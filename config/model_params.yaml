@@ -1,0 +1,61 @@
+# =============================================================================
+# Swiss Snow Model — Modellparameter
+# -----------------------------------------------------------------------------
+# Alle Koeffizienten der physikalisch motivierten Heuristiken an EINEM Ort.
+# Jede Transformation im Modell liest ausschliesslich aus dieser Datei.
+# Werte sind bewusst konservativ und literaturnah gewaehlt, aber kalibrierbar.
+# =============================================================================
+
+# --- Temperatur -> Schneephase (Regen/Schnee-Trennung) -----------------------
+# Logistische (sigmoide) Schneeanteilsfunktion um eine Schwellentemperatur.
+# snow_fraction = 1 / (1 + exp(k * (T - T_center)))
+temperature:
+  t_center_c: 1.0      # Wendepunkt [degC]; ~1 C wegen Nassschnee oberhalb 0 C
+  k: 1.4               # Steilheit des Uebergangs [1/degC]
+  # Referenz: Dai (2008), US Army Corps (1956) Regen/Schnee-Schwellen.
+
+# --- Hoehenabhaengige Niederschlagskorrektur ---------------------------------
+# Lapse-Rate fuer Temperatur und linearer Niederschlags-Enhancement-Faktor.
+altitude:
+  temp_lapse_k_per_m: -0.0065   # Standard-Atmosphaere ~ -6.5 K/km
+  precip_gamma_per_m: 0.0004    # +4 % Niederschlag pro 100 m Hoehengewinn
+  precip_factor_min: 0.6
+  precip_factor_max: 1.8        # Saettigung: kein unbegrenzter Stau-Zuschlag
+
+# --- Schnee-zu-Wasser-Verhaeltnis (Snow-to-Liquid Ratio, SLR) ----------------
+# cm Schnee pro cm Schmelzwasseraequivalent; kaeltere Luft -> lockerer Schnee.
+# SLR = clip(slr_intercept + slr_slope * T, slr_min, slr_max)
+slr:
+  slr_intercept: 10.0   # SLR bei 0 degC
+  slr_slope: -0.8       # pro degC kaelter -> +0.8 SLR
+  slr_min: 6.0
+  slr_max: 25.0
+  # Referenz: Roebber et al. (2003), typ. Bandbreite 5:1 (nass) bis 25:1 (kalt).
+
+# --- Orographischer Faktor (Luv-Verstaerkung / Lee-Abschwaechung) ------------
+# factor = 1 + k_oro * sin(slope) * wind_norm * cos(aspect - wind_from)
+orographic:
+  k_oro: 0.6
+  wind_ref_ms: 8.0      # Normierungswindgeschwindigkeit [m/s]
+  factor_min: 0.4
+  factor_max: 1.6
+
+# --- Wind-Umverteilung (Erosion an Kaemmen / Akkumulation im Lee) ------------
+# Erosion ~ Konvexitaet; Akkumulation ~ Konkavitaet + Lee-Hanglage.
+wind_redistribution:
+  k_erode: 0.35         # Erosion an exponierten konvexen Formen
+  k_deposit: 0.45       # Deposition in konkaven / Lee-Lagen
+  wind_ref_ms: 8.0
+  factor_min: 0.2
+  factor_max: 2.5
+  # Vereinfachte Heuristik; ersetzt kein Saltations-/SnowTran-3D-Modell.
+
+# --- Globale Begrenzungen ----------------------------------------------------
+limits:
+  max_new_snow_cm: 300.0   # Plausibilitaetsdeckel pro Zeitfenster
+
+# --- Modellmodus -------------------------------------------------------------
+mode:
+  # "precip"   : Basis = Open-Meteo precipitation (mm), Phase + SLR im Modell
+  # "snowfall" : Basis = Open-Meteo snowfall (cm), nur Terrain/Wind-Modifikation
+  base: "precip"

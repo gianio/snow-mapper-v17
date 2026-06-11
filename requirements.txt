@@ -1,0 +1,14 @@
+# --- Kern (erforderlich) ---
+numpy>=1.24
+scipy>=1.10
+pandas>=2.0
+requests>=2.31
+pyyaml>=6.0
+rasterio>=1.3
+pyproj>=3.5
+matplotlib>=3.7
+
+# --- Optional ---
+# xarray>=2023.1        # NetCDF-Export / mehrdimensionale Stapel
+# geopandas>=0.13       # Vektor-Overlays, Stationsgeometrien
+# folium>=0.14          # interaktive Web-Karten
