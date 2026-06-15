@@ -51,6 +51,7 @@ _FINE_RES = 60.0        # swissALTIRegio (feiner; speicher-sorgsam verarbeitet)
 _PNG_W = 2000
 _RAD_RES = 1000.0
 _RAD_K = 12
+_ROUGH_GRID_SCALE = 5.0
 
 
 def _idw_weights(points_xy, targets_xy, k=12, power=2.0, eps=1e-6):
@@ -190,16 +191,24 @@ def _load_altiregio(bounds, res):
 
 
 def _corrected_aspect(z, res):
-    """Exposition [Grad, im Uhrzeigersinn von Nord] + Hangneigung [Grad].
+    """Aspect [deg, clockwise from N] + slope [deg] using Horn's method.
 
-    Verifizierte Konvention: N=0, O=90, S=180, W=270 (Richtung, in die der
-    Hang abfaellt).
+    Horn (1981) 3x3 weighted gradient — same algorithm as GDAL gdaldem.
+    Convention: N=0, E=90, S=180, W=270 (downslope direction).
     """
-    zf = np.where(np.isnan(z), np.nanmean(z), z).astype("float32")
-    gy, gx = np.gradient(zf, res)        # gy=d/Zeile (Nord-Sued), gx=d/Spalte (Ost-West)
-    aspect = (np.degrees(np.arctan2(-gx, gy)) % 360.0).astype("float32")
+    zf = np.where(np.isnan(z), np.nanmean(z), z).astype("float64")
+    # Horn's 3x3 kernel
+    a = zf[:-2, :-2]; b = zf[:-2, 1:-1]; c = zf[:-2, 2:]
+    d = zf[1:-1, :-2];                    f = zf[1:-1, 2:]
+    g = zf[2:,   :-2]; h = zf[2:,  1:-1]; i = zf[2:,  2:]
+    dz_dx = ((c + 2*f + i) - (a + 2*d + g)) / (8 * res)
+    dz_dy = ((g + 2*h + i) - (a + 2*b + c)) / (8 * res)
+    # Pad to original shape
+    gx = np.pad(dz_dx, 1, mode='edge')
+    gy = np.pad(dz_dy, 1, mode='edge')
     slope = np.degrees(np.arctan(np.hypot(gx, gy))).astype("float32")
-    aspect = np.where(slope < 1.5, np.nan, aspect)   # flach -> keine Exposition
+    aspect = (np.degrees(np.arctan2(-gx, gy)) % 360.0).astype("float32")
+    aspect = np.where(slope < 1.5, np.nan, aspect)
     return aspect, slope
 
 
@@ -220,7 +229,7 @@ def _fine_terrain(bounds, aoi, use_synthetic):
     aspect_deg, slope_deg = _corrected_aspect(dem.elevation, res)
     aspect_cls = _aspect_classify(np.nan_to_num(aspect_deg), slope_deg)
     del aspect_deg, slope_deg
-    aspect_png, png_b = _class_to_png_b64(aspect_cls, transform, aoi.crs, bounds, png_w=3000)
+    aspect_png, png_b = _class_to_png_b64(aspect_cls, transform, aoi.crs, bounds, png_w=5000)
     del aspect_cls
 
     # --- Rauigkeit & TPI aus dezimiertem DEM (4x groeber) ---
@@ -391,6 +400,10 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
                                dem.transform, aoi.crs, dst_t, dh, dw)
     elev_main = _reproj_frame(np.nan_to_num(terrain.elevation, nan=0).astype("float32"),
                               dem.transform, aoi.crs, dst_t, dh, dw)
+    rough_main = roughness(np.nan_to_num(dem.elevation, nan=0).astype("float64"))
+    rough_w = _reproj_frame(rough_main.astype("float32"),
+                            dem.transform, aoi.crs, dst_t, dh, dw)
+    hourly_snow = [float(np.mean(snow_w[t])) for t in range(T)]
     left, bottom, right, top = array_bounds(dh, dw, dst_t)
 
     rad = _radiation_inputs(bounds, aoi, use_synthetic)
@@ -409,6 +422,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
                  "spd": p_spd, "dir": p_dir, "tpi": expo_tpi},
         "aspect_png": fine["aspect_png"], "rough_png": fine["rough_png"],
         "png_bounds": fine["png_bounds"], "rad": rad, "stations": stations,
+        "rough_grid": rough_w, "hourly_snow": hourly_snow,
     }
 
 
@@ -476,6 +490,14 @@ def _today_idx(times):
     return max(0, len(times) // 2)
 
 
+def _now_idx(times):
+    now = datetime.utcnow().strftime("%Y-%m-%dT%H")
+    for i, t in enumerate(times):
+        if t[:13] == now:
+            return i
+    return _today_idx(times)
+
+
 def export_interactive_html(data, out_html: Path) -> Path:
     def u8(a, fn):
         return base64.b64encode(np.clip(fn(a), 0, 255).astype("uint8").tobytes()).decode()
@@ -489,6 +511,7 @@ def export_interactive_html(data, out_html: Path) -> Path:
     maspect = u8(data["main_aspect"], lambda a: np.round(a / _DIR_DIV))
     mslope = u8(data["main_slope"], lambda a: np.round(np.clip(a, 0, 90)))
     melev = u8(data["main_elev"], lambda a: np.round(np.clip(a / _ELEV_SCALE, 0, 255)))
+    roughg = u8(data["rough_grid"], lambda a: np.round(np.clip(a / _ROUGH_GRID_SCALE, 0, 255)))
     rad = data["rad"]
     rslope = u8(rad["slope"], lambda a: np.round(np.clip(a, 0, 90)))
     raspect = u8(rad["aspect"], lambda a: np.round(a / _DIR_DIV))
@@ -509,6 +532,8 @@ def export_interactive_html(data, out_html: Path) -> Path:
                  "nx": data["wind"]["nx"], "ny": data["wind"]["ny"],
                  "tpi": [round(float(x), 2) for x in data["wind"]["tpi"].tolist()]},
         "stations": data["stations"],
+        "hourly_snow": [round(x, 3) for x in data["hourly_snow"]],
+        "now_index": _now_idx(data["times"]),
     }
     html = _HTML.replace("/*META*/", json.dumps(meta))
     for tok, blob in [("__SNOW__", snow), ("__TEMP__", temp), ("__SUN__", sun),
@@ -516,6 +541,7 @@ def export_interactive_html(data, out_html: Path) -> Path:
                       ("__RSLOPE__", rslope), ("__RASPECT__", raspect), ("__RHOR__", rhor),
                       ("__PREC__", prec), ("__MASPECT__", maspect), ("__MSLOPE__", mslope),
                       ("__MELEV__", melev),
+                      ("__ROUGHGRID__", roughg),
                       ("__ASPECTPNG__", data["aspect_png"]), ("__ROUGHPNG__", data["rough_png"])]:
         html = html.replace(f'"{tok}"', json.dumps(blob))
     out_html.write_text(html, encoding="utf-8")
@@ -526,9 +552,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Swiss Snow Model</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.js"></script>
+<script src="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css"/>
 <style>
  :root{--fg:#e8ecf1;--fg2:#c0c8d4;--mut:#8694a6;--acc:#5b9cf5;--acc2:#3d7de0;--bd:rgba(255,255,255,.12);--glass:rgba(15,20,35,.72);--glass2:rgba(15,20,35,.85);--glow:rgba(91,156,245,.15)}
  *{box-sizing:border-box}
@@ -547,12 +573,19 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .seg button{border:1px solid var(--bd);background:rgba(255,255,255,.07);border-radius:10px;padding:8px 12px;cursor:pointer;font-size:13px;min-height:38px;color:var(--fg2);transition:.15s;backdrop-filter:blur(4px)}
  .seg button:hover{border-color:var(--acc);background:rgba(255,255,255,.12)}
  .seg button.active{background:var(--acc2);color:#fff;border-color:var(--acc);font-weight:600;box-shadow:0 0 12px var(--glow)}
- #band{margin:20px 8px 6px}
- .noUi-connect{background:var(--acc2)!important}
- .noUi-target{background:rgba(255,255,255,.1)!important;border-color:var(--bd)!important;box-shadow:none!important}
- .noUi-handle{background:var(--acc)!important;border:none!important;box-shadow:0 0 6px rgba(91,156,245,.4)!important}
- .noUi-tooltip{background:var(--glass2)!important;color:var(--fg)!important;border:1px solid var(--bd)!important;font-size:11px!important}
- .winlbl{font-size:13px;margin-top:13px;font-weight:600}
+ #timeline{display:block;margin:8px 0 0;border:1px solid var(--bd);background:rgba(15,20,35,.5)}
+ .winlbl{font-size:13px;margin-top:10px;font-weight:600}
+ #three-wrap{position:absolute;inset:0;z-index:2000;display:none;background:#0a0a1a}
+ #three-wrap .maplibregl-canvas{outline:none}
+ #three-wrap .maplibregl-map{width:100%;height:100%}
+ #btn3dClose{position:absolute;top:14px;right:14px;z-index:2001;padding:7px 16px;border-radius:10px;border:1px solid var(--bd);background:var(--glass);color:var(--fg);cursor:pointer;font-size:13px;font-weight:600;backdrop-filter:blur(10px)}
+ #three-wrap .ctrl3d{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);z-index:2001;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px)}
+ #three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:6px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);cursor:pointer;font-size:12px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);touch-action:manipulation}
+ #three-wrap .ctrl3d button:hover{border-color:var(--acc);color:var(--fg)}
+ @media (max-width:560px){#three-wrap .ctrl3d{bottom:16px;gap:4px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:8px 10px;font-size:11px;min-height:40px}#btn3dClose{top:8px;right:8px;padding:10px 14px}}
+ #btn3d{font-size:12px;padding:3px 10px;border-radius:8px;border:1px solid var(--bd);background:rgba(255,255,255,.07);color:var(--fg2);cursor:pointer}
+ #btn3d:hover,#btn3d.active{border-color:var(--acc);color:var(--acc)}
+ .seg button.tact{background:var(--acc2);color:#fff;border-color:var(--acc);font-weight:600;box-shadow:0 0 8px var(--glow)}
  .sub{font-size:12px;color:var(--mut)}
  .ck{display:flex;align-items:center;gap:9px;margin-top:15px;font-size:13px;cursor:pointer;color:var(--fg2)}
  .ck input{width:18px;height:18px;accent-color:var(--acc)}
@@ -584,21 +617,42 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .leaflet-popup-tip{background:var(--glass2)!important}
  .leaflet-popup-close-button{color:var(--mut)!important}
  .leaflet-popup-close-button:hover{color:var(--fg)!important}
+ #searchWrap{position:absolute;z-index:1100;top:12px;right:12px;width:260px;max-width:calc(100vw - 420px)}
+ #searchWrap input{width:100%;padding:10px 14px 10px 36px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:var(--fg);font-size:14px;outline:none;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+ #searchWrap input::placeholder{color:var(--mut)}
+ #searchWrap input:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--glow),0 4px 20px rgba(0,0,0,.3)}
+ #searchWrap .icn{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--mut);font-size:15px}
+ #searchRes{position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--glass2);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--bd);border-radius:12px;overflow:hidden;display:none;max-height:260px;overflow-y:auto;box-shadow:0 8px 28px rgba(0,0,0,.5)}
+ #searchRes .sr{padding:10px 14px;cursor:pointer;font-size:13px;color:var(--fg2);border-bottom:1px solid rgba(255,255,255,.06);transition:.12s}
+ #searchRes .sr:last-child{border-bottom:none}
+ #searchRes .sr:hover,#searchRes .sr.sel{background:rgba(91,156,245,.15);color:var(--fg)}
+ #searchRes .sr .sub{font-size:11px;color:var(--mut);margin-top:2px}
+ #intro{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(135deg,#0a0e1a 0%,#111b33 40%,#0d1525 100%);transition:opacity .8s ease}
+ #intro.hide{opacity:0;pointer-events:none}
+ #intro h1{font-size:clamp(28px,5vw,48px);font-weight:800;letter-spacing:-.02em;color:#e8ecf1;margin:0;opacity:0;transform:translateY(20px);animation:introUp .7s .3s ease forwards}
+ #intro .sub{font-size:clamp(13px,2vw,17px);color:var(--mut);margin-top:8px;opacity:0;animation:introUp .6s .7s ease forwards}
+ #intro .bar{width:120px;height:3px;border-radius:2px;background:var(--acc);margin-top:20px;opacity:0;transform:scaleX(0);animation:introBar .8s 1s ease forwards}
+ @keyframes introUp{to{opacity:1;transform:translateY(0)}}
+ @keyframes introBar{to{opacity:1;transform:scaleX(1)}}
  @media (max-width:560px){
    .panel{top:auto;bottom:0;left:0;right:0;width:100%;max-width:100%;border-radius:20px 20px 0 0;max-height:55vh}
    .phead{padding:10px 16px}.phead::before{content:'';display:block;width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin:0 auto 8px}
    .pbody{max-height:42vh;padding-bottom:env(safe-area-inset-bottom,12px)}
    .legend{font-size:11px;max-width:170px;bottom:auto;top:10px;left:8px}
+   #searchWrap{top:auto;bottom:12px;right:12px;left:12px;width:auto;max-width:100%}
  }
 </style></head><body>
+<div id="intro"><h1>Swiss Snow Model</h1><div class="sub">Interactive Snow Forecast Map</div><div class="bar"></div></div>
 <div id="map"></div>
 <canvas id="flow"></canvas>
+<div id="searchWrap"><span class="icn">&#x1F50D;</span><input id="searchIn" type="text" placeholder="Search location..." autocomplete="off"/><div id="searchRes"></div></div>
 <div class="panel" id="panel">
- <div class="phead" id="phead"><h3>Swiss Snow Model</h3><button class="tog" id="tog">▾</button></div>
+ <div class="phead" id="phead"><h3>Swiss Snow Model</h3><span style="display:flex;gap:8px;align-items:center"><button id="btn3d" title="3D Terrain View">3D</button><button class="tog" id="tog">▾</button></span></div>
  <div class="pbody">
    <div class="sec"><div class="cap">Layer</div>
      <div class="seg" id="layer">
        <button data-l="snow" class="active">New Snow</button>
+       <button data-l="depth">Snow Depth</button>
        <button data-l="temp">Temperature</button>
        <button data-l="wind">Wind</button>
        <button data-l="sun">Sunshine</button>
@@ -609,6 +663,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
        <button data-l="rough">Roughness</button>
        <button data-l="tsurf">T Surface</button>
        <button data-l="shade">Hillshade</button>
+       <button data-l="skiable">Skiable</button>
        <button data-l="powder">Powder</button>
      </div></div>
    <div class="sec" id="statRow" style="display:none"><div class="cap">Statistic</div>
@@ -617,23 +672,33 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
        <button data-s="min">Min</button>
        <button data-s="sub0">always &lt;0°C</button><button data-s="max05">Max 0–5°C</button>
        <button data-s="lt10">max &lt;10 km/h</button></div></div>
-   <div class="sec"><div class="cap">Time Window (±5 days)</div>
-     <div id="band"></div>
-     <div class="seg" id="presets" style="margin-top:16px">
-       <button data-h="24">24h</button><button data-h="48">48h</button>
-       <button data-h="72">72h</button><button data-h="120">120h</button></div>
+   <div class="sec"><div class="cap">Time Window</div>
+     <canvas id="timeline" width="720" height="56" style="width:100%;border-radius:8px;cursor:default"></canvas>
+     <div class="seg" id="presets" style="margin-top:10px">
+       <button id="btnSinceSnow">Since Last Snowfall</button>
+       <button data-r="tomorrow">Till Tomorrow</button>
+       <button data-r="-24">-24 h</button><button data-r="-48">-48 h</button>
+       <button data-r="+24">+24 h</button><button data-r="+48">+48 h</button>
+       <button data-r="+72">+72 h</button><button data-r="+120">+120 h</button></div>
      <div class="winlbl" id="window"></div></div>
    <label class="ck"><input type="checkbox" id="stnToggle" checked/> Show SLF stations</label>
    <div class="sub" id="hint" style="margin-top:10px">Click map = inspect cell. Hover layer button = legend. Click station = measurements.</div>
  </div>
 </div>
 <div class="legend" id="legend"></div>
+<div id="three-wrap"><div id="map3d" style="width:100%;height:100%"></div><button id="btn3dClose">✕ 2D</button>
+<div class="ctrl3d">
+<button onclick="map3d.easeTo({pitch:0,bearing:0,duration:600})">Top</button><button onclick="map3d.easeTo({pitch:60,duration:600})">Tilt</button><button onclick="map3d.easeTo({pitch:75,duration:600})">FatMap</button><button id="exag3d">Exag 1.5×</button>
+</div>
+<div class="ctrl3d" style="bottom:70px"><label style="display:flex;align-items:center;gap:6px;color:var(--fg2);font-size:11px">Map <input id="mapOpac3d" type="range" min="0" max="100" value="15" style="width:80px;accent-color:var(--acc)"> <span id="mapOpacLbl">15%</span></label>
+<select id="overlay3d" style="padding:4px 8px;border-radius:8px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:12px;backdrop-filter:blur(10px)"><option value="none">No overlay</option><option value="snow">Snow</option><option value="temp">Temperature</option><option value="wind">Wind</option><option value="depth">Snow Depth</option></select></div>
+</div>
 <script>
 const M=/*META*/;
 function dec(b){const s=atob(b),n=s.length,a=new Uint8Array(n);for(let i=0;i<n;i++)a[i]=s.charCodeAt(i);return a;}
 const SNOW=dec("__SNOW__"),TEMP=dec("__TEMP__"),SUN=dec("__SUN__"),SPD=dec("__SPD__"),WDIR=dec("__DIR__");
 const WINDG=dec("__WINDG__"),RSLOPE=dec("__RSLOPE__"),RASPECT=dec("__RASPECT__"),RHOR=dec("__RHOR__");
-const PREC=dec("__PREC__"),MASPECT=dec("__MASPECT__"),MSLOPE=dec("__MSLOPE__"),MELEV=dec("__MELEV__");
+const PREC=dec("__PREC__"),MASPECT=dec("__MASPECT__"),MSLOPE=dec("__MSLOPE__"),MELEV=dec("__MELEV__"),ROUGHG=dec("__ROUGHGRID__");
 const ASPECT_PNG="data:image/png;base64,"+"__ASPECTPNG__",ROUGH_PNG="data:image/png;base64,"+"__ROUGHPNG__";
 const T=M.T,W=M.width,H=M.height,NP=W*H,P=M.wind.lat.length,NX=M.wind.nx;
 const RW=M.rad.width,RH=M.rad.height,RK=M.rad.K,RNP=RW*RH;
@@ -668,6 +733,8 @@ const melevv=p=>MELEV[p]*M.elev_scale;
 const mainToWind=new Int32Array(NP);
 const main2rad=new Int32Array(NP).fill(-1);
 function aspectQ(deg){const a=((deg%360)+360)%360;if(a>=315||a<45)return'N';if(a<135)return'E';if(a<225)return'S';return'W';}
+const ASPC={N:[0x4A,0x90,0xD9],E:[0x66,0xBB,0x6A],S:[0xEF,0x53,0x50],W:[0xFF,0xC1,0x07],F:[0x9E,0x9E,0x9E]};
+function aspCol(p){const s=mslpv(p);if(s<5)return ASPC.F;const q=aspectQ(maspv(p));return ASPC[q];}
 function isLee(cellAsp,windFrom){const lee=(windFrom+180)%360;let d=Math.abs(cellAsp-lee);if(d>180)d=360-d;return d<90;}
 const _QCEN={N:0,E:90,S:180,W:270};
 function computePowder(p,ta,tb){
@@ -732,14 +799,66 @@ function tsurfEst(t,p){
   const solarWarm=sun>0.3?1.5*Math.min(1,sun):0;
   return ta+radCool+solarWarm;
 }
+// --- Roughness + Skiability ---
+const roughv=p=>ROUGHG[p]*5.0;
+function minSnowNeeded(p){const rough=roughv(p),slp=mslpv(p);if(slp>55)return 9999;const rn=Math.min(1,rough/250);const sf=1+Math.max(0,slp-10)*0.02;return(20+rn*100)*sf;}
+// --- Snowfall Timeline ---
+const hSnow=M.hourly_snow,nowIdx=M.now_index;
+const SNOW_THRESH=0.005;
+const snowEvents=[];
+(function(){let s=-1;for(let t=0;t<T;t++){if(hSnow[t]>SNOW_THRESH){if(s<0)s=t;}else{if(s>=0){snowEvents.push([s,t]);s=-1;}}}if(s>=0)snowEvents.push([s,T]);})();
+function sinceLastSnowfall(){let ls=nowIdx;for(const[s,e]of snowEvents){if(s<=nowIdx)ls=s;}return[ls,Math.min(T,nowIdx+1)];}
+function tillTomorrow(){for(let t=nowIdx+1;t<T;t++){const d=new Date(M.times[t]+'Z');if(d.getUTCHours()===8)return[nowIdx,t];}return[nowIdx,Math.min(T,nowIdx+24)];}
+function drawTimeline(){const tc=document.getElementById('timeline'),ctx2=tc.getContext('2d'),cw=tc.width,ch=tc.height;
+  ctx2.clearRect(0,0,cw,ch);
+  const nx=nowIdx/T*cw;
+  ctx2.fillStyle='rgba(15,20,35,.6)';ctx2.fillRect(0,0,nx,ch);
+  ctx2.fillStyle='rgba(25,35,65,.45)';ctx2.fillRect(nx,0,cw-nx,ch);
+  const x1=a/T*cw,x2=b/T*cw;ctx2.fillStyle='rgba(91,156,245,.2)';ctx2.fillRect(x1,0,x2-x1,ch);
+  ctx2.font='9px system-ui';ctx2.textAlign='center';
+  for(let t=0;t<T;t++){const d=new Date(M.times[t]+'Z');if(d.getUTCHours()===0){const x=t/T*cw;
+    ctx2.fillStyle=t>=nowIdx?'rgba(100,160,255,.18)':'rgba(255,255,255,.1)';ctx2.fillRect(x,0,1,ch);
+    ctx2.fillStyle=t>=nowIdx?'rgba(140,180,240,.7)':'rgba(200,210,225,.5)';
+    ctx2.fillText(d.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short'}),x+22,ch-2);}}
+  let mx=0;for(const s of hSnow)if(s>mx)mx=s;mx=Math.max(.05,mx);
+  const bw=Math.max(1.2,cw/T);
+  for(let t=0;t<T;t++){const v=hSnow[t];if(v<.002)continue;const h=Math.max(1,v/mx*(ch-18));const x=t/T*cw;
+    const inSel=(t>=a&&t<b);const fut=t>=nowIdx;
+    ctx2.fillStyle=inSel?(fut?'rgba(130,200,255,.9)':'rgba(200,225,255,.8)'):(fut?'rgba(80,130,200,.3)':'rgba(140,160,180,.3)');
+    ctx2.fillRect(x,ch-14-h,Math.max(bw-.3,1),h);}
+  for(const[s,e]of snowEvents){const xs=s/T*cw,xe=e/T*cw;ctx2.fillStyle='rgba(91,156,245,.3)';ctx2.fillRect(xs,ch-14,xe-xs,3);}
+  ctx2.strokeStyle='rgba(91,156,245,.5)';ctx2.lineWidth=1.5;ctx2.strokeRect(x1+.5,0,x2-x1-1,ch);
+  ctx2.strokeStyle='#ff3040';ctx2.lineWidth=2.5;ctx2.beginPath();ctx2.moveTo(nx,0);ctx2.lineTo(nx,ch);ctx2.stroke();
+  ctx2.fillStyle='#ff3040';ctx2.font='bold 9px system-ui';ctx2.textAlign='center';ctx2.fillText('NOW',nx,10);
+  ctx2.font='bold 7px system-ui';ctx2.globalAlpha=.35;
+  if(nx>28){ctx2.textAlign='right';ctx2.fillStyle='#aab8cc';ctx2.fillText('PAST',nx-5,20);}
+  if(cw-nx>50){ctx2.textAlign='left';ctx2.fillStyle='#8cb8f0';ctx2.fillText('FORECAST',nx+5,20);}
+  ctx2.globalAlpha=1;}
 // Karte + Layer
 const [laMin,loMin,laMax,loMax]=M.bounds;
 const map=L.map('map').fitBounds([[laMin,loMin],[laMax,loMax]]);
 const base=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg",{attribution:"© swisstopo / MeteoSwiss / SLF / Copernicus"}).addTo(map);
 const slopeWMTS=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.hangneigung-ueber_30/default/current/3857/{z}/{x}/{y}.png",{opacity:.7});
 const reliefWMTS=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissalti3d-reliefschattierung_monodirektional/default/current/3857/{z}/{x}/{y}.png",{opacity:.85});
-const aspectImg=L.imageOverlay(ASPECT_PNG,[[M.png_bounds[0],M.png_bounds[1]],[M.png_bounds[2],M.png_bounds[3]]],{opacity:.72,className:'asp-crisp'});
 const roughImg=L.imageOverlay(ROUGH_PNG,[[M.png_bounds[0],M.png_bounds[1]],[M.png_bounds[2],M.png_bounds[3]]],{opacity:.78});
+// Aspect: load high-res classified PNG into offscreen canvas, render via GridLayer with nearest-neighbor
+const [aspS,aspWest,aspN,aspEast]=M.png_bounds;
+let aspData=null,aspPW=0,aspPH=0;
+const aspI=new Image();aspI.src=ASPECT_PNG;
+aspI.onload=function(){aspPW=aspI.width;aspPH=aspI.height;const c=document.createElement('canvas');c.width=aspPW;c.height=aspPH;const x=c.getContext('2d');x.drawImage(aspI,0,0);aspData=x.getImageData(0,0,aspPW,aspPH).data;};
+const AspectGrid=L.GridLayer.extend({createTile:function(coords){
+  const tile=document.createElement('canvas'),ts=this.getTileSize();tile.width=ts.x;tile.height=ts.y;
+  if(!aspData)return tile;const ctx=tile.getContext('2d'),img=ctx.createImageData(ts.x,ts.y),d=img.data;
+  const nw=this._map.unproject([coords.x*ts.x,coords.y*ts.y],coords.z);
+  const se=this._map.unproject([(coords.x+1)*ts.x,(coords.y+1)*ts.y],coords.z);
+  for(let y=0;y<ts.y;y++){const lat=nw.lat+(se.lat-nw.lat)*y/ts.y;
+    const py=Math.floor((aspN-lat)/(aspN-aspS)*aspPH);if(py<0||py>=aspPH)continue;
+    for(let x=0;x<ts.x;x++){const lon=nw.lng+(se.lng-nw.lng)*x/ts.x;
+      const px=Math.floor((lon-aspWest)/(aspEast-aspWest)*aspPW);if(px<0||px>=aspPW)continue;
+      const si=(py*aspPW+px)*4,di=(y*ts.x+x)*4;
+      d[di]=aspData[si];d[di+1]=aspData[si+1];d[di+2]=aspData[si+2];d[di+3]=aspData[si+3];}}
+  ctx.putImageData(img,0,0);return tile;}});
+const aspectGrid=new AspectGrid({opacity:.78,tileSize:256});
 const cv=document.createElement('canvas');cv.width=W;cv.height=H;const cx=cv.getContext('2d');
 let raster=L.imageOverlay(cv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:.82}).addTo(map);
 const rcv=document.createElement('canvas');rcv.width=RW;rcv.height=RH;const rcx=rcv.getContext('2d');
@@ -780,7 +899,7 @@ function renderRadiation(){const doy=bandDoy();
     const o=p*4;if(val<vmax*0.02){d[o+3]=0;continue;}const c=radColor(val/vmax);d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=205;}
   rcx.putImageData(img,0,0);radOverlay.setUrl(rcv.toDataURL());}
 const windArr=L.layerGroup(); const stnGroup=L.layerGroup().addTo(map);
-let layer="snow",stat="avg",a=M.today_index,b=Math.min(T,M.today_index+72),showStn=true,wtimer=null;
+let layer="snow",stat="avg",a=nowIdx,b=Math.min(T,nowIdx+48),showStn=true,wtimer=null;
 
 function setRaster(get,border){const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;
   for(let p=0;p<NP;p++){const r=get(p);const o=p*4;if(r){d[o]=r[0];d[o+1]=r[1];d[o+2]=r[2];d[o+3]=r[3]==null?210:r[3];if(cls)cls[p]=r[4];}else{d[o+3]=0;if(cls)cls[p]=-999;}}
@@ -789,6 +908,7 @@ function setRaster(get,border){const img=cx.createImageData(W,H),d=img.data;cons
 function aggT(p,m){let mn=1e9,mx=-1e9,su=0,c=0,cold=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;if(v<0)cold++;}return m=="max"?mx:m=="min"?mn:m=="sub0"?cold:m=="max05"?mx:su/Math.max(1,c);}
 function renderRaster(){
   if(layer=="snow"){const ca=a*NP,cb=b*NP;setRaster(p=>{const v=cum[cb+p]-cum[ca+p];const c=snowCol(v);return c?[c[0],c[1],c[2],235]:null;});}
+  else if(layer=="depth"){const cb2=b*NP;setRaster(p=>{const v=cum[cb2+p];if(v<1)return null;const x=Math.min(1,v/300);let r,g,bl;if(x<.15){r=220;g=235;bl=255;}else if(x<.4){const k=(x-.15)/.25;r=220-k*110|0;g=235-k*45|0;bl=255;}else if(x<.7){const k=(x-.4)/.3;r=110-k*70|0;g=190-k*50|0;bl=255-k*30|0;}else{const k=(x-.7)/.3;r=40;g=140-k*80|0;bl=225-k*85|0;}return[r,g,bl,210];});}
   else if(layer=="temp"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[40,120-(x*60|0),255,215];}
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[255,200-(x*110|0),60,235];}
@@ -801,6 +921,7 @@ function renderRaster(){
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[20,80,180,215];}
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[200,140-(x*80|0),255-(x*200|0),235];}
       const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);const col=tempCol(v);return[col[0],col[1],col[2],205];});}
+  else if(layer=="skiable"){const ca2=a*NP,cb2=b*NP;setRaster(p=>{const slp=mslpv(p);if(slp>55)return[80,0,0,150];const snow=cum[cb2+p]-cum[ca2+p];if(snow<1)return null;const need=minSnowNeeded(p);const r=snow/Math.max(1,need);if(r>=1.5)return[100,220,100,190];if(r>=1.0)return[160,220,100,180];if(r>=.7)return[255,220,50,180];if(r>=.4)return[255,140,40,170];return[255,60,40,160];});}
   else if(layer=="powder"){setRaster(p=>{const r=computePowder(p,a,b);if(!r.powdered)return null;return r.quality==='reduced'?[180,205,245,140]:[200,220,255,180];});}
   else setRaster(_=>null);
 }
@@ -836,9 +957,15 @@ function renderStations(){stnGroup.clearLayers();if(!showStn)return;
     const wind=s.vw!=null?(s.dw!=null?dirAb(s.dw)+" ":"")+(s.vw*3.6).toFixed(0):"";
     const tss=s.tss!=null?s.tss.toFixed(0)+"°":"";
     const ta=s.ta!=null?s.ta.toFixed(0)+"°":"";
-    const html=`<div class="scl"><div class="s-t">${tss}</div>`+
-      `<div class="s-row"><span class="s-l">${wind}</span><span class="s-c">${hs}</span><span class="s-r">${nsv}</span></div>`+
-      `<div class="s-b">${ta}</div></div>`;
+    const gust=s.vw!=null?(s.vw*3.6*1.5).toFixed(0):"";
+    let top="",mid="",bot="",lbl=hs,ll="",lr="";
+    if(layer=="wind"){lbl=wind||"–";top=gust?("≈"+gust+" gust"):"";ll="";lr="";bot=s.elev+"m";}
+    else if(layer=="temp"||layer=="tsurf"){lbl=ta||"–";top=tss?("Surf "+tss):"";ll="";lr=hs!="–"?hs+"cm":"";bot="";}
+    else if(layer=="sun"||layer=="rad"||layer=="radsun"){lbl=s.elev+"m";top="";ll="";lr="";bot=ta||"";}
+    else{lbl=hs;top=tss;ll=wind;lr=nsv;bot=ta;}
+    const html=`<div class="scl"><div class="s-t">${top}</div>`+
+      `<div class="s-row"><span class="s-l">${ll}</span><span class="s-c">${lbl}</span><span class="s-r">${lr}</span></div>`+
+      `<div class="s-b">${bot}</div></div>`;
     const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:html,iconSize:[104,52],iconAnchor:[52,26]}),zIndexOffset:500});
     m.bindPopup(stationCard(s),{maxWidth:260});m.addTo(stnGroup);}
 }
@@ -846,31 +973,33 @@ function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");retur
 function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});}
 function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
   if(l=="snow"){let h="<b>New Snow [cm] (SLF scale)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (click for details)</div>";}
+  if(l=="depth")return '<b>Cumulative Snow Depth [cm]</b><br>Total accumulated snowfall from model start<div style="margin-top:4px"><div><i style="background:#dcebff"></i>&lt;45 cm</div><div><i style="background:#6ebeff"></i>45–120 cm</div><div><i style="background:#288ce0"></i>120–210 cm</div><div><i style="background:#283ca0"></i>&gt;210 cm</div></div>';
   if(l=="temp"){let extra="blue=cold · red=warm";if(stat=="sub0")extra="only cells staying below 0°C for entire window";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>Temp 2 m [°C] (${sn})</b><br>${extra}`;}
   if(l=="wind"){let extra="color=speed, arrows=direction, flow animation";if(stat=="lt10")extra="green = max wind stays below 10 km/h";return "<b>Wind 10 m (km/h, "+sn+")</b><br>"+extra;}
   if(l=="sun")return "<b>Σ Sunshine Hours</b><br>Scale 0–48 h+ · light→orange = more sun";
   if(l=="rad")return "<b>Clear-sky Radiation [Wh/m²/d]</b><br>Day: "+dayLabel(bandDoy())+" (= window start)<br>dark=shade/low · yellow=high<br>incl. slope, aspect & terrain shadow";
   if(l=="radsun")return "<b>Effective Radiation [Wh/m²/d]</b><br>Clear-sky × cloud attenuation (20% diffuse + 80% × sunshine)<br>Day: "+dayLabel(bandDoy());
   if(l=="slope")return "<b>Slope Classes (swisstopo)</b><br>all classes from 30° (30/35/40/45°+)";
-  if(l=="aspect")return '<b>Aspect (swissALTIRegio)</b><br><div><i style="background:#4A90D9"></i>N (315°–45°)</div><div><i style="background:#66BB6A"></i>E (45°–135°)</div><div><i style="background:#EF5350"></i>S (135°–225°)</div><div><i style="background:#FFC107"></i>W (225°–315°)</div><div><i style="background:#9E9E9E"></i>Flat (&lt;5°)</div>';
+  if(l=="aspect")return '<b>Aspect (Horn, swissALTIRegio 60 m)</b><br><div><i style="background:#4A90D9"></i>N (315°–45°)</div><div><i style="background:#66BB6A"></i>E (45°–135°)</div><div><i style="background:#EF5350"></i>S (135°–225°)</div><div><i style="background:#FFC107"></i>W (225°–315°)</div><div><i style="background:#9E9E9E"></i>Flat (&lt;5°)</div>';
   if(l=="tsurf"){let extra="estimated: air ± radiative cooling/warming";if(stat=="sub0")extra="only cells with max surface temp &lt;0°C";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>T Surface [°C] (${sn})</b><br>${extra}`;}
   if(l=="rough")return "<b>Terrain Roughness</b><br>light→dark brown = rougher";
+  if(l=="skiable")return '<b>Skiability Estimate</b><br>Snow depth vs. terrain roughness need<div style="margin-top:4px"><div><i style="background:#64dc64"></i>Plenty of snow</div><div><i style="background:#a0dc64"></i>Skiable</div><div><i style="background:#ffdc32"></i>Marginal</div><div><i style="background:#ff8c28"></i>Needs more snow</div><div><i style="background:#ff3c28"></i>Far from skiable</div><div><i style="background:#500000"></i>Too steep (&gt;55°)</div></div>';
   if(l=="powder")return '<b>Powder Conditions</b><br><div><i style="background:rgba(200,220,255,.7)"></i>Powder (stable)</div><div><i style="background:rgba(180,205,245,.55)"></i>Powder (reduced)</div><div style="margin-top:4px;font-size:11px">Gust ≈ mean wind × 1.5</div>';
   return "<b>Hillshade / Relief (swisstopo)</b>";}
 function legend(l){document.getElementById('legend').innerHTML=legendFor(l||layer);}
 function showOverlay(){
-  [slopeWMTS,reliefWMTS].forEach(x=>map.removeLayer(x));[aspectImg,roughImg,radOverlay].forEach(x=>map.removeLayer(x));
-  const grid=(layer=="snow"||layer=="temp"||layer=="sun"||layer=="wind"||layer=="powder"||layer=="tsurf");
+  [slopeWMTS,reliefWMTS,aspectGrid,roughImg,radOverlay].forEach(x=>map.removeLayer(x));
+  const grid=(layer=="snow"||layer=="depth"||layer=="temp"||layer=="sun"||layer=="wind"||layer=="powder"||layer=="tsurf"||layer=="skiable");
   const radg=(layer=="rad"||layer=="radsun");
   raster.setOpacity(grid?0.82:0);
   if(radg)map.addLayer(radOverlay);
   if(layer=="slope")map.addLayer(slopeWMTS);
   else if(layer=="shade")map.addLayer(reliefWMTS);
-  else if(layer=="aspect")map.addLayer(aspectImg);
+  else if(layer=="aspect")map.addLayer(aspectGrid);
   else if(layer=="rough")map.addLayer(roughImg);
   if(layer=="wind"){map.addLayer(windArr);startFlow();}else{map.removeLayer(windArr);stopFlow();}
 }
-function renderAll(){showOverlay();renderRaster();renderStations();
+function renderAll(){showOverlay();renderRaster();renderStations();drawTimeline();
   if(layer=="rad"||layer=="radsun")renderRadiation();
   if(layer=="wind"){buildFlow();if(wtimer)clearTimeout(wtimer);wtimer=setTimeout(renderWind,120);}
   document.getElementById('window').innerHTML=`<b>${fmt(a)}</b> → <b>${fmt(b)}</b> (${b-a} h)`;legend();}
@@ -883,9 +1012,13 @@ document.querySelectorAll('#layer button').forEach(btn=>{
     renderAll();};
   btn.onmouseenter=()=>legend(btn.dataset.l);btn.onmouseleave=()=>legend();});
 document.querySelectorAll('#stat button').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('#stat button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');stat=btn.dataset.s;renderAll();});
-document.querySelectorAll('#presets button').forEach(btn=>btn.onclick=()=>{const h=+btn.dataset.h;let na=M.today_index,nb=Math.min(T,na+h);if(nb>=T){nb=T;na=Math.max(0,T-h);}band.noUiSlider.set([na,nb]);});
+document.querySelectorAll('#presets button[data-r]').forEach(btn=>{btn.onclick=()=>{const r=btn.dataset.r;let na,nb;
+  if(r==='tomorrow'){const p=tillTomorrow();na=p[0];nb=p[1];}
+  else{const h=parseInt(r);if(h<0){na=Math.max(0,nowIdx+h);nb=Math.min(T,nowIdx+1);}else{na=nowIdx;nb=Math.min(T,nowIdx+h);}}
+  a=na;b=nb;renderAll();};});
+document.getElementById('btnSinceSnow').onclick=()=>{const p=sinceLastSnowfall();a=p[0];b=p[1];renderAll();};
 document.getElementById('stnToggle').onchange=e=>{showStn=e.target.checked;renderStations();};
-document.getElementById('phead').onclick=()=>{const p=document.getElementById('panel');p.classList.toggle('collapsed');document.getElementById('tog').textContent=p.classList.contains('collapsed')?'▸':'▾';};
+document.getElementById('tog').onclick=e=>{e.stopPropagation();const p=document.getElementById('panel');p.classList.toggle('collapsed');e.target.textContent=p.classList.contains('collapsed')?'▸':'▾';};
 // --- Windy.com-style Wind Animation ---
 const flow=document.getElementById('flow'),fx=flow.getContext('2d');
 const loMinW=Math.min(...M.wind.lon),loMaxW=Math.max(...M.wind.lon),laMinW=Math.min(...M.wind.lat),laMaxW=Math.max(...M.wind.lat);
@@ -911,9 +1044,7 @@ function animFlow(){if(layer!="wind"||!flowVel){stopFlow();return;}
   flowReq=requestAnimationFrame(animFlow);}
 map.on('move',()=>{if(layer=="wind"){flowResize();fx.clearRect(0,0,flow.width,flow.height);}});
 map.on('resize',()=>{if(layer=="wind")flowResize();});
-const band=document.getElementById('band');
-noUiSlider.create(band,{start:[a,b],connect:true,step:1,range:{min:0,max:T},tooltips:[{to:fmt,from:Number},{to:fmt,from:Number}]});
-let raf=null;band.noUiSlider.on('update',v=>{a=Math.round(+v[0]);b=Math.max(a+1,Math.round(+v[1]));if(raf)cancelAnimationFrame(raf);raf=requestAnimationFrame(renderAll);});
+drawTimeline();
 // --- Point Inspector (universal click popup) ---
 map.setMaxBounds([[laMin-0.15,loMin-0.3],[laMax+0.15,loMax+0.3]]);
 map.setMinZoom(map.getBoundsZoom([[laMin,loMin],[laMax,loMax]]));
@@ -967,6 +1098,11 @@ map.on('click',function(e){
   const sunFrac=Math.max(0,Math.min(1,sunSum/(0.42*Math.max(1,b-a))));
   const effRad=solar*(0.2+0.8*sunFrac);
   h+=R('Rad. Eff.',effRad.toFixed(0)+' Wh/m²/d');
+  h+='<div class="isep"></div>';
+  const needS=minSnowNeeded(p),ratS=newSnow/Math.max(1,needS);
+  h+=R('Roughness',roughv(p).toFixed(0)+' m');
+  h+=R('Min Snow',needS.toFixed(0)+' cm');
+  h+=R('Skiable',ratS>=1.0?'YES ('+ratS.toFixed(1)+'×)':'NO ('+ratS.toFixed(1)+'×)');
   h+='</div>';
   h+='<div class="ipow '+(pw.powdered?'yes':'no')+'">';
   h+='Powder: '+(pw.powdered?'YES':'NO');
@@ -977,6 +1113,96 @@ map.on('click',function(e){
   h+='</div>';
   inspPopup=L.popup({maxWidth:300}).setLatLng(e.latlng).setContent(h).openOn(map);
 });
+// --- 3D Terrain Viewer (MapLibre GL) ---
+let map3d=null,is3d=false,exag3d=1.5;
+function make3dOverlay(mode){
+  const oc=document.createElement('canvas');oc.width=W;oc.height=H;
+  const ox=oc.getContext('2d'),oi=ox.createImageData(W,H),od=oi.data;
+  for(let p=0;p<NP;p++){const o=p*4;let r=0,g=0,bl=0,al=0;
+    if(mode==='snow'){const ca2=a*NP,cb2=b*NP;const v=cum[cb2+p]-cum[ca2+p];const c=snowCol(v);if(c){r=c[0];g=c[1];bl=c[2];al=200;}}
+    else if(mode==='depth'){const cb2=b*NP;const v=cum[cb2+p];if(v>=1){const x=Math.min(1,v/300);r=220-x*180|0;g=235-x*95|0;bl=255-x*30|0;al=180;}}
+    else if(mode==='temp'){let su=0,c=0;for(let t=a;t<b;t++){su+=tv(t,p);c++;}const v=su/Math.max(1,c);const tc2=tempCol(v);r=tc2[0];g=tc2[1];bl=tc2[2];al=170;}
+    else if(mode==='wind'){let su=0,c=0;for(let t=a;t<b;t++){su+=wg_(t,p)*3.6;c++;}const v=su/Math.max(1,c);if(v>=1){const c2=rampBYR(v/70);r=c2[0];g=c2[1];bl=c2[2];al=160;}}
+    od[o]=r;od[o+1]=g;od[o+2]=bl;od[o+3]=al;}
+  ox.putImageData(oi,0,0);return oc.toDataURL();}
+function update3dOverlay(){if(!map3d||!is3d)return;const sel=document.getElementById('overlay3d').value;
+  if(sel==='none'){if(map3d.getLayer('data-overlay'))map3d.setLayoutProperty('data-overlay','visibility','none');return;}
+  const url=make3dOverlay(sel);
+  if(map3d.getSource('data-src')){map3d.getSource('data-src').updateImage({url:url,coordinates:[[loMin,laMax],[loMax,laMax],[loMax,laMin],[loMin,laMin]]});}
+  else{map3d.addSource('data-src',{type:'image',url:url,coordinates:[[loMin,laMax],[loMax,laMax],[loMax,laMin],[loMin,laMin]]});
+    map3d.addLayer({id:'data-overlay',type:'raster',source:'data-src',paint:{'raster-opacity':0.75,'raster-fade-duration':0}});}
+  if(map3d.getLayer('data-overlay'))map3d.setLayoutProperty('data-overlay','visibility','visible');}
+function init3D(){
+  const wrap=document.getElementById('three-wrap');wrap.style.display='block';is3d=true;
+  const lc=map.getCenter(),lz=map.getZoom();
+  map3d=new maplibregl.Map({container:'map3d',
+    style:{version:8,
+      sources:{
+        'swisstopo':{type:'raster',tiles:['https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe-winter/default/current/3857/{z}/{x}/{y}.jpeg'],tileSize:256,attribution:'© swisstopo'},
+        'hillshade-tiles':{type:'raster',tiles:['https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissalti3d-reliefschattierung_monodirektional/default/current/3857/{z}/{x}/{y}.png'],tileSize:256},
+        'terrain-dem':{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',maxzoom:15}},
+      layers:[
+        {id:'swisstopo-base',type:'raster',source:'swisstopo',paint:{'raster-opacity':0.15}},
+        {id:'hillshade',type:'raster',source:'hillshade-tiles',paint:{'raster-opacity':1.0}}],
+      terrain:{source:'terrain-dem',exaggeration:exag3d}},
+    center:[lc.lng,lc.lat],zoom:lz,pitch:60,bearing:-20,maxPitch:85,
+    maxBounds:[[loMin-0.5,laMin-0.3],[loMax+0.5,laMax+0.3]],
+    touchZoomRotate:true,touchPitch:true,dragRotate:true});
+  map3d.addControl(new maplibregl.NavigationControl({visualizePitch:true,showCompass:true}),'top-left');
+  map3d.addControl(new maplibregl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:false}),'top-left');
+  map3d.scrollZoom.setWheelZoomRate(1/200);
+  document.getElementById('btn3d').classList.add('active');
+  map3d.on('load',()=>update3dOverlay());
+  map3d.on('moveend',sync3dTo2d);}
+function close3D(){
+  if(map3d){const c=map3d.getCenter(),z=map3d.getZoom();map.setView([c.lat,c.lng],z,{animate:false});}
+  is3d=false;if(map3d){map3d.remove();map3d=null;}
+  document.getElementById('three-wrap').style.display='none';
+  document.getElementById('btn3d').classList.remove('active');}
+document.getElementById('btn3d').onclick=e=>{e.stopPropagation();if(is3d)close3D();else init3D();};
+document.getElementById('btn3dClose').onclick=()=>close3D();
+document.getElementById('exag3d').onclick=()=>{if(!map3d)return;exag3d=exag3d>=2.5?1.0:exag3d+0.5;
+  map3d.setTerrain({source:'terrain-dem',exaggeration:exag3d});
+  document.getElementById('exag3d').textContent='Exag '+exag3d.toFixed(1)+'×';};
+document.getElementById('mapOpac3d').oninput=function(){if(!map3d)return;const v=this.value/100;
+  map3d.setPaintProperty('swisstopo-base','raster-opacity',v);
+  document.getElementById('mapOpacLbl').textContent=this.value+'%';};
+document.getElementById('overlay3d').onchange=()=>update3dOverlay();
+// --- Location Search (GeoAdmin API) ---
+(function(){const inp=document.getElementById('searchIn'),res=document.getElementById('searchRes');
+  let debT=null,selIdx=-1,items=[];
+  inp.addEventListener('input',()=>{clearTimeout(debT);const q=inp.value.trim();if(q.length<2){res.style.display='none';items=[];return;}
+    debT=setTimeout(()=>{fetch('https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText='+encodeURIComponent(q)+'&limit=6&sr=4326')
+      .then(r=>r.json()).then(d=>{items=d.results||[];selIdx=-1;if(!items.length){res.style.display='none';return;}
+        res.innerHTML=items.map((it,i)=>{const a=it.attrs;return`<div class="sr" data-i="${i}"><div>${a.label.replace(/<[^>]+>/g,'')}</div><div class="sub">${a.detail||''}</div></div>`;}).join('');
+        res.style.display='block';
+        res.querySelectorAll('.sr').forEach(el=>el.onclick=()=>pickResult(parseInt(el.dataset.i)));
+      }).catch(()=>{});},250);});
+  inp.addEventListener('keydown',e=>{if(!items.length)return;
+    if(e.key==='ArrowDown'){e.preventDefault();selIdx=Math.min(items.length-1,selIdx+1);hlSel();}
+    else if(e.key==='ArrowUp'){e.preventDefault();selIdx=Math.max(0,selIdx-1);hlSel();}
+    else if(e.key==='Enter'&&selIdx>=0){e.preventDefault();pickResult(selIdx);}
+    else if(e.key==='Escape'){res.style.display='none';}});
+  function hlSel(){res.querySelectorAll('.sr').forEach((el,i)=>el.classList.toggle('sel',i===selIdx));}
+  function pickResult(i){const a=items[i].attrs;res.style.display='none';
+    const lon=a.lon||a.x,lat=a.lat||a.y;
+    inp.value=a.label.replace(/<[^>]+>/g,'');
+    map.flyTo([lat,lon],14,{duration:1.8});
+    if(map3d&&is3d)map3d.flyTo({center:[lon,lat],zoom:14,duration:2000});
+    L.circle([lat,lon],{radius:80,color:'#5b9cf5',weight:2,fillColor:'#5b9cf5',fillOpacity:.25}).addTo(map).on('add',function(){const c=this;setTimeout(()=>map.removeLayer(c),4000);});}
+  document.addEventListener('click',e=>{if(!document.getElementById('searchWrap').contains(e.target))res.style.display='none';});
+})();
+// --- 2D ↔ 3D Coordinate Sync ---
+let syncLock=false;
+function sync2dTo3d(){if(!map3d||!is3d||syncLock)return;syncLock=true;
+  const c=map.getCenter(),z=map.getZoom();
+  map3d.jumpTo({center:[c.lng,c.lat],zoom:z});syncLock=false;}
+function sync3dTo2d(){if(!map3d||syncLock)return;syncLock=true;
+  const c=map3d.getCenter(),z=map3d.getZoom();
+  map.setView([c.lat,c.lng],z,{animate:false});syncLock=false;}
+map.on('moveend',sync2dTo3d);
+// --- Intro Animation ---
+setTimeout(()=>{const el=document.getElementById('intro');el.classList.add('hide');setTimeout(()=>el.remove(),900);},2200);
 renderAll();
 </script></body></html>
 """

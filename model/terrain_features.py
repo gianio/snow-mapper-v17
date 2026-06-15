@@ -26,21 +26,38 @@ class TerrainFeatures:
     curvature: np.ndarray  # normiert, dimensionslos
 
 
+def _horn_gradients(z: np.ndarray, res: float):
+    """Horn's method (3x3 weighted Sobel kernel) for dz/dx and dz/dy.
+
+    Returns (dz_dx, dz_dy_row) where dz_dx is positive eastward and
+    dz_dy_row is positive southward (for a north-up raster).
+    """
+    a = z[:-2, :-2]; b = z[:-2, 1:-1]; c = z[:-2, 2:]
+    d = z[1:-1, :-2];                    f = z[1:-1, 2:]
+    g = z[2:,   :-2]; h = z[2:,  1:-1]; i = z[2:,  2:]
+    dz_dx = ((c + 2*f + i) - (a + 2*d + g)) / (8 * res)
+    dz_dy = ((g + 2*h + i) - (a + 2*b + c)) / (8 * res)
+    return dz_dx, dz_dy
+
+
 def compute_terrain_features(elevation: np.ndarray, res: float) -> TerrainFeatures:
-    """Berechnet Slope, Aspect und normierte Kruemmung aus dem DEM."""
+    """Berechnet Slope, Aspect und normierte Kruemmung aus dem DEM.
+
+    Uses Horn's method (1981) for slope and aspect — the standard 3x3
+    weighted gradient used by GDAL gdaldem, ArcGIS, and QGIS.
+    """
     z = _fill_nan(elevation)
 
-    grad_row, grad_col = np.gradient(z, res)
-    gx_east = grad_col
-    gy_north = -grad_row
+    dz_dx, dz_dy = _horn_gradients(z, res)
+    # Pad back to original shape (replicate border)
+    gx = np.pad(dz_dx, 1, mode='edge')   # east gradient
+    gy = np.pad(dz_dy, 1, mode='edge')   # south gradient (north-up raster)
 
-    slope_rad = np.arctan(np.hypot(gx_east, gy_north))
+    slope_rad = np.arctan(np.hypot(gx, gy))
 
-    # Aspect: Richtung des Gefaelles (downhill = -Gradient), im Uhrzeigersinn
-    # von Nord. atan2(Ost-Komponente, Nord-Komponente).
-    aspect_rad = np.arctan2(-gx_east, -gy_north)
-    aspect_deg = np.degrees(aspect_rad) % 360.0
-    # Flachstellen erhalten Aspect 0 (irrelevant, da slope ~ 0).
+    # Aspect: downslope direction, clockwise from North.
+    # For north-up: east component of downslope = -gx, north component = gy
+    aspect_deg = np.degrees(np.arctan2(-gx, gy)) % 360.0
     aspect_deg = np.where(slope_rad < 1e-4, 0.0, aspect_deg)
 
     curvature = _normalized_curvature(z, res)
@@ -84,13 +101,14 @@ def _fill_nan(z: np.ndarray) -> np.ndarray:
 
 def hillshade(elevation: np.ndarray, res: float, az_deg: float = 315.0,
               alt_deg: float = 45.0) -> np.ndarray:
-    """Standard-Schummerung/Schattenrelief (0..1) aus dem DEM.
+    """Hillshade (0..1) using Horn's method gradients.
 
-    az_deg : Sonnen-Azimut (woher das Licht kommt), alt_deg : Sonnenhoehe.
+    az_deg : Sun azimuth (light source direction), alt_deg : Sun altitude.
     """
     z = _fill_nan(elevation)
-    grad_row, grad_col = np.gradient(z, res)
-    gx, gy = grad_col, -grad_row
+    dz_dx, dz_dy = _horn_gradients(z, res)
+    gx = np.pad(dz_dx, 1, mode='edge')
+    gy = np.pad(dz_dy, 1, mode='edge')
     slope = np.arctan(np.hypot(gx, gy))
     aspect = np.arctan2(-gx, gy)
     az = np.radians(360.0 - az_deg + 90.0)

@@ -436,3 +436,87 @@ python main.py --dem /path/to/dem.tif --hours 24 --plot --overlay
 - This is an estimation and visualisation tool, **not** a measurement or avalanche warning system.
 - Absolute snow amounts are heuristic and not event-calibrated. Use SLF validation (`validation/`) for bias assessment.
 - The free Open-Meteo tier has rate limits. For many grid points, use a coarser `--weather-step`.
+
+---
+
+## 6. Licensing & Legal Requirements
+
+All data sources used by this project are listed below with their respective licences and usage conditions. Users of this software must comply with all applicable terms.
+
+### 6.1 Open-Meteo
+
+| Item | Detail |
+|---|---|
+| **Provider** | [Open-Meteo GmbH](https://open-meteo.com/) |
+| **Licence** | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) for non-commercial use. Commercial use requires a paid subscription. |
+| **Attribution** | "Weather data by [Open-Meteo.com](https://open-meteo.com/)" must be displayed when data is shown publicly. |
+| **Terms** | [https://open-meteo.com/en/terms](https://open-meteo.com/en/terms) |
+| **Rate limits** | Free tier: rate-limited (HTTP 429). Do not abuse the API; keep request frequency reasonable. |
+| **Underlying models** | Open-Meteo aggregates data from national weather services (DWD ICON, MeteoSwiss, ECMWF, NOAA GFS, etc.), each with their own open data policies. The Open-Meteo CC BY 4.0 licence applies to the API output. |
+
+### 6.2 swisstopo
+
+| Item | Detail |
+|---|---|
+| **Provider** | [Swiss Federal Office of Topography (swisstopo)](https://www.swisstopo.admin.ch/) |
+| **Products used** | swissALTIRegio (DEM), pixelkarte-farbe (basemap tiles), hangneigung-ueber_30 (slope classes), swissalti3d-reliefschattierung_monodirektional (hillshade) |
+| **Licence** | **Open Government Data (OGD)** since 1 March 2021 — free for commercial and non-commercial use. See [Swiss Ordinance on Geoinformation (GeoIV), Art. 20a](https://www.admin.ch/opc/en/classified-compilation/20071088/index.html). |
+| **Attribution** | "© swisstopo" must appear on all maps and derived products. |
+| **Terms of use** | [https://www.swisstopo.admin.ch/en/terms-of-use](https://www.swisstopo.admin.ch/en/terms-of-use) |
+| **WMTS terms** | Tile services (WMTS) may be used freely, but swisstopo requests reasonable use and a User-Agent header. High-volume automated scraping is discouraged. See [geo.admin.ch Terms of Use](https://www.geo.admin.ch/en/terms-of-use). |
+
+### 6.3 Copernicus DEM (GLO-30)
+
+| Item | Detail |
+|---|---|
+| **Provider** | [European Space Agency (ESA) / Copernicus](https://spacedata.copernicus.eu/) |
+| **Product** | Copernicus DEM GLO-30 (30 m global DEM) |
+| **Licence** | Free and open access under [Copernicus Data Space Ecosystem Terms](https://dataspace.copernicus.eu/terms-and-conditions). Redistribution allowed with attribution. |
+| **Attribution** | "Contains modified Copernicus Sentinel data [year]" or "Copernicus DEM — GLO-30, provided under the Copernicus programme." |
+| **Hosting** | AWS Open Data Registry (free download, no API key). Also available via Copernicus Data Space Ecosystem. |
+| **Restrictions** | No restrictions on commercial or non-commercial use. Must not imply ESA endorsement. |
+
+### 6.4 SLF / IMIS Station Data
+
+| Item | Detail |
+|---|---|
+| **Provider** | [WSL Institute for Snow and Avalanche Research SLF](https://www.slf.ch/) (part of WSL / ETH domain) |
+| **Data** | IMIS automatic measurement stations: snow height, air temperature, snow surface temperature, wind speed/direction |
+| **Licence** | **CC BY 4.0** — [https://creativecommons.org/licenses/by/4.0/](https://creativecommons.org/licenses/by/4.0/) |
+| **Attribution** | "Data: SLF/WSL, CC BY 4.0" |
+| **Terms** | [https://www.slf.ch/en/about-the-slf/legal-information.html](https://www.slf.ch/en/about-the-slf/legal-information.html) |
+| **Restrictions** | Data is provided for informational purposes. It is explicitly **not** an avalanche warning and must not be presented as such. The official Swiss avalanche bulletin is published at [whiterisk.ch](https://whiterisk.ch/). |
+
+### 6.5 Leaflet
+
+| Item | Detail |
+|---|---|
+| **Library** | [Leaflet](https://leafletjs.com/) (JS mapping library) |
+| **Licence** | [BSD 2-Clause](https://github.com/Leaflet/Leaflet/blob/main/LICENSE) |
+| **Attribution** | "Leaflet" link in map attribution (automatically included). |
+
+### 6.6 Three.js
+
+| Item | Detail |
+|---|---|
+| **Library** | [Three.js](https://threejs.org/) (3D rendering library) |
+| **Licence** | [MIT](https://github.com/mrdoob/three.js/blob/dev/LICENSE) |
+| **Restrictions** | None beyond MIT licence terms (include copyright notice in distributions). |
+
+### 6.7 Summary of Attribution Requirements
+
+When displaying output from this tool publicly (e.g., screenshots, embedded maps, reports), the following attribution line covers all sources:
+
+```
+© swisstopo | Weather data by Open-Meteo.com | Copernicus DEM GLO-30 | Data: SLF/WSL (CC BY 4.0) | Map: Leaflet
+```
+
+This attribution is already included in the HTML output's map attribution string.
+
+### 6.8 Disclaimer
+
+This software is provided for research and personal use. It is **not** an official weather, snow, or avalanche forecast. Users must not rely on it for safety-critical decisions. Always consult official sources:
+
+- **Avalanche bulletin (Switzerland):** [whiterisk.ch](https://whiterisk.ch/) / [slf.ch](https://www.slf.ch/)
+- **Weather forecast:** [meteoswiss.ch](https://www.meteoswiss.ch/)
+- **Snow reports:** Local ski resort or tourist office
