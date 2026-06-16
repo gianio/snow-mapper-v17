@@ -549,7 +549,11 @@ def export_interactive_html(data, out_html: Path) -> Path:
 
 
 _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#0a0e1a"/>
+<meta name="mobile-web-app-capable" content="yes"/>
 <title>Swiss Snow Model</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -558,7 +562,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <style>
  :root{--fg:#e8ecf1;--fg2:#c0c8d4;--mut:#8694a6;--acc:#5b9cf5;--acc2:#3d7de0;--bd:rgba(255,255,255,.12);--glass:rgba(15,20,35,.72);--glass2:rgba(15,20,35,.85);--glow:rgba(91,156,245,.15)}
  *{box-sizing:border-box}
- html,body{margin:0;height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--fg)}
+ html,body{margin:0;height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--fg);-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
  #map{position:absolute;inset:0}
  #flow{position:absolute;inset:0;z-index:450;pointer-events:none}
  .panel{position:absolute;z-index:1000;top:12px;left:12px;width:392px;max-width:calc(100vw - 24px);
@@ -582,7 +586,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #three-wrap .ctrl3d{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);z-index:2001;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px)}
  #three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:6px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);cursor:pointer;font-size:12px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);touch-action:manipulation}
  #three-wrap .ctrl3d button:hover{border-color:var(--acc);color:var(--fg)}
- @media (max-width:560px){#three-wrap .ctrl3d{bottom:16px;gap:4px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:8px 10px;font-size:11px;min-height:40px}#btn3dClose{top:8px;right:8px;padding:10px 14px}}
+ @media (max-width:560px){#three-wrap .ctrl3d{bottom:calc(16px + env(safe-area-inset-bottom,0px));gap:5px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 12px;font-size:12px;min-height:44px;border-radius:10px}#btn3dClose{top:calc(8px + env(safe-area-inset-top,0px));right:8px;padding:10px 16px;font-size:14px;border-radius:12px}}
  #btn3d{font-size:12px;padding:3px 10px;border-radius:8px;border:1px solid var(--bd);background:rgba(255,255,255,.07);color:var(--fg2);cursor:pointer}
  #btn3d:hover,#btn3d.active{border-color:var(--acc);color:var(--acc)}
  .seg button.tact{background:var(--acc2);color:#fff;border-color:var(--acc);font-weight:600;box-shadow:0 0 8px var(--glow)}
@@ -594,17 +598,18 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .legend i{display:inline-block;width:13px;height:13px;margin-right:6px;vertical-align:-2px;border-radius:2px}
  .collapsed .pbody{display:none}
  .stn{background:rgba(15,20,35,.7);border:2px solid var(--acc);border-radius:11px;padding:1px 6px;font-size:11px;font-weight:700;color:var(--acc);text-align:center;box-shadow:0 1px 6px rgba(0,0,0,.5);white-space:nowrap}
- .scl{position:relative;width:104px;height:52px;font-size:10px;font-weight:700;text-align:center;pointer-events:none}
- .scl>div{position:absolute;left:0;right:0;text-shadow:0 0 3px rgba(0,0,0,.8),0 0 6px rgba(0,0,0,.5);white-space:nowrap}
- .scl .s-t{top:-1px;color:#6bc5f0}.scl .s-b{bottom:-1px;color:#f07070}
- .scl .s-row{top:17px;display:flex;align-items:center;justify-content:center;gap:5px}
+ .scl{position:relative;width:110px;height:56px;font-size:10px;font-weight:700;text-align:center;pointer-events:none}
+ .scl>div{position:absolute;left:0;right:0;white-space:nowrap}
+ .scl .s-pill{display:inline-block;background:rgba(8,12,28,.7);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);border-radius:6px;padding:1px 5px;box-shadow:0 1px 4px rgba(0,0,0,.4),inset 0 0 0 1px rgba(255,255,255,.08)}
+ .scl .s-t{top:-2px;color:#6bc5f0}.scl .s-b{bottom:-2px;color:#f07070}
+ .scl .s-row{top:17px;display:flex;align-items:center;justify-content:center;gap:4px}
  .scl .s-l{color:#b0c4de}.scl .s-r{color:#70d890}
- .scl .s-c{pointer-events:auto;background:rgba(15,20,35,.75);border:2px solid var(--acc);border-radius:9px;color:var(--acc);padding:0 4px;font-size:11px;box-shadow:0 1px 5px rgba(0,0,0,.45);cursor:pointer}
- .scard{font:12.5px system-ui;line-height:1.5;min-width:150px;color:var(--fg)}
- .scard b{font-size:13px}
- .scard .g{display:grid;grid-template-columns:auto auto;gap:2px 14px;margin-top:6px}
+ .scl .s-c{pointer-events:auto;background:rgba(8,12,28,.82);border:2px solid var(--acc);border-radius:10px;color:var(--acc);padding:1px 7px;font-size:12px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.5),0 0 0 3px rgba(91,156,245,.12);cursor:pointer;letter-spacing:.02em}
+ .scard{font:13px system-ui;line-height:1.6;min-width:160px;color:var(--fg)}
+ .scard b{font-size:14px}
+ .scard .g{display:grid;grid-template-columns:auto auto;gap:3px 16px;margin-top:6px}
  .scard .k{color:var(--mut)}
- .wn{font-size:9.5px;color:#c0d0e0;text-shadow:0 0 3px rgba(0,0,0,.8);font-weight:600}
+ .wn{font-size:10px;color:#d0ddf0;font-weight:700;display:inline-block;background:rgba(8,12,28,.65);border-radius:5px;padding:0 4px;box-shadow:0 1px 3px rgba(0,0,0,.35)}
  .icard{font:12.5px system-ui;line-height:1.5;min-width:200px;max-width:280px;color:var(--fg)}
  .icard b{font-size:13px}
  .icard .ig{display:grid;grid-template-columns:auto auto;gap:2px 14px;margin-top:6px}
@@ -613,9 +618,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .icard .ipow{margin-top:6px;padding:4px 8px;border-radius:6px;font-weight:600;font-size:12px;text-align:center}
  .icard .ipow.yes{background:rgba(91,156,245,.2);color:#8ec4ff}
  .icard .ipow.no{background:rgba(255,100,100,.15);color:#ff9090}
- .leaflet-popup-content-wrapper{background:var(--glass2)!important;backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important;border:1px solid var(--bd)!important;color:var(--fg)!important;box-shadow:0 6px 24px rgba(0,0,0,.5)!important}
+ .leaflet-popup-content-wrapper{background:var(--glass2)!important;backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important;border:1px solid var(--bd)!important;color:var(--fg)!important;box-shadow:0 6px 24px rgba(0,0,0,.5)!important;border-radius:14px!important}
+ .leaflet-popup-content{margin:12px 14px!important}
  .leaflet-popup-tip{background:var(--glass2)!important}
- .leaflet-popup-close-button{color:var(--mut)!important}
+ .leaflet-popup-close-button{color:var(--mut)!important;font-size:20px!important;width:28px!important;height:28px!important;line-height:28px!important}
  .leaflet-popup-close-button:hover{color:var(--fg)!important}
  #searchWrap{position:absolute;z-index:1100;top:12px;right:12px;width:260px;max-width:calc(100vw - 420px)}
  #searchWrap input{width:100%;padding:10px 14px 10px 36px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:var(--fg);font-size:14px;outline:none;box-shadow:0 4px 20px rgba(0,0,0,.3)}
@@ -635,11 +641,38 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  @keyframes introUp{to{opacity:1;transform:translateY(0)}}
  @keyframes introBar{to{opacity:1;transform:scaleX(1)}}
  @media (max-width:560px){
-   .panel{top:auto;bottom:0;left:0;right:0;width:100%;max-width:100%;border-radius:20px 20px 0 0;max-height:55vh}
-   .phead{padding:10px 16px}.phead::before{content:'';display:block;width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin:0 auto 8px}
-   .pbody{max-height:42vh;padding-bottom:env(safe-area-inset-bottom,12px)}
-   .legend{font-size:11px;max-width:170px;bottom:auto;top:10px;left:8px}
-   #searchWrap{top:auto;bottom:12px;right:12px;left:12px;width:auto;max-width:100%}
+   .panel{top:auto;bottom:0;left:0;right:0;width:100%;max-width:100%;border-radius:20px 20px 0 0;max-height:60vh;
+     padding-bottom:env(safe-area-inset-bottom,0px)}
+   .phead{padding:12px 16px 8px}.phead::before{content:'';display:block;width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin:0 auto 8px}
+   .phead h3{font-size:15px}
+   .pbody{max-height:46vh;padding:0 14px 14px;-webkit-overflow-scrolling:touch}
+   .seg{gap:5px}.seg button{padding:9px 11px;font-size:12px;min-height:40px;border-radius:8px}
+   #layer{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px}
+   #layer::-webkit-scrollbar{display:none}
+   #layer button{flex-shrink:0}
+   .legend{font-size:11px;max-width:160px;bottom:auto;top:10px;left:8px;padding:8px 10px;border-radius:10px}
+   #searchWrap{top:10px;right:8px;left:auto;width:calc(100vw - 180px);max-width:220px}
+   #searchWrap input{padding:9px 12px 9px 32px;font-size:13px;border-radius:10px}
+   #searchWrap .icn{left:10px;font-size:13px}
+   #searchRes{max-height:200px}
+   .scl{width:96px;height:50px;font-size:9px}
+   .scl .s-c{font-size:11px;padding:1px 5px}
+   .scl .s-pill{font-size:9px;padding:0 4px}
+   .winlbl{font-size:12px}
+   .icard{font-size:12px;max-width:260px;min-width:180px}
+   .scard{font-size:12px;min-width:140px}
+   .leaflet-popup-content-wrapper{max-width:calc(100vw - 40px)!important}
+   #btn3d{padding:6px 12px;font-size:13px;min-height:36px}
+   #presets{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px}
+   #presets::-webkit-scrollbar{display:none}
+   #presets button{flex-shrink:0;font-size:12px}
+ }
+ @media (max-width:380px){
+   .panel{max-height:55vh}
+   #searchWrap{width:calc(100vw - 160px);max-width:180px}
+   .scl{width:82px;height:44px;font-size:8px}
+   .scl .s-c{font-size:10px}
+   .legend{max-width:130px;font-size:10px}
  }
 </style></head><body>
 <div id="intro"><h1>Swiss Snow Model</h1><div class="sub">Interactive Snow Forecast Map</div><div class="bar"></div></div>
@@ -963,9 +996,10 @@ function renderStations(){stnGroup.clearLayers();if(!showStn)return;
     else if(layer=="temp"||layer=="tsurf"){lbl=ta||"–";top=tss?("Surf "+tss):"";ll="";lr=hs!="–"?hs+"cm":"";bot="";}
     else if(layer=="sun"||layer=="rad"||layer=="radsun"){lbl=s.elev+"m";top="";ll="";lr="";bot=ta||"";}
     else{lbl=hs;top=tss;ll=wind;lr=nsv;bot=ta;}
-    const html=`<div class="scl"><div class="s-t">${top}</div>`+
-      `<div class="s-row"><span class="s-l">${ll}</span><span class="s-c">${lbl}</span><span class="s-r">${lr}</span></div>`+
-      `<div class="s-b">${bot}</div></div>`;
+    const pill=(v,c)=>v?`<span class="s-pill" style="color:${c}">${v}</span>`:'';
+    const html=`<div class="scl"><div class="s-t">${pill(top,'#6bc5f0')}</div>`+
+      `<div class="s-row">${pill(ll,'#b0c4de')}<span class="s-c">${lbl}</span>${pill(lr,'#70d890')}</div>`+
+      `<div class="s-b">${pill(bot,'#f07070')}</div></div>`;
     const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:html,iconSize:[104,52],iconAnchor:[52,26]}),zIndexOffset:500});
     m.bindPopup(stationCard(s),{maxWidth:260});m.addTo(stnGroup);}
 }
@@ -1203,6 +1237,10 @@ function sync3dTo2d(){if(!map3d||syncLock)return;syncLock=true;
 map.on('moveend',sync2dTo3d);
 // --- Intro Animation ---
 setTimeout(()=>{const el=document.getElementById('intro');el.classList.add('hide');setTimeout(()=>el.remove(),900);},2200);
+// --- Mobile: auto-collapse panel, start with map visible ---
+if(window.innerWidth<=560){
+  const p=document.getElementById('panel');p.classList.add('collapsed');
+  document.getElementById('tog').textContent='▸';}
 renderAll();
 </script></body></html>
 """
