@@ -6,7 +6,7 @@ on:
   schedule:
     - cron: "0 3 * * *"    # 05:00 Swiss summer time (CEST)
     - cron: "0 9 * * *"    # 11:00 Swiss summer time
-    - cron: "26 13 * * *"   # 15:00 Swiss summer time
+    - cron: "27 13 * * *"   # 15:00 Swiss summer time
     - cron: "0 16 * * *"   # 18:00 Swiss summer time
   workflow_dispatch:
 
