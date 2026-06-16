@@ -47,9 +47,7 @@ def main() -> None:
         weather_step_deg=args.weather_step,
         n_stations=args.stations,
     )
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    tag = date or "today"
-    out = export_interactive_html(data, OUTPUT_DIR / f"interactive_{tag}.html")
+    out = export_interactive_html(data, Path("index.html"))
     print(f"[OUT] Interaktive Karte: {out}")
     print("      Band ziehen (max +/-5 Tage), Layer Schnee/Temp/Wind, Stat Mittel/Max/Min.")
 

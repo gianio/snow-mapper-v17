@@ -43,7 +43,7 @@ jobs:
         run: |
           python run_interactive.py
           mkdir -p dist
-          cp outputs/interactive_today.html dist/index.html
+          mv index.html dist/
 
       - uses: actions/upload-pages-artifact@v5
         with:

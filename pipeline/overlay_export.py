@@ -28,18 +28,17 @@ from PIL import Image
 
 # SLF-aehnliche, FESTE Klassen fuer Neuschnee [cm] - identisch fuer jede Karte,
 # damit das Ergebnis direkt mit der SLF-Neuschneekarte vergleichbar ist.
-SLF_BOUNDS = [1, 5, 10, 20, 30, 40, 60, 80, 100, 150, 300]  # cm-Grenzen
+SLF_BOUNDS = [1, 5, 10, 20, 30, 50, 75, 100, 150, 300]  # cm-Grenzen (SLF-nah)
 SLF_COLORS = [
-    "#d6f5b8",  # 1-5    sehr hell gruen
-    "#9fdd8c",  # 5-10   hellgruen
-    "#5cc98a",  # 10-20  gruen
-    "#27a89b",  # 20-30  tuerkis
-    "#2f8fc7",  # 30-40  cyan-blau
-    "#2a62b5",  # 40-60  blau
-    "#26358c",  # 60-80  dunkelblau
-    "#5b2a8c",  # 80-100 violett
-    "#8c2d7e",  # 100-150 magenta
-    "#7a0a1f",  # >=150  dunkelrot
+    "#e8f5e9",  # 1-5    sehr hell gruen
+    "#a5d6a7",  # 5-10   hellgruen
+    "#66bb6a",  # 10-20  gruen
+    "#42a5f5",  # 20-30  blau
+    "#1e88e5",  # 30-50  mittelblau
+    "#1565c0",  # 50-75  dunkelblau
+    "#7b1fa2",  # 75-100 violett
+    "#e91e63",  # 100-150 pink/magenta
+    "#b71c1c",  # >=150  dunkelrot
 ]
 _NODATA = -9999.0
 
