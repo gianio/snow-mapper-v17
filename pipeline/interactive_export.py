@@ -570,6 +570,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #layerBar button{border:1px solid var(--bd);background:rgba(255,255,255,.08);border-radius:10px;padding:6px 12px;cursor:pointer;font-size:12px;min-height:34px;color:var(--fg2);transition:.15s;backdrop-filter:blur(6px);flex-shrink:0;white-space:nowrap}
  #layerBar button:hover{border-color:var(--acc);background:rgba(255,255,255,.14)}
  #layerBar button.active{background:var(--acc2);color:#fff;border-color:var(--acc);font-weight:600;box-shadow:0 0 10px var(--glow)}
+ #statBar{position:absolute;z-index:999;top:42px;left:0;right:0;display:none;gap:5px;padding:4px 12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,rgba(10,14,26,.55) 0%,transparent 100%);align-items:center}
+ #statBar::-webkit-scrollbar{display:none}
+ #statBar .cap{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);flex-shrink:0}
+ #statBar button{border:1px solid var(--bd);background:rgba(255,255,255,.08);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:11px;min-height:28px;color:var(--fg2);transition:.15s;backdrop-filter:blur(6px);flex-shrink:0;white-space:nowrap}
+ #statBar button:hover{border-color:var(--acc);background:rgba(255,255,255,.14)}
+ #statBar button.active{background:var(--acc2);color:#fff;border-color:var(--acc);font-weight:600}
  #bottomPanel{position:absolute;z-index:1000;bottom:0;left:0;right:0;
    background:var(--glass);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border-top:1px solid var(--bd);box-shadow:0 -4px 24px rgba(0,0,0,.4);transition:max-height .3s ease;padding-bottom:env(safe-area-inset-bottom,0px)}
  #bottomPanel .drag{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin:6px auto 4px}
@@ -590,13 +596,16 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #three-wrap .maplibregl-canvas{outline:none}
  #three-wrap .maplibregl-map{width:100%;height:100%}
  #btn3dClose{position:absolute;top:14px;right:14px;z-index:2001;padding:7px 16px;border-radius:10px;border:1px solid var(--bd);background:var(--glass);color:var(--fg);cursor:pointer;font-size:13px;font-weight:600;backdrop-filter:blur(10px)}
- #three-wrap .ctrl3d{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);z-index:2001;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px)}
+ #three-wrap .ctrl3d{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);z-index:2001;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px)}
  #three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:6px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);cursor:pointer;font-size:12px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);touch-action:manipulation}
  #three-wrap .ctrl3d button:hover{border-color:var(--acc);color:var(--fg)}
  @media (max-width:560px){#three-wrap .ctrl3d{bottom:calc(16px + env(safe-area-inset-bottom,0px));gap:5px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 12px;font-size:12px;min-height:44px;border-radius:10px}#btn3dClose{top:calc(8px + env(safe-area-inset-top,0px));right:8px;padding:10px 16px;font-size:14px;border-radius:12px}}
  .sub{font-size:12px;color:var(--mut)}
  .asp-crisp img{image-rendering:pixelated;image-rendering:crisp-edges}
- .legend{position:absolute;z-index:950;bottom:var(--btm-h,80px);left:12px;background:var(--glass);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);border:1px solid var(--bd);padding:8px 10px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.35);font-size:11px;max-width:200px;line-height:1.5;color:var(--fg2)}
+ .legend{position:absolute;z-index:950;bottom:calc(var(--btm-h,80px) + 40px);left:12px;background:var(--glass);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);border:1px solid var(--bd);padding:8px 10px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.35);font-size:11px;max-width:200px;line-height:1.5;color:var(--fg2);display:none}
+ .legend.show{display:block}
+ #legendBtn{position:absolute;z-index:960;bottom:var(--btm-h,80px);left:12px;width:34px;height:34px;border-radius:10px;border:1px solid var(--bd);background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:var(--fg2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+ #legendBtn:hover,#legendBtn.active{border-color:var(--acc);color:var(--acc)}
  .legend i{display:inline-block;width:12px;height:12px;margin-right:5px;vertical-align:-2px;border-radius:2px}
  .stn{background:rgba(15,20,35,.7);border:2px solid var(--acc);border-radius:11px;padding:1px 6px;font-size:11px;font-weight:700;color:var(--acc);text-align:center;box-shadow:0 1px 6px rgba(0,0,0,.5);white-space:nowrap}
  .scl{position:relative;width:110px;height:56px;font-size:10px;font-weight:700;text-align:center;pointer-events:none}
@@ -631,6 +640,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #searchWrap input:focus{border-color:var(--acc);background:var(--glass);box-shadow:0 0 0 3px var(--glow)}
  #btn3dFloat{position:absolute;z-index:1000;bottom:var(--btm-h,80px);right:12px;padding:8px 14px;border-radius:10px;border:1px solid var(--bd);background:var(--glass);backdrop-filter:blur(12px);color:var(--fg2);cursor:pointer;font-size:13px;font-weight:600}
  #btn3dFloat:hover,#btn3dFloat.active{border-color:var(--acc);color:var(--acc)}
+ #stnToggleWrap{position:absolute;z-index:1050;top:82px;right:12px}
+ #stnToggleWrap label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--fg2);cursor:pointer;padding:6px 10px;border-radius:10px;border:1px solid var(--bd);background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+ #stnToggleWrap input{width:16px;height:16px;accent-color:var(--acc)}
  #searchWrap .icn{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--mut);font-size:15px}
  #searchRes{position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--glass2);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--bd);border-radius:12px;overflow:hidden;display:none;max-height:260px;overflow-y:auto;box-shadow:0 8px 28px rgba(0,0,0,.5)}
  #searchRes .sr{padding:10px 14px;cursor:pointer;font-size:13px;color:var(--fg2);border-bottom:1px solid rgba(255,255,255,.06);transition:.12s}
@@ -658,6 +670,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    .leaflet-popup-content-wrapper{max-width:calc(100vw - 40px)!important}
    .legend{max-width:150px;font-size:10px}
    #btn3dFloat{padding:6px 12px;font-size:12px}
+   #statBar{top:38px;padding:3px 8px;gap:4px}
+   #statBar button{padding:3px 8px;font-size:10px;min-height:24px}
+   #stnToggleWrap{top:74px;right:8px}
+   #stnToggleWrap label{font-size:11px;padding:5px 8px}
+   #legendBtn{width:30px;height:30px;font-size:14px}
  }
  @media (max-width:380px){
    #searchWrap{max-width:160px}
@@ -683,12 +700,18 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button data-l="skiable">Skiable</button>
   <button data-l="powder">Powder</button>
 </div>
+<div id="statBar"><span class="cap">Stat</span><div class="seg" id="stat">
+<button data-s="avg" class="active">Ø Mean</button><button data-s="max">Max</button>
+<button data-s="min">Min</button>
+<button data-s="sub0">always &lt;0°C</button><button data-s="max05">Max 0–5°C</button>
+<button data-s="lt10">max &lt;10 km/h</button></div></div>
 <div id="searchWrap"><span class="icn">&#x1F50D;</span><input id="searchIn" type="text" placeholder="Search location..." autocomplete="off"/><div id="searchRes"></div></div>
+<div id="stnToggleWrap"><label><input type="checkbox" id="stnToggle" checked/> SLF Stations</label></div>
 <button id="btn3dFloat">3D</button>
 <div id="bottomPanel">
   <div class="drag" id="btmDrag"></div>
   <div id="btmMain">
-    <canvas id="timeline" width="720" height="44" style="width:100%;border-radius:6px;cursor:default"></canvas>
+    <canvas id="timeline" width="720" height="66" style="width:100%;border-radius:6px;cursor:default"></canvas>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
       <div class="winlbl" id="window"></div>
       <div class="seg" id="presets" style="gap:4px">
@@ -704,19 +727,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <button id="btnSinceSnow" style="font-size:12px">Since Last Snowfall</button>
       <button data-r="tomorrow" style="font-size:12px">Till Tomorrow</button>
     </div>
-    <div class="sec" id="statRow" style="display:none"><div class="cap">Statistic</div>
-      <div class="seg" id="stat">
-        <button data-s="avg" class="active">Ø Mean</button><button data-s="max">Max</button>
-        <button data-s="min">Min</button>
-        <button data-s="sub0">always &lt;0°C</button><button data-s="max05">Max 0–5°C</button>
-        <button data-s="lt10">max &lt;10 km/h</button></div></div>
-    <label class="ck"><input type="checkbox" id="stnToggle" checked/> Show SLF stations</label>
   </div>
 </div>
-<div class="legend" id="legend"></div>
+<button id="legendBtn" title="Toggle legend">&#x2139;</button><div class="legend" id="legend"></div>
 <div id="three-wrap"><div id="map3d" style="width:100%;height:100%"></div><button id="btn3dClose">✕ 2D</button>
 <div class="ctrl3d">
-<button onclick="map3d.easeTo({pitch:0,bearing:0,duration:600})">Top</button><button onclick="map3d.easeTo({pitch:60,duration:600})">Tilt</button><button onclick="map3d.easeTo({pitch:75,duration:600})">FatMap</button><button id="exag3d">Exag 1.5×</button>
+<button onclick="map3d.easeTo({pitch:0,bearing:0,duration:600})">Top</button><button onclick="map3d.easeTo({pitch:60,duration:600})">Tilt</button><button onclick="map3d.easeTo({pitch:75,duration:600})">FatMap</button>
 </div>
 <div class="ctrl3d" style="bottom:70px"><label style="display:flex;align-items:center;gap:6px;color:var(--fg2);font-size:11px">Map <input id="mapOpac3d" type="range" min="0" max="100" value="15" style="width:80px;accent-color:var(--acc)"> <span id="mapOpacLbl">15%</span></label>
 <select id="overlay3d" style="padding:4px 8px;border-radius:8px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:12px;backdrop-filter:blur(10px)"><option value="none">No overlay</option><option value="snow">Snow</option><option value="temp">Temperature</option><option value="wind">Wind</option><option value="depth">Snow Depth</option></select></div>
@@ -843,24 +859,29 @@ function drawTimeline(){const tc=document.getElementById('timeline'),ctx2=tc.get
   ctx2.fillStyle='rgba(15,20,35,.6)';ctx2.fillRect(0,0,nx,ch);
   ctx2.fillStyle='rgba(25,35,65,.45)';ctx2.fillRect(nx,0,cw-nx,ch);
   const x1=a/T*cw,x2=b/T*cw;ctx2.fillStyle='rgba(91,156,245,.2)';ctx2.fillRect(x1,0,x2-x1,ch);
-  ctx2.font='9px system-ui';ctx2.textAlign='center';
+  ctx2.font='10px system-ui';ctx2.textAlign='center';
   for(let t=0;t<T;t++){const d=new Date(M.times[t]+'Z');if(d.getUTCHours()===0){const x=t/T*cw;
     ctx2.fillStyle=t>=nowIdx?'rgba(100,160,255,.18)':'rgba(255,255,255,.1)';ctx2.fillRect(x,0,1,ch);
     ctx2.fillStyle=t>=nowIdx?'rgba(140,180,240,.7)':'rgba(200,210,225,.5)';
-    ctx2.fillText(d.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short'}),x+22,ch-2);}}
+    ctx2.fillText(d.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short'}),x+22,ch-3);}}
   let mx=0;for(const s of hSnow)if(s>mx)mx=s;mx=Math.max(.05,mx);
-  const bw=Math.max(1.2,cw/T);
-  for(let t=0;t<T;t++){const v=hSnow[t];if(v<.002)continue;const h=Math.max(1,v/mx*(ch-18));const x=t/T*cw;
+  const bw=Math.max(1.2,cw/T),barH=ch-22;
+  for(let t=0;t<T;t++){const v=hSnow[t];if(v<.002)continue;const h=Math.max(1,v/mx*barH);const x=t/T*cw;
     const inSel=(t>=a&&t<b);const fut=t>=nowIdx;
     ctx2.fillStyle=inSel?(fut?'rgba(130,200,255,.9)':'rgba(200,225,255,.8)'):(fut?'rgba(80,130,200,.3)':'rgba(140,160,180,.3)');
-    ctx2.fillRect(x,ch-14-h,Math.max(bw-.3,1),h);}
-  for(const[s,e]of snowEvents){const xs=s/T*cw,xe=e/T*cw;ctx2.fillStyle='rgba(91,156,245,.3)';ctx2.fillRect(xs,ch-14,xe-xs,3);}
+    ctx2.fillRect(x,ch-16-h,Math.max(bw-.3,1),h);}
+  for(const[s,e]of snowEvents){const xs=s/T*cw,xe=e/T*cw;ctx2.fillStyle='rgba(91,156,245,.3)';ctx2.fillRect(xs,ch-16,xe-xs,3);}
+  const scW=30;ctx2.fillStyle='rgba(10,15,30,.6)';ctx2.fillRect(cw-scW,0,scW,ch-14);
+  ctx2.font='8px system-ui';ctx2.textAlign='right';ctx2.fillStyle='rgba(200,215,235,.6)';
+  for(let i=0;i<=3;i++){const frac=i/3;const cm=(mx*frac).toFixed(mx>=1?0:1);const y=ch-16-frac*barH;
+    ctx2.fillText(cm,cw-3,y+3);if(i>0){ctx2.strokeStyle='rgba(255,255,255,.06)';ctx2.lineWidth=.5;ctx2.beginPath();ctx2.moveTo(0,y);ctx2.lineTo(cw-scW,y);ctx2.stroke();}}
+  ctx2.fillStyle='rgba(200,215,235,.4)';ctx2.font='7px system-ui';ctx2.fillText('cm/h',cw-3,12);
   ctx2.strokeStyle='rgba(91,156,245,.5)';ctx2.lineWidth=1.5;ctx2.strokeRect(x1+.5,0,x2-x1-1,ch);
   ctx2.strokeStyle='#ff3040';ctx2.lineWidth=2.5;ctx2.beginPath();ctx2.moveTo(nx,0);ctx2.lineTo(nx,ch);ctx2.stroke();
-  ctx2.fillStyle='#ff3040';ctx2.font='bold 9px system-ui';ctx2.textAlign='center';ctx2.fillText('NOW',nx,10);
-  ctx2.font='bold 7px system-ui';ctx2.globalAlpha=.35;
-  if(nx>28){ctx2.textAlign='right';ctx2.fillStyle='#aab8cc';ctx2.fillText('PAST',nx-5,20);}
-  if(cw-nx>50){ctx2.textAlign='left';ctx2.fillStyle='#8cb8f0';ctx2.fillText('FORECAST',nx+5,20);}
+  ctx2.fillStyle='#ff3040';ctx2.font='bold 10px system-ui';ctx2.textAlign='center';ctx2.fillText('NOW',nx,12);
+  ctx2.font='bold 8px system-ui';ctx2.globalAlpha=.35;
+  if(nx>28){ctx2.textAlign='right';ctx2.fillStyle='#aab8cc';ctx2.fillText('PAST',nx-5,24);}
+  if(cw-nx>50){ctx2.textAlign='left';ctx2.fillStyle='#8cb8f0';ctx2.fillText('FORECAST',nx+5,24);}
   ctx2.globalAlpha=1;}
 // Karte + Layer
 const [laMin,loMin,laMax,loMax]=M.bounds;
@@ -937,18 +958,15 @@ function setRaster(get,border){const img=cx.createImageData(W,H),d=img.data;cons
 function aggT(p,m){let mn=1e9,mx=-1e9,su=0,c=0,cold=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;if(v<0)cold++;}return m=="max"?mx:m=="min"?mn:m=="sub0"?cold:m=="max05"?mx:su/Math.max(1,c);}
 function renderRaster(){
   if(layer=="snow"){const ca=a*NP,cb=b*NP;setRaster(p=>{const v=cum[cb+p]-cum[ca+p];const c=snowCol(v);return c?[c[0],c[1],c[2],235]:null;});}
-  else if(layer=="depth"){const DB=[0,10,20,30,50,70,100,150,200,300],DC=[[220,240,255],[190,225,255],[150,210,255],[100,190,250],[60,160,235],[30,130,210],[20,100,185],[40,60,160],[80,30,140],[120,15,80]];
-    const cb2=b*NP;setRaster(p=>{const v=cum[cb2+p];if(v<1)return null;let ci=0;for(let i=DB.length-1;i>=0;i--){if(v>=DB[i]){ci=i;break;}}const c=DC[Math.min(ci,DC.length-1)];return[c[0],c[1],c[2],215,ci];},true);}
+  else if(layer=="depth"){const cb2=b*NP;setRaster(p=>{const v=cum[cb2+p];if(v<1)return null;const x=Math.min(1,v/300);let r,g,bl;if(x<.33){const k=x/.33;r=220-k*120|0;g=240-k*50|0;bl=255-k*5|0;}else if(x<.66){const k=(x-.33)/.33;r=100-k*80|0;g=190-k*90|0;bl=250-k*65|0;}else{const k=(x-.66)/.34;r=20+k*100|0;g=100-k*85|0;bl=185-k*105|0;}return[r,g,bl,215];});}
   else if(layer=="temp"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[40,120-(x*60|0),255,215];}
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[255,200-(x*110|0),60,235];}
       const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);const col=tempCol(v);return[col[0],col[1],col[2],205];});}
-  else if(layer=="wind"){const WB=[0,10,20,30,40,50,60],WC=[[200,230,255],[120,200,240],[60,170,220],[255,200,50],[255,140,30],[255,60,30],[180,20,20]];
-    setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=wg_(t,p)*3.6;mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
-      if(stat=="lt10"){if(mx>=10)return null;const x=mx/10;return[40,190,90,215,0];}
+  else if(layer=="wind"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=wg_(t,p)*3.6;mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
+      if(stat=="lt10"){if(mx>=10)return null;return[40,190,90,215];}
       const val=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(val<0.5)return null;
-      let ci=0;for(let i=WB.length-1;i>=0;i--){if(val>=WB[i]){ci=i;break;}}
-      const c2=WC[Math.min(ci,WC.length-1)];return[c2[0],c2[1],c2[2],200,ci];},true);}
+      const c2=rampBYR(val/70);return[c2[0],c2[1],c2[2],200];});}
   else if(layer=="sun"){const vmax=48;setRaster(p=>{let s=0;for(let t=a;t<b;t++)s+=sunv(t,p);if(s<0.3)return null;const c=sunCol(s,vmax);return[c[0],c[1],c[2],205];});}
   else if(layer=="tsurf"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=tsurfEst(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[20,80,180,215];}
@@ -1016,9 +1034,9 @@ function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");retur
 function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});}
 function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
   if(l=="snow"){let h="<b>New Snow [cm] (SLF scale)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (click for details)</div>";}
-  if(l=="depth"){const DB=[0,10,20,30,50,70,100,150,200,300],DC=['rgb(220,240,255)','rgb(190,225,255)','rgb(150,210,255)','rgb(100,190,250)','rgb(60,160,235)','rgb(30,130,210)','rgb(20,100,185)','rgb(40,60,160)','rgb(80,30,140)','rgb(120,15,80)'];let h='<b>Snow Depth [cm]</b><br>';for(let i=0;i<DB.length-1;i++)h+='<div><i style="background:'+DC[i]+'"></i>'+DB[i]+'–'+DB[i+1]+'</div>';h+='<div><i style="background:'+DC[DC.length-1]+'"></i>≥'+DB[DB.length-1]+'</div>';return h;}
+  if(l=="depth")return '<b>Snow Depth [cm]</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(220,240,255),rgb(100,190,250),rgb(30,130,210),rgb(20,100,185),rgb(80,30,140),rgb(120,15,80));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:10px"><span>0</span><span>100</span><span>200</span><span>300+</span></div>';
   if(l=="temp"){let extra="blue=cold · red=warm";if(stat=="sub0")extra="only cells staying below 0°C for entire window";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>Temp 2 m [°C] (${sn})</b><br>${extra}`;}
-  if(l=="wind"){if(stat=="lt10")return "<b>Wind 10 m ("+sn+")</b><br>green = max wind stays below 10 km/h";const WB=[0,10,20,30,40,50,60],WC=['rgb(200,230,255)','rgb(120,200,240)','rgb(60,170,220)','rgb(255,200,50)','rgb(255,140,30)','rgb(255,60,30)','rgb(180,20,20)'];let h='<b>Wind 10 m (km/h, '+sn+')</b><br>';for(let i=0;i<WB.length-1;i++)h+='<div><i style="background:'+WC[i]+'"></i>'+WB[i]+'–'+WB[i+1]+'</div>';h+='<div><i style="background:'+WC[WC.length-1]+'"></i>≥'+WB[WB.length-1]+'</div>';h+='<div style="margin-top:4px;font-size:11px">Arrows show flow direction</div>';return h;}
+  if(l=="wind"){if(stat=="lt10")return "<b>Wind 10 m ("+sn+")</b><br>green = max wind stays below 10 km/h";return '<b>Wind 10 m (km/h, '+sn+')</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(30,120,255),rgb(30,240,135),rgb(255,240,0),rgb(255,40,0));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:10px"><span>0</span><span>25</span><span>50</span><span>70+</span></div><div style="margin-top:4px;font-size:11px">Arrows show flow direction</div>';}
   if(l=="sun")return "<b>Σ Sunshine Hours</b><br>Scale 0–48 h+ · light→orange = more sun";
   if(l=="rad")return "<b>Clear-sky Radiation [Wh/m²/d]</b><br>Day: "+dayLabel(bandDoy())+" (= window start)<br>dark=shade/low · yellow=high<br>incl. slope, aspect & terrain shadow";
   if(l=="radsun")return "<b>Effective Radiation [Wh/m²/d]</b><br>Clear-sky × cloud attenuation (20% diffuse + 80% × sunshine)<br>Day: "+dayLabel(bandDoy());
@@ -1030,6 +1048,7 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
   if(l=="powder")return '<b>Powder Conditions</b><br><div><i style="background:rgba(200,220,255,.7)"></i>Powder (stable)</div><div><i style="background:rgba(180,205,245,.55)"></i>Powder (reduced)</div><div style="margin-top:4px;font-size:11px">Gust ≈ mean wind × 1.5</div>';
   return "<b>Hillshade / Relief (swisstopo)</b>";}
 function legend(l){document.getElementById('legend').innerHTML=legendFor(l||layer);}
+document.getElementById('legendBtn').onclick=()=>{const lg=document.getElementById('legend'),btn=document.getElementById('legendBtn');lg.classList.toggle('show');btn.classList.toggle('active');};
 function showOverlay(){
   [slopeWMTS,reliefWMTS,aspectGrid,roughImg,radOverlay].forEach(x=>map.removeLayer(x));
   const grid=(layer=="snow"||layer=="depth"||layer=="temp"||layer=="sun"||layer=="wind"||layer=="powder"||layer=="tsurf"||layer=="skiable");
@@ -1048,7 +1067,7 @@ function renderAll(){showOverlay();renderRaster();renderStations();drawTimeline(
   document.getElementById('window').innerHTML=`<b>${fmt(a)}</b> → <b>${fmt(b)}</b> (${b-a} h)`;legend();}
 document.querySelectorAll('#layerBar button').forEach(btn=>{
   btn.onclick=()=>{document.querySelectorAll('#layerBar button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');layer=btn.dataset.l;
-    document.getElementById('statRow').style.display=(layer=="temp"||layer=="wind"||layer=="tsurf")?"block":"none";
+    document.getElementById('statBar').style.display=(layer=="temp"||layer=="wind"||layer=="tsurf")?"flex":"none";
     document.querySelectorAll('#stat [data-s=sub0],#stat [data-s=max05]').forEach(x=>x.style.display=(layer=="temp"||layer=="tsurf")?"":"none");
     document.querySelectorAll('#stat [data-s=lt10]').forEach(x=>x.style.display=(layer=="wind")?"":"none");
     if((layer=="wind"&&(stat=="sub0"||stat=="max05"))||((layer=="temp"||layer=="tsurf")&&stat=="lt10")){stat="avg";document.querySelectorAll('#stat button').forEach(x=>x.classList.toggle('active',x.dataset.s=="avg"));}
@@ -1240,9 +1259,6 @@ function close3D(){
   document.getElementById('btn3dFloat').classList.remove('active');}
 document.getElementById('btn3dFloat').onclick=e=>{e.stopPropagation();if(is3d)close3D();else init3D();};
 document.getElementById('btn3dClose').onclick=()=>close3D();
-document.getElementById('exag3d').onclick=()=>{if(!map3d)return;exag3d=exag3d>=2.5?1.0:exag3d+0.5;
-  map3d.setTerrain({source:'terrain-dem',exaggeration:exag3d});
-  document.getElementById('exag3d').textContent='Exag '+exag3d.toFixed(1)+'×';};
 document.getElementById('mapOpac3d').oninput=function(){if(!map3d)return;const v=this.value/100;
   map3d.setPaintProperty('swisstopo-base','raster-opacity',v);
   document.getElementById('mapOpacLbl').textContent=this.value+'%';};
