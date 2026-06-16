@@ -565,20 +565,27 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  html,body{margin:0;height:100%;overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--fg);-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
  #map{position:absolute;inset:0}
  #flow{position:absolute;inset:0;z-index:450;pointer-events:none}
- .panel{position:absolute;z-index:1000;top:12px;left:12px;width:392px;max-width:calc(100vw - 24px);
-   background:var(--glass);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--bd);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06);overflow:hidden}
- .phead{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer}
- .phead h3{margin:0;font-size:16px;font-weight:650}
- .tog{font-size:18px;color:var(--mut);border:none;background:none;cursor:pointer}
- .pbody{padding:0 16px 16px;max-height:74vh;overflow:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent}
- .sec{margin-top:15px}
- .cap{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);margin-bottom:8px}
+ #layerBar{position:absolute;z-index:1000;top:0;left:0;right:0;display:flex;gap:5px;padding:8px 12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,rgba(10,14,26,.7) 0%,transparent 100%)}
+ #layerBar::-webkit-scrollbar{display:none}
+ #layerBar button{border:1px solid var(--bd);background:rgba(255,255,255,.08);border-radius:10px;padding:6px 12px;cursor:pointer;font-size:12px;min-height:34px;color:var(--fg2);transition:.15s;backdrop-filter:blur(6px);flex-shrink:0;white-space:nowrap}
+ #layerBar button:hover{border-color:var(--acc);background:rgba(255,255,255,.14)}
+ #layerBar button.active{background:var(--acc2);color:#fff;border-color:var(--acc);font-weight:600;box-shadow:0 0 10px var(--glow)}
+ #bottomPanel{position:absolute;z-index:1000;bottom:0;left:0;right:0;
+   background:var(--glass);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border-top:1px solid var(--bd);box-shadow:0 -4px 24px rgba(0,0,0,.4);transition:max-height .3s ease;padding-bottom:env(safe-area-inset-bottom,0px)}
+ #bottomPanel .drag{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin:6px auto 4px}
+ #btmMain{padding:4px 12px 8px}
+ #btmExtra{padding:0 12px 12px;display:none;max-height:40vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+ #bottomPanel.expanded #btmExtra{display:block}
+ #timeline{display:block;border:1px solid var(--bd);background:rgba(15,20,35,.5);border-radius:6px}
+ .winlbl{font-size:12px;margin-top:4px;font-weight:600;color:var(--fg2)}
  .seg{display:flex;flex-wrap:wrap;gap:6px}
  .seg button{border:1px solid var(--bd);background:rgba(255,255,255,.07);border-radius:10px;padding:8px 12px;cursor:pointer;font-size:13px;min-height:38px;color:var(--fg2);transition:.15s;backdrop-filter:blur(4px)}
  .seg button:hover{border-color:var(--acc);background:rgba(255,255,255,.12)}
  .seg button.active{background:var(--acc2);color:#fff;border-color:var(--acc);font-weight:600;box-shadow:0 0 12px var(--glow)}
- #timeline{display:block;margin:8px 0 0;border:1px solid var(--bd);background:rgba(15,20,35,.5)}
- .winlbl{font-size:13px;margin-top:10px;font-weight:600}
+ .sec{margin-top:12px}
+ .cap{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+ .ck{display:flex;align-items:center;gap:9px;margin-top:12px;font-size:13px;cursor:pointer;color:var(--fg2)}
+ .ck input{width:18px;height:18px;accent-color:var(--acc)}
  #three-wrap{position:absolute;inset:0;z-index:2000;display:none;background:#0a0a1a}
  #three-wrap .maplibregl-canvas{outline:none}
  #three-wrap .maplibregl-map{width:100%;height:100%}
@@ -587,16 +594,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:6px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);cursor:pointer;font-size:12px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);touch-action:manipulation}
  #three-wrap .ctrl3d button:hover{border-color:var(--acc);color:var(--fg)}
  @media (max-width:560px){#three-wrap .ctrl3d{bottom:calc(16px + env(safe-area-inset-bottom,0px));gap:5px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 12px;font-size:12px;min-height:44px;border-radius:10px}#btn3dClose{top:calc(8px + env(safe-area-inset-top,0px));right:8px;padding:10px 16px;font-size:14px;border-radius:12px}}
- #btn3d{font-size:12px;padding:3px 10px;border-radius:8px;border:1px solid var(--bd);background:rgba(255,255,255,.07);color:var(--fg2);cursor:pointer}
- #btn3d:hover,#btn3d.active{border-color:var(--acc);color:var(--acc)}
- .seg button.tact{background:var(--acc2);color:#fff;border-color:var(--acc);font-weight:600;box-shadow:0 0 8px var(--glow)}
  .sub{font-size:12px;color:var(--mut)}
- .ck{display:flex;align-items:center;gap:9px;margin-top:15px;font-size:13px;cursor:pointer;color:var(--fg2)}
- .ck input{width:18px;height:18px;accent-color:var(--acc)}
  .asp-crisp img{image-rendering:pixelated;image-rendering:crisp-edges}
- .legend{position:absolute;z-index:900;bottom:16px;left:12px;background:var(--glass);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);border:1px solid var(--bd);padding:10px 12px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.35);font-size:12px;max-width:244px;line-height:1.5;color:var(--fg2)}
- .legend i{display:inline-block;width:13px;height:13px;margin-right:6px;vertical-align:-2px;border-radius:2px}
- .collapsed .pbody{display:none}
+ .legend{position:absolute;z-index:950;bottom:var(--btm-h,80px);left:12px;background:var(--glass);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);border:1px solid var(--bd);padding:8px 10px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.35);font-size:11px;max-width:200px;line-height:1.5;color:var(--fg2)}
+ .legend i{display:inline-block;width:12px;height:12px;margin-right:5px;vertical-align:-2px;border-radius:2px}
  .stn{background:rgba(15,20,35,.7);border:2px solid var(--acc);border-radius:11px;padding:1px 6px;font-size:11px;font-weight:700;color:var(--acc);text-align:center;box-shadow:0 1px 6px rgba(0,0,0,.5);white-space:nowrap}
  .scl{position:relative;width:110px;height:56px;font-size:10px;font-weight:700;text-align:center;pointer-events:none}
  .scl>div{position:absolute;left:0;right:0;white-space:nowrap}
@@ -624,10 +625,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .leaflet-popup-tip{background:var(--glass2)!important}
  .leaflet-popup-close-button{color:var(--mut)!important;font-size:20px!important;width:28px!important;height:28px!important;line-height:28px!important}
  .leaflet-popup-close-button:hover{color:var(--fg)!important}
- #searchWrap{position:absolute;z-index:1100;top:12px;right:12px;width:260px;max-width:calc(100vw - 420px)}
- #searchWrap input{width:100%;padding:10px 14px 10px 36px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:var(--fg);font-size:14px;outline:none;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+ #searchWrap{position:absolute;z-index:1100;top:46px;right:12px;width:220px;max-width:calc(100vw - 24px)}
+ #searchWrap input{width:100%;padding:9px 12px 9px 32px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(15,20,35,.35);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:var(--fg);font-size:13px;outline:none}
  #searchWrap input::placeholder{color:var(--mut)}
- #searchWrap input:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--glow),0 4px 20px rgba(0,0,0,.3)}
+ #searchWrap input:focus{border-color:var(--acc);background:var(--glass);box-shadow:0 0 0 3px var(--glow)}
+ #btn3dFloat{position:absolute;z-index:1000;bottom:var(--btm-h,80px);right:12px;padding:8px 14px;border-radius:10px;border:1px solid var(--bd);background:var(--glass);backdrop-filter:blur(12px);color:var(--fg2);cursor:pointer;font-size:13px;font-weight:600}
+ #btn3dFloat:hover,#btn3dFloat.active{border-color:var(--acc);color:var(--acc)}
  #searchWrap .icn{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--mut);font-size:15px}
  #searchRes{position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--glass2);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--bd);border-radius:12px;overflow:hidden;display:none;max-height:260px;overflow-y:auto;box-shadow:0 8px 28px rgba(0,0,0,.5)}
  #searchRes .sr{padding:10px 14px;cursor:pointer;font-size:13px;color:var(--fg2);border-bottom:1px solid rgba(255,255,255,.06);transition:.12s}
@@ -643,84 +646,72 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  @keyframes introBar{to{opacity:1;transform:scaleX(1)}}
  #intro .mtn{position:absolute;bottom:0;left:0;width:100%;height:40%;opacity:0;animation:introUp 1s .2s ease forwards}
  #intro .sources{font-size:clamp(10px,1.5vw,13px);color:var(--mut);margin-top:16px;letter-spacing:.08em;opacity:0;animation:introUp .6s .9s ease forwards}
- #intro::after{content:'';position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(1.5px 1.5px at 15% 25%,rgba(255,255,255,.25),transparent),radial-gradient(1px 1px at 45% 15%,rgba(255,255,255,.18),transparent),radial-gradient(2px 2px at 75% 35%,rgba(255,255,255,.22),transparent),radial-gradient(1px 1px at 90% 60%,rgba(255,255,255,.15),transparent);background-size:180px 180px;animation:snowFall 5s linear infinite}
- @keyframes snowFall{from{background-position:0 0}to{background-position:40px 180px}}
+ #intro .snow-wrap{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+ .sf{position:absolute;top:-10px;width:6px;height:6px;background:white;border-radius:50%;opacity:.6;animation:sfDrop linear infinite}
+ @keyframes sfDrop{0%{transform:translateY(0) translateX(0)}25%{transform:translateY(25vh) translateX(15px)}50%{transform:translateY(50vh) translateX(-10px)}75%{transform:translateY(75vh) translateX(20px)}100%{transform:translateY(110vh) translateX(5px)}}
  @media (max-width:560px){
-   .panel{top:auto;bottom:0;left:0;right:0;width:100%;max-width:100%;border-radius:20px 20px 0 0;
-     padding-bottom:env(safe-area-inset-bottom,0px);transition:max-height .3s ease}
-   .panel.collapsed{max-height:52px}
-   .panel.mini .pbody>.sec:not(:first-child),.panel.mini .ck,.panel.mini #hint{display:none}
-   .panel.mini{max-height:40vh}
-   .panel:not(.collapsed):not(.mini){max-height:60vh}
-   .phead{padding:12px 16px 8px}.phead::before{content:'';display:block;width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin:0 auto 8px}
-   .phead h3{font-size:15px}
-   .pbody{max-height:46vh;padding:0 14px 14px;-webkit-overflow-scrolling:touch}
-   .seg{gap:5px}.seg button{padding:9px 11px;font-size:12px;min-height:40px;border-radius:8px}
-   #layer{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px}
-   #layer::-webkit-scrollbar{display:none}
-   #layer button{flex-shrink:0}
-   .legend{font-size:11px;max-width:160px;bottom:calc(var(--panel-h,52px) + 8px);left:8px;padding:8px 10px;border-radius:10px}
-   #searchWrap{top:10px;right:8px;left:auto;width:calc(100vw - 24px);max-width:220px}
-   #searchWrap input{padding:9px 12px 9px 32px;font-size:13px;border-radius:10px}
-   #searchWrap .icn{left:10px;font-size:13px}
-   #searchRes{max-height:200px}
-   .winlbl{font-size:12px}
+   #layerBar{padding:6px 8px;gap:4px}
+   #layerBar button{padding:5px 10px;font-size:11px;min-height:30px}
+   #searchWrap{top:42px;right:8px;width:calc(100vw - 16px);max-width:200px}
    .icard{font-size:11.5px;max-width:220px;min-width:160px}
    .scard{font-size:12px;min-width:140px}
    .leaflet-popup-content-wrapper{max-width:calc(100vw - 40px)!important}
-   #btn3d{padding:6px 12px;font-size:13px;min-height:36px}
-   #presets{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px}
-   #presets::-webkit-scrollbar{display:none}
-   #presets button{flex-shrink:0;font-size:12px}
+   .legend{max-width:150px;font-size:10px}
+   #btn3dFloat{padding:6px 12px;font-size:12px}
  }
  @media (max-width:380px){
-   .panel.collapsed{max-height:48px}
-   .panel:not(.collapsed):not(.mini){max-height:55vh}
-   #searchWrap{width:calc(100vw - 24px);max-width:180px}
-   .legend{max-width:130px;font-size:10px}
+   #searchWrap{max-width:160px}
+   .legend{max-width:120px;font-size:9px}
  }
 </style></head><body>
-<div id="intro"><svg class="mtn" viewBox="0 0 800 200" preserveAspectRatio="none"><path d="M0,200 L80,110 L140,155 L240,55 L310,125 L390,35 L460,105 L540,55 L620,115 L700,65 L800,140 L800,200Z" fill="rgba(255,255,255,.04)"/><path d="M0,200 L100,130 L180,165 L300,80 L380,150 L470,85 L550,145 L660,95 L750,145 L800,165 L800,200Z" fill="rgba(255,255,255,.07)"/><path d="M0,200 L60,170 L160,145 L260,175 L360,130 L440,170 L520,150 L620,175 L720,155 L800,180 L800,200Z" fill="rgba(255,255,255,.03)"/></svg><h1>Swiss Snow Model</h1><div class="sub">Interactive Snow Forecast Map</div><div class="sources">swisstopo &middot; MeteoSwiss &middot; SLF &middot; Open-Meteo &middot; Copernicus</div><div class="bar"></div></div>
+<div id="intro"><div class="snow-wrap" id="snowWrap"></div><svg class="mtn" viewBox="0 0 800 200" preserveAspectRatio="none"><path d="M0,200 L80,110 L140,155 L240,55 L310,125 L390,35 L460,105 L540,55 L620,115 L700,65 L800,140 L800,200Z" fill="rgba(255,255,255,.04)"/><path d="M0,200 L100,130 L180,165 L300,80 L380,150 L470,85 L550,145 L660,95 L750,145 L800,165 L800,200Z" fill="rgba(255,255,255,.07)"/><path d="M0,200 L60,170 L160,145 L260,175 L360,130 L440,170 L520,150 L620,175 L720,155 L800,180 L800,200Z" fill="rgba(255,255,255,.03)"/></svg><h1>Swiss Snow Model</h1><div class="sub">Interactive Snow Forecast Map</div><div class="sources">swisstopo &middot; MeteoSwiss &middot; SLF &middot; Open-Meteo &middot; Copernicus</div><div class="bar"></div></div>
 <div id="map"></div>
 <canvas id="flow"></canvas>
+<div id="layerBar">
+  <button data-l="snow" class="active">New Snow</button>
+  <button data-l="depth">Snow Depth</button>
+  <button data-l="temp">Temperature</button>
+  <button data-l="wind">Wind</button>
+  <button data-l="sun">Sunshine</button>
+  <button data-l="rad">Radiation</button>
+  <button data-l="radsun">Eff. Rad.</button>
+  <button data-l="slope">Slope</button>
+  <button data-l="aspect">Aspect</button>
+  <button data-l="rough">Roughness</button>
+  <button data-l="tsurf">T Surface</button>
+  <button data-l="shade">Hillshade</button>
+  <button data-l="skiable">Skiable</button>
+  <button data-l="powder">Powder</button>
+</div>
 <div id="searchWrap"><span class="icn">&#x1F50D;</span><input id="searchIn" type="text" placeholder="Search location..." autocomplete="off"/><div id="searchRes"></div></div>
-<div class="panel" id="panel">
- <div class="phead" id="phead"><h3>Swiss Snow Model</h3><span style="display:flex;gap:8px;align-items:center"><button id="btn3d" title="3D Terrain View">3D</button><button class="tog" id="tog">▾</button></span></div>
- <div class="pbody">
-   <div class="sec"><div class="cap">Layer</div>
-     <div class="seg" id="layer">
-       <button data-l="snow" class="active">New Snow</button>
-       <button data-l="depth">Snow Depth</button>
-       <button data-l="temp">Temperature</button>
-       <button data-l="wind">Wind</button>
-       <button data-l="sun">Sunshine</button>
-       <button data-l="rad">Radiation</button>
-       <button data-l="radsun">Eff. Radiation</button>
-       <button data-l="slope">Slope</button>
-       <button data-l="aspect">Aspect</button>
-       <button data-l="rough">Roughness</button>
-       <button data-l="tsurf">T Surface</button>
-       <button data-l="shade">Hillshade</button>
-       <button data-l="skiable">Skiable</button>
-       <button data-l="powder">Powder</button>
-     </div></div>
-   <div class="sec" id="statRow" style="display:none"><div class="cap">Statistic</div>
-     <div class="seg" id="stat">
-       <button data-s="avg" class="active">Ø Mean</button><button data-s="max">Max</button>
-       <button data-s="min">Min</button>
-       <button data-s="sub0">always &lt;0°C</button><button data-s="max05">Max 0–5°C</button>
-       <button data-s="lt10">max &lt;10 km/h</button></div></div>
-   <div class="sec"><div class="cap">Time Window</div>
-     <canvas id="timeline" width="720" height="56" style="width:100%;border-radius:8px;cursor:default"></canvas>
-     <div class="seg" id="presets" style="margin-top:10px">
-       <button id="btnSinceSnow">Since Last Snowfall</button>
-       <button data-r="tomorrow">Till Tomorrow</button>
-       <button data-d="24">24h</button><button data-d="48" class="active">48h</button>
-       <button data-d="72">72h</button><button data-d="120">120h</button></div>
-     <div class="winlbl" id="window"></div></div>
-   <label class="ck"><input type="checkbox" id="stnToggle" checked/> Show SLF stations</label>
-   <div class="sub" id="hint" style="margin-top:10px">Click map = inspect cell. Hover layer button = legend. Click station = measurements.</div>
- </div>
+<button id="btn3dFloat">3D</button>
+<div id="bottomPanel">
+  <div class="drag" id="btmDrag"></div>
+  <div id="btmMain">
+    <canvas id="timeline" width="720" height="44" style="width:100%;border-radius:6px;cursor:default"></canvas>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+      <div class="winlbl" id="window"></div>
+      <div class="seg" id="presets" style="gap:4px">
+        <button data-d="24" style="padding:4px 8px;font-size:11px;min-height:28px">24h</button>
+        <button data-d="48" class="active" style="padding:4px 8px;font-size:11px;min-height:28px">48h</button>
+        <button data-d="72" style="padding:4px 8px;font-size:11px;min-height:28px">72h</button>
+        <button data-d="120" style="padding:4px 8px;font-size:11px;min-height:28px">120h</button>
+      </div>
+    </div>
+  </div>
+  <div id="btmExtra">
+    <div class="seg" style="margin-top:8px">
+      <button id="btnSinceSnow" style="font-size:12px">Since Last Snowfall</button>
+      <button data-r="tomorrow" style="font-size:12px">Till Tomorrow</button>
+    </div>
+    <div class="sec" id="statRow" style="display:none"><div class="cap">Statistic</div>
+      <div class="seg" id="stat">
+        <button data-s="avg" class="active">Ø Mean</button><button data-s="max">Max</button>
+        <button data-s="min">Min</button>
+        <button data-s="sub0">always &lt;0°C</button><button data-s="max05">Max 0–5°C</button>
+        <button data-s="lt10">max &lt;10 km/h</button></div></div>
+    <label class="ck"><input type="checkbox" id="stnToggle" checked/> Show SLF stations</label>
+  </div>
 </div>
 <div class="legend" id="legend"></div>
 <div id="three-wrap"><div id="map3d" style="width:100%;height:100%"></div><button id="btn3dClose">✕ 2D</button>
@@ -952,9 +943,12 @@ function renderRaster(){
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[40,120-(x*60|0),255,215];}
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[255,200-(x*110|0),60,235];}
       const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);const col=tempCol(v);return[col[0],col[1],col[2],205];});}
-  else if(layer=="wind"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=wg_(t,p)*3.6;mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
-      if(stat=="lt10"){if(mx>=10)return null;const x=mx/10;return[40,150+(x*40|0),90-(x*40|0),215];}
-      const val=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(val<1)return null;const col=rampBYR(val/70);return[col[0],col[1],col[2],195];});}
+  else if(layer=="wind"){const WB=[0,10,20,30,40,50,60],WC=[[200,230,255],[120,200,240],[60,170,220],[255,200,50],[255,140,30],[255,60,30],[180,20,20]];
+    setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=wg_(t,p)*3.6;mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
+      if(stat=="lt10"){if(mx>=10)return null;const x=mx/10;return[40,190,90,215,0];}
+      const val=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(val<0.5)return null;
+      let ci=0;for(let i=WB.length-1;i>=0;i--){if(val>=WB[i]){ci=i;break;}}
+      const c2=WC[Math.min(ci,WC.length-1)];return[c2[0],c2[1],c2[2],200,ci];},true);}
   else if(layer=="sun"){const vmax=48;setRaster(p=>{let s=0;for(let t=a;t<b;t++)s+=sunv(t,p);if(s<0.3)return null;const c=sunCol(s,vmax);return[c[0],c[1],c[2],205];});}
   else if(layer=="tsurf"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=tsurfEst(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[20,80,180,215];}
@@ -968,12 +962,7 @@ function windStat(k){let mn=1e9,mx=-1e9,su=0,c=0,ss=0,sc=0;
   for(let t=a;t<b;t++){const v=SPD[t*P+k]/M.spd_mul,dd=WDIR[t*P+k]*M.dir_div*Math.PI/180;
     mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;ss+=Math.sin(dd);sc+=Math.cos(dd);}
   return{v:(stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c)),dir:(Math.atan2(ss,sc)*180/Math.PI+360)%360};}
-function renderWind(){windArr.clearLayers();if(layer!="wind")return;
-  for(let k=0;k<P;k++){const w=windStat(k),kmh=w.v*3.6;
-    const col=rampBYR(kmh/70),ang=(w.dir+180)%360,len=10+Math.min(22,kmh*0.45);
-    const html=`<div style="opacity:.9;transform:rotate(${ang}deg);transform-origin:center"><svg width="${len}" height="10" style="overflow:visible"><line x1="0" y1="5" x2="${len-5}" y2="5" stroke="rgb(${col.join(",")})" stroke-width="2"/><polygon points="${len-5},1.5 ${len},5 ${len-5},8.5" fill="rgb(${col.join(",")})"/></svg></div><div class="wn" style="text-align:center">${kmh.toFixed(0)}</div>`;
-    L.marker([M.wind.lat[k],M.wind.lon[k]],{icon:L.divIcon({className:'',html:html,iconSize:[42,22],iconAnchor:[21,11]})}).addTo(windArr);}
-}
+function renderWind(){windArr.clearLayers();}
 function newSnowInt(s){if(!s.hs)return null;let sum=0,have=false;for(let t=a+1;t<b;t++){const h0=s.hs[t-1],h1=s.hs[t];if(h0!=null&&h1!=null){if(h1-h0>0.5)sum+=h1-h0;have=true;}}return have?sum:null;}
 function stationCard(s){const ns=newSnowInt(s);
   const row=(k,v)=>v==null?"":`<span class="k">${k}</span><span>${v}</span>`;
@@ -1029,7 +1018,7 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
   if(l=="snow"){let h="<b>New Snow [cm] (SLF scale)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (click for details)</div>";}
   if(l=="depth"){const DB=[0,10,20,30,50,70,100,150,200,300],DC=['rgb(220,240,255)','rgb(190,225,255)','rgb(150,210,255)','rgb(100,190,250)','rgb(60,160,235)','rgb(30,130,210)','rgb(20,100,185)','rgb(40,60,160)','rgb(80,30,140)','rgb(120,15,80)'];let h='<b>Snow Depth [cm]</b><br>';for(let i=0;i<DB.length-1;i++)h+='<div><i style="background:'+DC[i]+'"></i>'+DB[i]+'–'+DB[i+1]+'</div>';h+='<div><i style="background:'+DC[DC.length-1]+'"></i>≥'+DB[DB.length-1]+'</div>';return h;}
   if(l=="temp"){let extra="blue=cold · red=warm";if(stat=="sub0")extra="only cells staying below 0°C for entire window";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>Temp 2 m [°C] (${sn})</b><br>${extra}`;}
-  if(l=="wind"){let extra="color=speed, arrows=direction, flow animation";if(stat=="lt10")extra="green = max wind stays below 10 km/h";return "<b>Wind 10 m (km/h, "+sn+")</b><br>"+extra;}
+  if(l=="wind"){if(stat=="lt10")return "<b>Wind 10 m ("+sn+")</b><br>green = max wind stays below 10 km/h";const WB=[0,10,20,30,40,50,60],WC=['rgb(200,230,255)','rgb(120,200,240)','rgb(60,170,220)','rgb(255,200,50)','rgb(255,140,30)','rgb(255,60,30)','rgb(180,20,20)'];let h='<b>Wind 10 m (km/h, '+sn+')</b><br>';for(let i=0;i<WB.length-1;i++)h+='<div><i style="background:'+WC[i]+'"></i>'+WB[i]+'–'+WB[i+1]+'</div>';h+='<div><i style="background:'+WC[WC.length-1]+'"></i>≥'+WB[WB.length-1]+'</div>';h+='<div style="margin-top:4px;font-size:11px">Arrows show flow direction</div>';return h;}
   if(l=="sun")return "<b>Σ Sunshine Hours</b><br>Scale 0–48 h+ · light→orange = more sun";
   if(l=="rad")return "<b>Clear-sky Radiation [Wh/m²/d]</b><br>Day: "+dayLabel(bandDoy())+" (= window start)<br>dark=shade/low · yellow=high<br>incl. slope, aspect & terrain shadow";
   if(l=="radsun")return "<b>Effective Radiation [Wh/m²/d]</b><br>Clear-sky × cloud attenuation (20% diffuse + 80% × sunshine)<br>Day: "+dayLabel(bandDoy());
@@ -1057,13 +1046,12 @@ function renderAll(){showOverlay();renderRaster();renderStations();drawTimeline(
   if(layer=="rad"||layer=="radsun")renderRadiation();
   if(layer=="wind"){buildFlow();if(wtimer)clearTimeout(wtimer);wtimer=setTimeout(renderWind,120);}
   document.getElementById('window').innerHTML=`<b>${fmt(a)}</b> → <b>${fmt(b)}</b> (${b-a} h)`;legend();}
-document.querySelectorAll('#layer button').forEach(btn=>{
-  btn.onclick=()=>{document.querySelectorAll('#layer button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');layer=btn.dataset.l;
+document.querySelectorAll('#layerBar button').forEach(btn=>{
+  btn.onclick=()=>{document.querySelectorAll('#layerBar button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');layer=btn.dataset.l;
     document.getElementById('statRow').style.display=(layer=="temp"||layer=="wind"||layer=="tsurf")?"block":"none";
     document.querySelectorAll('#stat [data-s=sub0],#stat [data-s=max05]').forEach(x=>x.style.display=(layer=="temp"||layer=="tsurf")?"":"none");
     document.querySelectorAll('#stat [data-s=lt10]').forEach(x=>x.style.display=(layer=="wind")?"":"none");
     if((layer=="wind"&&(stat=="sub0"||stat=="max05"))||((layer=="temp"||layer=="tsurf")&&stat=="lt10")){stat="avg";document.querySelectorAll('#stat button').forEach(x=>x.classList.toggle('active',x.dataset.s=="avg"));}
-    if(isMobile&&panelState==='collapsed'){document.querySelector('.phead h3').textContent=btn.textContent;}
     renderAll();};
   btn.onmouseenter=()=>legend(btn.dataset.l);btn.onmouseleave=()=>legend();});
 document.querySelectorAll('#stat button').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('#stat button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');stat=btn.dataset.s;renderAll();});
@@ -1094,26 +1082,18 @@ document.getElementById('btnSinceSnow').onclick=()=>{const p=sinceLastSnowfall()
     tc.style.cursor=(cx>=x1-5&&cx<=x2+5)?'grab':'default';});
 })();
 document.getElementById('stnToggle').onchange=e=>{showStn=e.target.checked;renderStations();};
-// --- Panel 3-state (collapsed/mini/full) ---
-let panelState='collapsed';
-function setPanelState(s){panelState=s;const p=document.getElementById('panel');p.classList.remove('collapsed','mini');
-  if(s==='collapsed')p.classList.add('collapsed');else if(s==='mini')p.classList.add('mini');
-  document.getElementById('tog').textContent=s==='full'?'▾':s==='mini'?'▸':'▸';
-  const title=document.querySelector('.phead h3');
-  if(isMobile&&s==='collapsed'){const ab=document.querySelector('#layer button.active');title.textContent=ab?ab.textContent:'Swiss Snow Model';}
-  else title.textContent='Swiss Snow Model';
-  requestAnimationFrame(()=>{document.documentElement.style.setProperty('--panel-h',p.offsetHeight+'px');});}
-document.getElementById('tog').onclick=e=>{e.stopPropagation();
-  if(isMobile)setPanelState(panelState==='collapsed'?'mini':panelState==='mini'?'full':'collapsed');
-  else{const p=document.getElementById('panel');p.classList.toggle('collapsed');e.target.textContent=p.classList.contains('collapsed')?'▸':'▾';}};
-document.getElementById('phead').onclick=e=>{if(e.target.closest('button'))return;document.getElementById('tog').click();};
-if(isMobile){(function(){const ph=document.getElementById('phead');let ty=0;
-  ph.addEventListener('touchstart',e=>{ty=e.touches[0].clientY;},{passive:true});
-  ph.addEventListener('touchend',e=>{const dy=ty-e.changedTouches[0].clientY;
-    if(Math.abs(dy)<30)return;
-    if(dy>0)setPanelState(panelState==='collapsed'?'mini':panelState==='mini'?'full':'full');
-    else setPanelState(panelState==='full'?'mini':panelState==='mini'?'collapsed':'collapsed');
-  },{passive:true});})();}
+// --- Bottom Panel slide ---
+(function(){const bp=document.getElementById('bottomPanel'),drag=document.getElementById('btmDrag');let ty=0;
+  function updateBtmH(){requestAnimationFrame(()=>{document.documentElement.style.setProperty('--btm-h',bp.offsetHeight+'px');});}
+  function toggleExtra(){bp.classList.toggle('expanded');updateBtmH();}
+  drag.addEventListener('click',toggleExtra);
+  drag.addEventListener('touchstart',e=>{ty=e.touches[0].clientY;},{passive:true});
+  drag.addEventListener('touchend',e=>{const dy=ty-e.changedTouches[0].clientY;
+    if(dy>30&&!bp.classList.contains('expanded')){bp.classList.add('expanded');updateBtmH();}
+    else if(dy<-30&&bp.classList.contains('expanded')){bp.classList.remove('expanded');updateBtmH();}
+  },{passive:true});
+  updateBtmH();
+})();
 // --- Windy.com-style Wind Animation ---
 const flow=document.getElementById('flow'),fx=flow.getContext('2d');
 const loMinW=Math.min(...M.wind.lon),loMaxW=Math.max(...M.wind.lon),laMinW=Math.min(...M.wind.lat),laMaxW=Math.max(...M.wind.lat);
@@ -1250,15 +1230,15 @@ function init3D(){
   map3d.addControl(new maplibregl.NavigationControl({visualizePitch:true,showCompass:true}),'top-left');
   map3d.addControl(new maplibregl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:false}),'top-left');
   map3d.scrollZoom.setWheelZoomRate(1/200);
-  document.getElementById('btn3d').classList.add('active');
+  document.getElementById('btn3dFloat').classList.add('active');
   map3d.on('load',()=>update3dOverlay());
   map3d.on('moveend',sync3dTo2d);}
 function close3D(){
   if(map3d){const c=map3d.getCenter(),z=map3d.getZoom();map.setView([c.lat,c.lng],z,{animate:false});}
   is3d=false;if(map3d){map3d.remove();map3d=null;}
   document.getElementById('three-wrap').style.display='none';
-  document.getElementById('btn3d').classList.remove('active');}
-document.getElementById('btn3d').onclick=e=>{e.stopPropagation();if(is3d)close3D();else init3D();};
+  document.getElementById('btn3dFloat').classList.remove('active');}
+document.getElementById('btn3dFloat').onclick=e=>{e.stopPropagation();if(is3d)close3D();else init3D();};
 document.getElementById('btn3dClose').onclick=()=>close3D();
 document.getElementById('exag3d').onclick=()=>{if(!map3d)return;exag3d=exag3d>=2.5?1.0:exag3d+0.5;
   map3d.setTerrain({source:'terrain-dem',exaggeration:exag3d});
@@ -1305,8 +1285,14 @@ const _introStart=Date.now();
 function dismissIntro(){const el=document.getElementById('intro');if(!el)return;
   const wait=Math.max(0,3000-(Date.now()-_introStart));
   setTimeout(()=>{el.classList.add('hide');setTimeout(()=>el.remove(),900);},wait);}
-// --- Mobile: auto-collapse panel, start with map visible ---
-if(isMobile)setPanelState('collapsed');
+// --- Snow animation for intro ---
+(function(){const w=document.getElementById('snowWrap');if(!w)return;
+  for(let i=0;i<30;i++){const s=document.createElement('div');s.className='sf';
+    s.style.left=Math.random()*100+'%';s.style.animationDuration=(2+Math.random()*4)+'s';
+    s.style.animationDelay=Math.random()*3+'s';s.style.opacity=0.2+Math.random()*0.5;
+    s.style.width=s.style.height=(2+Math.random()*4)+'px';w.appendChild(s);}})();
 renderAll();dismissIntro();
+// Update bottom panel height for legend positioning
+requestAnimationFrame(()=>{document.documentElement.style.setProperty('--btm-h',document.getElementById('bottomPanel').offsetHeight+'px');});
 </script></body></html>
 """
