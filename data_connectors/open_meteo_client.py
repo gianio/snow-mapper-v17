@@ -138,13 +138,21 @@ class OpenMeteoClient:
         return [self._parse_point(p) for p in payload]
 
     def _request_with_retry(self, params: dict):
-        """GET mit exponentiellem Backoff bei 429/5xx (respektiert Retry-After)."""
+        """GET mit exponentiellem Backoff bei 429/5xx/Timeout (respektiert Retry-After)."""
         headers = {"User-Agent": "swiss-snow-model/1.0 (research)"}
         last_exc: Exception | None = None
         for attempt in range(self.max_retries):
-            resp = requests.get(
-                self.base_url, params=params, headers=headers, timeout=self.timeout
-            )
+            try:
+                resp = requests.get(
+                    self.base_url, params=params, headers=headers, timeout=self.timeout
+                )
+            except (requests.ConnectionError, requests.Timeout) as exc:
+                wait = self.backoff_s * (2 ** attempt)
+                print(f"[WX] {type(exc).__name__} - warte {wait:.0f}s "
+                      f"(Versuch {attempt + 1}/{self.max_retries}) ...")
+                time.sleep(wait)
+                last_exc = exc
+                continue
             if resp.status_code == 200:
                 return resp.json()
             if resp.status_code in (429, 500, 502, 503, 504):
@@ -157,7 +165,6 @@ class OpenMeteoClient:
                 last_exc = requests.HTTPError(f"{resp.status_code}", response=resp)
                 continue
             resp.raise_for_status()
-        # Alle Versuche erschoepft.
         raise RuntimeError(
             "Open-Meteo Rate-Limit/Fehler nach mehreren Versuchen. Tipp: groeberes "
             "--weather-step waehlen oder spaeter erneut versuchen."
