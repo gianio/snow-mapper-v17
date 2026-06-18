@@ -1,0 +1,33 @@
+.email-banner {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 56px);
+  left: 12px;
+  right: 12px;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(255, 240, 220, .95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(200, 150, 50, .2);
+  border-radius: 12px;
+  font-size: 13px;
+  color: #6a4a10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+}
+
+.email-banner button {
+  background: none;
+  border: none;
+  color: #0070b8;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.email-banner button:disabled {
+  color: #7a8a9a;
+}

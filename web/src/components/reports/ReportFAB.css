@@ -1,0 +1,28 @@
+.report-fab {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+  right: 20px;
+  z-index: 1000;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  background: #005a9f;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 90, 160, .35);
+  transition: transform .15s, box-shadow .15s;
+  touch-action: manipulation;
+}
+
+.report-fab:hover {
+  transform: scale(1.06);
+  box-shadow: 0 6px 24px rgba(0, 90, 160, .45);
+}
+
+.report-fab:active {
+  transform: scale(0.95);
+}

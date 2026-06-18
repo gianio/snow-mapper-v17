@@ -1,0 +1,9 @@
+.app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  color: #1a2a3a;
+  background: #f0f4f8;
+  -webkit-tap-highlight-color: transparent;
+}
