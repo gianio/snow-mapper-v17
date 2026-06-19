@@ -701,7 +701,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .auth-modal form{display:flex;flex-direction:column;gap:12px}
  .auth-modal input[type="text"],.auth-modal input[type="email"],.auth-modal input[type="password"]{width:100%;padding:14px 16px;border:1px solid rgba(0,90,160,.12);border-radius:12px;font-size:16px;color:#1a2a3a;background:#f8fafc;outline:none;box-sizing:border-box}
  .auth-modal input:focus{border-color:#0070b8;box-shadow:0 0 0 3px rgba(0,112,184,.12)}
- .auth-err{color:#d03030;font-size:13px;padding:8px 12px;background:rgba(220,60,60,.08);border-radius:8px;display:none}
+ .auth-err{color:#d03030;font-size:13px;padding:8px 12px;background:rgba(220,60,60,.08);border-radius:8px;min-height:0}
  .auth-btn{padding:14px;border-radius:12px;border:none;font-size:16px;font-weight:600;cursor:pointer}
  .auth-btn.primary{background:#005a9f;color:#fff}.auth-btn.primary:hover{background:#004080}
  .auth-btn.secondary{background:#f0f4f8;color:#3a4a5a}
