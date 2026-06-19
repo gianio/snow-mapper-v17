@@ -41,7 +41,7 @@ jobs:
 
       - name: Generate static site
         run: |
-          python run_interactive.py --date 2026-01-31
+          python run_interactive.py
           mkdir -p dist
           mv index.html dist/
 

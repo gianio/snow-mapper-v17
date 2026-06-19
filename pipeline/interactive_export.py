@@ -561,6 +561,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
  :root{--fg:#1a2a3a;--fg2:#3a4a5a;--mut:#7a8a9a;--acc:#0070b8;--acc2:#005a9f;--bd:rgba(0,90,160,.12);--glass:rgba(255,255,255,.88);--glass2:rgba(245,248,252,.94);--glow:rgba(0,112,184,.15);--panel-h:52px}
  *{box-sizing:border-box}
@@ -686,6 +687,68 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    #searchWrap{max-width:160px}
    .legend{max-width:140px;font-size:11px}
  }
+ /* --- Auth & Reports --- */
+ #userBar{position:fixed;top:calc(env(safe-area-inset-top,0px)+12px);right:12px;z-index:1100}
+ .login-btn{padding:10px 20px;border-radius:12px;border:1px solid var(--bd);background:rgba(255,255,255,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#005a9f;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.08)}
+ .login-btn:hover{background:#fff;border-color:#0070b8}
+ .user-pill{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;border-radius:20px;border:1px solid var(--bd);background:rgba(255,255,255,.9);backdrop-filter:blur(12px);cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.08)}
+ .user-avatar{width:28px;height:28px;border-radius:50%;background:#005a9f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+ .user-name{font-size:14px;font-weight:600;color:#3a4a5a}
+ .auth-overlay{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px}
+ .auth-modal{position:relative;background:#fff;border-radius:20px;padding:32px 28px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+ .auth-modal h2{margin:0 0 4px;font-size:22px;font-weight:700;color:#1a2a3a}
+ .auth-sub{font-size:14px;color:#7a8a9a;margin:0 0 20px}
+ .auth-modal form{display:flex;flex-direction:column;gap:12px}
+ .auth-modal input[type="text"],.auth-modal input[type="email"],.auth-modal input[type="password"]{width:100%;padding:14px 16px;border:1px solid rgba(0,90,160,.12);border-radius:12px;font-size:16px;color:#1a2a3a;background:#f8fafc;outline:none;box-sizing:border-box}
+ .auth-modal input:focus{border-color:#0070b8;box-shadow:0 0 0 3px rgba(0,112,184,.12)}
+ .auth-err{color:#d03030;font-size:13px;padding:8px 12px;background:rgba(220,60,60,.08);border-radius:8px;display:none}
+ .auth-btn{padding:14px;border-radius:12px;border:none;font-size:16px;font-weight:600;cursor:pointer}
+ .auth-btn.primary{background:#005a9f;color:#fff}.auth-btn.primary:hover{background:#004080}
+ .auth-btn.secondary{background:#f0f4f8;color:#3a4a5a}
+ .auth-close{position:absolute;top:12px;right:16px;background:none;border:none;font-size:24px;color:#7a8a9a;cursor:pointer}
+ .auth-switch{text-align:center;margin-top:16px;font-size:14px;color:#7a8a9a}
+ .auth-switch button{background:none;border:none;color:#0070b8;font-weight:600;cursor:pointer;font-size:14px}
+ .email-banner{position:fixed;top:calc(env(safe-area-inset-top,0px)+56px);left:12px;right:12px;z-index:1200;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:rgba(255,240,220,.95);border:1px solid rgba(200,150,50,.2);border-radius:12px;font-size:13px;color:#6a4a10;box-shadow:0 2px 8px rgba(0,0,0,.06);display:none}
+ .email-banner button{background:none;border:none;color:#0070b8;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
+ #reportFab{position:fixed;bottom:calc(var(--btm-h,80px) + 16px);right:20px;z-index:1000;width:60px;height:60px;border-radius:50%;border:none;background:#005a9f;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,90,160,.35);font-size:28px;font-weight:300;touch-action:manipulation;transition:transform .15s}
+ #reportFab:hover{transform:scale(1.06)}
+ #reportFab:active{transform:scale(.95)}
+ .report-overlay{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.3);display:flex;flex-direction:column;justify-content:flex-end}
+ .report-sheet{background:#fff;border-radius:20px 20px 0 0;max-height:85vh;overflow-y:auto;padding-bottom:calc(env(safe-area-inset-bottom,0px)+16px);box-shadow:0 -4px 24px rgba(0,0,0,.12)}
+ .report-sheet .sh{width:36px;height:5px;border-radius:3px;background:rgba(0,0,0,.12);margin:8px auto 4px}
+ .rp-photo{position:relative;height:180px;background:#e8eef4;cursor:pointer;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#7a8a9a;font-size:15px}
+ .rp-photo img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+ .rp-photo .ph-icon{font-size:36px}
+ .rp-section{padding:16px 20px 0}
+ .rp-label{font-size:13px;font-weight:600;color:#7a8a9a;margin-bottom:10px;text-transform:uppercase;letter-spacing:.03em}
+ .cat-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+ .cat-chips::-webkit-scrollbar{display:none}
+ .cat-chip{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:64px;min-height:64px;padding:10px 8px;border-radius:14px;border:2px solid rgba(0,90,160,.1);background:#f8fafc;cursor:pointer;font-size:13px;font-weight:600;color:#3a4a5a;flex-shrink:0}
+ .cat-chip:hover{border-color:#0070b8}
+ .cat-chip.active{background:rgba(0,90,160,.08);border-color:#005a9f;color:#005a9f}
+ .cat-emoji{font-size:22px}
+ .sub-chips{display:flex;flex-wrap:wrap;gap:8px}
+ .sub-chip{padding:10px 14px;border-radius:12px;border:1px solid rgba(0,90,160,.1);background:#f8fafc;cursor:pointer;font-size:14px;color:#3a4a5a}
+ .sub-chip:hover{border-color:#0070b8}
+ .sub-chip.active{background:rgba(0,90,160,.1);border-color:#005a9f;color:#005a9f;font-weight:600}
+ .bucket-row{display:flex;align-items:center;gap:6px;margin-top:12px;flex-wrap:wrap}
+ .bucket-lbl{font-size:13px;color:#7a8a9a;font-weight:600;margin-right:4px}
+ .bucket{padding:8px 14px;border-radius:10px;border:1px solid rgba(0,90,160,.1);background:#f8fafc;cursor:pointer;font-size:14px;color:#3a4a5a}
+ .bucket.active{background:#005a9f;color:#fff;border-color:#005a9f}
+ .rp-note{padding:12px 20px}
+ .rp-note summary{cursor:pointer;font-size:14px;color:#7a8a9a;font-weight:600}
+ .rp-note textarea{width:100%;margin-top:10px;padding:12px;border:1px solid rgba(0,90,160,.1);border-radius:12px;font-size:15px;font-family:inherit;resize:vertical;outline:none;background:#f8fafc;color:#1a2a3a;box-sizing:border-box}
+ .rp-note textarea:focus{border-color:#0070b8;box-shadow:0 0 0 3px rgba(0,112,184,.1)}
+ .rp-footer{padding:16px 20px;border-top:1px solid rgba(0,0,0,.06);margin-top:12px}
+ .score-bar{height:4px;border-radius:2px;background:#e8eef4;overflow:hidden}
+ .score-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#005a9f,#00c0d0);transition:width .3s}
+ .score-info{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;font-weight:600;color:#3a4a5a}
+ .score-hint{font-weight:400;color:#7a8a9a}
+ .rp-actions{display:flex;gap:10px;margin-top:12px}
+ .rp-cancel{flex:1;padding:14px;border-radius:12px;border:1px solid rgba(0,90,160,.1);background:#f8fafc;color:#3a4a5a;font-size:16px;font-weight:600;cursor:pointer}
+ .rp-post{flex:2;padding:14px;border-radius:12px;border:none;background:#005a9f;color:#fff;font-size:16px;font-weight:600;cursor:pointer}
+ .rp-post:hover{background:#004080}
+ .rp-post:disabled{opacity:.5;cursor:not-allowed}
 </style></head><body>
 <div id="intro"><div class="snow-wrap" id="snowWrap"></div><svg class="mtn" viewBox="0 0 800 200" preserveAspectRatio="none"><path d="M0,200 L80,110 L140,155 L240,55 L310,125 L390,35 L460,105 L540,55 L620,115 L700,65 L800,140 L800,200Z" fill="rgba(255,255,255,.04)"/><path d="M0,200 L100,130 L180,165 L300,80 L380,150 L470,85 L550,145 L660,95 L750,145 L800,165 L800,200Z" fill="rgba(255,255,255,.07)"/><path d="M0,200 L60,170 L160,145 L260,175 L360,130 L440,170 L520,150 L620,175 L720,155 L800,180 L800,200Z" fill="rgba(255,255,255,.03)"/></svg><h1>Swiss Snow Model</h1><div class="sub">Interactive Snow Forecast Map</div><div class="sources">swisstopo &middot; MeteoSwiss &middot; SLF &middot; Open-Meteo &middot; Copernicus</div><div class="bar"></div></div>
 <div id="map"></div>
@@ -724,6 +787,56 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="30" style="width:100px;accent-color:var(--acc)"> Map <span id="mapOpacLbl">30%</span></label>
 <button id="btn3dExag">×1.5</button>
 <select id="overlay3d" style="padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:16px;backdrop-filter:blur(10px);min-height:46px"><option value="none">No overlay</option><option value="snow">Snow</option><option value="temp">Temperature</option><option value="wind">Wind</option><option value="depth">Snow Depth</option><option value="powder">Powder</option></select></div>
+</div>
+<!-- Auth & Reports UI -->
+<div id="userBar"><button class="login-btn" id="btnLogin" onclick="authShow()">Sign in</button></div>
+<div class="email-banner" id="emailBanner"><span>Please confirm your email to post reports.</span><button onclick="authResend()">Resend email</button></div>
+<button id="reportFab" onclick="reportOpen()">+</button>
+<div class="auth-overlay" id="authOverlay" style="display:none" onclick="authHide()">
+<div class="auth-modal" onclick="event.stopPropagation()">
+<button class="auth-close" onclick="authHide()">&times;</button>
+<h2 id="authTitle">Sign in</h2>
+<p class="auth-sub" id="authSub">Sign in to post reports</p>
+<form id="authForm" onsubmit="authSubmit(event)">
+<input type="text" id="authUser" placeholder="Username" autocomplete="username" style="display:none"/>
+<input type="email" id="authEmail" placeholder="Email" autocomplete="email" required/>
+<input type="password" id="authPass" placeholder="Password" autocomplete="current-password" required minlength="8"/>
+<div class="auth-err" id="authErr"></div>
+<button class="auth-btn primary" type="submit" id="authSubmitBtn">Sign in</button>
+</form>
+<div class="auth-switch" id="authSwitch">No account? <button onclick="authToggle()">Register</button></div>
+</div>
+</div>
+<div class="report-overlay" id="reportOverlay" style="display:none" onclick="reportClose()">
+<div class="report-sheet" onclick="event.stopPropagation()">
+<div class="sh"></div>
+<div class="rp-photo" id="rpPhoto" onclick="document.getElementById('rpFile').click()">
+<span class="ph-icon">📷</span><span>Tap for photo</span>
+</div>
+<input type="file" id="rpFile" accept="image/*" capture="environment" onchange="rpSetPhoto(this)" hidden/>
+<div class="rp-section">
+<div class="rp-label">Was siehst du?</div>
+<div class="cat-chips" id="rpCats"></div>
+</div>
+<div class="rp-section" id="rpSubPanel" style="display:none">
+<div class="rp-label" id="rpSubLabel"></div>
+<div class="sub-chips" id="rpSubs"></div>
+</div>
+<div class="rp-section" id="rpBucketPanel" style="display:none">
+<div class="bucket-row" id="rpBuckets"></div>
+</div>
+<details class="rp-note"><summary>+ Notiz, Hashtags, Tags</summary>
+<textarea id="rpCaption" placeholder="Kurz beschreiben (optional)..." rows="3"></textarea>
+</details>
+<div class="rp-footer">
+<div class="score-bar"><div class="score-fill" id="rpScoreFill" style="width:0%"></div></div>
+<div class="score-info"><span id="rpScoreNum">0%</span><span class="score-hint" id="rpHint"></span></div>
+<div class="rp-actions">
+<button class="rp-cancel" onclick="reportClose()">Cancel</button>
+<button class="rp-post" id="rpPostBtn" onclick="reportSubmit()" disabled>Post</button>
+</div>
+</div>
+</div>
 </div>
 <script>
 const M=/*META*/;
@@ -1342,5 +1455,164 @@ function dismissIntro(){const el=document.getElementById('intro');if(!el)return;
     s.style.width=s.style.height=(2+Math.random()*4)+'px';w.appendChild(s);}})();
 setTopic('snow',0);dismissIntro();
 requestAnimationFrame(()=>{document.documentElement.style.setProperty('--btm-h',document.getElementById('bottomPanel').offsetHeight+'px');});
+// --- Supabase Auth & Reports ---
+const SB_URL='https://gdtxwowcqtbdkcoksivb.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdkdHh3b3djcXRiZGtjb2tzaXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NzA1ODUsImV4cCI6MjA5NzM0NjU4NX0.5t4UHGLnnWbDoPVZE0LnmN1bS_jvEU3mmk4-1JpvXmM';
+let sb=null,sbUser=null,authMode='login';
+try{sb=window.supabase.createClient(SB_URL,SB_KEY);}catch(e){console.warn('Supabase SDK not loaded',e);}
+function authUpdateUI(user){
+  sbUser=user;
+  const btn=document.getElementById('btnLogin'),bar=document.getElementById('userBar');
+  const fab=document.getElementById('reportFab'),banner=document.getElementById('emailBanner');
+  if(user){
+    const name=user.user_metadata?.username||user.email?.split('@')[0]||'User';
+    const avatar=user.user_metadata?.avatar_url;
+    btn.outerHTML=`<div class="user-pill" id="userPill" onclick="authMenu()">
+      <div class="user-avatar">${avatar?`<img src="${avatar}" alt="">`:`<span>${name[0].toUpperCase()}</span>`}</div>
+      <span class="user-name">${name}</span></div>`;
+    fab.style.display='flex';
+    banner.style.display=user.email_confirmed_at?'none':'flex';
+  } else {
+    const pill=document.getElementById('userPill');
+    if(pill)pill.outerHTML='<button class="login-btn" id="btnLogin" onclick="authShow()">Sign in</button>';
+    fab.style.display='none';banner.style.display='none';
+  }
+}
+if(sb){sb.auth.onAuthStateChange((ev,session)=>{authUpdateUI(session?.user||null);});
+  sb.auth.getSession().then(({data})=>{authUpdateUI(data.session?.user||null);});}
+function authShow(){authMode='login';authRender();document.getElementById('authOverlay').style.display='flex';}
+function authHide(){document.getElementById('authOverlay').style.display='none';document.getElementById('authErr').textContent='';}
+function authToggle(){authMode=authMode==='login'?'register':'login';authRender();}
+function authRender(){
+  const isReg=authMode==='register';
+  document.getElementById('authTitle').textContent=isReg?'Create account':'Sign in';
+  document.getElementById('authSub').textContent=isReg?'Create an account to post reports':'Sign in to post reports';
+  document.getElementById('authUser').style.display=isReg?'':'none';
+  document.getElementById('authSubmitBtn').textContent=isReg?'Create account':'Sign in';
+  document.getElementById('authSwitch').innerHTML=isReg?'Already have an account? <button onclick="authToggle()">Sign in</button>':'No account? <button onclick="authToggle()">Register</button>';
+}
+async function authSubmit(e){
+  e.preventDefault();if(!sb)return;
+  const email=document.getElementById('authEmail').value.trim();
+  const pass=document.getElementById('authPass').value;
+  const errEl=document.getElementById('authErr');errEl.textContent='';
+  try{
+    if(authMode==='register'){
+      const username=document.getElementById('authUser').value.trim();
+      if(!username){errEl.textContent='Username required';return;}
+      const{error}=await sb.auth.signUp({email,password:pass,options:{data:{username}}});
+      if(error)throw error;
+      errEl.style.color='var(--acc)';errEl.textContent='Check your email to confirm your account!';
+      return;
+    }
+    const{error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error)throw error;
+    authHide();
+  }catch(err){errEl.style.color='#e03030';errEl.textContent=err.message||'Error';}
+}
+async function authResend(){
+  if(!sb||!sbUser)return;
+  await sb.auth.resend({type:'signup',email:sbUser.email});
+  document.getElementById('emailBanner').querySelector('button').textContent='Sent!';
+}
+function authMenu(){
+  if(confirm('Sign out?')){if(sb)sb.auth.signOut();authUpdateUI(null);}
+}
+// --- Report categories ---
+const RP_CATS=[
+  {id:'snow',label:'Schnee',icon:'❄️',subs:['Neuschnee','Nassschnee','Triebschnee','Sulz','Firn','Bruchharsch','Windgepresst']},
+  {id:'route',label:'Route',icon:'🥾',subs:['Gespurt','Verspurt','Keine Spur','Lawinenzug','Wechte','Gletscherspalte']},
+  {id:'danger',label:'Gefahr',icon:'⚠️',subs:['Lawinenabgang','Risse/Setzungen','Wumm-Geräusche','Steinschlag','Blankeis','Triebschnee']},
+  {id:'tour',label:'Tour',icon:'⛷️',subs:['Powder','Sulz-Genuss','Abgeblasen','Bruchharsch','Nicht empfohlen']},
+  {id:'info',label:'Info',icon:'ℹ️',subs:['Hütte offen','Hütte geschlossen','Weg gesperrt','Brücke fehlt','Markierung fehlt']}
+];
+const RP_BUCKETS={snow:['0 cm','5 cm','10 cm','20 cm','30 cm','50 cm','100+'],
+  danger:['1 tief','2 mässig','3 erheblich','4 gross','5 sehr gross'],
+  tour:['⭐','⭐⭐','⭐⭐⭐','⭐⭐⭐⭐','⭐⭐⭐⭐⭐']};
+let rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null};
+function rpReset(){rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null};
+  document.getElementById('rpPhoto').innerHTML='<span class="ph-icon">📷</span><span>Tap for photo</span>';
+  document.getElementById('rpPhoto').style.backgroundImage='';
+  document.getElementById('rpSubPanel').style.display='none';
+  document.getElementById('rpBucketPanel').style.display='none';
+  document.getElementById('rpCaption').value='';rpScore();}
+function reportOpen(){
+  if(!sbUser){authShow();return;}
+  rpReset();
+  const cc=document.getElementById('rpCats');
+  cc.innerHTML=RP_CATS.map(c=>`<button class="cat-chip" data-id="${c.id}" onclick="rpPickCat('${c.id}')">${c.icon} ${c.label}</button>`).join('');
+  document.getElementById('reportOverlay').style.display='flex';
+  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{rpState.loc=[p.coords.latitude,p.coords.longitude];},()=>{},{enableHighAccuracy:true,timeout:10000});
+}
+function reportClose(){document.getElementById('reportOverlay').style.display='none';rpReset();}
+function rpPickCat(id){
+  rpState.cat=id;rpState.sub=null;rpState.bucket=null;
+  document.querySelectorAll('.cat-chip').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
+  const cat=RP_CATS.find(c=>c.id===id);
+  const sp=document.getElementById('rpSubPanel');
+  document.getElementById('rpSubLabel').textContent=cat.label+' — Details';
+  document.getElementById('rpSubs').innerHTML=cat.subs.map(s=>`<button class="sub-chip" onclick="rpPickSub(this,'${s}')">${s}</button>`).join('');
+  sp.style.display='';
+  const bp=document.getElementById('rpBucketPanel');
+  if(RP_BUCKETS[id]){
+    document.getElementById('rpBuckets').innerHTML=RP_BUCKETS[id].map(b=>`<button class="bucket" onclick="rpPickBucket(this,'${b}')">${b}</button>`).join('');
+    bp.style.display='';
+  } else bp.style.display='none';
+  rpScore();
+}
+function rpPickSub(el,val){rpState.sub=val;
+  document.querySelectorAll('.sub-chip').forEach(e=>e.classList.remove('active'));el.classList.add('active');rpScore();}
+function rpPickBucket(el,val){rpState.bucket=val;
+  document.querySelectorAll('.bucket').forEach(e=>e.classList.remove('active'));el.classList.add('active');rpScore();}
+function rpSetPhoto(inp){
+  if(!inp.files||!inp.files[0])return;
+  rpState.photoFile=inp.files[0];
+  const url=URL.createObjectURL(inp.files[0]);
+  rpState.photo=url;
+  const ph=document.getElementById('rpPhoto');
+  ph.style.backgroundImage=`url(${url})`;ph.innerHTML='<span class="ph-icon" style="opacity:.5">📷</span>';
+  rpScore();
+}
+function rpScore(){
+  let s=0;
+  if(rpState.cat)s+=30;
+  if(rpState.sub)s+=20;
+  if(rpState.bucket)s+=15;
+  if(rpState.photo)s+=25;
+  if(rpState.loc)s+=10;
+  s=Math.min(100,s);
+  document.getElementById('rpScoreFill').style.width=s+'%';
+  document.getElementById('rpScoreNum').textContent=s+'%';
+  const hints=['Add a photo','Select category','Select detail','Add measurement'];
+  const h=s<100?hints.find((_,i)=>[!rpState.photo,!rpState.cat,!rpState.sub,!rpState.bucket][i])||'':'Ready!';
+  document.getElementById('rpHint').textContent=h;
+  document.getElementById('rpPostBtn').disabled=s<30;
+}
+async function reportSubmit(){
+  if(!sb||!sbUser||!rpState.cat)return;
+  const btn=document.getElementById('rpPostBtn');btn.disabled=true;btn.textContent='Posting...';
+  try{
+    let imageUrl=null;
+    if(rpState.photoFile){
+      const ext=rpState.photoFile.name.split('.').pop()||'jpg';
+      const path=`${sbUser.id}/${Date.now()}.${ext}`;
+      const{error:upErr}=await sb.storage.from('report-images').upload(path,rpState.photoFile,{contentType:rpState.photoFile.type});
+      if(!upErr){const{data:urlData}=sb.storage.from('report-images').getPublicUrl(path);imageUrl=urlData?.publicUrl;}
+    }
+    const loc=rpState.loc||[map.getCenter().lat,map.getCenter().lng];
+    const{error}=await sb.from('reports').insert({
+      user_id:sbUser.id,
+      location:`POINT(${loc[1]} ${loc[0]})`,
+      primary_categories:[rpState.cat],
+      subtype:rpState.sub,
+      condition_data:rpState.bucket?{measurement:rpState.bucket}:{},
+      image_url:imageUrl,
+      caption:document.getElementById('rpCaption').value.trim()||null,
+      completion_score:parseInt(document.getElementById('rpScoreNum').textContent)
+    });
+    if(error)throw error;
+    reportClose();
+  }catch(err){alert('Error: '+(err.message||err));btn.disabled=false;btn.textContent='Post';}
+}
 </script></body></html>
 """
