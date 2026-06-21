@@ -688,12 +688,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    .legend{max-width:140px;font-size:11px}
  }
  /* --- Auth & Reports --- */
- #userBar{position:fixed;top:calc(env(safe-area-inset-top,0px)+12px);right:12px;z-index:1100}
- .login-btn{padding:10px 20px;border-radius:12px;border:1px solid var(--bd);background:rgba(255,255,255,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#005a9f;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.08)}
+ #userBar{position:fixed;top:calc(env(safe-area-inset-top,0px)+12px);right:12px;z-index:1100;display:flex;gap:8px;align-items:center}
+ .login-btn{padding:10px 20px;border-radius:12px;border:1px solid var(--bd);background:rgba(255,255,255,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#005a9f;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.08)}
  .login-btn:hover{background:#fff;border-color:#0070b8}
- .user-pill{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;border-radius:20px;border:1px solid var(--bd);background:rgba(255,255,255,.9);backdrop-filter:blur(12px);cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.08)}
- .user-avatar{width:28px;height:28px;border-radius:50%;background:#005a9f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
- .user-name{font-size:14px;font-weight:600;color:#3a4a5a}
+ .user-pill{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;border-radius:20px;border:1px solid var(--bd);background:rgba(255,255,255,.92);backdrop-filter:blur(12px);cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.08)}
+ .user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#005a9f,#0090d0);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+ .user-name{font-size:14px;font-weight:600;color:#3a4a5a;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
  .auth-overlay{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px}
  .auth-modal{position:relative;background:#fff;border-radius:20px;padding:32px 28px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,.15)}
  .auth-modal h2{margin:0 0 4px;font-size:22px;font-weight:700;color:#1a2a3a}
@@ -702,53 +702,86 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .auth-modal input[type="text"],.auth-modal input[type="email"],.auth-modal input[type="password"]{width:100%;padding:14px 16px;border:1px solid rgba(0,90,160,.12);border-radius:12px;font-size:16px;color:#1a2a3a;background:#f8fafc;outline:none;box-sizing:border-box}
  .auth-modal input:focus{border-color:#0070b8;box-shadow:0 0 0 3px rgba(0,112,184,.12)}
  .auth-err{color:#d03030;font-size:13px;padding:8px 12px;background:rgba(220,60,60,.08);border-radius:8px;min-height:0}
- .auth-btn{padding:14px;border-radius:12px;border:none;font-size:16px;font-weight:600;cursor:pointer}
+ .auth-btn{padding:14px;border-radius:12px;border:none;font-size:16px;font-weight:600;cursor:pointer;width:100%}
  .auth-btn.primary{background:#005a9f;color:#fff}.auth-btn.primary:hover{background:#004080}
- .auth-btn.secondary{background:#f0f4f8;color:#3a4a5a}
  .auth-close{position:absolute;top:12px;right:16px;background:none;border:none;font-size:24px;color:#7a8a9a;cursor:pointer}
  .auth-switch{text-align:center;margin-top:16px;font-size:14px;color:#7a8a9a}
  .auth-switch button{background:none;border:none;color:#0070b8;font-weight:600;cursor:pointer;font-size:14px}
- .email-banner{position:fixed;top:calc(env(safe-area-inset-top,0px)+56px);left:12px;right:12px;z-index:1200;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:rgba(255,240,220,.95);border:1px solid rgba(200,150,50,.2);border-radius:12px;font-size:13px;color:#6a4a10;box-shadow:0 2px 8px rgba(0,0,0,.06);display:none}
+ .email-banner{position:fixed;top:calc(env(safe-area-inset-top,0px)+56px);left:12px;right:12px;z-index:1200;display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:rgba(255,240,220,.95);border:1px solid rgba(200,150,50,.2);border-radius:12px;font-size:13px;color:#6a4a10;box-shadow:0 2px 8px rgba(0,0,0,.06)}
  .email-banner button{background:none;border:none;color:#0070b8;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
- #reportFab{position:fixed;bottom:calc(var(--btm-h,80px) + 16px);right:20px;z-index:1000;width:60px;height:60px;border-radius:50%;border:none;background:#005a9f;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,90,160,.35);font-size:28px;font-weight:300;touch-action:manipulation;transition:transform .15s}
- #reportFab:hover{transform:scale(1.06)}
+ #reportFab{position:fixed;bottom:calc(var(--btm-h,80px) + 16px);right:20px;z-index:1000;width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,#005a9f,#0080c8);color:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,90,160,.35);font-size:26px;font-weight:300;touch-action:manipulation;transition:transform .15s,box-shadow .15s}
+ #reportFab:hover{transform:scale(1.06);box-shadow:0 6px 24px rgba(0,90,160,.4)}
  #reportFab:active{transform:scale(.95)}
- .report-overlay{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.3);display:flex;flex-direction:column;justify-content:flex-end}
- .report-sheet{background:#fff;border-radius:20px 20px 0 0;max-height:85vh;overflow-y:auto;padding-bottom:calc(env(safe-area-inset-bottom,0px)+16px);box-shadow:0 -4px 24px rgba(0,0,0,.12)}
- .report-sheet .sh{width:36px;height:5px;border-radius:3px;background:rgba(0,0,0,.12);margin:8px auto 4px}
- .rp-photo{position:relative;height:180px;background:#e8eef4;cursor:pointer;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#7a8a9a;font-size:15px}
- .rp-photo img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
- .rp-photo .ph-icon{font-size:36px}
- .rp-section{padding:16px 20px 0}
+ #feedBtn{position:fixed;bottom:calc(var(--btm-h,80px) + 16px);right:84px;z-index:1000;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);color:#005a9f;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.1);font-size:20px;touch-action:manipulation;transition:transform .15s}
+ #feedBtn:active{transform:scale(.95)}
+ .report-overlay{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.35);display:flex;flex-direction:column;justify-content:flex-end}
+ .report-sheet{background:#fff;border-radius:24px 24px 0 0;max-height:90vh;overflow-y:auto;padding-bottom:calc(env(safe-area-inset-bottom,0px)+16px);box-shadow:0 -4px 30px rgba(0,0,0,.15)}
+ .report-sheet .sh{width:36px;height:5px;border-radius:3px;background:rgba(0,0,0,.1);margin:10px auto 6px}
+ .rp-header{padding:4px 20px 12px;display:flex;align-items:center;justify-content:space-between}
+ .rp-title{font-size:18px;font-weight:700;color:#1a2a3a}
+ .rp-step-label{font-size:13px;font-weight:600;color:#7a8a9a}
+ .rp-progress{display:flex;gap:4px;padding:0 20px 16px}
+ .rp-dot{flex:1;height:4px;border-radius:2px;background:#e8eef4;transition:background .3s}
+ .rp-dot.done{background:linear-gradient(90deg,#005a9f,#0090d0)}
+ .rp-dot.active{background:#0090d0}
+ .rp-body{min-height:280px;padding:0 20px}
+ .rp-photo{position:relative;height:200px;background:#f0f4f8;border-radius:16px;cursor:pointer;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#7a8a9a;font-size:15px;border:2px dashed rgba(0,90,160,.15);transition:border-color .2s}
+ .rp-photo:active{border-color:#005a9f}
+ .rp-photo.has-img{border:none}
+ .rp-photo .ph-icon{font-size:40px}
+ .rp-section{margin-top:16px}
  .rp-label{font-size:13px;font-weight:600;color:#7a8a9a;margin-bottom:10px;text-transform:uppercase;letter-spacing:.03em}
- .cat-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:4px}
- .cat-chips::-webkit-scrollbar{display:none}
- .cat-chip{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:64px;min-height:64px;padding:10px 8px;border-radius:14px;border:2px solid rgba(0,90,160,.1);background:#f8fafc;cursor:pointer;font-size:13px;font-weight:600;color:#3a4a5a;flex-shrink:0}
- .cat-chip:hover{border-color:#0070b8}
- .cat-chip.active{background:rgba(0,90,160,.08);border-color:#005a9f;color:#005a9f}
- .cat-emoji{font-size:22px}
+ .cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+ .cat-chip{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:16px;border:2px solid rgba(0,90,160,.08);background:#f8fafc;cursor:pointer;font-size:13px;font-weight:600;color:#3a4a5a;transition:all .15s}
+ .cat-chip:active{transform:scale(.96)}
+ .cat-chip.active{background:rgba(0,90,160,.08);border-color:#005a9f;color:#005a9f;box-shadow:0 2px 8px rgba(0,90,160,.12)}
+ .cat-emoji{font-size:28px}
  .sub-chips{display:flex;flex-wrap:wrap;gap:8px}
- .sub-chip{padding:10px 14px;border-radius:12px;border:1px solid rgba(0,90,160,.1);background:#f8fafc;cursor:pointer;font-size:14px;color:#3a4a5a}
- .sub-chip:hover{border-color:#0070b8}
+ .sub-chip{padding:10px 16px;border-radius:12px;border:1.5px solid rgba(0,90,160,.1);background:#f8fafc;cursor:pointer;font-size:14px;color:#3a4a5a;transition:all .15s}
+ .sub-chip:active{transform:scale(.96)}
  .sub-chip.active{background:rgba(0,90,160,.1);border-color:#005a9f;color:#005a9f;font-weight:600}
- .bucket-row{display:flex;align-items:center;gap:6px;margin-top:12px;flex-wrap:wrap}
- .bucket-lbl{font-size:13px;color:#7a8a9a;font-weight:600;margin-right:4px}
- .bucket{padding:8px 14px;border-radius:10px;border:1px solid rgba(0,90,160,.1);background:#f8fafc;cursor:pointer;font-size:14px;color:#3a4a5a}
+ .bucket-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+ .bucket{padding:10px 16px;border-radius:12px;border:1.5px solid rgba(0,90,160,.1);background:#f8fafc;cursor:pointer;font-size:14px;color:#3a4a5a;transition:all .15s}
+ .bucket:active{transform:scale(.96)}
  .bucket.active{background:#005a9f;color:#fff;border-color:#005a9f}
- .rp-note{padding:12px 20px}
- .rp-note summary{cursor:pointer;font-size:14px;color:#7a8a9a;font-weight:600}
- .rp-note textarea{width:100%;margin-top:10px;padding:12px;border:1px solid rgba(0,90,160,.1);border-radius:12px;font-size:15px;font-family:inherit;resize:vertical;outline:none;background:#f8fafc;color:#1a2a3a;box-sizing:border-box}
+ .rp-note textarea{width:100%;padding:14px;border:1.5px solid rgba(0,90,160,.1);border-radius:14px;font-size:15px;font-family:inherit;resize:none;outline:none;background:#f8fafc;color:#1a2a3a;box-sizing:border-box;min-height:100px}
  .rp-note textarea:focus{border-color:#0070b8;box-shadow:0 0 0 3px rgba(0,112,184,.1)}
- .rp-footer{padding:16px 20px;border-top:1px solid rgba(0,0,0,.06);margin-top:12px}
- .score-bar{height:4px;border-radius:2px;background:#e8eef4;overflow:hidden}
+ .rp-footer{padding:16px 20px 0;display:flex;gap:10px;align-items:center}
+ .rp-back{padding:14px 20px;border-radius:14px;border:1.5px solid rgba(0,90,160,.1);background:#f8fafc;color:#3a4a5a;font-size:15px;font-weight:600;cursor:pointer}
+ .rp-next{flex:1;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#005a9f,#0080c8);color:#fff;font-size:16px;font-weight:600;cursor:pointer;transition:opacity .15s}
+ .rp-next:disabled{opacity:.4;cursor:not-allowed}
+ .rp-next:active:not(:disabled){opacity:.8}
+ .score-bar{height:4px;border-radius:2px;background:#e8eef4;overflow:hidden;margin:0 20px 4px}
  .score-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#005a9f,#00c0d0);transition:width .3s}
- .score-info{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;font-weight:600;color:#3a4a5a}
- .score-hint{font-weight:400;color:#7a8a9a}
- .rp-actions{display:flex;gap:10px;margin-top:12px}
- .rp-cancel{flex:1;padding:14px;border-radius:12px;border:1px solid rgba(0,90,160,.1);background:#f8fafc;color:#3a4a5a;font-size:16px;font-weight:600;cursor:pointer}
- .rp-post{flex:2;padding:14px;border-radius:12px;border:none;background:#005a9f;color:#fff;font-size:16px;font-weight:600;cursor:pointer}
- .rp-post:hover{background:#004080}
- .rp-post:disabled{opacity:.5;cursor:not-allowed}
+ /* --- Feed --- */
+ .feed-overlay{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.35);display:flex;flex-direction:column;justify-content:flex-end}
+ .feed-sheet{background:#fff;border-radius:24px 24px 0 0;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 -4px 30px rgba(0,0,0,.15)}
+ .feed-sheet .sh{width:36px;height:5px;border-radius:3px;background:rgba(0,0,0,.1);margin:10px auto 6px}
+ .feed-header{padding:4px 20px 12px;display:flex;align-items:center;justify-content:space-between}
+ .feed-title{font-size:18px;font-weight:700;color:#1a2a3a}
+ .feed-close{background:none;border:none;font-size:22px;color:#7a8a9a;cursor:pointer;padding:4px 8px}
+ .feed-filter{display:flex;gap:6px;padding:0 20px 12px;overflow-x:auto;scrollbar-width:none}
+ .feed-filter::-webkit-scrollbar{display:none}
+ .feed-filter button{padding:6px 14px;border-radius:20px;border:1.5px solid rgba(0,90,160,.1);background:#f8fafc;font-size:13px;font-weight:600;color:#3a4a5a;cursor:pointer;white-space:nowrap;flex-shrink:0}
+ .feed-filter button.active{background:#005a9f;color:#fff;border-color:#005a9f}
+ .feed-list{flex:1;overflow-y:auto;padding:0 20px 20px;-webkit-overflow-scrolling:touch}
+ .feed-card{background:#f8fafc;border-radius:16px;padding:14px;margin-bottom:10px;border:1px solid rgba(0,90,160,.06);cursor:pointer;transition:box-shadow .15s}
+ .feed-card:active{box-shadow:0 2px 12px rgba(0,90,160,.12)}
+ .feed-card-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+ .feed-card-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#005a9f,#0090d0);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+ .feed-card-user{font-size:14px;font-weight:600;color:#1a2a3a}
+ .feed-card-time{font-size:12px;color:#7a8a9a;margin-left:auto}
+ .feed-card-img{width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:10px;background:#e8eef4}
+ .feed-card-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+ .feed-badge{padding:4px 10px;border-radius:8px;font-size:12px;font-weight:600;background:rgba(0,90,160,.08);color:#005a9f}
+ .feed-badge.danger{background:rgba(220,60,60,.08);color:#c03030}
+ .feed-card-text{font-size:14px;color:#3a4a5a;line-height:1.4}
+ .feed-card-loc{font-size:12px;color:#7a8a9a;margin-top:6px;display:flex;align-items:center;gap:4px}
+ .feed-empty{text-align:center;padding:60px 20px;color:#7a8a9a;font-size:15px}
+ /* --- Report markers --- */
+ .rpt-marker{width:36px;height:36px;border-radius:50%;background:#fff;border:3px solid #005a9f;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer;transition:transform .15s}
+ .rpt-marker:hover{transform:scale(1.15)}
+ .rpt-marker.danger{border-color:#d03030}
 </style></head><body>
 <div id="intro"><div class="snow-wrap" id="snowWrap"></div><svg class="mtn" viewBox="0 0 800 200" preserveAspectRatio="none"><path d="M0,200 L80,110 L140,155 L240,55 L310,125 L390,35 L460,105 L540,55 L620,115 L700,65 L800,140 L800,200Z" fill="rgba(255,255,255,.04)"/><path d="M0,200 L100,130 L180,165 L300,80 L380,150 L470,85 L550,145 L660,95 L750,145 L800,165 L800,200Z" fill="rgba(255,255,255,.07)"/><path d="M0,200 L60,170 L160,145 L260,175 L360,130 L440,170 L520,150 L620,175 L720,155 L800,180 L800,200Z" fill="rgba(255,255,255,.03)"/></svg><h1>Swiss Snow Model</h1><div class="sub">Interactive Snow Forecast Map</div><div class="sources">swisstopo &middot; MeteoSwiss &middot; SLF &middot; Open-Meteo &middot; Copernicus</div><div class="bar"></div></div>
 <div id="map"></div>
@@ -765,7 +798,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div id="sublayers"></div>
 </div>
 <div id="searchWrap"><span class="icn">&#x1F50D;</span><input id="searchIn" type="text" placeholder="Search location..." autocomplete="off"/><div id="searchRes"></div></div>
-<div id="stnToggleWrap"><label><input type="checkbox" id="stnToggle" checked/> SLF Stations</label></div>
+<div id="stnToggleWrap"><label><input type="checkbox" id="stnToggle" checked/> SLF Stations</label><label><input type="checkbox" id="rptToggle" checked onchange="toggleReportLayer(this.checked)"/> Reports</label></div>
 <button id="btn3dFloat">3D</button>
 <div id="bottomPanel">
   <div id="tlToggle"></div>
@@ -790,13 +823,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 </div>
 <!-- Auth & Reports UI -->
 <div id="userBar"><button class="login-btn" id="btnLogin" onclick="authShow()">Sign in</button></div>
-<div class="email-banner" id="emailBanner"><span>Please confirm your email to post reports.</span><button onclick="authResend()">Resend email</button></div>
+<div class="email-banner" id="emailBanner"><span>Please confirm your email to post reports.</span><button onclick="authResend()">Resend</button></div>
 <button id="reportFab" onclick="reportOpen()">+</button>
+<button id="feedBtn" onclick="feedOpen()">&#x1F4CB;</button>
 <div class="auth-overlay" id="authOverlay" style="display:none" onclick="authHide()">
 <div class="auth-modal" onclick="event.stopPropagation()">
 <button class="auth-close" onclick="authHide()">&times;</button>
 <h2 id="authTitle">Sign in</h2>
-<p class="auth-sub" id="authSub">Sign in to post reports</p>
+<p class="auth-sub" id="authSub">Sign in to post field reports</p>
 <form id="authForm" onsubmit="authSubmit(event)">
 <input type="text" id="authUser" placeholder="Username" autocomplete="username" style="display:none"/>
 <input type="email" id="authEmail" placeholder="Email" autocomplete="email" required/>
@@ -810,32 +844,23 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="report-overlay" id="reportOverlay" style="display:none" onclick="reportClose()">
 <div class="report-sheet" onclick="event.stopPropagation()">
 <div class="sh"></div>
-<div class="rp-photo" id="rpPhoto" onclick="document.getElementById('rpFile').click()">
-<span class="ph-icon">📷</span><span>Tap for photo</span>
-</div>
-<input type="file" id="rpFile" accept="image/*" capture="environment" onchange="rpSetPhoto(this)" hidden/>
-<div class="rp-section">
-<div class="rp-label">Was siehst du?</div>
-<div class="cat-chips" id="rpCats"></div>
-</div>
-<div class="rp-section" id="rpSubPanel" style="display:none">
-<div class="rp-label" id="rpSubLabel"></div>
-<div class="sub-chips" id="rpSubs"></div>
-</div>
-<div class="rp-section" id="rpBucketPanel" style="display:none">
-<div class="bucket-row" id="rpBuckets"></div>
-</div>
-<details class="rp-note"><summary>+ Notiz, Hashtags, Tags</summary>
-<textarea id="rpCaption" placeholder="Kurz beschreiben (optional)..." rows="3"></textarea>
-</details>
-<div class="rp-footer">
+<div class="rp-header"><span class="rp-title">New Report</span><span class="rp-step-label" id="rpStepLbl">Step 1 of 4</span></div>
+<div class="rp-progress" id="rpProgress"><div class="rp-dot active"></div><div class="rp-dot"></div><div class="rp-dot"></div><div class="rp-dot"></div></div>
 <div class="score-bar"><div class="score-fill" id="rpScoreFill" style="width:0%"></div></div>
-<div class="score-info"><span id="rpScoreNum">0%</span><span class="score-hint" id="rpHint"></span></div>
-<div class="rp-actions">
-<button class="rp-cancel" onclick="reportClose()">Cancel</button>
-<button class="rp-post" id="rpPostBtn" onclick="reportSubmit()" disabled>Post</button>
+<div class="rp-body" id="rpBody"></div>
+<input type="file" id="rpFile" accept="image/*" capture="environment" onchange="rpSetPhoto(this)" hidden/>
+<div class="rp-footer">
+<button class="rp-back" id="rpBackBtn" onclick="rpPrev()" style="display:none">Back</button>
+<button class="rp-next" id="rpNextBtn" onclick="rpNext()">Next</button>
 </div>
 </div>
+</div>
+<div class="feed-overlay" id="feedOverlay" style="display:none" onclick="feedClose()">
+<div class="feed-sheet" onclick="event.stopPropagation()">
+<div class="sh"></div>
+<div class="feed-header"><span class="feed-title">Field Reports</span><button class="feed-close" onclick="feedClose()">&times;</button></div>
+<div class="feed-filter" id="feedFilter"></div>
+<div class="feed-list" id="feedList"><div class="feed-empty">Loading reports...</div></div>
 </div>
 </div>
 <script>
@@ -1223,6 +1248,7 @@ document.getElementById('btnSinceSnow').onclick=()=>{const p=sinceLastSnowfall()
     tc.style.cursor=(cx>=x1-5&&cx<=x2+5)?'grab':'default';});
 })();
 document.getElementById('stnToggle').onchange=e=>{showStn=e.target.checked;renderStations();};
+function toggleReportLayer(on){if(on)map.addLayer(reportMarkers);else map.removeLayer(reportMarkers);}
 // --- Bottom Panel drag-to-resize ---
 (function(){const bp=document.getElementById('bottomPanel'),tl=document.getElementById('tlToggle'),btm=document.getElementById('btmMain');
   let maxH=0,minH=14,curH=0,dragging=false,startY=0,startH=0;
@@ -1460,15 +1486,36 @@ const SB_URL='https://gdtxwowcqtbdkcoksivb.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdkdHh3b3djcXRiZGtjb2tzaXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NzA1ODUsImV4cCI6MjA5NzM0NjU4NX0.5t4UHGLnnWbDoPVZE0LnmN1bS_jvEU3mmk4-1JpvXmM';
 let sb=null,sbUser=null,authMode='login';
 try{sb=window.supabase.createClient(SB_URL,SB_KEY);}catch(e){console.warn('Supabase SDK not loaded',e);}
+// --- Demo data (shown when no DB reports) ---
+const DEMO_REPORTS=[
+  {id:'d1',user:'AlpinMax',cat:'snow',icon:'❄️',sub:'Neuschnee',measurement:'30 cm',caption:'Frischer Powder am Titlis Nordwand! Traumhafte Bedingungen seit heute Morgen.',lat:46.7712,lng:8.4267,time:'vor 2h',img:null},
+  {id:'d2',user:'BerginaZH',cat:'danger',icon:'⚠️',sub:'Wumm-Geräusche',measurement:'3 erheblich',caption:'Deutliche Setzungsgeräusche oberhalb 2400m. Triebschnee in Mulden.',lat:46.8342,lng:8.3891,time:'vor 4h',img:null},
+  {id:'d3',user:'TourenfanBE',cat:'tour',icon:'⛷️',sub:'Powder',measurement:'⭐⭐⭐⭐⭐',caption:'Mega Abfahrt vom Wildstrubel! Unverspurter Pulver bis ins Tal.',lat:46.4200,lng:7.5050,time:'vor 5h',img:null},
+  {id:'d4',user:'SchneeLeo',cat:'snow',icon:'❄️',sub:'Firn',measurement:'10 cm',caption:'Firn ab 10 Uhr, darunter tragfähige Altschneedecke.',lat:46.5586,lng:7.9641,time:'vor 8h',img:null},
+  {id:'d5',user:'HüttenWart',cat:'info',icon:'ℹ️',sub:'Hütte offen',measurement:null,caption:'Tierberglihütte ist offen! Abendessen ab 18:00, Duschen verfügbar.',lat:46.7650,lng:8.4050,time:'vor 12h',img:null},
+  {id:'d6',user:'LawinenPro',cat:'danger',icon:'⚠️',sub:'Lawinenabgang',measurement:'4 gross',caption:'Spontane Schneebrettlawine Grösse 3 am Nordhang Pizzo Rotondo.',lat:46.5250,lng:8.4900,time:'vor 1d',img:null},
+  {id:'d7',user:'AlpinMax',cat:'route',icon:'🥾',sub:'Gespurt',measurement:null,caption:'Route auf den Stoos frisch gespurt. Super Aufstiegsspur.',lat:46.9765,lng:8.6612,time:'vor 1d',img:null},
+  {id:'d8',user:'GipfelStürmer',cat:'tour',icon:'⛷️',sub:'Bruchharsch',measurement:'⭐⭐',caption:'Bruchharsch ab 2000m, Abfahrt nur bedingt empfehlenswert.',lat:46.6900,lng:9.8200,time:'vor 2d',img:null}
+];
+let reportMarkers=L.layerGroup().addTo(map);
+let allReports=[...DEMO_REPORTS];
+function loadReportMarkers(){
+  reportMarkers.clearLayers();
+  allReports.forEach(r=>{
+    const isDanger=r.cat==='danger';
+    const icon=L.divIcon({className:'',html:`<div class="rpt-marker${isDanger?' danger':''}">${r.icon}</div>`,iconSize:[36,36],iconAnchor:[18,18]});
+    const m=L.marker([r.lat,r.lng],{icon}).addTo(reportMarkers);
+    m.bindPopup(`<div style="min-width:180px"><b>${r.user}</b> <span style="color:#7a8a9a;font-size:12px">${r.time}</span><br><span style="font-size:13px">${r.icon} ${r.sub||r.cat}${r.measurement?' · '+r.measurement:''}</span>${r.caption?'<br><span style="font-size:13px;color:#3a4a5a">'+r.caption+'</span>':''}</div>`,{maxWidth:260});
+  });
+}
 function authUpdateUI(user){
   sbUser=user;
-  const btn=document.getElementById('btnLogin'),bar=document.getElementById('userBar');
-  const fab=document.getElementById('reportFab'),banner=document.getElementById('emailBanner');
+  const btn=document.getElementById('btnLogin');
+  const fab=document.getElementById('reportFab'),feedB=document.getElementById('feedBtn'),banner=document.getElementById('emailBanner');
   if(user){
     const name=user.user_metadata?.username||user.email?.split('@')[0]||'User';
-    const avatar=user.user_metadata?.avatar_url;
     btn.outerHTML=`<div class="user-pill" id="userPill" onclick="authMenu()">
-      <div class="user-avatar">${avatar?`<img src="${avatar}" alt="">`:`<span>${name[0].toUpperCase()}</span>`}</div>
+      <div class="user-avatar"><span>${name[0].toUpperCase()}</span></div>
       <span class="user-name">${name}</span></div>`;
     fab.style.display='flex';
     banner.style.display=user.email_confirmed_at?'none':'flex';
@@ -1477,16 +1524,40 @@ function authUpdateUI(user){
     if(pill)pill.outerHTML='<button class="login-btn" id="btnLogin" onclick="authShow()">Sign in</button>';
     fab.style.display='none';banner.style.display='none';
   }
+  feedB.style.display='flex';
+  loadReportMarkers();
+  loadDbReports();
 }
+async function loadDbReports(){
+  if(!sb)return;
+  try{
+    const{data}=await sb.from('reports').select('*').order('created_at',{ascending:false}).limit(50);
+    if(data&&data.length){
+      const dbR=data.map(r=>{
+        let lat=0,lng=0;
+        const m=r.location?.match?.(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
+        if(m){lng=parseFloat(m[1]);lat=parseFloat(m[2]);}
+        const catId=r.primary_categories?.[0]||'info';
+        const catObj=RP_CATS.find(c=>c.id===catId);
+        const ago=timeAgo(r.created_at);
+        return{id:r.id,user:r.user_id?.substring(0,8)||'User',cat:catId,icon:catObj?.icon||'📍',sub:r.subtype,measurement:r.condition_data?.measurement||null,caption:r.caption,lat,lng,time:ago,img:r.image_url,dbRow:true};
+      });
+      allReports=[...dbR,...DEMO_REPORTS];
+      loadReportMarkers();
+    }
+  }catch(e){console.warn('loadDbReports',e);}
+}
+function timeAgo(ts){const d=Date.now()-new Date(ts).getTime(),h=d/36e5;if(h<1)return'just now';if(h<24)return Math.floor(h)+'h ago';return Math.floor(h/24)+'d ago';}
 if(sb){sb.auth.onAuthStateChange((ev,session)=>{authUpdateUI(session?.user||null);});
   sb.auth.getSession().then(({data})=>{authUpdateUI(data.session?.user||null);});}
+else{document.getElementById('feedBtn').style.display='flex';loadReportMarkers();}
 function authShow(){authMode='login';authRender();document.getElementById('authOverlay').style.display='flex';}
 function authHide(){document.getElementById('authOverlay').style.display='none';document.getElementById('authErr').textContent='';}
 function authToggle(){authMode=authMode==='login'?'register':'login';authRender();}
 function authRender(){
   const isReg=authMode==='register';
   document.getElementById('authTitle').textContent=isReg?'Create account':'Sign in';
-  document.getElementById('authSub').textContent=isReg?'Create an account to post reports':'Sign in to post reports';
+  document.getElementById('authSub').textContent=isReg?'Create an account to post field reports':'Sign in to post field reports';
   document.getElementById('authUser').style.display=isReg?'':'none';
   document.getElementById('authSubmitBtn').textContent=isReg?'Create account':'Sign in';
   document.getElementById('authSwitch').innerHTML=isReg?'Already have an account? <button onclick="authToggle()">Sign in</button>':'No account? <button onclick="authToggle()">Register</button>';
@@ -1502,7 +1573,7 @@ async function authSubmit(e){
       if(!username){errEl.textContent='Username required';return;}
       const{error}=await sb.auth.signUp({email,password:pass,options:{data:{username}}});
       if(error)throw error;
-      errEl.style.color='var(--acc)';errEl.textContent='Check your email to confirm your account!';
+      errEl.style.color='var(--acc)';errEl.textContent='Check your email to confirm!';
       return;
     }
     const{error}=await sb.auth.signInWithPassword({email,password:pass});
@@ -1510,14 +1581,8 @@ async function authSubmit(e){
     authHide();
   }catch(err){errEl.style.color='#e03030';errEl.textContent=err.message||'Error';}
 }
-async function authResend(){
-  if(!sb||!sbUser)return;
-  await sb.auth.resend({type:'signup',email:sbUser.email});
-  document.getElementById('emailBanner').querySelector('button').textContent='Sent!';
-}
-function authMenu(){
-  if(confirm('Sign out?')){if(sb)sb.auth.signOut();authUpdateUI(null);}
-}
+async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email});document.getElementById('emailBanner').querySelector('button').textContent='Sent!';}
+function authMenu(){if(confirm('Sign out?')){if(sb)sb.auth.signOut();authUpdateUI(null);}}
 // --- Report categories ---
 const RP_CATS=[
   {id:'snow',label:'Schnee',icon:'❄️',subs:['Neuschnee','Nassschnee','Triebschnee','Sulz','Firn','Bruchharsch','Windgepresst']},
@@ -1526,71 +1591,97 @@ const RP_CATS=[
   {id:'tour',label:'Tour',icon:'⛷️',subs:['Powder','Sulz-Genuss','Abgeblasen','Bruchharsch','Nicht empfohlen']},
   {id:'info',label:'Info',icon:'ℹ️',subs:['Hütte offen','Hütte geschlossen','Weg gesperrt','Brücke fehlt','Markierung fehlt']}
 ];
-const RP_BUCKETS={snow:['0 cm','5 cm','10 cm','20 cm','30 cm','50 cm','100+'],
-  danger:['1 tief','2 mässig','3 erheblich','4 gross','5 sehr gross'],
-  tour:['⭐','⭐⭐','⭐⭐⭐','⭐⭐⭐⭐','⭐⭐⭐⭐⭐']};
-let rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null};
-function rpReset(){rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null};
-  document.getElementById('rpPhoto').innerHTML='<span class="ph-icon">📷</span><span>Tap for photo</span>';
-  document.getElementById('rpPhoto').style.backgroundImage='';
-  document.getElementById('rpSubPanel').style.display='none';
-  document.getElementById('rpBucketPanel').style.display='none';
-  document.getElementById('rpCaption').value='';rpScore();}
+const RP_BUCKETS={snow:['0 cm','5 cm','10 cm','20 cm','30 cm','50 cm','100+'],danger:['1 tief','2 mässig','3 erheblich','4 gross','5 sehr gross'],tour:['⭐','⭐⭐','⭐⭐⭐','⭐⭐⭐⭐','⭐⭐⭐⭐⭐']};
+// --- Step-by-step report wizard ---
+let rpStep=0;
+let rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:''};
+const STEPS=[
+  {title:'Category',render:rpRenderCat},
+  {title:'Details',render:rpRenderDetail},
+  {title:'Photo',render:rpRenderPhoto},
+  {title:'Note & Post',render:rpRenderNote}
+];
+function rpReset(){rpStep=0;rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:''};}
+function rpUpdateUI(){
+  const dots=document.querySelectorAll('#rpProgress .rp-dot');
+  dots.forEach((d,i)=>{d.className='rp-dot';if(i<rpStep)d.classList.add('done');if(i===rpStep)d.classList.add('active');});
+  document.getElementById('rpStepLbl').textContent=`Step ${rpStep+1} of ${STEPS.length}`;
+  document.getElementById('rpBackBtn').style.display=rpStep>0?'':'none';
+  const nb=document.getElementById('rpNextBtn');
+  if(rpStep===STEPS.length-1){nb.textContent='Post Report';nb.onclick=reportSubmit;}
+  else{nb.textContent='Next';nb.onclick=rpNext;}
+  nb.disabled=rpStep===0&&!rpState.cat;
+  rpUpdateScore();
+  STEPS[rpStep].render();
+}
+function rpUpdateScore(){
+  let s=0;if(rpState.cat)s+=25;if(rpState.sub)s+=25;if(rpState.bucket)s+=15;if(rpState.photo)s+=25;if(rpState.loc)s+=10;
+  s=Math.min(100,s);
+  document.getElementById('rpScoreFill').style.width=s+'%';
+}
+function rpNext(){if(rpStep<STEPS.length-1){rpStep++;rpUpdateUI();}}
+function rpPrev(){if(rpStep>0){rpStep--;rpUpdateUI();}}
 function reportOpen(){
   if(!sbUser){authShow();return;}
-  rpReset();
-  const cc=document.getElementById('rpCats');
-  cc.innerHTML=RP_CATS.map(c=>`<button class="cat-chip" data-id="${c.id}" onclick="rpPickCat('${c.id}')">${c.icon} ${c.label}</button>`).join('');
+  rpReset();rpUpdateUI();
   document.getElementById('reportOverlay').style.display='flex';
-  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{rpState.loc=[p.coords.latitude,p.coords.longitude];},()=>{},{enableHighAccuracy:true,timeout:10000});
+  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{rpState.loc=[p.coords.latitude,p.coords.longitude];rpUpdateScore();},()=>{},{enableHighAccuracy:true,timeout:10000});
 }
 function reportClose(){document.getElementById('reportOverlay').style.display='none';rpReset();}
+function rpRenderCat(){
+  const b=document.getElementById('rpBody');
+  b.innerHTML=`<div class="rp-section"><div class="rp-label">What do you see?</div>
+    <div class="cat-grid">${RP_CATS.map(c=>`<button class="cat-chip${rpState.cat===c.id?' active':''}" data-id="${c.id}" onclick="rpPickCat('${c.id}')"><span class="cat-emoji">${c.icon}</span>${c.label}</button>`).join('')}</div></div>`;
+}
 function rpPickCat(id){
   rpState.cat=id;rpState.sub=null;rpState.bucket=null;
   document.querySelectorAll('.cat-chip').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
-  const cat=RP_CATS.find(c=>c.id===id);
-  const sp=document.getElementById('rpSubPanel');
-  document.getElementById('rpSubLabel').textContent=cat.label+' — Details';
-  document.getElementById('rpSubs').innerHTML=cat.subs.map(s=>`<button class="sub-chip" onclick="rpPickSub(this,'${s}')">${s}</button>`).join('');
-  sp.style.display='';
-  const bp=document.getElementById('rpBucketPanel');
-  if(RP_BUCKETS[id]){
-    document.getElementById('rpBuckets').innerHTML=RP_BUCKETS[id].map(b=>`<button class="bucket" onclick="rpPickBucket(this,'${b}')">${b}</button>`).join('');
-    bp.style.display='';
-  } else bp.style.display='none';
-  rpScore();
+  document.getElementById('rpNextBtn').disabled=false;
 }
-function rpPickSub(el,val){rpState.sub=val;
-  document.querySelectorAll('.sub-chip').forEach(e=>e.classList.remove('active'));el.classList.add('active');rpScore();}
-function rpPickBucket(el,val){rpState.bucket=val;
-  document.querySelectorAll('.bucket').forEach(e=>e.classList.remove('active'));el.classList.add('active');rpScore();}
+function rpRenderDetail(){
+  const cat=RP_CATS.find(c=>c.id===rpState.cat);
+  if(!cat){rpPrev();return;}
+  let html=`<div class="rp-section"><div class="rp-label">${cat.icon} ${cat.label} — Details</div>
+    <div class="sub-chips">${cat.subs.map(s=>`<button class="sub-chip${rpState.sub===s?' active':''}" onclick="rpPickSub(this,'${s}')">${s}</button>`).join('')}</div></div>`;
+  if(RP_BUCKETS[rpState.cat]){
+    html+=`<div class="rp-section"><div class="rp-label">Measurement</div>
+      <div class="bucket-row">${RP_BUCKETS[rpState.cat].map(b=>`<button class="bucket${rpState.bucket===b?' active':''}" onclick="rpPickBucket(this,'${b}')">${b}</button>`).join('')}</div></div>`;
+  }
+  document.getElementById('rpBody').innerHTML=html;
+}
+function rpPickSub(el,val){rpState.sub=val;document.querySelectorAll('.sub-chip').forEach(e=>e.classList.remove('active'));el.classList.add('active');rpUpdateScore();}
+function rpPickBucket(el,val){rpState.bucket=val;document.querySelectorAll('.bucket').forEach(e=>e.classList.remove('active'));el.classList.add('active');rpUpdateScore();}
+function rpRenderPhoto(){
+  const b=document.getElementById('rpBody');
+  const hasImg=rpState.photo;
+  b.innerHTML=`<div class="rp-section"><div class="rp-label">Add a photo</div>
+    <div class="rp-photo${hasImg?' has-img':''}" id="rpPhotoArea" onclick="document.getElementById('rpFile').click()" style="${hasImg?'background-image:url('+rpState.photo+');background-size:cover;background-position:center':''}">
+    ${hasImg?'<span class="ph-icon" style="opacity:.6;text-shadow:0 1px 4px rgba(0,0,0,.3)">📷</span>':'<span class="ph-icon">📷</span><span>Tap to take or choose a photo</span>'}
+    </div></div>
+    <div style="text-align:center;padding:8px;color:#7a8a9a;font-size:13px">${hasImg?'Tap photo to change':'Optional but recommended (+25%)'}</div>`;
+}
 function rpSetPhoto(inp){
   if(!inp.files||!inp.files[0])return;
   rpState.photoFile=inp.files[0];
-  const url=URL.createObjectURL(inp.files[0]);
-  rpState.photo=url;
-  const ph=document.getElementById('rpPhoto');
-  ph.style.backgroundImage=`url(${url})`;ph.innerHTML='<span class="ph-icon" style="opacity:.5">📷</span>';
-  rpScore();
+  rpState.photo=URL.createObjectURL(inp.files[0]);
+  rpUpdateScore();rpRenderPhoto();
 }
-function rpScore(){
-  let s=0;
-  if(rpState.cat)s+=30;
-  if(rpState.sub)s+=20;
-  if(rpState.bucket)s+=15;
-  if(rpState.photo)s+=25;
-  if(rpState.loc)s+=10;
-  s=Math.min(100,s);
-  document.getElementById('rpScoreFill').style.width=s+'%';
-  document.getElementById('rpScoreNum').textContent=s+'%';
-  const hints=['Add a photo','Select category','Select detail','Add measurement'];
-  const h=s<100?hints.find((_,i)=>[!rpState.photo,!rpState.cat,!rpState.sub,!rpState.bucket][i])||'':'Ready!';
-  document.getElementById('rpHint').textContent=h;
-  document.getElementById('rpPostBtn').disabled=s<30;
+function rpRenderNote(){
+  const b=document.getElementById('rpBody');
+  const cat=RP_CATS.find(c=>c.id===rpState.cat);
+  let summary=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">`;
+  if(cat)summary+=`<span class="feed-badge">${cat.icon} ${cat.label}</span>`;
+  if(rpState.sub)summary+=`<span class="feed-badge">${rpState.sub}</span>`;
+  if(rpState.bucket)summary+=`<span class="feed-badge">${rpState.bucket}</span>`;
+  if(rpState.photo)summary+=`<span class="feed-badge">📷 Photo</span>`;
+  if(rpState.loc)summary+=`<span class="feed-badge">📍 GPS</span>`;
+  summary+=`</div>`;
+  b.innerHTML=`<div class="rp-section"><div class="rp-label">Summary & Note</div>${summary}
+    <div class="rp-note"><textarea id="rpCaption" placeholder="Describe what you see (optional)..." oninput="rpState.caption=this.value">${rpState.caption}</textarea></div></div>`;
 }
 async function reportSubmit(){
   if(!sb||!sbUser||!rpState.cat)return;
-  const btn=document.getElementById('rpPostBtn');btn.disabled=true;btn.textContent='Posting...';
+  const btn=document.getElementById('rpNextBtn');btn.disabled=true;btn.textContent='Posting...';
   try{
     let imageUrl=null;
     if(rpState.photoFile){
@@ -1600,19 +1691,53 @@ async function reportSubmit(){
       if(!upErr){const{data:urlData}=sb.storage.from('report-images').getPublicUrl(path);imageUrl=urlData?.publicUrl;}
     }
     const loc=rpState.loc||[map.getCenter().lat,map.getCenter().lng];
+    let score=0;if(rpState.cat)score+=25;if(rpState.sub)score+=25;if(rpState.bucket)score+=15;if(rpState.photo)score+=25;if(rpState.loc)score+=10;
     const{error}=await sb.from('reports').insert({
-      user_id:sbUser.id,
-      location:`POINT(${loc[1]} ${loc[0]})`,
-      primary_categories:[rpState.cat],
-      subtype:rpState.sub,
+      user_id:sbUser.id,location:`POINT(${loc[1]} ${loc[0]})`,
+      primary_categories:[rpState.cat],subtype:rpState.sub,
       condition_data:rpState.bucket?{measurement:rpState.bucket}:{},
-      image_url:imageUrl,
-      caption:document.getElementById('rpCaption').value.trim()||null,
-      completion_score:parseInt(document.getElementById('rpScoreNum').textContent)
+      image_url:imageUrl,caption:rpState.caption.trim()||null,
+      completion_score:Math.min(100,score)
     });
     if(error)throw error;
-    reportClose();
-  }catch(err){alert('Error: '+(err.message||err));btn.disabled=false;btn.textContent='Post';}
+    reportClose();loadDbReports();
+  }catch(err){alert('Error: '+(err.message||err));btn.disabled=false;btn.textContent='Post Report';}
 }
+// --- Feed ---
+let feedFilter='all';
+function feedOpen(){
+  document.getElementById('feedOverlay').style.display='flex';
+  const ff=document.getElementById('feedFilter');
+  ff.innerHTML=['all','snow','route','danger','tour','info'].map(f=>{
+    const lbl=f==='all'?'All':RP_CATS.find(c=>c.id===f)?.icon+' '+RP_CATS.find(c=>c.id===f)?.label||f;
+    return`<button class="${feedFilter===f?'active':''}" onclick="feedSetFilter('${f}')">${lbl}</button>`;
+  }).join('');
+  feedRender();
+}
+function feedClose(){document.getElementById('feedOverlay').style.display='none';}
+function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter button').forEach((b,i)=>{b.classList.toggle('active',['all','snow','route','danger','tour','info'][i]===f);});feedRender();}
+function feedRender(){
+  const list=document.getElementById('feedList');
+  const filtered=feedFilter==='all'?allReports:allReports.filter(r=>r.cat===feedFilter);
+  if(!filtered.length){list.innerHTML='<div class="feed-empty">No reports yet. Be the first!</div>';return;}
+  list.innerHTML=filtered.map(r=>{
+    const isDanger=r.cat==='danger';
+    return`<div class="feed-card" onclick="feedFlyTo(${r.lat},${r.lng})">
+      <div class="feed-card-head">
+        <div class="feed-card-avatar">${r.user[0].toUpperCase()}</div>
+        <span class="feed-card-user">${r.user}</span>
+        <span class="feed-card-time">${r.time}</span>
+      </div>
+      ${r.img?`<img class="feed-card-img" src="${r.img}" alt=""/>`:''}
+      <div class="feed-card-badges">
+        <span class="feed-badge${isDanger?' danger':''}">${r.icon} ${r.sub||r.cat}</span>
+        ${r.measurement?`<span class="feed-badge">${r.measurement}</span>`:''}
+      </div>
+      ${r.caption?`<div class="feed-card-text">${r.caption}</div>`:''}
+      <div class="feed-card-loc">📍 ${r.lat.toFixed(3)}, ${r.lng.toFixed(3)}</div>
+    </div>`;
+  }).join('');
+}
+function feedFlyTo(lat,lng){feedClose();map.flyTo([lat,lng],14,{duration:1.5});}
 </script></body></html>
 """
