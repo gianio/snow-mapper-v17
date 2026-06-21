@@ -709,51 +709,77 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .auth-switch button{background:none;border:none;color:#0070b8;font-weight:600;cursor:pointer;font-size:14px}
  .email-banner{position:fixed;top:calc(env(safe-area-inset-top,0px)+56px);left:12px;right:12px;z-index:1200;display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:rgba(255,240,220,.95);border:1px solid rgba(200,150,50,.2);border-radius:12px;font-size:13px;color:#6a4a10;box-shadow:0 2px 8px rgba(0,0,0,.06)}
  .email-banner button{background:none;border:none;color:#0070b8;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
- #reportFab{position:fixed;bottom:calc(var(--btm-h,80px) + 16px);right:20px;z-index:1000;width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,#005a9f,#0080c8);color:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,90,160,.35);font-size:26px;font-weight:300;touch-action:manipulation;transition:transform .15s,box-shadow .15s}
- #reportFab:hover{transform:scale(1.06);box-shadow:0 6px 24px rgba(0,90,160,.4)}
- #reportFab:active{transform:scale(.95)}
- #feedBtn{position:fixed;bottom:calc(var(--btm-h,80px) + 16px);right:84px;z-index:1000;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);color:#005a9f;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.1);font-size:20px;touch-action:manipulation;transition:transform .15s}
- #feedBtn:active{transform:scale(.95)}
- .report-overlay{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.35);display:flex;flex-direction:column;justify-content:flex-end}
- .report-sheet{background:#fff;border-radius:24px 24px 0 0;max-height:90vh;overflow-y:auto;padding-bottom:calc(env(safe-area-inset-bottom,0px)+16px);box-shadow:0 -4px 30px rgba(0,0,0,.15)}
- .report-sheet .sh{width:36px;height:5px;border-radius:3px;background:rgba(0,0,0,.1);margin:10px auto 6px}
- .rp-header{padding:4px 20px 12px;display:flex;align-items:center;justify-content:space-between}
- .rp-title{font-size:18px;font-weight:700;color:#1a2a3a}
- .rp-step-label{font-size:13px;font-weight:600;color:#7a8a9a}
- .rp-progress{display:flex;gap:4px;padding:0 20px 16px}
- .rp-dot{flex:1;height:4px;border-radius:2px;background:#e8eef4;transition:background .3s}
- .rp-dot.done{background:linear-gradient(90deg,#005a9f,#0090d0)}
- .rp-dot.active{background:#0090d0}
- .rp-body{min-height:280px;padding:0 20px}
- .rp-photo{position:relative;height:200px;background:#f0f4f8;border-radius:16px;cursor:pointer;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#7a8a9a;font-size:15px;border:2px dashed rgba(0,90,160,.15);transition:border-color .2s}
- .rp-photo:active{border-color:#005a9f}
- .rp-photo.has-img{border:none}
- .rp-photo .ph-icon{font-size:40px}
- .rp-section{margin-top:16px}
- .rp-label{font-size:13px;font-weight:600;color:#7a8a9a;margin-bottom:10px;text-transform:uppercase;letter-spacing:.03em}
- .cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
- .cat-chip{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:16px;border:2px solid rgba(0,90,160,.08);background:#f8fafc;cursor:pointer;font-size:13px;font-weight:600;color:#3a4a5a;transition:all .15s}
- .cat-chip:active{transform:scale(.96)}
- .cat-chip.active{background:rgba(0,90,160,.08);border-color:#005a9f;color:#005a9f;box-shadow:0 2px 8px rgba(0,90,160,.12)}
- .cat-emoji{font-size:28px}
+ /* --- FAB & Feed button --- */
+ #reportFab{position:fixed;bottom:calc(var(--btm-h,80px) + 16px);right:20px;z-index:1000;width:60px;height:60px;border-radius:50%;border:none;background:linear-gradient(135deg,#5EC8FF,#3aa8e8);color:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(94,200,255,.4);font-size:28px;font-weight:300;touch-action:none;transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;-webkit-tap-highlight-color:transparent}
+ #reportFab:active{transform:scale(.92)}
+ #feedBtn{position:fixed;bottom:calc(var(--btm-h,80px) + 16px);right:88px;z-index:1000;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);color:#0B1120;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.1);font-size:18px;touch-action:manipulation;transition:transform .15s}
+ #feedBtn:active{transform:scale(.92)}
+ /* --- Radial quick-pick --- */
+ .radial-wrap{position:fixed;inset:0;z-index:4000;touch-action:none;display:none}
+ .radial-bg{position:absolute;inset:0;background:rgba(11,17,32,.6);backdrop-filter:blur(8px)}
+ .radial-ring{position:absolute;width:280px;height:280px;border-radius:50%}
+ .radial-seg{position:absolute;width:72px;height:72px;border-radius:50%;background:rgba(20,30,51,.85);border:2px solid rgba(94,200,255,.15);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px;font-weight:600;color:#E8EEF7;transition:transform .15s cubic-bezier(.34,1.56,.64,1),border-color .15s,background .15s;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+ .radial-seg .re{font-size:28px}
+ .radial-seg.hover{transform:scale(1.18);border-color:#5EC8FF;background:rgba(94,200,255,.15);box-shadow:0 0 24px rgba(94,200,255,.3),inset 0 1px 0 rgba(255,255,255,.1)}
+ .radial-center{position:absolute;width:48px;height:48px;border-radius:50%;background:rgba(94,200,255,.2);border:2px solid rgba(94,200,255,.3);display:flex;align-items:center;justify-content:center;color:#5EC8FF;font-size:20px}
+ /* --- Report sheet (Alpenglühen dark) --- */
+ .report-overlay{position:fixed;inset:0;z-index:3000;display:flex;flex-direction:column;justify-content:flex-end}
+ .report-overlay .ro-bg{position:absolute;inset:0;background:rgba(11,17,32,.5);backdrop-filter:blur(4px)}
+ .report-sheet{position:relative;background:rgba(20,30,51,.92);backdrop-filter:blur(24px) saturate(140%);-webkit-backdrop-filter:blur(24px) saturate(140%);border-radius:28px 28px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:calc(env(safe-area-inset-bottom,0px)+16px);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 -4px 30px rgba(0,0,0,.3);-webkit-overflow-scrolling:touch}
+ .report-sheet .sh{width:36px;height:5px;border-radius:3px;background:rgba(232,238,247,.15);margin:10px auto 8px}
+ /* --- Zone 1: Context (photo + location) --- */
+ .rp-ctx{display:flex;gap:12px;padding:0 20px;align-items:center}
+ .rp-thumb{position:relative;width:72px;height:72px;border-radius:18px;background:rgba(94,200,255,.08);border:2px dashed rgba(94,200,255,.2);cursor:pointer;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .2s}
+ .rp-thumb:active{border-color:#5EC8FF}
+ .rp-thumb.has-img{border:none}
+ .rp-thumb img{width:100%;height:100%;object-fit:cover}
+ .rp-thumb .ti{font-size:24px;color:#5EC8FF}
+ .rp-ring{position:absolute;inset:-4px;border-radius:22px;pointer-events:none}
+ .rp-ring circle{fill:none;stroke-width:3;stroke-linecap:round;transition:stroke-dashoffset .4s cubic-bezier(.34,1.56,.64,1)}
+ .rp-ctx-info{flex:1;min-width:0}
+ .rp-ctx-title{font-size:17px;font-weight:700;color:#E8EEF7;margin-bottom:2px}
+ .rp-ctx-loc{font-size:13px;color:#7C8CA8;display:flex;align-items:center;gap:4px}
+ .rp-ctx-hint{font-size:12px;color:#5EC8FF;margin-top:4px}
+ /* --- Zone 2: Categories --- */
+ .rp-zone{padding:16px 20px 0}
+ .rp-zone-label{font-size:14px;font-weight:500;color:#7C8CA8;margin-bottom:12px}
+ .cat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+ .cat-chip{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;border-radius:18px;border:2px solid rgba(94,200,255,.08);background:rgba(94,200,255,.04);cursor:pointer;font-size:12px;font-weight:600;color:#7C8CA8;transition:all .2s cubic-bezier(.34,1.56,.64,1);-webkit-tap-highlight-color:transparent}
+ .cat-chip .cat-emoji{font-size:26px;transition:transform .2s cubic-bezier(.34,1.56,.64,1)}
+ .cat-chip:active{transform:scale(.94)}
+ .cat-chip.active{border-color:#5EC8FF;background:rgba(94,200,255,.12);color:#E8EEF7;box-shadow:0 0 16px rgba(94,200,255,.15)}
+ .cat-chip.active .cat-emoji{transform:scale(1.1)}
+ /* --- Zone 3: Details (sub-chips + bucket dial) --- */
  .sub-chips{display:flex;flex-wrap:wrap;gap:8px}
- .sub-chip{padding:10px 16px;border-radius:12px;border:1.5px solid rgba(0,90,160,.1);background:#f8fafc;cursor:pointer;font-size:14px;color:#3a4a5a;transition:all .15s}
- .sub-chip:active{transform:scale(.96)}
- .sub-chip.active{background:rgba(0,90,160,.1);border-color:#005a9f;color:#005a9f;font-weight:600}
- .bucket-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
- .bucket{padding:10px 16px;border-radius:12px;border:1.5px solid rgba(0,90,160,.1);background:#f8fafc;cursor:pointer;font-size:14px;color:#3a4a5a;transition:all .15s}
- .bucket:active{transform:scale(.96)}
- .bucket.active{background:#005a9f;color:#fff;border-color:#005a9f}
- .rp-note textarea{width:100%;padding:14px;border:1.5px solid rgba(0,90,160,.1);border-radius:14px;font-size:15px;font-family:inherit;resize:none;outline:none;background:#f8fafc;color:#1a2a3a;box-sizing:border-box;min-height:100px}
- .rp-note textarea:focus{border-color:#0070b8;box-shadow:0 0 0 3px rgba(0,112,184,.1)}
- .rp-footer{padding:16px 20px 0;display:flex;gap:10px;align-items:center}
- .rp-back{padding:14px 20px;border-radius:14px;border:1.5px solid rgba(0,90,160,.1);background:#f8fafc;color:#3a4a5a;font-size:15px;font-weight:600;cursor:pointer}
- .rp-next{flex:1;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#005a9f,#0080c8);color:#fff;font-size:16px;font-weight:600;cursor:pointer;transition:opacity .15s}
- .rp-next:disabled{opacity:.4;cursor:not-allowed}
- .rp-next:active:not(:disabled){opacity:.8}
- .score-bar{height:4px;border-radius:2px;background:#e8eef4;overflow:hidden;margin:0 20px 4px}
- .score-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#005a9f,#00c0d0);transition:width .3s}
- /* --- Feed --- */
+ .sub-chip{padding:10px 16px;border-radius:999px;border:1.5px solid rgba(94,200,255,.1);background:rgba(94,200,255,.04);cursor:pointer;font-size:14px;color:#E8EEF7;transition:all .15s;-webkit-tap-highlight-color:transparent}
+ .sub-chip:active{transform:scale(.95)}
+ .sub-chip.active{background:rgba(94,200,255,.15);border-color:#5EC8FF;color:#5EC8FF;font-weight:600}
+ .bucket-track{display:flex;gap:0;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:8px 0}
+ .bucket-track::-webkit-scrollbar{display:none}
+ .bucket{min-width:72px;padding:14px 8px;border-radius:18px;border:1.5px solid rgba(94,200,255,.08);background:rgba(94,200,255,.04);cursor:pointer;font-size:15px;font-weight:600;color:#7C8CA8;text-align:center;scroll-snap-align:center;flex-shrink:0;transition:all .2s cubic-bezier(.34,1.56,.64,1);-webkit-tap-highlight-color:transparent;margin:0 4px}
+ .bucket:active{transform:scale(.95)}
+ .bucket.active{background:rgba(94,200,255,.18);border-color:#5EC8FF;color:#5EC8FF;box-shadow:0 4px 16px rgba(94,200,255,.2)}
+ .bucket-val{font-size:11px;color:#7C8CA8;text-align:center;margin-top:4px;min-height:16px;font-weight:600;letter-spacing:.02em}
+ /* --- Zone 4: Voice/Note --- */
+ .rp-voice-btn{width:100%;padding:16px;border-radius:18px;border:1.5px solid rgba(94,200,255,.1);background:rgba(94,200,255,.04);cursor:pointer;font-size:15px;color:#7C8CA8;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;-webkit-tap-highlight-color:transparent}
+ .rp-voice-btn:active,.rp-voice-btn.recording{background:rgba(94,200,255,.15);border-color:#5EC8FF;color:#5EC8FF}
+ .rp-caption{width:100%;padding:14px;border:1.5px solid rgba(94,200,255,.08);border-radius:18px;font-size:15px;font-family:inherit;resize:none;outline:none;background:rgba(94,200,255,.04);color:#E8EEF7;box-sizing:border-box;min-height:60px;margin-top:8px}
+ .rp-caption::placeholder{color:#7C8CA8}
+ .rp-caption:focus{border-color:rgba(94,200,255,.25);box-shadow:0 0 0 3px rgba(94,200,255,.08)}
+ /* --- Zone 5: Slide-to-post --- */
+ .slide-track{position:relative;height:56px;border-radius:28px;background:rgba(255,138,91,.08);border:1.5px solid rgba(255,138,91,.15);margin:16px 20px 0;overflow:hidden;touch-action:none;-webkit-tap-highlight-color:transparent}
+ .slide-fill{position:absolute;inset:0;border-radius:28px;background:linear-gradient(90deg,rgba(255,138,91,.3),rgba(255,138,91,.6));transform-origin:left;transition:transform .1s}
+ .slide-knob{position:absolute;left:4px;top:4px;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#FF8A5B,#ff6a3b);display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;box-shadow:0 4px 16px rgba(255,138,91,.4);touch-action:none;transition:left .05s,transform .15s;cursor:grab;z-index:1}
+ .slide-knob:active{cursor:grabbing}
+ .slide-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:rgba(255,138,91,.6);pointer-events:none;letter-spacing:.02em}
+ .slide-track.locked .slide-fill{transform:scaleX(1)!important}
+ .slide-track.locked .slide-knob{background:#4ADE80;box-shadow:0 4px 16px rgba(74,222,128,.4)}
+ .slide-track.locked .slide-label{color:rgba(74,222,128,.8)}
+ /* --- Undo snackbar --- */
+ .undo-bar{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px)+20px);left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:999px;background:rgba(20,30,51,.95);backdrop-filter:blur(12px);color:#E8EEF7;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:5000;animation:undoIn .3s cubic-bezier(.34,1.56,.64,1)}
+ .undo-bar button{background:none;border:none;color:#FF8A5B;font-weight:700;font-size:14px;cursor:pointer}
+ @keyframes undoIn{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+ /* --- Feed (keep light for contrast) --- */
  .feed-overlay{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.35);display:flex;flex-direction:column;justify-content:flex-end}
  .feed-sheet{background:#fff;border-radius:24px 24px 0 0;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 -4px 30px rgba(0,0,0,.15)}
  .feed-sheet .sh{width:36px;height:5px;border-radius:3px;background:rgba(0,0,0,.1);margin:10px auto 6px}
@@ -779,9 +805,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-card-loc{font-size:12px;color:#7a8a9a;margin-top:6px;display:flex;align-items:center;gap:4px}
  .feed-empty{text-align:center;padding:60px 20px;color:#7a8a9a;font-size:15px}
  /* --- Report markers --- */
- .rpt-marker{width:36px;height:36px;border-radius:50%;background:#fff;border:3px solid #005a9f;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer;transition:transform .15s}
+ .rpt-marker{width:36px;height:36px;border-radius:50%;background:#fff;border:3px solid #5EC8FF;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer;transition:transform .15s}
  .rpt-marker:hover{transform:scale(1.15)}
- .rpt-marker.danger{border-color:#d03030}
+ .rpt-marker.danger{border-color:#FF5470}
+ @media(prefers-reduced-motion:reduce){.cat-chip,.sub-chip,.bucket,.slide-knob,.radial-seg{transition:none!important}}
 </style></head><body>
 <div id="intro"><div class="snow-wrap" id="snowWrap"></div><svg class="mtn" viewBox="0 0 800 200" preserveAspectRatio="none"><path d="M0,200 L80,110 L140,155 L240,55 L310,125 L390,35 L460,105 L540,55 L620,115 L700,65 L800,140 L800,200Z" fill="rgba(255,255,255,.04)"/><path d="M0,200 L100,130 L180,165 L300,80 L380,150 L470,85 L550,145 L660,95 L750,145 L800,165 L800,200Z" fill="rgba(255,255,255,.07)"/><path d="M0,200 L60,170 L160,145 L260,175 L360,130 L440,170 L520,150 L620,175 L720,155 L800,180 L800,200Z" fill="rgba(255,255,255,.03)"/></svg><h1>Swiss Snow Model</h1><div class="sub">Interactive Snow Forecast Map</div><div class="sources">swisstopo &middot; MeteoSwiss &middot; SLF &middot; Open-Meteo &middot; Copernicus</div><div class="bar"></div></div>
 <div id="map"></div>
@@ -824,8 +851,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <!-- Auth & Reports UI -->
 <div id="userBar"><button class="login-btn" id="btnLogin" onclick="authShow()">Sign in</button></div>
 <div class="email-banner" id="emailBanner"><span>Please confirm your email to post reports.</span><button onclick="authResend()">Resend</button></div>
-<button id="reportFab" onclick="reportOpen()">+</button>
+<button id="reportFab">+</button>
 <button id="feedBtn" onclick="feedOpen()">&#x1F4CB;</button>
+<div class="radial-wrap" id="radialWrap"><div class="radial-bg"></div><div class="radial-ring" id="radialRing"></div><div class="radial-center" id="radialCenter">✕</div></div>
 <div class="auth-overlay" id="authOverlay" style="display:none" onclick="authHide()">
 <div class="auth-modal" onclick="event.stopPropagation()">
 <button class="auth-close" onclick="authHide()">&times;</button>
@@ -841,17 +869,44 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="auth-switch" id="authSwitch">No account? <button onclick="authToggle()">Register</button></div>
 </div>
 </div>
-<div class="report-overlay" id="reportOverlay" style="display:none" onclick="reportClose()">
+<div class="report-overlay" id="reportOverlay" style="display:none">
+<div class="ro-bg" onclick="reportClose()"></div>
 <div class="report-sheet" onclick="event.stopPropagation()">
 <div class="sh"></div>
-<div class="rp-header"><span class="rp-title">New Report</span><span class="rp-step-label" id="rpStepLbl">Step 1 of 4</span></div>
-<div class="rp-progress" id="rpProgress"><div class="rp-dot active"></div><div class="rp-dot"></div><div class="rp-dot"></div><div class="rp-dot"></div></div>
-<div class="score-bar"><div class="score-fill" id="rpScoreFill" style="width:0%"></div></div>
-<div class="rp-body" id="rpBody"></div>
+<div class="rp-ctx">
+  <div class="rp-thumb" id="rpThumb" onclick="document.getElementById('rpFile').click()">
+    <svg class="rp-ring" id="rpRing" viewBox="0 0 80 80"><circle cx="40" cy="40" r="37" stroke="rgba(94,200,255,.15)" /><circle id="rpRingFill" cx="40" cy="40" r="37" stroke="#5EC8FF" stroke-dasharray="232.5" stroke-dashoffset="232.5" transform="rotate(-90 40 40)"/></svg>
+    <span class="ti">📷</span>
+  </div>
+  <div class="rp-ctx-info">
+    <div class="rp-ctx-title" id="rpCtxTitle">New Report</div>
+    <div class="rp-ctx-loc" id="rpCtxLoc">📍 Getting location...</div>
+    <div class="rp-ctx-hint" id="rpCtxHint">Tap photo · choose category below</div>
+  </div>
+</div>
 <input type="file" id="rpFile" accept="image/*" capture="environment" onchange="rpSetPhoto(this)" hidden/>
-<div class="rp-footer">
-<button class="rp-back" id="rpBackBtn" onclick="rpPrev()" style="display:none">Back</button>
-<button class="rp-next" id="rpNextBtn" onclick="rpNext()">Next</button>
+<div class="rp-zone" id="rpZoneCat">
+  <div class="rp-zone-label">Was siehst du?</div>
+  <div class="cat-grid" id="rpCats"></div>
+</div>
+<div class="rp-zone" id="rpZoneSub" style="display:none">
+  <div class="rp-zone-label" id="rpSubLabel">Details</div>
+  <div class="sub-chips" id="rpSubs"></div>
+</div>
+<div class="rp-zone" id="rpZoneBucket" style="display:none">
+  <div class="rp-zone-label" id="rpBucketLabel">Messung</div>
+  <div class="bucket-track" id="rpBuckets"></div>
+  <div class="bucket-val" id="rpBucketVal"></div>
+</div>
+<div class="rp-zone" id="rpZoneNote" style="display:none">
+  <div class="rp-zone-label">Notiz</div>
+  <button class="rp-voice-btn" id="rpVoiceBtn" onclick="rpVoiceToggle()">🎤 Halten und sprechen</button>
+  <textarea class="rp-caption" id="rpCaption" placeholder="Kurz beschreiben (optional)..." oninput="rpState.caption=this.value"></textarea>
+</div>
+<div class="slide-track" id="rpSlide">
+  <div class="slide-fill" id="rpSlideFill" style="transform:scaleX(0)"></div>
+  <div class="slide-knob" id="rpSlideKnob">›</div>
+  <div class="slide-label">Wischen zum Posten</div>
 </div>
 </div>
 </div>
@@ -1486,7 +1541,8 @@ const SB_URL='https://gdtxwowcqtbdkcoksivb.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdkdHh3b3djcXRiZGtjb2tzaXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NzA1ODUsImV4cCI6MjA5NzM0NjU4NX0.5t4UHGLnnWbDoPVZE0LnmN1bS_jvEU3mmk4-1JpvXmM';
 let sb=null,sbUser=null,authMode='login';
 try{sb=window.supabase.createClient(SB_URL,SB_KEY);}catch(e){console.warn('Supabase SDK not loaded',e);}
-// --- Demo data (shown when no DB reports) ---
+function haptic(ms){try{navigator.vibrate(ms||8);}catch(e){}}
+// --- Demo data ---
 const DEMO_REPORTS=[
   {id:'d1',user:'AlpinMax',cat:'snow',icon:'❄️',sub:'Neuschnee',measurement:'30 cm',caption:'Frischer Powder am Titlis Nordwand! Traumhafte Bedingungen seit heute Morgen.',lat:46.7712,lng:8.4267,time:'vor 2h',img:null},
   {id:'d2',user:'BerginaZH',cat:'danger',icon:'⚠️',sub:'Wumm-Geräusche',measurement:'3 erheblich',caption:'Deutliche Setzungsgeräusche oberhalb 2400m. Triebschnee in Mulden.',lat:46.8342,lng:8.3891,time:'vor 4h',img:null},
@@ -1508,6 +1564,7 @@ function loadReportMarkers(){
     m.bindPopup(`<div style="min-width:180px"><b>${r.user}</b> <span style="color:#7a8a9a;font-size:12px">${r.time}</span><br><span style="font-size:13px">${r.icon} ${r.sub||r.cat}${r.measurement?' · '+r.measurement:''}</span>${r.caption?'<br><span style="font-size:13px;color:#3a4a5a">'+r.caption+'</span>':''}</div>`,{maxWidth:260});
   });
 }
+// --- Auth UI ---
 function authUpdateUI(user){
   sbUser=user;
   const btn=document.getElementById('btnLogin');
@@ -1525,8 +1582,7 @@ function authUpdateUI(user){
     fab.style.display='none';banner.style.display='none';
   }
   feedB.style.display='flex';
-  loadReportMarkers();
-  loadDbReports();
+  loadReportMarkers();loadDbReports();
 }
 async function loadDbReports(){
   if(!sb)return;
@@ -1534,20 +1590,16 @@ async function loadDbReports(){
     const{data}=await sb.from('reports').select('*').order('created_at',{ascending:false}).limit(50);
     if(data&&data.length){
       const dbR=data.map(r=>{
-        let lat=0,lng=0;
-        const m=r.location?.match?.(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
+        let lat=0,lng=0;const m=r.location?.match?.(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
         if(m){lng=parseFloat(m[1]);lat=parseFloat(m[2]);}
-        const catId=r.primary_categories?.[0]||'info';
-        const catObj=RP_CATS.find(c=>c.id===catId);
-        const ago=timeAgo(r.created_at);
-        return{id:r.id,user:r.user_id?.substring(0,8)||'User',cat:catId,icon:catObj?.icon||'📍',sub:r.subtype,measurement:r.condition_data?.measurement||null,caption:r.caption,lat,lng,time:ago,img:r.image_url,dbRow:true};
+        const catId=r.primary_categories?.[0]||'info';const catObj=RP_CATS.find(c=>c.id===catId);
+        return{id:r.id,user:r.user_id?.substring(0,8)||'User',cat:catId,icon:catObj?.icon||'📍',sub:r.subtype,measurement:r.condition_data?.measurement||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,dbRow:true};
       });
-      allReports=[...dbR,...DEMO_REPORTS];
-      loadReportMarkers();
+      allReports=[...dbR,...DEMO_REPORTS];loadReportMarkers();
     }
   }catch(e){console.warn('loadDbReports',e);}
 }
-function timeAgo(ts){const d=Date.now()-new Date(ts).getTime(),h=d/36e5;if(h<1)return'just now';if(h<24)return Math.floor(h)+'h ago';return Math.floor(h/24)+'d ago';}
+function timeAgo(ts){const d=Date.now()-new Date(ts).getTime(),h=d/36e5;if(h<1)return'gerade eben';if(h<24)return'vor '+Math.floor(h)+'h';return'vor '+Math.floor(h/24)+'d';}
 if(sb){sb.auth.onAuthStateChange((ev,session)=>{authUpdateUI(session?.user||null);});
   sb.auth.getSession().then(({data})=>{authUpdateUI(data.session?.user||null);});}
 else{document.getElementById('feedBtn').style.display='flex';loadReportMarkers();}
@@ -1556,11 +1608,11 @@ function authHide(){document.getElementById('authOverlay').style.display='none';
 function authToggle(){authMode=authMode==='login'?'register':'login';authRender();}
 function authRender(){
   const isReg=authMode==='register';
-  document.getElementById('authTitle').textContent=isReg?'Create account':'Sign in';
-  document.getElementById('authSub').textContent=isReg?'Create an account to post field reports':'Sign in to post field reports';
+  document.getElementById('authTitle').textContent=isReg?'Account erstellen':'Anmelden';
+  document.getElementById('authSub').textContent=isReg?'Erstelle ein Konto für Field Reports':'Anmelden für Field Reports';
   document.getElementById('authUser').style.display=isReg?'':'none';
-  document.getElementById('authSubmitBtn').textContent=isReg?'Create account':'Sign in';
-  document.getElementById('authSwitch').innerHTML=isReg?'Already have an account? <button onclick="authToggle()">Sign in</button>':'No account? <button onclick="authToggle()">Register</button>';
+  document.getElementById('authSubmitBtn').textContent=isReg?'Registrieren':'Anmelden';
+  document.getElementById('authSwitch').innerHTML=isReg?'Schon registriert? <button onclick="authToggle()">Anmelden</button>':'Kein Account? <button onclick="authToggle()">Registrieren</button>';
 }
 async function authSubmit(e){
   e.preventDefault();if(!sb)return;
@@ -1573,13 +1625,11 @@ async function authSubmit(e){
       if(!username){errEl.textContent='Username required';return;}
       const{error}=await sb.auth.signUp({email,password:pass,options:{data:{username}}});
       if(error)throw error;
-      errEl.style.color='var(--acc)';errEl.textContent='Check your email to confirm!';
-      return;
+      errEl.style.color='#5EC8FF';errEl.textContent='Check your email to confirm!';return;
     }
     const{error}=await sb.auth.signInWithPassword({email,password:pass});
-    if(error)throw error;
-    authHide();
-  }catch(err){errEl.style.color='#e03030';errEl.textContent=err.message||'Error';}
+    if(error)throw error;authHide();
+  }catch(err){errEl.style.color='#FF5470';errEl.textContent=err.message||'Error';}
 }
 async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email});document.getElementById('emailBanner').querySelector('button').textContent='Sent!';}
 function authMenu(){if(confirm('Sign out?')){if(sb)sb.auth.signOut();authUpdateUI(null);}}
@@ -1591,97 +1641,186 @@ const RP_CATS=[
   {id:'tour',label:'Tour',icon:'⛷️',subs:['Powder','Sulz-Genuss','Abgeblasen','Bruchharsch','Nicht empfohlen']},
   {id:'info',label:'Info',icon:'ℹ️',subs:['Hütte offen','Hütte geschlossen','Weg gesperrt','Brücke fehlt','Markierung fehlt']}
 ];
-const RP_BUCKETS={snow:['0 cm','5 cm','10 cm','20 cm','30 cm','50 cm','100+'],danger:['1 tief','2 mässig','3 erheblich','4 gross','5 sehr gross'],tour:['⭐','⭐⭐','⭐⭐⭐','⭐⭐⭐⭐','⭐⭐⭐⭐⭐']};
-// --- Step-by-step report wizard ---
-let rpStep=0;
-let rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:''};
-const STEPS=[
-  {title:'Category',render:rpRenderCat},
-  {title:'Details',render:rpRenderDetail},
-  {title:'Photo',render:rpRenderPhoto},
-  {title:'Note & Post',render:rpRenderNote}
-];
-function rpReset(){rpStep=0;rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:''};}
-function rpUpdateUI(){
-  const dots=document.querySelectorAll('#rpProgress .rp-dot');
-  dots.forEach((d,i)=>{d.className='rp-dot';if(i<rpStep)d.classList.add('done');if(i===rpStep)d.classList.add('active');});
-  document.getElementById('rpStepLbl').textContent=`Step ${rpStep+1} of ${STEPS.length}`;
-  document.getElementById('rpBackBtn').style.display=rpStep>0?'':'none';
-  const nb=document.getElementById('rpNextBtn');
-  if(rpStep===STEPS.length-1){nb.textContent='Post Report';nb.onclick=reportSubmit;}
-  else{nb.textContent='Next';nb.onclick=rpNext;}
-  nb.disabled=rpStep===0&&!rpState.cat;
-  rpUpdateScore();
-  STEPS[rpStep].render();
-}
-function rpUpdateScore(){
+const RP_BUCKETS={snow:['0','5','10','20','30','50','100+'],danger:['1','2','3','4','5'],tour:['⭐','⭐⭐','⭐⭐⭐','⭐⭐⭐⭐','⭐⭐⭐⭐⭐']};
+const RP_BUCKET_UNITS={snow:'cm',danger:'Stufe',tour:''};
+const RP_BUCKET_LABELS={snow:'Schneehöhe',danger:'Gefahrenstufe',tour:'Bewertung'};
+// --- Radial quick-pick (long-press FAB) ---
+let radialActive=false,radialCat=null;
+const RAD_POS=[{a:-90},{a:-162},{a:-18},{a:162},{a:18}];
+(function(){
+  const fab=document.getElementById('reportFab'),wrap=document.getElementById('radialWrap'),ring=document.getElementById('radialRing'),ctr=document.getElementById('radialCenter');
+  let timer=null,ox=0,oy=0;
+  function showRadial(cx,cy){
+    if(!sbUser){authShow();return;}
+    radialActive=true;radialCat=null;wrap.style.display='block';
+    const sz=280,hsz=sz/2;
+    const rx=Math.min(window.innerWidth-hsz-10,Math.max(hsz+10,cx))-hsz;
+    const ry=Math.min(window.innerHeight-hsz-10,Math.max(hsz+10,cy))-hsz;
+    ring.style.left=rx+'px';ring.style.top=ry+'px';
+    ctr.style.left=(rx+hsz-24)+'px';ctr.style.top=(ry+hsz-24)+'px';
+    ox=rx+hsz;oy=ry+hsz;
+    ring.innerHTML=RP_CATS.map((c,i)=>{
+      const ang=RAD_POS[i].a*Math.PI/180;const r=100;
+      const x=hsz+Math.cos(ang)*r-36;const y=hsz+Math.sin(ang)*r-36;
+      return`<div class="radial-seg" data-i="${i}" style="left:${x}px;top:${y}px"><span class="re">${c.icon}</span>${c.label}</div>`;
+    }).join('');
+    haptic(12);
+  }
+  function moveRadial(cx,cy){
+    if(!radialActive)return;
+    const dx=cx-ox,dy=cy-oy,dist=Math.sqrt(dx*dx+dy*dy);
+    let closest=-1;
+    if(dist>40){
+      const ang=Math.atan2(dy,dx)*180/Math.PI;
+      let minD=999;
+      RAD_POS.forEach((p,i)=>{let d=Math.abs(ang-p.a);if(d>180)d=360-d;if(d<minD){minD=d;closest=i;}});
+    }
+    ring.querySelectorAll('.radial-seg').forEach((s,i)=>{
+      const isH=i===closest;
+      s.classList.toggle('hover',isH);
+      if(isH&&radialCat!==i){radialCat=i;haptic(6);}
+    });
+    if(closest===-1)radialCat=null;
+  }
+  function endRadial(){
+    if(!radialActive)return;radialActive=false;wrap.style.display='none';
+    if(radialCat!==null){
+      haptic(20);
+      rpState.cat=RP_CATS[radialCat].id;
+      reportOpenSheet();
+    }
+  }
+  fab.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    timer=setTimeout(()=>{timer=null;showRadial(e.clientX,e.clientY);},300);
+  });
+  fab.addEventListener('pointermove',e=>{if(radialActive)moveRadial(e.clientX,e.clientY);});
+  fab.addEventListener('pointerup',e=>{
+    if(timer){clearTimeout(timer);timer=null;if(!sbUser){authShow();}else{rpState.cat=null;reportOpenSheet();}}
+    else endRadial();
+  });
+  fab.addEventListener('pointercancel',()=>{if(timer)clearTimeout(timer);endRadial();});
+  wrap.addEventListener('pointermove',e=>moveRadial(e.clientX,e.clientY));
+  wrap.addEventListener('pointerup',endRadial);
+})();
+// --- Single-sheet report flow ---
+let rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:'',locName:null};
+function rpReset(){rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:'',locName:null};}
+function rpScore(){
   let s=0;if(rpState.cat)s+=25;if(rpState.sub)s+=25;if(rpState.bucket)s+=15;if(rpState.photo)s+=25;if(rpState.loc)s+=10;
-  s=Math.min(100,s);
-  document.getElementById('rpScoreFill').style.width=s+'%';
+  return Math.min(100,s);
 }
-function rpNext(){if(rpStep<STEPS.length-1){rpStep++;rpUpdateUI();}}
-function rpPrev(){if(rpStep>0){rpStep--;rpUpdateUI();}}
-function reportOpen(){
-  if(!sbUser){authShow();return;}
-  rpReset();rpUpdateUI();
+function rpUpdateRing(){
+  const s=rpScore();const circ=232.5;
+  document.getElementById('rpRingFill').setAttribute('stroke-dashoffset',circ-(circ*s/100));
+  const hint=document.getElementById('rpCtxHint');
+  if(s>=100)hint.textContent='Top-Report ⭐';
+  else if(!rpState.cat)hint.textContent='Wähle eine Kategorie';
+  else if(!rpState.sub)hint.textContent='+ Details für besseren Report';
+  else if(!rpState.photo)hint.textContent='+ Foto für +25%';
+  else if(!rpState.bucket)hint.textContent='+ Messung für +15%';
+  else hint.textContent='Wische zum Posten ↓';
+}
+function reportOpenSheet(){
+  rpState.sub=null;rpState.bucket=null;rpState.photo=null;rpState.photoFile=null;rpState.caption='';
   document.getElementById('reportOverlay').style.display='flex';
-  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{rpState.loc=[p.coords.latitude,p.coords.longitude];rpUpdateScore();},()=>{},{enableHighAccuracy:true,timeout:10000});
+  rpRenderCats();rpRenderSubs();rpRenderBuckets();
+  rpUpdateRing();rpResetSlide();
+  document.getElementById('rpCaption').value='';
+  document.getElementById('rpZoneNote').style.display='none';
+  if(rpState.cat){rpShowDetails();}
+  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{
+    rpState.loc=[p.coords.latitude,p.coords.longitude];rpUpdateRing();
+    document.getElementById('rpCtxLoc').textContent='📍 '+p.coords.latitude.toFixed(4)+', '+p.coords.longitude.toFixed(4);
+  },()=>{document.getElementById('rpCtxLoc').textContent='📍 Kein GPS';},{enableHighAccuracy:true,timeout:10000});
 }
 function reportClose(){document.getElementById('reportOverlay').style.display='none';rpReset();}
-function rpRenderCat(){
-  const b=document.getElementById('rpBody');
-  b.innerHTML=`<div class="rp-section"><div class="rp-label">What do you see?</div>
-    <div class="cat-grid">${RP_CATS.map(c=>`<button class="cat-chip${rpState.cat===c.id?' active':''}" data-id="${c.id}" onclick="rpPickCat('${c.id}')"><span class="cat-emoji">${c.icon}</span>${c.label}</button>`).join('')}</div></div>`;
+function rpRenderCats(){
+  document.getElementById('rpCats').innerHTML=RP_CATS.map(c=>
+    `<button class="cat-chip${rpState.cat===c.id?' active':''}" data-id="${c.id}" onclick="rpPickCat('${c.id}')"><span class="cat-emoji">${c.icon}</span>${c.label}</button>`
+  ).join('');
 }
 function rpPickCat(id){
-  rpState.cat=id;rpState.sub=null;rpState.bucket=null;
+  rpState.cat=id;rpState.sub=null;rpState.bucket=null;haptic(8);
   document.querySelectorAll('.cat-chip').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
-  document.getElementById('rpNextBtn').disabled=false;
+  const cat=RP_CATS.find(c=>c.id===id);
+  document.getElementById('rpCtxTitle').textContent=cat.icon+' '+cat.label+' Report';
+  rpShowDetails();rpUpdateRing();
 }
-function rpRenderDetail(){
+function rpShowDetails(){
+  rpRenderSubs();rpRenderBuckets();
+  document.getElementById('rpZoneSub').style.display='';
+  document.getElementById('rpZoneNote').style.display='';
+}
+function rpRenderSubs(){
   const cat=RP_CATS.find(c=>c.id===rpState.cat);
-  if(!cat){rpPrev();return;}
-  let html=`<div class="rp-section"><div class="rp-label">${cat.icon} ${cat.label} — Details</div>
-    <div class="sub-chips">${cat.subs.map(s=>`<button class="sub-chip${rpState.sub===s?' active':''}" onclick="rpPickSub(this,'${s}')">${s}</button>`).join('')}</div></div>`;
-  if(RP_BUCKETS[rpState.cat]){
-    html+=`<div class="rp-section"><div class="rp-label">Measurement</div>
-      <div class="bucket-row">${RP_BUCKETS[rpState.cat].map(b=>`<button class="bucket${rpState.bucket===b?' active':''}" onclick="rpPickBucket(this,'${b}')">${b}</button>`).join('')}</div></div>`;
-  }
-  document.getElementById('rpBody').innerHTML=html;
+  if(!cat){document.getElementById('rpZoneSub').style.display='none';return;}
+  document.getElementById('rpSubLabel').textContent=cat.label+' — Details';
+  document.getElementById('rpSubs').innerHTML=cat.subs.map(s=>
+    `<button class="sub-chip${rpState.sub===s?' active':''}" onclick="rpPickSub(this,'${s}')">${s}</button>`
+  ).join('');
 }
-function rpPickSub(el,val){rpState.sub=val;document.querySelectorAll('.sub-chip').forEach(e=>e.classList.remove('active'));el.classList.add('active');rpUpdateScore();}
-function rpPickBucket(el,val){rpState.bucket=val;document.querySelectorAll('.bucket').forEach(e=>e.classList.remove('active'));el.classList.add('active');rpUpdateScore();}
-function rpRenderPhoto(){
-  const b=document.getElementById('rpBody');
-  const hasImg=rpState.photo;
-  b.innerHTML=`<div class="rp-section"><div class="rp-label">Add a photo</div>
-    <div class="rp-photo${hasImg?' has-img':''}" id="rpPhotoArea" onclick="document.getElementById('rpFile').click()" style="${hasImg?'background-image:url('+rpState.photo+');background-size:cover;background-position:center':''}">
-    ${hasImg?'<span class="ph-icon" style="opacity:.6;text-shadow:0 1px 4px rgba(0,0,0,.3)">📷</span>':'<span class="ph-icon">📷</span><span>Tap to take or choose a photo</span>'}
-    </div></div>
-    <div style="text-align:center;padding:8px;color:#7a8a9a;font-size:13px">${hasImg?'Tap photo to change':'Optional but recommended (+25%)'}</div>`;
+function rpPickSub(el,val){rpState.sub=val;haptic(8);
+  document.querySelectorAll('.sub-chip').forEach(e=>e.classList.remove('active'));el.classList.add('active');rpUpdateRing();}
+function rpRenderBuckets(){
+  const bk=RP_BUCKETS[rpState.cat];
+  if(!bk){document.getElementById('rpZoneBucket').style.display='none';return;}
+  document.getElementById('rpZoneBucket').style.display='';
+  document.getElementById('rpBucketLabel').textContent=RP_BUCKET_LABELS[rpState.cat]||'Messung';
+  document.getElementById('rpBuckets').innerHTML=bk.map(b=>
+    `<button class="bucket${rpState.bucket===b?' active':''}" onclick="rpPickBucket(this,'${b}')">${b}</button>`
+  ).join('');
+  document.getElementById('rpBucketVal').textContent=rpState.bucket?(rpState.bucket+' '+(RP_BUCKET_UNITS[rpState.cat]||'')):'';
 }
+function rpPickBucket(el,val){rpState.bucket=val;haptic(8);
+  document.querySelectorAll('.bucket').forEach(e=>e.classList.remove('active'));el.classList.add('active');
+  document.getElementById('rpBucketVal').textContent=val+' '+(RP_BUCKET_UNITS[rpState.cat]||'');
+  rpUpdateRing();}
 function rpSetPhoto(inp){
   if(!inp.files||!inp.files[0])return;
-  rpState.photoFile=inp.files[0];
-  rpState.photo=URL.createObjectURL(inp.files[0]);
-  rpUpdateScore();rpRenderPhoto();
+  rpState.photoFile=inp.files[0];rpState.photo=URL.createObjectURL(inp.files[0]);
+  const th=document.getElementById('rpThumb');
+  th.classList.add('has-img');th.innerHTML=`<svg class="rp-ring" viewBox="0 0 80 80"><circle cx="40" cy="40" r="37" stroke="rgba(94,200,255,.15)" stroke-width="3" fill="none"/><circle id="rpRingFill" cx="40" cy="40" r="37" stroke="#5EC8FF" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="232.5" stroke-dashoffset="0" transform="rotate(-90 40 40)"/></svg><img src="${rpState.photo}" alt=""/>`;
+  haptic(12);rpUpdateRing();
 }
-function rpRenderNote(){
-  const b=document.getElementById('rpBody');
-  const cat=RP_CATS.find(c=>c.id===rpState.cat);
-  let summary=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">`;
-  if(cat)summary+=`<span class="feed-badge">${cat.icon} ${cat.label}</span>`;
-  if(rpState.sub)summary+=`<span class="feed-badge">${rpState.sub}</span>`;
-  if(rpState.bucket)summary+=`<span class="feed-badge">${rpState.bucket}</span>`;
-  if(rpState.photo)summary+=`<span class="feed-badge">📷 Photo</span>`;
-  if(rpState.loc)summary+=`<span class="feed-badge">📍 GPS</span>`;
-  summary+=`</div>`;
-  b.innerHTML=`<div class="rp-section"><div class="rp-label">Summary & Note</div>${summary}
-    <div class="rp-note"><textarea id="rpCaption" placeholder="Describe what you see (optional)..." oninput="rpState.caption=this.value">${rpState.caption}</textarea></div></div>`;
+// --- Voice drop ---
+let rpRecognition=null,rpRecording=false;
+function rpVoiceToggle(){
+  const btn=document.getElementById('rpVoiceBtn');
+  if(rpRecording){if(rpRecognition)rpRecognition.stop();rpRecording=false;btn.classList.remove('recording');btn.textContent='🎤 Halten und sprechen';return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){document.getElementById('rpCaption').focus();return;}
+  rpRecognition=new SR();rpRecognition.lang='de-CH';rpRecognition.continuous=false;rpRecognition.interimResults=true;
+  rpRecognition.onresult=e=>{
+    let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
+    document.getElementById('rpCaption').value=t;rpState.caption=t;
+  };
+  rpRecognition.onend=()=>{rpRecording=false;btn.classList.remove('recording');btn.textContent='🎤 Halten und sprechen';};
+  rpRecognition.start();rpRecording=true;btn.classList.add('recording');btn.textContent='🎤 Recording...';haptic(12);
 }
+// --- Slide-to-post ---
+(function(){
+  const track=document.getElementById('rpSlide'),knob=document.getElementById('rpSlideKnob'),fill=document.getElementById('rpSlideFill');
+  let dragging=false,startX=0,maxDrag=0,locked=false;
+  function rpResetSlideInner(){locked=false;knob.style.left='4px';fill.style.transform='scaleX(0)';track.classList.remove('locked');knob.textContent='›';}
+  window.rpResetSlide=rpResetSlideInner;
+  knob.addEventListener('pointerdown',e=>{
+    if(locked||!rpState.cat)return;e.preventDefault();dragging=true;startX=e.clientX;
+    maxDrag=track.offsetWidth-knob.offsetWidth-8;knob.setPointerCapture(e.pointerId);
+  });
+  knob.addEventListener('pointermove',e=>{
+    if(!dragging)return;
+    let dx=Math.max(0,Math.min(maxDrag,e.clientX-startX));
+    knob.style.left=(4+dx)+'px';fill.style.transform=`scaleX(${dx/maxDrag})`;
+    if(dx/maxDrag>0.85&&!locked){locked=true;dragging=false;haptic(30);
+      knob.style.left=maxDrag+4+'px';fill.style.transform='scaleX(1)';track.classList.add('locked');knob.textContent='✓';
+      reportSubmit();
+    }
+  });
+  knob.addEventListener('pointerup',()=>{if(dragging&&!locked){dragging=false;knob.style.left='4px';fill.style.transform='scaleX(0)';}});
+})();
 async function reportSubmit(){
   if(!sb||!sbUser||!rpState.cat)return;
-  const btn=document.getElementById('rpNextBtn');btn.disabled=true;btn.textContent='Posting...';
   try{
     let imageUrl=null;
     if(rpState.photoFile){
@@ -1691,17 +1830,23 @@ async function reportSubmit(){
       if(!upErr){const{data:urlData}=sb.storage.from('report-images').getPublicUrl(path);imageUrl=urlData?.publicUrl;}
     }
     const loc=rpState.loc||[map.getCenter().lat,map.getCenter().lng];
-    let score=0;if(rpState.cat)score+=25;if(rpState.sub)score+=25;if(rpState.bucket)score+=15;if(rpState.photo)score+=25;if(rpState.loc)score+=10;
+    const score=rpScore();
     const{error}=await sb.from('reports').insert({
       user_id:sbUser.id,location:`POINT(${loc[1]} ${loc[0]})`,
       primary_categories:[rpState.cat],subtype:rpState.sub,
       condition_data:rpState.bucket?{measurement:rpState.bucket}:{},
       image_url:imageUrl,caption:rpState.caption.trim()||null,
-      completion_score:Math.min(100,score)
+      completion_score:score
     });
     if(error)throw error;
     reportClose();loadDbReports();
-  }catch(err){alert('Error: '+(err.message||err));btn.disabled=false;btn.textContent='Post Report';}
+    showUndo();
+  }catch(err){alert('Error: '+(err.message||err));rpResetSlide();}
+}
+function showUndo(){
+  const bar=document.createElement('div');bar.className='undo-bar';
+  bar.innerHTML='Gepostet. Andere sehen\'s jetzt auf der Karte. <button onclick="this.parentElement.remove()">OK</button>';
+  document.body.appendChild(bar);setTimeout(()=>bar.remove(),5000);
 }
 // --- Feed ---
 let feedFilter='all';
@@ -1709,7 +1854,7 @@ function feedOpen(){
   document.getElementById('feedOverlay').style.display='flex';
   const ff=document.getElementById('feedFilter');
   ff.innerHTML=['all','snow','route','danger','tour','info'].map(f=>{
-    const lbl=f==='all'?'All':RP_CATS.find(c=>c.id===f)?.icon+' '+RP_CATS.find(c=>c.id===f)?.label||f;
+    const lbl=f==='all'?'Alle':RP_CATS.find(c=>c.id===f)?.icon+' '+RP_CATS.find(c=>c.id===f)?.label||f;
     return`<button class="${feedFilter===f?'active':''}" onclick="feedSetFilter('${f}')">${lbl}</button>`;
   }).join('');
   feedRender();
@@ -1719,7 +1864,7 @@ function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter b
 function feedRender(){
   const list=document.getElementById('feedList');
   const filtered=feedFilter==='all'?allReports:allReports.filter(r=>r.cat===feedFilter);
-  if(!filtered.length){list.innerHTML='<div class="feed-empty">No reports yet. Be the first!</div>';return;}
+  if(!filtered.length){list.innerHTML='<div class="feed-empty">Noch keine Reports. Sei der Erste!</div>';return;}
   list.innerHTML=filtered.map(r=>{
     const isDanger=r.cat==='danger';
     return`<div class="feed-card" onclick="feedFlyTo(${r.lat},${r.lng})">
