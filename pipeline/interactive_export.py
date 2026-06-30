@@ -783,36 +783,62 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .undo-bar{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px)+20px);left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:999px;background:rgba(20,30,51,.95);backdrop-filter:blur(12px);color:#E8EEF7;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:5000;animation:undoIn .3s cubic-bezier(.34,1.56,.64,1)}
  .undo-bar button{background:none;border:none;color:#FF8A5B;font-weight:700;font-size:14px;cursor:pointer}
  @keyframes undoIn{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
- /* --- Feed --- */
- .feed-overlay{position:fixed;inset:0;z-index:3000;background:rgba(11,17,32,.4);backdrop-filter:blur(2px);display:flex;flex-direction:column;justify-content:flex-end}
- .feed-sheet{background:#fff;border-radius:24px 24px 0 0;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.12)}
- .feed-sheet .sh{width:32px;height:4px;border-radius:2px;background:rgba(0,0,0,.1);margin:10px auto 6px}
- .feed-header{padding:8px 20px 14px;display:flex;align-items:center;justify-content:space-between}
- .feed-title{font-size:20px;font-weight:800;color:var(--fg);letter-spacing:-.03em}
- .feed-close{background:none;border:none;font-size:18px;color:var(--mut);cursor:pointer;padding:6px;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center}
- .feed-close:hover{background:rgba(0,0,0,.05)}
- .feed-filter{display:flex;gap:5px;padding:0 20px 14px;overflow-x:auto;scrollbar-width:none}
+ /* --- Feed (full-page, Instagram-style) --- */
+ .feed-page{position:fixed;inset:0;z-index:3000;background:#fafafa;transform:translateX(100%);transition:transform .35s cubic-bezier(.32,.72,.42,1);display:flex;flex-direction:column;will-change:transform}
+ .feed-page.open{transform:translateX(0)}
+ .feed-nav{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#fff;border-bottom:1px solid rgba(0,0,0,.06);position:sticky;top:0;z-index:1;padding-top:calc(12px + env(safe-area-inset-top,0px))}
+ .feed-back{background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;color:var(--fg);border-radius:8px}
+ .feed-back:hover{background:rgba(0,0,0,.04)}
+ .feed-title{font-size:22px;font-weight:800;color:var(--fg);letter-spacing:-.04em;flex:1}
+ .feed-filter{display:flex;gap:6px;padding:10px 16px;overflow-x:auto;scrollbar-width:none;background:#fff;border-bottom:1px solid rgba(0,0,0,.04)}
  .feed-filter::-webkit-scrollbar{display:none}
- .feed-filter button{padding:6px 14px;border-radius:999px;border:1.5px solid transparent;background:rgba(0,0,0,.04);font-size:13px;font-weight:600;color:var(--fg2);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s;font-family:inherit}
+ .feed-filter button{padding:7px 16px;border-radius:999px;border:1.5px solid rgba(0,0,0,.08);background:#fff;font-size:13px;font-weight:600;color:var(--fg2);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s;font-family:inherit;display:flex;align-items:center;gap:6px}
+ .feed-filter button .cat-ico{width:16px;height:16px;display:flex;align-items:center;justify-content:center}
+ .feed-filter button .cat-ico svg{width:14px;height:14px}
  .feed-filter button.active{background:var(--fg);color:#fff;border-color:var(--fg)}
- .feed-list{flex:1;overflow-y:auto;padding:0 16px 20px;-webkit-overflow-scrolling:touch}
- .feed-card{background:#f7f9fc;border-radius:var(--r-lg);padding:14px;margin-bottom:8px;border:1px solid rgba(0,0,0,.04);cursor:pointer;transition:all .15s}
- .feed-card:active{transform:scale(.99);box-shadow:0 2px 12px rgba(0,0,0,.08)}
- .feed-card-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
- .feed-card-avatar{width:30px;height:30px;border-radius:50%;background:var(--fg);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;letter-spacing:.02em}
- .feed-card-user{font-size:14px;font-weight:700;color:var(--fg);letter-spacing:-.01em}
- .feed-card-time{font-size:11px;color:var(--mut);margin-left:auto;font-weight:500}
- .feed-card-img{width:100%;height:180px;object-fit:cover;border-radius:var(--r);margin-bottom:10px;background:#edf2f8}
- .feed-card-badges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
- .feed-badge{padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:rgba(0,0,0,.05);color:var(--fg2)}
- .feed-badge.danger{background:rgba(255,84,112,.1);color:#d03050}
- .feed-card-text{font-size:14px;color:var(--fg2);line-height:1.45}
- .feed-card-loc{font-size:11px;color:var(--mut);margin-top:6px;display:flex;align-items:center;gap:4px;font-weight:500}
- .feed-empty{text-align:center;padding:60px 20px;color:var(--mut);font-size:14px}
+ .feed-filter button.active .cat-ico svg{stroke:#fff}
+ .feed-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,0px)}
+ .feed-grid{max-width:600px;margin:0 auto;padding:0}
+ .feed-card{background:#fff;margin-bottom:8px;cursor:pointer}
+ .feed-card-head{display:flex;align-items:center;gap:10px;padding:12px 16px}
+ .feed-card-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;letter-spacing:.02em;color:#fff}
+ .feed-card-info{flex:1;min-width:0}
+ .feed-card-user{font-size:14px;font-weight:700;color:var(--fg);letter-spacing:-.01em;display:block}
+ .feed-card-loc{font-size:12px;color:var(--mut);font-weight:500;display:flex;align-items:center;gap:3px}
+ .feed-card-time{font-size:12px;color:var(--mut);font-weight:500;flex-shrink:0}
+ .feed-card-visual{width:100%;aspect-ratio:4/3;position:relative;overflow:hidden;background:#edf2f8}
+ .feed-card-visual img{width:100%;height:100%;object-fit:cover}
+ .feed-card-visual .card-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px}
+ .feed-card-visual .card-placeholder>span:first-child svg{width:56px;height:56px;opacity:.5}
+ .feed-card-visual .card-placeholder>span:last-child{font-size:15px;font-weight:700;opacity:.45;letter-spacing:.02em}
+ .feed-card-body{padding:12px 16px 16px}
+ .feed-card-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+ .feed-badge{padding:4px 12px;border-radius:999px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px}
+ .feed-badge .cat-ico{width:14px;height:14px;display:flex;align-items:center;justify-content:center}
+ .feed-badge .cat-ico svg{width:13px;height:13px}
+ .feed-badge.cat-snow{background:rgba(56,152,236,.1);color:#1a7fd4}
+ .feed-badge.cat-snow svg{stroke:#1a7fd4}
+ .feed-badge.cat-route{background:rgba(76,175,80,.1);color:#2e7d32}
+ .feed-badge.cat-route svg{stroke:#2e7d32}
+ .feed-badge.cat-danger{background:rgba(255,84,112,.1);color:#d03050}
+ .feed-badge.cat-danger svg{stroke:#d03050}
+ .feed-badge.cat-tour{background:rgba(156,39,176,.1);color:#7b1fa2}
+ .feed-badge.cat-tour svg{stroke:#7b1fa2}
+ .feed-badge.cat-info{background:rgba(255,152,0,.1);color:#e65100}
+ .feed-badge.cat-info svg{stroke:#e65100}
+ .feed-card-caption{font-size:14px;color:var(--fg2);line-height:1.5}
+ .feed-card-caption b{color:var(--fg);font-weight:700}
+ .feed-card-actions{display:flex;align-items:center;gap:16px;padding:10px 16px 4px;border-top:none}
+ .feed-card-actions button{background:none;border:none;cursor:pointer;padding:4px;color:var(--fg2);display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;font-family:inherit}
+ .feed-card-actions button svg{width:20px;height:20px}
+ .feed-card-actions button:hover{color:var(--fg)}
+ .feed-divider{height:1px;background:rgba(0,0,0,.06)}
+ .feed-empty{text-align:center;padding:80px 20px;color:var(--mut);font-size:15px}
+ @media(min-width:561px){.feed-grid{padding:12px}.feed-card{border-radius:var(--r-lg);margin-bottom:12px;border:1px solid rgba(0,0,0,.06);overflow:hidden}}
  /* --- Report markers --- */
- .rpt-marker{width:36px;height:36px;border-radius:50%;background:#fff;border:3px solid #5EC8FF;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer;transition:transform .15s}
+ .rpt-marker{width:36px;height:36px;border-radius:50%;background:#fff;border:2.5px solid currentColor;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer;transition:transform .15s}
+ .rpt-marker svg{width:18px;height:18px}
  .rpt-marker:hover{transform:scale(1.15)}
- .rpt-marker.danger{border-color:#FF5470}
  @media(prefers-reduced-motion:reduce){.cat-chip,.sub-chip,.bucket,.slide-knob,.radial-seg{transition:none!important}}
 </style></head><body>
 <div id="intro"><div class="snow-wrap" id="snowWrap"></div><svg class="mtn" viewBox="0 0 800 200" preserveAspectRatio="none"><path d="M0,200 L80,110 L140,155 L240,55 L310,125 L390,35 L460,105 L540,55 L620,115 L700,65 L800,140 L800,200Z" fill="rgba(255,255,255,.04)"/><path d="M0,200 L100,130 L180,165 L300,80 L380,150 L470,85 L550,145 L660,95 L750,145 L800,165 L800,200Z" fill="rgba(255,255,255,.07)"/><path d="M0,200 L60,170 L160,145 L260,175 L360,130 L440,170 L520,150 L620,175 L720,155 L800,180 L800,200Z" fill="rgba(255,255,255,.03)"/></svg><h1>Swiss Snow Model</h1><div class="sub">Interactive Snow Forecast Map</div><div class="sources">swisstopo &middot; MeteoSwiss &middot; SLF &middot; Open-Meteo &middot; Copernicus</div><div class="bar"></div></div>
@@ -851,7 +877,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="three-wrap"><div id="map3d" style="width:100%;height:100%"></div><button id="btn3dClose">✕ 2D</button>
 <div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="30" style="width:100px;accent-color:var(--acc)"> Map <span id="mapOpacLbl">30%</span></label>
 <button id="btn3dExag">×1.5</button>
-<select id="overlay3d" style="padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:16px;backdrop-filter:blur(10px);min-height:46px"><option value="none">No overlay</option><option value="snow">Snow</option><option value="temp">Temperature</option><option value="wind">Wind</option><option value="depth">Snow Depth</option><option value="powder">Powder</option></select></div>
+<select id="overlay3d" style="padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:16px;backdrop-filter:blur(10px);min-height:46px"><option value="none">No overlay</option><option value="snow">Snow</option><option value="temp">Temperature</option><option value="wind">Wind</option><option value="depth">Snow Depth</option><option value="powder">Powder</option></select>
+<span id="keys3d" style="font-size:12px;color:var(--mut);opacity:.7;padding:6px 10px;display:none">WASD/Arrows: rotate · +/-: zoom · R: reset</span></div>
 </div>
 <!-- Auth & Reports UI -->
 <div id="userBar"><button class="login-btn" id="btnLogin" onclick="authShow()">Sign in</button></div>
@@ -915,13 +942,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 </div>
 </div>
 </div>
-<div class="feed-overlay" id="feedOverlay" style="display:none" onclick="feedClose()">
-<div class="feed-sheet" onclick="event.stopPropagation()">
-<div class="sh"></div>
-<div class="feed-header"><span class="feed-title">Field Reports</span><button class="feed-close" onclick="feedClose()">&times;</button></div>
-<div class="feed-filter" id="feedFilter"></div>
-<div class="feed-list" id="feedList"><div class="feed-empty">Loading reports...</div></div>
+<div class="feed-page" id="feedPage">
+<div class="feed-nav">
+<button class="feed-back" onclick="feedClose()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+<span class="feed-title">Field Reports</span>
 </div>
+<div class="feed-filter" id="feedFilter"></div>
+<div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Loading reports...</div></div></div>
 </div>
 <script>
 const M=/*META*/;
@@ -1064,6 +1091,10 @@ function drawTimeline(){const tc=document.getElementById('timeline'),ctx2=tc.get
     ctx2.fillText(cm,cw-4,y+4);if(i>0){ctx2.strokeStyle='rgba(0,0,0,.04)';ctx2.lineWidth=.5;ctx2.beginPath();ctx2.moveTo(0,y);ctx2.lineTo(cw-scW,y);ctx2.stroke();}}
   ctx2.fillStyle='rgba(60,80,100,.35)';ctx2.font='10px system-ui';ctx2.fillText('cm/h',cw-4,16);
   ctx2.strokeStyle='rgba(0,112,184,.5)';ctx2.lineWidth=2;ctx2.strokeRect(x1+.5,0,x2-x1-1,ch);
+  const hh=24,hy=(ch-hh)/2;ctx2.fillStyle='rgba(0,112,184,.4)';
+  function rRect(rx,ry,rw,rh,rr){ctx2.beginPath();if(ctx2.roundRect){ctx2.roundRect(rx,ry,rw,rh,rr);}else{ctx2.moveTo(rx+rr,ry);ctx2.arcTo(rx+rw,ry,rx+rw,ry+rh,rr);ctx2.arcTo(rx+rw,ry+rh,rx,ry+rh,rr);ctx2.arcTo(rx,ry+rh,rx,ry,rr);ctx2.arcTo(rx,ry,rx+rw,ry,rr);ctx2.closePath();}ctx2.fill();}
+  rRect(x1-3,hy,6,hh,3);rRect(x2-3,hy,6,hh,3);
+  ctx2.fillStyle='rgba(255,255,255,.8)';for(let i=-1;i<=1;i++){ctx2.fillRect(x1-1,hy+hh/2+i*4,2,2);ctx2.fillRect(x2-1,hy+hh/2+i*4,2,2);}
   ctx2.font='bold 14px system-ui';ctx2.fillStyle='rgba(0,90,160,.85)';
   const tA=fmtTime(a),tB=fmtTime(b-1);
   ctx2.textAlign='left';ctx2.fillText(tA,x1+4,20);
@@ -1290,22 +1321,34 @@ document.querySelectorAll('#presets button[data-r]').forEach(btn=>{btn.onclick=(
   clearPresets();btn.classList.add('active');renderAll();};});
 document.getElementById('btnSinceSnow').onclick=()=>{const p=sinceLastSnowfall();a=p[0];b=p[1];windowSize=b-a;
   clearPresets();document.getElementById('btnSinceSnow').classList.add('active');renderAll();};
-// --- Timeline Drag ---
-(function(){const tc=document.getElementById('timeline');let dragging=false,dragStartX=0,dragStartA=0,ws=0;
-  function startDrag(e){const cx=e.touches?e.touches[0].clientX:e.clientX;const rect=tc.getBoundingClientRect();
+// --- Timeline Drag (desktop + mobile, edge resize + click-to-jump) ---
+(function(){const tc=document.getElementById('timeline');let mode=null,dragStartX=0,dragStartA=0,dragStartB=0,ws=0;
+  const EDGE=12;
+  function getZone(cx){const rect=tc.getBoundingClientRect();
     const x1=a/T*rect.width+rect.left,x2=b/T*rect.width+rect.left;
-    if(cx>=x1-15&&cx<=x2+15){dragging=true;dragStartX=cx;dragStartA=a;ws=b-a;tc.style.cursor='grabbing';e.preventDefault();}}
+    if(Math.abs(cx-x1)<EDGE)return'left';
+    if(Math.abs(cx-x2)<EDGE)return'right';
+    if(cx>x1&&cx<x2)return'center';
+    return'outside';}
+  function startDrag(e){const cx=e.touches?e.touches[0].clientX:e.clientX;
+    const zone=getZone(cx);
+    if(zone==='outside'){
+      const rect=tc.getBoundingClientRect();const clickT=Math.round((cx-rect.left)/rect.width*T);
+      const hw=Math.floor(windowSize/2);a=Math.max(0,Math.min(T-windowSize,clickT-hw));b=a+windowSize;
+      renderAll();return;}
+    mode=zone;dragStartX=cx;dragStartA=a;dragStartB=b;ws=b-a;tc.style.cursor=zone==='center'?'grabbing':'col-resize';e.preventDefault();}
   tc.addEventListener('mousedown',startDrag);tc.addEventListener('touchstart',startDrag,{passive:false});
-  function onDrag(e){if(!dragging)return;e.preventDefault();const cx=e.touches?e.touches[0].clientX:e.clientX;
+  function onDrag(e){if(!mode)return;e.preventDefault();const cx=e.touches?e.touches[0].clientX:e.clientX;
     const rect=tc.getBoundingClientRect();const delta=Math.round((cx-dragStartX)/rect.width*T);
-    let na=Math.max(0,Math.min(T-ws,dragStartA+delta));a=na;b=na+ws;
-    drawTimeline();document.getElementById('window').innerHTML=ws+'h window';}
+    if(mode==='center'){let na=Math.max(0,Math.min(T-ws,dragStartA+delta));a=na;b=na+ws;}
+    else if(mode==='left'){a=Math.max(0,Math.min(dragStartB-4,dragStartA+delta));windowSize=b-a;}
+    else if(mode==='right'){b=Math.min(T,Math.max(dragStartA+4,dragStartB+delta));windowSize=b-a;}
+    drawTimeline();document.getElementById('window').innerHTML=(b-a)+'h window';}
   document.addEventListener('mousemove',onDrag);document.addEventListener('touchmove',onDrag,{passive:false});
-  function endDrag(){if(dragging){dragging=false;tc.style.cursor='grab';renderAll();}}
+  function endDrag(){if(mode){mode=null;tc.style.cursor='default';renderAll();}}
   document.addEventListener('mouseup',endDrag);document.addEventListener('touchend',endDrag);
-  tc.addEventListener('mousemove',function(e){if(dragging)return;const rect=tc.getBoundingClientRect();const cx=e.clientX;
-    const x1=a/T*rect.width+rect.left,x2=b/T*rect.width+rect.left;
-    tc.style.cursor=(cx>=x1-5&&cx<=x2+5)?'grab':'default';});
+  tc.addEventListener('mousemove',function(e){if(mode)return;const cx=e.clientX;const zone=getZone(cx);
+    tc.style.cursor=zone==='center'?'grab':zone==='left'||zone==='right'?'col-resize':'crosshair';});
 })();
 document.getElementById('stnToggle').onchange=e=>{showStn=e.target.checked;renderStations();};
 function toggleReportLayer(on){if(on)map.addLayer(reportMarkers);else map.removeLayer(reportMarkers);}
@@ -1473,10 +1516,23 @@ function init3D(){
     touchZoomRotate:true,touchPitch:true,dragRotate:true});
   map3d.addControl(new maplibregl.NavigationControl({visualizePitch:true,showCompass:true}),'top-left');
   map3d.addControl(new maplibregl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:false}),'top-left');
-  map3d.scrollZoom.setWheelZoomRate(1/200);
+  map3d.scrollZoom.setWheelZoomRate(1/100);
+  map3d.keyboard.enable();
   document.getElementById('btn3dFloat').classList.add('active');
+  if(!isMobile)document.getElementById('keys3d').style.display='inline';
   map3d.on('load',()=>update3dOverlay());
-  map3d.on('moveend',sync3dTo2d);}
+  map3d.on('moveend',sync3dTo2d);
+  // Desktop keyboard controls for 3D
+  document.addEventListener('keydown',function(e){
+    if(!is3d||!map3d)return;const s=0.002;
+    if(e.key==='ArrowUp'||e.key==='w'){map3d.setPitch(Math.min(85,map3d.getPitch()+5));e.preventDefault();}
+    else if(e.key==='ArrowDown'||e.key==='s'){map3d.setPitch(Math.max(0,map3d.getPitch()-5));e.preventDefault();}
+    else if(e.key==='ArrowLeft'||e.key==='a'){map3d.setBearing(map3d.getBearing()-5);e.preventDefault();}
+    else if(e.key==='ArrowRight'||e.key==='d'){map3d.setBearing(map3d.getBearing()+5);e.preventDefault();}
+    else if(e.key==='+'||e.key==='='){map3d.zoomIn();e.preventDefault();}
+    else if(e.key==='-'){map3d.zoomOut();e.preventDefault();}
+    else if(e.key==='r'){map3d.easeTo({pitch:60,bearing:-20,duration:500});e.preventDefault();}
+  });}
 function close3D(){
   if(map3d){const c=map3d.getCenter(),z=map3d.getZoom();map.setView([c.lat,c.lng],z,{animate:false});}
   is3d=false;if(map3d){map3d.remove();map3d=null;}
@@ -1564,7 +1620,8 @@ function loadReportMarkers(){
   reportMarkers.clearLayers();
   allReports.forEach(r=>{
     const isDanger=r.cat==='danger';
-    const icon=L.divIcon({className:'',html:`<div class="rpt-marker${isDanger?' danger':''}">${r.icon}</div>`,iconSize:[36,36],iconAnchor:[18,18]});
+    const mColor=CAT_COLORS[r.cat]||'#1a7fd4';
+    const icon=L.divIcon({className:'',html:`<div class="rpt-marker${isDanger?' danger':''}" style="color:${mColor}">${CAT_SVG[r.cat]||r.icon}</div>`,iconSize:[36,36],iconAnchor:[18,18]});
     const m=L.marker([r.lat,r.lng],{icon}).addTo(reportMarkers);
     m.bindPopup(`<div style="min-width:180px"><b>${r.user}</b> <span style="color:#7a8a9a;font-size:12px">${r.time}</span><br><span style="font-size:13px">${r.icon} ${r.sub||r.cat}${r.measurement?' · '+r.measurement:''}</span>${r.caption?'<br><span style="font-size:13px;color:#3a4a5a">'+r.caption+'</span>':''}</div>`,{maxWidth:260});
   });
@@ -1639,6 +1696,16 @@ async function authSubmit(e){
 async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email});document.getElementById('emailBanner').querySelector('button').textContent='Sent!';}
 function authMenu(){if(confirm('Sign out?')){if(sb)sb.auth.signOut();authUpdateUI(null);}}
 // --- Report categories ---
+const CAT_SVG={
+  snow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="22"/><line x1="4.9" y1="7" x2="19.1" y2="17"/><line x1="4.9" y1="17" x2="19.1" y2="7"/><line x1="12" y1="2" x2="14" y2="4.5"/><line x1="12" y1="2" x2="10" y2="4.5"/><line x1="12" y1="22" x2="14" y2="19.5"/><line x1="12" y1="22" x2="10" y2="19.5"/><line x1="4.9" y1="7" x2="5.7" y2="9.8"/><line x1="4.9" y1="7" x2="7.5" y2="6"/><line x1="19.1" y1="17" x2="18.3" y2="14.2"/><line x1="19.1" y1="17" x2="16.5" y2="18"/><line x1="19.1" y1="7" x2="16.5" y2="6"/><line x1="19.1" y1="7" x2="18.3" y2="9.8"/><line x1="4.9" y1="17" x2="7.5" y2="18"/><line x1="4.9" y1="17" x2="5.7" y2="14.2"/></svg>',
+  route:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19l4-14 4 10 4-6 4 10"/><circle cx="6" cy="5" r="1.5" fill="currentColor" stroke="none"/><circle cx="18" cy="9" r="1.5" fill="currentColor" stroke="none"/></svg>',
+  danger:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.2L1.8 18.5c-.8 1.4.2 3 1.7 3h17c1.5 0 2.5-1.6 1.7-3L13.7 3.2c-.8-1.4-2.6-1.4-3.4 0z"/><line x1="12" y1="9" x2="12" y2="14"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>',
+  tour:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l7-10 4 5 7-11"/><circle cx="17" cy="4" r="2"/><path d="M14 20l3-4 4 4"/></svg>',
+  info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r=".5" fill="currentColor" stroke="none"/></svg>'
+};
+const CAT_COLORS={snow:'#1a7fd4',route:'#2e7d32',danger:'#d03050',tour:'#7b1fa2',info:'#e65100'};
+const CAT_BG={snow:'linear-gradient(135deg,#e3f2fd,#bbdefb)',route:'linear-gradient(135deg,#e8f5e9,#c8e6c9)',danger:'linear-gradient(135deg,#fce4ec,#f8bbd0)',tour:'linear-gradient(135deg,#f3e5f5,#e1bee7)',info:'linear-gradient(135deg,#fff3e0,#ffe0b2)'};
+function catSvg(id,size){return `<span class="cat-ico" style="width:${size||16}px;height:${size||16}px">${CAT_SVG[id]||''}</span>`;}
 const RP_CATS=[
   {id:'snow',label:'Schnee',icon:'❄️',subs:['Neuschnee','Nassschnee','Triebschnee','Sulz','Firn','Bruchharsch','Windgepresst']},
   {id:'route',label:'Route',icon:'🥾',subs:['Gespurt','Verspurt','Keine Spur','Lawinenzug','Wechte','Gletscherspalte']},
@@ -1853,41 +1920,55 @@ function showUndo(){
   bar.innerHTML='Gepostet. Andere sehen\'s jetzt auf der Karte. <button onclick="this.parentElement.remove()">OK</button>';
   document.body.appendChild(bar);setTimeout(()=>bar.remove(),5000);
 }
-// --- Feed ---
+// --- Feed (Instagram-style full page) ---
 let feedFilter='all';
 function feedOpen(){
-  document.getElementById('feedOverlay').style.display='flex';
+  const fp=document.getElementById('feedPage');
+  fp.classList.add('open');
   const ff=document.getElementById('feedFilter');
   ff.innerHTML=['all','snow','route','danger','tour','info'].map(f=>{
-    const lbl=f==='all'?'Alle':RP_CATS.find(c=>c.id===f)?.icon+' '+RP_CATS.find(c=>c.id===f)?.label||f;
+    const cat=RP_CATS.find(c=>c.id===f);
+    const lbl=f==='all'?'Alle':(catSvg(f,14)+' '+cat.label);
     return`<button class="${feedFilter===f?'active':''}" onclick="feedSetFilter('${f}')">${lbl}</button>`;
   }).join('');
   feedRender();
 }
-function feedClose(){document.getElementById('feedOverlay').style.display='none';}
+function feedClose(){document.getElementById('feedPage').classList.remove('open');}
 function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter button').forEach((b,i)=>{b.classList.toggle('active',['all','snow','route','danger','tour','info'][i]===f);});feedRender();}
 function feedRender(){
   const list=document.getElementById('feedList');
   const filtered=feedFilter==='all'?allReports:allReports.filter(r=>r.cat===feedFilter);
-  if(!filtered.length){list.innerHTML='<div class="feed-empty">Noch keine Reports. Sei der Erste!</div>';return;}
+  if(!filtered.length){list.innerHTML='<div class="feed-empty">Noch keine Reports in dieser Kategorie.</div>';return;}
   list.innerHTML=filtered.map(r=>{
-    const isDanger=r.cat==='danger';
+    const col=CAT_COLORS[r.cat]||'#666';
+    const bg=CAT_BG[r.cat]||'linear-gradient(135deg,#f0f0f0,#e0e0e0)';
+    const avatarBg=r.cat==='danger'?'linear-gradient(135deg,#d03050,#ff5470)':r.cat==='snow'?'linear-gradient(135deg,#1a7fd4,#42a5f5)':r.cat==='route'?'linear-gradient(135deg,#2e7d32,#66bb6a)':r.cat==='tour'?'linear-gradient(135deg,#7b1fa2,#ab47bc)':'linear-gradient(135deg,#e65100,#ff9800)';
     return`<div class="feed-card" onclick="feedFlyTo(${r.lat},${r.lng})">
       <div class="feed-card-head">
-        <div class="feed-card-avatar">${r.user[0].toUpperCase()}</div>
-        <span class="feed-card-user">${r.user}</span>
+        <div class="feed-card-avatar" style="background:${avatarBg}">${r.user[0].toUpperCase()}</div>
+        <div class="feed-card-info">
+          <span class="feed-card-user">${r.user}</span>
+          <span class="feed-card-loc"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> ${r.lat.toFixed(2)}°N, ${r.lng.toFixed(2)}°E</span>
+        </div>
         <span class="feed-card-time">${r.time}</span>
       </div>
-      ${r.img?`<img class="feed-card-img" src="${r.img}" alt=""/>`:''}
-      <div class="feed-card-badges">
-        <span class="feed-badge${isDanger?' danger':''}">${r.icon} ${r.sub||r.cat}</span>
-        ${r.measurement?`<span class="feed-badge">${r.measurement}</span>`:''}
+      <div class="feed-card-visual">
+        ${r.img?`<img src="${r.img}" alt=""/>`:
+        `<div class="card-placeholder" style="background:${bg}"><span style="color:${col}">${CAT_SVG[r.cat]||''}</span><span style="color:${col}">${r.sub||r.cat}</span></div>`}
       </div>
-      ${r.caption?`<div class="feed-card-text">${r.caption}</div>`:''}
-      <div class="feed-card-loc">📍 ${r.lat.toFixed(3)}, ${r.lng.toFixed(3)}</div>
+      <div class="feed-card-body">
+        <div class="feed-card-badges">
+          <span class="feed-badge cat-${r.cat}">${catSvg(r.cat,14)} ${r.sub||r.cat}</span>
+          ${r.measurement?`<span class="feed-badge cat-${r.cat}">${r.measurement}</span>`:''}
+        </div>
+        ${r.caption?`<div class="feed-card-caption"><b>${r.user}</b> ${r.caption}</div>`:''}
+      </div>
+      <div class="feed-card-actions">
+        <button onclick="event.stopPropagation();feedFlyTo(${r.lat},${r.lng})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Auf Karte</button>
+      </div>
     </div>`;
   }).join('');
 }
-function feedFlyTo(lat,lng){feedClose();map.flyTo([lat,lng],14,{duration:1.5});}
+function feedFlyTo(lat,lng){feedClose();setTimeout(()=>map.flyTo([lat,lng],14,{duration:1.2}),350);}
 </script></body></html>
 """
