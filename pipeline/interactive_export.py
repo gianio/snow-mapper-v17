@@ -568,14 +568,24 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  :root{--fg:#0f1d2f;--fg2:#2c3e54;--mut:#6b7f96;--acc:#1a7fd4;--acc2:#0e5fa3;--bd:rgba(14,95,163,.1);--glass:rgba(255,255,255,.82);--glass2:rgba(248,251,255,.92);--glow:rgba(26,127,212,.12);--panel-h:52px;--r:14px;--r-lg:18px}
  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
  html,body{margin:0;padding:0;height:100%;width:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--fg);overscroll-behavior:none;background:#edf2f8;position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
- #map{position:fixed;inset:0;background:#edf2f8}
- #flow{position:fixed;inset:0;z-index:450;pointer-events:none}
+ #map{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);background:#fff;transition:bottom .28s cubic-bezier(.4,0,.2,1)}
+ body.panel-dragging #map,body.panel-dragging #flow{transition:none}
+ #flow{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);z-index:450;pointer-events:none}
  #layerBar{position:absolute;z-index:1000;top:0;left:0;right:0;display:flex;flex-direction:column;gap:5px;padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 12px;scrollbar-width:none;background:linear-gradient(180deg,rgba(237,242,248,.96) 0%,rgba(237,242,248,.6) 85%,transparent 100%)}
- #topics{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px}
+ #topics{display:flex;gap:6px;align-items:center;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px}
  #topics::-webkit-scrollbar{display:none}
- #topics button{border:1.5px solid transparent;background:rgba(255,255,255,.65);border-radius:var(--r);padding:9px 16px;cursor:pointer;font-size:14px;font-weight:600;min-height:42px;color:var(--fg2);transition:all .2s cubic-bezier(.4,0,.2,1);backdrop-filter:blur(8px);flex-shrink:0;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.04);letter-spacing:-.01em}
- #topics button:hover{background:rgba(255,255,255,.9);box-shadow:0 2px 8px rgba(0,0,0,.06)}
- #topics button.active{background:var(--fg);color:#fff;border-color:var(--fg);box-shadow:0 2px 10px rgba(15,29,47,.2)}
+ #topics button{display:inline-flex;align-items:center;gap:7px;border:1.5px solid transparent;background:rgba(255,255,255,.7);border-radius:var(--r);padding:9px 15px;cursor:pointer;font-size:14px;font-weight:600;min-height:42px;color:var(--fg2);transition:all .2s cubic-bezier(.4,0,.2,1);backdrop-filter:blur(8px);flex-shrink:0;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.05);letter-spacing:-.01em}
+ #topics button svg{width:17px;height:17px;flex-shrink:0}
+ #topics button:hover{background:rgba(255,255,255,.95);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+ #topics>button[data-t="ski"],#topics>button[data-t="snow"]{background:rgba(255,255,255,.92);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+ #topics button.active{background:var(--fg);color:#fff;border-color:var(--fg);box-shadow:0 3px 12px rgba(15,29,47,.22)}
+ #moreTopics{color:var(--mut);padding:9px 13px}
+ #moreTopics .chev{width:14px!important;height:14px!important;transition:transform .25s}
+ #topics.expanded #moreTopics{background:var(--fg);color:#fff;border-color:var(--fg)}
+ #topics.expanded #moreTopics .chev{transform:rotate(180deg)}
+ #topicsMore{display:none;gap:6px;align-items:center}
+ #topicsMore button{background:rgba(255,255,255,.6)}
+ #topics.expanded #topicsMore{display:inline-flex}
  #sublayers{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:1px}
  #sublayers::-webkit-scrollbar{display:none}
  #sublayers button{border:1.5px solid rgba(0,0,0,.06);background:rgba(255,255,255,.55);border-radius:10px;padding:7px 13px;cursor:pointer;font-size:13px;font-weight:500;min-height:36px;color:var(--fg2);transition:all .2s;backdrop-filter:blur(4px);flex-shrink:0;white-space:nowrap}
@@ -583,10 +593,24 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #sublayers button.active{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
  #bottomPanel{position:absolute;z-index:1000;bottom:0;left:0;right:0;
    background:rgba(255,255,255,.78);backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);border-top:1px solid rgba(255,255,255,.5);box-shadow:0 -1px 0 var(--bd),0 -4px 20px rgba(0,0,0,.06);transition:none;padding-bottom:env(safe-area-inset-bottom,0px);overflow:hidden}
- #btmMain{padding:8px 12px 10px}
+ #btmMain{padding:10px 14px 12px}
  #timeline{display:block;border:1px solid var(--bd);background:rgba(237,242,248,.5);border-radius:var(--r)}
  #presets::-webkit-scrollbar{display:none}
- .winlbl{font-size:13px;margin-top:6px;font-weight:600;color:var(--fg2);letter-spacing:-.01em}
+ .winlbl{font-size:14px;font-weight:700;color:var(--fg);letter-spacing:-.01em}
+ #tlHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px}
+ #tlModeToggle{display:inline-flex;background:rgba(0,0,0,.05);border-radius:999px;padding:3px;flex-shrink:0}
+ #tlModeToggle button{border:none;background:none;padding:5px 13px;border-radius:999px;font-size:12px;font-weight:600;color:var(--mut);cursor:pointer;font-family:inherit;transition:.15s}
+ #tlModeToggle button.active{background:#fff;color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+ #tlDetail{display:none}
+ #bottomPanel.detail #tlDetail{display:block}
+ #tlExtended{margin-top:12px}
+ .tl-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--fg2)}
+ .tl-lbl{font-weight:600}.tl-val{font-weight:700;color:var(--acc2)}
+ #tlLen{width:100%;accent-color:var(--acc);margin:8px 0 12px;cursor:pointer}
+ .tl-steprow{display:flex;gap:6px}
+ .tl-step{flex:1;border:1px solid var(--bd);background:rgba(255,255,255,.7);border-radius:10px;padding:9px 6px;font-size:12px;font-weight:600;color:var(--fg2);cursor:pointer;font-family:inherit;transition:.15s}
+ .tl-step:hover{background:#fff;color:var(--fg)}
+ .tl-range{margin-top:10px;font-size:11px;color:var(--mut);text-align:center;font-weight:500}
  .seg{display:flex;flex-wrap:wrap;gap:5px}
  .seg button{border:1.5px solid transparent;background:rgba(255,255,255,.6);border-radius:var(--r);padding:8px 14px;cursor:pointer;font-size:14px;font-weight:500;min-height:40px;color:var(--fg2);transition:all .2s cubic-bezier(.4,0,.2,1);flex-shrink:0}
  .seg button:hover{background:rgba(255,255,255,.95)}
@@ -611,7 +635,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #legendBtn{position:absolute;z-index:960;bottom:var(--btm-h,80px);left:12px;width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:var(--mut);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.06)}
  #legendBtn:hover,#legendBtn.active{color:var(--acc);background:rgba(255,255,255,.9)}
  .legend i{display:inline-block;width:12px;height:12px;margin-right:5px;vertical-align:-2px;border-radius:2px}
- .stn{background:rgba(255,255,255,.85);border:2px solid var(--acc);border-radius:11px;padding:2px 7px;font-size:13px;font-weight:700;color:var(--acc2);text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.12);white-space:nowrap}
+ .stn{background:rgba(255,255,255,.9);border:1.5px solid var(--acc);border-radius:999px;padding:2px 8px;font-size:12px;font-weight:700;color:var(--acc2);text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.12);white-space:nowrap}
+ .stn-dot{width:12px;height:12px;border-radius:50%;background:var(--acc);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25);cursor:pointer;transition:transform .12s}
+ .stn-dot:hover{transform:scale(1.35)}
+ .rpt-dot{width:14px;height:14px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;transition:transform .12s}
+ .rpt-dot:hover{transform:scale(1.35)}
  .scl{position:relative;width:110px;height:56px;font-size:10px;font-weight:700;text-align:center;pointer-events:none}
  .scl>div{position:absolute;left:0;right:0;white-space:nowrap}
  .scl .s-pill{display:inline-block;background:rgba(255,255,255,.8);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);border-radius:6px;padding:1px 5px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
@@ -642,46 +670,64 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .leaflet-popup-tip{background:rgba(255,255,255,.9)!important}
  .leaflet-popup-close-button{color:var(--mut)!important;font-size:18px!important;width:28px!important;height:28px!important;line-height:28px!important}
  .leaflet-popup-close-button:hover{color:var(--fg)!important}
- #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 130px);right:12px;width:200px;max-width:calc(100vw - 24px)}
- #searchWrap input{width:100%;padding:9px 12px 9px 32px;border-radius:10px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.75);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:var(--fg);font-size:14px;font-weight:500;outline:none;box-shadow:0 1px 4px rgba(0,0,0,.05);font-family:inherit}
+ #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 58px);right:12px;width:230px;max-width:calc(100vw - 24px)}
+ #searchWrap input{width:100%;padding:10px 12px 10px 34px;border-radius:12px;border:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--fg);font-size:14px;font-weight:500;outline:none;box-shadow:0 2px 8px rgba(0,0,0,.07);font-family:inherit}
  #searchWrap input::placeholder{color:var(--mut);font-weight:400}
- #searchWrap input:focus{border-color:var(--acc);background:rgba(255,255,255,.95);box-shadow:0 0 0 3px var(--glow)}
- #btn3dFloat{position:absolute;z-index:1000;bottom:var(--btm-h,80px);right:12px;padding:8px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:var(--fg2);cursor:pointer;font-size:13px;font-weight:700;min-height:36px;box-shadow:0 1px 4px rgba(0,0,0,.06);letter-spacing:.02em}
- #btn3dFloat:hover{background:rgba(255,255,255,.9)}
- #btn3dFloat.active{background:var(--fg);color:#fff;border-color:var(--fg)}
- #stnToggleWrap{position:absolute;z-index:1050;top:calc(env(safe-area-inset-top,0px) + 172px);right:12px;display:flex;gap:4px}
- #stnToggleWrap label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--fg2);cursor:pointer;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 1px 3px rgba(0,0,0,.04)}
- #stnToggleWrap input{width:14px;height:14px;accent-color:var(--acc)}
+ #searchWrap input:focus{border-color:var(--acc);background:#fff;box-shadow:0 0 0 3px var(--glow)}
  #searchWrap .icn{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--mut);font-size:15px}
+ /* Right-side control rail */
+ #ctrlRail{position:absolute;z-index:1050;right:12px;top:calc(env(safe-area-inset-top,0px) + 110px);display:flex;flex-direction:column;gap:10px}
+ .rail-btn{position:relative;width:46px;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--fg2);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.09);transition:all .18s cubic-bezier(.34,1.56,.64,1)}
+ .rail-btn:hover{background:#fff;color:var(--fg);transform:translateY(-1px)}
+ .rail-btn:active{transform:scale(.92)}
+ .rail-btn.active{background:var(--fg);color:#fff;border-color:var(--fg)}
+ .rail-btn svg{width:21px;height:21px}
+ #togglePop{position:absolute;right:56px;top:0;background:rgba(255,255,255,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--bd);border-radius:14px;padding:10px 12px;box-shadow:0 6px 26px rgba(0,0,0,.14);display:none;flex-direction:column;gap:10px;white-space:nowrap}
+ #togglePop.show{display:flex}
+ #togglePop label{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:var(--fg2);cursor:pointer}
+ #togglePop input{width:16px;height:16px;accent-color:var(--acc)}
  #searchRes{position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--glass2);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--bd);border-radius:12px;overflow:hidden;display:none;max-height:260px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.1)}
  #searchRes .sr{padding:10px 14px;cursor:pointer;font-size:15px;color:var(--fg2);border-bottom:1px solid rgba(0,0,0,.05);transition:.12s}
  #searchRes .sr:last-child{border-bottom:none}
  #searchRes .sr:hover,#searchRes .sr.sel{background:rgba(0,112,184,.08);color:var(--fg)}
  #searchRes .sr .sub{font-size:11px;color:var(--mut);margin-top:2px}
- #intro{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(160deg,#0a1628 0%,#0e3460 35%,#1a6090 65%,#2a8ab0 100%);transition:opacity .8s ease}
+ #intro{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(160deg,#0a1628 0%,#0e3460 35%,#1a6090 65%,#2a8ab0 100%);transition:opacity .5s ease}
  #intro.hide{opacity:0;pointer-events:none}
- #intro h1{font-family:'Inter',sans-serif;font-size:clamp(26px,5vw,44px);font-weight:800;letter-spacing:-.03em;color:#fff;margin:0;opacity:0;transform:translateY(20px);animation:introUp .7s .3s ease forwards}
- #intro .sub{font-family:'Inter',sans-serif;font-size:clamp(12px,2vw,15px);color:rgba(255,255,255,.55);margin-top:8px;letter-spacing:.08em;text-transform:uppercase;opacity:0;animation:introUp .6s .7s ease forwards}
- #intro .bar{width:100px;height:2px;border-radius:1px;background:linear-gradient(90deg,rgba(255,255,255,.6),rgba(94,200,255,.8));margin-top:20px;opacity:0;transform:scaleX(0);animation:introBar .8s 1s ease forwards}
+ #intro h1{font-family:'Inter',sans-serif;font-size:clamp(26px,5vw,44px);font-weight:800;letter-spacing:-.03em;color:#fff;margin:0;opacity:0;transform:translateY(20px);animation:introUp .45s .1s ease forwards}
+ #intro .sub{font-family:'Inter',sans-serif;font-size:clamp(12px,2vw,15px);color:rgba(255,255,255,.55);margin-top:8px;letter-spacing:.08em;text-transform:uppercase;opacity:0;animation:introUp .4s .3s ease forwards}
+ #intro .bar{width:100px;height:2px;border-radius:1px;background:linear-gradient(90deg,rgba(255,255,255,.6),rgba(94,200,255,.8));margin-top:20px;opacity:0;transform:scaleX(0);animation:introBar .5s .45s ease forwards}
  @keyframes introUp{to{opacity:1;transform:translateY(0)}}
  @keyframes introBar{to{opacity:1;transform:scaleX(1)}}
- #intro .mtn{position:absolute;bottom:0;left:0;width:100%;height:40%;opacity:0;animation:introUp 1s .2s ease forwards}
- #intro .sources{font-size:clamp(10px,1.5vw,13px);color:rgba(255,255,255,.5);margin-top:16px;letter-spacing:.08em;opacity:0;animation:introUp .6s .9s ease forwards}
+ #intro .mtn{position:absolute;bottom:0;left:0;width:100%;height:40%;opacity:0;animation:introUp .6s .05s ease forwards}
+ #intro .sources{font-size:clamp(10px,1.5vw,13px);color:rgba(255,255,255,.5);margin-top:16px;letter-spacing:.08em;opacity:0;animation:introUp .4s .5s ease forwards}
  #intro .snow-wrap{position:absolute;inset:0;overflow:hidden;pointer-events:none}
  .sf{position:absolute;top:-10px;width:6px;height:6px;background:white;border-radius:50%;opacity:.6;animation:sfDrop linear infinite}
  @keyframes sfDrop{0%{transform:translateY(0) translateX(0)}25%{transform:translateY(25vh) translateX(15px)}50%{transform:translateY(50vh) translateX(-10px)}75%{transform:translateY(75vh) translateX(20px)}100%{transform:translateY(110vh) translateX(5px)}}
+ /* --- Onboarding coach marks --- */
+ #coach{position:fixed;inset:0;z-index:8000}
+ #coachSpot{position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(11,17,32,.6);transition:all .35s cubic-bezier(.4,0,.2,1);pointer-events:none}
+ #coachCard{position:absolute;width:min(300px,calc(100vw - 32px));background:#fff;border-radius:18px;padding:18px 20px;box-shadow:0 16px 50px rgba(0,0,0,.3);transition:top .35s cubic-bezier(.4,0,.2,1),left .35s cubic-bezier(.4,0,.2,1);opacity:0;animation:coachIn .3s .1s ease forwards}
+ @keyframes coachIn{to{opacity:1}}
+ #coachText{font-size:15px;line-height:1.5;color:var(--fg2);font-weight:500}
+ #coachText b{font-weight:800;color:var(--fg)}
+ #coachNav{display:flex;align-items:center;gap:10px;margin-top:16px}
+ #coachDots{display:flex;gap:6px;flex:1}
+ #coachDots i{width:6px;height:6px;border-radius:50%;background:rgba(0,0,0,.15);transition:.2s}
+ #coachDots i.on{background:var(--fg);width:16px;border-radius:3px}
+ #coachSkip{background:none;border:none;color:var(--mut);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+ #coachNext{background:var(--fg);color:#fff;border:none;border-radius:11px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
+ #coachNext:hover{background:#000}
  @media (max-width:560px){
    #layerBar{padding:calc(env(safe-area-inset-top,0px) + 8px) 10px 8px;gap:5px}
    #topics button{padding:8px 14px;font-size:15px;min-height:42px;border-radius:12px}
    #sublayers button{padding:7px 12px;font-size:14px;min-height:38px;border-radius:10px}
-   #searchWrap{top:calc(env(safe-area-inset-top,0px) + 120px);right:8px;width:calc(100vw - 16px);max-width:200px}
+   #searchWrap{top:calc(env(safe-area-inset-top,0px) + 112px);right:8px;width:calc(100vw - 16px);max-width:210px}
    .icard{font-size:14px;max-width:calc(100vw - 50px);min-width:200px}
    .scard{font-size:14px;min-width:160px}
    .leaflet-popup-content-wrapper{max-width:calc(100vw - 32px)!important}
    .legend{max-width:180px;font-size:12px}
-   #btn3dFloat{padding:10px 18px;font-size:16px;min-height:46px;border-radius:14px}
-   #stnToggleWrap{top:calc(env(safe-area-inset-top,0px) + 168px);right:8px}
-   #stnToggleWrap label{font-size:14px;padding:8px 10px}
+   #ctrlRail{top:calc(env(safe-area-inset-top,0px) + 162px);right:8px;gap:11px}
+   .rail-btn{width:48px;height:48px}
    #legendBtn{width:40px;height:40px;font-size:18px}
    .seg button{padding:9px 14px;font-size:15px;min-height:44px}
    .itab{padding:10px 6px;font-size:14px}
@@ -713,11 +759,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .auth-switch button{background:none;border:none;color:var(--acc);font-weight:600;cursor:pointer;font-size:13px}
  .email-banner{position:fixed;top:calc(env(safe-area-inset-top,0px)+56px);left:12px;right:12px;z-index:1200;display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:rgba(255,240,220,.95);border:1px solid rgba(200,150,50,.2);border-radius:12px;font-size:13px;color:#6a4a10;box-shadow:0 2px 8px rgba(0,0,0,.06)}
  .email-banner button{background:none;border:none;color:#0070b8;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
- /* --- FAB & Feed button --- */
- #reportFab{position:fixed;bottom:calc(var(--btm-h,80px) + 16px);right:16px;z-index:1000;width:56px;height:56px;border-radius:50%;border:none;background:var(--fg);color:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(15,29,47,.25),0 0 0 0 rgba(15,29,47,.1);touch-action:none;transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;-webkit-tap-highlight-color:transparent}
+ /* --- Report FAB (primary action) --- */
+ #reportFab{position:fixed;bottom:calc(var(--btm-h,80px) + 16px);right:16px;z-index:1000;width:58px;height:58px;border-radius:50%;border:none;background:var(--fg);color:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 6px 22px rgba(15,29,47,.3);touch-action:none;transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;-webkit-tap-highlight-color:transparent}
  #reportFab:active{transform:scale(.9)}
- #feedBtn{position:fixed;bottom:calc(var(--btm-h,80px) + 16px);right:80px;z-index:1000;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.8);backdrop-filter:blur(12px);color:var(--fg);cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.08);touch-action:manipulation;transition:transform .15s}
- #feedBtn:active{transform:scale(.9)}
  /* --- Radial quick-pick --- */
  .radial-wrap{position:fixed;inset:0;z-index:4000;touch-action:none;display:none}
  .radial-bg{position:absolute;inset:0;background:rgba(11,17,32,.6);backdrop-filter:blur(8px)}
@@ -846,30 +890,58 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <canvas id="flow"></canvas>
 <div id="layerBar">
   <div id="topics">
-    <button data-t="ski">Ski</button>
-    <button data-t="snow" class="active">Snow</button>
-    <button data-t="temp">Temp</button>
-    <button data-t="wind">Wind</button>
-    <button data-t="rad">Radiation</button>
-    <button data-t="terrain">Terrain</button>
+    <button data-t="ski"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M5 20l5-11 4 6 2.5-4L21 20"/><circle cx="15.5" cy="4.5" r="1.5"/></svg><span>Ski</span></button>
+    <button data-t="snow" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="7.5" x2="19" y2="16.5"/><line x1="5" y1="16.5" x2="19" y2="7.5"/></svg><span>Snow</span></button>
+    <button id="moreTopics" title="More conditions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M4 6h16M4 18h16"/></svg><span>More</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+    <span id="topicsMore">
+      <button data-t="temp">Temp</button>
+      <button data-t="wind">Wind</button>
+      <button data-t="rad">Radiation</button>
+      <button data-t="terrain">Terrain</button>
+    </span>
   </div>
   <div id="sublayers"></div>
 </div>
 <div id="searchWrap"><span class="icn">&#x1F50D;</span><input id="searchIn" type="text" placeholder="Search location..." autocomplete="off"/><div id="searchRes"></div></div>
-<div id="stnToggleWrap"><label><input type="checkbox" id="stnToggle" checked/> SLF Stations</label><label><input type="checkbox" id="rptToggle" checked onchange="toggleReportLayer(this.checked)"/> Reports</label></div>
-<button id="btn3dFloat">3D</button>
+<div id="ctrlRail">
+  <button class="rail-btn" id="feedBtn" onclick="feedOpen()" title="Community feed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v10a2 2 0 0 1-2 2H8l-4 3.5V5z"/><line x1="8" y1="9.5" x2="16" y2="9.5"/><line x1="8" y1="13" x2="13" y2="13"/></svg></button>
+  <button class="rail-btn" id="railToggles" title="Show / hide markers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.5"/></svg></button>
+  <button class="rail-btn" id="btn3dFloat" title="3D terrain"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l8.5 4.75v9.5L12 21.5l-8.5-4.75v-9.5L12 2.5z"/><path d="M12 12l8.5-4.75M12 12v9.5M12 12L3.5 7.25"/></svg></button>
+  <div id="togglePop">
+    <label><input type="checkbox" id="stnToggle" checked/> SLF Stations</label>
+    <label><input type="checkbox" id="rptToggle" checked onchange="toggleReportLayer(this.checked)"/> Reports</label>
+  </div>
+</div>
 <div id="bottomPanel">
   <div id="tlToggle"></div>
   <div id="btmMain">
-    <canvas id="timeline" width="900" height="200" style="width:100%;border-radius:10px;cursor:default"></canvas>
-    <div class="winlbl" id="window" style="margin-top:6px"></div>
-    <div class="seg" id="presets" style="gap:5px;margin-top:6px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch">
+    <div id="tlHead">
+      <span class="winlbl" id="window"></span>
+      <div id="tlModeToggle">
+        <button data-m="simple" class="active">Simple</button>
+        <button data-m="detail">Detailed</button>
+      </div>
+    </div>
+    <div class="seg" id="presets" style="gap:5px;margin-top:2px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch">
       <button data-d="24">24h</button>
       <button data-d="48" class="active">48h</button>
       <button data-d="72">72h</button>
       <button data-d="120">120h</button>
       <button id="btnSinceSnow">Last Snow</button>
       <button data-r="tomorrow">Tomorrow</button>
+    </div>
+    <div id="tlDetail">
+      <canvas id="timeline" width="900" height="200" style="width:100%;border-radius:10px;cursor:default;margin-top:10px"></canvas>
+      <div id="tlExtended">
+        <div class="tl-row"><span class="tl-lbl">Window length</span><span id="tlLenVal" class="tl-val">48h</span></div>
+        <input type="range" id="tlLen" min="6" max="168" step="6" value="48"/>
+        <div class="tl-steprow">
+          <button id="tlPrev" class="tl-step">◀ Earlier</button>
+          <button id="tlNow" class="tl-step">Now</button>
+          <button id="tlNext" class="tl-step">Later ▶</button>
+        </div>
+        <div id="tlRange" class="tl-range"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -883,8 +955,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <!-- Auth & Reports UI -->
 <div id="userBar"><button class="login-btn" id="btnLogin" onclick="authShow()">Sign in</button></div>
 <div class="email-banner" id="emailBanner"><span>Please confirm your email to post reports.</span><button onclick="authResend()">Resend</button></div>
-<button id="reportFab"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-<button id="feedBtn" onclick="feedOpen()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h12M4 18h8"/></svg></button>
+<button id="reportFab" title="Add a report"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
 <div class="radial-wrap" id="radialWrap"><div class="radial-bg"></div><div class="radial-ring" id="radialRing"></div><div class="radial-center" id="radialCenter">✕</div></div>
 <div class="auth-overlay" id="authOverlay" style="display:none" onclick="authHide()">
 <div class="auth-modal" onclick="event.stopPropagation()">
@@ -950,6 +1021,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="feed-filter" id="feedFilter"></div>
 <div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Loading reports...</div></div></div>
 </div>
+<div id="coach" style="display:none"><div id="coachSpot"></div><div id="coachCard"><div id="coachText"></div><div id="coachNav"><span id="coachDots"></span><button id="coachSkip">Überspringen</button><button id="coachNext">Weiter</button></div></div></div>
 <script>
 const M=/*META*/;
 function dec(b){const s=atob(b),n=s.length,a=new Uint8Array(n);for(let i=0;i<n;i++)a[i]=s.charCodeAt(i);return a;}
@@ -1107,8 +1179,19 @@ function drawTimeline(){const tc=document.getElementById('timeline'),ctx2=tc.get
   ctx2.globalAlpha=1;}
 // Karte + Layer
 const [laMin,loMin,laMax,loMax]=M.bounds;
-const map=L.map('map',{zoomControl:false}).fitBounds([[laMin,loMin],[laMax,loMax]],{padding:[10,10]});
+const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,wheelPxPerZoomLevel:90,maxBoundsViscosity:1.0,inertia:true}).fitBounds([[laMin,loMin],[laMax,loMax]],{padding:[6,6]});
+// Constrain panning + zoom to the meteo grid, with a thin white frame around the data
+const _fitZoom=map.getZoom();
+map.setMinZoom(_fitZoom-0.25);map.setMaxZoom(16);
+const _padLa=(laMax-laMin)*0.04,_padLo=(loMax-loMin)*0.04;
+map.setMaxBounds([[laMin-_padLa,loMin-_padLo],[laMax+_padLa,loMax+_padLo]]);
 const base=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg",{attribution:"© swisstopo / MeteoSwiss / SLF / Copernicus"}).addTo(map);
+// White mask outside the meteo grid → clean, smooth map ending
+map.createPane('maskPane');map.getPane('maskPane').style.zIndex=350;map.getPane('maskPane').style.pointerEvents='none';
+const _world=[[-89,-360],[-89,360],[89,360],[89,-360]];
+const _hole=[[laMin,loMin],[laMin,loMax],[laMax,loMax],[laMax,loMin]];
+L.polygon([_world,_hole],{pane:'maskPane',stroke:false,fillColor:'#ffffff',fillOpacity:1,interactive:false}).addTo(map);
+L.rectangle([[laMin,loMin],[laMax,loMax]],{pane:'maskPane',fill:false,color:'rgba(15,29,47,.12)',weight:1,interactive:false}).addTo(map);
 const slopeWMTS=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.hangneigung-ueber_30/default/current/3857/{z}/{x}/{y}.png",{opacity:.7});
 const reliefWMTS=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissalti3d-reliefschattierung_monodirektional/default/current/3857/{z}/{x}/{y}.png",{opacity:.85});
 const roughImg=L.imageOverlay(ROUGH_PNG,[[M.png_bounds[0],M.png_bounds[1]],[M.png_bounds[2],M.png_bounds[3]]],{opacity:.78});
@@ -1217,10 +1300,13 @@ function stationCard(s){const ns=newSnowInt(s);
     ${row("Wind",windStr)}
     ${row("Wind Dir.",s.dw!=null?s.dw.toFixed(0)+"°":null)}
     </div></div>`;}
+// Detail tiers by zoom: 0 = tiny dot, 1 = simple value pill, 2 = full multi-value card
+function detailTier(){const z=map.getZoom();if(z<9.4)return 0;if(z<11.2||isMobile)return 1;return 2;}
 function renderStations(){stnGroup.clearLayers();if(!showStn)return;
   const dirAb=d=>["N","NE","E","SE","S","SW","W","NW"][Math.round(d/45)%8];
-  const zoom=map.getZoom();
-  const stns=isMobile?M.stations.filter((_,i)=>zoom>=10||i%3===0):M.stations;
+  const tier=detailTier();
+  // Thin out at the lowest zoom so dots don't clutter
+  const stns=tier===0?M.stations.filter((_,i)=>i%2===0):M.stations;
   for(const s of stns){const ns=newSnowInt(s);
     const hs=s.hs_now!=null?s.hs_now.toFixed(0):"–";
     const nsv=ns!=null?"+"+ns.toFixed(0):"";
@@ -1233,10 +1319,12 @@ function renderStations(){stnGroup.clearLayers();if(!showStn)return;
     else if(layer=="temp"||layer=="tsurf")lbl=ta||"–";
     else if(layer=="sun"||layer=="rad"||layer=="radsun")lbl=s.elev+"m";
     let html,iSize,iAnc;
-    if(isMobile){
-      let unit='';if(layer=='wind')unit=' km/h';else if(layer=='temp'||layer=='tsurf')unit='C';
-      else if(layer=='sun'||layer=='rad'||layer=='radsun')unit='';else if(lbl!=='–')unit=' cm';
-      html='<div class="stn">'+lbl+unit+'</div>';iSize=[56,22];iAnc=[28,11];
+    if(tier===0){
+      html='<div class="stn-dot"></div>';iSize=[12,12];iAnc=[6,6];
+    }else if(tier===1){
+      let unit='';if(layer=='wind')unit='';else if(layer=='temp'||layer=='tsurf')unit='';
+      else if(layer=='sun'||layer=='rad'||layer=='radsun')unit='';else if(lbl!=='–')unit='';
+      html='<div class="stn">'+lbl+unit+'</div>';iSize=[46,22];iAnc=[23,11];
     }else{
       let top="",bot="",ll="",lr="";
       if(layer=="wind"){top=gust?("≈"+gust+" gust"):"";bot=s.elev+"m";}
@@ -1251,7 +1339,8 @@ function renderStations(){stnGroup.clearLayers();if(!showStn)return;
     const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:html,iconSize:iSize,iconAnchor:iAnc}),zIndexOffset:500});
     m.bindPopup(stationCard(s),{maxWidth:isMobile?240:260});m.addTo(stnGroup);}
 }
-if(isMobile)map.on('zoomend',renderStations);
+let _lastTier=-1;
+map.on('zoomend',()=>{const t=detailTier();if(t!==_lastTier){_lastTier=t;renderStations();loadReportMarkers();}});
 function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");return d.toLocaleString('en-GB',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit'});}
 function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});}
 function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
@@ -1283,10 +1372,30 @@ function showOverlay(){
   else if(layer=="rough")map.addLayer(roughImg);
   if(layer=="wind"){map.addLayer(windArr);startFlow();}else{map.removeLayer(windArr);stopFlow();}
 }
-function renderAll(){showOverlay();renderRaster();renderStations();drawTimeline();
+function renderAll(){showOverlay();renderRaster();renderStations();if(tlMode==='detail')drawTimeline();
   if(layer=="rad"||layer=="radsun")renderRadiation();
   if(layer=="wind"){buildFlow();if(wtimer)clearTimeout(wtimer);wtimer=setTimeout(renderWind,120);}
-  document.getElementById('window').innerHTML=`${b-a}h window`;legend();}
+  document.getElementById('window').innerHTML=`${b-a}h window`;syncTl();legend();}
+// --- Simple / Detailed timeline mode ---
+let tlMode='simple',sliderActive=false;
+function syncTl(){const wv=b-a;
+  const lv=document.getElementById('tlLenVal');if(lv)lv.textContent=wv+'h';
+  const sl=document.getElementById('tlLen');if(sl&&!sliderActive)sl.value=Math.min(parseInt(sl.max),Math.max(parseInt(sl.min),wv));
+  const rg=document.getElementById('tlRange');if(rg)rg.textContent=fmt(a)+'  →  '+fmt(b-1);}
+function setTlMode(m){tlMode=m;const bp=document.getElementById('bottomPanel');bp.classList.toggle('detail',m==='detail');
+  document.querySelectorAll('#tlModeToggle button').forEach(x=>x.classList.toggle('active',x.dataset.m===m));
+  if(m==='detail')drawTimeline();
+  if(typeof panelRestore==='function')panelRestore();}
+document.querySelectorAll('#tlModeToggle button').forEach(x=>x.onclick=()=>setTlMode(x.dataset.m));
+(function(){const sl=document.getElementById('tlLen');if(!sl)return;sl.max=Math.min(168,T);
+  sl.addEventListener('input',()=>{sliderActive=true;const ws=Math.min(T,parseInt(sl.value));windowSize=ws;
+    const center=Math.round((a+b)/2);a=Math.max(0,Math.min(T-ws,center-Math.floor(ws/2)));b=Math.min(T,a+ws);
+    document.getElementById('tlLenVal').textContent=(b-a)+'h';drawTimeline();document.getElementById('window').innerHTML=(b-a)+'h window';document.getElementById('tlRange').textContent=fmt(a)+'  →  '+fmt(b-1);});
+  sl.addEventListener('change',()=>{sliderActive=false;clearPresets();renderAll();});
+  document.getElementById('tlPrev').onclick=()=>{const ws=b-a;a=Math.max(0,a-ws);b=Math.min(T,a+ws);clearPresets();renderAll();};
+  document.getElementById('tlNext').onclick=()=>{const ws=b-a;b=Math.min(T,b+ws);a=Math.max(0,b-ws);clearPresets();renderAll();};
+  document.getElementById('tlNow').onclick=()=>{const ws=b-a;a=Math.max(0,Math.min(T-ws,nowIdx-Math.floor(ws/2)));b=Math.min(T,a+ws);clearPresets();renderAll();};
+})();
 const TOPICS={
   ski:[{l:'skiable',s:'avg',label:'Skiable'},{l:'powder',s:'avg',label:'Powder'}],
   snow:[{l:'snow',s:'avg',label:'New Snow'},{l:'depth',s:'avg',label:'Snow Depth'}],
@@ -1298,7 +1407,8 @@ const TOPICS={
 let curTopic='snow';
 function setTopic(t,subIdx){
   curTopic=t;
-  document.querySelectorAll('#topics button').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
+  document.querySelectorAll('#topics button[data-t]').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
+  if(['temp','wind','rad','terrain'].includes(t))document.getElementById('topics').classList.add('expanded');
   const subs=document.getElementById('sublayers');
   const items=TOPICS[t];
   subs.innerHTML=items.map((s,i)=>'<button data-i="'+i+'"'+(i===(subIdx||0)?' class="active"':'')+'>'+s.label+'</button>').join('');
@@ -1308,9 +1418,10 @@ function setTopic(t,subIdx){
     btn.onmouseenter=()=>legend(items[parseInt(btn.dataset.i)].l);btn.onmouseleave=()=>legend();});
   const sel=items[subIdx||0];layer=sel.l;stat=sel.s;renderAll();
 }
-document.querySelectorAll('#topics button').forEach(btn=>{
+document.querySelectorAll('#topics button[data-t]').forEach(btn=>{
   btn.onclick=()=>setTopic(btn.dataset.t);
   btn.onmouseenter=()=>legend(TOPICS[btn.dataset.t][0].l);btn.onmouseleave=()=>legend();});
+document.getElementById('moreTopics').onclick=()=>document.getElementById('topics').classList.toggle('expanded');
 function clearPresets(){document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('active'));}
 document.querySelectorAll('#presets button[data-d]').forEach(btn=>{btn.onclick=()=>{
   clearPresets();btn.classList.add('active');
@@ -1352,22 +1463,32 @@ document.getElementById('btnSinceSnow').onclick=()=>{const p=sinceLastSnowfall()
 })();
 document.getElementById('stnToggle').onchange=e=>{showStn=e.target.checked;renderStations();};
 function toggleReportLayer(on){if(on)map.addLayer(reportMarkers);else map.removeLayer(reportMarkers);}
+// Marker-visibility popover on the control rail
+(function(){const btn=document.getElementById('railToggles'),pop=document.getElementById('togglePop');
+  btn.onclick=e=>{e.stopPropagation();const open=pop.classList.toggle('show');btn.classList.toggle('active',open);if(open)pop.style.top=btn.offsetTop+'px';};
+  document.addEventListener('click',e=>{if(!pop.contains(e.target)&&e.target!==btn&&!btn.contains(e.target)){pop.classList.remove('show');btn.classList.remove('active');}});
+})();
 // --- Bottom Panel drag-to-resize ---
+let panelSetH=null,panelRestore=null;
 (function(){const bp=document.getElementById('bottomPanel'),tl=document.getElementById('tlToggle'),btm=document.getElementById('btmMain');
-  let maxH=0,minH=14,curH=0,dragging=false,startY=0,startH=0;
+  let maxH=0,minH=14,curH=0,dragging=false,startY=0,startH=0,lastFull=0;
+  function invalidate(){try{map.invalidateSize({animate:false,pan:false});}catch(e){}}
   function updH(){document.documentElement.style.setProperty('--btm-h',bp.offsetHeight+'px');}
   function setH(h){h=Math.max(minH,Math.min(maxH,h));bp.style.height=h+'px';
     const show=h>minH+20;btm.style.display=show?'':'none';updH();}
-  function initMax(){bp.style.height='';btm.style.display='';maxH=bp.offsetHeight;curH=maxH;updH();}
+  function initMax(){bp.style.height='';btm.style.display='';maxH=bp.offsetHeight;curH=maxH;lastFull=maxH;updH();invalidate();}
   requestAnimationFrame(initMax);
   window.addEventListener('resize',initMax);
-  function onDown(e){dragging=true;startY=e.touches?e.touches[0].clientY:e.clientY;startH=bp.offsetHeight;e.preventDefault();}
+  function onDown(e){dragging=true;startY=e.touches?e.touches[0].clientY:e.clientY;startH=bp.offsetHeight;document.body.classList.add('panel-dragging');e.preventDefault();}
   function onMove(e){if(!dragging)return;const cy=e.touches?e.touches[0].clientY:e.clientY;const dy=cy-startY;setH(startH-dy);e.preventDefault();}
-  function onUp(){if(!dragging)return;dragging=false;curH=bp.offsetHeight;if(curH<minH+40)setH(minH);
-    requestAnimationFrame(updH);}
+  function onUp(){if(!dragging)return;dragging=false;curH=bp.offsetHeight;if(curH<minH+40)setH(minH);else lastFull=curH;
+    document.body.classList.remove('panel-dragging');requestAnimationFrame(()=>{updH();invalidate();});}
   tl.addEventListener('mousedown',onDown);tl.addEventListener('touchstart',onDown,{passive:false});
   document.addEventListener('mousemove',onMove);document.addEventListener('touchmove',onMove,{passive:false});
   document.addEventListener('mouseup',onUp);document.addEventListener('touchend',onUp);
+  // Expose collapse/expand for other UI (e.g. timeline mode switch)
+  panelSetH=function(h){setH(h);requestAnimationFrame(()=>{updH();invalidate();});};
+  panelRestore=function(){bp.style.height='';btm.style.display='';maxH=bp.offsetHeight;updH();invalidate();};
 })();
 // --- Windy.com-style Wind Animation ---
 const flow=document.getElementById('flow'),fx=flow.getContext('2d');
@@ -1587,14 +1708,48 @@ map.on('moveend',sync2dTo3d);
 // --- Intro Animation ---
 const _introStart=Date.now();
 function dismissIntro(){const el=document.getElementById('intro');if(!el)return;
-  const wait=Math.max(0,3000-(Date.now()-_introStart));
-  setTimeout(()=>{el.classList.add('hide');setTimeout(()=>el.remove(),900);},wait);}
+  const wait=Math.max(0,1200-(Date.now()-_introStart));
+  setTimeout(()=>{el.classList.add('hide');setTimeout(()=>{el.remove();maybeOnboard();},500);},wait);}
 // --- Snow animation for intro ---
 (function(){const w=document.getElementById('snowWrap');if(!w)return;
   for(let i=0;i<30;i++){const s=document.createElement('div');s.className='sf';
     s.style.left=Math.random()*100+'%';s.style.animationDuration=(2+Math.random()*4)+'s';
     s.style.animationDelay=Math.random()*3+'s';s.style.opacity=0.2+Math.random()*0.5;
     s.style.width=s.style.height=(2+Math.random()*4)+'px';w.appendChild(s);}})();
+// --- First-run onboarding coach marks ---
+const COACH_STEPS=[
+  {sel:'#topics button[data-t="ski"]',html:'<b>Finde den besten Schnee.</b><br>Tippe auf <b>Ski</b> für Skitauglichkeit & Pulverqualität – deine wichtigsten Highlights auf einen Blick.'},
+  {sel:'#topics button[data-t="snow"]',html:'<b>Schnee-Bedingungen.</b><br>Unter <b>Snow</b> siehst du Neuschnee & Schneehöhe. Über <b>More</b> kommen Temperatur, Wind & mehr dazu.'},
+  {sel:'#searchWrap',html:'<b>Spring zu einem Ort.</b><br>Suche einen Berg oder Ort und zoome direkt dorthin.'},
+  {sel:'#feedBtn',html:'<b>Community-Feed.</b><br>Hier siehst du aktuelle Meldungen von Tourengängern in der ganzen Schweiz.'}
+];
+let coachIdx=0;
+function maybeOnboard(){try{if(localStorage.getItem('ssm_onboarded'))return;}catch(e){}coachIdx=0;startCoach();}
+function endCoach(){try{localStorage.setItem('ssm_onboarded','1');}catch(e){}const c=document.getElementById('coach');if(c)c.style.display='none';}
+function showCoachStep(){
+  const c=document.getElementById('coach');
+  // Skip steps whose target is missing
+  while(coachIdx<COACH_STEPS.length&&!document.querySelector(COACH_STEPS[coachIdx].sel))coachIdx++;
+  if(coachIdx>=COACH_STEPS.length){endCoach();return;}
+  const step=COACH_STEPS[coachIdx],el=document.querySelector(step.sel),r=el.getBoundingClientRect();
+  const pad=8,spot=document.getElementById('coachSpot'),card=document.getElementById('coachCard');
+  spot.style.left=(r.left-pad)+'px';spot.style.top=(r.top-pad)+'px';spot.style.width=(r.width+pad*2)+'px';spot.style.height=(r.height+pad*2)+'px';
+  document.getElementById('coachText').innerHTML=step.html;
+  document.getElementById('coachDots').innerHTML=COACH_STEPS.map((_,i)=>'<i class="'+(i===coachIdx?'on':'')+'"></i>').join('');
+  document.getElementById('coachNext').textContent=coachIdx===COACH_STEPS.length-1?'Los geht’s':'Weiter';
+  // Position card: below the target if room, else above
+  const cw=Math.min(300,window.innerWidth-32),vh=window.innerHeight;
+  let top=r.bottom+14,below=true;if(top+150>vh){top=r.top-14-160;below=false;}
+  top=Math.max(12,Math.min(top,vh-180));
+  let left=r.left+r.width/2-cw/2;left=Math.max(12,Math.min(left,window.innerWidth-cw-12));
+  card.style.left=left+'px';card.style.top=top+'px';
+  c.style.display='block';
+}
+function coachNext(){coachIdx++;if(coachIdx>=COACH_STEPS.length)endCoach();else showCoachStep();}
+function startCoach(){const nx=document.getElementById('coachNext'),sk=document.getElementById('coachSkip');
+  nx.onclick=coachNext;sk.onclick=endCoach;
+  window.addEventListener('resize',()=>{if(document.getElementById('coach').style.display==='block')showCoachStep();});
+  showCoachStep();}
 setTopic('snow',0);dismissIntro();
 requestAnimationFrame(()=>{document.documentElement.style.setProperty('--btm-h',document.getElementById('bottomPanel').offsetHeight+'px');});
 // --- Supabase Auth & Reports ---
@@ -1603,6 +1758,17 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 let sb=null,sbUser=null,authMode='login';
 try{sb=window.supabase.createClient(SB_URL,SB_KEY);}catch(e){console.warn('Supabase SDK not loaded',e);}
 function haptic(ms){try{navigator.vibrate(ms||8);}catch(e){}}
+// --- Category icons / colors (defined early: used by markers on first paint) ---
+const CAT_SVG={
+  snow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="22"/><line x1="4.9" y1="7" x2="19.1" y2="17"/><line x1="4.9" y1="17" x2="19.1" y2="7"/><line x1="12" y1="2" x2="14" y2="4.5"/><line x1="12" y1="2" x2="10" y2="4.5"/><line x1="12" y1="22" x2="14" y2="19.5"/><line x1="12" y1="22" x2="10" y2="19.5"/><line x1="4.9" y1="7" x2="5.7" y2="9.8"/><line x1="4.9" y1="7" x2="7.5" y2="6"/><line x1="19.1" y1="17" x2="18.3" y2="14.2"/><line x1="19.1" y1="17" x2="16.5" y2="18"/><line x1="19.1" y1="7" x2="16.5" y2="6"/><line x1="19.1" y1="7" x2="18.3" y2="9.8"/><line x1="4.9" y1="17" x2="7.5" y2="18"/><line x1="4.9" y1="17" x2="5.7" y2="14.2"/></svg>',
+  route:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19l4-14 4 10 4-6 4 10"/><circle cx="6" cy="5" r="1.5" fill="currentColor" stroke="none"/><circle cx="18" cy="9" r="1.5" fill="currentColor" stroke="none"/></svg>',
+  danger:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.2L1.8 18.5c-.8 1.4.2 3 1.7 3h17c1.5 0 2.5-1.6 1.7-3L13.7 3.2c-.8-1.4-2.6-1.4-3.4 0z"/><line x1="12" y1="9" x2="12" y2="14"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>',
+  tour:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l7-10 4 5 7-11"/><circle cx="17" cy="4" r="2"/><path d="M14 20l3-4 4 4"/></svg>',
+  info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r=".5" fill="currentColor" stroke="none"/></svg>'
+};
+const CAT_COLORS={snow:'#1a7fd4',route:'#2e7d32',danger:'#d03050',tour:'#7b1fa2',info:'#e65100'};
+const CAT_BG={snow:'linear-gradient(135deg,#e3f2fd,#bbdefb)',route:'linear-gradient(135deg,#e8f5e9,#c8e6c9)',danger:'linear-gradient(135deg,#fce4ec,#f8bbd0)',tour:'linear-gradient(135deg,#f3e5f5,#e1bee7)',info:'linear-gradient(135deg,#fff3e0,#ffe0b2)'};
+function catSvg(id,size){return `<span class="cat-ico" style="width:${size||16}px;height:${size||16}px">${CAT_SVG[id]||''}</span>`;}
 // --- Demo data ---
 const DEMO_REPORTS=[
   {id:'d1',user:'AlpinMax',cat:'snow',icon:'❄️',sub:'Neuschnee',measurement:'30 cm',caption:'Frischer Powder am Titlis Nordwand! Traumhafte Bedingungen seit heute Morgen.',lat:46.7712,lng:8.4267,time:'vor 2h',img:null},
@@ -1618,12 +1784,17 @@ let reportMarkers=L.layerGroup().addTo(map);
 let allReports=[...DEMO_REPORTS];
 function loadReportMarkers(){
   reportMarkers.clearLayers();
+  const tier=(typeof detailTier==='function')?detailTier():2;
   allReports.forEach(r=>{
-    const isDanger=r.cat==='danger';
     const mColor=CAT_COLORS[r.cat]||'#1a7fd4';
-    const icon=L.divIcon({className:'',html:`<div class="rpt-marker${isDanger?' danger':''}" style="color:${mColor}">${CAT_SVG[r.cat]||r.icon}</div>`,iconSize:[36,36],iconAnchor:[18,18]});
-    const m=L.marker([r.lat,r.lng],{icon}).addTo(reportMarkers);
-    m.bindPopup(`<div style="min-width:180px"><b>${r.user}</b> <span style="color:#7a8a9a;font-size:12px">${r.time}</span><br><span style="font-size:13px">${r.icon} ${r.sub||r.cat}${r.measurement?' · '+r.measurement:''}</span>${r.caption?'<br><span style="font-size:13px;color:#3a4a5a">'+r.caption+'</span>':''}</div>`,{maxWidth:260});
+    let icon;
+    if(tier===0){
+      icon=L.divIcon({className:'',html:`<div class="rpt-dot" style="background:${mColor}"></div>`,iconSize:[14,14],iconAnchor:[7,7]});
+    }else{
+      icon=L.divIcon({className:'',html:`<div class="rpt-marker" style="color:${mColor}">${CAT_SVG[r.cat]||r.icon}</div>`,iconSize:[36,36],iconAnchor:[18,18]});
+    }
+    const m=L.marker([r.lat,r.lng],{icon,zIndexOffset:700}).addTo(reportMarkers);
+    m.bindPopup(`<div style="min-width:180px"><b>${r.user}</b> <span style="color:#7a8a9a;font-size:12px">${r.time}</span><br><span style="font-size:13px;display:inline-flex;align-items:center;gap:5px;color:${mColor}">${catSvg?catSvg(r.cat,14):''} ${r.sub||r.cat}${r.measurement?' · '+r.measurement:''}</span>${r.caption?'<br><span style="font-size:13px;color:#3a4a5a">'+r.caption+'</span>':''}</div>`,{maxWidth:260});
   });
 }
 // --- Auth UI ---
@@ -1696,16 +1867,6 @@ async function authSubmit(e){
 async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email});document.getElementById('emailBanner').querySelector('button').textContent='Sent!';}
 function authMenu(){if(confirm('Sign out?')){if(sb)sb.auth.signOut();authUpdateUI(null);}}
 // --- Report categories ---
-const CAT_SVG={
-  snow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="22"/><line x1="4.9" y1="7" x2="19.1" y2="17"/><line x1="4.9" y1="17" x2="19.1" y2="7"/><line x1="12" y1="2" x2="14" y2="4.5"/><line x1="12" y1="2" x2="10" y2="4.5"/><line x1="12" y1="22" x2="14" y2="19.5"/><line x1="12" y1="22" x2="10" y2="19.5"/><line x1="4.9" y1="7" x2="5.7" y2="9.8"/><line x1="4.9" y1="7" x2="7.5" y2="6"/><line x1="19.1" y1="17" x2="18.3" y2="14.2"/><line x1="19.1" y1="17" x2="16.5" y2="18"/><line x1="19.1" y1="7" x2="16.5" y2="6"/><line x1="19.1" y1="7" x2="18.3" y2="9.8"/><line x1="4.9" y1="17" x2="7.5" y2="18"/><line x1="4.9" y1="17" x2="5.7" y2="14.2"/></svg>',
-  route:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19l4-14 4 10 4-6 4 10"/><circle cx="6" cy="5" r="1.5" fill="currentColor" stroke="none"/><circle cx="18" cy="9" r="1.5" fill="currentColor" stroke="none"/></svg>',
-  danger:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.2L1.8 18.5c-.8 1.4.2 3 1.7 3h17c1.5 0 2.5-1.6 1.7-3L13.7 3.2c-.8-1.4-2.6-1.4-3.4 0z"/><line x1="12" y1="9" x2="12" y2="14"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>',
-  tour:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l7-10 4 5 7-11"/><circle cx="17" cy="4" r="2"/><path d="M14 20l3-4 4 4"/></svg>',
-  info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r=".5" fill="currentColor" stroke="none"/></svg>'
-};
-const CAT_COLORS={snow:'#1a7fd4',route:'#2e7d32',danger:'#d03050',tour:'#7b1fa2',info:'#e65100'};
-const CAT_BG={snow:'linear-gradient(135deg,#e3f2fd,#bbdefb)',route:'linear-gradient(135deg,#e8f5e9,#c8e6c9)',danger:'linear-gradient(135deg,#fce4ec,#f8bbd0)',tour:'linear-gradient(135deg,#f3e5f5,#e1bee7)',info:'linear-gradient(135deg,#fff3e0,#ffe0b2)'};
-function catSvg(id,size){return `<span class="cat-ico" style="width:${size||16}px;height:${size||16}px">${CAT_SVG[id]||''}</span>`;}
 const RP_CATS=[
   {id:'snow',label:'Schnee',icon:'❄️',subs:['Neuschnee','Nassschnee','Triebschnee','Sulz','Firn','Bruchharsch','Windgepresst']},
   {id:'route',label:'Route',icon:'🥾',subs:['Gespurt','Verspurt','Keine Spur','Lawinenzug','Wechte','Gletscherspalte']},
