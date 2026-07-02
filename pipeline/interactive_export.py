@@ -925,6 +925,19 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .groups-row button{padding:7px 14px;border-radius:999px;border:1.5px solid var(--acc);background:none;color:var(--acc);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
  .groups-row button.joined{background:var(--acc);color:#fff}
  .groups-empty{text-align:center;color:var(--mut);padding:30px;font-size:14px}
+ /* Location search picker (Gipfel / Gebiet) */
+ .loc-picker{position:fixed;inset:0;z-index:3800;background:rgba(11,17,32,.5);backdrop-filter:blur(4px);display:flex;flex-direction:column;justify-content:flex-end}
+ .loc-picker-sheet{background:#fff;border-radius:22px 22px 0 0;max-height:80vh;display:flex;flex-direction:column;padding-bottom:calc(env(safe-area-inset-bottom,0px)+8px);box-shadow:0 -8px 40px rgba(0,0,0,.2)}
+ .loc-picker-head{display:flex;align-items:center;gap:10px;padding:16px 18px 12px;border-bottom:1px solid rgba(0,0,0,.06)}
+ .loc-picker-head svg{width:20px;height:20px;color:var(--mut);flex-shrink:0}
+ .loc-picker-head input{flex:1;border:none;outline:none;font-size:17px;font-family:inherit;color:var(--fg);background:none}
+ .loc-picker-head input::placeholder{color:var(--mut)}
+ .loc-picker-head button{background:none;border:none;font-size:19px;color:var(--mut);cursor:pointer;width:30px;flex-shrink:0}
+ .loc-picker-list{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px}
+ .loc-picker-list button{display:flex;align-items:center;width:100%;gap:10px;padding:13px 14px;border:none;background:none;border-radius:12px;cursor:pointer;font-family:inherit;font-size:15px;font-weight:600;color:var(--fg);text-align:left}
+ .loc-picker-list button:hover{background:rgba(15,29,47,.05)}
+ .loc-picker-list button .lp-e{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--mut)}
+ .loc-picker-list .lp-empty{text-align:center;color:var(--mut);padding:30px;font-size:14px}
  .feed-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,0px)}
  .feed-grid{max-width:600px;margin:0 auto;padding:0}
  .feed-card{background:#fff;margin-bottom:8px;cursor:pointer}
@@ -1120,13 +1133,23 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="feed-filter" id="feedFilter"></div>
 <div class="feed-loc" id="feedLoc" style="display:none">
   <button class="feed-loc-btn" id="feedNear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> In der Nähe</button>
-  <select class="feed-loc-sel" id="feedPeak"><option value="">⛰ Gipfel wählen…</option></select>
-  <select class="feed-loc-sel" id="feedDest"><option value="">🎿 Skigebiet wählen…</option></select>
+  <button class="feed-loc-btn" id="feedPeakBtn" onclick="openLocPicker('peak')">⛰ Gipfel</button>
+  <button class="feed-loc-btn" id="feedDestBtn" onclick="openLocPicker('dest')">🎿 Gebiet</button>
   <button class="feed-loc-clear" id="feedAnchorClear" style="display:none">✕ Filter</button>
 </div>
 <div class="feed-groups" id="feedGroups" style="display:none"></div>
 <div class="feed-anchor-bar" id="feedAnchorBar" style="display:none"></div>
 <div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Loading reports...</div></div></div>
+</div>
+<div class="loc-picker" id="locPicker" style="display:none" onclick="if(event.target===this)locPickerClose()">
+  <div class="loc-picker-sheet">
+    <div class="loc-picker-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="locPickerInput" type="text" placeholder="Suchen…" autocomplete="off" oninput="locPickerFilter(this.value)"/>
+      <button onclick="locPickerClose()">✕</button>
+    </div>
+    <div class="loc-picker-list" id="locPickerList"></div>
+  </div>
 </div>
 <div class="groups-modal" id="groupsModal" style="display:none" onclick="if(event.target===this)groupsClose()">
   <div class="groups-sheet">
@@ -1931,6 +1954,25 @@ function haversineKm(la1,lo1,la2,lo2){const R=6371,dLa=(la2-la1)*Math.PI/180,dLo
   const s=Math.sin(dLa/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)**2;
   return 2*R*Math.asin(Math.min(1,Math.sqrt(s)));}
 function nearestOf(list,lat,lng){let best=null,bd=1e9;for(const p of list){const d=haversineKm(lat,lng,p.lat,p.lng);if(d<bd){bd=d;best=p;}}return best?{item:best,km:bd}:null;}
+// Parse a Postgres/PostGIS location into [lat,lng]. Handles WKT text, GeoJSON,
+// and (importantly) the EWKB hex that geography columns return by default —
+// without this reports were read as (0,0), far from Switzerland.
+function parseGeo(g){
+  if(g==null)return null;
+  if(typeof g==='object'){if(g.coordinates&&g.coordinates.length>=2)return[+g.coordinates[1],+g.coordinates[0]];return null;}
+  const s=String(g);
+  const m=s.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)/i);
+  if(m)return[parseFloat(m[2]),parseFloat(m[1])];
+  if(/^[0-9A-Fa-f]+$/.test(s)&&s.length>=42){try{
+    const buf=new Uint8Array(s.length/2);for(let i=0;i<buf.length;i++)buf[i]=parseInt(s.substr(i*2,2),16);
+    const dv=new DataView(buf.buffer),le=buf[0]===1,type=dv.getUint32(1,le);let off=5;
+    if(type&0x20000000)off+=4;   // SRID present
+    if(type&0x40000000)off+=4;   // measured
+    const x=dv.getFloat64(off,le),y=dv.getFloat64(off+8,le);
+    if(isFinite(x)&&isFinite(y)&&Math.abs(y)<=90&&Math.abs(x)<=180)return[y,x];
+  }catch(e){}}
+  return null;
+}
 // --- Demo data ---
 const DEMO_REPORTS=[
   {id:'d1',user:'AlpinMax',cat:'snow',icon:'❄️',sub:'Neuschnee',measurement:'30 cm',caption:'Frischer Powder am Titlis Nordwand! Traumhafte Bedingungen seit heute Morgen.',lat:46.7712,lng:8.4267,time:'vor 2h',img:null},
@@ -2006,11 +2048,10 @@ async function loadDbReports(){
     let likeCount={},likedByMe={};try{const{data:rx}=await sb.from('report_reactions').select('report_id,user_id').eq('type','like').in('report_id',ids);
       (rx||[]).forEach(x=>{likeCount[x.report_id]=(likeCount[x.report_id]||0)+1;if(sbUser&&x.user_id===sbUser.id)likedByMe[x.report_id]=true;});}catch(e){}
     const dbR=data.map(r=>{
-      let lat=0,lng=0;const m=r.location?.match?.(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
-      if(m){lng=parseFloat(m[1]);lat=parseFloat(m[2]);}
+      const ll=parseGeo(r.location);if(!ll||(ll[0]===0&&ll[1]===0))return null;const lat=ll[0],lng=ll[1];
       const catId=r.primary_categories?.[0]||'info';const catObj=RP_CATS.find(c=>c.id===catId);
       return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,cat:catId,icon:catObj?.icon||'📍',sub:r.subtype,measurement:r.condition_data?.measurement||null,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,groupId:r.group_id||null,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],dbRow:true};
-    });
+    }).filter(Boolean);
     allReports=[...dbR,...DEMO_REPORTS];loadReportMarkers();
     if(document.getElementById('feedPage').classList.contains('open'))feedRender();
   }catch(e){console.warn('loadDbReports',e);}
@@ -2384,10 +2425,6 @@ function feedOpen(){
   document.getElementById('feedFilter').innerHTML=['all','snow','route','danger','tour','info'].map(f=>{
     const cat=RP_CATS.find(c=>c.id===f);const lbl=f==='all'?'Alle':(catSvg(f,14)+' '+cat.label);
     return`<button class="${feedFilter===f?'active':''}" onclick="feedSetFilter('${f}')">${lbl}</button>`;}).join('');
-  const pk=document.getElementById('feedPeak');
-  if(pk.options.length<=1)pk.innerHTML='<option value="">⛰ Gipfel wählen…</option>'+PEAKS.slice().sort((a,b)=>a.n.localeCompare(b.n)).map(p=>`<option value="${PEAKS.indexOf(p)}">${p.n} (${p.e} m)</option>`).join('');
-  const ds=document.getElementById('feedDest');
-  if(ds.options.length<=1)ds.innerHTML='<option value="">🎿 Skigebiet wählen…</option>'+DESTS.slice().sort((a,b)=>a.n.localeCompare(b.n)).map(p=>`<option value="${DESTS.indexOf(p)}">${p.n}</option>`).join('');
   document.getElementById('feedLoc').style.display=feedScope==='near'?'flex':'none';
   document.getElementById('feedGroups').style.display=feedScope==='groups'?'flex':'none';
   groupsRender();feedRender();
@@ -2403,11 +2440,13 @@ function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter b
 function feedSetGroup(id){feedGroup=id;groupsRender();feedRender();}
 function feedSetAnchor(a){feedAnchor=a;
   document.getElementById('feedNear').classList.toggle('active',!!a&&a.src==='me');
-  document.getElementById('feedPeak').classList.toggle('active',!!a&&a.src==='peak');
-  document.getElementById('feedDest').classList.toggle('active',!!a&&a.src==='dest');
+  document.getElementById('feedPeakBtn').classList.toggle('active',!!a&&a.src==='peak');
+  document.getElementById('feedDestBtn').classList.toggle('active',!!a&&a.src==='dest');
+  document.getElementById('feedPeakBtn').textContent=(a&&a.src==='peak')?('⛰ '+a.name):'⛰ Gipfel';
+  document.getElementById('feedDestBtn').textContent=(a&&a.src==='dest')?('🎿 '+a.name):'🎿 Gebiet';
   const bar=document.getElementById('feedAnchorBar'),clr=document.getElementById('feedAnchorClear');
   if(a){bar.style.display='';bar.innerHTML='Sortiert nach Nähe zu <b>'+a.name+'</b>';clr.style.display='';}
-  else{bar.style.display='none';clr.style.display='none';document.getElementById('feedPeak').value='';document.getElementById('feedDest').value='';}
+  else{bar.style.display='none';clr.style.display='none';}
   feedRender();}
 function feedClearAnchor(){feedSetAnchor(null);}
 (function(){
@@ -2418,10 +2457,22 @@ function feedClearAnchor(){feedSetAnchor(null);}
     navigator.geolocation.getCurrentPosition(p=>{near.disabled=false;near.innerHTML=nearHTML;
       feedSetAnchor({name:'meiner Position',lat:p.coords.latitude,lng:p.coords.longitude,src:'me'});},
     ()=>{near.disabled=false;near.innerHTML=nearHTML;alert('Standort nicht verfügbar');},{enableHighAccuracy:true,timeout:10000});};
-  document.getElementById('feedPeak').onchange=function(){if(this.value===''){feedClearAnchor();return;}const p=PEAKS[+this.value];document.getElementById('feedDest').value='';feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:'peak'});};
-  document.getElementById('feedDest').onchange=function(){if(this.value===''){feedClearAnchor();return;}const p=DESTS[+this.value];document.getElementById('feedPeak').value='';feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:'dest'});};
   document.getElementById('feedAnchorClear').onclick=feedClearAnchor;
 })();
+// --- Location search picker (Gipfel / Gebiet) ---
+let locPickerMode='peak';
+function openLocPicker(mode){locPickerMode=mode;
+  const inp=document.getElementById('locPickerInput');inp.value='';
+  inp.placeholder=mode==='peak'?'Gipfel suchen…':'Gebiet suchen…';
+  document.getElementById('locPicker').style.display='flex';locPickerFilter('');
+  setTimeout(()=>inp.focus(),60);}
+function locPickerClose(){document.getElementById('locPicker').style.display='none';}
+function locPickerFilter(q){const list=(locPickerMode==='peak'?PEAKS:DESTS);q=(q||'').toLowerCase().trim();
+  const items=list.map((p,i)=>({p,i})).filter(o=>!q||o.p.n.toLowerCase().includes(q)).sort((x,y)=>x.p.n.localeCompare(y.p.n));
+  const el=document.getElementById('locPickerList');
+  el.innerHTML=items.length?items.map(o=>`<button onclick="locPickerPick(${o.i})"><span>${o.p.n}</span>${o.p.e?'<span class="lp-e">'+o.p.e+' m</span>':''}</button>`).join(''):'<div class="lp-empty">Nichts gefunden</div>';}
+function locPickerPick(i){const p=(locPickerMode==='peak'?PEAKS:DESTS)[i];
+  feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:locPickerMode});locPickerClose();haptic(6);}
 // --- Groups UI ---
 function groupsRender(){
   const row=document.getElementById('feedGroups');
