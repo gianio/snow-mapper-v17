@@ -145,6 +145,23 @@ CREATE POLICY "group_members_manage_own" ON group_members
 -- Link reports to an optional group
 ALTER TABLE reports ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES groups(id) ON DELETE SET NULL;
 
+-- Comments on reports
+CREATE TABLE IF NOT EXISTS report_comments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  report_id UUID REFERENCES reports(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE report_comments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "comments_read_all" ON report_comments;
+CREATE POLICY "comments_read_all" ON report_comments FOR SELECT USING (true);
+DROP POLICY IF EXISTS "comments_insert_own" ON report_comments;
+CREATE POLICY "comments_insert_own" ON report_comments FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "comments_delete_own" ON report_comments;
+CREATE POLICY "comments_delete_own" ON report_comments FOR DELETE USING (auth.uid() = user_id);
+CREATE INDEX IF NOT EXISTS idx_comments_report ON report_comments (report_id, created_at);
+
 CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows (follower_id);
 CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members (user_id);
 CREATE INDEX IF NOT EXISTS idx_reports_group ON reports (group_id);
@@ -158,21 +175,28 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('report-images', 'report-images', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
+-- Public read for everyone (anon + authenticated)
 DROP POLICY IF EXISTS "report_images_public_read" ON storage.objects;
 CREATE POLICY "report_images_public_read" ON storage.objects
   FOR SELECT USING (bucket_id = 'report-images');
 
+-- Any logged-in user may upload. NOTE: use "TO authenticated" — checking
+-- auth.role() in WITH CHECK is what caused "new row violates row-level
+-- security policy" on upload.
 DROP POLICY IF EXISTS "report_images_auth_insert" ON storage.objects;
 CREATE POLICY "report_images_auth_insert" ON storage.objects
-  FOR INSERT WITH CHECK (bucket_id = 'report-images' AND auth.role() = 'authenticated');
+  FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'report-images');
 
 DROP POLICY IF EXISTS "report_images_owner_update" ON storage.objects;
 CREATE POLICY "report_images_owner_update" ON storage.objects
-  FOR UPDATE USING (bucket_id = 'report-images' AND auth.uid() = owner);
+  FOR UPDATE TO authenticated
+  USING (bucket_id = 'report-images' AND owner = auth.uid());
 
 DROP POLICY IF EXISTS "report_images_owner_delete" ON storage.objects;
 CREATE POLICY "report_images_owner_delete" ON storage.objects
-  FOR DELETE USING (bucket_id = 'report-images' AND auth.uid() = owner);
+  FOR DELETE TO authenticated
+  USING (bucket_id = 'report-images' AND owner = auth.uid());
 
 -- Indices
 CREATE INDEX idx_reports_location ON reports USING GIST(location);
