@@ -571,31 +571,40 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #map{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);background:#fff;transition:bottom .28s cubic-bezier(.4,0,.2,1)}
  body.panel-dragging #map,body.panel-dragging #flow{transition:none}
  #flow{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);z-index:450;pointer-events:none}
- #layerBar{position:absolute;z-index:1000;top:0;left:0;right:0;display:flex;flex-direction:column;gap:5px;padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 12px;scrollbar-width:none;background:linear-gradient(180deg,rgba(237,242,248,.96) 0%,rgba(237,242,248,.6) 85%,transparent 100%)}
- #topics{display:flex;gap:6px;align-items:center;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px}
+ /* --- Layer selector: one elegant floating glass card --- */
+ #layerBar{position:absolute;z-index:1000;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;max-width:calc(100vw - 112px);display:inline-flex;flex-direction:column;padding:6px;background:rgba(255,255,255,.7);backdrop-filter:blur(24px) saturate(1.8);-webkit-backdrop-filter:blur(24px) saturate(1.8);border:1px solid rgba(255,255,255,.7);border-radius:20px;box-shadow:0 10px 34px rgba(15,29,47,.13),0 1px 0 rgba(255,255,255,.7) inset;--topic-accent:#1a7fd4;--topic-tint:rgba(26,127,212,.13)}
+ #topics{display:flex;gap:2px;align-items:center;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
  #topics::-webkit-scrollbar{display:none}
- #topics button{display:inline-flex;align-items:center;gap:7px;border:1.5px solid transparent;background:rgba(255,255,255,.7);border-radius:var(--r);padding:9px 15px;cursor:pointer;font-size:14px;font-weight:600;min-height:42px;color:var(--fg2);transition:all .2s cubic-bezier(.4,0,.2,1);backdrop-filter:blur(8px);flex-shrink:0;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.05);letter-spacing:-.01em}
- #topics button svg{width:17px;height:17px;flex-shrink:0}
- #topics button:hover{background:rgba(255,255,255,.95);box-shadow:0 2px 8px rgba(0,0,0,.06)}
- #topics>button[data-t="ski"],#topics>button[data-t="snow"]{background:rgba(255,255,255,.92);box-shadow:0 2px 8px rgba(0,0,0,.08)}
- #topics button.active{background:var(--fg);color:#fff;border-color:var(--fg);box-shadow:0 3px 12px rgba(15,29,47,.22)}
- #moreTopics{color:var(--mut);padding:9px 13px}
- #moreTopics .chev{width:14px!important;height:14px!important;transition:transform .25s}
- #moreTopics.sel{background:var(--fg);color:#fff;border-color:var(--fg)}
- #topics.expanded #moreTopics{background:var(--fg);color:#fff;border-color:var(--fg)}
+ #topics button{display:inline-flex;align-items:center;gap:7px;border:none;background:transparent;border-radius:13px;padding:9px 14px;cursor:pointer;font-size:14px;font-weight:650;min-height:40px;color:var(--mut);transition:all .22s cubic-bezier(.4,0,.2,1);flex-shrink:0;white-space:nowrap;letter-spacing:-.01em;font-family:inherit}
+ #topics button svg{width:18px;height:18px;flex-shrink:0;transition:color .2s}
+ #topics button:hover{color:var(--fg)}
+ #topics button.active{background:#fff;color:var(--fg);box-shadow:0 2px 9px rgba(15,29,47,.13),0 0 0 1px rgba(15,29,47,.04)}
+ #topics button.active svg{color:var(--topic-accent)}
+ #moreTopics{color:var(--mut);padding:9px 12px;gap:5px}
+ #moreTopics .chev{width:13px!important;height:13px!important;transition:transform .25s;opacity:.65}
+ #moreTopics.sel{background:#fff;color:var(--fg);box-shadow:0 2px 9px rgba(15,29,47,.13)}
+ #moreTopics.sel>svg:first-child{color:var(--topic-accent)}
+ #topics.expanded #moreTopics{background:rgba(15,29,47,.06);color:var(--fg)}
  #topics.expanded #moreTopics .chev{transform:rotate(180deg)}
- /* Vertical floating dropdown (position set by JS; never pushes layout) */
- #topicsMore{position:fixed;display:none;flex-direction:column;gap:5px;background:rgba(255,255,255,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--bd);border-radius:14px;padding:7px;box-shadow:0 10px 34px rgba(0,0,0,.18);z-index:1200;min-width:158px;animation:moreIn .16s ease}
- @keyframes moreIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+ /* More dropdown: iconed, described (position set by JS) */
+ #topicsMore{position:fixed;display:none;flex-direction:column;gap:1px;background:rgba(255,255,255,.98);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(15,29,47,.08);border-radius:16px;padding:6px;box-shadow:0 18px 46px rgba(15,29,47,.2);z-index:1200;min-width:214px;animation:moreIn .18s cubic-bezier(.34,1.4,.64,1)}
+ @keyframes moreIn{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
  #topics.expanded #topicsMore{display:flex}
- #topicsMore button{width:100%;justify-content:flex-start;background:rgba(0,0,0,.03);min-height:42px;border-radius:10px}
- #topicsMore button:hover{background:rgba(0,0,0,.06)}
- #topicsMore button.active{background:var(--fg);color:#fff}
- #sublayers{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:1px}
+ #topicsMore button{display:flex;align-items:center;gap:12px;width:100%;justify-content:flex-start;background:transparent;border:none;border-radius:12px;padding:9px 10px;min-height:auto;cursor:pointer;font-family:inherit;text-align:left;transition:background .15s;color:var(--fg)}
+ #topicsMore .mt-ic{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+ #topicsMore .mt-ic svg{width:20px;height:20px}
+ #topicsMore .mt-tx{display:flex;flex-direction:column;gap:1px;min-width:0}
+ #topicsMore .mt-tx b{font-size:14px;font-weight:700;color:var(--fg);letter-spacing:-.01em}
+ #topicsMore .mt-tx span{font-size:11.5px;color:var(--mut);font-weight:500;white-space:nowrap}
+ #topicsMore button:hover{background:rgba(15,29,47,.045)}
+ #topicsMore button.active{background:rgba(15,29,47,.06)}
+ /* Sublayers: connected secondary segment row */
+ #sublayers{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-top:6px;padding-top:6px;border-top:1px solid rgba(15,29,47,.07)}
+ #sublayers:empty{display:none}
  #sublayers::-webkit-scrollbar{display:none}
- #sublayers button{border:1.5px solid rgba(0,0,0,.06);background:rgba(255,255,255,.55);border-radius:10px;padding:7px 13px;cursor:pointer;font-size:13px;font-weight:500;min-height:36px;color:var(--fg2);transition:all .2s;backdrop-filter:blur(4px);flex-shrink:0;white-space:nowrap}
- #sublayers button:hover{background:rgba(255,255,255,.85)}
- #sublayers button.active{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+ #sublayers button{border:none;background:rgba(15,29,47,.05);border-radius:9px;padding:6px 12px;cursor:pointer;font-size:12.5px;font-weight:650;min-height:32px;color:var(--fg2);transition:all .18s;flex-shrink:0;white-space:nowrap;font-family:inherit;letter-spacing:-.01em}
+ #sublayers button:hover{background:rgba(15,29,47,.09);color:var(--fg)}
+ #sublayers button.active{background:var(--topic-tint);color:var(--topic-accent)}
  #bottomPanel{position:absolute;z-index:1000;bottom:0;left:0;right:0;
    background:rgba(255,255,255,.78);backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);border-top:1px solid rgba(255,255,255,.5);box-shadow:0 -1px 0 var(--bd),0 -4px 20px rgba(0,0,0,.06);transition:none;padding-bottom:env(safe-area-inset-bottom,0px);overflow:hidden}
  #btmMain{padding:10px 14px 12px}
@@ -727,9 +736,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #coachNext{background:var(--fg);color:#fff;border:none;border-radius:11px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
  #coachNext:hover{background:#000}
  @media (max-width:560px){
-   #layerBar{padding:calc(env(safe-area-inset-top,0px) + 8px) 10px 8px;gap:5px}
-   #topics button{padding:8px 14px;font-size:15px;min-height:42px;border-radius:12px}
-   #sublayers button{padding:7px 12px;font-size:14px;min-height:38px;border-radius:10px}
+   #layerBar{max-width:calc(100vw - 98px);padding:5px}
+   #topics button{padding:9px 13px;font-size:14px;min-height:40px}
+   #topics button span{display:inline}
+   #sublayers button{padding:6px 12px;font-size:12.5px;min-height:32px}
    #searchWrap{top:calc(env(safe-area-inset-top,0px) + 112px);right:8px;width:calc(100vw - 16px);max-width:210px}
    .icard{font-size:14px;max-width:calc(100vw - 50px);min-width:200px}
    .scard{font-size:14px;min-width:160px}
@@ -991,10 +1001,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <button data-t="snow" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="7.5" x2="19" y2="16.5"/><line x1="5" y1="16.5" x2="19" y2="7.5"/></svg><span>Snow</span></button>
     <button id="moreTopics" title="More conditions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M4 6h16M4 18h16"/></svg><span>More</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
     <span id="topicsMore">
-      <button data-t="temp">Temp</button>
-      <button data-t="wind">Wind</button>
-      <button data-t="rad">Radiation</button>
-      <button data-t="terrain">Terrain</button>
+      <button data-t="temp"><span class="mt-ic" style="background:rgba(232,89,12,.12);color:#e8590c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V4a2 2 0 1 0-4 0v10.76a4 4 0 1 0 4 0z"/></svg></span><span class="mt-tx"><b>Temperatur</b><span>Luft &amp; Oberfläche</span></span></button>
+      <button data-t="wind"><span class="mt-ic" style="background:rgba(13,148,136,.12);color:#0d9488"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.6 4.6A2 2 0 1 1 11 8H2M12.6 19.4A2 2 0 1 0 14 16H2M17.6 7.6A2.5 2.5 0 1 1 19 12H2"/></svg></span><span class="mt-tx"><b>Wind</b><span>Geschwindigkeit &amp; Böen</span></span></button>
+      <button data-t="rad"><span class="mt-ic" style="background:rgba(245,158,11,.14);color:#f59e0b"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span><span class="mt-tx"><b>Strahlung</b><span>Einstrahlung &amp; Sonne</span></span></button>
+      <button data-t="terrain"><span class="mt-ic" style="background:rgba(100,116,139,.14);color:#64748b"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l6-11 3.5 6M11 20l4-8 6 8z"/></svg></span><span class="mt-tx"><b>Gelände</b><span>Hang, Exposition, Relief</span></span></button>
     </span>
   </div>
   <div id="sublayers"></div>
@@ -1534,11 +1544,15 @@ const TOPICS={
   terrain:[{l:'slope',s:'avg',label:'Slope'},{l:'aspect',s:'avg',label:'Aspect'},{l:'rough',s:'avg',label:'Roughness'},{l:'shade',s:'avg',label:'Hillshade'}]
 };
 let curTopic='snow';
+const TOPIC_COLOR={ski:['#0aa06e','rgba(10,160,110,.14)'],snow:['#1a7fd4','rgba(26,127,212,.13)'],temp:['#e8590c','rgba(232,89,12,.13)'],wind:['#0d9488','rgba(13,148,136,.14)'],rad:['#f59e0b','rgba(245,158,11,.16)'],terrain:['#64748b','rgba(100,116,139,.16)']};
 function setTopic(t,subIdx){
   curTopic=t;
   document.querySelectorAll('#topics button[data-t]').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
   const isMore=['temp','wind','rad','terrain'].includes(t);
   document.getElementById('moreTopics').classList.toggle('sel',isMore);
+  document.querySelectorAll('#topicsMore button').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
+  const tc=TOPIC_COLOR[t]||TOPIC_COLOR.snow;const lb=document.getElementById('layerBar');
+  lb.style.setProperty('--topic-accent',tc[0]);lb.style.setProperty('--topic-tint',tc[1]);
   document.getElementById('topics').classList.remove('expanded');
   const subs=document.getElementById('sublayers');
   const items=TOPICS[t];
