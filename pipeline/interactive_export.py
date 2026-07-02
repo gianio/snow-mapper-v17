@@ -581,11 +581,16 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #topics button.active{background:var(--fg);color:#fff;border-color:var(--fg);box-shadow:0 3px 12px rgba(15,29,47,.22)}
  #moreTopics{color:var(--mut);padding:9px 13px}
  #moreTopics .chev{width:14px!important;height:14px!important;transition:transform .25s}
+ #moreTopics.sel{background:var(--fg);color:#fff;border-color:var(--fg)}
  #topics.expanded #moreTopics{background:var(--fg);color:#fff;border-color:var(--fg)}
  #topics.expanded #moreTopics .chev{transform:rotate(180deg)}
- #topicsMore{display:none;gap:6px;align-items:center}
- #topicsMore button{background:rgba(255,255,255,.6)}
- #topics.expanded #topicsMore{display:inline-flex}
+ /* Vertical floating dropdown (position set by JS; never pushes layout) */
+ #topicsMore{position:fixed;display:none;flex-direction:column;gap:5px;background:rgba(255,255,255,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--bd);border-radius:14px;padding:7px;box-shadow:0 10px 34px rgba(0,0,0,.18);z-index:1200;min-width:158px;animation:moreIn .16s ease}
+ @keyframes moreIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+ #topics.expanded #topicsMore{display:flex}
+ #topicsMore button{width:100%;justify-content:flex-start;background:rgba(0,0,0,.03);min-height:42px;border-radius:10px}
+ #topicsMore button:hover{background:rgba(0,0,0,.06)}
+ #topicsMore button.active{background:var(--fg);color:#fff}
  #sublayers{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:1px}
  #sublayers::-webkit-scrollbar{display:none}
  #sublayers button{border:1.5px solid rgba(0,0,0,.06);background:rgba(255,255,255,.55);border-radius:10px;padding:7px 13px;cursor:pointer;font-size:13px;font-weight:500;min-height:36px;color:var(--fg2);transition:all .2s;backdrop-filter:blur(4px);flex-shrink:0;white-space:nowrap}
@@ -670,6 +675,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .leaflet-popup-tip{background:rgba(255,255,255,.9)!important}
  .leaflet-popup-close-button{color:var(--mut)!important;font-size:18px!important;width:28px!important;height:28px!important;line-height:28px!important}
  .leaflet-popup-close-button:hover{color:var(--fg)!important}
+ /* Attribution: tiny, faint, unobtrusive (expand on hover) */
+ .leaflet-control-attribution{background:rgba(255,255,255,.4)!important;color:rgba(80,100,120,.55)!important;font-size:9px!important;padding:1px 6px!important;border-radius:6px 0 0 0!important;box-shadow:none!important;backdrop-filter:blur(4px);max-width:22px;overflow:hidden;white-space:nowrap;transition:max-width .3s,background .3s}
+ .leaflet-control-attribution:hover{max-width:80vw;background:rgba(255,255,255,.85)!important;color:var(--mut)!important}
+ .leaflet-control-attribution a{color:inherit!important}
  #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 58px);right:12px;width:230px;max-width:calc(100vw - 24px)}
  #searchWrap input{width:100%;padding:10px 12px 10px 34px;border-radius:12px;border:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--fg);font-size:14px;font-weight:500;outline:none;box-shadow:0 2px 8px rgba(0,0,0,.07);font-family:inherit}
  #searchWrap input::placeholder{color:var(--mut);font-weight:400}
@@ -823,6 +832,46 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .slide-track.locked .slide-fill{transform:scaleX(1)!important}
  .slide-track.locked .slide-knob{background:#4ADE80;box-shadow:0 4px 16px rgba(74,222,128,.4)}
  .slide-track.locked .slide-label{color:rgba(74,222,128,.8)}
+ /* --- Report wizard (stepper) --- */
+ .rp-wiz-head{display:flex;align-items:center;gap:12px;padding:2px 16px 0}
+ .rp-nav-btn{width:36px;height:36px;border-radius:10px;border:none;background:rgba(94,200,255,.08);color:#9db4d0;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:.15s}
+ .rp-nav-btn svg{width:20px;height:20px}
+ .rp-nav-btn:hover{background:rgba(94,200,255,.16);color:#E8EEF7}
+ .rp-nav-btn:disabled{opacity:.3;cursor:default}
+ .rp-progress{flex:1;display:flex;gap:6px}
+ .rp-progress i{flex:1;height:4px;border-radius:2px;background:rgba(232,238,247,.14);transition:background .25s}
+ .rp-progress i.done{background:#5EC8FF}
+ .rp-progress i.cur{background:#5EC8FF;box-shadow:0 0 8px rgba(94,200,255,.5)}
+ .rp-step-title{font-size:22px;font-weight:800;color:#E8EEF7;letter-spacing:-.02em;padding:14px 20px 2px}
+ .rp-step-sub{font-size:13px;color:#7C8CA8;padding:0 20px 4px}
+ .rp-pane{padding:16px 20px 0;animation:rpPaneIn .25s ease}
+ @keyframes rpPaneIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
+ .rp-photo-big{width:100%;aspect-ratio:4/3;max-height:44vh;border-radius:22px;background:rgba(94,200,255,.06);border:2px dashed rgba(94,200,255,.22);cursor:pointer;overflow:hidden;display:flex;align-items:center;justify-content:center;transition:border-color .2s}
+ .rp-photo-big:active{border-color:#5EC8FF}
+ .rp-photo-big.has-img{border:none;background:#0a1220}
+ .rp-photo-big img{width:100%;height:100%;object-fit:cover}
+ .rp-photo-placeholder{display:flex;flex-direction:column;align-items:center;gap:12px;color:#5EC8FF}
+ .rp-photo-placeholder svg{width:56px;height:56px;opacity:.85}
+ .rp-photo-placeholder span{font-size:16px;font-weight:600}
+ .rp-loc-card{padding:12px 16px;border-radius:14px;background:rgba(94,200,255,.06);color:#9db4d0;font-size:14px;font-weight:500;margin-bottom:10px}
+ .rp-peak{margin-bottom:12px;padding:14px 16px;border-radius:16px;background:rgba(94,200,255,.08);border:1.5px solid rgba(94,200,255,.2)}
+ .rp-peak-q{font-size:15px;color:#E8EEF7;font-weight:600;margin-bottom:10px}
+ .rp-peak-btns{display:flex;gap:8px}
+ .rp-peak-btns button{flex:1;padding:10px;border-radius:11px;border:1.5px solid rgba(94,200,255,.2);background:rgba(94,200,255,.05);color:#9db4d0;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+ .rp-peak-btns button.yes{background:#5EC8FF;color:#0a1628;border-color:#5EC8FF}
+ .rp-peak.confirmed{border-color:#4ADE80;background:rgba(74,222,128,.1)}
+ .rp-peak.confirmed .rp-peak-q{color:#4ADE80}
+ .rp-summary{margin-top:12px;font-size:13px;color:#7C8CA8;display:flex;flex-wrap:wrap;gap:6px}
+ .rp-summary .rp-tag{padding:4px 10px;border-radius:999px;background:rgba(94,200,255,.1);color:#9db4d0;font-weight:600;display:inline-flex;align-items:center;gap:5px}
+ .rp-summary .rp-tag svg{width:13px;height:13px;stroke:#5EC8FF}
+ .rp-wiz-nav{display:flex;align-items:center;gap:10px;padding:18px 20px calc(env(safe-area-inset-bottom,0px)+18px)}
+ .rp-skip{background:none;border:none;color:#7C8CA8;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;padding:12px}
+ .rp-next{flex:1;padding:15px;border-radius:16px;border:none;background:#5EC8FF;color:#0a1628;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:-.01em;transition:.15s}
+ .rp-next:hover{background:#7ad4ff}
+ .rp-next:disabled{opacity:.4;cursor:default}
+ .rp-next.post{background:linear-gradient(135deg,#FF8A5B,#ff6a3b);color:#fff}
+ .cat-chip .cat-ico-w{width:30px;height:30px;display:flex;align-items:center;justify-content:center}
+ .cat-chip .cat-ico-w svg{width:26px;height:26px;stroke:currentColor}
  /* --- Undo snackbar --- */
  .undo-bar{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px)+20px);left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:999px;background:rgba(20,30,51,.95);backdrop-filter:blur(12px);color:#E8EEF7;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:5000;animation:undoIn .3s cubic-bezier(.34,1.56,.64,1)}
  .undo-bar button{background:none;border:none;color:#FF8A5B;font-weight:700;font-size:14px;cursor:pointer}
@@ -841,6 +890,17 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-filter button .cat-ico svg{width:14px;height:14px}
  .feed-filter button.active{background:var(--fg);color:#fff;border-color:var(--fg)}
  .feed-filter button.active .cat-ico svg{stroke:#fff}
+ .feed-loc{display:flex;gap:8px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none;background:#fff}
+ .feed-loc::-webkit-scrollbar{display:none}
+ .feed-loc-btn,.feed-loc-sel,.feed-loc-clear{flex-shrink:0;padding:8px 14px;border-radius:999px;border:1.5px solid rgba(0,0,0,.08);background:#fff;font-size:13px;font-weight:600;color:var(--fg2);cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+ .feed-loc-btn svg{width:15px;height:15px}
+ .feed-loc-btn.active{background:var(--fg);color:#fff;border-color:var(--fg)}
+ .feed-loc-sel{-webkit-appearance:none;appearance:none;padding-right:16px}
+ .feed-loc-sel.active{background:var(--acc);color:#fff;border-color:var(--acc)}
+ .feed-loc-clear{background:rgba(255,84,112,.1);color:#d03050;border-color:transparent}
+ .feed-anchor-bar{padding:0 16px 12px;background:#fff;font-size:13px;color:var(--fg2);font-weight:600;display:flex;align-items:center;gap:6px}
+ .feed-anchor-bar b{color:var(--acc2)}
+ .feed-card-dist{font-size:11px;font-weight:700;color:var(--acc2);background:rgba(26,127,212,.1);padding:2px 8px;border-radius:999px;margin-left:auto;flex-shrink:0}
  .feed-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,0px)}
  .feed-grid{max-width:600px;margin:0 auto;padding:0}
  .feed-card{background:#fff;margin-bottom:8px;cursor:pointer}
@@ -928,10 +988,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <button data-d="72">72h</button>
       <button data-d="120">120h</button>
       <button id="btnSinceSnow">Last Snow</button>
-      <button data-r="tomorrow">Tomorrow</button>
+      <button data-r="tomorrow">Till tomorrow</button>
     </div>
     <div id="tlDetail">
-      <canvas id="timeline" width="900" height="200" style="width:100%;border-radius:10px;cursor:default;margin-top:10px"></canvas>
+      <canvas id="timeline" width="900" height="120" style="width:100%;height:120px;border-radius:10px;cursor:default;margin-top:10px"></canvas>
       <div id="tlExtended">
         <div class="tl-row"><span class="tl-lbl">Window length</span><span id="tlLenVal" class="tl-val">48h</span></div>
         <input type="range" id="tlLen" min="6" max="168" step="6" value="48"/>
@@ -976,42 +1036,55 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="ro-bg" onclick="reportClose()"></div>
 <div class="report-sheet" onclick="event.stopPropagation()">
 <div class="sh"></div>
-<div class="rp-ctx">
-  <div class="rp-thumb" id="rpThumb" onclick="document.getElementById('rpFile').click()">
-    <svg class="rp-ring" id="rpRing" viewBox="0 0 80 80"><circle cx="40" cy="40" r="37" stroke="rgba(94,200,255,.15)" /><circle id="rpRingFill" cx="40" cy="40" r="37" stroke="#5EC8FF" stroke-dasharray="232.5" stroke-dashoffset="232.5" transform="rotate(-90 40 40)"/></svg>
-    <span class="ti">📷</span>
-  </div>
-  <div class="rp-ctx-info">
-    <div class="rp-ctx-title" id="rpCtxTitle">New Report</div>
-    <div class="rp-ctx-loc" id="rpCtxLoc">📍 Getting location...</div>
-    <div class="rp-ctx-hint" id="rpCtxHint">Tap photo · choose category below</div>
+<div class="rp-wiz-head">
+  <button class="rp-nav-btn" id="rpBack" onclick="rpStepPrev()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <div class="rp-progress" id="rpProgress"></div>
+  <button class="rp-nav-btn" onclick="reportClose()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</div>
+<div class="rp-step-title" id="rpStepTitle">Foto hinzufügen</div>
+<div class="rp-step-sub" id="rpStepSub">Zeig, was du siehst (optional)</div>
+<input type="file" id="rpFile" accept="image/*" capture="environment" onchange="rpSetPhoto(this)" hidden/>
+
+<!-- STEP: photo -->
+<div class="rp-pane" data-step="photo">
+  <div class="rp-photo-big" id="rpPhotoBig" onclick="document.getElementById('rpFile').click()">
+    <div class="rp-photo-placeholder" id="rpPhotoPlaceholder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <span>Foto aufnehmen</span>
+    </div>
   </div>
 </div>
-<input type="file" id="rpFile" accept="image/*" capture="environment" onchange="rpSetPhoto(this)" hidden/>
-<div class="rp-zone" id="rpZoneCat">
-  <div class="rp-zone-label">Was siehst du?</div>
+
+<!-- STEP: cat -->
+<div class="rp-pane" data-step="cat" style="display:none">
   <div class="cat-grid" id="rpCats"></div>
 </div>
-<div class="rp-zone" id="rpZoneSub" style="display:none">
-  <div class="rp-zone-label" id="rpSubLabel">Details</div>
+
+<!-- STEP: sub -->
+<div class="rp-pane" data-step="sub" style="display:none">
   <div class="sub-chips" id="rpSubs"></div>
 </div>
-<div class="rp-zone" id="rpZoneBucket" style="display:none">
-  <div class="rp-zone-label" id="rpBucketLabel">Messung</div>
+
+<!-- STEP: bucket -->
+<div class="rp-pane" data-step="bucket" style="display:none">
   <div class="bucket-track" id="rpBuckets"></div>
   <div class="bucket-val" id="rpBucketVal"></div>
 </div>
-<div class="rp-zone" id="rpZoneNote" style="display:none">
-  <div class="rp-zone-label">Notiz</div>
+
+<!-- STEP: final -->
+<div class="rp-pane" data-step="final" style="display:none">
+  <div class="rp-loc-card" id="rpLocCard"><span id="rpCtxLoc">📍 Standort wird ermittelt…</span></div>
+  <div class="rp-peak" id="rpPeakConfirm" style="display:none"></div>
   <button class="rp-voice-btn" id="rpVoiceBtn" onclick="rpVoiceToggle()">🎤 Halten und sprechen</button>
-  <textarea class="rp-caption" id="rpCaption" placeholder="Kurz beschreiben (optional)..." oninput="rpState.caption=this.value"></textarea>
+  <textarea class="rp-caption" id="rpCaption" placeholder="Kurz beschreiben (optional)…" oninput="rpState.caption=this.value"></textarea>
+  <div class="rp-summary" id="rpSummary"></div>
 </div>
-<div class="slide-track" id="rpSlide">
-  <div class="slide-fill" id="rpSlideFill" style="transform:scaleX(0)"></div>
-  <div class="slide-knob" id="rpSlideKnob">›</div>
-  <div class="slide-label">Wischen zum Posten</div>
+
+<div class="rp-wiz-nav">
+  <button class="rp-skip" id="rpSkip" onclick="rpStepNext()">Überspringen</button>
+  <button class="rp-next" id="rpNext" onclick="rpStepNext()">Weiter</button>
 </div>
-</div>
+</div></div>
 </div>
 <div class="feed-page" id="feedPage">
 <div class="feed-nav">
@@ -1019,6 +1092,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <span class="feed-title">Field Reports</span>
 </div>
 <div class="feed-filter" id="feedFilter"></div>
+<div class="feed-loc" id="feedLoc">
+  <button class="feed-loc-btn" id="feedNear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> In der Nähe</button>
+  <select class="feed-loc-sel" id="feedPeak"><option value="">⛰ Gipfel wählen…</option></select>
+  <select class="feed-loc-sel" id="feedDest"><option value="">🎿 Skigebiet wählen…</option></select>
+  <button class="feed-loc-clear" id="feedAnchorClear" style="display:none">✕ Filter</button>
+</div>
+<div class="feed-anchor-bar" id="feedAnchorBar" style="display:none"></div>
 <div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Loading reports...</div></div></div>
 </div>
 <div id="coach" style="display:none"><div id="coachSpot"></div><div id="coachCard"><div id="coachText"></div><div id="coachNav"><span id="coachDots"></span><button id="coachSkip">Überspringen</button><button id="coachNext">Weiter</button></div></div></div>
@@ -1139,50 +1219,52 @@ const snowEvents=[];
 function sinceLastSnowfall(){let ls=nowIdx;for(const[s,e]of snowEvents){if(s<=nowIdx)ls=s;}return[ls,Math.min(T,nowIdx+1)];}
 function tillTomorrow(){for(let t=nowIdx+1;t<T;t++){const d=new Date(M.times[t]+'Z');if(d.getUTCHours()===8)return[nowIdx,t];}return[nowIdx,Math.min(T,nowIdx+24)];}
 function fmtTime(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+'Z');const h=d.getUTCHours();return h===0?'12AM':h===12?'12PM':h<12?h+'AM':(h-12)+'PM';}
-function drawTimeline(){const tc=document.getElementById('timeline'),ctx2=tc.getContext('2d'),cw=tc.width,ch=tc.height;
-  ctx2.clearRect(0,0,cw,ch);
-  const nx=nowIdx/T*cw;
-  ctx2.fillStyle='rgba(200,210,225,.35)';ctx2.fillRect(0,0,nx,ch);
-  ctx2.fillStyle='rgba(220,232,248,.25)';ctx2.fillRect(nx,0,cw-nx,ch);
-  const x1=a/T*cw,x2=b/T*cw;ctx2.fillStyle='rgba(0,112,184,.1)';ctx2.fillRect(x1,0,x2-x1,ch);
-  ctx2.font='13px system-ui';ctx2.textAlign='center';
+function drawTimeline(){const tc=document.getElementById('timeline');const rect=tc.getBoundingClientRect();
+  if(!rect.width)return;
+  const cw=rect.width,ch=rect.height||120,dpr=window.devicePixelRatio||1;
+  if(tc.width!==Math.round(cw*dpr)||tc.height!==Math.round(ch*dpr)){tc.width=Math.round(cw*dpr);tc.height=Math.round(ch*dpr);}
+  const ctx2=tc.getContext('2d');ctx2.setTransform(dpr,0,0,dpr,0,0);ctx2.clearRect(0,0,cw,ch);
+  const nx=nowIdx/T*cw,x1=a/T*cw,x2=b/T*cw;
+  // past / future wash + selection band
+  ctx2.fillStyle='rgba(200,210,225,.25)';ctx2.fillRect(0,0,nx,ch);
+  ctx2.fillStyle='rgba(220,232,248,.20)';ctx2.fillRect(nx,0,cw-nx,ch);
+  ctx2.fillStyle='rgba(0,112,184,.10)';ctx2.fillRect(x1,0,x2-x1,ch);
+  // day gridlines + big readable date labels along the bottom
+  ctx2.textAlign='left';
   for(let t=0;t<T;t++){const d=new Date(M.times[t]+'Z');if(d.getUTCHours()===0){const x=t/T*cw;
-    ctx2.fillStyle=t>=nowIdx?'rgba(0,112,184,.12)':'rgba(0,0,0,.06)';ctx2.fillRect(x,0,1,ch);
-    ctx2.fillStyle=t>=nowIdx?'rgba(0,90,160,.7)':'rgba(80,100,120,.5)';
-    ctx2.fillText(d.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short'}),x+30,ch-4);}}
+    ctx2.fillStyle='rgba(0,0,0,.06)';ctx2.fillRect(x,22,1,ch-40);
+    ctx2.fillStyle='rgba(70,90,110,.7)';ctx2.font='700 13px Inter,system-ui';
+    ctx2.fillText(d.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit'}),x+7,ch-7);}}
+  // hourly snowfall bars
   let mx=0;for(const s of hSnow)if(s>mx)mx=s;mx=Math.max(.05,mx);
-  const bw=Math.max(1.5,cw/T),barH=ch-30;
-  for(let t=0;t<T;t++){const v=hSnow[t];if(v<.002)continue;const h=Math.max(1,v/mx*barH);const x=t/T*cw;
-    const inSel=(t>=a&&t<b);const fut=t>=nowIdx;
-    ctx2.fillStyle=inSel?(fut?'rgba(0,112,184,.85)':'rgba(80,150,200,.65)'):(fut?'rgba(0,112,184,.25)':'rgba(140,160,180,.2)');
-    ctx2.fillRect(x,ch-22-h,Math.max(bw-.3,1),h);}
-  for(const[s,e]of snowEvents){const xs=s/T*cw,xe=e/T*cw;ctx2.fillStyle='rgba(0,112,184,.25)';ctx2.fillRect(xs,ch-22,xe-xs,4);}
-  const scW=40;ctx2.fillStyle='rgba(240,244,248,.7)';ctx2.fillRect(cw-scW,0,scW,ch-18);
-  ctx2.font='11px system-ui';ctx2.textAlign='right';ctx2.fillStyle='rgba(60,80,100,.5)';
-  for(let i=0;i<=4;i++){const frac=i/4;const cm=(mx*frac).toFixed(mx>=1?0:1);const y=ch-22-frac*barH;
-    ctx2.fillText(cm,cw-4,y+4);if(i>0){ctx2.strokeStyle='rgba(0,0,0,.04)';ctx2.lineWidth=.5;ctx2.beginPath();ctx2.moveTo(0,y);ctx2.lineTo(cw-scW,y);ctx2.stroke();}}
-  ctx2.fillStyle='rgba(60,80,100,.35)';ctx2.font='10px system-ui';ctx2.fillText('cm/h',cw-4,16);
-  ctx2.strokeStyle='rgba(0,112,184,.5)';ctx2.lineWidth=2;ctx2.strokeRect(x1+.5,0,x2-x1-1,ch);
-  const hh=24,hy=(ch-hh)/2;ctx2.fillStyle='rgba(0,112,184,.4)';
+  const bw=Math.max(1.5,cw/T),barH=ch-52;
+  for(let t=0;t<T;t++){const v=hSnow[t];if(v<.002)continue;const h=Math.max(1.5,v/mx*barH);const x=t/T*cw;
+    const inSel=(t>=a&&t<b),fut=t>=nowIdx;
+    ctx2.fillStyle=inSel?(fut?'rgba(0,112,184,.9)':'rgba(80,150,200,.7)'):(fut?'rgba(0,112,184,.22)':'rgba(150,165,185,.2)');
+    ctx2.fillRect(x,ch-26-h,Math.max(bw-.3,1),h);}
+  // single clean max label (no cluttered scale)
+  ctx2.fillStyle='rgba(90,110,130,.65)';ctx2.font='600 12px Inter,system-ui';ctx2.textAlign='right';
+  ctx2.fillText('max '+mx.toFixed(mx>=1?0:1)+' cm/h',cw-8,18);
+  // selection frame + grab handles
+  ctx2.strokeStyle='rgba(0,112,184,.6)';ctx2.lineWidth=2.5;ctx2.strokeRect(x1+1,1,x2-x1-2,ch-2);
+  const hh=28,hy=(ch-hh)/2;ctx2.fillStyle='rgba(0,112,184,.55)';
   function rRect(rx,ry,rw,rh,rr){ctx2.beginPath();if(ctx2.roundRect){ctx2.roundRect(rx,ry,rw,rh,rr);}else{ctx2.moveTo(rx+rr,ry);ctx2.arcTo(rx+rw,ry,rx+rw,ry+rh,rr);ctx2.arcTo(rx+rw,ry+rh,rx,ry+rh,rr);ctx2.arcTo(rx,ry+rh,rx,ry,rr);ctx2.arcTo(rx,ry,rx+rw,ry,rr);ctx2.closePath();}ctx2.fill();}
-  rRect(x1-3,hy,6,hh,3);rRect(x2-3,hy,6,hh,3);
-  ctx2.fillStyle='rgba(255,255,255,.8)';for(let i=-1;i<=1;i++){ctx2.fillRect(x1-1,hy+hh/2+i*4,2,2);ctx2.fillRect(x2-1,hy+hh/2+i*4,2,2);}
-  ctx2.font='bold 14px system-ui';ctx2.fillStyle='rgba(0,90,160,.85)';
-  const tA=fmtTime(a),tB=fmtTime(b-1);
-  ctx2.textAlign='left';ctx2.fillText(tA,x1+4,20);
-  ctx2.textAlign='right';ctx2.fillText(tB,x2-4,20);
+  rRect(x1-4,hy,8,hh,4);rRect(x2-4,hy,8,hh,4);
+  ctx2.fillStyle='#fff';for(let i=-1;i<=1;i++){ctx2.fillRect(x1-1.5,hy+hh/2+i*5,3,2.5);ctx2.fillRect(x2-1.5,hy+hh/2+i*5,3,2.5);}
+  // selected start / end times (large & clear)
+  ctx2.font='800 16px Inter,system-ui';ctx2.fillStyle='#0e5fa3';
+  ctx2.textAlign='left';ctx2.fillText(fmtTime(a),x1+8,22);
+  ctx2.textAlign='right';ctx2.fillText(fmtTime(b-1),x2-8,22);
+  // NOW marker
   ctx2.strokeStyle='#e03030';ctx2.lineWidth=2.5;ctx2.beginPath();ctx2.moveTo(nx,0);ctx2.lineTo(nx,ch);ctx2.stroke();
-  ctx2.fillStyle='#e03030';ctx2.font='bold 13px system-ui';ctx2.textAlign='center';ctx2.fillText('NOW',nx,38);
-  ctx2.font='bold 11px system-ui';ctx2.globalAlpha=.3;
-  if(nx>35){ctx2.textAlign='right';ctx2.fillStyle='#5a6a7a';ctx2.fillText('PAST',nx-8,54);}
-  if(cw-nx>60){ctx2.textAlign='left';ctx2.fillStyle='#0070b8';ctx2.fillText('FORECAST',nx+8,54);}
-  ctx2.globalAlpha=1;}
+  ctx2.fillStyle='#e03030';ctx2.font='800 13px Inter,system-ui';ctx2.textAlign='center';
+  ctx2.fillText('NOW',Math.max(18,Math.min(cw-18,nx)),ch-26);}
 // Karte + Layer
 const [laMin,loMin,laMax,loMax]=M.bounds;
 const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,wheelPxPerZoomLevel:90,maxBoundsViscosity:1.0,inertia:true}).fitBounds([[laMin,loMin],[laMax,loMax]],{padding:[6,6]});
 // Constrain panning + zoom to the meteo grid, with a thin white frame around the data
 const _fitZoom=map.getZoom();
-map.setMinZoom(_fitZoom-0.25);map.setMaxZoom(16);
+map.setMinZoom(_fitZoom);map.setMaxZoom(16);  // never zoom out past the initial view
 const _padLa=(laMax-laMin)*0.04,_padLo=(loMax-loMin)*0.04;
 map.setMaxBounds([[laMin-_padLa,loMin-_padLo],[laMax+_padLa,loMax+_padLo]]);
 const base=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg",{attribution:"© swisstopo / MeteoSwiss / SLF / Copernicus"}).addTo(map);
@@ -1408,7 +1490,9 @@ let curTopic='snow';
 function setTopic(t,subIdx){
   curTopic=t;
   document.querySelectorAll('#topics button[data-t]').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
-  if(['temp','wind','rad','terrain'].includes(t))document.getElementById('topics').classList.add('expanded');
+  const isMore=['temp','wind','rad','terrain'].includes(t);
+  document.getElementById('moreTopics').classList.toggle('sel',isMore);
+  document.getElementById('topics').classList.remove('expanded');
   const subs=document.getElementById('sublayers');
   const items=TOPICS[t];
   subs.innerHTML=items.map((s,i)=>'<button data-i="'+i+'"'+(i===(subIdx||0)?' class="active"':'')+'>'+s.label+'</button>').join('');
@@ -1421,7 +1505,13 @@ function setTopic(t,subIdx){
 document.querySelectorAll('#topics button[data-t]').forEach(btn=>{
   btn.onclick=()=>setTopic(btn.dataset.t);
   btn.onmouseenter=()=>legend(TOPICS[btn.dataset.t][0].l);btn.onmouseleave=()=>legend();});
-document.getElementById('moreTopics').onclick=()=>document.getElementById('topics').classList.toggle('expanded');
+(function(){const mt=document.getElementById('moreTopics'),menu=document.getElementById('topicsMore'),topics=document.getElementById('topics');
+  function place(){const r=mt.getBoundingClientRect();menu.style.top=(r.bottom+8)+'px';
+    let left=r.left;left=Math.min(left,window.innerWidth-menu.offsetWidth-10);menu.style.left=Math.max(8,left)+'px';}
+  mt.onclick=e=>{e.stopPropagation();const open=topics.classList.toggle('expanded');if(open)place();};
+  document.addEventListener('click',e=>{if(topics.classList.contains('expanded')&&!menu.contains(e.target)&&!mt.contains(e.target))topics.classList.remove('expanded');});
+  window.addEventListener('resize',()=>{if(topics.classList.contains('expanded'))place();});
+})();
 function clearPresets(){document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('active'));}
 document.querySelectorAll('#presets button[data-d]').forEach(btn=>{btn.onclick=()=>{
   clearPresets();btn.classList.add('active');
@@ -1468,27 +1558,27 @@ function toggleReportLayer(on){if(on)map.addLayer(reportMarkers);else map.remove
   btn.onclick=e=>{e.stopPropagation();const open=pop.classList.toggle('show');btn.classList.toggle('active',open);if(open)pop.style.top=btn.offsetTop+'px';};
   document.addEventListener('click',e=>{if(!pop.contains(e.target)&&e.target!==btn&&!btn.contains(e.target)){pop.classList.remove('show');btn.classList.remove('active');}});
 })();
-// --- Bottom Panel drag-to-resize ---
-let panelSetH=null,panelRestore=null;
+// --- Bottom panel: expand (content height) / collapse (tap or swipe the handle) ---
+let panelRestore=null,panelCollapsed=false;
 (function(){const bp=document.getElementById('bottomPanel'),tl=document.getElementById('tlToggle'),btm=document.getElementById('btmMain');
-  let maxH=0,minH=14,curH=0,dragging=false,startY=0,startH=0,lastFull=0;
+  const minH=16;
   function invalidate(){try{map.invalidateSize({animate:false,pan:false});}catch(e){}}
   function updH(){document.documentElement.style.setProperty('--btm-h',bp.offsetHeight+'px');}
-  function setH(h){h=Math.max(minH,Math.min(maxH,h));bp.style.height=h+'px';
-    const show=h>minH+20;btm.style.display=show?'':'none';updH();}
-  function initMax(){bp.style.height='';btm.style.display='';maxH=bp.offsetHeight;curH=maxH;lastFull=maxH;updH();invalidate();}
-  requestAnimationFrame(initMax);
-  window.addEventListener('resize',initMax);
-  function onDown(e){dragging=true;startY=e.touches?e.touches[0].clientY:e.clientY;startH=bp.offsetHeight;document.body.classList.add('panel-dragging');e.preventDefault();}
-  function onMove(e){if(!dragging)return;const cy=e.touches?e.touches[0].clientY:e.clientY;const dy=cy-startY;setH(startH-dy);e.preventDefault();}
-  function onUp(){if(!dragging)return;dragging=false;curH=bp.offsetHeight;if(curH<minH+40)setH(minH);else lastFull=curH;
-    document.body.classList.remove('panel-dragging');requestAnimationFrame(()=>{updH();invalidate();});}
-  tl.addEventListener('mousedown',onDown);tl.addEventListener('touchstart',onDown,{passive:false});
-  document.addEventListener('mousemove',onMove);document.addEventListener('touchmove',onMove,{passive:false});
-  document.addEventListener('mouseup',onUp);document.addEventListener('touchend',onUp);
-  // Expose collapse/expand for other UI (e.g. timeline mode switch)
-  panelSetH=function(h){setH(h);requestAnimationFrame(()=>{updH();invalidate();});};
-  panelRestore=function(){bp.style.height='';btm.style.display='';maxH=bp.offsetHeight;updH();invalidate();};
+  function apply(){if(panelCollapsed){bp.style.height=minH+'px';btm.style.display='none';}else{bp.style.height='';btm.style.display='';}
+    updH();requestAnimationFrame(()=>{updH();invalidate();});}
+  requestAnimationFrame(apply);
+  window.addEventListener('resize',()=>{if(!panelCollapsed){updH();invalidate();}});
+  let sy=0,drag=false,moved=0;
+  function down(e){drag=true;sy=e.touches?e.touches[0].clientY:e.clientY;moved=0;}
+  function move(e){if(!drag)return;const y=e.touches?e.touches[0].clientY:e.clientY;moved=y-sy;}
+  function up(){if(!drag)return;drag=false;
+    if(moved>24)panelCollapsed=true;else if(moved<-24)panelCollapsed=false;else panelCollapsed=!panelCollapsed;
+    apply();}
+  tl.addEventListener('mousedown',down);tl.addEventListener('touchstart',down,{passive:true});
+  document.addEventListener('mousemove',move);document.addEventListener('touchmove',move,{passive:true});
+  document.addEventListener('mouseup',up);document.addEventListener('touchend',up);
+  // Called after content changes (e.g. Simple↔Detailed) to recompute height
+  panelRestore=function(){if(panelCollapsed){panelCollapsed=false;}apply();};
 })();
 // --- Windy.com-style Wind Animation ---
 const flow=document.getElementById('flow'),fx=flow.getContext('2d');
@@ -1769,6 +1859,37 @@ const CAT_SVG={
 const CAT_COLORS={snow:'#1a7fd4',route:'#2e7d32',danger:'#d03050',tour:'#7b1fa2',info:'#e65100'};
 const CAT_BG={snow:'linear-gradient(135deg,#e3f2fd,#bbdefb)',route:'linear-gradient(135deg,#e8f5e9,#c8e6c9)',danger:'linear-gradient(135deg,#fce4ec,#f8bbd0)',tour:'linear-gradient(135deg,#f3e5f5,#e1bee7)',info:'linear-gradient(135deg,#fff3e0,#ffe0b2)'};
 function catSvg(id,size){return `<span class="cat-ico" style="width:${size||16}px;height:${size||16}px">${CAT_SVG[id]||''}</span>`;}
+// --- Swiss peaks & famous ski destinations (for peak detection + feed filters) ---
+const PEAKS=[
+  {n:'Matterhorn',lat:45.9763,lng:7.6586,e:4478},{n:'Dufourspitze',lat:45.9369,lng:7.8669,e:4634},
+  {n:'Dom',lat:46.0940,lng:7.8580,e:4545},{n:'Weisshorn',lat:46.1017,lng:7.7167,e:4506},
+  {n:'Jungfrau',lat:46.5367,lng:7.9625,e:4158},{n:'Mönch',lat:46.5583,lng:7.9975,e:4107},
+  {n:'Eiger',lat:46.5775,lng:8.0053,e:3967},{n:'Piz Bernina',lat:46.3828,lng:9.9083,e:4049},
+  {n:'Finsteraarhorn',lat:46.5372,lng:8.1263,e:4274},{n:'Aletschhorn',lat:46.4650,lng:8.0000,e:4194},
+  {n:'Titlis',lat:46.7722,lng:8.4364,e:3238},{n:'Säntis',lat:47.2494,lng:9.3431,e:2502},
+  {n:'Piz Palü',lat:46.3800,lng:9.9670,e:3900},{n:'Tödi',lat:46.8110,lng:8.9170,e:3614},
+  {n:'Piz Buin',lat:46.8419,lng:10.1197,e:3312},{n:'Piz Kesch',lat:46.6180,lng:9.8720,e:3418},
+  {n:'Wildhorn',lat:46.3560,lng:7.3720,e:3247},{n:'Wildstrubel',lat:46.3910,lng:7.5250,e:3243},
+  {n:'Bishorn',lat:46.1290,lng:7.7000,e:4153},{n:'Grand Combin',lat:45.9370,lng:7.2990,e:4314},
+  {n:"Pigne d'Arolla",lat:46.0100,lng:7.4400,e:3790},{n:'Piz Corvatsch',lat:46.4110,lng:9.8200,e:3451},
+  {n:'Pizol',lat:46.9600,lng:9.4000,e:2844},{n:'Grosser Mythen',lat:47.0350,lng:8.6900,e:1898},
+  {n:'Rigi',lat:47.0570,lng:8.4850,e:1798},{n:'Piz Nair',lat:46.4890,lng:9.8100,e:3057}
+];
+const DESTS=[
+  {n:'Davos',lat:46.7998,lng:9.8340},{n:'Lenzerheide',lat:46.7290,lng:9.5580},{n:'Arosa',lat:46.7830,lng:9.6790},
+  {n:'St. Moritz',lat:46.4980,lng:9.8380},{n:'Zermatt',lat:46.0207,lng:7.7491},{n:'Verbier',lat:46.0960,lng:7.2280},
+  {n:'Laax / Flims',lat:46.8030,lng:9.2580},{n:'Engelberg',lat:46.8210,lng:8.4010},{n:'Grindelwald',lat:46.6240,lng:8.0340},
+  {n:'Saas-Fee',lat:46.1090,lng:7.9290},{n:'Andermatt',lat:46.6350,lng:8.5940},{n:'Crans-Montana',lat:46.3080,lng:7.4780},
+  {n:'Adelboden',lat:46.4920,lng:7.5610},{n:'Gstaad',lat:46.4720,lng:7.2860},{n:'Wengen',lat:46.6050,lng:7.9220},
+  {n:'Villars',lat:46.2980,lng:7.0560},{n:'Nendaz',lat:46.1830,lng:7.3060},{n:'Scuol',lat:46.7970,lng:10.2990},
+  {n:'Grimentz / Zinal',lat:46.1350,lng:7.6220},{n:'Leukerbad',lat:46.3810,lng:7.6270},{n:'Champéry',lat:46.1770,lng:6.8690},
+  {n:'Klosters',lat:46.8690,lng:9.8790},{n:'Meiringen',lat:46.7290,lng:8.2050},{n:'Flumserberg',lat:47.0900,lng:9.2830},
+  {n:'Sörenberg',lat:46.8210,lng:8.0360},{n:'Braunwald',lat:46.9410,lng:8.9970}
+];
+function haversineKm(la1,lo1,la2,lo2){const R=6371,dLa=(la2-la1)*Math.PI/180,dLo=(lo2-lo1)*Math.PI/180;
+  const s=Math.sin(dLa/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)**2;
+  return 2*R*Math.asin(Math.min(1,Math.sqrt(s)));}
+function nearestOf(list,lat,lng){let best=null,bd=1e9;for(const p of list){const d=haversineKm(lat,lng,p.lat,p.lng);if(d<bd){bd=d;best=p;}}return best?{item:best,km:bd}:null;}
 // --- Demo data ---
 const DEMO_REPORTS=[
   {id:'d1',user:'AlpinMax',cat:'snow',icon:'❄️',sub:'Neuschnee',measurement:'30 cm',caption:'Frischer Powder am Titlis Nordwand! Traumhafte Bedingungen seit heute Morgen.',lat:46.7712,lng:8.4267,time:'vor 2h',img:null},
@@ -1826,7 +1947,7 @@ async function loadDbReports(){
         let lat=0,lng=0;const m=r.location?.match?.(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
         if(m){lng=parseFloat(m[1]);lat=parseFloat(m[2]);}
         const catId=r.primary_categories?.[0]||'info';const catObj=RP_CATS.find(c=>c.id===catId);
-        return{id:r.id,user:r.user_id?.substring(0,8)||'User',cat:catId,icon:catObj?.icon||'📍',sub:r.subtype,measurement:r.condition_data?.measurement||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,dbRow:true};
+        return{id:r.id,user:r.user_id?.substring(0,8)||'User',cat:catId,icon:catObj?.icon||'📍',sub:r.subtype,measurement:r.condition_data?.measurement||null,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,dbRow:true};
       });
       allReports=[...dbR,...DEMO_REPORTS];loadReportMarkers();
     }
@@ -1937,85 +2058,105 @@ const RAD_POS=[{a:-90},{a:-162},{a:-18},{a:162},{a:18}];
   wrap.addEventListener('pointerup',endRadial);
 })();
 // --- Single-sheet report flow ---
-let rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:'',locName:null};
-function rpReset(){rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:'',locName:null};}
-function rpScore(){
-  let s=0;if(rpState.cat)s+=25;if(rpState.sub)s+=25;if(rpState.bucket)s+=15;if(rpState.photo)s+=25;if(rpState.loc)s+=10;
-  return Math.min(100,s);
+let rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:'',peak:null,dest:null,peakCand:null};
+function rpReset(){rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:'',peak:null,dest:null,peakCand:null};}
+function rpScore(){let s=0;if(rpState.cat)s+=25;if(rpState.sub)s+=25;if(rpState.bucket)s+=15;if(rpState.photo)s+=25;if(rpState.loc)s+=10;return Math.min(100,s);}
+// --- Wizard step engine ---
+const RP_PHOTO_PLACEHOLDER='<div class="rp-photo-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Foto aufnehmen</span></div>';
+const RP_STEP_META={photo:{t:'Foto hinzufügen',s:'Zeig, was du siehst (optional)'},cat:{t:'Was siehst du?',s:'Wähle eine Kategorie'},sub:{t:'Details',s:'Genauer beschreiben'},bucket:{t:'Messung',s:'Wie viel / wie stark?'},final:{t:'Fast fertig',s:'Standort & Notiz, dann posten'}};
+let rpStepList=[],rpCurStep='photo';
+function rpBuildSteps(){const s=['photo','cat','sub'];if(RP_BUCKETS[rpState.cat])s.push('bucket');s.push('final');return s;}
+function rpShow(stepId){
+  rpStepList=rpBuildSteps();if(!rpStepList.includes(stepId))stepId=rpStepList[0];rpCurStep=stepId;
+  document.querySelectorAll('#reportOverlay .rp-pane').forEach(p=>p.style.display=p.dataset.step===stepId?'':'none');
+  const meta=RP_STEP_META[stepId];
+  document.getElementById('rpStepTitle').textContent=meta.t;
+  let sub=meta.s;if(stepId==='bucket')sub=RP_BUCKET_LABELS[rpState.cat]||meta.s;
+  document.getElementById('rpStepSub').textContent=sub;
+  if(stepId==='sub')rpRenderSubs();
+  if(stepId==='bucket')rpRenderBuckets();
+  if(stepId==='final'){rpRenderSummary();rpDetectPeak();}
+  rpRenderProgress();rpRenderNav();
 }
-function rpUpdateRing(){
-  const s=rpScore();const circ=232.5;
-  document.getElementById('rpRingFill').setAttribute('stroke-dashoffset',circ-(circ*s/100));
-  const hint=document.getElementById('rpCtxHint');
-  if(s>=100)hint.textContent='Top-Report ⭐';
-  else if(!rpState.cat)hint.textContent='Wähle eine Kategorie';
-  else if(!rpState.sub)hint.textContent='+ Details für besseren Report';
-  else if(!rpState.photo)hint.textContent='+ Foto für +25%';
-  else if(!rpState.bucket)hint.textContent='+ Messung für +15%';
-  else hint.textContent='Wische zum Posten ↓';
-}
+function rpRenderProgress(){const idx=rpStepList.indexOf(rpCurStep);
+  document.getElementById('rpProgress').innerHTML=rpStepList.map((s,i)=>'<i class="'+(i<idx?'done':i===idx?'cur':'')+'"></i>').join('');}
+function rpRenderNav(){const idx=rpStepList.indexOf(rpCurStep);
+  document.getElementById('rpBack').disabled=idx<=0;
+  const skip=document.getElementById('rpSkip'),next=document.getElementById('rpNext');
+  skip.style.display=(['photo','sub','bucket'].includes(rpCurStep))?'':'none';
+  if(rpCurStep==='final'){next.textContent='Report posten';next.classList.add('post');next.disabled=!rpState.cat;}
+  else{next.textContent='Weiter';next.classList.remove('post');next.disabled=(rpCurStep==='cat'&&!rpState.cat);}}
+function rpStepNext(){const idx=rpStepList.indexOf(rpCurStep);
+  if(rpCurStep==='final'){reportSubmit();return;}
+  if(rpCurStep==='cat'&&!rpState.cat)return;
+  rpShow(rpStepList[Math.min(rpStepList.length-1,idx+1)]);haptic(6);}
+function rpStepPrev(){const idx=rpStepList.indexOf(rpCurStep);if(idx>0)rpShow(rpStepList[idx-1]);}
 function reportOpenSheet(){
-  rpState.sub=null;rpState.bucket=null;rpState.photo=null;rpState.photoFile=null;rpState.caption='';
   document.getElementById('reportOverlay').style.display='flex';
-  rpRenderCats();rpRenderSubs();rpRenderBuckets();
-  rpUpdateRing();rpResetSlide();
+  rpState.sub=null;rpState.bucket=null;rpState.caption='';rpState.peak=null;rpState.dest=null;rpState.peakCand=null;
+  if(!rpState.cat){rpState.photo=null;rpState.photoFile=null;}
   document.getElementById('rpCaption').value='';
-  document.getElementById('rpZoneNote').style.display='none';
-  if(rpState.cat){rpShowDetails();}
+  rpRenderCats();rpResetPhoto();
+  rpShow(rpState.cat?'sub':'photo');
+  document.getElementById('rpCtxLoc').textContent='📍 Standort wird ermittelt…';
   if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{
-    rpState.loc=[p.coords.latitude,p.coords.longitude];rpUpdateRing();
+    rpState.loc=[p.coords.latitude,p.coords.longitude];
     document.getElementById('rpCtxLoc').textContent='📍 '+p.coords.latitude.toFixed(4)+', '+p.coords.longitude.toFixed(4);
-  },()=>{document.getElementById('rpCtxLoc').textContent='📍 Kein GPS';},{enableHighAccuracy:true,timeout:10000});
+    if(rpCurStep==='final')rpDetectPeak();
+  },()=>{document.getElementById('rpCtxLoc').textContent='📍 Kein GPS – Kartenmitte wird verwendet';},{enableHighAccuracy:true,timeout:10000});
 }
 function reportClose(){document.getElementById('reportOverlay').style.display='none';rpReset();}
 function rpRenderCats(){
   document.getElementById('rpCats').innerHTML=RP_CATS.map(c=>
-    `<button class="cat-chip${rpState.cat===c.id?' active':''}" data-id="${c.id}" onclick="rpPickCat('${c.id}')"><span class="cat-emoji">${c.icon}</span>${c.label}</button>`
+    `<button class="cat-chip${rpState.cat===c.id?' active':''}" data-id="${c.id}" style="${rpState.cat===c.id?'color:'+CAT_COLORS[c.id]:''}" onclick="rpPickCat('${c.id}')"><span class="cat-ico-w">${CAT_SVG[c.id]}</span>${c.label}</button>`
   ).join('');
 }
-function rpPickCat(id){
-  rpState.cat=id;rpState.sub=null;rpState.bucket=null;haptic(8);
-  document.querySelectorAll('.cat-chip').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
-  const cat=RP_CATS.find(c=>c.id===id);
-  document.getElementById('rpCtxTitle').textContent=cat.icon+' '+cat.label+' Report';
-  rpShowDetails();rpUpdateRing();
-}
-function rpShowDetails(){
-  rpRenderSubs();rpRenderBuckets();
-  document.getElementById('rpZoneSub').style.display='';
-  document.getElementById('rpZoneNote').style.display='';
-}
-function rpRenderSubs(){
-  const cat=RP_CATS.find(c=>c.id===rpState.cat);
-  if(!cat){document.getElementById('rpZoneSub').style.display='none';return;}
-  document.getElementById('rpSubLabel').textContent=cat.label+' — Details';
+function rpPickCat(id){rpState.cat=id;rpState.sub=null;rpState.bucket=null;haptic(10);
+  document.querySelectorAll('#rpCats .cat-chip').forEach(el=>{const on=el.dataset.id===id;el.classList.toggle('active',on);el.style.color=on?CAT_COLORS[id]:'';});
+  rpStepList=rpBuildSteps();setTimeout(()=>rpShow('sub'),170);}
+function rpRenderSubs(){const cat=RP_CATS.find(c=>c.id===rpState.cat);if(!cat)return;
   document.getElementById('rpSubs').innerHTML=cat.subs.map(s=>
-    `<button class="sub-chip${rpState.sub===s?' active':''}" onclick="rpPickSub(this,'${s}')">${s}</button>`
-  ).join('');
-}
+    `<button class="sub-chip${rpState.sub===s?' active':''}" onclick="rpPickSub(this,'${s.replace(/'/g,"\\\\'")}')">${s}</button>`).join('');}
 function rpPickSub(el,val){rpState.sub=val;haptic(8);
-  document.querySelectorAll('.sub-chip').forEach(e=>e.classList.remove('active'));el.classList.add('active');rpUpdateRing();}
-function rpRenderBuckets(){
-  const bk=RP_BUCKETS[rpState.cat];
-  if(!bk){document.getElementById('rpZoneBucket').style.display='none';return;}
-  document.getElementById('rpZoneBucket').style.display='';
-  document.getElementById('rpBucketLabel').textContent=RP_BUCKET_LABELS[rpState.cat]||'Messung';
+  document.querySelectorAll('#rpSubs .sub-chip').forEach(e=>e.classList.remove('active'));el.classList.add('active');
+  setTimeout(()=>rpStepNext(),170);}
+function rpRenderBuckets(){const bk=RP_BUCKETS[rpState.cat];if(!bk)return;
   document.getElementById('rpBuckets').innerHTML=bk.map(b=>
-    `<button class="bucket${rpState.bucket===b?' active':''}" onclick="rpPickBucket(this,'${b}')">${b}</button>`
-  ).join('');
-  document.getElementById('rpBucketVal').textContent=rpState.bucket?(rpState.bucket+' '+(RP_BUCKET_UNITS[rpState.cat]||'')):'';
-}
+    `<button class="bucket${rpState.bucket===b?' active':''}" onclick="rpPickBucket(this,'${b}')">${b}</button>`).join('');
+  document.getElementById('rpBucketVal').textContent=rpState.bucket?(rpState.bucket+' '+(RP_BUCKET_UNITS[rpState.cat]||'')):'';}
 function rpPickBucket(el,val){rpState.bucket=val;haptic(8);
-  document.querySelectorAll('.bucket').forEach(e=>e.classList.remove('active'));el.classList.add('active');
+  document.querySelectorAll('#rpBuckets .bucket').forEach(e=>e.classList.remove('active'));el.classList.add('active');
   document.getElementById('rpBucketVal').textContent=val+' '+(RP_BUCKET_UNITS[rpState.cat]||'');
-  rpUpdateRing();}
+  setTimeout(()=>rpStepNext(),180);}
 function rpSetPhoto(inp){
   if(!inp.files||!inp.files[0])return;
   rpState.photoFile=inp.files[0];rpState.photo=URL.createObjectURL(inp.files[0]);
-  const th=document.getElementById('rpThumb');
-  th.classList.add('has-img');th.innerHTML=`<svg class="rp-ring" viewBox="0 0 80 80"><circle cx="40" cy="40" r="37" stroke="rgba(94,200,255,.15)" stroke-width="3" fill="none"/><circle id="rpRingFill" cx="40" cy="40" r="37" stroke="#5EC8FF" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="232.5" stroke-dashoffset="0" transform="rotate(-90 40 40)"/></svg><img src="${rpState.photo}" alt=""/>`;
-  haptic(12);rpUpdateRing();
+  rpResetPhoto();haptic(12);setTimeout(()=>rpShow('cat'),220);
 }
+function rpResetPhoto(){const big=document.getElementById('rpPhotoBig');if(!big)return;
+  if(rpState.photo){big.classList.add('has-img');big.innerHTML=`<img src="${rpState.photo}" alt=""/>`;}
+  else{big.classList.remove('has-img');big.innerHTML=RP_PHOTO_PLACEHOLDER;}}
+// --- Peak detection ---
+function rpDetectPeak(){
+  const box=document.getElementById('rpPeakConfirm');if(!box)return;
+  const loc=rpState.loc;if(!loc){box.style.display='none';rpRenderSummary();return;}
+  const nd=nearestOf(DESTS,loc[0],loc[1]);rpState.dest=(nd&&nd.km<=12)?nd.item.n:null;
+  if(rpState.peak){box.className='rp-peak confirmed';box.style.display='';box.innerHTML='<div class="rp-peak-q">✓ Gipfel: '+rpState.peak+'</div>';rpRenderSummary();return;}
+  const np=nearestOf(PEAKS,loc[0],loc[1]);
+  if(np&&np.km<=2.0){rpState.peakCand=np.item.n;box.className='rp-peak';box.style.display='';
+    box.innerHTML='<div class="rp-peak-q">Bist du beim '+np.item.n+' ('+np.item.e+' m)?</div><div class="rp-peak-btns"><button class="yes" onclick="rpConfirmPeak(true)">Ja</button><button onclick="rpConfirmPeak(false)">Nein</button></div>';}
+  else{rpState.peakCand=null;box.style.display='none';}
+  rpRenderSummary();}
+function rpConfirmPeak(yes){rpState.peak=yes?rpState.peakCand:null;haptic(12);rpDetectPeak();}
+function rpRenderSummary(){const el=document.getElementById('rpSummary');if(!el)return;
+  const cat=RP_CATS.find(c=>c.id===rpState.cat);const t=[];
+  if(cat)t.push('<span class="rp-tag">'+catSvg(cat.id,13)+cat.label+'</span>');
+  if(rpState.sub)t.push('<span class="rp-tag">'+rpState.sub+'</span>');
+  if(rpState.bucket)t.push('<span class="rp-tag">'+rpState.bucket+' '+(RP_BUCKET_UNITS[rpState.cat]||'')+'</span>');
+  if(rpState.photo)t.push('<span class="rp-tag">📷 Foto</span>');
+  if(rpState.peak)t.push('<span class="rp-tag">⛰ '+rpState.peak+'</span>');
+  else if(rpState.dest)t.push('<span class="rp-tag">📍 '+rpState.dest+'</span>');
+  el.innerHTML=t.join('');}
 // --- Voice drop ---
 let rpRecognition=null,rpRecording=false;
 function rpVoiceToggle(){
@@ -2031,29 +2172,9 @@ function rpVoiceToggle(){
   rpRecognition.onend=()=>{rpRecording=false;btn.classList.remove('recording');btn.textContent='🎤 Halten und sprechen';};
   rpRecognition.start();rpRecording=true;btn.classList.add('recording');btn.textContent='🎤 Recording...';haptic(12);
 }
-// --- Slide-to-post ---
-(function(){
-  const track=document.getElementById('rpSlide'),knob=document.getElementById('rpSlideKnob'),fill=document.getElementById('rpSlideFill');
-  let dragging=false,startX=0,maxDrag=0,locked=false;
-  function rpResetSlideInner(){locked=false;knob.style.left='4px';fill.style.transform='scaleX(0)';track.classList.remove('locked');knob.textContent='›';}
-  window.rpResetSlide=rpResetSlideInner;
-  knob.addEventListener('pointerdown',e=>{
-    if(locked||!rpState.cat)return;e.preventDefault();dragging=true;startX=e.clientX;
-    maxDrag=track.offsetWidth-knob.offsetWidth-8;knob.setPointerCapture(e.pointerId);
-  });
-  knob.addEventListener('pointermove',e=>{
-    if(!dragging)return;
-    let dx=Math.max(0,Math.min(maxDrag,e.clientX-startX));
-    knob.style.left=(4+dx)+'px';fill.style.transform=`scaleX(${dx/maxDrag})`;
-    if(dx/maxDrag>0.85&&!locked){locked=true;dragging=false;haptic(30);
-      knob.style.left=maxDrag+4+'px';fill.style.transform='scaleX(1)';track.classList.add('locked');knob.textContent='✓';
-      reportSubmit();
-    }
-  });
-  knob.addEventListener('pointerup',()=>{if(dragging&&!locked){dragging=false;knob.style.left='4px';fill.style.transform='scaleX(0)';}});
-})();
 async function reportSubmit(){
   if(!sb||!sbUser||!rpState.cat)return;
+  const next=document.getElementById('rpNext');next.disabled=true;next.textContent='Poste…';
   try{
     let imageUrl=null;
     if(rpState.photoFile){
@@ -2063,18 +2184,19 @@ async function reportSubmit(){
       if(!upErr){const{data:urlData}=sb.storage.from('report-images').getPublicUrl(path);imageUrl=urlData?.publicUrl;}
     }
     const loc=rpState.loc||[map.getCenter().lat,map.getCenter().lng];
-    const score=rpScore();
+    const cd=rpState.bucket?{measurement:rpState.bucket}:{};
+    if(rpState.peak)cd.peak=rpState.peak;if(rpState.dest)cd.dest=rpState.dest;
     const{error}=await sb.from('reports').insert({
       user_id:sbUser.id,location:`POINT(${loc[1]} ${loc[0]})`,
       primary_categories:[rpState.cat],subtype:rpState.sub,
-      condition_data:rpState.bucket?{measurement:rpState.bucket}:{},
+      condition_data:cd,
       image_url:imageUrl,caption:rpState.caption.trim()||null,
-      completion_score:score
+      completion_score:rpScore()
     });
     if(error)throw error;
     reportClose();loadDbReports();
     showUndo();
-  }catch(err){alert('Error: '+(err.message||err));rpResetSlide();}
+  }catch(err){alert('Error: '+(err.message||err));next.disabled=false;next.textContent='Report posten';}
 }
 function showUndo(){
   const bar=document.createElement('div');bar.className='undo-bar';
@@ -2082,7 +2204,7 @@ function showUndo(){
   document.body.appendChild(bar);setTimeout(()=>bar.remove(),5000);
 }
 // --- Feed (Instagram-style full page) ---
-let feedFilter='all';
+let feedFilter='all',feedAnchor=null;
 function feedOpen(){
   const fp=document.getElementById('feedPage');
   fp.classList.add('open');
@@ -2092,26 +2214,52 @@ function feedOpen(){
     const lbl=f==='all'?'Alle':(catSvg(f,14)+' '+cat.label);
     return`<button class="${feedFilter===f?'active':''}" onclick="feedSetFilter('${f}')">${lbl}</button>`;
   }).join('');
+  const pk=document.getElementById('feedPeak');
+  if(pk.options.length<=1)pk.innerHTML='<option value="">⛰ Gipfel wählen…</option>'+PEAKS.slice().sort((a,b)=>a.n.localeCompare(b.n)).map((p,i)=>`<option value="${PEAKS.indexOf(p)}">${p.n} (${p.e} m)</option>`).join('');
+  const ds=document.getElementById('feedDest');
+  if(ds.options.length<=1)ds.innerHTML='<option value="">🎿 Skigebiet wählen…</option>'+DESTS.slice().sort((a,b)=>a.n.localeCompare(b.n)).map(p=>`<option value="${DESTS.indexOf(p)}">${p.n}</option>`).join('');
   feedRender();
 }
 function feedClose(){document.getElementById('feedPage').classList.remove('open');}
 function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter button').forEach((b,i)=>{b.classList.toggle('active',['all','snow','route','danger','tour','info'][i]===f);});feedRender();}
+function feedSetAnchor(a){feedAnchor=a;
+  document.getElementById('feedNear').classList.toggle('active',!!a&&a.src==='me');
+  document.getElementById('feedPeak').classList.toggle('active',!!a&&a.src==='peak');
+  document.getElementById('feedDest').classList.toggle('active',!!a&&a.src==='dest');
+  const bar=document.getElementById('feedAnchorBar'),clr=document.getElementById('feedAnchorClear');
+  if(a){bar.style.display='';bar.innerHTML='Sortiert nach Nähe zu <b>'+a.name+'</b>';clr.style.display='';}
+  else{bar.style.display='none';clr.style.display='none';document.getElementById('feedPeak').value='';document.getElementById('feedDest').value='';}
+  feedRender();}
+function feedClearAnchor(){feedSetAnchor(null);}
+(function(){
+  const near=document.getElementById('feedNear');if(!near)return;
+  near.onclick=()=>{if(!navigator.geolocation){alert('Kein GPS verfügbar');return;}
+    near.textContent='… GPS';near.disabled=true;
+    navigator.geolocation.getCurrentPosition(p=>{near.disabled=false;near.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> In der Nähe';
+      feedSetAnchor({name:'meiner Position',lat:p.coords.latitude,lng:p.coords.longitude,src:'me'});},
+    ()=>{near.disabled=false;near.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> In der Nähe';alert('Standort nicht verfügbar');},{enableHighAccuracy:true,timeout:10000});};
+  document.getElementById('feedPeak').onchange=function(){if(this.value===''){feedClearAnchor();return;}const p=PEAKS[+this.value];document.getElementById('feedDest').value='';feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:'peak'});};
+  document.getElementById('feedDest').onchange=function(){if(this.value===''){feedClearAnchor();return;}const p=DESTS[+this.value];document.getElementById('feedPeak').value='';feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:'dest'});};
+  document.getElementById('feedAnchorClear').onclick=feedClearAnchor;
+})();
 function feedRender(){
   const list=document.getElementById('feedList');
-  const filtered=feedFilter==='all'?allReports:allReports.filter(r=>r.cat===feedFilter);
+  let filtered=feedFilter==='all'?allReports.slice():allReports.filter(r=>r.cat===feedFilter);
+  if(feedAnchor){filtered=filtered.map(r=>({r,km:haversineKm(feedAnchor.lat,feedAnchor.lng,r.lat,r.lng)})).sort((a,b)=>a.km-b.km).map(o=>{o.r._km=o.km;return o.r;});}
   if(!filtered.length){list.innerHTML='<div class="feed-empty">Noch keine Reports in dieser Kategorie.</div>';return;}
   list.innerHTML=filtered.map(r=>{
     const col=CAT_COLORS[r.cat]||'#666';
     const bg=CAT_BG[r.cat]||'linear-gradient(135deg,#f0f0f0,#e0e0e0)';
     const avatarBg=r.cat==='danger'?'linear-gradient(135deg,#d03050,#ff5470)':r.cat==='snow'?'linear-gradient(135deg,#1a7fd4,#42a5f5)':r.cat==='route'?'linear-gradient(135deg,#2e7d32,#66bb6a)':r.cat==='tour'?'linear-gradient(135deg,#7b1fa2,#ab47bc)':'linear-gradient(135deg,#e65100,#ff9800)';
+    const distTag=(feedAnchor&&r._km!=null)?`<span class="feed-card-dist">${r._km<1?Math.round(r._km*1000)+' m':r._km.toFixed(r._km<10?1:0)+' km'}</span>`:'';
     return`<div class="feed-card" onclick="feedFlyTo(${r.lat},${r.lng})">
       <div class="feed-card-head">
         <div class="feed-card-avatar" style="background:${avatarBg}">${r.user[0].toUpperCase()}</div>
         <div class="feed-card-info">
           <span class="feed-card-user">${r.user}</span>
-          <span class="feed-card-loc"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> ${r.lat.toFixed(2)}°N, ${r.lng.toFixed(2)}°E</span>
+          <span class="feed-card-loc"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> ${r.peak?r.peak:(r.lat.toFixed(2)+'°N, '+r.lng.toFixed(2)+'°E')}</span>
         </div>
-        <span class="feed-card-time">${r.time}</span>
+        ${distTag||`<span class="feed-card-time">${r.time}</span>`}
       </div>
       <div class="feed-card-visual">
         ${r.img?`<img src="${r.img}" alt=""/>`:
