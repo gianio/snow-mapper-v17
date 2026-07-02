@@ -149,6 +149,31 @@ CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows (follower_id);
 CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members (user_id);
 CREATE INDEX IF NOT EXISTS idx_reports_group ON reports (group_id);
 
+-- ============================================================
+-- STORAGE: public bucket for report photos.
+-- Without this (public) bucket + policies, uploaded photos do NOT
+-- appear in the feed. Run this once.
+-- ============================================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('report-images', 'report-images', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "report_images_public_read" ON storage.objects;
+CREATE POLICY "report_images_public_read" ON storage.objects
+  FOR SELECT USING (bucket_id = 'report-images');
+
+DROP POLICY IF EXISTS "report_images_auth_insert" ON storage.objects;
+CREATE POLICY "report_images_auth_insert" ON storage.objects
+  FOR INSERT WITH CHECK (bucket_id = 'report-images' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "report_images_owner_update" ON storage.objects;
+CREATE POLICY "report_images_owner_update" ON storage.objects
+  FOR UPDATE USING (bucket_id = 'report-images' AND auth.uid() = owner);
+
+DROP POLICY IF EXISTS "report_images_owner_delete" ON storage.objects;
+CREATE POLICY "report_images_owner_delete" ON storage.objects
+  FOR DELETE USING (bucket_id = 'report-images' AND auth.uid() = owner);
+
 -- Indices
 CREATE INDEX idx_reports_location ON reports USING GIST(location);
 CREATE INDEX idx_reports_categories ON reports USING GIN(primary_categories);
