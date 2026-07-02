@@ -94,6 +94,61 @@ CREATE POLICY "reactions_insert_auth" ON report_reactions
 CREATE POLICY "reactions_delete_own" ON report_reactions
   FOR DELETE USING (auth.uid() = user_id);
 
+-- ============================================================
+-- SOCIAL LAYER (follows, groups) — run this block to enable the
+-- follow / connections / groups features. Safe to re-run.
+-- Likes reuse the existing report_reactions table (type='like').
+-- ============================================================
+
+-- Follows (user connections)
+CREATE TABLE IF NOT EXISTS follows (
+  follower_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  following_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (follower_id, following_id)
+);
+ALTER TABLE follows ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "follows_read_all" ON follows;
+CREATE POLICY "follows_read_all" ON follows FOR SELECT USING (true);
+DROP POLICY IF EXISTS "follows_manage_own" ON follows;
+CREATE POLICY "follows_manage_own" ON follows
+  FOR ALL USING (auth.uid() = follower_id) WITH CHECK (auth.uid() = follower_id);
+
+-- Groups
+CREATE TABLE IF NOT EXISTS groups (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "groups_read_all" ON groups;
+CREATE POLICY "groups_read_all" ON groups FOR SELECT USING (true);
+DROP POLICY IF EXISTS "groups_create_auth" ON groups;
+CREATE POLICY "groups_create_auth" ON groups FOR INSERT WITH CHECK (auth.uid() = created_by);
+
+-- Group membership
+CREATE TABLE IF NOT EXISTS group_members (
+  group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (group_id, user_id)
+);
+ALTER TABLE group_members ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "group_members_read_all" ON group_members;
+CREATE POLICY "group_members_read_all" ON group_members FOR SELECT USING (true);
+DROP POLICY IF EXISTS "group_members_manage_own" ON group_members;
+CREATE POLICY "group_members_manage_own" ON group_members
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- Link reports to an optional group
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES groups(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows (follower_id);
+CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members (user_id);
+CREATE INDEX IF NOT EXISTS idx_reports_group ON reports (group_id);
+
 -- Indices
 CREATE INDEX idx_reports_location ON reports USING GIST(location);
 CREATE INDEX idx_reports_categories ON reports USING GIN(primary_categories);

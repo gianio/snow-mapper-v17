@@ -861,6 +861,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rp-peak-btns button.yes{background:#5EC8FF;color:#0a1628;border-color:#5EC8FF}
  .rp-peak.confirmed{border-color:#4ADE80;background:rgba(74,222,128,.1)}
  .rp-peak.confirmed .rp-peak-q{color:#4ADE80}
+ .rp-group{display:flex;align-items:center;gap:10px;margin-top:12px}
+ .rp-group-lbl{font-size:14px;color:#9db4d0;font-weight:600;flex-shrink:0}
+ .rp-group-sel{flex:1;padding:11px 14px;border-radius:12px;border:1.5px solid rgba(94,200,255,.15);background:rgba(94,200,255,.06);color:#E8EEF7;font-size:14px;font-family:inherit;outline:none;-webkit-appearance:none;appearance:none}
  .rp-summary{margin-top:12px;font-size:13px;color:#7C8CA8;display:flex;flex-wrap:wrap;gap:6px}
  .rp-summary .rp-tag{padding:4px 10px;border-radius:999px;background:rgba(94,200,255,.1);color:#9db4d0;font-weight:600;display:inline-flex;align-items:center;gap:5px}
  .rp-summary .rp-tag svg{width:13px;height:13px;stroke:#5EC8FF}
@@ -901,6 +904,40 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-anchor-bar{padding:0 16px 12px;background:#fff;font-size:13px;color:var(--fg2);font-weight:600;display:flex;align-items:center;gap:6px}
  .feed-anchor-bar b{color:var(--acc2)}
  .feed-card-dist{font-size:11px;font-weight:700;color:var(--acc2);background:rgba(26,127,212,.1);padding:2px 8px;border-radius:999px;margin-left:auto;flex-shrink:0}
+ /* Feed scope segmented control */
+ .feed-scope{display:flex;gap:6px;padding:10px 16px 10px;overflow-x:auto;scrollbar-width:none;background:#fff}
+ .feed-scope::-webkit-scrollbar{display:none}
+ .feed-scope button{flex:1;min-width:max-content;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;border-radius:12px;border:none;background:rgba(0,0,0,.04);font-size:13px;font-weight:700;color:var(--mut);cursor:pointer;font-family:inherit;white-space:nowrap;transition:.15s}
+ .feed-scope button svg{width:16px;height:16px}
+ .feed-scope button.active{background:var(--fg);color:#fff}
+ /* Feed group chips row */
+ .feed-groups{display:flex;gap:8px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none;background:#fff}
+ .feed-groups::-webkit-scrollbar{display:none}
+ .feed-groups button{flex-shrink:0;padding:8px 14px;border-radius:999px;border:1.5px solid rgba(0,0,0,.08);background:#fff;font-size:13px;font-weight:600;color:var(--fg2);cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+ .feed-groups button.active{background:var(--acc);color:#fff;border-color:var(--acc)}
+ .feed-groups button.manage{background:rgba(0,0,0,.04);border-color:transparent;color:var(--fg2)}
+ /* Like + follow on cards */
+ .feed-card-actions button.liked{color:#e0245e}
+ .feed-card-actions button.liked svg{fill:#e0245e;stroke:#e0245e}
+ .feed-follow{margin-left:auto;flex-shrink:0;padding:5px 12px;border-radius:999px;border:1.5px solid var(--acc);background:none;color:var(--acc);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+ .feed-follow.following{background:var(--acc);color:#fff}
+ .feed-card-group{font-size:11px;font-weight:700;color:#7b1fa2;background:rgba(156,39,176,.1);padding:2px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:4px}
+ /* Groups modal */
+ .groups-modal{position:fixed;inset:0;z-index:3600;background:rgba(11,17,32,.5);backdrop-filter:blur(4px);display:flex;flex-direction:column;justify-content:flex-end}
+ .groups-sheet{background:#fff;border-radius:22px 22px 0 0;max-height:80vh;display:flex;flex-direction:column;padding-bottom:calc(env(safe-area-inset-bottom,0px)+12px);box-shadow:0 -8px 40px rgba(0,0,0,.2)}
+ .groups-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 12px;font-size:19px;font-weight:800;color:var(--fg)}
+ .groups-head button{background:none;border:none;font-size:20px;color:var(--mut);cursor:pointer}
+ .groups-new{display:flex;gap:8px;padding:0 20px 14px}
+ .groups-new input{flex:1;padding:12px 14px;border:1.5px solid rgba(0,0,0,.1);border-radius:12px;font-size:14px;font-family:inherit;outline:none}
+ .groups-new input:focus{border-color:var(--acc)}
+ .groups-new button{padding:12px 16px;border-radius:12px;border:none;background:var(--fg);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+ .groups-list{overflow-y:auto;padding:0 20px 8px}
+ .groups-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid rgba(0,0,0,.05)}
+ .groups-row .gr-name{flex:1;font-size:15px;font-weight:600;color:var(--fg)}
+ .groups-row .gr-meta{font-size:12px;color:var(--mut);font-weight:500}
+ .groups-row button{padding:7px 14px;border-radius:999px;border:1.5px solid var(--acc);background:none;color:var(--acc);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+ .groups-row button.joined{background:var(--acc);color:#fff}
+ .groups-empty{text-align:center;color:var(--mut);padding:30px;font-size:14px}
  .feed-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,0px)}
  .feed-grid{max-width:600px;margin:0 auto;padding:0}
  .feed-card{background:#fff;margin-bottom:8px;cursor:pointer}
@@ -1077,6 +1114,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div class="rp-peak" id="rpPeakConfirm" style="display:none"></div>
   <button class="rp-voice-btn" id="rpVoiceBtn" onclick="rpVoiceToggle()">🎤 Halten und sprechen</button>
   <textarea class="rp-caption" id="rpCaption" placeholder="Kurz beschreiben (optional)…" oninput="rpState.caption=this.value"></textarea>
+  <div class="rp-group" id="rpGroupWrap" style="display:none"><span class="rp-group-lbl">Teilen in</span><select class="rp-group-sel" id="rpGroupSel" onchange="rpState.group=this.value||null"><option value="">🌍 Öffentlich</option></select></div>
   <div class="rp-summary" id="rpSummary"></div>
 </div>
 
@@ -1091,15 +1129,24 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <button class="feed-back" onclick="feedClose()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
 <span class="feed-title">Field Reports</span>
 </div>
+<div class="feed-scope" id="feedScope"></div>
 <div class="feed-filter" id="feedFilter"></div>
-<div class="feed-loc" id="feedLoc">
+<div class="feed-loc" id="feedLoc" style="display:none">
   <button class="feed-loc-btn" id="feedNear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> In der Nähe</button>
   <select class="feed-loc-sel" id="feedPeak"><option value="">⛰ Gipfel wählen…</option></select>
   <select class="feed-loc-sel" id="feedDest"><option value="">🎿 Skigebiet wählen…</option></select>
   <button class="feed-loc-clear" id="feedAnchorClear" style="display:none">✕ Filter</button>
 </div>
+<div class="feed-groups" id="feedGroups" style="display:none"></div>
 <div class="feed-anchor-bar" id="feedAnchorBar" style="display:none"></div>
 <div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Loading reports...</div></div></div>
+</div>
+<div class="groups-modal" id="groupsModal" style="display:none" onclick="if(event.target===this)groupsClose()">
+  <div class="groups-sheet">
+    <div class="groups-head"><span>Gruppen</span><button onclick="groupsClose()">✕</button></div>
+    <div class="groups-new"><input id="groupNewName" type="text" placeholder="Neue Gruppe erstellen…" maxlength="40"/><button onclick="createGroup()">Erstellen</button></div>
+    <div class="groups-list" id="groupsList"></div>
+  </div>
 </div>
 <div id="coach" style="display:none"><div id="coachSpot"></div><div id="coachCard"><div id="coachText"></div><div id="coachNav"><span id="coachDots"></span><button id="coachSkip">Überspringen</button><button id="coachNext">Weiter</button></div></div></div>
 <script>
@@ -1936,23 +1983,75 @@ function authUpdateUI(user){
     fab.style.display='none';banner.style.display='none';
   }
   feedB.style.display='flex';
-  loadReportMarkers();loadDbReports();
+  loadSocial().then(()=>{loadReportMarkers();loadDbReports();});
+}
+// --- Social state ---
+let myFollowing=new Set(),myGroups=[],allGroups=[];
+async function loadSocial(){
+  if(!sb)return;
+  try{
+    if(sbUser){
+      const{data:f}=await sb.from('follows').select('following_id').eq('follower_id',sbUser.id);
+      myFollowing=new Set((f||[]).map(x=>x.following_id));
+      const{data:gm}=await sb.from('group_members').select('group_id,groups(name)').eq('user_id',sbUser.id);
+      myGroups=(gm||[]).map(x=>({id:x.group_id,name:x.groups?.name||'Gruppe'}));
+    }else{myFollowing=new Set();myGroups=[];}
+    const{data:g}=await sb.from('groups').select('*').order('created_at',{ascending:false}).limit(200);
+    allGroups=g||[];
+  }catch(e){console.warn('loadSocial',e);}
 }
 async function loadDbReports(){
   if(!sb)return;
   try{
-    const{data}=await sb.from('reports').select('*').order('created_at',{ascending:false}).limit(50);
-    if(data&&data.length){
-      const dbR=data.map(r=>{
-        let lat=0,lng=0;const m=r.location?.match?.(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
-        if(m){lng=parseFloat(m[1]);lat=parseFloat(m[2]);}
-        const catId=r.primary_categories?.[0]||'info';const catObj=RP_CATS.find(c=>c.id===catId);
-        return{id:r.id,user:r.user_id?.substring(0,8)||'User',cat:catId,icon:catObj?.icon||'📍',sub:r.subtype,measurement:r.condition_data?.measurement||null,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,dbRow:true};
-      });
-      allReports=[...dbR,...DEMO_REPORTS];loadReportMarkers();
-    }
+    const{data}=await sb.from('reports').select('*').order('created_at',{ascending:false}).limit(60);
+    if(!data||!data.length){return;}
+    const ids=data.map(r=>r.id),uids=[...new Set(data.map(r=>r.user_id).filter(Boolean))];
+    // usernames
+    let nameMap={};try{const{data:pr}=await sb.from('profiles').select('id,username').in('id',uids);(pr||[]).forEach(p=>nameMap[p.id]=p.username);}catch(e){}
+    // likes (reuse report_reactions type=like)
+    let likeCount={},likedByMe={};try{const{data:rx}=await sb.from('report_reactions').select('report_id,user_id').eq('type','like').in('report_id',ids);
+      (rx||[]).forEach(x=>{likeCount[x.report_id]=(likeCount[x.report_id]||0)+1;if(sbUser&&x.user_id===sbUser.id)likedByMe[x.report_id]=true;});}catch(e){}
+    const dbR=data.map(r=>{
+      let lat=0,lng=0;const m=r.location?.match?.(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
+      if(m){lng=parseFloat(m[1]);lat=parseFloat(m[2]);}
+      const catId=r.primary_categories?.[0]||'info';const catObj=RP_CATS.find(c=>c.id===catId);
+      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,cat:catId,icon:catObj?.icon||'📍',sub:r.subtype,measurement:r.condition_data?.measurement||null,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,groupId:r.group_id||null,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],dbRow:true};
+    });
+    allReports=[...dbR,...DEMO_REPORTS];loadReportMarkers();
+    if(document.getElementById('feedPage').classList.contains('open'))feedRender();
   }catch(e){console.warn('loadDbReports',e);}
 }
+// --- Likes ---
+async function toggleLike(id,ev){if(ev){ev.stopPropagation();}
+  if(!sb||!sbUser){authShow();return;}
+  const r=allReports.find(x=>x.id===id);if(!r||!r.dbRow)return;
+  const willLike=!r.liked;r.liked=willLike;r.likes=(r.likes||0)+(willLike?1:-1);feedRender();
+  try{
+    if(willLike)await sb.from('report_reactions').insert({report_id:id,user_id:sbUser.id,type:'like'});
+    else await sb.from('report_reactions').delete().match({report_id:id,user_id:sbUser.id,type:'like'});
+  }catch(e){r.liked=!willLike;r.likes+=(willLike?-1:1);feedRender();}
+}
+// --- Follow ---
+async function toggleFollow(uid,ev){if(ev){ev.stopPropagation();}
+  if(!sb||!sbUser){authShow();return;}
+  if(!uid||uid===sbUser.id)return;
+  const following=myFollowing.has(uid);
+  if(following)myFollowing.delete(uid);else myFollowing.add(uid);feedRender();
+  try{
+    if(!following)await sb.from('follows').insert({follower_id:sbUser.id,following_id:uid});
+    else await sb.from('follows').delete().match({follower_id:sbUser.id,following_id:uid});
+  }catch(e){if(!following)myFollowing.delete(uid);else myFollowing.add(uid);feedRender();}
+}
+// --- Groups ---
+async function joinGroup(id){if(!sb||!sbUser){authShow();return;}
+  try{await sb.from('group_members').insert({group_id:id,user_id:sbUser.id});await loadSocial();groupsRender();feedRender();}catch(e){alert('Fehler: '+(e.message||e));}}
+async function leaveGroup(id){if(!sb||!sbUser)return;
+  try{await sb.from('group_members').delete().match({group_id:id,user_id:sbUser.id});await loadSocial();groupsRender();feedRender();}catch(e){}}
+async function createGroup(){if(!sb||!sbUser){authShow();return;}
+  const name=(document.getElementById('groupNewName').value||'').trim();if(!name)return;
+  try{const{data,error}=await sb.from('groups').insert({name,created_by:sbUser.id}).select().single();if(error)throw error;
+    await sb.from('group_members').insert({group_id:data.id,user_id:sbUser.id});
+    document.getElementById('groupNewName').value='';await loadSocial();groupsRender();}catch(e){alert('Fehler: '+(e.message||e));}}
 function timeAgo(ts){const d=Date.now()-new Date(ts).getTime(),h=d/36e5;if(h<1)return'gerade eben';if(h<24)return'vor '+Math.floor(h)+'h';return'vor '+Math.floor(h/24)+'d';}
 if(sb){sb.auth.onAuthStateChange((ev,session)=>{authUpdateUI(session?.user||null);});
   sb.auth.getSession().then(({data})=>{authUpdateUI(data.session?.user||null);});}
@@ -2058,8 +2157,8 @@ const RAD_POS=[{a:-90},{a:-162},{a:-18},{a:162},{a:18}];
   wrap.addEventListener('pointerup',endRadial);
 })();
 // --- Single-sheet report flow ---
-let rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:'',peak:null,dest:null,peakCand:null};
-function rpReset(){rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:'',peak:null,dest:null,peakCand:null};}
+let rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:'',peak:null,dest:null,peakCand:null,group:null};
+function rpReset(){rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:'',peak:null,dest:null,peakCand:null,group:null};}
 function rpScore(){let s=0;if(rpState.cat)s+=25;if(rpState.sub)s+=25;if(rpState.bucket)s+=15;if(rpState.photo)s+=25;if(rpState.loc)s+=10;return Math.min(100,s);}
 // --- Wizard step engine ---
 const RP_PHOTO_PLACEHOLDER='<div class="rp-photo-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Foto aufnehmen</span></div>';
@@ -2075,7 +2174,7 @@ function rpShow(stepId){
   document.getElementById('rpStepSub').textContent=sub;
   if(stepId==='sub')rpRenderSubs();
   if(stepId==='bucket')rpRenderBuckets();
-  if(stepId==='final'){rpRenderSummary();rpDetectPeak();}
+  if(stepId==='final'){rpRenderSummary();rpDetectPeak();rpRenderGroupSel();}
   rpRenderProgress();rpRenderNav();
 }
 function rpRenderProgress(){const idx=rpStepList.indexOf(rpCurStep);
@@ -2148,6 +2247,9 @@ function rpDetectPeak(){
   else{rpState.peakCand=null;box.style.display='none';}
   rpRenderSummary();}
 function rpConfirmPeak(yes){rpState.peak=yes?rpState.peakCand:null;haptic(12);rpDetectPeak();}
+function rpRenderGroupSel(){const wrap=document.getElementById('rpGroupWrap'),sel=document.getElementById('rpGroupSel');if(!wrap)return;
+  if(sbUser&&myGroups.length){wrap.style.display='';sel.innerHTML='<option value="">🌍 Öffentlich</option>'+myGroups.map(g=>`<option value="${g.id}"${rpState.group===g.id?' selected':''}>👥 ${g.name}</option>`).join('');}
+  else{wrap.style.display='none';}}
 function rpRenderSummary(){const el=document.getElementById('rpSummary');if(!el)return;
   const cat=RP_CATS.find(c=>c.id===rpState.cat);const t=[];
   if(cat)t.push('<span class="rp-tag">'+catSvg(cat.id,13)+cat.label+'</span>');
@@ -2186,13 +2288,15 @@ async function reportSubmit(){
     const loc=rpState.loc||[map.getCenter().lat,map.getCenter().lng];
     const cd=rpState.bucket?{measurement:rpState.bucket}:{};
     if(rpState.peak)cd.peak=rpState.peak;if(rpState.dest)cd.dest=rpState.dest;
-    const{error}=await sb.from('reports').insert({
+    const row={
       user_id:sbUser.id,location:`POINT(${loc[1]} ${loc[0]})`,
       primary_categories:[rpState.cat],subtype:rpState.sub,
       condition_data:cd,
       image_url:imageUrl,caption:rpState.caption.trim()||null,
       completion_score:rpScore()
-    });
+    };
+    if(rpState.group)row.group_id=rpState.group;
+    const{error}=await sb.from('reports').insert(row);
     if(error)throw error;
     reportClose();loadDbReports();
     showUndo();
@@ -2204,24 +2308,38 @@ function showUndo(){
   document.body.appendChild(bar);setTimeout(()=>bar.remove(),5000);
 }
 // --- Feed (Instagram-style full page) ---
-let feedFilter='all',feedAnchor=null;
+let feedFilter='all',feedAnchor=null,feedScope='all',feedGroup=null;
+const FEED_SCOPES=[
+  {id:'all',label:'Entdecken',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.2 7.8 14 14 7.8 16.2 10 10"/></svg>'},
+  {id:'following',label:'Folge ich',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>'},
+  {id:'groups',label:'Gruppen',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.4"/><path d="M2.5 19a6.5 6.5 0 0 1 13 0M15.5 19a5 5 0 0 1 6 0"/></svg>'},
+  {id:'near',label:'Nähe',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>'}
+];
+function groupName(id){const g=allGroups.find(x=>x.id===id)||myGroups.find(x=>x.id===id);return g?g.name:'Gruppe';}
 function feedOpen(){
-  const fp=document.getElementById('feedPage');
-  fp.classList.add('open');
-  const ff=document.getElementById('feedFilter');
-  ff.innerHTML=['all','snow','route','danger','tour','info'].map(f=>{
-    const cat=RP_CATS.find(c=>c.id===f);
-    const lbl=f==='all'?'Alle':(catSvg(f,14)+' '+cat.label);
-    return`<button class="${feedFilter===f?'active':''}" onclick="feedSetFilter('${f}')">${lbl}</button>`;
-  }).join('');
+  const fp=document.getElementById('feedPage');fp.classList.add('open');
+  document.getElementById('feedScope').innerHTML=FEED_SCOPES.map(s=>
+    `<button data-s="${s.id}" class="${feedScope===s.id?'active':''}" onclick="feedSetScope('${s.id}')">${s.icon}${s.label}</button>`).join('');
+  document.getElementById('feedFilter').innerHTML=['all','snow','route','danger','tour','info'].map(f=>{
+    const cat=RP_CATS.find(c=>c.id===f);const lbl=f==='all'?'Alle':(catSvg(f,14)+' '+cat.label);
+    return`<button class="${feedFilter===f?'active':''}" onclick="feedSetFilter('${f}')">${lbl}</button>`;}).join('');
   const pk=document.getElementById('feedPeak');
-  if(pk.options.length<=1)pk.innerHTML='<option value="">⛰ Gipfel wählen…</option>'+PEAKS.slice().sort((a,b)=>a.n.localeCompare(b.n)).map((p,i)=>`<option value="${PEAKS.indexOf(p)}">${p.n} (${p.e} m)</option>`).join('');
+  if(pk.options.length<=1)pk.innerHTML='<option value="">⛰ Gipfel wählen…</option>'+PEAKS.slice().sort((a,b)=>a.n.localeCompare(b.n)).map(p=>`<option value="${PEAKS.indexOf(p)}">${p.n} (${p.e} m)</option>`).join('');
   const ds=document.getElementById('feedDest');
   if(ds.options.length<=1)ds.innerHTML='<option value="">🎿 Skigebiet wählen…</option>'+DESTS.slice().sort((a,b)=>a.n.localeCompare(b.n)).map(p=>`<option value="${DESTS.indexOf(p)}">${p.n}</option>`).join('');
-  feedRender();
+  document.getElementById('feedLoc').style.display=feedScope==='near'?'flex':'none';
+  document.getElementById('feedGroups').style.display=feedScope==='groups'?'flex':'none';
+  groupsRender();feedRender();
 }
 function feedClose(){document.getElementById('feedPage').classList.remove('open');}
+function feedSetScope(s){feedScope=s;
+  document.querySelectorAll('#feedScope button').forEach(b=>b.classList.toggle('active',b.dataset.s===s));
+  document.getElementById('feedLoc').style.display=s==='near'?'flex':'none';
+  document.getElementById('feedGroups').style.display=s==='groups'?'flex':'none';
+  if(s==='groups')groupsRender();
+  feedRender();haptic(5);}
 function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter button').forEach((b,i)=>{b.classList.toggle('active',['all','snow','route','danger','tour','info'][i]===f);});feedRender();}
+function feedSetGroup(id){feedGroup=id;groupsRender();feedRender();}
 function feedSetAnchor(a){feedAnchor=a;
   document.getElementById('feedNear').classList.toggle('active',!!a&&a.src==='me');
   document.getElementById('feedPeak').classList.toggle('active',!!a&&a.src==='peak');
@@ -2233,18 +2351,46 @@ function feedSetAnchor(a){feedAnchor=a;
 function feedClearAnchor(){feedSetAnchor(null);}
 (function(){
   const near=document.getElementById('feedNear');if(!near)return;
+  const nearHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> In der Nähe';
   near.onclick=()=>{if(!navigator.geolocation){alert('Kein GPS verfügbar');return;}
     near.textContent='… GPS';near.disabled=true;
-    navigator.geolocation.getCurrentPosition(p=>{near.disabled=false;near.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> In der Nähe';
+    navigator.geolocation.getCurrentPosition(p=>{near.disabled=false;near.innerHTML=nearHTML;
       feedSetAnchor({name:'meiner Position',lat:p.coords.latitude,lng:p.coords.longitude,src:'me'});},
-    ()=>{near.disabled=false;near.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> In der Nähe';alert('Standort nicht verfügbar');},{enableHighAccuracy:true,timeout:10000});};
+    ()=>{near.disabled=false;near.innerHTML=nearHTML;alert('Standort nicht verfügbar');},{enableHighAccuracy:true,timeout:10000});};
   document.getElementById('feedPeak').onchange=function(){if(this.value===''){feedClearAnchor();return;}const p=PEAKS[+this.value];document.getElementById('feedDest').value='';feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:'peak'});};
   document.getElementById('feedDest').onchange=function(){if(this.value===''){feedClearAnchor();return;}const p=DESTS[+this.value];document.getElementById('feedPeak').value='';feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:'dest'});};
   document.getElementById('feedAnchorClear').onclick=feedClearAnchor;
 })();
+// --- Groups UI ---
+function groupsRender(){
+  const row=document.getElementById('feedGroups');
+  if(row){let h='';
+    if(myGroups.length){h+=`<button class="${feedGroup===null?'active':''}" onclick="feedSetGroup(null)">Alle meine</button>`;
+      h+=myGroups.map(g=>`<button class="${feedGroup===g.id?'active':''}" onclick="feedSetGroup('${g.id}')">👥 ${g.name}</button>`).join('');}
+    h+=`<button class="manage" onclick="groupsOpen()">⚙ Verwalten</button>`;row.innerHTML=h;}
+  const list=document.getElementById('groupsList');
+  if(list){
+    if(!sb||!sbUser){list.innerHTML='<div class="groups-empty">Melde dich an, um Gruppen beizutreten oder zu erstellen.</div>';return;}
+    if(!allGroups.length){list.innerHTML='<div class="groups-empty">Noch keine Gruppen. Erstelle oben die erste!</div>';return;}
+    const mine=new Set(myGroups.map(g=>g.id));
+    list.innerHTML=allGroups.map(g=>{const joined=mine.has(g.id);
+      return`<div class="groups-row"><div style="flex:1"><div class="gr-name">${g.name}</div>${g.description?'<div class="gr-meta">'+g.description+'</div>':''}</div><button class="${joined?'joined':''}" onclick="${joined?'leaveGroup':'joinGroup'}('${g.id}')">${joined?'Mitglied':'Beitreten'}</button></div>`;}).join('');}
+}
+function groupsOpen(){document.getElementById('groupsModal').style.display='flex';groupsRender();}
+function groupsClose(){document.getElementById('groupsModal').style.display='none';}
 function feedRender(){
   const list=document.getElementById('feedList');
-  let filtered=feedFilter==='all'?allReports.slice():allReports.filter(r=>r.cat===feedFilter);
+  let base=allReports.slice();
+  if(feedScope==='following'){
+    if(!sbUser){list.innerHTML='<div class="feed-empty">Melde dich an, um Leuten zu folgen und ihre Reports hier zu sehen.</div>';return;}
+    base=base.filter(r=>r.dbRow&&r.userId&&myFollowing.has(r.userId));
+    if(!base.length){list.innerHTML='<div class="feed-empty">Du folgst noch niemandem. Tippe bei einem Report auf „Folgen".</div>';return;}
+  }else if(feedScope==='groups'){
+    const gm=new Set(myGroups.map(g=>g.id));
+    base=base.filter(r=>r.dbRow&&r.groupId&&(feedGroup?r.groupId===feedGroup:gm.has(r.groupId)));
+    if(!base.length){list.innerHTML='<div class="feed-empty">Keine Gruppen-Reports. Tritt einer Gruppe bei (⚙ Verwalten) oder poste in einer Gruppe.</div>';return;}
+  }
+  let filtered=feedFilter==='all'?base:base.filter(r=>r.cat===feedFilter);
   if(feedAnchor){filtered=filtered.map(r=>({r,km:haversineKm(feedAnchor.lat,feedAnchor.lng,r.lat,r.lng)})).sort((a,b)=>a.km-b.km).map(o=>{o.r._km=o.km;return o.r;});}
   if(!filtered.length){list.innerHTML='<div class="feed-empty">Noch keine Reports in dieser Kategorie.</div>';return;}
   list.innerHTML=filtered.map(r=>{
@@ -2252,6 +2398,10 @@ function feedRender(){
     const bg=CAT_BG[r.cat]||'linear-gradient(135deg,#f0f0f0,#e0e0e0)';
     const avatarBg=r.cat==='danger'?'linear-gradient(135deg,#d03050,#ff5470)':r.cat==='snow'?'linear-gradient(135deg,#1a7fd4,#42a5f5)':r.cat==='route'?'linear-gradient(135deg,#2e7d32,#66bb6a)':r.cat==='tour'?'linear-gradient(135deg,#7b1fa2,#ab47bc)':'linear-gradient(135deg,#e65100,#ff9800)';
     const distTag=(feedAnchor&&r._km!=null)?`<span class="feed-card-dist">${r._km<1?Math.round(r._km*1000)+' m':r._km.toFixed(r._km<10?1:0)+' km'}</span>`:'';
+    const canFollow=r.dbRow&&r.userId&&(!sbUser||r.userId!==sbUser.id);
+    const followBtn=canFollow?`<button class="feed-follow ${myFollowing.has(r.userId)?'following':''}" onclick="toggleFollow('${r.userId}',event)">${myFollowing.has(r.userId)?'Folge ich':'Folgen'}</button>`:'';
+    const likeBtn=r.dbRow?`<button class="${r.liked?'liked':''}" onclick="toggleLike('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/></svg> ${r.likes||0}</button>`:'';
+    const grpBadge=r.groupId?`<span class="feed-card-group">👥 ${groupName(r.groupId)}</span>`:'';
     return`<div class="feed-card" onclick="feedFlyTo(${r.lat},${r.lng})">
       <div class="feed-card-head">
         <div class="feed-card-avatar" style="background:${avatarBg}">${r.user[0].toUpperCase()}</div>
@@ -2259,7 +2409,7 @@ function feedRender(){
           <span class="feed-card-user">${r.user}</span>
           <span class="feed-card-loc"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> ${r.peak?r.peak:(r.lat.toFixed(2)+'°N, '+r.lng.toFixed(2)+'°E')}</span>
         </div>
-        ${distTag||`<span class="feed-card-time">${r.time}</span>`}
+        ${followBtn||distTag||`<span class="feed-card-time">${r.time}</span>`}
       </div>
       <div class="feed-card-visual">
         ${r.img?`<img src="${r.img}" alt=""/>`:
@@ -2269,11 +2419,14 @@ function feedRender(){
         <div class="feed-card-badges">
           <span class="feed-badge cat-${r.cat}">${catSvg(r.cat,14)} ${r.sub||r.cat}</span>
           ${r.measurement?`<span class="feed-badge cat-${r.cat}">${r.measurement}</span>`:''}
+          ${grpBadge}
         </div>
         ${r.caption?`<div class="feed-card-caption"><b>${r.user}</b> ${r.caption}</div>`:''}
       </div>
       <div class="feed-card-actions">
-        <button onclick="event.stopPropagation();feedFlyTo(${r.lat},${r.lng})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Auf Karte</button>
+        ${likeBtn}
+        <button onclick="event.stopPropagation();feedFlyTo(${r.lat},${r.lng})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Karte</button>
+        ${distTag&&!feedAnchor?'':''}
       </div>
     </div>`;
   }).join('');
