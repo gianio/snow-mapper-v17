@@ -681,6 +681,31 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .itab.active{color:var(--acc);border-bottom-color:var(--acc)}
  .ipane{display:none}
  .ipane.active{display:block}
+ /* Map-click inspect panel */
+ .insp-panel{position:fixed;z-index:2600;background:#fff;display:none;flex-direction:column;box-shadow:0 10px 50px rgba(11,17,32,.28);overflow:hidden}
+ .insp-panel.open{display:flex;animation:inspIn .3s cubic-bezier(.32,.72,.42,1)}
+ @media(min-width:561px){.insp-panel{top:12px;right:12px;bottom:calc(var(--btm-h,0px) + 12px);width:372px;border-radius:20px}@keyframes inspIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}}
+ @media(max-width:560px){.insp-panel{left:0;right:0;bottom:0;max-height:80vh;border-radius:22px 22px 0 0}@keyframes inspIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}}
+ .insp-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 16px 12px;border-bottom:1px solid rgba(0,0,0,.06);flex-shrink:0}
+ .insp-head .insp-t b{font-size:15px;color:var(--fg);font-weight:800;letter-spacing:-.01em}
+ .insp-head .insp-sub{font-size:12px;color:var(--mut);font-weight:600;margin-top:1px}
+ .insp-head button{background:rgba(15,29,47,.05);border:none;width:32px;height:32px;border-radius:10px;color:var(--fg2);font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+ .insp-head button:hover{background:rgba(15,29,47,.1);color:var(--fg)}
+ .insp-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 16px calc(env(safe-area-inset-bottom,0px)+14px)}
+ .insp-sec{padding:13px 0;border-bottom:1px solid rgba(0,0,0,.05)}
+ .insp-sec:last-child{border-bottom:none}
+ .insp-sec h4{margin:0 0 9px;font-size:13px;font-weight:800;color:var(--fg);letter-spacing:-.01em;display:flex;justify-content:space-between;align-items:baseline}
+ .insp-sec h4 em{font-style:normal;font-weight:700;color:var(--acc2);font-size:12.5px}
+ .insp-sec canvas{display:block;width:100%}
+ .insp-hscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+ .insp-hint{font-size:10.5px;color:var(--mut);text-align:center;margin-top:5px}
+ .insp-radwrap{display:flex;align-items:center;gap:18px}
+ .insp-radring{position:relative;width:78px;height:78px;flex-shrink:0;border-radius:50%}
+ .insp-radring .rv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;color:var(--fg)}
+ .insp-radinfo{font-size:12.5px;color:var(--fg2);line-height:1.5}
+ .insp-radinfo b{color:var(--fg)}
+ .insp-xmark{width:30px;height:30px;display:flex;align-items:center;justify-content:center}
+ .insp-xmark svg{width:30px;height:30px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))}
  .leaflet-popup-content-wrapper{background:rgba(255,255,255,.9)!important;backdrop-filter:blur(16px) saturate(1.4)!important;-webkit-backdrop-filter:blur(16px) saturate(1.4)!important;border:1px solid rgba(255,255,255,.6)!important;color:var(--fg)!important;box-shadow:0 4px 24px rgba(0,0,0,.1),0 1px 0 rgba(255,255,255,.5) inset!important;border-radius:var(--r-lg)!important}
  .leaflet-popup-content{margin:12px 14px!important;font-size:14px!important}
  .leaflet-popup-tip{background:rgba(255,255,255,.9)!important}
@@ -1060,6 +1085,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="map"></div>
 <canvas id="flow"></canvas>
 <div id="modeGlow"></div>
+<div id="inspPanel" class="insp-panel"></div>
 <div id="layerBar">
   <div id="topics">
     <button data-t="ski"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M5 20l5-11 4 6 2.5-4L21 20"/><circle cx="15.5" cy="4.5" r="1.5"/></svg><span>Ski</span></button>
@@ -1795,81 +1821,91 @@ drawTimeline();
 map.setMaxBounds([[laMinW-0.05,loMinW-0.05],[laMaxW+0.05,loMaxW+0.05]]);
 map.setMinZoom(map.getBoundsZoom([[laMinW,loMinW],[laMaxW,loMaxW]])+0.3);
 function iTabSw(el,tab){const c=el.closest('.icard');c.querySelectorAll('.itab').forEach(x=>x.classList.remove('active'));el.classList.add('active');c.querySelectorAll('.ipane').forEach(x=>x.classList.toggle('active',x.dataset.p===tab));}
-let inspPopup=null;
-map.on('click',function(e){
-  if(inspPopup){map.closePopup(inspPopup);inspPopup=null;}
-  const lat=e.latlng.lat,lon=e.latlng.lng;
+// --- Map-click inspect panel with charts + red X marker ---
+let inspMarker=null;
+function inspClose(){document.getElementById('inspPanel').classList.remove('open');if(inspMarker){map.removeLayer(inspMarker);inspMarker=null;}}
+map.on('click',function(e){inspOpen(e.latlng.lat,e.latlng.lng);});
+function inspOpen(lat,lon){
   const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
   if(cx2<0||cx2>=W||cy2<0||cy2>=H)return;
-  const p=cy2*W+cx2;
-  const elev=melevv(p),asp=maspv(p),slp=mslpv(p),quad=aspectQ(asp);
-  const ca=a*NP,cb=b*NP;const newSnow=cum[cb+p]-cum[ca+p];const cumDepth=cum[cb+p];
-  let tmin=1e9,tmax=-1e9,tsum=0,tc=0;
-  for(let t=a;t<b;t++){const v=tv(t,p);if(v<tmin)tmin=v;if(v>tmax)tmax=v;tsum+=v;tc++;}
-  const tmean=tsum/Math.max(1,tc);
-  let lastSnowT=a;
-  for(let t=a;t<b;t++){if(SNOW[t*NP+p]>0)lastSnowT=t;}
-  let ftc=0,bel=tv(lastSnowT,p)<0;
-  for(let t=lastSnowT+1;t<b;t++){const b2=tv(t,p)<0;if(b2!==bel){ftc+=0.5;bel=b2;}}
-  ftc=Math.floor(ftc);
-  const wk=mainToWind[p];let wsum=0,wmax=-1;
-  for(let t=a;t<b;t++){const v=SPD[t*P+wk]/M.spd_mul*3.6;wsum+=v;if(v>wmax)wmax=v;}
-  const wmean=wsum/Math.max(1,b-a);
-  const doy=bandDoy();if(doy!==radDoy){radCS=computeRad(doy);radDoy=doy;}
+  const p=cy2*W+cx2,elev=melevv(p),wk=mainToWind[p];
+  if(inspMarker)map.removeLayer(inspMarker);
+  inspMarker=L.marker([lat,lon],{icon:L.divIcon({className:'',html:'<div class="insp-xmark"><svg viewBox="0 0 24 24" fill="none" stroke="#e0245e" stroke-width="3.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>',iconSize:[30,30],iconAnchor:[15,15]}),interactive:false,zIndexOffset:2000}).addTo(map);
+  const ca=a*NP,cb=b*NP;const newSnow=cum[cb+p]-cum[ca+p],depthNow=cum[cb+p];
+  let wsum=0;for(let t=a;t<b;t++)wsum+=SPD[t*P+wk]/M.spd_mul*3.6;const wmean=wsum/Math.max(1,b-a);
+  const pan=document.getElementById('inspPanel');
+  pan.innerHTML=
+   '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b><div class="insp-sub">'+elev.toFixed(0)+' m · Fenster '+(b-a)+' h</div></div><button onclick="inspClose()">✕</button></div>'+
+   '<div class="insp-body">'+
+     '<div class="insp-sec"><h4>Neuschnee <em>+'+newSnow.toFixed(1)+' cm</em></h4><canvas id="icNew"></canvas></div>'+
+     '<div class="insp-sec"><h4>Schneehöhe <em>'+depthNow.toFixed(0)+' cm</em></h4><canvas id="icDepth"></canvas></div>'+
+     '<div class="insp-sec"><h4>Temperatur <em>Luft · Oberfläche</em></h4><div class="insp-hscroll" id="icTempScroll"><canvas id="icTemp"></canvas></div><div class="insp-hint">◀ in die Vergangenheit scrollen ▶</div></div>'+
+     '<div class="insp-sec"><h4>Windrose <em>Ø '+wmean.toFixed(0)+' km/h</em></h4><canvas id="icWind"></canvas></div>'+
+     '<div class="insp-sec"><h4>Strahlungsindex</h4><div id="icRad"></div></div>'+
+   '</div>';
+  pan.classList.add('open');
+  requestAnimationFrame(()=>{
+    icNewSnow(document.getElementById('icNew'),p);
+    icDepth(document.getElementById('icDepth'),p);
+    icTemp(document.getElementById('icTemp'),p);
+    icWind(document.getElementById('icWind'),p,wk);
+    icRad(document.getElementById('icRad'),p);
+  });
+}
+function icSetup(cv,hh,wOverride){const dpr=window.devicePixelRatio||1;const ww=wOverride||cv.getBoundingClientRect().width||320;
+  cv.width=Math.round(ww*dpr);cv.height=Math.round(hh*dpr);cv.style.height=hh+'px';if(wOverride)cv.style.width=ww+'px';
+  const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,ww,hh);return{ctx,w:ww,h:hh};}
+function icRR(ctx,x,y,w,h,r){r=Math.max(0,Math.min(r,w/2,h/2));ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y,w,h,r);else{ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}}
+function icDayGrid(ctx,w,h,t0,t1,baseY,perHr){ctx.textAlign='center';ctx.font='600 9.5px Inter,system-ui';
+  for(let t=t0;t<t1;t++){const d=new Date(M.times[t]+'Z');if(d.getUTCHours()===0){const x=perHr?(t-t0)*perHr:(t-t0)/(t1-t0)*w;
+    ctx.strokeStyle='rgba(15,29,47,.05)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,6);ctx.lineTo(x,baseY);ctx.stroke();
+    ctx.fillStyle='rgba(90,110,130,.72)';ctx.fillText(d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}),x+ (perHr?perHr*12:20),h-2);}}}
+function icNewSnow(cv,p){const{ctx,w,h}=icSetup(cv,86);const t0=a,t1=b,n=Math.max(1,t1-t0),baseY=h-14;
+  let mx=0;const vals=[];for(let t=t0;t<t1;t++){const v=SNOW[t*NP+p]*M.snow_scale;vals.push(v);if(v>mx)mx=v;}mx=Math.max(0.05,mx);
+  icDayGrid(ctx,w,h,t0,t1,baseY);
+  const bw=w/n,g=ctx.createLinearGradient(0,0,0,baseY);g.addColorStop(0,'#54aef0');g.addColorStop(1,'#1a7fd4');ctx.fillStyle=g;
+  for(let i=0;i<n;i++){const v=vals[i];if(v<0.002)continue;const bh=Math.max(1.5,v/mx*(baseY-6));icRR(ctx,i*bw+.4,baseY-bh,Math.max(bw-1,1.2),bh,Math.min(2,bw/2.2));ctx.fill();}
+  ctx.strokeStyle='rgba(15,29,47,.12)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,baseY+.5);ctx.lineTo(w,baseY+.5);ctx.stroke();
+  ctx.fillStyle='rgba(90,110,130,.6)';ctx.font='600 10px Inter';ctx.textAlign='right';ctx.fillText('max '+mx.toFixed(mx>=1?0:1)+' cm/h',w-2,11);}
+function icDepth(cv,p){const{ctx,w,h}=icSetup(cv,78);const t0=a,t1=b,baseY=h-14;
+  const vals=[];let mx=1;for(let t=t0;t<=t1;t++){const v=cum[t*NP+p];vals.push(v);if(v>mx)mx=v;}
+  icDayGrid(ctx,w,h,t0,t1,baseY);
+  ctx.strokeStyle='rgba(15,29,47,.12)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,baseY+.5);ctx.lineTo(w,baseY+.5);ctx.stroke();
+  const L=vals.length;
+  ctx.beginPath();for(let i=0;i<L;i++){const x=i/(L-1)*w,y=baseY-vals[i]/mx*(baseY-6);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+  ctx.lineTo(w,baseY);ctx.lineTo(0,baseY);ctx.closePath();ctx.fillStyle='rgba(26,127,212,.13)';ctx.fill();
+  ctx.beginPath();for(let i=0;i<L;i++){const x=i/(L-1)*w,y=baseY-vals[i]/mx*(baseY-6);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.strokeStyle='#0e5fa3';ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='rgba(90,110,130,.6)';ctx.font='600 10px Inter';ctx.textAlign='right';ctx.fillText('max '+mx.toFixed(0)+' cm',w-2,11);}
+function icTemp(cv,p){const perHr=5,fullW=Math.max(320,T*perHr),h=124;const{ctx}=icSetup(cv,h,fullW);const baseY=h-16,topY=14;
+  let mn=1e9,mx=-1e9;const air=[],srf=[];for(let t=0;t<T;t++){const va=tv(t,p),vs=tsurfEst(t,p);air.push(va);srf.push(vs);mn=Math.min(mn,va,vs);mx=Math.max(mx,va,vs);}
+  mn=Math.floor(mn-1);mx=Math.ceil(mx+1);const rng=Math.max(1,mx-mn),yOf=v=>baseY-(v-mn)/rng*(baseY-topY);
+  for(let t=0;t<T;t++){const d=new Date(M.times[t]+'Z');if(d.getUTCHours()===0){const x=t*perHr;ctx.strokeStyle='rgba(15,29,47,.05)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,topY);ctx.lineTo(x,baseY);ctx.stroke();ctx.fillStyle='rgba(90,110,130,.72)';ctx.font='600 9.5px Inter';ctx.textAlign='center';ctx.fillText(d.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit'}),x+perHr*12,h-3);}}
+  ctx.fillStyle='rgba(26,127,212,.08)';ctx.fillRect(a*perHr,topY,(b-a)*perHr,baseY-topY);
+  if(mn<0&&mx>0){const yz=yOf(0);ctx.strokeStyle='rgba(224,36,94,.3)';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(0,yz);ctx.lineTo(fullW,yz);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='rgba(224,36,94,.65)';ctx.font='600 9px Inter';ctx.textAlign='left';ctx.fillText('0°C',3,yz-2);}
+  ctx.strokeStyle='rgba(15,29,47,.4)';ctx.setLineDash([2,2]);ctx.beginPath();ctx.moveTo(nowIdx*perHr,topY);ctx.lineTo(nowIdx*perHr,baseY);ctx.stroke();ctx.setLineDash([]);
+  function line(arr,col,wd){ctx.beginPath();for(let t=0;t<T;t++){const x=t*perHr,y=yOf(arr[t]);t?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.strokeStyle=col;ctx.lineWidth=wd;ctx.lineJoin='round';ctx.stroke();}
+  line(srf,'#f5a623',1.5);line(air,'#1a7fd4',2);
+  ctx.textAlign='left';ctx.font='700 10px Inter';ctx.fillStyle='#1a7fd4';ctx.fillText('● Luft',4,11);ctx.fillStyle='#f5a623';ctx.fillText('● Oberfläche',44,11);
+  ctx.fillStyle='rgba(90,110,130,.6)';ctx.font='600 9px Inter';ctx.fillText(mx+'°',3,topY+7);ctx.fillText(mn+'°',3,baseY-2);
+  const sc=document.getElementById('icTempScroll');if(sc)sc.scrollLeft=Math.max(0,a*perHr-40);}
+function icWind(cv,p,wk){const{ctx,w,h}=icSetup(cv,152);const cx=w/2,cy=h/2+2,R=Math.min(cx,cy)-18;
+  const NS=8,cnt=new Array(NS).fill(0),spd=new Array(NS).fill(0);let n=0,tot=0;
+  for(let t=a;t<b;t++){let dir=(WDIR[t*P+wk]*M.dir_div)%360;if(dir<0)dir+=360;const s=SPD[t*P+wk]/M.spd_mul*3.6;const si=Math.round(dir/(360/NS))%NS;cnt[si]++;spd[si]+=s;n++;tot+=s;}
+  for(let i=0;i<NS;i++)if(cnt[i])spd[i]/=cnt[i];
+  const mxC=Math.max(1,...cnt);
+  ctx.strokeStyle='rgba(15,29,47,.09)';ctx.lineWidth=1;for(let r=1;r<=3;r++){ctx.beginPath();ctx.arc(cx,cy,R*r/3,0,2*Math.PI);ctx.stroke();}
+  const labs=['N','NE','E','SE','S','SW','W','NW'];ctx.fillStyle='rgba(90,110,130,.75)';ctx.font='700 9px Inter';ctx.textAlign='center';ctx.textBaseline='middle';
+  for(let i=0;i<NS;i++){const ang=i*(2*Math.PI/NS)-Math.PI/2;ctx.fillText(labs[i],cx+Math.cos(ang)*(R+10),cy+Math.sin(ang)*(R+10));}
+  for(let i=0;i<NS;i++){if(!cnt[i])continue;const ang=i*(2*Math.PI/NS)-Math.PI/2,len=cnt[i]/mxC*R,half=(Math.PI/NS)*0.72,c=rampBYR(Math.min(1,spd[i]/50));
+    ctx.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+',.85)';ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,len,ang-half,ang+half);ctx.closePath();ctx.fill();}
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(cx,cy,16,0,2*Math.PI);ctx.fill();
+  ctx.fillStyle='#0f1d2f';ctx.font='800 13px Inter';ctx.textBaseline='middle';ctx.fillText((tot/Math.max(1,n)).toFixed(0),cx,cy-2);
+  ctx.font='600 7.5px Inter';ctx.fillStyle='rgba(90,110,130,.85)';ctx.fillText('km/h Ø',cx,cy+9);ctx.textBaseline='alphabetic';}
+function icRad(el,p){const doy=bandDoy();if(doy!==radDoy){radCS=computeRad(doy);radDoy=doy;}
   const rp=main2rad[p];const solar=rp>=0?radCS[rp]:0;
-  let tsMin=1e9,tsMax=-1e9,tsSum=0;
-  for(let t=a;t<b;t++){const v=tsurfEst(t,p);if(v<tsMin)tsMin=v;if(v>tsMax)tsMax=v;tsSum+=v;}
-  const tsMean=tsSum/Math.max(1,b-a);
-  const pw=computePowder(p,a,b);
-  const R=(k,v)=>'<span class="ik">'+k+'</span><span>'+v+'</span>';
-  let sunSum=0;for(let t=a;t<b;t++)sunSum+=sunv(t,p);
-  const sunFrac=Math.max(0,Math.min(1,sunSum/(0.42*Math.max(1,b-a))));
-  const effRad=solar*(0.2+0.8*sunFrac);
-  const needS=minSnowNeeded(p),ratS=newSnow/Math.max(1,needS);
-  let h='<div class="icard"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b> · <span style="color:var(--mut)">'+elev.toFixed(0)+' m</span>';
-  h+='<div class="itabs">';
-  h+='<div class="itab active" onclick="iTabSw(this,\'snow\')">Snow</div>';
-  h+='<div class="itab" onclick="iTabSw(this,\'temp\')">Temp</div>';
-  h+='<div class="itab" onclick="iTabSw(this,\'wind\')">Wind</div>';
-  h+='<div class="itab" onclick="iTabSw(this,\'terrain\')">Terrain</div>';
-  h+='</div>';
-  h+='<div class="ipane active" data-p="snow"><div class="ig">';
-  h+=R('New Snow',newSnow.toFixed(1)+' cm');
-  h+=R('Cum. Depth',cumDepth.toFixed(0)+' cm');
-  h+=R('Sunshine',sunSum.toFixed(1)+' h');
-  h+='</div>';
-  h+='<div class="ipow '+(pw.powdered?'yes':'no')+'">Powder: '+(pw.powdered?'YES':'NO')+(pw.quality==='reduced'?' (reduced)':'')+'</div>';
-  if(pw.valid_aspects.length)h+='<div style="font-size:11px;margin-top:2px">Valid: '+pw.valid_aspects.join(', ')+'</div>';
-  if(pw.reason_flags.length)h+='<div style="font-size:10px;color:var(--mut);margin-top:2px">'+pw.reason_flags.join(', ')+'</div>';
-  h+='</div>';
-  h+='<div class="ipane" data-p="temp"><div class="ig">';
-  h+=R('T Air Ø',tmean.toFixed(1)+' °C');
-  h+=R('T Air Min',tmin.toFixed(1)+' °C');
-  h+=R('T Air Max',tmax.toFixed(1)+' °C');
-  h+='<div class="isep"></div>';
-  h+=R('T Surf Ø',tsMean.toFixed(1)+' °C');
-  h+=R('T Surf Min',tsMin.toFixed(1)+' °C');
-  h+=R('Freeze-Thaw',ftc+' cycles');
-  h+='</div></div>';
-  h+='<div class="ipane" data-p="wind"><div class="ig">';
-  h+=R('Wind Ø',wmean.toFixed(0)+' km/h');
-  h+=R('Wind Max',wmax.toFixed(0)+' km/h');
-  h+=R('≈ Gust Max',(wmax*PD_GUST_FACTOR).toFixed(0)+' km/h');
-  h+='</div></div>';
-  h+='<div class="ipane" data-p="terrain"><div class="ig">';
-  h+=R('Slope',slp.toFixed(0)+'°');
-  h+=R('Aspect',quad+' ('+asp.toFixed(0)+'°)');
-  h+=R('Roughness',roughv(p).toFixed(0)+' m');
-  h+='<div class="isep"></div>';
-  h+=R('Rad. Clear',solar.toFixed(0)+' Wh/m²/d');
-  h+=R('Rad. Eff.',effRad.toFixed(0)+' Wh/m²/d');
-  h+='<div class="isep"></div>';
-  h+=R('Min Snow',needS.toFixed(0)+' cm');
-  h+=R('Skiable',ratS>=1.0?'YES ('+ratS.toFixed(1)+'×)':'NO ('+ratS.toFixed(1)+'×)');
-  h+='</div></div>';
-  h+='</div>';
-  inspPopup=L.popup({maxWidth:isMobile?280:320,autoPanPaddingTopLeft:[10,50],autoPanPaddingBottomRight:[10,isMobile?120:20]}).setLatLng(e.latlng).setContent(h).openOn(map);
-});
+  let sunSum=0;for(let t=a;t<b;t++)sunSum+=sunv(t,p);const sunFrac=Math.max(0,Math.min(1,sunSum/(0.42*Math.max(1,b-a))));
+  const factor=0.2+0.8*sunFrac,pct=Math.round(factor*100),effRad=solar*factor,deg=Math.round(factor*360);
+  el.innerHTML='<div class="insp-radwrap"><div class="insp-radring" style="background:conic-gradient(#f5a623 '+deg+'deg, rgba(15,29,47,.09) '+deg+'deg)"><div style="position:absolute;inset:8px;background:#fff;border-radius:50%"></div><div class="rv">'+pct+'%</div></div><div class="insp-radinfo">Effektiv vs. theoret. Maximum<br><b>'+effRad.toFixed(0)+'</b> / <b>'+solar.toFixed(0)+'</b> Wh/m²/d<br>Sonnenstunden: <b>'+sunSum.toFixed(1)+' h</b></div></div>';}
 // --- 3D Terrain Viewer (MapLibre GL) ---
 let map3d=null,is3d=false,exag3d=1.5;
 function make3dOverlay(mode){
