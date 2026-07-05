@@ -570,7 +570,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  html,body{margin:0;padding:0;height:100%;width:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--fg);overscroll-behavior:none;background:#edf2f8;position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
  #map{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);background:#fff}
  #flow{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);z-index:450;pointer-events:none}
- #modeGlow{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);z-index:455;pointer-events:none;transition:box-shadow .45s ease;box-shadow:inset 0 0 0 3px rgba(26,127,212,.5),inset 0 0 60px rgba(26,127,212,.1)}
+ #modeGlow{position:fixed;inset:0;z-index:2500;pointer-events:none;transition:box-shadow .5s ease;box-shadow:inset 0 0 0 3px rgba(26,127,212,.5),inset 0 0 70px rgba(26,127,212,.12)}
  /* --- Layer selector: one elegant floating glass card --- */
  #layerBar{position:absolute;z-index:1000;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;max-width:calc(100vw - 112px);display:inline-flex;flex-direction:column;padding:6px;background:rgba(255,255,255,.7);backdrop-filter:blur(24px) saturate(1.8);-webkit-backdrop-filter:blur(24px) saturate(1.8);border:1px solid rgba(255,255,255,.7);border-radius:20px;box-shadow:0 10px 34px rgba(15,29,47,.13),0 1px 0 rgba(255,255,255,.7) inset;--topic-accent:#1a7fd4;--topic-tint:rgba(26,127,212,.13)}
  #topics{display:flex;gap:2px;align-items:center;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -690,13 +690,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .leaflet-control-attribution{background:rgba(255,255,255,.4)!important;color:rgba(80,100,120,.55)!important;font-size:9px!important;padding:1px 6px!important;border-radius:6px 0 0 0!important;box-shadow:none!important;backdrop-filter:blur(4px);max-width:22px;overflow:hidden;white-space:nowrap;transition:max-width .3s,background .3s}
  .leaflet-control-attribution:hover{max-width:80vw;background:rgba(255,255,255,.85)!important;color:var(--mut)!important}
  .leaflet-control-attribution a{color:inherit!important}
- #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 58px);right:12px;width:230px;max-width:calc(100vw - 24px)}
+ #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 116px);left:12px;width:230px;max-width:calc(100vw - 24px)}
  #searchWrap input{width:100%;padding:10px 12px 10px 34px;border-radius:12px;border:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--fg);font-size:14px;font-weight:500;outline:none;box-shadow:0 2px 8px rgba(0,0,0,.07);font-family:inherit}
  #searchWrap input::placeholder{color:var(--mut);font-weight:400}
  #searchWrap input:focus{border-color:var(--acc);background:#fff;box-shadow:0 0 0 3px var(--glow)}
  #searchWrap .icn{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--mut);font-size:15px}
  /* Right-side control rail */
- #ctrlRail{position:absolute;z-index:1050;right:12px;top:calc(env(safe-area-inset-top,0px) + 110px);display:flex;flex-direction:column;gap:10px}
+ #ctrlRail{position:absolute;z-index:1050;right:12px;top:calc(env(safe-area-inset-top,0px) + 58px);display:flex;flex-direction:column;gap:10px}
  .rail-btn{position:relative;width:46px;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--fg2);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.09);transition:all .18s cubic-bezier(.34,1.56,.64,1)}
  .rail-btn:hover{background:#fff;color:var(--fg);transform:translateY(-1px)}
  .rail-btn:active{transform:scale(.92)}
@@ -742,12 +742,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    #topics button{padding:9px 13px;font-size:14px;min-height:40px}
    #topics button span{display:inline}
    #sublayers button{padding:6px 12px;font-size:12.5px;min-height:32px}
-   #searchWrap{top:calc(env(safe-area-inset-top,0px) + 112px);right:8px;width:calc(100vw - 16px);max-width:210px}
+   #searchWrap{top:calc(env(safe-area-inset-top,0px) + 118px);left:8px;right:auto;width:calc(100vw - 84px);max-width:230px}
    .icard{font-size:14px;max-width:calc(100vw - 50px);min-width:200px}
    .scard{font-size:14px;min-width:160px}
    .leaflet-popup-content-wrapper{max-width:calc(100vw - 32px)!important}
    .legend{max-width:180px;font-size:12px}
-   #ctrlRail{top:calc(env(safe-area-inset-top,0px) + 162px);right:8px;gap:11px}
+   #ctrlRail{top:calc(env(safe-area-inset-top,0px) + 60px);right:8px;gap:11px}
    .rail-btn{width:48px;height:48px}
    #legendBtn{width:40px;height:40px;font-size:18px}
    .seg button{padding:9px 14px;font-size:15px;min-height:44px}
@@ -781,7 +781,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .email-banner{position:fixed;top:calc(env(safe-area-inset-top,0px)+56px);left:12px;right:12px;z-index:1200;display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:rgba(255,240,220,.95);border:1px solid rgba(200,150,50,.2);border-radius:12px;font-size:13px;color:#6a4a10;box-shadow:0 2px 8px rgba(0,0,0,.06)}
  .email-banner button{background:none;border:none;color:#0070b8;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
  /* --- Report FAB (primary action) --- */
- #reportFab{position:fixed;bottom:calc(var(--btm-h,80px) + 16px);right:16px;z-index:1000;width:58px;height:58px;border-radius:50%;border:none;background:var(--fg);color:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 6px 22px rgba(15,29,47,.3);touch-action:none;transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;-webkit-tap-highlight-color:transparent}
+ #reportFab{position:fixed;bottom:calc(var(--btm-h,80px) + 16px);right:16px;z-index:1000;height:52px;padding:0 18px 0 14px;gap:7px;border-radius:26px;border:none;background:var(--fg);color:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;font-family:inherit;font-size:15px;font-weight:700;letter-spacing:-.01em;box-shadow:0 6px 22px rgba(15,29,47,.3);touch-action:none;transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;-webkit-tap-highlight-color:transparent}
+ #reportFab svg{width:22px;height:22px}
  #reportFab:active{transform:scale(.9)}
  /* --- Radial quick-pick --- */
  .radial-wrap{position:fixed;inset:0;z-index:4000;touch-action:none;display:none}
@@ -814,6 +815,22 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .bucket:active{transform:scale(.95)}
  .bucket.active{background:var(--acc);border-color:var(--acc);color:#fff;box-shadow:0 4px 14px rgba(26,127,212,.3)}
  .bucket-val{font-size:12px;color:var(--mut);text-align:center;margin-top:8px;min-height:16px;font-weight:600}
+ /* detail follow-up groups */
+ .rp-fu{margin-bottom:16px}
+ .rp-fu:last-child{margin-bottom:0}
+ .rp-fu-lbl{font-size:13px;font-weight:700;color:var(--fg2);margin-bottom:9px}
+ .rp-fu-opts{display:flex;flex-wrap:wrap;gap:8px}
+ .rp-fu-opts button{padding:11px 15px;border-radius:14px;border:1.5px solid rgba(15,29,47,.1);background:#f5f8fb;cursor:pointer;font-size:14px;font-weight:600;color:var(--fg2);font-family:inherit;transition:all .15s}
+ .rp-fu-opts button:active{transform:scale(.95)}
+ .rp-fu-opts button.active{background:var(--acc);border-color:var(--acc);color:#fff}
+ /* stars */
+ .rp-stars{display:flex;justify-content:center;gap:8px;padding:14px 0 4px}
+ .rp-stars button{background:none;border:none;cursor:pointer;padding:2px;color:rgba(15,29,47,.16);transition:transform .12s,color .12s}
+ .rp-stars button svg{width:42px;height:42px}
+ .rp-stars button.on{color:#f5a623}
+ .rp-stars button.on svg{fill:#f5a623}
+ .rp-stars button:active{transform:scale(1.2)}
+ .rp-stars-lbl{text-align:center;font-size:14px;font-weight:700;color:var(--fg2);margin-top:8px;min-height:20px}
  .rp-voice-btn{width:100%;padding:14px;border-radius:14px;border:1.5px solid rgba(15,29,47,.1);background:#f5f8fb;cursor:pointer;font-size:14px;font-weight:600;color:var(--fg2);display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;-webkit-tap-highlight-color:transparent}
  .rp-voice-btn:active,.rp-voice-btn.recording{background:rgba(26,127,212,.1);border-color:var(--acc);color:var(--acc)}
  .rp-caption{width:100%;padding:14px;border:1.5px solid rgba(15,29,47,.1);border-radius:14px;font-size:15px;font-family:inherit;resize:none;outline:none;background:#f5f8fb;color:var(--fg);box-sizing:border-box;min-height:64px;margin-top:10px}
@@ -908,8 +925,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-groups button.active{background:var(--acc);color:#fff;border-color:var(--acc)}
  .feed-groups button.manage{background:rgba(0,0,0,.04);border-color:transparent;color:var(--fg2)}
  /* Like + follow on cards */
- .feed-card-actions button.liked{color:#e0245e}
- .feed-card-actions button.liked svg{fill:#e0245e;stroke:#e0245e}
+ .endorse-btn .endorse-lbl{font-weight:700}
+ .feed-card-actions button.endorsed{color:#0a8f4f}
+ .feed-card-actions button.endorsed svg{stroke:#0a8f4f}
  .feed-follow{margin-left:auto;flex-shrink:0;padding:5px 12px;border-radius:999px;border:1.5px solid var(--acc);background:none;color:var(--acc);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
  .feed-follow.following{background:var(--acc);color:#fff}
  .feed-card-group{font-size:11px;font-weight:700;color:#7b1fa2;background:rgba(156,39,176,.1);padding:2px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:4px}
@@ -998,9 +1016,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-card-actions button:hover{color:var(--fg)}
  .feed-divider{height:1px;background:rgba(0,0,0,.06)}
  .feed-empty{text-align:center;padding:80px 20px;color:var(--mut);font-size:15px}
- .feed-fab{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px)+22px);right:20px;width:58px;height:58px;border-radius:50%;border:none;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(26,127,212,.4);z-index:5;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
- .feed-fab svg{width:26px;height:26px}
- .feed-fab:active{transform:scale(.9)}
+ .feed-fab{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px)+22px);right:20px;height:52px;padding:0 20px 0 16px;gap:8px;border-radius:26px;border:none;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;font-size:15px;font-weight:700;box-shadow:0 8px 24px rgba(26,127,212,.4);z-index:5;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
+ .feed-fab svg{width:24px;height:24px}
+ .feed-fab:active{transform:scale(.92)}
  .feed-fab:hover{background:var(--acc2)}
  @media(min-width:561px){.feed-grid{padding:12px}.feed-card{border-radius:var(--r-lg);margin-bottom:12px;border:1px solid rgba(0,0,0,.06);overflow:hidden}}
  /* --- Report markers --- */
@@ -1080,7 +1098,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <!-- Auth & Reports UI -->
 <div id="userBar"><button class="login-btn" id="btnLogin" onclick="authShow()">Sign in</button></div>
 <div class="email-banner" id="emailBanner"><span>Please confirm your email to post reports.</span><button onclick="authResend()">Resend</button></div>
-<button id="reportFab" title="Add a report"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+<button id="reportFab" title="Bedingungen melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
 <div class="radial-wrap" id="radialWrap"><div class="radial-bg"></div><div class="radial-ring" id="radialRing"></div><div class="radial-center" id="radialCenter">✕</div></div>
 <div class="auth-overlay" id="authOverlay" style="display:none" onclick="authHide()">
 <div class="auth-modal" onclick="event.stopPropagation()">
@@ -1130,10 +1148,20 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div class="sub-chips" id="rpSubs"></div>
 </div>
 
-<!-- STEP: bucket -->
-<div class="rp-pane" data-step="bucket" style="display:none">
-  <div class="bucket-track" id="rpBuckets"></div>
-  <div class="bucket-val" id="rpBucketVal"></div>
+<!-- STEP: detail (subtype-specific follow-up questions) -->
+<div class="rp-pane" data-step="detail" style="display:none">
+  <div id="rpDetail"></div>
+</div>
+
+<!-- STEP: info (free text) -->
+<div class="rp-pane" data-step="info" style="display:none">
+  <textarea class="rp-caption" id="rpInfoText" placeholder="Was möchtest du melden? (z. B. Hütte offen, Weg gesperrt, Brücke fehlt …)" oninput="rpState.infotext=this.value" style="min-height:120px;margin-top:0"></textarea>
+</div>
+
+<!-- STEP: stars (recommendation) -->
+<div class="rp-pane" data-step="stars" style="display:none">
+  <div class="rp-stars" id="rpStars"></div>
+  <div class="rp-stars-lbl" id="rpStarsLbl">Tippe auf die Sterne</div>
 </div>
 
 <!-- STEP: final -->
@@ -1142,7 +1170,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div class="rp-peak" id="rpPeakConfirm" style="display:none"></div>
   <button class="rp-voice-btn" id="rpVoiceBtn" onclick="rpVoiceToggle()">🎤 Halten und sprechen</button>
   <textarea class="rp-caption" id="rpCaption" placeholder="Kurz beschreiben (optional)…" oninput="rpState.caption=this.value"></textarea>
-  <div class="rp-group" id="rpGroupWrap" style="display:none"><span class="rp-group-lbl">Teilen in</span><select class="rp-group-sel" id="rpGroupSel" onchange="rpState.group=this.value||null"><option value="">🌍 Öffentlich</option></select></div>
   <div class="rp-summary" id="rpSummary"></div>
 </div>
 
@@ -1166,10 +1193,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button class="feed-loc-btn" id="feedDestBtn" onclick="openLocPicker('dest')">🎿 Gebiet</button>
   <button class="feed-loc-clear" id="feedAnchorClear" style="display:none">✕ Filter</button>
 </div>
-<div class="feed-groups" id="feedGroups" style="display:none"></div>
 <div class="feed-anchor-bar" id="feedAnchorBar" style="display:none"></div>
 <div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Loading reports...</div></div></div>
-<button class="feed-fab" id="feedFab" onclick="feedCreatePost()" title="Report erstellen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+<button class="feed-fab" id="feedFab" onclick="feedCreatePost()" title="Bedingungen melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
 </div>
 <div class="loc-picker" id="locPicker" style="display:none" onclick="if(event.target===this)locPickerClose()">
   <div class="loc-picker-sheet">
@@ -1179,13 +1205,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <button onclick="locPickerClose()">✕</button>
     </div>
     <div class="loc-picker-list" id="locPickerList"></div>
-  </div>
-</div>
-<div class="groups-modal" id="groupsModal" style="display:none" onclick="if(event.target===this)groupsClose()">
-  <div class="groups-sheet">
-    <div class="groups-head"><span>Gruppen</span><button onclick="groupsClose()">✕</button></div>
-    <div class="groups-new"><input id="groupNewName" type="text" placeholder="Neue Gruppe erstellen…" maxlength="40"/><button onclick="createGroup()">Erstellen</button></div>
-    <div class="groups-list" id="groupsList"></div>
   </div>
 </div>
 <div class="cmt-modal" id="cmtModal" style="display:none" onclick="if(event.target===this)commentsClose()">
@@ -1956,6 +1975,10 @@ function startCoach(){const nx=document.getElementById('coachNext'),sk=document.
   nx.onclick=coachNext;sk.onclick=endCoach;
   window.addEventListener('resize',()=>{if(document.getElementById('coach').style.display==='block')showCoachStep();});
   showCoachStep();}
+// Prevent the whole page (UI) from zooming — the map keeps its own zoom
+document.addEventListener('gesturestart',e=>e.preventDefault());
+document.addEventListener('gesturechange',e=>e.preventDefault());
+(function(){let lt=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lt<=300&&!e.target.closest('#map,#map3d')){e.preventDefault();}lt=n;},{passive:false});})();
 setTopic('snow',0);dismissIntro();
 requestAnimationFrame(()=>{document.documentElement.style.setProperty('--btm-h',document.getElementById('bottomPanel').offsetHeight+'px');});
 // --- Supabase Auth & Reports ---
@@ -2074,18 +2097,14 @@ function authUpdateUI(user){
   loadSocial().then(()=>{loadReportMarkers();loadDbReports();});
 }
 // --- Social state ---
-let myFollowing=new Set(),myGroups=[],allGroups=[];
+let myFollowing=new Set();
 async function loadSocial(){
   if(!sb)return;
   try{
     if(sbUser){
       const{data:f}=await sb.from('follows').select('following_id').eq('follower_id',sbUser.id);
       myFollowing=new Set((f||[]).map(x=>x.following_id));
-      const{data:gm}=await sb.from('group_members').select('group_id,groups(name)').eq('user_id',sbUser.id);
-      myGroups=(gm||[]).map(x=>({id:x.group_id,name:x.groups?.name||'Gruppe'}));
-    }else{myFollowing=new Set();myGroups=[];}
-    const{data:g}=await sb.from('groups').select('*').order('created_at',{ascending:false}).limit(200);
-    allGroups=g||[];
+    }else{myFollowing=new Set();}
   }catch(e){console.warn('loadSocial',e);}
 }
 async function loadDbReports(){
@@ -2105,21 +2124,22 @@ async function loadDbReports(){
     const dbR=data.map(r=>{
       const ll=parseGeo(r.location);if(!ll||(ll[0]===0&&ll[1]===0))return null;const lat=ll[0],lng=ll[1];
       const catId=r.primary_categories?.[0]||'info';const catObj=RP_CATS.find(c=>c.id===catId);
-      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,cat:catId,icon:catObj?.icon||'📍',sub:r.subtype,measurement:r.condition_data?.measurement||null,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,groupId:r.group_id||null,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,dbRow:true};
+      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,cat:catId,icon:catObj?.icon||'📍',sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,dbRow:true};
     }).filter(Boolean);
     allReports=[...dbR,...DEMO_REPORTS];loadReportMarkers();
     if(document.getElementById('feedPage').classList.contains('open'))feedRender();
   }catch(e){console.warn('loadDbReports',e);}
 }
 // --- Likes ---
-async function toggleLike(id,ev){if(ev){ev.stopPropagation();}
+async function toggleEndorse(id,ev){if(ev){ev.stopPropagation();}
   if(!sb||!sbUser){authShow();return;}
   const r=allReports.find(x=>x.id===id);if(!r||!r.dbRow)return;
-  const willLike=!r.liked;r.liked=willLike;r.likes=(r.likes||0)+(willLike?1:-1);feedRender();
+  if(r.userId&&r.userId===sbUser.id){return;} // can't endorse your own
+  const willEndorse=!r.liked;r.liked=willEndorse;r.likes=(r.likes||0)+(willEndorse?1:-1);feedRender();
   try{
-    if(willLike)await sb.from('report_reactions').insert({report_id:id,user_id:sbUser.id,type:'like'});
+    if(willEndorse)await sb.from('report_reactions').insert({report_id:id,user_id:sbUser.id,type:'like'});
     else await sb.from('report_reactions').delete().match({report_id:id,user_id:sbUser.id,type:'like'});
-  }catch(e){r.liked=!willLike;r.likes+=(willLike?-1:1);feedRender();}
+  }catch(e){r.liked=!willEndorse;r.likes+=(willEndorse?-1:1);feedRender();}
 }
 // --- Follow ---
 async function toggleFollow(uid,ev){if(ev){ev.stopPropagation();}
@@ -2132,16 +2152,6 @@ async function toggleFollow(uid,ev){if(ev){ev.stopPropagation();}
     else await sb.from('follows').delete().match({follower_id:sbUser.id,following_id:uid});
   }catch(e){if(!following)myFollowing.delete(uid);else myFollowing.add(uid);feedRender();}
 }
-// --- Groups ---
-async function joinGroup(id){if(!sb||!sbUser){authShow();return;}
-  try{await sb.from('group_members').insert({group_id:id,user_id:sbUser.id});await loadSocial();groupsRender();feedRender();}catch(e){alert('Fehler: '+(e.message||e));}}
-async function leaveGroup(id){if(!sb||!sbUser)return;
-  try{await sb.from('group_members').delete().match({group_id:id,user_id:sbUser.id});await loadSocial();groupsRender();feedRender();}catch(e){}}
-async function createGroup(){if(!sb||!sbUser){authShow();return;}
-  const name=(document.getElementById('groupNewName').value||'').trim();if(!name)return;
-  try{const{data,error}=await sb.from('groups').insert({name,created_by:sbUser.id}).select().single();if(error)throw error;
-    await sb.from('group_members').insert({group_id:data.id,user_id:sbUser.id});
-    document.getElementById('groupNewName').value='';await loadSocial();groupsRender();}catch(e){alert('Fehler: '+(e.message||e));}}
 function timeAgo(ts){const d=Date.now()-new Date(ts).getTime(),h=d/36e5;if(h<1)return'gerade eben';if(h<24)return'vor '+Math.floor(h)+'h';return'vor '+Math.floor(h/24)+'d';}
 if(sb){sb.auth.onAuthStateChange((ev,session)=>{authUpdateUI(session?.user||null);});
   sb.auth.getSession().then(({data})=>{authUpdateUI(data.session?.user||null);});}
@@ -2178,15 +2188,27 @@ async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'s
 function authMenu(){if(confirm('Sign out?')){if(sb)sb.auth.signOut();authUpdateUI(null);}}
 // --- Report categories ---
 const RP_CATS=[
-  {id:'snow',label:'Schnee',icon:'❄️',subs:['Neuschnee','Nassschnee','Triebschnee','Sulz','Firn','Bruchharsch','Windgepresst']},
-  {id:'route',label:'Route',icon:'🥾',subs:['Gespurt','Verspurt','Keine Spur','Lawinenzug','Wechte','Gletscherspalte']},
-  {id:'danger',label:'Gefahr',icon:'⚠️',subs:['Lawinenabgang','Risse/Setzungen','Wumm-Geräusche','Steinschlag','Blankeis','Triebschnee']},
-  {id:'tour',label:'Tour',icon:'⛷️',subs:['Powder','Sulz-Genuss','Abgeblasen','Bruchharsch','Nicht empfohlen']},
-  {id:'info',label:'Info',icon:'ℹ️',subs:['Hütte offen','Hütte geschlossen','Weg gesperrt','Brücke fehlt','Markierung fehlt']}
+  {id:'snow',label:'Schnee',icon:'❄️',subs:['Neuschnee','Nassschnee','Triebschnee','Firn','Bruchharsch','Windgepresst']},
+  {id:'route',label:'Route',icon:'🥾',subs:['Personen auf Route','Unverspurter Platz']},
+  {id:'danger',label:'Gefahr',icon:'⚠️',subs:['Lawine','Warnzeichen','Steinschlag','Blankeis']},
+  {id:'info',label:'Info',icon:'ℹ️',subs:[]}
 ];
-const RP_BUCKETS={snow:['0','5','10','20','30','50','100+'],danger:['1','2','3','4','5'],tour:['⭐','⭐⭐','⭐⭐⭐','⭐⭐⭐⭐','⭐⭐⭐⭐⭐']};
-const RP_BUCKET_UNITS={snow:'cm',danger:'Stufe',tour:''};
-const RP_BUCKET_LABELS={snow:'Schneehöhe',danger:'Gefahrenstufe',tour:'Bewertung'};
+// Follow-up questions per "cat|subtype". Each: {id,label,opts,unit?}
+const RP_FOLLOWUPS={
+  'snow|Neuschnee':[{id:'height',label:'Schneehöhe',opts:['0','5','10','20','30','50','100+'],unit:'cm'}],
+  'snow|Triebschnee':[{id:'height',label:'Triebschnee-Höhe',opts:['0','5','10','20','30','50','100+'],unit:'cm'}],
+  'snow|Nassschnee':[{id:'wet',label:'Wie feucht?',opts:['nur oberflächlich','Stock drückt durch','Ski sinkt ein']}],
+  'snow|Bruchharsch':[{id:'crust',label:'Deckel',opts:['feiner Deckel','harter, nicht tragend','tragender Deckel']}],
+  'snow|Firn':[{id:'firn',label:'Wann aufgesulzt?',opts:['früh morgens','vormittags','mittags','nachmittags']}],
+  'snow|Windgepresst':[{id:'crust',label:'Deckel',opts:['feiner Deckel','harter, nicht tragend','tragender Deckel','eisig']}],
+  'route|Personen auf Route':[{id:'people',label:'Personen heute',opts:['0','1-2','3-5','6-10','10+']}],
+  'route|Unverspurter Platz':[{id:'untracked',label:'Unverspurter Platz',opts:['0%','25%','50%','75%','100%']}],
+  'danger|Lawine':[{id:'trigger',label:'Auslösung',opts:['Person','spontan']},{id:'size',label:'Grösse',opts:['klein','mittel','gross']}],
+  'danger|Warnzeichen':[{id:'sign',label:'Zeichen',opts:['Wumm-Geräusch','Risse','Wumm + Risse']}],
+  'danger|Steinschlag':[],
+  'danger|Blankeis':[]
+};
+function rpFollowups(){return RP_FOLLOWUPS[rpState.cat+'|'+rpState.sub]||[];}
 // --- Radial quick-pick (long-press FAB) ---
 let radialActive=false,radialCat=null;
 const RAD_POS=[{a:-90},{a:-162},{a:-18},{a:162},{a:18}];
@@ -2247,8 +2269,8 @@ const RAD_POS=[{a:-90},{a:-162},{a:-18},{a:162},{a:18}];
   wrap.addEventListener('pointerup',endRadial);
 })();
 // --- Single-sheet report flow ---
-let rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:'',peak:null,dest:null,peakCand:null,group:null,photoLoc:null,deviceLoc:null,locSource:null};
-function rpReset(){rpState={cat:null,sub:null,bucket:null,photo:null,photoFile:null,loc:null,caption:'',peak:null,dest:null,peakCand:null,group:null,photoLoc:null,deviceLoc:null,locSource:null};}
+let rpState={cat:null,sub:null,details:{},infotext:'',stars:0,photo:null,photoFile:null,loc:null,caption:'',peak:null,dest:null,peakCand:null,photoLoc:null,deviceLoc:null,locSource:null};
+function rpReset(){rpState={cat:null,sub:null,details:{},infotext:'',stars:0,photo:null,photoFile:null,loc:null,caption:'',peak:null,dest:null,peakCand:null,photoLoc:null,deviceLoc:null,locSource:null};}
 // --- EXIF GPS extractor (no external lib) ---
 function readExifGps(file){return new Promise(res=>{
   const fr=new FileReader();
@@ -2288,22 +2310,26 @@ function parseExif(view,tiff){try{
   if(Math.abs(lat)>90||Math.abs(lng)>180)return null;
   return[lat,lng];
 }catch(e){return null;}}
-function rpScore(){let s=0;if(rpState.cat)s+=25;if(rpState.sub)s+=25;if(rpState.bucket)s+=15;if(rpState.photo)s+=25;if(rpState.loc)s+=10;return Math.min(100,s);}
+function rpScore(){let s=0;if(rpState.cat)s+=20;if(rpState.sub||rpState.infotext)s+=20;if(Object.keys(rpState.details||{}).length)s+=15;if(rpState.photo)s+=25;if(rpState.loc)s+=10;if(rpState.stars)s+=10;return Math.min(100,s);}
 // --- Wizard step engine ---
 const RP_PHOTO_PLACEHOLDER='<div class="rp-photo-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Foto aufnehmen</span></div>';
-const RP_STEP_META={photo:{t:'Foto hinzufügen',s:'Zeig, was du siehst (optional)'},cat:{t:'Was siehst du?',s:'Wähle eine Kategorie'},sub:{t:'Details',s:'Genauer beschreiben'},bucket:{t:'Messung',s:'Wie viel / wie stark?'},final:{t:'Fast fertig',s:'Standort & Notiz, dann posten'}};
+const RP_STEP_META={photo:{t:'Foto hinzufügen',s:'Zeig, was du siehst (optional)'},cat:{t:'Was siehst du?',s:'Wähle eine Kategorie'},sub:{t:'Details',s:'Wähle die Art'},detail:{t:'Präzisieren',s:'Wähle die passende Angabe'},info:{t:'Deine Info',s:'Kurz beschreiben – keine Links'},stars:{t:'Weiterempfehlung',s:'Wie sehr lohnt es sich gerade?'},final:{t:'Fast fertig',s:'Standort & Notiz, dann posten'}};
 let rpStepList=[],rpCurStep='photo';
-function rpBuildSteps(){const s=['photo','cat','sub'];if(RP_BUCKETS[rpState.cat])s.push('bucket');s.push('final');return s;}
+function rpBuildSteps(){const s=['photo','cat'];
+  if(rpState.cat==='info'){s.push('info');}
+  else if(rpState.cat){s.push('sub');if(rpState.sub&&rpFollowups().length)s.push('detail');}
+  s.push('stars','final');return s;}
 function rpShow(stepId){
   rpStepList=rpBuildSteps();if(!rpStepList.includes(stepId))stepId=rpStepList[0];rpCurStep=stepId;
   document.querySelectorAll('#reportOverlay .rp-pane').forEach(p=>p.style.display=p.dataset.step===stepId?'':'none');
   const meta=RP_STEP_META[stepId];
   document.getElementById('rpStepTitle').textContent=meta.t;
-  let sub=meta.s;if(stepId==='bucket')sub=RP_BUCKET_LABELS[rpState.cat]||meta.s;
-  document.getElementById('rpStepSub').textContent=sub;
+  document.getElementById('rpStepSub').textContent=meta.s;
   if(stepId==='sub')rpRenderSubs();
-  if(stepId==='bucket')rpRenderBuckets();
-  if(stepId==='final'){updateLocCard();rpRenderSummary();rpDetectPeak();rpRenderGroupSel();}
+  if(stepId==='detail')rpRenderDetail();
+  if(stepId==='info')document.getElementById('rpInfoText').value=rpState.infotext||'';
+  if(stepId==='stars')rpRenderStars();
+  if(stepId==='final'){updateLocCard();rpRenderSummary();rpDetectPeak();}
   rpRenderProgress();rpRenderNav();
 }
 function rpRenderProgress(){const idx=rpStepList.indexOf(rpCurStep);
@@ -2312,28 +2338,40 @@ function rpRenderNav(){const idx=rpStepList.indexOf(rpCurStep);
   document.getElementById('rpBack').disabled=idx<=0;
   const back=document.getElementById('rpBackBtn');if(back)back.style.display=idx>0?'':'none';
   const skip=document.getElementById('rpSkip'),next=document.getElementById('rpNext');
-  skip.style.display=(['photo','sub','bucket'].includes(rpCurStep))?'':'none';
+  skip.style.display=(['photo','detail','stars','info'].includes(rpCurStep))?'':'none';
   if(rpCurStep==='final'){next.textContent='Report posten';next.classList.add('post');next.disabled=!rpState.cat;}
-  else{next.textContent='Weiter';next.classList.remove('post');next.disabled=(rpCurStep==='cat'&&!rpState.cat);}}
+  else{next.textContent='Weiter';next.classList.remove('post');next.disabled=(rpCurStep==='cat'&&!rpState.cat)||(rpCurStep==='sub'&&!rpState.sub);}}
 function rpStepNext(){const idx=rpStepList.indexOf(rpCurStep);
   if(rpCurStep==='final'){reportSubmit();return;}
   if(rpCurStep==='cat'&&!rpState.cat)return;
+  if(rpCurStep==='sub'&&!rpState.sub)return;
   rpShow(rpStepList[Math.min(rpStepList.length-1,idx+1)]);haptic(6);}
 function rpStepPrev(){const idx=rpStepList.indexOf(rpCurStep);if(idx>0)rpShow(rpStepList[idx-1]);}
 function reportOpenSheet(){
   document.getElementById('reportOverlay').style.display='flex';
-  rpState.sub=null;rpState.bucket=null;rpState.caption='';rpState.peak=null;rpState.dest=null;rpState.peakCand=null;
+  rpState.sub=null;rpState.details={};rpState.infotext='';rpState.stars=0;rpState.caption='';rpState.peak=null;rpState.dest=null;rpState.peakCand=null;
   if(!rpState.cat){rpState.photo=null;rpState.photoFile=null;}
   rpState.photoLoc=null;rpState.deviceLoc=null;rpState.locSource=null;rpState.loc=null;
   document.getElementById('rpCaption').value='';
   rpRenderCats();rpResetPhoto();
   rpShow(rpState.cat?'sub':'photo');
-  updateLocCard();
-  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{
-    rpState.deviceLoc=[p.coords.latitude,p.coords.longitude,p.coords.accuracy];
-    if(rpState.locSource!=='photo'){rpState.locSource='device';rpState.loc=[p.coords.latitude,p.coords.longitude];}
-    updateLocCard();if(rpCurStep==='final')rpDetectPeak();
-  },()=>{updateLocCard();},{enableHighAccuracy:true,timeout:12000,maximumAge:0});
+  updateLocCard();rpGeolocate();
+}
+// Warm, live-updating geolocation (reduces the lag / inaccuracy)
+let rpGeoWatch=null;
+function rpGeolocate(){
+  if(!navigator.geolocation)return;
+  navigator.geolocation.getCurrentPosition(rpGeoOk,()=>{updateLocCard();},{enableHighAccuracy:true,timeout:8000,maximumAge:0});
+  try{if(rpGeoWatch!=null)navigator.geolocation.clearWatch(rpGeoWatch);
+    rpGeoWatch=navigator.geolocation.watchPosition(rpGeoOk,()=>{},{enableHighAccuracy:true,timeout:20000,maximumAge:0});}catch(e){}
+}
+function rpGeoOk(p){
+  const prev=rpState.deviceLoc;
+  // keep the most accurate fix
+  if(prev&&prev[2]&&p.coords.accuracy>prev[2]*1.4)return;
+  rpState.deviceLoc=[p.coords.latitude,p.coords.longitude,p.coords.accuracy];
+  if(rpState.locSource!=='photo'){rpState.locSource='device';rpState.loc=[p.coords.latitude,p.coords.longitude];}
+  updateLocCard();if(rpCurStep==='final')rpDetectPeak();
 }
 function updateLocCard(){
   const card=document.getElementById('rpLocCard');if(!card)return;
@@ -2352,29 +2390,33 @@ function rpSwitchLoc(){
   else if(rpState.locSource==='device'&&rpState.photoLoc){rpState.locSource='photo';rpState.loc=[rpState.photoLoc[0],rpState.photoLoc[1]];}
   rpState.peak=null;rpState.peakCand=null;haptic(8);updateLocCard();rpDetectPeak();
 }
-function reportClose(){document.getElementById('reportOverlay').style.display='none';rpReset();}
+function reportClose(){document.getElementById('reportOverlay').style.display='none';
+  try{if(rpGeoWatch!=null){navigator.geolocation.clearWatch(rpGeoWatch);rpGeoWatch=null;}}catch(e){}
+  rpReset();}
 function rpRenderCats(){
   document.getElementById('rpCats').innerHTML=RP_CATS.map(c=>
     `<button class="cat-chip${rpState.cat===c.id?' active':''}" data-id="${c.id}" style="${rpState.cat===c.id?'color:'+CAT_COLORS[c.id]:''}" onclick="rpPickCat('${c.id}')"><span class="cat-ico-w">${CAT_SVG[c.id]}</span>${c.label}</button>`
   ).join('');
 }
-function rpPickCat(id){rpState.cat=id;rpState.sub=null;rpState.bucket=null;haptic(10);
+function rpPickCat(id){rpState.cat=id;rpState.sub=null;rpState.details={};haptic(10);
   document.querySelectorAll('#rpCats .cat-chip').forEach(el=>{const on=el.dataset.id===id;el.classList.toggle('active',on);el.style.color=on?CAT_COLORS[id]:'';});
-  rpStepList=rpBuildSteps();setTimeout(()=>rpShow('sub'),170);}
+  rpStepList=rpBuildSteps();setTimeout(()=>rpShow(id==='info'?'info':'sub'),170);}
 function rpRenderSubs(){const cat=RP_CATS.find(c=>c.id===rpState.cat);if(!cat)return;
   document.getElementById('rpSubs').innerHTML=cat.subs.map(s=>
     `<button class="sub-chip${rpState.sub===s?' active':''}" onclick="rpPickSub(this,'${s.replace(/'/g,"\\\\'")}')">${s}</button>`).join('');}
-function rpPickSub(el,val){rpState.sub=val;haptic(8);
+function rpPickSub(el,val){rpState.sub=val;rpState.details={};haptic(8);
   document.querySelectorAll('#rpSubs .sub-chip').forEach(e=>e.classList.remove('active'));el.classList.add('active');
-  setTimeout(()=>rpStepNext(),170);}
-function rpRenderBuckets(){const bk=RP_BUCKETS[rpState.cat];if(!bk)return;
-  document.getElementById('rpBuckets').innerHTML=bk.map(b=>
-    `<button class="bucket${rpState.bucket===b?' active':''}" onclick="rpPickBucket(this,'${b}')">${b}</button>`).join('');
-  document.getElementById('rpBucketVal').textContent=rpState.bucket?(rpState.bucket+' '+(RP_BUCKET_UNITS[rpState.cat]||'')):'';}
-function rpPickBucket(el,val){rpState.bucket=val;haptic(8);
-  document.querySelectorAll('#rpBuckets .bucket').forEach(e=>e.classList.remove('active'));el.classList.add('active');
-  document.getElementById('rpBucketVal').textContent=val+' '+(RP_BUCKET_UNITS[rpState.cat]||'');
-  setTimeout(()=>rpStepNext(),180);}
+  rpStepList=rpBuildSteps();setTimeout(()=>rpStepNext(),170);}
+function rpRenderDetail(){const fus=rpFollowups();const el=document.getElementById('rpDetail');
+  el.innerHTML=fus.map(q=>`<div class="rp-fu"><div class="rp-fu-lbl">${q.label}${q.unit?' ('+q.unit+')':''}</div><div class="rp-fu-opts">${q.opts.map(o=>`<button class="${rpState.details[q.id]===o?'active':''}" onclick="rpPickDetail('${q.id}','${o.replace(/'/g,"\\\\'")}',this)">${o}</button>`).join('')}</div></div>`).join('');}
+function rpPickDetail(qid,val,el){rpState.details[qid]=val;haptic(6);
+  el.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));el.classList.add('active');
+  const fus=rpFollowups();if(fus.every(q=>rpState.details[q.id]))setTimeout(()=>rpStepNext(),220);}
+function rpRenderStars(){const el=document.getElementById('rpStars');const cur=rpState.stars||0;
+  el.innerHTML=[1,2,3,4,5].map(n=>`<button class="${n<=cur?'on':''}" onclick="rpPickStar(${n})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2l3 6.9 7.5.6-5.7 4.9 1.8 7.3L12 17.8 5.1 21.7l1.8-7.3L1.2 9.5l7.5-.6z"/></svg></button>`).join('');
+  const lbls=['','Nicht empfohlen','Mässig','Ordentlich','Sehr gut','Top – unbedingt!'];
+  document.getElementById('rpStarsLbl').textContent=cur?lbls[cur]:'Tippe auf die Sterne';}
+function rpPickStar(n){rpState.stars=n;haptic(8);rpRenderStars();}
 function rpSetPhoto(inp){
   if(!inp.files||!inp.files[0])return;
   const file=inp.files[0];
@@ -2403,14 +2445,12 @@ function rpDetectPeak(){
   else{rpState.peakCand=null;box.style.display='none';}
   rpRenderSummary();}
 function rpConfirmPeak(yes){rpState.peak=yes?rpState.peakCand:null;haptic(12);rpDetectPeak();}
-function rpRenderGroupSel(){const wrap=document.getElementById('rpGroupWrap'),sel=document.getElementById('rpGroupSel');if(!wrap)return;
-  if(sbUser&&myGroups.length){wrap.style.display='';sel.innerHTML='<option value="">🌍 Öffentlich</option>'+myGroups.map(g=>`<option value="${g.id}"${rpState.group===g.id?' selected':''}>👥 ${g.name}</option>`).join('');}
-  else{wrap.style.display='none';}}
 function rpRenderSummary(){const el=document.getElementById('rpSummary');if(!el)return;
   const cat=RP_CATS.find(c=>c.id===rpState.cat);const t=[];
   if(cat)t.push('<span class="rp-tag">'+catSvg(cat.id,13)+cat.label+'</span>');
   if(rpState.sub)t.push('<span class="rp-tag">'+rpState.sub+'</span>');
-  if(rpState.bucket)t.push('<span class="rp-tag">'+rpState.bucket+' '+(RP_BUCKET_UNITS[rpState.cat]||'')+'</span>');
+  const fus=rpFollowups();fus.forEach(q=>{if(rpState.details[q.id])t.push('<span class="rp-tag">'+rpState.details[q.id]+(q.unit&&q.id==='height'?' '+q.unit:'')+'</span>');});
+  if(rpState.stars)t.push('<span class="rp-tag">★ '+rpState.stars+'/5</span>');
   if(rpState.photo)t.push('<span class="rp-tag">📷 Foto</span>');
   if(rpState.peak)t.push('<span class="rp-tag">⛰ '+rpState.peak+'</span>');
   else if(rpState.dest)t.push('<span class="rp-tag">📍 '+rpState.dest+'</span>');
@@ -2444,16 +2484,23 @@ async function reportSubmit(){
       else{const{data:urlData}=sb.storage.from('report-images').getPublicUrl(path);imageUrl=urlData?.publicUrl||null;}
     }
     const loc=rpState.loc||[map.getCenter().lat,map.getCenter().lng];
-    const cd=rpState.bucket?{measurement:rpState.bucket}:{};
+    const cd={};
+    const fus=rpFollowups(),dvals={};fus.forEach(q=>{if(rpState.details[q.id])dvals[q.id]=rpState.details[q.id];});
+    if(Object.keys(dvals).length)cd.details=dvals;
+    if(rpState.stars)cd.stars=rpState.stars;
     if(rpState.peak)cd.peak=rpState.peak;if(rpState.dest)cd.dest=rpState.dest;
+    // human-readable measurement for the card
+    let meas=null;if(dvals.height)meas=dvals.height+' cm';else if(fus[0]&&dvals[fus[0].id])meas=dvals[fus[0].id];
+    if(meas)cd.measurement=meas;
+    let caption=rpState.caption.trim();let subtype=rpState.sub;
+    if(rpState.cat==='info'){const info=(rpState.infotext||'').trim();if(info){cd.info=info;if(!caption)caption=info;}subtype=subtype||'Info';}
     const row={
       user_id:sbUser.id,location:`POINT(${loc[1]} ${loc[0]})`,
-      primary_categories:[rpState.cat],subtype:rpState.sub,
+      primary_categories:[rpState.cat],subtype:subtype,
       condition_data:cd,
-      image_url:imageUrl,caption:rpState.caption.trim()||null,
+      image_url:imageUrl,caption:caption||null,
       completion_score:rpScore()
     };
-    if(rpState.group)row.group_id=rpState.group;
     const{error}=await sb.from('reports').insert(row);
     if(error)throw error;
     reportClose();loadDbReports();
@@ -2470,20 +2517,17 @@ let feedFilter='all',feedAnchor=null,feedScope='all',feedGroup=null;
 const FEED_SCOPES=[
   {id:'all',label:'Entdecken',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.2 7.8 14 14 7.8 16.2 10 10"/></svg>'},
   {id:'following',label:'Folge ich',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>'},
-  {id:'groups',label:'Gruppen',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.4"/><path d="M2.5 19a6.5 6.5 0 0 1 13 0M15.5 19a5 5 0 0 1 6 0"/></svg>'},
   {id:'near',label:'Nähe',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>'}
 ];
-function groupName(id){const g=allGroups.find(x=>x.id===id)||myGroups.find(x=>x.id===id);return g?g.name:'Gruppe';}
 function feedOpen(){
   const fp=document.getElementById('feedPage');fp.classList.add('open');
   document.getElementById('feedScope').innerHTML=FEED_SCOPES.map(s=>
     `<button data-s="${s.id}" class="${feedScope===s.id?'active':''}" onclick="feedSetScope('${s.id}')">${s.icon}${s.label}</button>`).join('');
-  document.getElementById('feedFilter').innerHTML=['all','snow','route','danger','tour','info'].map(f=>{
+  document.getElementById('feedFilter').innerHTML=['all','snow','route','danger','info'].map(f=>{
     const cat=RP_CATS.find(c=>c.id===f);const lbl=f==='all'?'Alle':(catSvg(f,14)+' '+cat.label);
     return`<button class="${feedFilter===f?'active':''}" onclick="feedSetFilter('${f}')">${lbl}</button>`;}).join('');
   document.getElementById('feedLoc').style.display=feedScope==='near'?'flex':'none';
-  document.getElementById('feedGroups').style.display=feedScope==='groups'?'flex':'none';
-  groupsRender();feedRender();
+  feedRender();
 }
 function feedClose(){document.getElementById('feedPage').classList.remove('open');}
 function feedCreatePost(){if(!sb||!sbUser){authShow();return;}feedClose();setTimeout(()=>{rpState.cat=null;reportOpenSheet();},370);}
@@ -2522,11 +2566,8 @@ async function addComment(){
 function feedSetScope(s){feedScope=s;
   document.querySelectorAll('#feedScope button').forEach(b=>b.classList.toggle('active',b.dataset.s===s));
   document.getElementById('feedLoc').style.display=s==='near'?'flex':'none';
-  document.getElementById('feedGroups').style.display=s==='groups'?'flex':'none';
-  if(s==='groups')groupsRender();
   feedRender();haptic(5);}
-function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter button').forEach((b,i)=>{b.classList.toggle('active',['all','snow','route','danger','tour','info'][i]===f);});feedRender();}
-function feedSetGroup(id){feedGroup=id;groupsRender();feedRender();}
+function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter button').forEach((b,i)=>{b.classList.toggle('active',['all','snow','route','danger','info'][i]===f);});feedRender();}
 function feedSetAnchor(a){feedAnchor=a;
   document.getElementById('feedNear').classList.toggle('active',!!a&&a.src==='me');
   document.getElementById('feedPeakBtn').classList.toggle('active',!!a&&a.src==='peak');
@@ -2564,23 +2605,6 @@ function locPickerFilter(q){const list=(locPickerMode==='peak'?PEAKS:DESTS);q=(q
   el.innerHTML=items.length?items.map(o=>`<button onclick="locPickerPick(${o.i})"><span>${o.p.n}</span>${o.p.e?'<span class="lp-e">'+o.p.e+' m</span>':''}</button>`).join(''):'<div class="lp-empty">Nichts gefunden</div>';}
 function locPickerPick(i){const p=(locPickerMode==='peak'?PEAKS:DESTS)[i];
   feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:locPickerMode});locPickerClose();haptic(6);}
-// --- Groups UI ---
-function groupsRender(){
-  const row=document.getElementById('feedGroups');
-  if(row){let h='';
-    if(myGroups.length){h+=`<button class="${feedGroup===null?'active':''}" onclick="feedSetGroup(null)">Alle meine</button>`;
-      h+=myGroups.map(g=>`<button class="${feedGroup===g.id?'active':''}" onclick="feedSetGroup('${g.id}')">👥 ${g.name}</button>`).join('');}
-    h+=`<button class="manage" onclick="groupsOpen()">⚙ Verwalten</button>`;row.innerHTML=h;}
-  const list=document.getElementById('groupsList');
-  if(list){
-    if(!sb||!sbUser){list.innerHTML='<div class="groups-empty">Melde dich an, um Gruppen beizutreten oder zu erstellen.</div>';return;}
-    if(!allGroups.length){list.innerHTML='<div class="groups-empty">Noch keine Gruppen. Erstelle oben die erste!</div>';return;}
-    const mine=new Set(myGroups.map(g=>g.id));
-    list.innerHTML=allGroups.map(g=>{const joined=mine.has(g.id);
-      return`<div class="groups-row"><div style="flex:1"><div class="gr-name">${g.name}</div>${g.description?'<div class="gr-meta">'+g.description+'</div>':''}</div><button class="${joined?'joined':''}" onclick="${joined?'leaveGroup':'joinGroup'}('${g.id}')">${joined?'Mitglied':'Beitreten'}</button></div>`;}).join('');}
-}
-function groupsOpen(){document.getElementById('groupsModal').style.display='flex';groupsRender();}
-function groupsClose(){document.getElementById('groupsModal').style.display='none';}
 function feedRender(){
   const list=document.getElementById('feedList');
   let base=allReports.slice();
@@ -2588,10 +2612,6 @@ function feedRender(){
     if(!sbUser){list.innerHTML='<div class="feed-empty">Melde dich an, um Leuten zu folgen und ihre Reports hier zu sehen.</div>';return;}
     base=base.filter(r=>r.dbRow&&r.userId&&myFollowing.has(r.userId));
     if(!base.length){list.innerHTML='<div class="feed-empty">Du folgst noch niemandem. Tippe bei einem Report auf „Folgen".</div>';return;}
-  }else if(feedScope==='groups'){
-    const gm=new Set(myGroups.map(g=>g.id));
-    base=base.filter(r=>r.dbRow&&r.groupId&&(feedGroup?r.groupId===feedGroup:gm.has(r.groupId)));
-    if(!base.length){list.innerHTML='<div class="feed-empty">Keine Gruppen-Reports. Tritt einer Gruppe bei (⚙ Verwalten) oder poste in einer Gruppe.</div>';return;}
   }
   let filtered=feedFilter==='all'?base:base.filter(r=>r.cat===feedFilter);
   if(feedAnchor){filtered=filtered.map(r=>({r,km:haversineKm(feedAnchor.lat,feedAnchor.lng,r.lat,r.lng)})).sort((a,b)=>a.km-b.km).map(o=>{o.r._km=o.km;return o.r;});}
@@ -2603,8 +2623,7 @@ function feedRender(){
     const distTag=(feedAnchor&&r._km!=null)?`<span class="feed-card-dist">${r._km<1?Math.round(r._km*1000)+' m':r._km.toFixed(r._km<10?1:0)+' km'}</span>`:'';
     const canFollow=r.dbRow&&r.userId&&(!sbUser||r.userId!==sbUser.id);
     const followBtn=canFollow?`<button class="feed-follow ${myFollowing.has(r.userId)?'following':''}" onclick="toggleFollow('${r.userId}',event)">${myFollowing.has(r.userId)?'Folge ich':'Folgen'}</button>`:'';
-    const likeBtn=r.dbRow?`<button class="${r.liked?'liked':''}" onclick="toggleLike('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/></svg> ${r.likes||0}</button>`:'';
-    const grpBadge=r.groupId?`<span class="feed-card-group">👥 ${groupName(r.groupId)}</span>`:'';
+    const endBtn=r.dbRow?`<button class="endorse-btn ${r.liked?'endorsed':''}" onclick="toggleEndorse('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> ${r.likes||0}<span class="endorse-lbl">${r.liked?'Bestätigt':'Bestätigen'}</span></button>`:'';
     return`<div class="feed-card" onclick="feedFlyTo(${r.lat},${r.lng})">
       <div class="feed-card-head">
         <div class="feed-card-avatar" style="background:${avatarBg}">${r.user[0].toUpperCase()}</div>
@@ -2622,12 +2641,12 @@ function feedRender(){
         <div class="feed-card-badges">
           <span class="feed-badge cat-${r.cat}">${catSvg(r.cat,14)} ${r.sub||r.cat}</span>
           ${r.measurement?`<span class="feed-badge cat-${r.cat}">${r.measurement}</span>`:''}
-          ${grpBadge}
+          ${r.stars?`<span class="feed-badge cat-${r.cat}">★ ${r.stars}/5</span>`:''}
         </div>
         ${r.caption?`<div class="feed-card-caption"><b>${r.user}</b> ${r.caption}</div>`:''}
       </div>
       <div class="feed-card-actions">
-        ${likeBtn}
+        ${endBtn}
         ${r.dbRow?`<button onclick="openComments('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg> ${r.comments||0}</button>`:''}
         <button onclick="event.stopPropagation();feedFlyTo(${r.lat},${r.lng})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Karte</button>
       </div>
