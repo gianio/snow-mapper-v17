@@ -145,6 +145,10 @@ CREATE POLICY "group_members_manage_own" ON group_members
 -- Link reports to an optional group
 ALTER TABLE reports ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES groups(id) ON DELETE SET NULL;
 
+-- Profile customization
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS push_enabled BOOLEAN DEFAULT false;
+
 -- Comments on reports
 CREATE TABLE IF NOT EXISTS report_comments (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

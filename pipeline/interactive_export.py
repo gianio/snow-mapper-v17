@@ -966,6 +966,35 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .cmt-input button{width:46px;height:46px;border-radius:50%;border:none;background:var(--acc);color:#fff;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
  .cmt-input button svg{width:20px;height:20px}
  .cmt-input button:active{transform:scale(.92)}
+ /* Profile sheet */
+ .prof-modal{position:fixed;inset:0;z-index:5200;background:rgba(11,17,32,.5);backdrop-filter:blur(6px);display:flex;flex-direction:column;justify-content:flex-end}
+ @media(min-width:561px){.prof-modal{justify-content:center;align-items:center;padding:16px}}
+ .prof-sheet{background:#fff;border-radius:22px 22px 0 0;max-height:88vh;overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,.2)}
+ @media(min-width:561px){.prof-sheet{border-radius:22px;width:100%;max-width:420px}}
+ .prof-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 8px;font-size:19px;font-weight:800;color:var(--fg)}
+ .prof-head button{background:none;border:none;font-size:19px;color:var(--mut);cursor:pointer}
+ .prof-body{padding:8px 20px calc(env(safe-area-inset-bottom,0px)+20px)}
+ .prof-top{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+ .prof-av{position:relative;width:76px;height:76px;border-radius:50%;background:var(--fg);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;cursor:pointer;flex-shrink:0;overflow:hidden;background-size:cover;background-position:center}
+ .prof-av .prof-av-edit{position:absolute;right:-2px;bottom:-2px;width:28px;height:28px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;border:2.5px solid #fff}
+ .prof-av .prof-av-edit svg{width:14px;height:14px}
+ .prof-av.has-img span{display:none}
+ .prof-meta{min-width:0}
+ .prof-name{font-size:20px;font-weight:800;color:var(--fg);letter-spacing:-.02em}
+ .prof-endo{font-size:14px;color:var(--acc2);font-weight:700;margin-top:2px}
+ .prof-lbl{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--fg2);margin-bottom:6px}
+ .prof-cnt{color:var(--mut);font-weight:600}
+ .prof-cnt.over{color:#d03050}
+ .prof-bio{width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid rgba(15,29,47,.1);border-radius:14px;font-size:15px;font-family:inherit;resize:none;outline:none;background:#f5f8fb;color:var(--fg);min-height:96px}
+ .prof-bio:focus{border-color:var(--acc);background:#fff}
+ .prof-row{display:flex;align-items:center;justify-content:space-between;margin-top:16px;font-size:15px;font-weight:600;color:var(--fg)}
+ .prof-toggle{width:50px;height:30px;border-radius:999px;border:none;background:rgba(15,29,47,.15);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+ .prof-toggle span{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+ .prof-toggle.on{background:var(--acc)}
+ .prof-toggle.on span{left:23px}
+ .prof-save{width:100%;margin-top:20px;padding:15px;border-radius:15px;border:none;background:var(--acc);color:#fff;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit}
+ .prof-save:hover{background:var(--acc2)}
+ .prof-signout{width:100%;margin-top:10px;padding:13px;border-radius:14px;border:none;background:none;color:#d03050;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
  /* Location search picker (Gipfel / Gebiet) */
  .loc-picker{position:fixed;inset:0;z-index:3800;background:rgba(11,17,32,.5);backdrop-filter:blur(4px);display:flex;flex-direction:column;justify-content:flex-end}
  .loc-picker-sheet{background:#fff;border-radius:22px 22px 0 0;max-height:80vh;display:flex;flex-direction:column;padding-bottom:calc(env(safe-area-inset-bottom,0px)+8px);box-shadow:0 -8px 40px rgba(0,0,0,.2)}
@@ -1212,6 +1241,23 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <div class="cmt-head"><span>Kommentare</span><button onclick="commentsClose()">✕</button></div>
     <div class="cmt-list" id="cmtList"></div>
     <div class="cmt-input"><input id="cmtInput" type="text" placeholder="Kommentar schreiben…" maxlength="500" onkeydown="if(event.key==='Enter')addComment()"/><button onclick="addComment()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div>
+  </div>
+</div>
+<div class="prof-modal" id="profModal" style="display:none" onclick="if(event.target===this)profClose()">
+  <div class="prof-sheet">
+    <div class="prof-head"><span>Profil</span><button onclick="profClose()">✕</button></div>
+    <div class="prof-body">
+      <div class="prof-top">
+        <div class="prof-av" id="profAv" onclick="document.getElementById('profAvFile').click()"><span id="profAvInitial"></span><div class="prof-av-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div></div>
+        <input type="file" id="profAvFile" accept="image/*" hidden onchange="profSetAvatar(this)"/>
+        <div class="prof-meta"><div class="prof-name" id="profName">User</div><div class="prof-endo" id="profEndo">– Endorsements</div></div>
+      </div>
+      <label class="prof-lbl">Über dich <span class="prof-cnt" id="profBioCnt">0/200</span></label>
+      <textarea class="prof-bio" id="profBio" maxlength="1400" placeholder="Kurze Beschreibung (max. 200 Wörter, keine Links)…" oninput="profBioInput()"></textarea>
+      <div class="prof-row"><span>Push-Benachrichtigungen</span><button class="prof-toggle" id="profPush" onclick="profTogglePush()"><span></span></button></div>
+      <button class="prof-save" id="profSave" onclick="profSave()">Speichern</button>
+      <button class="prof-signout" onclick="profSignOut()">Abmelden</button>
+    </div>
   </div>
 </div>
 <div id="coach" style="display:none"><div id="coachSpot"></div><div id="coachCard"><div id="coachText"></div><div id="coachNav"><span id="coachDots"></span><button id="coachSkip">Überspringen</button><button id="coachNext">Weiter</button></div></div></div>
@@ -2083,9 +2129,10 @@ function authUpdateUI(user){
   const fab=document.getElementById('reportFab'),feedB=document.getElementById('feedBtn'),banner=document.getElementById('emailBanner');
   if(user){
     const name=user.user_metadata?.username||user.email?.split('@')[0]||'User';
-    btn.outerHTML=`<div class="user-pill" id="userPill" onclick="authMenu()">
-      <div class="user-avatar"><span>${name[0].toUpperCase()}</span></div>
+    btn.outerHTML=`<div class="user-pill" id="userPill" onclick="openProfile()">
+      <div class="user-avatar" id="userPillAv"><span>${name[0].toUpperCase()}</span></div>
       <span class="user-name">${name}</span></div>`;
+    loadMyProfileAvatar();
     fab.style.display='flex';
     banner.style.display=user.email_confirmed_at?'none':'flex';
   } else {
@@ -2185,7 +2232,72 @@ async function authSubmit(e){
   }catch(err){errEl.style.color='#FF5470';errEl.textContent=err.message||'Error';}
 }
 async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email});document.getElementById('emailBanner').querySelector('button').textContent='Sent!';}
-function authMenu(){if(confirm('Sign out?')){if(sb)sb.auth.signOut();authUpdateUI(null);}}
+function authMenu(){openProfile();}
+// --- Profile & Settings ---
+let myProfile=null,profAvatarFile=null,profAvatarUrl=null;
+function sanitizeBio(t){
+  t=(t||'').replace(/https?:\/\/\S+/gi,'').replace(/www\.\S+/gi,'').replace(/\S+\.(com|net|org|ch|io|de|ly|co)\S*/gi,'');
+  const words=t.trim().split(/\s+/).filter(Boolean);
+  return words.slice(0,200).join(' ');
+}
+function profBioInput(){const ta=document.getElementById('profBio');const words=ta.value.trim().split(/\s+/).filter(Boolean).length;
+  const cnt=document.getElementById('profBioCnt');cnt.textContent=words+'/200';cnt.classList.toggle('over',words>200);}
+async function loadMyProfileAvatar(){if(!sb||!sbUser)return;
+  try{const{data}=await sb.from('profiles').select('avatar_url').eq('id',sbUser.id).single();
+    if(data&&data.avatar_url){const av=document.getElementById('userPillAv');if(av){av.style.backgroundImage='url('+data.avatar_url+')';av.style.backgroundSize='cover';av.querySelector('span').style.display='none';}}}catch(e){}}
+async function openProfile(){
+  if(!sb||!sbUser){authShow();return;}
+  document.getElementById('profModal').style.display='flex';
+  const name=sbUser.user_metadata?.username||sbUser.email?.split('@')[0]||'User';
+  document.getElementById('profName').textContent=name;
+  document.getElementById('profAvInitial').textContent=name[0].toUpperCase();
+  document.getElementById('profEndo').textContent='… Endorsements';
+  profAvatarFile=null;
+  try{
+    const{data}=await sb.from('profiles').select('bio,avatar_url,push_enabled').eq('id',sbUser.id).single();
+    myProfile=data||{};
+    document.getElementById('profBio').value=data?.bio||'';profBioInput();
+    const av=document.getElementById('profAv');
+    if(data?.avatar_url){av.classList.add('has-img');av.style.backgroundImage='url('+data.avatar_url+')';profAvatarUrl=data.avatar_url;}
+    else{av.classList.remove('has-img');av.style.backgroundImage='';}
+    document.getElementById('profPush').classList.toggle('on',!!data?.push_enabled);
+  }catch(e){myProfile={};}
+  // endorsement total = sum of endorsements across my reports
+  try{
+    const{data:rs}=await sb.from('reports').select('id').eq('user_id',sbUser.id);
+    const ids=(rs||[]).map(r=>r.id);let total=0;
+    if(ids.length){const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',ids);total=count||0;}
+    document.getElementById('profEndo').innerHTML='<b>'+total+'</b> Endorsements';
+  }catch(e){document.getElementById('profEndo').textContent='';}
+}
+function profClose(){document.getElementById('profModal').style.display='none';}
+function profSetAvatar(inp){if(!inp.files||!inp.files[0])return;profAvatarFile=inp.files[0];
+  const url=URL.createObjectURL(profAvatarFile);const av=document.getElementById('profAv');av.classList.add('has-img');av.style.backgroundImage='url('+url+')';}
+async function profTogglePush(){
+  const t=document.getElementById('profPush');const willOn=!t.classList.contains('on');
+  if(willOn&&'Notification'in window){try{const perm=await Notification.requestPermission();if(perm!=='granted'){alert('Benachrichtigungen wurden nicht erlaubt. Bitte im Browser aktivieren.');return;}}catch(e){}}
+  t.classList.toggle('on',willOn);
+}
+async function profSave(){
+  if(!sb||!sbUser)return;
+  const btn=document.getElementById('profSave');btn.disabled=true;btn.textContent='Speichert…';
+  try{
+    let avatarUrl=profAvatarUrl;
+    if(profAvatarFile){
+      const ext=(profAvatarFile.name.split('.').pop()||'jpg').toLowerCase();
+      const path='avatars/'+sbUser.id+'_'+Date.now()+'.'+ext;
+      const{error:upErr}=await sb.storage.from('report-images').upload(path,profAvatarFile,{contentType:profAvatarFile.type||'image/jpeg',upsert:true});
+      if(!upErr){const{data}=sb.storage.from('report-images').getPublicUrl(path);avatarUrl=data?.publicUrl||avatarUrl;}
+    }
+    const bio=sanitizeBio(document.getElementById('profBio').value);
+    const push=document.getElementById('profPush').classList.contains('on');
+    const{error}=await sb.from('profiles').update({bio:bio||null,avatar_url:avatarUrl||null,push_enabled:push}).eq('id',sbUser.id);
+    if(error)throw error;
+    profAvatarUrl=avatarUrl;loadMyProfileAvatar();profClose();
+  }catch(e){alert('Fehler: '+(e.message||e));}
+  btn.disabled=false;btn.textContent='Speichern';
+}
+function profSignOut(){if(sb)sb.auth.signOut();profClose();authUpdateUI(null);}
 // --- Report categories ---
 const RP_CATS=[
   {id:'snow',label:'Schnee',icon:'❄️',subs:['Neuschnee','Nassschnee','Triebschnee','Firn','Bruchharsch','Windgepresst']},
