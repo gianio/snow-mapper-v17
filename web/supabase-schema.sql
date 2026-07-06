@@ -242,3 +242,11 @@ RETURNS JSON AS $$
   WHERE r.created_at > NOW() - since
     AND (cat IS NULL OR cat = ANY(r.primary_categories));
 $$ LANGUAGE sql STABLE;
+
+-- ============================================================
+-- IMPORTANT: reload the PostgREST schema cache so newly added
+-- columns/tables (bio, push_enabled, report_comments, …) are
+-- visible to the API immediately. Run this LAST (and any time
+-- you get "Could not find the X column ... in the schema cache").
+-- ============================================================
+NOTIFY pgrst, 'reload schema';
