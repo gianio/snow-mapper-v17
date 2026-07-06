@@ -1025,6 +1025,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .prof-save{width:100%;margin-top:20px;padding:15px;border-radius:15px;border:none;background:var(--acc);color:#fff;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit}
  .prof-save:hover{background:var(--acc2)}
  .prof-signout{width:100%;margin-top:10px;padding:13px;border-radius:14px;border:none;background:none;color:#d03050;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+ .prof-bioview{font-size:14px;color:var(--fg2);line-height:1.55;margin-top:4px;white-space:pre-wrap;min-height:12px}
+ .prof-save.following{background:var(--fg)}
+ .feed-card-avatar,.feed-card-user{cursor:pointer}
  /* Location search picker (Gipfel / Gebiet) */
  .loc-picker{position:fixed;inset:0;z-index:3800;background:rgba(11,17,32,.5);backdrop-filter:blur(4px);display:flex;flex-direction:column;justify-content:flex-end}
  .loc-picker-sheet{background:#fff;border-radius:22px 22px 0 0;max-height:80vh;display:flex;flex-direction:column;padding-bottom:calc(env(safe-area-inset-bottom,0px)+8px);box-shadow:0 -8px 40px rgba(0,0,0,.2)}
@@ -1040,7 +1043,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .loc-picker-list .lp-empty{text-align:center;color:var(--mut);padding:30px;font-size:14px}
  .feed-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,0px)}
  .feed-grid{max-width:600px;margin:0 auto;padding:0}
- .feed-card{background:#fff;margin-bottom:8px;cursor:pointer}
+ .feed-card{background:#fff;margin-bottom:8px;cursor:pointer;transition:box-shadow .3s}
+ .feed-card.flash{box-shadow:0 0 0 3px var(--acc) inset;animation:cardFlash 1.8s ease}
+ @keyframes cardFlash{0%,100%{background:#fff}30%{background:rgba(26,127,212,.08)}}
  .feed-card-head{display:flex;align-items:center;gap:10px;padding:12px 16px}
  .feed-card-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;letter-spacing:.02em;color:#fff}
  .feed-card-info{flex:1;min-width:0}
@@ -1288,6 +1293,16 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <div class="prof-row"><span>Push-Benachrichtigungen</span><button class="prof-toggle" id="profPush" onclick="profTogglePush()"><span></span></button></div>
       <button class="prof-save" id="profSave" onclick="profSave()">Speichern</button>
       <button class="prof-signout" onclick="profSignOut()">Abmelden</button>
+    </div>
+  </div>
+</div>
+<div class="prof-modal" id="userViewModal" style="display:none" onclick="if(event.target===this)userViewClose()">
+  <div class="prof-sheet">
+    <div class="prof-head"><span>Profil</span><button onclick="userViewClose()">✕</button></div>
+    <div class="prof-body">
+      <div class="prof-top"><div class="prof-av" id="uvAv"><span id="uvInitial"></span></div><div class="prof-meta"><div class="prof-name" id="uvName"></div><div class="prof-endo" id="uvEndo"></div></div></div>
+      <div class="prof-bioview" id="uvBio"></div>
+      <button class="prof-save" id="uvFollow" onclick="uvToggleFollow()">Folgen</button>
     </div>
   </div>
 </div>
@@ -2167,9 +2182,17 @@ function loadReportMarkers(){
       icon=L.divIcon({className:'',html:`<div class="rpt-marker" style="color:${mColor}">${CAT_SVG[r.cat]||r.icon}</div>`,iconSize:[36,36],iconAnchor:[18,18]});
     }
     const m=L.marker([r.lat,r.lng],{icon,zIndexOffset:700}).addTo(reportMarkers);
-    m.bindPopup(`<div style="min-width:180px"><b>${r.user}</b> <span style="color:#7a8a9a;font-size:12px">${r.time}</span><br><span style="font-size:13px;display:inline-flex;align-items:center;gap:5px;color:${mColor}">${catSvg?catSvg(r.cat,14):''} ${r.sub||r.cat}${r.measurement?' · '+r.measurement:''}</span>${r.caption?'<br><span style="font-size:13px;color:#3a4a5a">'+r.caption+'</span>':''}</div>`,{maxWidth:260});
+    const rid=r.id;
+    m.bindPopup(`<div style="min-width:180px"><b>${r.user}</b> <span style="color:#7a8a9a;font-size:12px">${r.time}</span><br><span style="font-size:13px;display:inline-flex;align-items:center;gap:5px;color:${mColor}">${catSvg?catSvg(r.cat,14):''} ${r.sub||r.cat}${r.measurement?' · '+r.measurement:''}</span>${r.caption?'<br><span style="font-size:13px;color:#3a4a5a">'+r.caption+'</span>':''}<br><a href="javascript:void(0)" onclick="feedOpenAt('${rid}')" style="font-size:12px;font-weight:700;color:#1a7fd4">Im Feed öffnen →</a></div>`,{maxWidth:260});
+    m.on('click',function(){if(rptLastOpen===rid){feedOpenAt(rid);}else{rptLastOpen=rid;}});
+    m.on('popupclose',function(){if(rptLastOpen===rid)rptLastOpen=null;});
   });
 }
+let rptLastOpen=null;
+function feedOpenAt(id){feedScope='all';feedFilter='all';feedAnchor=null;
+  if(document.getElementById('inspPanel'))document.getElementById('inspPanel').classList.remove('open');
+  feedOpen();
+  setTimeout(()=>{const el=document.getElementById('feedcard-'+id);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1800);}},160);}
 // --- Auth UI ---
 function authUpdateUI(user){
   sbUser=user;
@@ -2346,6 +2369,30 @@ async function profSave(){
   btn.disabled=false;btn.textContent='Speichern';
 }
 function profSignOut(){if(sb)sb.auth.signOut();profClose();authUpdateUI(null);}
+// --- View another user's profile ---
+let uvUid=null;
+async function viewUser(uid,username){
+  if(!uid){return;} uvUid=uid;
+  if(sbUser&&uid===sbUser.id){openProfile();return;}
+  document.getElementById('userViewModal').style.display='flex';
+  document.getElementById('uvName').textContent=username||'User';
+  document.getElementById('uvInitial').textContent=(username||'U')[0].toUpperCase();
+  const av=document.getElementById('uvAv');av.classList.remove('has-img');av.style.backgroundImage='';
+  document.getElementById('uvBio').textContent='';document.getElementById('uvEndo').textContent='…';
+  const fb=document.getElementById('uvFollow');fb.textContent=myFollowing.has(uid)?'Folge ich':'Folgen';fb.classList.toggle('following',myFollowing.has(uid));
+  if(!sb)return;
+  try{const{data}=await sb.from('profiles').select('username,bio,avatar_url').eq('id',uid).single();
+    if(data){document.getElementById('uvName').textContent=data.username||username||'User';document.getElementById('uvInitial').textContent=(data.username||'U')[0].toUpperCase();
+      document.getElementById('uvBio').textContent=data.bio||'';
+      if(data.avatar_url){av.classList.add('has-img');av.style.backgroundImage='url('+data.avatar_url+')';}}
+  }catch(e){}
+  try{const{data:rs}=await sb.from('reports').select('id').eq('user_id',uid);const ids=(rs||[]).map(r=>r.id);let total=0;
+    if(ids.length){const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',ids);total=count||0;}
+    document.getElementById('uvEndo').innerHTML='<b>'+total+'</b> Endorsements';}catch(e){document.getElementById('uvEndo').textContent='';}
+}
+function userViewClose(){document.getElementById('userViewModal').style.display='none';}
+async function uvToggleFollow(){if(!sb||!sbUser){authShow();return;}await toggleFollow(uvUid);
+  const fb=document.getElementById('uvFollow');fb.textContent=myFollowing.has(uvUid)?'Folge ich':'Folgen';fb.classList.toggle('following',myFollowing.has(uvUid));}
 // --- Report categories ---
 const RP_CATS=[
   {id:'snow',label:'Schnee',icon:'❄️',subs:['Neuschnee','Nassschnee','Triebschnee','Firn','Bruchharsch','Windgepresst']},
@@ -2557,7 +2604,7 @@ function reportClose(){document.getElementById('reportOverlay').style.display='n
   rpReset();}
 function rpRenderCats(){
   document.getElementById('rpCats').innerHTML=RP_CATS.map(c=>
-    `<button class="cat-chip${rpState.cat===c.id?' active':''}" data-id="${c.id}" style="${rpState.cat===c.id?'color:'+CAT_COLORS[c.id]:''}" onclick="rpPickCat('${c.id}')"><span class="cat-ico-w">${CAT_SVG[c.id]}</span>${c.label}</button>`
+    `<button class="cat-chip${rpState.cat===c.id?' active':''}" data-id="${c.id}" style="${rpState.cat===c.id?'color:'+CAT_COLORS[c.id]:''}" onclick="rpPickCat('${c.id}')"><span class="cat-ico-w" style="color:${CAT_COLORS[c.id]}">${CAT_SVG[c.id]}</span>${c.label}</button>`
   ).join('');
 }
 function rpPickCat(id){rpState.cat=id;rpState.sub=null;rpState.details={};haptic(10);
@@ -2679,7 +2726,8 @@ let feedFilter='all',feedAnchor=null,feedScope='all',feedGroup=null;
 const FEED_SCOPES=[
   {id:'all',label:'Entdecken',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.2 7.8 14 14 7.8 16.2 10 10"/></svg>'},
   {id:'following',label:'Folge ich',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>'},
-  {id:'near',label:'Nähe',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>'}
+  {id:'near',label:'Nähe',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>'},
+  {id:'map',label:'Kartenausschnitt',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21 1 6"/><line x1="8" y1="3" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="21"/></svg>'}
 ];
 function feedOpen(){
   const fp=document.getElementById('feedPage');fp.classList.add('open');
@@ -2728,6 +2776,8 @@ async function addComment(){
 function feedSetScope(s){feedScope=s;
   document.querySelectorAll('#feedScope button').forEach(b=>b.classList.toggle('active',b.dataset.s===s));
   document.getElementById('feedLoc').style.display=s==='near'?'flex':'none';
+  // Nähe: immediately use the current device location
+  if(s==='near'&&(!feedAnchor||feedAnchor.src!=='me')){const nb=document.getElementById('feedNear');if(nb)nb.click();}
   feedRender();haptic(5);}
 function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter button').forEach((b,i)=>{b.classList.toggle('active',['all','snow','route','danger','info'][i]===f);});feedRender();}
 function feedSetAnchor(a){feedAnchor=a;
@@ -2774,6 +2824,9 @@ function feedRender(){
     if(!sbUser){list.innerHTML='<div class="feed-empty">Melde dich an, um Leuten zu folgen und ihre Reports hier zu sehen.</div>';return;}
     base=base.filter(r=>r.dbRow&&r.userId&&myFollowing.has(r.userId));
     if(!base.length){list.innerHTML='<div class="feed-empty">Du folgst noch niemandem. Tippe bei einem Report auf „Folgen".</div>';return;}
+  }else if(feedScope==='map'){
+    const bnds=map.getBounds();base=base.filter(r=>bnds.contains([r.lat,r.lng]));
+    if(!base.length){list.innerHTML='<div class="feed-empty">Keine Reports im aktuellen Kartenausschnitt. Zoome heraus oder verschiebe die Karte.</div>';return;}
   }
   let filtered=feedFilter==='all'?base:base.filter(r=>r.cat===feedFilter);
   if(feedAnchor){filtered=filtered.map(r=>({r,km:haversineKm(feedAnchor.lat,feedAnchor.lng,r.lat,r.lng)})).sort((a,b)=>a.km-b.km).map(o=>{o.r._km=o.km;return o.r;});}
@@ -2786,11 +2839,11 @@ function feedRender(){
     const canFollow=r.dbRow&&r.userId&&(!sbUser||r.userId!==sbUser.id);
     const followBtn=canFollow?`<button class="feed-follow ${myFollowing.has(r.userId)?'following':''}" onclick="toggleFollow('${r.userId}',event)">${myFollowing.has(r.userId)?'Folge ich':'Folgen'}</button>`:'';
     const endBtn=r.dbRow?`<button class="endorse-btn ${r.liked?'endorsed':''}" onclick="toggleEndorse('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> ${r.likes||0}<span class="endorse-lbl">${r.liked?'Bestätigt':'Bestätigen'}</span></button>`:'';
-    return`<div class="feed-card" onclick="feedFlyTo(${r.lat},${r.lng})">
+    return`<div class="feed-card" id="feedcard-${r.id}" onclick="feedFlyTo(${r.lat},${r.lng})">
       <div class="feed-card-head">
-        <div class="feed-card-avatar" style="background:${avatarBg}">${r.user[0].toUpperCase()}</div>
+        <div class="feed-card-avatar" style="background:${avatarBg}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/'/g,'')}')"`:''}>${r.user[0].toUpperCase()}</div>
         <div class="feed-card-info">
-          <span class="feed-card-user">${r.user}</span>
+          <span class="feed-card-user"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/'/g,'')}')"`:''}>${r.user}</span>
           <span class="feed-card-loc"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> ${r.peak?r.peak:(r.lat.toFixed(2)+'°N, '+r.lng.toFixed(2)+'°E')}</span>
         </div>
         ${followBtn||distTag||`<span class="feed-card-time">${r.time}</span>`}
