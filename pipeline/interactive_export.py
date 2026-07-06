@@ -804,6 +804,22 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .auth-err{color:#d03030;font-size:13px;padding:8px 12px;background:rgba(220,60,60,.06);border-radius:10px;min-height:0}
  .auth-btn{padding:13px;border-radius:var(--r);border:none;font-size:15px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;letter-spacing:-.01em;transition:all .15s}
  .auth-btn.primary{background:var(--fg);color:#fff}.auth-btn.primary:hover{background:#000}
+ .auth-btn.ghost{background:none;color:var(--mut);margin-top:8px}
+ .auth-btn.ghost:hover{background:rgba(0,0,0,.04);color:var(--fg)}
+ .auth-code{width:100%;box-sizing:border-box;text-align:center;font-size:30px!important;font-weight:800;letter-spacing:12px;padding:14px 8px!important;border:1.5px solid rgba(0,0,0,.1)!important;border-radius:14px;background:#f5f7fa;color:var(--fg);outline:none;margin-bottom:10px;font-family:inherit}
+ .auth-code:focus{border-color:var(--acc)!important;background:#fff;box-shadow:0 0 0 3px var(--glow)}
+ .auth-paste{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:1.5px dashed rgba(26,127,212,.3);border-radius:12px;background:rgba(26,127,212,.05);color:var(--acc2);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px}
+ .auth-paste svg{width:17px;height:17px}
+ .auth-paste:hover{background:rgba(26,127,212,.1)}
+ .auth-bio-ic{width:64px;height:64px;margin:6px auto 12px;border-radius:20px;background:rgba(26,127,212,.1);color:var(--acc);display:flex;align-items:center;justify-content:center}
+ .auth-bio-ic svg{width:36px;height:36px}
+ .bio-lock{position:fixed;inset:0;z-index:8500;background:linear-gradient(160deg,#0a1628,#0e3460 60%,#1a6090);display:flex;align-items:center;justify-content:center;padding:24px}
+ .bio-lock-card{text-align:center;color:#fff;max-width:300px;width:100%}
+ .bio-lock-card .auth-bio-ic{background:rgba(255,255,255,.12);color:#fff;width:76px;height:76px}
+ .bio-lock-t{font-size:22px;font-weight:800;letter-spacing:-.02em}
+ .bio-lock-s{font-size:14px;color:rgba(255,255,255,.7);margin:4px 0 22px}
+ .bio-lock-card .auth-btn.primary{background:#fff;color:var(--fg)}
+ .bio-lock-out{background:none;border:none;color:rgba(255,255,255,.6);font-size:14px;font-weight:600;cursor:pointer;margin-top:14px;font-family:inherit}
  .auth-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;color:var(--mut);cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center}
  .auth-close:hover{background:rgba(0,0,0,.05)}
  .auth-switch{text-align:center;margin-top:20px;font-size:13px;color:var(--mut)}
@@ -1167,18 +1183,41 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="radial-wrap" id="radialWrap"><div class="radial-bg"></div><div class="radial-ring" id="radialRing"></div><div class="radial-center" id="radialCenter">✕</div></div>
 <div class="auth-overlay" id="authOverlay" style="display:none" onclick="authHide()">
 <div class="auth-modal" onclick="event.stopPropagation()">
-<button class="auth-close" onclick="authHide()">&times;</button>
-<h2 id="authTitle">Sign in</h2>
-<p class="auth-sub" id="authSub">Sign in to post field reports</p>
+<button class="auth-close" id="authClose" onclick="authHide()">&times;</button>
+<h2 id="authTitle">Anmelden</h2>
+<p class="auth-sub" id="authSub">Anmelden für Field Reports</p>
 <form id="authForm" onsubmit="authSubmit(event)">
 <input type="text" id="authUser" placeholder="Username" autocomplete="username" style="display:none"/>
-<input type="email" id="authEmail" placeholder="Email" autocomplete="email" required/>
-<input type="password" id="authPass" placeholder="Password" autocomplete="current-password" required minlength="8"/>
+<input type="email" id="authEmail" placeholder="E-Mail" autocomplete="email" required/>
+<input type="password" id="authPass" placeholder="Passwort" autocomplete="current-password" required minlength="8"/>
 <div class="auth-err" id="authErr"></div>
-<button class="auth-btn primary" type="submit" id="authSubmitBtn">Sign in</button>
+<button class="auth-btn primary" type="submit" id="authSubmitBtn">Anmelden</button>
 </form>
-<div class="auth-switch" id="authSwitch">No account? <button onclick="authToggle()">Register</button></div>
+<div id="authCodeBox" style="display:none">
+  <p class="auth-sub" id="authCodeSub">Wir haben dir einen 6-stelligen Code geschickt.</p>
+  <input type="text" id="authCode" class="auth-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="––––––" oninput="authCodeInput()"/>
+  <button class="auth-paste" type="button" onclick="authPasteCode()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Code aus E-Mail einfügen</button>
+  <div class="auth-err" id="authCodeErr"></div>
+  <button class="auth-btn primary" id="authCodeBtn" onclick="authVerifyCode()">Bestätigen</button>
+  <div class="auth-switch">Kein Code erhalten? <button onclick="authResendCode()">Erneut senden</button> · <button onclick="authBackToForm()">Zurück</button></div>
 </div>
+<div id="authBioBox" style="display:none">
+  <div class="auth-bio-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10a3 3 0 0 1 6 0M8.5 15.5c1 1 5 1 7 0M12 10v3.5"/></svg></div>
+  <p class="auth-sub" style="text-align:center;margin-bottom:14px">Nächstes Mal schneller & sicher mit <b id="authBioName">Biometrie</b> anmelden?</p>
+  <button class="auth-btn primary" onclick="authEnableBio()">Aktivieren</button>
+  <button class="auth-btn ghost" onclick="authFinishBio()">Später</button>
+</div>
+<div class="auth-switch" id="authSwitch">Kein Account? <button onclick="authToggle()">Registrieren</button></div>
+</div>
+</div>
+<div class="bio-lock" id="bioLock" style="display:none">
+  <div class="bio-lock-card">
+    <div class="auth-bio-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10a3 3 0 0 1 6 0M8.5 15.5c1 1 5 1 7 0M12 10v3.5"/></svg></div>
+    <div class="bio-lock-t">Swiss Snow Model</div>
+    <div class="bio-lock-s">Entsperre mit <b id="bioLockName">Biometrie</b></div>
+    <button class="auth-btn primary" onclick="bioUnlock()">Entsperren</button>
+    <button class="bio-lock-out" onclick="bioSignOut()">Abmelden</button>
+  </div>
 </div>
 <div class="report-overlay" id="reportOverlay" style="display:none">
 <div class="ro-bg" onclick="reportClose()"></div>
@@ -2206,6 +2245,9 @@ function authUpdateUI(user){
     loadMyProfileAvatar();
     fab.style.display='flex';
     banner.style.display=user.email_confirmed_at?'none':'flex';
+    // biometric lock on a restored session (not right after an explicit login)
+    if(!justLoggedIn&&!bioUnlocked&&bioEnabledFor(user.id))showBioLock();
+    justLoggedIn=false;
   } else {
     const pill=document.getElementById('userPill');
     if(pill)pill.outerHTML='<button class="login-btn" id="btnLogin" onclick="authShow()">Sign in</button>';
@@ -2274,11 +2316,23 @@ function timeAgo(ts){const d=Date.now()-new Date(ts).getTime(),h=d/36e5;if(h<1)r
 if(sb){sb.auth.onAuthStateChange((ev,session)=>{authUpdateUI(session?.user||null);});
   sb.auth.getSession().then(({data})=>{authUpdateUI(data.session?.user||null);});}
 else{document.getElementById('feedBtn').style.display='flex';loadReportMarkers();}
+let authPendingEmail=null,justLoggedIn=false;
 function authShow(){authMode='login';authRender();document.getElementById('authOverlay').style.display='flex';}
-function authHide(){document.getElementById('authOverlay').style.display='none';document.getElementById('authErr').textContent='';}
+function authHide(){document.getElementById('authOverlay').style.display='none';document.getElementById('authErr').textContent='';document.getElementById('authCodeErr').textContent='';}
 function authToggle(){authMode=authMode==='login'?'register':'login';authRender();}
+function authBackToForm(){authMode='login';authRender();}
 function authRender(){
-  const isReg=authMode==='register';
+  const isReg=authMode==='register',isCode=authMode==='code',isBio=authMode==='biometric';
+  document.getElementById('authForm').style.display=(isCode||isBio)?'none':'flex';
+  document.getElementById('authCodeBox').style.display=isCode?'block':'none';
+  document.getElementById('authBioBox').style.display=isBio?'block':'none';
+  document.getElementById('authSwitch').style.display=(isCode||isBio)?'none':'block';
+  document.getElementById('authClose').style.display=isBio?'none':'flex';
+  if(isCode){document.getElementById('authTitle').textContent='E-Mail bestätigen';document.getElementById('authSub').style.display='none';
+    document.getElementById('authCodeSub').textContent='Wir haben einen 6-stelligen Code an '+(authPendingEmail||'deine E-Mail')+' geschickt.';return;}
+  if(isBio){document.getElementById('authTitle').textContent='Biometrischer Login';document.getElementById('authSub').style.display='none';
+    document.getElementById('authBioName').textContent=bioName();return;}
+  document.getElementById('authSub').style.display='';
   document.getElementById('authTitle').textContent=isReg?'Account erstellen':'Anmelden';
   document.getElementById('authSub').textContent=isReg?'Erstelle ein Konto für Field Reports':'Anmelden für Field Reports';
   document.getElementById('authUser').style.display=isReg?'':'none';
@@ -2289,20 +2343,80 @@ async function authSubmit(e){
   e.preventDefault();if(!sb)return;
   const email=document.getElementById('authEmail').value.trim();
   const pass=document.getElementById('authPass').value;
-  const errEl=document.getElementById('authErr');errEl.textContent='';
+  const errEl=document.getElementById('authErr');errEl.textContent='';errEl.style.color='#FF5470';
   try{
     if(authMode==='register'){
       const username=document.getElementById('authUser').value.trim();
-      if(!username){errEl.textContent='Username required';return;}
+      if(!username){errEl.textContent='Benutzername erforderlich';return;}
       const{error}=await sb.auth.signUp({email,password:pass,options:{data:{username}}});
       if(error)throw error;
-      errEl.style.color='#5EC8FF';errEl.textContent='Check your email to confirm!';return;
+      authPendingEmail=email;authMode='code';authRender();setTimeout(()=>document.getElementById('authCode').focus(),100);return;
     }
     const{error}=await sb.auth.signInWithPassword({email,password:pass});
-    if(error)throw error;authHide();
-  }catch(err){errEl.style.color='#FF5470';errEl.textContent=err.message||'Error';}
+    if(error){
+      if(/confirm|verif/i.test(error.message||'')){authPendingEmail=email;try{await sb.auth.resend({type:'signup',email});}catch(x){}authMode='code';authRender();return;}
+      throw error;
+    }
+    authAfterLogin();
+  }catch(err){errEl.textContent=err.message||'Fehler';}
 }
-async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email});document.getElementById('emailBanner').querySelector('button').textContent='Sent!';}
+function authCodeInput(){const v=document.getElementById('authCode').value.replace(/\D/g,'').slice(0,6);document.getElementById('authCode').value=v;if(v.length===6)authVerifyCode();}
+async function authPasteCode(){
+  try{const t=await navigator.clipboard.readText();const m=(t||'').match(/\d{6}/);
+    if(m){document.getElementById('authCode').value=m[0];authVerifyCode();}
+    else{document.getElementById('authCodeErr').style.color='#FF5470';document.getElementById('authCodeErr').textContent='Kein 6-stelliger Code in der Zwischenablage.';}
+  }catch(e){document.getElementById('authCodeErr').style.color='#FF5470';document.getElementById('authCodeErr').textContent='Zwischenablage nicht verfügbar – Code manuell eingeben.';}
+}
+async function authVerifyCode(){
+  if(!sb||!authPendingEmail)return;
+  const token=document.getElementById('authCode').value.trim();const err=document.getElementById('authCodeErr');err.textContent='';
+  if(token.length<6){err.style.color='#FF5470';err.textContent='Bitte 6 Ziffern eingeben.';return;}
+  const btn=document.getElementById('authCodeBtn');btn.disabled=true;btn.textContent='Prüfe…';
+  try{
+    let r=await sb.auth.verifyOtp({email:authPendingEmail,token,type:'signup'});
+    if(r.error){const r2=await sb.auth.verifyOtp({email:authPendingEmail,token,type:'email'});if(r2.error)throw r2.error;}
+    authAfterLogin();
+  }catch(e){err.style.color='#FF5470';err.textContent=(e.message||'Code ungültig oder abgelaufen.');}
+  btn.disabled=false;btn.textContent='Bestätigen';
+}
+async function authResendCode(){if(!sb||!authPendingEmail)return;try{await sb.auth.resend({type:'signup',email:authPendingEmail});const err=document.getElementById('authCodeErr');err.style.color='#0a8f4f';err.textContent='Neuer Code gesendet.';}catch(e){}}
+async function authAfterLogin(){
+  justLoggedIn=true;
+  const uid=sbUser?.id;
+  const avail=await bioAvailable();
+  if(avail&&uid&&!bioEnabledFor(uid)){authMode='biometric';authRender();return;}
+  authHide();
+}
+function authEnableBio(){
+  bioEnroll(sbUser.id,sbUser.email).then(()=>{authFinishBio();}).catch(e=>{alert('Biometrie konnte nicht aktiviert werden: '+(e.message||e));authFinishBio();});
+}
+function authFinishBio(){authHide();authMode='login';}
+async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email});const b=document.getElementById('emailBanner').querySelector('button');if(b)b.textContent='Gesendet!';}
+// --- Biometric (WebAuthn platform authenticator) ---
+function _b64u(buf){let s=btoa(String.fromCharCode.apply(null,new Uint8Array(buf)));return s.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function _b64uDec(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const bin=atob(s),b=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return b.buffer;}
+async function bioAvailable(){try{return !!(window.PublicKeyCredential&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());}catch(e){return false;}}
+function bioName(){const ua=navigator.userAgent;if(/iPhone|iPad|Macintosh/.test(ua))return 'Face ID / Touch ID';if(/Android/.test(ua))return 'Fingerabdruck';return 'Biometrie';}
+function bioEnabledFor(uid){try{return !!localStorage.getItem('ssm_bio_'+uid);}catch(e){return false;}}
+async function bioEnroll(uid,email){
+  const challenge=crypto.getRandomValues(new Uint8Array(32));
+  const cred=await navigator.credentials.create({publicKey:{
+    challenge,rp:{name:'Swiss Snow Model',id:location.hostname},
+    user:{id:new TextEncoder().encode(uid),name:email||uid,displayName:email||'User'},
+    pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+    authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},
+    timeout:60000,attestation:'none'}});
+  localStorage.setItem('ssm_bio_'+uid,_b64u(cred.rawId));
+}
+async function bioVerify(uid){
+  const id=localStorage.getItem('ssm_bio_'+uid);if(!id)throw new Error('no credential');
+  const challenge=crypto.getRandomValues(new Uint8Array(32));
+  await navigator.credentials.get({publicKey:{challenge,timeout:60000,userVerification:'required',allowCredentials:[{type:'public-key',id:_b64uDec(id)}]}});
+}
+let bioUnlocked=false;
+function showBioLock(){document.getElementById('bioLockName').textContent=bioName();document.getElementById('bioLock').style.display='flex';}
+async function bioUnlock(){try{await bioVerify(sbUser.id);bioUnlocked=true;document.getElementById('bioLock').style.display='none';}catch(e){alert('Entsperren fehlgeschlagen. Bitte erneut versuchen.');}}
+function bioSignOut(){document.getElementById('bioLock').style.display='none';bioUnlocked=true;if(sb)sb.auth.signOut();}
 function authMenu(){openProfile();}
 // --- Profile & Settings ---
 let myProfile=null,profAvatarFile=null,profAvatarUrl=null;
