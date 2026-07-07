@@ -830,6 +830,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .email-banner button{background:none;border:none;color:#0070b8;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
  /* --- Report FAB (primary action) --- */
  #reportFab{position:fixed;bottom:calc(var(--btm-h,80px) + 16px);right:16px;z-index:1000;height:52px;padding:0 18px 0 14px;gap:7px;border-radius:26px;border:none;background:var(--fg);color:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;font-family:inherit;font-size:15px;font-weight:700;letter-spacing:-.01em;box-shadow:0 6px 22px rgba(15,29,47,.3);touch-action:none;transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;-webkit-tap-highlight-color:transparent}
+ #reportFab{touch-action:manipulation}
  #reportFab svg{width:22px;height:22px}
  #reportFab:active{transform:scale(.9)}
  /* --- Radial quick-pick --- */
@@ -930,6 +931,62 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rp-next:disabled{opacity:.35;cursor:default}
  .rp-next.post{background:var(--acc)}
  .rp-next.post:hover{background:var(--acc2)}
+ /* --- SLF-style observation wizard --- */
+ .obs-body{padding:14px 20px 0}
+ .obs-body:empty{padding:0}
+ .obs-types{display:flex;flex-direction:column;gap:10px}
+ .obs-type{display:flex;align-items:center;gap:14px;padding:16px;border-radius:18px;border:1.5px solid rgba(15,29,47,.08);background:#f5f8fb;cursor:pointer;text-align:left;font-family:inherit;transition:all .16s cubic-bezier(.34,1.56,.64,1)}
+ .obs-type:active{transform:scale(.98)}
+ .obs-type:hover{background:#fff;box-shadow:0 4px 16px rgba(15,29,47,.08)}
+ .obs-type-ic{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+ .obs-type-ic svg{width:26px;height:26px}
+ .obs-type-tx b{display:block;font-size:16px;font-weight:800;color:var(--fg);letter-spacing:-.01em}
+ .obs-type-tx span{font-size:12.5px;color:var(--mut);font-weight:500}
+ .obs-media-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+ .obs-media-tile{aspect-ratio:1;border-radius:14px;overflow:hidden;position:relative;background:#eef2f6}
+ .obs-media-tile img{width:100%;height:100%;object-fit:cover}
+ .obs-media-tile .rm{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(11,17,32,.6);color:#fff;border:none;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+ .obs-media-add{aspect-ratio:1;border-radius:14px;border:2px dashed rgba(15,29,47,.16);background:#f5f8fb;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;color:var(--acc);font-family:inherit}
+ .obs-media-add svg{width:26px;height:26px}
+ .obs-media-add span{font-size:11px;font-weight:700}
+ .obs-hint{font-size:12.5px;color:var(--mut);line-height:1.45;margin:2px 0 12px;padding:10px 12px;background:rgba(26,127,212,.06);border-radius:12px}
+ .obs-enum{display:flex;flex-direction:column;gap:8px}
+ .obs-enum button{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 16px;border-radius:14px;border:1.5px solid rgba(15,29,47,.1);background:#f5f8fb;cursor:pointer;font-size:15px;font-weight:600;color:var(--fg);font-family:inherit;text-align:left;transition:.14s}
+ .obs-enum button .ct{display:block;font-size:12px;color:var(--mut);font-weight:500;margin-top:1px}
+ .obs-enum button .rd{width:22px;height:22px;border-radius:50%;border:2px solid rgba(15,29,47,.2);flex-shrink:0}
+ .obs-enum button.active{border-color:var(--acc);background:rgba(26,127,212,.06)}
+ .obs-enum button.active .rd{border-color:var(--acc);background:radial-gradient(circle,var(--acc) 42%,transparent 46%)}
+ .obs-card{border:1.5px solid rgba(15,29,47,.08);border-radius:16px;margin-bottom:10px;overflow:hidden;background:#fff}
+ .obs-card-h{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;font-weight:700;color:var(--fg);font-size:15px}
+ .obs-card-h .chev{margin-left:auto;transition:transform .2s}
+ .obs-card-h .chev svg{width:18px;height:18px}
+ .obs-card.open .obs-card-h .chev{transform:rotate(180deg)}
+ .obs-card-b{display:none;padding:0 16px 16px}
+ .obs-card.open .obs-card-b{display:block}
+ .obs-card-sum{margin-left:auto;font-size:12px;color:var(--acc2);font-weight:700}
+ .obs-fld{margin-top:12px}
+ .obs-fld-l{font-size:13px;font-weight:700;color:var(--fg2);margin-bottom:8px}
+ .obs-chips{display:flex;flex-wrap:wrap;gap:7px}
+ .obs-chips button{padding:9px 13px;border-radius:12px;border:1.5px solid rgba(15,29,47,.1);background:#f5f8fb;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--fg2);font-family:inherit;transition:.14s}
+ .obs-chips button.active{background:var(--acc);border-color:var(--acc);color:#fff}
+ .obs-toggle{display:flex;align-items:center;justify-content:space-between;margin-top:12px;font-size:14px;font-weight:600;color:var(--fg)}
+ .obs-sw{width:48px;height:28px;border-radius:999px;border:none;background:rgba(15,29,47,.15);position:relative;cursor:pointer;flex-shrink:0}
+ .obs-sw span{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .18s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+ .obs-sw.on{background:var(--acc)}.obs-sw.on span{left:23px}
+ .obs-size-vis{display:flex;align-items:center;gap:14px;margin:6px 0 12px;padding:14px;border-radius:16px;background:#f5f8fb}
+ .obs-size-obj{font-size:44px;line-height:1;flex-shrink:0}
+ .obs-size-cons{font-size:13.5px;color:var(--fg2);font-weight:600;line-height:1.4}
+ .obs-person{border:1.5px solid rgba(15,29,47,.1);border-radius:14px;padding:12px 14px;margin-bottom:10px;position:relative}
+ .obs-person .rm{position:absolute;top:8px;right:8px;background:none;border:none;color:#d03050;font-size:13px;font-weight:700;cursor:pointer}
+ .obs-add-btn{width:100%;padding:12px;border-radius:12px;border:1.5px dashed rgba(26,127,212,.3);background:rgba(26,127,212,.05);color:var(--acc2);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+ .obs-loc-map{width:100%;height:150px;border-radius:16px;overflow:hidden;margin-bottom:10px;border:1px solid rgba(15,29,47,.1)}
+ .obs-loc-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg2);font-weight:600;margin-bottom:10px;flex-wrap:wrap}
+ .obs-loc-src{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(26,127,212,.12);color:var(--acc2)}
+ .obs-dt{width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid rgba(15,29,47,.1);border-radius:12px;font-size:14px;font-family:inherit;color:var(--fg);background:#f5f8fb;margin-bottom:10px}
+ .obs-warn{font-size:12.5px;color:#b06a00;background:rgba(245,158,11,.12);border-radius:10px;padding:8px 11px;margin-bottom:10px;font-weight:600}
+ .obs-cc{font-size:11px;color:var(--mut);text-align:right;margin-top:4px}
+ .obs-summary{margin-top:14px;display:flex;flex-wrap:wrap;gap:6px}
+ .obs-summary .rp-tag{padding:5px 11px;border-radius:999px;background:rgba(15,29,47,.05);color:var(--fg2);font-size:12.5px;font-weight:650}
  .cat-chip .cat-ico-w{width:30px;height:30px;display:flex;align-items:center;justify-content:center}
  .cat-chip .cat-ico-w svg{width:26px;height:26px;stroke:currentColor}
  /* --- Undo snackbar --- */
@@ -1092,6 +1149,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-badge.cat-tour svg{stroke:#7b1fa2}
  .feed-badge.cat-info{background:rgba(255,152,0,.1);color:#e65100}
  .feed-badge.cat-info svg{stroke:#e65100}
+ .feed-badge.cat-avalanche{background:rgba(208,48,80,.1);color:#d03050}.feed-badge.cat-avalanche svg{stroke:#d03050}
+ .feed-badge.cat-whumpf{background:rgba(232,89,12,.1);color:#e8590c}.feed-badge.cat-whumpf svg{stroke:#e8590c}
+ .feed-badge.cat-wind_slab{background:rgba(13,148,136,.1);color:#0d9488}.feed-badge.cat-wind_slab svg{stroke:#0d9488}
+ .feed-badge.cat-other{background:rgba(26,127,212,.1);color:#1a7fd4}.feed-badge.cat-other svg{stroke:#1a7fd4}
  .feed-card-caption{font-size:14px;color:var(--fg2);line-height:1.5}
  .feed-card-caption b{color:var(--fg);font-weight:700}
  .feed-card-actions{display:flex;align-items:center;gap:16px;padding:10px 16px 4px;border-top:none}
@@ -1224,70 +1285,20 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   </div>
 </div>
 <div class="report-overlay" id="reportOverlay" style="display:none">
-<div class="ro-bg" onclick="reportClose()"></div>
-<div class="report-sheet" onclick="event.stopPropagation()">
-<div class="sh"></div>
-<div class="rp-wiz-head">
-  <button class="rp-nav-btn" id="rpBack" onclick="rpStepPrev()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-  <div class="rp-progress" id="rpProgress"></div>
-  <button class="rp-nav-btn" onclick="reportClose()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-</div>
-<div class="rp-step-title" id="rpStepTitle">Foto hinzufügen</div>
-<div class="rp-step-sub" id="rpStepSub">Zeig, was du siehst (optional)</div>
-<input type="file" id="rpFile" accept="image/*" onchange="rpSetPhoto(this)" hidden/>
-
-<!-- STEP: photo -->
-<div class="rp-pane" data-step="photo">
-  <div class="rp-photo-big" id="rpPhotoBig" onclick="document.getElementById('rpFile').click()">
-    <div class="rp-photo-placeholder" id="rpPhotoPlaceholder">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-      <span>Foto aufnehmen</span>
-    </div>
+<div class="ro-bg" onclick="obsClose()"></div>
+<div class="report-sheet obs-sheet" onclick="event.stopPropagation()">
+  <div class="rp-wiz-head">
+    <button class="rp-nav-btn" id="obsBack" onclick="obsBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="rp-progress" id="obsProgress"></div>
+    <button class="rp-nav-btn" onclick="obsClose()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
+  <div class="rp-step-title" id="obsTitle">Beobachtung melden</div>
+  <div class="rp-step-sub" id="obsSub">Was hast du gesehen?</div>
+  <div class="obs-body" id="obsBody"></div>
+  <div class="rp-wiz-nav" id="obsNav"><button class="rp-next" id="obsNext" onclick="obsNext()">Weiter</button></div>
 </div>
-
-<!-- STEP: cat -->
-<div class="rp-pane" data-step="cat" style="display:none">
-  <div class="cat-grid" id="rpCats"></div>
 </div>
-
-<!-- STEP: sub -->
-<div class="rp-pane" data-step="sub" style="display:none">
-  <div class="sub-chips" id="rpSubs"></div>
-</div>
-
-<!-- STEP: detail (subtype-specific follow-up questions) -->
-<div class="rp-pane" data-step="detail" style="display:none">
-  <div id="rpDetail"></div>
-</div>
-
-<!-- STEP: info (free text) -->
-<div class="rp-pane" data-step="info" style="display:none">
-  <textarea class="rp-caption" id="rpInfoText" placeholder="Was möchtest du melden? (z. B. Hütte offen, Weg gesperrt, Brücke fehlt …)" oninput="rpState.infotext=this.value" style="min-height:120px;margin-top:0"></textarea>
-</div>
-
-<!-- STEP: stars (recommendation) -->
-<div class="rp-pane" data-step="stars" style="display:none">
-  <div class="rp-stars" id="rpStars"></div>
-  <div class="rp-stars-lbl" id="rpStarsLbl">Tippe auf die Sterne</div>
-</div>
-
-<!-- STEP: final -->
-<div class="rp-pane" data-step="final" style="display:none">
-  <div class="rp-loc-card" id="rpLocCard"><span id="rpCtxLoc">📍 Standort wird ermittelt…</span></div>
-  <div class="rp-peak" id="rpPeakConfirm" style="display:none"></div>
-  <button class="rp-voice-btn" id="rpVoiceBtn" onclick="rpVoiceToggle()">🎤 Halten und sprechen</button>
-  <textarea class="rp-caption" id="rpCaption" placeholder="Kurz beschreiben (optional)…" oninput="rpState.caption=this.value"></textarea>
-  <div class="rp-summary" id="rpSummary"></div>
-</div>
-
-<div class="rp-wiz-nav">
-  <button class="rp-back-btn" id="rpBackBtn" onclick="rpStepPrev()" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Zurück</button>
-  <button class="rp-skip" id="rpSkip" onclick="rpStepNext()">Überspringen</button>
-  <button class="rp-next" id="rpNext" onclick="rpStepNext()">Weiter</button>
-</div>
-</div></div>
-</div>
+<input type="file" id="obsFile" accept="image/*" multiple onchange="obsAddMedia(this)" hidden/>
 <div class="feed-page" id="feedPage">
 <div class="feed-nav">
 <button class="feed-back" onclick="feedClose()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
@@ -2148,8 +2159,12 @@ const CAT_SVG={
   tour:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l7-10 4 5 7-11"/><circle cx="17" cy="4" r="2"/><path d="M14 20l3-4 4 4"/></svg>',
   info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r=".5" fill="currentColor" stroke="none"/></svg>'
 };
-const CAT_COLORS={snow:'#1a7fd4',route:'#2e7d32',danger:'#d03050',tour:'#7b1fa2',info:'#e65100'};
-const CAT_BG={snow:'linear-gradient(135deg,#e3f2fd,#bbdefb)',route:'linear-gradient(135deg,#e8f5e9,#c8e6c9)',danger:'linear-gradient(135deg,#fce4ec,#f8bbd0)',tour:'linear-gradient(135deg,#f3e5f5,#e1bee7)',info:'linear-gradient(135deg,#fff3e0,#ffe0b2)'};
+const CAT_COLORS={snow:'#1a7fd4',route:'#2e7d32',danger:'#d03050',tour:'#7b1fa2',info:'#e65100',avalanche:'#d03050',whumpf:'#e8590c',wind_slab:'#0d9488',other:'#1a7fd4'};
+const CAT_BG={snow:'linear-gradient(135deg,#e3f2fd,#bbdefb)',route:'linear-gradient(135deg,#e8f5e9,#c8e6c9)',danger:'linear-gradient(135deg,#fce4ec,#f8bbd0)',tour:'linear-gradient(135deg,#f3e5f5,#e1bee7)',info:'linear-gradient(135deg,#fff3e0,#ffe0b2)',avalanche:'linear-gradient(135deg,#fce4ec,#f8bbd0)',whumpf:'linear-gradient(135deg,#fff3e0,#ffe0b2)',wind_slab:'linear-gradient(135deg,#e0f2f1,#b2dfdb)',other:'linear-gradient(135deg,#e3f2fd,#bbdefb)'};
+// new SLF report-type icons reuse existing glyphs
+CAT_SVG.avalanche=CAT_SVG.danger;CAT_SVG.whumpf=CAT_SVG.danger;CAT_SVG.wind_slab=CAT_SVG.snow;CAT_SVG.other=CAT_SVG.info;
+const CAT_LABEL={snow:'Schnee',route:'Menschen',danger:'Gefahr',info:'Info',tour:'Tour',avalanche:'Lawine',whumpf:'Wumm',wind_slab:'Triebschnee',other:'Beobachtung'};
+function catLabel(id){return CAT_LABEL[id]||id;}
 function catSvg(id,size){return `<span class="cat-ico" style="width:${size||16}px;height:${size||16}px">${CAT_SVG[id]||''}</span>`;}
 // --- Swiss peaks & famous ski destinations (for peak detection + feed filters) ---
 const PEAKS=[
@@ -2536,66 +2551,9 @@ const RP_FOLLOWUPS={
 };
 function rpFollowups(){return RP_FOLLOWUPS[rpState.cat+'|'+rpState.sub]||[];}
 function rpFuAnswered(q){const v=rpState.details[q.id];return q.multi?(Array.isArray(v)&&v.length>0):!!v;}
-// --- Radial quick-pick (long-press FAB) ---
-let radialActive=false,radialCat=null;
-const RAD_POS=[{a:-90},{a:-162},{a:-18},{a:162},{a:18}];
-(function(){
-  const fab=document.getElementById('reportFab'),wrap=document.getElementById('radialWrap'),ring=document.getElementById('radialRing'),ctr=document.getElementById('radialCenter');
-  let timer=null,ox=0,oy=0;
-  function showRadial(cx,cy){
-    if(!sbUser){authShow();return;}
-    radialActive=true;radialCat=null;wrap.style.display='block';
-    const sz=280,hsz=sz/2;
-    const rx=Math.min(window.innerWidth-hsz-10,Math.max(hsz+10,cx))-hsz;
-    const ry=Math.min(window.innerHeight-hsz-10,Math.max(hsz+10,cy))-hsz;
-    ring.style.left=rx+'px';ring.style.top=ry+'px';
-    ctr.style.left=(rx+hsz-24)+'px';ctr.style.top=(ry+hsz-24)+'px';
-    ox=rx+hsz;oy=ry+hsz;
-    ring.innerHTML=RP_CATS.map((c,i)=>{
-      const ang=RAD_POS[i].a*Math.PI/180;const r=100;
-      const x=hsz+Math.cos(ang)*r-36;const y=hsz+Math.sin(ang)*r-36;
-      return`<div class="radial-seg" data-i="${i}" style="left:${x}px;top:${y}px"><span class="re">${c.icon}</span>${c.label}</div>`;
-    }).join('');
-    haptic(12);
-  }
-  function moveRadial(cx,cy){
-    if(!radialActive)return;
-    const dx=cx-ox,dy=cy-oy,dist=Math.sqrt(dx*dx+dy*dy);
-    let closest=-1;
-    if(dist>40){
-      const ang=Math.atan2(dy,dx)*180/Math.PI;
-      let minD=999;
-      RAD_POS.forEach((p,i)=>{let d=Math.abs(ang-p.a);if(d>180)d=360-d;if(d<minD){minD=d;closest=i;}});
-    }
-    ring.querySelectorAll('.radial-seg').forEach((s,i)=>{
-      const isH=i===closest;
-      s.classList.toggle('hover',isH);
-      if(isH&&radialCat!==i){radialCat=i;haptic(6);}
-    });
-    if(closest===-1)radialCat=null;
-  }
-  function endRadial(){
-    if(!radialActive)return;radialActive=false;wrap.style.display='none';
-    if(radialCat!==null){
-      haptic(20);
-      rpState.cat=RP_CATS[radialCat].id;
-      reportOpenSheet();
-    }
-  }
-  fab.addEventListener('pointerdown',e=>{
-    e.preventDefault();
-    timer=setTimeout(()=>{timer=null;showRadial(e.clientX,e.clientY);},300);
-  });
-  fab.addEventListener('pointermove',e=>{if(radialActive)moveRadial(e.clientX,e.clientY);});
-  fab.addEventListener('pointerup',e=>{
-    if(timer){clearTimeout(timer);timer=null;if(!sbUser){authShow();}else{rpState.cat=null;reportOpenSheet();}}
-    else endRadial();
-  });
-  fab.addEventListener('pointercancel',()=>{if(timer)clearTimeout(timer);endRadial();});
-  wrap.addEventListener('pointermove',e=>moveRadial(e.clientX,e.clientY));
-  wrap.addEventListener('pointerup',endRadial);
-})();
-// --- Single-sheet report flow ---
+// FAB opens the SLF-style observation wizard
+document.getElementById('reportFab').addEventListener('click',()=>{obsOpen();});
+// --- Single-sheet report flow (legacy, retained for helpers) ---
 let rpState={cat:null,sub:null,details:{},infotext:'',stars:0,photo:null,photoFile:null,loc:null,caption:'',peak:null,dest:null,peakCand:null,photoLoc:null,deviceLoc:null,locSource:null};
 function rpReset(){rpState={cat:null,sub:null,details:{},infotext:'',stars:0,photo:null,photoFile:null,loc:null,caption:'',peak:null,dest:null,peakCand:null,photoLoc:null,deviceLoc:null,locSource:null};}
 // --- EXIF GPS extractor (no external lib) ---
@@ -2844,9 +2802,215 @@ async function reportSubmit(){
 }
 function showUndo(){
   const bar=document.createElement('div');bar.className='undo-bar';
-  bar.innerHTML='Gepostet. Andere sehen\'s jetzt auf der Karte. <button onclick="this.parentElement.remove()">OK</button>';
+  bar.innerHTML='Gemeldet. Danke! Andere sehen\'s jetzt auf der Karte. <button onclick="this.parentElement.remove()">OK</button>';
   document.body.appendChild(bar);setTimeout(()=>bar.remove(),5000);
 }
+// ============================================================
+// SLF-style observation reporting wizard
+// ============================================================
+const OBS_TYPE_LIST=[
+ {id:'avalanche',label:'Lawine',sub:'Spontan oder ausgelöst',color:'#d03050',tint:'rgba(208,48,80,.12)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M4 20l6-13 4 7"/><path d="M14 20c1-3 3-5 6-6"/></svg>'},
+ {id:'whumpf',label:'Wumm-Geräusch',sub:'Setzungsgeräusche im Schnee',color:'#e8590c',tint:'rgba(232,89,12,.12)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><circle cx="9" cy="15" r="2"/><path d="M14 9c2 1 3 3 3 5M17 5c3 2 4 6 4 10"/></svg>'},
+ {id:'wind_slab',label:'Triebschnee',sub:'Windverfrachteter Schnee',color:'#0d9488',tint:'rgba(13,148,136,.12)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18M4 18l7-9 5 6"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/></svg>'},
+ {id:'other',label:'Andere Beobachtung',sub:'Freie Geländemeldung',color:'#1a7fd4',tint:'rgba(26,127,212,.12)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M5 20l5-9 4 6 5-9"/><path d="M15 5h6v5"/></svg>'}
+];
+const OBS_SIZE=[
+ {k:'small',r:1,l:'Klein',obj:'⛷️',c:'Verschüttung von Personen unwahrscheinlich'},
+ {k:'medium',r:2,l:'Mittel',obj:'🧍',c:'Kann Personen verschütten, verletzen oder töten'},
+ {k:'large',r:3,l:'Gross',obj:'🚗',c:'Kann Autos verschütten und zerstören'},
+ {k:'very_large',r:4,l:'Sehr gross',obj:'🚆',c:'Kann Lastwagen und Züge verschütten und zerstören'},
+ {k:'extreme',r:5,l:'Extrem gross',obj:'🏘️',c:'Kann die Landschaft katastrophal verwüsten'},
+ {k:'unknown',r:0,l:'Unbekannt',obj:'❓',c:''}
+];
+function obsSizeMeta(k){return OBS_SIZE.find(s=>s.k===k)||OBS_SIZE[5];}
+function compareSize(a,b){const ra=obsSizeMeta(a).r,rb=obsSizeMeta(b).r;if(!ra||!rb)return null;return ra===rb?0:(ra>rb?1:-1);}
+const OBS_ENUM={
+ whumpfFrequency:{title:'Wumm-Geräusche',sub:'Setzungsgeräusche deuten auf Schwachschichten hin.',required:true,opts:[{k:'none',l:'Keine'},{k:'rare',l:'Selten',ct:'1–3'},{k:'frequent',l:'Häufig',ct:'>3'}]},
+ windSlab24h:{title:'Triebschnee (letzte 24 h)',sub:'Wie viel frischer Triebschnee?',required:true,opts:[{k:'none',l:'Kein'},{k:'small',l:'Klein',ct:'5–20 cm'},{k:'medium',l:'Mittel',ct:'20–50 cm'},{k:'large',l:'Gross',ct:'>50 cm'}]}
+};
+const OBS_TRIGGER=[['spontaneous','Spontan'],['person','Person'],['explosive','Sprengung'],['snow_groomer','Pistenfahrzeug'],['other','Andere'],['unknown','Unbekannt']];
+const OBS_BURIAL=[['not_buried','Nicht verschüttet'],['partially_buried','Teilweise verschüttet'],['fully_buried','Vollständig verschüttet']];
+const OBS_CONSEQ=[['uninjured','Unverletzt'],['injured','Verletzt'],['deceased','Verstorben']];
+const OBS_AVTYPE=[['glide_snow','Gleitschnee'],['loose_snow','Lockerschnee'],['slab','Schneebrett'],['unknown','Unbekannt']];
+const OBS_WET=[['dry','Trocken'],['wet','Nass'],['unknown','Unbekannt']];
+const OBS_STEPS={
+ avalanche:[{k:'media'},{k:'avdetails'},{k:'comment'},{k:'submit'}],
+ whumpf:[{k:'enum',f:'whumpfFrequency'},{k:'enum',f:'windSlab24h'},{k:'media_comment',final:true}],
+ wind_slab:[{k:'enum',f:'windSlab24h'},{k:'media_comment',final:true}],
+ other:[{k:'media'},{k:'comment',final:true}]
+};
+function obsLbl(arr,k){const f=arr.find(x=>x[0]===k);return f?f[1]:k;}
+function obsEnumLabel(f,k){const o=(OBS_ENUM[f].opts).find(x=>x.k===k);return o?o.l:k;}
+let obsState=null,obsDeviceFix=null,obsMap=null,obsMarker=null,obsOpenCards=new Set();
+function obsNewState(type){return{type,step:0,steps:OBS_STEPS[type]||[],media:[],comment:'',
+  location:{lat:null,lon:null,elevation:null,aspect:null,source:null},observedAt:null,
+  avalanche:{triggerType:'unknown',remoteTrigger:false,caughtPersons:[],characteristics:{size:'unknown',sizeRank:0,avalancheType:'unknown',wetness:'unknown'}},
+  whumpfFrequency:null,windSlab24h:null};}
+function obsDEM(lat,lon){const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));if(cx2<0||cx2>=W||cy2<0||cy2>=H)return{};const p=cy2*W+cx2;return{elev:Math.round(melevv(p)),aspect:aspectQ(maspv(p))};}
+function obsApplyLoc(lat,lon,source){const d=obsDEM(lat,lon);obsState.location={lat,lon,elevation:(d.elev!=null?d.elev:null),aspect:(d.aspect||null),source};}
+function obsWarmLocation(){if(!navigator.geolocation)return;navigator.geolocation.getCurrentPosition(p=>{obsDeviceFix={lat:p.coords.latitude,lon:p.coords.longitude};
+  if(obsState&&obsState.location.source!=='exif'&&obsState.location.source!=='manual'){obsApplyLoc(p.coords.latitude,p.coords.longitude,'device');if(!obsState.observedAt)obsState.observedAt=new Date();const st=obsState.steps[obsState.step];if(st&&(st.k==='submit'||st.final))obsRender();}
+},()=>{},{enableHighAccuracy:true,timeout:12000,maximumAge:0});}
+function obsOpen(){if(!sb||!sbUser){authShow();return;}
+  obsState=null;obsOpenCards=new Set();document.getElementById('reportOverlay').style.display='flex';
+  document.getElementById('obsBack').style.visibility='hidden';
+  document.getElementById('obsProgress').innerHTML='';
+  document.getElementById('obsTitle').textContent='Beobachtung melden';
+  document.getElementById('obsSub').textContent='Was hast du gesehen?';
+  document.getElementById('obsNav').style.display='none';
+  document.getElementById('obsBody').innerHTML='<div class="obs-types">'+OBS_TYPE_LIST.map(t=>`<button class="obs-type" onclick="obsStart('${t.id}')"><span class="obs-type-ic" style="background:${t.tint};color:${t.color}">${t.icon}</span><span class="obs-type-tx"><b>${t.label}</b><span>${t.sub}</span></span></button>`).join('')+'</div>';
+  obsWarmLocation();
+}
+function obsStart(type){obsState=obsNewState(type);obsOpenCards=new Set();
+  if(obsDeviceFix){obsApplyLoc(obsDeviceFix.lat,obsDeviceFix.lon,'device');}
+  obsState.observedAt=new Date();
+  document.getElementById('obsNav').style.display='';obsRender();haptic(8);}
+function obsClose(){if(obsState&&(obsState.media.length||obsState.comment)){if(!confirm('Meldung verwerfen?'))return;}
+  document.getElementById('reportOverlay').style.display='none';if(obsMap){try{obsMap.remove();}catch(e){}obsMap=null;}obsState=null;}
+function obsBack(){if(!obsState){obsClose();return;}if(obsState.step>0){obsState.step--;obsRender();}else{obsOpen();}}
+function obsStepDisabled(st){if(st.k==='enum'){const e=OBS_ENUM[st.f];if(e.required&&!obsState[st.f])return true;}
+  if(st.k==='submit'||st.final){if(obsState.location.lat==null)return true;if(obsState.observedAt&&obsState.observedAt.getTime()>Date.now())return true;}
+  return false;}
+function obsNext(){const steps=obsState.steps,st=steps[obsState.step];
+  if(obsStepDisabled(st))return;
+  if(st.k==='submit'||st.final){obsSubmit();return;}
+  if(obsState.step<steps.length-1){obsState.step++;obsRender();haptic(6);}}
+const OBS_TITLES={media:['Fotos & Videos','Übersicht + Detail helfen am meisten'],avdetails:['Lawinendetails','Optional – tippe zum Ausklappen'],comment:['Kommentar','Optional, max. 500 Zeichen'],media_comment:['Beobachtung erfassen','Fotos & Kommentar'],submit:['Standort & Absenden','Prüfe Ort und Zeit']};
+function obsRender(){const steps=obsState.steps,i=obsState.step,st=steps[i];
+  document.getElementById('obsBack').style.visibility='visible';
+  document.getElementById('obsProgress').innerHTML=steps.map((s,ix)=>`<i class="${ix<i?'done':ix===i?'cur':''}"></i>`).join('');
+  const isFinal=st.k==='submit'||st.final;
+  let title='',sub='';
+  if(st.k==='enum'){title=OBS_ENUM[st.f].title;sub=OBS_ENUM[st.f].sub;}
+  else{const tt=OBS_TITLES[st.k]||['',''];title=tt[0];sub=tt[1];}
+  document.getElementById('obsTitle').textContent=title;document.getElementById('obsSub').textContent=sub;
+  let body='';
+  if(st.k==='media')body=obsMediaBlock(obsState.type==='avalanche');
+  else if(st.k==='comment')body=obsCommentHTML();
+  else if(st.k==='media_comment')body=obsMediaBlock(false)+obsCommentHTML();
+  else if(st.k==='enum')body=obsEnumHTML(st.f);
+  else if(st.k==='avdetails')body=obsAvDetailsHTML();
+  if(isFinal)body+=obsLocationHTML()+obsSummaryHTML();
+  document.getElementById('obsBody').innerHTML=body;
+  if(isFinal)setTimeout(obsInitMap,30);
+  const next=document.getElementById('obsNext');next.classList.toggle('post',isFinal);next.textContent=isFinal?'Melden':'Weiter';next.disabled=obsStepDisabled(st);}
+function obsMediaBlock(av){const hint=av?'<div class="obs-hint">Am hilfreichsten: Übersichtsfotos der ganzen Lawine + Detailaufnahmen der Anrisskante / des Anrissgebiets. Fotos liefern automatisch Standort & Zeit.</div>':'<div class="obs-hint">Relevante Beobachtungen aus dem Gelände. Fotos liefern automatisch Standort & Zeit.</div>';
+  return hint+'<div id="obsMediaWrap">'+obsMediaGrid()+'</div>';}
+function obsMediaGrid(){const tiles=obsState.media.map((m,ix)=>`<div class="obs-media-tile"><img src="${m.url}"/><button class="rm" onclick="obsRemoveMedia(${ix})">✕</button></div>`).join('');
+  const add='<div class="obs-media-add" onclick="document.getElementById(\'obsFile\').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Hinzufügen</span></div>';
+  return '<div class="obs-media-grid">'+tiles+add+'</div>';}
+function obsRerenderMedia(){const w=document.getElementById('obsMediaWrap');if(w)w.innerHTML=obsMediaGrid();}
+function obsCommentHTML(){const v=obsState.comment||'';return '<textarea class="rp-caption" id="obsComment" maxlength="500" placeholder="Kommentar (optional)…" oninput="obsState.comment=this.value;var c=document.getElementById(\'obsCC\');if(c)c.textContent=this.value.length+\'/500\'" style="margin-top:0">'+v+'</textarea><div class="obs-cc" id="obsCC">'+v.length+'/500</div>';}
+function obsEnumHTML(f){const e=OBS_ENUM[f];return '<div class="obs-enum">'+e.opts.map(o=>`<button class="${obsState[f]===o.k?'active':''}" onclick="obsPickEnum('${f}','${o.k}')"><span>${o.l}${o.ct?'<span class="ct">'+o.ct+'</span>':''}</span><span class="rd"></span></button>`).join('')+'</div>';}
+function obsPickEnum(f,k){obsState[f]=k;haptic(6);obsRender();}
+function obsCard(id,title,sum,inner){const open=obsOpenCards.has(id)?' open':'';return `<div class="obs-card${open}" id="obscard-${id}"><div class="obs-card-h" onclick="obsToggleCard('${id}')">${title}${sum?'<span class="obs-card-sum">'+sum+'</span>':''}<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="obs-card-b">${inner}</div></div>`;}
+function obsToggleCard(id){if(obsOpenCards.has(id))obsOpenCards.delete(id);else obsOpenCards.add(id);const el=document.getElementById('obscard-'+id);if(el)el.classList.toggle('open');}
+function obsAvDetailsHTML(){const a=obsState.avalanche;
+  const trigSum=a.triggerType!=='unknown'?(obsLbl(OBS_TRIGGER,a.triggerType)+(a.remoteTrigger?' · Fern':'')):'';
+  const c1=obsCard('trigger','Auslösung',trigSum,
+    '<div class="obs-fld"><div class="obs-chips">'+OBS_TRIGGER.map(x=>`<button class="${a.triggerType===x[0]?'active':''}" onclick="obsSetTrigger('${x[0]}')">${x[1]}</button>`).join('')+'</div></div>'+
+    '<div class="obs-toggle">Fernauslösung<button class="obs-sw'+(a.remoteTrigger?' on':'')+'" onclick="obsToggleRemote(this)"><span></span></button></div>');
+  const pers=a.caughtPersons.map((pp,ix)=>obsPersonHTML(pp,ix)).join('');
+  const c2=obsCard('persons','Erfasste Personen',a.caughtPersons.length?(''+a.caughtPersons.length):'',
+    pers+'<button class="obs-add-btn" onclick="obsAddPerson()">+ Person hinzufügen</button>');
+  const ch=a.characteristics,sm=obsSizeMeta(ch.size);
+  const sizeVis=ch.size!=='unknown'?`<div class="obs-size-vis"><div class="obs-size-obj">${sm.obj}</div><div class="obs-size-cons">${sm.c}</div></div>`:'';
+  const c3=obsCard('chars','Lawineneigenschaften',ch.size!=='unknown'?sm.l:'',
+    '<div class="obs-fld"><div class="obs-fld-l">Grösse</div>'+sizeVis+'<div class="obs-chips">'+OBS_SIZE.map(s=>`<button class="${ch.size===s.k?'active':''}" onclick="obsSetSize('${s.k}')">${s.l}</button>`).join('')+'</div></div>'+
+    '<div class="obs-fld"><div class="obs-fld-l">Lawinentyp</div><div class="obs-chips">'+OBS_AVTYPE.map(x=>`<button class="${ch.avalancheType===x[0]?'active':''}" onclick="obsSetAv('avalancheType','${x[0]}')">${x[1]}</button>`).join('')+'</div></div>'+
+    '<div class="obs-fld"><div class="obs-fld-l">Feuchtigkeit</div><div class="obs-chips">'+OBS_WET.map(x=>`<button class="${ch.wetness===x[0]?'active':''}" onclick="obsSetAv('wetness','${x[0]}')">${x[1]}</button>`).join('')+'</div></div>');
+  return c1+c2+c3;}
+function obsPersonHTML(pp,ix){return '<div class="obs-person"><button class="rm" onclick="obsRemovePerson('+ix+')">Entfernen</button><div class="obs-fld" style="margin-top:2px"><div class="obs-fld-l">Verschüttung</div><div class="obs-chips">'+OBS_BURIAL.map(x=>`<button class="${pp.burial===x[0]?'active':''}" onclick="obsSetPerson(${ix},'burial','${x[0]}')">${x[1]}</button>`).join('')+'</div></div><div class="obs-fld"><div class="obs-fld-l">Folge</div><div class="obs-chips">'+OBS_CONSEQ.map(x=>`<button class="${pp.consequence===x[0]?'active':''}" onclick="obsSetPerson(${ix},'consequence','${x[0]}')">${x[1]}</button>`).join('')+'</div></div></div>';}
+function obsRerenderAv(){document.getElementById('obsBody').innerHTML=obsAvDetailsHTML();}
+function obsSetTrigger(k){obsState.avalanche.triggerType=k;haptic(6);obsRerenderAv();}
+function obsToggleRemote(el){obsState.avalanche.remoteTrigger=!obsState.avalanche.remoteTrigger;el.classList.toggle('on',obsState.avalanche.remoteTrigger);haptic(6);}
+function obsAddPerson(){obsState.avalanche.caughtPersons.push({burial:'not_buried',consequence:'uninjured'});obsOpenCards.add('persons');obsRerenderAv();}
+function obsRemovePerson(ix){obsState.avalanche.caughtPersons.splice(ix,1);obsRerenderAv();}
+function obsSetPerson(ix,f,k){obsState.avalanche.caughtPersons[ix][f]=k;haptic(6);obsRerenderAv();}
+function obsSetSize(k){obsState.avalanche.characteristics.size=k;obsState.avalanche.characteristics.sizeRank=obsSizeMeta(k).r;haptic(6);obsRerenderAv();}
+function obsSetAv(f,k){obsState.avalanche.characteristics[f]=k;haptic(6);obsRerenderAv();}
+function obsPad(n){return String(n).padStart(2,'0');}
+function obsToLocalInput(d){return d.getFullYear()+'-'+obsPad(d.getMonth()+1)+'-'+obsPad(d.getDate())+'T'+obsPad(d.getHours())+':'+obsPad(d.getMinutes());}
+function obsLocRowHTML(){const L=obsState.location;const srcTxt={exif:'Foto',device:'Gerät',manual:'Manuell'}[L.source]||'—';
+  return '<span class="obs-loc-src">'+srcTxt+'</span><span>'+(L.lat!=null?(L.lat.toFixed(4)+', '+L.lon.toFixed(4)):'Kein Standort')+'</span>'+(L.elevation!=null?'<span>· '+L.elevation+' m</span>':'')+(L.aspect?'<span>· '+L.aspect+'</span>':'');}
+function obsLocationHTML(){const dt=obsState.observedAt?obsToLocalInput(obsState.observedAt):'';
+  const future=obsState.observedAt&&obsState.observedAt.getTime()>Date.now();
+  const old=obsState.observedAt&&(Date.now()-obsState.observedAt.getTime())>7*864e5;
+  let warn='';if(future)warn='<div class="obs-warn">⚠︎ Zeitpunkt liegt in der Zukunft – bitte korrigieren.</div>';else if(old)warn='<div class="obs-warn">Beobachtung ist älter als 7 Tage.</div>';
+  return '<div class="obs-loc-map" id="obsMap"></div><div class="obs-loc-row" id="obsLocRow">'+obsLocRowHTML()+'</div><input type="datetime-local" class="obs-dt" id="obsDt" value="'+dt+'" onchange="obsSetDateTime(this.value)"/>'+warn;}
+function obsSetDateTime(v){if(v){obsState.observedAt=new Date(v);obsRender();}}
+function obsInitMap(){const el=document.getElementById('obsMap');if(!el)return;if(obsMap){try{obsMap.remove();}catch(e){}obsMap=null;}
+  const L0=obsState.location;const lat=L0.lat!=null?L0.lat:map.getCenter().lat,lon=L0.lon!=null?L0.lon:map.getCenter().lng;
+  obsMap=L.map(el,{zoomControl:false,attributionControl:false}).setView([lat,lon],14);
+  L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg').addTo(obsMap);
+  obsMarker=L.marker([lat,lon],{draggable:true}).addTo(obsMap);
+  function moved(ll){obsApplyLoc(ll.lat,ll.lng,'manual');const r=document.getElementById('obsLocRow');if(r)r.innerHTML=obsLocRowHTML();const n=document.getElementById('obsNext');if(n)n.disabled=false;}
+  obsMarker.on('dragend',()=>moved(obsMarker.getLatLng()));
+  obsMap.on('click',e=>{obsMarker.setLatLng(e.latlng);moved(e.latlng);});
+  setTimeout(()=>{try{obsMap.invalidateSize();}catch(e){}},120);}
+function obsSummaryHTML(){const t=[];const ty=OBS_TYPE_LIST.find(x=>x.id===obsState.type);t.push('<span class="rp-tag">'+ty.label+'</span>');
+  if(obsState.type==='avalanche'){const a=obsState.avalanche;if(a.characteristics.size!=='unknown')t.push('<span class="rp-tag">Grösse: '+obsSizeMeta(a.characteristics.size).l+'</span>');if(a.triggerType!=='unknown')t.push('<span class="rp-tag">'+obsLbl(OBS_TRIGGER,a.triggerType)+'</span>');if(a.caughtPersons.length)t.push('<span class="rp-tag">'+a.caughtPersons.length+' Pers.</span>');}
+  if(obsState.whumpfFrequency)t.push('<span class="rp-tag">Wumm: '+obsEnumLabel('whumpfFrequency',obsState.whumpfFrequency)+'</span>');
+  if(obsState.windSlab24h)t.push('<span class="rp-tag">Triebschnee: '+obsEnumLabel('windSlab24h',obsState.windSlab24h)+'</span>');
+  if(obsState.media.length)t.push('<span class="rp-tag">📷 '+obsState.media.length+'</span>');
+  return '<div class="obs-summary">'+t.join('')+'</div>';}
+function obsRemoveMedia(ix){obsState.media.splice(ix,1);obsRerenderMedia();}
+function obsAddMedia(input){if(!input.files)return;const files=Array.prototype.slice.call(input.files);input.value='';
+  files.forEach(f=>{const url=URL.createObjectURL(f);const m={file:f,url,type:f.type&&f.type.indexOf('video')===0?'video':'image',exif:null};obsState.media.push(m);
+    obsReadExif(f).then(ex=>{m.exif=ex;let changed=false;
+      if(ex&&ex.gps&&obsState.location.source!=='manual'){obsApplyLoc(ex.gps[0],ex.gps[1],'exif');changed=true;}
+      if(ex&&ex.dt&&obsState.location.source!=='manual'){obsState.observedAt=ex.dt;changed=true;}
+      const st=obsState.steps[obsState.step];
+      if(changed&&(st.k==='submit'||st.final))obsRender();else obsRerenderMedia();
+    });});
+  obsRerenderMedia();}
+// EXIF: GPS + DateTimeOriginal
+function obsReadExif(file){return new Promise(res=>{const fr=new FileReader();
+  fr.onload=function(e){try{const view=new DataView(e.target.result);if(view.getUint16(0)!==0xFFD8){res(null);return;}
+    const len=view.byteLength;let off=2;
+    while(off<len-4){const marker=view.getUint16(off);off+=2;
+      if(marker===0xFFE1){if(view.getUint32(off+2)===0x45786966){res(obsParseExif(view,off+8));return;}off+=view.getUint16(off);}
+      else if((marker&0xFF00)!==0xFF00){break;}else{off+=view.getUint16(off);}}
+    res(null);}catch(err){res(null);}};
+  fr.onerror=()=>res(null);fr.readAsArrayBuffer(file.slice(0,262144));});}
+function obsParseExif(view,tiff){try{const little=view.getUint16(tiff)===0x4949;
+  const u16=o=>view.getUint16(tiff+o,little),u32=o=>view.getUint32(tiff+o,little),u8=o=>view.getUint8(tiff+o);
+  const ifd0=u32(4);let gpsPtr=0,exifPtr=0;const n0=u16(ifd0);
+  for(let i=0;i<n0;i++){const en=ifd0+2+i*12,tag=u16(en);if(tag===0x8825)gpsPtr=u32(en+8);else if(tag===0x8769)exifPtr=u32(en+8);}
+  let gps=null,dt=null;
+  if(gpsPtr){const rat=o=>{const nu=u32(o),de=u32(o+4);return de?nu/de:0;};const dms=o=>rat(o)+rat(o+8)/60+rat(o+16)/3600;
+    let latRef='N',lngRef='E',la=null,lo=null;const gn=u16(gpsPtr);
+    for(let i=0;i<gn;i++){const en=gpsPtr+2+i*12,tag=u16(en),vo=u32(en+8);
+      if(tag===1)latRef=String.fromCharCode(u8(en+8));else if(tag===2)la=dms(vo);else if(tag===3)lngRef=String.fromCharCode(u8(en+8));else if(tag===4)lo=dms(vo);}
+    if(la!=null&&lo!=null){if(latRef==='S')la=-la;if(lngRef==='W')lo=-lo;if(Math.abs(la)<=90&&Math.abs(lo)<=180)gps=[la,lo];}}
+  if(exifPtr){const en0=u16(exifPtr);for(let i=0;i<en0;i++){const en=exifPtr+2+i*12,tag=u16(en);if(tag===0x9003||tag===0x0132){const vo=u32(en+8);let s='';for(let j=0;j<19;j++){const ch=u8(vo+j);if(ch===0)break;s+=String.fromCharCode(ch);}const mt=s.match(/(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);if(mt){dt=new Date(+mt[1],+mt[2]-1,+mt[3],+mt[4],+mt[5],+mt[6]);break;}}}}
+  return(gps||dt)?{gps,dt}:null;
+}catch(e){return null;}}
+async function obsSubmit(){if(!sb||!sbUser||!obsState)return;const L=obsState.location;
+  if(L.lat==null){alert('Bitte Standort auf der Karte setzen.');return;}
+  if(obsState.observedAt&&obsState.observedAt.getTime()>Date.now()){alert('Zeitpunkt liegt in der Zukunft.');return;}
+  const next=document.getElementById('obsNext');next.disabled=true;next.textContent='Melden…';
+  try{const urls=[];
+    for(const m of obsState.media){try{const ext=(m.file.name.split('.').pop()||'jpg').toLowerCase();const path=sbUser.id+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.'+ext;
+      const{error}=await sb.storage.from('report-images').upload(path,m.file,{contentType:m.file.type||'image/jpeg'});
+      if(!error){const{data}=sb.storage.from('report-images').getPublicUrl(path);if(data&&data.publicUrl)urls.push(data.publicUrl);}
+      else if(urls.length===0&&obsState.media.length){/* keep going */}}catch(e){}}
+    const cd=obsBuildCD();
+    const row={user_id:sbUser.id,location:`POINT(${L.lon} ${L.lat})`,elevation_m:L.elevation||null,
+      primary_categories:[obsState.type],subtype:obsSubLabel(),condition_data:cd,
+      image_url:urls[0]||null,caption:(obsState.comment||'').trim()||null,
+      captured_at:obsState.observedAt?obsState.observedAt.toISOString():null,completion_score:80};
+    const{error}=await sb.from('reports').insert(row);if(error)throw error;
+    if(obsMap){try{obsMap.remove();}catch(e){}obsMap=null;}obsState=null;
+    document.getElementById('reportOverlay').style.display='none';loadDbReports();showUndo();
+  }catch(e){alert('Fehler: '+(e.message||e));next.disabled=false;next.textContent='Melden';}}
+function obsBuildCD(){const s=obsState;const cd={obsType:s.type,source:s.location.source,aspect:s.location.aspect||null,
+  media:s.media.map(m=>({type:m.type,gps:(m.exif&&m.exif.gps)||null,takenAt:(m.exif&&m.exif.dt)?m.exif.dt.toISOString():null}))};
+  if(s.type==='avalanche'){const a=s.avalanche;cd.avalanche={triggerType:a.triggerType,remoteTrigger:a.remoteTrigger,caughtPersons:a.caughtPersons,characteristics:{size:a.characteristics.size,sizeRank:a.characteristics.sizeRank,avalancheType:a.characteristics.avalancheType,wetness:a.characteristics.wetness}};if(a.characteristics.size!=='unknown')cd.measurement=obsSizeMeta(a.characteristics.size).l;}
+  if(s.whumpfFrequency){cd.whumpfFrequency=s.whumpfFrequency;cd.measurement=obsEnumLabel('whumpfFrequency',s.whumpfFrequency);}
+  if(s.windSlab24h){cd.windSlab24h=s.windSlab24h;if(!cd.measurement)cd.measurement=obsEnumLabel('windSlab24h',s.windSlab24h);}
+  return cd;}
+function obsSubLabel(){const s=obsState;if(s.type==='avalanche')return s.avalanche.characteristics.size!=='unknown'?('Lawine '+obsSizeMeta(s.avalanche.characteristics.size).l):'Lawine';if(s.type==='whumpf')return 'Wumm';if(s.type==='wind_slab')return 'Triebschnee';return 'Beobachtung';}
 // --- Feed (Instagram-style full page) ---
 let feedFilter='all',feedAnchor=null,feedScope='all',feedGroup=null;
 const FEED_SCOPES=[
@@ -2859,14 +3023,14 @@ function feedOpen(){
   const fp=document.getElementById('feedPage');fp.classList.add('open');
   document.getElementById('feedScope').innerHTML=FEED_SCOPES.map(s=>
     `<button data-s="${s.id}" class="${feedScope===s.id?'active':''}" onclick="feedSetScope('${s.id}')">${s.icon}${s.label}</button>`).join('');
-  document.getElementById('feedFilter').innerHTML=['all','snow','route','danger','info'].map(f=>{
-    const cat=RP_CATS.find(c=>c.id===f);const lbl=f==='all'?'Alle':(catSvg(f,14)+' '+cat.label);
+  document.getElementById('feedFilter').innerHTML=['all','avalanche','whumpf','wind_slab','other'].map(f=>{
+    const lbl=f==='all'?'Alle':(catSvg(f,14)+' '+catLabel(f));
     return`<button class="${feedFilter===f?'active':''}" onclick="feedSetFilter('${f}')">${lbl}</button>`;}).join('');
   document.getElementById('feedLoc').style.display=feedScope==='near'?'flex':'none';
   feedRender();
 }
 function feedClose(){document.getElementById('feedPage').classList.remove('open');}
-function feedCreatePost(){if(!sb||!sbUser){authShow();return;}feedClose();setTimeout(()=>{rpState.cat=null;reportOpenSheet();},370);}
+function feedCreatePost(){if(!sb||!sbUser){authShow();return;}feedClose();setTimeout(()=>{obsOpen();},370);}
 // --- Comments ---
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 let cmtReportId=null;
@@ -2905,7 +3069,7 @@ function feedSetScope(s){feedScope=s;
   // Nähe: immediately use the current device location
   if(s==='near'&&(!feedAnchor||feedAnchor.src!=='me')){const nb=document.getElementById('feedNear');if(nb)nb.click();}
   feedRender();haptic(5);}
-function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter button').forEach((b,i)=>{b.classList.toggle('active',['all','snow','route','danger','info'][i]===f);});feedRender();}
+function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter button').forEach((b,i)=>{b.classList.toggle('active',['all','avalanche','whumpf','wind_slab','other'][i]===f);});feedRender();}
 function feedSetAnchor(a){feedAnchor=a;
   document.getElementById('feedNear').classList.toggle('active',!!a&&a.src==='me');
   document.getElementById('feedPeakBtn').classList.toggle('active',!!a&&a.src==='peak');
