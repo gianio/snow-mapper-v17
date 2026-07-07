@@ -567,7 +567,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <style>
  :root{--fg:#0f1d2f;--fg2:#2c3e54;--mut:#6b7f96;--acc:#1a7fd4;--acc2:#0e5fa3;--bd:rgba(14,95,163,.1);--glass:rgba(255,255,255,.82);--glass2:rgba(248,251,255,.92);--glow:rgba(26,127,212,.12);--panel-h:52px;--r:14px;--r-lg:18px}
  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
- html,body{margin:0;padding:0;height:100%;width:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--fg);overscroll-behavior:none;background:#edf2f8;position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+ html,body{margin:0;padding:0;height:100%;height:100dvh;width:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--fg);overscroll-behavior:none;background:#0a1628;position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
  #map{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);background:#fff}
  #flow{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);z-index:450;pointer-events:none}
  #modeGlow{position:fixed;inset:0;z-index:2500;pointer-events:none;transition:box-shadow .5s ease;box-shadow:inset 0 0 0 3px rgba(26,127,212,.5),inset 0 0 70px rgba(26,127,212,.12)}
@@ -607,7 +607,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #sublayers button:hover{background:rgba(15,29,47,.09);color:var(--fg)}
  #sublayers button.active{background:var(--topic-tint);color:var(--topic-accent)}
  #bottomPanel{position:absolute;z-index:1000;bottom:0;left:0;right:0;
-   background:rgba(255,255,255,.68);backdrop-filter:blur(22px) saturate(1.35);-webkit-backdrop-filter:blur(22px) saturate(1.35);border-top:1px solid rgba(255,255,255,.5);box-shadow:0 -1px 0 var(--bd),0 -4px 20px rgba(0,0,0,.06);transition:none;padding-bottom:env(safe-area-inset-bottom,0px);overflow:hidden}
+   background:rgba(255,255,255,.8);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border-top:1px solid rgba(255,255,255,.5);box-shadow:0 -1px 0 var(--bd),0 -4px 20px rgba(0,0,0,.06);transition:none;padding-bottom:env(safe-area-inset-bottom,0px);overflow:hidden}
  #btmMain{padding:8px 14px 10px}
  #timeline{display:block;border:1px solid var(--bd);background:rgba(237,242,248,.5);border-radius:var(--r)}
  #presets::-webkit-scrollbar{display:none}
@@ -1528,7 +1528,6 @@ map.createPane('maskPane');map.getPane('maskPane').style.zIndex=350;map.getPane(
 const _world=[[-89,-360],[-89,360],[89,360],[89,-360]];
 const _hole=[[laMin,loMin],[laMin,loMax],[laMax,loMax],[laMax,loMin]];
 L.polygon([_world,_hole],{pane:'maskPane',stroke:false,fillColor:'#ffffff',fillOpacity:1,interactive:false}).addTo(map);
-L.rectangle([[laMin,loMin],[laMax,loMax]],{pane:'maskPane',fill:false,color:'rgba(15,29,47,.12)',weight:1,interactive:false}).addTo(map);
 const slopeWMTS=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.hangneigung-ueber_30/default/current/3857/{z}/{x}/{y}.png",{opacity:.7});
 const reliefWMTS=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissalti3d-reliefschattierung_monodirektional/default/current/3857/{z}/{x}/{y}.png",{opacity:.85});
 const roughImg=L.imageOverlay(ROUGH_PNG,[[M.png_bounds[0],M.png_bounds[1]],[M.png_bounds[2],M.png_bounds[3]]],{opacity:.78});
