@@ -785,17 +785,26 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ipane{display:none}
  .ipane.active{display:block}
  /* Map-click inspect panel */
- .insp-panel{position:fixed;z-index:2600;background:rgba(255,255,255,.9);backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);display:none;flex-direction:column;box-shadow:0 10px 50px rgba(11,17,32,.28);overflow:hidden}
+ .insp-panel{position:fixed;z-index:2600;background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);display:none;flex-direction:column;box-shadow:var(--elev3);overflow:hidden;border:1px solid rgba(255,255,255,.5)}
  .insp-panel.open{display:flex;animation:inspIn .3s cubic-bezier(.32,.72,.42,1)}
- @media(min-width:561px){.insp-panel{top:calc(env(safe-area-inset-top,0px) + 16px);right:16px;bottom:calc(var(--btm-h,0px) + 16px);width:376px;border-radius:22px}@keyframes inspIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}}
- @media(max-width:560px){.insp-panel{left:12px;right:12px;bottom:calc(var(--btm-h,0px) + 12px);max-height:48vh;border-radius:20px}@keyframes inspIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}}
- .insp-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 16px 12px;border-bottom:1px solid rgba(0,0,0,.06);flex-shrink:0}
+ @media(min-width:561px){.insp-panel{top:calc(env(safe-area-inset-top,0px) + 16px);right:16px;bottom:calc(var(--btm-h,0px) + 16px);width:384px;border-radius:var(--r-xl)}@keyframes inspIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}}
+ @media(max-width:560px){.insp-panel{left:12px;right:12px;bottom:calc(var(--btm-h,0px) + 12px);max-height:60vh;border-radius:var(--r-xl)}@keyframes inspIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}}
+ .insp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:16px 16px 12px;border-bottom:1px solid var(--hair);flex-shrink:0}
+ .insp-head .insp-t{min-width:0}
  .insp-head .insp-t b{font-size:15px;color:var(--fg);font-weight:800;letter-spacing:-.01em}
- .insp-head .insp-sub{font-size:12px;color:var(--mut);font-weight:600;margin-top:1px}
- .insp-head button{background:rgba(15,29,47,.05);border:none;width:32px;height:32px;border-radius:10px;color:var(--fg2);font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
- .insp-head button:hover{background:rgba(15,29,47,.1);color:var(--fg)}
+ .insp-chips{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+ .insp-chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--fill);color:var(--fg2);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+ .insp-chip.accent{background:rgba(26,127,212,.12);color:var(--acc2)}
+ .insp-head button{background:var(--fill);border:none;width:34px;height:34px;border-radius:11px;color:var(--fg2);font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:.15s}
+ .insp-head button:hover{background:var(--fill2);color:var(--fg)}
  .insp-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 18px calc(env(safe-area-inset-bottom,0px)+16px)}
- .insp-sec{padding:15px 0;border-bottom:1px solid rgba(0,0,0,.06)}
+ .insp-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 0 6px}
+ .insp-tile{background:var(--fill);border-radius:14px;padding:11px 13px;border:1px solid var(--hair)}
+ .insp-tile .tl{font-size:10.5px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+ .insp-tile .tv{font-size:21px;font-weight:800;color:var(--fg);letter-spacing:-.02em;margin-top:3px;line-height:1}
+ .insp-tile .tv small{font-size:12px;font-weight:700;color:var(--mut)}
+ .insp-tile.accent .tv{color:var(--acc2)}
+ .insp-sec{padding:15px 0;border-bottom:1px solid var(--hair)}
  .insp-sec:last-child{border-bottom:none}
  .insp-sec h4{margin:0 0 9px;font-size:13px;font-weight:800;color:var(--fg);letter-spacing:-.01em;display:flex;justify-content:space-between;align-items:baseline}
  .insp-sec h4 em{font-style:normal;font-weight:700;color:var(--acc2);font-size:12.5px}
@@ -1108,6 +1117,26 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .obs-cc{font-size:11px;color:var(--mut);text-align:right;margin-top:4px}
  .obs-summary{margin-top:14px;display:flex;flex-wrap:wrap;gap:6px}
  .obs-summary .rp-tag{padding:5px 11px;border-radius:999px;background:rgba(15,29,47,.05);color:var(--fg2);font-size:12.5px;font-weight:650}
+ /* --- Snow-condition inputs --- */
+ .snow-kinds{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+ .snow-kind{padding:10px 14px;border-radius:12px;border:1.5px solid var(--hair);border-left:4px solid var(--k);background:var(--fill);font-family:inherit;font-size:14px;font-weight:700;color:var(--fg2);cursor:pointer;transition:.15s var(--ease)}
+ .snow-kind:hover{background:var(--card)}
+ .snow-kind.active{background:var(--k);border-color:var(--k);color:#fff}
+ .snow-fields{margin-top:4px}
+ .snow-val{color:var(--acc2);font-weight:800;font-size:13px;float:right}
+ .obs-range{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:var(--fill2);outline:none;margin:8px 0 2px}
+ .obs-range::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--acc);border:3px solid #fff;box-shadow:var(--elev1);cursor:pointer}
+ .obs-range::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:var(--acc);border:3px solid #fff;box-shadow:var(--elev1);cursor:pointer}
+ .obs-range-row{display:flex;align-items:center;gap:10px}
+ .obs-range-row span{font-size:12px;font-weight:700;color:var(--mut);width:26px;flex-shrink:0;text-align:right}
+ .rose-wrap{display:flex;justify-content:center;margin:8px 0 4px}
+ .rose-svg{width:184px;height:184px}
+ .rose-w{fill:var(--fill2);stroke:var(--card);stroke-width:2;cursor:pointer;transition:fill .14s}
+ .rose-w:hover{fill:var(--fill)}
+ .rose-w.on{fill:var(--acc)}
+ .rose-t{fill:var(--fg2);font:800 12px Inter,system-ui;text-anchor:middle;pointer-events:none}
+ .rose-t.on{fill:#fff}
+ .rose-presets{justify-content:center;margin-top:2px}
  .cat-chip .cat-ico-w{width:30px;height:30px;display:flex;align-items:center;justify-content:center}
  .cat-chip .cat-ico-w svg{width:26px;height:26px;stroke:currentColor}
  /* --- Undo snackbar --- */
@@ -2079,10 +2108,15 @@ function inspOpen(lat,lon){
   inspMarker=L.marker([lat,lon],{icon:L.divIcon({className:'',html:'<div class="insp-xmark"><svg viewBox="0 0 24 24" fill="none" stroke="#e0245e" stroke-width="3.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>',iconSize:[30,30],iconAnchor:[15,15]}),interactive:false,zIndexOffset:2000}).addTo(map);
   const ca=a*NP,cb=b*NP;const newSnow=cum[cb+p]-cum[ca+p],depthNow=cum[cb+p];
   let wsum=0;for(let t=a;t<b;t++)wsum+=SPD[t*P+wk]/M.spd_mul*3.6;const wmean=wsum/Math.max(1,b-a);
+  const asp=maspv(p),slp=mslpv(p),quad=aspectQ(asp),QD={N:'Nord',E:'Ost',S:'Süd',W:'West'};
   const pan=document.getElementById('inspPanel');
+  const tile=(l,v,ac)=>'<div class="insp-tile'+(ac?' accent':'')+'"><div class="tl">'+l+'</div><div class="tv">'+v+'</div></div>';
   pan.innerHTML=
-   '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b><div class="insp-sub">'+elev.toFixed(0)+' m · Fenster '+(b-a)+' h</div></div><button onclick="inspClose()">✕</button></div>'+
+   '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b>'+
+     '<div class="insp-chips"><span class="insp-chip">⛰ '+elev.toFixed(0)+' m</span><span class="insp-chip accent">'+(QD[quad]||quad)+' · '+asp.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'° Neigung</span><span class="insp-chip">Fenster '+(b-a)+' h</span></div>'+
+   '</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
    '<div class="insp-body">'+
+     '<div class="insp-tiles">'+tile('Neuschnee','+'+newSnow.toFixed(newSnow>=10?0:1)+'<small> cm</small>',true)+tile('Schneehöhe',depthNow.toFixed(0)+'<small> cm</small>')+tile('Ø Wind',wmean.toFixed(0)+'<small> km/h</small>')+tile('Exposition',(QD[quad]||quad)+'<small> '+slp.toFixed(0)+'°</small>')+'</div>'+
      '<div class="insp-sec"><h4>Neuschnee <em>+'+newSnow.toFixed(1)+' cm</em></h4><canvas id="icNew"></canvas></div>'+
      '<div class="insp-sec"><h4>Schneehöhe <em>'+depthNow.toFixed(0)+' cm</em></h4><canvas id="icDepth"></canvas></div>'+
      '<div class="insp-sec"><h4>Temperatur <em>Luft · Oberfläche</em></h4><div class="insp-tempwrap"><canvas id="icTempY"></canvas><div class="insp-hscroll" id="icTempScroll"><canvas id="icTemp"></canvas></div></div><div class="insp-hint">◀ in die Vergangenheit scrollen ▶</div></div>'+
@@ -3046,8 +3080,23 @@ const OBS_TYPE_LIST=[
  {id:'avalanche',label:'Lawine',sub:'Spontan oder ausgelöst',color:'#d03050',tint:'rgba(208,48,80,.12)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M4 20l6-13 4 7"/><path d="M14 20c1-3 3-5 6-6"/></svg>'},
  {id:'whumpf',label:'Wumm-Geräusch',sub:'Setzungsgeräusche im Schnee',color:'#e8590c',tint:'rgba(232,89,12,.12)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><circle cx="9" cy="15" r="2"/><path d="M14 9c2 1 3 3 3 5M17 5c3 2 4 6 4 10"/></svg>'},
  {id:'wind_slab',label:'Triebschnee',sub:'Windverfrachteter Schnee',color:'#0d9488',tint:'rgba(13,148,136,.12)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18M4 18l7-9 5 6"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/></svg>'},
+ {id:'snow',label:'Schneequalität',sub:'Pulver · Harsch · Firn · Nassschnee',color:'#2a8ab0',tint:'rgba(42,138,176,.14)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M4 6l16 12M20 6L4 18"/><path d="M12 2l-2.5 2.5M12 2l2.5 2.5M12 22l-2.5-2.5M12 22l2.5-2.5M4 6l.2 3.4M4 6l3.4-.2M20 18l-.2-3.4M20 18l-3.4.2M20 6l-3.4-.2M20 6l-.2 3.4M4 18l3.4.2M4 18l.2-3.4"/></svg>'},
  {id:'other',label:'Andere Beobachtung',sub:'Freie Geländemeldung',color:'#1a7fd4',tint:'rgba(26,127,212,.12)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M5 20l5-9 4 6 5-9"/><path d="M15 5h6v5"/></svg>'}
 ];
+const SNOW_KINDS=[
+ {k:'powder',l:'Pulver',c:'#1a7fd4'},
+ {k:'wind_powder',l:'Triebschnee-Pulver',c:'#2a8ab0'},
+ {k:'wind_pressed',l:'Windharsch',c:'#0d9488'},
+ {k:'melt_crust',l:'Schmelzharsch',c:'#e8590c'},
+ {k:'wet',l:'Nassschnee',c:'#7b5cff'},
+ {k:'firn',l:'Firn',c:'#f5a623'}
+];
+const SNOW_LIGHT=[['very_light','sehr leicht'],['light','leicht'],['medium','mittel'],['dense','schwer / feucht']];
+const SNOW_THICK=[['carries','trägt'],['breaks','bricht durch'],['thin','dünn / leicht']];
+const SNOW_WET=[['surface','nur Oberfläche nass'],['sticky','Ski bleibt leicht stecken'],['sink','Ski sinkt ganz ein']];
+const SNOW_FIRN=[['hard','noch hart'],['semi','halb aufgefirnt'],['full','komplett Firn']];
+const ASPECT8=['N','NE','E','SE','S','SW','W','NW'];
+function snowKindLabel(k){const f=SNOW_KINDS.find(x=>x.k===k);return f?f.l:null;}
 const OBS_SIZE=[
  {k:'small',r:1,l:'Klein',obj:'⛷️',c:'Verschüttung von Personen unwahrscheinlich'},
  {k:'medium',r:2,l:'Mittel',obj:'🧍',c:'Kann Personen verschütten, verletzen oder töten'},
@@ -3071,6 +3120,7 @@ const OBS_STEPS={
  avalanche:[{k:'media'},{k:'avdetails'},{k:'comment'},{k:'submit'}],
  whumpf:[{k:'enum',f:'whumpfFrequency'},{k:'enum',f:'windSlab24h'},{k:'media_comment',final:true}],
  wind_slab:[{k:'enum',f:'windSlab24h'},{k:'media_comment',final:true}],
+ snow:[{k:'snowcond'},{k:'media_comment',final:true}],
  other:[{k:'media'},{k:'comment',final:true}]
 };
 function obsLbl(arr,k){const f=arr.find(x=>x[0]===k);return f?f[1]:k;}
@@ -3079,7 +3129,8 @@ let obsState=null,obsDeviceFix=null,obsMap=null,obsMarker=null,obsOpenCards=new 
 function obsNewState(type){return{type,step:0,steps:OBS_STEPS[type]||[],media:[],comment:'',
   location:{lat:null,lon:null,elevation:null,aspect:null,source:null},observedAt:null,
   avalanche:{triggerType:'unknown',remoteTrigger:false,caughtPersons:[],characteristics:{size:'unknown',sizeRank:0,avalancheType:'unknown',wetness:'unknown'}},
-  whumpfFrequency:null,windSlab24h:null};}
+  whumpfFrequency:null,windSlab24h:null,
+  snow:{kind:null,depth:30,lightness:null,powderline:2200,thickness:null,alt:2200,altLow:1800,altHigh:2600,aspects:[],wetness:null,firnState:null,firnTime:''}};}
 function obsDEM(lat,lon){const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));if(cx2<0||cx2>=W||cy2<0||cy2>=H)return{};const p=cy2*W+cx2;return{elev:Math.round(melevv(p)),aspect:aspectQ(maspv(p))};}
 function obsApplyLoc(lat,lon,source){const d=obsDEM(lat,lon);obsState.location={lat,lon,elevation:(d.elev!=null?d.elev:null),aspect:(d.aspect||null),source};}
 function obsWarmLocation(){if(!navigator.geolocation)return;navigator.geolocation.getCurrentPosition(p=>{obsDeviceFix={lat:p.coords.latitude,lon:p.coords.longitude};
@@ -3103,13 +3154,14 @@ function obsClose(){if(obsState&&(obsState.media.length||obsState.comment)){if(!
   document.getElementById('reportOverlay').style.display='none';if(obsMap){try{obsMap.remove();}catch(e){}obsMap=null;}obsState=null;}
 function obsBack(){if(!obsState){obsClose();return;}if(obsState.step>0){obsState.step--;obsRender();}else{obsOpen();}}
 function obsStepDisabled(st){if(st.k==='enum'){const e=OBS_ENUM[st.f];if(e.required&&!obsState[st.f])return true;}
+  if(st.k==='snowcond'){if(!obsState.snow.kind)return true;}
   if(st.k==='submit'||st.final){if(obsState.location.lat==null)return true;if(obsState.observedAt&&obsState.observedAt.getTime()>Date.now())return true;}
   return false;}
 function obsNext(){const steps=obsState.steps,st=steps[obsState.step];
   if(obsStepDisabled(st))return;
   if(st.k==='submit'||st.final){obsSubmit();return;}
   if(obsState.step<steps.length-1){obsState.step++;obsRender();haptic(6);}}
-const OBS_TITLES={media:['Fotos & Videos','Übersicht + Detail helfen am meisten'],avdetails:['Lawinendetails','Optional – tippe zum Ausklappen'],comment:['Kommentar','Optional, max. 500 Zeichen'],media_comment:['Beobachtung erfassen','Fotos & Kommentar'],submit:['Standort & Absenden','Prüfe Ort und Zeit']};
+const OBS_TITLES={media:['Fotos & Videos','Übersicht + Detail helfen am meisten'],avdetails:['Lawinendetails','Optional – tippe zum Ausklappen'],comment:['Kommentar','Optional, max. 500 Zeichen'],media_comment:['Beobachtung erfassen','Fotos & Kommentar'],submit:['Standort & Absenden','Prüfe Ort und Zeit'],snowcond:['Schneequalität','Was liegt & wie fährt es sich?']};
 function obsRender(){const steps=obsState.steps,i=obsState.step,st=steps[i];
   document.getElementById('obsBack').style.visibility='visible';
   document.getElementById('obsProgress').innerHTML=steps.map((s,ix)=>`<i class="${ix<i?'done':ix===i?'cur':''}"></i>`).join('');
@@ -3123,6 +3175,7 @@ function obsRender(){const steps=obsState.steps,i=obsState.step,st=steps[i];
   else if(st.k==='comment')body=obsCommentHTML();
   else if(st.k==='media_comment')body=obsMediaBlock(false)+obsCommentHTML();
   else if(st.k==='enum')body=obsEnumHTML(st.f);
+  else if(st.k==='snowcond')body=obsSnowHTML();
   else if(st.k==='avdetails')body=obsAvDetailsHTML();
   if(isFinal)body+=obsLocationHTML()+obsSummaryHTML();
   document.getElementById('obsBody').innerHTML=body;
@@ -3137,6 +3190,50 @@ function obsRerenderMedia(){const w=document.getElementById('obsMediaWrap');if(w
 function obsCommentHTML(){const v=obsState.comment||'';return '<textarea class="rp-caption" id="obsComment" maxlength="500" placeholder="Kommentar (optional)…" oninput="obsState.comment=this.value;var c=document.getElementById(\'obsCC\');if(c)c.textContent=this.value.length+\'/500\'" style="margin-top:0">'+v+'</textarea><div class="obs-cc" id="obsCC">'+v.length+'/500</div>';}
 function obsEnumHTML(f){const e=OBS_ENUM[f];return '<div class="obs-enum">'+e.opts.map(o=>`<button class="${obsState[f]===o.k?'active':''}" onclick="obsPickEnum('${f}','${o.k}')"><span>${o.l}${o.ct?'<span class="ct">'+o.ct+'</span>':''}</span><span class="rd"></span></button>`).join('')+'</div>';}
 function obsPickEnum(f,k){obsState[f]=k;haptic(6);obsRender();}
+// --- Snow-condition step (kind selector + per-kind fields) ---
+function obsSnowHTML(){const s=obsState.snow;
+  let h='<div class="obs-fld-l">Schneeart</div><div class="snow-kinds">'+SNOW_KINDS.map(k=>`<button class="snow-kind${s.kind===k.k?' active':''}" style="--k:${k.c}" onclick="obsSnowKind('${k.k}')">${k.l}</button>`).join('')+'</div>';
+  if(s.kind)h+='<div class="snow-fields">'+obsSnowFields(s.kind)+'</div>';
+  return h;}
+function obsSnowKind(k){obsState.snow.kind=(obsState.snow.kind===k?null:k);haptic(6);obsRender();}
+function obsSnowSet(f,v){obsState.snow[f]=(obsState.snow[f]===v?null:v);haptic(5);obsRender();}
+function obsSnowFields(kind){
+  if(kind==='powder')return obsDepthSlider('depth','Pulvertiefe')+obsSeg('lightness','Konsistenz',SNOW_LIGHT)+obsAltSlider('powderline','Pulvergrenze — Pulver ab');
+  if(kind==='wind_powder')return obsDepthSlider('depth','Tiefe der Auflage')+obsRose('Wo liegt der Triebschnee-Pulver?');
+  if(kind==='wind_pressed')return obsSeg('thickness','Winddeckel',SNOW_THICK)+obsAltSlider('alt','Betroffen ab Höhe')+obsRose('Betroffene Expositionen');
+  if(kind==='melt_crust')return obsSeg('thickness','Bruchharsch-Deckel',SNOW_THICK)+obsAltRange('Höhenband')+obsRose('Betroffene Expositionen');
+  if(kind==='wet')return obsSeg('wetness','Nässegrad',SNOW_WET);
+  if(kind==='firn')return obsSeg('firnState','Firn-Reife',SNOW_FIRN)+obsFirnTime();
+  return '';}
+function obsSeg(field,label,opts){const v=obsState.snow[field];
+  return '<div class="obs-fld"><div class="obs-fld-l">'+label+'</div><div class="obs-chips">'+opts.map(o=>`<button class="${v===o[0]?'active':''}" onclick="obsSnowSet('${field}','${o[0]}')">${o[1]}</button>`).join('')+'</div></div>';}
+function obsDepthSlider(field,label){const v=obsState.snow[field]||0;
+  return '<div class="obs-fld"><div class="obs-fld-l">'+label+' <b class="snow-val" id="sv_'+field+'">'+v+' cm</b></div><input type="range" class="obs-range" min="0" max="120" step="5" value="'+v+'" oninput="obsState.snow.'+field+'=+this.value;var l=document.getElementById(\'sv_'+field+'\');if(l)l.textContent=this.value+\' cm\'"></div>';}
+function obsAltSlider(field,label){const v=obsState.snow[field]||2000;
+  return '<div class="obs-fld"><div class="obs-fld-l">'+label+' <b class="snow-val" id="sv_'+field+'">'+v+' m</b></div><input type="range" class="obs-range" min="500" max="4000" step="50" value="'+v+'" oninput="obsState.snow.'+field+'=+this.value;var l=document.getElementById(\'sv_'+field+'\');if(l)l.textContent=this.value+\' m\'"></div>';}
+function obsAltRange(label){const lo=obsState.snow.altLow,hi=obsState.snow.altHigh;
+  return '<div class="obs-fld"><div class="obs-fld-l">'+label+' <b class="snow-val" id="sv_altband">'+lo+'–'+hi+' m</b></div>'+
+   '<div class="obs-range-row"><span>ab</span><input type="range" class="obs-range" min="500" max="4000" step="50" value="'+lo+'" oninput="obsAltBand(\'lo\',+this.value)"></div>'+
+   '<div class="obs-range-row"><span>bis</span><input type="range" class="obs-range" min="500" max="4000" step="50" value="'+hi+'" oninput="obsAltBand(\'hi\',+this.value)"></div></div>';}
+function obsAltBand(which,val){const s=obsState.snow;if(which==='lo')s.altLow=Math.min(val,s.altHigh);else s.altHigh=Math.max(val,s.altLow);
+  var l=document.getElementById('sv_altband');if(l)l.textContent=s.altLow+'–'+s.altHigh+' m';}
+function obsRose(label){const sel=obsState.snow.aspects||[];const cx=92,cy=92,rO=80,rI=34;let paths='';
+  for(let i=0;i<8;i++){const mid=i*45;const a0=(mid-22.5-90)*Math.PI/180,a1=(mid+22.5-90)*Math.PI/180;
+    const P=(r,a)=>[(cx+r*Math.cos(a)).toFixed(1),(cy+r*Math.sin(a)).toFixed(1)];
+    const o0=P(rO,a0),o1=P(rO,a1),i0=P(rI,a0),i1=P(rI,a1);
+    const d='M'+i0[0]+' '+i0[1]+' L'+o0[0]+' '+o0[1]+' A'+rO+' '+rO+' 0 0 1 '+o1[0]+' '+o1[1]+' L'+i1[0]+' '+i1[1]+' A'+rI+' '+rI+' 0 0 0 '+i0[0]+' '+i0[1]+' Z';
+    const on=sel.indexOf(ASPECT8[i])>=0;const lm=(mid-90)*Math.PI/180,lr=(rO+rI)/2;
+    const lx=(cx+lr*Math.cos(lm)).toFixed(1),ly=(cy+lr*Math.sin(lm)+4).toFixed(1);
+    paths+='<path d="'+d+'" class="rose-w'+(on?' on':'')+'" onclick="obsRoseTog(\''+ASPECT8[i]+'\')"/><text x="'+lx+'" y="'+ly+'" class="rose-t'+(on?' on':'')+'">'+ASPECT8[i]+'</text>';}
+  const presets='<div class="obs-chips rose-presets"><button onclick="obsRosePreset([\'N\',\'NE\',\'E\',\'SE\',\'S\',\'SW\',\'W\',\'NW\'])">Alle</button><button onclick="obsRosePreset([\'N\',\'NE\',\'NW\'])">Nord</button><button onclick="obsRosePreset([\'S\',\'SE\',\'SW\'])">Süd</button><button onclick="obsRosePreset([])">Keine</button></div>';
+  return '<div class="obs-fld"><div class="obs-fld-l">'+label+'</div><div class="rose-wrap"><svg viewBox="0 0 184 184" class="rose-svg" aria-label="Expositionsrose">'+paths+'</svg></div>'+presets+'</div>';}
+function obsRoseTog(a){const s=obsState.snow,i=s.aspects.indexOf(a);if(i>=0)s.aspects.splice(i,1);else s.aspects.push(a);haptic(5);obsRender();}
+function obsRosePreset(set){obsState.snow.aspects=set.slice();haptic(6);obsRender();}
+function obsFirnTime(){const v=obsState.snow.firnTime||'';return '<div class="obs-fld"><div class="obs-fld-l">Fahrbereit ab (Uhrzeit)</div><input type="time" class="obs-dt" value="'+v+'" oninput="obsState.snow.firnTime=this.value"></div>';}
+function snowMeasure(sn){const l=snowKindLabel(sn.kind)||'Schnee';
+  if(sn.kind==='powder'&&sn.depth)return sn.depth+' cm Pulver';
+  if(sn.kind==='wind_powder'&&sn.depth)return 'Triebschnee '+sn.depth+' cm';
+  return l;}
 function obsCard(id,title,sum,inner){const open=obsOpenCards.has(id)?' open':'';return `<div class="obs-card${open}" id="obscard-${id}"><div class="obs-card-h" onclick="obsToggleCard('${id}')">${title}${sum?'<span class="obs-card-sum">'+sum+'</span>':''}<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="obs-card-b">${inner}</div></div>`;}
 function obsToggleCard(id){if(obsOpenCards.has(id))obsOpenCards.delete(id);else obsOpenCards.add(id);const el=document.getElementById('obscard-'+id);if(el)el.classList.toggle('open');}
 function obsAvDetailsHTML(){const a=obsState.avalanche;
@@ -3186,6 +3283,13 @@ function obsSummaryHTML(){const t=[];const ty=OBS_TYPE_LIST.find(x=>x.id===obsSt
   if(obsState.type==='avalanche'){const a=obsState.avalanche;if(a.characteristics.size!=='unknown')t.push('<span class="rp-tag">Grösse: '+obsSizeMeta(a.characteristics.size).l+'</span>');if(a.triggerType!=='unknown')t.push('<span class="rp-tag">'+obsLbl(OBS_TRIGGER,a.triggerType)+'</span>');if(a.caughtPersons.length)t.push('<span class="rp-tag">'+a.caughtPersons.length+' Pers.</span>');}
   if(obsState.whumpfFrequency)t.push('<span class="rp-tag">Wumm: '+obsEnumLabel('whumpfFrequency',obsState.whumpfFrequency)+'</span>');
   if(obsState.windSlab24h)t.push('<span class="rp-tag">Triebschnee: '+obsEnumLabel('windSlab24h',obsState.windSlab24h)+'</span>');
+  if(obsState.type==='snow'){const sn=obsState.snow;if(sn.kind)t.push('<span class="rp-tag">'+snowKindLabel(sn.kind)+'</span>');
+    if((sn.kind==='powder'||sn.kind==='wind_powder')&&sn.depth)t.push('<span class="rp-tag">'+sn.depth+' cm</span>');
+    if(sn.kind==='powder'&&sn.powderline)t.push('<span class="rp-tag">ab '+sn.powderline+' m</span>');
+    if(sn.kind==='melt_crust')t.push('<span class="rp-tag">'+sn.altLow+'–'+sn.altHigh+' m</span>');
+    if(sn.kind==='wind_pressed'&&sn.alt)t.push('<span class="rp-tag">ab '+sn.alt+' m</span>');
+    if(sn.aspects&&sn.aspects.length)t.push('<span class="rp-tag">'+sn.aspects.join(' ')+'</span>');
+    if(sn.firnTime)t.push('<span class="rp-tag">ab '+sn.firnTime+'</span>');}
   if(obsState.media.length)t.push('<span class="rp-tag">📷 '+obsState.media.length+'</span>');
   return '<div class="obs-summary">'+t.join('')+'</div>';}
 function obsRemoveMedia(ix){obsState.media.splice(ix,1);obsRerenderMedia();}
@@ -3243,8 +3347,9 @@ function obsBuildCD(){const s=obsState;const cd={obsType:s.type,source:s.locatio
   if(s.type==='avalanche'){const a=s.avalanche;cd.avalanche={triggerType:a.triggerType,remoteTrigger:a.remoteTrigger,caughtPersons:a.caughtPersons,characteristics:{size:a.characteristics.size,sizeRank:a.characteristics.sizeRank,avalancheType:a.characteristics.avalancheType,wetness:a.characteristics.wetness}};if(a.characteristics.size!=='unknown')cd.measurement=obsSizeMeta(a.characteristics.size).l;}
   if(s.whumpfFrequency){cd.whumpfFrequency=s.whumpfFrequency;cd.measurement=obsEnumLabel('whumpfFrequency',s.whumpfFrequency);}
   if(s.windSlab24h){cd.windSlab24h=s.windSlab24h;if(!cd.measurement)cd.measurement=obsEnumLabel('windSlab24h',s.windSlab24h);}
+  if(s.type==='snow'){cd.snow=s.snow;cd.measurement=snowMeasure(s.snow);}
   return cd;}
-function obsSubLabel(){const s=obsState;if(s.type==='avalanche')return s.avalanche.characteristics.size!=='unknown'?('Lawine '+obsSizeMeta(s.avalanche.characteristics.size).l):'Lawine';if(s.type==='whumpf')return 'Wumm';if(s.type==='wind_slab')return 'Triebschnee';return 'Beobachtung';}
+function obsSubLabel(){const s=obsState;if(s.type==='avalanche')return s.avalanche.characteristics.size!=='unknown'?('Lawine '+obsSizeMeta(s.avalanche.characteristics.size).l):'Lawine';if(s.type==='whumpf')return 'Wumm';if(s.type==='wind_slab')return 'Triebschnee';if(s.type==='snow')return snowKindLabel(s.snow.kind)||'Schnee';return 'Beobachtung';}
 // --- Feed (Instagram-style full page) ---
 let feedFilter='all',feedAnchor=null,feedScope='all',feedGroup=null;
 const FEED_SCOPES=[
