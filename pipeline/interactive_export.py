@@ -1394,6 +1394,17 @@ const PD_GUST_REDIST_MIN_KMH=20;
 const PD_GUST_REDIST_MAX_KMH=60;
 const PD_WIND_REDIST_KMH=30;
 const PD_GUST_FACTOR=1.5;
+// Neu (validiert gegen Golden-Dataset, s. tools/eval_powder.py — 26/27):
+const PD_MIN_NEWSNOW_CM=0.5;      // I1/D0': min. Neuschnee im Lookback
+const PD_NEWSNOW_LOOKBACK_H=168;  // I1: 7 Tage
+const PD_COLD_SOLAR_TMAX_C=-4;    // I2: kalte Decke vertraegt mehr Sonne
+const PD_COLD_SOLAR_FACTOR=1.5;   // I2
+const PD_WET_PM_TMAX_C=3;         // I3: Nachmittagsnaesse -> reduced
+const PD_WET_PM_SUN_H=1;          // I3
+const PD_WET_PM_DROP_S_C=6;       // I3: ab hier S raus
+const PD_PERSIST_CHECK_H=72;      // I4: Kalt-Persistenz alter Powder
+const PD_PERSIST_WARM_C=0.5;      // I4
+const PD_PERSIST_WARM_SHARE=0.35; // I4
 const precv=(t,p)=>PREC[t*NP+p]/M.prec_mul;
 const maspv=p=>MASPECT[p]*M.dir_div;
 const mslpv=p=>MSLOPE[p];
@@ -1405,6 +1416,7 @@ const ASPC={N:[0x4A,0x90,0xD9],E:[0x66,0xBB,0x6A],S:[0xEF,0x53,0x50],W:[0xFF,0xC
 function aspCol(p){const s=mslpv(p);if(s<5)return ASPC.F;const q=aspectQ(maspv(p));return ASPC[q];}
 function isLee(cellAsp,windFrom){const lee=(windFrom+180)%360;let d=Math.abs(cellAsp-lee);if(d>180)d=360-d;return d<90;}
 const _QCEN={N:0,E:90,S:180,W:270};
+// Referenz: model/powder_engine.py — Aenderungen dort und hier synchron halten!
 function computePowder(p,ta,tb){
   const asp=maspv(p),slp=mslpv(p),quad=aspectQ(asp);
   const res={powdered:false,valid_aspects:[],reason_flags:[],quality:'stable'};
@@ -1413,8 +1425,22 @@ function computePowder(p,ta,tb){
   for(let t=ta;t<tb;t++){const d=WDIR[t*P+wk]*M.dir_div*Math.PI/180;ss+=Math.sin(d);sc2+=Math.cos(d);ws+=SPD[t*P+wk]/M.spd_mul*3.6;wc++;}
   const domW=(Math.atan2(ss,sc2)*180/Math.PI+360)%360;
   const meanW=ws/Math.max(1,wc), gustW=meanW*PD_GUST_FACTOR;
-  // D1: Rain in last 48h
-  const r0=Math.max(0,tb-PD_RAIN_LOOKBACK_H);let rain=false;
+  let tmax=-999;for(let t=ta;t<tb;t++){const v=tv(t,p);if(v>tmax)tmax=v;}
+  // Letzter Schneefall ueber die ganze Serie (fuer D0'/D1')
+  let lastSnowG=-1;for(let t=0;t<tb;t++){if(SNOW[t*NP+p]*M.snow_scale>0.1)lastSnowG=t;}
+  // I1/D0': ohne Neuschnee kein Powder — ausser Decke blieb kalt (I4)
+  const s0=Math.max(0,tb-PD_NEWSNOW_LOOKBACK_H);
+  const newSnow=cum[tb*NP+p]-cum[s0*NP+p];
+  let aged=false;
+  if(newSnow<PD_MIN_NEWSNOW_CM){
+    const w0=Math.max(0,tb-PD_PERSIST_CHECK_H);let warm=0;
+    for(let t=w0;t<tb;t++)if(tv(t,p)>PD_PERSIST_WARM_C)warm++;
+    if(warm/Math.max(1,tb-w0)>PD_PERSIST_WARM_SHARE){res.reason_flags.push('D0_no_recent_snow');return res;}
+    aged=true;res.reason_flags.push('I4_old_snow_persist');
+  }
+  // D1': Regen in den letzten 48h — aber nur NACH dem letzten Schneefall
+  let r0=Math.max(0,tb-PD_RAIN_LOOKBACK_H);if(lastSnowG>=0)r0=Math.max(r0,lastSnowG+1);
+  let rain=false;
   for(let t=r0;t<tb&&!rain;t++){if(precv(t,p)>PD_RAIN_MIN_MM&&tv(t,p)>PD_RAIN_TEMP_C)rain=true;}
   if(rain){res.reason_flags.push('D1_rain');return res;}
   // D2: Freeze-thaw cycles since last snowfall
@@ -1424,12 +1450,13 @@ function computePowder(p,ta,tb){
   for(let t=lastSnow+1;t<tb;t++){const b2=tv(t,p)<0;if(b2!==bel){ftc+=0.5;bel=b2;}}
   ftc=Math.floor(ftc);
   if(ftc>PD_FT_DESTROY){res.reason_flags.push('D2_freeze_thaw');return res;}
-  // D3: Solar melt
+  // D3: Solar melt (I2: kalte Decke vertraegt mehr Sonne)
   const doy=bandDoy();if(doy!==radDoy){radCS=computeRad(doy);radDoy=doy;}
   const rp=main2rad[p];const solar=rp>=0?radCS[rp]:0;
-  if(solar>=PD_SOLAR_DESTROY_WH){res.reason_flags.push('D3_solar_melt');return res;}
+  let destroyWh=PD_SOLAR_DESTROY_WH;
+  if(tmax<PD_COLD_SOLAR_TMAX_C){destroyWh*=PD_COLD_SOLAR_FACTOR;res.reason_flags.push('I2_cold_solar_relax');}
+  if(solar>=destroyWh){res.reason_flags.push('D3_solar_melt');return res;}
   // --- Preservation ---
-  let tmax=-999;for(let t=ta;t<tb;t++){const v=tv(t,p);if(v>tmax)tmax=v;}
   const ALL=['N','E','S','W'];const valid=new Set();
   // R1
   if(tmax<PD_DEEP_FREEZE_C){res.reason_flags.push('R1_deep_freeze');ALL.forEach(a=>valid.add(a));}
@@ -1447,12 +1474,18 @@ function computePowder(p,ta,tb){
     res.reason_flags.push('R4_freeze_clear_night');valid.add('N');
   }
   if(valid.size===0)return res;
-  // Solar moderation
-  if(solar>=PD_SOLAR_MOD_WH&&solar<PD_SOLAR_DESTROY_WH){valid.delete('S');valid.delete('W');}
+  // Solar moderation — nur wenn nicht tiefgefroren (I3b)
+  if(tmax>=PD_DEEP_FREEZE_C&&solar>=PD_SOLAR_MOD_WH&&solar<destroyWh){valid.delete('S');valid.delete('W');}
+  // I3: Nachmittagsnaesse
+  let winSun=0;for(let t=ta;t<tb;t++)winSun+=sunv(t,p);
+  if(tmax>=PD_WET_PM_TMAX_C&&winSun>=PD_WET_PM_SUN_H){
+    res.reason_flags.push('G2_wet_afternoon');res.quality='reduced';
+    if(tmax>=PD_WET_PM_DROP_S_C)valid.delete('S');
+  }
   res.valid_aspects=[...valid];
   if(!valid.has(quad))return res;
   // Degradation
-  if(ftc>=PD_FT_DEGRADE)res.quality='reduced';
+  if(ftc>=PD_FT_DEGRADE||aged)res.quality='reduced';
   res.powdered=true;return res;
 }
 function tempCol(t){const x=Math.max(-20,Math.min(20,t))/20;let r,g,b;if(x<0){const k=x+1;r=40+k*215|0;g=80+k*175|0;b=255;}else{r=255;g=255-x*200|0;b=255-x*235|0;}return[r,g,b];}

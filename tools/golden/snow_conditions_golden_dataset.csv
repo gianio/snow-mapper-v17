@@ -1,0 +1,28 @@
+id,image_id,powder,depth_cm,wind_crust,sun_crust,aspect,amount,wet_AM,wet_PM,zone_note,lat,lon,alt_m,date,time_local
+1,a_lot_of_pow_20cm,yes,20,none,none,,moderate,no,no,uniform coverage,46.9592,9.8391,1944,2026-01-10,12:28
+2,30-40cm_powdery_bit_wind_pressed,yes,35,partial,none,,deep,no,no,"light wind imprint, still skiable",46.4303,10.0045,2351,2026-01-29,12:32
+3,barely_snow_but_powder,yes,5,none,none,,trace,no,no,thin overall snowpack,46.6994,8.829,,2026-01-24,12:33
+4,barely_snow_sun_affected_hard_parts,yes,,none,full,,trace,no,yes,powder only at very top,46.7179,9.0442,2139,2026-02-07,12:16
+5,crusty_powder_top_shadow_else_sun_affected,yes,,none,partial,shaded/top,thin,no,yes,crusty powder in top-shadow only,47.0364,9.3071,2134,2026-02-28,10:11
+6,good_powder_all_day_20-30cm,yes,25,none,none,,moderate,no,no,"thin base, powder surface all day",46.9455,9.6377,1450,2026-02-17,11:01
+7,good_powder_leftovers_wet_crusty,yes,,none,partial,,thin,yes,yes,leftovers wet by morning,46.7154,8.7819,2738,2026-03-20,10:48
+8,good_powder_20cm_wind_affected_top,yes,20,partial,none,,moderate,no,no,wind influence at ridge/top only,46.8593,9.2493,1654,2026-03-27,15:47
+9,hard_crust_carrys_powder_above_3400,yes,,none,full,,thin,no,no,powder only above 3400 m,45.9076,7.2511,2809,2026-04-22,09:42
+10,north_aspects_still_powdery_10cm,yes,10,none,none,N,thin,no,no,N-aspects only at this elevation,46.7216,8.7674,2514,2026-04-03,11:51
+11,not_much_snow_bit_of_powder,yes,,none,none,,trace,no,no,overall thin snowpack,46.7212,8.786,2715,2026-01-01,13:22
+12,not_much_snow_only_NN_high_alt,yes,,none,none,N,trace,no,no,N-aspects + high altitude only,46.6795,8.6738,2826,2026-03-08,10:24
+13,only_powder_north_aspects_this_height,yes,,none,none,N,thin,no,no,N-aspects only at this elevation band,46.6948,9.9395,2967,2026-05-01,12:13
+14,only_powder_this_height_bit_wind_crusty,yes,,partial,none,,thin,no,no,mild wind crust at elevation,46.6188,8.9121,3173,2026-05-08,13:09
+15,only_powder_N_aspect_above_3000,yes,,none,none,N,thin,no,no,N-aspects only above 3000 m,46.6097,8.8824,3116,2026-04-26,12:57
+16,only_powder_N_high_alt_freeze_thaw_affected,yes,,none,partial,N,thin,no,yes,N + high alt only; freeze-thaw affected,45.9651,7.504,3558,2026-05-24,09:21
+17,powder_from_wind_Triebschnee_10cm,yes,10,partial,none,leeward,thin,no,no,wind-drifted deposit (Triebschnee),46.7393,8.7768,2929,2026-01-02,12:19
+18,powder_N_aspect_got_wet_during_day_10-20cm,yes,15,none,partial,N,moderate,no,yes,N-aspects; wet by afternoon,46.7018,9.9415,2495,2026-05-19,10:23
+19,powder_leftovers_many_freeze_thaw_cycles,yes,,none,partial,,trace,no,yes,leftovers; heavily cycled snowpack,46.8055,8.9159,3374,2026-04-05,12:52
+20,powder_only_high_NN_altitudes_10cm,yes,10,none,none,N,thin,no,no,N-aspects only + high altitude only,46.6942,8.6864,3032,2026-03-08,12:11
+21,powder_S_aspect_wet_during_day,yes,,none,full,S,thin,no,yes,S-aspects wet by afternoon,46.7303,9.947,2821,2026-05-16,14:09
+22,powder_wind_affected_crusty_bottom,yes,,partial,partial,,thin,no,no,wind-affected top + crusty base,46.5315,8.7916,2145,2025-12-29,11:24
+23,super_powder_30cm,yes,30,none,none,,deep,no,no,excellent uniform deep powder,46.701,8.8298,1543,2026-03-31,18:03
+24,sun_affected_thick_crust_E_bit_powder,yes,,none,full,E,trace,no,yes,sun-aspects heavily crusted; only E holds trace,46.7262,8.8337,2269,2026-03-06,10:01
+25,super_powder_20cm,yes,20,none,none,,moderate,no,no,excellent uniform coverage,46.7125,8.8193,1766,2026-02-22,14:13
+26,Triebschnee_10cm,yes,10,partial,none,leeward,thin,no,no,wind slab / Triebschnee,46.7288,8.7844,2892,2026-01-03,11:30
+27,very_good_powder_10-20cm_morning_heavy_at_noon,yes,15,none,partial,,moderate,no,yes,"morning powder, got wet/heavy by noon",46.814,9.9032,2323,2026-02-13,10:04
