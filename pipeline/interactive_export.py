@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 from rasterio.warp import Resampling, calculate_default_transform, reproject
 from rasterio.transform import array_bounds, from_origin
 from pyproj import Transformer
@@ -545,7 +545,79 @@ def export_interactive_html(data, out_html: Path) -> Path:
                       ("__ASPECTPNG__", data["aspect_png"]), ("__ROUGHPNG__", data["rough_png"])]:
         html = html.replace(f'"{tok}"', json.dumps(blob))
     out_html.write_text(html, encoding="utf-8")
+    _write_pwa_assets(out_html.parent)
     return out_html
+
+
+def _snowflake_icon(size: int) -> Image.Image:
+    """Simple branded PWA icon: navy rounded square + white 6-arm snowflake."""
+    import math
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    rad = int(size * 0.22)
+    d.rounded_rectangle([0, 0, size - 1, size - 1], radius=rad, fill=(10, 22, 40, 255))
+    cx = cy = size / 2
+    arm = size * 0.34
+    lw = max(2, int(size * 0.035))
+    white = (255, 255, 255, 235)
+    for k in range(6):
+        a = math.radians(60 * k)
+        ex, ey = cx + arm * math.cos(a), cy + arm * math.sin(a)
+        d.line([cx, cy, ex, ey], fill=white, width=lw)
+        # two side branches per arm
+        for frac, blen in ((0.55, 0.16), (0.8, 0.12)):
+            bx, by = cx + arm * frac * math.cos(a), cy + arm * frac * math.sin(a)
+            for da in (math.radians(35), -math.radians(35)):
+                d.line([bx, by,
+                        bx + size * blen * math.cos(a + da),
+                        by + size * blen * math.sin(a + da)],
+                       fill=white, width=max(1, lw - 1))
+    return img
+
+
+def _write_pwa_assets(out_dir: Path) -> None:
+    """Emit manifest, service worker and icons next to index.html so the app is
+    installable (Add to Home Screen) and loads offline with the last data."""
+    for px, name in [(180, "icon-180.png"), (192, "icon-192.png"), (512, "icon-512.png")]:
+        try:
+            _snowflake_icon(px).save(out_dir / name)
+        except Exception:  # icon is cosmetic; never fail the build over it
+            pass
+    manifest = {
+        "name": "Swiss Snow Model",
+        "short_name": "SnowModel",
+        "start_url": "./",
+        "scope": "./",
+        "display": "standalone",
+        "orientation": "portrait",
+        "background_color": "#0a1628",
+        "theme_color": "#0a1628",
+        "description": "Interaktive Neuschnee-, Pulver- und Skitauglichkeits-Karte für die Schweiz.",
+        "icons": [
+            {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+        ],
+    }
+    (out_dir / "manifest.webmanifest").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    (out_dir / "sw.js").write_text(_SERVICE_WORKER, encoding="utf-8")
+
+
+_SERVICE_WORKER = r"""// Swiss Snow Model — service worker (installable + offline last-data).
+const C='ssm-v1';
+const CORE=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];
+self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(CORE).catch(()=>{})));});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
+self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
+  const url=new URL(r.url);
+  if(url.origin!==location.origin)return; // map tiles / Supabase / CDNs -> network
+  const isShell=r.mode==='navigate'||url.pathname.endsWith('/')||url.pathname.endsWith('index.html');
+  if(isShell){
+    e.respondWith(fetch(r).then(resp=>{const cp=resp.clone();caches.open(C).then(c=>c.put('./index.html',cp));return resp;}).catch(()=>caches.match('./index.html')));
+    return;}
+  e.respondWith(caches.match(r).then(m=>m||fetch(r)));
+});
+"""
 
 
 _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
@@ -562,10 +634,36 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <script src="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="manifest" href="manifest.webmanifest"/>
+<link rel="apple-touch-icon" href="icon-180.png"/>
+<!-- Sentry error tracking: paste your browser DSN into SENTRY_DSN to enable. -->
+<script>window.SENTRY_DSN='';(function(){if(!window.SENTRY_DSN)return;var s=document.createElement('script');s.src='https://browser.sentry-cdn.com/7.120.0/bundle.tracing.min.js';s.crossOrigin='anonymous';s.onload=function(){try{window.Sentry.init({dsn:window.SENTRY_DSN,tracesSampleRate:0,release:'snow-mapper'});}catch(e){}};document.head.appendChild(s);window.addEventListener('error',function(e){try{if(window.Sentry&&e.error)window.Sentry.captureException(e.error);}catch(_){}});window.addEventListener('unhandledrejection',function(e){try{if(window.Sentry)window.Sentry.captureException(e.reason);}catch(_){}});})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
- :root{--fg:#0f1d2f;--fg2:#2c3e54;--mut:#6b7f96;--acc:#1a7fd4;--acc2:#0e5fa3;--bd:rgba(14,95,163,.1);--glass:rgba(255,255,255,.82);--glass2:rgba(248,251,255,.92);--glow:rgba(26,127,212,.12);--panel-h:52px;--r:14px;--r-lg:18px}
+ :root{--fg:#0f1d2f;--fg2:#2c3e54;--mut:#6b7f96;--acc:#1a7fd4;--acc2:#0e5fa3;--bd:rgba(14,95,163,.1);--glass:rgba(255,255,255,.82);--glass2:rgba(248,251,255,.92);--glow:rgba(26,127,212,.12);--panel-h:52px;--r:14px;--r-lg:18px;
+   /* design-system extensions (2026 refresh) */
+   --ok:#1a9e6a;--warn:#d98a1f;--danger:#e0483c;--danger-tint:rgba(224,72,60,.12);
+   --sp1:4px;--sp2:8px;--sp3:12px;--sp4:16px;--sp5:24px;--r-sm:10px;--r-xl:24px;
+   --elev1:0 1px 3px rgba(15,29,47,.10);--elev2:0 6px 20px rgba(15,29,47,.13);--elev3:0 18px 46px rgba(15,29,47,.22);
+   --blur:blur(24px) saturate(1.5);--dur:.22s;--ease:cubic-bezier(.4,0,.2,1);--ease-spring:cubic-bezier(.34,1.4,.64,1)}
+ /* Respect reduced-motion: kill non-essential animation/transition globally */
+ @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+ /* Higher-contrast borders/text for snow-glare / accessibility */
+ @media (prefers-contrast:more){:root{--mut:#4a5a6e;--bd:rgba(14,95,163,.28)}}
+ /* --- Toast notifications (errors are no longer silent) --- */
+ #toastWrap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:9500;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:max-content;max-width:calc(100vw - 32px)}
+ .toast{pointer-events:auto;display:flex;align-items:center;gap:9px;padding:11px 16px;border-radius:var(--r);font-size:13.5px;font-weight:600;color:var(--fg);background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(255,255,255,.6);box-shadow:var(--elev2);max-width:100%;animation:toastIn .3s var(--ease-spring)}
+ .toast.out{animation:toastOut .25s var(--ease) forwards}
+ .toast .ic{width:18px;height:18px;flex-shrink:0}
+ .toast.err{color:#7a1a12}.toast.err .ic{color:var(--danger)}
+ .toast.ok{color:#0d5a3a}.toast.ok .ic{color:var(--ok)}
+ @keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+ @keyframes toastOut{to{opacity:0;transform:translateY(8px) scale(.97)}}
+ /* --- Skeleton shimmer for loading feed/cards --- */
+ .skel{position:relative;overflow:hidden;background:rgba(15,29,47,.06);border-radius:var(--r-sm)}
+ .skel::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-100%);animation:shimmer 1.3s infinite}
+ @keyframes shimmer{100%{transform:translateX(100%)}}
  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
  html,body{margin:0;padding:0;height:100%;height:100dvh;width:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--fg);overscroll-behavior:none;background:#0a1628;position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
  #map{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);background:#fff}
@@ -755,6 +853,24 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #intro .mtn{position:absolute;bottom:0;left:0;width:100%;height:40%;opacity:0;animation:introUp .6s .05s ease forwards}
  #intro .sources{font-size:clamp(10px,1.5vw,13px);color:rgba(255,255,255,.5);margin-top:16px;letter-spacing:.08em;opacity:0;animation:introUp .4s .5s ease forwards}
  #intro .snow-wrap{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+ /* --- First-run legal / safety disclaimer gate --- */
+ #disc{position:fixed;inset:0;z-index:9800;display:none;align-items:flex-end;justify-content:center;background:rgba(6,14,26,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+ #disc.show{display:flex;animation:discBg .3s ease}
+ @keyframes discBg{from{opacity:0}to{opacity:1}}
+ #disc .sheet{width:100%;max-width:520px;background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(255,255,255,.6);border-radius:var(--r-xl) var(--r-xl) 0 0;box-shadow:var(--elev3);padding:24px 22px calc(env(safe-area-inset-bottom,0px) + 22px);animation:discUp .4s var(--ease-spring)}
+ @media(min-width:560px){#disc{align-items:center}#disc .sheet{border-radius:var(--r-xl)}}
+ @keyframes discUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+ #disc .ic{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--danger-tint);color:var(--danger);margin-bottom:14px}
+ #disc .ic svg{width:24px;height:24px}
+ #disc h2{margin:0 0 8px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:var(--fg)}
+ #disc p{margin:0 0 12px;font-size:14px;line-height:1.5;color:var(--fg2)}
+ #disc .fine{font-size:12px;color:var(--mut);line-height:1.45}
+ #disc a{color:var(--acc);font-weight:600;text-decoration:none}
+ #disc .chk{display:flex;gap:10px;align-items:flex-start;margin:14px 0;font-size:13px;color:var(--fg2);cursor:pointer}
+ #disc .chk input{margin-top:1px;width:18px;height:18px;accent-color:var(--acc);flex-shrink:0}
+ #disc button.accept{width:100%;border:none;border-radius:var(--r);padding:14px;font-size:15px;font-weight:700;font-family:inherit;color:#fff;background:var(--acc);cursor:pointer;transition:.2s;box-shadow:var(--elev1)}
+ #disc button.accept:disabled{opacity:.45;cursor:not-allowed}
+ #disc button.accept:not(:disabled):active{transform:scale(.98)}
  .sf{position:absolute;top:-10px;width:6px;height:6px;background:white;border-radius:50%;opacity:.6;animation:sfDrop linear infinite}
  @keyframes sfDrop{0%{transform:translateY(0) translateX(0)}25%{transform:translateY(25vh) translateX(15px)}50%{transform:translateY(50vh) translateX(-10px)}75%{transform:translateY(75vh) translateX(20px)}100%{transform:translateY(110vh) translateX(5px)}}
  /* --- Onboarding coach marks --- */
@@ -1103,6 +1219,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .prof-toggle.on span{left:23px}
  .prof-save{width:100%;margin-top:20px;padding:15px;border-radius:15px;border:none;background:var(--acc);color:#fff;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit}
  .prof-save:hover{background:var(--acc2)}
+ .prof-feedback{width:100%;margin-top:10px;padding:13px;border-radius:14px;border:1px solid var(--bd);background:none;color:var(--acc2);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
  .prof-signout{width:100%;margin-top:10px;padding:13px;border-radius:14px;border:none;background:none;color:#d03050;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
  .prof-bioview{font-size:14px;color:var(--fg2);line-height:1.55;margin-top:4px;white-space:pre-wrap;min-height:12px}
  .prof-save.following{background:var(--fg)}
@@ -1161,6 +1278,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-card-actions button{background:none;border:none;cursor:pointer;padding:4px;color:var(--fg2);display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;font-family:inherit}
  .feed-card-actions button svg{width:20px;height:20px}
  .feed-card-actions button:hover{color:var(--fg)}
+ .feed-card-actions .flag-btn{margin-left:auto;color:var(--mut)}
+ .feed-card-actions .flag-btn:hover{color:var(--danger)}
+ .feed-card-actions .flag-btn.flagged{color:var(--danger)}
  .feed-divider{height:1px;background:rgba(0,0,0,.06)}
  .feed-empty{text-align:center;padding:80px 20px;color:var(--mut);font-size:15px}
  .feed-fab{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px)+22px);right:20px;height:52px;padding:0 20px 0 16px;gap:8px;border-radius:26px;border:none;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;font-size:15px;font-weight:700;box-shadow:0 8px 24px rgba(26,127,212,.4);z-index:5;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
@@ -1175,6 +1295,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  @media(prefers-reduced-motion:reduce){.cat-chip,.sub-chip,.bucket,.slide-knob,.radial-seg{transition:none!important}}
 </style></head><body>
 <div id="intro"><div class="snow-wrap" id="snowWrap"></div><svg class="mtn" viewBox="0 0 800 200" preserveAspectRatio="none"><path d="M0,200 L80,110 L140,155 L240,55 L310,125 L390,35 L460,105 L540,55 L620,115 L700,65 L800,140 L800,200Z" fill="rgba(255,255,255,.04)"/><path d="M0,200 L100,130 L180,165 L300,80 L380,150 L470,85 L550,145 L660,95 L750,145 L800,165 L800,200Z" fill="rgba(255,255,255,.07)"/><path d="M0,200 L60,170 L160,145 L260,175 L360,130 L440,170 L520,150 L620,175 L720,155 L800,180 L800,200Z" fill="rgba(255,255,255,.03)"/></svg><h1>Swiss Snow Model</h1><div class="sub">Interactive Snow Forecast Map</div><div class="sources">swisstopo &middot; MeteoSwiss &middot; SLF &middot; Open-Meteo &middot; Copernicus</div><div class="bar"></div></div>
+<div id="toastWrap" aria-live="polite"></div>
+<div id="disc"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="discH"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><h2 id="discH">Bevor du startest</h2><p><b>Experimentelle Modelldaten.</b> Diese App zeigt modellierte Schnee-, Pulver- und Skitauglichkeits-Sch&auml;tzungen. Sie ist <b>kein Lawinenbulletin</b> und ersetzt nicht die offizielle Beurteilung des <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation.html" target="_blank" rel="noopener">SLF</a> bzw. <a href="https://whiterisk.ch" target="_blank" rel="noopener">White Risk</a>. Entscheidungen im Gel&auml;nde triffst du auf <b>eigenes Risiko</b>.</p><p class="fine">Datenschutz: F&uuml;r Konto, Meldungen und Fotos werden E-Mail, Standort und Bilddaten bei Supabase (EU) gespeichert. Du kannst Konto und Beitr&auml;ge jederzeit l&ouml;schen.</p><label class="chk"><input type="checkbox" id="discChk" onchange="var b=document.getElementById('discBtn');if(b)b.disabled=!this.checked"><span>Ich habe verstanden, dass dies experimentelle Daten sind und kein Lawinenbulletin ersetzt.</span></label><button class="accept" id="discBtn" disabled onclick="acceptDisc()">Verstanden &ndash; loslegen</button></div></div>
 <div id="map"></div>
 <canvas id="flow"></canvas>
 <div id="modeGlow"></div>
@@ -1348,6 +1470,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <textarea class="prof-bio" id="profBio" maxlength="1400" placeholder="Kurze Beschreibung (max. 200 Wörter, keine Links)…" oninput="profBioInput()"></textarea>
       <div class="prof-row"><span>Push-Benachrichtigungen</span><button class="prof-toggle" id="profPush" onclick="profTogglePush()"><span></span></button></div>
       <button class="prof-save" id="profSave" onclick="profSave()">Speichern</button>
+      <button class="prof-feedback" onclick="sendFeedback()">Feedback senden</button>
       <button class="prof-signout" onclick="profSignOut()">Abmelden</button>
     </div>
   </div>
@@ -2134,7 +2257,7 @@ map.on('moveend',sync2dTo3d);
 const _introStart=Date.now();
 function dismissIntro(){const el=document.getElementById('intro');if(!el)return;
   const wait=Math.max(0,1200-(Date.now()-_introStart));
-  setTimeout(()=>{el.classList.add('hide');setTimeout(()=>{el.remove();maybeOnboard();},500);},wait);}
+  setTimeout(()=>{el.classList.add('hide');setTimeout(()=>{el.remove();maybeDisclaimer();},500);},wait);}
 // --- Snow animation for intro ---
 (function(){const w=document.getElementById('snowWrap');if(!w)return;
   for(let i=0;i<30;i++){const s=document.createElement('div');s.className='sf';
@@ -2193,6 +2316,7 @@ document.addEventListener('gesturestart',e=>e.preventDefault());
 document.addEventListener('gesturechange',e=>e.preventDefault());
 (function(){let lt=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lt<=300&&!e.target.closest('#map,#map3d')){e.preventDefault();}lt=n;},{passive:false});})();
 setTopic('snow',0);dismissIntro();
+if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
 requestAnimationFrame(()=>{document.documentElement.style.setProperty('--btm-h',document.getElementById('bottomPanel').offsetHeight+'px');});
 // --- Supabase Auth & Reports ---
 const SB_URL='https://gdtxwowcqtbdkcoksivb.supabase.co';
@@ -2200,6 +2324,38 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 let sb=null,sbUser=null,authMode='login';
 try{sb=window.supabase.createClient(SB_URL,SB_KEY);}catch(e){console.warn('Supabase SDK not loaded',e);}
 function haptic(ms){try{navigator.vibrate(ms||8);}catch(e){}}
+// --- Toast notifications (surface errors + confirmations; no longer silent) ---
+function toast(msg,kind){const w=document.getElementById('toastWrap');
+  if(!w){try{console.log('toast:',kind||'',msg);}catch(e){}return;}
+  const t=document.createElement('div');t.className='toast'+(kind?(' '+kind):'');
+  const ic=kind==='err'?'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12.5"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>':kind==='ok'?'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>':'';
+  t.innerHTML=ic+'<span></span>';t.querySelector('span').textContent=msg;w.appendChild(t);
+  if(kind==='err'){try{haptic(18);}catch(e){}}
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>{t.remove();},260);},kind==='err'?4200:2600);}
+// --- First-run legal / safety disclaimer gate (must accept before onboarding) ---
+const DISC_VER='1';
+function maybeDisclaimer(){
+  try{if(localStorage.getItem('ssm_disclaimer_v'+DISC_VER)){maybeOnboard();return;}}catch(e){}
+  const el=document.getElementById('disc');if(!el){maybeOnboard();return;}el.classList.add('show');}
+function acceptDisc(){
+  try{localStorage.setItem('ssm_disclaimer_v'+DISC_VER,'1');}catch(e){}
+  const el=document.getElementById('disc');if(el)el.classList.remove('show');
+  try{haptic(12);}catch(e){}maybeOnboard();}
+// --- Client-side image downscale before upload (protect the 1GB free tier) ---
+async function downscaleImage(file,maxPx,q){
+  maxPx=maxPx||1600;q=q||0.85;
+  if(!file||!/^image\//.test(file.type||''))return file;
+  try{
+    const bmp=await createImageBitmap(file,{imageOrientation:'from-image'});
+    const w=bmp.width,h=bmp.height,long=Math.max(w,h);
+    if(long<=maxPx&&(file.size||0)<600*1024){if(bmp.close)bmp.close();return file;}
+    const scale=Math.min(1,maxPx/long),cw=Math.round(w*scale),ch=Math.round(h*scale);
+    const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+    cv.getContext('2d').drawImage(bmp,0,0,cw,ch);if(bmp.close)bmp.close();
+    const blob=await new Promise(res=>cv.toBlob(res,'image/jpeg',q));
+    return(blob&&blob.size<(file.size||Infinity))?blob:file;
+  }catch(e){console.warn('downscale',e);return file;}
+}
 // --- Category icons / colors (defined early: used by markers on first paint) ---
 const CAT_SVG={
   snow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="22"/><line x1="4.9" y1="7" x2="19.1" y2="17"/><line x1="4.9" y1="17" x2="19.1" y2="7"/><line x1="12" y1="2" x2="14" y2="4.5"/><line x1="12" y1="2" x2="10" y2="4.5"/><line x1="12" y1="22" x2="14" y2="19.5"/><line x1="12" y1="22" x2="10" y2="19.5"/><line x1="4.9" y1="7" x2="5.7" y2="9.8"/><line x1="4.9" y1="7" x2="7.5" y2="6"/><line x1="19.1" y1="17" x2="18.3" y2="14.2"/><line x1="19.1" y1="17" x2="16.5" y2="18"/><line x1="19.1" y1="7" x2="16.5" y2="6"/><line x1="19.1" y1="7" x2="18.3" y2="9.8"/><line x1="4.9" y1="17" x2="7.5" y2="18"/><line x1="4.9" y1="17" x2="5.7" y2="14.2"/></svg>',
@@ -2351,6 +2507,7 @@ async function loadDbReports(){
     let cmtCount={};try{const{data:cc}=await sb.from('report_comments').select('report_id').in('report_id',ids);
       (cc||[]).forEach(x=>{cmtCount[x.report_id]=(cmtCount[x.report_id]||0)+1;});}catch(e){}
     const dbR=data.map(r=>{
+      if(r.flagged)return null; // hide community-flagged reports
       const ll=parseGeo(r.location);if(!ll||(ll[0]===0&&ll[1]===0))return null;const lat=ll[0],lng=ll[1];
       const catId=r.primary_categories?.[0]||'info';const catObj=RP_CATS.find(c=>c.id===catId);
       return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||'📍',sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,dbRow:true};
@@ -2369,6 +2526,20 @@ async function toggleEndorse(id,ev){if(ev){ev.stopPropagation();}
     if(willEndorse)await sb.from('report_reactions').insert({report_id:id,user_id:sbUser.id,type:'like'});
     else await sb.from('report_reactions').delete().match({report_id:id,user_id:sbUser.id,type:'like'});
   }catch(e){r.liked=!willEndorse;r.likes+=(willEndorse?-1:1);feedRender();}
+}
+// --- Report moderation: flag/melden ---
+async function reportFlag(id,ev){if(ev){ev.stopPropagation();}
+  if(!sb||!sbUser){authShow();return;}
+  const r=allReports.find(x=>x.id===id);if(!r||!r.dbRow)return;
+  if(r.userId&&r.userId===sbUser.id){toast('Du kannst deinen eigenen Report nicht melden.');return;}
+  if(r.flaggedByMe){toast('Bereits gemeldet.');return;}
+  if(!confirm('Diesen Report als unangemessen melden?'))return;
+  r.flaggedByMe=true;feedRender();
+  try{
+    const{error}=await sb.from('report_flags').insert({report_id:id,user_id:sbUser.id,reason:null});
+    if(error)throw error;
+    toast('Danke, der Report wurde gemeldet.','ok');haptic(10);
+  }catch(e){r.flaggedByMe=false;feedRender();toast('Melden fehlgeschlagen: '+(e.message||e),'err');}
 }
 // --- Follow ---
 async function toggleFollow(uid,ev){if(ev){ev.stopPropagation();}
@@ -2538,9 +2709,10 @@ async function profSave(){
   try{
     let avatarUrl=profAvatarUrl;
     if(profAvatarFile){
-      const ext=(profAvatarFile.name.split('.').pop()||'jpg').toLowerCase();
+      const up=await downscaleImage(profAvatarFile,512,0.85);
+      const ext=(up.type==='image/jpeg')?'jpg':(profAvatarFile.name.split('.').pop()||'jpg').toLowerCase();
       const path='avatars/'+sbUser.id+'_'+Date.now()+'.'+ext;
-      const{error:upErr}=await sb.storage.from('report-images').upload(path,profAvatarFile,{contentType:profAvatarFile.type||'image/jpeg',upsert:true});
+      const{error:upErr}=await sb.storage.from('report-images').upload(path,up,{contentType:up.type||'image/jpeg',upsert:true});
       if(!upErr){const{data}=sb.storage.from('report-images').getPublicUrl(path);avatarUrl=data?.publicUrl||avatarUrl;}
     }
     const bio=sanitizeBio(document.getElementById('profBio').value);
@@ -2552,6 +2724,9 @@ async function profSave(){
   btn.disabled=false;btn.textContent='Speichern';
 }
 function profSignOut(){if(sb)sb.auth.signOut();profClose();authUpdateUI(null);}
+function sendFeedback(){try{haptic(8);}catch(e){}
+  const body=encodeURIComponent('\n\n---\nSwiss Snow Model\n'+(navigator.userAgent||''));
+  window.location.href='mailto:giani.morf@bluewin.ch?subject='+encodeURIComponent('Snow-Mapper Feedback')+'&body='+body;}
 // --- View another user's profile ---
 let uvUid=null;
 async function viewUser(uid,username){
@@ -2818,9 +2993,10 @@ async function reportSubmit(){
   try{
     let imageUrl=null;
     if(rpState.photoFile){
-      const ext=(rpState.photoFile.name.split('.').pop()||'jpg').toLowerCase();
+      const up=await downscaleImage(rpState.photoFile);
+      const ext=(up.type==='image/jpeg')?'jpg':(rpState.photoFile.name.split('.').pop()||'jpg').toLowerCase();
       const path=`${sbUser.id}/${Date.now()}.${ext}`;
-      const{error:upErr}=await sb.storage.from('report-images').upload(path,rpState.photoFile,{contentType:rpState.photoFile.type||'image/jpeg',upsert:false});
+      const{error:upErr}=await sb.storage.from('report-images').upload(path,up,{contentType:up.type||'image/jpeg',upsert:false});
       if(upErr){console.error('Foto-Upload fehlgeschlagen',upErr);
         if(!confirm('Foto konnte nicht hochgeladen werden: '+(upErr.message||upErr)+' — Report trotzdem ohne Foto posten?')){next.disabled=false;next.textContent='Report posten';return;}}
       else{const{data:urlData}=sb.storage.from('report-images').getPublicUrl(path);imageUrl=urlData?.publicUrl||null;}
@@ -3040,8 +3216,8 @@ async function obsSubmit(){if(!sb||!sbUser||!obsState)return;const L=obsState.lo
   if(obsState.observedAt&&obsState.observedAt.getTime()>Date.now()){alert('Zeitpunkt liegt in der Zukunft.');return;}
   const next=document.getElementById('obsNext');next.disabled=true;next.textContent='Melden…';
   try{const urls=[];
-    for(const m of obsState.media){try{const ext=(m.file.name.split('.').pop()||'jpg').toLowerCase();const path=sbUser.id+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.'+ext;
-      const{error}=await sb.storage.from('report-images').upload(path,m.file,{contentType:m.file.type||'image/jpeg'});
+    for(const m of obsState.media){try{const up=await downscaleImage(m.file);const ext=(up.type==='image/jpeg')?'jpg':(m.file.name.split('.').pop()||'jpg').toLowerCase();const path=sbUser.id+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.'+ext;
+      const{error}=await sb.storage.from('report-images').upload(path,up,{contentType:up.type||'image/jpeg'});
       if(!error){const{data}=sb.storage.from('report-images').getPublicUrl(path);if(data&&data.publicUrl)urls.push(data.publicUrl);}
       else if(urls.length===0&&obsState.media.length){/* keep going */}}catch(e){}}
     const cd=obsBuildCD();
@@ -3083,9 +3259,10 @@ function feedCreatePost(){if(!sb||!sbUser){authShow();return;}feedClose();setTim
 // --- Comments ---
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 let cmtReportId=null;
+const CMT_SKELETON='<div class="cmt-row"><div class="cmt-av skel"></div><div class="cmt-b" style="flex:1"><div class="skel" style="height:12px;width:38%;margin-bottom:7px"></div><div class="skel" style="height:11px;width:85%;margin-bottom:5px"></div><div class="skel" style="height:11px;width:55%"></div></div></div>'.repeat(3);
 function openComments(id,ev){if(ev)ev.stopPropagation();cmtReportId=id;
   document.getElementById('cmtModal').style.display='flex';
-  document.getElementById('cmtList').innerHTML='<div class="cmt-empty">Lädt…</div>';
+  document.getElementById('cmtList').innerHTML=CMT_SKELETON;
   document.getElementById('cmtInput').value='';loadComments(id);}
 function commentsClose(){document.getElementById('cmtModal').style.display='none';cmtReportId=null;}
 async function loadComments(id){
@@ -3203,6 +3380,7 @@ function feedRender(){
         ${endBtn}
         ${r.dbRow?`<button onclick="openComments('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg> ${r.comments||0}</button>`:''}
         <button onclick="event.stopPropagation();feedFlyTo(${r.lat},${r.lng})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Karte</button>
+        ${r.dbRow&&(!sbUser||r.userId!==sbUser.id)?`<button class="flag-btn ${r.flaggedByMe?'flagged':''}" title="Melden" aria-label="Report melden" onclick="reportFlag('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>`:''}
       </div>
     </div>`;
   }).join('');

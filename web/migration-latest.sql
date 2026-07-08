@@ -64,5 +64,77 @@ CREATE POLICY "report_images_owner_delete" ON storage.objects
   FOR DELETE TO authenticated
   USING (bucket_id = 'report-images' AND owner = auth.uid());
 
--- 5) Reload the API schema cache so the new columns/tables are visible now
+-- 5) Privacy: stop exposing profiles.email (and webauthn_credentials) to
+--    public/authenticated readers. RLS is row-level only, so a column REVOKE
+--    alone is ineffective when table-level SELECT is granted — instead revoke
+--    the whole table then grant back only the columns the app actually reads.
+--    The client always gets the current user's email from the auth session
+--    (sbUser.email), never from this table, so nothing breaks.
+REVOKE SELECT ON profiles FROM anon, authenticated;
+GRANT SELECT (id, username, avatar_url, bio, push_enabled, created_at)
+  ON profiles TO anon, authenticated;
+
+-- 6) Moderation: flag column + report_flags table + auto-flag trigger.
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS flagged BOOLEAN DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS report_flags (
+  report_id  UUID REFERENCES reports(id) ON DELETE CASCADE,
+  user_id    UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  reason     TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (report_id, user_id)          -- one flag per user per report
+);
+ALTER TABLE report_flags ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "flags_insert_own" ON report_flags;
+CREATE POLICY "flags_insert_own" ON report_flags
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "flags_read_own" ON report_flags;
+CREATE POLICY "flags_read_own" ON report_flags
+  FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "flags_delete_own" ON report_flags;
+CREATE POLICY "flags_delete_own" ON report_flags
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- Auto-hide: once >= 3 distinct users flag a report, mark it flagged so the
+-- feed can filter it without any manual DB intervention. SECURITY DEFINER so
+-- it can update a report it does not own and count across all flags.
+CREATE OR REPLACE FUNCTION mark_report_flagged()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF (SELECT COUNT(*) FROM report_flags WHERE report_id = NEW.report_id) >= 3 THEN
+    UPDATE reports SET flagged = true WHERE id = NEW.report_id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+DROP TRIGGER IF EXISTS trg_mark_flagged ON report_flags;
+CREATE TRIGGER trg_mark_flagged AFTER INSERT ON report_flags
+  FOR EACH ROW EXECUTE FUNCTION mark_report_flagged();
+
+-- 7) Abuse guard: cap reports at 20 per user per rolling 24 h.
+CREATE OR REPLACE FUNCTION enforce_report_rate_limit()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF (SELECT COUNT(*) FROM reports
+        WHERE user_id = NEW.user_id
+          AND created_at > NOW() - INTERVAL '24 hours') >= 20 THEN
+    RAISE EXCEPTION 'Rate limit: max 20 reports per 24 h (%).', NEW.user_id
+      USING HINT = 'Try again later.';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_report_rate_limit ON reports;
+CREATE TRIGGER trg_report_rate_limit BEFORE INSERT ON reports
+  FOR EACH ROW EXECUTE FUNCTION enforce_report_rate_limit();
+
+-- 8) Storage hardening: cap upload size (~3 MB) and restrict to image types.
+--    Combined with the client-side downscale this keeps the 1 GB free tier
+--    from filling up with raw 12-MP phone photos.
+UPDATE storage.buckets
+SET file_size_limit = 3145728,
+    allowed_mime_types = ARRAY['image/jpeg','image/png','image/webp']
+WHERE id = 'report-images';
+
+-- 9) Reload the API schema cache so the new columns/tables are visible now
 NOTIFY pgrst, 'reload schema';
