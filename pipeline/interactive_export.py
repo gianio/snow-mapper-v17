@@ -719,6 +719,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .leaflet-control-attribution{background:rgba(255,255,255,.4)!important;color:rgba(80,100,120,.55)!important;font-size:9px!important;padding:1px 6px!important;border-radius:6px 0 0 0!important;box-shadow:none!important;backdrop-filter:blur(4px);max-width:22px;overflow:hidden;white-space:nowrap;transition:max-width .3s,background .3s}
  .leaflet-control-attribution:hover{max-width:80vw;background:rgba(255,255,255,.85)!important;color:var(--mut)!important}
  .leaflet-control-attribution a{color:inherit!important}
+ .leaflet-control-scale-line{background:rgba(255,255,255,.6)!important;border-color:rgba(15,29,47,.35)!important;color:var(--fg2)!important;font-family:'Inter',system-ui!important;font-size:10px!important;font-weight:600!important;backdrop-filter:blur(4px)}
+ .leaflet-control-scale{margin-bottom:6px!important;margin-right:8px!important}
  #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 116px);left:12px;width:230px;max-width:calc(100vw - 24px)}
  #searchWrap input{width:100%;padding:10px 12px 10px 34px;border-radius:12px;border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.72);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);color:var(--fg);font-size:14px;font-weight:500;outline:none;box-shadow:0 2px 8px rgba(0,0,0,.07);font-family:inherit}
  #searchWrap input::placeholder{color:var(--mut);font-weight:400}
@@ -1560,6 +1562,7 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
 const [laMin,loMin,laMax,loMax]=M.bounds;
 const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
 const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,wheelPxPerZoomLevel:_desktop?38:90,wheelDebounceTime:_desktop?12:40,maxBoundsViscosity:1.0,inertia:true}).fitBounds([[laMin,loMin],[laMax,loMax]],{padding:[6,6]});
+L.control.scale({imperial:false,maxWidth:120,position:'bottomright'}).addTo(map);
 if(_desktop&&map.scrollWheelZoom&&map.scrollWheelZoom.setWheelPxPerZoomLevel)map.scrollWheelZoom.setWheelPxPerZoomLevel(38);
 // Constrain panning + zoom to the meteo grid, with a thin white frame around the data
 const _fitZoom=map.getZoom();
@@ -2172,6 +2175,19 @@ function startCoach(){const nx=document.getElementById('coachNext'),sk=document.
   nx.onclick=coachNext;sk.onclick=endCoach;
   window.addEventListener('resize',()=>{if(document.getElementById('coach').style.display==='block')showCoachStep();});
   showCoachStep();}
+// ESC closes the topmost overlay (desktop convenience)
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape')return;
+  const vis=id=>{const el=document.getElementById(id);return el&&el.style.display!=='none'&&el.style.display!=='';};
+  if(vis('locPicker')){locPickerClose();return;}
+  if(vis('cmtModal')){commentsClose();return;}
+  if(vis('userViewModal')){userViewClose();return;}
+  if(vis('profModal')){profClose();return;}
+  if(vis('reportOverlay')){obsClose();return;}
+  if(document.getElementById('feedPage').classList.contains('open')){feedClose();return;}
+  if(document.getElementById('inspPanel').classList.contains('open')){inspClose();return;}
+  if(vis('authOverlay')&&authMode!=='biometric'){authHide();return;}
+});
 // Prevent the whole page (UI) from zooming — the map keeps its own zoom
 document.addEventListener('gesturestart',e=>e.preventDefault());
 document.addEventListener('gesturechange',e=>e.preventDefault());
@@ -2275,7 +2291,7 @@ function loadReportMarkers(){
     }
     const m=L.marker([r.lat,r.lng],{icon,zIndexOffset:700}).addTo(reportMarkers);
     const rid=r.id;
-    m.bindPopup(`<div style="min-width:180px"><b>${r.user}</b> <span style="color:#7a8a9a;font-size:12px">${r.time}</span><br><span style="font-size:13px;display:inline-flex;align-items:center;gap:5px;color:${mColor}">${catSvg?catSvg(r.cat,14):''} ${r.sub||r.cat}${r.measurement?' · '+r.measurement:''}</span>${r.caption?'<br><span style="font-size:13px;color:#3a4a5a">'+r.caption+'</span>':''}<br><a href="javascript:void(0)" onclick="feedOpenAt('${rid}')" style="font-size:12px;font-weight:700;color:#1a7fd4">Im Feed öffnen →</a></div>`,{maxWidth:260});
+    m.bindPopup(`<div style="min-width:180px">${r.img?`<img src="${r.img}" loading="lazy" style="width:100%;height:96px;object-fit:cover;border-radius:10px;margin-bottom:7px" onclick="feedOpenAt('${rid}')"/>`:''}<b>${r.user}</b> <span style="color:#7a8a9a;font-size:12px">${r.time}</span><br><span style="font-size:13px;display:inline-flex;align-items:center;gap:5px;color:${mColor}">${catSvg?catSvg(r.cat,14):''} ${r.sub||r.cat}${r.measurement?' · '+r.measurement:''}</span>${r.caption?'<br><span style="font-size:13px;color:#3a4a5a">'+r.caption+'</span>':''}<br><a href="javascript:void(0)" onclick="feedOpenAt('${rid}')" style="font-size:12px;font-weight:700;color:#1a7fd4">Im Feed öffnen →</a></div>`,{maxWidth:260});
     m.on('click',function(){if(rptLastOpen===rid){feedOpenAt(rid);}else{rptLastOpen=rid;}});
     m.on('popupclose',function(){if(rptLastOpen===rid)rptLastOpen=null;});
   });
@@ -3172,7 +3188,7 @@ function feedRender(){
         ${followBtn||distTag||`<span class="feed-card-time">${r.time}</span>`}
       </div>
       <div class="feed-card-visual">
-        ${r.img?`<img src="${r.img}" alt=""/>`:
+        ${r.img?`<img src="${r.img}" alt="" loading="lazy" decoding="async"/>`:
         `<div class="card-placeholder" style="background:${bg}"><span style="color:${col}">${CAT_SVG[r.cat]||''}</span><span style="color:${col}">${r.sub||r.cat}</span></div>`}
       </div>
       <div class="feed-card-body">
