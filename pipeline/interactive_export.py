@@ -720,7 +720,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* Higher-contrast borders/text for snow-glare / accessibility */
  @media (prefers-contrast:more){:root{--mut:#4a5a6e;--bd:rgba(14,95,163,.28);--hair:rgba(15,29,47,.18)}}
  /* Solid surfaces for users who reduce transparency (a11y) */
- @media (prefers-reduced-transparency:reduce){.feed-nav,.cmt-sheet,.prof-sheet,.loc-picker-sheet,.groups-sheet,.report-sheet,.auth-modal,#coachCard,#disc .sheet,.toast{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:#fff!important}}
+ @media (prefers-reduced-transparency:reduce){.feed-nav,.cmt-sheet,.prof-sheet,.loc-picker-sheet,.groups-sheet,.report-sheet,.auth-modal,#coachCard,#disc .sheet,.toast,.insp-panel{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:#fff!important}}
  /* --- Toast notifications (errors are no longer silent) --- */
  #toastWrap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:9500;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:max-content;max-width:calc(100vw - 32px)}
  .toast{pointer-events:auto;display:flex;align-items:center;gap:9px;padding:11px 16px;border-radius:var(--r);font-size:13.5px;font-weight:600;color:var(--fg);background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(255,255,255,.6);box-shadow:var(--elev2);max-width:100%;animation:toastIn .3s var(--ease-spring)}
@@ -867,7 +867,15 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ipane{display:none}
  .ipane.active{display:block}
  /* Map-click inspect panel */
- .insp-panel{position:fixed;z-index:2600;background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);display:none;flex-direction:column;box-shadow:var(--elev3);overflow:hidden;border:1px solid rgba(255,255,255,.5)}
+ /* Super-transparent glass: the map stays clearly visible through the panel,
+    blur+saturate keeps the content readable. Draggable via the header. */
+ .insp-panel{position:fixed;z-index:2600;background:rgba(255,255,255,.38);backdrop-filter:blur(10px) saturate(1.7);-webkit-backdrop-filter:blur(10px) saturate(1.7);display:none;flex-direction:column;box-shadow:var(--elev3);overflow:hidden;border:1px solid rgba(255,255,255,.55)}
+ .insp-panel::before{content:'';flex-shrink:0;width:38px;height:4px;border-radius:2px;background:rgba(15,29,47,.28);margin:7px auto -3px}
+ .insp-panel .insp-head{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+ .insp-panel.dragging .insp-head{cursor:grabbing}
+ .insp-chip{background:rgba(255,255,255,.62)}
+ .insp-tile{background:rgba(255,255,255,.5);border-color:rgba(255,255,255,.55)}
+ .insp-head button{background:rgba(255,255,255,.6)}
  .insp-panel.open{display:flex;animation:inspIn .3s cubic-bezier(.32,.72,.42,1)}
  @media(min-width:561px){.insp-panel{top:auto;right:16px;bottom:calc(var(--btm-h,0px) + 16px);width:336px;max-height:min(72vh,640px);border-radius:var(--r-xl)}@keyframes inspIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}}
  @media(max-width:560px){.insp-panel{left:12px;right:12px;bottom:calc(var(--btm-h,0px) + 12px);max-height:44vh;border-radius:var(--r-xl)}@keyframes inspIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}}
@@ -1461,6 +1469,17 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .cond-save{width:100%;margin-top:18px;padding:15px;border-radius:15px;border:none;background:var(--acc);color:#fff;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;transition:.15s}
  .cond-save:hover{background:var(--acc2)}
  .cond-save:disabled{opacity:.4;cursor:default}
+ /* Quick-Check entry points */
+ .qr-loc{font-size:12.5px;font-weight:650;color:var(--fg2);background:var(--fill);border:1px solid var(--hair);border-radius:10px;padding:8px 11px;margin-top:12px}
+ .rail-btn.qr-accent{background:linear-gradient(150deg,rgba(245,166,35,.24),rgba(245,166,35,.1));color:#b06a00;border-color:rgba(245,166,35,.4)}
+ .feed-quick{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;border:1px solid rgba(245,166,35,.45);background:linear-gradient(150deg,rgba(245,166,35,.2),rgba(245,166,35,.08));color:#8a5200;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;transition:.15s}
+ .feed-quick svg{width:15px;height:15px}
+ .feed-quick:active{transform:scale(.95)}
+ .obs-quick{width:100%;display:flex;align-items:center;gap:12px;padding:13px 15px;margin:2px 0 4px;border-radius:16px;border:1px solid rgba(245,166,35,.4);background:linear-gradient(140deg,rgba(245,166,35,.18),rgba(255,255,255,.85) 70%);font-family:inherit;cursor:pointer;text-align:left;box-shadow:var(--elev1);transition:.15s;animation:obsPop .5s var(--ease-spring) both}
+ .obs-quick svg{width:24px;height:24px;color:#b06a00;flex-shrink:0}
+ .obs-quick b{display:block;font-size:15px;font-weight:800;color:var(--fg)}
+ .obs-quick em{font-style:normal;font-size:12px;color:var(--mut);font-weight:600}
+ .obs-quick:hover{box-shadow:var(--elev2)}
  /* first-time explainer tooltip */
  .cond-hint{position:fixed;z-index:4200;max-width:236px;background:var(--fg);color:#fff;font-size:12.5px;font-weight:600;line-height:1.45;padding:11px 13px;border-radius:14px;box-shadow:var(--elev3);animation:toastIn .3s var(--ease-spring)}
  .cond-hint b{color:#7cc4ff}
@@ -1505,6 +1524,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="searchWrap"><span class="icn">&#x1F50D;</span><input id="searchIn" type="text" placeholder="Search location..." autocomplete="off"/><div id="searchRes"></div></div>
 <div id="ctrlRail">
   <button class="rail-btn feed-accent" id="feedBtn" onclick="feedOpen()" title="Community-Feed" aria-label="Community-Feed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
+  <button class="rail-btn qr-accent" id="quickBtn" onclick="qrOpen()" title="Quick-Check: Sterne + Powder" aria-label="Quick-Check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></button>
   <button class="rail-btn" id="railToggles" title="Show / hide markers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.5"/></svg></button>
   <button class="rail-btn" id="btn3dFloat" title="3D terrain"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l8.5 4.75v9.5L12 21.5l-8.5-4.75v-9.5L12 2.5z"/><path d="M12 12l8.5-4.75M12 12v9.5M12 12L3.5 7.25"/></svg></button>
   <div id="togglePop">
@@ -1625,6 +1645,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="feed-nav">
 <button class="feed-back" onclick="feedClose()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
 <span class="feed-title">Field Reports</span>
+<button class="feed-quick" onclick="qrOpen(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Quick</button>
 </div>
 <div class="feed-scope" id="feedScope"></div>
 <div class="feed-filter" id="feedFilter"></div>
@@ -1664,6 +1685,19 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <div class="cond-lbl">Powder?</div>
       <div class="cond-pow"><button id="condPowY" onclick="condSetPowder(true)">❄ Ja</button><button id="condPowN" onclick="condSetPowder(false)">Nein</button></div>
       <button class="cond-save" id="condSaveBtn" onclick="condSave()" disabled>Speichern</button>
+    </div>
+  </div>
+</div>
+<div class="cond-modal" id="qrModal" style="display:none" onclick="if(event.target===this)qrClose()">
+  <div class="cond-sheet">
+    <div class="cond-head"><b>⚡ Quick-Check</b><button onclick="qrClose()">✕</button></div>
+    <div class="cond-body">
+      <div class="qr-loc" id="qrLoc">📍 Standort wird ermittelt…</div>
+      <div class="cond-lbl">Wie war der Schnee?</div>
+      <div class="cond-stars" id="qrStars"></div>
+      <div class="cond-lbl">Powder?</div>
+      <div class="cond-pow"><button id="qrPowY" onclick="qrSetPowder(true)">❄ Ja</button><button id="qrPowN" onclick="qrSetPowder(false)">Nein</button></div>
+      <button class="cond-save" id="qrSaveBtn" onclick="qrSubmit()" disabled>Posten</button>
     </div>
   </div>
 </div>
@@ -2308,6 +2342,7 @@ function inspOpen(lat,lon){
      '<div class="insp-sec"><h4>Strahlungsindex</h4><div id="icRad"></div></div>'+
    '</div>';
   pan.classList.add('open');
+  inspApplyDrag(pan,false);inspAttachDrag(pan);
   requestAnimationFrame(()=>{
     icNewSnow(document.getElementById('icNew'),p);
     icDepth(document.getElementById('icDepth'),p);
@@ -2316,6 +2351,31 @@ function inspOpen(lat,lon){
     icRad(document.getElementById('icRad'),p);
   });
 }
+// --- Inspect panel: drag anywhere, snap to the nearest side edge on release.
+// Offsets persist for the session so the panel reopens where the user left it.
+let inspDX=0,inspDY=0;
+function inspApplyDrag(pan,animate){
+  pan.style.transition=animate?'transform .32s cubic-bezier(.34,1.4,.64,1)':'none';
+  pan.style.transform=(inspDX||inspDY)?('translate('+inspDX+'px,'+inspDY+'px)'):'';}
+function inspSnap(pan){
+  const r=pan.getBoundingClientRect(),vw=window.innerWidth,vh=window.innerHeight,m=12;
+  if(r.width<vw-2*m-20){ // free horizontal space -> snap to nearest side edge
+    const target=(r.left+r.width/2<vw/2)?m:(vw-m-r.width);
+    inspDX+=target-r.left;}
+  const top=Math.max(m,Math.min(r.top,vh-r.height-m)); // keep fully on screen
+  inspDY+=top-r.top;
+  inspApplyDrag(pan,true);}
+function inspAttachDrag(pan){
+  const head=pan.querySelector('.insp-head');if(!head||head._drag)return;head._drag=true;
+  let sx=0,sy=0,bx=0,by=0,on=false;
+  head.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;
+    on=true;sx=e.clientX;sy=e.clientY;bx=inspDX;by=inspDY;
+    pan.classList.add('dragging');pan.style.transition='none';
+    try{head.setPointerCapture(e.pointerId);}catch(_){}});
+  head.addEventListener('pointermove',e=>{if(!on)return;
+    inspDX=bx+(e.clientX-sx);inspDY=by+(e.clientY-sy);inspApplyDrag(pan,false);});
+  const fin=()=>{if(!on)return;on=false;pan.classList.remove('dragging');inspSnap(pan);};
+  head.addEventListener('pointerup',fin);head.addEventListener('pointercancel',fin);}
 function icSetup(cv,hh,wOverride){const dpr=window.devicePixelRatio||1;const ww=wOverride||cv.getBoundingClientRect().width||320;
   cv.width=Math.round(ww*dpr);cv.height=Math.round(hh*dpr);cv.style.height=hh+'px';if(wOverride)cv.style.width=ww+'px';
   const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,ww,hh);return{ctx,w:ww,h:hh};}
@@ -2548,6 +2608,7 @@ document.addEventListener('keydown',function(e){
   const vis=id=>{const el=document.getElementById(id);return el&&el.style.display!=='none'&&el.style.display!=='';};
   if(vis('locPicker')){locPickerClose();return;}
   if(vis('cmtModal')){commentsClose();return;}
+  if(vis('qrModal')){qrClose();return;}
   if(vis('userViewModal')){userViewClose();return;}
   if(vis('profModal')){profClose();return;}
   if(vis('reportOverlay')){obsClose();return;}
@@ -3406,7 +3467,9 @@ function obsOpen(){if(!sb||!sbUser){authShow();return;}
   document.getElementById('obsSub').textContent='Was hast du gesehen?';
   document.getElementById('obsNav').style.display='none';
   const SCATTER=[{dx:-4,dy:0,r:-2},{dx:5,dy:9,r:1.6},{dx:-6,dy:-5,r:1.2},{dx:4,dy:-8,r:-1.4},{dx:0,dy:2,r:.8}];
-  document.getElementById('obsBody').innerHTML='<div class="obs-types cluster">'+OBS_TYPE_LIST.map((t,i)=>{const s=SCATTER[i%SCATTER.length];
+  document.getElementById('obsBody').innerHTML=
+    '<button class="obs-quick" onclick="obsClose();qrOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span><b>Quick-Check</b><em>Nur Sterne + Powder — 5 Sekunden</em></span></button>'+
+    '<div class="obs-types cluster">'+OBS_TYPE_LIST.map((t,i)=>{const s=SCATTER[i%SCATTER.length];
     return `<button class="obs-type" style="--i:${i};--dx:${s.dx}px;--dy:${s.dy}px;--rot:${s.r}deg;--tc:${t.color};--tt:${t.tint}" onclick="obsStart('${t.id}')"><span class="obs-type-ic">${t.icon}</span><span class="obs-type-tx"><b>${t.label}</b><span>${t.sub}</span></span></button>`;}).join('')+'</div>';
   obsWarmLocation();
 }
@@ -3676,6 +3739,42 @@ function condMaybeHint(){try{if(localStorage.getItem('ssm_cond_hint'))return;}ca
   tip.style.top=(below?rect.bottom+11:rect.top-tip.offsetHeight-11)+'px';
   try{localStorage.setItem('ssm_cond_hint','1');}catch(e){}
   const dismiss=()=>{if(tip.parentNode)tip.remove();};tip.onclick=dismiss;setTimeout(dismiss,8000);}
+// --- Quick-Check: a 5-second standalone report (stars + powder + location) ---
+let qrStars=0,qrPowder=null,qrLL=null;
+function qrOpen(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
+  if(!sb||!sbUser){authShow();return;}
+  qrStars=0;qrPowder=null;qrLL=null;
+  document.getElementById('qrModal').style.display='flex';
+  qrRenderStars();qrRenderPow();qrSync();
+  const lc=document.getElementById('qrLoc');lc.textContent='📍 Standort wird ermittelt…';
+  const fallback=()=>{try{const c=map.getCenter();qrLL=[c.lat,c.lng];lc.textContent='📍 Kartenmitte · '+c.lat.toFixed(3)+'°N '+c.lng.toFixed(3)+'°E';}catch(e){lc.textContent='📍 Standort unbekannt';}};
+  if(navigator.geolocation){navigator.geolocation.getCurrentPosition(p=>{
+    qrLL=[p.coords.latitude,p.coords.longitude];const d=obsDEM(qrLL[0],qrLL[1]);
+    lc.textContent='📍 Dein Standort'+(d.elev?(' · '+d.elev+' m'+(d.aspect?(' · '+d.aspect):'')):'');
+  },fallback,{enableHighAccuracy:true,timeout:8000,maximumAge:60000});}else fallback();
+  haptic(8);}
+function qrClose(){document.getElementById('qrModal').style.display='none';}
+function qrSetStars(n){qrStars=n;qrRenderStars();qrSync();haptic(5);}
+function qrSetPowder(v){qrPowder=v;qrRenderPow();qrSync();haptic(5);}
+function qrSync(){const b2=document.getElementById('qrSaveBtn');if(b2)b2.disabled=!(qrStars&&qrPowder!==null);}
+function qrRenderStars(){const el=document.getElementById('qrStars');if(!el)return;let h='';
+  for(let i=1;i<=5;i++)h+='<button class="'+(i<=qrStars?'on':'')+'" onclick="qrSetStars('+i+')" aria-label="'+i+' Sterne"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z"/></svg></button>';
+  el.innerHTML=h;}
+function qrRenderPow(){var y=document.getElementById('qrPowY'),n=document.getElementById('qrPowN');
+  if(y)y.classList.toggle('on',qrPowder===true);if(n)n.classList.toggle('on',qrPowder===false);}
+async function qrSubmit(){if(!sb||!sbUser||!qrStars||qrPowder===null)return;
+  const btn=document.getElementById('qrSaveBtn');btn.disabled=true;btn.textContent='Postet…';
+  try{
+    let ll=qrLL;if(!ll){try{const c=map.getCenter();ll=[c.lat,c.lng];}catch(e){ll=[46.8,8.2];}}
+    const d=obsDEM(ll[0],ll[1]);
+    const row={user_id:sbUser.id,location:'POINT('+ll[1]+' '+ll[0]+')',elevation_m:d.elev||null,
+      primary_categories:['snow'],subtype:'Quick-Check',
+      condition_data:{quick:true,stars:qrStars,powder:qrPowder,measurement:(qrPowder?'❄ Powder':'Kein Powder')},
+      caption:null,completion_score:40,captured_at:new Date().toISOString()};
+    const{error}=await sb.from('reports').insert(row);if(error)throw error;
+    toast('Quick-Check gepostet — danke!','ok');haptic(12);qrClose();loadDbReports();
+  }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e),'err');}
+  btn.disabled=false;btn.textContent='Posten';}
 const CMT_SKELETON='<div class="cmt-row"><div class="cmt-av skel"></div><div class="cmt-b" style="flex:1"><div class="skel" style="height:12px;width:38%;margin-bottom:7px"></div><div class="skel" style="height:11px;width:85%;margin-bottom:5px"></div><div class="skel" style="height:11px;width:55%"></div></div></div>'.repeat(3);
 function openComments(id,ev){if(ev)ev.stopPropagation();cmtReportId=id;
   document.getElementById('cmtModal').style.display='flex';
