@@ -33,8 +33,8 @@ Legend: ✅ done in code · 🟡 needs a manual step from you · ⬜ deferred
 | Item | Status | Where |
 |---|---|---|
 | Service worker: instant repeat/installed loads, offline last-data | ✅ | `sw.js` + `interactive_export.py` |
-| Inline gzip of raster blobs | ⬜ deferred | see note below |
-| Full app-shell + external data-blob + `latest.json` split | ⬜ deferred | future pass |
+| App-shell + external data-blob + `latest.json` split | ✅ | `--split` build → `dist/` (shell ~130 KB + app.js + `data/`) |
+| Inline gzip of raster blobs | ⬜ deferred | now easy on the split blob (fetch + DecompressionStream) |
 
 > **Why inline-gzip was deferred:** the browser `DecompressionStream` API is
 > async, but the app's raster arrays are decoded synchronously at boot and the

@@ -498,25 +498,31 @@ def _now_idx(times):
     return _today_idx(times)
 
 
-def export_interactive_html(data, out_html: Path) -> Path:
+def _build_meta_blobs(data):
+    """Encode every raster cube to base64 and assemble the client meta dict.
+    Returns (meta, blobs) where blobs maps the client key -> base64 string.
+    Shared by the single-file and split exporters so the encoding lives once."""
     def u8(a, fn):
         return base64.b64encode(np.clip(fn(a), 0, 255).astype("uint8").tobytes()).decode()
-    snow = u8(data["snow"], lambda a: np.round(a / _SNOW_SCALE))
-    temp = u8(data["temp"], lambda a: np.round((a + _TEMP_OFF) * _TEMP_MUL))
-    sun = u8(data["sun"], lambda a: np.round(a * _SUN_MUL))
-    spd = u8(data["wind"]["spd"], lambda a: np.round(a * _SPD_MUL))
-    wdir = u8(data["wind"]["dir"], lambda a: np.round(a / _DIR_DIV))
-    windg = u8(data["wind_grid"], lambda a: np.round(np.clip(a, 0, 51) * _SPD_MUL))
-    prec = u8(data["prec"], lambda a: np.round(a * _PREC_MUL))
-    maspect = u8(data["main_aspect"], lambda a: np.round(a / _DIR_DIV))
-    mslope = u8(data["main_slope"], lambda a: np.round(np.clip(a, 0, 90)))
-    melev = u8(data["main_elev"], lambda a: np.round(np.clip(a / _ELEV_SCALE, 0, 255)))
-    roughg = u8(data["rough_grid"], lambda a: np.round(np.clip(a / _ROUGH_GRID_SCALE, 0, 255)))
     rad = data["rad"]
-    rslope = u8(rad["slope"], lambda a: np.round(np.clip(a, 0, 90)))
-    raspect = u8(rad["aspect"], lambda a: np.round(a / _DIR_DIV))
-    rhor = u8(rad["horizon"], lambda a: np.round(np.clip(a, 0, 90)))
-
+    blobs = {
+        "SNOW": u8(data["snow"], lambda a: np.round(a / _SNOW_SCALE)),
+        "TEMP": u8(data["temp"], lambda a: np.round((a + _TEMP_OFF) * _TEMP_MUL)),
+        "SUN": u8(data["sun"], lambda a: np.round(a * _SUN_MUL)),
+        "SPD": u8(data["wind"]["spd"], lambda a: np.round(a * _SPD_MUL)),
+        "DIR": u8(data["wind"]["dir"], lambda a: np.round(a / _DIR_DIV)),
+        "WINDG": u8(data["wind_grid"], lambda a: np.round(np.clip(a, 0, 51) * _SPD_MUL)),
+        "PREC": u8(data["prec"], lambda a: np.round(a * _PREC_MUL)),
+        "MASPECT": u8(data["main_aspect"], lambda a: np.round(a / _DIR_DIV)),
+        "MSLOPE": u8(data["main_slope"], lambda a: np.round(np.clip(a, 0, 90))),
+        "MELEV": u8(data["main_elev"], lambda a: np.round(np.clip(a / _ELEV_SCALE, 0, 255))),
+        "ROUGHGRID": u8(data["rough_grid"], lambda a: np.round(np.clip(a / _ROUGH_GRID_SCALE, 0, 255))),
+        "RSLOPE": u8(rad["slope"], lambda a: np.round(np.clip(a, 0, 90))),
+        "RASPECT": u8(rad["aspect"], lambda a: np.round(a / _DIR_DIV)),
+        "RHOR": u8(rad["horizon"], lambda a: np.round(np.clip(a, 0, 90))),
+        "ASPECTPNG": data["aspect_png"],
+        "ROUGHPNG": data["rough_png"],
+    }
     meta = {
         "T": data["T"], "width": data["width"], "height": data["height"],
         "bounds": data["bounds"], "times": data["times"], "today_index": data["today_index"],
@@ -535,18 +541,78 @@ def export_interactive_html(data, out_html: Path) -> Path:
         "hourly_snow": [round(x, 3) for x in data["hourly_snow"]],
         "now_index": _now_idx(data["times"]),
     }
-    html = _HTML.replace("/*META*/", json.dumps(meta))
-    for tok, blob in [("__SNOW__", snow), ("__TEMP__", temp), ("__SUN__", sun),
-                      ("__SPD__", spd), ("__DIR__", wdir), ("__WINDG__", windg),
-                      ("__RSLOPE__", rslope), ("__RASPECT__", raspect), ("__RHOR__", rhor),
-                      ("__PREC__", prec), ("__MASPECT__", maspect), ("__MSLOPE__", mslope),
-                      ("__MELEV__", melev),
-                      ("__ROUGHGRID__", roughg),
-                      ("__ASPECTPNG__", data["aspect_png"]), ("__ROUGHPNG__", data["rough_png"])]:
-        html = html.replace(f'"{tok}"', json.dumps(blob))
+    return meta, blobs
+
+
+def _app_js() -> str:
+    """The application script, extracted from the template between the
+    /*__APP_START__*/ and /*__APP_END__*/ sentinels (used for the split build)."""
+    return _HTML.split("/*__APP_START__*/", 1)[1].split("/*__APP_END__*/", 1)[0]
+
+
+def export_interactive_html(data, out_html: Path) -> Path:
+    """Single self-contained file with the data inlined (default, local use,
+    openable via file://)."""
+    meta, blobs = _build_meta_blobs(data)
+    boot = "<script>window.__D=" + json.dumps({"meta": meta, "b": blobs}) + ";</script>"
+    html = _HTML.replace("<!--__BOOT__-->", boot)
     out_html.write_text(html, encoding="utf-8")
     _write_pwa_assets(out_html.parent)
     return out_html
+
+
+def export_split_app(data, out_dir: Path) -> Path:
+    """App-shell + external data blob + latest.json pointer. The shell/binary is
+    stable and small; forecast data updates independently (for GitHub Pages and
+    the iOS app). Must be served over HTTP(S) — not file:// (fetch is blocked)."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    ddir = out_dir / "data"; ddir.mkdir(exist_ok=True)
+    meta, blobs = _build_meta_blobs(data)
+    stamp = datetime.now().strftime("%Y%m%d%H%M")
+    dataname = "snowdata-%s.json" % stamp
+    (ddir / dataname).write_text(json.dumps({"meta": meta, "b": blobs}), encoding="utf-8")
+    (ddir / "latest.json").write_text(json.dumps(
+        {"version": stamp, "data": dataname,
+         "generated": datetime.now().replace(microsecond=0).isoformat() + "Z"}),
+        encoding="utf-8")
+    # keep the last few snapshots for rollback, prune older ones
+    for old in sorted(ddir.glob("snowdata-*.json"))[:-4]:
+        try:
+            old.unlink()
+        except OSError:
+            pass
+    (out_dir / "app.js").write_text(_app_js(), encoding="utf-8")
+    shell = _HTML.split('<script id="appjs">', 1)[0].replace("<!--__BOOT__-->", _BOOT_SPLIT) + "</body></html>"
+    (out_dir / "index.html").write_text(shell, encoding="utf-8")
+    _write_pwa_assets(out_dir)
+    return out_dir / "index.html"
+
+
+# Async loader for the split build: fetch latest.json -> data blob (with a real
+# progress bar on the intro), set window.__D, then inject the app script.
+_BOOT_SPLIT = r"""<script>
+(function(){
+  function bar(){return document.querySelector('#intro .bar');}
+  function prog(f){var b=bar();if(b){b.style.animation='none';b.style.transformOrigin='left';b.style.transform='scaleX('+Math.max(0.03,Math.min(1,f))+')';}}
+  function fail(m){var i=document.getElementById('intro');if(i){var s=i.querySelector('.sub');if(s)s.textContent=m;}try{if(window.Sentry)window.Sentry.captureMessage(m);}catch(e){}}
+  function run(){var s=document.createElement('script');s.src='app.js';s.onerror=function(){fail('App konnte nicht geladen werden.');};document.body.appendChild(s);}
+  (async function(){
+    try{
+      var lj=await (await fetch('data/latest.json',{cache:'no-cache'})).json();
+      var res=await fetch('data/'+lj.data,{cache:'force-cache'});
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      var total=+(res.headers.get('Content-Length')||0),text;
+      if(res.body&&total&&window.ReadableStream){
+        var reader=res.body.getReader(),chunks=[],got=0,r;
+        while(!(r=await reader.read()).done){chunks.push(r.value);got+=r.value.length;prog(got/total);}
+        var buf=new Uint8Array(got),off=0;chunks.forEach(function(c){buf.set(c,off);off+=c.length;});
+        text=new TextDecoder().decode(buf);
+      }else{text=await res.text();prog(1);}
+      window.__D=JSON.parse(text);run();
+    }catch(e){fail('Daten konnten nicht geladen werden — Verbindung prüfen.');try{if(window.Sentry)window.Sentry.captureException(e);}catch(_){}}
+  })();
+})();
+</script>"""
 
 
 def _snowflake_icon(size: int) -> Image.Image:
@@ -604,18 +670,19 @@ def _write_pwa_assets(out_dir: Path) -> None:
 
 
 _SERVICE_WORKER = r"""// Swiss Snow Model — service worker (installable + offline last-data).
-const C='ssm-v1';
-const CORE=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];
+// Network-first for all same-origin GETs (shell, app.js, data blob, icons) so
+// online users always get the latest, and offline falls back to the last cache.
+const C='ssm-v2';
+const CORE=['./','./index.html','./app.js','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(CORE).catch(()=>{})));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
   const url=new URL(r.url);
   if(url.origin!==location.origin)return; // map tiles / Supabase / CDNs -> network
-  const isShell=r.mode==='navigate'||url.pathname.endsWith('/')||url.pathname.endsWith('index.html');
-  if(isShell){
-    e.respondWith(fetch(r).then(resp=>{const cp=resp.clone();caches.open(C).then(c=>c.put('./index.html',cp));return resp;}).catch(()=>caches.match('./index.html')));
-    return;}
-  e.respondWith(caches.match(r).then(m=>m||fetch(r)));
+  e.respondWith(
+    fetch(r).then(resp=>{const cp=resp.clone();caches.open(C).then(c=>c.put(r,cp)).catch(()=>{});return resp;})
+      .catch(()=>caches.match(r).then(m=>m||(r.mode==='navigate'?caches.match('./index.html'):undefined)))
+  );
 });
 """
 
@@ -1567,13 +1634,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   </div>
 </div>
 <div id="coach" style="display:none"><div id="coachSpot"></div><div id="coachCard"><div id="coachText"></div><div id="coachNav"><span id="coachDots"></span><button id="coachSkip">Überspringen</button><button id="coachNext">Weiter</button></div></div></div>
-<script>
-const M=/*META*/;
+<!--__BOOT__-->
+<script id="appjs">/*__APP_START__*/
+const __D=window.__D||{};const M=__D.meta||{};function db(k){return (__D.b&&__D.b[k])||"";}
 function dec(b){const s=atob(b),n=s.length,a=new Uint8Array(n);for(let i=0;i<n;i++)a[i]=s.charCodeAt(i);return a;}
-const SNOW=dec("__SNOW__"),TEMP=dec("__TEMP__"),SUN=dec("__SUN__"),SPD=dec("__SPD__"),WDIR=dec("__DIR__");
-const WINDG=dec("__WINDG__"),RSLOPE=dec("__RSLOPE__"),RASPECT=dec("__RASPECT__"),RHOR=dec("__RHOR__");
-const PREC=dec("__PREC__"),MASPECT=dec("__MASPECT__"),MSLOPE=dec("__MSLOPE__"),MELEV=dec("__MELEV__"),ROUGHG=dec("__ROUGHGRID__");
-const ASPECT_PNG="data:image/png;base64,"+"__ASPECTPNG__",ROUGH_PNG="data:image/png;base64,"+"__ROUGHPNG__";
+const SNOW=dec(db('SNOW')),TEMP=dec(db('TEMP')),SUN=dec(db('SUN')),SPD=dec(db('SPD')),WDIR=dec(db('DIR'));
+const WINDG=dec(db('WINDG')),RSLOPE=dec(db('RSLOPE')),RASPECT=dec(db('RASPECT')),RHOR=dec(db('RHOR'));
+const PREC=dec(db('PREC')),MASPECT=dec(db('MASPECT')),MSLOPE=dec(db('MSLOPE')),MELEV=dec(db('MELEV')),ROUGHG=dec(db('ROUGHGRID'));
+const ASPECT_PNG="data:image/png;base64,"+db('ASPECTPNG'),ROUGH_PNG="data:image/png;base64,"+db('ROUGHPNG');
 const T=M.T,W=M.width,H=M.height,NP=W*H,P=M.wind.lat.length,NX=M.wind.nx;
 const RW=M.rad.width,RH=M.rad.height,RK=M.rad.K,RNP=RW*RH;
 const [RbS,RlW,RbN,RlE]=M.rad.bounds;
@@ -3604,5 +3672,5 @@ function feedAnimateCards(){
   });
 }
 function feedFlyTo(lat,lng){feedClose();setTimeout(()=>map.flyTo([lat,lng],14,{duration:1.2}),350);}
-</script></body></html>
+/*__APP_END__*/</script></body></html>
 """

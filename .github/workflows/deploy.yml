@@ -54,21 +54,19 @@ jobs:
             echo "tools/cache/ not present — skipping powder regression."
           fi
 
-      - name: Generate static site
+      - name: Generate app shell + data blob
+        # Split build: small stable shell (index.html + app.js) + a separate
+        # data/ blob behind latest.json, so daily data updates don't rebuild the
+        # shell. Writes manifest/sw/icons into dist too.
         run: |
-          python run_interactive.py
           mkdir -p dist
-          mv index.html dist/
+          python run_interactive.py --split --out-dir dist
           touch dist/.nojekyll
 
-      - name: Validate inline JS (node --check)
-        run: python tools/check_inline_js.py dist/index.html
-
-      - name: Add PWA assets to the deploy bundle
+      - name: Validate JS (node --check)
         run: |
-          for f in manifest.webmanifest sw.js icon-180.png icon-192.png icon-512.png; do
-            [ -f "$f" ] && mv "$f" dist/ || true
-          done
+          python tools/check_inline_js.py dist/index.html
+          node --check dist/app.js
 
       - uses: actions/upload-pages-artifact@v5
         with:
