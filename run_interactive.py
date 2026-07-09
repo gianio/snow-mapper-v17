@@ -18,7 +18,9 @@ from datetime import datetime
 from pathlib import Path
 
 from config.settings import OUTPUT_DIR
-from pipeline.interactive_export import build_interactive_data, export_interactive_html
+from pipeline.interactive_export import (
+    build_interactive_data, export_interactive_html, export_split_app,
+)
 
 
 def _valid_date(text: str) -> str:
@@ -36,6 +38,11 @@ def main() -> None:
     ap.add_argument("--offline", action="store_true", help="Synthetisch (ohne Stationen)")
     ap.add_argument("--weather-step", type=float, default=0.2, help="Wetter-Gitter [Grad]")
     ap.add_argument("--stations", type=int, default=60, help="Anzahl SLF-Stationen")
+    ap.add_argument("--split", action="store_true",
+                    help="App-Shell + separater Daten-Blob (data/latest.json) statt Ein-Datei; "
+                         "für GitHub Pages / die iOS-App. Muss über HTTP(S) ausgeliefert werden.")
+    ap.add_argument("--out-dir", type=str, default="dist",
+                    help="Zielverzeichnis für den --split-Build (Default: dist)")
     args = ap.parse_args()
 
     date = _valid_date(args.date) if args.date else None
@@ -47,9 +54,14 @@ def main() -> None:
         weather_step_deg=args.weather_step,
         n_stations=args.stations,
     )
-    out = export_interactive_html(data, Path("index.html"))
-    print(f"[OUT] Interaktive Karte: {out}")
-    print("      Band ziehen (max +/-5 Tage), Layer Schnee/Temp/Wind, Stat Mittel/Max/Min.")
+    if args.split:
+        out = export_split_app(data, Path(args.out_dir))
+        print(f"[OUT] App-Shell + Daten-Blob: {out} (+ app.js, data/latest.json)")
+        print("      Über HTTP(S) ausliefern (nicht file://). Daten aktualisieren = nur data/ neu bauen.")
+    else:
+        out = export_interactive_html(data, Path("index.html"))
+        print(f"[OUT] Interaktive Karte: {out}")
+        print("      Band ziehen (max +/-5 Tage), Layer Schnee/Temp/Wind, Stat Mittel/Max/Min.")
 
 
 if __name__ == "__main__":
