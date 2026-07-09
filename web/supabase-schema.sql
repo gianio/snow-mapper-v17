@@ -27,6 +27,11 @@ DROP POLICY IF EXISTS "profiles_update_own" ON profiles;
 CREATE POLICY "profiles_update_own" ON profiles
   FOR UPDATE USING (auth.uid() = id);
 
+-- DSG: users may delete their own profile (cascades to all their content)
+DROP POLICY IF EXISTS "profiles_delete_own" ON profiles;
+CREATE POLICY "profiles_delete_own" ON profiles
+  FOR DELETE USING (auth.uid() = id);
+
 -- Auto-create profile on user signup
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
