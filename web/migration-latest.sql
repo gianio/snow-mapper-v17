@@ -136,5 +136,25 @@ SET file_size_limit = 3145728,
     allowed_mime_types = ARRAY['image/jpeg','image/png','image/webp']
 WHERE id = 'report-images';
 
--- 9) Reload the API schema cache so the new columns/tables are visible now
+-- 9) Per-post condition ratings (crowdsourced snow quality: 1–5 stars + powder).
+--    One rating per user per report (upsert on the PK).
+CREATE TABLE IF NOT EXISTS report_conditions (
+  report_id  UUID REFERENCES reports(id) ON DELETE CASCADE,
+  user_id    UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  stars      SMALLINT CHECK (stars BETWEEN 1 AND 5),
+  powder     BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (report_id, user_id)
+);
+ALTER TABLE report_conditions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "cond_read_all" ON report_conditions;
+CREATE POLICY "cond_read_all" ON report_conditions FOR SELECT USING (true);
+DROP POLICY IF EXISTS "cond_insert_own" ON report_conditions;
+CREATE POLICY "cond_insert_own" ON report_conditions FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "cond_update_own" ON report_conditions;
+CREATE POLICY "cond_update_own" ON report_conditions FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "cond_delete_own" ON report_conditions;
+CREATE POLICY "cond_delete_own" ON report_conditions FOR DELETE USING (auth.uid() = user_id);
+
+-- 10) Reload the API schema cache so the new columns/tables are visible now
 NOTIFY pgrst, 'reload schema';

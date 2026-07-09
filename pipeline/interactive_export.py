@@ -1319,6 +1319,37 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-card-actions .flag-btn{margin-left:auto;color:var(--mut)}
  .feed-card-actions .flag-btn:hover{color:var(--danger)}
  .feed-card-actions .flag-btn.flagged{color:var(--danger)}
+ .feed-card-actions .cond-btn.rated{color:var(--acc2)}
+ .feed-card-actions .cond-btn.rated svg{color:var(--acc)}
+ .cond-chip{font-size:12px;font-weight:800;color:var(--acc2);background:rgba(26,127,212,.1);padding:3px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:4px}
+ .cond-chip svg{width:13px;height:13px;fill:#f5a623}
+ /* condition rating modal */
+ .cond-modal{position:fixed;inset:0;z-index:3950;background:rgba(11,17,32,.5);backdrop-filter:blur(4px);display:flex;flex-direction:column;justify-content:flex-end}
+ @media(min-width:561px){.cond-modal{justify-content:center;align-items:center;padding:16px}}
+ .cond-sheet{background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:var(--r-xl) var(--r-xl) 0 0;box-shadow:var(--elev3);padding-bottom:calc(env(safe-area-inset-bottom,0px)+18px)}
+ @media(min-width:561px){.cond-sheet{border-radius:var(--r-xl);width:100%;max-width:380px}}
+ .cond-sheet::before{content:'';display:block;width:38px;height:4px;border-radius:2px;background:rgba(15,29,47,.16);margin:8px auto 0}
+ .cond-head{display:flex;align-items:center;justify-content:space-between;padding:8px 20px 0}
+ .cond-head b{font-size:18px;font-weight:800;color:var(--fg);letter-spacing:-.01em}
+ .cond-head button{background:none;border:none;font-size:19px;color:var(--mut);cursor:pointer}
+ .cond-body{padding:2px 20px 4px}
+ .cond-lbl{font-size:13px;font-weight:700;color:var(--fg2);margin:16px 0 8px}
+ .cond-stars{display:flex;gap:8px;justify-content:center}
+ .cond-stars button{background:none;border:none;cursor:pointer;padding:2px}
+ .cond-stars button svg{width:40px;height:40px;fill:var(--fill2);stroke:none;transition:transform .12s var(--ease-spring),fill .12s}
+ .cond-stars button.on svg{fill:#f5a623}
+ .cond-stars button:active svg{transform:scale(.88)}
+ .cond-pow{display:flex;gap:10px}
+ .cond-pow button{flex:1;padding:13px;border-radius:14px;border:1.5px solid var(--hair);background:var(--fill);font-family:inherit;font-size:15px;font-weight:700;color:var(--fg2);cursor:pointer;transition:.14s}
+ .cond-pow button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+ .cond-save{width:100%;margin-top:18px;padding:15px;border-radius:15px;border:none;background:var(--acc);color:#fff;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;transition:.15s}
+ .cond-save:hover{background:var(--acc2)}
+ .cond-save:disabled{opacity:.4;cursor:default}
+ /* first-time explainer tooltip */
+ .cond-hint{position:fixed;z-index:4200;max-width:236px;background:var(--fg);color:#fff;font-size:12.5px;font-weight:600;line-height:1.45;padding:11px 13px;border-radius:14px;box-shadow:var(--elev3);animation:toastIn .3s var(--ease-spring)}
+ .cond-hint b{color:#7cc4ff}
+ .cond-hint::after{content:'';position:absolute;bottom:-6px;left:50%;margin-left:-7px;width:14px;height:14px;background:var(--fg);transform:rotate(45deg);border-radius:2px}
+ .cond-hint.below::after{bottom:auto;top:-6px}
  .feed-divider{height:1px;background:rgba(0,0,0,.06)}
  .feed-empty{text-align:center;padding:80px 20px;color:var(--mut);font-size:15px}
  .feed-fab{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px)+22px);right:20px;height:52px;padding:0 20px 0 16px;gap:8px;border-radius:26px;border:none;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;font-size:15px;font-weight:700;box-shadow:0 8px 24px rgba(26,127,212,.4);z-index:5;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
@@ -1493,6 +1524,18 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <div class="cmt-head"><span>Kommentare</span><button onclick="commentsClose()">✕</button></div>
     <div class="cmt-list" id="cmtList"></div>
     <div class="cmt-input"><input id="cmtInput" type="text" placeholder="Kommentar schreiben…" maxlength="500" onkeydown="if(event.key==='Enter')addComment()"/><button onclick="addComment()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div>
+  </div>
+</div>
+<div class="cond-modal" id="condModal" style="display:none" onclick="if(event.target===this)condClose()">
+  <div class="cond-sheet">
+    <div class="cond-head"><b>Wie sind die Bedingungen?</b><button onclick="condClose()">✕</button></div>
+    <div class="cond-body">
+      <div class="cond-lbl">Gesamteindruck</div>
+      <div class="cond-stars" id="condStars"></div>
+      <div class="cond-lbl">Powder?</div>
+      <div class="cond-pow"><button id="condPowY" onclick="condSetPowder(true)">❄ Ja</button><button id="condPowN" onclick="condSetPowder(false)">Nein</button></div>
+      <button class="cond-save" id="condSaveBtn" onclick="condSave()" disabled>Speichern</button>
+    </div>
   </div>
 </div>
 <div class="prof-modal" id="profModal" style="display:none" onclick="if(event.target===this)profClose()">
@@ -2549,11 +2592,15 @@ async function loadDbReports(){
     // comment counts
     let cmtCount={};try{const{data:cc}=await sb.from('report_comments').select('report_id').in('report_id',ids);
       (cc||[]).forEach(x=>{cmtCount[x.report_id]=(cmtCount[x.report_id]||0)+1;});}catch(e){}
+    // condition ratings (crowdsourced snow quality: stars 1–5 + powder)
+    let condAgg={},myCond={};try{const{data:cnd}=await sb.from('report_conditions').select('report_id,user_id,stars,powder').in('report_id',ids);
+      (cnd||[]).forEach(x=>{const g=condAgg[x.report_id]||(condAgg[x.report_id]={n:0,sum:0,pow:0});g.n++;g.sum+=x.stars||0;if(x.powder)g.pow++;if(sbUser&&x.user_id===sbUser.id)myCond[x.report_id]={stars:x.stars,powder:!!x.powder};});}catch(e){}
     const dbR=data.map(r=>{
       if(r.flagged)return null; // hide community-flagged reports
       const ll=parseGeo(r.location);if(!ll||(ll[0]===0&&ll[1]===0))return null;const lat=ll[0],lng=ll[1];
       const catId=r.primary_categories?.[0]||'info';const catObj=RP_CATS.find(c=>c.id===catId);
-      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||'📍',sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,dbRow:true};
+      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||'📍',sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,
+        condN:condAgg[r.id]?condAgg[r.id].n:0,condAvg:condAgg[r.id]?condAgg[r.id].sum/condAgg[r.id].n:0,condPow:condAgg[r.id]?condAgg[r.id].pow:0,myCond:myCond[r.id]||null,dbRow:true};
     }).filter(Boolean);
     allReports=[...dbR,...DEMO_REPORTS];loadReportMarkers();
     if(document.getElementById('feedPage').classList.contains('open'))feedRender();
@@ -3373,6 +3420,45 @@ function feedCreatePost(){if(!sb||!sbUser){authShow();return;}feedClose();setTim
 // --- Comments ---
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 let cmtReportId=null;
+// --- Per-post condition check (crowdsourced snow quality) ---
+let condReportId=null,condStars=0,condPowder=null;
+function openCondition(id,ev){if(ev)ev.stopPropagation();
+  if(!sb||!sbUser){authShow();return;}
+  condReportId=id;const r=allReports.find(x=>x.id===id);const mine=r&&r.myCond;
+  condStars=mine?mine.stars:0;condPowder=mine?mine.powder:null;
+  condRenderStars();condRenderPowder();var sv=document.getElementById('condSaveBtn');if(sv)sv.disabled=!condStars;
+  document.getElementById('condModal').style.display='flex';
+  try{localStorage.setItem('ssm_cond_hint','1');}catch(e){}var h=document.getElementById('condHint');if(h)h.remove();}
+function condClose(){document.getElementById('condModal').style.display='none';condReportId=null;}
+function condSetStars(n){condStars=n;condRenderStars();var sv=document.getElementById('condSaveBtn');if(sv)sv.disabled=!condStars;haptic(5);}
+function condSetPowder(v){condPowder=v;condRenderPowder();haptic(5);}
+function condRenderStars(){const el=document.getElementById('condStars');if(!el)return;let h='';
+  for(let i=1;i<=5;i++)h+='<button class="'+(i<=condStars?'on':'')+'" onclick="condSetStars('+i+')" aria-label="'+i+' Sterne"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z"/></svg></button>';
+  el.innerHTML=h;}
+function condRenderPowder(){var y=document.getElementById('condPowY'),n=document.getElementById('condPowN');if(y)y.classList.toggle('on',condPowder===true);if(n)n.classList.toggle('on',condPowder===false);}
+async function condSave(){if(!sb||!sbUser||!condReportId||!condStars)return;
+  const id=condReportId,pw=condPowder===true;
+  try{const{error}=await sb.from('report_conditions').upsert({report_id:id,user_id:sbUser.id,stars:condStars,powder:pw},{onConflict:'report_id,user_id'});
+    if(error)throw error;
+    const r=allReports.find(x=>x.id===id);
+    if(r){const had=r.myCond,sum=(r.condAvg||0)*(r.condN||0);let n=r.condN||0,ns=sum,np=r.condPow||0;
+      if(had){ns+=condStars-(had.stars||0);if(had.powder&&!pw)np--;if(!had.powder&&pw)np++;}
+      else{n++;ns+=condStars;if(pw)np++;}
+      r.condN=n;r.condAvg=n?ns/n:0;r.condPow=np;r.myCond={stars:condStars,powder:pw};}
+    feedRender();toast('Danke fürs Bewerten!','ok');haptic(10);condClose();
+  }catch(e){toast('Speichern fehlgeschlagen: '+(e.message||e),'err');}}
+function condMaybeHint(){try{if(localStorage.getItem('ssm_cond_hint'))return;}catch(e){}
+  if(document.getElementById('condHint'))return;
+  const btn=document.querySelector('#feedList .cond-btn');if(!btn)return;
+  const rect=btn.getBoundingClientRect();if(!rect.width)return;
+  const tip=document.createElement('div');tip.id='condHint';tip.className='cond-hint';
+  tip.innerHTML='<b>Neu:</b> Tippe hier, um kurz die Schnee-Bedingungen zu bewerten (★ &amp; Powder) — so finden alle die besten Hänge.';
+  document.body.appendChild(tip);
+  const below=rect.top<150;tip.classList.toggle('below',below);
+  tip.style.left=Math.max(10,Math.min(rect.left+rect.width/2-tip.offsetWidth/2,window.innerWidth-tip.offsetWidth-10))+'px';
+  tip.style.top=(below?rect.bottom+11:rect.top-tip.offsetHeight-11)+'px';
+  try{localStorage.setItem('ssm_cond_hint','1');}catch(e){}
+  const dismiss=()=>{if(tip.parentNode)tip.remove();};tip.onclick=dismiss;setTimeout(dismiss,8000);}
 const CMT_SKELETON='<div class="cmt-row"><div class="cmt-av skel"></div><div class="cmt-b" style="flex:1"><div class="skel" style="height:12px;width:38%;margin-bottom:7px"></div><div class="skel" style="height:11px;width:85%;margin-bottom:5px"></div><div class="skel" style="height:11px;width:55%"></div></div></div>'.repeat(3);
 function openComments(id,ev){if(ev)ev.stopPropagation();cmtReportId=id;
   document.getElementById('cmtModal').style.display='flex';
@@ -3487,18 +3573,21 @@ function feedRender(){
           <span class="feed-badge cat-${r.cat}">${catSvg(r.cat,14)} ${r.sub||r.cat}</span>
           ${r.measurement?`<span class="feed-badge cat-${r.cat}">${r.measurement}</span>`:''}
           ${r.stars?`<span class="feed-badge cat-${r.cat}">★ ${r.stars}/5</span>`:''}
+          ${r.condN?`<span class="cond-chip" title="${r.condN} Bewertung(en)"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z"/></svg>${r.condAvg.toFixed(1)}${r.condPow?` · ❄${r.condPow}`:''}</span>`:''}
         </div>
         ${r.caption?`<div class="feed-card-caption"><b>${r.user}</b> ${r.caption}</div>`:''}
       </div>
       <div class="feed-card-actions">
         ${endBtn}
         ${r.dbRow?`<button onclick="openComments('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg> ${r.comments||0}</button>`:''}
+        ${r.dbRow?`<button class="cond-btn${r.myCond?' rated':''}" title="Bedingungen bewerten" aria-label="Bedingungen bewerten" onclick="openCondition('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3"/></svg></button>`:''}
         <button onclick="event.stopPropagation();feedFlyTo(${r.lat},${r.lng})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Karte</button>
         ${r.dbRow&&(!sbUser||r.userId!==sbUser.id)?`<button class="flag-btn ${r.flaggedByMe?'flagged':''}" title="Melden" aria-label="Report melden" onclick="reportFlag('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>`:''}
       </div>
     </div>`;
   }).join('');
   feedAnimateCards();
+  condMaybeHint();
 }
 // First-appearance card entrance (skips re-animating on like/flag re-renders).
 const feedSeen=new Set();
