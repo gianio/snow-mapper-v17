@@ -27,6 +27,11 @@ DROP POLICY IF EXISTS "profiles_update_own" ON profiles;
 CREATE POLICY "profiles_update_own" ON profiles
   FOR UPDATE USING (auth.uid() = id);
 
+-- DSG: users may delete their own profile (cascades to all their content)
+DROP POLICY IF EXISTS "profiles_delete_own" ON profiles;
+CREATE POLICY "profiles_delete_own" ON profiles
+  FOR DELETE USING (auth.uid() = id);
+
 -- Auto-create profile on user signup
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
@@ -65,6 +70,22 @@ CREATE TABLE IF NOT EXISTS reports (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   sync_status TEXT DEFAULT 'synced'
 );
+
+-- Reconcile columns on a pre-existing reports table. Older installs created the
+-- table before some columns existed; CREATE TABLE IF NOT EXISTS won't add them,
+-- and the indices below (e.g. GIN on hashtags) fail with 42703 without these.
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS location_name TEXT;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS elevation_m INT;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS primary_categories TEXT[];
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS subtype TEXT;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS condition_data JSONB;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS caption TEXT;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS hashtags TEXT[];
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS tagged_users UUID[];
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS completion_score INT DEFAULT 0;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS captured_at TIMESTAMPTZ;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS sync_status TEXT DEFAULT 'synced';
 
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 

@@ -156,5 +156,13 @@ CREATE POLICY "cond_update_own" ON report_conditions FOR UPDATE USING (auth.uid(
 DROP POLICY IF EXISTS "cond_delete_own" ON report_conditions;
 CREATE POLICY "cond_delete_own" ON report_conditions FOR DELETE USING (auth.uid() = user_id);
 
--- 10) Reload the API schema cache so the new columns/tables are visible now
+-- 10) DSG/App-Store compliance: users may delete their own profile. The FK
+--     cascades remove all their content (reports -> comments/reactions/flags/
+--     conditions, follows). The auth.users login row itself needs the service
+--     role (Edge Function) — until then it simply has no profile anymore.
+DROP POLICY IF EXISTS "profiles_delete_own" ON profiles;
+CREATE POLICY "profiles_delete_own" ON profiles
+  FOR DELETE USING (auth.uid() = id);
+
+-- 11) Reload the API schema cache so the new columns/tables are visible now
 NOTIFY pgrst, 'reload schema';
