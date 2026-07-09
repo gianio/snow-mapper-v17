@@ -1,11 +1,14 @@
 -- Swiss Snow Mapper — Database Schema
--- Run this in Supabase SQL Editor (Dashboard → SQL Editor → New query)
+-- Run this in Supabase SQL Editor (Dashboard → SQL Editor → New query).
+-- 100% safe to run multiple times (idempotent: IF NOT EXISTS + DROP ... IF EXISTS
+-- before every policy/trigger). If you only need the latest additions, run
+-- web/migration-latest.sql instead.
 
 -- Enable PostGIS
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- Profiles (extends Supabase auth.users)
-CREATE TABLE profiles (
+CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
   email TEXT UNIQUE NOT NULL,
@@ -16,9 +19,11 @@ CREATE TABLE profiles (
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "profiles_read_all" ON profiles;
 CREATE POLICY "profiles_read_all" ON profiles
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "profiles_update_own" ON profiles;
 CREATE POLICY "profiles_update_own" ON profiles
   FOR UPDATE USING (auth.uid() = id);
 
@@ -36,12 +41,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
 -- Reports
-CREATE TABLE reports (
+CREATE TABLE IF NOT EXISTS reports (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   location GEOGRAPHY(POINT, 4326) NOT NULL,
@@ -62,20 +68,24 @@ CREATE TABLE reports (
 
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "reports_read_all" ON reports;
 CREATE POLICY "reports_read_all" ON reports
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "reports_insert_own" ON reports;
 CREATE POLICY "reports_insert_own" ON reports
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "reports_update_own" ON reports;
 CREATE POLICY "reports_update_own" ON reports
   FOR UPDATE USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "reports_delete_own" ON reports;
 CREATE POLICY "reports_delete_own" ON reports
   FOR DELETE USING (auth.uid() = user_id);
 
 -- Report reactions
-CREATE TABLE report_reactions (
+CREATE TABLE IF NOT EXISTS report_reactions (
   report_id UUID REFERENCES reports(id) ON DELETE CASCADE,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   type TEXT CHECK (type IN ('like', 'helpful', 'stale')) NOT NULL,
@@ -85,12 +95,15 @@ CREATE TABLE report_reactions (
 
 ALTER TABLE report_reactions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "reactions_read_all" ON report_reactions;
 CREATE POLICY "reactions_read_all" ON report_reactions
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "reactions_insert_auth" ON report_reactions;
 CREATE POLICY "reactions_insert_auth" ON report_reactions
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "reactions_delete_own" ON report_reactions;
 CREATE POLICY "reactions_delete_own" ON report_reactions
   FOR DELETE USING (auth.uid() = user_id);
 
@@ -203,11 +216,11 @@ CREATE POLICY "report_images_owner_delete" ON storage.objects
   USING (bucket_id = 'report-images' AND owner = auth.uid());
 
 -- Indices
-CREATE INDEX idx_reports_location ON reports USING GIST(location);
-CREATE INDEX idx_reports_categories ON reports USING GIN(primary_categories);
-CREATE INDEX idx_reports_hashtags ON reports USING GIN(hashtags);
-CREATE INDEX idx_reports_created ON reports (created_at DESC);
-CREATE INDEX idx_reports_user ON reports (user_id);
+CREATE INDEX IF NOT EXISTS idx_reports_location ON reports USING GIST(location);
+CREATE INDEX IF NOT EXISTS idx_reports_categories ON reports USING GIN(primary_categories);
+CREATE INDEX IF NOT EXISTS idx_reports_hashtags ON reports USING GIN(hashtags);
+CREATE INDEX IF NOT EXISTS idx_reports_created ON reports (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reports_user ON reports (user_id);
 
 -- Helper: get reports as GeoJSON for map layer
 CREATE OR REPLACE FUNCTION get_reports_geojson(
