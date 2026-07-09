@@ -31,6 +31,10 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
@@ -39,12 +43,32 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
+      - name: Powder-engine regression (offline)
+        # Activates automatically once tools/cache/ is committed (generate it
+        # once online with `python tools/eval_powder.py`, then commit the cache).
+        # Until then this is a no-op so the build stays green.
+        run: |
+          if [ -d tools/cache ]; then
+            python tools/eval_powder.py --offline
+          else
+            echo "tools/cache/ not present — skipping powder regression."
+          fi
+
       - name: Generate static site
         run: |
           python run_interactive.py
           mkdir -p dist
           mv index.html dist/
           touch dist/.nojekyll
+
+      - name: Validate inline JS (node --check)
+        run: python tools/check_inline_js.py dist/index.html
+
+      - name: Add PWA assets to the deploy bundle
+        run: |
+          for f in manifest.webmanifest sw.js icon-180.png icon-192.png icon-512.png; do
+            [ -f "$f" ] && mv "$f" dist/ || true
+          done
 
       - uses: actions/upload-pages-artifact@v5
         with:

@@ -1,10 +1,17 @@
 __pycache__/
 *.pyc
 index.html
+# PWA build artifacts (generated next to index.html by the pipeline)
+manifest.webmanifest
+sw.js
+icon-180.png
+icon-192.png
+icon-512.png
 
 # Web app
 web/node_modules/
 web/dist/
 web/.env
 web/.env.local
-tools/cache/
+# NOTE: tools/cache/ is intentionally NOT ignored — commit it to activate the
+# offline powder-engine regression gate in CI (see docs/launch-checklist.md).
