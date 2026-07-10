@@ -735,6 +735,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* Edge-to-edge: tinted glass band under the device status bar (safe-area),
     so the app visually reaches the physical screen edge like a native app.
     Height is 0 in normal browser windows; theme-color handles those. */
+ #statusScrimB{position:fixed;bottom:0;left:0;right:0;height:env(safe-area-inset-bottom, 0px);z-index:2900;pointer-events:none;background:linear-gradient(0deg,var(--edge-tint,rgba(248,251,255,.92)),rgba(248,251,255,.4));backdrop-filter:blur(14px) saturate(1.5);-webkit-backdrop-filter:blur(14px) saturate(1.5)}
  #statusScrim{position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);z-index:2900;pointer-events:none;background:linear-gradient(180deg,var(--edge-tint,rgba(248,251,255,.92)),rgba(248,251,255,.55));backdrop-filter:blur(14px) saturate(1.5);-webkit-backdrop-filter:blur(14px) saturate(1.5)}
  /* --- Skeleton shimmer for loading feed/cards --- */
  .skel{position:relative;overflow:hidden;background:rgba(22,21,46,.06);border-radius:var(--r-sm)}
@@ -871,12 +872,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .insp-tile{background:rgba(255,255,255,.5);border-color:rgba(255,255,255,.55)}
  .insp-head button{background:rgba(255,255,255,.6)}
  .insp-panel.open{display:flex;animation:inspIn .3s cubic-bezier(.32,.72,.42,1)}
- @media(min-width:561px){.insp-panel{top:auto;right:16px;bottom:calc(var(--btm-h,0px) + 16px);width:300px;max-height:min(70vh,600px);border-radius:var(--r-xl)}@keyframes inspIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}}
- @media(max-width:560px){.insp-panel{left:auto;right:12px;bottom:calc(var(--btm-h,0px) + 12px);width:min(54vw,250px);max-height:56vh;border-radius:var(--r-xl)}@keyframes inspIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}}
+ @media(min-width:561px){.insp-panel{top:auto;right:16px;bottom:calc(var(--btm-h,0px) + 16px);width:320px;height:320px;border-radius:var(--r-xl)}@keyframes inspIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}}
+ @media(max-width:560px){.insp-panel{left:auto;right:12px;bottom:calc(var(--btm-h,0px) + 12px);width:min(60vw,260px);height:min(60vw,260px);border-radius:var(--r-xl)}@keyframes inspIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}}
  .insp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:16px 16px 12px;border-bottom:1px solid var(--hair);flex-shrink:0}
  .insp-head .insp-t{min-width:0}
  .insp-head .insp-t b{font-size:15px;color:var(--fg);font-weight:800;letter-spacing:-.01em}
- .insp-chips{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+ .insp-chips{display:flex;gap:6px;margin-top:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+ .insp-chips::-webkit-scrollbar{display:none}
  .insp-chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--fill);color:var(--fg2);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
  .insp-chip.accent{background:rgba(94,92,230,.12);color:var(--acc2)}
  .insp-head button{background:var(--fill);border:none;width:34px;height:34px;border-radius:11px;color:var(--fg2);font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:.15s}
@@ -921,7 +923,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #searchWrap input:focus{border-color:var(--acc);background:#fff;box-shadow:0 0 0 3px var(--glow)}
  #searchWrap .icn{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--mut);font-size:15px}
  /* Right-side control rail */
- #ctrlRail{position:absolute;z-index:1050;right:12px;top:calc(env(safe-area-inset-top,0px) + 58px);display:flex;flex-direction:column;gap:10px}
+ #ctrlRail{position:absolute;z-index:1050;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:10px}
  .rail-btn{position:relative;width:46px;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.72);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);color:var(--fg2);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.09);transition:all .18s cubic-bezier(.34,1.56,.64,1)}
  .rail-btn:hover{background:#fff;color:var(--fg);transform:translateY(-1px)}
  .rail-btn:active{transform:scale(.92)}
@@ -929,6 +931,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #btn3dFloat{background:rgba(94,92,230,.16);color:var(--acc2);border-color:rgba(94,92,230,.28)}
  .rail-btn.feed-accent{background:linear-gradient(150deg,rgba(94,92,230,.2),rgba(155,140,255,.12));color:var(--acc2);border-color:rgba(94,92,230,.3)}
  #accountBtn.signed{color:var(--acc2)}
+ #railToggles.active{color:var(--acc2);background:rgba(94,92,230,.14);border-color:rgba(94,92,230,.3)}
+ .rail-note{position:absolute;right:56px;padding:6px 11px;border-radius:10px;background:var(--fg);color:#fff;font-size:12px;font-weight:700;white-space:nowrap;opacity:0;transform:translateX(6px);transition:.25s var(--ease);pointer-events:none}
+ .rail-note.show{opacity:1;transform:translateX(0)}
  .acct-img{display:block;width:34px;height:34px;border-radius:50%;background-size:cover;background-position:center;box-shadow:0 0 0 2px rgba(255,255,255,.9)}
  #userBar{display:none!important} /* replaced by the rail account button */
  .rail-btn.feed-accent:hover{color:var(--acc)}
@@ -973,6 +978,24 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #disc button.accept{width:100%;border:none;border-radius:var(--r);padding:14px;font-size:15px;font-weight:700;font-family:inherit;color:#fff;background:var(--acc);cursor:pointer;transition:.2s;box-shadow:var(--elev1)}
  #disc button.accept:disabled{opacity:.45;cursor:not-allowed}
  #disc button.accept:not(:disabled):active{transform:scale(.98)}
+ /* --- Add-to-Home-Screen sheet --- */
+ #a2hs{position:fixed;inset:0;z-index:9700;display:none;align-items:flex-end;justify-content:center;background:rgba(10,9,26,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+ #a2hs.show{display:flex;animation:discBg .3s ease}
+ #a2hs .sheet{width:100%;max-width:480px;background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(255,255,255,.6);border-radius:var(--r-xl) var(--r-xl) 0 0;box-shadow:var(--elev3);padding:22px 22px calc(env(safe-area-inset-bottom, 0px) + 20px)}
+ @media(min-width:560px){#a2hs{align-items:center}#a2hs .sheet{border-radius:var(--r-xl)}}
+ #a2hs .sheet{animation:discUp .4s var(--ease-spring)}
+ .a2hs-ic{width:52px;height:52px;border-radius:15px;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,#241d5c,#4a3f9e);color:#fff;margin-bottom:12px;box-shadow:var(--elev2)}
+ .a2hs-ic svg{width:28px;height:28px}
+ #a2hs h2{margin:0 0 6px;font-size:19px;font-weight:800;letter-spacing:-.02em;color:var(--fg)}
+ #a2hs p{margin:0 0 14px;font-size:13.5px;line-height:1.5;color:var(--fg2)}
+ .a2hs-step{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:14px;background:var(--fill);border:1px solid var(--hair);margin-bottom:8px;font-size:14px;font-weight:650;color:var(--fg)}
+ .a2hs-step .n{width:24px;height:24px;border-radius:50%;background:var(--acc);color:#fff;font-size:12.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+ .a2hs-step svg{width:21px;height:21px;color:var(--acc2);flex-shrink:0}
+ #a2hs button.accept{width:100%;margin-top:6px;border:none;border-radius:var(--r);padding:14px;font-size:15px;font-weight:800;font-family:inherit;color:#fff;background:var(--acc);cursor:pointer;box-shadow:var(--elev1);transition:.2s}
+ #a2hs button.accept:active{transform:scale(.98)}
+ #a2hs .later{width:100%;margin-top:8px;border:none;background:none;color:var(--mut);font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;padding:9px}
+ .a2hs-hint{font-size:12.5px;color:var(--mut);line-height:1.45;padding:10px 12px;background:var(--fill);border-radius:12px;margin-bottom:6px}
+ body.standalone #profInstall{display:none}
  .sf{position:absolute;top:-10px;width:6px;height:6px;background:white;border-radius:50%;opacity:.6;animation:sfDrop linear infinite}
  @keyframes sfDrop{0%{transform:translateY(0) translateX(0)}25%{transform:translateY(25vh) translateX(15px)}50%{transform:translateY(50vh) translateX(-10px)}75%{transform:translateY(75vh) translateX(20px)}100%{transform:translateY(110vh) translateX(5px)}}
  /* --- Onboarding coach marks --- */
@@ -999,7 +1022,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    .scard{font-size:14px;min-width:160px}
    .leaflet-popup-content-wrapper{max-width:calc(100vw - 32px)!important}
    .legend{max-width:180px;font-size:12px}
-   #ctrlRail{top:calc(env(safe-area-inset-top,0px) + 60px);right:8px;gap:11px}
+   #ctrlRail{top:calc(env(safe-area-inset-top,0px) + 12px);right:8px;gap:11px}
    .rail-btn{width:48px;height:48px}
    #legendBtn{width:40px;height:40px;font-size:18px}
    .seg button{padding:9px 14px;font-size:15px;min-height:44px}
@@ -1480,6 +1503,15 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .qr-corner.bl{bottom:8px;left:10px}
  .qr-pad-dot{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:var(--acc);border:3.5px solid #fff;box-shadow:var(--elev2);pointer-events:none;transition:left .05s linear,top .05s linear}
  .qr-read{margin-top:10px;font-size:13px;font-weight:700;color:var(--fg2);text-align:center;min-height:18px}
+ .qr-photo-row{display:flex;gap:10px;margin-top:12px}
+ .qr-photo-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;padding:16px 10px;border-radius:14px;border:1.5px dashed rgba(94,92,230,.4);background:rgba(94,92,230,.06);color:var(--acc2);font-size:13px;font-weight:750;cursor:pointer;text-align:center}
+ .qr-photo-btn svg{width:24px;height:24px}
+ .qr-photo-btn.lib{border-style:solid;border-color:var(--hair);background:var(--fill);color:var(--fg2)}
+ .qr-prev{width:100%;max-height:150px;object-fit:cover;border-radius:14px;margin-top:10px}
+ .qr-adj{display:block;margin:12px auto 0;border:none;background:none;color:var(--acc2);font-size:13px;font-weight:750;font-family:inherit;cursor:pointer}
+ .qr-skip{width:100%;margin-top:8px;border:none;background:none;color:var(--mut);font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;padding:9px}
+ #mapFab{position:fixed;bottom:calc(var(--btm-h,90px) + 16px);z-index:900}
+ #mapQr{position:fixed;bottom:calc(var(--btm-h,90px) + 100px);z-index:900}
  .feed-qr{position:absolute;bottom:calc(env(safe-area-inset-bottom, 0px) + 96px);left:50%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:999px;border:1px solid rgba(245,166,35,.5);background:linear-gradient(150deg,rgba(255,244,224,.96),rgba(255,255,255,.92));color:#8a5200;font-size:13.5px;font-weight:800;font-family:inherit;cursor:pointer;z-index:5;box-shadow:var(--elev2);transition:transform .15s var(--ease)}
  .feed-qr svg{width:16px;height:16px}
  .feed-qr:active{transform:translateX(-50%) scale(.94)}
@@ -1506,7 +1538,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-fab span{position:absolute;bottom:-19px;left:50%;transform:translateX(-50%);font-size:10.5px;font-weight:800;letter-spacing:.03em;color:var(--acc2);text-shadow:0 1px 2px rgba(255,255,255,.8)}
  .feed-fab:active{transform:translateX(-50%) scale(.9)}
  .feed-fab:hover{box-shadow:0 12px 32px rgba(94,92,230,.55),0 0 0 5px rgba(255,255,255,.85)}
- @media(min-width:561px){.feed-grid{padding:16px 0}.feed-card{margin:0 0 16px}}
+ .feed-card.slim .feed-card-head{padding:10px 14px 2px}
+ .feed-card.slim .feed-card-body{padding:6px 14px 10px}
+ .feed-card.slim .feed-card-caption{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13.5px}
+ .feed-card.slim .feed-card-actions{padding:7px 14px;gap:14px}
+ .feed-card.slim{margin-bottom:10px}
+ @media(min-width:561px){.feed-grid{padding:16px 0}.feed-card{margin:0 0 16px}.feed-card.slim{margin-bottom:10px}}
  /* --- Report markers --- */
  .rpt-marker{width:36px;height:36px;border-radius:50%;background:#fff;border:2.5px solid currentColor;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer;transition:transform .15s}
  .rpt-marker svg{width:18px;height:18px}
@@ -1516,10 +1553,25 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="intro"><div class="snow-wrap" id="snowWrap"></div><svg class="mtn" viewBox="0 0 800 200" preserveAspectRatio="none"><path d="M0,200 L80,110 L140,155 L240,55 L310,125 L390,35 L460,105 L540,55 L620,115 L700,65 L800,140 L800,200Z" fill="rgba(255,255,255,.04)"/><path d="M0,200 L100,130 L180,165 L300,80 L380,150 L470,85 L550,145 L660,95 L750,145 L800,165 L800,200Z" fill="rgba(255,255,255,.07)"/><path d="M0,200 L60,170 L160,145 L260,175 L360,130 L440,170 L520,150 L620,175 L720,155 L800,180 L800,200Z" fill="rgba(255,255,255,.03)"/></svg><h1>Swiss Snow Model</h1><div class="sub">Interactive Snow Forecast Map</div><div class="sources">swisstopo &middot; MeteoSwiss &middot; SLF &middot; Open-Meteo &middot; Copernicus</div><div class="bar"></div></div>
 <div id="toastWrap" aria-live="polite"></div>
 <div id="disc"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="discH"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><h2 id="discH">Bevor du startest</h2><p><b>Experimentelle Modelldaten.</b> Diese App zeigt modellierte Schnee-, Pulver- und Skitauglichkeits-Sch&auml;tzungen. Sie ist <b>kein Lawinenbulletin</b> und ersetzt nicht die offizielle Beurteilung des <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation.html" target="_blank" rel="noopener">SLF</a> bzw. <a href="https://whiterisk.ch" target="_blank" rel="noopener">White Risk</a>. Entscheidungen im Gel&auml;nde triffst du auf <b>eigenes Risiko</b>.</p><p class="fine">Datenschutz: F&uuml;r Konto, Meldungen und Fotos werden E-Mail, Standort und Bilddaten bei Supabase (EU) gespeichert. Du kannst Konto und Beitr&auml;ge jederzeit l&ouml;schen.</p><label class="chk"><input type="checkbox" id="discChk" onchange="var b=document.getElementById('discBtn');if(b)b.disabled=!this.checked"><span>Ich habe verstanden, dass dies experimentelle Daten sind und kein Lawinenbulletin ersetzt.</span></label><button class="accept" id="discBtn" disabled onclick="acceptDisc()">Verstanden &ndash; loslegen</button></div></div>
+<div id="a2hs" onclick="if(event.target===this)a2hsLater()"><div class="sheet" role="dialog" aria-modal="true">
+  <div class="a2hs-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="4.2" y1="7.5" x2="19.8" y2="16.5"/><line x1="4.2" y1="16.5" x2="19.8" y2="7.5"/></svg></div>
+  <h2>Snow Mapper aufs Home-Screen</h2>
+  <p>Als App installiert läuft Snow Mapper im Vollbild (randlos), startet offline mit den letzten Daten und ist einen Fingertipp entfernt.</p>
+  <div id="a2hsIos" style="display:none">
+    <div class="a2hs-step"><span class="n">1</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg><span>Tippe unten auf das <b>Teilen</b>-Symbol</span></div>
+    <div class="a2hs-step"><span class="n">2</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Wähle <b>Zum Home-Bildschirm</b></span></div>
+  </div>
+  <div id="a2hsAndroid" style="display:none">
+    <div class="a2hs-hint" id="a2hsFallback" style="display:none">Öffne das Browser-Menü (⋮) und wähle <b>App installieren</b>.</div>
+    <button class="accept" id="a2hsInstallBtn" onclick="a2hsInstall()">App installieren</button>
+  </div>
+  <button class="later" onclick="a2hsLater()">Später</button>
+</div></div>
 <div id="map"></div>
 <canvas id="flow"></canvas>
 <div id="modeGlow"></div>
 <div id="statusScrim"></div>
+<div id="statusScrimB"></div>
 <div id="inspPanel" class="insp-panel"></div>
 <div id="layerBar">
   <div id="topics">
@@ -1537,13 +1589,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="ctrlRail">
   <button class="rail-btn" id="accountBtn" onclick="accountTap()" title="Anmelden" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></button>
   <button class="rail-btn feed-accent" id="feedBtn" onclick="feedOpen()" title="Community-Feed" aria-label="Community-Feed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
-  <button class="rail-btn" id="railToggles" title="Messstationen ein/aus" aria-label="Messstationen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0" stroke-dasharray="0"/></svg></button>
+  <button class="rail-btn active" id="railToggles" onclick="toggleStations()" title="Messstationen ein/aus" aria-label="Messstationen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0" stroke-dasharray="0"/></svg></button>
   <button class="rail-btn" id="btn3dFloat" title="3D-Ansicht" aria-label="3D-Ansicht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg></button>
   <button class="rail-btn" id="locBtn" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg></button>
-  <div id="togglePop">
-    <label><input type="checkbox" id="stnToggle" checked/> Messstationen</label>
-  </div>
 </div>
+<button class="feed-qr" id="mapQr" onclick="qrOpen(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Report Powder</button>
+<button class="feed-fab" id="mapFab" onclick="obsOpen()" title="Beobachtung melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
 <div id="bottomPanel" class="detail">
   <div id="tlToggle"></div>
   <div id="btmMain">
@@ -1613,7 +1664,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div class="auth-bio-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10a3 3 0 0 1 6 0M8.5 15.5c1 1 5 1 7 0M12 10v3.5"/></svg></div>
   <p class="auth-sub" style="text-align:center;margin-bottom:14px">Nächstes Mal schneller & sicher mit <b id="authBioName">Biometrie</b> anmelden?</p>
   <button class="auth-btn primary" onclick="authEnableBio()">Aktivieren</button>
-  <button class="auth-btn ghost" onclick="authFinishBio()">Später</button>
+  <button class="auth-btn ghost" onclick="authSkipBio()">Später</button>
 </div>
 <div class="auth-switch" id="authSwitch">Kein Account? <button onclick="authToggle()">Registrieren</button></div>
 </div>
@@ -1694,6 +1745,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <div class="cond-head"><b><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:19px;height:19px;vertical-align:-3px;color:#b06a00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Quick Powder Report</b><button onclick="qrClose()">✕</button></div>
     <div class="cond-body">
       <div class="qr-loc" id="qrLoc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;color:var(--acc2)"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> <span id="qrLocTxt">Standort wird ermittelt…</span></div>
+      <div id="qrStep1">
       <div class="cond-lbl">Setze den Punkt: Menge → &nbsp;·&nbsp; Qualität ↑</div>
       <div class="qr-pad" id="qrPad">
         <span class="qr-corner tr">Deep &amp; Top</span>
@@ -1701,7 +1753,21 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         <div class="qr-pad-dot" id="qrPadDot" style="display:none"></div>
       </div>
       <div class="qr-read" id="qrRead">Tippe oder ziehe auf dem Feld</div>
-      <button class="cond-save" id="qrSaveBtn" onclick="qrSubmit()" disabled>Posten</button>
+      <button class="cond-save" id="qrNextBtn" onclick="qrNext()" disabled>Weiter</button>
+      </div>
+      <div id="qrStep2" style="display:none">
+      <div class="qr-photo-row">
+        <label class="qr-photo-btn" for="qrCam"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Foto aufnehmen</label>
+        <label class="qr-photo-btn lib" for="qrLib"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Mediathek</label>
+      </div>
+      <input id="qrCam" type="file" accept="image/*" capture="environment" hidden onchange="qrPhotoPick(this)">
+      <input id="qrLib" type="file" accept="image/*" hidden onchange="qrPhotoPick(this)">
+      <img id="qrPrev" class="qr-prev" style="display:none" alt=""/>
+      <button class="qr-adj" onclick="qrLocAdjust()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Standort anpassen</button>
+      <div id="qrMapWrap" style="display:none"><div class="obs-loc-wrap"><div class="obs-loc-map" id="qrMap" style="height:140px"></div></div></div>
+      <button class="cond-save" id="qrSaveBtn" onclick="qrSubmit()">Posten</button>
+      <button class="qr-skip" onclick="qrSkip()">Ohne Foto posten</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1720,6 +1786,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <button class="prof-save" id="profSave" onclick="profSave()">Speichern</button>
       <div class="prof-sec-title">Einstellungen &amp; Daten</div>
       <button class="prof-item" onclick="profExportData(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Meine Daten exportieren (JSON)</button>
+      <button class="prof-item" id="profBioBtn" style="display:none" onclick="profEnableBio()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10a3 3 0 0 1 6 0M8.5 15.5c1 1 5 1 7 0M12 10v3.5"/></svg>Biometrisches Login aktivieren</button>
+      <button class="prof-item" id="profInstall" onclick="profClose();a2hsShow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="7" x2="12" y2="13"/><polyline points="9.5 10.5 12 13 14.5 10.5"/><line x1="9" y1="17" x2="15" y2="17"/></svg>App installieren</button>
       <button class="prof-item" onclick="profShowLegal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Datenschutz &amp; Haftung anzeigen</button>
       <button class="prof-item" onclick="sendFeedback()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>Feedback senden</button>
       <button class="prof-item danger" onclick="profDeleteAccount(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Konto &amp; Daten löschen</button>
@@ -2254,13 +2322,17 @@ document.getElementById('btnSinceSnow').onclick=()=>{const p=sinceLastSnowfall()
   tc.addEventListener('mousemove',function(e){if(mode)return;const cx=e.clientX;const zone=getZone(cx);
     tc.style.cursor=zone==='center'?'grab':zone==='left'||zone==='right'?'col-resize':'crosshair';});
 })();
-document.getElementById('stnToggle').onchange=e=>{showStn=e.target.checked;renderStations();};
+
 function toggleReportLayer(on){if(on)map.addLayer(reportMarkers);else map.removeLayer(reportMarkers);}
 // Marker-visibility popover on the control rail
-(function(){const btn=document.getElementById('railToggles'),pop=document.getElementById('togglePop');
-  btn.onclick=e=>{e.stopPropagation();const open=pop.classList.toggle('show');btn.classList.toggle('active',open);if(open)pop.style.top=btn.offsetTop+'px';};
-  document.addEventListener('click',e=>{if(!pop.contains(e.target)&&e.target!==btn&&!btn.contains(e.target)){pop.classList.remove('show');btn.classList.remove('active');}});
-})();
+function toggleStations(){showStn=!showStn;renderStations();
+  const btn=document.getElementById('railToggles');btn.classList.toggle('active',showStn);
+  const rail=document.getElementById('ctrlRail');
+  let note=document.getElementById('railNote');
+  if(!note){note=document.createElement('div');note.id='railNote';note.className='rail-note';rail.appendChild(note);}
+  note.textContent=showStn?'Stationen an':'Stationen aus';
+  note.style.top=(btn.offsetTop+10)+'px';note.classList.add('show');
+  clearTimeout(note._t);note._t=setTimeout(()=>note.classList.remove('show'),1500);haptic(6);}
 // --- Rail: account button + locate-me ---
 function accountTap(){if(sbUser)openProfile();else authShow();}
 function updateAccountBtn(avatarUrl){const btn=document.getElementById('accountBtn');if(!btn)return;
@@ -2347,12 +2419,12 @@ function inspOpen(lat,lon){
   const pan=document.getElementById('inspPanel');
   pan.innerHTML=
    '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b>'+
-     '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elev.toFixed(0)+' m</span><span class="insp-chip accent">'+(QD[quad]||quad)+' · '+asp.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'° Neigung</span><span class="insp-chip">Fenster '+(b-a)+' h</span></div>'+
+     '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elev.toFixed(0)+' m</span><span class="insp-chip accent">'+(QD[quad]||quad)+' · '+asp.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+
    '</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
    '<div class="insp-body">'+
      '<div class="insp-sec"><h4>Neuschnee <em>+'+newSnow.toFixed(1)+' cm</em></h4><canvas id="icNew"></canvas></div>'+
      '<div class="insp-sec"><h4>Schneehöhe <em>'+depthNow.toFixed(0)+' cm</em></h4><canvas id="icDepth"></canvas></div>'+
-     '<div class="insp-sec"><h4>Temperatur <em>Luft · Oberfläche</em></h4><div class="insp-hscroll" id="icTempScroll"><canvas id="icTemp"></canvas></div><div class="insp-hint">◀ in die Vergangenheit scrollen ▶</div></div>'+
+     '<div class="insp-sec"><h4>Temperatur <em>Luft · Oberfläche</em></h4><canvas id="icTemp"></canvas></div>'+
      '<div class="insp-sec"><h4>Windrose <em>Ø '+wmean.toFixed(0)+' km/h</em></h4><canvas id="icWind"></canvas></div>'+
      '<div class="insp-sec"><h4>Strahlung <em>% vom Tagesmaximum</em></h4><canvas id="icRad"></canvas></div>'+
    '</div>';
@@ -2381,16 +2453,21 @@ function inspSnap(pan){
   inspDY+=top-r.top;
   inspApplyDrag(pan,true);}
 function inspAttachDrag(pan){
-  const head=pan.querySelector('.insp-head');if(!head||head._drag)return;head._drag=true;
-  let sx=0,sy=0,bx=0,by=0,on=false;
-  head.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;
+  if(pan._drag)return;pan._drag=true;
+  pan.style.touchAction='pan-y';
+  let sx=0,sy=0,bx=0,by=0,on=false,decided=false,doDrag=false;
+  function begin(e){pan.classList.add('dragging');pan.style.transition='none';try{pan.setPointerCapture(e.pointerId);}catch(_){}}
+  pan.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;
     on=true;sx=e.clientX;sy=e.clientY;bx=inspDX;by=inspDY;
-    pan.classList.add('dragging');pan.style.transition='none';
-    try{head.setPointerCapture(e.pointerId);}catch(_){}});
-  head.addEventListener('pointermove',e=>{if(!on)return;
-    inspDX=bx+(e.clientX-sx);inspDY=by+(e.clientY-sy);inspApplyDrag(pan,false);});
-  const fin=()=>{if(!on)return;on=false;pan.classList.remove('dragging');inspSnap(pan);};
-  head.addEventListener('pointerup',fin);head.addEventListener('pointercancel',fin);}
+    doDrag=!!e.target.closest('.insp-head');decided=doDrag;if(doDrag)begin(e);});
+  pan.addEventListener('pointermove',e=>{if(!on)return;
+    const dx=e.clientX-sx,dy=e.clientY-sy;
+    if(!decided){if(Math.abs(dx)<7&&Math.abs(dy)<7)return;
+      decided=true;doDrag=Math.abs(dx)>=Math.abs(dy);
+      if(doDrag)begin(e);else{on=false;return;}}
+    if(!doDrag)return;inspDX=bx+dx;inspDY=by+dy;inspApplyDrag(pan,false);});
+  const fin=()=>{if(!on)return;on=false;if(doDrag){pan.classList.remove('dragging');inspSnap(pan);}};
+  pan.addEventListener('pointerup',fin);pan.addEventListener('pointercancel',fin);}
 function icSetup(cv,hh,wOverride){const dpr=window.devicePixelRatio||1;const ww=wOverride||cv.getBoundingClientRect().width||320;
   cv.width=Math.round(ww*dpr);cv.height=Math.round(hh*dpr);cv.style.height=hh+'px';if(wOverride)cv.style.width=ww+'px';
   const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,ww,hh);return{ctx,w:ww,h:hh};}
@@ -2421,32 +2498,25 @@ function icDepth(cv,p){const{ctx,w,h}=icSetup(cv,80);const t0=a,t1=b;const LG=4,
   ctx.beginPath();for(let i=0;i<Ln;i++){const x=px(i),y=py(vals[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.lineTo(px(Ln-1),baseY);ctx.lineTo(LG,baseY);ctx.closePath();ctx.fillStyle='rgba(94,92,230,.13)';ctx.fill();
   ctx.beginPath();for(let i=0;i<Ln;i++){const x=px(i),y=py(vals[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.strokeStyle='#4844c9';ctx.lineWidth=2.2;ctx.stroke();
   icPill(ctx,px(mi),py(vals[mi])-21,vals[mi].toFixed(0)+' cm','#4844c9',w);}
-function icTemp(cv,p){const perHr=6,fullW=Math.max(320,T*perHr),h=130;const{ctx}=icSetup(cv,h,fullW);const baseY=h-18,topY=16;
-  let mn=1e9,mx=-1e9;const air=[],srf=[];for(let t=0;t<T;t++){const va=tv(t,p),vs=tsurfEst(t,p);air.push(va);srf.push(vs);mn=Math.min(mn,va,vs);mx=Math.max(mx,va,vs);}
+function icTemp(cv,p){const{ctx,w,h}=icSetup(cv,110);const t0=a,t1=Math.max(a+1,b),n=t1-t0;
+  const baseY=h-16,topY=18,plotW=w-8,xOf=i2=>4+i2/Math.max(1,n-1)*plotW;
+  let mn=1e9,mx=-1e9;const air=[],srf=[];
+  for(let t=t0;t<t1;t++){const va=tv(t,p),vs=tsurfEst(t,p);air.push(va);srf.push(vs);mn=Math.min(mn,va,vs);mx=Math.max(mx,va,vs);}
   mn=Math.floor(mn-1);mx=Math.ceil(mx+1);const rng=Math.max(1,mx-mn),yOf=v=>baseY-(v-mn)/rng*(baseY-topY);
-  for(let t=0;t<T;t++){const d=new Date(M.times[t]+'Z');if(d.getUTCHours()===0){const x=t*perHr;ctx.strokeStyle='rgba(22,21,46,.05)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,topY);ctx.lineTo(x,baseY);ctx.stroke();ctx.fillStyle='rgba(90,110,130,.75)';ctx.font='600 11px Inter';ctx.textAlign='center';ctx.fillText(d.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit'}),x+perHr*12,h-4);}}
-  ctx.fillStyle='rgba(94,92,230,.08)';ctx.fillRect(a*perHr,topY,(b-a)*perHr,baseY-topY);
-  // 0–5 °C band (wet-snow zone) + dashed 0° and 5° reference lines with
-  // repeating inline labels so they stay readable while scrolling (no y-axis).
-  if(mx>0){const y5=yOf(Math.min(5,mx)),y0=yOf(Math.max(0,mn));
-    ctx.fillStyle='rgba(245,166,35,.09)';ctx.fillRect(0,y5,fullW,Math.max(0,y0-y5));}
+  icDayGrid(ctx,4,plotW,h,t0,t1,baseY);
+  if(mx>0){const y5=yOf(Math.min(5,mx)),y0=yOf(Math.max(0,mn));ctx.fillStyle='rgba(245,166,35,.09)';ctx.fillRect(4,y5,plotW,Math.max(0,y0-y5));}
   function refLine(v,col,lbl){if(v<mn||v>mx)return;const y=yOf(v);
-    ctx.strokeStyle=col;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(fullW,y);ctx.stroke();ctx.setLineDash([]);
-    ctx.font='800 10px Inter';ctx.textAlign='left';
-    for(let x=6;x<fullW;x+=260){ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillRect(x-2,y-11,20,12);ctx.fillStyle=col;ctx.fillText(lbl,x,y-2);}}
-  refLine(0,'rgba(224,36,94,.55)','0°');
-  refLine(5,'rgba(217,138,31,.6)','5°');
-  ctx.strokeStyle='rgba(22,21,46,.4)';ctx.setLineDash([2,2]);ctx.beginPath();ctx.moveTo(nowIdx*perHr,topY);ctx.lineTo(nowIdx*perHr,baseY);ctx.stroke();ctx.setLineDash([]);
-  ctx.fillStyle='#e0245e';ctx.font='700 10px Inter';ctx.textAlign='center';ctx.fillText('JETZT',nowIdx*perHr,topY-4);
-  function line(arr,col,wd){ctx.beginPath();for(let t=0;t<T;t++){const x=t*perHr,y=yOf(arr[t]);t?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.strokeStyle=col;ctx.lineWidth=wd;ctx.lineJoin='round';ctx.stroke();}
-  line(srf,'#f5a623',1.7);line(air,'#5e5ce6',2.4);
-  // Direct high/low labels on the air curve (replaces the y-axis)
+    ctx.strokeStyle=col;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(4,y);ctx.lineTo(4+plotW,y);ctx.stroke();ctx.setLineDash([]);
+    ctx.font='800 10px Inter';ctx.textAlign='left';ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillRect(6,y-11,20,12);ctx.fillStyle=col;ctx.fillText(lbl,8,y-2);}
+  refLine(0,'rgba(224,36,94,.55)','0°');refLine(5,'rgba(217,138,31,.6)','5°');
+  if(nowIdx>=t0&&nowIdx<t1){const x=xOf(nowIdx-t0);ctx.strokeStyle='rgba(22,21,46,.4)';ctx.setLineDash([2,2]);ctx.beginPath();ctx.moveTo(x,topY);ctx.lineTo(x,baseY);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#e0245e';ctx.font='700 9.5px Inter';ctx.textAlign='center';ctx.fillText('JETZT',x,topY-5);}
+  function line(arr,col,wd){ctx.beginPath();for(let i2=0;i2<n;i2++){const x=xOf(i2),y=yOf(arr[i2]);i2?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.strokeStyle=col;ctx.lineWidth=wd;ctx.lineJoin='round';ctx.stroke();}
+  line(srf,'#f5a623',1.6);line(air,'#5e5ce6',2.2);
   let aMx=-1e9,aMxI=0,aMn=1e9,aMnI=0;
-  for(let t=0;t<T;t++){if(air[t]>aMx){aMx=air[t];aMxI=t;}if(air[t]<aMn){aMn=air[t];aMnI=t;}}
-  icPill(ctx,aMxI*perHr,yOf(aMx)-22,'Hoch '+aMx.toFixed(0)+'°','#c2410c',fullW);
-  icPill(ctx,aMnI*perHr,Math.min(baseY-18,yOf(aMn)+6),'Tief '+aMn.toFixed(0)+'°','#4844c9',fullW);
-  ctx.textAlign='left';ctx.font='700 11px Inter';ctx.fillStyle='#5e5ce6';ctx.fillText('● Luft',4,12);ctx.fillStyle='#f5a623';ctx.fillText('● Oberfläche',48,12);
-  const sc=document.getElementById('icTempScroll');if(sc)sc.scrollLeft=Math.max(0,a*perHr-40);}
+  for(let i2=0;i2<n;i2++){if(air[i2]>aMx){aMx=air[i2];aMxI=i2;}if(air[i2]<aMn){aMn=air[i2];aMnI=i2;}}
+  icPill(ctx,xOf(aMxI),yOf(aMx)-22,'Hoch '+aMx.toFixed(0)+'°','#c2410c',w);
+  icPill(ctx,xOf(aMnI),Math.min(baseY-18,yOf(aMn)+6),'Tief '+aMn.toFixed(0)+'°','#4844c9',w);
+  ctx.textAlign='left';ctx.font='700 10.5px Inter';ctx.fillStyle='#5e5ce6';ctx.fillText('● Luft',6,12);ctx.fillStyle='#f5a623';ctx.fillText('● Oberfläche',46,12);}
 function icWind(cv,p,wk){const{ctx,w,h}=icSetup(cv,152);const cx=w/2,cy=h/2+2,R=Math.min(cx,cy)-18;
   const NS=8,cnt=new Array(NS).fill(0),spd=new Array(NS).fill(0);let n=0,tot=0;
   for(let t=a;t<b;t++){let dir=(WDIR[t*P+wk]*M.dir_div)%360;if(dir<0)dir+=360;const s=SPD[t*P+wk]/M.spd_mul*3.6;const si=Math.round(dir/(360/NS))%NS;cnt[si]++;spd[si]+=s;n++;tot+=s;}
@@ -2604,8 +2674,32 @@ const COACH_STEPS=[
   {sel:'#feedBtn',html:'<b>Community-Feed.</b><br>Hier siehst du aktuelle Meldungen von Tourengängern in der ganzen Schweiz.'}
 ];
 let coachIdx=0;
-function maybeOnboard(){try{if(localStorage.getItem('ssm_onboarded'))return;}catch(e){}coachIdx=0;startCoach();}
-function endCoach(){try{localStorage.setItem('ssm_onboarded','1');}catch(e){}const c=document.getElementById('coach');if(c)c.style.display='none';}
+function maybeOnboard(){try{if(localStorage.getItem('ssm_onboarded')){maybeA2HS();return;}}catch(e){}coachIdx=0;startCoach();}
+// --- Add-to-Home-Screen sheet ---
+function maybeA2HS(){
+  if(isStandalone())return;
+  if(!('ontouchstart'in window)&&window.innerWidth>900)return; // desktop
+  try{const v=localStorage.getItem('ssm_a2hs');
+    if(v==='done')return;
+    if(v){const o=JSON.parse(v);if(o&&o.t&&(Date.now()-o.t)<7*864e5)return;}}catch(e){}
+  setTimeout(a2hsShow,700);}
+function a2hsShow(){
+  const el=document.getElementById('a2hs');if(!el)return;
+  const ios=isIOS();
+  document.getElementById('a2hsIos').style.display=ios?'':'none';
+  document.getElementById('a2hsAndroid').style.display=ios?'none':'';
+  if(!ios){const has=!!bipEvt;
+    document.getElementById('a2hsInstallBtn').style.display=has?'':'none';
+    document.getElementById('a2hsFallback').style.display=has?'none':'';}
+  el.classList.add('show');haptic(8);}
+function a2hsLater(){const el=document.getElementById('a2hs');if(el)el.classList.remove('show');
+  try{localStorage.setItem('ssm_a2hs',JSON.stringify({s:'later',t:Date.now()}));}catch(e){}}
+async function a2hsInstall(){if(!bipEvt){a2hsLater();return;}
+  try{bipEvt.prompt();const r=await bipEvt.userChoice;
+    if(r&&r.outcome==='accepted'){try{localStorage.setItem('ssm_a2hs','done');}catch(e){}}
+    document.getElementById('a2hs').classList.remove('show');bipEvt=null;
+  }catch(e){a2hsLater();}}
+function endCoach(){try{localStorage.setItem('ssm_onboarded','1');}catch(e){}const c=document.getElementById('coach');if(c)c.style.display='none';maybeA2HS();}
 function showCoachStep(){
   const c=document.getElementById('coach');
   // Skip steps whose target is missing or hidden (e.g. non-Ski topics in Simple mode)
@@ -2637,6 +2731,7 @@ document.addEventListener('keydown',function(e){
   const vis=id=>{const el=document.getElementById(id);return el&&el.style.display!=='none'&&el.style.display!=='';};
   if(vis('locPicker')){locPickerClose();return;}
   if(vis('cmtModal')){commentsClose();return;}
+  var a2=document.getElementById('a2hs');if(a2&&a2.classList.contains('show')){a2hsLater();return;}
   if(vis('qrModal')){qrClose();return;}
   if(vis('userViewModal')){userViewClose();return;}
   if(vis('profModal')){profClose();return;}
@@ -2669,6 +2764,14 @@ const IC={
  cam:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'
 };
 function ic(n){return '<svg class="ic-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(IC[n]||'')+'</svg>';}
+// --- Add-to-Home-Screen: detection + native-install capture ---
+function isStandalone(){try{return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}catch(e){return false;}}
+function isIOS(){const ua=navigator.userAgent;return /iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);}
+let bipEvt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();bipEvt=e;});
+window.addEventListener('appinstalled',()=>{try{localStorage.setItem('ssm_a2hs','done');}catch(e){}
+  const el=document.getElementById('a2hs');if(el)el.classList.remove('show');toast('App installiert!','ok');});
+window.addEventListener('DOMContentLoaded',()=>{if(isStandalone())document.body.classList.add('standalone');});
 // --- Toast notifications (surface errors + confirmations; no longer silent) ---
 function toast(msg,kind){const w=document.getElementById('toastWrap');
   if(!w){try{console.log('toast:',kind||'',msg);}catch(e){}return;}
@@ -2975,13 +3078,20 @@ async function authAfterLogin(){
   justLoggedIn=true;
   const uid=sbUser?.id;
   const avail=await bioAvailable();
-  if(avail&&uid&&!bioEnabledFor(uid)){authMode='biometric';authRender();return;}
+  let skip=false;try{skip=!!localStorage.getItem('ssm_bio_skip_'+uid);}catch(e){}
+  if(avail&&uid&&!bioEnabledFor(uid)&&!skip){authMode='biometric';authRender();return;}
   authHide();
 }
 function authEnableBio(){
   bioEnroll(sbUser.id,sbUser.email).then(()=>{authFinishBio();}).catch(e=>{alert('Biometrie konnte nicht aktiviert werden: '+(e.message||e));authFinishBio();});
 }
 function authFinishBio(){authHide();authMode='login';}
+function authSkipBio(){try{if(sbUser)localStorage.setItem('ssm_bio_skip_'+sbUser.id,'1');}catch(e){}authFinishBio();}
+function profEnableBio(){if(!sbUser)return;
+  bioEnroll(sbUser.id,sbUser.email).then(()=>{toast('Biometrisches Login aktiviert','ok');
+    try{localStorage.removeItem('ssm_bio_skip_'+sbUser.id);}catch(e){}
+    const b2=document.getElementById('profBioBtn');if(b2)b2.style.display='none';})
+  .catch(e=>toast('Aktivierung fehlgeschlagen: '+(e.message||e),'err'));}
 async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email});const b=document.getElementById('emailBanner').querySelector('button');if(b)b.textContent='Gesendet!';}
 // --- Biometric (WebAuthn platform authenticator) ---
 function _b64u(buf){let s=btoa(String.fromCharCode.apply(null,new Uint8Array(buf)));return s.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
@@ -3005,8 +3115,8 @@ async function bioVerify(uid){
   await navigator.credentials.get({publicKey:{challenge,timeout:60000,userVerification:'required',allowCredentials:[{type:'public-key',id:_b64uDec(id)}]}});
 }
 let bioUnlocked=false;
-function showBioLock(){document.getElementById('bioLockName').textContent=bioName();document.getElementById('bioLock').style.display='flex';}
-async function bioUnlock(){try{await bioVerify(sbUser.id);bioUnlocked=true;document.getElementById('bioLock').style.display='none';}catch(e){alert('Entsperren fehlgeschlagen. Bitte erneut versuchen.');}}
+function showBioLock(){document.getElementById('bioLockName').textContent=bioName();document.getElementById('bioLock').style.display='flex';setTimeout(()=>{bioUnlock(true);},350);}
+async function bioUnlock(auto){try{await bioVerify(sbUser.id);bioUnlocked=true;document.getElementById('bioLock').style.display='none';}catch(e){if(!auto)alert('Entsperren fehlgeschlagen. Bitte erneut versuchen.');}}
 function bioSignOut(){document.getElementById('bioLock').style.display='none';bioUnlocked=true;if(sb)sb.auth.signOut();}
 function authMenu(){openProfile();}
 // --- Profile & Settings ---
@@ -3025,6 +3135,8 @@ async function loadMyProfileAvatar(){if(!sb||!sbUser)return;
 async function openProfile(){
   if(!sb||!sbUser){authShow();return;}
   document.getElementById('profModal').style.display='flex';
+  try{const bb=document.getElementById('profBioBtn');
+    if(bb)bioAvailable().then(av=>{bb.style.display=(av&&!bioEnabledFor(sbUser.id))?'':'none';});}catch(e){}
   const name=sbUser.user_metadata?.username||sbUser.email?.split('@')[0]||'User';
   document.getElementById('profName').textContent=name;
   document.getElementById('profAvInitial').textContent=name[0].toUpperCase();
@@ -3768,11 +3880,17 @@ function condMaybeHint(){try{if(localStorage.getItem('ssm_cond_hint'))return;}ca
   try{localStorage.setItem('ssm_cond_hint','1');}catch(e){}
   const dismiss=()=>{if(tip.parentNode)tip.remove();};tip.onclick=dismiss;setTimeout(dismiss,8000);}
 // --- Quick-Check: a 5-second standalone report (stars + powder + location) ---
-let qrStars=0,qrPowder=null,qrLL=null,qrAmount=null,qrQuality=null;
+let qrStars=0,qrPowder=null,qrLL=null,qrAmount=null,qrQuality=null,qrPhoto=null,qrMapObj=null;
 function qrOpen(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
   if(!sb||!sbUser){authShow();return;}
   qrStars=0;qrPowder=null;qrLL=null;qrAmount=null;qrQuality=null;
+  qrPhoto=null;
   document.getElementById('qrModal').style.display='flex';
+  document.getElementById('qrStep1').style.display='';
+  document.getElementById('qrStep2').style.display='none';
+  const pv=document.getElementById('qrPrev');if(pv){pv.style.display='none';pv.src='';}
+  const mw=document.getElementById('qrMapWrap');if(mw)mw.style.display='none';
+  if(qrMapObj){try{qrMapObj.remove();}catch(e){}qrMapObj=null;}
   const dot=document.getElementById('qrPadDot');if(dot)dot.style.display='none';
   const rd=document.getElementById('qrRead');if(rd)rd.textContent='Tippe oder ziehe auf dem Feld';
   qrPadAttach();qrSync();
@@ -3783,8 +3901,27 @@ function qrOpen(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
     lc.textContent='Dein Standort'+(d.elev?(' · '+d.elev+' m'+(d.aspect?(' · '+d.aspect):'')):'');
   },fallback,{enableHighAccuracy:true,timeout:8000,maximumAge:60000});}else fallback();
   haptic(8);}
-function qrClose(){document.getElementById('qrModal').style.display='none';}
-function qrSync(){const b2=document.getElementById('qrSaveBtn');if(b2)b2.disabled=!(qrAmount!==null&&qrQuality!==null);}
+function qrClose(){document.getElementById('qrModal').style.display='none';
+  if(qrMapObj){try{qrMapObj.remove();}catch(e){}qrMapObj=null;}}
+function qrNext(){if(qrAmount===null||qrQuality===null)return;
+  document.getElementById('qrStep1').style.display='none';
+  document.getElementById('qrStep2').style.display='';haptic(6);}
+function qrPhotoPick(inp){if(!inp.files||!inp.files[0])return;qrPhoto=inp.files[0];inp.value='';
+  const pv=document.getElementById('qrPrev');pv.src=URL.createObjectURL(qrPhoto);pv.style.display='';haptic(6);}
+function qrSkip(){qrPhoto=null;qrSubmit();}
+function qrLocAdjust(){const w2=document.getElementById('qrMapWrap');
+  const show=w2.style.display==='none';w2.style.display=show?'':'none';
+  if(show&&!qrMapObj){
+    const c=qrLL||[map.getCenter().lat,map.getCenter().lng];
+    qrMapObj=L.map('qrMap',{zoomControl:false,attributionControl:false}).setView(c,13);
+    L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg').addTo(qrMapObj);
+    const wrap=w2.querySelector('.obs-loc-wrap');
+    if(!wrap.querySelector('.obs-pin'))wrap.insertAdjacentHTML('beforeend','<div class="obs-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="rgba(224,36,94,.14)"/><circle cx="12" cy="10" r="3"/></svg></div>');
+    qrMapObj.on('moveend',()=>{const cc=qrMapObj.getCenter();qrLL=[cc.lat,cc.lng];
+      const d=obsDEM(cc.lat,cc.lng);
+      document.getElementById('qrLocTxt').textContent='Manuell gesetzt'+(d.elev?(' · '+d.elev+' m'):'');});
+    setTimeout(()=>{try{qrMapObj.invalidateSize();}catch(e){}},120);}}
+function qrSync(){const b2=document.getElementById('qrNextBtn');if(b2)b2.disabled=!(qrAmount!==null&&qrQuality!==null);}
 function qrQuadLabel(){const a2=qrAmount,q=qrQuality;
   if(a2>=50&&q>=50)return 'Deep & Top Powder';
   if(a2<50&&q>=50)return 'Top Qualität, wenig Schnee';
@@ -3809,7 +3946,12 @@ async function qrSubmit(){if(!sb||!sbUser||qrAmount===null||qrQuality===null)ret
   try{
     let ll=qrLL;if(!ll){try{const c=map.getCenter();ll=[c.lat,c.lng];}catch(e){ll=[46.8,8.2];}}
     const d=obsDEM(ll[0],ll[1]);
-    const row={user_id:sbUser.id,location:'POINT('+ll[1]+' '+ll[0]+')',elevation_m:d.elev||null,
+    let imageUrl=null;
+    if(qrPhoto){const up=await downscaleImage(qrPhoto);
+      const path=sbUser.id+'/'+Date.now()+'.jpg';
+      const{error:upErr}=await sb.storage.from('report-images').upload(path,up,{contentType:up.type||'image/jpeg'});
+      if(!upErr){const{data:ud}=sb.storage.from('report-images').getPublicUrl(path);imageUrl=ud?.publicUrl||null;}}
+    const row={user_id:sbUser.id,location:'POINT('+ll[1]+' '+ll[0]+')',elevation_m:d.elev||null,image_url:imageUrl,
       primary_categories:['snow'],subtype:'Quick Powder Report',
       condition_data:{quick:true,powderAmount:qrAmount,powderQuality:qrQuality,
         stars:Math.max(1,Math.round(qrQuality/20)),powder:(qrAmount>=50&&qrQuality>=50),
@@ -3915,7 +4057,7 @@ function feedRender(){
     const canFollow=r.dbRow&&r.userId&&(!sbUser||r.userId!==sbUser.id);
     const followBtn=canFollow?`<button class="feed-follow ${myFollowing.has(r.userId)?'following':''}" onclick="toggleFollow('${r.userId}',event)">${myFollowing.has(r.userId)?'Folge ich':'Folgen'}</button>`:'';
     const endBtn=r.dbRow?`<button class="endorse-btn ${r.liked?'endorsed':''}" onclick="toggleEndorse('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> ${r.likes||0}<span class="endorse-lbl">${r.liked?'Bestätigt':'Bestätigen'}</span></button>`:'';
-    return`<div class="feed-card" id="feedcard-${r.id}" onclick="feedFlyTo(${r.lat},${r.lng})">
+    return`<div class="feed-card${r.img?'':' slim'}" id="feedcard-${r.id}" onclick="feedFlyTo(${r.lat},${r.lng})">
       <div class="feed-card-head">
         <div class="feed-card-avatar" style="${r.avatar?`background-image:url(${r.avatar});background-size:cover;background-position:center`:`background:${avatarBg}`}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/'/g,'')}')"`:''}>${r.avatar?'':r.user[0].toUpperCase()}</div>
         <div class="feed-card-info">
@@ -3924,10 +4066,7 @@ function feedRender(){
         </div>
         ${followBtn||distTag||`<span class="feed-card-time">${r.time}</span>`}
       </div>
-      <div class="feed-card-visual">
-        ${r.img?`<img src="${r.img}" alt="" loading="lazy" decoding="async"/>`:
-        `<div class="card-placeholder" style="background:${bg}"><span style="color:${col}">${CAT_SVG[r.cat]||''}</span><span style="color:${col}">${r.sub||r.cat}</span></div>`}
-      </div>
+      ${r.img?`<div class="feed-card-visual"><img src="${r.img}" alt="" loading="lazy" decoding="async"/></div>`:''}
       <div class="feed-card-body">
         <div class="feed-card-badges">
           <span class="feed-badge cat-${r.cat}">${catSvg(r.cat,14)} ${r.sub||r.cat}</span>
