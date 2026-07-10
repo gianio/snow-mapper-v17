@@ -973,6 +973,24 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #disc button.accept{width:100%;border:none;border-radius:var(--r);padding:14px;font-size:15px;font-weight:700;font-family:inherit;color:#fff;background:var(--acc);cursor:pointer;transition:.2s;box-shadow:var(--elev1)}
  #disc button.accept:disabled{opacity:.45;cursor:not-allowed}
  #disc button.accept:not(:disabled):active{transform:scale(.98)}
+ /* --- Add-to-Home-Screen sheet --- */
+ #a2hs{position:fixed;inset:0;z-index:9700;display:none;align-items:flex-end;justify-content:center;background:rgba(10,9,26,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+ #a2hs.show{display:flex;animation:discBg .3s ease}
+ #a2hs .sheet{width:100%;max-width:480px;background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(255,255,255,.6);border-radius:var(--r-xl) var(--r-xl) 0 0;box-shadow:var(--elev3);padding:22px 22px calc(env(safe-area-inset-bottom, 0px) + 20px)}
+ @media(min-width:560px){#a2hs{align-items:center}#a2hs .sheet{border-radius:var(--r-xl)}}
+ #a2hs .sheet{animation:discUp .4s var(--ease-spring)}
+ .a2hs-ic{width:52px;height:52px;border-radius:15px;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,#241d5c,#4a3f9e);color:#fff;margin-bottom:12px;box-shadow:var(--elev2)}
+ .a2hs-ic svg{width:28px;height:28px}
+ #a2hs h2{margin:0 0 6px;font-size:19px;font-weight:800;letter-spacing:-.02em;color:var(--fg)}
+ #a2hs p{margin:0 0 14px;font-size:13.5px;line-height:1.5;color:var(--fg2)}
+ .a2hs-step{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:14px;background:var(--fill);border:1px solid var(--hair);margin-bottom:8px;font-size:14px;font-weight:650;color:var(--fg)}
+ .a2hs-step .n{width:24px;height:24px;border-radius:50%;background:var(--acc);color:#fff;font-size:12.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+ .a2hs-step svg{width:21px;height:21px;color:var(--acc2);flex-shrink:0}
+ #a2hs button.accept{width:100%;margin-top:6px;border:none;border-radius:var(--r);padding:14px;font-size:15px;font-weight:800;font-family:inherit;color:#fff;background:var(--acc);cursor:pointer;box-shadow:var(--elev1);transition:.2s}
+ #a2hs button.accept:active{transform:scale(.98)}
+ #a2hs .later{width:100%;margin-top:8px;border:none;background:none;color:var(--mut);font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;padding:9px}
+ .a2hs-hint{font-size:12.5px;color:var(--mut);line-height:1.45;padding:10px 12px;background:var(--fill);border-radius:12px;margin-bottom:6px}
+ body.standalone #profInstall{display:none}
  .sf{position:absolute;top:-10px;width:6px;height:6px;background:white;border-radius:50%;opacity:.6;animation:sfDrop linear infinite}
  @keyframes sfDrop{0%{transform:translateY(0) translateX(0)}25%{transform:translateY(25vh) translateX(15px)}50%{transform:translateY(50vh) translateX(-10px)}75%{transform:translateY(75vh) translateX(20px)}100%{transform:translateY(110vh) translateX(5px)}}
  /* --- Onboarding coach marks --- */
@@ -1516,6 +1534,20 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="intro"><div class="snow-wrap" id="snowWrap"></div><svg class="mtn" viewBox="0 0 800 200" preserveAspectRatio="none"><path d="M0,200 L80,110 L140,155 L240,55 L310,125 L390,35 L460,105 L540,55 L620,115 L700,65 L800,140 L800,200Z" fill="rgba(255,255,255,.04)"/><path d="M0,200 L100,130 L180,165 L300,80 L380,150 L470,85 L550,145 L660,95 L750,145 L800,165 L800,200Z" fill="rgba(255,255,255,.07)"/><path d="M0,200 L60,170 L160,145 L260,175 L360,130 L440,170 L520,150 L620,175 L720,155 L800,180 L800,200Z" fill="rgba(255,255,255,.03)"/></svg><h1>Swiss Snow Model</h1><div class="sub">Interactive Snow Forecast Map</div><div class="sources">swisstopo &middot; MeteoSwiss &middot; SLF &middot; Open-Meteo &middot; Copernicus</div><div class="bar"></div></div>
 <div id="toastWrap" aria-live="polite"></div>
 <div id="disc"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="discH"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><h2 id="discH">Bevor du startest</h2><p><b>Experimentelle Modelldaten.</b> Diese App zeigt modellierte Schnee-, Pulver- und Skitauglichkeits-Sch&auml;tzungen. Sie ist <b>kein Lawinenbulletin</b> und ersetzt nicht die offizielle Beurteilung des <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation.html" target="_blank" rel="noopener">SLF</a> bzw. <a href="https://whiterisk.ch" target="_blank" rel="noopener">White Risk</a>. Entscheidungen im Gel&auml;nde triffst du auf <b>eigenes Risiko</b>.</p><p class="fine">Datenschutz: F&uuml;r Konto, Meldungen und Fotos werden E-Mail, Standort und Bilddaten bei Supabase (EU) gespeichert. Du kannst Konto und Beitr&auml;ge jederzeit l&ouml;schen.</p><label class="chk"><input type="checkbox" id="discChk" onchange="var b=document.getElementById('discBtn');if(b)b.disabled=!this.checked"><span>Ich habe verstanden, dass dies experimentelle Daten sind und kein Lawinenbulletin ersetzt.</span></label><button class="accept" id="discBtn" disabled onclick="acceptDisc()">Verstanden &ndash; loslegen</button></div></div>
+<div id="a2hs" onclick="if(event.target===this)a2hsLater()"><div class="sheet" role="dialog" aria-modal="true">
+  <div class="a2hs-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="4.2" y1="7.5" x2="19.8" y2="16.5"/><line x1="4.2" y1="16.5" x2="19.8" y2="7.5"/></svg></div>
+  <h2>Snow Mapper aufs Home-Screen</h2>
+  <p>Als App installiert läuft Snow Mapper im Vollbild (randlos), startet offline mit den letzten Daten und ist einen Fingertipp entfernt.</p>
+  <div id="a2hsIos" style="display:none">
+    <div class="a2hs-step"><span class="n">1</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg><span>Tippe unten auf das <b>Teilen</b>-Symbol</span></div>
+    <div class="a2hs-step"><span class="n">2</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Wähle <b>Zum Home-Bildschirm</b></span></div>
+  </div>
+  <div id="a2hsAndroid" style="display:none">
+    <div class="a2hs-hint" id="a2hsFallback" style="display:none">Öffne das Browser-Menü (⋮) und wähle <b>App installieren</b>.</div>
+    <button class="accept" id="a2hsInstallBtn" onclick="a2hsInstall()">App installieren</button>
+  </div>
+  <button class="later" onclick="a2hsLater()">Später</button>
+</div></div>
 <div id="map"></div>
 <canvas id="flow"></canvas>
 <div id="modeGlow"></div>
@@ -1720,6 +1752,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <button class="prof-save" id="profSave" onclick="profSave()">Speichern</button>
       <div class="prof-sec-title">Einstellungen &amp; Daten</div>
       <button class="prof-item" onclick="profExportData(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Meine Daten exportieren (JSON)</button>
+      <button class="prof-item" id="profInstall" onclick="profClose();a2hsShow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="7" x2="12" y2="13"/><polyline points="9.5 10.5 12 13 14.5 10.5"/><line x1="9" y1="17" x2="15" y2="17"/></svg>App installieren</button>
       <button class="prof-item" onclick="profShowLegal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Datenschutz &amp; Haftung anzeigen</button>
       <button class="prof-item" onclick="sendFeedback()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>Feedback senden</button>
       <button class="prof-item danger" onclick="profDeleteAccount(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Konto &amp; Daten löschen</button>
@@ -2604,8 +2637,32 @@ const COACH_STEPS=[
   {sel:'#feedBtn',html:'<b>Community-Feed.</b><br>Hier siehst du aktuelle Meldungen von Tourengängern in der ganzen Schweiz.'}
 ];
 let coachIdx=0;
-function maybeOnboard(){try{if(localStorage.getItem('ssm_onboarded'))return;}catch(e){}coachIdx=0;startCoach();}
-function endCoach(){try{localStorage.setItem('ssm_onboarded','1');}catch(e){}const c=document.getElementById('coach');if(c)c.style.display='none';}
+function maybeOnboard(){try{if(localStorage.getItem('ssm_onboarded')){maybeA2HS();return;}}catch(e){}coachIdx=0;startCoach();}
+// --- Add-to-Home-Screen sheet ---
+function maybeA2HS(){
+  if(isStandalone())return;
+  if(!('ontouchstart'in window)&&window.innerWidth>900)return; // desktop
+  try{const v=localStorage.getItem('ssm_a2hs');
+    if(v==='done')return;
+    if(v){const o=JSON.parse(v);if(o&&o.t&&(Date.now()-o.t)<7*864e5)return;}}catch(e){}
+  setTimeout(a2hsShow,700);}
+function a2hsShow(){
+  const el=document.getElementById('a2hs');if(!el)return;
+  const ios=isIOS();
+  document.getElementById('a2hsIos').style.display=ios?'':'none';
+  document.getElementById('a2hsAndroid').style.display=ios?'none':'';
+  if(!ios){const has=!!bipEvt;
+    document.getElementById('a2hsInstallBtn').style.display=has?'':'none';
+    document.getElementById('a2hsFallback').style.display=has?'none':'';}
+  el.classList.add('show');haptic(8);}
+function a2hsLater(){const el=document.getElementById('a2hs');if(el)el.classList.remove('show');
+  try{localStorage.setItem('ssm_a2hs',JSON.stringify({s:'later',t:Date.now()}));}catch(e){}}
+async function a2hsInstall(){if(!bipEvt){a2hsLater();return;}
+  try{bipEvt.prompt();const r=await bipEvt.userChoice;
+    if(r&&r.outcome==='accepted'){try{localStorage.setItem('ssm_a2hs','done');}catch(e){}}
+    document.getElementById('a2hs').classList.remove('show');bipEvt=null;
+  }catch(e){a2hsLater();}}
+function endCoach(){try{localStorage.setItem('ssm_onboarded','1');}catch(e){}const c=document.getElementById('coach');if(c)c.style.display='none';maybeA2HS();}
 function showCoachStep(){
   const c=document.getElementById('coach');
   // Skip steps whose target is missing or hidden (e.g. non-Ski topics in Simple mode)
@@ -2637,6 +2694,7 @@ document.addEventListener('keydown',function(e){
   const vis=id=>{const el=document.getElementById(id);return el&&el.style.display!=='none'&&el.style.display!=='';};
   if(vis('locPicker')){locPickerClose();return;}
   if(vis('cmtModal')){commentsClose();return;}
+  var a2=document.getElementById('a2hs');if(a2&&a2.classList.contains('show')){a2hsLater();return;}
   if(vis('qrModal')){qrClose();return;}
   if(vis('userViewModal')){userViewClose();return;}
   if(vis('profModal')){profClose();return;}
@@ -2669,6 +2727,14 @@ const IC={
  cam:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'
 };
 function ic(n){return '<svg class="ic-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(IC[n]||'')+'</svg>';}
+// --- Add-to-Home-Screen: detection + native-install capture ---
+function isStandalone(){try{return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}catch(e){return false;}}
+function isIOS(){const ua=navigator.userAgent;return /iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);}
+let bipEvt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();bipEvt=e;});
+window.addEventListener('appinstalled',()=>{try{localStorage.setItem('ssm_a2hs','done');}catch(e){}
+  const el=document.getElementById('a2hs');if(el)el.classList.remove('show');toast('App installiert!','ok');});
+window.addEventListener('DOMContentLoaded',()=>{if(isStandalone())document.body.classList.add('standalone');});
 // --- Toast notifications (surface errors + confirmations; no longer silent) ---
 function toast(msg,kind){const w=document.getElementById('toastWrap');
   if(!w){try{console.log('toast:',kind||'',msg);}catch(e){}return;}
