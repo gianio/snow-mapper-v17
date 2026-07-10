@@ -1438,28 +1438,28 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .loc-picker-list button .lp-e{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--mut)}
  .loc-picker-list .lp-empty{text-align:center;color:var(--mut);padding:30px;font-size:14px}
  .feed-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,0px)}
- .feed-grid{max-width:600px;margin:0 auto;padding:6px 0 12px}
- .feed-card{background:var(--card);margin:0 12px 14px;border-radius:var(--r-lg);border:1px solid var(--hair);box-shadow:var(--elev1);overflow:hidden;cursor:pointer;transition:box-shadow .25s var(--ease),transform .25s var(--ease)}
+ .feed-grid{max-width:600px;margin:0 auto;padding:10px 0 120px}
+ .feed-card{background:var(--card);margin:0 14px 20px;border-radius:22px;border:1px solid var(--hair);box-shadow:var(--elev1);overflow:hidden;cursor:pointer;transition:box-shadow .25s var(--ease),transform .25s var(--ease)}
  .feed-card:hover{box-shadow:var(--elev2)}
  @media(hover:none){.feed-card:active{transform:scale(.992)}}
  .feed-card.enter{animation:cardIn .5s var(--ease) both}
  @keyframes cardIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
  .feed-card.flash{box-shadow:0 0 0 3px var(--acc) inset;animation:cardFlash 1.8s ease}
  @keyframes cardFlash{0%,100%{background:#fff}30%{background:rgba(94,92,230,.08)}}
- .feed-card-head{display:flex;align-items:center;gap:10px;padding:12px 16px}
- .feed-card-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;letter-spacing:.02em;color:#fff;box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--ring)}
+ .feed-card-head{display:flex;align-items:center;gap:11px;padding:14px 16px 10px}
+  .feed-card-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;letter-spacing:.02em;color:#fff;box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--ring)}
  .feed-card-info{flex:1;min-width:0}
  .feed-card-user{font-size:14px;font-weight:700;color:var(--fg);letter-spacing:-.01em;display:block}
  .feed-card-loc{font-size:12px;color:var(--mut);font-weight:500;display:flex;align-items:center;gap:3px}
  .feed-card-time{font-size:12px;color:var(--mut);font-weight:500;flex-shrink:0}
- .feed-card-visual{width:100%;aspect-ratio:4/3;position:relative;overflow:hidden;background:var(--fill2)}
+ .feed-card-visual{margin:2px 14px 0;aspect-ratio:4/3;position:relative;overflow:hidden;background:var(--fill2);border-radius:16px}
  .feed-card-visual img{width:100%;height:100%;object-fit:cover}
  .feed-card-visual .card-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px}
  .feed-card-visual .card-placeholder>span:first-child svg{width:56px;height:56px;opacity:.5}
  .feed-card-visual .card-placeholder>span:last-child{font-size:15px;font-weight:700;opacity:.45;letter-spacing:.02em}
- .feed-card-body{padding:12px 16px 16px}
+ .feed-card-body{padding:12px 18px 4px}
  .feed-card-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
- .feed-badge{padding:4px 12px;border-radius:999px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px}
+ .feed-badge{padding:5px 13px;border-radius:999px;font-size:12.5px;font-weight:650;display:flex;align-items:center;gap:6px}
  .feed-badge .cat-ico{width:14px;height:14px;display:flex;align-items:center;justify-content:center}
  .feed-badge .cat-ico svg{width:13px;height:13px}
  .feed-badge.cat-snow{background:rgba(56,152,236,.1);color:#5e5ce6}
@@ -1476,9 +1476,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-badge.cat-whumpf{background:rgba(232,89,12,.1);color:#e8590c}.feed-badge.cat-whumpf svg{stroke:#e8590c}
  .feed-badge.cat-wind_slab{background:rgba(13,148,136,.1);color:#0d9488}.feed-badge.cat-wind_slab svg{stroke:#0d9488}
  .feed-badge.cat-other{background:rgba(94,92,230,.1);color:#5e5ce6}.feed-badge.cat-other svg{stroke:#5e5ce6}
- .feed-card-caption{font-size:14px;color:var(--fg2);line-height:1.5}
+ .feed-card-caption{font-size:14.5px;color:var(--fg2);line-height:1.55;margin-top:2px}
  .feed-card-caption b{color:var(--fg);font-weight:700}
- .feed-card-actions{display:flex;align-items:center;gap:18px;padding:11px 16px;border-top:1px solid var(--hair)}
+ .feed-card-actions{display:flex;align-items:center;gap:20px;padding:12px 18px 13px;border-top:1px solid var(--hair);margin-top:10px}
  .feed-card-actions button{background:none;border:none;cursor:pointer;padding:4px;color:var(--fg2);display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;font-family:inherit}
  .feed-card-actions button svg{width:20px;height:20px}
  .feed-card-actions button:hover{color:var(--fg)}
@@ -1575,12 +1575,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-fab span{position:absolute;bottom:-19px;left:50%;transform:translateX(-50%);font-size:10.5px;font-weight:800;letter-spacing:.03em;color:var(--acc2);text-shadow:0 1px 2px rgba(255,255,255,.8)}
  .feed-fab:active{transform:translateX(-50%) scale(.9)}
  .feed-fab:hover{box-shadow:0 12px 32px rgba(94,92,230,.55),0 0 0 5px rgba(255,255,255,.85)}
- .feed-card.slim .feed-card-head{padding:10px 14px 2px}
- .feed-card.slim .feed-card-body{padding:6px 14px 10px}
- .feed-card.slim .feed-card-caption{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13.5px}
- .feed-card.slim .feed-card-actions{padding:7px 14px;gap:14px}
- .feed-card.slim{margin-bottom:10px}
- @media(min-width:561px){.feed-grid{padding:16px 0}.feed-card{margin:0 0 16px}.feed-card.slim{margin-bottom:10px}}
+ /* Text-only posts: first-class "quote" cards with a category tint wash */
+ .feed-tx{position:relative;margin:2px 16px 0;padding:16px 18px 15px 22px;border-radius:16px;font-size:17px;line-height:1.5;font-weight:550;color:var(--fg);letter-spacing:-.012em;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+ .feed-tx-bar{position:absolute;left:8px;top:14px;bottom:14px;width:4px;border-radius:2px;opacity:.75}
+ .feed-card.text .feed-card-actions{margin-top:8px}
+ @media(min-width:561px){.feed-grid{padding:18px 0 120px}.feed-card{margin:0 0 20px}}
  /* --- Report markers --- */
  .rpt-marker{width:36px;height:36px;border-radius:50%;background:#fff;border:2.5px solid currentColor;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer;transition:transform .15s}
  .rpt-marker svg{width:18px;height:18px}
@@ -2956,7 +2955,7 @@ const DEMO_DEFS=[
 const DEMO_REPORTS=DEMO_DEFS.map((d,i2)=>({id:'d'+(i2+1),user:DEMO_USERS[i2%DEMO_USERS.length],cat:d[0],icon:'',
   sub:d[1],measurement:d[2],caption:d[3],lat:d[4],lng:d[5],
   time:i2<3?('vor '+(2+i2)+'h'):(i2<12?('vor '+(i2-1)+'h'):('vor '+(i2-10)+'d')),
-  img:demoImg(200+i2*9,210+i2*7,205+(i2%5)*6),stars:(i2%5)+1,likes:(i2*3)%17,comments:i2%4}));
+  img:(i2%4===3)?null:demoImg(200+i2*9,210+i2*7,205+(i2%5)*6),stars:(i2%5)+1,likes:(i2*3)%17,comments:i2%4}));
 
 let reportMarkers=L.layerGroup().addTo(map);
 function demoActive(){try{if(location.search.indexOf('demo')>=0)return true;}catch(e){}return !sb;}
@@ -4164,7 +4163,7 @@ function locPickerPick(i){const p=(locPickerMode==='peak'?PEAKS:DESTS)[i];
   feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:locPickerMode});locPickerClose();haptic(6);}
 function feedRender(){
   const list=document.getElementById('feedList');
-  let base=allReports.slice().filter(r=>r.img);
+  let base=allReports.slice();
   if(feedScope==='following'){
     if(!sbUser){list.innerHTML='<div class="feed-empty">Melde dich an, um Leuten zu folgen und ihre Reports hier zu sehen.</div>';return;}
     base=base.filter(r=>r.dbRow&&r.userId&&myFollowing.has(r.userId));
@@ -4184,7 +4183,7 @@ function feedRender(){
     const canFollow=r.dbRow&&r.userId&&(!sbUser||r.userId!==sbUser.id);
     const followBtn=canFollow?`<button class="feed-follow ${myFollowing.has(r.userId)?'following':''}" onclick="toggleFollow('${r.userId}',event)">${myFollowing.has(r.userId)?'Folge ich':'Folgen'}</button>`:'';
     const endBtn=r.dbRow?`<button class="endorse-btn ${r.liked?'endorsed':''}" onclick="toggleEndorse('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> ${r.likes||0}<span class="endorse-lbl">${r.liked?'Bestätigt':'Bestätigen'}</span></button>`:'';
-    return`<div class="feed-card${r.img?'':' slim'}" id="feedcard-${r.id}" onclick="feedFlyTo(${r.lat},${r.lng})">
+    return`<div class="feed-card${r.img?' photo':' text'}" id="feedcard-${r.id}" onclick="feedFlyTo(${r.lat},${r.lng})">
       <div class="feed-card-head">
         <div class="feed-card-avatar" style="${r.avatar?`background-image:url(${r.avatar});background-size:cover;background-position:center`:`background:${avatarBg}`}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['\"<>]/g,'')}')"`:''}>${r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase())}</div>
         <div class="feed-card-info">
@@ -4193,7 +4192,8 @@ function feedRender(){
         </div>
         ${followBtn||distTag||`<span class="feed-card-time">${r.time}</span>`}
       </div>
-      ${r.img?`<div class="feed-card-visual"><img src="${r.img}" alt="" loading="lazy" decoding="async"/></div>`:''}
+      ${r.img?`<div class="feed-card-visual"><img src="${r.img}" alt="" loading="lazy" decoding="async"/></div>`:
+        (r.caption?`<div class="feed-tx" style="background:linear-gradient(150deg,${col}14,rgba(255,255,255,0) 75%)"><span class="feed-tx-bar" style="background:${col}"></span>${escapeHtml(r.caption)}</div>`:'')}
       <div class="feed-card-body">
         <div class="feed-card-badges">
           <span class="feed-badge cat-${r.cat}">${catSvg(r.cat,14)} ${escapeHtml(r.sub||r.cat)}</span>
@@ -4201,7 +4201,7 @@ function feedRender(){
           ${r.stars?`<span class="feed-badge cat-${r.cat}"><svg class="ic-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z" fill="#f5a623" stroke="none"/></svg> ${r.stars}/5</span>`:''}
           ${r.condN?`<span class="cond-chip" title="${r.condN} Bewertung(en)"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z"/></svg>${r.condAvg.toFixed(1)}${r.condPow?` · ❄${r.condPow}`:''}</span>`:''}
         </div>
-        ${r.caption?`<div class="feed-card-caption"><b>${escapeHtml(r.user)}</b> ${escapeHtml(r.caption)}</div>`:''}
+        ${r.img&&r.caption?`<div class="feed-card-caption"><b>${escapeHtml(r.user)}</b> ${escapeHtml(r.caption)}</div>`:''}
       </div>
       <div class="feed-card-actions">
         ${endBtn}
