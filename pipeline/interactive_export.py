@@ -742,8 +742,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .skel::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-100%);animation:shimmer 1.3s infinite}
  @keyframes shimmer{100%{transform:translateX(100%)}}
  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
- html{background:#0e0c22}
- html,body{margin:0;padding:0;height:100%;height:100dvh;width:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--fg);overscroll-behavior:none;background:#0e0c22;position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+ html{background:#e7e5f5}
+ html,body{margin:0;padding:0;height:100%;height:100dvh;width:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--fg);overscroll-behavior:none;background:#e7e5f5;position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
  #map{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);background:#fff}
  #flow{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);z-index:450;pointer-events:none}
  #modeGlow{position:fixed;inset:0;z-index:2500;pointer-events:none;transition:box-shadow .5s ease;box-shadow:inset 0 0 0 3px rgba(94,92,230,.5),inset 0 0 70px rgba(94,92,230,.12)}
@@ -763,10 +763,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #topics.expanded #moreTopics{background:rgba(22,21,46,.06);color:var(--fg)}
  #topics.expanded #moreTopics .chev{transform:rotate(180deg)}
  /* More dropdown: iconed, described (position set by JS) */
- #topicsMore{position:fixed;display:none;flex-direction:column;gap:1px;background:rgba(255,255,255,.98);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(22,21,46,.08);border-radius:16px;padding:6px;box-shadow:0 18px 46px rgba(22,21,46,.2);z-index:1200;min-width:214px;overflow-y:auto;scrollbar-width:none;animation:moreIn .18s cubic-bezier(.34,1.4,.64,1)}
+ #topicsMore{position:static;display:none;flex-direction:column;gap:1px;background:transparent;border:none;border-top:1px solid rgba(22,21,46,.08);border-radius:0;padding:6px 0 0;margin-top:6px;box-shadow:none;min-width:0;width:100%;animation:moreIn .18s cubic-bezier(.34,1.4,.64,1)}
  #topicsMore::-webkit-scrollbar{display:none}
  @keyframes moreIn{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
- #topics.expanded #topicsMore{display:flex}
+ #layerBar.expanded #topicsMore{display:flex}
  #topicsMore button{display:flex;align-items:center;gap:12px;width:100%;justify-content:flex-start;background:transparent;border:none;border-radius:12px;padding:9px 10px;min-height:auto;cursor:pointer;font-family:inherit;text-align:left;transition:background .15s;color:var(--fg)}
  #topicsMore .mt-ic{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
  #topicsMore .mt-ic svg{width:20px;height:20px}
@@ -783,8 +783,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #sublayers button:hover{background:rgba(22,21,46,.09);color:var(--fg)}
  #sublayers button.active{background:var(--topic-tint);color:var(--topic-accent)}
  #bottomPanel{position:absolute;z-index:1000;bottom:0;left:0;right:0;
-   background:rgba(255,255,255,.8);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border-top:1px solid rgba(255,255,255,.5);box-shadow:0 -1px 0 var(--bd),0 -4px 20px rgba(0,0,0,.06);transition:none;padding-bottom:env(safe-area-inset-bottom,0px);overflow:hidden}
- #btmMain{padding:8px 14px 10px}
+   background:rgba(255,255,255,.8);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border-top:1px solid rgba(255,255,255,.5);box-shadow:0 -1px 0 var(--bd),0 -4px 20px rgba(0,0,0,.06);transition:none;padding-bottom:max(env(safe-area-inset-bottom, 0px) - 6px, 0px);overflow:hidden}
+ #btmMain{padding:6px 14px 2px}
  #timeline{display:block;border:1px solid var(--bd);background:rgba(237,242,248,.5);border-radius:var(--r)}
  #presets::-webkit-scrollbar{display:none}
  .winlbl{font-size:13px;font-weight:700;color:var(--fg);letter-spacing:-.01em}
@@ -934,6 +934,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #railToggles.active{color:var(--acc2);background:rgba(94,92,230,.14);border-color:rgba(94,92,230,.3)}
  .rail-note{position:absolute;right:56px;padding:6px 11px;border-radius:10px;background:var(--fg);color:#fff;font-size:12px;font-weight:700;white-space:nowrap;opacity:0;transform:translateX(6px);transition:.25s var(--ease);pointer-events:none}
  .rail-note.show{opacity:1;transform:translateX(0)}
+ .me-dot{position:relative;width:18px;height:18px;border-radius:50%;background:#5e5ce6;border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.35)}
+ .me-dot::after{content:'';position:absolute;inset:-7px;border-radius:50%;border:2px solid rgba(94,92,230,.5);animation:xpulse 2s ease-out infinite}
  .acct-img{display:block;width:34px;height:34px;border-radius:50%;background-size:cover;background-position:center;box-shadow:0 0 0 2px rgba(255,255,255,.9)}
  #userBar{display:none!important} /* replaced by the rail account button */
  .rail-btn.feed-accent:hover{color:var(--acc)}
@@ -1264,6 +1266,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rose-t{fill:var(--fg2);font:800 12px Inter,system-ui;text-anchor:middle;pointer-events:none}
  .rose-t.on{fill:#fff}
  .rose-presets{justify-content:center;margin-top:2px}
+ /* dual-handle altitude band (timeslider-style) */
+ .alt-band{position:relative;height:34px;margin:26px 4px 2px;border-radius:6px;background:var(--fill2)}
+ .ab-fill{position:absolute;top:0;bottom:0;background:rgba(94,92,230,.28);border-radius:6px}
+ .ab-h{position:absolute;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:var(--acc);border:3px solid #fff;box-shadow:var(--elev1);cursor:ew-resize;touch-action:none}
+ .ab-h span{position:absolute;top:-24px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:800;color:var(--acc2);background:rgba(255,255,255,.9);padding:1px 6px;border-radius:7px;white-space:nowrap}
+ .ab-scale{display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--mut);margin-top:4px;padding:0 4px}
  .cat-chip .cat-ico-w{width:30px;height:30px;display:flex;align-items:center;justify-content:center}
  .cat-chip .cat-ico-w svg{width:26px;height:26px;stroke:currentColor}
  /* --- Undo snackbar --- */
@@ -1385,6 +1393,16 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .prof-bioview{font-size:14px;color:var(--fg2);line-height:1.55;margin-top:4px;white-space:pre-wrap;min-height:12px}
  /* --- Public user profile (hero layout) --- */
  .uv-sheet{overflow:hidden}
+ #userViewModal{justify-content:stretch;align-items:stretch;padding:0}
+ #userViewModal .prof-sheet{width:100%;max-width:none;height:100%;max-height:none;border-radius:0;display:flex;flex-direction:column}
+ #userViewModal .uv-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+ .uv-posts{margin-top:18px;text-align:left}
+ .uv-posts h3{font-size:13px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;margin:0 0 10px}
+ .uv-post{background:var(--card);border:1px solid var(--hair);border-radius:14px;margin-bottom:10px;overflow:hidden;cursor:pointer;box-shadow:var(--elev1)}
+ .uv-post img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+ .uv-post .b{padding:10px 12px;font-size:13px;color:var(--fg2)}
+ .uv-post .b b{color:var(--fg)}
+ .uv-post .t{font-size:11px;color:var(--mut);font-weight:600;margin-top:3px}
  .uv-hero{position:relative;height:86px;background:linear-gradient(140deg,#241d5c 0%,#4a3f9e 45%,#7d6bd6 80%,#9b8cff 100%)}
  .uv-hero::after{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 90'%3E%3Cpath d='M0 90 60 42 110 68 180 22 240 58 300 30 400 74 400 90Z' fill='rgba(255,255,255,.10)'/%3E%3C/svg%3E") bottom/cover no-repeat}
  .uv-close{position:absolute;top:10px;right:10px;z-index:1;width:30px;height:30px;border-radius:10px;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:15px;cursor:pointer;backdrop-filter:blur(4px)}
@@ -1503,6 +1521,22 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .qr-corner.bl{bottom:8px;left:10px}
  .qr-pad-dot{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:var(--acc);border:3.5px solid #fff;box-shadow:var(--elev2);pointer-events:none;transition:left .05s linear,top .05s linear}
  .qr-read{margin-top:10px;font-size:13px;font-weight:700;color:var(--fg2);text-align:center;min-height:18px}
+ .qr-step{animation:qrFade .35s var(--ease) both}
+ @keyframes qrFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+ .qr-cmline{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed rgba(22,21,46,.16);pointer-events:none}
+ .qr-cmline i{position:absolute;bottom:2px;left:3px;font-style:normal;font-size:9px;font-weight:800;color:var(--mut)}
+ .qr-axis-x{text-align:center;font-size:11px;font-weight:800;color:var(--mut);margin-top:4px;letter-spacing:.03em}
+ .qr-q{position:absolute;display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;opacity:.75}
+ .qr-q svg{width:20px;height:20px;fill:none;stroke:currentColor}
+ .qr-q svg:first-child{fill:currentColor;stroke:none}
+ .qr-q svg.fl{fill:none!important;stroke:currentColor!important}
+ .qr-q em{font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.02em}
+ .qr-q.tr{top:10px;right:10px;color:#4844c9}
+ .qr-q.tl{top:10px;left:10px;color:#7d6bd6}
+ .qr-q.br{bottom:20px;right:10px;color:#77749a}
+ .qr-q.bl{bottom:20px;left:10px;color:#b06a00}
+ .qr-photo-one{display:flex;align-items:center;justify-content:center;gap:10px;padding:20px 12px;border-radius:14px;border:1.5px dashed rgba(94,92,230,.4);background:rgba(94,92,230,.06);color:var(--acc2);font-size:14.5px;font-weight:750;cursor:pointer;margin-top:8px}
+ .qr-photo-one svg{width:26px;height:26px}
  .qr-photo-row{display:flex;gap:10px;margin-top:12px}
  .qr-photo-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;padding:16px 10px;border-radius:14px;border:1.5px dashed rgba(94,92,230,.4);background:rgba(94,92,230,.06);color:var(--acc2);font-size:13px;font-weight:750;cursor:pointer;text-align:center}
  .qr-photo-btn svg{width:24px;height:24px}
@@ -1510,8 +1544,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .qr-prev{width:100%;max-height:150px;object-fit:cover;border-radius:14px;margin-top:10px}
  .qr-adj{display:block;margin:12px auto 0;border:none;background:none;color:var(--acc2);font-size:13px;font-weight:750;font-family:inherit;cursor:pointer}
  .qr-skip{width:100%;margin-top:8px;border:none;background:none;color:var(--mut);font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;padding:9px}
- #mapFab{position:fixed;bottom:calc(var(--btm-h,90px) + 16px);z-index:900}
- #mapQr{position:fixed;bottom:calc(var(--btm-h,90px) + 100px);z-index:900}
+ #mapFab{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 14px);width:56px;height:56px;z-index:900}
+ #mapFab:active{transform:scale(.9)}
+ #mapFab span{display:none}
+ #mapQr{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 84px);z-index:900;padding:9px 14px}
+ #mapQr:active{transform:scale(.94)}
  .feed-qr{position:absolute;bottom:calc(env(safe-area-inset-bottom, 0px) + 96px);left:50%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:999px;border:1px solid rgba(245,166,35,.5);background:linear-gradient(150deg,rgba(255,244,224,.96),rgba(255,255,255,.92));color:#8a5200;font-size:13.5px;font-weight:800;font-family:inherit;cursor:pointer;z-index:5;box-shadow:var(--elev2);transition:transform .15s var(--ease)}
  .feed-qr svg{width:16px;height:16px}
  .feed-qr:active{transform:translateX(-50%) scale(.94)}
@@ -1577,12 +1614,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div id="topics">
     <button data-t="ski"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M5 20l5-11 4 6 2.5-4L21 20"/><circle cx="15.5" cy="4.5" r="1.5"/></svg><span>Ski</span></button>
     <button data-t="snow" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="7.5" x2="19" y2="16.5"/><line x1="5" y1="16.5" x2="19" y2="7.5"/></svg><span>Snow</span></button>
-    <button id="moreTopics" title="More conditions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M4 6h16M4 18h16"/></svg><span>More</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
-    <span id="topicsMore">
+    <button id="moreTopics" title="More conditions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M4 6h16M4 18h16"/></svg><span>Mehr</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+    
+  </div>
+  <span id="topicsMore">
       <button data-t="temp"><span class="mt-ic" style="background:rgba(232,89,12,.12);color:#e8590c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V4a2 2 0 1 0-4 0v10.76a4 4 0 1 0 4 0z"/></svg></span><span class="mt-tx"><b>Temperatur</b><span>Luft &amp; Oberfläche</span></span></button>
       <button data-t="wind"><span class="mt-ic" style="background:rgba(13,148,136,.12);color:#0d9488"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.6 4.6A2 2 0 1 1 11 8H2M12.6 19.4A2 2 0 1 0 14 16H2M17.6 7.6A2.5 2.5 0 1 1 19 12H2"/></svg></span><span class="mt-tx"><b>Wind</b><span>Geschwindigkeit &amp; Böen</span></span></button>
       </span>
-  </div>
   <div id="sublayers"></div>
 </div>
 <div id="searchWrap"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Search location..." autocomplete="off"/><div id="searchRes"></div></div>
@@ -1745,28 +1783,36 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <div class="cond-head"><b><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:19px;height:19px;vertical-align:-3px;color:#b06a00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Quick Powder Report</b><button onclick="qrClose()">✕</button></div>
     <div class="cond-body">
       <div class="qr-loc" id="qrLoc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;color:var(--acc2)"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> <span id="qrLocTxt">Standort wird ermittelt…</span></div>
-      <div id="qrStep1">
-      <div class="cond-lbl">Setze den Punkt: Menge → &nbsp;·&nbsp; Qualität ↑</div>
-      <div class="qr-pad" id="qrPad">
-        <span class="qr-corner tr">Deep &amp; Top</span>
-        <span class="qr-corner bl">Kein Powder</span>
-        <div class="qr-pad-dot" id="qrPadDot" style="display:none"></div>
+      <div class="qr-step" id="qrStep0">
+        <div class="cond-lbl">1 · Standort — Karte unter dem Pin verschieben</div>
+        <div class="obs-loc-wrap"><div class="obs-loc-map" id="qrMap" style="height:180px"></div></div>
+        <button class="cond-save" onclick="qrToStep(1)">Weiter</button>
       </div>
-      <div class="qr-read" id="qrRead">Tippe oder ziehe auf dem Feld</div>
-      <button class="cond-save" id="qrNextBtn" onclick="qrNext()" disabled>Weiter</button>
+      <div class="qr-step" id="qrStep1" style="display:none">
+        <div class="cond-lbl">2 · Wie viel &amp; wie gut?</div>
+        <div class="qr-pad" id="qrPad">
+          <div class="qr-cmline" style="left:16.7%"><i>10</i></div>
+          <div class="qr-cmline" style="left:33.3%"><i>20</i></div>
+          <div class="qr-cmline" style="left:50%"><i>30</i></div>
+          <div class="qr-cmline" style="left:66.7%"><i>40</i></div>
+          <div class="qr-cmline" style="left:83.3%"><i>50</i></div>
+          <span class="qr-q tr"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z"/></svg><svg viewBox="0 0 24 24" class="fl"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9" fill="none" stroke-width="2"/></svg><em>Tief &amp; top</em></span>
+          <span class="qr-q tl"><svg viewBox="0 0 24 24" class="fl"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9" fill="none" stroke-width="2"/></svg><em>Wenig, pulvrig</em></span>
+          <span class="qr-q br"><svg viewBox="0 0 24 24"><path d="M3 8h18M3 13h18M3 18h18" fill="none" stroke-width="2.4"/></svg><em>Viel, kompakt</em></span>
+          <span class="qr-q bl"><svg viewBox="0 0 24 24"><path d="M10.3 3.2L1.8 18.5c-.8 1.4.2 3 1.7 3h17c1.5 0 2.5-1.6 1.7-3L13.7 3.2c-.8-1.4-2.6-1.4-3.4 0z" fill="none" stroke-width="2"/></svg><em>Wenig, hart/eisig</em></span>
+          <div class="qr-pad-dot" id="qrPadDot" style="display:none"></div>
+        </div>
+        <div class="qr-axis-x">Menge (cm) →</div>
+        <div class="qr-read" id="qrRead">Tippe oder ziehe auf dem Feld</div>
+        <button class="cond-save" id="qrNextBtn" onclick="qrToStep(2)" disabled>Weiter</button>
       </div>
-      <div id="qrStep2" style="display:none">
-      <div class="qr-photo-row">
-        <label class="qr-photo-btn" for="qrCam"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Foto aufnehmen</label>
-        <label class="qr-photo-btn lib" for="qrLib"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Mediathek</label>
-      </div>
-      <input id="qrCam" type="file" accept="image/*" capture="environment" hidden onchange="qrPhotoPick(this)">
-      <input id="qrLib" type="file" accept="image/*" hidden onchange="qrPhotoPick(this)">
-      <img id="qrPrev" class="qr-prev" style="display:none" alt=""/>
-      <button class="qr-adj" onclick="qrLocAdjust()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Standort anpassen</button>
-      <div id="qrMapWrap" style="display:none"><div class="obs-loc-wrap"><div class="obs-loc-map" id="qrMap" style="height:140px"></div></div></div>
-      <button class="cond-save" id="qrSaveBtn" onclick="qrSubmit()">Posten</button>
-      <button class="qr-skip" onclick="qrSkip()">Ohne Foto posten</button>
+      <div class="qr-step" id="qrStep2" style="display:none">
+        <div class="cond-lbl">3 · Foto (optional)</div>
+        <label class="qr-photo-one" for="qrLib"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Foto aufnehmen oder wählen</span></label>
+        <input id="qrLib" type="file" accept="image/*" hidden onchange="qrPhotoPick(this)">
+        <img id="qrPrev" class="qr-prev" style="display:none" alt=""/>
+        <button class="cond-save" id="qrSaveBtn" onclick="qrSubmit()">Posten</button>
+        <button class="qr-skip" onclick="qrSkip()">Ohne Foto posten</button>
       </div>
     </div>
   </div>
@@ -1809,6 +1855,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       </div>
       <span id="uvEndo" style="display:none"></span>
       <button class="prof-save" id="uvFollow" onclick="uvToggleFollow()">Folgen</button>
+      <div class="uv-posts" id="uvPosts"></div>
     </div>
   </div>
 </div>
@@ -2020,7 +2067,8 @@ const _fitZoom=map.getZoom();
 map.setMinZoom(_fitZoom);map.setMaxZoom(16);  // never zoom out past the initial view
 const _padLa=(laMax-laMin)*0.04,_padLo=(loMax-loMin)*0.04;
 map.setMaxBounds([[laMin-_padLa,loMin-_padLo],[laMax+_padLa,loMax+_padLo]]);
-const base=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg",{attribution:"© swisstopo / MeteoSwiss / SLF / Copernicus"}).addTo(map);
+const osmBase=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap / swisstopo / MeteoSwiss / SLF / Copernicus"}).addTo(map);
+const base=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg",{minZoom:9,attribution:"© swisstopo"}).addTo(map);
 // White mask outside the meteo grid → clean, smooth map ending
 map.createPane('maskPane');map.getPane('maskPane').style.zIndex=350;map.getPane('maskPane').style.pointerEvents='none';
 const _world=[[-89,-360],[-89,360],[89,360],[89,-360]];
@@ -2048,9 +2096,9 @@ const AspectGrid=L.GridLayer.extend({createTile:function(coords){
   ctx.putImageData(img,0,0);return tile;}});
 const aspectGrid=new AspectGrid({opacity:.78,tileSize:256});
 const cv=document.createElement('canvas');cv.width=W;cv.height=H;const cx=cv.getContext('2d');
-let raster=L.imageOverlay(cv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:.82}).addTo(map);
+let raster=L.imageOverlay(cv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:.94}).addTo(map);
 const rcv=document.createElement('canvas');rcv.width=RW;rcv.height=RH;const rcx=rcv.getContext('2d');
-let radOverlay=L.imageOverlay(rcv.toDataURL(),[[RbS,RlW],[RbN,RlE]],{opacity:.8});
+let radOverlay=L.imageOverlay(rcv.toDataURL(),[[RbS,RlW],[RbN,RlE]],{opacity:.9});
 const rad2cube=new Int32Array(RNP);
 (function(){for(let p=0;p<RNP;p++){const ry=(p/RW)|0,rx=p%RW;
   const lat=RbN-(RbN-RbS)*ry/(RH-1),lon=RlW+(RlE-RlW)*rx/(RW-1);
@@ -2198,7 +2246,7 @@ function showOverlay(){
   [slopeWMTS,reliefWMTS,aspectGrid,roughImg,radOverlay].forEach(x=>map.removeLayer(x));
   const grid=(layer=="snow"||layer=="depth"||layer=="temp"||layer=="sun"||layer=="wind"||layer=="powder"||layer=="tsurf"||layer=="skiable");
   const radg=(layer=="rad"||layer=="radsun");
-  raster.setOpacity(grid?0.82:0);
+  raster.setOpacity(grid?0.94:0);
   if(radg)map.addLayer(radOverlay);
   if(layer=="slope")map.addLayer(slopeWMTS);
   else if(layer=="shade")map.addLayer(reliefWMTS);
@@ -2206,7 +2254,7 @@ function showOverlay(){
   else if(layer=="rough")map.addLayer(roughImg);
   if(layer=="wind"){map.addLayer(windArr);startFlow();}else{map.removeLayer(windArr);stopFlow();}
 }
-function renderAll(){showOverlay();renderRaster();renderStations();if(tlMode==='detail')drawTimeline();
+function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefresh();if(tlMode==='detail')drawTimeline();
   if(layer=="rad"||layer=="radsun")renderRadiation();
   if(layer=="wind"){buildFlow();if(wtimer)clearTimeout(wtimer);wtimer=setTimeout(renderWind,120);}
   document.getElementById('window').innerHTML=`${b-a}h window`;syncTl();legend();}
@@ -2262,7 +2310,7 @@ function setTopic(t,subIdx){
   if(glow)glow.style.boxShadow='inset 0 0 0 3px '+tc[2]+', inset 0 0 60px '+tc[3];
   document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.setAttribute('content',tc[0]));
   document.documentElement.style.setProperty('--edge-tint',tc[1]||'rgba(248,251,255,.92)');
-  document.getElementById('topics').classList.remove('expanded');
+  document.getElementById('topics').classList.remove('expanded');document.getElementById('layerBar').classList.remove('expanded');
   const subs=document.getElementById('sublayers');
   const items=TOPICS[t];
   subs.innerHTML=items.map((s,i)=>'<button data-i="'+i+'"'+(i===(subIdx||0)?' class="active"':'')+'>'+s.label+'</button>').join('');
@@ -2275,13 +2323,10 @@ function setTopic(t,subIdx){
 document.querySelectorAll('#topics button[data-t]').forEach(btn=>{
   btn.onclick=()=>setTopic(btn.dataset.t);
   btn.onmouseenter=()=>legend(TOPICS[btn.dataset.t][0].l);btn.onmouseleave=()=>legend();});
-(function(){const mt=document.getElementById('moreTopics'),menu=document.getElementById('topicsMore'),topics=document.getElementById('topics');
-  function place(){const lb=document.getElementById('layerBar').getBoundingClientRect();const r=mt.getBoundingClientRect();
-    menu.style.top=(lb.bottom+8)+'px';menu.style.maxHeight=(window.innerHeight-lb.bottom-24)+'px';
-    let left=Math.min(r.left,window.innerWidth-menu.offsetWidth-10);menu.style.left=Math.max(8,left)+'px';}
-  mt.onclick=e=>{e.stopPropagation();const open=topics.classList.toggle('expanded');if(open)place();};
-  document.addEventListener('click',e=>{if(topics.classList.contains('expanded')&&!menu.contains(e.target)&&!mt.contains(e.target))topics.classList.remove('expanded');});
-  window.addEventListener('resize',()=>{if(topics.classList.contains('expanded'))place();});
+(function(){const mt=document.getElementById('moreTopics'),topics=document.getElementById('topics');
+  mt.onclick=e=>{e.stopPropagation();const open=topics.classList.toggle('expanded');document.getElementById('layerBar').classList.toggle('expanded',open);};
+  document.addEventListener('click',e=>{const menu=document.getElementById('topicsMore');
+    if(topics.classList.contains('expanded')&&!menu.contains(e.target)&&!mt.contains(e.target)){topics.classList.remove('expanded');document.getElementById('layerBar').classList.remove('expanded');}});
 })();
 function clearPresets(){document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('active'));}
 document.querySelectorAll('#presets button[data-d]').forEach(btn=>{btn.onclick=()=>{
@@ -2341,9 +2386,15 @@ function updateAccountBtn(avatarUrl){const btn=document.getElementById('accountB
   btn.classList.add('signed');btn.title='Mein Profil';
   if(avatarUrl){btn.innerHTML='<span class="acct-img" style="background-image:url('+avatarUrl+')"></span>';}
   else{btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';}}
+let meMarker=null;
 function flyToMe(){haptic(8);
   if(!navigator.geolocation){toast('Standort nicht verfügbar','err');return;}
-  navigator.geolocation.getCurrentPosition(p=>{try{map.flyTo([p.coords.latitude,p.coords.longitude],13,{duration:1.1});}catch(e){}},
+  navigator.geolocation.getCurrentPosition(p=>{const ll=[p.coords.latitude,p.coords.longitude];
+    try{
+      if(meMarker)map.removeLayer(meMarker);
+      meMarker=L.marker(ll,{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1900}).addTo(map);
+      map.flyTo(ll,13,{duration:1.1});
+    }catch(e){}},
     ()=>{toast('Standort konnte nicht ermittelt werden','err');},{enableHighAccuracy:true,timeout:9000});}
 // --- Bottom panel: expand (content height) / collapse (tap or swipe the handle) ---
 let panelRestore=null,panelCollapsed=false;
@@ -2407,7 +2458,9 @@ function iTabSw(el,tab){const c=el.closest('.icard');c.querySelectorAll('.itab')
 let inspMarker=null;
 function inspClose(){document.getElementById('inspPanel').classList.remove('open');if(inspMarker){map.removeLayer(inspMarker);inspMarker=null;}}
 map.on('click',function(e){inspOpen(e.latlng.lat,e.latlng.lng);});
-function inspOpen(lat,lon){
+let inspLast=null;
+function inspAutoRefresh(){try{if(inspLast&&document.getElementById('inspPanel').classList.contains('open'))inspOpen(inspLast.lat,inspLast.lon);}catch(e){}}
+function inspOpen(lat,lon){inspLast={lat,lon};
   const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
   if(cx2<0||cx2>=W||cy2<0||cy2>=H)return;
   const p=cy2*W+cx2,elev=melevv(p),wk=mainToWind[p];
@@ -2870,16 +2923,41 @@ function parseGeo(g){
   return null;
 }
 // --- Demo data ---
-const DEMO_REPORTS=[
-  {id:'d1',user:'AlpinMax',cat:'snow',icon:'',sub:'Neuschnee',measurement:'30 cm',caption:'Frischer Powder am Titlis Nordwand! Traumhafte Bedingungen seit heute Morgen.',lat:46.7712,lng:8.4267,time:'vor 2h',img:null},
-  {id:'d2',user:'BerginaZH',cat:'danger',icon:'',sub:'Wumm-Geräusche',measurement:'3 erheblich',caption:'Deutliche Setzungsgeräusche oberhalb 2400m. Triebschnee in Mulden.',lat:46.8342,lng:8.3891,time:'vor 4h',img:null},
-  {id:'d3',user:'TourenfanBE',cat:'tour',icon:'',sub:'Powder',measurement:'5/5',caption:'Mega Abfahrt vom Wildstrubel! Unverspurter Pulver bis ins Tal.',lat:46.4200,lng:7.5050,time:'vor 5h',img:null},
-  {id:'d4',user:'SchneeLeo',cat:'snow',icon:'',sub:'Firn',measurement:'10 cm',caption:'Firn ab 10 Uhr, darunter tragfähige Altschneedecke.',lat:46.5586,lng:7.9641,time:'vor 8h',img:null},
-  {id:'d5',user:'HüttenWart',cat:'info',icon:'',sub:'Hütte offen',measurement:null,caption:'Tierberglihütte ist offen! Abendessen ab 18:00, Duschen verfügbar.',lat:46.7650,lng:8.4050,time:'vor 12h',img:null},
-  {id:'d6',user:'LawinenPro',cat:'danger',icon:'',sub:'Lawinenabgang',measurement:'4 gross',caption:'Spontane Schneebrettlawine Grösse 3 am Nordhang Pizzo Rotondo.',lat:46.5250,lng:8.4900,time:'vor 1d',img:null},
-  {id:'d7',user:'AlpinMax',cat:'route',icon:'',sub:'Gespurt',measurement:null,caption:'Route auf den Stoos frisch gespurt. Super Aufstiegsspur.',lat:46.9765,lng:8.6612,time:'vor 1d',img:null},
-  {id:'d8',user:'GipfelStürmer',cat:'tour',icon:'',sub:'Bruchharsch',measurement:'2/5',caption:'Bruchharsch ab 2000m, Abfahrt nur bedingt empfehlenswert.',lat:46.6900,lng:9.8200,time:'vor 2d',img:null}
-];
+function demoImg(h1,h2,sky){const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">'+
+ '<defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="hsl('+sky+',70%,72%)"/><stop offset="1" stop-color="hsl('+sky+',45%,90%)"/></linearGradient></defs>'+
+ '<rect width="800" height="500" fill="url(#s)"/>'+
+ '<circle cx="660" cy="90" r="46" fill="rgba(255,250,235,.9)"/>'+
+ '<path d="M0 500 L140 220 L260 360 L400 150 L540 340 L660 230 L800 420 L800 500 Z" fill="hsl('+h1+',22%,72%)"/>'+
+ '<path d="M0 500 L120 330 L300 430 L470 280 L640 430 L800 350 L800 500 Z" fill="hsl('+h2+',18%,88%)"/>'+
+ '<path d="M370 190 L400 150 L430 195 Z" fill="#fff" opacity=".9"/></svg>';
+ return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);}
+const DEMO_USERS=['AlpinMax','BerginaZH','TourenfanBE','SchneeLeo','LawinenPro','GipfelStuermer','PowderPia','FreerideFabio','SkitourSina','HochtourHans'];
+const DEMO_DEFS=[
+ ['snow','Neuschnee','35 cm','Frischer Powder am Titlis! Traumbedingungen seit heute Morgen.',46.771,8.427],
+ ['tour','Powder','Tiefer, guter Powder · 40 cm','Mega Abfahrt vom Wildstrubel, unverspurt bis ins Tal!',46.420,7.505],
+ ['snow','Firn','Firn ab 10:30','Perfekter Frühlingsfirn am Südhang, Abfahrt wie auf Samt.',46.559,7.964],
+ ['danger','Wumm-Geräusche','3 erheblich','Deutliche Setzungsgeräusche oberhalb 2400 m, Triebschnee in Mulden.',46.834,8.389],
+ ['snow','Triebschnee','20–40 cm','Frische Triebschneepakete hinter dem Grat, Vorsicht in Rinnen.',46.525,8.490],
+ ['tour','Powder','Wenig, aber pulvrig · 15 cm','Oberhalb 2600 m noch kalter Pulver auf Nordseiten.',46.976,8.661],
+ ['snow','Nassschnee','Ski sinkt ein','Ab Mittag tiefer Sulz unterhalb 2000 m, früh starten!',46.690,9.820],
+ ['danger','Lawinenabgang','Gr. 3 spontan','Schneebrett am Nordhang Piz Terri, spontan um 11 Uhr.',46.612,8.999],
+ ['snow','Neuschnee','22 cm','Überraschend viel Neuschnee im Goms, leicht & trocken.',46.475,8.278],
+ ['tour','Bruchharsch','Viel, aber kompakt','Deckel trägt nicht überall — anstrengende Abfahrt.',46.365,7.850],
+ ['snow','Windgepresst','Deckel trägt','Windharsch auf allen Westhängen oberhalb 2500 m.',46.500,9.430],
+ ['tour','Powder','Tiefer, guter Powder · 50 cm','Waldabfahrten in Andermatt sind ein Traum heute!',46.635,8.594],
+ ['snow','Firn','komplett Firn','Klassischer Aprilfirn an der Wildspitz-Südflanke.',47.085,8.555],
+ ['danger','Warnzeichen','Risse sichtbar','Frische Risse beim Betreten der Wechte am Gemsstock.',46.602,8.612],
+ ['snow','Neuschnee','18 cm','Feiner Pulver im Diemtigtal, Aufstieg gespurt.',46.552,7.564],
+ ['tour','Powder','Wenig, aber pulvrig','Nordrinnen am Piz Beverin halten noch kalten Schnee.',46.663,9.362],
+ ['snow','Nassschnee','nur Oberfläche','Oberflächlich feucht ab 11 Uhr, darunter kompakt.',46.020,7.749],
+ ['tour','Firn','halb aufgefirnt','Sonnenaufgangstour aufs Sustenhorn — Firn ab 9 Uhr perfekt.',46.735,8.445],
+ ['snow','Triebschnee','30 cm Auflage','Bise hat ordentlich verfrachtet, Leeseiten meiden.',47.020,9.280],
+ ['danger','Blankeis','ab 2800 m','Kammlagen abgeblasen und eisig, Harscheisen Pflicht.',46.083,7.230]];
+const DEMO_REPORTS=DEMO_DEFS.map((d,i2)=>({id:'d'+(i2+1),user:DEMO_USERS[i2%DEMO_USERS.length],cat:d[0],icon:'',
+  sub:d[1],measurement:d[2],caption:d[3],lat:d[4],lng:d[5],
+  time:i2<3?('vor '+(2+i2)+'h'):(i2<12?('vor '+(i2-1)+'h'):('vor '+(i2-10)+'d')),
+  img:demoImg(200+i2*9,210+i2*7,205+(i2%5)*6),stars:(i2%5)+1,likes:(i2*3)%17,comments:i2%4}));
+
 let reportMarkers=L.layerGroup().addTo(map);
 let allReports=[...DEMO_REPORTS];
 function loadReportMarkers(){
@@ -3115,7 +3193,11 @@ async function bioVerify(uid){
   await navigator.credentials.get({publicKey:{challenge,timeout:60000,userVerification:'required',allowCredentials:[{type:'public-key',id:_b64uDec(id)}]}});
 }
 let bioUnlocked=false;
-function showBioLock(){document.getElementById('bioLockName').textContent=bioName();document.getElementById('bioLock').style.display='flex';setTimeout(()=>{bioUnlock(true);},350);}
+let bioAutoTried=false;
+function showBioLock(){const el=document.getElementById('bioLock');
+  if(el.style.display==='flex')return; // already showing — no second prompt
+  document.getElementById('bioLockName').textContent=bioName();el.style.display='flex';
+  if(!bioAutoTried){bioAutoTried=true;setTimeout(()=>{bioUnlock(true);},350);}}
 async function bioUnlock(auto){try{await bioVerify(sbUser.id);bioUnlocked=true;document.getElementById('bioLock').style.display='none';}catch(e){if(!auto)alert('Entsperren fehlgeschlagen. Bitte erneut versuchen.');}}
 function bioSignOut(){document.getElementById('bioLock').style.display='none';bioUnlocked=true;if(sb)sb.auth.signOut();}
 function authMenu(){openProfile();}
@@ -3210,10 +3292,19 @@ async function viewUser(uid,username){
       if(data.created_at){const d=new Date(data.created_at);document.getElementById('uvSince').textContent=d.toLocaleDateString('de-CH',{month:'short',year:'2-digit'});}
       if(data.avatar_url){av.classList.add('has-img');av.style.backgroundImage='url('+data.avatar_url+')';}}
   }catch(e){}
-  try{const{data:rs}=await sb.from('reports').select('id').eq('user_id',uid);const ids=(rs||[]).map(r=>r.id);let total=0;
+  try{const{data:rs}=await sb.from('reports').select('*').eq('user_id',uid).order('created_at',{ascending:false}).limit(30);
+    const ids=(rs||[]).map(r=>r.id);let total=0;
     if(ids.length){const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',ids);total=count||0;}
     document.getElementById('uvReports').textContent=ids.length;
-    document.getElementById('uvEndoN').textContent=total;}catch(e){}
+    document.getElementById('uvEndoN').textContent=total;
+    const posts=document.getElementById('uvPosts');
+    const rows=(rs||[]).map(r=>{const ll=parseGeo(r.location);const cap=escapeHtml(r.caption||r.subtype||'');
+      const meta=escapeHtml((r.condition_data&&r.condition_data.measurement)||r.subtype||'');
+      return '<div class="uv-post" onclick="userViewClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'">'+
+        (r.image_url?('<img src="'+r.image_url+'" loading="lazy"/>'):'')+
+        '<div class="b"><b>'+meta+'</b>'+(cap?(' — '+cap):'')+'<div class="t">'+timeAgo(r.created_at)+'</div></div></div>';}).join('');
+    posts.innerHTML='<h3>Beiträge</h3>'+(rows||'<div style="color:var(--mut);font-size:13px">Noch keine Beiträge.</div>');
+  }catch(e){}
 }
 // --- Swiss/DSG data rights: export + delete + legal re-show ---
 async function profExportData(btn){if(!sb||!sbUser)return;
@@ -3641,6 +3732,7 @@ function obsRender(){const steps=obsState.steps,i=obsState.step,st=steps[i];
   else if(st.k==='avdetails')body=obsAvDetailsHTML();
   if(isFinal)body+=obsLocationHTML()+obsSummaryHTML();
   document.getElementById('obsBody').innerHTML=body;
+  if(st.k==='snowcond')setTimeout(obsAltBandAttach,0);
   if(isFinal)setTimeout(obsInitMap,30);
   const next=document.getElementById('obsNext');next.classList.toggle('post',isFinal);next.textContent=isFinal?'Melden':'Weiter';next.disabled=obsStepDisabled(st);}
 function obsMediaBlock(av){const hint=av?'<div class="obs-hint">Am hilfreichsten: Übersichtsfotos der ganzen Lawine + Detailaufnahmen der Anrisskante / des Anrissgebiets. Fotos liefern automatisch Standort & Zeit.</div>':'<div class="obs-hint">Relevante Beobachtungen aus dem Gelände. Fotos liefern automatisch Standort & Zeit.</div>';
@@ -3660,12 +3752,15 @@ function obsSnowHTML(){const s=obsState.snow;
 function obsSnowKind(k){obsState.snow.kind=(obsState.snow.kind===k?null:k);haptic(6);obsRender();}
 function obsSnowSet(f,v){obsState.snow[f]=(obsState.snow[f]===v?null:v);haptic(5);obsRender();}
 function obsSnowFields(kind){
-  if(kind==='powder')return obsDepthSlider('depth','Pulvertiefe')+obsSeg('lightness','Konsistenz',SNOW_LIGHT)+obsAltSlider('powderline','Pulvergrenze — Pulver ab');
-  if(kind==='wind_powder')return obsDepthSlider('depth','Tiefe der Auflage')+obsRose('Wo liegt der Triebschnee-Pulver?');
-  if(kind==='wind_pressed')return obsSeg('thickness','Winddeckel',SNOW_THICK)+obsAltSlider('alt','Betroffen ab Höhe')+obsRose('Betroffene Expositionen');
-  if(kind==='melt_crust')return obsSeg('thickness','Bruchharsch-Deckel',SNOW_THICK)+obsAltRange('Höhenband')+obsRose('Betroffene Expositionen');
-  if(kind==='wet')return obsSeg('wetness','Nässegrad',SNOW_WET);
-  if(kind==='firn')return obsSeg('firnState','Firn-Reife',SNOW_FIRN)+obsFirnTime();
+  let f='';
+  if(kind==='powder')f=obsDepthSlider('depth','Pulvertiefe')+obsSeg('lightness','Konsistenz',SNOW_LIGHT);
+  if(kind==='wind_powder')f=obsDepthSlider('depth','Tiefe der Auflage');
+  if(kind==='wind_pressed')f=obsSeg('thickness','Winddeckel',SNOW_THICK);
+  if(kind==='melt_crust')f=obsSeg('thickness','Bruchharsch-Deckel',SNOW_THICK);
+  if(kind==='wet')f=obsSeg('wetness','Nässegrad',SNOW_WET);
+  if(kind==='firn')f=obsSeg('firnState','Firn-Reife',SNOW_FIRN)+obsFirnTime();
+  // for every snow kind: altitude band (dual handles) + exposure rose
+  return f+obsAltBand2('Höhenband')+obsRose('Betroffene Expositionen');
   return '';}
 function obsSeg(field,label,opts){const v=obsState.snow[field];
   return '<div class="obs-fld"><div class="obs-fld-l">'+label+'</div><div class="obs-chips">'+opts.map(o=>`<button class="${v===o[0]?'active':''}" onclick="obsSnowSet('${field}','${o[0]}')">${o[1]}</button>`).join('')+'</div></div>';}
@@ -3677,6 +3772,34 @@ function obsAltRange(label){const lo=obsState.snow.altLow,hi=obsState.snow.altHi
   return '<div class="obs-fld"><div class="obs-fld-l">'+label+' <b class="snow-val" id="sv_altband">'+lo+'–'+hi+' m</b></div>'+
    '<div class="obs-range-row"><span>ab</span><input type="range" class="obs-range" min="500" max="4000" step="50" value="'+lo+'" oninput="obsAltBand(\'lo\',+this.value)"></div>'+
    '<div class="obs-range-row"><span>bis</span><input type="range" class="obs-range" min="500" max="4000" step="50" value="'+hi+'" oninput="obsAltBand(\'hi\',+this.value)"></div></div>';}
+function obsAltBand2(label){const lo=obsState.snow.altLow,hi=obsState.snow.altHigh,mn=500,mx=4000;
+  const p=v=>((v-mn)/(mx-mn)*100).toFixed(2);
+  return '<div class="obs-fld"><div class="obs-fld-l">'+label+'</div>'+
+   '<div class="alt-band" id="altBand">'+
+    '<div class="ab-fill" style="left:'+p(lo)+'%;right:'+(100-parseFloat(p(hi)))+'%"></div>'+
+    '<div class="ab-h" data-h="lo" style="left:'+p(lo)+'%"><span>'+lo+'</span></div>'+
+    '<div class="ab-h" data-h="hi" style="left:'+p(hi)+'%"><span>'+hi+'</span></div>'+
+   '</div><div class="ab-scale"><i>500</i><i>4000 m</i></div></div>';}
+function obsAltBandAttach(){const band=document.getElementById('altBand');if(!band||band._wired)return;band._wired=true;
+  band.style.touchAction='none';const mn=500,mx=4000;
+  let cur=null;
+  function setV(which,clientX){const r=band.getBoundingClientRect();
+    let v=mn+(mx-mn)*Math.max(0,Math.min(1,(clientX-r.left)/r.width));v=Math.round(v/50)*50;
+    const sn=obsState.snow;
+    if(which==='lo')sn.altLow=Math.min(v,sn.altHigh);else sn.altHigh=Math.max(v,sn.altLow);
+    const p=x=>((x-mn)/(mx-mn)*100)+'%';
+    const lo=band.querySelector('[data-h="lo"]'),hi=band.querySelector('[data-h="hi"]'),fill=band.querySelector('.ab-fill');
+    lo.style.left=p(sn.altLow);hi.style.left=p(sn.altHigh);
+    lo.querySelector('span').textContent=sn.altLow;hi.querySelector('span').textContent=sn.altHigh;
+    fill.style.left=p(sn.altLow);fill.style.right=(100-((sn.altHigh-mn)/(mx-mn)*100))+'%';}
+  band.addEventListener('pointerdown',e=>{const h=e.target.closest('.ab-h');
+    if(h)cur=h.dataset.h;else{const r=band.getBoundingClientRect();const fx=(e.clientX-r.left)/r.width;
+      const sn=obsState.snow;const dl=Math.abs(fx*(mx-mn)+mn-sn.altLow),dh=Math.abs(fx*(mx-mn)+mn-sn.altHigh);
+      cur=dl<=dh?'lo':'hi';}
+    try{band.setPointerCapture(e.pointerId);}catch(_){}setV(cur,e.clientX);});
+  band.addEventListener('pointermove',e=>{if(cur)setV(cur,e.clientX);});
+  const fin=()=>{cur=null;};
+  band.addEventListener('pointerup',fin);band.addEventListener('pointercancel',fin);}
 function obsAltBand(which,val){const s=obsState.snow;if(which==='lo')s.altLow=Math.min(val,s.altHigh);else s.altHigh=Math.max(val,s.altLow);
   var l=document.getElementById('sv_altband');if(l)l.textContent=s.altLow+'–'+s.altHigh+' m';}
 function obsRose(label){const sel=obsState.snow.aspects||[];const cx=92,cy=92,rO=80,rI=34;let paths='';
@@ -3886,11 +4009,12 @@ function qrOpen(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
   qrStars=0;qrPowder=null;qrLL=null;qrAmount=null;qrQuality=null;
   qrPhoto=null;
   document.getElementById('qrModal').style.display='flex';
-  document.getElementById('qrStep1').style.display='';
+  document.getElementById('qrStep0').style.display='';
+  document.getElementById('qrStep1').style.display='none';
   document.getElementById('qrStep2').style.display='none';
   const pv=document.getElementById('qrPrev');if(pv){pv.style.display='none';pv.src='';}
-  const mw=document.getElementById('qrMapWrap');if(mw)mw.style.display='none';
   if(qrMapObj){try{qrMapObj.remove();}catch(e){}qrMapObj=null;}
+  setTimeout(qrInitMap,60);
   const dot=document.getElementById('qrPadDot');if(dot)dot.style.display='none';
   const rd=document.getElementById('qrRead');if(rd)rd.textContent='Tippe oder ziehe auf dem Feld';
   qrPadAttach();qrSync();
@@ -3903,19 +4027,20 @@ function qrOpen(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
   haptic(8);}
 function qrClose(){document.getElementById('qrModal').style.display='none';
   if(qrMapObj){try{qrMapObj.remove();}catch(e){}qrMapObj=null;}}
-function qrNext(){if(qrAmount===null||qrQuality===null)return;
-  document.getElementById('qrStep1').style.display='none';
-  document.getElementById('qrStep2').style.display='';haptic(6);}
+function qrToStep(n){
+  if(n===2&&(qrAmount===null||qrQuality===null))return;
+  ['qrStep0','qrStep1','qrStep2'].forEach((id,ix)=>{const el=document.getElementById(id);
+    el.style.display=ix===n?'':'none';if(ix===n){el.style.animation='none';void el.offsetWidth;el.style.animation='';}});
+  haptic(6);}
 function qrPhotoPick(inp){if(!inp.files||!inp.files[0])return;qrPhoto=inp.files[0];inp.value='';
   const pv=document.getElementById('qrPrev');pv.src=URL.createObjectURL(qrPhoto);pv.style.display='';haptic(6);}
 function qrSkip(){qrPhoto=null;qrSubmit();}
-function qrLocAdjust(){const w2=document.getElementById('qrMapWrap');
-  const show=w2.style.display==='none';w2.style.display=show?'':'none';
-  if(show&&!qrMapObj){
+function qrInitMap(){
+  if(!qrMapObj){
     const c=qrLL||[map.getCenter().lat,map.getCenter().lng];
     qrMapObj=L.map('qrMap',{zoomControl:false,attributionControl:false}).setView(c,13);
     L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg').addTo(qrMapObj);
-    const wrap=w2.querySelector('.obs-loc-wrap');
+    const wrap=document.getElementById('qrMap').parentElement;
     if(!wrap.querySelector('.obs-pin'))wrap.insertAdjacentHTML('beforeend','<div class="obs-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="rgba(224,36,94,.14)"/><circle cx="12" cy="10" r="3"/></svg></div>');
     qrMapObj.on('moveend',()=>{const cc=qrMapObj.getCenter();qrLL=[cc.lat,cc.lng];
       const d=obsDEM(cc.lat,cc.lng);
@@ -3923,18 +4048,19 @@ function qrLocAdjust(){const w2=document.getElementById('qrMapWrap');
     setTimeout(()=>{try{qrMapObj.invalidateSize();}catch(e){}},120);}}
 function qrSync(){const b2=document.getElementById('qrNextBtn');if(b2)b2.disabled=!(qrAmount!==null&&qrQuality!==null);}
 function qrQuadLabel(){const a2=qrAmount,q=qrQuality;
-  if(a2>=50&&q>=50)return 'Deep & Top Powder';
-  if(a2<50&&q>=50)return 'Top Qualität, wenig Schnee';
-  if(a2>=50&&q<50)return 'Viel, aber schwerer Schnee';
-  return 'Kein Powder';}
+  if(a2>=30&&q>=50)return 'Tiefer, guter Powder';
+  if(a2<30&&q>=50)return 'Wenig, aber pulvrig';
+  if(a2>=30&&q<50)return 'Viel, aber kompakt/schwer';
+  return 'Wenig & hart/eisig';}
 function qrPadAttach(){const pad=document.getElementById('qrPad');if(!pad||pad._wired)return;pad._wired=true;
   pad.style.touchAction='none';
   function setFrom(e){const r=pad.getBoundingClientRect();
-    qrAmount=Math.round(100*Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)));
+    const fx=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+    qrAmount=Math.round(fx*60); // cm, 0–60
     qrQuality=Math.round(100*Math.max(0,Math.min(1,1-(e.clientY-r.top)/r.height)));
     const dot=document.getElementById('qrPadDot');
-    dot.style.display='block';dot.style.left=(qrAmount)+'%';dot.style.top=(100-qrQuality)+'%';
-    document.getElementById('qrRead').textContent=qrQuadLabel()+' · Menge '+qrAmount+'% · Qualität '+qrQuality+'%';
+    dot.style.display='block';dot.style.left=(fx*100)+'%';dot.style.top=(100-qrQuality)+'%';
+    document.getElementById('qrRead').textContent=qrQuadLabel()+' · '+qrAmount+' cm · Qualität '+qrQuality+'%';
     qrSync();}
   let on=false;
   pad.addEventListener('pointerdown',e=>{on=true;try{pad.setPointerCapture(e.pointerId);}catch(_){}setFrom(e);haptic(5);});
@@ -3953,9 +4079,9 @@ async function qrSubmit(){if(!sb||!sbUser||qrAmount===null||qrQuality===null)ret
       if(!upErr){const{data:ud}=sb.storage.from('report-images').getPublicUrl(path);imageUrl=ud?.publicUrl||null;}}
     const row={user_id:sbUser.id,location:'POINT('+ll[1]+' '+ll[0]+')',elevation_m:d.elev||null,image_url:imageUrl,
       primary_categories:['snow'],subtype:'Quick Powder Report',
-      condition_data:{quick:true,powderAmount:qrAmount,powderQuality:qrQuality,
-        stars:Math.max(1,Math.round(qrQuality/20)),powder:(qrAmount>=50&&qrQuality>=50),
-        measurement:qrQuadLabel()},
+      condition_data:{quick:true,powderAmountCm:qrAmount,powderQuality:qrQuality,
+        stars:Math.max(1,Math.round(qrQuality/20)),powder:(qrAmount>=30&&qrQuality>=50),
+        measurement:qrQuadLabel()+' · '+qrAmount+' cm'},
       caption:null,completion_score:40,captured_at:new Date().toISOString()};
     const{error}=await sb.from('reports').insert(row);if(error)throw error;
     toast('Powder-Report gepostet — danke!','ok');haptic(12);qrClose();loadDbReports();
@@ -4037,7 +4163,7 @@ function locPickerPick(i){const p=(locPickerMode==='peak'?PEAKS:DESTS)[i];
   feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:locPickerMode});locPickerClose();haptic(6);}
 function feedRender(){
   const list=document.getElementById('feedList');
-  let base=allReports.slice();
+  let base=allReports.slice().filter(r=>r.img);
   if(feedScope==='following'){
     if(!sbUser){list.innerHTML='<div class="feed-empty">Melde dich an, um Leuten zu folgen und ihre Reports hier zu sehen.</div>';return;}
     base=base.filter(r=>r.dbRow&&r.userId&&myFollowing.has(r.userId));
