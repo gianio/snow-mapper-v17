@@ -672,7 +672,7 @@ def _write_pwa_assets(out_dir: Path) -> None:
 _SERVICE_WORKER = r"""// Swiss Snow Model — service worker (installable + offline last-data).
 // Network-first for all same-origin GETs (shell, app.js, data blob, icons) so
 // online users always get the latest, and offline falls back to the last cache.
-const C='ssm-v2';
+const C='ssm-v3';
 const CORE=['./','./index.html','./app.js','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(CORE).catch(()=>{})));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
@@ -1438,28 +1438,28 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .loc-picker-list button .lp-e{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--mut)}
  .loc-picker-list .lp-empty{text-align:center;color:var(--mut);padding:30px;font-size:14px}
  .feed-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,0px)}
- .feed-grid{max-width:600px;margin:0 auto;padding:6px 0 12px}
- .feed-card{background:var(--card);margin:0 12px 14px;border-radius:var(--r-lg);border:1px solid var(--hair);box-shadow:var(--elev1);overflow:hidden;cursor:pointer;transition:box-shadow .25s var(--ease),transform .25s var(--ease)}
+ .feed-grid{max-width:600px;margin:0 auto;padding:10px 0 120px}
+ .feed-card{background:var(--card);margin:0 14px 20px;border-radius:22px;border:1px solid var(--hair);box-shadow:var(--elev1);overflow:hidden;cursor:pointer;transition:box-shadow .25s var(--ease),transform .25s var(--ease)}
  .feed-card:hover{box-shadow:var(--elev2)}
  @media(hover:none){.feed-card:active{transform:scale(.992)}}
  .feed-card.enter{animation:cardIn .5s var(--ease) both}
  @keyframes cardIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
  .feed-card.flash{box-shadow:0 0 0 3px var(--acc) inset;animation:cardFlash 1.8s ease}
  @keyframes cardFlash{0%,100%{background:#fff}30%{background:rgba(94,92,230,.08)}}
- .feed-card-head{display:flex;align-items:center;gap:10px;padding:12px 16px}
- .feed-card-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;letter-spacing:.02em;color:#fff;box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--ring)}
+ .feed-card-head{display:flex;align-items:center;gap:11px;padding:14px 16px 10px}
+  .feed-card-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;letter-spacing:.02em;color:#fff;box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--ring)}
  .feed-card-info{flex:1;min-width:0}
  .feed-card-user{font-size:14px;font-weight:700;color:var(--fg);letter-spacing:-.01em;display:block}
  .feed-card-loc{font-size:12px;color:var(--mut);font-weight:500;display:flex;align-items:center;gap:3px}
  .feed-card-time{font-size:12px;color:var(--mut);font-weight:500;flex-shrink:0}
- .feed-card-visual{width:100%;aspect-ratio:4/3;position:relative;overflow:hidden;background:var(--fill2)}
+ .feed-card-visual{margin:2px 14px 0;aspect-ratio:4/3;position:relative;overflow:hidden;background:var(--fill2);border-radius:16px}
  .feed-card-visual img{width:100%;height:100%;object-fit:cover}
  .feed-card-visual .card-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px}
  .feed-card-visual .card-placeholder>span:first-child svg{width:56px;height:56px;opacity:.5}
  .feed-card-visual .card-placeholder>span:last-child{font-size:15px;font-weight:700;opacity:.45;letter-spacing:.02em}
- .feed-card-body{padding:12px 16px 16px}
+ .feed-card-body{padding:12px 18px 4px}
  .feed-card-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
- .feed-badge{padding:4px 12px;border-radius:999px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px}
+ .feed-badge{padding:5px 13px;border-radius:999px;font-size:12.5px;font-weight:650;display:flex;align-items:center;gap:6px}
  .feed-badge .cat-ico{width:14px;height:14px;display:flex;align-items:center;justify-content:center}
  .feed-badge .cat-ico svg{width:13px;height:13px}
  .feed-badge.cat-snow{background:rgba(56,152,236,.1);color:#5e5ce6}
@@ -1476,9 +1476,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-badge.cat-whumpf{background:rgba(232,89,12,.1);color:#e8590c}.feed-badge.cat-whumpf svg{stroke:#e8590c}
  .feed-badge.cat-wind_slab{background:rgba(13,148,136,.1);color:#0d9488}.feed-badge.cat-wind_slab svg{stroke:#0d9488}
  .feed-badge.cat-other{background:rgba(94,92,230,.1);color:#5e5ce6}.feed-badge.cat-other svg{stroke:#5e5ce6}
- .feed-card-caption{font-size:14px;color:var(--fg2);line-height:1.5}
+ .feed-card-caption{font-size:14.5px;color:var(--fg2);line-height:1.55;margin-top:2px}
  .feed-card-caption b{color:var(--fg);font-weight:700}
- .feed-card-actions{display:flex;align-items:center;gap:18px;padding:11px 16px;border-top:1px solid var(--hair)}
+ .feed-card-actions{display:flex;align-items:center;gap:20px;padding:12px 18px 13px;border-top:1px solid var(--hair);margin-top:10px}
  .feed-card-actions button{background:none;border:none;cursor:pointer;padding:4px;color:var(--fg2);display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;font-family:inherit}
  .feed-card-actions button svg{width:20px;height:20px}
  .feed-card-actions button:hover{color:var(--fg)}
@@ -1575,12 +1575,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-fab span{position:absolute;bottom:-19px;left:50%;transform:translateX(-50%);font-size:10.5px;font-weight:800;letter-spacing:.03em;color:var(--acc2);text-shadow:0 1px 2px rgba(255,255,255,.8)}
  .feed-fab:active{transform:translateX(-50%) scale(.9)}
  .feed-fab:hover{box-shadow:0 12px 32px rgba(94,92,230,.55),0 0 0 5px rgba(255,255,255,.85)}
- .feed-card.slim .feed-card-head{padding:10px 14px 2px}
- .feed-card.slim .feed-card-body{padding:6px 14px 10px}
- .feed-card.slim .feed-card-caption{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13.5px}
- .feed-card.slim .feed-card-actions{padding:7px 14px;gap:14px}
- .feed-card.slim{margin-bottom:10px}
- @media(min-width:561px){.feed-grid{padding:16px 0}.feed-card{margin:0 0 16px}.feed-card.slim{margin-bottom:10px}}
+ /* Text-only posts: first-class "quote" cards with a category tint wash */
+ .feed-tx{position:relative;margin:2px 16px 0;padding:16px 18px 15px 22px;border-radius:16px;font-size:17px;line-height:1.5;font-weight:550;color:var(--fg);letter-spacing:-.012em;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+ .feed-tx-bar{position:absolute;left:8px;top:14px;bottom:14px;width:4px;border-radius:2px;opacity:.75}
+ .feed-card.text .feed-card-actions{margin-top:8px}
+ @media(min-width:561px){.feed-grid{padding:18px 0 120px}.feed-card{margin:0 0 20px}}
  /* --- Report markers --- */
  .rpt-marker{width:36px;height:36px;border-radius:50%;background:#fff;border:2.5px solid currentColor;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer;transition:transform .15s}
  .rpt-marker svg{width:18px;height:18px}
@@ -1614,7 +1613,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div id="topics">
     <button data-t="ski"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M5 20l5-11 4 6 2.5-4L21 20"/><circle cx="15.5" cy="4.5" r="1.5"/></svg><span>Ski</span></button>
     <button data-t="snow" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="7.5" x2="19" y2="16.5"/><line x1="5" y1="16.5" x2="19" y2="7.5"/></svg><span>Snow</span></button>
-    <button id="moreTopics" title="More conditions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M4 6h16M4 18h16"/></svg><span>Mehr</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+    <button id="moreTopics" title="Weitere Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M4 6h16M4 18h16"/></svg><span>Mehr</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
     
   </div>
   <span id="topicsMore">
@@ -1623,7 +1622,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       </span>
   <div id="sublayers"></div>
 </div>
-<div id="searchWrap"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Search location..." autocomplete="off"/><div id="searchRes"></div></div>
+<div id="searchWrap"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Ort suchen…" autocomplete="off"/><div id="searchRes"></div></div>
 <div id="ctrlRail">
   <button class="rail-btn" id="accountBtn" onclick="accountTap()" title="Anmelden" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></button>
   <button class="rail-btn feed-accent" id="feedBtn" onclick="feedOpen()" title="Community-Feed" aria-label="Community-Feed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
@@ -1639,8 +1638,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <div id="tlHead">
       <span class="winlbl" id="window"></span>
       <div id="tlModeToggle">
-        <button data-m="simple">Simple</button>
-        <button data-m="detail" class="active">Detailed</button>
+        <button data-m="simple">Einfach</button>
+        <button data-m="detail" class="active">Detail</button>
       </div>
     </div>
     <div class="seg" id="presets" style="gap:5px;margin-top:2px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch">
@@ -1648,8 +1647,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <button data-d="48" class="active">48h</button>
       <button data-d="72">72h</button>
       <button data-d="120">120h</button>
-      <button id="btnSinceSnow">Last Snow</button>
-      <button data-r="tomorrow">Till tomorrow</button>
+      <button id="btnSinceSnow">Letzter Schnee</button>
+      <button data-r="tomorrow">Bis morgen</button>
     </div>
     <div id="tlDetail">
       <canvas id="timeline" width="900" height="94" style="width:100%;height:94px;border-radius:10px;cursor:default;margin-top:8px"></canvas>
@@ -1670,11 +1669,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="three-wrap"><div id="map3d" style="width:100%;height:100%"></div><button id="btn3dClose">✕ 2D</button>
 <div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="30" style="width:100px;accent-color:var(--acc)"> Map <span id="mapOpacLbl">30%</span></label>
 <button id="btn3dExag">×1.5</button>
-<select id="overlay3d" style="padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:16px;backdrop-filter:blur(10px);min-height:46px"><option value="none">No overlay</option><option value="snow">Snow</option><option value="temp">Temperature</option><option value="wind">Wind</option><option value="depth">Snow Depth</option><option value="powder">Powder</option></select>
+<select id="overlay3d" style="padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:16px;backdrop-filter:blur(10px);min-height:46px"><option value="none">No overlay</option><option value="snow">Snow</option><option value="temp">Temperature</option><option value="wind">Wind</option><option value="depth">Schneehöhe</option><option value="powder">Powder</option></select>
 <span id="keys3d" style="font-size:12px;color:var(--mut);opacity:.7;padding:6px 10px;display:none">WASD/Arrows: rotate · +/-: zoom · R: reset</span></div>
 </div>
 <!-- Auth & Reports UI -->
-<div id="userBar"><button class="login-btn" id="btnLogin" onclick="authShow()">Sign in</button></div>
+<div id="userBar"><button class="login-btn" id="btnLogin" onclick="authShow()">Anmelden</button></div>
 <div class="email-banner" id="emailBanner"><span>Please confirm your email to post reports.</span><button onclick="authResend()">Resend</button></div>
 <button id="reportFab" title="Bedingungen melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
 <div class="radial-wrap" id="radialWrap"><div class="radial-bg"></div><div class="radial-ring" id="radialRing"></div><div class="radial-center" id="radialCenter">✕</div></div>
@@ -1734,7 +1733,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="feed-page" id="feedPage">
 <div class="feed-nav">
 <button class="feed-back" onclick="feedClose()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
-<span class="feed-title">Field Reports</span>
+<span class="feed-title">Community</span>
 </div>
 <div class="feed-scope" id="feedScope"></div>
 <div class="feed-filter" id="feedFilter"></div>
@@ -1745,7 +1744,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button class="feed-loc-clear" id="feedAnchorClear" style="display:none">✕ Filter</button>
 </div>
 <div class="feed-anchor-bar" id="feedAnchorBar" style="display:none"></div>
-<div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Loading reports...</div></div></div>
+<div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Lade Beiträge…</div></div></div>
 <button class="feed-qr" onclick="qrOpen(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Report Powder</button>
 <button class="feed-fab" id="feedFab" onclick="feedCreatePost()" title="Bedingungen melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
 </div>
@@ -2175,7 +2174,7 @@ function stationCard(s){const ns=newSnowInt(s);
   const windStr=s.vw!=null?(dirTxt?dirTxt+" ":"")+(s.vw*3.6).toFixed(0)+" km/h":null;
   return `<div class="scard"><b>${s.label}</b><br><span class="sub">${s.code} · ${s.elev} m asl</span>
     <div class="g">
-    ${row("Snow Depth",s.hs_now!=null?s.hs_now.toFixed(0)+" cm":null)}
+    ${row("Schneehöhe",s.hs_now!=null?s.hs_now.toFixed(0)+" cm":null)}
     ${row("New Snow",ns!=null?"+"+ns.toFixed(0)+" cm":null)}
     ${row("Air Temp",s.ta!=null?s.ta.toFixed(1)+" °C":null)}
     ${row("Snow Surface",s.tss!=null?s.tss.toFixed(1)+" °C":null)}
@@ -2226,7 +2225,7 @@ map.on('zoomend',()=>{const t=detailTier();if(t!==_lastTier){_lastTier=t;renderS
 function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");return d.toLocaleString('en-GB',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit'});}
 function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});}
 function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
-  if(l=="snow"){let h="<b>New Snow [cm] (SLF scale)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (click for details)</div>";}
+  if(l=="snow"){let h="<b>Neuschnee [cm] (SLF-Skala)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (click for details)</div>";}
   if(l=="depth")return '<b>Snow Depth [cm]</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(220,240,255),rgb(100,190,250),rgb(30,130,210),rgb(20,100,185),rgb(80,30,140),rgb(120,15,80));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:10px"><span>0</span><span>100</span><span>200</span><span>300+</span></div>';
   if(l=="temp"){let extra="blue=cold · red=warm";if(stat=="sub0")extra="only cells staying below 0°C for entire window";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>Temp 2 m [°C] (${sn})</b><br>${extra}`;}
   if(l=="wind"){if(stat=="lt10")return "<b>Wind 10 m ("+sn+")</b><br>green = max wind stays below 10 km/h";return '<b>Wind 10 m (km/h, '+sn+')</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(30,120,255),rgb(30,240,135),rgb(255,240,0),rgb(255,40,0));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:10px"><span>0</span><span>25</span><span>50</span><span>70+</span></div><div style="margin-top:4px;font-size:11px">Arrows show flow direction</div>';}
@@ -2257,7 +2256,7 @@ function showOverlay(){
 function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefresh();if(tlMode==='detail')drawTimeline();
   if(layer=="rad"||layer=="radsun")renderRadiation();
   if(layer=="wind"){buildFlow();if(wtimer)clearTimeout(wtimer);wtimer=setTimeout(renderWind,120);}
-  document.getElementById('window').innerHTML=`${b-a}h window`;syncTl();legend();}
+  document.getElementById('window').innerHTML=`${b-a}h Fenster`;syncTl();legend();}
 // --- Simple / Detailed timeline mode (detailed = default) ---
 let tlMode='detail',sliderActive=false;
 function syncTl(){const wv=b-a;
@@ -2272,7 +2271,7 @@ document.querySelectorAll('#tlModeToggle button').forEach(x=>x.onclick=()=>setTl
 (function(){const sl=document.getElementById('tlLen');if(!sl)return;sl.max=Math.min(168,T);
   sl.addEventListener('input',()=>{sliderActive=true;const ws=Math.min(T,parseInt(sl.value));windowSize=ws;
     const center=Math.round((a+b)/2);a=Math.max(0,Math.min(T-ws,center-Math.floor(ws/2)));b=Math.min(T,a+ws);
-    document.getElementById('tlLenVal').textContent=(b-a)+'h';drawTimeline();document.getElementById('window').innerHTML=(b-a)+'h window';document.getElementById('tlRange').textContent=fmt(a)+'  →  '+fmt(b-1);});
+    document.getElementById('tlLenVal').textContent=(b-a)+'h';drawTimeline();document.getElementById('window').innerHTML=(b-a)+'h Fenster';document.getElementById('tlRange').textContent=fmt(a)+'  →  '+fmt(b-1);});
   sl.addEventListener('change',()=>{sliderActive=false;clearPresets();renderAll();});
   const lenBtn=document.getElementById('tlLenBtn');if(lenBtn)lenBtn.onclick=()=>{const show=sl.style.display==='none';sl.style.display=show?'block':'none';lenBtn.classList.toggle('active',show);};
   document.getElementById('tlPrev').onclick=()=>{const ws=b-a;a=Math.max(0,a-ws);b=Math.min(T,a+ws);clearPresets();renderAll();};
@@ -2281,7 +2280,7 @@ document.querySelectorAll('#tlModeToggle button').forEach(x=>x.onclick=()=>setTl
 })();
 const TOPICS={
   ski:[{l:'skiable',s:'avg',label:'Skiable'},{l:'powder',s:'avg',label:'Powder'}],
-  snow:[{l:'snow',s:'avg',label:'New Snow'},{l:'depth',s:'avg',label:'Snow Depth'}],
+  snow:[{l:'snow',s:'avg',label:'Neuschnee'},{l:'depth',s:'avg',label:'Schneehöhe'}],
   temp:[{l:'temp',s:'avg',label:'Mean'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'temp',s:'sub0',label:'<0°C'},{l:'temp',s:'max05',label:'0-5°C'},{l:'tsurf',s:'avg',label:'Surface'}],
   wind:[{l:'wind',s:'avg',label:'Mean'},{l:'wind',s:'max',label:'Max'},{l:'wind',s:'min',label:'Min'},{l:'wind',s:'lt10',label:'<10 km/h'}],
   rad:[{l:'rad',s:'avg',label:'Clear-sky'},{l:'radsun',s:'avg',label:'Effective'},{l:'sun',s:'avg',label:'Sunshine'}],
@@ -2360,7 +2359,7 @@ document.getElementById('btnSinceSnow').onclick=()=>{const p=sinceLastSnowfall()
     if(mode==='center'){let na=Math.max(0,Math.min(T-ws,dragStartA+delta));a=na;b=na+ws;}
     else if(mode==='left'){a=Math.max(0,Math.min(dragStartB-4,dragStartA+delta));windowSize=b-a;}
     else if(mode==='right'){b=Math.min(T,Math.max(dragStartA+4,dragStartB+delta));windowSize=b-a;}
-    drawTimeline();document.getElementById('window').innerHTML=(b-a)+'h window';}
+    drawTimeline();document.getElementById('window').innerHTML=(b-a)+'h Fenster';}
   document.addEventListener('mousemove',onDrag);document.addEventListener('touchmove',onDrag,{passive:false});
   function endDrag(){if(mode){mode=null;tc.style.cursor='default';renderAll();}}
   document.addEventListener('mouseup',endDrag);document.addEventListener('touchend',endDrag);
@@ -2956,10 +2955,11 @@ const DEMO_DEFS=[
 const DEMO_REPORTS=DEMO_DEFS.map((d,i2)=>({id:'d'+(i2+1),user:DEMO_USERS[i2%DEMO_USERS.length],cat:d[0],icon:'',
   sub:d[1],measurement:d[2],caption:d[3],lat:d[4],lng:d[5],
   time:i2<3?('vor '+(2+i2)+'h'):(i2<12?('vor '+(i2-1)+'h'):('vor '+(i2-10)+'d')),
-  img:demoImg(200+i2*9,210+i2*7,205+(i2%5)*6),stars:(i2%5)+1,likes:(i2*3)%17,comments:i2%4}));
+  img:(i2%4===3)?null:demoImg(200+i2*9,210+i2*7,205+(i2%5)*6),stars:(i2%5)+1,likes:(i2*3)%17,comments:i2%4}));
 
 let reportMarkers=L.layerGroup().addTo(map);
-let allReports=[...DEMO_REPORTS];
+function demoActive(){try{if(location.search.indexOf('demo')>=0)return true;}catch(e){}return !sb;}
+let allReports=demoActive()?[...DEMO_REPORTS]:[];
 function loadReportMarkers(){
   reportMarkers.clearLayers();
   const tier=(typeof detailTier==='function')?detailTier():2;
@@ -2973,7 +2973,7 @@ function loadReportMarkers(){
     }
     const m=L.marker([r.lat,r.lng],{icon,zIndexOffset:700}).addTo(reportMarkers);
     const rid=r.id;
-    m.bindPopup(`<div style="min-width:180px">${r.img?`<img src="${r.img}" loading="lazy" style="width:100%;height:96px;object-fit:cover;border-radius:10px;margin-bottom:7px" onclick="feedOpenAt('${rid}')"/>`:''}<b>${r.user}</b> <span style="color:#7a8a9a;font-size:12px">${r.time}</span><br><span style="font-size:13px;display:inline-flex;align-items:center;gap:5px;color:${mColor}">${catSvg?catSvg(r.cat,14):''} ${r.sub||r.cat}${r.measurement?' · '+r.measurement:''}</span>${r.caption?'<br><span style="font-size:13px;color:#3a4a5a">'+r.caption+'</span>':''}<br><a href="javascript:void(0)" onclick="feedOpenAt('${rid}')" style="font-size:12px;font-weight:700;color:#5e5ce6">Im Feed öffnen →</a></div>`,{maxWidth:260});
+    m.bindPopup(`<div style="min-width:180px">${r.img?`<img src="${r.img}" loading="lazy" style="width:100%;height:96px;object-fit:cover;border-radius:10px;margin-bottom:7px" onclick="feedOpenAt('${rid}')"/>`:''}<b>${escapeHtml(r.user)}</b> <span style="color:#7a8a9a;font-size:12px">${escapeHtml(r.time)}</span><br><span style="font-size:13px;display:inline-flex;align-items:center;gap:5px;color:${mColor}">${catSvg?catSvg(r.cat,14):''} ${escapeHtml(r.sub||r.cat)}${r.measurement?' · '+escapeHtml(r.measurement):''}</span>${r.caption?'<br><span style="font-size:13px;color:#3a4a5a">'+escapeHtml(r.caption)+'</span>':''}<br><a href="javascript:void(0)" onclick="feedOpenAt('${rid}')" style="font-size:12px;font-weight:700;color:#5e5ce6">Im Feed öffnen →</a></div>`,{maxWidth:260});
     m.on('click',function(){if(rptLastOpen===rid){feedOpenAt(rid);}else{rptLastOpen=rid;}});
     m.on('popupclose',function(){if(rptLastOpen===rid)rptLastOpen=null;});
   });
@@ -3002,7 +3002,7 @@ function authUpdateUI(user){
     justLoggedIn=false;
   } else {
     const pill=document.getElementById('userPill');
-    if(pill)pill.outerHTML='<button class="login-btn" id="btnLogin" onclick="authShow()">Sign in</button>';
+    if(pill)pill.outerHTML='<button class="login-btn" id="btnLogin" onclick="authShow()">Anmelden</button>';
     updateAccountBtn(null);
     fab.style.display='none';banner.style.display='none';
   }
@@ -3044,7 +3044,7 @@ async function loadDbReports(){
       return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||ic('pin'),sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,
         condN:condAgg[r.id]?condAgg[r.id].n:0,condAvg:condAgg[r.id]?condAgg[r.id].sum/condAgg[r.id].n:0,condPow:condAgg[r.id]?condAgg[r.id].pow:0,myCond:myCond[r.id]||null,dbRow:true};
     }).filter(Boolean);
-    allReports=[...dbR,...DEMO_REPORTS];loadReportMarkers();
+    allReports=demoActive()?[...dbR,...DEMO_REPORTS]:dbR;loadReportMarkers();
     if(document.getElementById('feedPage').classList.contains('open'))feedRender();
   }catch(e){console.warn('loadDbReports',e);}
 }
@@ -4163,7 +4163,7 @@ function locPickerPick(i){const p=(locPickerMode==='peak'?PEAKS:DESTS)[i];
   feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:locPickerMode});locPickerClose();haptic(6);}
 function feedRender(){
   const list=document.getElementById('feedList');
-  let base=allReports.slice().filter(r=>r.img);
+  let base=allReports.slice();
   if(feedScope==='following'){
     if(!sbUser){list.innerHTML='<div class="feed-empty">Melde dich an, um Leuten zu folgen und ihre Reports hier zu sehen.</div>';return;}
     base=base.filter(r=>r.dbRow&&r.userId&&myFollowing.has(r.userId));
@@ -4183,24 +4183,25 @@ function feedRender(){
     const canFollow=r.dbRow&&r.userId&&(!sbUser||r.userId!==sbUser.id);
     const followBtn=canFollow?`<button class="feed-follow ${myFollowing.has(r.userId)?'following':''}" onclick="toggleFollow('${r.userId}',event)">${myFollowing.has(r.userId)?'Folge ich':'Folgen'}</button>`:'';
     const endBtn=r.dbRow?`<button class="endorse-btn ${r.liked?'endorsed':''}" onclick="toggleEndorse('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> ${r.likes||0}<span class="endorse-lbl">${r.liked?'Bestätigt':'Bestätigen'}</span></button>`:'';
-    return`<div class="feed-card${r.img?'':' slim'}" id="feedcard-${r.id}" onclick="feedFlyTo(${r.lat},${r.lng})">
+    return`<div class="feed-card${r.img?' photo':' text'}" id="feedcard-${r.id}" onclick="feedFlyTo(${r.lat},${r.lng})">
       <div class="feed-card-head">
-        <div class="feed-card-avatar" style="${r.avatar?`background-image:url(${r.avatar});background-size:cover;background-position:center`:`background:${avatarBg}`}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/'/g,'')}')"`:''}>${r.avatar?'':r.user[0].toUpperCase()}</div>
+        <div class="feed-card-avatar" style="${r.avatar?`background-image:url(${r.avatar});background-size:cover;background-position:center`:`background:${avatarBg}`}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['\"<>]/g,'')}')"`:''}>${r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase())}</div>
         <div class="feed-card-info">
-          <span class="feed-card-user"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/'/g,'')}')"`:''}>${r.user}</span>
-          <span class="feed-card-loc"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> ${r.peak?r.peak:(r.lat.toFixed(2)+'°N, '+r.lng.toFixed(2)+'°E')}</span>
+          <span class="feed-card-user"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['"<>]/g,'')}')"`:''}>${escapeHtml(r.user)}</span>
+          <span class="feed-card-loc"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> ${r.peak?escapeHtml(r.peak):(r.lat.toFixed(2)+'°N, '+r.lng.toFixed(2)+'°E')}</span>
         </div>
         ${followBtn||distTag||`<span class="feed-card-time">${r.time}</span>`}
       </div>
-      ${r.img?`<div class="feed-card-visual"><img src="${r.img}" alt="" loading="lazy" decoding="async"/></div>`:''}
+      ${r.img?`<div class="feed-card-visual"><img src="${r.img}" alt="" loading="lazy" decoding="async"/></div>`:
+        (r.caption?`<div class="feed-tx" style="background:linear-gradient(150deg,${col}14,rgba(255,255,255,0) 75%)"><span class="feed-tx-bar" style="background:${col}"></span>${escapeHtml(r.caption)}</div>`:'')}
       <div class="feed-card-body">
         <div class="feed-card-badges">
-          <span class="feed-badge cat-${r.cat}">${catSvg(r.cat,14)} ${r.sub||r.cat}</span>
-          ${r.measurement?`<span class="feed-badge cat-${r.cat}">${r.measurement}</span>`:''}
+          <span class="feed-badge cat-${r.cat}">${catSvg(r.cat,14)} ${escapeHtml(r.sub||r.cat)}</span>
+          ${r.measurement?`<span class="feed-badge cat-${r.cat}">${escapeHtml(r.measurement)}</span>`:''}
           ${r.stars?`<span class="feed-badge cat-${r.cat}"><svg class="ic-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z" fill="#f5a623" stroke="none"/></svg> ${r.stars}/5</span>`:''}
           ${r.condN?`<span class="cond-chip" title="${r.condN} Bewertung(en)"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z"/></svg>${r.condAvg.toFixed(1)}${r.condPow?` · ❄${r.condPow}`:''}</span>`:''}
         </div>
-        ${r.caption?`<div class="feed-card-caption"><b>${r.user}</b> ${r.caption}</div>`:''}
+        ${r.img&&r.caption?`<div class="feed-card-caption"><b>${escapeHtml(r.user)}</b> ${escapeHtml(r.caption)}</div>`:''}
       </div>
       <div class="feed-card-actions">
         ${endBtn}
