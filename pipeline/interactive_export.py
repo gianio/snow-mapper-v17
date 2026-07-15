@@ -783,7 +783,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #sublayers button:hover{background:rgba(22,21,46,.09);color:var(--fg)}
  #sublayers button.active{background:var(--topic-tint);color:var(--topic-accent)}
  #bottomPanel{position:absolute;z-index:1000;bottom:0;left:0;right:0;
-   background:rgba(255,255,255,.8);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border-top:1px solid rgba(255,255,255,.5);box-shadow:0 -1px 0 var(--bd),0 -4px 20px rgba(0,0,0,.06);transition:none;padding-bottom:max(env(safe-area-inset-bottom, 0px) - 6px, 0px);overflow:hidden}
+   background:rgba(255,255,255,.8);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border-top:1px solid rgba(255,255,255,.5);box-shadow:0 -1px 0 var(--bd),0 -4px 20px rgba(0,0,0,.06);transition:none;padding-bottom:max(env(safe-area-inset-bottom, 0px) - 18px, 4px);overflow:hidden}
  #btmMain{padding:6px 14px 2px}
  #timeline{display:block;border:1px solid var(--bd);background:rgba(237,242,248,.5);border-radius:var(--r)}
  #presets::-webkit-scrollbar{display:none}
@@ -1510,29 +1510,31 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .cond-save:hover{background:var(--acc2)}
  .cond-save:disabled{opacity:.4;cursor:default}
  /* Quick-Check entry points */
- .qr-pad{position:relative;width:100%;aspect-ratio:1.35;margin-top:10px;border-radius:16px;border:1px solid var(--hair);background:linear-gradient(to top right,var(--fill2) 0%,var(--fill) 40%,rgba(94,92,230,.28) 100%);cursor:crosshair;overflow:hidden}
- .qr-pad::before,.qr-pad::after{content:'';position:absolute;background:rgba(22,21,46,.1)}
- .qr-pad::before{left:50%;top:0;bottom:0;width:1px}
- .qr-pad::after{top:50%;left:0;right:0;height:1px}
+ .qr-padwrap{display:flex;gap:8px;margin-top:12px;align-items:stretch}
+ .qr-yaxis{display:flex;flex-direction:column;width:96px;flex-shrink:0}
+ .qr-yband{flex:1;display:flex;align-items:center;gap:6px;padding-right:2px;font-size:9.5px;font-weight:800;line-height:1.08;letter-spacing:.01em}
+ .qr-yband svg{width:16px;height:16px;flex-shrink:0}
+ .qr-yband:nth-child(1){color:#4844c9}
+ .qr-yband:nth-child(2){color:#6a66cc}
+ .qr-yband:nth-child(3){color:#8f7bbf}
+ .qr-yband:nth-child(4){color:#b06a00}
+ .qr-pad{position:relative;flex:1;aspect-ratio:1.18;border-radius:16px;border:1px solid var(--hair);background:linear-gradient(to top,rgba(176,106,0,.16) 0%,var(--fill) 44%,rgba(94,92,230,.30) 100%);cursor:crosshair;overflow:hidden}
+ .qr-qline{position:absolute;left:0;right:0;height:0;border-top:1.5px dashed rgba(22,21,46,.14);pointer-events:none}
  .qr-corner{position:absolute;font-size:10.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--mut);pointer-events:none}
  .qr-corner.tr{top:8px;right:10px;color:var(--acc2)}
  .qr-corner.bl{bottom:8px;left:10px}
- .qr-pad-dot{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:var(--acc);border:3.5px solid #fff;box-shadow:var(--elev2);pointer-events:none;transition:left .05s linear,top .05s linear}
- .qr-read{margin-top:10px;font-size:13px;font-weight:700;color:var(--fg2);text-align:center;min-height:18px}
+ .qr-pad-dot{position:absolute;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;background:var(--acc);border:3.5px solid #fff;box-shadow:var(--elev2);pointer-events:none;transition:left .05s linear,top .05s linear;z-index:2}
+ .qr-dot-cm{position:absolute;left:50%;bottom:calc(100% + 7px);transform:translateX(-50%);background:#16152e;color:#fff;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:8px;white-space:nowrap;box-shadow:var(--elev1)}
+ .qr-dot-cm::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#16152e}
+ .qr-pad-dot.below .qr-dot-cm{bottom:auto;top:calc(100% + 7px)}
+ .qr-pad-dot.below .qr-dot-cm::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:#16152e}
+ .qr-read{margin-top:8px;font-size:13px;font-weight:800;color:var(--fg2);text-align:center;min-height:18px}
  .qr-step{animation:qrFade .35s var(--ease) both}
  @keyframes qrFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
  .qr-cmline{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed rgba(22,21,46,.16);pointer-events:none}
  .qr-cmline i{position:absolute;bottom:2px;left:3px;font-style:normal;font-size:9px;font-weight:800;color:var(--mut)}
- .qr-axis-x{text-align:center;font-size:11px;font-weight:800;color:var(--mut);margin-top:4px;letter-spacing:.03em}
- .qr-q{position:absolute;display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;opacity:.75}
- .qr-q svg{width:20px;height:20px;fill:none;stroke:currentColor}
- .qr-q svg:first-child{fill:currentColor;stroke:none}
- .qr-q svg.fl{fill:none!important;stroke:currentColor!important}
- .qr-q em{font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.02em}
- .qr-q.tr{top:10px;right:10px;color:#4844c9}
- .qr-q.tl{top:10px;left:10px;color:#7d6bd6}
- .qr-q.br{bottom:20px;right:10px;color:#77749a}
- .qr-q.bl{bottom:20px;left:10px;color:#b06a00}
+ .qr-axis-x{display:flex;align-items:center;justify-content:center;gap:8px;font-size:11.5px;font-weight:800;color:var(--fg2);margin:8px 0 2px;letter-spacing:.02em}
+ .qr-axis-x svg{color:var(--mut)}
  .qr-photo-one{display:flex;align-items:center;justify-content:center;gap:10px;padding:20px 12px;border-radius:14px;border:1.5px dashed rgba(94,92,230,.4);background:rgba(94,92,230,.06);color:var(--acc2);font-size:14.5px;font-weight:750;cursor:pointer;margin-top:8px}
  .qr-photo-one svg{width:26px;height:26px}
  .qr-photo-row{display:flex;gap:10px;margin-top:12px}
@@ -1545,11 +1547,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #mapFab{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 14px);width:56px;height:56px;z-index:900}
  #mapFab:active{transform:scale(.9)}
  #mapFab span{display:none}
- #mapQr{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 84px);z-index:900;padding:9px 14px}
- #mapQr:active{transform:scale(.94)}
- .feed-qr{position:absolute;bottom:calc(env(safe-area-inset-bottom, 0px) + 96px);left:50%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:999px;border:1px solid rgba(245,166,35,.5);background:linear-gradient(150deg,rgba(255,244,224,.96),rgba(255,255,255,.92));color:#8a5200;font-size:13.5px;font-weight:800;font-family:inherit;cursor:pointer;z-index:5;box-shadow:var(--elev2);transition:transform .15s var(--ease)}
- .feed-qr svg{width:16px;height:16px}
- .feed-qr:active{transform:translateX(-50%) scale(.94)}
+ #mapQr{position:fixed;left:auto;right:15px;transform:none;bottom:calc(var(--btm-h,90px) + 92px);z-index:900}
+ #mapQr:active{transform:scale(.9)}
+ .feed-qr{position:absolute;bottom:calc(env(safe-area-inset-bottom, 0px) + 96px);left:50%;transform:translateX(-50%);width:56px;height:56px;padding:0;border-radius:50%;border:none;background:linear-gradient(140deg,#ffd75e,#f5a623 55%,#e08a00);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;box-shadow:0 10px 26px rgba(240,150,10,.45),0 0 0 5px rgba(255,255,255,.75);z-index:5;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
+ .feed-qr svg{width:24px;height:24px}
+ .feed-qr span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:.03em;color:#b06a00;text-shadow:0 1px 2px rgba(255,255,255,.85);white-space:nowrap}
+ .feed-qr:active{transform:translateX(-50%) scale(.92)}
  .qr-loc{font-size:12.5px;font-weight:650;color:var(--fg2);background:var(--fill);border:1px solid var(--hair);border-radius:10px;padding:8px 11px;margin-top:12px}
  .rail-btn.qr-accent{background:linear-gradient(150deg,rgba(245,166,35,.24),rgba(245,166,35,.1));color:#b06a00;border-color:rgba(245,166,35,.4)}
  .feed-quick{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;border:1px solid rgba(245,166,35,.45);background:linear-gradient(150deg,rgba(245,166,35,.2),rgba(245,166,35,.08));color:#8a5200;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;transition:.15s}
@@ -1628,7 +1631,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button class="rail-btn" id="btn3dFloat" title="3D-Ansicht" aria-label="3D-Ansicht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg></button>
   <button class="rail-btn" id="locBtn" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg></button>
 </div>
-<button class="feed-qr" id="mapQr" onclick="qrOpen(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Report Powder</button>
+<button class="feed-qr" id="mapQr" onclick="qrOpen(event)" title="Quick Powder Report"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <button class="feed-fab" id="mapFab" onclick="obsOpen()" title="Beobachtung melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
 <div id="bottomPanel" class="detail">
   <div id="tlToggle"></div>
@@ -1709,7 +1712,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <div class="auth-bio-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10a3 3 0 0 1 6 0M8.5 15.5c1 1 5 1 7 0M12 10v3.5"/></svg></div>
     <div class="bio-lock-t">Swiss Snow Model</div>
     <div class="bio-lock-s">Entsperre mit <b id="bioLockName">Biometrie</b></div>
-    <button class="auth-btn primary" onclick="bioUnlock()">Entsperren</button>
+    <button class="auth-btn primary" onclick="haptic(6);bioUnlock()">Mit <span id="bioLockName2">Face ID</span> entsperren</button>
     <button class="bio-lock-out" onclick="bioSignOut()">Abmelden</button>
   </div>
 </div>
@@ -1743,7 +1746,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 </div>
 <div class="feed-anchor-bar" id="feedAnchorBar" style="display:none"></div>
 <div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Lade Beiträge…</div></div></div>
-<button class="feed-qr" onclick="qrOpen(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Report Powder</button>
+<button class="feed-qr" onclick="qrOpen(event)" title="Quick Powder Report"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <button class="feed-fab" id="feedFab" onclick="feedCreatePost()" title="Bedingungen melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
 </div>
 <div class="loc-picker" id="locPicker" style="display:none" onclick="if(event.target===this)locPickerClose()">
@@ -1787,19 +1790,26 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       </div>
       <div class="qr-step" id="qrStep1" style="display:none">
         <div class="cond-lbl">2 · Wie viel &amp; wie gut?</div>
-        <div class="qr-pad" id="qrPad">
-          <div class="qr-cmline" style="left:16.7%"><i>10</i></div>
-          <div class="qr-cmline" style="left:33.3%"><i>20</i></div>
-          <div class="qr-cmline" style="left:50%"><i>30</i></div>
-          <div class="qr-cmline" style="left:66.7%"><i>40</i></div>
-          <div class="qr-cmline" style="left:83.3%"><i>50</i></div>
-          <span class="qr-q tr"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z"/></svg><svg viewBox="0 0 24 24" class="fl"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9" fill="none" stroke-width="2"/></svg><em>Tief &amp; top</em></span>
-          <span class="qr-q tl"><svg viewBox="0 0 24 24" class="fl"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9" fill="none" stroke-width="2"/></svg><em>Wenig, pulvrig</em></span>
-          <span class="qr-q br"><svg viewBox="0 0 24 24"><path d="M3 8h18M3 13h18M3 18h18" fill="none" stroke-width="2.4"/></svg><em>Viel, kompakt</em></span>
-          <span class="qr-q bl"><svg viewBox="0 0 24 24"><path d="M10.3 3.2L1.8 18.5c-.8 1.4.2 3 1.7 3h17c1.5 0 2.5-1.6 1.7-3L13.7 3.2c-.8-1.4-2.6-1.4-3.4 0z" fill="none" stroke-width="2"/></svg><em>Wenig, hart/eisig</em></span>
-          <div class="qr-pad-dot" id="qrPadDot" style="display:none"></div>
+        <div class="qr-padwrap">
+          <div class="qr-yaxis">
+            <div class="qr-yband"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6z"/></svg><span>Pulver fluffy</span></div>
+            <div class="qr-yband"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v20M3.5 7l17 10M20.5 7l-17 10"/></svg><span>Pulver</span></div>
+            <div class="qr-yband"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3v11M7 9.5l5 4 5-4"/><circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"/></svg><span>Gealterter Pulver</span></div>
+            <div class="qr-yband"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8h16M4 12h16M4 16h16"/></svg><span>Kompakt / gedeckelt</span></div>
+          </div>
+          <div class="qr-pad" id="qrPad">
+            <div class="qr-qline" style="top:25%"></div>
+            <div class="qr-qline" style="top:50%"></div>
+            <div class="qr-qline" style="top:75%"></div>
+            <div class="qr-cmline" style="left:16.7%"><i>10</i></div>
+            <div class="qr-cmline" style="left:33.3%"><i>20</i></div>
+            <div class="qr-cmline" style="left:50%"><i>30</i></div>
+            <div class="qr-cmline" style="left:66.7%"><i>40</i></div>
+            <div class="qr-cmline" style="left:83.3%"><i>50</i></div>
+            <div class="qr-pad-dot" id="qrPadDot" style="display:none"><span class="qr-dot-cm" id="qrDotCm">0 cm</span></div>
+          </div>
         </div>
-        <div class="qr-axis-x">Menge (cm) →</div>
+        <div class="qr-axis-x"><b>wenig Schnee</b><svg viewBox="0 0 60 12" style="width:52px;height:12px" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 6h56M2 6l5-3M2 6l5 3M58 6l-5-3M58 6l-5 3"/></svg><b>viel Schnee</b></div>
         <div class="qr-read" id="qrRead">Tippe oder ziehe auf dem Feld</div>
         <button class="cond-save" id="qrNextBtn" onclick="qrToStep(2)" disabled>Weiter</button>
       </div>
@@ -2060,11 +2070,18 @@ const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
 const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,wheelPxPerZoomLevel:_desktop?38:90,wheelDebounceTime:_desktop?12:40,maxBoundsViscosity:1.0,inertia:true}).fitBounds([[laMin,loMin],[laMax,loMax]],{padding:[6,6]});
 L.control.scale({imperial:false,maxWidth:120,position:'bottomright'}).addTo(map);
 if(_desktop&&map.scrollWheelZoom&&map.scrollWheelZoom.setWheelPxPerZoomLevel)map.scrollWheelZoom.setWheelPxPerZoomLevel(38);
-// Open on Switzerland but allow free panning / zoom-out across the whole OSM world
-map.setMinZoom(4);map.setMaxZoom(16);
+// Constrain panning + zoom to the meteo grid, with a thin white frame around the data
+const _fitZoom=map.getZoom();
+map.setMinZoom(_fitZoom);map.setMaxZoom(16);  // never zoom out past the initial view
+const _padLa=(laMax-laMin)*0.04,_padLo=(loMax-loMin)*0.04;
+map.setMaxBounds([[laMin-_padLa,loMin-_padLo],[laMax+_padLa,loMax+_padLo]]);
 const osmBase=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap / swisstopo / MeteoSwiss / SLF / Copernicus"}).addTo(map);
 const base=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg",{minZoom:9,attribution:"© swisstopo"}).addTo(map);
-// OSM base extends worldwide — neighbouring countries stay visible (no white mask)
+// White mask outside the meteo grid → clean, smooth map ending
+map.createPane('maskPane');map.getPane('maskPane').style.zIndex=350;map.getPane('maskPane').style.pointerEvents='none';
+const _world=[[-89,-360],[-89,360],[89,360],[89,-360]];
+const _hole=[[laMin,loMin],[laMin,loMax],[laMax,loMax],[laMax,loMin]];
+L.polygon([_world,_hole],{pane:'maskPane',stroke:false,fillColor:'#ffffff',fillOpacity:1,interactive:false}).addTo(map);
 const slopeWMTS=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.hangneigung-ueber_30/default/current/3857/{z}/{x}/{y}.png",{opacity:.7});
 const reliefWMTS=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissalti3d-reliefschattierung_monodirektional/default/current/3857/{z}/{x}/{y}.png",{opacity:.85});
 const roughImg=L.imageOverlay(ROUGH_PNG,[[M.png_bounds[0],M.png_bounds[1]],[M.png_bounds[2],M.png_bounds[3]]],{opacity:.78});
@@ -2445,7 +2462,8 @@ map.on('move',()=>{if(layer=="wind"){flowResize();fx.clearRect(0,0,flow.width,fl
 map.on('resize',()=>{if(layer=="wind")flowResize();});
 drawTimeline();
 // --- Point Inspector (universal click popup) ---
-// (map pan/zoom intentionally unrestricted — full OSM world; see base setup above)
+map.setMaxBounds([[laMinW-0.05,loMinW-0.05],[laMaxW+0.05,loMaxW+0.05]]);
+map.setMinZoom(map.getBoundsZoom([[laMinW,loMinW],[laMaxW,loMaxW]])+0.3);
 function iTabSw(el,tab){const c=el.closest('.icard');c.querySelectorAll('.itab').forEach(x=>x.classList.remove('active'));el.classList.add('active');c.querySelectorAll('.ipane').forEach(x=>x.classList.toggle('active',x.dataset.p===tab));}
 // --- Map-click inspect panel with charts + red X marker ---
 let inspMarker=null;
@@ -3189,8 +3207,12 @@ let bioUnlocked=false;
 let bioAutoTried=false;
 function showBioLock(){const el=document.getElementById('bioLock');
   if(el.style.display==='flex')return; // already showing — no second prompt
-  document.getElementById('bioLockName').textContent=bioName();el.style.display='flex';
-  if(!bioAutoTried){bioAutoTried=true;setTimeout(()=>{bioUnlock(true);},350);}}
+  document.getElementById('bioLockName').textContent=bioName();
+  const bn2=document.getElementById('bioLockName2');if(bn2)bn2.textContent=bioName();
+  el.style.display='flex';}
+  // NOTE: iOS Safari requires a user gesture for navigator.credentials.get(), so we
+  // do NOT auto-trigger Face ID (it was silently rejected → "doesn't always work" +
+  // an extra failed prompt). The user taps "Entsperren", which is a valid gesture.
 async function bioUnlock(auto){try{await bioVerify(sbUser.id);bioUnlocked=true;document.getElementById('bioLock').style.display='none';}catch(e){if(!auto)alert('Entsperren fehlgeschlagen. Bitte erneut versuchen.');}}
 function bioSignOut(){document.getElementById('bioLock').style.display='none';bioUnlocked=true;if(sb)sb.auth.signOut();}
 function authMenu(){openProfile();}
@@ -4040,11 +4062,11 @@ function qrInitMap(){
       document.getElementById('qrLocTxt').textContent='Manuell gesetzt'+(d.elev?(' · '+d.elev+' m'):'');});
     setTimeout(()=>{try{qrMapObj.invalidateSize();}catch(e){}},120);}}
 function qrSync(){const b2=document.getElementById('qrNextBtn');if(b2)b2.disabled=!(qrAmount!==null&&qrQuality!==null);}
-function qrQuadLabel(){const a2=qrAmount,q=qrQuality;
-  if(a2>=30&&q>=50)return 'Tiefer, guter Powder';
-  if(a2<30&&q>=50)return 'Wenig, aber pulvrig';
-  if(a2>=30&&q<50)return 'Viel, aber kompakt/schwer';
-  return 'Wenig & hart/eisig';}
+function qrQuadLabel(){const q=qrQuality==null?0:qrQuality;
+  if(q>=75)return 'Pulver fluffy';
+  if(q>=50)return 'Pulver';
+  if(q>=25)return 'Gealterter Pulver';
+  return 'Kompakt / gedeckelt';}
 function qrPadAttach(){const pad=document.getElementById('qrPad');if(!pad||pad._wired)return;pad._wired=true;
   pad.style.touchAction='none';
   function setFrom(e){const r=pad.getBoundingClientRect();
@@ -4053,7 +4075,9 @@ function qrPadAttach(){const pad=document.getElementById('qrPad');if(!pad||pad._
     qrQuality=Math.round(100*Math.max(0,Math.min(1,1-(e.clientY-r.top)/r.height)));
     const dot=document.getElementById('qrPadDot');
     dot.style.display='block';dot.style.left=(fx*100)+'%';dot.style.top=(100-qrQuality)+'%';
-    document.getElementById('qrRead').textContent=qrQuadLabel()+' · '+qrAmount+' cm · Qualität '+qrQuality+'%';
+    dot.classList.toggle('below',qrQuality>84);
+    const cmEl=document.getElementById('qrDotCm');if(cmEl)cmEl.textContent=qrAmount+' cm';
+    document.getElementById('qrRead').textContent=qrQuadLabel()+' · '+qrAmount+' cm';
     qrSync();}
   let on=false;
   pad.addEventListener('pointerdown',e=>{on=true;try{pad.setPointerCapture(e.pointerId);}catch(_){}setFrom(e);haptic(5);});
