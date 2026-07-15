@@ -164,5 +164,25 @@ DROP POLICY IF EXISTS "profiles_delete_own" ON profiles;
 CREATE POLICY "profiles_delete_own" ON profiles
   FOR DELETE USING (auth.uid() = id);
 
--- 11) Reload the API schema cache so the new columns/tables are visible now
+-- 11) Profile visibility (Nur ich / Freunde / Alle) + user reporting.
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS visibility TEXT DEFAULT 'all';
+-- §5 uses column-level grants on profiles, so the new column must be granted:
+GRANT SELECT (visibility) ON profiles TO anon, authenticated;
+
+CREATE TABLE IF NOT EXISTS user_flags (
+  user_id     UUID REFERENCES profiles(id) ON DELETE CASCADE,  -- the reported user
+  reporter_id UUID REFERENCES profiles(id) ON DELETE CASCADE,  -- who reported
+  reason      TEXT,
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (user_id, reporter_id)          -- one report per reporter per user
+);
+ALTER TABLE user_flags ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "uflags_insert_own" ON user_flags;
+CREATE POLICY "uflags_insert_own" ON user_flags
+  FOR INSERT WITH CHECK (auth.uid() = reporter_id);
+DROP POLICY IF EXISTS "uflags_read_own" ON user_flags;
+CREATE POLICY "uflags_read_own" ON user_flags
+  FOR SELECT USING (auth.uid() = reporter_id);
+
+-- 12) Reload the API schema cache so the new columns/tables are visible now
 NOTIFY pgrst, 'reload schema';
