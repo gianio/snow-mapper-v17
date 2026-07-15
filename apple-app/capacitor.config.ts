@@ -17,7 +17,7 @@ const config: CapacitorConfig = {
     // Let the web content draw under the status bar / home indicator; the web
     // app already handles safe areas via env(safe-area-inset-*).
     contentInset: 'never',
-    backgroundColor: '#e7e5f5',
+    backgroundColor: '#ffffff',
     // Allow the WKWebView to load Supabase / tile CDNs over https.
     limitsNavigationsToAppBoundDomains: false,
   },
@@ -27,7 +27,7 @@ const config: CapacitorConfig = {
       // native splash minimal and let JS hide it once boot completes.
       launchShowDuration: 0,
       launchAutoHide: false,
-      backgroundColor: '#e7e5f5',
+      backgroundColor: '#ffffff',
       showSpinner: false,
     },
     StatusBar: {

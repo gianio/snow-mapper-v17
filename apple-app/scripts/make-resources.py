@@ -17,10 +17,11 @@ from PIL import Image, ImageDraw
 OUT = Path(__file__).resolve().parent.parent / "resources"
 OUT.mkdir(parents=True, exist_ok=True)
 
-INDIGO = (74, 63, 158)      # --acc2-ish
-VIOLET = (125, 107, 214)    # #7d6bd6
-NIGHT = (14, 12, 34)        # #0e0c22
-PAGE = (231, 229, 245)      # #e7e5f5 (app background)
+# Black & white identity (matches the app's monochrome steering UI)
+INDIGO = (34, 34, 38)       # dark charcoal (gradient top)
+VIOLET = (58, 58, 64)       # mid charcoal
+NIGHT = (0, 0, 0)           # pure black (gradient bottom)
+PAGE = (255, 255, 255)      # white app background
 
 
 def _vgrad(size, top, bottom):
