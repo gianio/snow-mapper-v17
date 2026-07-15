@@ -1,0 +1,32 @@
+<!--
+  Add these keys to ios/App/App/Info.plist AFTER you run `npx cap add ios`.
+  Apple REJECTS builds that access location / camera / photos without a
+  purpose string, so all three are required (the wording must be specific —
+  vague strings are also rejected). German + English are both fine; App Review
+  reads the app's primary language.
+
+  Open ios/App/App/Info.plist in Xcode (or a text editor) and paste the
+  <key>/<string> pairs inside the top-level <dict>.
+-->
+
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>Zeigt deinen Standort auf der Karte und ordnet deine Schnee-Meldungen dem richtigen Ort zu.</string>
+
+<key>NSCameraUsageDescription</key>
+<string>Erlaubt dir, ein Foto der Schneeverhältnisse für deine Meldung aufzunehmen.</string>
+
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Erlaubt dir, ein vorhandenes Foto für deine Schnee-Meldung auszuwählen.</string>
+
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>Erlaubt der App, aufgenommene Fotos in deiner Mediathek zu speichern.</string>
+
+<!-- App display name (optional; overrides appName for the home screen). -->
+<key>CFBundleDisplayName</key>
+<string>Snow Model</string>
+
+<!-- Portrait only, matching the web app layout. -->
+<key>UISupportedInterfaceOrientations</key>
+<array>
+  <string>UIInterfaceOrientationPortrait</string>
+</array>

@@ -1,0 +1,22 @@
+# Node
+node_modules/
+*.log
+.DS_Store
+
+# Generated web assets (rebuilt by `npm run build:web`)
+www/*
+!www/.gitkeep
+
+# Generated icon/splash derivatives (source PNGs in resources/ ARE committed)
+resources/ios/
+resources/android/
+
+# Capacitor iOS native project build artifacts.
+# NOTE: the ios/ folder is generated on your Mac via `npx cap add ios`.
+# You MAY commit ios/ once generated (recommended for reproducibility), but
+# never commit these heavy/derived paths:
+ios/App/Pods/
+ios/App/App/public/
+ios/App/build/
+ios/DerivedData/
+ios/App/output/
