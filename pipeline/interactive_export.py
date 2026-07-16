@@ -706,7 +706,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <!-- Sentry error tracking: paste your browser DSN into SENTRY_DSN to enable. -->
 <script>window.SENTRY_DSN='';(function(){if(!window.SENTRY_DSN)return;var s=document.createElement('script');s.src='https://browser.sentry-cdn.com/7.120.0/bundle.tracing.min.js';s.crossOrigin='anonymous';s.onload=function(){try{window.Sentry.init({dsn:window.SENTRY_DSN,tracesSampleRate:0,release:'snow-mapper'});}catch(e){}};document.head.appendChild(s);window.addEventListener('error',function(e){try{if(window.Sentry&&e.error)window.Sentry.captureException(e.error);}catch(_){}});window.addEventListener('unhandledrejection',function(e){try{if(window.Sentry)window.Sentry.captureException(e.reason);}catch(_){}});})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
  :root{--fg:#16152e;--fg2:#39365e;--mut:#77749a;--acc:#141419;--acc2:#000;--bd:rgba(20,20,25,.10);--glass:rgba(255,255,255,.82);--glass2:rgba(248,251,255,.92);--glow:rgba(20,20,25,.10);--panel-h:52px;--r:14px;--r-lg:18px;
    /* design-system extensions (2026 refresh) */
@@ -787,6 +788,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #btmMain{padding:6px 14px 2px}
  #timeline{display:block;border:1px solid var(--bd);background:rgba(237,242,248,.5);border-radius:var(--r)}
  #presets::-webkit-scrollbar{display:none}
+ #presets.can-scroll{-webkit-mask-image:linear-gradient(90deg,#000 86%,transparent);mask-image:linear-gradient(90deg,#000 86%,transparent)}
  .winlbl{font-size:13px;font-weight:700;color:var(--fg);letter-spacing:-.01em}
  #tlHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:10px}
  #tlModeToggle{display:inline-flex;background:rgba(0,0,0,.05);border-radius:999px;padding:3px;flex-shrink:0}
@@ -864,6 +866,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* Map-click inspect panel */
  /* Super-transparent glass: the map stays clearly visible through the panel,
     blur+saturate keeps the content readable. Draggable via the header. */
+ body.insp-open #mapQr,body.insp-open #mapFab{opacity:0;pointer-events:none;transition:opacity .2s}
  .insp-panel{position:fixed;z-index:2600;background:rgba(255,255,255,.38);backdrop-filter:blur(10px) saturate(1.7);-webkit-backdrop-filter:blur(10px) saturate(1.7);display:none;flex-direction:column;box-shadow:var(--elev3);overflow:hidden;border:1px solid rgba(255,255,255,.55)}
  .insp-panel::before{content:'';flex-shrink:0;width:38px;height:4px;border-radius:2px;background:rgba(22,21,46,.28);margin:7px auto -3px}
  .insp-panel .insp-head{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -877,7 +880,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .insp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:16px 16px 12px;border-bottom:1px solid var(--hair);flex-shrink:0}
  .insp-head .insp-t{min-width:0}
  .insp-head .insp-t b{font-size:15px;color:var(--fg);font-weight:800;letter-spacing:-.01em}
- .insp-chips{display:flex;gap:6px;margin-top:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+ .insp-chips{display:flex;gap:6px;margin-top:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-right:12px;-webkit-mask-image:linear-gradient(90deg,#000 91%,transparent);mask-image:linear-gradient(90deg,#000 91%,transparent)}
  .insp-chips::-webkit-scrollbar{display:none}
  .insp-chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--fill);color:var(--fg2);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
  .insp-chip.accent{background:rgba(20,20,25,.12);color:var(--acc2)}
@@ -939,7 +942,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .acct-img{display:block;width:34px;height:34px;border-radius:50%;background-size:cover;background-position:center;box-shadow:0 0 0 2px rgba(255,255,255,.9)}
  #userBar{display:none!important} /* replaced by the rail account button */
  .rail-btn.feed-accent:hover{color:var(--acc)}
- .feed-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+ .feed-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2);display:none}
+ .feed-dot.on{display:block}
  #btn3dFloat:hover{background:rgba(20,20,25,.26);color:var(--acc2)}
  #btn3dFloat.active{background:var(--acc);color:#fff;border-color:var(--acc)}
  .rail-btn svg{width:21px;height:21px}
@@ -954,8 +958,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #searchRes .sr .sub{font-size:11px;color:var(--mut);margin-top:2px}
  #intro{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;background:#ffffff;transition:opacity .24s ease}
  #intro.hide{opacity:0;pointer-events:none}
- #intro .mark{width:58px;height:58px;border-radius:18px;background:linear-gradient(150deg,#2e2e34,#000);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px rgba(0,0,0,.30);color:#fff}
- #intro .mark svg{width:32px;height:32px}
+ #intro .fall{animation:flakeFall 2.9s ease-in-out infinite}
+ #intro .flake{display:block;width:74px;height:74px;color:#0a0a0c;animation:flakeSpin 6.5s linear infinite;filter:drop-shadow(0 10px 18px rgba(0,0,0,.14))}
+ @keyframes flakeSpin{to{transform:rotate(360deg)}}
+ @keyframes flakeFall{0%{transform:translate(0,-12px)}25%{transform:translate(5px,-4px)}50%{transform:translate(-4px,4px)}75%{transform:translate(4px,9px)}100%{transform:translate(0,-12px)}}
+ @media (prefers-reduced-motion:reduce){#intro .fall,#intro .flake{animation:none}}
  #intro .track{width:132px;height:3px;border-radius:2px;background:rgba(22,21,46,.10);overflow:hidden}
  #intro .bar{height:100%;width:100%;border-radius:2px;background:linear-gradient(90deg,#141419,#3c3c42);transform-origin:left;transform:scaleX(.12);animation:introLoad 1.15s ease-in-out infinite alternate}
  @keyframes introLoad{from{transform:scaleX(.12)}to{transform:scaleX(1)}}
@@ -1042,6 +1049,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .auth-overlay{position:fixed;inset:0;z-index:5000;background:rgba(11,17,32,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px}
  .auth-modal{position:relative;background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:var(--r-xl);padding:36px 28px 28px;width:100%;max-width:360px;box-shadow:var(--elev3),0 1px 0 rgba(255,255,255,.5) inset}
  .auth-modal h2{margin:0 0 4px;font-size:24px;font-weight:800;color:var(--fg);letter-spacing:-.03em}
+ .auth-note{font-size:12px;color:var(--mut);margin:4px 0 10px;line-height:1.5}
  .auth-sub{font-size:13px;color:var(--mut);margin:0 0 24px}
  .auth-modal form{display:flex;flex-direction:column;gap:10px}
  .auth-modal input[type="text"],.auth-modal input[type="email"],.auth-modal input[type="password"]{width:100%;padding:13px 16px;border:1.5px solid rgba(0,0,0,.08);border-radius:var(--r);font-size:15px;font-family:inherit;color:var(--fg);background:var(--fill);outline:none;box-sizing:border-box;transition:border-color .15s,box-shadow .15s}
@@ -1593,7 +1601,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rpt-marker:hover{transform:scale(1.15)}
  @media(prefers-reduced-motion:reduce){.cat-chip,.sub-chip,.bucket,.slide-knob,.radial-seg{transition:none!important}}
 </style></head><body>
-<div id="intro"><div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v20M2 12h20M4.9 4.9l14.2 14.2M19.1 4.9L4.9 19.1"/><path d="M12 5l2 2M12 5l-2 2M12 19l2-2M12 19l-2-2M5 12l2 2M5 12l2-2M19 12l-2 2M19 12l-2-2"/></svg></div><div class="track"><div class="bar"></div></div><div class="sub"></div></div>
+<div id="intro"><div class="fall"><svg class="flake" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M24 3v42M5.8 13.5l36.4 21M42.2 13.5L5.8 34.5"/><path d="M24 9l4.5-4.5M24 9l-4.5-4.5M24 39l4.5 4.5M24 39l-4.5 4.5"/><path d="M10 16.9l-6.2-1.2M10 16.9l1.2-6.2M38 31.1l6.2 1.2M38 31.1l-1.2 6.2"/><path d="M38 16.9l6.2-1.2M38 16.9l-1.2-6.2M10 31.1l-6.2 1.2M10 31.1l1.2 6.2"/><circle cx="24" cy="24" r="3.2"/><path d="M24 15.5l3 3M24 15.5l-3 3M24 32.5l3-3M24 32.5l-3-3M16.6 19.7l1.1 4.1M31.4 19.7l-1.1 4.1M16.6 28.3l4.1-1.1M31.4 28.3l-4.1 1.1"/></svg></div><div class="track"><div class="bar"></div></div><div class="sub"></div></div>
 <div id="toastWrap" aria-live="polite"></div>
 <div id="disc"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="discH"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><h2 id="discH">Bevor du startest</h2><p><b>Experimentelle Modelldaten.</b> Diese App zeigt modellierte Schnee-, Pulver- und Skitauglichkeits-Sch&auml;tzungen. Sie ist <b>kein Lawinenbulletin</b> und ersetzt nicht die offizielle Beurteilung des <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation.html" target="_blank" rel="noopener">SLF</a> bzw. <a href="https://whiterisk.ch" target="_blank" rel="noopener">White Risk</a>. Entscheidungen im Gel&auml;nde triffst du auf <b>eigenes Risiko</b>.</p><p class="fine">Datenschutz: F&uuml;r Konto, Meldungen und Fotos werden E-Mail, Standort und Bilddaten bei Supabase (EU) gespeichert. Du kannst Konto und Beitr&auml;ge jederzeit l&ouml;schen.</p><label class="chk"><input type="checkbox" id="discChk" onchange="var b=document.getElementById('discBtn');if(b)b.disabled=!this.checked"><span>Ich habe verstanden, dass dies experimentelle Daten sind und kein Lawinenbulletin ersetzt.</span></label><button class="accept" id="discBtn" disabled onclick="acceptDisc()">Verstanden &ndash; loslegen</button></div></div>
 <div id="a2hs" onclick="if(event.target===this)a2hsLater()"><div class="sheet" role="dialog" aria-modal="true">
@@ -1687,7 +1695,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="auth-modal" onclick="event.stopPropagation()">
 <button class="auth-close" id="authClose" onclick="authHide()">&times;</button>
 <h2 id="authTitle">Anmelden</h2>
-<p class="auth-sub" id="authSub">Anmelden für Field Reports</p>
+<p class="auth-sub" id="authSub">Anmelden für Community &amp; Meldungen</p>
+<p class="auth-note">Karte &amp; Prognosen funktionieren ohne Konto — du brauchst es nur zum Melden, für den Feed und dein Profil.</p>
 <form id="authForm" onsubmit="authSubmit(event)">
 <input type="text" id="authUser" placeholder="Username" autocomplete="username" style="display:none"/>
 <input type="email" id="authEmail" placeholder="E-Mail" autocomplete="email" required/>
@@ -1862,6 +1871,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
           <button data-v="friends" onclick="profSetVis('friends')">Freunde</button>
           <button data-v="all" class="active" onclick="profSetVis('all')">Alle</button>
         </div>
+        <div class="prof-hint" style="margin-top:8px">«Freunde» heisst: ihr folgt euch gegenseitig. Die Einstellung gilt für deine Beiträge auf der Karte und im Feed.</div>
         <div class="prof-sec-title">Meine Daten</div>
         <button class="prof-item" onclick="profExportData(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Meine Daten exportieren (JSON)</button>
         <button class="prof-item" onclick="profDeleteContent(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>Alle meine Beiträge löschen</button>
@@ -2062,7 +2072,7 @@ const snowEvents=[];
 (function(){let s=-1;for(let t=0;t<T;t++){if(hSnow[t]>SNOW_THRESH){if(s<0)s=t;}else{if(s>=0){snowEvents.push([s,t]);s=-1;}}}if(s>=0)snowEvents.push([s,T]);})();
 function sinceLastSnowfall(){let ls=nowIdx;for(const[s,e]of snowEvents){if(s<=nowIdx)ls=s;}return[ls,Math.min(T,nowIdx+1)];}
 function tillTomorrow(){for(let t=nowIdx+1;t<T;t++){const d=new Date(M.times[t]+'Z');if(d.getUTCHours()===8)return[nowIdx,t];}return[nowIdx,Math.min(T,nowIdx+24)];}
-function fmtTime(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+'Z');const h=d.getUTCHours();return h===0?'12AM':h===12?'12PM':h<12?h+'AM':(h-12)+'PM';}
+function fmtTime(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+'Z');return d.getUTCHours()+':00';}
 function drawTimeline(){const tc=document.getElementById('timeline');const rect=tc.getBoundingClientRect();
   if(!rect.width)return;
   const cw=rect.width,ch=rect.height||120,dpr=window.devicePixelRatio||1;
@@ -2078,7 +2088,7 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     ctx2.strokeStyle='rgba(22,21,46,.05)';ctx2.lineWidth=1;ctx2.beginPath();ctx2.moveTo(x,22);ctx2.lineTo(x,baseY);ctx2.stroke();
     // only label a day if it clears the previous label → no overlap on narrow phones
     if(x-_lastLabX>=48){ctx2.fillStyle='rgba(70,90,110,.7)';ctx2.font='700 11.5px Inter,system-ui';
-      ctx2.fillText(d.toLocaleDateString('de-CH',{weekday:'short',day:'2-digit'}),x+6,ch-7);_lastLabX=x;}}}
+      ctx2.fillText(['So','Mo','Di','Mi','Do','Fr','Sa'][d.getUTCDay()]+' '+d.getUTCDate()+'.',x+6,ch-7);_lastLabX=x;}}}
   // baseline
   ctx2.strokeStyle='rgba(22,21,46,.09)';ctx2.lineWidth=1;ctx2.beginPath();ctx2.moveTo(0,baseY+.5);ctx2.lineTo(cw,baseY+.5);ctx2.stroke();
   // snowfall bars — rounded tops, vertical gradient (snow stays blue)
@@ -2276,8 +2286,8 @@ function renderStations(){stnGroup.clearLayers();if(!showStn)return;
 }
 let _lastTier=-1;
 map.on('zoomend',()=>{const t=detailTier();if(t!==_lastTier){_lastTier=t;renderStations();loadReportMarkers();}});
-function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");return d.toLocaleString('en-GB',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit'});}
-function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});}
+function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");const wd=['So','Mo','Di','Mi','Do','Fr','Sa'][d.getUTCDay()];return wd+' '+d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'., '+d.getUTCHours()+':00';}
+function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString('de-CH',{day:'2-digit',month:'short'});}
 function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
   if(l=="snow"){let h="<b>Neuschnee [cm] (SLF-Skala)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (click for details)</div>";}
   if(l=="depth")return '<b>Snow Depth [cm]</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(220,240,255),rgb(100,190,250),rgb(30,130,210),rgb(20,100,185),rgb(80,30,140),rgb(120,15,80));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:10px"><span>0</span><span>100</span><span>200</span><span>300+</span></div>';
@@ -2379,6 +2389,8 @@ document.querySelectorAll('#topics button[data-t]').forEach(btn=>{
   btn.onmouseenter=()=>legend(TOPICS[btn.dataset.t][0].l);btn.onmouseleave=()=>legend();});
 function positionSearch(){try{var sw=document.getElementById('searchWrap'),lb=document.getElementById('layerBar');if(!sw||!lb)return;var r=lb.getBoundingClientRect();sw.style.top=(r.bottom+8)+'px';}catch(e){}}
 addEventListener('resize',positionSearch);requestAnimationFrame(positionSearch);
+function presetsFade(){const p=document.getElementById('presets');if(!p)return;p.classList.toggle('can-scroll',p.scrollWidth-p.clientWidth-p.scrollLeft>4);}
+(function(){const p=document.getElementById('presets');if(p)p.addEventListener('scroll',presetsFade,{passive:true});addEventListener('resize',presetsFade);requestAnimationFrame(presetsFade);})();
 (function(){const mt=document.getElementById('moreTopics'),topics=document.getElementById('topics');
   mt.onclick=e=>{e.stopPropagation();const open=topics.classList.toggle('expanded');document.getElementById('layerBar').classList.toggle('expanded',open);requestAnimationFrame(positionSearch);};
   document.addEventListener('click',e=>{const menu=document.getElementById('topicsMore');
@@ -2513,11 +2525,11 @@ map.setView([46.8027,9.8360],10.6,{animate:false}); // start zoomed on Davos
 function iTabSw(el,tab){const c=el.closest('.icard');c.querySelectorAll('.itab').forEach(x=>x.classList.remove('active'));el.classList.add('active');c.querySelectorAll('.ipane').forEach(x=>x.classList.toggle('active',x.dataset.p===tab));}
 // --- Map-click inspect panel with charts + red X marker ---
 let inspMarker=null;
-function inspClose(){document.getElementById('inspPanel').classList.remove('open');if(inspMarker){map.removeLayer(inspMarker);inspMarker=null;}}
+function inspClose(){document.getElementById('inspPanel').classList.remove('open');document.body.classList.remove('insp-open');if(inspMarker){map.removeLayer(inspMarker);inspMarker=null;}}
 map.on('click',function(e){inspOpen(e.latlng.lat,e.latlng.lng);});
 let inspLast=null;
 function inspAutoRefresh(){try{if(inspLast&&document.getElementById('inspPanel').classList.contains('open'))inspOpen(inspLast.lat,inspLast.lon);}catch(e){}}
-function inspOpen(lat,lon){inspLast={lat,lon};
+function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-open');
   const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
   if(cx2<0||cx2>=W||cy2<0||cy2>=H)return;
   const p=cy2*W+cx2,elev=melevv(p),wk=mainToWind[p];
@@ -3081,6 +3093,8 @@ async function loadDbReports(){
   try{
     const{data}=await sb.from('reports').select('*').order('created_at',{ascending:false}).limit(60);
     if(!data||!data.length){return;}
+    try{const nw=new Date(data[0].created_at).getTime();const seen=+(localStorage.getItem('ssm_feed_seen')||0);
+      const fd=document.querySelector('#feedBtn .feed-dot');if(fd)fd.classList.toggle('on',nw>seen);}catch(e){}
     const ids=data.map(r=>r.id),uids=[...new Set(data.map(r=>r.user_id).filter(Boolean))];
     // usernames
     let nameMap={},avatarMap={};try{const{data:pr}=await sb.from('profiles').select('id,username,avatar_url').in('id',uids);(pr||[]).forEach(p=>{nameMap[p.id]=p.username;if(p.avatar_url)avatarMap[p.id]=p.avatar_url;});}catch(e){}
@@ -3162,7 +3176,7 @@ function authRender(){
     document.getElementById('authBioName').textContent=bioName();return;}
   document.getElementById('authSub').style.display='';
   document.getElementById('authTitle').textContent=isReg?'Account erstellen':'Anmelden';
-  document.getElementById('authSub').textContent=isReg?'Erstelle ein Konto für Field Reports':'Anmelden für Field Reports';
+  document.getElementById('authSub').textContent=isReg?'Erstelle ein Konto für die Community':'Anmelden für Community & Meldungen';
   document.getElementById('authUser').style.display=isReg?'':'none';
   document.getElementById('authSubmitBtn').textContent=isReg?'Registrieren':'Anmelden';
   document.getElementById('authSwitch').innerHTML=isReg?'Schon registriert? <button onclick="authToggle()">Anmelden</button>':'Kein Account? <button onclick="authToggle()">Registrieren</button>';
@@ -4025,6 +4039,7 @@ const FEED_SCOPES=[
   {id:'map',label:'Kartenausschnitt',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21 1 6"/><line x1="8" y1="3" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="21"/></svg>'}
 ];
 function feedOpen(){
+  try{localStorage.setItem('ssm_feed_seen',String(Date.now()));const fd=document.querySelector('#feedBtn .feed-dot');if(fd)fd.classList.remove('on');}catch(e){}
   const fp=document.getElementById('feedPage');fp.classList.add('open');
   document.getElementById('feedScope').innerHTML=FEED_SCOPES.map(s=>
     `<button data-s="${s.id}" class="${feedScope===s.id?'active':''}" onclick="feedSetScope('${s.id}')">${s.icon}${s.label}</button>`).join('');

@@ -184,5 +184,34 @@ DROP POLICY IF EXISTS "uflags_read_own" ON user_flags;
 CREATE POLICY "uflags_read_own" ON user_flags
   FOR SELECT USING (auth.uid() = reporter_id);
 
+-- Enforcement: reports respect the author's visibility setting.
+--   'all'      -> everyone (incl. anonymous)
+--   'friends'  -> mutual follows only (both directions), plus the author
+--   'me'       -> only the author
+-- SECURITY DEFINER so the check can read profiles/follows regardless of the
+-- caller's column grants and without RLS recursion.
+CREATE OR REPLACE FUNCTION report_author_visible(author UUID)
+RETURNS BOOLEAN AS $$
+DECLARE vis TEXT;
+BEGIN
+  SELECT COALESCE(visibility, 'all') INTO vis FROM profiles WHERE id = author;
+  IF vis IS NULL OR vis = 'all' THEN RETURN TRUE; END IF;      -- default: public
+  IF auth.uid() IS NULL THEN RETURN FALSE; END IF;
+  IF auth.uid() = author THEN RETURN TRUE; END IF;
+  IF vis = 'friends' THEN
+    RETURN EXISTS (SELECT 1 FROM follows
+                   WHERE follower_id = auth.uid() AND following_id = author)
+       AND EXISTS (SELECT 1 FROM follows
+                   WHERE follower_id = author AND following_id = auth.uid());
+  END IF;
+  RETURN FALSE;                                                 -- 'me'
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+DROP POLICY IF EXISTS "reports_read_all" ON reports;
+DROP POLICY IF EXISTS "reports_read_visible" ON reports;
+CREATE POLICY "reports_read_visible" ON reports
+  FOR SELECT USING (report_author_visible(user_id));
+
 -- 12) Reload the API schema cache so the new columns/tables are visible now
 NOTIFY pgrst, 'reload schema';
