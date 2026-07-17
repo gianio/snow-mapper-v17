@@ -791,8 +791,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  html{background:#ffffff}
  html,body{margin:0;padding:0;height:100%;height:100dvh;width:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--fg);overscroll-behavior:none;background:#ffffff;position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
  #map{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);background:#fff}
+ .leaflet-control-scale{margin-right:92px!important;margin-bottom:10px!important}
  #flow{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);z-index:450;pointer-events:none}
- #modeGlow{position:fixed;inset:0;z-index:2500;pointer-events:none;transition:box-shadow .5s ease;box-shadow:inset 0 0 0 3px rgba(20,20,25,.5),inset 0 0 70px rgba(20,20,25,.12)}
+ #modeGlow{display:none}
+ .rail-btn svg,#legendBtn svg{color:var(--topic-accent,#141419);transition:color .45s ease}
  /* --- Layer selector: one elegant floating glass card --- */
  #layerBar{position:absolute;z-index:1000;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;max-width:calc(100vw - 112px);display:inline-flex;flex-direction:column;padding:6px;background:rgba(255,255,255,.62);backdrop-filter:blur(24px) saturate(1.5);-webkit-backdrop-filter:blur(24px) saturate(1.5);border:1px solid rgba(255,255,255,.6);border-radius:20px;box-shadow:0 10px 34px rgba(22,21,46,.13),0 1px 0 rgba(255,255,255,.6) inset;--topic-accent:#141419;--topic-tint:rgba(20,20,25,.13)}
  #topics{display:flex;gap:2px;align-items:center;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -1286,6 +1288,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .obs-loc-wrap{position:relative}
  .obs-pin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);z-index:600;color:#e0245e;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.3))}
  .obs-pin svg{width:34px;height:34px;display:block}
+ .mm-tools{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px;z-index:600}
+ .mm-tools button{width:36px;height:36px;border-radius:11px;border:1px solid var(--hair);background:rgba(255,255,255,.9);backdrop-filter:blur(8px);color:var(--fg);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--elev1)}
+ .mm-tools button svg{width:17px;height:17px}
  .obs-pin-hint{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);z-index:600;pointer-events:none;font-size:10.5px;font-weight:700;color:#fff;background:rgba(11,17,32,.62);padding:4px 10px;border-radius:999px;white-space:nowrap}
  .obs-loc-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg2);font-weight:600;margin-bottom:10px;flex-wrap:wrap}
  .obs-loc-src{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(20,20,25,.12);color:var(--acc2)}
@@ -1569,12 +1574,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .cond-save:disabled{opacity:.4;cursor:default}
  /* Quick-Check entry points */
  .qr-padwrap{display:flex;gap:6px;margin-top:12px;align-items:stretch}
- .qr-ylab{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:18px;font-size:9.5px;font-weight:800;color:var(--mut);letter-spacing:.05em;writing-mode:vertical-rl;transform:rotate(180deg);text-transform:uppercase;white-space:nowrap}
+ .qr-ylab{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:20px;font-size:11px;font-weight:800;color:var(--mut);letter-spacing:.05em;writing-mode:vertical-rl;transform:rotate(180deg);text-transform:uppercase;white-space:nowrap}
  .qr-pad{position:relative;flex:1;aspect-ratio:1.18;border-radius:16px;border:1px solid var(--hair);background:linear-gradient(to right,rgba(20,20,25,.10),rgba(20,20,25,.03) 55%,#fff);cursor:crosshair;overflow:hidden}
- .qr-qline{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed rgba(20,20,25,.13);pointer-events:none}
+ .qr-qline{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed rgba(20,20,25,.30);pointer-events:none}
  .qr-xbands{display:flex;margin-top:8px;padding-left:24px}
- .qr-xband{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;font-size:8.8px;font-weight:800;line-height:1.15;letter-spacing:.01em}
- .qr-xband svg{width:15px;height:15px}
+ .qr-xband{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;font-size:10.5px;font-weight:800;line-height:1.18;letter-spacing:.01em}
+ .qr-xband svg{width:21px;height:21px}
  .qr-xband:nth-child(1){color:#9a9aa2}
  .qr-xband:nth-child(2){color:#6e6e76}
  .qr-xband:nth-child(3){color:#3c3c42}
@@ -1606,11 +1611,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #mapFab{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 14px);width:56px;height:56px;z-index:900}
  #mapFab:active{transform:scale(.9)}
  #mapFab span{display:none}
- #mapQr{position:fixed;left:auto;right:17px;transform:none;bottom:calc(var(--btm-h,90px) + 96px);z-index:900}
+ #mapQr{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 94px);z-index:900}
  #mapQr:active{transform:scale(.9)}
- .feed-qr{position:absolute;bottom:calc(env(safe-area-inset-bottom, 0px) + 112px);left:auto;right:19px;transform:none;width:56px;height:56px;padding:0;border-radius:50%;border:none;background:linear-gradient(140deg,#ffd75e,#f5a623 55%,#e08a00);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;box-shadow:0 10px 26px rgba(240,150,10,.45),0 0 0 5px rgba(255,255,255,.75);z-index:5;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
+ .feed-qr{position:absolute;bottom:calc(env(safe-area-inset-bottom, 0px) + 108px);left:auto;right:16px;transform:none;width:56px;height:56px;padding:0;border-radius:50%;border:1.5px solid rgba(10,10,12,.9);background:#fff;color:#0a0a0c;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;box-shadow:0 10px 26px rgba(0,0,0,.22);z-index:5;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
  .feed-qr svg{width:24px;height:24px}
- .feed-qr span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:.03em;color:#b06a00;text-shadow:0 1px 2px rgba(255,255,255,.85);white-space:nowrap}
+ .feed-qr span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:.03em;color:var(--fg2);text-shadow:0 1px 2px rgba(255,255,255,.85);white-space:nowrap}
  .feed-qr:active{transform:scale(.92)}
  .qr-loc{font-size:12.5px;font-weight:650;color:var(--fg2);background:var(--fill);border:1px solid var(--hair);border-radius:10px;padding:8px 11px;margin-top:12px}
  .rail-btn.qr-accent{background:linear-gradient(150deg,rgba(245,166,35,.24),rgba(245,166,35,.1));color:#b06a00;border-color:rgba(245,166,35,.4)}
@@ -1641,9 +1646,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .us-empty{color:var(--mut);font-size:13px;text-align:center;padding:18px 0}
  .feed-empty{text-align:center;padding:80px 20px;color:var(--mut);font-size:15px}
  /* Instagram-style centered create button at the very bottom of the feed */
- .feed-fab{position:absolute;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);left:auto;right:16px;transform:none;width:62px;height:62px;padding:0;border-radius:50%;border:none;background:linear-gradient(140deg,#3c3c42,#141419 55%,#000000);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;box-shadow:0 10px 28px rgba(20,20,25,.45),0 0 0 5px rgba(255,255,255,.75);z-index:5;transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s}
- .feed-fab svg{width:28px;height:28px}
- .feed-fab span{position:absolute;bottom:-19px;left:50%;transform:translateX(-50%);font-size:10.5px;font-weight:800;letter-spacing:.03em;color:var(--acc2);text-shadow:0 1px 2px rgba(255,255,255,.8)}
+ .feed-fab{position:absolute;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);left:auto;right:16px;transform:none;width:56px;height:56px;padding:0;border-radius:50%;border:none;background:linear-gradient(140deg,#3c3c42,#141419 55%,#000000);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;box-shadow:0 10px 28px rgba(20,20,25,.45),0 0 0 5px rgba(255,255,255,.75);z-index:5;transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s}
+ .feed-fab svg{width:24px;height:24px}
+ .feed-fab span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:.03em;color:var(--fg2);text-shadow:0 1px 2px rgba(255,255,255,.8)}
  .feed-fab:active{transform:scale(.9)}
  .feed-fab:hover{box-shadow:0 12px 32px rgba(20,20,25,.55),0 0 0 5px rgba(255,255,255,.85)}
  /* Text-only posts: first-class "quote" cards with a category tint wash */
@@ -2436,8 +2441,7 @@ function setTopic(t,subIdx){
   const tc=TOPIC_COLOR[t]||TOPIC_COLOR.snow;const lb=document.getElementById('layerBar');
   lb.style.setProperty('--topic-accent',tc[0]);lb.style.setProperty('--topic-tint',tc[1]);
   tlSel=tc[0];tlSelTint=tc[1];
-  const glow=document.getElementById('modeGlow');
-  if(glow)glow.style.boxShadow='inset 0 0 0 3px '+tc[2]+', inset 0 0 60px '+tc[3];
+  document.documentElement.style.setProperty('--topic-accent',tc[0]);
   document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.setAttribute('content','#ffffff'));
   document.documentElement.style.setProperty('--edge-tint','rgba(255,255,255,.92)');
   document.getElementById('topics').classList.remove('expanded');document.getElementById('layerBar').classList.remove('expanded');
@@ -2725,9 +2729,10 @@ function icRad(cv,p){const{ctx,w,h}=icSetup(cv,92);
   for(let t=0;t<T;t++){const d=new Date(M.times[t]+'Z'),key=d.toISOString().slice(0,10);
     if(!cur||cur.key!==key){cur={key,sum:0,n:0,inWin:false,lbl:d.toLocaleDateString('de-CH',{weekday:'short'})};days.push(cur);}
     cur.sum+=sunv(t,p);cur.n++;if(t>=a&&t<b)cur.inWin=true;}
-  const baseY=h-16,topY=20,n=days.length,bw=(w-8)/n;
+  const shown=days.filter(d2=>d2.inWin);
+  const baseY=h-16,topY=20,n=shown.length,bw=(w-8)/Math.max(1,n);
   ctx.strokeStyle='rgba(22,21,46,.12)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(4,baseY+.5);ctx.lineTo(w-4,baseY+.5);ctx.stroke();
-  days.forEach((d2,i)=>{
+  shown.forEach((d2,i)=>{
     const pct=Math.round(100*Math.max(0,Math.min(1,d2.sum/(0.42*24))));
     const bh=Math.max(2,pct/100*(baseY-topY)),x=4+i*bw;
     ctx.fillStyle=d2.inWin?'#f5a623':'rgba(245,166,35,.32)';
@@ -2737,6 +2742,21 @@ function icRad(cv,p){const{ctx,w,h}=icSetup(cv,92);
     ctx.fillText(pct+'%',x+bw/2,baseY-bh-4);
     ctx.fillStyle='rgba(90,110,130,.75)';ctx.font='600 9px Inter';
     ctx.fillText(d2.lbl,x+bw/2,h-4);});}
+// --- Mini-map tools (post-location step): search a place + recenter on GPS ---
+function miniMapTools(mapObj,wrapEl){if(!wrapEl||wrapEl.querySelector('.mm-tools'))return;
+  const d=document.createElement('div');d.className='mm-tools';
+  d.innerHTML='<button type="button" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>'
+    +'<button type="button" title="Mein Standort" aria-label="Mein Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg></button>';
+  const[bs,bl]=d.querySelectorAll('button');
+  bs.onclick=e=>{e.stopPropagation();const q=prompt('Ort suchen…');if(!q)return;
+    fetch('https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText='+encodeURIComponent(q)+'&limit=1&sr=4326')
+      .then(r=>r.json()).then(j=>{const a2=j.results&&j.results[0]&&j.results[0].attrs;
+        if(a2){mapObj.setView([a2.lat||a2.y,a2.lon||a2.x],13.5);}else toast('Kein Ort gefunden.','err');})
+      .catch(()=>toast('Suche fehlgeschlagen.','err'));};
+  bl.onclick=e=>{e.stopPropagation();if(!navigator.geolocation){toast('Kein GPS verfügbar.','err');return;}
+    navigator.geolocation.getCurrentPosition(pos=>{mapObj.setView([pos.coords.latitude,pos.coords.longitude],13.5);try{haptic(6);}catch(_){}},
+      ()=>toast('Standort nicht verfügbar.','err'),{enableHighAccuracy:true,timeout:8000});};
+  wrapEl.appendChild(d);}
 // --- 3D Terrain Viewer (MapLibre GL) ---
 let map3d=null,is3d=false,exag3d=1.5;
 function make3dOverlay(mode){
@@ -2942,7 +2962,7 @@ document.addEventListener('keydown',function(e){
 document.addEventListener('gesturestart',e=>e.preventDefault());
 document.addEventListener('gesturechange',e=>e.preventDefault());
 (function(){let lt=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lt<=300&&!e.target.closest('#map,#map3d')){e.preventDefault();}lt=n;},{passive:false});})();
-try{map.setView([46.8027,9.8360],10.6,{animate:false});}catch(e){} // start on Davos (safe: all decls done)
+try{map.setView([46.8027,9.8360],11.8,{animate:false});}catch(e){} // start on Davos, ~10x10 km viewport
 window.__APP_OK=true;
 setTopic('snow',0);dismissIntro();
 try{const _pid=new URLSearchParams(location.search).get('post');
@@ -3114,7 +3134,7 @@ function loadReportMarkers(){
   reportMarkers.clearLayers();
   const tier=(typeof detailTier==='function')?detailTier():2;
   allReports.forEach(r=>{
-    const mColor=CAT_COLORS[r.cat]||'#5e5ce6';
+    const mColor='#16152e'; // Post-Marker monochrom (B/W-Design)
     let icon;
     if(tier===0){
       icon=L.divIcon({className:'',html:`<div class="rpt-dot" style="background:${mColor}"></div>`,iconSize:[14,14],iconAnchor:[7,7]});
@@ -4058,6 +4078,7 @@ function obsInitMap(){const el=document.getElementById('obsMap');if(!el)return;i
   if(!el.parentElement.querySelector('.obs-pin')){
     el.parentElement.insertAdjacentHTML('beforeend',
       '<div class="obs-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="rgba(224,36,94,.14)"/><circle cx="12" cy="10" r="3"/></svg></div><div class="obs-pin-hint">Karte unter dem Pin verschieben</div>');}
+  miniMapTools(obsMap,el.parentElement);
   function moved(){const c=obsMap.getCenter();obsApplyLoc(c.lat,c.lng,'manual');
     const r=document.getElementById('obsLocRow');if(r)r.innerHTML=obsLocRowHTML();
     const n=document.getElementById('obsNext');if(n)n.disabled=false;}
@@ -4262,6 +4283,7 @@ function qrInitMap(){
     L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg').addTo(qrMapObj);
     const wrap=document.getElementById('qrMap').parentElement;
     if(!wrap.querySelector('.obs-pin'))wrap.insertAdjacentHTML('beforeend','<div class="obs-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="rgba(224,36,94,.14)"/><circle cx="12" cy="10" r="3"/></svg></div>');
+    miniMapTools(qrMapObj,wrap);
     qrMapObj.on('moveend',()=>{const cc=qrMapObj.getCenter();qrLL=[cc.lat,cc.lng];
       const d=obsDEM(cc.lat,cc.lng);
       document.getElementById('qrLocTxt').textContent='Manuell gesetzt'+(d.elev?(' · '+d.elev+' m'):'');});
