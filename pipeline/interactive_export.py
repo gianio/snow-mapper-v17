@@ -622,7 +622,9 @@ _BOOT_SPLIT = r"""<script>
       window.__D=JSON.parse(text);text=null;
       var code=await appJsP;
       try{await waitLeaflet();}catch(e){fail('Karten-Bibliothek nicht erreichbar — Verbindung prüfen.');return;}
+      await new Promise(function(res){var t0=Date.now();(function poll(){if(window.supabase||Date.now()-t0>4000)return res();setTimeout(poll,120);})();});
       var sc=document.createElement('script');sc.textContent=code;document.body.appendChild(sc);
+      setTimeout(function(){if(!window.__APP_OK&&window.__introStuck)window.__introStuck('App-Start fehlgeschlagen — bitte erneut versuchen.');},6000);
     }catch(e){fail('Daten konnten nicht geladen werden — Verbindung prüfen.');try{if(window.Sentry)window.Sentry.captureException(e);}catch(_){}}
   })();
 })();
@@ -730,6 +732,23 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="icon-180.png"/>
 <!-- Sentry error tracking: paste your browser DSN into SENTRY_DSN to enable. -->
+<script>
+(function(){
+  function stuck(msg){var i=document.getElementById('intro');if(!i)return;
+    var s=i.querySelector('.sub');if(s)s.textContent=msg;
+    var f=i.querySelector('.flake');if(f)f.style.animationPlayState='paused';
+    if(!i.querySelector('.retry')){var b=document.createElement('button');b.className='retry';b.textContent='Erneut versuchen';
+      b.style.cssText='margin-top:14px;padding:11px 22px;border-radius:12px;border:1px solid rgba(0,0,0,.15);background:#0a0a0c;color:#fff;font:700 14px Inter,system-ui;cursor:pointer';
+      b.onclick=function(){location.reload();};i.appendChild(b);}}
+  window.__introStuck=stuck;
+  window.addEventListener('error',function(e){
+    if(document.getElementById('intro')&&!window.__APP_OK)
+      stuck('Fehler beim Start: '+String((e&&e.message)||'unbekannt').slice(0,120));});
+  setTimeout(function(){
+    if(document.getElementById('intro')&&!window.__APP_OK)
+      stuck('Der Start dauert ungewöhnlich lange — Verbindung prüfen.');},45000);
+})();
+</script>
 <script>window.SENTRY_DSN='';(function(){if(!window.SENTRY_DSN)return;var s=document.createElement('script');s.src='https://browser.sentry-cdn.com/7.120.0/bundle.tracing.min.js';s.crossOrigin='anonymous';s.onload=function(){try{window.Sentry.init({dsn:window.SENTRY_DSN,tracesSampleRate:0,release:'snow-mapper'});}catch(e){}};document.head.appendChild(s);window.addEventListener('error',function(e){try{if(window.Sentry&&e.error)window.Sentry.captureException(e.error);}catch(_){}});window.addEventListener('unhandledrejection',function(e){try{if(window.Sentry)window.Sentry.captureException(e.reason);}catch(_){}});})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -2333,7 +2352,7 @@ function renderStations(){stnGroup.clearLayers();if(!showStn)return;
     m.bindPopup(stationCard(s),{maxWidth:isMobile?240:260});m.addTo(stnGroup);}
 }
 let _lastTier=-1;
-map.on('zoomend',()=>{const t=detailTier();if(t!==_lastTier){_lastTier=t;renderStations();loadReportMarkers();}});
+map.on('zoomend',()=>{try{const t=detailTier();if(t!==_lastTier){_lastTier=t;renderStations();loadReportMarkers();}}catch(e){}});
 function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");const wd=['So','Mo','Di','Mi','Do','Fr','Sa'][d.getUTCDay()];return wd+' '+d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'., '+d.getUTCHours()+':00';}
 function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString('de-CH',{day:'2-digit',month:'short'});}
 function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
@@ -2569,7 +2588,6 @@ drawTimeline();
 // --- Point Inspector (universal click popup) ---
 map.setMaxBounds([[laMinW-0.05,loMinW-0.05],[laMaxW+0.05,loMaxW+0.05]]);
 map.setMinZoom(map.getBoundsZoom([[laMinW,loMinW],[laMaxW,loMaxW]])+0.3);
-map.setView([46.8027,9.8360],10.6,{animate:false}); // start zoomed on Davos
 function iTabSw(el,tab){const c=el.closest('.icard');c.querySelectorAll('.itab').forEach(x=>x.classList.remove('active'));el.classList.add('active');c.querySelectorAll('.ipane').forEach(x=>x.classList.toggle('active',x.dataset.p===tab));}
 // --- Map-click inspect panel with charts + red X marker ---
 let inspMarker=null;
@@ -2924,6 +2942,8 @@ document.addEventListener('keydown',function(e){
 document.addEventListener('gesturestart',e=>e.preventDefault());
 document.addEventListener('gesturechange',e=>e.preventDefault());
 (function(){let lt=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lt<=300&&!e.target.closest('#map,#map3d')){e.preventDefault();}lt=n;},{passive:false});})();
+try{map.setView([46.8027,9.8360],10.6,{animate:false});}catch(e){} // start on Davos (safe: all decls done)
+window.__APP_OK=true;
 setTopic('snow',0);dismissIntro();
 try{const _pid=new URLSearchParams(location.search).get('post');
   if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);}catch(e){}
