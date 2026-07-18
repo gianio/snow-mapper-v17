@@ -688,7 +688,7 @@ def _write_pwa_assets(out_dir: Path) -> None:
 _SERVICE_WORKER = r"""// Swiss Snow Model — service worker (installable + offline last-data).
 // Network-first for all same-origin GETs (shell, app.js, data blob, icons) so
 // online users always get the latest, and offline falls back to the last cache.
-const C='ssm-v5';
+const C='ssm-v6';
 const CORE=['./','./index.html','./app.js','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(CORE).catch(()=>{})));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
@@ -706,8 +706,9 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
       return resp;})));
     return;
   }
+  const fresh=(r.mode==='navigate'||url.pathname.endsWith('/app.js')||url.pathname.endsWith('/index.html'));
   e.respondWith(
-    fetch(r).then(resp=>{const cp=resp.clone();caches.open(C).then(c=>c.put(r,cp)).catch(()=>{});return resp;})
+    fetch(r,fresh?{cache:'no-cache'}:undefined).then(resp=>{const cp=resp.clone();caches.open(C).then(c=>c.put(r,cp)).catch(()=>{});return resp;})
       .catch(()=>caches.match(r).then(m=>m||(r.mode==='navigate'?caches.match('./index.html'):undefined)))
   );
 });
@@ -1695,6 +1696,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <span id="topicsMore">
       <button data-t="temp"><span class="mt-ic" style="background:rgba(232,89,12,.12);color:#e8590c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V4a2 2 0 1 0-4 0v10.76a4 4 0 1 0 4 0z"/></svg></span><span class="mt-tx"><b>Temperatur</b><span>Luft &amp; Oberfläche</span></span></button>
       <button data-t="wind"><span class="mt-ic" style="background:rgba(13,148,136,.12);color:#0d9488"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.6 4.6A2 2 0 1 1 11 8H2M12.6 19.4A2 2 0 1 0 14 16H2M17.6 7.6A2.5 2.5 0 1 1 19 12H2"/></svg></span><span class="mt-tx"><b>Wind</b><span>Geschwindigkeit &amp; Böen</span></span></button>
+      <button data-t="qpr"><span class="mt-ic" style="background:rgba(30,58,138,.12);color:#1e3a8a"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg></span><span class="mt-tx"><b>Powder-Reports</b><span>Heatmap der Community</span></span></button>
       </span>
   <div id="sublayers"></div>
 </div>
@@ -2202,8 +2204,7 @@ const _fitZoom=map.getZoom();
 map.setMinZoom(_fitZoom);map.setMaxZoom(16);  // never zoom out past the initial view
 const _padLa=(laMax-laMin)*0.04,_padLo=(loMax-loMin)*0.04;
 map.setMaxBounds([[laMin-_padLa,loMin-_padLo],[laMax+_padLa,loMax+_padLo]]);
-const osmBase=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap / swisstopo / MeteoSwiss / SLF / Copernicus"}).addTo(map);
-const base=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg",{minZoom:9,attribution:"© swisstopo"}).addTo(map);
+const base=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe-winter/default/current/3857/{z}/{x}/{y}.jpeg",{maxZoom:17,attribution:"© swisstopo / MeteoSwiss / SLF / Copernicus"}).addTo(map);
 // White mask outside the meteo grid → clean, smooth map ending
 map.createPane('maskPane');map.getPane('maskPane').style.zIndex=350;map.getPane('maskPane').style.pointerEvents='none';
 const _world=[[-89,-360],[-89,360],[89,360],[89,-360]];
@@ -2269,6 +2270,44 @@ function renderRadiation(){const doy=bandDoy();
     if(layer=="radsun"){const cc=rad2cube[p];let s=0;for(let t=a;t<b;t++)s+=sunv(t,cc);const sf=Math.max(0,Math.min(1,s/(0.42*win)));val*=(0.2+0.8*sf);}
     const o=p*4;if(val<vmax*0.02){d[o+3]=0;continue;}const c=radColor(val/vmax);d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=205;}
   rcx.putImageData(img,0,0);radOverlay.setUrl(rcv.toDataURL());}
+// --- Quick-Powder-Reports: Demo-Punkte + Heatmap-Overlay (dunkelblau = tief & fluffy) ---
+const DEMO_QPR=[
+[46.797,9.827,55,95],[46.81,9.85,50,90],[46.78,9.80,45,88],[46.83,9.81,40,85],[46.77,9.87,52,92],
+[46.79,9.90,38,80],[46.84,9.88,35,75],[46.75,9.83,48,90],[46.78,9.67,30,70],[46.86,9.53,28,65],
+[46.73,9.60,25,60],[46.70,9.16,32,72],[46.85,9.21,20,55],[46.83,9.26,24,60],
+[46.49,9.84,42,85],[46.53,9.90,36,78],[46.43,9.76,30,70],[46.60,10.03,26,62],
+[46.02,7.75,45,88],[46.10,7.78,38,80],[45.98,7.71,50,90],[46.08,7.93,35,74],
+[46.10,7.23,40,82],[46.06,7.30,33,72],[46.19,7.31,26,60],[46.31,7.47,30,68],
+[46.62,8.03,44,86],[46.66,8.06,38,78],[46.56,7.98,32,70],[46.68,7.96,28,64],
+[46.68,8.59,42,84],[46.63,8.60,36,76],[46.72,8.64,30,66],
+[46.82,9.28,35,75],[46.90,9.83,30,68],[46.95,9.90,25,58],[47.05,9.44,22,55],
+[46.34,8.99,28,64],[46.47,8.75,24,58],[46.86,8.63,33,72],[47.10,8.76,20,52],
+[46.44,7.10,30,68],[46.35,7.99,38,80],[46.39,7.63,42,84],[46.30,7.60,35,74]];
+let dbQpr=[];
+const qcv=document.createElement('canvas');qcv.width=500;qcv.height=340;const qcx=qcv.getContext('2d');
+let qprOverlay=L.imageOverlay(qcv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:.82});
+function renderQprHeat(){
+  const GW=250,GH=170,f=new Float32Array(GW*GH);
+  const pts=DEMO_QPR.concat(dbQpr);
+  for(const[la,lo,cm,q]of pts){
+    const gx=(lo-loMin)/(loMax-loMin)*(GW-1),gy=(laMax-la)/(laMax-laMin)*(GH-1);
+    const inten=Math.max(0,Math.min(1,(cm/60)))*Math.max(0,Math.min(1,(q/100)));
+    if(inten<=0)continue;const R=9;
+    for(let dy=-R;dy<=R;dy++){const y=Math.round(gy)+dy;if(y<0||y>=GH)continue;
+      for(let dx=-R;dx<=R;dx++){const x=Math.round(gx)+dx;if(x<0||x>=GW)continue;
+        const d2=dx*dx+dy*dy;if(d2>R*R)continue;
+        f[y*GW+x]+=inten*Math.exp(-d2/(2*3.4*3.4));}}}
+  const img=qcx.createImageData(GW,GH),d=img.data;
+  for(let i=0;i<GW*GH;i++){const v=Math.min(1,f[i]/1.15);const o=i*4;
+    if(v<0.04){d[o+3]=0;continue;}
+    const t=Math.pow(v,0.75);
+    d[o]=205-190*t|0;d[o+1]=228-198*t|0;d[o+2]=255-130*t|0;
+    d[o+3]=60+195*t|0;}
+  const tmp=document.createElement('canvas');tmp.width=GW;tmp.height=GH;
+  tmp.getContext('2d').putImageData(img,0,0);
+  qcx.clearRect(0,0,500,340);qcx.imageSmoothingEnabled=true;
+  qcx.drawImage(tmp,0,0,500,340);
+  qprOverlay.setUrl(qcv.toDataURL());}
 const windArr=L.layerGroup(); const stnGroup=L.layerGroup().addTo(map);
 let layer="snow",stat="avg",windowSize=48,a=nowIdx,b=Math.min(T,nowIdx+48),showStn=true,wtimer=null;
 const isMobile=window.innerWidth<=560;
@@ -2373,12 +2412,13 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
   if(l=="tsurf"){let extra="estimated: air ± radiative cooling/warming";if(stat=="sub0")extra="only cells with max surface temp &lt;0°C";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>T Surface [°C] (${sn})</b><br>${extra}`;}
   if(l=="rough")return "<b>Terrain Roughness</b><br>light→dark brown = rougher";
   if(l=="skiable")return '<b>Skiability Estimate</b><br>Snow depth vs. terrain roughness need<div style="margin-top:4px"><div><i style="background:#64dc64"></i>Plenty of snow</div><div><i style="background:#a0dc64"></i>Skiable</div><div><i style="background:#ffdc32"></i>Marginal</div><div><i style="background:#ff8c28"></i>Needs more snow</div><div><i style="background:#ff3c28"></i>Far from skiable</div><div><i style="background:#500000"></i>Too steep (&gt;55°)</div></div>';
+  if(l=="qprheat")return '<b>Powder-Reports (Heatmap)</b><br><div><i style="background:#cde4ff"></i>vereinzelt / wenig</div><div><i style="background:#5b83d9"></i>guter Powder</div><div><i style="background:#0f2a7d"></i>tief &amp; fluffy</div><div style="margin-top:4px;font-size:11px">aus Quick-Powder-Reports · inkl. Demo-Daten</div>';
   if(l=="powder")return '<b>Powder Conditions</b><br><div><i style="background:rgba(200,220,255,.7)"></i>Powder (stable)</div><div><i style="background:rgba(180,205,245,.55)"></i>Powder (reduced)</div><div style="margin-top:4px;font-size:11px">Gust ≈ mean wind × 1.5</div>';
   return "<b>Hillshade / Relief (swisstopo)</b>";}
 function legend(l){document.getElementById('legend').innerHTML=legendFor(l||layer);}
 document.getElementById('legendBtn').onclick=()=>{const lg=document.getElementById('legend'),btn=document.getElementById('legendBtn');lg.classList.toggle('show');btn.classList.toggle('active');};
 function showOverlay(){
-  [slopeWMTS,reliefWMTS,aspectGrid,roughImg,radOverlay].forEach(x=>map.removeLayer(x));
+  [slopeWMTS,reliefWMTS,aspectGrid,roughImg,radOverlay,qprOverlay].forEach(x=>map.removeLayer(x));
   const grid=(layer=="snow"||layer=="depth"||layer=="temp"||layer=="sun"||layer=="wind"||layer=="powder"||layer=="tsurf"||layer=="skiable");
   const radg=(layer=="rad"||layer=="radsun");
   raster.setOpacity(grid?0.94:0);
@@ -2387,6 +2427,7 @@ function showOverlay(){
   else if(layer=="shade")map.addLayer(reliefWMTS);
   else if(layer=="aspect")map.addLayer(aspectGrid);
   else if(layer=="rough")map.addLayer(roughImg);
+  else if(layer=="qprheat"){map.addLayer(qprOverlay);renderQprHeat();}
   if(layer=="wind"){map.addLayer(windArr);startFlow();}else{map.removeLayer(windArr);stopFlow();}
 }
 function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefresh();if(tlMode==='detail')drawTimeline();
@@ -2416,6 +2457,7 @@ document.querySelectorAll('#tlModeToggle button').forEach(x=>x.onclick=()=>setTl
 })();
 const TOPICS={
   ski:[{l:'skiable',s:'avg',label:'Skiable'},{l:'powder',s:'avg',label:'Powder'}],
+  qpr:[{l:'qprheat',s:'avg',label:'Heatmap'}],
   snow:[{l:'snow',s:'avg',label:'Neuschnee'},{l:'depth',s:'avg',label:'Schneehöhe'}],
   temp:[{l:'temp',s:'avg',label:'Mean'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'temp',s:'sub0',label:'<0°C'},{l:'temp',s:'max05',label:'0-5°C'},{l:'tsurf',s:'avg',label:'Surface'}],
   wind:[{l:'wind',s:'avg',label:'Mean'},{l:'wind',s:'max',label:'Max'},{l:'wind',s:'min',label:'Min'},{l:'wind',s:'lt10',label:'<10 km/h'}],
@@ -2430,12 +2472,13 @@ const TOPIC_COLOR={
   temp:['#e8590c','rgba(232,89,12,.13)','rgba(232,89,12,.52)','rgba(232,89,12,.12)'],
   wind:['#0d9488','rgba(13,148,136,.14)','rgba(13,148,136,.5)','rgba(13,148,136,.10)'],
   rad:['#f59e0b','rgba(245,158,11,.16)','rgba(245,158,11,.55)','rgba(245,158,11,.13)'],
-  terrain:['#64748b','rgba(100,116,139,.16)','rgba(100,116,139,.5)','rgba(100,116,139,.10)']};
+  terrain:['#64748b','rgba(100,116,139,.16)','rgba(100,116,139,.5)','rgba(100,116,139,.10)'],
+  qpr:['#1e3a8a','rgba(30,58,138,.14)','rgba(30,58,138,.5)','rgba(30,58,138,.10)']};
 let tlSel='#5e5ce6',tlSelTint='rgba(94,92,230,.12)';
 function setTopic(t,subIdx){
   curTopic=t;
   document.querySelectorAll('#topics button[data-t]').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
-  const isMore=['temp','wind','rad','terrain'].includes(t);
+  const isMore=['temp','wind','rad','terrain','qpr'].includes(t);
   document.getElementById('moreTopics').classList.toggle('sel',isMore);
   document.querySelectorAll('#topicsMore button').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
   const tc=TOPIC_COLOR[t]||TOPIC_COLOR.snow;const lb=document.getElementById('layerBar');
@@ -2962,12 +3005,12 @@ document.addEventListener('keydown',function(e){
 document.addEventListener('gesturestart',e=>e.preventDefault());
 document.addEventListener('gesturechange',e=>e.preventDefault());
 (function(){let lt=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lt<=300&&!e.target.closest('#map,#map3d')){e.preventDefault();}lt=n;},{passive:false});})();
-try{map.setView([46.8027,9.8360],11.8,{animate:false});}catch(e){} // start on Davos, ~10x10 km viewport
+try{map.setView([46.7970,9.8270],11.8,{animate:false});}catch(e){} // Davos (Platz/Dorf), Karte fuellt den Screen
 window.__APP_OK=true;
 setTopic('snow',0);dismissIntro();
 try{const _pid=new URLSearchParams(location.search).get('post');
   if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);}catch(e){}
-if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
+if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(reg=>{try{reg.update();}catch(e){}}).catch(()=>{});});}
 requestAnimationFrame(()=>{document.documentElement.style.setProperty('--btm-h',document.getElementById('bottomPanel').offsetHeight+'px');});
 // --- Supabase Auth & Reports ---
 const SB_URL='https://gdtxwowcqtbdkcoksivb.supabase.co';
@@ -3196,6 +3239,9 @@ async function loadDbReports(){
     if(!data||!data.length){return;}
     try{const nw=new Date(data[0].created_at).getTime();const seen=+(localStorage.getItem('ssm_feed_seen')||0);
       const fd=document.querySelector('#feedBtn .feed-dot');if(fd)fd.classList.toggle('on',nw>seen);}catch(e){}
+    try{dbQpr=data.filter(r=>r.condition_data&&r.condition_data.quick).map(r=>{const ll=parseGeo(r.location);const cd=r.condition_data;
+        return ll?[ll[0],ll[1],+cd.powderAmountCm||0,+cd.powderQuality||0]:null;}).filter(Boolean);
+      if(layer==='qprheat')renderQprHeat();}catch(e){}
     const ids=data.map(r=>r.id),uids=[...new Set(data.map(r=>r.user_id).filter(Boolean))];
     // usernames
     let nameMap={},avatarMap={};try{const{data:pr}=await sb.from('profiles').select('id,username,avatar_url').in('id',uids);(pr||[]).forEach(p=>{nameMap[p.id]=p.username;if(p.avatar_url)avatarMap[p.id]=p.avatar_url;});}catch(e){}
