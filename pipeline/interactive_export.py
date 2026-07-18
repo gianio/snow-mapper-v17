@@ -2501,6 +2501,11 @@ function setTopic(t,subIdx){
 document.querySelectorAll('#topics button[data-t]').forEach(btn=>{
   btn.onclick=()=>setTopic(btn.dataset.t);
   btn.onmouseenter=()=>legend(TOPICS[btn.dataset.t][0].l);btn.onmouseleave=()=>legend();});
+// The expanded "Mehr" menu lives OUTSIDE #topics — bind its buttons too
+// (they were dead: tapping Temperatur/Wind/Powder-Reports did nothing).
+document.querySelectorAll('#topicsMore button[data-t]').forEach(btn=>{
+  btn.onclick=e=>{e.stopPropagation();setTopic(btn.dataset.t);};
+  btn.onmouseenter=()=>legend(TOPICS[btn.dataset.t][0].l);btn.onmouseleave=()=>legend();});
 function positionSearch(){try{var sw=document.getElementById('searchWrap'),lb=document.getElementById('layerBar');if(!sw||!lb)return;var r=lb.getBoundingClientRect();sw.style.top=(r.bottom+8)+'px';}catch(e){}}
 addEventListener('resize',positionSearch);requestAnimationFrame(positionSearch);
 function presetsFade(){const p=document.getElementById('presets');if(!p)return;p.classList.toggle('can-scroll',p.scrollWidth-p.clientWidth-p.scrollLeft>4);}
