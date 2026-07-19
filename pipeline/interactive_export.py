@@ -616,7 +616,10 @@ _BOOT_SPLIT = r"""<script>
     (function poll(){if(window.L)return res();if(Date.now()-t0>20000)return rej(new Error('Leaflet timeout'));setTimeout(poll,150);})();});}
   (async function(){
     try{
-      var lj=await (await fetchT('data/latest.json',{cache:'no-cache'},15000)).json();
+      var isDemo=location.search.indexOf('demo')>=0;
+      var ljr=await fetchT(isDemo?'data/demo-latest.json':'data/latest.json',{cache:'no-cache'},15000);
+      if(!ljr.ok&&isDemo)ljr=await fetchT('data/latest.json',{cache:'no-cache'},15000);
+      var lj=await ljr.json();
       var useGz=!!(lj.gz&&window.DecompressionStream);
       var res=await fetchT('data/'+(useGz?lj.gz:lj.data),{cache:'force-cache'},90000);
       if(!res.ok)throw new Error('HTTP '+res.status);
@@ -988,6 +991,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .leaflet-control-attribution a{color:inherit!important}
  .leaflet-control-scale-line{background:rgba(255,255,255,.6)!important;border-color:rgba(22,21,46,.35)!important;color:var(--fg2)!important;font-family:'Inter',system-ui!important;font-size:10px!important;font-weight:600!important;backdrop-filter:blur(4px)}
  .leaflet-control-scale{margin-bottom:6px!important;margin-right:8px!important}
+ #demoPill{position:fixed;z-index:1050;top:calc(env(safe-area-inset-top,0px) + 172px);left:12px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--hair);background:rgba(255,255,255,.85);backdrop-filter:blur(12px);color:var(--fg2);font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:var(--elev1)}
+ #demoPill .dp-dot{width:7px;height:7px;border-radius:50%;background:rgba(20,20,25,.35)}
+ #demoPill.on{background:#0a0a0c;color:#fff;border-color:#0a0a0c}
+ #demoPill.on .dp-dot{background:#5ee68a}
  #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 116px);left:12px;width:230px;max-width:calc(100vw - 24px)}
  #searchWrap input{width:100%;padding:10px 12px 10px 34px;border-radius:12px;border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.72);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);color:var(--fg);font-size:14px;font-weight:500;outline:none;box-shadow:0 2px 8px rgba(0,0,0,.07);font-family:inherit}
  #searchWrap input::placeholder{color:var(--mut);font-weight:400}
@@ -1476,23 +1483,26 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #userViewModal{justify-content:stretch;align-items:stretch;padding:0}
  #userViewModal .prof-sheet{width:100%;max-width:none;height:100%;max-height:none;border-radius:0;display:flex;flex-direction:column}
  #userViewModal .uv-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
- .uv-posts{margin-top:18px;text-align:left}
+ .uv-posts{margin-top:22px;text-align:left}
+ .uv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;border-radius:14px;overflow:hidden;margin-bottom:12px}
+ .uv-cell{aspect-ratio:1;cursor:pointer;background:var(--fill)}
+ .uv-cell img{width:100%;height:100%;object-fit:cover;display:block}
  .uv-posts h3{font-size:13px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;margin:0 0 10px}
  .uv-post{background:var(--card);border:1px solid var(--hair);border-radius:14px;margin-bottom:10px;overflow:hidden;cursor:pointer;box-shadow:var(--elev1)}
  .uv-post img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
  .uv-post .b{padding:10px 12px;font-size:13px;color:var(--fg2)}
  .uv-post .b b{color:var(--fg)}
  .uv-post .t{font-size:11px;color:var(--mut);font-weight:600;margin-top:3px}
- .uv-hero{position:relative;height:86px;padding-top:env(safe-area-inset-top,0px);background:linear-gradient(140deg,#0c0c0f 0%,#26262c 45%,#26262c 80%,#3c3c42 100%)}
+ .uv-hero{position:relative;height:108px;padding-top:env(safe-area-inset-top,0px);background:linear-gradient(150deg,#0a0a0c 0%,#26262c 60%,#55555e 100%)}
  .uv-hero::after{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 90'%3E%3Cpath d='M0 90 60 42 110 68 180 22 240 58 300 30 400 74 400 90Z' fill='rgba(255,255,255,.10)'/%3E%3C/svg%3E") bottom/cover no-repeat}
  .uv-close{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:10px;z-index:1;width:30px;height:30px;border-radius:10px;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:15px;cursor:pointer;backdrop-filter:blur(4px)}
- .uv-body{text-align:center;padding-top:0!important}
- .uv-av{margin:-38px auto 10px;width:84px;height:84px;font-size:30px;box-shadow:0 0 0 4px var(--glass2),var(--elev2)}
+ .uv-body{text-align:center;padding-top:60px!important}
+ .uv-av{position:absolute;left:50%;bottom:-46px;transform:translateX(-50%);margin:0;width:92px;height:92px;font-size:32px;box-shadow:0 0 0 5px #fff,var(--elev2);z-index:2}
  .uv-name{font-size:21px;font-weight:800;color:var(--fg);letter-spacing:-.02em}
  .uv-bio{font-size:14px;color:var(--fg2);line-height:1.5;margin:6px auto 0;max-width:290px;white-space:pre-wrap}
  .uv-bio:empty{display:none}
  .uv-stats{display:flex;justify-content:center;gap:8px;margin:16px 0 4px}
- .uv-stat{flex:1;max-width:110px;background:var(--fill);border:1px solid var(--hair);border-radius:14px;padding:10px 6px}
+ .uv-stat{flex:1;max-width:110px;background:#fff;border:1px solid var(--hair);border-radius:16px;padding:12px 6px;box-shadow:var(--elev1)}
  .uv-stat b{display:block;font-size:19px;font-weight:800;color:var(--fg);letter-spacing:-.02em}
  .uv-stat span{font-size:10.5px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
  .uv-report{width:100%;margin-top:10px;border:none;background:none;color:var(--mut);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;padding:9px;text-decoration:underline;text-underline-offset:3px}
@@ -1731,6 +1741,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       </span>
   <div id="sublayers"></div>
 </div>
+<button id="demoPill" onclick="demoToggle()" title="Demo-Modus umschalten"><span class="dp-dot"></span><span id="demoPillTxt">Demo</span></button>
 <div id="searchWrap"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Ort suchen…" autocomplete="off"/><div id="searchRes"></div></div>
 <div id="ctrlRail">
   <button class="rail-btn" id="accountBtn" onclick="accountTap()" title="Anmelden" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></button>
@@ -2000,9 +2011,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 </div>
 <div class="prof-modal" id="userViewModal" style="display:none" onclick="if(event.target===this)userViewClose()">
   <div class="prof-sheet uv-sheet">
-    <div class="uv-hero"><button class="uv-close" onclick="userViewClose()" aria-label="Schliessen">✕</button></div>
+    <div class="uv-hero"><button class="uv-close" onclick="userViewClose()" aria-label="Schliessen">✕</button><div class="prof-av uv-av" id="uvAv"><span id="uvInitial"></span></div></div>
     <div class="prof-body uv-body">
-      <div class="prof-av uv-av" id="uvAv"><span id="uvInitial"></span></div>
       <div class="uv-name" id="uvName"></div>
       <div class="uv-bio" id="uvBio"></div>
       <div class="uv-stats">
@@ -3205,8 +3215,43 @@ const DEMO_REPORTS=DEMO_DEFS.map((d,i2)=>({id:'d'+(i2+1),user:DEMO_USERS[i2%DEMO
   time:i2<3?('vor '+(2+i2)+'h'):(i2<12?('vor '+(i2-1)+'h'):('vor '+(i2-10)+'d')),
   img:(i2%4===3)?null:demoImg(200+i2*9,210+i2*7,205+(i2%5)*6),stars:(i2%5)+1,likes:(i2*3)%17,comments:i2%4}));
 
+// Grosse Demo-Flotte: ~150 zusätzliche Meldungen von vielen Nutzern
+(function(){
+  const U2=[...DEMO_USERS,'NiveNina','CouloirChris','FirnFelix','TiefschneeTina','RidgeRuedi','SplitSelina','EngadinElia','WallisWendy','GlarnerGian','UrnerUrs','BuendnerBea','JuraJon','TessinTom','SaasSera','ArosaAnja','ElmEnzo','DavosDario','ZermattZoe','GrindelGwen','AndermattAri'];
+  const spots=[[46.797,9.827],[46.78,9.67],[46.49,9.84],[46.02,7.75],[46.10,7.23],[46.62,8.03],[46.68,8.59],[46.34,8.99],[46.86,8.63],[47.05,9.44],[46.44,7.10],[46.35,7.99],[46.39,7.63],[46.31,7.47],[46.56,7.98],[46.72,8.64],[46.85,9.21],[46.60,10.03],[46.53,9.90],[47.10,8.76],[46.19,7.31],[46.90,9.83],[46.43,9.76],[46.66,8.06],[46.08,7.93],[46.73,9.60],[46.70,9.16],[46.47,8.75],[46.63,8.60],[46.30,7.60]];
+  let seed=42;const rnd=()=> (seed=(seed*1103515245+12345)&0x7fffffff)/0x7fffffff;
+  const jit=()=> (rnd()-0.5)*0.08;
+  const qualN=['Winddeckel','Sonnendeckel','Durchnässter Pulver','Gealterter Pulver','Pulver'];
+  let id=DEMO_REPORTS.length;
+  function add(o){DEMO_REPORTS.push(Object.assign({id:'g'+(++id),icon:'',likes:Math.floor(rnd()*25),comments:Math.floor(rnd()*5),stars:1+Math.floor(rnd()*5)},o));}
+  for(let i=0;i<50;i++){ // Quick-Powder-Reports (farbige Marker + Heatmap-Futter)
+    const sp=spots[i%spots.length],cm=5*Math.floor(1+rnd()*11),q=Math.floor(rnd()*100);
+    add({user:U2[i%U2.length],cat:'snow',sub:'Quick Powder',
+      measurement:qualN[Math.min(4,Math.floor(q/20))]+' · '+cm+' cm',caption:null,
+      lat:sp[0]+jit(),lng:sp[1]+jit(),time:'vor '+(1+Math.floor(rnd()*72))+'h',img:null,
+      condition_data:{quick:true,powderAmountCm:cm,powderQuality:q}});}
+  const caps=['Traumtag!','Unverspurt bis Mittag.','Harter Deckel oberhalb 2600 m.','Beste Verhältnisse im Nordhang.','Sicht mässig, Schnee top.','Viel Wind am Grat.','Sulz ab Mittag.','Perfekter Firn.','Grosse Einsinktiefe, Vorsicht.','Lohnt sich!'];
+  for(let i=0;i<50;i++){ // Feld-Reports mit Foto
+    const sp=spots[(i*3)%spots.length];
+    add({user:U2[(i*7)%U2.length],cat:i%3?'snow':'tour',sub:i%3?'Neuschnee':'Skitour',
+      measurement:(10+5*Math.floor(rnd()*9))+' cm',caption:caps[i%caps.length],
+      lat:sp[0]+jit(),lng:sp[1]+jit(),time:'vor '+(1+Math.floor(rnd()*96))+'h',
+      img:demoImg(180+i*11,200+i*13,190+i*7)});}
+  const obsT=[['danger','Wumm-Geräusche','Setzungsgeräusche beim Aufstieg.'],['danger','Lawinenabgang','Frisches Schneebrett im NE-Hang.'],['danger','Triebschnee','Deutliche Triebschnee-Ansammlungen am Grat.'],['snow','Schneehöhe','Messung am Hangfuss.'],['tour','Aufstiegsspur','Spur neu angelegt, gut zu gehen.']];
+  for(let i=0;i<50;i++){ // Beobachtungen
+    const sp=spots[(i*5+2)%spots.length],t=obsT[i%obsT.length];
+    add({user:U2[(i*3+1)%U2.length],cat:t[0],sub:t[1],
+      measurement:t[1]==='Schneehöhe'?(40+5*Math.floor(rnd()*20))+' cm':null,
+      caption:t[2],lat:sp[0]+jit(),lng:sp[1]+jit(),time:'vor '+(1+Math.floor(rnd()*5))+'d',
+      img:(i%5===0)?demoImg(150+i*9,170+i*11,160+i*5):null});}
+})();
 let reportMarkers=L.layerGroup().addTo(map);
 function demoActive(){try{if(location.search.indexOf('demo')>=0)return true;}catch(e){}return !sb;}
+function demoToggle(){try{const u=new URL(location.href);
+  if(u.searchParams.has('demo'))u.searchParams.delete('demo');else u.searchParams.set('demo','1');
+  location.href=u.toString();}catch(e){}}
+(function(){try{const b=document.getElementById('demoPill');if(!b)return;
+  if(location.search.indexOf('demo')>=0){b.classList.add('on');document.getElementById('demoPillTxt').textContent='DEMO · 1.4.2026';}}catch(e){}})();
 let allReports=demoActive()?[...DEMO_REPORTS]:[];
 function loadReportMarkers(){
   reportMarkers.clearLayers();
@@ -3573,12 +3618,14 @@ async function viewUser(uid,username){
     document.getElementById('uvReports').textContent=ids.length;
     document.getElementById('uvEndoN').textContent=total;
     const posts=document.getElementById('uvPosts');
-    const rows=(rs||[]).map(r=>{const ll=parseGeo(r.location);const cap=escapeHtml(r.caption||r.subtype||'');
+    const withImg=(rs||[]).filter(r=>r.image_url),noImg=(rs||[]).filter(r=>!r.image_url);
+    const grid=withImg.length?('<div class="uv-grid">'+withImg.map(r=>{const ll=parseGeo(r.location);
+      return '<div class="uv-cell" onclick="userViewClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'"><img src="'+r.image_url+'" loading="lazy" alt=""/></div>';}).join('')+'</div>'):'';
+    const rows=noImg.map(r=>{const ll=parseGeo(r.location);const cap=escapeHtml(r.caption||r.subtype||'');
       const meta=escapeHtml((r.condition_data&&r.condition_data.measurement)||r.subtype||'');
       return '<div class="uv-post" onclick="userViewClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'">'+
-        (r.image_url?('<img src="'+r.image_url+'" loading="lazy"/>'):'')+
         '<div class="b"><b>'+meta+'</b>'+(cap?(' — '+cap):'')+'<div class="t">'+timeAgo(r.created_at)+'</div></div></div>';}).join('');
-    posts.innerHTML='<h3>Beiträge</h3>'+(rows||'<div style="color:var(--mut);font-size:13px">Noch keine Beiträge.</div>');
+    posts.innerHTML='<h3>Beiträge · '+ids.length+'</h3>'+((grid+rows)||'<div style="color:var(--mut);font-size:13px;text-align:center;padding:14px 0">Noch keine Beiträge.</div>');
   }catch(e){}
 }
 // --- Swiss/DSG data rights: export + delete + legal re-show ---
