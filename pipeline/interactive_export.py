@@ -810,6 +810,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  html,body{margin:0;padding:0;height:100%;height:100dvh;width:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--fg);overscroll-behavior:none;background:#ffffff;position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
  #map{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);background:#fff}
  .leaflet-control-scale{margin-right:92px!important;margin-bottom:10px!important}
+ .osm-under{filter:grayscale(.85) brightness(1.09) contrast(.9)}
  #flow{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);z-index:450;pointer-events:none}
  #modeGlow{display:none}
  .rail-btn svg,#legendBtn svg{color:var(--topic-accent,#141419);transition:color .45s ease}
@@ -1258,6 +1259,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .obs-types.cluster .obs-type:last-child{grid-column:1/-1;flex-direction:row;align-items:center}
  .obs-types.cluster .obs-type-ic{width:52px;height:52px;border-radius:16px;background:var(--tc);color:#fff;box-shadow:0 6px 14px var(--tt)}
  .obs-types.cluster .obs-type-ic svg{width:28px;height:28px}
+ /* Landing der normalen Meldung: monochrom (B/W) */
+ .obs-types.cluster .obs-type{background:#fff}
+ .obs-types.cluster .obs-type:hover{background:#fff}
+ .obs-types.cluster .obs-type-ic{background:#111116;box-shadow:0 6px 14px rgba(0,0,0,.20)}
+ .obs-quick{border-color:rgba(10,10,12,.4);background:#fff}
+ .obs-quick svg{color:#0a0a0c}
  .obs-types.cluster .obs-type-tx b{font-size:15.5px}
  @keyframes obsPop{from{opacity:0;transform:translate(0,30px) scale(.35) rotate(0deg)}60%{opacity:1}to{opacity:1;transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(1)}}
  .obs-type{display:flex;align-items:center;gap:14px;padding:16px;border-radius:18px;border:1.5px solid rgba(22,21,46,.08);background:var(--fill);cursor:pointer;text-align:left;font-family:inherit;transition:all .16s cubic-bezier(.34,1.56,.64,1)}
@@ -1597,15 +1604,18 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* Quick-Check entry points */
  .qr-padwrap{display:flex;gap:6px;margin-top:12px;align-items:stretch}
  .qr-ylab{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:20px;font-size:11px;font-weight:800;color:var(--mut);letter-spacing:.05em;writing-mode:vertical-rl;transform:rotate(180deg);text-transform:uppercase;white-space:nowrap}
- .qr-pad{position:relative;flex:1;aspect-ratio:1.18;border-radius:16px;border:1px solid var(--hair);background:linear-gradient(to right,rgba(20,20,25,.10),rgba(20,20,25,.03) 55%,#fff);cursor:crosshair;overflow:hidden}
+ .qr-pad{position:relative;flex:1;aspect-ratio:1.18;border-radius:16px;border:1px solid var(--hair);background:linear-gradient(to right,rgba(13,148,136,.24),rgba(13,148,136,.06) 19%,rgba(217,119,6,.24) 21%,rgba(217,119,6,.06) 39%,rgba(2,132,199,.24) 41%,rgba(2,132,199,.06) 59%,rgba(124,111,208,.24) 61%,rgba(124,111,208,.06) 79%,rgba(30,58,138,.26) 81%,rgba(30,58,138,.08) 100%);cursor:crosshair;overflow:hidden}
  .qr-qline{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed rgba(20,20,25,.30);pointer-events:none}
  .qr-xbands{display:flex;margin-top:8px;padding-left:24px}
- .qr-xband{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;font-size:10.5px;font-weight:800;line-height:1.18;letter-spacing:.01em}
- .qr-xband svg{width:21px;height:21px}
- .qr-xband:nth-child(1){color:#9a9aa2}
- .qr-xband:nth-child(2){color:#6e6e76}
- .qr-xband:nth-child(3){color:#3c3c42}
- .qr-xband:nth-child(4){color:#000}
+ .qr-xband{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;font-size:9.8px;font-weight:800;line-height:1.16;letter-spacing:.01em}
+ .qr-xband svg{width:22px;height:22px}
+ .qr-xband:nth-child(1){color:#0d9488}
+ .qr-xband:nth-child(2){color:#d97706}
+ .qr-xband:nth-child(3){color:#0284c7}
+ .qr-xband:nth-child(4){color:#7c6fd0}
+ .qr-xband:nth-child(5){color:#1e3a8a}
+ .qr-grad{display:flex;align-items:center;justify-content:space-between;margin-top:7px;padding:0 2px 0 26px;font-size:9.5px;color:var(--mut);font-weight:600}
+ .qr-grad b{font-weight:800;color:var(--fg2)}
  .qr-corner{position:absolute;font-size:10.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--mut);pointer-events:none}
  .qr-corner.tr{top:8px;right:10px;color:var(--acc2)}
  .qr-corner.bl{bottom:8px;left:10px}
@@ -1888,9 +1898,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         <div class="qr-padwrap">
           <div class="qr-ylab">wenig ← Menge (cm) → viel</div>
           <div class="qr-pad" id="qrPad">
-            <div class="qr-qline" style="left:25%"></div>
-            <div class="qr-qline" style="left:50%"></div>
-            <div class="qr-qline" style="left:75%"></div>
+            <div class="qr-qline" style="left:20%"></div>
+            <div class="qr-qline" style="left:40%"></div>
+            <div class="qr-qline" style="left:60%"></div>
+            <div class="qr-qline" style="left:80%"></div>
             <div class="qr-cmline" style="top:16.7%"><i>50</i></div>
             <div class="qr-cmline" style="top:33.3%"><i>40</i></div>
             <div class="qr-cmline" style="top:50%"><i>30</i></div>
@@ -1900,11 +1911,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
           </div>
         </div>
         <div class="qr-xbands">
-          <div class="qr-xband"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8h16M4 12h16M4 16h16"/></svg><span>Kompakt /<br>gedeckelt</span></div>
-          <div class="qr-xband"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3v11M7 9.5l5 4 5-4"/><circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"/></svg><span>Gealterter<br>Pulver</span></div>
-          <div class="qr-xband"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v20M3.5 7l17 10M20.5 7l-17 10"/></svg><span>Pulver</span></div>
-          <div class="qr-xband"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6z"/></svg><span>Pulver<br>fluffy</span></div>
+          <div class="qr-xband"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9.6 4.6A2 2 0 1 1 11 8H2M12.6 19.4A2 2 0 1 0 14 16H2M17.6 7.6A2.5 2.5 0 1 1 19 12H2"/></svg><span>Wind-<br>deckel</span></div>
+          <div class="qr-xband"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg><span>Sonnen-<br>deckel</span></div>
+          <div class="qr-xband"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7s6.5 7.5 6.5 12a6.5 6.5 0 0 1-13 0c0-4.5 6.5-12 6.5-12z"/></svg><span>Durch-<br>nässt</span></div>
+          <div class="qr-xband"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v11M7 9.5l5 4 5-4"/><circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"/></svg><span>Gealterter<br>Pulver</span></div>
+          <div class="qr-xband"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 2v20M3.5 7l17 10M20.5 7l-17 10"/></svg><span>Pulver</span></div>
         </div>
+        <div class="qr-grad"><b>◀ stark</b><span>Abstufung innerhalb jeder Kategorie</span><b>leicht ▶</b></div>
         <div class="qr-read" id="qrRead">Tippe oder ziehe auf dem Feld</div>
         <button class="cond-save" id="qrNextBtn" onclick="qrToStep(2)" disabled>Weiter <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       </div>
@@ -2221,12 +2234,10 @@ const _fitZoom=map.getZoom();
 map.setZoom(_fitZoom,{animate:false});map.setMinZoom(_fitZoom);map.setMaxZoom(16);  // never zoom out past the initial view (sync — kein animierter Auto-Zoom)
 const _padLa=(laMax-laMin)*0.04,_padLo=(loMax-loMin)*0.04;
 map.setMaxBounds([[laMin-_padLa,loMin-_padLo],[laMax+_padLa,loMax+_padLo]]);
+const osmUnder=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,className:'osm-under',attribution:"© OpenStreetMap"}).addTo(map);
 const base=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe-winter/default/current/3857/{z}/{x}/{y}.jpeg",{maxZoom:17,attribution:"© swisstopo / MeteoSwiss / SLF / Copernicus"}).addTo(map);
-// White mask outside the meteo grid → clean, smooth map ending
-map.createPane('maskPane');map.getPane('maskPane').style.zIndex=350;map.getPane('maskPane').style.pointerEvents='none';
-const _world=[[-89,-360],[-89,360],[89,360],[89,-360]];
-const _hole=[[laMin,loMin],[laMin,loMax],[laMax,loMax],[laMax,loMin]];
-L.polygon([_world,_hole],{pane:'maskPane',stroke:false,fillColor:'#ffffff',fillOpacity:1,interactive:false}).addTo(map);
+// Keine weisse Maske mehr: die gedimmte OSM-Unterlage zeigt die Nachbarlaender,
+// die Winter-Pixelkarte liegt fuer die Schweiz darueber.
 const slopeWMTS=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.hangneigung-ueber_30/default/current/3857/{z}/{x}/{y}.png",{opacity:.7});
 const reliefWMTS=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissalti3d-reliefschattierung_monodirektional/default/current/3857/{z}/{x}/{y}.png",{opacity:.85});
 const roughImg=L.imageOverlay(ROUGH_PNG,[[M.png_bounds[0],M.png_bounds[1]],[M.png_bounds[2],M.png_bounds[3]]],{opacity:.78});
@@ -2329,6 +2340,7 @@ const windArr=L.layerGroup(); const stnGroup=L.layerGroup().addTo(map);
 let layer="snow",stat="avg",windowSize=48,a=nowIdx,b=Math.min(T,nowIdx+48),showStn=true,wtimer=null;
 const isMobile=window.innerWidth<=560;
 
+function depthCol(v){const x=Math.min(1,v/300);let r,g,bl;if(x<.33){const k=x/.33;r=220-k*120|0;g=240-k*50|0;bl=255-k*5|0;}else if(x<.66){const k=(x-.33)/.33;r=100-k*80|0;g=190-k*90|0;bl=250-k*65|0;}else{const k=(x-.66)/.34;r=20+k*100|0;g=100-k*85|0;bl=185-k*105|0;}return[r,g,bl];}
 function setRaster(get,border){const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;
   for(let p=0;p<NP;p++){const r=get(p);const o=p*4;if(r){d[o]=r[0];d[o+1]=r[1];d[o+2]=r[2];d[o+3]=r[3]==null?210:r[3];if(cls)cls[p]=r[4];}else{d[o+3]=0;if(cls)cls[p]=-999;}}
   if(border){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=y*W+x;if(cls[p]==-999)continue;const rt=x<W-1?cls[p+1]:cls[p],bt=y<H-1?cls[p+W]:cls[p];if(rt!=cls[p]||bt!=cls[p]){const o=p*4;d[o]=20;d[o+1]=20;d[o+2]=30;d[o+3]=230;}}}
@@ -2336,7 +2348,7 @@ function setRaster(get,border){const img=cx.createImageData(W,H),d=img.data;cons
 function aggT(p,m){let mn=1e9,mx=-1e9,su=0,c=0,cold=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;if(v<0)cold++;}return m=="max"?mx:m=="min"?mn:m=="sub0"?cold:m=="max05"?mx:su/Math.max(1,c);}
 function renderRaster(){
   if(layer=="snow"){const ca=a*NP,cb=b*NP;setRaster(p=>{const v=cum[cb+p]-cum[ca+p];const c=snowCol(v);return c?[c[0],c[1],c[2],235]:null;});}
-  else if(layer=="depth"){const cb2=b*NP;setRaster(p=>{const v=cum[cb2+p];if(v<1)return null;const x=Math.min(1,v/300);let r,g,bl;if(x<.33){const k=x/.33;r=220-k*120|0;g=240-k*50|0;bl=255-k*5|0;}else if(x<.66){const k=(x-.33)/.33;r=100-k*80|0;g=190-k*90|0;bl=250-k*65|0;}else{const k=(x-.66)/.34;r=20+k*100|0;g=100-k*85|0;bl=185-k*105|0;}return[r,g,bl,215];});}
+  else if(layer=="depth"){const cb2=b*NP;setRaster(p=>{const v=cum[cb2+p];if(v<1)return null;const c=depthCol(v);return[c[0],c[1],c[2],215];});}
   else if(layer=="temp"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[40,120-(x*60|0),255,215];}
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[255,200-(x*110|0),60,235];}
@@ -2655,7 +2667,7 @@ map.on('move',()=>{if(layer=="wind"){flowResize();fx.clearRect(0,0,flow.width,fl
 map.on('resize',()=>{if(layer=="wind")flowResize();});
 drawTimeline();
 // --- Point Inspector (universal click popup) ---
-map.setMaxBounds([[laMinW-0.05,loMinW-0.05],[laMaxW+0.05,loMaxW+0.05]]);
+map.setMaxBounds([[laMinW-1.0,loMinW-1.5],[laMaxW+1.0,loMaxW+1.5]]);
 const _mz2=map.getBoundsZoom([[laMinW,loMinW],[laMaxW,loMaxW]])+0.3;if(map.getZoom()<_mz2)map.setZoom(_mz2,{animate:false});map.setMinZoom(_mz2);
 function iTabSw(el,tab){const c=el.closest('.icard');c.querySelectorAll('.itab').forEach(x=>x.classList.remove('active'));el.classList.add('active');c.querySelectorAll('.ipane').forEach(x=>x.classList.toggle('active',x.dataset.p===tab));}
 // --- Map-click inspect panel with charts + red X marker ---
@@ -3200,7 +3212,11 @@ function loadReportMarkers(){
   reportMarkers.clearLayers();
   const tier=(typeof detailTier==='function')?detailTier():2;
   allReports.forEach(r=>{
-    const mColor='#16152e'; // Post-Marker monochrom (B/W-Design)
+    const _cd=r.condition_data||{};
+    let _cm=(_cd.quick&&_cd.powderAmountCm!=null)?+_cd.powderAmountCm:null;
+    if(_cm==null&&r.measurement){const mm=/(\d+)\s*cm/.exec(r.measurement);if(mm)_cm=+mm[1];}
+    // Powder-/Schnee-Meldungen: Marker nach der Schneehoehen-Farbskala einfaerben
+    const mColor=_cm!=null?('rgb('+depthCol(_cm).join(',')+')'):'#16152e';
     let icon;
     if(tier===0){
       icon=L.divIcon({className:'',html:`<div class="rpt-dot" style="background:${mColor}"></div>`,iconSize:[14,14],iconAnchor:[7,7]});
@@ -4359,10 +4375,11 @@ function qrInitMap(){
     setTimeout(()=>{try{qrMapObj.invalidateSize();}catch(e){}},120);}}
 function qrSync(){const b2=document.getElementById('qrNextBtn');if(b2)b2.disabled=!(qrAmount!==null&&qrQuality!==null);}
 function qrQuadLabel(){const q=qrQuality==null?0:qrQuality;
-  if(q>=75)return 'Pulver fluffy';
-  if(q>=50)return 'Pulver';
-  if(q>=25)return 'Gealterter Pulver';
-  return 'Kompakt / gedeckelt';}
+  const i=Math.min(4,Math.floor(q/20)),f=(q-i*20)/20;   // Band + Position im Band
+  const names=['Winddeckel','Sonnendeckel','Durchnässter Pulver','Gealterter Pulver','Pulver'];
+  if(i<=1)return (f<0.33?'Starker ':f>0.67?'Leichter ':'')+names[i];
+  if(i===2)return f<0.33?'Stark durchnässt':f>0.67?'Leicht durchnässt':names[i];
+  return names[i]+(f>0.67?' · top':'');}
 function qrPadAttach(){const pad=document.getElementById('qrPad');if(!pad||pad._wired)return;pad._wired=true;
   pad.style.touchAction='none';
   function setFrom(e){const r=pad.getBoundingClientRect();
@@ -4516,14 +4533,12 @@ function feedRender(){
           <span class="feed-badge cat-${r.cat}">${catSvg(r.cat,14)} ${escapeHtml(r.sub||r.cat)}</span>
           ${r.measurement?`<span class="feed-badge cat-${r.cat}">${escapeHtml(r.measurement)}</span>`:''}
           ${r.stars?`<span class="feed-badge cat-${r.cat}"><svg class="ic-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z" fill="#f5a623" stroke="none"/></svg> ${r.stars}/5</span>`:''}
-          ${r.condN?`<span class="cond-chip" title="${r.condN} Bewertung(en)"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z"/></svg>${r.condAvg.toFixed(1)}${r.condPow?` · ❄${r.condPow}`:''}</span>`:''}
         </div>
         ${r.img&&r.caption?`<div class="feed-card-caption"><b>${escapeHtml(r.user)}</b> ${escapeHtml(r.caption)}</div>`:''}
       </div>
       <div class="feed-card-actions">
         ${endBtn}
         ${r.dbRow?`<button onclick="openComments('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg> ${r.comments||0}</button>`:''}
-        ${r.dbRow?`<button class="cond-btn${r.myCond?' rated':''}" title="Bedingungen bewerten" aria-label="Bedingungen bewerten" onclick="openCondition('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3"/></svg></button>`:''}
         <button onclick="event.stopPropagation();feedFlyTo(${r.lat},${r.lng})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Karte</button>
         <button title="Teilen" aria-label="Teilen" onclick="sharePost('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>
         <button class="save-btn${savedPosts.has(String(r.id))?' saved':''}" title="Merken" aria-label="Merken" onclick="toggleSave('${r.id}',event)"><svg viewBox="0 0 24 24" fill="${savedPosts.has(String(r.id))?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
@@ -4532,7 +4547,6 @@ function feedRender(){
     </div>`;
   }).join('');
   feedAnimateCards();
-  condMaybeHint();
 }
 // First-appearance card entrance (skips re-animating on like/flag re-renders).
 const feedSeen=new Set();
