@@ -3224,12 +3224,34 @@ const DEMO_REPORTS=DEMO_DEFS.map((d,i2)=>({id:'d'+(i2+1),user:DEMO_USERS[i2%DEMO
   const qualN=['Winddeckel','Sonnendeckel','Durchnässter Pulver','Gealterter Pulver','Pulver'];
   let id=DEMO_REPORTS.length;
   function add(o){DEMO_REPORTS.push(Object.assign({id:'g'+(++id),icon:'',likes:Math.floor(rnd()*25),comments:Math.floor(rnd()*5),stars:1+Math.floor(rnd()*5)},o));}
-  for(let i=0;i<50;i++){ // Quick-Powder-Reports (farbige Marker + Heatmap-Futter)
-    const sp=spots[i%spots.length],cm=5*Math.floor(1+rnd()*11),q=Math.floor(rnd()*100);
-    add({user:U2[i%U2.length],cat:'snow',sub:'Quick Powder',
-      measurement:qualN[Math.min(4,Math.floor(q/20))]+' · '+cm+' cm',caption:null,
-      lat:sp[0]+jit(),lng:sp[1]+jit(),time:'vor '+(1+Math.floor(rnd()*72))+'h',img:null,
-      condition_data:{quick:true,powderAmountCm:cm,powderQuality:q}});}
+  // Quick-Powder-Reports: regional differenziert — jede Region hat ein eigenes
+  // Schnee-Profil (Engadin fluffy & tief, Wallis-Sued Sonnendeckel, Ostschweiz
+  // Winddeckel, Tessin durchnaesst ...), inkl. Abstufung stark/leicht, Expo+Hoehe,
+  // teils Foto und Caption.
+  const qLbl=q=>{const bi=Math.min(4,Math.floor(q/20)),f=(q-bi*20)/20;
+    if(bi<=1)return (f<0.33?'Starker ':f>0.67?'Leichter ':'')+qualN[bi];
+    if(bi===2)return f<0.33?'Stark durchnässt':f>0.67?'Leicht durchnässt':qualN[bi];
+    return qualN[bi]+(f>0.67?' · top':'');};
+  const regions=[
+    {idx:[0,17,18,21],q:82,qs:16,cm:42,cs:14},  // Davos/Engadin: fluffy & tief
+    {idx:[3,4,24,20],q:32,qs:18,cm:30,cs:12},   // Wallis Sued: Sonnendeckel
+    {idx:[10,14,11,25],q:65,qs:20,cm:34,cs:12}, // Berner Oberland: gut
+    {idx:[5,6,8,27],q:55,qs:25,cm:26,cs:10},    // Zentralschweiz: gemischt
+    {idx:[7,12,22],q:48,qs:12,cm:22,cs:10},     // Tessin: durchnaesst
+    {idx:[9,19,15,26],q:14,qs:12,cm:16,cs:8}];  // Ostschweiz/Jura: Winddeckel
+  const qCaps=['Bester Run der Saison!','Oben top, unten Deckel.','Nordseitig noch kalt & trocken.','Ab Mittag feucht.','Windgepresst am Grat, im Schutz gut.','Knietief!','Tragfähiger Deckel, drunter weich.','Erste 200 Hm traumhaft.'];
+  const expos=['N','NE','E','SE','S','SW','W','NW'];
+  for(let i=0;i<50;i++){
+    const rg=regions[i%regions.length];
+    const sp=spots[rg.idx[Math.floor(rnd()*rg.idx.length)]%spots.length];
+    let q=Math.round(rg.q+(rnd()*2-1)*rg.qs);q=Math.max(0,Math.min(99,q));
+    let cm=5*Math.round((rg.cm+(rnd()*2-1)*rg.cs)/5);cm=Math.max(5,Math.min(60,cm));
+    add({user:U2[(i*11+3)%U2.length],cat:'snow',sub:'Quick Powder',
+      measurement:qLbl(q)+' · '+cm+' cm',
+      caption:(i%3===0)?qCaps[i%qCaps.length]:null,
+      lat:sp[0]+jit(),lng:sp[1]+jit(),time:'vor '+(1+Math.floor(rnd()*96))+'h',
+      img:(i%5===4)?demoImg(210+i*13,190+i*17,205+i*7):null,
+      condition_data:{quick:true,powderAmountCm:cm,powderQuality:q,exposition:expos[Math.floor(rnd()*8)],altitudeM:1800+Math.round(rnd()*14)*100}});}
   const caps=['Traumtag!','Unverspurt bis Mittag.','Harter Deckel oberhalb 2600 m.','Beste Verhältnisse im Nordhang.','Sicht mässig, Schnee top.','Viel Wind am Grat.','Sulz ab Mittag.','Perfekter Firn.','Grosse Einsinktiefe, Vorsicht.','Lohnt sich!'];
   for(let i=0;i<50;i++){ // Feld-Reports mit Foto
     const sp=spots[(i*3)%spots.length];
