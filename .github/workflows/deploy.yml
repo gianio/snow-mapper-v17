@@ -61,9 +61,12 @@ jobs:
         run: |
           mkdir -p dist
           python run_interactive.py --split --res 3000 --out-dir dist
-          # Demo-Datensatz: synthetischer Winter vom 1. April 2026 (fuer den
-          # Demo-Umschalter in der App; Boot laedt data/demo-latest.json)
-          python run_interactive.py --split --offline --date 2026-04-01 --res 3000 --out-dir dist_demo
+          # Demo-Datensatz: ECHTE Wetterdaten vom 1. April 2026 (ERA5-Archiv
+          # via archive-api.open-meteo.com; _select_endpoint waehlt es
+          # automatisch fuer alte Daten). Faellt bei API-Problemen auf
+          # synthetisch zurueck, damit der Deploy nie an der Demo scheitert.
+          python run_interactive.py --split --date 2026-04-01 --res 3000 --out-dir dist_demo \
+            || python run_interactive.py --split --offline --date 2026-04-01 --res 3000 --out-dir dist_demo
           cp dist_demo/data/snowdata-*.json dist/data/demo.json
           cp dist_demo/data/snowdata-*.json.gz dist/data/demo.json.gz
           python -c "import json;json.dump({'version':'demo-20260401','data':'demo.json','gz':'demo.json.gz'},open('dist/data/demo-latest.json','w'))"
