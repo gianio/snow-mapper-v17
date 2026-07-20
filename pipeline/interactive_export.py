@@ -3282,8 +3282,10 @@ function loadReportMarkers(){
     const _cd=r.condition_data||{};
     let _cm=(_cd.quick&&_cd.powderAmountCm!=null)?+_cd.powderAmountCm:null;
     if(_cm==null&&r.measurement){const mm=/(\d+)\s*cm/.exec(r.measurement);if(mm)_cm=+mm[1];}
-    // Powder-/Schnee-Meldungen: Marker nach der Schneehoehen-Farbskala einfaerben
-    const mColor=_cm!=null?('rgb('+depthCol(_cm).join(',')+')'):'#16152e';
+    // Powder-/Schnee-Meldungen: Marker nach der NEUSCHNEE-Farblegende einfaerben
+    // (gleiche Skala wie der Neuschnee-Layer, bezogen auf die gemeldeten cm)
+    const _sc=_cm!=null?snowCol(_cm):null;
+    const mColor=_sc?('rgb('+_sc.join(',')+')'):'#16152e';
     let icon;
     if(tier===0){
       icon=L.divIcon({className:'',html:`<div class="rpt-dot" style="background:${mColor}"></div>`,iconSize:[14,14],iconAnchor:[7,7]});

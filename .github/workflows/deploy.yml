@@ -65,7 +65,7 @@ jobs:
           # via archive-api.open-meteo.com; _select_endpoint waehlt es
           # automatisch fuer alte Daten). Faellt bei API-Problemen auf
           # synthetisch zurueck, damit der Deploy nie an der Demo scheitert.
-          python run_interactive.py --split --date 2026-04-01 --res 3000 --out-dir dist_demo \
+          python run_interactive.py --split --date 2026-04-01 --res 3000 --weather-step 0.1 --out-dir dist_demo \
             || python run_interactive.py --split --offline --date 2026-04-01 --res 3000 --out-dir dist_demo
           cp dist_demo/data/snowdata-*.json dist/data/demo.json
           cp dist_demo/data/snowdata-*.json.gz dist/data/demo.json.gz
