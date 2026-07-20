@@ -3284,7 +3284,8 @@ function loadReportMarkers(){
     if(_cm==null&&r.measurement){const mm=/(\d+)\s*cm/.exec(r.measurement);if(mm)_cm=+mm[1];}
     // Powder-/Schnee-Meldungen: Marker nach der NEUSCHNEE-Farblegende einfaerben
     // (gleiche Skala wie der Neuschnee-Layer, bezogen auf die gemeldeten cm)
-    const _sc=_cm!=null?snowCol(_cm):null;
+    // <5 cm waere auf der Karte fast unsichtbar-weiss -> monochrom lassen
+    const _sc=(_cm!=null&&_cm>=5)?snowCol(_cm):null;
     const mColor=_sc?('rgb('+_sc.join(',')+')'):'#16152e';
     let icon;
     if(tier===0){
