@@ -22,7 +22,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
 
@@ -54,23 +54,48 @@ jobs:
             echo "tools/cache/ not present — skipping powder regression."
           fi
 
-      - name: Generate app shell + data blob
+      - name: Generate app shell + live data blob
         # Split build: small stable shell (index.html + app.js) + a separate
         # data/ blob behind latest.json, so daily data updates don't rebuild the
-        # shell. Writes manifest/sw/icons into dist too.
+        # shell. Writes manifest/sw/icons into dist too. This is the CRITICAL
+        # path — the deploy must always get here.
         run: |
           mkdir -p dist
           python run_interactive.py --split --res 3000 --out-dir dist
-          # Demo-Datensatz: ECHTE Wetterdaten vom 1. April 2026 (ERA5-Archiv
-          # via archive-api.open-meteo.com; _select_endpoint waehlt es
-          # automatisch fuer alte Daten). Faellt bei API-Problemen auf
-          # synthetisch zurueck, damit der Deploy nie an der Demo scheitert.
-          python run_interactive.py --split --date 2026-04-01 --res 3000 --weather-step 0.1 --out-dir dist_demo \
-            || python run_interactive.py --split --offline --date 2026-04-01 --res 3000 --out-dir dist_demo
-          cp dist_demo/data/snowdata-*.json dist/data/demo.json
-          cp dist_demo/data/snowdata-*.json.gz dist/data/demo.json.gz
-          python -c "import json;json.dump({'version':'demo-20260401','data':'demo.json','gz':'demo.json.gz'},open('dist/data/demo-latest.json','w'))"
           touch dist/.nojekyll
+
+      # The 1 April 2026 demo dataset is HISTORICAL and never changes, so we
+      # build it once (real ERA5 archive weather) and cache it. Re-fetching
+      # ~1200 archive points on every run (4x/day) is what blew past the old
+      # 15-min timeout and cancelled the deploy.
+      - name: Cache demo dataset (historical, static)
+        id: demo-cache
+        uses: actions/cache@v4
+        with:
+          path: dist_demo
+          key: demo-dataset-20260401-res3000-ws01-v1
+
+      - name: Build demo dataset (real ERA5 archive, cache miss only)
+        # Best-effort + time-bounded: if the archive fetch is slow/rate-limited
+        # it is killed at 13 min and dist_demo is removed so nothing partial is
+        # cached; the deploy still succeeds and demo mode falls back to live
+        # data (handled in the boot loader) until a later run caches it.
+        if: steps.demo-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        run: |
+          timeout 780 python run_interactive.py --split --date 2026-04-01 --res 3000 --weather-step 0.1 --out-dir dist_demo \
+            || { echo "demo build slow/failed — leaving it out, app uses live data in demo mode"; rm -rf dist_demo; }
+
+      - name: Assemble demo dataset into dist (if present)
+        run: |
+          if ls dist_demo/data/snowdata-*.json >/dev/null 2>&1; then
+            cp dist_demo/data/snowdata-*.json dist/data/demo.json
+            cp dist_demo/data/snowdata-*.json.gz dist/data/demo.json.gz 2>/dev/null || true
+            python -c "import json;json.dump({'version':'demo-20260401','data':'demo.json','gz':'demo.json.gz'},open('dist/data/demo-latest.json','w'))"
+            echo "demo dataset assembled into dist/data/."
+          else
+            echo "no demo dataset this run — demo mode falls back to live data."
+          fi
 
       - name: Validate JS (node --check)
         run: |
