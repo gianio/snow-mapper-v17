@@ -1166,6 +1166,31 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .radial-center{position:absolute;width:48px;height:48px;border-radius:50%;background:rgba(94,200,255,.2);border:2px solid rgba(94,200,255,.3);display:flex;align-items:center;justify-content:center;color:#5EC8FF;font-size:20px}
  /* --- Report sheet (Alpenglühen dark) --- */
  /* --- Report wizard: centered light modal --- */
+ /* --- Draw-based snow report --- */
+ body.draw-on #ctrlRail,body.draw-on #layerBar,body.draw-on #searchWrap,body.draw-on #demoPill,body.draw-on #mapQr,body.draw-on #mapFab,body.draw-on #bottomPanel,body.draw-on #legendBtn,body.draw-on .legend{display:none!important}
+ #drawWrap{position:fixed;inset:0;z-index:4000;display:none}
+ #drawCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+ #drawClose{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;z-index:4002;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);box-shadow:var(--elev1);font-size:17px;color:var(--fg);cursor:pointer}
+ #drawHint{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);left:50%;transform:translateX(-50%) translateY(-8px);z-index:4002;background:#0a0a0c;color:#fff;font-size:12.5px;font-weight:700;padding:9px 15px;border-radius:999px;opacity:0;transition:.3s;pointer-events:none;box-shadow:var(--elev2);max-width:82vw;text-align:center}
+ #drawHint.show{opacity:1;transform:translateX(-50%) translateY(0)}
+ #drawBar{position:fixed;left:0;right:0;bottom:0;z-index:4002;padding:14px 12px calc(env(safe-area-inset-bottom,0px) + 12px);background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.94) 26%)}
+ #drawSlider{display:none;align-items:center;gap:11px;background:#fff;border:1px solid var(--hair);border-radius:14px;padding:10px 15px;margin-bottom:10px;box-shadow:var(--elev1);animation:qrFade .22s var(--ease) both}
+ #drawSlider label{font-size:13px;font-weight:800;color:var(--fg2);white-space:nowrap}
+ #drawSlider input{flex:1;accent-color:var(--fg);min-width:0}
+ #drawSlider b{font-size:13.5px;font-weight:800;color:var(--fg);min-width:46px;text-align:right}
+ #drawTypes{display:flex;gap:9px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px;margin-bottom:11px}
+ #drawTypes::-webkit-scrollbar{display:none}
+ .dt-sw{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:5px;border:none;background:none;font-family:inherit;cursor:pointer;padding:2px;opacity:.55;transition:opacity .15s,transform .15s}
+ .dt-sw.on{opacity:1;transform:translateY(-1px)}
+ .dt-sw i{width:34px;height:34px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 2px 7px rgba(0,0,0,.22);display:block;background-size:6px 6px}
+ .dt-sw.on i{box-shadow:0 0 0 2.5px var(--fg),0 2px 7px rgba(0,0,0,.22)}
+ .dt-sw span{font-size:10px;font-weight:800;color:var(--fg2);white-space:nowrap;letter-spacing:-.01em}
+ #drawActions{display:flex;align-items:center;gap:9px}
+ #drawActions .db{width:46px;height:46px;flex-shrink:0;border-radius:14px;border:1px solid var(--hair);background:#fff;box-shadow:var(--elev1);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--fg2)}
+ #drawActions .db:active{transform:scale(.94)}
+ #drawActions .db svg{width:20px;height:20px}
+ #drawPostBtn{flex:1;height:46px;border-radius:14px;border:none;background:var(--fg);color:#fff;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer}
+ #drawPostBtn:active{transform:scale(.98)}
  .report-overlay{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px}
  .report-overlay .ro-bg{position:absolute;inset:0;background:rgba(11,17,32,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
  .report-sheet{position:relative;width:100%;max-width:440px;max-height:92vh;overflow-y:auto;background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:26px;box-shadow:var(--elev3);-webkit-overflow-scrolling:touch;animation:rpSheetIn .28s cubic-bezier(.34,1.4,.64,1)}
@@ -1867,6 +1892,20 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <div class="bio-lock-s">Entsperre mit <b id="bioLockName">Biometrie</b></div>
     <button class="auth-btn primary" onclick="haptic(6);bioUnlock()">Mit <span id="bioLockName2">Face ID</span> entsperren</button>
     <button class="bio-lock-out" onclick="bioSignOut()">Abmelden</button>
+  </div>
+</div>
+<div id="drawWrap">
+  <canvas id="drawCanvas"></canvas>
+  <button id="drawClose" onclick="drawClose()" aria-label="Schliessen">✕</button>
+  <div id="drawHint">Male die Schneezonen direkt auf die Karte</div>
+  <div id="drawBar">
+    <div id="drawSlider"></div>
+    <div id="drawTypes"></div>
+    <div id="drawActions">
+      <button class="db" onclick="drawUndo()" title="Rückgängig" aria-label="Rückgängig"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+      <button class="db" onclick="drawClear()" title="Löschen" aria-label="Löschen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+      <button id="drawPostBtn" onclick="drawPost()">Posten</button>
+    </div>
   </div>
 </div>
 <div class="report-overlay" id="reportOverlay" style="display:none">
@@ -3358,6 +3397,9 @@ function _rptCluster(g,zoom){
   _rptAdd(lat,lng,html,sz,sz,()=>map.flyTo([lat,lng],Math.min(15,zoom+2.3),{duration:.7}),500);}
 function loadReportMarkers(){
   reportMarkers.clearLayers();
+  if(!window._drawOv)window._drawOv=L.layerGroup().addTo(map);
+  _drawOv.clearLayers();
+  (allReports||[]).forEach(r=>{const cd=r.condition_data||{};if(cd.draw&&cd.bounds&&r.img){try{L.imageOverlay(r.img,cd.bounds,{opacity:.5,interactive:false}).addTo(_drawOv);}catch(e){}}});
   if(!allReports||!allReports.length)return;
   const z=map.getZoom(),cellPx=66,clusterOn=z<12.5,rich=z>=12.5;
   const cells={};
@@ -4136,8 +4178,112 @@ function obsOpen(){if(!sb||!sbUser){authShow();return;}
   document.getElementById('obsBody').innerHTML=
     '<div class="obs-types cluster">'+OBS_TYPE_LIST.map((t,i)=>{const s=SCATTER[i%SCATTER.length];
     return `<button class="obs-type" style="--i:${i};--dx:${s.dx}px;--dy:${s.dy}px;--rot:${s.r}deg;--tc:${t.color};--tt:${t.tint}" onclick="obsStart('${t.id}')"><span class="obs-type-ic">${t.icon}</span><span class="obs-type-tx"><b>${t.label}</b><span>${t.sub}</span></span></button>`;}).join('')+'</div>'+
-    '<button class="obs-quick" style="--i:5" onclick="obsClose();qrOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span><b>Quick Powder Report</b><em>Ein Fingertipp — Menge &amp; Qualität</em></span></button>';
+    '<button class="obs-quick" style="--i:5" onclick="obsClose();qrOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span><b>Quick Powder Report</b><em>Ein Fingertipp — Menge &amp; Qualität</em></span></button>'+
+    '<button class="obs-quick draw" style="--i:6" onclick="obsClose();drawOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span><b>Schnee-Karte zeichnen</b><em>Male die Zonen direkt auf die Karte</em></span></button>';
   obsWarmLocation();
+}
+// ===== Draw-based snow report (paint zones directly on the map) =====
+const DRAW_TYPES=[
+ {id:'powder',label:'Powder',color:'#4aa3ff',slfDepth:true,slider:{key:'cm',label:'Tiefe',min:5,max:80,step:5,unit:' cm',val:30}},
+ {id:'compact',label:'Kompakt',color:'#8aa0c8',slider:null},
+ {id:'wet',label:'Nassschnee',color:'#f59e0b',slider:{key:'wet',label:'Nässe',min:1,max:5,step:1,unit:'/5',val:3}},
+ {id:'suncrust',label:'Sonnendeckel',color:'#f4d03f',slider:{key:'crust',label:'Deckel',min:1,max:5,step:1,unit:'/5',val:2}},
+ {id:'windslab',label:'Windharsch',color:'#b9c4d4',slider:{key:'wind',label:'Wind',min:1,max:5,step:1,unit:'/5',val:3}},
+ {id:'firn',label:'Firn',color:'#3fb27f',slider:null},
+ {id:'icy',label:'Eisig',color:'#38bdf8',dash:[15,10],slider:null},
+ {id:'nosnow',label:'Kein Schnee',color:'#e0483c',dash:[5,12],slider:null}
+];
+let drawStrokes=[],drawType=DRAW_TYPES[0],drawCtx=null,_drawCur=null;
+function drawOpen(){
+  drawStrokes=[];_drawCur=null;
+  document.body.classList.add('draw-on');
+  document.getElementById('drawWrap').style.display='block';
+  try{map.dragging.disable();map.touchZoom.disable();map.doubleClickZoom.disable();map.scrollWheelZoom.disable();}catch(e){}
+  drawSetupCanvas();drawRenderTypes();drawSelect('powder');
+  try{haptic(8);}catch(e){}
+  const h=document.getElementById('drawHint');h.classList.add('show');setTimeout(()=>h.classList.remove('show'),2600);
+}
+function drawClose(){
+  if(drawStrokes.length&&!confirm('Zeichnung verwerfen?'))return;
+  document.getElementById('drawWrap').style.display='none';
+  document.body.classList.remove('draw-on');
+  try{map.dragging.enable();map.touchZoom.enable();map.doubleClickZoom.enable();if(_desktop)map.scrollWheelZoom.enable();}catch(e){}
+}
+function drawSetupCanvas(){
+  const cv=document.getElementById('drawCanvas');
+  const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;
+  cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
+  drawCtx=cv.getContext('2d');drawCtx.setTransform(dpr,0,0,dpr,0,0);
+  if(!cv._wired){cv._wired=true;cv.style.touchAction='none';
+    const pt=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
+    cv.addEventListener('pointerdown',e=>{try{cv.setPointerCapture(e.pointerId);}catch(_){}
+      const t=drawType,col=t.slfDepth?('rgb('+(snowCol(t.slider.val)||[74,163,255]).join(',')+')'):t.color;
+      _drawCur={type:t.id,color:col,dash:t.dash||null,size:30,pts:[pt(e)]};drawStrokes.push(_drawCur);drawRepaint();try{haptic(4);}catch(_){}});
+    cv.addEventListener('pointermove',e=>{if(!_drawCur)return;_drawCur.pts.push(pt(e));drawRepaint();});
+    const end=()=>{_drawCur=null;};
+    cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);cv.addEventListener('pointerleave',end);
+  }
+  drawRepaint();
+}
+function drawRepaint(){
+  const ctx=drawCtx;if(!ctx)return;const cv=document.getElementById('drawCanvas');
+  ctx.clearRect(0,0,cv.clientWidth,cv.clientHeight);
+  ctx.lineJoin='round';ctx.lineCap='round';
+  drawStrokes.forEach(sk=>{
+    ctx.strokeStyle=sk.color;ctx.globalAlpha=sk.dash?.9:.42;ctx.lineWidth=sk.size;ctx.setLineDash(sk.dash||[]);
+    ctx.beginPath();sk.pts.forEach((pp,i)=>{i?ctx.lineTo(pp[0],pp[1]):ctx.moveTo(pp[0],pp[1]);});
+    if(sk.pts.length===1)ctx.lineTo(sk.pts[0][0]+.05,sk.pts[0][1]);
+    ctx.stroke();
+  });
+  ctx.globalAlpha=1;ctx.setLineDash([]);
+}
+function drawRenderTypes(){
+  document.getElementById('drawTypes').innerHTML=DRAW_TYPES.map(t=>{
+    const dashBg=t.dash?';background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.85) 0 2px,transparent 2px 5px)':'';
+    return '<button class="dt-sw'+(t.id===drawType.id?' on':'')+'" data-id="'+t.id+'" onclick="drawSelect(\''+t.id+'\')" title="'+t.label+'"><i style="background:'+t.color+dashBg+'"></i><span>'+t.label+'</span></button>';
+  }).join('');
+}
+function drawSelect(id){
+  drawType=DRAW_TYPES.find(t=>t.id===id)||DRAW_TYPES[0];
+  document.querySelectorAll('#drawTypes .dt-sw').forEach(b=>b.classList.toggle('on',b.dataset.id===id));
+  const box=document.getElementById('drawSlider'),sl=drawType.slider;
+  if(sl){box.style.display='flex';
+    box.innerHTML='<label>'+sl.label+'</label><input type="range" min="'+sl.min+'" max="'+sl.max+'" step="'+sl.step+'" value="'+sl.val+'" oninput="drawType.slider.val=+this.value;document.getElementById(\'drawSliderVal\').textContent=this.value+\''+(sl.unit||'')+'\';"><b id="drawSliderVal">'+sl.val+(sl.unit||'')+'</b>';
+  } else box.style.display='none';
+  try{haptic(4);}catch(e){}
+}
+function drawUndo(){if(!drawStrokes.length)return;drawStrokes.pop();drawRepaint();try{haptic(5);}catch(e){}}
+function drawClear(){if(!drawStrokes.length)return;if(confirm('Ganze Zeichnung löschen?')){drawStrokes=[];drawRepaint();}}
+function drawSummary(){
+  const used=[...new Set(drawStrokes.map(s=>s.type))];
+  return used.map(id=>{const t=DRAW_TYPES.find(x=>x.id===id);let n=t.label;
+    if(t.slider){n+=' ('+t.slider.label+' '+t.slider.val+(t.slider.unit||'')+')';}return n;});
+}
+async function drawPost(){
+  if(!drawStrokes.length){toast('Zeichne zuerst mindestens eine Zone ein.','err');return;}
+  const cv=document.getElementById('drawCanvas');let png;try{png=cv.toDataURL('image/png');}catch(e){toast('Zeichnung konnte nicht gespeichert werden.','err');return;}
+  const names=drawSummary();
+  let cen;try{cen=map.getCenter();}catch(e){cen={lat:46.8,lng:8.2};}
+  let bnds;try{const b=map.getBounds();bnds=[[b.getSouth(),b.getWest()],[b.getNorth(),b.getEast()]];}catch(e){bnds=null;}
+  const cd={draw:true,bounds:bnds,types:names,measurement:names.join(', ')};
+  if(demoActive()||!sb){ // demo / offline: add locally so it shows immediately
+    allReports.unshift({id:'draw'+Date.now(),user:'Du',cat:'snow',sub:'Schnee-Karte',measurement:names.join(', '),caption:null,lat:cen.lat,lng:cen.lng,time:'gerade eben',img:png,likes:0,comments:0,stars:0,condition_data:cd});
+    loadReportMarkers();drawStrokes=[];drawClose();toast('Schnee-Karte gespeichert (Demo).','ok');return;
+  }
+  if(!sbUser){authShow();return;}
+  const btn=document.getElementById('drawPostBtn');btn.disabled=true;btn.textContent='Postet…';
+  try{
+    let imageUrl=null;
+    try{const blob=await (await fetch(png)).blob();const path=sbUser.id+'/draw'+Date.now()+'.png';
+      const{error:upErr}=await sb.storage.from('report-images').upload(path,blob,{contentType:'image/png'});
+      if(!upErr){const{data:ud}=sb.storage.from('report-images').getPublicUrl(path);imageUrl=ud?.publicUrl||null;}}catch(e){}
+    const row={user_id:sbUser.id,location:'POINT('+cen.lng+' '+cen.lat+')',image_url:imageUrl,
+      primary_categories:['snow'],subtype:'Schnee-Karte',condition_data:cd,
+      caption:null,completion_score:50,captured_at:new Date().toISOString()};
+    const{error}=await sb.from('reports').insert(row);if(error)throw error;
+    toast('Schnee-Karte gepostet — danke!','ok');try{haptic(12);}catch(e){}drawStrokes=[];drawClose();loadDbReports();
+  }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e),'err');}
+  btn.disabled=false;btn.textContent='Posten';
 }
 function obsStart(type){obsState=obsNewState(type);obsOpenCards=new Set();
   if(obsDeviceFix){obsApplyLoc(obsDeviceFix.lat,obsDeviceFix.lon,'device');}
