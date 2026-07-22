@@ -1206,6 +1206,25 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #drawActions .db svg{width:20px;height:20px}
  #drawPostBtn{flex:1;height:46px;border-radius:14px;border:none;background:var(--fg);color:#fff;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer}
  #drawPostBtn:active{transform:scale(.98)}
+ /* draw finalize sheet + feed snapshot image */
+ #drawFinish{position:fixed;inset:0;z-index:4100;display:none;align-items:flex-end;justify-content:center}
+ #drawFinish::before{content:"";position:absolute;inset:0;background:rgba(11,17,32,.5);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+ .dfin-sheet{position:relative;width:100%;max-width:440px;max-height:88vh;overflow-y:auto;background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:24px 24px 0 0;padding:8px 16px calc(env(safe-area-inset-bottom,0px) + 16px);box-shadow:var(--elev3);animation:rpSheetIn .28s cubic-bezier(.34,1.4,.64,1);-webkit-overflow-scrolling:touch}
+ .dfin-grab{width:38px;height:4px;border-radius:2px;background:var(--hair);margin:6px auto 10px}
+ .dfin-sheet h3{margin:2px 0 12px;font-size:17px;font-weight:800;text-align:center;color:var(--fg)}
+ .dfin-snap{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--hair);margin-bottom:12px;box-shadow:var(--elev1)}
+ .dfin-snap img{width:100%;display:block;max-height:260px;object-fit:cover}
+ .dfin-tag{position:absolute;left:10px;bottom:10px;background:rgba(10,10,12,.72);color:#fff;font-size:11px;font-weight:800;padding:4px 9px;border-radius:9px}
+ .dfin-photo{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;height:46px;border-radius:13px;border:1.5px dashed var(--hair);background:var(--fill);color:var(--fg2);font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;margin-bottom:12px}
+ .dfin-photo svg{width:19px;height:19px}
+ #drawPhotoPrev{width:100%;max-height:220px;object-fit:cover;border-radius:13px;margin-bottom:12px;display:none}
+ #drawCaption{width:100%;box-sizing:border-box;min-height:74px;resize:vertical;border-radius:13px;border:1px solid var(--hair);background:var(--fill);padding:11px 13px;font-family:inherit;font-size:14px;color:var(--fg);margin-bottom:14px}
+ .dfin-actions{display:flex;gap:10px}
+ .dfin-back{flex:0 0 auto;padding:0 18px;height:48px;border-radius:14px;border:1px solid var(--hair);background:#fff;color:var(--fg2);font-size:14px;font-weight:800;font-family:inherit;cursor:pointer}
+ .dfin-post{flex:1;height:48px;border-radius:14px;border:none;background:var(--fg);color:#fff;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer}
+ .dfin-post:active,.dfin-back:active{transform:scale(.98)}
+ .feed-card-visual.second{margin-top:6px;position:relative}
+ .fc-snap-tag{position:absolute;left:8px;bottom:8px;background:rgba(10,10,12,.72);color:#fff;font-size:10.5px;font-weight:800;padding:4px 8px;border-radius:8px}
  .report-overlay{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px}
  .report-overlay .ro-bg{position:absolute;inset:0;background:rgba(11,17,32,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
  .report-sheet{position:relative;width:100%;max-width:440px;max-height:92vh;overflow-y:auto;background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:26px;box-shadow:var(--elev3);-webkit-overflow-scrolling:touch;animation:rpSheetIn .28s cubic-bezier(.34,1.4,.64,1)}
@@ -1922,7 +1941,22 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <div id="drawActions">
       <button class="db" onclick="drawUndo()" title="Rückgängig" aria-label="Rückgängig"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
       <button class="db" onclick="drawClear()" title="Löschen" aria-label="Löschen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-      <button id="drawPostBtn" onclick="drawPost()">Posten</button>
+      <button id="drawPostBtn" onclick="drawOpenFinish()">Posten</button>
+    </div>
+  </div>
+  <div id="drawFinish">
+    <div class="dfin-sheet">
+      <div class="dfin-grab"></div>
+      <h3>Schnee-Karte melden</h3>
+      <div class="dfin-snap"><img id="drawSnapImg" alt=""/><span class="dfin-tag">Karte + Zeichnung</span></div>
+      <input type="file" id="drawFile" accept="image/*" hidden onchange="drawPhotoPick(this)"/>
+      <button class="dfin-photo" id="drawPhotoBtn" onclick="document.getElementById('drawFile').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto hinzufügen (optional)</button>
+      <img id="drawPhotoPrev" alt=""/>
+      <textarea id="drawCaption" maxlength="500" placeholder="Beschreibung (optional) — Verhältnisse, Ort, Hinweise…"></textarea>
+      <div class="dfin-actions">
+        <button class="dfin-back" onclick="drawFinishClose()">Zurück</button>
+        <button class="dfin-post" id="drawPublishBtn" onclick="drawPublish()">Veröffentlichen</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2339,8 +2373,8 @@ const _fitZoom=map.getZoom();
 map.setZoom(_fitZoom,{animate:false});map.setMinZoom(_fitZoom);map.setMaxZoom(16);  // never zoom out past the initial view (sync — kein animierter Auto-Zoom)
 const _padLa=(laMax-laMin)*0.04,_padLo=(loMax-loMin)*0.04;
 map.setMaxBounds([[laMin-_padLa,loMin-_padLo],[laMax+_padLa,loMax+_padLo]]);
-const osmUnder=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,className:'osm-under',attribution:"© OpenStreetMap"}).addTo(map);
-const base=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe-winter/default/current/3857/{z}/{x}/{y}.jpeg",{maxZoom:17,attribution:"© swisstopo / MeteoSwiss / SLF / Copernicus"}).addTo(map);
+const osmUnder=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,crossOrigin:true,className:'osm-under',attribution:"© OpenStreetMap"}).addTo(map);
+const base=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe-winter/default/current/3857/{z}/{x}/{y}.jpeg",{maxZoom:17,crossOrigin:true,attribution:"© swisstopo / MeteoSwiss / SLF / Copernicus"}).addTo(map);
 // Keine weisse Maske mehr: die gedimmte OSM-Unterlage zeigt die Nachbarlaender,
 // die Winter-Pixelkarte liegt fuer die Schweiz darueber.
 const slopeWMTS=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.hangneigung-ueber_30/default/current/3857/{z}/{x}/{y}.png",{opacity:.7});
@@ -3417,7 +3451,7 @@ function loadReportMarkers(){
   reportMarkers.clearLayers();
   if(!window._drawOv)window._drawOv=L.layerGroup().addTo(map);
   _drawOv.clearLayers();
-  (allReports||[]).forEach(r=>{const cd=r.condition_data||{};if(cd.draw&&cd.bounds&&r.img){try{L.imageOverlay(r.img,cd.bounds,{opacity:.62,interactive:false}).addTo(_drawOv);}catch(e){}}});
+  (allReports||[]).forEach(r=>{const cd=r.condition_data||{};const _im=cd.drawImage||r.img;if(cd.draw&&cd.bounds&&_im){try{L.imageOverlay(_im,cd.bounds,{opacity:.62,interactive:false}).addTo(_drawOv);}catch(e){}}});
   if(!allReports||!allReports.length)return;
   const z=map.getZoom(),cellPx=66,clusterOn=z<12.5,rich=z>=12.5;
   const cells={};
@@ -3496,7 +3530,7 @@ async function loadDbReports(){
       if(r.flagged)return null; // hide community-flagged reports
       const ll=parseGeo(r.location);if(!ll||(ll[0]===0&&ll[1]===0))return null;const lat=ll[0],lng=ll[1];
       const catId=r.primary_categories?.[0]||'info';const catObj=RP_CATS.find(c=>c.id===catId);
-      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||ic('pin'),sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,
+      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||ic('pin'),sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,condition_data:r.condition_data||null,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,
         condN:condAgg[r.id]?condAgg[r.id].n:0,condAvg:condAgg[r.id]?condAgg[r.id].sum/condAgg[r.id].n:0,condPow:condAgg[r.id]?condAgg[r.id].pow:0,myCond:myCond[r.id]||null,dbRow:true};
     }).filter(Boolean);
     allReports=demoActive()?[...dbR,...DEMO_REPORTS]:dbR;loadReportMarkers();
@@ -4424,32 +4458,72 @@ function drawSummary(){
   if(drawTracks.length){const lv=drawTracks[drawTracks.length-1].level;out.push('Verspurt ('+DRAW_PENS.tracks.slider.labels[lv-1]+')');}
   return out;
 }
-async function drawPost(){
+let drawPhotoFile=null,drawSnapData=null,drawPaintData=null,drawFinCen=null,drawFinBnds=null,drawFinNames=null;
+function drawPaintingPNG(){try{drawRepaint(.85);const png=document.getElementById('drawCanvas').toDataURL('image/png');drawRepaint();return png;}catch(e){return null;}}
+function drawMapSnapshot(){
+  const cv=document.getElementById('drawCanvas'),W=cv.clientWidth,H=cv.clientHeight,dpr=drawDpr;
+  try{
+    const snap=document.createElement('canvas');snap.width=Math.round(W*dpr);snap.height=Math.round(H*dpr);
+    const sctx=snap.getContext('2d');sctx.scale(dpr,dpr);
+    sctx.fillStyle='#e8eef4';sctx.fillRect(0,0,W,H);
+    const cr=cv.getBoundingClientRect();
+    const imgs=map.getContainer().querySelectorAll('.leaflet-tile-pane img,.leaflet-image-layer');
+    imgs.forEach(im=>{if(!im.complete||!im.naturalWidth)return;const r=im.getBoundingClientRect();
+      try{sctx.drawImage(im,r.left-cr.left,r.top-cr.top,r.width,r.height);}catch(e){}});
+    drawRepaint(.92);sctx.drawImage(cv,0,0,W,H);drawRepaint();
+    return snap.toDataURL('image/png');
+  }catch(e){
+    try{const s=document.createElement('canvas');s.width=Math.round(W*dpr);s.height=Math.round(H*dpr);
+      const x=s.getContext('2d');x.scale(dpr,dpr);x.fillStyle='#e8eef4';x.fillRect(0,0,W,H);
+      drawRepaint(.92);x.drawImage(cv,0,0,W,H);drawRepaint();return s.toDataURL('image/png');}catch(_){return null;}
+  }
+}
+function drawOpenFinish(){
   if(!drawHasContent()){toast('Zeichne zuerst mindestens eine Zone ein.','err');return;}
-  const cv=document.getElementById('drawCanvas');let png;
-  try{drawRepaint(.85);png=cv.toDataURL('image/png');drawRepaint();}catch(e){toast('Zeichnung konnte nicht gespeichert werden.','err');return;}
-  const names=drawSummary();
-  let cen;try{cen=map.getCenter();}catch(e){cen={lat:46.8,lng:8.2};}
-  let bnds;try{const b=map.getBounds();bnds=[[b.getSouth(),b.getWest()],[b.getNorth(),b.getEast()]];}catch(e){bnds=null;}
-  const cd={draw:true,bounds:bnds,types:names,measurement:names.join(', ')};
+  drawFinNames=drawSummary();
+  try{const c=map.getCenter();drawFinCen={lat:c.lat,lng:c.lng};}catch(e){drawFinCen={lat:46.8,lng:8.2};}
+  try{const b=map.getBounds();drawFinBnds=[[b.getSouth(),b.getWest()],[b.getNorth(),b.getEast()]];}catch(e){drawFinBnds=null;}
+  drawPaintData=drawPaintingPNG();
+  drawSnapData=drawMapSnapshot();
+  drawPhotoFile=null;
+  const img=document.getElementById('drawSnapImg');if(img)img.src=drawSnapData||drawPaintData||'';
+  const pv=document.getElementById('drawPhotoPrev');if(pv){pv.style.display='none';pv.src='';}
+  const ta=document.getElementById('drawCaption');if(ta)ta.value='';
+  const pb=document.getElementById('drawPhotoBtn');if(pb)pb.style.display='';
+  document.getElementById('drawFinish').style.display='flex';
+  try{haptic(6);}catch(e){}
+}
+function drawFinishClose(){document.getElementById('drawFinish').style.display='none';}
+function drawPhotoPick(inp){if(!inp.files||!inp.files[0])return;drawPhotoFile=inp.files[0];inp.value='';
+  const pv=document.getElementById('drawPhotoPrev');if(pv){try{pv.src=URL.createObjectURL(drawPhotoFile);}catch(e){}pv.style.display='block';}
+  const pb=document.getElementById('drawPhotoBtn');if(pb)pb.style.display='none';try{haptic(6);}catch(e){}}
+async function drawPublish(){
+  const cap=(document.getElementById('drawCaption').value||'').trim()||null;
+  const names=drawFinNames||drawSummary(),cen=drawFinCen||{lat:46.8,lng:8.2};
+  const cd={draw:true,bounds:drawFinBnds,types:names,measurement:names.join(', '),snapshot:drawSnapData||null,drawImage:drawPaintData||null};
   if(demoActive()||!sb){
-    allReports.unshift({id:'draw'+Date.now(),user:'Du',cat:'snow',sub:'Schnee-Karte',measurement:names.join(', '),caption:null,lat:cen.lat,lng:cen.lng,time:'gerade eben',img:png,likes:0,comments:0,stars:0,condition_data:cd});
-    loadReportMarkers();drawClearSilent();drawClose();toast('Schnee-Karte gespeichert (Demo).','ok');return;
+    let photoUrl=null;if(drawPhotoFile){try{photoUrl=URL.createObjectURL(drawPhotoFile);}catch(e){}}
+    allReports.unshift({id:'draw'+Date.now(),user:'Du',cat:'snow',sub:'Schnee-Karte',measurement:names.join(', '),caption:cap,lat:cen.lat,lng:cen.lng,time:'gerade eben',img:photoUrl||drawSnapData||drawPaintData,likes:0,comments:0,stars:0,condition_data:cd});
+    loadReportMarkers();drawFinishClose();drawClearSilent();drawClose();toast('Schnee-Karte gespeichert (Demo).','ok');return;
   }
   if(!sbUser){authShow();return;}
-  const btn=document.getElementById('drawPostBtn');btn.disabled=true;btn.textContent='Postet…';
+  const btn=document.getElementById('drawPublishBtn');btn.disabled=true;btn.textContent='Postet…';
   try{
-    let imageUrl=null;
-    try{const blob=await (await fetch(png)).blob();const path=sbUser.id+'/draw'+Date.now()+'.png';
-      const{error:upErr}=await sb.storage.from('report-images').upload(path,blob,{contentType:'image/png'});
-      if(!upErr){const{data:ud}=sb.storage.from('report-images').getPublicUrl(path);imageUrl=ud?.publicUrl||null;}}catch(e){}
-    const row={user_id:sbUser.id,location:'POINT('+cen.lng+' '+cen.lat+')',image_url:imageUrl,
+    async function up(src,ext,ct){try{const blob=typeof src==='string'?await (await fetch(src)).blob():src;
+      const path=sbUser.id+'/draw'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.'+ext;
+      const{error}=await sb.storage.from('report-images').upload(path,blob,{contentType:ct});
+      if(error)return null;const{data:ud}=sb.storage.from('report-images').getPublicUrl(path);return ud?.publicUrl||null;}catch(e){return null;}}
+    let photoUrl=null;if(drawPhotoFile){const dw=await downscaleImage(drawPhotoFile);photoUrl=await up(dw,'jpg',(dw&&dw.type)||'image/jpeg');}
+    const paintUrl=drawPaintData?await up(drawPaintData,'png','image/png'):null;
+    const snapUrl=drawSnapData?await up(drawSnapData,'png','image/png'):null;
+    cd.snapshot=snapUrl;cd.drawImage=paintUrl;
+    const row={user_id:sbUser.id,location:'POINT('+cen.lng+' '+cen.lat+')',image_url:photoUrl||snapUrl||paintUrl,
       primary_categories:['snow'],subtype:'Schnee-Karte',condition_data:cd,
-      caption:null,completion_score:50,captured_at:new Date().toISOString()};
+      caption:cap,completion_score:(cap||photoUrl)?70:50,captured_at:new Date().toISOString()};
     const{error}=await sb.from('reports').insert(row);if(error)throw error;
-    toast('Schnee-Karte gepostet — danke!','ok');try{haptic(12);}catch(e){}drawClearSilent();drawClose();loadDbReports();
+    toast('Schnee-Karte gepostet — danke!','ok');try{haptic(12);}catch(e){}drawFinishClose();drawClearSilent();drawClose();loadDbReports();
   }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e),'err');}
-  btn.disabled=false;btn.textContent='Posten';
+  btn.disabled=false;btn.textContent='Veröffentlichen';
 }
 function obsStart(type){obsState=obsNewState(type);obsOpenCards=new Set();
   if(obsDeviceFix){obsApplyLoc(obsDeviceFix.lat,obsDeviceFix.lon,'device');}
@@ -4981,6 +5055,7 @@ function feedRender(){
       </div>
       ${r.img?`<div class="feed-card-visual" onclick="feedImgTap('${r.id}',event)"><img src="${r.img}" alt="" loading="lazy" decoding="async"/></div>`:
         (r.caption?`<div class="feed-tx" style="background:linear-gradient(150deg,${col}14,rgba(255,255,255,0) 75%)"><span class="feed-tx-bar" style="background:${col}"></span>${escapeHtml(r.caption)}</div>`:'')}
+      ${(r.condition_data&&r.condition_data.snapshot&&r.condition_data.snapshot!==r.img)?`<div class="feed-card-visual second"><img src="${r.condition_data.snapshot}" alt="" loading="lazy" decoding="async"/><span class="fc-snap-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;vertical-align:-1px"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/></svg> Zeichnung auf Karte</span></div>`:''}
       <div class="feed-card-body">
         <div class="feed-card-badges">
           <span class="feed-badge cat-${r.cat}">${catSvg(r.cat,14)} ${escapeHtml(r.sub||r.cat)}</span>
