@@ -1170,13 +1170,16 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.draw-on #ctrlRail,body.draw-on #layerBar,body.draw-on #searchWrap,body.draw-on #demoPill,body.draw-on #mapQr,body.draw-on #mapFab,body.draw-on #mapDraw,body.draw-on #bottomPanel,body.draw-on #legendBtn,body.draw-on .legend{display:none!important}
  .fab-v{position:absolute;top:-3px;left:-3px;min-width:16px;height:15px;padding:0 3px;border-radius:7px;background:#0a0a0c;color:#fff;font-size:8.5px;font-weight:900;line-height:15px;text-align:center;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
  .feed-fab .fab-v{background:#fff;color:#0a0a0c;border-color:#0a0a0c}
- #mapQr{bottom:calc(env(safe-area-inset-bottom, 0px) + 92px)!important}
- #mapDraw{bottom:calc(env(safe-area-inset-bottom, 0px) + 166px)!important}
+ #mapFab{bottom:calc(env(safe-area-inset-bottom, 0px) + 182px)!important}
+ #mapQr{bottom:calc(env(safe-area-inset-bottom, 0px) + 100px)!important}
+ #mapDraw{bottom:calc(env(safe-area-inset-bottom, 0px) + 18px)!important}
  .feed-draw{border-color:rgba(37,99,235,.9)!important;color:#2563eb!important}
  .feed-draw svg{color:#2563eb}
  #drawWrap{position:fixed;inset:0;z-index:4000;display:none}
  #drawCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
  body.draw-pan #drawCanvas{pointer-events:none;cursor:grab}
+ body.draw-pan #drawWrap{pointer-events:none}
+ body.draw-pan #drawClose,body.draw-pan #drawPan{pointer-events:auto}
  #drawClose{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;z-index:4002;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);box-shadow:var(--elev1);font-size:17px;color:var(--fg);cursor:pointer}
  #drawPan{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);right:12px;z-index:4002;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--hair);background:rgba(255,255,255,.92);backdrop-filter:blur(8px);box-shadow:var(--elev1);font-size:12px;font-weight:800;font-family:inherit;color:var(--fg2);cursor:pointer;white-space:nowrap}
  #drawPan svg{width:16px;height:16px;flex-shrink:0}
@@ -4265,6 +4268,7 @@ let drawCtx=null,drawPen=DRAW_PENS.powder,drawCat='snow',drawPanOn=false;
 let drawZoneCanvas=null,drawZoneW=0,drawZoneH=0,drawDpr=1,drawRefBounds=null;
 let drawRoutes=[],drawTracks=[],drawZoneUsed=new Set(),drawHistory=[];
 let _drawPainting=false,_drawLastPt=null,_drawCurRoute=null,_drawCurTrack=null,_drawDashAcc=0;
+let _drawTrackGrid=new Set(),drawTrackZoom=null;
 const DRAW_ZONE_W=34; // base zone brush width (CSS px)
 
 function drawHasContent(){return drawZoneUsed.size||drawRoutes.length||drawTracks.length;}
@@ -4278,7 +4282,7 @@ function drawC2O(cx,cy){const r=drawRefRect();return [(cx-r.x)/r.w*drawZoneW,(cy
 function drawOScale(){const r=drawRefRect();return drawZoneW/r.w;}
 
 function drawOpen(){
-  drawRoutes=[];drawTracks=[];drawZoneUsed=new Set();drawHistory=[];drawPanOn=false;_drawPainting=false;drawZoneCanvas=null;
+  drawRoutes=[];drawTracks=[];drawZoneUsed=new Set();drawHistory=[];drawPanOn=false;_drawPainting=false;drawZoneCanvas=null;_drawTrackGrid=new Set();drawTrackZoom=null;
   document.body.classList.remove('draw-pan');document.body.classList.add('draw-on');
   document.getElementById('drawWrap').style.display='block';
   try{map.dragging.disable();map.touchZoom.disable();map.doubleClickZoom.disable();map.scrollWheelZoom.disable();}catch(e){}
@@ -4313,6 +4317,7 @@ function drawSetupCanvas(){
   drawZoneW=Math.round(w*drawDpr);drawZoneH=Math.round(h*drawDpr);
   drawZoneCanvas=document.createElement('canvas');drawZoneCanvas.width=drawZoneW;drawZoneCanvas.height=drawZoneH;
   try{drawRefBounds=map.getBounds();}catch(e){drawRefBounds=null;}
+  try{if(drawTrackZoom==null)drawTrackZoom=map.getZoom();}catch(e){drawTrackZoom=13;}
   if(!cv._wired){cv._wired=true;
     const pt=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
     cv.addEventListener('pointerdown',e=>{if(drawPanOn)return;try{cv.setPointerCapture(e.pointerId);}catch(_){}
@@ -4337,13 +4342,31 @@ function drawStrokeBegin(p){
   const k=drawPen.kind;
   if(k==='zone'||k==='eraser'){_drawDashAcc=0;_drawLastPt=drawC2O(p[0],p[1]);drawCommitSeg(_drawLastPt,_drawLastPt);}
   else if(k==='route'){_drawCurRoute={pen:drawPen.id,color:drawPen.color,dash:drawPen.dash||null,pts:[map.containerPointToLatLng(p)]};drawRoutes.push(_drawCurRoute);}
-  else if(k==='tracks'){_drawCurTrack={level:drawPen.slider.val,pts:[map.containerPointToLatLng(p)]};drawTracks.push(_drawCurTrack);}
+  else if(k==='tracks'){drawTrackAt(p[0],p[1]);}
 }
 function drawStrokeExtend(p){
   const k=drawPen.kind;
   if(k==='zone'||k==='eraser'){const o=drawC2O(p[0],p[1]);drawCommitSeg(_drawLastPt,o);_drawLastPt=o;}
   else if(k==='route'&&_drawCurRoute){_drawCurRoute.pts.push(map.containerPointToLatLng(p));}
-  else if(k==='tracks'&&_drawCurTrack){_drawCurTrack.pts.push(map.containerPointToLatLng(p));}
+  else if(k==='tracks'){drawTrackAt(p[0],p[1]);}
+}
+// Verspurung: place a stipple dot on a fixed geo grid (brush keeps constant
+// spacing; passing over the same spot twice never adds a second dot).
+function drawTrackGap(level){return level===1?30:(level===2?18:11);}
+function drawTrackAt(cx,cy){
+  const level=drawPen.slider.val,gap=drawTrackGap(level);
+  let ll;try{ll=map.containerPointToLatLng([cx,cy]);}catch(e){return;}
+  const z=drawTrackZoom!=null?drawTrackZoom:map.getZoom();
+  let pz;try{pz=map.project(ll,z);}catch(e){return;}
+  const gx=Math.round(pz.x/gap),gy=Math.round(pz.y/gap),key=gap+':'+gx+'_'+gy;
+  if(_drawTrackGrid.has(key))return;_drawTrackGrid.add(key);
+  let snapped;try{snapped=map.unproject(L.point(gx*gap,gy*gap),z);}catch(e){snapped=ll;}
+  drawTracks.push({ll:snapped,level:level});
+}
+function drawRebuildTrackGrid(){
+  _drawTrackGrid=new Set();const z=drawTrackZoom!=null?drawTrackZoom:map.getZoom();
+  drawTracks.forEach(d=>{const gap=drawTrackGap(d.level);let pz;try{pz=map.project(d.ll,z);}catch(e){return;}
+    _drawTrackGrid.add(gap+':'+Math.round(pz.x/gap)+'_'+Math.round(pz.y/gap));});
 }
 function drawCommitSeg(a,b){
   const octx=drawZoneCanvas.getContext('2d');octx.lineJoin='round';
@@ -4366,7 +4389,7 @@ function drawRepaint(expAlpha){
   const W=cv.clientWidth,H=cv.clientHeight;ctx.clearRect(0,0,W,H);
   if(drawZoneCanvas){const r=drawRefRect();ctx.globalAlpha=expAlpha||.5;
     ctx.drawImage(drawZoneCanvas,0,0,drawZoneW,drawZoneH,r.x,r.y,r.w,r.h);ctx.globalAlpha=1;}
-  drawTracks.forEach(t=>drawPaintTrack(ctx,t));
+  drawPaintTrack(ctx);
   drawRoutes.forEach(rt=>drawPaintRoute(ctx,rt));
 }
 function drawPaintRoute(ctx,rt){
@@ -4379,21 +4402,12 @@ function drawPaintRoute(ctx,rt){
   ctx.setLineDash(rt.dash||[]);ctx.strokeStyle=rt.color;ctx.lineWidth=5;ctx.stroke();
   ctx.setLineDash([]);
 }
-function drawPaintTrack(ctx,t){
-  let pts;try{pts=t.pts.map(ll=>map.latLngToContainerPoint(ll));}catch(e){return;}
-  const gap=t.level===1?26:(t.level===2?15:9),lines=t.level===1?2:3;
-  ctx.fillStyle='rgba(31,41,55,.82)';ctx.globalAlpha=1;
-  let carry=0;
-  for(let i=1;i<pts.length;i++){
-    const a=pts[i-1],b=pts[i],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||0.0001;
-    const ux=dx/len,uy=dy/len,px=-uy,py=ux;
-    let d=carry;
-    while(d<len){const cx=a.x+ux*d,cy=a.y+uy*d;
-      for(let k=0;k<lines;k++){const off=(k-(lines-1)/2)*4;
-        ctx.beginPath();ctx.arc(cx+px*off,cy+py*off,1.5,0,6.28318);ctx.fill();}
-      d+=gap;}
-    carry=d-len;
-  }
+function drawPaintTrack(ctx){
+  if(!drawTracks.length)return;
+  ctx.globalAlpha=1;ctx.fillStyle='rgba(31,41,55,.85)';
+  drawTracks.forEach(d=>{let pt;try{pt=map.latLngToContainerPoint(d.ll);}catch(e){return;}
+    const r=d.level===3?1.7:(d.level===2?2:2.4);
+    ctx.beginPath();ctx.arc(pt.x,pt.y,r,0,6.28318);ctx.fill();});
 }
 function drawPushHistory(){
   if(!drawZoneCanvas)return;const c=document.createElement('canvas');c.width=drawZoneW;c.height=drawZoneH;
@@ -4405,12 +4419,12 @@ function drawUndo(){
   if(!drawHistory.length)return;const h=drawHistory.pop();
   const octx=drawZoneCanvas.getContext('2d');octx.setTransform(1,0,0,1,0,0);
   octx.clearRect(0,0,drawZoneW,drawZoneH);octx.drawImage(h.zone,0,0);
-  drawRoutes.length=h.nR;drawTracks.length=h.nT;drawZoneUsed=new Set(h.used);
+  drawRoutes.length=h.nR;drawTracks.length=h.nT;drawZoneUsed=new Set(h.used);drawRebuildTrackGrid();
   drawRepaint();try{haptic(5);}catch(e){}
 }
 function drawClearSilent(){
   if(drawZoneCanvas)drawZoneCanvas.getContext('2d').clearRect(0,0,drawZoneW,drawZoneH);
-  drawRoutes=[];drawTracks=[];drawZoneUsed.clear();drawHistory=[];
+  drawRoutes=[];drawTracks=[];drawZoneUsed.clear();drawHistory=[];_drawTrackGrid=new Set();
 }
 function drawClear(){if(!drawHasContent())return;if(!confirm('Ganze Zeichnung löschen?'))return;drawClearSilent();drawRepaint();}
 function drawRenderCats(){
@@ -4460,38 +4474,46 @@ function drawSummary(){
 }
 let drawPhotoFile=null,drawSnapData=null,drawPaintData=null,drawFinCen=null,drawFinBnds=null,drawFinNames=null;
 function drawPaintingPNG(){try{drawRepaint(.85);const png=document.getElementById('drawCanvas').toDataURL('image/png');drawRepaint();return png;}catch(e){return null;}}
-function drawMapSnapshot(){
+// Composite the map behind the drawing. Base tiles are re-loaded through fresh
+// crossOrigin images so the canvas is never tainted (a non-CORS tile simply
+// fails to load and is skipped rather than blanking the whole snapshot).
+async function drawMapSnapshot(){
   const cv=document.getElementById('drawCanvas'),W=cv.clientWidth,H=cv.clientHeight,dpr=drawDpr;
+  const mk=()=>{const s=document.createElement('canvas');s.width=Math.round(W*dpr);s.height=Math.round(H*dpr);
+    const x=s.getContext('2d');x.scale(dpr,dpr);x.fillStyle='#e8eef4';x.fillRect(0,0,W,H);return {s:s,x:x};};
   try{
-    const snap=document.createElement('canvas');snap.width=Math.round(W*dpr);snap.height=Math.round(H*dpr);
-    const sctx=snap.getContext('2d');sctx.scale(dpr,dpr);
-    sctx.fillStyle='#e8eef4';sctx.fillRect(0,0,W,H);
     const cr=cv.getBoundingClientRect();
-    const imgs=map.getContainer().querySelectorAll('.leaflet-tile-pane img,.leaflet-image-layer');
-    imgs.forEach(im=>{if(!im.complete||!im.naturalWidth)return;const r=im.getBoundingClientRect();
-      try{sctx.drawImage(im,r.left-cr.left,r.top-cr.top,r.width,r.height);}catch(e){}});
-    drawRepaint(.92);sctx.drawImage(cv,0,0,W,H);drawRepaint();
-    return snap.toDataURL('image/png');
+    const tiles=[...map.getContainer().querySelectorAll('.leaflet-tile-pane img')]
+      .filter(im=>im.complete&&im.naturalWidth&&im.src&&im.src.indexOf('data:')!==0)
+      .map(im=>{const r=im.getBoundingClientRect();let op=1;try{op=parseFloat(getComputedStyle(im.parentNode).opacity);if(isNaN(op))op=1;}catch(e){}
+        return {src:im.src,x:r.left-cr.left,y:r.top-cr.top,w:r.width,h:r.height,op:op};});
+    const loaded=await Promise.all(tiles.map(t=>new Promise(res=>{
+      const ni=new Image();let to;const done=v=>{clearTimeout(to);res(v);};
+      ni.crossOrigin='anonymous';ni.onload=()=>done(Object.assign(t,{img:ni}));ni.onerror=()=>done(null);
+      to=setTimeout(()=>done(null),3000);ni.src=t.src;})));
+    const g=mk();
+    loaded.forEach(t=>{if(t&&t.img){try{g.x.globalAlpha=t.op;g.x.drawImage(t.img,t.x,t.y,t.w,t.h);}catch(e){}}});
+    g.x.globalAlpha=1;
+    drawRepaint(.92);g.x.drawImage(cv,0,0,W,H);drawRepaint();
+    return g.s.toDataURL('image/png');
   }catch(e){
-    try{const s=document.createElement('canvas');s.width=Math.round(W*dpr);s.height=Math.round(H*dpr);
-      const x=s.getContext('2d');x.scale(dpr,dpr);x.fillStyle='#e8eef4';x.fillRect(0,0,W,H);
-      drawRepaint(.92);x.drawImage(cv,0,0,W,H);drawRepaint();return s.toDataURL('image/png');}catch(_){return null;}
+    try{const g=mk();drawRepaint(.92);g.x.drawImage(cv,0,0,W,H);drawRepaint();return g.s.toDataURL('image/png');}catch(_){return drawPaintData||null;}
   }
 }
-function drawOpenFinish(){
+async function drawOpenFinish(){
   if(!drawHasContent()){toast('Zeichne zuerst mindestens eine Zone ein.','err');return;}
   drawFinNames=drawSummary();
   try{const c=map.getCenter();drawFinCen={lat:c.lat,lng:c.lng};}catch(e){drawFinCen={lat:46.8,lng:8.2};}
   try{const b=map.getBounds();drawFinBnds=[[b.getSouth(),b.getWest()],[b.getNorth(),b.getEast()]];}catch(e){drawFinBnds=null;}
-  drawPaintData=drawPaintingPNG();
-  drawSnapData=drawMapSnapshot();
   drawPhotoFile=null;
-  const img=document.getElementById('drawSnapImg');if(img)img.src=drawSnapData||drawPaintData||'';
+  drawPaintData=drawPaintingPNG();drawSnapData=null;
+  const img=document.getElementById('drawSnapImg');if(img)img.src=drawPaintData||'';
   const pv=document.getElementById('drawPhotoPrev');if(pv){pv.style.display='none';pv.src='';}
   const ta=document.getElementById('drawCaption');if(ta)ta.value='';
   const pb=document.getElementById('drawPhotoBtn');if(pb)pb.style.display='';
   document.getElementById('drawFinish').style.display='flex';
   try{haptic(6);}catch(e){}
+  try{drawSnapData=await drawMapSnapshot();if(img&&drawSnapData)img.src=drawSnapData;}catch(e){}
 }
 function drawFinishClose(){document.getElementById('drawFinish').style.display='none';}
 function drawPhotoPick(inp){if(!inp.files||!inp.files[0])return;drawPhotoFile=inp.files[0];inp.value='';
