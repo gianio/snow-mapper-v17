@@ -1193,6 +1193,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #drawSlider label{font-size:13px;font-weight:800;color:var(--fg2);white-space:nowrap}
  #drawSlider input{flex:1;accent-color:var(--fg);min-width:0}
  #drawSlider b{font-size:13px;font-weight:800;color:var(--fg);min-width:92px;text-align:right}
+#drawBrush{display:none;align-items:center;gap:11px;background:#fff;border:1px solid var(--hair);border-radius:14px;padding:8px 15px;margin-bottom:10px;box-shadow:var(--elev1)}
+ #drawBrush label{font-size:13px;font-weight:800;color:var(--fg2);white-space:nowrap}
+ #drawBrush input{flex:1;accent-color:var(--fg);min-width:0}
+ #drawBrush b{font-size:13px;font-weight:800;color:var(--fg);min-width:52px;text-align:right}
  #drawCats{display:flex;gap:4px;margin-bottom:10px;background:var(--fill);border:1px solid var(--hair);border-radius:13px;padding:4px}
  .dc-tab{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;height:36px;border:none;background:none;border-radius:9px;font-family:inherit;font-size:12px;font-weight:800;color:var(--fg2);cursor:pointer;white-space:nowrap}
  .dc-tab svg{width:15px;height:15px}
@@ -1223,11 +1227,25 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .dfin-photo svg{width:19px;height:19px}
  #drawPhotoPrev{width:100%;max-height:220px;object-fit:cover;border-radius:13px;margin-bottom:12px;display:none}
  #drawCaption{width:100%;box-sizing:border-box;min-height:74px;resize:vertical;border-radius:13px;border:1px solid var(--hair);background:var(--fill);padding:11px 13px;font-family:inherit;font-size:14px;color:var(--fg);margin-bottom:14px}
+ .insp-prog h4 em{color:#7c3aed}
+ .prog-conf{display:flex;align-items:center;gap:9px;margin-top:3px}
+ .prog-bar{flex:1;height:8px;border-radius:5px;background:var(--fill2);overflow:hidden}
+ .prog-bar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#ef4444,#f59e0b 45%,#22c55e)}
+ .prog-conf span{font-size:12px;font-weight:800;color:var(--fg2);white-space:nowrap}
+ .prog-note{font-size:11.5px;color:var(--mut);margin-top:6px;line-height:1.4}
  .dfin-actions{display:flex;gap:10px}
  .dfin-back{flex:0 0 auto;padding:0 18px;height:48px;border-radius:14px;border:1px solid var(--hair);background:#fff;color:var(--fg2);font-size:14px;font-weight:800;font-family:inherit;cursor:pointer}
  .dfin-post{flex:1;height:48px;border-radius:14px;border:none;background:var(--fg);color:#fff;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer}
  .dfin-post:active,.dfin-back:active{transform:scale(.98)}
  .feed-card-visual.second{margin-top:6px;position:relative}
+ .fc-wrap{position:relative;margin:2px 14px 0;aspect-ratio:4/3;border-radius:16px;overflow:hidden;background:var(--fill2)}
+ .fc-carousel{display:flex;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ .fc-carousel::-webkit-scrollbar{display:none}
+ .fc-slide{flex:0 0 100%;height:100%;scroll-snap-align:start;position:relative}
+ .fc-slide img{width:100%;height:100%;object-fit:cover;display:block}
+ .fc-dots{position:absolute;left:0;right:0;bottom:8px;display:flex;gap:6px;justify-content:center;pointer-events:none}
+ .fc-dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.6);box-shadow:0 1px 3px rgba(0,0,0,.5);transition:width .2s,background .2s}
+ .fc-dots i.on{background:#fff;width:16px;border-radius:3px}
  .fc-snap-tag{position:absolute;left:8px;bottom:8px;background:rgba(10,10,12,.72);color:#fff;font-size:10.5px;font-weight:800;padding:4px 8px;border-radius:8px}
  .report-overlay{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px}
  .report-overlay .ro-bg{position:absolute;inset:0;background:rgba(11,17,32,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
@@ -1839,6 +1857,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <button data-t="temp"><span class="mt-ic" style="background:rgba(232,89,12,.12);color:#e8590c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V4a2 2 0 1 0-4 0v10.76a4 4 0 1 0 4 0z"/></svg></span><span class="mt-tx"><b>Temperatur</b><span>Luft &amp; Oberfläche</span></span></button>
       <button data-t="wind"><span class="mt-ic" style="background:rgba(13,148,136,.12);color:#0d9488"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.6 4.6A2 2 0 1 1 11 8H2M12.6 19.4A2 2 0 1 0 14 16H2M17.6 7.6A2.5 2.5 0 1 1 19 12H2"/></svg></span><span class="mt-tx"><b>Wind</b><span>Geschwindigkeit &amp; Böen</span></span></button>
       <button data-t="qpr"><span class="mt-ic" style="background:rgba(30,58,138,.12);color:#1e3a8a"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg></span><span class="mt-tx"><b>Powder-Reports</b><span>Heatmap der Community</span></span></button>
+      <button data-t="prog"><span class="mt-ic" style="background:rgba(124,58,237,.12);color:#7c3aed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg></span><span class="mt-tx"><b>Schnee-Prognose</b><span>aus Zeichnen-Reports (Aspekt+Höhe)</span></span></button>
       </span>
   <div id="sublayers"></div>
 </div>
@@ -1939,6 +1958,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button id="drawPan" onclick="drawTogglePan()" title="Karte bewegen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg><span>Karte bewegen</span></button>
   <div id="drawHint">Male die Zonen — oben rechts kannst du die Karte bewegen</div>
   <div id="drawBar">
+    <div id="drawBrush"></div>
     <div id="drawSlider"></div>
     <div id="drawCats"></div>
     <div id="drawPens"></div>
@@ -2479,6 +2499,69 @@ function renderQprHeat(){
   qcx.clearRect(0,0,500,340);qcx.imageSmoothingEnabled=true;
   qcx.drawImage(tmp,0,0,500,340);
   qprOverlay.setUrl(qcv.toDataURL());}
+// ===== Schnee-Prognose: Aspekt + Höhen-Heuristik aus Zeichnen-Reports =====
+const PROG_GW=200,PROG_GH=140;
+const pcv=document.createElement('canvas');pcv.width=PROG_GW*2;pcv.height=PROG_GH*2;const pcx=pcv.getContext('2d');
+let prognosisOverlay=L.imageOverlay(pcv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:.72});
+let PROG_ASP=null,PROG_ELEV=null,PROG_SLP=null,PROG_LA=null,PROG_LO=null;
+let _progField=null,_progConf=null,_progType=null;
+const PROG_COL={powder:[74,163,255],drift:[232,89,12],wet:[245,158,11],suncrust:[244,208,63],windpressed:[150,168,196],firn:[63,178,127],scoured:[154,135,120]};
+const PROG_LABEL={powder:'Powder',drift:'Triebschnee',wet:'Nassschnee',suncrust:'Sonnendeckel',windpressed:'Windgepresst',firn:'Firn',scoured:'Abgeweht'};
+function progTerrain(){
+  if(PROG_ASP)return;const N=PROG_GW*PROG_GH;
+  PROG_ASP=new Float32Array(N);PROG_ELEV=new Float32Array(N);PROG_SLP=new Float32Array(N);PROG_LA=new Float32Array(N);PROG_LO=new Float32Array(N);
+  for(let gy=0;gy<PROG_GH;gy++)for(let gx=0;gx<PROG_GW;gx++){const idx=gy*PROG_GW+gx;
+    const lat=laMax-gy/(PROG_GH-1)*(laMax-laMin),lon=loMin+gx/(PROG_GW-1)*(loMax-loMin);
+    PROG_LA[idx]=lat;PROG_LO[idx]=lon;
+    const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
+    if(cx<0||cx>=W||cy<0||cy>=H){PROG_ELEV[idx]=-1;continue;}
+    const q=cy*W+cx;PROG_ASP[idx]=maspv(q);PROG_ELEV[idx]=melevv(q);PROG_SLP[idx]=mslpv(q);}
+}
+function progZones(){
+  const out=[];(allReports||[]).forEach(r=>{const cd=r.condition_data;if(!cd||!cd.zones)return;
+    cd.zones.forEach(z=>{if(!z||!z.type)return;const c=z.centroid||[r.lat,r.lng];if(c[0]==null)return;
+      out.push({type:z.type,lat:c[0],lng:c[1],e0:z.elevMin,e1:z.elevMax,asp:z.aspectDeg,conc:z.aspectConc==null?0.6:z.aspectConc});});});
+  return out;
+}
+function progEnvelope(asp,elev,slp,z){
+  if(elev<0)return 0;let em=1;
+  if(z.e0!=null&&z.e1!=null){const dband=Math.max(0,z.e0-elev,elev-z.e1);em=Math.exp(-(dband*dband)/(230*230));}
+  let am=0.55;
+  if(z.asp!=null&&slp>=8){let dA=Math.abs(asp-z.asp)%360;if(dA>180)dA=360-dA;
+    const c=Math.cos(dA*Math.PI/180),c0=Math.cos(70*Math.PI/180);
+    am=Math.max(0,Math.min(1,(c-c0)/(1-c0)));const conc=Math.max(0,Math.min(1,z.conc));am=am*conc+0.5*(1-conc);}
+  return em*am;
+}
+function progDistKm(lat,lon,z){const dLat=(lat-z.lat)*111,dLo=(lon-z.lng)*111*Math.cos(lat*Math.PI/180);return Math.hypot(dLat,dLo);}
+function renderPrognosis(type){
+  progTerrain();_progType=type;
+  const zones=progZones(),sel=zones.filter(z=>z.type===type),oth=zones.filter(z=>z.type!==type);
+  const N=PROG_GW*PROG_GH,SC=16;
+  _progField=new Float32Array(N);_progConf=new Float32Array(N);
+  const col=PROG_COL[type]||[74,163,255];
+  const img=new ImageData(PROG_GW,PROG_GH),d=img.data;
+  for(let idx=0;idx<N;idx++){
+    const asp=PROG_ASP[idx],elev=PROG_ELEV[idx],slp=PROG_SLP[idx],lat=PROG_LA[idx],lon=PROG_LO[idx];
+    if(elev<0){d[idx*4+3]=0;continue;}
+    let sS=0,sO=0;
+    for(const z of sel){const e=progEnvelope(asp,elev,slp,z);if(e<=0.02)continue;const dd=progDistKm(lat,lon,z);sS+=e*Math.exp(-(dd*dd)/(SC*SC));}
+    for(const z of oth){const e=progEnvelope(asp,elev,slp,z);if(e<=0.02)continue;const dd=progDistKm(lat,lon,z);sO+=e*Math.exp(-(dd*dd)/(SC*SC));}
+    const tot=sS+sO,agree=tot>0?sS/tot:0,evid=1-Math.exp(-tot/1.1),strength=1-Math.exp(-sS/1.1);
+    const like=strength*(0.3+0.7*agree);
+    _progField[idx]=like;_progConf[idx]=Math.round(100*agree*evid);
+    const o=idx*4;if(like<0.05){d[o+3]=0;continue;}
+    const t=Math.pow(like,0.8);d[o]=col[0];d[o+1]=col[1];d[o+2]=col[2];d[o+3]=Math.min(215,40+195*t)|0;
+  }
+  const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
+  pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
+  prognosisOverlay.setUrl(pcv.toDataURL());
+}
+function prognosisAt(lat,lon){
+  if(!_progField)return null;
+  const gx=Math.round((lon-loMin)/(loMax-loMin)*(PROG_GW-1)),gy=Math.round((laMax-lat)/(laMax-laMin)*(PROG_GH-1));
+  if(gx<0||gx>=PROG_GW||gy<0||gy>=PROG_GH)return null;const idx=gy*PROG_GW+gx;
+  return {type:_progType,like:Math.round(_progField[idx]*100),conf:_progConf[idx]};
+}
 const windArr=L.layerGroup(); const stnGroup=L.layerGroup().addTo(map);
 let layer="snow",stat="avg",windowSize=48,a=nowIdx,b=Math.min(T,nowIdx+48),showStn=true,wtimer=null;
 const isMobile=window.innerWidth<=560;
@@ -2584,13 +2667,15 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
   if(l=="tsurf"){let extra="estimated: air ± radiative cooling/warming";if(stat=="sub0")extra="only cells with max surface temp &lt;0°C";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>T Surface [°C] (${sn})</b><br>${extra}`;}
   if(l=="rough")return "<b>Terrain Roughness</b><br>light→dark brown = rougher";
   if(l=="skiable")return '<b>Skiability Estimate</b><br>Snow depth vs. terrain roughness need<div style="margin-top:4px"><div><i style="background:#64dc64"></i>Plenty of snow</div><div><i style="background:#a0dc64"></i>Skiable</div><div><i style="background:#ffdc32"></i>Marginal</div><div><i style="background:#ff8c28"></i>Needs more snow</div><div><i style="background:#ff3c28"></i>Far from skiable</div><div><i style="background:#500000"></i>Too steep (&gt;55°)</div></div>';
+  if(l=="prog"){const ty=_progType||stat,cl=(PROG_LABEL[ty]||ty),c=PROG_COL[ty]||[124,58,237];
+    return '<b>Prognose · '+cl+'</b><br><div><i style="background:rgba('+c[0]+','+c[1]+','+c[2]+',.85)"></i>hohe Wahrscheinlichkeit</div><div><i style="background:rgba('+c[0]+','+c[1]+','+c[2]+',.28)"></i>gering</div><div style="margin-top:4px;font-size:11px">nahe Hänge mit ähnlichem Aspekt &amp; Höhe · tippe für Vertrauen&nbsp;%</div>';}
   if(l=="qprheat")return '<b>Powder-Reports (Heatmap)</b><br><div><i style="background:#cde4ff"></i>vereinzelt / wenig</div><div><i style="background:#5b83d9"></i>guter Powder</div><div><i style="background:#0f2a7d"></i>tief &amp; fluffy</div><div style="margin-top:4px;font-size:11px">aus Quick-Powder-Reports · inkl. Demo-Daten</div>';
   if(l=="powder")return '<b>Powder Conditions</b><br><div><i style="background:rgba(200,220,255,.7)"></i>Powder (stable)</div><div><i style="background:rgba(180,205,245,.55)"></i>Powder (reduced)</div><div style="margin-top:4px;font-size:11px">Gust ≈ mean wind × 1.5</div>';
   return "<b>Hillshade / Relief (swisstopo)</b>";}
 function legend(l){document.getElementById('legend').innerHTML=legendFor(l||layer);}
 document.getElementById('legendBtn').onclick=()=>{const lg=document.getElementById('legend'),btn=document.getElementById('legendBtn');lg.classList.toggle('show');btn.classList.toggle('active');};
 function showOverlay(){
-  [slopeWMTS,reliefWMTS,aspectGrid,roughImg,radOverlay,qprOverlay].forEach(x=>map.removeLayer(x));
+  [slopeWMTS,reliefWMTS,aspectGrid,roughImg,radOverlay,qprOverlay,prognosisOverlay].forEach(x=>map.removeLayer(x));
   const grid=(layer=="snow"||layer=="depth"||layer=="temp"||layer=="sun"||layer=="wind"||layer=="powder"||layer=="tsurf"||layer=="skiable");
   const radg=(layer=="rad"||layer=="radsun");
   raster.setOpacity(grid?0.94:0);
@@ -2600,6 +2685,7 @@ function showOverlay(){
   else if(layer=="aspect")map.addLayer(aspectGrid);
   else if(layer=="rough")map.addLayer(roughImg);
   else if(layer=="qprheat"){map.addLayer(qprOverlay);renderQprHeat();}
+  else if(layer=="prog"){map.addLayer(prognosisOverlay);renderPrognosis(stat);}
   if(layer=="wind"){map.addLayer(windArr);startFlow();}else{map.removeLayer(windArr);stopFlow();}
 }
 function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefresh();if(tlMode==='detail')drawTimeline();
@@ -2630,6 +2716,7 @@ document.querySelectorAll('#tlModeToggle button').forEach(x=>x.onclick=()=>setTl
 const TOPICS={
   ski:[{l:'skiable',s:'avg',label:'Skiable'},{l:'powder',s:'avg',label:'Powder'}],
   qpr:[{l:'qprheat',s:'avg',label:'Heatmap'}],
+  prog:[{l:'prog',s:'powder',label:'Powder'},{l:'prog',s:'wet',label:'Nass'},{l:'prog',s:'suncrust',label:'Sonnendeckel'},{l:'prog',s:'windpressed',label:'Windgepresst'},{l:'prog',s:'drift',label:'Triebschnee'},{l:'prog',s:'firn',label:'Firn'}],
   snow:[{l:'snow',s:'avg',label:'Neuschnee'},{l:'depth',s:'avg',label:'Schneehöhe'}],
   temp:[{l:'temp',s:'avg',label:'Mean'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'temp',s:'sub0',label:'<0°C'},{l:'temp',s:'max05',label:'0-5°C'},{l:'tsurf',s:'avg',label:'Surface'}],
   wind:[{l:'wind',s:'avg',label:'Mean'},{l:'wind',s:'max',label:'Max'},{l:'wind',s:'min',label:'Min'},{l:'wind',s:'lt10',label:'<10 km/h'}],
@@ -2645,12 +2732,13 @@ const TOPIC_COLOR={
   wind:['#0d9488','rgba(13,148,136,.14)','rgba(13,148,136,.5)','rgba(13,148,136,.10)'],
   rad:['#f59e0b','rgba(245,158,11,.16)','rgba(245,158,11,.55)','rgba(245,158,11,.13)'],
   terrain:['#64748b','rgba(100,116,139,.16)','rgba(100,116,139,.5)','rgba(100,116,139,.10)'],
-  qpr:['#1e3a8a','rgba(30,58,138,.14)','rgba(30,58,138,.5)','rgba(30,58,138,.10)']};
+  qpr:['#1e3a8a','rgba(30,58,138,.14)','rgba(30,58,138,.5)','rgba(30,58,138,.10)'],
+  prog:['#7c3aed','rgba(124,58,237,.14)','rgba(124,58,237,.5)','rgba(124,58,237,.11)']};
 let tlSel='#5e5ce6',tlSelTint='rgba(94,92,230,.12)';
 function setTopic(t,subIdx){
   curTopic=t;
   document.querySelectorAll('#topics button[data-t]').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
-  const isMore=['temp','wind','rad','terrain','qpr'].includes(t);
+  const isMore=['temp','wind','rad','terrain','qpr','prog'].includes(t);
   document.getElementById('moreTopics').classList.toggle('sel',isMore);
   document.querySelectorAll('#topicsMore button').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
   const tc=TOPIC_COLOR[t]||TOPIC_COLOR.snow;const lb=document.getElementById('layerBar');
@@ -2829,11 +2917,16 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   let wsum=0;for(let t=a;t<b;t++)wsum+=SPD[t*P+wk]/M.spd_mul*3.6;const wmean=wsum/Math.max(1,b-a);
   const asp=maspv(p),slp=mslpv(p),quad=aspectQ(asp),QD={N:'Nord',E:'Ost',S:'Süd',W:'West'};
   const pan=document.getElementById('inspPanel');
+  let progSec='';
+  if(layer==='prog'){try{const pr=prognosisAt(lat,lon);if(pr){const cl=(PROG_LABEL[pr.type]||pr.type);const zc=progZones().filter(z=>z.type===pr.type).length;
+    progSec='<div class="insp-sec insp-prog"><h4>Prognose '+cl+' <em>'+pr.like+'% wahrsch.</em></h4>'+
+      '<div class="prog-conf"><div class="prog-bar"><i style="width:'+pr.conf+'%"></i></div><span>'+pr.conf+'% Vertrauen</span></div>'+
+      '<div class="prog-note">Aus '+zc+' Zeichnen-Report(s), gewichtet nach Aspekt, Höhe und Distanz zur nächsten Meldung.</div></div>';}}catch(e){}}
   pan.innerHTML=
    '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b>'+
      '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elev.toFixed(0)+' m</span><span class="insp-chip accent">'+(QD[quad]||quad)+' · '+asp.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+
    '</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
-   '<div class="insp-body">'+
+   '<div class="insp-body">'+progSec+
      '<div class="insp-sec"><h4>Neuschnee <em>+'+newSnow.toFixed(1)+' cm</em></h4><canvas id="icNew"></canvas></div>'+
      '<div class="insp-sec"><h4>Schneehöhe <em>'+depthNow.toFixed(0)+' cm</em></h4><canvas id="icDepth"></canvas></div>'+
      '<div class="insp-sec"><h4>Temperatur <em>Luft · Oberfläche</em></h4><canvas id="icTemp"></canvas></div>'+
@@ -3399,6 +3492,34 @@ const DEMO_REPORTS=DEMO_DEFS.map((d,i2)=>({id:'d'+(i2+1),user:DEMO_USERS[i2%DEMO
       measurement:t[1]==='Schneehöhe'?(40+5*Math.floor(rnd()*20))+' cm':null,
       caption:t[2],lat:sp[0]+jit(),lng:sp[1]+jit(),time:'vor '+(1+Math.floor(rnd()*5))+'d',
       img:(i%5===0)?demoImg(150+i*9,170+i*11,160+i*5):null});}
+  // ---- Demo Schnee-Karten (Zeichnen v3) mit Aspekt/Höhen-Zonen fürs Prognose-Modell ----
+  const DC={powder:'#4aa3ff',drift:'#e8590c',wet:'#f59e0b',suncrust:'#f4d03f',windpressed:'#b9c4d4',firn:'#3fb27f',scoured:'#9a8778'};
+  const DCL={powder:'Powder',drift:'Triebschnee',wet:'Nassschnee',suncrust:'Sonnendeckel',windpressed:'Windgepresst',firn:'Firn',scoured:'Abgeweht'};
+  function drawDemoSnap(col){return 'data:image/svg+xml;utf8,'+encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="#e9eef3"/>'+
+    '<path d="M0 215 L95 150 L175 195 L265 120 L345 170 L400 135 L400 300 L0 300Z" fill="#dee6ec"/>'+
+    '<path d="M55 130 L150 82 L215 122 L305 74" stroke="#cdd7e0" stroke-width="6" fill="none"/>'+
+    '<ellipse cx="210" cy="152" rx="122" ry="66" fill="'+col+'" opacity="0.5"/>'+
+    '<ellipse cx="150" cy="120" rx="70" ry="40" fill="'+col+'" opacity="0.44"/></svg>');}
+  const drawDemos=[
+    [46.80,9.83,'powder',0,1700,2300,'Top Pulver an den Nordhängen bei Davos'],
+    [46.49,9.90,'powder',315,2000,2600,'Engadin NW — unverspurt & fluffy'],
+    [46.10,7.60,'suncrust',180,2200,2900,'Wallis Südhänge — harter Sonnendeckel oben'],
+    [46.62,8.03,'windpressed',45,2100,2700,'Berner Oberland — windgepresst am Grat NE'],
+    [46.94,8.63,'wet',90,1200,1800,'Zentralschweiz Osthänge — nass ab Mittag'],
+    [46.30,8.80,'wet',180,1000,1700,'Tessin — durchnässt, Südhänge'],
+    [46.73,9.60,'powder',0,1800,2400,'Nordbünden — kalter Pulver an N-Hängen'],
+    [47.05,9.10,'windpressed',315,1900,2500,'Glarner Alpen — Triebschnee-Deckel NW'],
+    [46.02,7.75,'drift',270,2300,2900,'Wallis Westgrate — frischer Triebschnee'],
+    [46.44,7.10,'firn',180,1000,1500,'Firn an tiefen Südhängen (Jura-Voralpen)']
+  ];
+  drawDemos.forEach((dd,k)=>{const la=dd[0],lo=dd[1],ty=dd[2],asp=dd[3],e0=dd[4],e1=dd[5],cap=dd[6];
+    const snap=drawDemoSnap(DC[ty]||'#4aa3ff'),photo=(k%2===0)?demoImg(160+k*12,185+k*10,175+k*6):null;
+    add({user:U2[(k*5+2)%U2.length],cat:'snow',sub:'Schnee-Karte',
+      measurement:DCL[ty]+' · '+e0+'–'+e1+' m',caption:cap,lat:la,lng:lo,
+      time:'vor '+(2+Math.floor(rnd()*40))+'h',img:photo||snap,
+      condition_data:{draw:true,snapshot:snap,measurement:DCL[ty]+' · '+e0+'–'+e1+' m',
+        zones:[{type:ty,centroid:[la,lo],elevMin:e0,elevMax:e1,aspectDeg:asp,aspectConc:0.82,n:120}]}});});
 })();
 let reportMarkers=L.layerGroup().addTo(map);
 function demoActive(){try{if(location.search.indexOf('demo')>=0)return true;}catch(e){}return !sb;}
@@ -3517,7 +3638,7 @@ async function loadDbReports(){
       const fd=document.querySelector('#feedBtn .feed-dot');if(fd)fd.classList.toggle('on',nw>seen);}catch(e){}
     try{dbQpr=data.filter(r=>r.condition_data&&r.condition_data.quick).map(r=>{const ll=parseGeo(r.location);const cd=r.condition_data;
         return ll?[ll[0],ll[1],+cd.powderAmountCm||0,+cd.powderQuality||0]:null;}).filter(Boolean);
-      if(layer==='qprheat')renderQprHeat();}catch(e){}
+      if(layer==='qprheat')renderQprHeat();if(layer==='prog')renderPrognosis(stat);}catch(e){}
     const ids=data.map(r=>r.id),uids=[...new Set(data.map(r=>r.user_id).filter(Boolean))];
     // usernames
     let nameMap={},avatarMap={};try{const{data:pr}=await sb.from('profiles').select('id,username,avatar_url').in('id',uids);(pr||[]).forEach(p=>{nameMap[p.id]=p.username;if(p.avatar_url)avatarMap[p.id]=p.avatar_url;});}catch(e){}
@@ -4257,7 +4378,7 @@ const DRAW_PENS={
  route_up:{id:'route_up',label:'Aufstieg',color:'#16a34a',kind:'route',dash:[11,9]},
  route_down:{id:'route_down',label:'Abfahrt',color:'#f43f5e',kind:'route'},
  tracks:{id:'tracks',label:'Verspurung',color:'#1f2937',kind:'tracks',slider:{label:'Spuren',min:1,max:3,step:1,val:2,labels:['1–3 Spuren','10–20 Spuren','>20 Spuren']}},
- eraser:{id:'eraser',label:'Radierer',color:'#eef2f7',kind:'eraser',slider:{label:'Größe',min:20,max:90,step:10,unit:' px',val:46}}
+ eraser:{id:'eraser',label:'Radierer',color:'#eef2f7',kind:'eraser'}
 };
 const DRAW_CATS=[
  {id:'snow',label:'Schnee',icon:_SVG_SNOW,pens:['powder','drift','compact','wet','suncrust','windpressed','firn','scoured','icy','nosnow']},
@@ -4270,6 +4391,7 @@ let drawZoneCanvas=null,drawZoneW=0,drawZoneH=0,drawDpr=1,drawRefBounds=null;
 let drawRoutes=[],drawTracks=[],drawZoneUsed=new Set(),drawHistory=[];
 let _drawPainting=false,_drawLastPt=null,_drawCurRoute=null,_drawCurTrack=null,_drawDashAcc=0;
 let _drawTrackGrid=new Set(),drawTrackZoom=null;
+let drawBrushSize=34,drawZoneSamples={},_drawLastTrackC=null;
 const DRAW_ZONE_W=34; // base zone brush width (CSS px)
 
 function drawHasContent(){return drawZoneUsed.size||drawRoutes.length||drawTracks.length;}
@@ -4283,12 +4405,12 @@ function drawC2O(cx,cy){const r=drawRefRect();return [(cx-r.x)/r.w*drawZoneW,(cy
 function drawOScale(){const r=drawRefRect();return drawZoneW/r.w;}
 
 function drawOpen(){
-  drawRoutes=[];drawTracks=[];drawZoneUsed=new Set();drawHistory=[];drawPanOn=false;_drawPainting=false;drawZoneCanvas=null;_drawTrackGrid=new Set();drawTrackZoom=null;
+  drawRoutes=[];drawTracks=[];drawZoneUsed=new Set();drawHistory=[];drawPanOn=false;_drawPainting=false;drawZoneCanvas=null;_drawTrackGrid=new Set();drawTrackZoom=null;drawZoneSamples={};
   document.body.classList.remove('draw-pan');document.body.classList.add('draw-on');
   document.getElementById('drawWrap').style.display='block';
   try{map.dragging.disable();map.touchZoom.disable();map.doubleClickZoom.disable();map.scrollWheelZoom.disable();}catch(e){}
   const pb=document.getElementById('drawPan');if(pb){pb.classList.remove('on');pb.querySelector('span').textContent='Karte bewegen';}
-  drawSetupCanvas();drawRenderCats();drawSelectCat('snow');
+  drawSetupCanvas();drawRenderCats();drawSelectCat('snow');drawShowBrush();
   try{haptic(8);}catch(e){}
   const h=document.getElementById('drawHint');h.classList.add('show');setTimeout(()=>h.classList.remove('show'),3200);
 }
@@ -4341,28 +4463,57 @@ function drawReanchor(){
 }
 function drawStrokeBegin(p){
   const k=drawPen.kind;
-  if(k==='zone'||k==='eraser'){_drawDashAcc=0;_drawLastPt=drawC2O(p[0],p[1]);drawCommitSeg(_drawLastPt,_drawLastPt);}
+  if(k==='zone'||k==='eraser'){_drawDashAcc=0;_drawLastPt=drawC2O(p[0],p[1]);drawCommitSeg(_drawLastPt,_drawLastPt);if(k==='zone')drawSampleAt(p);}
   else if(k==='route'){_drawCurRoute={pen:drawPen.id,color:drawPen.color,dash:drawPen.dash||null,pts:[map.containerPointToLatLng(p)]};drawRoutes.push(_drawCurRoute);}
-  else if(k==='tracks'){drawTrackAt(p[0],p[1]);}
+  else if(k==='tracks'){_drawLastTrackC=p;drawTrackAt(p[0],p[1]);}
 }
 function drawStrokeExtend(p){
   const k=drawPen.kind;
-  if(k==='zone'||k==='eraser'){const o=drawC2O(p[0],p[1]);drawCommitSeg(_drawLastPt,o);_drawLastPt=o;}
+  if(k==='zone'||k==='eraser'){const o=drawC2O(p[0],p[1]);drawCommitSeg(_drawLastPt,o);_drawLastPt=o;if(k==='zone')drawSampleAt(p);}
   else if(k==='route'&&_drawCurRoute){_drawCurRoute.pts.push(map.containerPointToLatLng(p));}
-  else if(k==='tracks'){drawTrackAt(p[0],p[1]);}
+  else if(k==='tracks'){drawTrackStep(p);}
 }
 // Verspurung: place a stipple dot on a fixed geo grid (brush keeps constant
 // spacing; passing over the same spot twice never adds a second dot).
 function drawTrackGap(level){return level===1?30:(level===2?18:11);}
+// A brush that stamps a fixed geo-grid mesh of dots within the brush radius —
+// keeps constant spacing and never double-stamps the same cell.
 function drawTrackAt(cx,cy){
   const level=drawPen.slider.val,gap=drawTrackGap(level);
   let ll;try{ll=map.containerPointToLatLng([cx,cy]);}catch(e){return;}
   const z=drawTrackZoom!=null?drawTrackZoom:map.getZoom();
   let pz;try{pz=map.project(ll,z);}catch(e){return;}
-  const gx=Math.round(pz.x/gap),gy=Math.round(pz.y/gap),key=gap+':'+gx+'_'+gy;
-  if(_drawTrackGrid.has(key))return;_drawTrackGrid.add(key);
-  let snapped;try{snapped=map.unproject(L.point(gx*gap,gy*gap),z);}catch(e){snapped=ll;}
-  drawTracks.push({ll:snapped,level:level});
+  const rad=Math.max(gap*0.6,(drawBrushSize/2)*Math.pow(2,z-map.getZoom()));
+  const cgx=Math.round(pz.x/gap),cgy=Math.round(pz.y/gap),span=Math.ceil(rad/gap);
+  for(let gy=cgy-span;gy<=cgy+span;gy++)for(let gx=cgx-span;gx<=cgx+span;gx++){
+    const ppx=gx*gap,ppy=gy*gap;if(Math.hypot(ppx-pz.x,ppy-pz.y)>rad)continue;
+    const key=gap+':'+gx+'_'+gy;if(_drawTrackGrid.has(key))continue;_drawTrackGrid.add(key);
+    let snapped;try{snapped=map.unproject(L.point(ppx,ppy),z);}catch(e){continue;}
+    drawTracks.push({ll:snapped,level:level});drawRecordSample('tracks',snapped.lat,snapped.lng);
+  }
+}
+function drawTrackStep(p){
+  const last=_drawLastTrackC||p,dx=p[0]-last[0],dy=p[1]-last[1],dist=Math.hypot(dx,dy);
+  const step=Math.max(3,drawBrushSize*0.35),n=Math.max(1,Math.ceil(dist/step));
+  for(let i=1;i<=n;i++)drawTrackAt(last[0]+dx*i/n,last[1]+dy*i/n);
+  _drawLastTrackC=p;
+}
+function drawSampleAt(p){let ll;try{ll=map.containerPointToLatLng(p);}catch(e){return;}drawRecordSample(drawPen.id,ll.lat,ll.lng);}
+function drawRecordSample(type,lat,lng){if(!type)return;const a=(drawZoneSamples[type]=drawZoneSamples[type]||[]);if(a.length<600)a.push([lat,lng]);}
+function drawDemFull(lat,lon){const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
+  if(cx<0||cx>=W||cy<0||cy>=H)return null;const q=cy*W+cx;return{elev:melevv(q),aspectDeg:maspv(q),slope:mslpv(q)};}
+function drawComputeZones(){
+  const zones=[];
+  for(const type in drawZoneSamples){const pts=drawZoneSamples[type];if(!pts||pts.length<2)continue;
+    let slat=0,slng=0,emin=1e9,emax=-1e9,sx=0,sy=0,na=0;
+    for(const pr of pts){const la=pr[0],lo=pr[1];slat+=la;slng+=lo;const d=drawDemFull(la,lo);if(!d)continue;
+      if(d.elev!=null){if(d.elev<emin)emin=d.elev;if(d.elev>emax)emax=d.elev;}
+      if(d.slope>=6&&d.aspectDeg!=null){const r=d.aspectDeg*Math.PI/180;sx+=Math.cos(r);sy+=Math.sin(r);na++;}}
+    zones.push({type:type,centroid:[slat/pts.length,slng/pts.length],
+      elevMin:emin<1e9?Math.round(emin):null,elevMax:emax>-1e9?Math.round(emax):null,
+      aspectDeg:na?((Math.atan2(sy,sx)*180/Math.PI)+360)%360:null,aspectConc:na?Math.hypot(sx,sy)/na:0,n:pts.length});
+  }
+  return zones;
 }
 function drawRebuildTrackGrid(){
   _drawTrackGrid=new Set();const z=drawTrackZoom!=null?drawTrackZoom:map.getZoom();
@@ -4373,10 +4524,10 @@ function drawCommitSeg(a,b){
   const octx=drawZoneCanvas.getContext('2d');octx.lineJoin='round';
   const scale=drawOScale(),isEr=drawPen.kind==='eraser';
   if(isEr){octx.globalCompositeOperation='destination-out';octx.lineCap='round';octx.setLineDash([]);
-    octx.strokeStyle='rgba(0,0,0,1)';octx.lineWidth=(drawPen.slider.val)*scale;
+    octx.strokeStyle='rgba(0,0,0,1)';octx.lineWidth=drawBrushSize*scale;
   }else{octx.globalCompositeOperation='destination-over'; // no overpainting: new paint stays under existing
     const col=drawPen.slfDepth?('rgb('+((snowCol(drawPen.slider.val)||[74,163,255]).join(','))+')'):drawPen.color;
-    octx.strokeStyle=col;octx.lineWidth=DRAW_ZONE_W*scale;
+    octx.strokeStyle=col;octx.lineWidth=drawBrushSize*scale;
     if(drawPen.dash){octx.lineCap='butt';octx.setLineDash(drawPen.dash.map(d=>d*scale));octx.lineDashOffset=-_drawDashAcc;}
     else{octx.lineCap='round';octx.setLineDash([]);octx.lineDashOffset=0;}
   }
@@ -4425,7 +4576,7 @@ function drawUndo(){
 }
 function drawClearSilent(){
   if(drawZoneCanvas)drawZoneCanvas.getContext('2d').clearRect(0,0,drawZoneW,drawZoneH);
-  drawRoutes=[];drawTracks=[];drawZoneUsed.clear();drawHistory=[];_drawTrackGrid=new Set();
+  drawRoutes=[];drawTracks=[];drawZoneUsed.clear();drawHistory=[];_drawTrackGrid=new Set();drawZoneSamples={};
 }
 function drawClear(){if(!drawHasContent())return;if(!confirm('Ganze Zeichnung löschen?'))return;drawClearSilent();drawRepaint();}
 function drawRenderCats(){
@@ -4454,6 +4605,9 @@ function drawSelectPen(id){
   document.querySelectorAll('#drawPens .dt-sw').forEach(b=>b.classList.toggle('on',b.dataset.pen===id));
   drawShowSlider();try{haptic(4);}catch(e){}
 }
+function drawShowBrush(){const box=document.getElementById('drawBrush');if(!box)return;box.style.display='flex';
+  box.innerHTML='<label>Pinsel</label><input type="range" min="12" max="80" step="2" value="'+drawBrushSize+'"><b id="drawBrushVal">'+drawBrushSize+' px</b>';
+  box.querySelector('input').oninput=function(){drawBrushSize=+this.value;document.getElementById('drawBrushVal').textContent=drawBrushSize+' px';};}
 function drawSliderTxt(sl){return sl.labels?sl.labels[sl.val-1]:(sl.val+(sl.unit||''));}
 function drawShowSlider(){
   const box=document.getElementById('drawSlider'),sl=drawPen.slider;
@@ -4523,7 +4677,7 @@ function drawPhotoPick(inp){if(!inp.files||!inp.files[0])return;drawPhotoFile=in
 async function drawPublish(){
   const cap=(document.getElementById('drawCaption').value||'').trim()||null;
   const names=drawFinNames||drawSummary(),cen=drawFinCen||{lat:46.8,lng:8.2};
-  const cd={draw:true,bounds:drawFinBnds,types:names,measurement:names.join(', '),snapshot:drawSnapData||null,drawImage:drawPaintData||null};
+  const cd={draw:true,bounds:drawFinBnds,types:names,measurement:names.join(', '),snapshot:drawSnapData||null,drawImage:drawPaintData||null,zones:drawComputeZones()};
   if(demoActive()||!sb){
     let photoUrl=null;if(drawPhotoFile){try{photoUrl=URL.createObjectURL(drawPhotoFile);}catch(e){}}
     allReports.unshift({id:'draw'+Date.now(),user:'Du',cat:'snow',sub:'Schnee-Karte',measurement:names.join(', '),caption:cap,lat:cen.lat,lng:cen.lng,time:'gerade eben',img:photoUrl||drawSnapData||drawPaintData,likes:0,comments:0,stars:0,condition_data:cd});
@@ -5042,6 +5196,23 @@ function locPickerFilter(q){const list=(locPickerMode==='peak'?PEAKS:DESTS);q=(q
   el.innerHTML=items.length?items.map(o=>`<button onclick="locPickerPick(${o.i})"><span>${o.p.n}</span>${o.p.e?'<span class="lp-e">'+o.p.e+' m</span>':''}</button>`).join(''):'<div class="lp-empty">Nichts gefunden</div>';}
 function locPickerPick(i){const p=(locPickerMode==='peak'?PEAKS:DESTS)[i];
   feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:locPickerMode});locPickerClose();haptic(6);}
+const _SNAP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;vertical-align:-1px"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/></svg>';
+function feedVisual(r,col){
+  const snap=r.condition_data&&r.condition_data.snapshot;
+  if(r.img&&snap&&snap!==r.img){
+    return '<div class="fc-wrap"><div class="fc-carousel" id="fcar-'+r.id+'">'+
+      '<div class="fc-slide"><img src="'+r.img+'" alt="" loading="lazy" decoding="async"/></div>'+
+      '<div class="fc-slide"><img src="'+snap+'" alt="" loading="lazy" decoding="async"/><span class="fc-snap-tag">'+_SNAP_ICON+' Zeichnung auf Karte</span></div>'+
+      '</div><div class="fc-dots" id="fcd-'+r.id+'"><i class="on"></i><i></i></div></div>';
+  }
+  if(r.img)return '<div class="feed-card-visual" onclick="feedImgTap(\''+r.id+'\',event)"><img src="'+r.img+'" alt="" loading="lazy" decoding="async"/></div>';
+  if(r.caption)return '<div class="feed-tx" style="background:linear-gradient(150deg,'+col+'14,rgba(255,255,255,0) 75%)"><span class="feed-tx-bar" style="background:'+col+'"></span>'+escapeHtml(r.caption)+'</div>';
+  return '';
+}
+function feedWireCarousels(){document.querySelectorAll('.fc-carousel').forEach(c=>{if(c._w)return;c._w=1;
+  const dots=document.getElementById('fcd-'+c.id.slice(5));
+  c.addEventListener('scroll',()=>{const i=Math.round(c.scrollLeft/Math.max(1,c.clientWidth));
+    if(dots)dots.querySelectorAll('i').forEach((d,k)=>d.classList.toggle('on',k===i));},{passive:true});});}
 function feedRender(){
   const list=document.getElementById('feedList');
   let base=allReports.slice();
@@ -5076,9 +5247,7 @@ function feedRender(){
         </div>
         ${followBtn||distTag||`<span class="feed-card-time">${r.time}</span>`}
       </div>
-      ${r.img?`<div class="feed-card-visual" onclick="feedImgTap('${r.id}',event)"><img src="${r.img}" alt="" loading="lazy" decoding="async"/></div>`:
-        (r.caption?`<div class="feed-tx" style="background:linear-gradient(150deg,${col}14,rgba(255,255,255,0) 75%)"><span class="feed-tx-bar" style="background:${col}"></span>${escapeHtml(r.caption)}</div>`:'')}
-      ${(r.condition_data&&r.condition_data.snapshot&&r.condition_data.snapshot!==r.img)?`<div class="feed-card-visual second"><img src="${r.condition_data.snapshot}" alt="" loading="lazy" decoding="async"/><span class="fc-snap-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;vertical-align:-1px"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/></svg> Zeichnung auf Karte</span></div>`:''}
+      ${feedVisual(r,col)}
       <div class="feed-card-body">
         <div class="feed-card-badges">
           <span class="feed-badge cat-${r.cat}">${catSvg(r.cat,14)} ${escapeHtml(r.sub||r.cat)}</span>
@@ -5097,7 +5266,7 @@ function feedRender(){
       </div>
     </div>`;
   }).join('');
-  feedAnimateCards();
+  feedAnimateCards();feedWireCarousels();
 }
 // First-appearance card entrance (skips re-animating on like/flag re-renders).
 const feedSeen=new Set();
