@@ -937,7 +937,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* Map-click inspect panel */
  /* Super-transparent glass: the map stays clearly visible through the panel,
     blur+saturate keeps the content readable. Draggable via the header. */
- body.insp-open #mapQr,body.insp-open #mapFab{opacity:0;pointer-events:none;transition:opacity .2s}
+ body.insp-open #mapQr,body.insp-open #mapFab,body.insp-open #mapDraw{opacity:0;pointer-events:none;transition:opacity .2s}
  .insp-panel{position:fixed;z-index:2600;background:rgba(255,255,255,.38);backdrop-filter:blur(10px) saturate(1.7);-webkit-backdrop-filter:blur(10px) saturate(1.7);display:none;flex-direction:column;box-shadow:var(--elev3);overflow:hidden;border:1px solid rgba(255,255,255,.55)}
  .insp-panel::before{content:'';flex-shrink:0;width:38px;height:4px;border-radius:2px;background:rgba(22,21,46,.28);margin:7px auto -3px}
  .insp-panel .insp-head{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -1170,9 +1170,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.draw-on #ctrlRail,body.draw-on #layerBar,body.draw-on #searchWrap,body.draw-on #demoPill,body.draw-on #mapQr,body.draw-on #mapFab,body.draw-on #mapDraw,body.draw-on #bottomPanel,body.draw-on #legendBtn,body.draw-on .legend{display:none!important}
  .fab-v{position:absolute;top:-3px;left:-3px;min-width:16px;height:15px;padding:0 3px;border-radius:7px;background:#0a0a0c;color:#fff;font-size:8.5px;font-weight:900;line-height:15px;text-align:center;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
  .feed-fab .fab-v{background:#fff;color:#0a0a0c;border-color:#0a0a0c}
- #mapFab{bottom:calc(env(safe-area-inset-bottom, 0px) + 182px)!important}
- #mapQr{bottom:calc(env(safe-area-inset-bottom, 0px) + 100px)!important}
- #mapDraw{bottom:calc(env(safe-area-inset-bottom, 0px) + 18px)!important}
+ #mapFab{bottom:calc(var(--btm-h,90px) + 178px)!important}
+ #mapQr{bottom:calc(var(--btm-h,90px) + 96px)!important}
+ #mapDraw{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 14px)!important;z-index:900}
+ #mapDraw:active{transform:scale(.9)}
  .feed-draw{border-color:rgba(37,99,235,.9)!important;color:#2563eb!important}
  .feed-draw svg{color:#2563eb}
  #drawWrap{position:fixed;inset:0;z-index:4000;display:none}
