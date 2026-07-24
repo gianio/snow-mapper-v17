@@ -2241,6 +2241,62 @@ const melevv=p=>MELEV[p]*M.elev_scale;
 const mainToWind=new Int32Array(NP);
 const main2rad=new Int32Array(NP).fill(-1);
 function aspectQ(deg){const a=((deg%360)+360)%360;if(a>=315||a<45)return'N';if(a<135)return'E';if(a<225)return'S';return'W';}
+function asp8(deg){if(deg==null||isNaN(deg))return null;return ['N','NO','O','SO','S','SW','W','NW'][Math.round(((deg%360)+360)%360/45)%8];}
+const SWISS_PEAKS=[[45.976,7.658,'Matterhorn'],[45.937,7.867,'Dufourspitze'],[46.094,7.858,'Dom'],[46.101,7.717,'Weisshorn'],[46.033,7.612,'Dent Blanche'],[45.937,7.299,'Grand Combin'],[46.049,7.899,'Allalinhorn'],[46.057,7.861,'Alphubel'],[46.018,7.833,'Rimpfischhorn'],[45.941,7.719,'Breithorn'],[46.393,7.862,'Bietschhorn'],[46.161,8.028,'Fletschhorn'],[46.156,8.001,'Lagginhorn'],[46.128,8.011,'Weissmies'],[46.577,8.005,'Eiger'],[46.558,7.999,'Mönch'],[46.536,7.962,'Jungfrau'],[46.537,8.116,'Finsteraarhorn'],[46.463,8.021,'Aletschhorn'],[46.588,8.117,'Schreckhorn'],[46.651,8.107,'Wetterhorn'],[46.492,7.752,'Blüemlisalp'],[46.391,7.531,'Wildstrubel'],[46.358,7.371,'Wildhorn'],[46.474,7.720,'Doldenhorn'],[46.646,7.652,'Niesen'],[46.772,8.437,'Titlis'],[46.808,8.918,'Tödi'],[46.826,8.859,'Clariden'],[46.702,8.454,'Sustenhorn'],[46.642,8.421,'Dammastock'],[46.979,8.252,'Pilatus'],[47.048,8.485,'Rigi'],[47.249,9.343,'Säntis'],[47.158,9.311,'Churfirsten'],[46.995,9.000,'Glärnisch'],[46.900,9.267,'Ringelspitz'],[46.383,9.908,'Piz Bernina'],[46.377,9.965,'Piz Palü'],[46.616,9.874,'Piz Kesch'],[46.833,9.807,'Weissfluhgipfel'],[46.773,9.855,'Jakobshorn'],[46.842,10.119,'Piz Buin'],[46.845,10.062,'Piz Linard'],[46.472,9.720,'Piz Julier'],[46.408,9.820,'Piz Corvatsch'],[46.512,9.828,'Piz Nair'],[46.550,9.660,'Piz d\'Err'],[46.550,9.700,'Piz Ela'],[46.622,9.031,'Rheinwaldhorn'],[46.417,8.478,'Basòdino'],[46.421,8.720,'Campo Tencia'],[46.331,7.208,'Les Diablerets'],[46.161,6.920,'Dents du Midi'],[46.243,7.148,'Grand Muveran'],[46.548,7.020,'Moléson'],[46.512,7.150,'Vanil Noir'],[46.925,8.548,'Uri Rotstock'],[46.780,8.680,'Bristen'],[46.930,9.180,'Piz Sardona'],[46.749,9.949,'Flüela Wisshorn'],[46.575,9.671,'Tinzenhorn'],[47.192,9.271,'Alvier'],[46.803,9.930,'Piz Vadret'],[46.360,8.000,'Nufenen'],[46.557,8.561,'Titlis-Region']];
+function nearestPeak(lat,lng){let best=null,bd=1e9;for(const pk of SWISS_PEAKS){const dLat=(lat-pk[0])*111,dLo=(lng-pk[1])*111*Math.cos(lat*Math.PI/180),d=Math.hypot(dLat,dLo);if(d<bd){bd=d;best=pk;}}return(best&&bd<7)?best[2]:null;}
+// --- OCR-basierte Gipfelerkennung: liest den Bergnamen direkt von der Karte ---
+let _ocrLoad=null,_ocrWorker=null,_ocrWorkerP=null;
+function ensureTesseract(){
+  if(window.Tesseract)return Promise.resolve(true);
+  if(_ocrLoad)return _ocrLoad;
+  _ocrLoad=new Promise(res=>{try{const sc=document.createElement('script');
+    sc.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';sc.async=true;
+    sc.onload=()=>res(!!window.Tesseract);sc.onerror=()=>res(false);
+    setTimeout(()=>res(!!window.Tesseract),12000);document.head.appendChild(sc);}catch(e){res(false);}});
+  return _ocrLoad;
+}
+async function ocrGetWorker(){
+  if(_ocrWorker)return _ocrWorker;
+  if(_ocrWorkerP)return _ocrWorkerP;
+  _ocrWorkerP=(async()=>{const ok=await ensureTesseract();if(!ok||!window.Tesseract)return null;
+    try{_ocrWorker=await Tesseract.createWorker('deu');}catch(e){try{_ocrWorker=await Tesseract.createWorker('eng');}catch(_){_ocrWorker=null;}}
+    return _ocrWorker;})();
+  return _ocrWorkerP;
+}
+async function ocrMapCrop(){
+  let c;try{c=map.latLngToContainerPoint(map.getCenter());}catch(e){return null;}
+  const CW=340,CH=250,SC=2.4,x0=c.x-CW/2,y0=c.y-CH/2;
+  const cv=document.createElement('canvas');cv.width=Math.round(CW*SC);cv.height=Math.round(CH*SC);
+  const g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);
+  const mc=map.getContainer(),mr=mc.getBoundingClientRect();
+  const tiles=[...mc.querySelectorAll('.leaflet-tile-pane img')].filter(im=>im.complete&&im.naturalWidth&&im.src&&im.src.indexOf('data:')!==0)
+    .map(im=>{const r=im.getBoundingClientRect();return {src:im.src,x:r.left-mr.left,y:r.top-mr.top,w:r.width,h:r.height};});
+  const loaded=await Promise.all(tiles.map(t=>new Promise(res=>{const ni=new Image();let to;const done=v=>{clearTimeout(to);res(v);};
+    ni.crossOrigin='anonymous';ni.onload=()=>done(Object.assign(t,{img:ni}));ni.onerror=()=>done(null);to=setTimeout(()=>done(null),3000);ni.src=t.src;})));
+  let drew=0;loaded.forEach(t=>{if(t&&t.img){try{g.drawImage(t.img,(t.x-x0)*SC,(t.y-y0)*SC,t.w*SC,t.h*SC);drew++;}catch(e){}}});
+  if(!drew)return null;
+  try{const id=g.getImageData(0,0,cv.width,cv.height),d=id.data;
+    for(let i=0;i<d.length;i+=4){let v=0.3*d[i]+0.59*d[i+1]+0.11*d[i+2];v=(v-128)*1.55+128;v=v<0?0:v>255?255:v;d[i]=d[i+1]=d[i+2]=v;}
+    g.putImageData(id,0,0);}catch(e){return null;}
+  return cv;
+}
+async function ocrPeakFromMap(){
+  try{const cv=await ocrMapCrop();if(!cv)return null;
+    const w=await ocrGetWorker();if(!w)return null;
+    const{data}=await w.recognize(cv);
+    const cxc=cv.width/2,cyc=cv.height/2;let best=null,bs=-1e9;
+    const bad=/^(Bergstation|Talstation|Hütte|Huette|Restaurant|Parkplatz|See|Stausee|Gletscher|Pass|Alp|Camping|Bahnhof)$/i;
+    (data.lines||[]).forEach(ln=>{const txt=(ln.text||'').replace(/\s+/g,' ').trim();
+      const m=txt.match(/([A-Za-zÀ-ſ][A-Za-zÀ-ſ'’.\- ]{2,}?)\s+(\d{3,4})(?!\d)/);
+      if(!m)return;const nm=m[1].trim(),el=+m[2];
+      if(el<700||el>4700||nm.length<3||bad.test(nm))return;
+      const bb=ln.bbox||{x0:0,y0:0,x1:cv.width,y1:cv.height},bx=(bb.x0+bb.x1)/2,by=(bb.y0+bb.y1)/2;
+      const dist=Math.hypot(bx-cxc,by-cyc)/cv.width;
+      const score=((ln.confidence||50)/100)-dist*1.15;
+      if(score>bs){bs=score;best=nm;}});
+    return best;
+  }catch(e){return null;}
+}
 const ASPC={N:[0x4A,0x90,0xD9],E:[0x66,0xBB,0x6A],S:[0xEF,0x53,0x50],W:[0xFF,0xC1,0x07],F:[0x9E,0x9E,0x9E]};
 function aspCol(p){const s=mslpv(p);if(s<5)return ASPC.F;const q=aspectQ(maspv(p));return ASPC[q];}
 function isLee(cellAsp,windFrom){const lee=(windFrom+180)%360;let d=Math.abs(cellAsp-lee);if(d>180)d=360-d;return d<90;}
@@ -2525,10 +2581,10 @@ function progZones(){
 }
 function progEnvelope(asp,elev,slp,z){
   if(elev<0)return 0;let em=1;
-  if(z.e0!=null&&z.e1!=null){const dband=Math.max(0,z.e0-elev,elev-z.e1);em=Math.exp(-(dband*dband)/(230*230));}
+  if(z.e0!=null&&z.e1!=null){const dband=Math.max(0,z.e0-elev,elev-z.e1);em=Math.exp(-(dband*dband)/(165*165));}
   let am=0.55;
   if(z.asp!=null&&slp>=8){let dA=Math.abs(asp-z.asp)%360;if(dA>180)dA=360-dA;
-    const c=Math.cos(dA*Math.PI/180),c0=Math.cos(70*Math.PI/180);
+    const c=Math.cos(dA*Math.PI/180),c0=Math.cos(60*Math.PI/180);
     am=Math.max(0,Math.min(1,(c-c0)/(1-c0)));const conc=Math.max(0,Math.min(1,z.conc));am=am*conc+0.5*(1-conc);}
   return em*am;
 }
@@ -2536,18 +2592,18 @@ function progDistKm(lat,lon,z){const dLat=(lat-z.lat)*111,dLo=(lon-z.lng)*111*Ma
 function renderPrognosis(type){
   progTerrain();_progType=type;
   const zones=progZones(),sel=zones.filter(z=>z.type===type),oth=zones.filter(z=>z.type!==type);
-  const N=PROG_GW*PROG_GH,SC=16;
+  const N=PROG_GW*PROG_GH,SC=11;
   _progField=new Float32Array(N);_progConf=new Float32Array(N);
   const col=PROG_COL[type]||[74,163,255];
   const img=new ImageData(PROG_GW,PROG_GH),d=img.data;
   for(let idx=0;idx<N;idx++){
     const asp=PROG_ASP[idx],elev=PROG_ELEV[idx],slp=PROG_SLP[idx],lat=PROG_LA[idx],lon=PROG_LO[idx];
     if(elev<0){d[idx*4+3]=0;continue;}
-    let sS=0,sO=0;
-    for(const z of sel){const e=progEnvelope(asp,elev,slp,z);if(e<=0.02)continue;const dd=progDistKm(lat,lon,z);sS+=e*Math.exp(-(dd*dd)/(SC*SC));}
-    for(const z of oth){const e=progEnvelope(asp,elev,slp,z);if(e<=0.02)continue;const dd=progDistKm(lat,lon,z);sO+=e*Math.exp(-(dd*dd)/(SC*SC));}
-    const tot=sS+sO,agree=tot>0?sS/tot:0,evid=1-Math.exp(-tot/1.1),strength=1-Math.exp(-sS/1.1);
-    const like=strength*(0.3+0.7*agree);
+    let sS=0,sO=0,best=0;
+    for(const z of sel){const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;const dd=progDistKm(lat,lon,z);const m=e*Math.exp(-(dd*dd)/(SC*SC));sS+=m;if(m>best)best=m;}
+    for(const z of oth){const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;const dd=progDistKm(lat,lon,z);sO+=e*Math.exp(-(dd*dd)/(SC*SC));}
+    const tot=sS+sO,agree=tot>0?sS/tot:0,evid=1-Math.exp(-tot/0.85);
+    const like=best*(0.4+0.6*agree);
     _progField[idx]=like;_progConf[idx]=Math.round(100*agree*evid);
     const o=idx*4;if(like<0.05){d[o+3]=0;continue;}
     const t=Math.pow(like,0.8);d[o]=col[0];d[o+1]=col[1];d[o+2]=col[2];d[o+3]=Math.min(215,40+195*t)|0;
@@ -3515,10 +3571,11 @@ const DEMO_REPORTS=DEMO_DEFS.map((d,i2)=>({id:'d'+(i2+1),user:DEMO_USERS[i2%DEMO
   ];
   drawDemos.forEach((dd,k)=>{const la=dd[0],lo=dd[1],ty=dd[2],asp=dd[3],e0=dd[4],e1=dd[5],cap=dd[6];
     const snap=drawDemoSnap(DC[ty]||'#4aa3ff'),photo=(k%2===0)?demoImg(160+k*12,185+k*10,175+k*6):null;
+    const meas=DCL[ty]+' · '+e0+'\u2013'+e1+' m · '+asp8(asp);
     add({user:U2[(k*5+2)%U2.length],cat:'snow',sub:'Schnee-Karte',
-      measurement:DCL[ty]+' · '+e0+'–'+e1+' m',caption:cap,lat:la,lng:lo,
+      measurement:meas,caption:cap,lat:la,lng:lo,
       time:'vor '+(2+Math.floor(rnd()*40))+'h',img:photo||snap,
-      condition_data:{draw:true,snapshot:snap,measurement:DCL[ty]+' · '+e0+'–'+e1+' m',
+      condition_data:{draw:true,snapshot:snap,measurement:meas,
         zones:[{type:ty,centroid:[la,lo],elevMin:e0,elevMax:e1,aspectDeg:asp,aspectConc:0.82,n:120}]}});});
 })();
 let reportMarkers=L.layerGroup().addTo(map);
@@ -4395,6 +4452,9 @@ let drawBrushSize=34,drawZoneSamples={},_drawLastTrackC=null;
 const DRAW_ZONE_W=34; // base zone brush width (CSS px)
 
 function drawHasContent(){return drawZoneUsed.size||drawRoutes.length||drawTracks.length;}
+function drawViewBounds(){const cv=document.getElementById('drawCanvas');
+  const nw=map.containerPointToLatLng([0,0]),se=map.containerPointToLatLng([cv.clientWidth,cv.clientHeight]);
+  return L.latLngBounds(nw,se);}
 function drawRefRect(){
   if(!drawRefBounds)return {x:0,y:0,w:drawZoneW/drawDpr||1,h:drawZoneH/drawDpr||1};
   try{const nw=map.latLngToContainerPoint(drawRefBounds.getNorthWest());
@@ -4439,7 +4499,7 @@ function drawSetupCanvas(){
   drawCtx=cv.getContext('2d');drawCtx.setTransform(drawDpr,0,0,drawDpr,0,0);
   drawZoneW=Math.round(w*drawDpr);drawZoneH=Math.round(h*drawDpr);
   drawZoneCanvas=document.createElement('canvas');drawZoneCanvas.width=drawZoneW;drawZoneCanvas.height=drawZoneH;
-  try{drawRefBounds=map.getBounds();}catch(e){drawRefBounds=null;}
+  try{drawRefBounds=drawViewBounds();}catch(e){drawRefBounds=null;}
   try{if(drawTrackZoom==null)drawTrackZoom=map.getZoom();}catch(e){drawTrackZoom=13;}
   if(!cv._wired){cv._wired=true;
     const pt=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
@@ -4458,7 +4518,7 @@ function drawReanchor(){
   const nc=document.createElement('canvas');nc.width=drawZoneW;nc.height=drawZoneH;
   const nctx=nc.getContext('2d');
   nctx.drawImage(drawZoneCanvas,0,0,drawZoneW,drawZoneH,r.x*drawDpr,r.y*drawDpr,r.w*drawDpr,r.h*drawDpr);
-  drawZoneCanvas=nc;try{drawRefBounds=map.getBounds();}catch(e){}
+  drawZoneCanvas=nc;try{drawRefBounds=drawViewBounds();}catch(e){}
   drawRepaint();
 }
 function drawStrokeBegin(p){
@@ -4502,6 +4562,10 @@ function drawSampleAt(p){let ll;try{ll=map.containerPointToLatLng(p);}catch(e){r
 function drawRecordSample(type,lat,lng){if(!type)return;const a=(drawZoneSamples[type]=drawZoneSamples[type]||[]);if(a.length<600)a.push([lat,lng]);}
 function drawDemFull(lat,lon){const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
   if(cx<0||cx>=W||cy<0||cy>=H)return null;const q=cy*W+cx;return{elev:melevv(q),aspectDeg:maspv(q),slope:mslpv(q)};}
+function drawZoneLabel(zones){if(!zones||!zones.length)return '';
+  return zones.map(z=>{const t=(typeof DRAW_PENS!=='undefined'&&DRAW_PENS[z.type]&&DRAW_PENS[z.type].label)||z.type;const parts=[t];
+    if(z.elevMin!=null&&z.elevMax!=null)parts.push(z.elevMin+'\u2013'+z.elevMax+' m');
+    const a=asp8(z.aspectDeg);if(a)parts.push(a);return parts.join(' \u00b7 ');}).join(' / ');}
 function drawComputeZones(){
   const zones=[];
   for(const type in drawZoneSamples){const pts=drawZoneSamples[type];if(!pts||pts.length<2)continue;
@@ -4627,7 +4691,7 @@ function drawSummary(){
   if(drawTracks.length){const lv=drawTracks[drawTracks.length-1].level;out.push('Verspurt ('+DRAW_PENS.tracks.slider.labels[lv-1]+')');}
   return out;
 }
-let drawPhotoFile=null,drawSnapData=null,drawPaintData=null,drawFinCen=null,drawFinBnds=null,drawFinNames=null;
+let drawPhotoFile=null,drawSnapData=null,drawPaintData=null,drawFinCen=null,drawFinBnds=null,drawFinNames=null,drawFinPeak=null;
 function drawPaintingPNG(){try{drawRepaint(.85);const png=document.getElementById('drawCanvas').toDataURL('image/png');drawRepaint();return png;}catch(e){return null;}}
 // Composite the map behind the drawing. Base tiles are re-loaded through fresh
 // crossOrigin images so the canvas is never tainted (a non-CORS tile simply
@@ -4658,13 +4722,16 @@ async function drawMapSnapshot(){
 async function drawOpenFinish(){
   if(!drawHasContent()){toast('Zeichne zuerst mindestens eine Zone ein.','err');return;}
   drawFinNames=drawSummary();
-  try{const c=map.getCenter();drawFinCen={lat:c.lat,lng:c.lng};}catch(e){drawFinCen={lat:46.8,lng:8.2};}
-  try{const b=map.getBounds();drawFinBnds=[[b.getSouth(),b.getWest()],[b.getNorth(),b.getEast()]];}catch(e){drawFinBnds=null;}
+  try{const vb=drawViewBounds();drawFinBnds=[[vb.getSouth(),vb.getWest()],[vb.getNorth(),vb.getEast()]];const cc=vb.getCenter();drawFinCen={lat:cc.lat,lng:cc.lng};}catch(e){drawFinCen={lat:46.8,lng:8.2};drawFinBnds=null;}
   drawPhotoFile=null;
   drawPaintData=drawPaintingPNG();drawSnapData=null;
   const img=document.getElementById('drawSnapImg');if(img)img.src=drawPaintData||'';
   const pv=document.getElementById('drawPhotoPrev');if(pv){pv.style.display='none';pv.src='';}
-  const ta=document.getElementById('drawCaption');if(ta)ta.value='';
+  drawFinPeak=null;const ta=document.getElementById('drawCaption');
+  if(ta){ta.value='';const op=ta.getAttribute('placeholder');
+    try{const pk=nearestPeak(drawFinCen.lat,drawFinCen.lng);if(pk){drawFinPeak=pk;ta.value=pk+' — ';}}catch(e){}
+    const auto=ta.value;ta.setAttribute('placeholder','Berg wird von der Karte erkannt …');
+    ocrPeakFromMap().then(nm=>{try{ta.setAttribute('placeholder',op||'');if(nm&&(ta.value===auto||ta.value==='')){ta.value=nm+' — ';drawFinPeak=nm;}}catch(e){}}).catch(()=>{try{ta.setAttribute('placeholder',op||'');}catch(e){}});}
   const pb=document.getElementById('drawPhotoBtn');if(pb)pb.style.display='';
   document.getElementById('drawFinish').style.display='flex';
   try{haptic(6);}catch(e){}
@@ -4677,10 +4744,11 @@ function drawPhotoPick(inp){if(!inp.files||!inp.files[0])return;drawPhotoFile=in
 async function drawPublish(){
   const cap=(document.getElementById('drawCaption').value||'').trim()||null;
   const names=drawFinNames||drawSummary(),cen=drawFinCen||{lat:46.8,lng:8.2};
-  const cd={draw:true,bounds:drawFinBnds,types:names,measurement:names.join(', '),snapshot:drawSnapData||null,drawImage:drawPaintData||null,zones:drawComputeZones()};
+  const zns=drawComputeZones();const zlabel=drawZoneLabel(zns)||names.join(', ');
+  const cd={draw:true,bounds:drawFinBnds,types:names,measurement:zlabel,snapshot:drawSnapData||null,drawImage:drawPaintData||null,zones:zns,peak:drawFinPeak||null};
   if(demoActive()||!sb){
     let photoUrl=null;if(drawPhotoFile){try{photoUrl=URL.createObjectURL(drawPhotoFile);}catch(e){}}
-    allReports.unshift({id:'draw'+Date.now(),user:'Du',cat:'snow',sub:'Schnee-Karte',measurement:names.join(', '),caption:cap,lat:cen.lat,lng:cen.lng,time:'gerade eben',img:photoUrl||drawSnapData||drawPaintData,likes:0,comments:0,stars:0,condition_data:cd});
+    allReports.unshift({id:'draw'+Date.now(),user:'Du',cat:'snow',sub:'Schnee-Karte',measurement:cd.measurement,caption:cap,lat:cen.lat,lng:cen.lng,time:'gerade eben',img:photoUrl||drawSnapData||drawPaintData,likes:0,comments:0,stars:0,condition_data:cd});
     loadReportMarkers();drawFinishClose();drawClearSilent();drawClose();toast('Schnee-Karte gespeichert (Demo).','ok');return;
   }
   if(!sbUser){authShow();return;}
