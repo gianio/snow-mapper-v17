@@ -92,27 +92,31 @@ def _reproj_cube(cube, src_t, src_crs, dst_t, dh, dw):
 
 
 _ASPECT_COLORS = {
-    0: (0x9E, 0x9E, 0x9E, 178),  # flat  grey
-    1: (0x4A, 0x90, 0xD9, 255),  # N     blue
-    2: (0x66, 0xBB, 0x6A, 255),  # E     green
-    3: (0xEF, 0x53, 0x50, 255),  # S     red/orange
-    4: (0xFF, 0xC1, 0x07, 255),  # W     yellow
+    0: (0x9E, 0x9E, 0x9E, 178),  # flat grey
+    1: (0x4A, 0x90, 0xD9, 255),  # N  blue
+    2: (0x45, 0xC0, 0xC0, 255),  # NE teal
+    3: (0x66, 0xBB, 0x6A, 255),  # E  green
+    4: (0xBE, 0xDB, 0x39, 255),  # SE lime
+    5: (0xEF, 0x53, 0x50, 255),  # S  red
+    6: (0xFF, 0x9E, 0x42, 255),  # SW orange
+    7: (0xFF, 0xC1, 0x07, 255),  # W  yellow
+    8: (0xA9, 0x87, 0xE0, 255),  # NW violet
 }
 
 
 def _aspect_classify(aspect_deg, slope_deg):
-    """Classify aspect into integer quadrant index (0=flat,1=N,2=E,3=S,4=W).
+    """Classify aspect into 8-way index (0=flat,1=N,2=NE,3=E,4=SE,5=S,6=SW,7=W,8=NW).
 
-    Done BEFORE reprojection so nearest-neighbor on the integer index
-    is guaranteed to produce no blending.
+    45 deg sectors centred on each direction (N=[337.5,22.5)). Done BEFORE
+    reprojection so nearest-neighbour on the integer index never blends.
     """
     cls = np.zeros(aspect_deg.shape, dtype="uint8")
     a = aspect_deg % 360
-    flat = slope_deg < 5.0
-    cls[(~flat) & ((a >= 315) | (a < 45))] = 1   # N
-    cls[(~flat) & (a >= 45) & (a < 135)] = 2      # E
-    cls[(~flat) & (a >= 135) & (a < 225)] = 3     # S
-    cls[(~flat) & (a >= 225) & (a < 315)] = 4     # W
+    steep = slope_deg >= 5.0
+    for lo, hi, idx in [(337.5, 360.0, 1), (0.0, 22.5, 1), (22.5, 67.5, 2),
+                        (67.5, 112.5, 3), (112.5, 157.5, 4), (157.5, 202.5, 5),
+                        (202.5, 247.5, 6), (247.5, 292.5, 7), (292.5, 337.5, 8)]:
+        cls[steep & (a >= lo) & (a < hi)] = idx
     return cls
 
 
@@ -131,6 +135,30 @@ def _class_to_png_b64(cls_lv95, src_t, src_crs, bounds, png_w=3000):
     for idx, (r, g, b, a) in _ASPECT_COLORS.items():
         mask = cls_wgs == idx
         rgba[mask] = [r, g, b, a]
+    buf = io.BytesIO()
+    Image.fromarray(rgba, "RGBA").save(buf, format="PNG", optimize=True)
+    left, bottom, right, top = array_bounds(dh2, dw2, dst_t2)
+    return base64.b64encode(buf.getvalue()).decode(), (bottom, left, top, right)
+
+
+def _elev_to_png_b64(elev, src_t, src_crs, bounds, png_w=1600):
+    """Reproject a float elevation raster -> WGS84 and encode metres as
+    R*256 + G (1 m precision, 0..65535 m). Decoded client-side for accurate
+    point elevations (far finer than the coarse weather grid)."""
+    h, w = elev.shape
+    dst_t, dw, dh = calculate_default_transform(src_crs, "EPSG:4326", w, h, *bounds)
+    scale = max(1.0, dw / png_w)
+    dw2, dh2 = int(dw / scale), int(dh / scale)
+    dst_t2 = from_origin(dst_t.c, dst_t.f, (dst_t.a * dw) / dw2, (-dst_t.e * dh) / dh2)
+    out = np.zeros((dh2, dw2), "float32")
+    reproject(source=elev.astype("float32"), destination=out, src_transform=src_t,
+              src_crs=src_crs, dst_transform=dst_t2, dst_crs="EPSG:4326",
+              resampling=Resampling.bilinear)
+    e = np.clip(np.round(out), 0, 65535).astype("uint32")
+    rgba = np.zeros((dh2, dw2, 4), dtype="uint8")
+    rgba[:, :, 0] = ((e >> 8) & 0xFF).astype("uint8")
+    rgba[:, :, 1] = (e & 0xFF).astype("uint8")
+    rgba[:, :, 3] = 255
     buf = io.BytesIO()
     Image.fromarray(rgba, "RGBA").save(buf, format="PNG", optimize=True)
     left, bottom, right, top = array_bounds(dh2, dw2, dst_t2)
@@ -238,6 +266,7 @@ def _fine_terrain(bounds, aoi, use_synthetic):
     rough = roughness(zc)
     vmax = float(np.nanpercentile(rough, 98))
     ct = from_origin(bounds[0], bounds[3], res * 4, res * 4)
+    elev_png, elev_b = _elev_to_png_b64(zc, ct, aoi.crs, bounds, png_w=1600)
     rough_png, _ = _rgba_to_png_b64(_rough_rgba(rough, vmax), ct, aoi.crs, bounds, png_w=1400)
     del rough
 
@@ -256,7 +285,7 @@ def _fine_terrain(bounds, aoi, use_synthetic):
         return 1.0 + 0.45 * t, t
 
     return {"aspect_png": aspect_png, "rough_png": rough_png, "png_bounds": png_b,
-            "expo_at": expo_at}
+            "elev_png": elev_png, "elev_bounds": elev_b, "expo_at": expo_at}
 
 
 def _radiation_inputs(bounds, aoi, use_synthetic):
@@ -421,7 +450,8 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         "wind": {"lat": wind["lat"], "lon": wind["lon"], "nx": wind["nx"], "ny": wind["ny"],
                  "spd": p_spd, "dir": p_dir, "tpi": expo_tpi},
         "aspect_png": fine["aspect_png"], "rough_png": fine["rough_png"],
-        "png_bounds": fine["png_bounds"], "rad": rad, "stations": stations,
+        "png_bounds": fine["png_bounds"], "elev_png": fine["elev_png"],
+        "elev_bounds": fine["elev_bounds"], "rad": rad, "stations": stations,
         "rough_grid": rough_w, "hourly_snow": hourly_snow,
     }
 
@@ -521,6 +551,7 @@ def _build_meta_blobs(data):
         "RASPECT": u8(rad["aspect"], lambda a: np.round(a / _DIR_DIV)),
         "RHOR": u8(rad["horizon"], lambda a: np.round(np.clip(a, 0, 90))),
         "ASPECTPNG": data["aspect_png"],
+        "ELEVPNG": data["elev_png"],
         "ROUGHPNG": data["rough_png"],
     }
     meta = {
@@ -531,6 +562,7 @@ def _build_meta_blobs(data):
         "elev_scale": _ELEV_SCALE,
         "slf_bounds": SLF_BOUNDS, "slf_colors": SLF_COLORS,
         "png_bounds": data["png_bounds"],
+        "elev_bounds": data["elev_bounds"],
         "rad": {"width": rad["width"], "height": rad["height"], "K": rad["K"],
                 "bounds": rad["bounds"]},
         "wind": {"lat": [round(x, 4) for x in data["wind"]["lat"].tolist()],
@@ -2196,7 +2228,7 @@ function dec(b){const s=atob(b),n=s.length,a=new Uint8Array(n);for(let i=0;i<n;i
 const SNOW=dec(db('SNOW')),TEMP=dec(db('TEMP')),SUN=dec(db('SUN')),SPD=dec(db('SPD')),WDIR=dec(db('DIR'));
 const WINDG=dec(db('WINDG')),RSLOPE=dec(db('RSLOPE')),RASPECT=dec(db('RASPECT')),RHOR=dec(db('RHOR'));
 const PREC=dec(db('PREC')),MASPECT=dec(db('MASPECT')),MSLOPE=dec(db('MSLOPE')),MELEV=dec(db('MELEV')),ROUGHG=dec(db('ROUGHGRID'));
-const ASPECT_PNG="data:image/png;base64,"+db('ASPECTPNG'),ROUGH_PNG="data:image/png;base64,"+db('ROUGHPNG');
+const ASPECT_PNG="data:image/png;base64,"+db('ASPECTPNG'),ROUGH_PNG="data:image/png;base64,"+db('ROUGHPNG'),ELEV_PNG="data:image/png;base64,"+db('ELEVPNG');
 const T=M.T,W=M.width,H=M.height,NP=W*H,P=M.wind.lat.length,NX=M.wind.nx;
 const RW=M.rad.width,RH=M.rad.height,RK=M.rad.K,RNP=RW*RH;
 const [RbS,RlW,RbN,RlE]=M.rad.bounds;
@@ -2464,7 +2496,21 @@ const roughImg=L.imageOverlay(ROUGH_PNG,[[M.png_bounds[0],M.png_bounds[1]],[M.pn
 const [aspS,aspWest,aspN,aspEast]=M.png_bounds;
 let aspData=null,aspPW=0,aspPH=0;
 const aspI=new Image();aspI.src=ASPECT_PNG;
-aspI.onload=function(){aspPW=aspI.width;aspPH=aspI.height;const c=document.createElement('canvas');c.width=aspPW;c.height=aspPH;const x=c.getContext('2d');x.drawImage(aspI,0,0);aspData=x.getImageData(0,0,aspPW,aspPH).data;};
+aspI.onload=function(){aspPW=aspI.width;aspPH=aspI.height;const c=document.createElement('canvas');c.width=aspPW;c.height=aspPH;const x=c.getContext('2d');x.drawImage(aspI,0,0);try{aspData=x.getImageData(0,0,aspPW,aspPH).data;}catch(e){}};
+// --- Fine terrain sampling: 60 m aspect (8-way) + fine elevation raster ---
+let elevData=null,elevPW=0,elevPH=0;
+const elevI=new Image();elevI.src=ELEV_PNG;
+elevI.onload=function(){elevPW=elevI.width;elevPH=elevI.height;const c=document.createElement('canvas');c.width=elevPW;c.height=elevPH;const x=c.getContext('2d');x.drawImage(elevI,0,0);try{elevData=x.getImageData(0,0,elevPW,elevPH).data;}catch(e){}};
+const ASP8DEG=[[0x4A,0x90,0xD9,0],[0x45,0xC0,0xC0,45],[0x66,0xBB,0x6A,90],[0xBE,0xDB,0x39,135],[0xEF,0x53,0x50,180],[0xFF,0x9E,0x42,225],[0xFF,0xC1,0x07,270],[0xA9,0x87,0xE0,315]];
+function _pngSample(data,pw,ph,bnds,lat,lng){if(!data||!bnds)return null;const S=bnds[0],Wst=bnds[1],N=bnds[2],E=bnds[3];
+  if(lat>N||lat<S||lng<Wst||lng>E)return null;
+  const px=Math.floor((lng-Wst)/(E-Wst)*(pw-1)),py=Math.floor((N-lat)/(N-S)*(ph-1));
+  if(px<0||px>=pw||py<0||py>=ph)return null;const i=(py*pw+px)*4;return [data[i],data[i+1],data[i+2],data[i+3]];}
+function fineElev(lat,lng){const c=_pngSample(elevData,elevPW,elevPH,M.elev_bounds,lat,lng);if(!c||c[3]<128)return null;const e=c[0]*256+c[1];return e>0?e:null;}
+function fineAspectDeg(lat,lng){const c=_pngSample(aspData,aspPW,aspPH,M.png_bounds,lat,lng);if(!c||c[3]<128)return null;
+  const gd=Math.abs(c[0]-0x9E)+Math.abs(c[1]-0x9E)+Math.abs(c[2]-0x9E);let best=null,bd=1e9;
+  for(const a of ASP8DEG){const dd=Math.abs(c[0]-a[0])+Math.abs(c[1]-a[1])+Math.abs(c[2]-a[2]);if(dd<bd){bd=dd;best=a;}}
+  if(gd<=bd)return null;return best?best[3]:null;}
 const AspectGrid=L.GridLayer.extend({createTile:function(coords){
   const tile=document.createElement('canvas'),ts=this.getTileSize();tile.width=ts.x;tile.height=ts.y;
   if(!aspData)return tile;const ctx=tile.getContext('2d'),img=ctx.createImageData(ts.x,ts.y),d=img.data;
@@ -2571,7 +2617,8 @@ function progTerrain(){
     PROG_LA[idx]=lat;PROG_LO[idx]=lon;
     const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
     if(cx<0||cx>=W||cy<0||cy>=H){PROG_ELEV[idx]=-1;continue;}
-    const q=cy*W+cx;PROG_ASP[idx]=maspv(q);PROG_ELEV[idx]=melevv(q);PROG_SLP[idx]=mslpv(q);}
+    const q=cy*W+cx;const fa=fineAspectDeg(lat,lon),fe=fineElev(lat,lon);
+    PROG_ASP[idx]=(fa!=null?fa:maspv(q));PROG_ELEV[idx]=(fe!=null?fe:melevv(q));PROG_SLP[idx]=(fa!=null?20:mslpv(q));}
 }
 function progZones(){
   const out=[];(allReports||[]).forEach(r=>{const cd=r.condition_data;if(!cd||!cd.zones)return;
@@ -2719,7 +2766,7 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
   if(l=="rad")return "<b>Clear-sky Radiation [Wh/m²/d]</b><br>Day: "+dayLabel(bandDoy())+" (= window start)<br>dark=shade/low · yellow=high<br>incl. slope, aspect & terrain shadow";
   if(l=="radsun")return "<b>Effective Radiation [Wh/m²/d]</b><br>Clear-sky × cloud attenuation (20% diffuse + 80% × sunshine)<br>Day: "+dayLabel(bandDoy());
   if(l=="slope")return "<b>Slope Classes (swisstopo)</b><br>all classes from 30° (30/35/40/45°+)";
-  if(l=="aspect")return '<b>Aspect (Horn, swissALTIRegio 60 m)</b><br><div><i style="background:#4A90D9"></i>N (315°–45°)</div><div><i style="background:#66BB6A"></i>E (45°–135°)</div><div><i style="background:#EF5350"></i>S (135°–225°)</div><div><i style="background:#FFC107"></i>W (225°–315°)</div><div><i style="background:#9E9E9E"></i>Flat (&lt;5°)</div>';
+  if(l=="aspect")return '<b>Aspekt (Horn · swissALTIRegio 60 m · 8 Sektoren)</b><br><div><i style="background:#4A90D9"></i>N</div><div><i style="background:#45C0C0"></i>NO</div><div><i style="background:#66BB6A"></i>O</div><div><i style="background:#BEDB39"></i>SO</div><div><i style="background:#EF5350"></i>S</div><div><i style="background:#FF9E42"></i>SW</div><div><i style="background:#FFC107"></i>W</div><div><i style="background:#A987E0"></i>NW</div><div><i style="background:#9E9E9E"></i>flach (&lt;5°)</div>';
   if(l=="tsurf"){let extra="estimated: air ± radiative cooling/warming";if(stat=="sub0")extra="only cells with max surface temp &lt;0°C";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>T Surface [°C] (${sn})</b><br>${extra}`;}
   if(l=="rough")return "<b>Terrain Roughness</b><br>light→dark brown = rougher";
   if(l=="skiable")return '<b>Skiability Estimate</b><br>Snow depth vs. terrain roughness need<div style="margin-top:4px"><div><i style="background:#64dc64"></i>Plenty of snow</div><div><i style="background:#a0dc64"></i>Skiable</div><div><i style="background:#ffdc32"></i>Marginal</div><div><i style="background:#ff8c28"></i>Needs more snow</div><div><i style="background:#ff3c28"></i>Far from skiable</div><div><i style="background:#500000"></i>Too steep (&gt;55°)</div></div>';
@@ -2971,7 +3018,9 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   inspMarker=L.marker([lat,lon],{icon:L.divIcon({className:'',html:'<div class="insp-xmark"><svg viewBox="0 0 24 24" fill="none" stroke="#e0245e" stroke-width="3.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>',iconSize:[30,30],iconAnchor:[15,15]}),interactive:false,zIndexOffset:2000}).addTo(map);
   const ca=a*NP,cb=b*NP;const newSnow=cum[cb+p]-cum[ca+p],depthNow=cum[cb+p];
   let wsum=0;for(let t=a;t<b;t++)wsum+=SPD[t*P+wk]/M.spd_mul*3.6;const wmean=wsum/Math.max(1,b-a);
-  const asp=maspv(p),slp=mslpv(p),quad=aspectQ(asp),QD={N:'Nord',E:'Ost',S:'Süd',W:'West'};
+  const _fe=fineElev(lat,lon),_fa=fineAspectDeg(lat,lon);const elevD=(_fe!=null?_fe:elev),slp=mslpv(p);
+  const QD8={N:'Nord',NO:'Nordost',O:'Ost',SO:'Südost',S:'Süd',SW:'Südwest',W:'West',NW:'Nordwest'},QD4={N:'Nord',E:'Ost',S:'Süd',W:'West'};
+  const aspDeg=(_fa!=null?_fa:maspv(p)),aspLbl=(_fa!=null?QD8[asp8(_fa)]:(QD4[aspectQ(maspv(p))]||''));
   const pan=document.getElementById('inspPanel');
   let progSec='';
   if(layer==='prog'){try{const pr=prognosisAt(lat,lon);if(pr){const cl=(PROG_LABEL[pr.type]||pr.type);const zc=progZones().filter(z=>z.type===pr.type).length;
@@ -2980,7 +3029,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
       '<div class="prog-note">Aus '+zc+' Zeichnen-Report(s), gewichtet nach Aspekt, Höhe und Distanz zur nächsten Meldung.</div></div>';}}catch(e){}}
   pan.innerHTML=
    '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b>'+
-     '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elev.toFixed(0)+' m</span><span class="insp-chip accent">'+(QD[quad]||quad)+' · '+asp.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+
+     '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+
    '</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
    '<div class="insp-body">'+progSec+
      '<div class="insp-sec"><h4>Neuschnee <em>+'+newSnow.toFixed(1)+' cm</em></h4><canvas id="icNew"></canvas></div>'+
@@ -4396,7 +4445,11 @@ function obsNewState(type){return{type,step:0,steps:OBS_STEPS[type]||[],media:[]
   avalanche:{triggerType:'unknown',remoteTrigger:false,caughtPersons:[],characteristics:{size:'unknown',sizeRank:0,avalancheType:'unknown',wetness:'unknown'}},
   whumpfFrequency:null,windSlab24h:null,
   snow:{kind:null,depth:30,lightness:null,powderline:2200,thickness:null,alt:2200,altLow:1800,altHigh:2600,aspects:[],wetness:null,firnState:null,firnTime:''}};}
-function obsDEM(lat,lon){const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));if(cx2<0||cx2>=W||cy2<0||cy2>=H)return{};const p=cy2*W+cx2;return{elev:Math.round(melevv(p)),aspect:aspectQ(maspv(p))};}
+function obsDEM(lat,lon){const fe=fineElev(lat,lon),fa=fineAspectDeg(lat,lon);
+  const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
+  let ce=null,ca=null;if(cx2>=0&&cx2<W&&cy2>=0&&cy2<H){const p=cy2*W+cx2;ce=Math.round(melevv(p));ca=aspectQ(maspv(p));}
+  const el=(fe!=null?Math.round(fe):ce),as=(fa!=null?asp8(fa):ca);
+  if(el==null&&as==null)return{};return{elev:el,aspect:as};}
 function obsApplyLoc(lat,lon,source){const d=obsDEM(lat,lon);obsState.location={lat,lon,elevation:(d.elev!=null?d.elev:null),aspect:(d.aspect||null),source};}
 function obsWarmLocation(){if(!navigator.geolocation)return;navigator.geolocation.getCurrentPosition(p=>{obsDeviceFix={lat:p.coords.latitude,lon:p.coords.longitude};
   if(obsState&&obsState.location.source!=='exif'&&obsState.location.source!=='manual'){obsApplyLoc(p.coords.latitude,p.coords.longitude,'device');if(!obsState.observedAt)obsState.observedAt=new Date();const st=obsState.steps[obsState.step];if(st&&(st.k==='submit'||st.final))obsRender();}
@@ -4561,7 +4614,10 @@ function drawTrackStep(p){
 function drawSampleAt(p){let ll;try{ll=map.containerPointToLatLng(p);}catch(e){return;}drawRecordSample(drawPen.id,ll.lat,ll.lng);}
 function drawRecordSample(type,lat,lng){if(!type)return;const a=(drawZoneSamples[type]=drawZoneSamples[type]||[]);if(a.length<600)a.push([lat,lng]);}
 function drawDemFull(lat,lon){const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
-  if(cx<0||cx>=W||cy<0||cy>=H)return null;const q=cy*W+cx;return{elev:melevv(q),aspectDeg:maspv(q),slope:mslpv(q)};}
+  const fe=fineElev(lat,lon),fa=fineAspectDeg(lat,lon);
+  let ce=null,ca=null,cs=null;if(cx>=0&&cx<W&&cy>=0&&cy<H){const q=cy*W+cx;ce=melevv(q);ca=maspv(q);cs=mslpv(q);}
+  const el=(fe!=null?fe:ce),ad=(fa!=null?fa:ca);if(el==null&&ad==null)return null;
+  return{elev:el,aspectDeg:ad,slope:(fa!=null?20:(cs!=null?cs:0))};}
 function drawZoneLabel(zones){if(!zones||!zones.length)return '';
   return zones.map(z=>{const t=(typeof DRAW_PENS!=='undefined'&&DRAW_PENS[z.type]&&DRAW_PENS[z.type].label)||z.type;const parts=[t];
     if(z.elevMin!=null&&z.elevMax!=null)parts.push(z.elevMin+'\u2013'+z.elevMax+' m');
