@@ -1,0 +1,49 @@
+name: Validate (PR)
+
+# deploy.yml only runs on pushes to main, so pull requests previously had no
+# checks at all. This builds the app offline (no network data fetches) and runs
+# the terrain + model test suites, so a PR shows green/red before merging.
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libgdal-dev libproj-dev gdal-bin
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Terrain aspect unit test
+        run: python tools/test_aspect.py
+
+      - name: Build app (offline, synthetic data)
+        run: |
+          mkdir -p dist
+          python run_interactive.py --split --offline --date 2026-04-01 --res 4000 --out-dir dist
+
+      - name: Validate JS
+        run: |
+          python tools/check_inline_js.py dist/index.html
+          node --check dist/app.js
+
+      - name: Snow-prognosis model test
+        run: node tools/test_model.js dist/app.js

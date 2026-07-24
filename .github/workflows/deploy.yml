@@ -102,6 +102,13 @@ jobs:
           python tools/check_inline_js.py dist/index.html
           node --check dist/app.js
 
+      - name: Terrain + model tests
+        # Aspect maths (synthetic tilted planes) and the snow-prognosis
+        # scoring model, extracted from the built app.js.
+        run: |
+          python tools/test_aspect.py
+          node tools/test_model.js dist/app.js
+
       - uses: actions/upload-pages-artifact@v5
         with:
           path: ./dist

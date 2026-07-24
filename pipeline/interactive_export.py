@@ -45,6 +45,7 @@ _SPD_MUL = 5.0
 _DIR_DIV = 2.0
 _SUN_MUL = 100.0
 _PREC_MUL = 5.0
+_ELEV_Q = 4.0            # metres per step in the fine elevation raster
 _ELEV_SCALE = 20.0
 _WIND_STEP = 9000.0
 _FINE_RES = 60.0        # swissALTIRegio (feiner; speicher-sorgsam verarbeitet)
@@ -141,23 +142,31 @@ def _class_to_png_b64(cls_lv95, src_t, src_crs, bounds, png_w=3000):
     return base64.b64encode(buf.getvalue()).decode(), (bottom, left, top, right)
 
 
-def _elev_to_png_b64(elev, src_t, src_crs, bounds, png_w=1600):
-    """Reproject a float elevation raster -> WGS84 and encode metres as
-    R*256 + G (1 m precision, 0..65535 m). Decoded client-side for accurate
-    point elevations (far finer than the coarse weather grid)."""
+def _elev_to_png_b64(elev, slope, src_t, src_crs, bounds, png_w=2200):
+    """Reproject elevation + slope -> WGS84 and encode as RGBA:
+    (R*256+G)*_ELEV_Q = elevation in metres, B = slope in degrees.
+    Both are reprojected as floats BEFORE byte-splitting, and the client
+    samples them bilinearly, so point values stay accurate between pixels.
+    """
     h, w = elev.shape
     dst_t, dw, dh = calculate_default_transform(src_crs, "EPSG:4326", w, h, *bounds)
     scale = max(1.0, dw / png_w)
     dw2, dh2 = int(dw / scale), int(dh / scale)
     dst_t2 = from_origin(dst_t.c, dst_t.f, (dst_t.a * dw) / dw2, (-dst_t.e * dh) / dh2)
-    out = np.zeros((dh2, dw2), "float32")
-    reproject(source=elev.astype("float32"), destination=out, src_transform=src_t,
-              src_crs=src_crs, dst_transform=dst_t2, dst_crs="EPSG:4326",
-              resampling=Resampling.bilinear)
-    e = np.clip(np.round(out), 0, 65535).astype("uint32")
+
+    def _rp(src):
+        out = np.zeros((dh2, dw2), "float32")
+        reproject(source=src.astype("float32"), destination=out, src_transform=src_t,
+                  src_crs=src_crs, dst_transform=dst_t2, dst_crs="EPSG:4326",
+                  resampling=Resampling.bilinear)
+        return out
+
+    e = np.clip(np.round(_rp(elev) / _ELEV_Q), 0, 65535).astype("uint32")
+    sl = np.clip(np.round(_rp(slope)), 0, 90).astype("uint8")
     rgba = np.zeros((dh2, dw2, 4), dtype="uint8")
     rgba[:, :, 0] = ((e >> 8) & 0xFF).astype("uint8")
     rgba[:, :, 1] = (e & 0xFF).astype("uint8")
+    rgba[:, :, 2] = sl
     rgba[:, :, 3] = 255
     buf = io.BytesIO()
     Image.fromarray(rgba, "RGBA").save(buf, format="PNG", optimize=True)
@@ -256,6 +265,8 @@ def _fine_terrain(bounds, aoi, use_synthetic):
     # --- Exposition: classify into integer quadrant, then reproject index ---
     aspect_deg, slope_deg = _corrected_aspect(dem.elevation, res)
     aspect_cls = _aspect_classify(np.nan_to_num(aspect_deg), slope_deg)
+    # keep a decimated copy of the TRUE 60 m slope for the fine terrain raster
+    slope_dec = np.ascontiguousarray(slope_deg[::4, ::4]).astype("float32")
     del aspect_deg, slope_deg
     aspect_png, png_b = _class_to_png_b64(aspect_cls, transform, aoi.crs, bounds, png_w=5000)
     del aspect_cls
@@ -266,7 +277,10 @@ def _fine_terrain(bounds, aoi, use_synthetic):
     rough = roughness(zc)
     vmax = float(np.nanpercentile(rough, 98))
     ct = from_origin(bounds[0], bounds[3], res * 4, res * 4)
-    elev_png, elev_b = _elev_to_png_b64(zc, ct, aoi.crs, bounds, png_w=1600)
+    sd = slope_dec[:zc.shape[0], :zc.shape[1]]
+    if sd.shape != zc.shape:  # guard against odd rounding of the decimation
+        sd = np.zeros_like(zc, dtype="float32")
+    elev_png, elev_b = _elev_to_png_b64(zc, sd, ct, aoi.crs, bounds, png_w=2200)
     rough_png, _ = _rgba_to_png_b64(_rough_rgba(rough, vmax), ct, aoi.crs, bounds, png_w=1400)
     del rough
 
@@ -562,7 +576,7 @@ def _build_meta_blobs(data):
         "elev_scale": _ELEV_SCALE,
         "slf_bounds": SLF_BOUNDS, "slf_colors": SLF_COLORS,
         "png_bounds": data["png_bounds"],
-        "elev_bounds": data["elev_bounds"],
+        "elev_bounds": data["elev_bounds"], "elev_q": _ELEV_Q,
         "rad": {"width": rad["width"], "height": rad["height"], "K": rad["K"],
                 "bounds": rad["bounds"]},
         "wind": {"lat": [round(x, 4) for x in data["wind"]["lat"].tolist()],
@@ -2500,13 +2514,30 @@ aspI.onload=function(){aspPW=aspI.width;aspPH=aspI.height;const c=document.creat
 // --- Fine terrain sampling: 60 m aspect (8-way) + fine elevation raster ---
 let elevData=null,elevPW=0,elevPH=0;
 const elevI=new Image();elevI.src=ELEV_PNG;
-elevI.onload=function(){elevPW=elevI.width;elevPH=elevI.height;const c=document.createElement('canvas');c.width=elevPW;c.height=elevPH;const x=c.getContext('2d');x.drawImage(elevI,0,0);try{elevData=x.getImageData(0,0,elevPW,elevPH).data;}catch(e){}};
+elevI.onload=function(){elevPW=elevI.width;elevPH=elevI.height;const c=document.createElement('canvas');c.width=elevPW;c.height=elevPH;const x=c.getContext('2d');x.drawImage(elevI,0,0);try{elevData=x.getImageData(0,0,elevPW,elevPH).data;}catch(e){}
+  try{if(demoFitZones()){loadReportMarkers();if(layer==='prog')renderPrognosis(stat);}}catch(e){}};
 const ASP8DEG=[[0x4A,0x90,0xD9,0],[0x45,0xC0,0xC0,45],[0x66,0xBB,0x6A,90],[0xBE,0xDB,0x39,135],[0xEF,0x53,0x50,180],[0xFF,0x9E,0x42,225],[0xFF,0xC1,0x07,270],[0xA9,0x87,0xE0,315]];
 function _pngSample(data,pw,ph,bnds,lat,lng){if(!data||!bnds)return null;const S=bnds[0],Wst=bnds[1],N=bnds[2],E=bnds[3];
   if(lat>N||lat<S||lng<Wst||lng>E)return null;
   const px=Math.floor((lng-Wst)/(E-Wst)*(pw-1)),py=Math.floor((N-lat)/(N-S)*(ph-1));
   if(px<0||px>=pw||py<0||py>=ph)return null;const i=(py*pw+px)*4;return [data[i],data[i+1],data[i+2],data[i+3]];}
-function fineElev(lat,lng){const c=_pngSample(elevData,elevPW,elevPH,M.elev_bounds,lat,lng);if(!c||c[3]<128)return null;const e=c[0]*256+c[1];return e>0?e:null;}
+// Bilinear sample of the fine terrain raster: f(px) -> value. Interpolating
+// between pixel centres keeps point elevation/slope accurate at ~150 m spacing.
+function _pngBilinear(data,pw,ph,bnds,lat,lng,f){
+  if(!data||!bnds)return null;const S=bnds[0],Wst=bnds[1],N=bnds[2],E=bnds[3];
+  if(lat>N||lat<S||lng<Wst||lng>E)return null;
+  const fx=(lng-Wst)/(E-Wst)*(pw-1),fy=(N-lat)/(N-S)*(ph-1);
+  const x0=Math.floor(fx),y0=Math.floor(fy),tx=fx-x0,ty=fy-y0;
+  const x1=Math.min(pw-1,x0+1),y1=Math.min(ph-1,y0+1);
+  if(x0<0||y0<0||x0>=pw||y0>=ph)return null;
+  const at=(x,y)=>{const i=(y*pw+x)*4;if(data[i+3]<128)return null;return f(data[i],data[i+1],data[i+2]);};
+  const v00=at(x0,y0),v10=at(x1,y0),v01=at(x0,y1),v11=at(x1,y1);
+  if(v00==null||v10==null||v01==null||v11==null)return v00!=null?v00:(v10!=null?v10:(v01!=null?v01:v11));
+  return (v00*(1-tx)+v10*tx)*(1-ty)+(v01*(1-tx)+v11*tx)*ty;
+}
+const ELEV_Q=M.elev_q||1;
+function fineElev(lat,lng){const v=_pngBilinear(elevData,elevPW,elevPH,M.elev_bounds,lat,lng,(r,g,b)=>(r*256+g)*ELEV_Q);return(v!=null&&v>0)?v:null;}
+function fineSlope(lat,lng){const v=_pngBilinear(elevData,elevPW,elevPH,M.elev_bounds,lat,lng,(r,g,b)=>b);return v!=null?v:null;}
 function fineAspectDeg(lat,lng){const c=_pngSample(aspData,aspPW,aspPH,M.png_bounds,lat,lng);if(!c||c[3]<128)return null;
   const gd=Math.abs(c[0]-0x9E)+Math.abs(c[1]-0x9E)+Math.abs(c[2]-0x9E);let best=null,bd=1e9;
   for(const a of ASP8DEG){const dd=Math.abs(c[0]-a[0])+Math.abs(c[1]-a[1])+Math.abs(c[2]-a[2]);if(dd<bd){bd=dd;best=a;}}
@@ -2617,41 +2648,99 @@ function progTerrain(){
     PROG_LA[idx]=lat;PROG_LO[idx]=lon;
     const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
     if(cx<0||cx>=W||cy<0||cy>=H){PROG_ELEV[idx]=-1;continue;}
-    const q=cy*W+cx;const fa=fineAspectDeg(lat,lon),fe=fineElev(lat,lon);
-    PROG_ASP[idx]=(fa!=null?fa:maspv(q));PROG_ELEV[idx]=(fe!=null?fe:melevv(q));PROG_SLP[idx]=(fa!=null?20:mslpv(q));}
+    const q=cy*W+cx;const fa=fineAspectDeg(lat,lon),fe=fineElev(lat,lon),fs=fineSlope(lat,lon);
+    PROG_ASP[idx]=(fa!=null?fa:maspv(q));PROG_ELEV[idx]=(fe!=null?fe:melevv(q));
+    PROG_SLP[idx]=(fs!=null?fs:mslpv(q));}
+}
+// Report age in hours: DB rows carry created_at, demo rows a "vor 5h/3d" label.
+function progAgeH(r){
+  try{if(r.createdAt){const d=(Date.now()-new Date(r.createdAt).getTime())/3.6e6;if(isFinite(d)&&d>=0)return d;}}catch(e){}
+  const t=String(r.time||'');if(/gerade/i.test(t))return 0;
+  let m=t.match(/(\d+)\s*h/);if(m)return +m[1];
+  m=t.match(/(\d+)\s*d/);if(m)return +m[1]*24;
+  return 24;
+}
+let _demoFitted=false;
+function demoFitZones(){
+  if(_demoFitted||!elevData||!aspData||typeof DEMO_REPORTS==='undefined')return false;
+  _demoFitted=true;let changed=false;
+  DEMO_REPORTS.forEach(r=>{const cd=r.condition_data;
+    if(!cd||!cd.demoFit||!cd.zones||!cd.zones.length)return;
+    const e=fineElev(r.lat,r.lng),a=fineAspectDeg(r.lat,r.lng);
+    cd.zones.forEach(z=>{
+      if(e!=null){z.elevMin=Math.round((e-260)/50)*50;z.elevMax=Math.round((e+260)/50)*50;}
+      if(a!=null)z.aspectDeg=a;});
+    const z0=cd.zones[0];
+    const parts=[cd.label0||'Schnee'];
+    if(z0.elevMin!=null&&z0.elevMax!=null)parts.push(z0.elevMin+'\u2013'+z0.elevMax+' m');
+    const a8=asp8(z0.aspectDeg);if(a8)parts.push(a8);
+    cd.measurement=parts.join(' \u00b7 ');r.measurement=cd.measurement;changed=true;});
+  return changed;
 }
 function progZones(){
+  demoFitZones();
   const out=[];(allReports||[]).forEach(r=>{const cd=r.condition_data;if(!cd||!cd.zones)return;
     cd.zones.forEach(z=>{if(!z||!z.type)return;const c=z.centroid||[r.lat,r.lng];if(c[0]==null)return;
-      out.push({type:z.type,lat:c[0],lng:c[1],e0:z.elevMin,e1:z.elevMax,asp:z.aspectDeg,conc:z.aspectConc==null?0.6:z.aspectConc});});});
+      out.push({type:z.type,lat:c[0],lng:c[1],e0:z.elevMin,e1:z.elevMax,asp:z.aspectDeg,conc:z.aspectConc==null?0.6:z.aspectConc,ageH:progAgeH(r)});});});
   return out;
 }
+// --- Terrain-similarity model (pure functions, unit-tested) ---------------
+// Aspect: 8-sector logic — same sector matches fully, one sector over is a
+// partial match, two sectors is weak, opposite slopes do not match at all.
+const PROG_SC_KM=11;      // spatial decay scale
+const PROG_ELEV_SD=180;   // elevation roll-off outside the reported band [m]
+const PROG_AGE_H=72;      // report half-life-ish for recency weighting
+function progAspectMatch(asp,zAsp,conc){
+  if(zAsp==null||asp==null)return 0.6;
+  let d=Math.abs(asp-zAsp)%360;if(d>180)d=360-d;
+  const m=d<=22.5?1:(d<=67.5?0.55:(d<=112.5?0.15:0));
+  const c=Math.max(0,Math.min(1,conc==null?0.7:conc));
+  // Only a genuinely diffuse report (low concentration) keeps an aspect-agnostic
+  // floor; squaring (1-c) makes a well-defined report exclude opposite slopes.
+  return m*c+0.45*(1-c)*(1-c);
+}
+function progElevMatch(elev,e0,e1){
+  if(e0==null||e1==null)return 0.7;
+  if(elev>=e0&&elev<=e1)return 1;                       // inside the reported band
+  const d=Math.max(e0-elev,elev-e1);
+  return Math.exp(-(d*d)/(PROG_ELEV_SD*PROG_ELEV_SD));  // fades outside it
+}
 function progEnvelope(asp,elev,slp,z){
-  if(elev<0)return 0;let em=1;
-  if(z.e0!=null&&z.e1!=null){const dband=Math.max(0,z.e0-elev,elev-z.e1);em=Math.exp(-(dband*dband)/(165*165));}
-  let am=0.55;
-  if(z.asp!=null&&slp>=8){let dA=Math.abs(asp-z.asp)%360;if(dA>180)dA=360-dA;
-    const c=Math.cos(dA*Math.PI/180),c0=Math.cos(60*Math.PI/180);
-    am=Math.max(0,Math.min(1,(c-c0)/(1-c0)));const conc=Math.max(0,Math.min(1,z.conc));am=am*conc+0.5*(1-conc);}
+  if(elev<0)return 0;
+  const em=progElevMatch(elev,z.e0,z.e1);
+  const am=(slp!=null&&slp<12)?0.5:progAspectMatch(asp,z.asp,z.conc); // flats: aspect-neutral
   return em*am;
 }
 function progDistKm(lat,lon,z){const dLat=(lat-z.lat)*111,dLo=(lon-z.lng)*111*Math.cos(lat*Math.PI/180);return Math.hypot(dLat,dLo);}
+function progRecency(z){const a=z.ageH==null?12:z.ageH;return 0.35+0.65*Math.exp(-a/PROG_AGE_H);}
+// Combine supporting (sel) and conflicting (oth) reports for one location.
+// like = how likely this snow type is here; conf = how much we trust it.
+function progCell(asp,elev,slp,lat,lon,sel,oth){
+  let sS=0,sO=0,best=0,sw=0,sw2=0;
+  for(const z of sel){const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;
+    const dd=progDistKm(lat,lon,z),m=e*Math.exp(-(dd*dd)/(PROG_SC_KM*PROG_SC_KM))*progRecency(z);
+    sS+=m;sw+=m;sw2+=m*m;if(m>best)best=m;}
+  for(const z of oth){const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;
+    const dd=progDistKm(lat,lon,z);sO+=e*Math.exp(-(dd*dd)/(PROG_SC_KM*PROG_SC_KM))*progRecency(z);}
+  const tot=sS+sO,agree=tot>0?sS/tot:0;
+  const evid=1-Math.exp(-tot/0.8);                       // more/closer reports -> more evidence
+  const nEff=sw2>0?(sw*sw)/sw2:0;                        // effective independent reports
+  const multi=0.72+0.28*Math.min(1,Math.max(0,nEff-1));  // a single source cannot be fully certain
+  const like=Math.min(1,best*(0.45+0.55*agree));
+  return {like:like,conf:Math.round(100*agree*evid*multi)};
+}
 function renderPrognosis(type){
   progTerrain();_progType=type;
   const zones=progZones(),sel=zones.filter(z=>z.type===type),oth=zones.filter(z=>z.type!==type);
-  const N=PROG_GW*PROG_GH,SC=11;
+  const N=PROG_GW*PROG_GH;
   _progField=new Float32Array(N);_progConf=new Float32Array(N);
   const col=PROG_COL[type]||[74,163,255];
   const img=new ImageData(PROG_GW,PROG_GH),d=img.data;
   for(let idx=0;idx<N;idx++){
     const asp=PROG_ASP[idx],elev=PROG_ELEV[idx],slp=PROG_SLP[idx],lat=PROG_LA[idx],lon=PROG_LO[idx];
     if(elev<0){d[idx*4+3]=0;continue;}
-    let sS=0,sO=0,best=0;
-    for(const z of sel){const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;const dd=progDistKm(lat,lon,z);const m=e*Math.exp(-(dd*dd)/(SC*SC));sS+=m;if(m>best)best=m;}
-    for(const z of oth){const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;const dd=progDistKm(lat,lon,z);sO+=e*Math.exp(-(dd*dd)/(SC*SC));}
-    const tot=sS+sO,agree=tot>0?sS/tot:0,evid=1-Math.exp(-tot/0.85);
-    const like=best*(0.4+0.6*agree);
-    _progField[idx]=like;_progConf[idx]=Math.round(100*agree*evid);
+    const r=progCell(asp,elev,slp,lat,lon,sel,oth);const like=r.like;
+    _progField[idx]=like;_progConf[idx]=r.conf;
     const o=idx*4;if(like<0.05){d[o+3]=0;continue;}
     const t=Math.pow(like,0.8);d[o]=col[0];d[o+1]=col[1];d[o+2]=col[2];d[o+3]=Math.min(215,40+195*t)|0;
   }
@@ -3018,7 +3107,8 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   inspMarker=L.marker([lat,lon],{icon:L.divIcon({className:'',html:'<div class="insp-xmark"><svg viewBox="0 0 24 24" fill="none" stroke="#e0245e" stroke-width="3.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>',iconSize:[30,30],iconAnchor:[15,15]}),interactive:false,zIndexOffset:2000}).addTo(map);
   const ca=a*NP,cb=b*NP;const newSnow=cum[cb+p]-cum[ca+p],depthNow=cum[cb+p];
   let wsum=0;for(let t=a;t<b;t++)wsum+=SPD[t*P+wk]/M.spd_mul*3.6;const wmean=wsum/Math.max(1,b-a);
-  const _fe=fineElev(lat,lon),_fa=fineAspectDeg(lat,lon);const elevD=(_fe!=null?_fe:elev),slp=mslpv(p);
+  const _fe=fineElev(lat,lon),_fa=fineAspectDeg(lat,lon),_fs=fineSlope(lat,lon);
+  const elevD=(_fe!=null?_fe:elev),slp=(_fs!=null?_fs:mslpv(p));
   const QD8={N:'Nord',NO:'Nordost',O:'Ost',SO:'Südost',S:'Süd',SW:'Südwest',W:'West',NW:'Nordwest'},QD4={N:'Nord',E:'Ost',S:'Süd',W:'West'};
   const aspDeg=(_fa!=null?_fa:maspv(p)),aspLbl=(_fa!=null?QD8[asp8(_fa)]:(QD4[aspectQ(maspv(p))]||''));
   const pan=document.getElementById('inspPanel');
@@ -3624,7 +3714,7 @@ const DEMO_REPORTS=DEMO_DEFS.map((d,i2)=>({id:'d'+(i2+1),user:DEMO_USERS[i2%DEMO
     add({user:U2[(k*5+2)%U2.length],cat:'snow',sub:'Schnee-Karte',
       measurement:meas,caption:cap,lat:la,lng:lo,
       time:'vor '+(2+Math.floor(rnd()*40))+'h',img:photo||snap,
-      condition_data:{draw:true,snapshot:snap,measurement:meas,
+      condition_data:{draw:true,snapshot:snap,measurement:meas,demoFit:true,label0:DCL[ty],
         zones:[{type:ty,centroid:[la,lo],elevMin:e0,elevMax:e1,aspectDeg:asp,aspectConc:0.82,n:120}]}});});
 })();
 let reportMarkers=L.layerGroup().addTo(map);
@@ -3761,7 +3851,7 @@ async function loadDbReports(){
       if(r.flagged)return null; // hide community-flagged reports
       const ll=parseGeo(r.location);if(!ll||(ll[0]===0&&ll[1]===0))return null;const lat=ll[0],lng=ll[1];
       const catId=r.primary_categories?.[0]||'info';const catObj=RP_CATS.find(c=>c.id===catId);
-      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||ic('pin'),sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,condition_data:r.condition_data||null,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,
+      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||ic('pin'),sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,condition_data:r.condition_data||null,createdAt:r.created_at,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,
         condN:condAgg[r.id]?condAgg[r.id].n:0,condAvg:condAgg[r.id]?condAgg[r.id].sum/condAgg[r.id].n:0,condPow:condAgg[r.id]?condAgg[r.id].pow:0,myCond:myCond[r.id]||null,dbRow:true};
     }).filter(Boolean);
     allReports=demoActive()?[...dbR,...DEMO_REPORTS]:dbR;loadReportMarkers();
@@ -4616,8 +4706,8 @@ function drawRecordSample(type,lat,lng){if(!type)return;const a=(drawZoneSamples
 function drawDemFull(lat,lon){const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
   const fe=fineElev(lat,lon),fa=fineAspectDeg(lat,lon);
   let ce=null,ca=null,cs=null;if(cx>=0&&cx<W&&cy>=0&&cy<H){const q=cy*W+cx;ce=melevv(q);ca=maspv(q);cs=mslpv(q);}
-  const el=(fe!=null?fe:ce),ad=(fa!=null?fa:ca);if(el==null&&ad==null)return null;
-  return{elev:el,aspectDeg:ad,slope:(fa!=null?20:(cs!=null?cs:0))};}
+  const el=(fe!=null?fe:ce),ad=(fa!=null?fa:ca),fs=fineSlope(lat,lon);if(el==null&&ad==null)return null;
+  return{elev:el,aspectDeg:ad,slope:(fs!=null?fs:(cs!=null?cs:0))};}
 function drawZoneLabel(zones){if(!zones||!zones.length)return '';
   return zones.map(z=>{const t=(typeof DRAW_PENS!=='undefined'&&DRAW_PENS[z.type]&&DRAW_PENS[z.type].label)||z.type;const parts=[t];
     if(z.elevMin!=null&&z.elevMax!=null)parts.push(z.elevMin+'\u2013'+z.elevMax+' m');
