@@ -1173,6 +1173,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .auth-note{font-size:12px;color:var(--mut);margin:4px 0 10px;line-height:1.5}
  .auth-sub{font-size:13px;color:var(--mut);margin:0 0 24px}
  .auth-modal form{display:flex;flex-direction:column;gap:10px}
+ .auth-sent-ic{width:52px;height:52px;margin:2px auto 12px;border-radius:16px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--fg2)}
+ .auth-sent-ic svg{width:26px;height:26px}
  .auth-forgot{display:block;width:100%;margin-top:4px;border:none;background:none;color:var(--mut);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;padding:6px}
  .auth-forgot:hover{color:var(--fg2);text-decoration:underline}
  .auth-modal input[type="text"],.auth-modal input[type="email"],.auth-modal input[type="password"]{width:100%;padding:13px 16px;border:1.5px solid rgba(0,0,0,.08);border-radius:var(--r);font-size:15px;font-family:inherit;color:var(--fg);background:var(--fill);outline:none;box-sizing:border-box;transition:border-color .15s,box-shadow .15s}
@@ -1968,7 +1970,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <button class="auth-close" id="authClose" onclick="authHide()">&times;</button>
 <h2 id="authTitle">Anmelden</h2>
 <p class="auth-sub" id="authSub">Anmelden für Community &amp; Meldungen</p>
-<p class="auth-note">Karte &amp; Prognosen funktionieren ohne Konto — du brauchst es nur zum Melden, für den Feed und dein Profil.</p>
+<p class="auth-note" id="authNote">Karte &amp; Prognosen funktionieren ohne Konto — du brauchst es nur zum Melden, für den Feed und dein Profil.</p>
 <form id="authForm" onsubmit="authSubmit(event)">
 <input type="text" id="authUser" placeholder="Username" autocomplete="username" style="display:none"/>
 <input type="email" id="authEmail" placeholder="E-Mail" autocomplete="email" required/>
@@ -1984,6 +1986,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div class="auth-err" id="authCodeErr"></div>
   <button class="auth-btn primary" id="authCodeBtn" onclick="authVerifyCode()">Bestätigen</button>
   <div class="auth-switch">Kein Code erhalten? <button onclick="authResendCode()">Erneut senden</button> · <button onclick="authBackToForm()">Zurück</button></div>
+</div>
+<div id="authSentBox" style="display:none">
+  <div class="auth-sent-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg></div>
+  <p class="auth-sub" style="text-align:center">Wir haben dir einen Link an <b id="authSentMail"></b> geschickt. Öffne die E-Mail und tippe auf <b>„Passwort zurücksetzen“</b> — danach kannst du hier direkt ein neues Passwort setzen.</p>
+  <p class="auth-note" style="text-align:center">Der Link öffnet die App wieder. Nichts erhalten? Schau im Spam-Ordner nach.</p>
+  <div class="auth-switch"><button onclick="authBackToForm()">Zurück zur Anmeldung</button></div>
 </div>
 <div id="authNewPassBox" style="display:none">
   <p class="auth-sub">Wähle ein neues Passwort (mindestens 8 Zeichen).</p>
@@ -3934,28 +3942,42 @@ async function toggleFollow(uid,ev){if(ev){ev.stopPropagation();}
   }catch(e){if(!following)myFollowing.delete(uid);else myFollowing.add(uid);feedRender();}
 }
 function timeAgo(ts){const d=Date.now()-new Date(ts).getTime(),h=d/36e5;if(h<1)return'gerade eben';if(h<24)return'vor '+Math.floor(h)+'h';return'vor '+Math.floor(h/24)+'d';}
-if(sb){sb.auth.onAuthStateChange((ev,session)=>{authUpdateUI(session?.user||null);});
+if(sb){sb.auth.onAuthStateChange((ev,session)=>{
+    if(ev==='PASSWORD_RECOVERY'){authUpdateUI(session?.user||null);authOnRecovery();return;}
+    authUpdateUI(session?.user||null);});
   sb.auth.getSession().then(({data})=>{authUpdateUI(data.session?.user||null);});}
 else{document.getElementById('feedBtn').style.display='flex';loadReportMarkers();}
 let authPendingEmail=null,justLoggedIn=false;
-function authShow(){authMode='login';authRecovery=false;authRender();document.getElementById('authOverlay').style.display='flex';}
+function authShow(){authMode='login';authRender();document.getElementById('authOverlay').style.display='flex';}
 function authHide(){document.getElementById('authOverlay').style.display='none';document.getElementById('authErr').textContent='';document.getElementById('authCodeErr').textContent='';}
 function authToggle(){authMode=authMode==='login'?'register':'login';authRender();}
-function authBackToForm(){authMode='login';authRecovery=false;authRender();}
-let authRecovery=false;
+function authBackToForm(){authMode='login';authRender();}
 function authForgot(){authMode='forgot';authRender();}
 async function authSendRecovery(email){
   const errEl=document.getElementById('authErr');
   if(!email){errEl.textContent='Bitte E-Mail eingeben.';return;}
   const btn=document.getElementById('authSubmitBtn');btn.disabled=true;btn.textContent='Sende…';
   try{
-    const{error}=await sb.auth.resetPasswordForEmail(email);
+    // Link-based reset: Supabase mails a recovery link that reopens the app;
+    // detectSessionInUrl then fires PASSWORD_RECOVERY (see authOnRecovery).
+    const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
     if(error)throw error;
-    authPendingEmail=email;authRecovery=true;authMode='code';authRender();
-    setTimeout(()=>{const c=document.getElementById('authCode');if(c)c.focus();},100);
+    authPendingEmail=email;authMode='sent';authRender();
   }catch(e){errEl.textContent=e.message||'Konnte E-Mail nicht senden.';}
   btn.disabled=false;authRender();
 }
+// The recovery link puts us back here with a temporary session -> let the user
+// pick a new password straight away.
+let authRecoveryPending=false;
+function authOnRecovery(){
+  authRecoveryPending=true;
+  try{document.getElementById('authOverlay').style.display='flex';}catch(e){}
+  authMode='newpass';authRender();
+  try{history.replaceState(null,'',location.origin+location.pathname+location.search);}catch(e){}
+  setTimeout(()=>{const np=document.getElementById('authNewPass');if(np)np.focus();},80);
+}
+(function(){try{const h=location.hash||'';
+  if(/type=recovery/.test(h)||/[?&]type=recovery/.test(location.search))setTimeout(authOnRecovery,900);}catch(e){}})();
 async function authSetNewPassword(){
   const err=document.getElementById('authNewPassErr');err.style.color='#FF5470';err.textContent='';
   const a=document.getElementById('authNewPass').value,b=document.getElementById('authNewPass2').value;
@@ -3965,30 +3987,34 @@ async function authSetNewPassword(){
   try{
     const{error}=await sb.auth.updateUser({password:a});
     if(error)throw error;
-    authRecovery=false;toast('Passwort geändert — du bist angemeldet.','ok');authAfterLogin();
+    authRecoveryPending=false;toast('Passwort geändert — du bist angemeldet.','ok');authAfterLogin();
   }catch(e){err.textContent=e.message||'Konnte Passwort nicht ändern.';}
   btn.disabled=false;btn.textContent='Passwort speichern';
 }
 function authRender(){
   const isReg=authMode==='register',isCode=authMode==='code',isBio=authMode==='biometric';
-  const isForgot=authMode==='forgot',isNew=authMode==='newpass';
-  document.getElementById('authForm').style.display=(isCode||isBio||isNew)?'none':'flex';
+  const isForgot=authMode==='forgot',isNew=authMode==='newpass',isSent=authMode==='sent';
+  document.getElementById('authForm').style.display=(isCode||isBio||isNew||isSent)?'none':'flex';
   document.getElementById('authCodeBox').style.display=isCode?'block':'none';
   document.getElementById('authBioBox').style.display=isBio?'block':'none';
   document.getElementById('authNewPassBox').style.display=isNew?'block':'none';
-  document.getElementById('authSwitch').style.display=(isCode||isBio||isNew)?'none':'block';
+  document.getElementById('authSentBox').style.display=isSent?'block':'none';
+  document.getElementById('authSwitch').style.display=(isCode||isBio||isNew||isSent)?'none':'block';
+  document.getElementById('authNote').style.display=(isCode||isBio||isNew||isSent||isForgot)?'none':'';
   document.getElementById('authClose').style.display=isBio?'none':'flex';
   document.getElementById('authPass').style.display=isForgot?'none':'';
   document.getElementById('authPass').required=!isForgot;
-  document.getElementById('authForgotBtn').style.display=(isReg||isForgot)?'none':'block';
+  document.getElementById('authForgotBtn').style.display=(isReg||isForgot||isSent)?'none':'block';
+  if(isSent){document.getElementById('authTitle').textContent='E-Mail unterwegs';document.getElementById('authSub').style.display='none';
+    document.getElementById('authSentMail').textContent=authPendingEmail||'deine E-Mail';return;}
   if(isNew){document.getElementById('authTitle').textContent='Neues Passwort';document.getElementById('authSub').style.display='none';return;}
   if(isForgot){document.getElementById('authTitle').textContent='Passwort zurücksetzen';
     document.getElementById('authSub').style.display='';
-    document.getElementById('authSub').textContent='Wir senden dir einen 6-stelligen Code an deine E-Mail.';
+    document.getElementById('authSub').textContent='Wir senden dir einen Link zum Zurücksetzen an deine E-Mail.';
     document.getElementById('authUser').style.display='none';
-    document.getElementById('authSubmitBtn').textContent='Code senden';
+    document.getElementById('authSubmitBtn').textContent='Link senden';
     document.getElementById('authSwitch').innerHTML='<button onclick="authBackToForm()">Zurück zur Anmeldung</button>';return;}
-  if(isCode){document.getElementById('authTitle').textContent=authRecovery?'Code eingeben':'E-Mail bestätigen';document.getElementById('authSub').style.display='none';
+  if(isCode){document.getElementById('authTitle').textContent='E-Mail bestätigen';document.getElementById('authSub').style.display='none';
     document.getElementById('authCodeSub').textContent='Wir haben einen 6-stelligen Code an '+(authPendingEmail||'deine E-Mail')+' geschickt.';return;}
   if(isBio){document.getElementById('authTitle').textContent='Biometrischer Login';document.getElementById('authSub').style.display='none';
     document.getElementById('authBioName').textContent=bioName();return;}
@@ -4034,13 +4060,6 @@ async function authVerifyCode(){
   if(token.length<6){err.style.color='#FF5470';err.textContent='Bitte 6 Ziffern eingeben.';return;}
   const btn=document.getElementById('authCodeBtn');btn.disabled=true;btn.textContent='Prüfe…';
   try{
-    if(authRecovery){
-      const rr=await sb.auth.verifyOtp({email:authPendingEmail,token,type:'recovery'});
-      if(rr.error)throw rr.error;
-      btn.disabled=false;btn.textContent='Bestätigen';
-      authMode='newpass';authRender();
-      setTimeout(()=>{const np=document.getElementById('authNewPass');if(np)np.focus();},80);return;
-    }
     let r=await sb.auth.verifyOtp({email:authPendingEmail,token,type:'signup'});
     if(r.error){const r2=await sb.auth.verifyOtp({email:authPendingEmail,token,type:'email'});if(r2.error)throw r2.error;}
     authAfterLogin();
