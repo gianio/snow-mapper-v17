@@ -1060,7 +1060,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rail-note.show{opacity:1;transform:translateX(0)}
  .me-dot{position:relative;width:18px;height:18px;border-radius:50%;background:#141419;border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.35)}
  .me-dot::after{content:'';position:absolute;inset:-7px;border-radius:50%;border:2px solid rgba(20,20,25,.5);animation:xpulse 2s ease-out infinite}
- .acct-img{display:block;width:34px;height:34px;border-radius:50%;background-size:cover;background-position:center;box-shadow:0 0 0 2px rgba(255,255,255,.9)}
+ .acct-img{display:block;width:34px;height:34px;border-radius:28%;background-size:cover;background-position:center;box-shadow:0 0 0 2px rgba(255,255,255,.9)}
  #userBar{display:none!important} /* replaced by the rail account button */
  .rail-btn.feed-accent:hover{color:var(--acc)}
  .feed-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2);display:none}
@@ -1165,7 +1165,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .login-btn{min-height:40px;padding:9px 18px;border-radius:999px;border:1.5px solid rgba(22,21,46,.12);background:rgba(255,255,255,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:var(--fg);font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.06);letter-spacing:-.01em}
  .login-btn:hover{background:#fff}
  .user-pill{display:flex;align-items:center;gap:8px;min-height:40px;padding:5px 14px 5px 5px;border-radius:999px;border:1.5px solid rgba(22,21,46,.08);background:rgba(255,255,255,.85);backdrop-filter:blur(12px);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.06)}
- .user-avatar{width:26px;height:26px;border-radius:50%;background:var(--fg);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;letter-spacing:.02em}
+ .user-avatar{border-radius:28%!important;width:26px;height:26px;border-radius:50%;background:var(--fg);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;letter-spacing:.02em}
  .user-name{font-size:13px;font-weight:600;color:var(--fg2);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
  .auth-overlay{position:fixed;inset:0;z-index:5000;background:rgba(11,17,32,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px}
  .auth-modal{position:relative;background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:var(--r-xl);padding:36px 28px 28px;width:100%;max-width:360px;box-shadow:var(--elev3),0 1px 0 rgba(255,255,255,.5) inset}
@@ -1173,6 +1173,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .auth-note{font-size:12px;color:var(--mut);margin:4px 0 10px;line-height:1.5}
  .auth-sub{font-size:13px;color:var(--mut);margin:0 0 24px}
  .auth-modal form{display:flex;flex-direction:column;gap:10px}
+ .auth-forgot{display:block;width:100%;margin-top:4px;border:none;background:none;color:var(--mut);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;padding:6px}
+ .auth-forgot:hover{color:var(--fg2);text-decoration:underline}
  .auth-modal input[type="text"],.auth-modal input[type="email"],.auth-modal input[type="password"]{width:100%;padding:13px 16px;border:1.5px solid rgba(0,0,0,.08);border-radius:var(--r);font-size:15px;font-family:inherit;color:var(--fg);background:var(--fill);outline:none;box-sizing:border-box;transition:border-color .15s,box-shadow .15s}
  .auth-modal input:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--glow);background:var(--card)}
  .auth-err{color:#d03030;font-size:13px;padding:8px 12px;background:rgba(220,60,60,.06);border-radius:10px;min-height:0}
@@ -1582,7 +1584,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .prof-head button{background:none;border:none;font-size:19px;color:var(--mut);cursor:pointer}
  .prof-body{padding:14px 24px calc(env(safe-area-inset-bottom,0px) + 30px)}
  .prof-top{display:flex;align-items:center;gap:16px;margin-bottom:18px}
- .prof-av{position:relative;width:76px;height:76px;border-radius:50%;background:var(--fg);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;cursor:pointer;flex-shrink:0;overflow:hidden;background-size:cover;background-position:center}
+ .prof-av{position:relative;width:76px;height:76px;border-radius:26%;background:var(--fg);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;cursor:pointer;flex-shrink:0;overflow:hidden;background-size:cover;background-position:center}
  .prof-av .prof-av-edit{position:absolute;right:-2px;bottom:-2px;width:28px;height:28px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;border:2.5px solid #fff}
  .prof-av .prof-av-edit svg{width:14px;height:14px}
  .prof-av.has-img span{display:none}
@@ -1672,7 +1674,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-card.flash{box-shadow:0 0 0 3px var(--acc) inset;animation:cardFlash 1.8s ease}
  @keyframes cardFlash{0%,100%{background:#fff}30%{background:rgba(20,20,25,.08)}}
  .feed-card-head{display:flex;align-items:center;gap:11px;padding:14px 16px 10px}
-  .feed-card-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;letter-spacing:.02em;color:#fff;box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--ring)}
+  .feed-card-avatar{width:42px;height:42px;border-radius:28%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;letter-spacing:.02em;color:#fff;box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--ring)}
  .feed-card-info{flex:1;min-width:0}
  .feed-card-user{font-size:14px;font-weight:700;color:var(--fg);letter-spacing:-.01em;display:block}
  .feed-card-loc{font-size:12px;color:var(--mut);font-weight:500;display:flex;align-items:center;gap:3px}
@@ -1841,6 +1843,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rpt-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px 5px 8px;border-radius:999px;background:#fff;border:1.5px solid var(--cc);color:var(--cc);font-weight:800;font-size:12.5px;white-space:nowrap;box-shadow:0 3px 11px rgba(0,0,0,.20);cursor:pointer;transition:transform .15s}
  .rpt-chip:hover{transform:scale(1.06)}
  .rpt-chip svg{width:14px;height:14px}
+ .rpt-tiny{width:9px;height:9px;border-radius:50%;background:var(--cc);box-shadow:0 0 0 1.6px rgba(255,255,255,.92),0 1px 3px rgba(0,0,0,.35);cursor:pointer}
  .rpt-pin{position:relative;width:34px;height:34px;border-radius:50%;background:#fff;border:2.5px solid var(--cc);color:var(--cc);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 9px rgba(0,0,0,.22);cursor:pointer;transition:transform .15s}
  .rpt-pin:hover{transform:scale(1.15)}
  .rpt-pin svg{width:17px;height:17px}
@@ -1903,6 +1906,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <button data-t="temp"><span class="mt-ic" style="background:rgba(232,89,12,.12);color:#e8590c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V4a2 2 0 1 0-4 0v10.76a4 4 0 1 0 4 0z"/></svg></span><span class="mt-tx"><b>Temperatur</b><span>Luft &amp; Oberfläche</span></span></button>
       <button data-t="wind"><span class="mt-ic" style="background:rgba(13,148,136,.12);color:#0d9488"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.6 4.6A2 2 0 1 1 11 8H2M12.6 19.4A2 2 0 1 0 14 16H2M17.6 7.6A2.5 2.5 0 1 1 19 12H2"/></svg></span><span class="mt-tx"><b>Wind</b><span>Geschwindigkeit &amp; Böen</span></span></button>
       <button data-t="qpr"><span class="mt-ic" style="background:rgba(30,58,138,.12);color:#1e3a8a"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg></span><span class="mt-tx"><b>Powder-Reports</b><span>Heatmap der Community</span></span></button>
+      <button data-t="aspect"><span class="mt-ic" style="background:rgba(13,148,136,.12);color:#0d9488"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/><path d="M12 7l2.5 5h-5z" fill="currentColor" stroke="none"/></svg></span><span class="mt-tx"><b>Exposition</b><span>Himmelsrichtung der Hänge (8 Sektoren)</span></span></button>
       <button data-t="prog"><span class="mt-ic" style="background:rgba(124,58,237,.12);color:#7c3aed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg></span><span class="mt-tx"><b>Schnee-Prognose</b><span>aus Zeichnen-Reports (Aspekt+Höhe)</span></span></button>
       </span>
   <div id="sublayers"></div>
@@ -1910,7 +1914,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <button id="demoPill" onclick="demoToggle()" title="Demo-Modus umschalten"><span class="dp-dot"></span><span id="demoPillTxt">Demo</span></button>
 <div id="searchWrap"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Ort suchen…" autocomplete="off"/><div id="searchRes"></div></div>
 <div id="ctrlRail">
-  <button class="rail-btn" id="accountBtn" onclick="accountTap()" title="Anmelden" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></button>
+  <button class="rail-btn" id="accountBtn" onclick="accountTap()" title="Anmelden" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.6"/><path d="M3.5 20a6.5 6.5 0 0 1 13 0"/><line x1="19" y1="6" x2="19" y2="12"/><line x1="16" y1="9" x2="22" y2="9"/></svg></button>
   <button class="rail-btn feed-accent" id="feedBtn" onclick="feedOpen()" title="Community-Feed" aria-label="Community-Feed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
   <button class="rail-btn active" id="railToggles" onclick="toggleStations()" title="Messstationen ein/aus" aria-label="Messstationen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0" stroke-dasharray="0"/></svg></button>
   <button class="rail-btn" id="btn3dFloat" title="3D-Ansicht" aria-label="3D-Ansicht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg></button>
@@ -1971,6 +1975,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <input type="password" id="authPass" placeholder="Passwort" autocomplete="current-password" required minlength="8"/>
 <div class="auth-err" id="authErr"></div>
 <button class="auth-btn primary" type="submit" id="authSubmitBtn">Anmelden</button>
+<button class="auth-forgot" type="button" id="authForgotBtn" onclick="authForgot()">Passwort vergessen?</button>
 </form>
 <div id="authCodeBox" style="display:none">
   <p class="auth-sub" id="authCodeSub">Wir haben dir einen 6-stelligen Code geschickt.</p>
@@ -1979,6 +1984,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div class="auth-err" id="authCodeErr"></div>
   <button class="auth-btn primary" id="authCodeBtn" onclick="authVerifyCode()">Bestätigen</button>
   <div class="auth-switch">Kein Code erhalten? <button onclick="authResendCode()">Erneut senden</button> · <button onclick="authBackToForm()">Zurück</button></div>
+</div>
+<div id="authNewPassBox" style="display:none">
+  <p class="auth-sub">Wähle ein neues Passwort (mindestens 8 Zeichen).</p>
+  <input type="password" id="authNewPass" placeholder="Neues Passwort" autocomplete="new-password" minlength="8"/>
+  <input type="password" id="authNewPass2" placeholder="Neues Passwort wiederholen" autocomplete="new-password" minlength="8"/>
+  <div class="auth-err" id="authNewPassErr"></div>
+  <button class="auth-btn primary" id="authNewPassBtn" onclick="authSetNewPassword()">Passwort speichern</button>
+  <div class="auth-switch"><button onclick="authBackToForm()">Abbrechen</button></div>
 </div>
 <div id="authBioBox" style="display:none">
   <div class="auth-bio-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10a3 3 0 0 1 6 0M8.5 15.5c1 1 5 1 7 0M12 10v3.5"/></svg></div>
@@ -2633,12 +2646,23 @@ function renderQprHeat(){
   qcx.drawImage(tmp,0,0,500,340);
   qprOverlay.setUrl(qcv.toDataURL());}
 // ===== Schnee-Prognose: Aspekt + Höhen-Heuristik aus Zeichnen-Reports =====
-const PROG_GW=200,PROG_GH=140;
+const PROG_GW=340,PROG_GH=240;
 const pcv=document.createElement('canvas');pcv.width=PROG_GW*2;pcv.height=PROG_GH*2;const pcx=pcv.getContext('2d');
 let prognosisOverlay=L.imageOverlay(pcv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:.72});
 let PROG_ASP=null,PROG_ELEV=null,PROG_SLP=null,PROG_LA=null,PROG_LO=null;
 let _progField=null,_progConf=null,_progType=null;
 const PROG_COL={powder:[74,163,255],drift:[232,89,12],wet:[245,158,11],suncrust:[244,208,63],windpressed:[150,168,196],firn:[63,178,127],scoured:[154,135,120]};
+// Colourful, perceptually ordered ramp for the 0-100% confidence map.
+const PROG_CONF_STOPS=[[0.00,48,18,59],[0.15,62,73,204],[0.30,33,144,231],[0.45,26,196,171],
+                       [0.60,96,214,79],[0.72,212,225,53],[0.85,249,152,42],[1.00,231,49,38]];
+function progConfColor(t){
+  t=Math.max(0,Math.min(1,t));
+  for(let i=1;i<PROG_CONF_STOPS.length;i++){
+    const a=PROG_CONF_STOPS[i-1],b=PROG_CONF_STOPS[i];
+    if(t<=b[0]){const f=(t-a[0])/Math.max(1e-6,b[0]-a[0]);
+      return [Math.round(a[1]+(b[1]-a[1])*f),Math.round(a[2]+(b[2]-a[2])*f),Math.round(a[3]+(b[3]-a[3])*f)];}}
+  const l=PROG_CONF_STOPS[PROG_CONF_STOPS.length-1];return [l[1],l[2],l[3]];
+}
 const PROG_LABEL={powder:'Powder',drift:'Triebschnee',wet:'Nassschnee',suncrust:'Sonnendeckel',windpressed:'Windgepresst',firn:'Firn',scoured:'Abgeweht'};
 function progTerrain(){
   if(PROG_ASP)return;const N=PROG_GW*PROG_GH;
@@ -2723,9 +2747,12 @@ function progCell(asp,elev,slp,lat,lon,sel,oth){
   for(const z of oth){const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;
     const dd=progDistKm(lat,lon,z);sO+=e*Math.exp(-(dd*dd)/(PROG_SC_KM*PROG_SC_KM))*progRecency(z);}
   const tot=sS+sO,agree=tot>0?sS/tot:0;
-  const evid=1-Math.exp(-tot/0.8);                       // more/closer reports -> more evidence
+  // Standing on terrain that matches a nearby report IS close to an
+  // observation, so evidence saturates quickly and a single good report can
+  // reach ~95%; extra corroborating reports take it the rest of the way.
+  const evid=1-Math.exp(-tot/0.22);
   const nEff=sw2>0?(sw*sw)/sw2:0;                        // effective independent reports
-  const multi=0.72+0.28*Math.min(1,Math.max(0,nEff-1));  // a single source cannot be fully certain
+  const multi=0.97+0.03*Math.min(1,Math.max(0,nEff-1));
   const like=Math.min(1,best*(0.45+0.55*agree));
   return {like:like,conf:Math.round(100*agree*evid*multi)};
 }
@@ -2741,8 +2768,10 @@ function renderPrognosis(type){
     if(elev<0){d[idx*4+3]=0;continue;}
     const r=progCell(asp,elev,slp,lat,lon,sel,oth);const like=r.like;
     _progField[idx]=like;_progConf[idx]=r.conf;
-    const o=idx*4;if(like<0.05){d[o+3]=0;continue;}
-    const t=Math.pow(like,0.8);d[o]=col[0];d[o+1]=col[1];d[o+2]=col[2];d[o+3]=Math.min(215,40+195*t)|0;
+    const o=idx*4;if(like<0.04){d[o+3]=0;continue;}
+    // hue = confidence (0-100%), opacity = how likely this snow type is here
+    const cc=progConfColor(r.conf/100),t=Math.pow(like,0.75);
+    d[o]=cc[0];d[o+1]=cc[1];d[o+2]=cc[2];d[o+3]=Math.min(225,45+200*t)|0;
   }
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
@@ -2859,8 +2888,12 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
   if(l=="tsurf"){let extra="estimated: air ± radiative cooling/warming";if(stat=="sub0")extra="only cells with max surface temp &lt;0°C";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>T Surface [°C] (${sn})</b><br>${extra}`;}
   if(l=="rough")return "<b>Terrain Roughness</b><br>light→dark brown = rougher";
   if(l=="skiable")return '<b>Skiability Estimate</b><br>Snow depth vs. terrain roughness need<div style="margin-top:4px"><div><i style="background:#64dc64"></i>Plenty of snow</div><div><i style="background:#a0dc64"></i>Skiable</div><div><i style="background:#ffdc32"></i>Marginal</div><div><i style="background:#ff8c28"></i>Needs more snow</div><div><i style="background:#ff3c28"></i>Far from skiable</div><div><i style="background:#500000"></i>Too steep (&gt;55°)</div></div>';
-  if(l=="prog"){const ty=_progType||stat,cl=(PROG_LABEL[ty]||ty),c=PROG_COL[ty]||[124,58,237];
-    return '<b>Prognose · '+cl+'</b><br><div><i style="background:rgba('+c[0]+','+c[1]+','+c[2]+',.85)"></i>hohe Wahrscheinlichkeit</div><div><i style="background:rgba('+c[0]+','+c[1]+','+c[2]+',.28)"></i>gering</div><div style="margin-top:4px;font-size:11px">nahe Hänge mit ähnlichem Aspekt &amp; Höhe · tippe für Vertrauen&nbsp;%</div>';}
+  if(l=="prog"){const ty=_progType||stat,cl=(PROG_LABEL[ty]||ty);
+    const ramp=PROG_CONF_STOPS.map(st=>'rgb('+st[1]+','+st[2]+','+st[3]+') '+Math.round(st[0]*100)+'%').join(',');
+    return '<b>Prognose · '+cl+'</b><br><div style="margin:3px 0 2px"><span style="display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,'+ramp+')"></span>'+
+      '<span style="display:flex;justify-content:space-between;font-size:10px;margin-top:2px"><span>0%</span><span>50%</span><span>100%</span></span></div>'+
+      '<div style="font-size:11px">Farbe = <b>Vertrauen</b>, Deckkraft = Wahrscheinlichkeit für '+cl+'.</div>'+
+      '<div style="margin-top:3px;font-size:11px">Hänge mit gleichem Aspekt &amp; gleicher Höhe nahe einer Meldung · tippe für Details</div>';}
   if(l=="qprheat")return '<b>Powder-Reports (Heatmap)</b><br><div><i style="background:#cde4ff"></i>vereinzelt / wenig</div><div><i style="background:#5b83d9"></i>guter Powder</div><div><i style="background:#0f2a7d"></i>tief &amp; fluffy</div><div style="margin-top:4px;font-size:11px">aus Quick-Powder-Reports · inkl. Demo-Daten</div>';
   if(l=="powder")return '<b>Powder Conditions</b><br><div><i style="background:rgba(200,220,255,.7)"></i>Powder (stable)</div><div><i style="background:rgba(180,205,245,.55)"></i>Powder (reduced)</div><div style="margin-top:4px;font-size:11px">Gust ≈ mean wind × 1.5</div>';
   return "<b>Hillshade / Relief (swisstopo)</b>";}
@@ -2908,6 +2941,7 @@ document.querySelectorAll('#tlModeToggle button').forEach(x=>x.onclick=()=>setTl
 const TOPICS={
   ski:[{l:'skiable',s:'avg',label:'Skiable'},{l:'powder',s:'avg',label:'Powder'}],
   qpr:[{l:'qprheat',s:'avg',label:'Heatmap'}],
+  aspect:[{l:'aspect',s:'avg',label:'Exposition'},{l:'slope',s:'avg',label:'Hangneigung'},{l:'shade',s:'avg',label:'Schattierung'}],
   prog:[{l:'prog',s:'powder',label:'Powder'},{l:'prog',s:'wet',label:'Nass'},{l:'prog',s:'suncrust',label:'Sonnendeckel'},{l:'prog',s:'windpressed',label:'Windgepresst'},{l:'prog',s:'drift',label:'Triebschnee'},{l:'prog',s:'firn',label:'Firn'}],
   snow:[{l:'snow',s:'avg',label:'Neuschnee'},{l:'depth',s:'avg',label:'Schneehöhe'}],
   temp:[{l:'temp',s:'avg',label:'Mean'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'temp',s:'sub0',label:'<0°C'},{l:'temp',s:'max05',label:'0-5°C'},{l:'tsurf',s:'avg',label:'Surface'}],
@@ -2925,12 +2959,13 @@ const TOPIC_COLOR={
   rad:['#f59e0b','rgba(245,158,11,.16)','rgba(245,158,11,.55)','rgba(245,158,11,.13)'],
   terrain:['#64748b','rgba(100,116,139,.16)','rgba(100,116,139,.5)','rgba(100,116,139,.10)'],
   qpr:['#1e3a8a','rgba(30,58,138,.14)','rgba(30,58,138,.5)','rgba(30,58,138,.10)'],
-  prog:['#7c3aed','rgba(124,58,237,.14)','rgba(124,58,237,.5)','rgba(124,58,237,.11)']};
+  prog:['#7c3aed','rgba(124,58,237,.14)','rgba(124,58,237,.5)','rgba(124,58,237,.11)'],
+  aspect:['#0d9488','rgba(13,148,136,.14)','rgba(13,148,136,.5)','rgba(13,148,136,.10)']};
 let tlSel='#5e5ce6',tlSelTint='rgba(94,92,230,.12)';
 function setTopic(t,subIdx){
   curTopic=t;
   document.querySelectorAll('#topics button[data-t]').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
-  const isMore=['temp','wind','rad','terrain','qpr','prog'].includes(t);
+  const isMore=['temp','wind','rad','terrain','qpr','prog','aspect'].includes(t);
   document.getElementById('moreTopics').classList.toggle('sel',isMore);
   document.querySelectorAll('#topicsMore button').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
   const tc=TOPIC_COLOR[t]||TOPIC_COLOR.snow;const lb=document.getElementById('layerBar');
@@ -3021,7 +3056,9 @@ function toggleStations(){showStn=!showStn;renderStations();
 function accountTap(){if(sbUser)openProfile();else authShow();}
 function updateAccountBtn(avatarUrl){const btn=document.getElementById('accountBtn');if(!btn)return;
   if(!sbUser){btn.classList.remove('signed');btn.title='Anmelden';
-    btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>';return;}
+    // person + plus reads unambiguously as "sign in"; the old door-and-arrow
+    // glyph is the same shape the convention uses for "log out".
+    btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.6"/><path d="M3.5 20a6.5 6.5 0 0 1 13 0"/><line x1="19" y1="6" x2="19" y2="12"/><line x1="16" y1="9" x2="22" y2="9"/></svg>';return;}
   btn.classList.add('signed');btn.title='Mein Profil';
   if(avatarUrl){btn.innerHTML='<span class="acct-img" style="background-image:url('+avatarUrl+')"></span>';}
   else{btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';}}
@@ -3756,6 +3793,7 @@ function _rptMarker(r,mode){
   const col=_rptColor(r);let html,w,h;
   if(mode==='photo'&&r.img){html='<div class="rpt-photo" style="--cc:'+col+'"><img src="'+r.img+'" loading="lazy" alt=""/><i class="rp-cat" style="background:'+(CAT_COLORS[r.cat]||'#333')+'">'+(CAT_SVG[r.cat]||'')+'</i></div>';w=h=58;}
   else if(mode==='chip'){const cm=_rptDepth(r);const lab=(cm!=null)?(cm+' cm'):_rptShort(r);html='<div class="rpt-chip" style="--cc:'+col+'">'+(CAT_SVG[r.cat]||'')+'<b>'+escapeHtml(lab)+'</b></div>';w=Math.round(30+lab.length*8.6);h=30;}
+  else if(mode==='dot'){html='<div class="rpt-tiny" style="--cc:'+col+'"></div>';w=h=12;}
   else{html='<div class="rpt-pin" style="--cc:'+col+'">'+(CAT_SVG[r.cat]||'')+(r.img?'<i class="rp-dot"></i>':'')+'</div>';w=h=38;}
   const m=_rptAdd(r.lat,r.lng,html,w,h,null,700);
   m.bindPopup(reportPopupHTML(r),{maxWidth:236,className:'rpt-pop',closeButton:true});}
@@ -3774,7 +3812,8 @@ function loadReportMarkers(){
   _drawOv.clearLayers();
   (allReports||[]).forEach(r=>{const cd=r.condition_data||{};const _im=cd.drawImage||r.img;if(cd.draw&&cd.bounds&&_im){try{L.imageOverlay(_im,cd.bounds,{opacity:.62,interactive:false}).addTo(_drawOv);}catch(e){}}});
   if(!allReports||!allReports.length)return;
-  const z=map.getZoom(),cellPx=66,clusterOn=z<12.5,rich=z>=12.5;
+  const z=map.getZoom(),cellPx=66,tiny=z<9.5,clusterOn=z<12.5,rich=z>=12.5;
+  if(tiny){allReports.forEach(r=>_rptMarker(r,'dot'));return;}
   const cells={};
   allReports.forEach(r=>{let key;
     if(clusterOn){try{const pt=map.latLngToLayerPoint([r.lat,r.lng]);key=Math.round(pt.x/cellPx)+'|'+Math.round(pt.y/cellPx);}catch(e){key='s'+r.id;}}
@@ -3899,18 +3938,57 @@ if(sb){sb.auth.onAuthStateChange((ev,session)=>{authUpdateUI(session?.user||null
   sb.auth.getSession().then(({data})=>{authUpdateUI(data.session?.user||null);});}
 else{document.getElementById('feedBtn').style.display='flex';loadReportMarkers();}
 let authPendingEmail=null,justLoggedIn=false;
-function authShow(){authMode='login';authRender();document.getElementById('authOverlay').style.display='flex';}
+function authShow(){authMode='login';authRecovery=false;authRender();document.getElementById('authOverlay').style.display='flex';}
 function authHide(){document.getElementById('authOverlay').style.display='none';document.getElementById('authErr').textContent='';document.getElementById('authCodeErr').textContent='';}
 function authToggle(){authMode=authMode==='login'?'register':'login';authRender();}
-function authBackToForm(){authMode='login';authRender();}
+function authBackToForm(){authMode='login';authRecovery=false;authRender();}
+let authRecovery=false;
+function authForgot(){authMode='forgot';authRender();}
+async function authSendRecovery(email){
+  const errEl=document.getElementById('authErr');
+  if(!email){errEl.textContent='Bitte E-Mail eingeben.';return;}
+  const btn=document.getElementById('authSubmitBtn');btn.disabled=true;btn.textContent='Sende…';
+  try{
+    const{error}=await sb.auth.resetPasswordForEmail(email);
+    if(error)throw error;
+    authPendingEmail=email;authRecovery=true;authMode='code';authRender();
+    setTimeout(()=>{const c=document.getElementById('authCode');if(c)c.focus();},100);
+  }catch(e){errEl.textContent=e.message||'Konnte E-Mail nicht senden.';}
+  btn.disabled=false;authRender();
+}
+async function authSetNewPassword(){
+  const err=document.getElementById('authNewPassErr');err.style.color='#FF5470';err.textContent='';
+  const a=document.getElementById('authNewPass').value,b=document.getElementById('authNewPass2').value;
+  if(!a||a.length<8){err.textContent='Mindestens 8 Zeichen.';return;}
+  if(a!==b){err.textContent='Die Passwörter stimmen nicht überein.';return;}
+  const btn=document.getElementById('authNewPassBtn');btn.disabled=true;btn.textContent='Speichere…';
+  try{
+    const{error}=await sb.auth.updateUser({password:a});
+    if(error)throw error;
+    authRecovery=false;toast('Passwort geändert — du bist angemeldet.','ok');authAfterLogin();
+  }catch(e){err.textContent=e.message||'Konnte Passwort nicht ändern.';}
+  btn.disabled=false;btn.textContent='Passwort speichern';
+}
 function authRender(){
   const isReg=authMode==='register',isCode=authMode==='code',isBio=authMode==='biometric';
-  document.getElementById('authForm').style.display=(isCode||isBio)?'none':'flex';
+  const isForgot=authMode==='forgot',isNew=authMode==='newpass';
+  document.getElementById('authForm').style.display=(isCode||isBio||isNew)?'none':'flex';
   document.getElementById('authCodeBox').style.display=isCode?'block':'none';
   document.getElementById('authBioBox').style.display=isBio?'block':'none';
-  document.getElementById('authSwitch').style.display=(isCode||isBio)?'none':'block';
+  document.getElementById('authNewPassBox').style.display=isNew?'block':'none';
+  document.getElementById('authSwitch').style.display=(isCode||isBio||isNew)?'none':'block';
   document.getElementById('authClose').style.display=isBio?'none':'flex';
-  if(isCode){document.getElementById('authTitle').textContent='E-Mail bestätigen';document.getElementById('authSub').style.display='none';
+  document.getElementById('authPass').style.display=isForgot?'none':'';
+  document.getElementById('authPass').required=!isForgot;
+  document.getElementById('authForgotBtn').style.display=(isReg||isForgot)?'none':'block';
+  if(isNew){document.getElementById('authTitle').textContent='Neues Passwort';document.getElementById('authSub').style.display='none';return;}
+  if(isForgot){document.getElementById('authTitle').textContent='Passwort zurücksetzen';
+    document.getElementById('authSub').style.display='';
+    document.getElementById('authSub').textContent='Wir senden dir einen 6-stelligen Code an deine E-Mail.';
+    document.getElementById('authUser').style.display='none';
+    document.getElementById('authSubmitBtn').textContent='Code senden';
+    document.getElementById('authSwitch').innerHTML='<button onclick="authBackToForm()">Zurück zur Anmeldung</button>';return;}
+  if(isCode){document.getElementById('authTitle').textContent=authRecovery?'Code eingeben':'E-Mail bestätigen';document.getElementById('authSub').style.display='none';
     document.getElementById('authCodeSub').textContent='Wir haben einen 6-stelligen Code an '+(authPendingEmail||'deine E-Mail')+' geschickt.';return;}
   if(isBio){document.getElementById('authTitle').textContent='Biometrischer Login';document.getElementById('authSub').style.display='none';
     document.getElementById('authBioName').textContent=bioName();return;}
@@ -3926,6 +4004,7 @@ async function authSubmit(e){
   const email=document.getElementById('authEmail').value.trim();
   const pass=document.getElementById('authPass').value;
   const errEl=document.getElementById('authErr');errEl.textContent='';errEl.style.color='#FF5470';
+  if(authMode==='forgot'){await authSendRecovery(email);return;}
   try{
     if(authMode==='register'){
       const username=document.getElementById('authUser').value.trim();
@@ -3955,6 +4034,13 @@ async function authVerifyCode(){
   if(token.length<6){err.style.color='#FF5470';err.textContent='Bitte 6 Ziffern eingeben.';return;}
   const btn=document.getElementById('authCodeBtn');btn.disabled=true;btn.textContent='Prüfe…';
   try{
+    if(authRecovery){
+      const rr=await sb.auth.verifyOtp({email:authPendingEmail,token,type:'recovery'});
+      if(rr.error)throw rr.error;
+      btn.disabled=false;btn.textContent='Bestätigen';
+      authMode='newpass';authRender();
+      setTimeout(()=>{const np=document.getElementById('authNewPass');if(np)np.focus();},80);return;
+    }
     let r=await sb.auth.verifyOtp({email:authPendingEmail,token,type:'signup'});
     if(r.error){const r2=await sb.auth.verifyOtp({email:authPendingEmail,token,type:'email'});if(r2.error)throw r2.error;}
     authAfterLogin();
