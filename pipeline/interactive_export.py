@@ -48,7 +48,8 @@ _PREC_MUL = 5.0
 _ELEV_Q = 4.0            # metres per step in the fine elevation raster
 _ELEV_SCALE = 20.0
 _WIND_STEP = 9000.0
-_FINE_RES = 60.0        # swissALTIRegio (feiner; speicher-sorgsam verarbeitet)
+_FINE_RES = 30.0        # swissALTIRegio (10 m Quelle) — feiner gelesen, damit
+                        # Felswaende nicht zu Rampen verschliffen werden
 _PNG_W = 2000
 _RAD_RES = 1000.0
 _RAD_K = 12
@@ -129,9 +130,12 @@ def _class_to_png_b64(cls_lv95, src_t, src_crs, bounds, png_w=3000):
     dw2, dh2 = int(dw / scale), int(dh / scale)
     dst_t2 = from_origin(dst_t.c, dst_t.f, (dst_t.a * dw) / dw2, (-dst_t.e * dh) / dh2)
     cls_wgs = np.zeros((dh2, dw2), dtype="uint8")
+    # mode() = majority of the underlying fine cells. nearest() picks one sample
+    # per output cell, which aliases into stripes across steep, fast-changing
+    # terrain; the majority is both stabler and truer to the ground.
     reproject(source=cls_lv95, destination=cls_wgs, src_transform=src_t,
               src_crs=src_crs, dst_transform=dst_t2, dst_crs="EPSG:4326",
-              resampling=Resampling.nearest)
+              resampling=Resampling.mode)
     rgba = np.zeros((dh2, dw2, 4), dtype="uint8")
     for idx, (r, g, b, a) in _ASPECT_COLORS.items():
         mask = cls_wgs == idx
@@ -221,8 +225,11 @@ def _load_altiregio(bounds, res):
     import rasterio
     with rasterio.open(url) as ds:
         win = win_from_bounds(e0, n0, e1, n1, ds.transform)
+        # average() smears a cliff into a smooth ramp, which is what makes the
+        # 8-way aspect band up like contour lines in steep rock; bilinear keeps
+        # the real gradient direction.
         arr = ds.read(1, window=win, out_shape=(oh, ow),
-                      resampling=Resampling.average, boundless=True, fill_value=np.nan)
+                      resampling=Resampling.bilinear, boundless=True, fill_value=np.nan)
     arr = np.where(arr < -100, np.nan, arr).astype("float32")
     return _DEM(arr, from_origin(e0, n1, res, res), res, bounds, "EPSG:2056")
 
@@ -233,7 +240,7 @@ def _corrected_aspect(z, res):
     Horn (1981) 3x3 weighted gradient — same algorithm as GDAL gdaldem.
     Convention: N=0, E=90, S=180, W=270 (downslope direction).
     """
-    zf = np.where(np.isnan(z), np.nanmean(z), z).astype("float64")
+    zf = np.where(np.isnan(z), np.nanmean(z), z).astype("float32")
     # Horn's 3x3 kernel
     a = zf[:-2, :-2]; b = zf[:-2, 1:-1]; c = zf[:-2, 2:]
     d = zf[1:-1, :-2];                    f = zf[1:-1, 2:]
@@ -268,7 +275,7 @@ def _fine_terrain(bounds, aoi, use_synthetic):
     # keep a decimated copy of the TRUE 60 m slope for the fine terrain raster
     slope_dec = np.ascontiguousarray(slope_deg[::4, ::4]).astype("float32")
     del aspect_deg, slope_deg
-    aspect_png, png_b = _class_to_png_b64(aspect_cls, transform, aoi.crs, bounds, png_w=5000)
+    aspect_png, png_b = _class_to_png_b64(aspect_cls, transform, aoi.crs, bounds, png_w=6000)
     del aspect_cls
 
     # --- Rauigkeit & TPI aus dezimiertem DEM (4x groeber) ---
