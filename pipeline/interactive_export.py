@@ -1554,6 +1554,15 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .endorse-btn .endorse-lbl{font-weight:700}
  .feed-card-actions button.endorsed{color:#0a8f4f}
  .feed-card-actions button.endorsed svg{stroke:#0a8f4f}
+ .feed-card-actions .del-btn{color:#c0304a}
+ .feed-card-actions .del-btn svg{stroke:#c0304a}
+ .uv-del{position:absolute;top:6px;right:6px;width:28px;height:28px;border:none;border-radius:9px;background:rgba(11,17,32,.58);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;backdrop-filter:blur(6px)}
+ .uv-del svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+ .uv-cell{position:relative}
+ .uv-post{position:relative}
+ .uv-post .uv-del{background:rgba(192,48,74,.1);color:#c0304a;top:50%;transform:translateY(-50%)}
+ .uv-post .uv-del svg{stroke:#c0304a}
+ .uv-post.own .b{padding-right:44px}
  .feed-follow{margin-left:auto;flex-shrink:0;padding:5px 12px;border-radius:999px;border:1.5px solid var(--acc);background:none;color:var(--acc);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
  .feed-follow.following{background:var(--acc);color:#fff}
  .feed-card-group{font-size:11px;font-weight:700;color:#7b1fa2;background:rgba(156,39,176,.1);padding:2px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:4px}
@@ -2191,6 +2200,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         <div class="prof-meta"><div class="prof-name" id="profName">User</div><div class="prof-endo" id="profEndo">– Endorsements</div></div>
       </div>
       <div class="prof-view" id="profViewMain">
+        <div class="prof-sec-title">Meine Beiträge</div>
+        <div class="uv-posts" id="profPosts"><div class="prof-hint">Lade …</div></div>
         <div class="prof-sec-title">Einstellungen</div>
         <button class="prof-item nav" onclick="profNav('pers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Personalisieren<span class="chev">›</span></button>
         <button class="prof-item nav" onclick="profNav('priv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Privatsphäre &amp; Daten<span class="chev">›</span></button>
@@ -2675,8 +2686,8 @@ function renderQprHeat(){
 const PROG_GW=340,PROG_GH=240;
 const pcv=document.createElement('canvas');pcv.width=PROG_GW*2;pcv.height=PROG_GH*2;const pcx=pcv.getContext('2d');
 let prognosisOverlay=L.imageOverlay(pcv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:.72});
-let PROG_ASP=null,PROG_ELEV=null,PROG_SLP=null,PROG_LA=null,PROG_LO=null;
-let _progField=null,_progConf=null,_progType=null;
+let PROG_ASP=null,PROG_ELEV=null,PROG_SLP=null,PROG_LA=null,PROG_LO=null,PROG_Q=null;
+let _progField=null,_progConf=null,_progType=null,_progModel=null,_progDiff=null;
 const PROG_COL={powder:[74,163,255],drift:[232,89,12],wet:[245,158,11],suncrust:[244,208,63],windpressed:[150,168,196],firn:[63,178,127],scoured:[154,135,120]};
 // Colourful, perceptually ordered ramp for the 0-100% confidence map.
 const PROG_CONF_STOPS=[[0.00,48,18,59],[0.15,62,73,204],[0.30,33,144,231],[0.45,26,196,171],
@@ -2693,12 +2704,13 @@ const PROG_LABEL={powder:'Powder',drift:'Triebschnee',wet:'Nassschnee',suncrust:
 function progTerrain(){
   if(PROG_ASP)return;const N=PROG_GW*PROG_GH;
   PROG_ASP=new Float32Array(N);PROG_ELEV=new Float32Array(N);PROG_SLP=new Float32Array(N);PROG_LA=new Float32Array(N);PROG_LO=new Float32Array(N);
+  PROG_Q=new Int32Array(N);
   for(let gy=0;gy<PROG_GH;gy++)for(let gx=0;gx<PROG_GW;gx++){const idx=gy*PROG_GW+gx;
     const lat=laMax-gy/(PROG_GH-1)*(laMax-laMin),lon=loMin+gx/(PROG_GW-1)*(loMax-loMin);
-    PROG_LA[idx]=lat;PROG_LO[idx]=lon;
+    PROG_LA[idx]=lat;PROG_LO[idx]=lon;PROG_Q[idx]=-1;
     const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
     if(cx<0||cx>=W||cy<0||cy>=H){PROG_ELEV[idx]=-1;continue;}
-    const q=cy*W+cx;const fa=fineAspectDeg(lat,lon),fe=fineElev(lat,lon),fs=fineSlope(lat,lon);
+    const q=cy*W+cx;PROG_Q[idx]=q;const fa=fineAspectDeg(lat,lon),fe=fineElev(lat,lon),fs=fineSlope(lat,lon);
     PROG_ASP[idx]=(fa!=null?fa:maspv(q));PROG_ELEV[idx]=(fe!=null?fe:melevv(q));
     PROG_SLP[idx]=(fs!=null?fs:mslpv(q));}
 }
@@ -2732,7 +2744,7 @@ function demoFitZones(){
 let progSrc='both';
 const PROG_SRC_LABEL={draw:'Zeichnen',quick:'Quick',both:'Zeichnen + Quick',all:'Alle Reports'};
 function progSetSrc(v){progSrc=v;progRenderBar();
-  try{if(layer==='prog'||layer==='powfind'){showOverlay();legend();}}catch(e){}}
+  try{if(layer==='prog'||layer==='powfind'||layer==='progdiff'){showOverlay();legend();}}catch(e){}}
 // map free text from a written report onto a snow type
 function progTypeFromText(t){t=(t||'').toLowerCase();
   if(/trieb|windzeichen|schneebrett/.test(t))return 'drift';
@@ -2749,27 +2761,54 @@ function progZoneFromPoint(r,type,cm,conc){
     e0:e!=null?e-250:null,e1:e!=null?e+250:null,
     asp:(d&&d.aspectDeg!=null)?d.aspectDeg:null,conc:conc,cm:cm,ageH:progAgeH(r)};
 }
+// --- Report credibility: confirmations on the post + author trust score -----
+// "Bestätigen" writes a report_reactions row, so r.likes IS the number of
+// confirmations. A user's trust score is the sum of confirmations across all
+// of their reports — the same number the profile shows as "Trust Score".
+// Both saturate, so no single popular post can dominate the map.
+const PROG_END_HALF=3;    // confirmations for half of the endorsement bonus
+const PROG_TRUST_HALF=8;  // trust points for half of the trust bonus
+const PROG_END_MAX=0.60;  // max +60% from confirmations
+const PROG_TRUST_MAX=0.50;// max +50% from a very trusted author
+let _progTrust=null;
+function progTrustMap(){
+  if(_progTrust)return _progTrust;
+  const m=new Map();
+  (allReports||[]).forEach(r=>{if(!r.userId)return;
+    m.set(r.userId,(m.get(r.userId)||0)+(r.likes||0));});
+  _progTrust=m;return m;
+}
+function progTrustOf(uid){if(!uid)return 0;return progTrustMap().get(uid)||0;}
+function progInvalidateTrust(){_progTrust=null;}
+// Weight of one report, 1.0 = unconfirmed post by an unknown author.
+function progReportWeight(r){
+  const n=Math.max(0,r.likes||0),t=Math.max(0,progTrustOf(r.userId));
+  const endW=1+PROG_END_MAX*(n/(n+PROG_END_HALF));
+  const trW=1+PROG_TRUST_MAX*(t/(t+PROG_TRUST_HALF));
+  return endW*trW;
+}
 function progZones(){
-  demoFitZones();
+  demoFitZones();progInvalidateTrust();
   const useDraw=progSrc!=='quick',useQuick=progSrc!=='draw',useRep=(progSrc==='all');
   const out=[];(allReports||[]).forEach(r=>{const cd=r.condition_data;if(!cd)return;
+    const w=progReportWeight(r);
     if(cd.zones&&cd.zones.length){
       if(!useDraw)return;
       cd.zones.forEach(z=>{if(!z||!z.type)return;const c=z.centroid||[r.lat,r.lng];if(c[0]==null)return;
         out.push({type:z.type,lat:c[0],lng:c[1],e0:z.elevMin,e1:z.elevMax,asp:z.aspectDeg,
-          conc:z.aspectConc==null?0.6:z.aspectConc,cm:z.cm==null?null:z.cm,ageH:progAgeH(r)});});
+          conc:z.aspectConc==null?0.6:z.aspectConc,cm:z.cm==null?null:z.cm,ageH:progAgeH(r),w:w});});
       return;}
     if(cd.quick){
       if(!useQuick)return;
       const q=cd.powderQuality,cm=cd.powderAmountCm==null?null:cd.powderAmountCm;
       let ty='powder';
       if(q!=null){ty=q<20?'windpressed':(q<40?'suncrust':(q<60?'wet':'powder'));}
-      out.push(progZoneFromPoint(r,ty,cm,0.4));return;}
+      const z=progZoneFromPoint(r,ty,cm,0.4);z.w=w;out.push(z);return;}
     if(useRep){
       const ty=progTypeFromText((r.sub||'')+' '+(r.measurement||'')+' '+(r.caption||''));
       if(!ty)return;
       let cm=null;const m=/(\d{1,3})\s*cm/.exec(r.measurement||'');if(m)cm=+m[1];
-      out.push(progZoneFromPoint(r,ty,cm,0.35));}
+      const z=progZoneFromPoint(r,ty,cm,0.35);z.w=w;out.push(z);}
   });
   return out;
 }
@@ -2804,14 +2843,20 @@ function progDistKm(lat,lon,z){const dLat=(lat-z.lat)*111,dLo=(lon-z.lng)*111*Ma
 function progRecency(z){const a=z.ageH==null?12:z.ageH;return 0.35+0.65*Math.exp(-a/PROG_AGE_H);}
 // Combine supporting (sel) and conflicting (oth) reports for one location.
 // like = how likely this snow type is here; conf = how much we trust it.
+// Credibility (confirmations x author trust) deliberately does NOT scale the
+// raw terrain match: how similar this slope is to the reported one is a
+// property of the terrain, not of the reporter. It scales the *evidence*, so a
+// confirmed report by a trusted user carries more weight when several reports
+// overlap — it wins the agree/conflict tug-of-war and lifts confidence faster.
 function progCell(asp,elev,slp,lat,lon,sel,oth){
   let sS=0,sO=0,best=0,sw=0,sw2=0,cmS=0,cmW=0;
   for(const z of sel){const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;
-    const dd=progDistKm(lat,lon,z),m=e*Math.exp(-(dd*dd)/(PROG_SC_KM*PROG_SC_KM))*progRecency(z);
-    sS+=m;sw+=m;sw2+=m*m;if(m>best)best=m;
+    const dd=progDistKm(lat,lon,z),m0=e*Math.exp(-(dd*dd)/(PROG_SC_KM*PROG_SC_KM))*progRecency(z);
+    const m=m0*(z.w==null?1:z.w);
+    sS+=m;sw+=m;sw2+=m*m;if(m0>best)best=m0;
     if(z.cm!=null){cmS+=z.cm*m;cmW+=m;}}
   for(const z of oth){const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;
-    const dd=progDistKm(lat,lon,z);sO+=e*Math.exp(-(dd*dd)/(PROG_SC_KM*PROG_SC_KM))*progRecency(z);}
+    const dd=progDistKm(lat,lon,z);sO+=e*Math.exp(-(dd*dd)/(PROG_SC_KM*PROG_SC_KM))*progRecency(z)*(z.w==null?1:z.w);}
   const tot=sS+sO,agree=tot>0?sS/tot:0;
   // Standing on terrain that matches a nearby report IS close to an
   // observation, so evidence saturates quickly and a single good report can
@@ -2848,7 +2893,8 @@ function renderPrognosis(type){
 let progConfMin=50;
 function progSetConfMin(v){progConfMin=+v;
   const o=document.getElementById('progConfVal');if(o)o.textContent=progConfMin+'%';
-  try{if(layer==='powfind'){renderPowderFind();legend();}}catch(e){}}
+  try{if(layer==='powfind'){renderPowderFind();legend();}
+     else if(layer==='progdiff'){renderProgDiff();legend();}}catch(e){}}
 function renderPowderFind(){
   progTerrain();_progType='powder';
   const zones=progZones(),sel=zones.filter(z=>z.type==='powder'),oth=zones.filter(z=>z.type!=='powder');
@@ -2869,6 +2915,59 @@ function renderPowderFind(){
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
   prognosisOverlay.setUrl(pcv.toDataURL());
+}
+// --- Abweichung: report-based powder prognosis vs. the model "Ski > Powder" --
+// Both layers answer the same question from different evidence, so the
+// interesting places are where they disagree. Model powder is a yes/no verdict
+// per forecast cell, so it maps onto 0 / 0.55 (reduced) / 1 (stable).
+const PROGDIFF_TOL=0.18;   // |rep-model| below this counts as agreement
+function progModelPowder(q,cache){
+  if(q<0)return 0;
+  if(cache.has(q))return cache.get(q);
+  let v=0;
+  try{const r=computePowder(q,a,b);if(r&&r.powdered)v=(r.quality==='reduced')?0.55:1;}catch(e){}
+  cache.set(q,v);return v;
+}
+function renderProgDiff(){
+  progTerrain();_progType='powder';
+  const zones=progZones(),sel=zones.filter(z=>z.type==='powder'),oth=zones.filter(z=>z.type!=='powder');
+  const N=PROG_GW*PROG_GH;
+  _progField=new Float32Array(N);_progConf=new Float32Array(N);_progModel=new Float32Array(N);_progDiff=new Float32Array(N);
+  const cache=new Map();
+  const img=new ImageData(PROG_GW,PROG_GH),d=img.data;
+  for(let idx=0;idx<N;idx++){
+    const elev=PROG_ELEV[idx];const o=idx*4;
+    if(elev<0){d[o+3]=0;continue;}
+    const mod=progModelPowder(PROG_Q[idx],cache);
+    const r=progCell(PROG_ASP[idx],elev,PROG_SLP[idx],PROG_LA[idx],PROG_LO[idx],sel,oth);
+    _progField[idx]=r.like;_progConf[idx]=r.conf;_progModel[idx]=mod;
+    if(r.conf<progConfMin){                       // no report we trust enough here
+      _progDiff[idx]=NaN;
+      if(mod<=0){d[o+3]=0;continue;}
+      d[o]=132;d[o+1]=146;d[o+2]=168;d[o+3]=(38+40*mod)|0;   // model alone, muted
+      continue;}
+    const diff=r.like-mod;_progDiff[idx]=diff;
+    if(Math.abs(diff)<=PROGDIFF_TOL){
+      if(Math.max(r.like,mod)<0.15){d[o+3]=0;continue;}       // both say "no powder"
+      d[o]=42;d[o+1]=190;d[o+2]=112;d[o+3]=(90+110*Math.max(r.like,mod))|0; // agreement
+      continue;}
+    const t=Math.min(1,(Math.abs(diff)-PROGDIFF_TOL)/(1-PROGDIFF_TOL));
+    if(diff<0){ // model claims powder, the reports do not -> orange to red
+      d[o]=Math.round(250-19*t);d[o+1]=Math.round(168-119*t);d[o+2]=Math.round(60-16*t);}
+    else{       // reports say powder, the model misses it -> cyan to violet
+      d[o]=Math.round(34+92*t);d[o+1]=Math.round(206-130*t);d[o+2]=Math.round(214+33*t);}
+    d[o+3]=(105+130*t)|0;
+  }
+  const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
+  pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
+  prognosisOverlay.setUrl(pcv.toDataURL());
+}
+function progDiffAt(lat,lon){
+  if(!_progDiff)return null;
+  const gx=Math.round((lon-loMin)/(loMax-loMin)*(PROG_GW-1)),gy=Math.round((laMax-lat)/(laMax-laMin)*(PROG_GH-1));
+  if(gx<0||gx>=PROG_GW||gy<0||gy>=PROG_GH)return null;const idx=gy*PROG_GW+gx;
+  return {rep:Math.round(_progField[idx]*100),model:Math.round(_progModel[idx]*100),
+          conf:_progConf[idx],diff:isNaN(_progDiff[idx])?null:Math.round(_progDiff[idx]*100)};
 }
 function prognosisAt(lat,lon){
   if(!_progField)return null;
@@ -2986,6 +3085,15 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
     return '<b>Powder-Finder</b><br>'+sw(10)+sw(30)+sw(60)+sw(100)+
       '<div style="margin-top:4px;font-size:11px">Farbe = erwartete Schneehöhe (SLF-Skala), nur Flächen mit ≥ '+progConfMin+'% Vertrauen.</div>'+
       '<div style="font-size:11px">Quelle: '+(PROG_SRC_LABEL[progSrc]||progSrc)+'</div>';}
+  if(l=="progdiff")
+    return '<b>Abweichung · Meldungen vs. Modell</b>'+
+      '<div style="margin:3px 0 2px"><span style="display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,rgb(231,49,44),rgb(250,168,60),rgb(42,190,112),rgb(34,206,214),rgb(126,76,247))"></span>'+
+      '<span style="display:flex;justify-content:space-between;font-size:10px;margin-top:2px"><span>Modell +</span><span>einig</span><span>Meldungen +</span></span></div>'+
+      '<div><i style="background:rgb(250,168,60)"></i>Modell sagt Powder, Meldungen nicht</div>'+
+      '<div><i style="background:rgb(42,190,112)"></i>beide einig (±'+Math.round(PROGDIFF_TOL*100)+'%)</div>'+
+      '<div><i style="background:rgb(34,206,214)"></i>Meldungen sagen Powder, Modell nicht</div>'+
+      '<div><i style="background:rgb(132,146,168)"></i>nur Modell (keine Meldung ≥ '+progConfMin+'%)</div>'+
+      '<div style="margin-top:4px;font-size:11px">Vergleicht den Powder-Layer aus <b>Ski &rsaquo; Powder</b> mit der Prognose aus Meldungen. Quelle: '+(PROG_SRC_LABEL[progSrc]||progSrc)+'</div>';
   if(l=="prog"){const ty=_progType||stat,cl=(PROG_LABEL[ty]||ty);
     const ramp=PROG_CONF_STOPS.map(st=>'rgb('+st[1]+','+st[2]+','+st[3]+') '+Math.round(st[0]*100)+'%').join(',');
     return '<b>Prognose · '+cl+'</b><br><div style="margin:3px 0 2px"><span style="display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,'+ramp+')"></span>'+
@@ -3010,6 +3118,7 @@ function showOverlay(){
   else if(layer=="qprheat"){map.addLayer(qprOverlay);renderQprHeat();}
   else if(layer=="prog"){map.addLayer(prognosisOverlay);renderPrognosis(stat);}
   else if(layer=="powfind"){map.addLayer(prognosisOverlay);renderPowderFind();}
+  else if(layer=="progdiff"){map.addLayer(prognosisOverlay);renderProgDiff();}
   if(layer=="wind"){map.addLayer(windArr);startFlow();}else{map.removeLayer(windArr);stopFlow();}
 }
 function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefresh();if(tlMode==='detail')drawTimeline();
@@ -3041,7 +3150,7 @@ const TOPICS={
   ski:[{l:'skiable',s:'avg',label:'Skiable'},{l:'powder',s:'avg',label:'Powder'}],
   qpr:[{l:'qprheat',s:'avg',label:'Heatmap'}],
   aspect:[{l:'aspect',s:'avg',label:'Exposition'},{l:'slope',s:'avg',label:'Hangneigung'},{l:'shade',s:'avg',label:'Schattierung'}],
-  prog:[{l:'powfind',s:'powder',label:'Powder-Finder'},{l:'prog',s:'powder',label:'Powder'},{l:'prog',s:'wet',label:'Nass'},{l:'prog',s:'suncrust',label:'Sonnendeckel'},{l:'prog',s:'windpressed',label:'Windgepresst'},{l:'prog',s:'drift',label:'Triebschnee'},{l:'prog',s:'firn',label:'Firn'}],
+  prog:[{l:'powfind',s:'powder',label:'Powder-Finder'},{l:'progdiff',s:'powder',label:'Abweichung'},{l:'prog',s:'powder',label:'Powder'},{l:'prog',s:'wet',label:'Nass'},{l:'prog',s:'suncrust',label:'Sonnendeckel'},{l:'prog',s:'windpressed',label:'Windgepresst'},{l:'prog',s:'drift',label:'Triebschnee'},{l:'prog',s:'firn',label:'Firn'}],
   snow:[{l:'snow',s:'avg',label:'Neuschnee'},{l:'depth',s:'avg',label:'Schneehöhe'}],
   temp:[{l:'temp',s:'avg',label:'Mean'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'temp',s:'sub0',label:'<0°C'},{l:'temp',s:'max05',label:'0-5°C'},{l:'tsurf',s:'avg',label:'Surface'}],
   wind:[{l:'wind',s:'avg',label:'Mean'},{l:'wind',s:'max',label:'Max'},{l:'wind',s:'min',label:'Min'},{l:'wind',s:'lt10',label:'<10 km/h'}],
@@ -3094,14 +3203,14 @@ document.querySelectorAll('#topicsMore button[data-t]').forEach(btn=>{
   btn.onmouseenter=()=>legend(TOPICS[btn.dataset.t][0].l);btn.onmouseleave=()=>legend();});
 function progRenderBar(){
   const bar=document.getElementById('progBar');if(!bar)return;
-  const on=(layer==='prog'||layer==='powfind');
+  const on=(layer==='prog'||layer==='powfind'||layer==='progdiff');
   bar.classList.toggle('on',on);
   if(!on){bar.innerHTML='';return;}
   const srcs=['draw','quick','both','all'];
   let html='<div class="pb-row"><span class="pb-lbl">Quelle</span><div class="pb-seg">'+
     srcs.map(k=>'<button data-src="'+k+'"'+(progSrc===k?' class="active"':'')+'>'+PROG_SRC_LABEL[k]+'</button>').join('')+
     '</div></div>';
-  if(layer==='powfind')
+  if(layer==='powfind'||layer==='progdiff')
     html+='<div class="pb-row"><span class="pb-lbl">Vertrauen</span>'+
       '<input type="range" min="0" max="95" step="5" value="'+progConfMin+'" oninput="progSetConfMin(this.value)"/>'+
       '<b id="progConfVal">'+progConfMin+'%</b></div>';
@@ -3268,7 +3377,15 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   if(layer==='prog'){try{const pr=prognosisAt(lat,lon);if(pr){const cl=(PROG_LABEL[pr.type]||pr.type);const zc=progZones().filter(z=>z.type===pr.type).length;
     progSec='<div class="insp-sec insp-prog"><h4>Prognose '+cl+' <em>'+pr.like+'% wahrsch.</em></h4>'+
       '<div class="prog-conf"><div class="prog-bar"><i style="width:'+pr.conf+'%"></i></div><span>'+pr.conf+'% Vertrauen</span></div>'+
-      '<div class="prog-note">Aus '+zc+' Zeichnen-Report(s), gewichtet nach Aspekt, Höhe und Distanz zur nächsten Meldung.</div></div>';}}catch(e){}}
+      '<div class="prog-note">Aus '+zc+' Meldung(en), gewichtet nach Aspekt, Höhe, Distanz sowie Bestätigungen und Trust Score der Melder.</div></div>';}}catch(e){}}
+  if(layer==='progdiff'){try{const pd=progDiffAt(lat,lon);if(pd){
+    const verdict=pd.diff==null?'Keine belastbare Meldung hier – nur Modell.'
+      :(Math.abs(pd.diff)<=PROGDIFF_TOL*100?'Meldungen und Modell sind sich einig.'
+        :(pd.diff<0?'Modell erwartet Powder, die Meldungen nicht.':'Meldungen zeigen Powder, das Modell nicht.'));
+    progSec='<div class="insp-sec insp-prog"><h4>Abweichung <em>'+(pd.diff==null?'–':(pd.diff>0?'+':'')+pd.diff+'%')+'</em></h4>'+
+      '<div class="prog-conf"><div class="prog-bar"><i style="width:'+pd.rep+'%"></i></div><span>Meldungen '+pd.rep+'%</span></div>'+
+      '<div class="prog-conf"><div class="prog-bar"><i style="width:'+pd.model+'%"></i></div><span>Modell '+pd.model+'%</span></div>'+
+      '<div class="prog-note">'+verdict+' Vertrauen der Meldungen: '+pd.conf+'%.</div></div>';}}catch(e){}}
   pan.innerHTML=
    '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b>'+
      '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+
@@ -3988,7 +4105,7 @@ async function loadDbReports(){
       const fd=document.querySelector('#feedBtn .feed-dot');if(fd)fd.classList.toggle('on',nw>seen);}catch(e){}
     try{dbQpr=data.filter(r=>r.condition_data&&r.condition_data.quick).map(r=>{const ll=parseGeo(r.location);const cd=r.condition_data;
         return ll?[ll[0],ll[1],+cd.powderAmountCm||0,+cd.powderQuality||0]:null;}).filter(Boolean);
-      if(layer==='qprheat')renderQprHeat();if(layer==='prog')renderPrognosis(stat);if(layer==='powfind')renderPowderFind();}catch(e){}
+      if(layer==='qprheat')renderQprHeat();if(layer==='prog')renderPrognosis(stat);if(layer==='powfind')renderPowderFind();if(layer==='progdiff')renderProgDiff();}catch(e){}
     const ids=data.map(r=>r.id),uids=[...new Set(data.map(r=>r.user_id).filter(Boolean))];
     // usernames
     let nameMap={},avatarMap={};try{const{data:pr}=await sb.from('profiles').select('id,username,avatar_url').in('id',uids);(pr||[]).forEach(p=>{nameMap[p.id]=p.username;if(p.avatar_url)avatarMap[p.id]=p.avatar_url;});}catch(e){}
@@ -4011,6 +4128,38 @@ async function loadDbReports(){
     allReports=demoActive()?[...dbR,...DEMO_REPORTS]:dbR;loadReportMarkers();
     if(document.getElementById('feedPage').classList.contains('open'))feedRender();
   }catch(e){console.warn('loadDbReports',e);}
+}
+// --- Delete one of my own reports --------------------------------------
+// The report row is the anchor: comments, reactions, flags and condition
+// ratings all reference it with ON DELETE CASCADE, so removing it takes the
+// whole thread with it. RLS ("reports_delete_own") is what actually enforces
+// that only the author can do this — the UI check is only for the button.
+function storagePathFromUrl(u){
+  try{const m=String(u||'').match(/\/report-images\/(.+)$/);
+    return m?decodeURIComponent(m[1].split('?')[0]):null;}catch(e){return null;}
+}
+async function deleteReport(id,ev){
+  if(ev){ev.stopPropagation();ev.preventDefault();}
+  if(!sb||!sbUser){authShow();return;}
+  const r=(allReports||[]).find(x=>String(x.id)===String(id));
+  if(!r||!r.dbRow){toast('Dieser Beitrag kann nicht gelöscht werden','err');return;}
+  if(r.userId&&r.userId!==sbUser.id){toast('Nur eigene Beiträge löschbar','err');return;}
+  if(!confirm('Diesen Beitrag endgültig löschen? Kommentare, Bestätigungen und Bewertungen dazu verschwinden mit.'))return;
+  try{
+    const{error}=await sb.from('reports').delete().eq('id',id).eq('user_id',sbUser.id);
+    if(error)throw error;
+    // photos are best-effort: a failure here must not leave the row behind
+    const paths=[];const cd=r.condition_data||{};
+    [r.img,cd.drawImage].concat(cd.images||[]).forEach(u=>{const p=storagePathFromUrl(u);if(p)paths.push(p);});
+    if(paths.length){try{await sb.storage.from('report-images').remove(paths);}catch(e){}}
+    allReports=(allReports||[]).filter(x=>String(x.id)!==String(id));
+    try{savedPosts.delete(String(id));}catch(e){}
+    loadReportMarkers();feedRender();
+    try{if(layer==='prog')renderPrognosis(stat);else if(layer==='powfind')renderPowderFind();
+        else if(layer==='progdiff')renderProgDiff();}catch(e){}
+    toast('Beitrag gelöscht','ok');haptic(12);
+    loadDbReports();
+  }catch(e){toast('Löschen fehlgeschlagen: '+(e.message||e),'err');}
 }
 // --- Likes ---
 async function toggleEndorse(id,ev){if(ev){ev.stopPropagation();}
@@ -4234,10 +4383,50 @@ function profSetVis(v){try{localStorage.setItem('ssm_visibility',v);}catch(e){}
   document.querySelectorAll('#profVis button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
   (async()=>{try{if(sb&&sbUser)await sb.from('profiles').update({visibility:v}).eq('id',sbUser.id);}catch(e){}})();
   toast('Sichtbarkeit: '+(v==='me'?'Nur ich':v==='friends'?'Freunde':'Alle'),'ok');}
+// "Meine Beiträge" in the profile: every post with its own delete button, so a
+// user can remove a single report instead of only the all-or-nothing wipe.
+async function profLoadPosts(){
+  const box=document.getElementById('profPosts');if(!box)return;
+  if(!sb||!sbUser){box.innerHTML='';return;}
+  const del=id=>'<button class="uv-del" title="Löschen" aria-label="Beitrag löschen" onclick="uvDeletePost(\''+id+'\',event)">'+
+    '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>';
+  try{
+    const{data:rs}=await sb.from('reports').select('id,caption,subtype,image_url,condition_data,location,created_at')
+      .eq('user_id',sbUser.id).order('created_at',{ascending:false}).limit(40);
+    if(!rs||!rs.length){box.innerHTML='<div class="prof-hint">Noch keine Beiträge.</div>';return;}
+    const withImg=rs.filter(r=>r.image_url),noImg=rs.filter(r=>!r.image_url);
+    const grid=withImg.length?('<div class="uv-grid">'+withImg.map(r=>{const ll=parseGeo(r.location);
+      return '<div class="uv-cell" onclick="profClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'"><img src="'+r.image_url+'" loading="lazy" alt=""/>'+del(r.id)+'</div>';}).join('')+'</div>'):'';
+    const rows=noImg.map(r=>{const ll=parseGeo(r.location);const cap=escapeHtml(r.caption||r.subtype||'');
+      const meta=escapeHtml((r.condition_data&&r.condition_data.measurement)||r.subtype||'Beitrag');
+      return '<div class="uv-post own" onclick="profClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'">'+
+        '<div class="b"><b>'+meta+'</b>'+(cap?(' — '+cap):'')+'<div class="t">'+timeAgo(r.created_at)+'</div></div>'+del(r.id)+'</div>';}).join('');
+    box.innerHTML=grid+rows;
+  }catch(e){box.innerHTML='<div class="prof-hint">Beiträge konnten nicht geladen werden.</div>';}
+}
+// Delete straight from a profile list — the post may be older than the 60 rows
+// the feed keeps in memory, so this deletes by id instead of via allReports.
+async function uvDeletePost(id,ev){
+  if(ev){ev.stopPropagation();ev.preventDefault();}
+  if(!sb||!sbUser)return;
+  if(!confirm('Diesen Beitrag endgültig löschen? Kommentare, Bestätigungen und Bewertungen dazu verschwinden mit.'))return;
+  try{
+    let row=null;try{const{data}=await sb.from('reports').select('image_url,condition_data').eq('id',id).single();row=data;}catch(e){}
+    const{error}=await sb.from('reports').delete().eq('id',id).eq('user_id',sbUser.id);
+    if(error)throw error;
+    const paths=[];const cd=(row&&row.condition_data)||{};
+    [row&&row.image_url,cd.drawImage].concat(cd.images||[]).forEach(u=>{const p=storagePathFromUrl(u);if(p)paths.push(p);});
+    if(paths.length){try{await sb.storage.from('report-images').remove(paths);}catch(e){}}
+    allReports=(allReports||[]).filter(x=>String(x.id)!==String(id));
+    loadReportMarkers();try{feedRender();}catch(e){}
+    toast('Beitrag gelöscht','ok');haptic(12);
+    profLoadPosts();loadDbReports();
+  }catch(e){toast('Löschen fehlgeschlagen: '+(e.message||e),'err');}
+}
 async function profDeleteContent(btn){if(!sb||!sbUser)return;
   if(!confirm('Wirklich ALLE deine Beiträge (inkl. Kommentare und Bewertungen dazu) löschen? Dein Konto bleibt bestehen.'))return;
   btn.disabled=true;
-  try{await sb.from('reports').delete().eq('user_id',sbUser.id);toast('Alle Beiträge gelöscht','ok');loadReportMarkers();loadDbReports();}
+  try{await sb.from('reports').delete().eq('user_id',sbUser.id);toast('Alle Beiträge gelöscht','ok');loadReportMarkers();loadDbReports();profLoadPosts();}
   catch(e){toast('Löschen fehlgeschlagen: '+(e.message||e),'err');}
   btn.disabled=false;}
 function sanitizeBio(t){
@@ -4262,7 +4451,7 @@ async function openProfile(){
   document.getElementById('profName').textContent=name;
   document.getElementById('profAvInitial').textContent=name[0].toUpperCase();
   document.getElementById('profEndo').textContent='… Trust Score';
-  profAvatarFile=null;
+  profAvatarFile=null;profLoadPosts();
   try{
     const{data}=await sb.from('profiles').select('bio,avatar_url,push_enabled').eq('id',sbUser.id).single();
     myProfile=data||{};
@@ -4339,13 +4528,17 @@ async function viewUser(uid,username){
     document.getElementById('uvReports').textContent=ids.length;
     document.getElementById('uvEndoN').textContent=total;
     const posts=document.getElementById('uvPosts');
+    // Own profile: every post gets a delete button (RLS still enforces ownership).
+    const mine=!!(sbUser&&uid===sbUser.id);
+    const delBtn=id=>mine?('<button class="uv-del" title="Löschen" aria-label="Beitrag löschen" onclick="uvDeletePost(\''+id+'\',event)">'+
+      '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>'):'';
     const withImg=(rs||[]).filter(r=>r.image_url),noImg=(rs||[]).filter(r=>!r.image_url);
     const grid=withImg.length?('<div class="uv-grid">'+withImg.map(r=>{const ll=parseGeo(r.location);
-      return '<div class="uv-cell" onclick="userViewClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'"><img src="'+r.image_url+'" loading="lazy" alt=""/></div>';}).join('')+'</div>'):'';
+      return '<div class="uv-cell" onclick="userViewClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'"><img src="'+r.image_url+'" loading="lazy" alt=""/>'+delBtn(r.id)+'</div>';}).join('')+'</div>'):'';
     const rows=noImg.map(r=>{const ll=parseGeo(r.location);const cap=escapeHtml(r.caption||r.subtype||'');
       const meta=escapeHtml((r.condition_data&&r.condition_data.measurement)||r.subtype||'');
-      return '<div class="uv-post" onclick="userViewClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'">'+
-        '<div class="b"><b>'+meta+'</b>'+(cap?(' — '+cap):'')+'<div class="t">'+timeAgo(r.created_at)+'</div></div></div>';}).join('');
+      return '<div class="uv-post'+(mine?' own':'')+'" onclick="userViewClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'">'+
+        '<div class="b"><b>'+meta+'</b>'+(cap?(' — '+cap):'')+'<div class="t">'+timeAgo(r.created_at)+'</div></div>'+delBtn(r.id)+'</div>';}).join('');
     posts.innerHTML='<h3>Beiträge · '+ids.length+'</h3>'+((grid+rows)||'<div style="color:var(--mut);font-size:13px;text-align:center;padding:14px 0">Noch keine Beiträge.</div>');
   }catch(e){}
 }
@@ -5701,6 +5894,7 @@ function feedRender(){
         <button title="Teilen" aria-label="Teilen" onclick="sharePost('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>
         <button class="save-btn${savedPosts.has(String(r.id))?' saved':''}" title="Merken" aria-label="Merken" onclick="toggleSave('${r.id}',event)"><svg viewBox="0 0 24 24" fill="${savedPosts.has(String(r.id))?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
         ${r.dbRow&&(!sbUser||r.userId!==sbUser.id)?`<button class="flag-btn ${r.flaggedByMe?'flagged':''}" title="Melden" aria-label="Report melden" onclick="reportFlag('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>`:''}
+        ${r.dbRow&&sbUser&&r.userId===sbUser.id?`<button class="del-btn" title="Löschen" aria-label="Beitrag löschen" onclick="deleteReport('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`:''}
       </div>
     </div>`;
   }).join('');
