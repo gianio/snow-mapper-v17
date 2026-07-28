@@ -899,6 +899,16 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #topicsMore button:hover{background:rgba(22,21,46,.045)}
  #topicsMore button.active{background:rgba(22,21,46,.06)}
  /* Sublayers: connected secondary segment row */
+ #progBar{display:none;flex-direction:column;gap:7px;margin-top:7px;padding-top:7px;border-top:1px solid rgba(22,21,46,.07)}
+ #progBar.on{display:flex}
+ .pb-row{display:flex;align-items:center;gap:6px}
+ .pb-lbl{font-size:10.5px;font-weight:800;color:var(--mut);letter-spacing:.02em;text-transform:uppercase;flex-shrink:0;min-width:52px}
+ .pb-seg{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+ .pb-seg::-webkit-scrollbar{display:none}
+ .pb-seg button{border:none;background:rgba(22,21,46,.05);border-radius:8px;padding:5px 9px;cursor:pointer;font-size:11.5px;font-weight:750;color:var(--fg2);font-family:inherit;white-space:nowrap}
+ .pb-seg button.active{background:var(--topic-tint);color:var(--topic-accent)}
+ #progBar input[type=range]{flex:1;accent-color:var(--topic-accent);min-width:0}
+ #progConfVal{font-size:11.5px;font-weight:800;color:var(--fg2);min-width:34px;text-align:right}
  #sublayers{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-top:6px;padding-top:6px;border-top:1px solid rgba(22,21,46,.07)}
  #sublayers:empty{display:none}
  #sublayers::-webkit-scrollbar{display:none}
@@ -1919,6 +1929,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <button data-t="prog"><span class="mt-ic" style="background:rgba(124,58,237,.12);color:#7c3aed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg></span><span class="mt-tx"><b>Schnee-Prognose</b><span>aus Zeichnen-Reports (Aspekt+Höhe)</span></span></button>
       </span>
   <div id="sublayers"></div>
+  <div id="progBar"></div>
 </div>
 <button id="demoPill" onclick="demoToggle()" title="Demo-Modus umschalten"><span class="dp-dot"></span><span id="demoPillTxt">Demo</span></button>
 <div id="searchWrap"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Ort suchen…" autocomplete="off"/><div id="searchRes"></div></div>
@@ -2716,11 +2727,50 @@ function demoFitZones(){
     cd.measurement=parts.join(' \u00b7 ');r.measurement=cd.measurement;changed=true;});
   return changed;
 }
+// Which report kinds feed the prognosis: drawn snow maps, quick powder
+// reports, and the longer field/observation reports.
+let progSrc='both';
+const PROG_SRC_LABEL={draw:'Zeichnen',quick:'Quick',both:'Zeichnen + Quick',all:'Alle Reports'};
+function progSetSrc(v){progSrc=v;progRenderBar();
+  try{if(layer==='prog'||layer==='powfind'){showOverlay();legend();}}catch(e){}}
+// map free text from a written report onto a snow type
+function progTypeFromText(t){t=(t||'').toLowerCase();
+  if(/trieb|windzeichen|schneebrett/.test(t))return 'drift';
+  if(/nass|durchn|sulz/.test(t))return 'wet';
+  if(/sonnendeckel|harsch.*sonn|bruchharsch/.test(t))return 'suncrust';
+  if(/windgepresst|windharsch|winddeckel|gepresst/.test(t))return 'windpressed';
+  if(/firn/.test(t))return 'firn';
+  if(/pulver|powder|neuschnee/.test(t))return 'powder';
+  return null;}
+function progZoneFromPoint(r,type,cm,conc){
+  const d=drawDemFull(r.lat,r.lng);
+  const e=(d&&d.elev!=null)?Math.round(d.elev):null;
+  return {type:type,lat:r.lat,lng:r.lng,
+    e0:e!=null?e-250:null,e1:e!=null?e+250:null,
+    asp:(d&&d.aspectDeg!=null)?d.aspectDeg:null,conc:conc,cm:cm,ageH:progAgeH(r)};
+}
 function progZones(){
   demoFitZones();
-  const out=[];(allReports||[]).forEach(r=>{const cd=r.condition_data;if(!cd||!cd.zones)return;
-    cd.zones.forEach(z=>{if(!z||!z.type)return;const c=z.centroid||[r.lat,r.lng];if(c[0]==null)return;
-      out.push({type:z.type,lat:c[0],lng:c[1],e0:z.elevMin,e1:z.elevMax,asp:z.aspectDeg,conc:z.aspectConc==null?0.6:z.aspectConc,ageH:progAgeH(r)});});});
+  const useDraw=progSrc!=='quick',useQuick=progSrc!=='draw',useRep=(progSrc==='all');
+  const out=[];(allReports||[]).forEach(r=>{const cd=r.condition_data;if(!cd)return;
+    if(cd.zones&&cd.zones.length){
+      if(!useDraw)return;
+      cd.zones.forEach(z=>{if(!z||!z.type)return;const c=z.centroid||[r.lat,r.lng];if(c[0]==null)return;
+        out.push({type:z.type,lat:c[0],lng:c[1],e0:z.elevMin,e1:z.elevMax,asp:z.aspectDeg,
+          conc:z.aspectConc==null?0.6:z.aspectConc,cm:z.cm==null?null:z.cm,ageH:progAgeH(r)});});
+      return;}
+    if(cd.quick){
+      if(!useQuick)return;
+      const q=cd.powderQuality,cm=cd.powderAmountCm==null?null:cd.powderAmountCm;
+      let ty='powder';
+      if(q!=null){ty=q<20?'windpressed':(q<40?'suncrust':(q<60?'wet':'powder'));}
+      out.push(progZoneFromPoint(r,ty,cm,0.4));return;}
+    if(useRep){
+      const ty=progTypeFromText((r.sub||'')+' '+(r.measurement||'')+' '+(r.caption||''));
+      if(!ty)return;
+      let cm=null;const m=/(\d{1,3})\s*cm/.exec(r.measurement||'');if(m)cm=+m[1];
+      out.push(progZoneFromPoint(r,ty,cm,0.35));}
+  });
   return out;
 }
 // --- Terrain-similarity model (pure functions, unit-tested) ---------------
@@ -2755,10 +2805,11 @@ function progRecency(z){const a=z.ageH==null?12:z.ageH;return 0.35+0.65*Math.exp
 // Combine supporting (sel) and conflicting (oth) reports for one location.
 // like = how likely this snow type is here; conf = how much we trust it.
 function progCell(asp,elev,slp,lat,lon,sel,oth){
-  let sS=0,sO=0,best=0,sw=0,sw2=0;
+  let sS=0,sO=0,best=0,sw=0,sw2=0,cmS=0,cmW=0;
   for(const z of sel){const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;
     const dd=progDistKm(lat,lon,z),m=e*Math.exp(-(dd*dd)/(PROG_SC_KM*PROG_SC_KM))*progRecency(z);
-    sS+=m;sw+=m;sw2+=m*m;if(m>best)best=m;}
+    sS+=m;sw+=m;sw2+=m*m;if(m>best)best=m;
+    if(z.cm!=null){cmS+=z.cm*m;cmW+=m;}}
   for(const z of oth){const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;
     const dd=progDistKm(lat,lon,z);sO+=e*Math.exp(-(dd*dd)/(PROG_SC_KM*PROG_SC_KM))*progRecency(z);}
   const tot=sS+sO,agree=tot>0?sS/tot:0;
@@ -2769,7 +2820,7 @@ function progCell(asp,elev,slp,lat,lon,sel,oth){
   const nEff=sw2>0?(sw*sw)/sw2:0;                        // effective independent reports
   const multi=0.97+0.03*Math.min(1,Math.max(0,nEff-1));
   const like=Math.min(1,best*(0.45+0.55*agree));
-  return {like:like,conf:Math.round(100*agree*evid*multi)};
+  return {like:like,conf:Math.round(100*agree*evid*multi),cm:cmW>0?(cmS/cmW):null};
 }
 function renderPrognosis(type){
   progTerrain();_progType=type;
@@ -2787,6 +2838,33 @@ function renderPrognosis(type){
     // hue = confidence (0-100%), opacity = how likely this snow type is here
     const cc=progConfColor(r.conf/100),t=Math.pow(like,0.75);
     d[o]=cc[0];d[o+1]=cc[1];d[o+2]=cc[2];d[o+3]=Math.min(225,45+200*t)|0;
+  }
+  const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
+  pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
+  prognosisOverlay.setUrl(pcv.toDataURL());
+}
+// Powder-Finder: where powder is expected, painted in the SLF new-snow depth
+// colours, filtered by a minimum confidence the user picks.
+let progConfMin=50;
+function progSetConfMin(v){progConfMin=+v;
+  const o=document.getElementById('progConfVal');if(o)o.textContent=progConfMin+'%';
+  try{if(layer==='powfind'){renderPowderFind();legend();}}catch(e){}}
+function renderPowderFind(){
+  progTerrain();_progType='powder';
+  const zones=progZones(),sel=zones.filter(z=>z.type==='powder'),oth=zones.filter(z=>z.type!=='powder');
+  const N=PROG_GW*PROG_GH;
+  _progField=new Float32Array(N);_progConf=new Float32Array(N);
+  const img=new ImageData(PROG_GW,PROG_GH),d=img.data;
+  for(let idx=0;idx<N;idx++){
+    const elev=PROG_ELEV[idx];const o=idx*4;
+    if(elev<0){d[o+3]=0;continue;}
+    const r=progCell(PROG_ASP[idx],elev,PROG_SLP[idx],PROG_LA[idx],PROG_LO[idx],sel,oth);
+    _progField[idx]=r.like;_progConf[idx]=r.conf;
+    if(r.conf<progConfMin||r.like<0.05){d[o+3]=0;continue;}
+    const cm=r.cm!=null?r.cm:25;                       // depth drives the colour
+    const c=snowCol(cm)||[120,170,255];
+    d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];
+    d[o+3]=Math.min(230,70+185*Math.pow(r.like,0.7))|0; // strength drives opacity
   }
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
@@ -2903,12 +2981,17 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
   if(l=="tsurf"){let extra="estimated: air ± radiative cooling/warming";if(stat=="sub0")extra="only cells with max surface temp &lt;0°C";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>T Surface [°C] (${sn})</b><br>${extra}`;}
   if(l=="rough")return "<b>Terrain Roughness</b><br>light→dark brown = rougher";
   if(l=="skiable")return '<b>Skiability Estimate</b><br>Snow depth vs. terrain roughness need<div style="margin-top:4px"><div><i style="background:#64dc64"></i>Plenty of snow</div><div><i style="background:#a0dc64"></i>Skiable</div><div><i style="background:#ffdc32"></i>Marginal</div><div><i style="background:#ff8c28"></i>Needs more snow</div><div><i style="background:#ff3c28"></i>Far from skiable</div><div><i style="background:#500000"></i>Too steep (&gt;55°)</div></div>';
+  if(l=="powfind"){
+    const sw=(cm)=>{const c=snowCol(cm)||[150,150,150];return '<div><i style="background:rgb('+c[0]+','+c[1]+','+c[2]+')"></i>'+cm+' cm</div>';};
+    return '<b>Powder-Finder</b><br>'+sw(10)+sw(30)+sw(60)+sw(100)+
+      '<div style="margin-top:4px;font-size:11px">Farbe = erwartete Schneehöhe (SLF-Skala), nur Flächen mit ≥ '+progConfMin+'% Vertrauen.</div>'+
+      '<div style="font-size:11px">Quelle: '+(PROG_SRC_LABEL[progSrc]||progSrc)+'</div>';}
   if(l=="prog"){const ty=_progType||stat,cl=(PROG_LABEL[ty]||ty);
     const ramp=PROG_CONF_STOPS.map(st=>'rgb('+st[1]+','+st[2]+','+st[3]+') '+Math.round(st[0]*100)+'%').join(',');
     return '<b>Prognose · '+cl+'</b><br><div style="margin:3px 0 2px"><span style="display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,'+ramp+')"></span>'+
       '<span style="display:flex;justify-content:space-between;font-size:10px;margin-top:2px"><span>0%</span><span>50%</span><span>100%</span></span></div>'+
       '<div style="font-size:11px">Farbe = <b>Vertrauen</b>, Deckkraft = Wahrscheinlichkeit für '+cl+'.</div>'+
-      '<div style="margin-top:3px;font-size:11px">Hänge mit gleichem Aspekt &amp; gleicher Höhe nahe einer Meldung · tippe für Details</div>';}
+      '<div style="margin-top:3px;font-size:11px">Hänge mit gleichem Aspekt &amp; gleicher Höhe nahe einer Meldung · Quelle: '+(PROG_SRC_LABEL[progSrc]||progSrc)+'</div>';}
   if(l=="qprheat")return '<b>Powder-Reports (Heatmap)</b><br><div><i style="background:#cde4ff"></i>vereinzelt / wenig</div><div><i style="background:#5b83d9"></i>guter Powder</div><div><i style="background:#0f2a7d"></i>tief &amp; fluffy</div><div style="margin-top:4px;font-size:11px">aus Quick-Powder-Reports · inkl. Demo-Daten</div>';
   if(l=="powder")return '<b>Powder Conditions</b><br><div><i style="background:rgba(200,220,255,.7)"></i>Powder (stable)</div><div><i style="background:rgba(180,205,245,.55)"></i>Powder (reduced)</div><div style="margin-top:4px;font-size:11px">Gust ≈ mean wind × 1.5</div>';
   return "<b>Hillshade / Relief (swisstopo)</b>";}
@@ -2926,6 +3009,7 @@ function showOverlay(){
   else if(layer=="rough")map.addLayer(roughImg);
   else if(layer=="qprheat"){map.addLayer(qprOverlay);renderQprHeat();}
   else if(layer=="prog"){map.addLayer(prognosisOverlay);renderPrognosis(stat);}
+  else if(layer=="powfind"){map.addLayer(prognosisOverlay);renderPowderFind();}
   if(layer=="wind"){map.addLayer(windArr);startFlow();}else{map.removeLayer(windArr);stopFlow();}
 }
 function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefresh();if(tlMode==='detail')drawTimeline();
@@ -2957,7 +3041,7 @@ const TOPICS={
   ski:[{l:'skiable',s:'avg',label:'Skiable'},{l:'powder',s:'avg',label:'Powder'}],
   qpr:[{l:'qprheat',s:'avg',label:'Heatmap'}],
   aspect:[{l:'aspect',s:'avg',label:'Exposition'},{l:'slope',s:'avg',label:'Hangneigung'},{l:'shade',s:'avg',label:'Schattierung'}],
-  prog:[{l:'prog',s:'powder',label:'Powder'},{l:'prog',s:'wet',label:'Nass'},{l:'prog',s:'suncrust',label:'Sonnendeckel'},{l:'prog',s:'windpressed',label:'Windgepresst'},{l:'prog',s:'drift',label:'Triebschnee'},{l:'prog',s:'firn',label:'Firn'}],
+  prog:[{l:'powfind',s:'powder',label:'Powder-Finder'},{l:'prog',s:'powder',label:'Powder'},{l:'prog',s:'wet',label:'Nass'},{l:'prog',s:'suncrust',label:'Sonnendeckel'},{l:'prog',s:'windpressed',label:'Windgepresst'},{l:'prog',s:'drift',label:'Triebschnee'},{l:'prog',s:'firn',label:'Firn'}],
   snow:[{l:'snow',s:'avg',label:'Neuschnee'},{l:'depth',s:'avg',label:'Schneehöhe'}],
   temp:[{l:'temp',s:'avg',label:'Mean'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'temp',s:'sub0',label:'<0°C'},{l:'temp',s:'max05',label:'0-5°C'},{l:'tsurf',s:'avg',label:'Surface'}],
   wind:[{l:'wind',s:'avg',label:'Mean'},{l:'wind',s:'max',label:'Max'},{l:'wind',s:'min',label:'Min'},{l:'wind',s:'lt10',label:'<10 km/h'}],
@@ -2996,9 +3080,9 @@ function setTopic(t,subIdx){
   subs.innerHTML=items.map((s,i)=>'<button data-i="'+i+'"'+(i===(subIdx||0)?' class="active"':'')+'>'+s.label+'</button>').join('');
   subs.querySelectorAll('button').forEach(btn=>{
     btn.onclick=()=>{subs.querySelectorAll('button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');
-      const sub=items[parseInt(btn.dataset.i)];layer=sub.l;stat=sub.s;renderAll();};
+      const sub=items[parseInt(btn.dataset.i)];layer=sub.l;stat=sub.s;renderAll();progRenderBar();};
     btn.onmouseenter=()=>legend(items[parseInt(btn.dataset.i)].l);btn.onmouseleave=()=>legend();});
-  const sel=items[subIdx||0];layer=sel.l;stat=sel.s;renderAll();
+  const sel=items[subIdx||0];layer=sel.l;stat=sel.s;renderAll();progRenderBar();
 }
 document.querySelectorAll('#topics button[data-t]').forEach(btn=>{
   btn.onclick=()=>setTopic(btn.dataset.t);
@@ -3008,6 +3092,22 @@ document.querySelectorAll('#topics button[data-t]').forEach(btn=>{
 document.querySelectorAll('#topicsMore button[data-t]').forEach(btn=>{
   btn.onclick=e=>{e.stopPropagation();setTopic(btn.dataset.t);};
   btn.onmouseenter=()=>legend(TOPICS[btn.dataset.t][0].l);btn.onmouseleave=()=>legend();});
+function progRenderBar(){
+  const bar=document.getElementById('progBar');if(!bar)return;
+  const on=(layer==='prog'||layer==='powfind');
+  bar.classList.toggle('on',on);
+  if(!on){bar.innerHTML='';return;}
+  const srcs=['draw','quick','both','all'];
+  let html='<div class="pb-row"><span class="pb-lbl">Quelle</span><div class="pb-seg">'+
+    srcs.map(k=>'<button data-src="'+k+'"'+(progSrc===k?' class="active"':'')+'>'+PROG_SRC_LABEL[k]+'</button>').join('')+
+    '</div></div>';
+  if(layer==='powfind')
+    html+='<div class="pb-row"><span class="pb-lbl">Vertrauen</span>'+
+      '<input type="range" min="0" max="95" step="5" value="'+progConfMin+'" oninput="progSetConfMin(this.value)"/>'+
+      '<b id="progConfVal">'+progConfMin+'%</b></div>';
+  bar.innerHTML=html;
+  bar.querySelectorAll('.pb-seg button').forEach(b=>b.onclick=()=>progSetSrc(b.dataset.src));
+}
 function positionSearch(){try{var sw=document.getElementById('searchWrap'),lb=document.getElementById('layerBar');if(!sw||!lb)return;var r=lb.getBoundingClientRect();sw.style.top=(r.bottom+8)+'px';}catch(e){}}
 addEventListener('resize',positionSearch);requestAnimationFrame(positionSearch);
 function presetsFade(){const p=document.getElementById('presets');if(!p)return;p.classList.toggle('can-scroll',p.scrollWidth-p.clientWidth-p.scrollLeft>4);}
@@ -3888,7 +3988,7 @@ async function loadDbReports(){
       const fd=document.querySelector('#feedBtn .feed-dot');if(fd)fd.classList.toggle('on',nw>seen);}catch(e){}
     try{dbQpr=data.filter(r=>r.condition_data&&r.condition_data.quick).map(r=>{const ll=parseGeo(r.location);const cd=r.condition_data;
         return ll?[ll[0],ll[1],+cd.powderAmountCm||0,+cd.powderQuality||0]:null;}).filter(Boolean);
-      if(layer==='qprheat')renderQprHeat();if(layer==='prog')renderPrognosis(stat);}catch(e){}
+      if(layer==='qprheat')renderQprHeat();if(layer==='prog')renderPrognosis(stat);if(layer==='powfind')renderPowderFind();}catch(e){}
     const ids=data.map(r=>r.id),uids=[...new Set(data.map(r=>r.user_id).filter(Boolean))];
     // usernames
     let nameMap={},avatarMap={};try{const{data:pr}=await sb.from('profiles').select('id,username,avatar_url').in('id',uids);(pr||[]).forEach(p=>{nameMap[p.id]=p.username;if(p.avatar_url)avatarMap[p.id]=p.avatar_url;});}catch(e){}
@@ -4707,9 +4807,18 @@ let drawBrushSize=34,drawZoneSamples={},_drawLastTrackC=null;
 const DRAW_ZONE_W=34; // base zone brush width (CSS px)
 
 function drawHasContent(){return drawZoneUsed.size||drawRoutes.length||drawTracks.length;}
-function drawViewBounds(){const cv=document.getElementById('drawCanvas');
-  const nw=map.containerPointToLatLng([0,0]),se=map.containerPointToLatLng([cv.clientWidth,cv.clientHeight]);
-  return L.latLngBounds(nw,se);}
+function drawFitCanvas(){
+  // Pin the canvas exactly onto the map container so that canvas pixel (x,y)
+  // IS map container point (x,y). Without this the canvas covers the whole
+  // viewport while #map stops at --btm-h, and the drawing lands offset.
+  const cv=document.getElementById('drawCanvas');
+  try{const mr=map.getContainer().getBoundingClientRect();
+    cv.style.left=mr.left+'px';cv.style.top=mr.top+'px';
+    cv.style.width=mr.width+'px';cv.style.height=mr.height+'px';
+    cv.style.right='auto';cv.style.bottom='auto';}catch(e){}
+  return cv;
+}
+function drawViewBounds(){return map.getBounds();}
 function drawRefRect(){
   if(!drawRefBounds)return {x:0,y:0,w:drawZoneW/drawDpr||1,h:drawZoneH/drawDpr||1};
   try{const nw=map.latLngToContainerPoint(drawRefBounds.getNorthWest());
@@ -4747,7 +4856,7 @@ function drawTogglePan(){
   try{haptic(6);}catch(e){}
 }
 function drawSetupCanvas(){
-  const cv=document.getElementById('drawCanvas');
+  const cv=drawFitCanvas();
   drawDpr=Math.min(window.devicePixelRatio||1,2);
   const w=cv.clientWidth,h=cv.clientHeight;
   cv.width=Math.round(w*drawDpr);cv.height=Math.round(h*drawDpr);
@@ -4831,9 +4940,12 @@ function drawComputeZones(){
     for(const pr of pts){const la=pr[0],lo=pr[1];slat+=la;slng+=lo;const d=drawDemFull(la,lo);if(!d)continue;
       if(d.elev!=null){if(d.elev<emin)emin=d.elev;if(d.elev>emax)emax=d.elev;}
       if(d.slope>=6&&d.aspectDeg!=null){const r=d.aspectDeg*Math.PI/180;sx+=Math.cos(r);sy+=Math.sin(r);na++;}}
+    const _pen=DRAW_PENS[type];
+    const _cm=(_pen&&_pen.slider&&(type==='powder'||type==='drift'))?_pen.slider.val:null;
     zones.push({type:type,centroid:[slat/pts.length,slng/pts.length],
       elevMin:emin<1e9?Math.round(emin):null,elevMax:emax>-1e9?Math.round(emax):null,
-      aspectDeg:na?((Math.atan2(sy,sx)*180/Math.PI)+360)%360:null,aspectConc:na?Math.hypot(sx,sy)/na:0,n:pts.length});
+      aspectDeg:na?((Math.atan2(sy,sx)*180/Math.PI)+360)%360:null,aspectConc:na?Math.hypot(sx,sy)/na:0,
+      cm:_cm,n:pts.length});
   }
   return zones;
 }
