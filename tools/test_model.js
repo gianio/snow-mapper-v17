@@ -11,7 +11,9 @@ const path = require('path');
 const appPath = process.argv[2] || path.join(__dirname, '..', 'dist', 'app.js');
 const src = fs.readFileSync(appPath, 'utf8');
 
-const START = '// --- Terrain-similarity model';
+// The block spans report credibility (confirmations + author trust) through the
+// terrain-similarity scoring, i.e. everything that turns reports into a map.
+const START = '// --- Report credibility';
 const END = 'function renderPrognosis';
 const i = src.indexOf(START), j = src.indexOf(END, i);
 if (i < 0 || j < 0) {
@@ -19,7 +21,10 @@ if (i < 0 || j < 0) {
   process.exit(1);
 }
 const model = src.slice(i, j);
-const M = new Function(model + '\nreturn {progCell,progAspectMatch,progElevMatch,progEnvelope};')();
+const EXPORTS = 'progCell,progAspectMatch,progElevMatch,progEnvelope,progReportWeight,progTrustOf';
+// allReports is a free variable in the app; inject the fixture the test wants.
+const mk = reports => new Function('allReports', model + '\nreturn {' + EXPORTS + '};')(reports || []);
+const M = mk([]);
 
 const LAT = 46.80, LNG = 9.83;
 // the reference report: powder, N-facing, 1700-2300 m, 2 h old
@@ -68,6 +73,42 @@ const checks = [
   ['confidence stays within 0-100',           Object.keys(R).every(k => C(k) >= 0 && C(k) <= 100)],
   ['likelihood stays within 0-1',             Object.keys(R).every(k => L(k) >= 0 && L(k) <= 1)],
 ];
+
+// --- Credibility weighting: confirmations on the post + author trust score ---
+const rep = (id, uid, likes) => ({ id, userId: uid, likes });
+// "anna" has 12 confirmations spread over her posts, "neu" is a new account.
+const WORLD = [rep('a1', 'anna', 7), rep('a2', 'anna', 5), rep('n1', 'neu', 0)];
+const Mw = mk(WORLD);
+const wAnna = Mw.progReportWeight(rep('a1', 'anna', 7));
+const wNeu  = Mw.progReportWeight(rep('n1', 'neu', 0));
+const wNoOne = mk([]).progReportWeight({ likes: 0 });
+// same terrain, same distance, same age - only credibility differs
+const zw = w => Object.assign({}, P, { w });
+const plain     = M.progCell(0, 2000, 30, LAT, LNG, [zw(1)], []);
+const trusted   = M.progCell(0, 2000, 30, LAT, LNG, [zw(wAnna)], []);
+// tug-of-war: a confirmed powder report against an unconfirmed 'wet' one
+const conflict = t => M.progCell(0, 2000, 30, LAT, LNG,
+  [Object.assign({}, P, { w: t })], [Object.assign({}, P, { type: 'wet', w: 1 })]);
+const powderTrusted = conflict(wAnna), powderPlain = conflict(1);
+
+console.log('');
+console.log(`  weight: unknown author, 0 confirmations = ${wNoOne.toFixed(3)}`);
+console.log(`  weight: new account, 0 confirmations    = ${wNeu.toFixed(3)}`);
+console.log(`  weight: trusted author, 7 confirmations = ${wAnna.toFixed(3)}`);
+console.log(`  trust score of "anna" = ${Mw.progTrustOf('anna')}, "neu" = ${Mw.progTrustOf('neu')}`);
+console.log(`  conf: plain report ${plain.conf}%  ->  trusted report ${trusted.conf}%`);
+console.log(`  vs a conflicting report: plain like ${powderPlain.like.toFixed(3)} -> trusted ${powderTrusted.like.toFixed(3)}`);
+
+checks.push(
+  ['unweighted report is exactly neutral (1.0)', wNoOne === 1],
+  ['trust score sums confirmations per author',  Mw.progTrustOf('anna') === 12 && Mw.progTrustOf('neu') === 0],
+  ['confirmed + trusted outweighs a new account', wAnna > wNeu],
+  ['a new account is never penalised below 1',   wNeu >= 1],
+  ['credibility is bounded (no runaway weight)', Mw.progReportWeight(rep('x', 'anna', 9999)) < 2.5],
+  ['credibility raises confidence',              trusted.conf > plain.conf],
+  ['credibility does not change terrain match',  Math.abs(trusted.like - plain.like) < 1e-9],
+  ['credibility wins the agree/conflict tug',    powderTrusted.like > powderPlain.like],
+);
 
 for (const k of Object.keys(R)) {
   console.log(`  ${k.padEnd(14)} like=${L(k).toFixed(3)} conf=${C(k)}%`);

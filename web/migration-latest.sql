@@ -213,5 +213,12 @@ DROP POLICY IF EXISTS "reports_read_visible" ON reports;
 CREATE POLICY "reports_read_visible" ON reports
   FOR SELECT USING (report_author_visible(user_id));
 
--- 12) Reload the API schema cache so the new columns/tables are visible now
+-- 12) Users must be able to delete their own reports from inside the app.
+--     Everything that hangs off a report (comments, reactions, flags,
+--     condition ratings) already has ON DELETE CASCADE, so one row is enough.
+DROP POLICY IF EXISTS "reports_delete_own" ON reports;
+CREATE POLICY "reports_delete_own" ON reports
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- 13) Reload the API schema cache so the new columns/tables are visible now
 NOTIFY pgrst, 'reload schema';
