@@ -864,30 +864,36 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
  html{background:#ffffff}
  html,body{margin:0;padding:0;height:100%;height:100dvh;width:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--fg);overscroll-behavior:none;background:#ffffff;position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
- #map{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);background:#fff}
+ #map{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);background:#fff;--resort-op:0;--resort-lbl:0}
+ /* Resort markers: a dot that fades in with zoom, and a label that follows a
+    little later so the country view stays uncluttered. */
+ .resort-pin{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:4px;white-space:nowrap;opacity:var(--resort-op);transition:opacity .25s linear}
+ .resort-pin i{width:5px;height:5px;border-radius:50%;background:#5b6b80;box-shadow:0 0 0 1.5px rgba(255,255,255,.9);flex-shrink:0}
+ .resort-pin span{font-size:9.5px;font-weight:800;color:#4a5a6e;letter-spacing:-.01em;opacity:var(--resort-lbl);text-shadow:0 0 3px #fff,0 0 6px #fff,0 1px 0 #fff}
  .leaflet-control-scale{margin-right:92px!important;margin-bottom:10px!important}
- .osm-under{filter:grayscale(.85) brightness(1.09) contrast(.9)}
  #flow{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);z-index:450;pointer-events:none}
  #modeGlow{display:none}
  .rail-btn svg,#legendBtn svg{color:var(--topic-accent,#141419);transition:color .45s ease}
  /* --- Layer selector: one elegant floating glass card --- */
- #layerBar{position:absolute;z-index:1000;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;max-width:calc(100vw - 112px);display:inline-flex;flex-direction:column;padding:6px;background:rgba(255,255,255,.62);backdrop-filter:blur(24px) saturate(1.5);-webkit-backdrop-filter:blur(24px) saturate(1.5);border:1px solid rgba(255,255,255,.6);border-radius:20px;box-shadow:0 10px 34px rgba(22,21,46,.13),0 1px 0 rgba(255,255,255,.6) inset;--topic-accent:#141419;--topic-tint:rgba(20,20,25,.13)}
- /* Two group names side by side do not fit every phone, so the row wraps
-    instead of clipping a label -- readability beats a single line. */
- #topics{display:flex;flex-wrap:wrap;gap:2px;align-items:center}
+ #layerBar{position:absolute;z-index:1000;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;max-width:calc(100vw - 112px);display:inline-flex;flex-direction:column;gap:8px;padding:8px;background:rgba(255,255,255,.74);backdrop-filter:blur(26px) saturate(1.5);-webkit-backdrop-filter:blur(26px) saturate(1.5);border:1px solid rgba(255,255,255,.7);border-radius:22px;box-shadow:0 12px 38px rgba(22,21,46,.15),0 1px 0 rgba(255,255,255,.65) inset;--topic-accent:#141419;--topic-tint:rgba(20,20,25,.13)}
+ /* Group picker: two equal halves inside one track. Full names always fit
+    because the row wraps rather than clipping, and the selected half is a
+    filled pill so the active state is unmistakable at a glance. */
+ #topics{display:flex;flex-wrap:wrap;gap:3px;align-items:stretch;background:rgba(22,21,46,.055);border-radius:15px;padding:3px}
  #topics::-webkit-scrollbar{display:none}
- /* Two group labels have to fit side by side on a 390 px phone without the
-    second one being clipped, so the type is a touch tighter than before. */
- #topics button{display:inline-flex;align-items:center;gap:3px;border:none;background:transparent;border-radius:13px;padding:9px 8px;cursor:pointer;font-size:12.5px;font-weight:750;min-height:40px;color:var(--mut);transition:all .22s cubic-bezier(.4,0,.2,1);flex:1 1 auto;justify-content:center;white-space:nowrap;letter-spacing:-.01em;font-family:inherit}
+ #topics button{display:inline-flex;align-items:center;gap:5px;border:none;background:transparent;border-radius:12px;padding:0 10px;cursor:pointer;font-size:12.5px;font-weight:750;min-height:42px;color:var(--fg2);transition:background .2s,color .2s,box-shadow .2s;flex:1 1 auto;justify-content:center;white-space:nowrap;letter-spacing:-.01em;font-family:inherit}
+ #topics button.active{background:#fff;color:var(--fg);box-shadow:0 2px 10px rgba(22,21,46,.15)}
+ #topics button:active{transform:scale(.985)}
  #topics button svg{width:18px;height:18px;flex-shrink:0;transition:color .2s}
- .tp-tag{flex-shrink:0;color:var(--mut);font-size:11.5px;font-weight:900;font-style:normal;letter-spacing:0}
- .tp-tag::after{content:'\00b7';margin-left:3px;opacity:.55}
+ .tp-tag{flex-shrink:0;color:var(--mut);font-size:12px;font-weight:900;font-style:normal;letter-spacing:0}
+ .tp-tag::after{content:'\00b7';margin-left:3px;opacity:.5}
  #topics button.active .tp-tag{color:var(--topic-accent)}
- #variants{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-top:5px;padding-top:5px;border-top:1px dashed rgba(22,21,46,.10)}
+ #variants{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-top:2px}
  #variants:empty{display:none}
  #variants::-webkit-scrollbar{display:none}
- #variants button{border:none;background:transparent;border-radius:8px;padding:4px 9px;cursor:pointer;font-size:11.5px;font-weight:700;color:var(--mut);flex-shrink:0;white-space:nowrap;font-family:inherit}
+ #variants button{border:none;background:transparent;border-radius:10px;padding:0 11px;min-height:36px;cursor:pointer;font-size:12.5px;font-weight:700;color:var(--mut);flex-shrink:0;white-space:nowrap;font-family:inherit;display:inline-flex;align-items:center}
  #variants button.active{background:var(--topic-tint);color:var(--topic-accent)}
+ #variants button:active{transform:scale(.97)}
  #sublayers button.zoomed-in{position:relative}
  #sublayers button.zoomed-in::after{content:"";position:absolute;top:5px;right:5px;width:4px;height:4px;border-radius:50%;background:var(--topic-accent)}
  #topics button:hover{color:var(--fg)}
@@ -896,22 +902,34 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* More dropdown: iconed, described (position set by JS) */
  @keyframes moreIn{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
  /* Sublayers: connected secondary segment row */
- #progBar{display:none;flex-direction:column;gap:7px;margin-top:7px;padding-top:7px;border-top:1px solid rgba(22,21,46,.07)}
+ #progBar{display:none;flex-direction:column;gap:9px;padding-top:8px;border-top:1px solid rgba(22,21,46,.08)}
  #progBar.on{display:flex}
  .pb-row{display:flex;align-items:center;gap:6px}
  .pb-lbl{font-size:10.5px;font-weight:800;color:var(--mut);letter-spacing:.02em;text-transform:uppercase;flex-shrink:0;min-width:52px}
  .pb-seg{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
  .pb-seg::-webkit-scrollbar{display:none}
- .pb-seg button{border:none;background:rgba(22,21,46,.05);border-radius:8px;padding:5px 9px;cursor:pointer;font-size:11.5px;font-weight:750;color:var(--fg2);font-family:inherit;white-space:nowrap}
+ .pb-seg button{border:none;background:rgba(22,21,46,.05);border-radius:9px;padding:0 11px;min-height:32px;cursor:pointer;font-size:12px;font-weight:750;color:var(--fg2);font-family:inherit;white-space:nowrap;display:inline-flex;align-items:center}
  .pb-seg button.active{background:var(--topic-tint);color:var(--topic-accent)}
- #progBar input[type=range]{flex:1;accent-color:var(--topic-accent);min-width:0}
+ #progBar input[type=range]{flex:1;accent-color:var(--topic-accent);min-width:0;height:30px}
  #progConfVal{font-size:11.5px;font-weight:800;color:var(--fg2);min-width:34px;text-align:right}
- #sublayers{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-top:6px;padding-top:6px;border-top:1px solid rgba(22,21,46,.07)}
+ /* Layer chips: 44 px tall so they stay hittable with gloves on, and the
+    selected one is filled with the group accent rather than tinted — at a
+    glance, in glare, there is exactly one chip that reads as "on". */
+ /* Wrapped, not scrolled: every layer in the group is visible and one tap
+    away. Beyond ~3 rows (group B at deep zoom) the row scrolls vertically
+    rather than swallowing the map. */
+ #sublayers{display:flex;flex-wrap:wrap;gap:6px;max-height:154px;overflow-y:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:1px;
+   -webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 14px),transparent);mask-image:linear-gradient(180deg,#000 calc(100% - 14px),transparent)}
+ /* no fade when everything already fits (the common case) */
+ #sublayers.fits{-webkit-mask-image:none;mask-image:none}
  #sublayers:empty{display:none}
  #sublayers::-webkit-scrollbar{display:none}
- #sublayers button{border:none;background:rgba(22,21,46,.05);border-radius:9px;padding:6px 12px;cursor:pointer;font-size:12.5px;font-weight:650;min-height:32px;color:var(--fg2);transition:all .18s;flex-shrink:0;white-space:nowrap;font-family:inherit;letter-spacing:-.01em}
- #sublayers button:hover{background:rgba(22,21,46,.09);color:var(--fg)}
- #sublayers button.active{background:var(--topic-tint);color:var(--topic-accent)}
+ #sublayers button{border:1px solid rgba(22,21,46,.07);background:rgba(255,255,255,.75);border-radius:13px;padding:0 15px;cursor:pointer;font-size:13.5px;font-weight:700;min-height:44px;color:var(--fg2);transition:background .18s,color .18s,box-shadow .18s,border-color .18s;flex-shrink:0;white-space:nowrap;font-family:inherit;letter-spacing:-.01em;display:inline-flex;align-items:center}
+ #sublayers button:hover{background:#fff;color:var(--fg)}
+ #sublayers button.active{background:var(--topic-accent);border-color:var(--topic-accent);color:#fff;box-shadow:0 4px 14px color-mix(in srgb,var(--topic-accent) 38%,transparent)}
+ #sublayers button:active{transform:scale(.97)}
+ /* deep-zoom-only chips carry a dot; keep it visible on the filled state */
+ #sublayers button.zoomed-in.active::after{background:rgba(255,255,255,.9)}
  #bottomPanel{position:absolute;z-index:1000;bottom:0;left:0;right:0;
    background:rgba(255,255,255,.8);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border-top:1px solid rgba(255,255,255,.5);box-shadow:0 -1px 0 var(--bd),0 -4px 20px rgba(0,0,0,.06);transition:none;padding-bottom:max(env(safe-area-inset-bottom, 0px) - 18px, 4px);overflow:hidden}
  #btmMain{padding:6px 14px 2px}
@@ -1155,10 +1173,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #coachNext{background:var(--fg);color:#fff;border:none;border-radius:11px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
  #coachNext:hover{background:#000}
  @media (max-width:560px){
-   #layerBar{max-width:calc(100vw - 76px);padding:5px}
-   #topics button{padding:9px 13px;font-size:14px;min-height:40px}
+   /* Phones are the primary target, so the controls stay FULL size here --
+      this block used to shrink the touch targets, which is backwards for
+      one-handed and gloved use. */
+   #layerBar{max-width:calc(100vw - 76px);padding:7px;gap:7px}
+   #topics button{padding:0 10px;font-size:12.5px;min-height:42px}
    #topics button span{display:inline}
-   #sublayers button{padding:6px 12px;font-size:12.5px;min-height:32px}
+   #sublayers button{padding:0 14px;font-size:13.5px;min-height:44px}
+   #variants button{padding:0 11px;min-height:36px;font-size:12.5px}
    #searchWrap{top:calc(env(safe-area-inset-top,0px) + 118px);left:8px;right:auto;width:calc(100vw - 84px);max-width:230px}
    .icard{font-size:14px;max-width:calc(100vw - 50px);min-width:200px}
    .scard{font-size:14px;min-width:160px}
@@ -2073,7 +2095,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   </div>
   <div id="drawDepthV" aria-label="Schneehöhe">
     <span class="ddv-cap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M4.2 6.5l15.6 11M4.2 17.5l15.6-11"/></svg></span>
-    <input type="range" min="5" max="120" step="5" value="30" orient="vertical" aria-label="Schneehöhe in cm"/>
+    <input type="range" min="5" max="150" step="5" value="30" orient="vertical" aria-label="Schneehöhe in cm"/>
     <b id="drawDepthVVal">30</b><span class="ddv-unit">cm</span>
   </div>
   <div id="drawBar">
@@ -2574,8 +2596,18 @@ const _fitZoom=map.getZoom();
 map.setZoom(_fitZoom,{animate:false});map.setMinZoom(_fitZoom);map.setMaxZoom(16);  // never zoom out past the initial view (sync — kein animierter Auto-Zoom)
 const _padLa=(laMax-laMin)*0.04,_padLo=(loMax-loMin)*0.04;
 map.setMaxBounds([[laMin-_padLa,loMin-_padLo],[laMax+_padLa,loMax+_padLo]]);
-const osmUnder=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,crossOrigin:true,className:'osm-under',attribution:"© OpenStreetMap"}).addTo(map);
-const base=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe-winter/default/current/3857/{z}/{x}/{y}.jpeg",{maxZoom:17,crossOrigin:true,attribution:"© swisstopo / MeteoSwiss / SLF / Copernicus"}).addTo(map);
+// ===== Base map: ONE canonical tile source ==================================
+// Every raster basemap in the app (main map, 3D, the mini-maps in the report
+// and pin flows) comes from this one swisstopo product through this one URL
+// builder. The OpenStreetMap under-layer that used to sit beneath it is gone:
+// it drew the same ground a second time, and the abstract border layer below
+// now supplies the "outside Switzerland" context on its own.
+function swissTile(id,ext){return "https://wmts.geo.admin.ch/1.0.0/"+id+"/default/current/3857/{z}/{x}/{y}."+(ext||"jpeg");}
+const BASE_TILE='ch.swisstopo.pixelkarte-farbe-winter';
+const BASE_ATTR="© swisstopo / MeteoSwiss / SLF / Copernicus";
+function swissBaseLayer(opts){return L.tileLayer(swissTile(BASE_TILE),
+  Object.assign({maxZoom:17,crossOrigin:true,attribution:BASE_ATTR},opts||{}));}
+const base=swissBaseLayer().addTo(map);
 // --- Abstract far-zoom base: white page + the Swiss border, nothing else -----
 // Simplified national outline (Natural Earth 10 m, Douglas-Peucker 0.006 deg),
 // delta-encoded in 1e-4 degree steps as lat,lon pairs. Baked in so the abstract
@@ -2583,11 +2615,30 @@ const base=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-
 const CH_BORDER_ENC="468644,104538,-412,-89,-243,-277,-433,115,-201,-290,-347,-53,-284,-252,-336,264,-31,426,-121,209,-451,68,-408,-219,134,-1486,144,-195,98,-412,427,-9,88,-417,-224,-1043,-400,-166,-314,-384,-491,-47,-169,159,-207,-177,-136,158,-187,913,-111,74,-218,-76,-197,-282,-233,-126,-287,125,-470,540,-191,-131,-122,-279,-106,-752,396,-110,380,-541,580,-136,151,-456,-42,-630,-284,-873,123,-480,-85,-108,-307,-9,-199,-341,68,-1378,221,-339,361,-200,185,-382,1230,-98,-319,-500,191,-330,124,-8,36,-198,-41,-487,-123,-191,-486,-252,-198,229,-370,-5,-483,148,-1002,-504,-271,-435,-318,-181,-341,-726,-193,-185,-355,-18,-216,-111,-225,-571,-114,-43,-348,178,-287,-351,-377,303,-112,409,-165,114,-509,-287,-274,-320,141,-628,-84,-396,570,121,637,-411,314,-706,46,-325,833,665,233,-255,47,-618,151,-232,-137,-464,270,-757,851,-915,275,-722,404,-149,776,197,590,29,225,-42,138,-137,35,-287,-185,-829,-283,-297,-179,109,-174,-160,-160,-398,-449,-491,-237,-857,-137,-196,-182,-142,-180,268,-396,296,-366,28,-324,-217,-264,-437,-95,-416,-614,-146,-304,-249,-174,-876,-225,-253,-190,-27,-7,-206,-205,-59,-47,-125,142,-1372,376,-510,178,-1019,-274,-374,-108,-507,-381,-912,56,-751,-369,-1332,137,-866,431,-517,598,-275,555,-726,70,-227,-115,-232,55,-183,354,-23,273,206,103,-153,122,-796,168,-86,343,92,836,528,760,-773,330,317,357,50,151,-244,266,-1490,-73,-1308,-404,-852,-137,-961,-195,-325,-595,-550,-476,235,-80,147,32,237,-230,52,-484,-898,-415,-511,-116,-324,106,-340,-13,-456,-174,-695,403,241,291,-281,121,37,311,844,33,468,550,110,579,357,372,-282,229,-540,142,134,375,-34,805,815,187,-242,132,-31,969,1479,270,716,534,913,252,34,162,-155,555,297,249,-16,265,-174,351,148,423,1561,348,667,225,229,186,-120,159,134,256,563,172,-12,71,300,831,1135,339,679,454,24,389,780,110,77,276,-403,-139,-1374,284,174,234,405,189,16,103,424,170,225,369,-177,101,365,-88,441,59,498,-80,771,-284,-182,-163,57,-268,698,159,710,55,972,269,230,251,-150,-83,531,110,171,220,-76,24,242,157,41,93,-225,332,676,195,867,16,227,-251,-132,-68,-368,-204,737,117,833,393,530,-75,785,-272,140,0,1301,68,449,484,918,62,540,-62,556,-236,177,-112,478,33,948,218,129,158,606,-325,383,108,199,388,-3,36,133,-100,80,237,57,66,-391,-230,-1099,256,-670,108,64,232,-56,237,458,407,257,154,880,157,-93,62,159,-66,434,-323,60,-50,98,55,124,282,143,-29,129,-294,249,-13,312,-101,67,-238,-194,-289,167,5,528,62,-82,196,90,-9,269,-293,585,-29,-184,-70,1,-247,439,-18,637,246,712,-85,1668,-143,135,-60,763,-1156,2743,-236,75,-302,295,-286,658,-424,-8,-152,-97,-332,-388,-335,-136,-841,-828,-337,-172,-337,-24,-469,269,-214,5,-348,-365,-93,11,-115,836,38,1085,-407,1889,-114,-17,-53,143,-590,-82,-124,127,-366,1318,-252,387,-185,657,197,901,565,337,-6,606,187,5,229,175,198,252,114,401,-589,795,-169,53,-339,-124,-214,24";
 const CH_BORDER=(function(){const v=CH_BORDER_ENC.split(",");const out=[];let la=0,lo=0;
   for(let i=0;i<v.length;i+=2){la+=+v[i];lo+=+v[i+1];out.push([la/1e4,lo/1e4]);}return out;})();
+// Canton boundaries (Natural Earth admin-1, same simplification) and the major
+// alpine resorts, as context UNDER the national border. Both are dimmed at the
+// country view and sharpen as you zoom, mirroring how the terrain tiles fade.
+const CH_CANTONS_ENC="459397,78496,-205,-59,-47,-125,159,-992,-47,-257,406,-633,178,-1019,-274,-374,-108,-507,-381,-912,56,-751,-329,-1030,0,-935,448,-681,678,-344,555,-726,70,-227,-115,-232,55,-183,354,-23,273,206,103,-153,122,-796,168,-86,343,92,836,528,760,-773,330,317,265,60,-23,785,-279,279,-267,0,-138,365,-267,91,-1177,1048,299,712,372,541,279,258,240,25,368,641,183,133,76,384,-197,34,-34,119,87,377,214,369,-29,1054,195,503,104,-189,170,568,208,266,-232,987,611,1218,43,570,301,642,79,68,164,-77,174,379,-102,1111,-144,592,-110,110,134,820,383,827,646,304,164,191,-16,191,-717,-61,-346,258,-148,395,-272,-293,-137,-516,-407,-101,-63,-425,-259,-484,-126,-84,-78,104,-192,-55,-243,-497,-449,-492,-237,-857,-137,-196,-182,-142,-180,269,-396,295,-366,28,-324,-217,-264,-437,-95,-416,-614,-146,-304,-249,-174,-876,-225,-253,-190,-27,-7,-206;461082,87290,-124,-515,270,-757,851,-915,275,-722,404,-149,776,197,590,29,225,-42,138,-137,15,-420,407,101,137,516,463,622,276,140,60,133,-133,992,124,416,-155,1105,211,1097,83,118,108,-39,121,88,119,382,-175,118,-99,573,-142,164,-572,-233,-193,62,-333,272,14,287,-149,115,-250,-22,-263,112,-222,-98,-302,11,-269,-189,-468,-121,-694,294,-476,763,-348,-732,-193,-185,-355,-18,-216,-111,-225,-571,-114,-43,-348,178,-287,-351,-377,303,-112,409,-165,114,-509,-287,-274,-320,141,-628,-84,-396,570,121,637,-411,314,-706,46,-325,833,665,233,-254,47,-619,138,-181;462312,92248,-271,-435,-311,-175,618,-874,268,1,374,-195,647,321,302,-11,222,98,263,-112,250,22,149,-115,-14,-287,333,-272,193,-62,627,200,163,-364,23,-340,173,-174,-117,-326,-262,-71,-190,-604,-71,-589,49,-772,106,-333,339,-45,156,-194,533,151,186,465,280,332,42,549,334,211,202,8,246,461,-148,535,190,780,158,215,386,243,-100,660,160,341,71,469,332,449,-134,193,-117,1436,-125,419,270,287,435,184,301,392,806,-550,-115,836,38,1085,-407,1889,-114,-17,-53,143,-590,-82,-124,127,-366,1318,-252,387,-185,657,197,901,565,337,-6,606,187,5,229,175,312,542,-23,165,-566,741,-169,53,-339,-124,-536,-29,-334,-313,-432,115,-201,-290,-347,-53,-284,-252,-336,264,-31,426,-121,209,-451,68,-408,-219,134,-1486,144,-195,98,-412,427,-9,88,-417,-224,-1043,-400,-166,-314,-384,-491,-47,-169,159,-207,-177,-136,158,-187,913,-111,74,-218,-76,-295,-358,-226,-56,-666,671,-191,-131,-233,-701,5,-330,396,-110,380,-541,580,-136,151,-456,-42,-630,-284,-873,123,-480,-85,-108,-307,-9,-199,-341,68,-1378,221,-339,361,-200,185,-382,1230,-98,-319,-500,191,-330,124,-8,36,-198,-41,-487,-364,-365,-245,-78,-198,229,-370,-5,-483,148,-1002,-504;478012,85582,-66,434,-323,60,-50,98,55,124,282,143,-29,129,-294,249,-13,312,-101,67,-238,-194,-289,167,5,528,61,-82,197,90,-9,269,-293,585,-29,-184,-165,142,105,-516,-263,-226,-83,-699,171,-262,312,16,8,-432,-381,-464,-8,-739,-170,-436,251,-848,108,64,232,-56,237,458,407,257,154,880,157,-93,62,159;475894,85607,56,156,-343,-204,147,-265,215,223,-75,90;476713,88519,-195,543,104,756,167,348,-85,1668,-143,135,-60,763,-1156,2743,-176,56,-205,-934,38,-137,120,25,45,-101,-353,-579,261,-375,179,14,100,-93,-147,-671,-49,318,-150,51,-174,-152,-60,-340,76,-566,226,-476,-149,-137,-48,-245,78,-857,-138,-272,-218,308,-196,-9,-70,-412,-456,-384,-79,-183,286,-399,278,189,97,-180,334,-191,126,112,361,30,159,-467,137,-98,84,65,94,-110,350,-882,94,151,-125,389,144,149,192,135,263,-167,-48,-165,192,118,-105,516;476326,86016,237,57,19,-137,381,464,-8,432,-312,-16,-171,262,-11,408,213,564,-263,167,-336,-284,125,-389,-94,-151,-350,882,-94,110,-174,-26,-239,552,-328,-56,-126,-112,-334,191,-97,180,-278,-189,-330,442,-291,238,-292,86,-233,-296,-192,-95,-243,-682,31,-542,-99,-184,-231,-138,-60,-433,-231,-489,-106,-82,-155,85,68,-519,451,-608,45,-392,-84,-575,132,-581,595,-335,98,324,369,307,-64,-296,125,-140,236,15,158,-327,321,327,634,-456,430,2,643,630,32,278,218,129,137,306,21,300,-98,154,-152,139,-215,-223,-147,265,395,247,388,-3,36,133,-100,80;476220,82511,-62,375,-280,276,-67,1049,-643,-630,-292,-55,-772,509,-321,-327,-158,327,-236,-15,-125,140,64,296,-369,-307,-98,-324,-406,249,-260,-144,-772,126,8,-291,137,-251,1113,-628,142,-280,-12,-169,-572,-602,60,-242,130,11,77,-562,106,-149,-182,-689,300,-223,44,-154,-20,-271,-288,-69,-148,-1094,372,-164,417,346,276,444,-100,797,62,153,447,322,189,-11,118,-310,388,-179,147,-367,202,-22,68,-397,549,-511,22,-203,-178,-77,-169,-387,198,-50,178,-504,128,583,321,341,-75,785,-272,140,0,1301,68,449,484,918,62,721;475966,76597,-320,-238,1,-262,-133,372,-217,-65,143,-287,-91,-228,285,-680,332,1388;475443,76834,61,439,-178,504,-198,50,169,387,178,77,-22,203,-549,511,-68,397,-202,22,-57,125,-171,-100,-183,88,-145,-248,-54,-469,-177,-115,-211,-652,-251,-192,277,-723,60,-686,343,-73,80,376,312,128,216,251,243,-491,-75,-498,-113,-64,-110,185,-221,-115,-114,-403,-149,12,-37,-377,-194,-220,75,-500,-185,-400,338,-421,83,709,175,-93,120,-252,142,87,251,-150,-33,317,-349,82,88,797,331,-49,49,-432,129,-102,56,255,157,41,93,-225,211,382,-285,680,91,228,-143,287,217,65,-71,365;474306,73785,27,97,-202,-40,188,-473,-13,416;475169,95531,-362,314,-286,658,-424,-8,-484,-485,-335,-136,-841,-828,-337,-172,-337,-24,-469,269,-214,5,-348,-365,-132,13,-767,548,-301,-392,-435,-184,-270,-287,125,-419,117,-1436,134,-193,376,-107,344,76,344,-191,118,-163,-73,-446,105,-256,189,371,616,106,141,-1052,384,-677,-58,-219,268,-332,182,34,67,-1799,231,138,99,184,-31,542,186,589,443,453,331,-55,335,-281,79,183,456,384,70,412,196,9,218,-308,138,272,-78,857,48,245,149,137,-226,476,-76,566,60,340,174,152,150,-51,49,-318,147,671,-100,93,-179,-14,-261,375,353,579,-45,101,-120,-25,-38,137,205,934;474819,74674,169,184,-49,432,-331,49,-88,-797,349,-82,-50,214;474333,73882,176,324,-258,352,-105,-154,-15,-562,202,40;473207,75590,4,85,167,0,301,-469,114,-835,165,156,-72,541,211,315,37,377,149,-12,114,403,221,115,110,-185,113,64,-7,352,86,66,-247,571,-216,-251,-312,-128,-80,-376,-216,17,-168,142,-19,600,-277,723,251,192,211,652,177,115,147,658,52,59,183,-88,171,100,-90,242,-388,179,-118,310,-189,11,-447,-322,-62,-153,100,-797,-276,-444,-417,-346,-75,-911,327,-455,-166,-1029,-304,195,-370,529,-257,194,-121,-25,-199,-353,125,-840,-354,-402,-202,-446,-179,68,-118,-107,-43,-184,226,-95,-18,-485,237,-118,13,535,286,144,148,466,263,-151,-296,-833,231,-112,98,-237,224,-89,229,750,70,-27,123,212,392,1005,227,162;474992,70098,-88,441,59,498,-80,771,-284,-182,-163,57,-268,698,151,988,-336,743,-190,151,-155,1027,-198,255,-201,-179,-32,224,-141,-624,60,-1094,121,-182,-300,-498,-84,-410,108,-1033,-183,-26,-111,-160,-202,-16,-52,-869,-329,-276,-250,-467,-9,-331,-292,-664,138,-559,432,502,339,679,454,24,499,857,276,-403,-139,-1374,284,174,234,405,189,16,189,573,84,76,369,-177,101,365;462412,60619,118,321,484,67,304,179,-318,556,95,424,-416,210,-80,147,32,237,-230,52,-484,-898,-415,-511,-116,-324,106,-340,-13,-456,-174,-695,403,241,291,-281,121,37,311,844,-19,190;463318,61186,386,165,261,-269,229,-540,142,134,375,-34,805,815,187,-242,132,-31,969,1479,707,1516,180,151,169,-4,162,-155,493,260,50,787,825,2037,-220,9,-208,193,-771,253,-188,270,-99,-45,-102,420,60,830,187,115,35,-188,470,187,115,-289,49,230,354,-489,183,323,-528,591,87,180,-318,33,-52,136,-252,-281,-241,-40,-298,-309,-47,-170,-113,223,-83,-37,-624,-638,-143,-40,-129,-630,-707,-22,24,529,-138,448,-322,-381,58,-385,-119,-85,-246,183,-13,265,177,304,-39,244,-285,555,-459,256,78,233,326,362,110,518,317,436,120,574,165,299,-175,114,-259,-13,-267,-186,-234,11,-254,-319,-280,85,-245,-113,-206,328,-327,-54,-225,-293,-240,-25,-279,-258,-372,-541,-299,-712,1177,-1048,267,-91,138,-365,267,0,279,-279,23,-785,191,-104,52,-150,266,-1490,-73,-1308,-404,-852,-137,-961,-654,-821,-196,-29,-95,-424,318,-556;469897,70211,-115,413,-409,108,-364,337,-59,-225,-292,-169,-134,-260,948,-956,425,752;468515,64431,201,53,375,-206,351,148,423,1561,348,667,225,229,186,-120,159,134,256,563,172,-12,71,300,399,633,-107,324,-191,173,-486,-105,337,1618,-138,7,-226,544,-58,-66,-246,35,-207,-473,-462,-227,-1444,-2551,293,-183,216,-20,208,-193,220,-9,-825,-2037,-50,-787;473440,75545,-62,130,-167,0,28,-309,201,179;467692,84462,-186,-96,-558,115,-61,-464,-330,77,-176,-299,-596,-253,-433,-878,-134,-820,110,-110,144,-592,102,-1111,-174,-379,-164,77,-79,-68,-301,-642,-43,-570,-611,-1218,232,-987,-208,-266,-170,-568,-104,189,-195,-503,29,-1054,-214,-369,-87,-377,34,-119,175,-6,22,-88,-90,-358,-169,-99,-143,-348,327,54,206,-328,245,113,280,-85,186,283,302,25,267,186,259,13,175,-114,247,405,68,361,520,6,87,110,-26,349,99,124,352,47,319,-700,255,-83,751,147,326,-42,47,408,306,0,150,-1498,234,101,345,-124,215,329,169,-113,-188,-825,-55,-803,115,-413,462,227,207,473,348,-8,182,-505,138,-7,-337,-1618,433,129,244,-197,77,-207,-94,520,278,586,9,331,177,361,402,382,52,869,202,16,111,160,183,26,-108,1033,84,410,300,498,-121,182,-60,1094,116,597,-202,-135,-145,-490,-370,-727,-70,27,-277,-776,-516,526,307,771,-316,117,-95,-432,-286,-144,-56,-551,-238,227,62,392,-226,95,104,284,265,-27,173,412,354,402,-125,840,232,379,345,-195,370,-529,304,-195,166,1029,-327,455,75,911,-220,34,-782,520,-405,88,-269,-130,-533,-8,-366,242,-88,550,-565,-244,-146,-169,-72,-355,-296,-5,-169,-143,-276,96,-726,1128,116,401,-21,520,-282,827,86,406,-88,813,307,882,-198,329,-5,451;471423,84056,-290,368,-163,-362,-348,-183,-91,164,-23,554,-278,421,-177,-36,-120,-331,180,-332,-127,-197,91,-462,-104,-369,6,-610,-96,-419,-167,9,-112,-723,-214,11,-336,-441,25,-236,-145,-147,-541,-270,-332,135,-178,-163,-95,-666,715,-1066,276,-96,169,143,296,5,72,355,146,169,565,244,88,-550,366,-242,533,8,269,130,484,-120,551,-358,148,1094,288,69,20,271,-44,154,-300,223,182,689,-106,149,-77,562,-130,-11,-60,242,572,602,12,169,-142,280,-1113,628,-137,251,-8,291;471133,84424,290,-368,772,-126,260,144,-189,86,-118,464,25,1084,-451,608,-155,703,-508,-534,-169,-608,36,-899,269,-175,-62,-379;469892,85910,-296,182,-140,782,-212,150,168,588,-80,563,-430,274,320,854,-195,153,-222,26,-346,-764,-305,-1,-246,-461,-202,-8,-334,-211,-42,-549,-280,-332,-145,-430,-517,-199,-213,207,-339,45,-124,-416,119,-1066,-322,-199,-191,-329,148,-395,346,-258,647,101,98,-123,330,-77,61,464,606,-104,138,85,68,324,276,-80,440,295,81,-275,490,-132,385,856,449,167,11,293;469461,86596,135,-504,296,-182,-76,-1015,117,-244,120,331,128,68,85,-69,242,-384,64,-664,137,-56,261,185,250,566,-25,175,-269,175,31,515,-85,265,130,617,565,644,87,-184,213,-62,279,548,59,1920,-66,312,-182,-34,-268,332,-684,-291,-202,14,-222,-179,-205,-448,-111,-48,-652,687,-317,-70,-394,-1067,430,-274,80,-563,-182,-529,226,-209,5,-278;469222,89303,74,213,317,70,652,-687,111,48,205,448,222,179,202,-14,684,291,58,219,-384,677,-141,1052,-616,-106,-189,-371,-105,256,73,446,-118,163,-344,191,-344,-76,-376,107,-332,-449,-71,-469,-160,-341,104,-396,-26,-330,-364,-177,-158,-215,-192,-874,112,-81,38,-360,241,-16,410,781,222,-26,195,-153;469933,84651,-117,244,65,722,-61,15,-421,-223,-352,-815,-490,132,-12,-486,130,-187,-93,-292,100,9,40,-130,-516,88,-374,497,-81,-309,424,-648,960,66,232,-417,306,159,121,-440,-78,-365,77,-48,162,287,18,781,104,369,-91,462,127,197,-20,142,-160,190;470042,72159,-186,206,-215,-329,-345,124,-234,-101,-150,1498,-306,0,-47,-408,-326,42,-751,-147,-255,83,-319,700,-352,-47,-99,-124,49,-306,-110,-153,-293,37,-269,-88,-26,-316,-412,-704,-120,-574,-317,-436,-110,-518,-326,-362,-78,-233,459,-256,285,-555,39,-244,-177,-304,13,-265,246,-183,119,85,-58,385,322,381,138,-448,-24,-529,707,22,129,630,143,40,624,638,83,37,113,-223,47,170,298,309,241,40,252,281,52,-136,318,-33,-87,-180,528,-591,217,385,-948,956,134,260,292,169,59,225,364,-337,409,-108,55,803,205,732;469412,72374,-77,-63,48,-86,29,149;469072,68751,-354,489,-49,-230,-115,289,-470,-187,-35,188,-187,-115,-60,-830,102,-420,99,45,116,-234,334,-86,619,1091;467519,67868,-190,50,-124,-240,199,-91,115,281;467734,68596,-215,289,-173,-107,-75,-149,91,-290,-99,-339,471,596;467895,83682,-307,-882,88,-813,-86,-406,253,-635,40,-509,178,163,332,-135,589,302,110,163,-38,188,336,441,214,-11,190,1088,-121,440,-306,-159,-232,417,-960,-66,-280,414;467697,84011,54,-95,81,309,374,-497,516,-88,-40,130,-100,-9,93,292,-130,187,-30,738,-479,-272,-276,80,-63,-775;473936,94866,-251,-52,-151,68,304,-1448,-198,-7,-311,-337,-294,-62,-504,287,-30,-231,310,-1118,94,117,288,-64,176,161,33,-189,175,-130,426,399,115,1834,222,163,341,966,-183,861,-86,-600,-168,331,-92,17,-180,-427,258,23,101,-189,-395,-373;474498,96084,-254,-269,128,-331,126,600;473534,94882,-570,-171,-249,-195,-245,-478,-73,-283,69,-308,483,-401,321,10,275,318,335,124,-339,1063,-7,321;473972,95405,-36,-539,113,30,98,244,113,-28,77,166,-107,150,-258,-23";
+const CH_CANTONS=CH_CANTONS_ENC.split(";").map(function(r){
+  const v=r.split(",");const out=[];let la=0,lo=0;
+  for(let i=0;i<v.length;i+=2){la+=+v[i];lo+=+v[i+1];out.push([la/1e4,lo/1e4]);}return out;});
+const CH_RESORTS=("Zermatt~460200~77486|Davos~468043~98372|St. Moritz~464994~98433|Verbier~461002~72265|Arosa~467779~96762|Grindelwald~466240~80360|Saas-Fee~461080~79274|Crans-Montana~463132~74791|Engelberg~468211~84013|Andermatt~466356~85939|Laax~468045~92579|Flims~468370~92846|Adelboden~464914~75603|Lenzerheide~467221~95590|Scuol~467967~102980|Gstaad~464721~72869|Champéry~461754~68690|Grächen~461953~78374|Pontresina~464955~99013|Disentis~467034~88509|Meiringen~467271~81872|Kandersteg~464947~76733|Leukerbad~463794~76269|Villars-sur-Ollon~462983~70563|Leysin~463418~70115|Airolo~465286~86119|Zweisimmen~465554~73730|Lauterbrunnen~465931~79094|Zuoz~466021~99596|Celerina~465122~98579|Amden~471489~91423|Saanen~464894~72600|Fiesch~463998~81353|Evolène~461142~74941|Beckenried~469665~84757|Wildhaus~472058~93540|Klosters Serneus~468892~98383|Charmey~466196~71649").split("|").map(function(e){
+  const q=e.split("~");return {name:q[0],lat:+q[1]/1e4,lng:+q[2]/1e4};});
 map.createPane('abstractPane');
 map.getPane('abstractPane').style.zIndex=150;          // below tilePane (200)
 map.getPane('abstractPane').style.pointerEvents='none';
+map.createPane('resortPane');
+map.getPane('resortPane').style.zIndex=460;            // above overlays, below markers
+map.getPane('resortPane').style.pointerEvents='none';
+const chCantons=L.polyline(CH_CANTONS,{pane:'abstractPane',interactive:false,smoothFactor:0.5,
+  color:'#9fb0c4',weight:1,opacity:.18,fill:false}).addTo(map);
 const chOutline=L.polygon(CH_BORDER,{pane:'abstractPane',interactive:false,smoothFactor:0.35,
   color:'#7c8ca3',weight:2.2,opacity:.95,fillColor:'#eef3f8',fillOpacity:1,lineJoin:'round'}).addTo(map);
+const resortGroup=L.layerGroup([],{pane:'resortPane'}).addTo(map);
+CH_RESORTS.forEach(function(r){
+  L.marker([r.lat,r.lng],{pane:'resortPane',interactive:false,keyboard:false,
+    icon:L.divIcon({className:'',html:'<div class="resort-pin"><i></i><span>'+r.name+'</span></div>',
+      iconSize:[0,0],iconAnchor:[0,0]})}).addTo(resortGroup);});
 // Tiles are transparent at the initial (fully zoomed-out) view and only reach
 // full strength at the deepest zoom, so the map starts abstract and gains
 // detail as you come closer.
@@ -2598,14 +2649,21 @@ function baseFadeT(){
 }
 function updateBaseFade(){
   const t=baseFadeT(),op=Math.pow(t,1.7);            // slow start, 1.0 only at max zoom
-  base.setOpacity(op);osmUnder.setOpacity(op*.6);
+  base.setOpacity(op);
   chOutline.setStyle({weight:1.1+1.5*(1-op),opacity:.18+.77*(1-op),fillOpacity:1-op*.6});
+  // Context layers follow the same idea from the other end: barely there on the
+  // country view, clearly readable once you are looking at a single region.
+  chCantons.setStyle({opacity:.14+.46*t,weight:.8+.9*t});
+  const rt=Math.max(0,Math.min(1,(t-0.18)/0.5));     // resorts appear a bit later
+  const el=document.getElementById('map');
+  if(el){el.style.setProperty('--resort-op',rt.toFixed(3));
+    el.style.setProperty('--resort-lbl',(t>0.30?Math.min(1,(t-0.30)/0.25):0).toFixed(3));}
 }
 map.on('zoom zoomend',updateBaseFade);updateBaseFade();
 // Keine weisse Maske mehr: die gedimmte OSM-Unterlage zeigt die Nachbarlaender,
 // die Winter-Pixelkarte liegt fuer die Schweiz darueber.
-const slopeWMTS=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.hangneigung-ueber_30/default/current/3857/{z}/{x}/{y}.png",{opacity:.7});
-const reliefWMTS=L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissalti3d-reliefschattierung_monodirektional/default/current/3857/{z}/{x}/{y}.png",{opacity:.85});
+const slopeWMTS=L.tileLayer(swissTile('ch.swisstopo.hangneigung-ueber_30','png'),{opacity:.7});
+const reliefWMTS=L.tileLayer(swissTile('ch.swisstopo.swissalti3d-reliefschattierung_monodirektional','png'),{opacity:.85});
 const roughImg=L.imageOverlay(ROUGH_PNG,[[M.png_bounds[0],M.png_bounds[1]],[M.png_bounds[2],M.png_bounds[3]]],{opacity:.78});
 // Aspect: load high-res classified PNG into offscreen canvas, render via GridLayer with nearest-neighbor
 const [aspS,aspWest,aspN,aspEast]=M.png_bounds;
@@ -3021,39 +3079,64 @@ function renderProgDiff(){
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
   prognosisOverlay.setUrl(pcv.toDataURL());
 }
-// --- Other snow types: black/white patterns instead of colours --------------
-// Colour is reserved for snow depth (Reported Powder), so every other type gets
-// a distinct monochrome texture: "====" for a supportive crust, hatching for
-// drift, dots for sun crust, and so on.
-const PROG_PATTERNS={
+// --- One pattern language for every snow type except Powder -----------------
+// Powder is the only type that keeps a solid colour (blue, and on the map the
+// SLF depth scale). Everything else is told apart by TEXTURE, so the types stay
+// distinguishable without relying on colour at all — in the drawing tool, in
+// the palette and in the map layers, all from this one table.
+const SNOW_PATTERNS={
+  drift:{label:'Triebschnee',hint:'Stipplung — windverfrachtet'},
   windpressed:{label:'Windgepresst',hint:'==== tragfähiger Deckel'},
-  suncrust:{label:'Sonnendeckel',hint:'Punktraster'},
-  drift:{label:'Triebschnee',hint:'Schrägschraffur'},
+  suncrust:{label:'Sonnendeckel',hint:'raue Schraffur — Bruchharsch'},
   wet:{label:'Nassschnee',hint:'Wellenlinien'},
   firn:{label:'Firn',hint:'Kreuzraster'},
-  scoured:{label:'Abgeweht',hint:'Strichlinien'}
+  scoured:{label:'Abgeweht',hint:'lockere Strichlinien'},
+  compact:{label:'Kompakt',hint:'feine Linien'},
+  icy:{label:'Eisig',hint:'harte Doppeldiagonalen'},
+  nosnow:{label:'Kein Schnee',hint:'offene Kreuze'}
 };
-function progPatternTile(type){
+const PROG_PATTERNS=SNOW_PATTERNS;   // the map layers use the same textures
+// ink = the texture colour, bg = optional backing (the drawing pens want one so
+// the painted area reads as a filled zone; the map layers do not).
+function snowPatternTile(type,ink,bg){
   const S=14,c=document.createElement('canvas');c.width=S*2;c.height=S*2;
   const x=c.getContext('2d');x.scale(2,2);
-  x.strokeStyle='#14161a';x.fillStyle='#14161a';x.lineWidth=1.4;x.lineCap='butt';
+  if(bg){x.fillStyle=bg;x.fillRect(0,0,S,S);}
+  x.strokeStyle=ink||'#14161a';x.fillStyle=ink||'#14161a';x.lineWidth=1.4;x.lineCap='butt';
   if(type==='windpressed'){                                  // ==== double rules
     [3.5,6.5,10.5,13.5].forEach(y=>{x.beginPath();x.moveTo(0,y);x.lineTo(S,y);x.stroke();});
-  }else if(type==='suncrust'){                               // dot grid
-    [[3.5,3.5],[10.5,3.5],[3.5,10.5],[10.5,10.5],[7,7]].forEach(q=>{
-      x.beginPath();x.arc(q[0],q[1],1.5,0,6.2832);x.fill();});
-  }else if(type==='drift'){                                  // diagonal hatch
-    for(let k=-S;k<S*2;k+=5){x.beginPath();x.moveTo(k,0);x.lineTo(k+S,S);x.stroke();}
+  }else if(type==='drift'){                                  // stipple: wind-blown grains
+    [[3,3],[10,4],[6,7.5],[12.5,9.5],[2.5,11],[8.5,12.5]].forEach(q=>{
+      x.beginPath();x.arc(q[0],q[1],1.35,0,6.2832);x.fill();});
+  }else if(type==='suncrust'){                               // rough, broken hatching
+    x.lineWidth=1.6;
+    [[0,4,6,1],[8,2,14,6],[1,9,7,12],[9,11,14,8],[4,13,10,14.5]].forEach(q=>{
+      x.beginPath();x.moveTo(q[0],q[1]);x.lineTo(q[2],q[3]);x.stroke();});
   }else if(type==='wet'){                                    // wave lines
     [4,11].forEach(y=>{x.beginPath();x.moveTo(0,y);
       for(let q=0;q<=S;q+=2)x.lineTo(q,y+((q/2)%2?2:-2));x.stroke();});
   }else if(type==='firn'){                                   // cross hatch
     for(let k=-S;k<S*2;k+=6){x.beginPath();x.moveTo(k,0);x.lineTo(k+S,S);x.stroke();
       x.beginPath();x.moveTo(k,S);x.lineTo(k+S,0);x.stroke();}
-  }else{                                                     // scoured: dashes
-    x.setLineDash([5,4]);[3.5,7,10.5,14].forEach(y=>{x.beginPath();x.moveTo(0,y);x.lineTo(S,y);x.stroke();});
+  }else if(type==='compact'){                                // fine dense rules
+    x.lineWidth=1;[2.5,6,9.5,13].forEach(y=>{x.beginPath();x.moveTo(0,y);x.lineTo(S,y);x.stroke();});
+  }else if(type==='icy'){                                    // hard double diagonals
+    x.lineWidth=1.7;
+    for(let k=-S;k<S*2;k+=7){[0,2.4].forEach(o=>{x.beginPath();x.moveTo(k+o,0);x.lineTo(k+o+S,S);x.stroke();});}
+  }else if(type==='nosnow'){                                 // open crosses
+    x.lineWidth=1.3;[[3.5,3.5],[10.5,10.5]].forEach(q=>{
+      x.beginPath();x.moveTo(q[0]-2.5,q[1]-2.5);x.lineTo(q[0]+2.5,q[1]+2.5);
+      x.moveTo(q[0]+2.5,q[1]-2.5);x.lineTo(q[0]-2.5,q[1]+2.5);x.stroke();});
+  }else{                                                     // scoured: loose dashes
+    x.setLineDash([5,5]);[3.5,7,10.5,14].forEach(y=>{x.beginPath();x.moveTo(0,y);x.lineTo(S,y);x.stroke();});
   }
   return c;
+}
+function progPatternTile(type){return snowPatternTile(type,'#14161a',null);}
+// CSS background-image for a palette swatch — same geometry, drawn small.
+function snowPatternURL(type){
+  const c=snowPatternTile(type,'#20242b','#f2f5f9');
+  try{return c.toDataURL();}catch(e){return '';}
 }
 const _progPatCache={};
 function renderProgPattern(type){
@@ -3338,6 +3421,8 @@ function setTopic(t,itemIdx,varIdx){
   subs.querySelectorAll('button').forEach(btn=>{
     btn.onclick=()=>setTopic(t,parseInt(btn.dataset.i),0);
     btn.onmouseenter=()=>legend(items[parseInt(btn.dataset.i)].vars[0].l);btn.onmouseleave=()=>legend();});
+  subs.classList.toggle('fits',subs.scrollHeight<=subs.clientHeight+1);
+  requestAnimationFrame(()=>subs.classList.toggle('fits',subs.scrollHeight<=subs.clientHeight+1));
   const it=items[curItem];const vars=it.vars;
   curVar=Math.max(0,Math.min(vars.length-1,varIdx||0));
   const vb=document.getElementById('variants');
@@ -3729,8 +3814,8 @@ function init3D(){
   map3d=new maplibregl.Map({container:'map3d',
     style:{version:8,
       sources:{
-        'swisstopo':{type:'raster',tiles:['https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe-winter/default/current/3857/{z}/{x}/{y}.jpeg'],tileSize:256,attribution:'© swisstopo'},
-        'hillshade-tiles':{type:'raster',tiles:['https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissalti3d-reliefschattierung_monodirektional/default/current/3857/{z}/{x}/{y}.png'],tileSize:256},
+        'swisstopo':{type:'raster',tiles:[swissTile(BASE_TILE)],tileSize:256,attribution:BASE_ATTR},
+        'hillshade-tiles':{type:'raster',tiles:[swissTile('ch.swisstopo.swissalti3d-reliefschattierung_monodirektional','png')],tileSize:256},
         'terrain-dem':{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',maxzoom:15}},
       layers:[
         {id:'swisstopo-base',type:'raster',source:'swisstopo',paint:{'raster-opacity':0.3}},
@@ -5170,12 +5255,16 @@ const _SVG_ROUTE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 const _SVG_TRACKS='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="7" cy="6" r="1.4"/><circle cx="12" cy="6" r="1.4"/><circle cx="17" cy="6" r="1.4"/><circle cx="7" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="17" cy="12" r="1.4"/><circle cx="7" cy="18" r="1.4"/><circle cx="12" cy="18" r="1.4"/><circle cx="17" cy="18" r="1.4"/></svg>';
 const _SVG_ERASER='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 20H21M15.5 5.5l3 3L9 18H6l-2.5-2.5a1.5 1.5 0 0 1 0-2.1L13 3.9a1.5 1.5 0 0 1 2.1 0z"/></svg>';
 const _CRUST_LABELS=['super leicht','mühsam','tragend'];
+// Deep days happen: every snow-depth input runs to 150 cm, and the top step is
+// an open-ended "150+" bucket rather than a hard ceiling.
+const SNOW_CM_MAX=150;
+function snowCmLabel(v){return (+v>=SNOW_CM_MAX?SNOW_CM_MAX+'+':(''+v));}
 // Route colours: uphill is the darker orange, downhill the bright one.
 const ROUTE_UP_COL='#b45309',ROUTE_DOWN_COL='#fb923c';
 const TRACK_LABELS=['< 3 Personen','< 10 Personen','> 20 Personen'];
 const DRAW_PENS={
- powder:{id:'powder',label:'Powder',color:'#4aa3ff',kind:'zone',slfDepth:true,slider:{label:'Tiefe',min:5,max:80,step:5,unit:' cm',val:30}},
- drift:{id:'drift',label:'Triebschnee',color:'#e8590c',kind:'zone',slider:{label:'Mächtigkeit',min:5,max:60,step:5,unit:' cm',val:20}},
+ powder:{id:'powder',label:'Powder',color:'#4aa3ff',kind:'zone',slfDepth:true,slider:{label:'Tiefe',min:5,max:SNOW_CM_MAX,step:5,unit:' cm',val:30}},
+ drift:{id:'drift',label:'Triebschnee',color:'#e8590c',kind:'zone',slider:{label:'Mächtigkeit',min:5,max:SNOW_CM_MAX,step:5,unit:' cm',val:20}},
  compact:{id:'compact',label:'Kompakt',color:'#8aa0c8',kind:'zone'},
  wet:{id:'wet',label:'Nassschnee',color:'#f59e0b',kind:'zone',slider:{label:'Nässe',min:1,max:5,step:1,unit:'/5',val:3}},
  suncrust:{id:'suncrust',label:'Sonnendeckel',color:'#f4d03f',kind:'zone',slider:{label:'Deckel',min:1,max:3,step:1,val:2,labels:_CRUST_LABELS}},
@@ -5388,7 +5477,13 @@ function drawCommitSeg(a,b){
   if(isEr){octx.globalCompositeOperation='destination-out';octx.lineCap='round';octx.setLineDash([]);
     octx.strokeStyle='rgba(0,0,0,1)';octx.lineWidth=drawBrushSize*scale;
   }else{octx.globalCompositeOperation='destination-over'; // no overpainting: new paint stays under existing
-    const col=drawPen.slfDepth?('rgb('+((snowCol(drawPen.slider.val)||[74,163,255]).join(','))+')'):drawPen.color;
+    // Powder is the one type that paints as a solid colour (the SLF depth
+    // scale); every other snow type paints as its texture, so the drawing is
+    // readable without colour.
+    let col;
+    if(drawPen.slfDepth)col='rgb('+((snowCol(drawPen.slider.val)||[74,163,255]).join(','))+')';
+    else if(SNOW_PATTERNS[drawPen.id])col=drawPenPattern(octx,drawPen.id);
+    else col=drawPen.color;
     octx.strokeStyle=col;octx.lineWidth=drawBrushSize*scale;
     if(drawPen.dash){octx.lineCap='butt';octx.setLineDash(drawPen.dash.map(d=>d*scale));octx.lineDashOffset=-_drawDashAcc;}
     else{octx.lineCap='round';octx.setLineDash([]);octx.lineDashOffset=0;}
@@ -5397,6 +5492,14 @@ function drawCommitSeg(a,b){
   if(!isEr&&drawPen.dash)_drawDashAcc+=Math.hypot(b[0]-a[0],b[1]-a[1]);
   octx.globalCompositeOperation='source-over';octx.setLineDash([]);octx.lineDashOffset=0;
   if(!isEr)drawZoneUsed.add(drawPen.id);
+}
+// Canvas patterns are per-context, so they are cached per context+type.
+const _drawPatCache=new WeakMap();
+function drawPenPattern(ctx,type){
+  let m=_drawPatCache.get(ctx);if(!m){m={};_drawPatCache.set(ctx,m);}
+  if(!m[type]){const tile=snowPatternTile(type,'#1d2430','rgba(246,248,251,.88)');
+    m[type]=ctx.createPattern(tile,'repeat');}
+  return m[type];
 }
 function drawRepaint(expAlpha){
   const ctx=drawCtx;if(!ctx)return;const cv=document.getElementById('drawCanvas');
@@ -5499,11 +5602,13 @@ function drawSelectCat(id){
 function drawRenderPens(cat){
   const el=document.getElementById('drawPens');
   el.innerHTML=cat.pens.map(pid=>{const p=DRAW_PENS[pid];
-    const dashBg=p.dash?';background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.9) 0 2px,transparent 2px 5px)':'';
-    let bg=p.color,extra='';
-    if(p.kind==='eraser'){extra=';border-style:dashed;border-color:#9aa4b2';}
-    if(p.kind==='route'){extra=';border-color:'+p.color;}
-    return '<button class="dt-sw" data-pen="'+p.id+'"><i style="background:'+bg+dashBg+extra+'"></i><span>'+p.label+'</span></button>';
+    let style='',extra='';
+    if(SNOW_PATTERNS[p.id]){                       // pattern types: show the texture
+      style='background-color:#f2f5f9;background-image:url('+snowPatternURL(p.id)+');background-size:14px 14px';
+    }else{style='background:'+p.color;}            // powder (and non-snow pens)
+    if(p.kind==='eraser')extra=';border-style:dashed;border-color:#9aa4b2';
+    if(p.kind==='route')extra=';border-color:'+p.color;
+    return '<button class="dt-sw" data-pen="'+p.id+'"><i style="'+style+extra+'"></i><span>'+p.label+'</span></button>';
   }).join('');
   el.querySelectorAll('.dt-sw').forEach(b=>b.addEventListener('click',()=>drawSelectPen(b.dataset.pen)));
 }
@@ -5547,12 +5652,13 @@ function drawSyncDepthV(){
   if(!sl)return;
   const inp=dv.querySelector('input');
   inp.min=sl.min;inp.max=sl.max;inp.step=sl.step;inp.value=sl.val;
-  dv.querySelector('#drawDepthVVal').textContent=sl.val;
+  dv.querySelector('#drawDepthVVal').textContent=snowCmLabel(sl.val);
   const c=snowCol(sl.val);
   dv.style.borderColor=c?('rgb('+c.join(',')+')'):'';
   dv.style.background=c?('rgba('+c.join(',')+',.20)'):'';
 }
-function drawSliderTxt(sl){return sl.labels?sl.labels[sl.val-1]:(sl.val+(sl.unit||''));}
+function drawSliderTxt(sl){if(sl.labels)return sl.labels[sl.val-1];
+  return (sl.unit===' cm'?snowCmLabel(sl.val):sl.val)+(sl.unit||'');}
 function drawShowSlider(){
   const box=document.getElementById('drawSlider'),sl=drawPen.slider;
   // cm depths live in the vertical snow box on the right; only the other
@@ -5717,7 +5823,7 @@ function obsSnowFields(kind){
 function obsSeg(field,label,opts){const v=obsState.snow[field];
   return '<div class="obs-fld"><div class="obs-fld-l">'+label+'</div><div class="obs-chips">'+opts.map(o=>`<button class="${v===o[0]?'active':''}" onclick="obsSnowSet('${field}','${o[0]}')">${o[1]}</button>`).join('')+'</div></div>';}
 function obsDepthSlider(field,label){const v=obsState.snow[field]||0;
-  return '<div class="obs-fld"><div class="obs-fld-l">'+label+' <b class="snow-val" id="sv_'+field+'">'+v+' cm</b></div><input type="range" class="obs-range" min="0" max="120" step="5" value="'+v+'" oninput="obsState.snow.'+field+'=+this.value;var l=document.getElementById(\'sv_'+field+'\');if(l)l.textContent=this.value+\' cm\'"></div>';}
+  return '<div class="obs-fld"><div class="obs-fld-l">'+label+' <b class="snow-val" id="sv_'+field+'">'+snowCmLabel(v)+' cm</b></div><input type="range" class="obs-range" min="0" max="'+SNOW_CM_MAX+'" step="5" value="'+v+'" oninput="obsState.snow.'+field+'=+this.value;var l=document.getElementById(\'sv_'+field+'\');if(l)l.textContent=snowCmLabel(this.value)+\' cm\'"></div>';}
 function obsAltSlider(field,label){const v=obsState.snow[field]||2000;
   return '<div class="obs-fld"><div class="obs-fld-l">'+label+' <b class="snow-val" id="sv_'+field+'">'+v+' m</b></div><input type="range" class="obs-range" min="500" max="4000" step="50" value="'+v+'" oninput="obsState.snow.'+field+'=+this.value;var l=document.getElementById(\'sv_'+field+'\');if(l)l.textContent=this.value+\' m\'"></div>';}
 function obsAltRange(label){const lo=obsState.snow.altLow,hi=obsState.snow.altHigh;
@@ -5810,7 +5916,7 @@ function obsSetDateTime(v){if(v){obsState.observedAt=new Date(v);obsRender();}}
 function obsInitMap(){const el=document.getElementById('obsMap');if(!el)return;if(obsMap){try{obsMap.remove();}catch(e){}obsMap=null;}
   const L0=obsState.location;const lat=L0.lat!=null?L0.lat:map.getCenter().lat,lon=L0.lon!=null?L0.lon:map.getCenter().lng;
   obsMap=L.map(el,{zoomControl:false,attributionControl:false}).setView([lat,lon],14);
-  L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg').addTo(obsMap);
+  swissBaseLayer().addTo(obsMap);
   // Fixed pin in the middle — the user pans the MAP underneath it until the
   // pin sits on the right spot (no marker dragging).
   if(!el.parentElement.querySelector('.obs-pin')){
@@ -6018,7 +6124,7 @@ function qrInitMap(){
   if(!qrMapObj){
     const c=qrLL||[map.getCenter().lat,map.getCenter().lng];
     qrMapObj=L.map('qrMap',{zoomControl:false,attributionControl:false}).setView(c,13);
-    L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg').addTo(qrMapObj);
+    swissBaseLayer().addTo(qrMapObj);
     const wrap=document.getElementById('qrMap').parentElement;
     if(!wrap.querySelector('.obs-pin'))wrap.insertAdjacentHTML('beforeend','<div class="obs-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="rgba(224,36,94,.14)"/><circle cx="12" cy="10" r="3"/></svg></div>');
     miniMapTools(qrMapObj,wrap);
@@ -6039,9 +6145,9 @@ function qrPadAttach(){const pad=document.getElementById('qrPad');if(!pad||pad._
     const fx=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
     const fy=Math.max(0,Math.min(1,(e.clientY-r.top)/r.height));
     qrQuality=Math.round(fx*100);              // X: Qualität (links kompakt → rechts fluffy)
-    qrAmount=Math.round((1-fy)*60/5)*5;        // Y: Menge in 5-cm-Schritten (0–60)
+    qrAmount=Math.round((1-fy)*SNOW_CM_MAX/5)*5;   // Y: Menge in 5-cm-Schritten (0–150)
     const dot=document.getElementById('qrPadDot');
-    dot.style.display='block';dot.style.left=(fx*100)+'%';dot.style.top=(100-qrAmount/60*100)+'%';
+    dot.style.display='block';dot.style.left=(fx*100)+'%';dot.style.top=(100-qrAmount/SNOW_CM_MAX*100)+'%';
     dot.classList.toggle('below',qrAmount>50);
     const cmEl=document.getElementById('qrDotCm');if(cmEl)cmEl.textContent=qrAmount+' cm';
     document.getElementById('qrRead').textContent=qrQuadLabel()+' · '+qrAmount+' cm';
