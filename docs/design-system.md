@@ -1,0 +1,340 @@
+# Alpin Grid — Snow Mapper design system
+
+The visual and interaction language for Snow Mapper. It replaces the previous
+"alpine glass" style (translucent floating cards, blur, soft shadows, decorative
+purple) with a flat, grid-driven, instrument-like system.
+
+The reference implementation is the `<style>` block and markup inside
+`pipeline/interactive_export.py`. Tokens are CSS custom properties on `:root`;
+**every screen must be built from them.** If you find yourself typing a hex
+value outside `:root`, that is the bug.
+
+---
+
+## 1. Why it looks like this
+
+Snow Mapper is read outdoors, on a phone, in glare, often with gloves on, by
+someone deciding where to ski. That pushes every decision:
+
+- **Glare** kills low-contrast translucency. Surfaces are opaque.
+- **Gloves** need 44 px targets and no precision gestures.
+- **Deciding** means the map is the product. Chrome must never compete with it.
+- **The map is already colourful.** So the interface must not be.
+
+The result reads like a Swiss instrument panel: neutral, structured by thin
+rules and a strict grid, with colour spent only where it carries information.
+
+---
+
+## 2. The six principles
+
+### P1 — One screen, no stacking
+The map is the application. Everything else **docks to an edge** of it. Nothing
+opens on top of something else that is already on top. A user is never more than
+one dismiss away from the map.
+
+Practically: no nested menus, no modal over modal, no flyout that hides the
+thing it belongs to. Panels are docked or they are dismissed.
+
+### P2 — Colour is data. Chrome is neutral.
+See §4. This is the load-bearing rule of the whole system.
+
+### P3 — Structure by rules, not by shadows
+Hierarchy comes from **hairlines, spacing and type weight**. Not from blur, not
+from layered drop shadows, not from tinted glass. Exactly one elevation token
+exists, and it is only for surfaces that are temporary.
+
+### P4 — One tap to anything you look at often
+Depth costs taps and taps cost gloves. Any map layer is **one tap**. Secondary
+variants of a layer (Wind → Max, Temperatur → Oberfläche) cost a second tap, and
+only if you want them. Nothing routine costs three.
+
+### P5 — Type carries hierarchy
+Size and weight separate levels. Colour does not. A "more important" label is
+bigger or heavier, never blue.
+
+### P6 — Show the state, don't imply it
+The selected thing is **filled**, not tinted. At a glance, in sun, there is
+exactly one filled element per group of choices.
+
+---
+
+## 3. Layout
+
+### The one-screen model
+
+```
+┌─────────────────────────────────────┐
+│  search                     ▏rail▕  │   top: search only.  right: icon rail
+│                                     │
+│                                     │
+│              M A P                  │   the map is never boxed in
+│                                     │
+│                                 (+) │   primary actions, thumb-reachable
+│                                 (✎) │
+├─────────────────────────────────────┤
+│  LAYERS   ▸ all layers, one tap     │   the console: one surface,
+│  ─────────────────────────────────  │   sectioned by hairlines
+│  TIME     ▸ presets · scrubber      │
+└─────────────────────────────────────┘
+```
+
+The **console** at the bottom is a single surface holding every recurring
+control. It is sectioned by hairlines, never by separate floating cards. This is
+what "many features on one screen" means here: the features are *unfolded onto
+one surface*, not distributed across menus.
+
+### Grid and spacing
+
+An 8 px baseline. Use the scale; do not invent values.
+
+| token | value | use |
+|---|---|---|
+| `--sp1` | 4px | icon-to-label |
+| `--sp2` | 8px | inside a control |
+| `--sp3` | 12px | between controls |
+| `--sp4` | 16px | surface padding |
+| `--sp5` | 24px | between sections |
+| `--sp6` | 32px | page rhythm |
+
+Gutters are `--sp4`. Sections inside a surface are separated by `--sp4` of space
+**or** a hairline, never both.
+
+### Radius
+
+Two steps and a pill. More than that reads as noise.
+
+| token | value | use |
+|---|---|---|
+| `--r-1` | 8px | controls: buttons, chips, inputs, swatches |
+| `--r-2` | 14px | surfaces: console, sheets, cards |
+| `--r-full` | 999px | only genuinely pill-shaped things (badges, avatars) |
+
+### Elevation
+
+| token | use |
+|---|---|
+| `--lift` | the *only* shadow. Temporary surfaces: sheets, toasts, popovers. |
+
+Docked surfaces get a **hairline**, not a shadow. Nothing has more than one
+shadow. Nothing has an inset highlight.
+
+### Touch targets
+
+| element | min height |
+|---|---|
+| primary control (layer chip, button) | **44px** |
+| secondary control (variant tab, icon button) | 36px |
+| never below | 32px |
+
+Media queries may **not** shrink targets on small screens. Phones are the
+primary device; if a control does not fit, wrap the row or shorten the label.
+
+---
+
+## 4. The colour law
+
+> **Colour is data. Chrome is neutral. One accent at a time.**
+
+Three families, and they never mix.
+
+### 4.1 Ink — all chrome, always
+
+Every bar, panel, button, border and label is drawn from this ramp and nothing
+else.
+
+| token | value | use |
+|---|---|---|
+| `--ink-900` | `#0E1116` | primary text, filled buttons |
+| `--ink-700` | `#333A45` | secondary text |
+| `--ink-500` | `#6B7480` | muted text, inactive icons |
+| `--ink-300` | `#AAB2BD` | disabled, placeholder |
+| `--ink-150` | `#D6DBE2` | strong borders |
+| `--ink-100` | `#E7EAEF` | hairlines |
+| `--ink-050` | `#F4F6F9` | recessed fills, tracks |
+| `--paper`   | `#FFFFFF` | surfaces |
+
+A chrome element that needs emphasis gets **darker ink or heavier type** — not
+a colour.
+
+### 4.2 Accent — exactly one, contextual
+
+One accent is live at a time. It is set by the region of the app you are in, and
+it means **"this is the thing you selected"**.
+
+| context | token value | meaning |
+|---|---|---|
+| Meteo model (A) selected | `--accent-meteo` `#0B6BCB` | forecast-model layers |
+| Report model (B) selected | `--accent-report` `#6D3BD1` | community-report layers |
+
+The accent is **global, not per screen**: whichever map layer is selected sets
+`--accent` on `:root`, and every surface in the app — feed, sheets, profile,
+draw mode — picks it up from there. One accent is live in the entire product at
+any moment, which is what makes the sub-applications feel like one app.
+
+Rules:
+
+1. The accent is exposed as `--accent` and `--accent-soft` (its 12 % tint).
+   Components reference those, never a literal hue.
+2. **At most one accented element per group of choices.** If two things are
+   accented, one of them is wrong.
+3. The accent is never used for decoration — no accented headings, dividers,
+   icons-for-fun, or gradients.
+4. Chrome that is not "the selected thing" stays ink, even on an accented
+   screen. Avatars, category badges and icons are ink; the danger categories
+   are the one exception, because there the colour is the meaning.
+
+### 4.3 Semantic — fixed meanings, never decorative
+
+| token | value | meaning |
+|---|---|---|
+| `--danger` | `#C62828` | destructive action, avalanche/danger reports |
+| `--warn` | `#E08A00` | caution, degraded confidence |
+| `--ok` | `#1B7F4F` | confirmed, success |
+
+If it is not that meaning, it does not get that colour.
+
+### 4.4 Data palettes — the map only
+
+These live on the map and in legends. They must **never** appear in chrome.
+
+| palette | use |
+|---|---|
+| SLF new-snow scale | snow depth, everywhere depth is shown |
+| Confidence ramp (`PROG_CONF_STOPS`) | 0–100 % model confidence |
+| Snow-type textures (`SNOW_PATTERNS`) | every snow type **except** powder |
+
+And the reciprocal rule: **Powder is the only snow type with a solid colour.**
+Every other type is told apart by texture, so the map stays readable for
+colour-blind users and in flat light. Depth owns colour; type owns pattern.
+
+### 4.5 Quick test
+
+Screenshot any screen and desaturate it. If you can still tell what is selected,
+what is a button and what is a warning — it passes. If the screen collapses into
+grey mush, hierarchy was being carried by colour and needs fixing.
+
+---
+
+## 5. Type
+
+One family (system UI stack). Hierarchy by size and weight only.
+
+| role | size / weight | notes |
+|---|---|---|
+| Display | 22 / 800 | screen titles, one per screen |
+| Title | 17 / 800 | sheet headers |
+| Body-strong | 15 / 700 | button labels, list titles |
+| Body | 14 / 500 | prose |
+| Meta | 12.5 / 600 | timestamps, captions |
+| Micro-label | 10 / 800, `letter-spacing:.08em`, UPPERCASE, `--ink-500` | section labels in the console, form field labels |
+
+Numbers that a user compares (cm, %, °C, km/h) use
+`font-variant-numeric: tabular-nums`.
+
+`letter-spacing: -.01em` on 14 px and above; never on the micro-label.
+
+---
+
+## 6. Components
+
+Recipes, not suggestions.
+
+### Surface
+```
+background: var(--paper);
+border: 1px solid var(--ink-100);
+border-radius: var(--r-2);
+```
+Temporary surfaces add `box-shadow: var(--lift)`. Docked surfaces do not.
+
+### Section label
+Micro-label, `--sp2` below it, hairline above it when it follows another
+section.
+
+### Chip / selectable (layer chips, filters, segmented options)
+```
+min-height: 44px; padding: 0 15px; border-radius: var(--r-1);
+background: var(--paper); border: 1px solid var(--ink-100); color: var(--ink-700);
+```
+Selected:
+```
+background: var(--accent); border-color: var(--accent); color: var(--paper);
+```
+Filled, not tinted (P6). No shadow on the selected state.
+
+### Button
+- **Primary** — `--ink-900` fill, `--paper` text. One per screen.
+- **Secondary** — `--paper` fill, `--ink-100` border, `--ink-900` text.
+- **Quiet** — no fill, no border, `--ink-700` text.
+- **Destructive** — `--danger` text; fills only on the final confirm step.
+
+All: `min-height 44px`, `--r-1`, `:active { transform: scale(.97) }`.
+
+### Input
+```
+background: var(--ink-050); border: 1px solid var(--ink-100);
+border-radius: var(--r-1); min-height: 44px;
+```
+Focus: `border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft)`.
+
+### Sheet
+Docks to the bottom edge, `--r-2` on the top corners only, grab handle
+(`36×4`, `--ink-150`), `--sp4` padding, `--lift`. Backdrop is
+`rgba(14,17,22,.32)` — a scrim, not a blur.
+
+### Icon
+1.75 px stroke, `currentColor`, 20 px in controls and 18 px inline. Custom SVG
+only — **no emoji anywhere in the UI**.
+
+---
+
+## 7. Motion
+
+| token | value | use |
+|---|---|---|
+| `--dur-1` | 120ms | state changes (selection, hover, press) |
+| `--dur-2` | 220ms | surfaces entering and leaving |
+| `--ease` | `cubic-bezier(.2,0,0,1)` | everything |
+
+One easing curve. No springs, no bounce — this is an instrument. Everything is
+wrapped by `prefers-reduced-motion`.
+
+---
+
+## 8. Per-screen application
+
+| screen | how the language applies |
+|---|---|
+| **Map** | Full bleed. Abstract at country view, detail fading in with zoom. Chrome docks to edges only. |
+| **Console** | One surface. `LAYERS` section, hairline, `TIME` section. All layers one tap. |
+| **Feed** | White cards on `--ink-050`, hairline separated, photo full-bleed inside the card. Action row is quiet buttons; only counts are dark. |
+| **Sheets** (comments, profile, condition, location) | Identical sheet recipe, inheriting whatever accent is currently live. |
+| **Report / draw** | The drawing canvas is the surface; controls dock left (brush) and right (depth) and along the bottom. Pen swatches show the actual texture. |
+| **Inspect panel** | Docked card, tabular numbers, charts in ink with the data palettes only for the values themselves. |
+| **Auth / intro / disclaimer** | Centred single-column, one primary button, no decoration. |
+
+---
+
+## 9. Accessibility
+
+- Contrast: body text ≥ 4.5:1, large/heavy text ≥ 3:1 against its surface. The
+  ink ramp is built so `--ink-500` on `--paper` passes.
+- Never signal by colour alone — the snow-type textures exist for exactly this
+  reason, and selected states are filled rather than tinted.
+- `prefers-reduced-motion`, `prefers-contrast: more` and
+  `prefers-reduced-transparency` are all honoured.
+- Every icon-only control has an `aria-label`.
+- Focus is always visible: `box-shadow: 0 0 0 3px var(--accent-soft)`.
+
+---
+
+## 10. Adding something new
+
+1. Can it live on a surface that already exists? Put it there. (P1)
+2. Which of the three colour families does it belong to? If chrome — it is ink
+   plus, at most, the accent. (P2)
+3. Is it a recurring choice? Then it is one tap. (P4)
+4. Does it need a shadow? Only if it is temporary. (P3)
+5. Are the targets 44 px? (§3)
+6. Desaturate it. Does it still work? (§4.5)
