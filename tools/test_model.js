@@ -99,6 +99,24 @@ console.log(`  trust score of "anna" = ${Mw.progTrustOf('anna')}, "neu" = ${Mw.p
 console.log(`  conf: plain report ${plain.conf}%  ->  trusted report ${trusted.conf}%`);
 console.log(`  vs a conflicting report: plain like ${powderPlain.like.toFixed(3)} -> trusted ${powderTrusted.like.toFixed(3)}`);
 
+// --- The reported case: a slope that matches the report exactly, 2 km away ---
+// "powder drawn N-facing 2000-2400 m; a north slope at 2000-2400 m two km off
+// should read almost 100%". It used to read 79%, because a PERFECT aspect match
+// was being discounted by the report's concentration.
+const NEAR = { type:'powder', lat:LAT, lng:LNG, e0:2000, e1:2400, asp:0, conc:0.82, ageH:2 };
+const twoKm = M.progCell(0, 2200, 32, LAT + 2/111, LNG, [NEAR], []);
+const exactAsp = M.progAspectMatch(0, 0, 0.82);
+console.log('');
+console.log(`  exact aspect match (conc .82) = ${exactAsp.toFixed(3)}  (was 0.835)`);
+console.log(`  matching N slope 2 km away    = ${(twoKm.like*100).toFixed(0)}% likely, ${twoKm.conf}% confident`);
+
+checks.push(
+  ['a perfect aspect match scores 1.0',        Math.abs(exactAsp - 1) < 1e-9],
+  ['concentration widens tolerance, not peak', M.progAspectMatch(0,0,0.2) === M.progAspectMatch(0,0,0.95)],
+  ['diffuse report tolerates more off-angle',  M.progAspectMatch(50,0,0.2) > M.progAspectMatch(50,0,0.95)],
+  ['exact match 2 km away is near-certain',    twoKm.like >= 0.90 && twoKm.conf >= 90],
+);
+
 checks.push(
   ['unweighted report is exactly neutral (1.0)', wNoOne === 1],
   ['trust score sums confirmations per author',  Mw.progTrustOf('anna') === 12 && Mw.progTrustOf('neu') === 0],
