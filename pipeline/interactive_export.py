@@ -834,12 +834,15 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     Nothing outside this block may declare a raw colour for chrome.
     =================================================================== */
  :root{
-   /* --- ink: every bar, panel, border and label comes from here --- */
-   --ink-900:#0E1116;--ink-700:#333A45;--ink-500:#6B7480;--ink-300:#AAB2BD;
-   --ink-150:#D6DBE2;--ink-100:#E7EAEF;--ink-050:#F4F6F9;--paper:#FFFFFF;
+   /* --- ink: every bar, panel, border and label comes from here.
+          The ramp is BLUE-TINTED, not neutral grey: the whole product reads as
+          one cold, alpine family (see docs/design-system.md §4.1). --- */
+   --ink-900:#0B1520;--ink-700:#283A4D;--ink-500:#5C728A;--ink-300:#9BAEC4;
+   --ink-150:#C8D6E4;--ink-100:#DCE7F1;--ink-050:#EFF5FA;--paper:#FFFFFF;
    /* --- accent: exactly one live at a time, set per region --- */
    --accent:#0B6BCB;--accent-soft:rgba(11,107,203,.12);
-   --accent-meteo:#0B6BCB;--accent-report:#6D3BD1;
+   --accent-meteo:#0B6BCB;--accent-meteo-soft:rgba(11,107,203,.12);
+   --accent-report:#1D8FB0;--accent-report-soft:rgba(29,143,176,.14);
    /* --- semantic: fixed meanings, never decorative --- */
    --ok:#1B7F4F;--warn:#E08A00;--danger:#C62828;--danger-tint:rgba(198,40,40,.10);
    /* --- scales --- */
@@ -863,6 +866,31 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    --blur:none;--dur:var(--dur-2);--ease-spring:var(--ease);
    --panel-h:52px;
    --topic-accent:var(--accent);--topic-tint:var(--accent-soft)}
+ /* --- Dark theme -----------------------------------------------------------
+    Only the ramp flips; not one component rule changes, because every surface
+    is built from these tokens. Follows the system setting, and the profile
+    switch can force it with data-theme on <html>. */
+ @media (prefers-color-scheme:dark){
+   :root:not([data-theme="light"]){
+     --ink-900:#EAF2FA;--ink-700:#BACBDD;--ink-500:#8399B1;--ink-300:#5A6E86;
+     --ink-150:#33455A;--ink-100:#25364A;--ink-050:#162535;--paper:#0E1A26;
+     --accent:#4FA8F5;--accent-soft:rgba(79,168,245,.18);
+     --accent-meteo:#4FA8F5;--accent-report:#4FD3E8;
+     --accent-meteo-soft:rgba(79,168,245,.18);--accent-report-soft:rgba(79,211,232,.20);
+     --ok:#3DBE84;--warn:#F0A93B;--danger:#F0645C;--danger-tint:rgba(240,100,92,.16);
+     --lift:0 10px 30px rgba(0,0,0,.55)}
+ }
+ :root[data-theme="dark"]{
+   --ink-900:#EAF2FA;--ink-700:#BACBDD;--ink-500:#8399B1;--ink-300:#5A6E86;
+   --ink-150:#33455A;--ink-100:#25364A;--ink-050:#162535;--paper:#0E1A26;
+   --accent:#4FA8F5;--accent-soft:rgba(79,168,245,.18);
+   --accent-meteo:#4FA8F5;--accent-report:#4FD3E8;
+   --accent-meteo-soft:rgba(79,168,245,.18);--accent-report-soft:rgba(79,211,232,.20);
+   --ok:#3DBE84;--warn:#F0A93B;--danger:#F0645C;--danger-tint:rgba(240,100,92,.16);
+   --lift:0 10px 30px rgba(0,0,0,.55)}
+ /* the map itself keeps its own light cartography; only the chrome flips */
+ :root[data-theme="dark"] #map,:root[data-theme="dark"] .leaflet-container{background:#0E1A26}
+ @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #map{background:#0E1A26}}
  /* P5: numbers a user compares are tabular so columns line up */
  .num,.snow-val,#tlLenVal,#progConfVal,#drawDepthVVal,#drawBrushVVal,.insp-chip,.tl-range{font-variant-numeric:tabular-nums}
  /* Micro-label (section labels, field labels) */
@@ -875,7 +903,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* Solid surfaces for users who reduce transparency (a11y) */
  /* --- Toast notifications (errors are no longer silent) --- */
  #toastWrap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:9500;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:max-content;max-width:calc(100vw - 32px)}
- .toast{pointer-events:auto;display:flex;align-items:center;gap:9px;padding:11px 16px;border-radius:var(--r);font-size:13.5px;font-weight:600;color:var(--fg);background:var(--glass2);border:1px solid var(--ink-100);box-shadow:var(--elev2);max-width:100%;animation:toastIn .3s var(--ease-spring)}
+ .toast{border:1px solid var(--ink-100);pointer-events:auto;display:flex;align-items:center;gap:9px;padding:11px 16px;border-radius:var(--r);font-size:13.5px;font-weight:600;color:var(--fg);background:var(--glass2);border:1px solid var(--ink-100);box-shadow:var(--elev2);max-width:100%;animation:toastIn .3s var(--ease-spring)}
  .toast.out{animation:toastOut .25s var(--ease) forwards}
  .toast .ic{width:18px;height:18px;flex-shrink:0}
  .toast.err{color:#7a1a12}.toast.err .ic{color:var(--danger)}
@@ -900,14 +928,47 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* Resort markers: a dot that fades in with zoom, and a label that follows a
     little later so the country view stays uncluttered. */
  .resort-pin{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:4px;white-space:nowrap;opacity:var(--resort-op);transition:opacity .25s linear}
- .resort-pin i{width:5px;height:5px;border-radius:50%;background:#5b6b80;box-shadow:0 0 0 1.5px var(--paper);flex-shrink:0}
- .resort-pin span{font-size:9.5px;font-weight:800;color:#4a5a6e;letter-spacing:-.01em;opacity:var(--resort-lbl);text-shadow:0 0 3px #fff,0 0 6px #fff,0 1px 0 #fff}
+ .resort-pin i{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--paper);flex-shrink:0}
+ #map.no-resort-labels .resort-pin span{display:none}
+ .resort-pin span{font-size:10.5px;font-weight:800;color:var(--ink-700);letter-spacing:-.01em;opacity:var(--resort-lbl);text-shadow:0 0 3px #fff,0 0 6px #fff,0 1px 0 #fff}
  .leaflet-control-scale{margin-right:92px!important;margin-bottom:10px!important}
  #flow{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);z-index:450;pointer-events:none}
  #modeGlow{display:none}
  .rail-btn svg,#legendBtn svg{color:currentColor}
  /* ============ Alpin Grid component recipes (docs/design-system.md §6) ====
     Shared classes so every screen is built from the same parts. */
+ /* --- swisstopo-style sheet parts (see the reference screenshots) ---------
+    An uppercase accent section label, a scrolling row of outlined pill tabs,
+    and picture cards for choices. */
+ .as-seclabel{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+   color:var(--accent);text-align:center;margin:var(--sp5) 0 var(--sp3)}
+ .as-tabs{display:flex;gap:var(--sp2);overflow-x:auto;scrollbar-width:none;padding:2px var(--sp4);
+   -webkit-overflow-scrolling:touch}
+ .as-tabs::-webkit-scrollbar{display:none}
+ .as-tab{flex:0 0 auto;min-height:var(--tap);padding:0 20px;border-radius:var(--r-full);
+   border:2px solid transparent;background:transparent;color:var(--ink-500);
+   font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center}
+ .as-tab.on{border-color:var(--accent);color:var(--accent)}
+ .as-tab:active{transform:scale(.97)}
+ .as-cards{display:flex;gap:var(--sp3);overflow-x:auto;scrollbar-width:none;padding:2px var(--sp4) var(--sp2)}
+ .as-cards::-webkit-scrollbar{display:none}
+ .as-card{flex:0 0 auto;width:112px;background:none;border:none;padding:0;cursor:pointer;font-family:inherit}
+ .as-card .as-card-img{width:112px;height:74px;border-radius:var(--r-1);overflow:hidden;
+   border:2px solid var(--ink-100);background:var(--ink-050);display:block}
+ .as-card.on .as-card-img{border-color:var(--accent)}
+ .as-card .as-card-lbl{display:block;margin-top:6px;font-size:13px;font-weight:700;
+   color:var(--ink-500);line-height:1.25;text-align:center}
+ .as-card.on .as-card-lbl{color:var(--accent)}
+ /* list row with a round check and an info affordance */
+ .as-row{display:flex;align-items:center;gap:var(--sp3);min-height:56px;padding:0 var(--sp4);
+   border-bottom:1px solid var(--ink-100);background:none;width:100%;font-family:inherit;
+   font-size:16px;font-weight:600;color:var(--ink-900);cursor:pointer;text-align:left}
+ .as-row .as-check{width:26px;height:26px;border-radius:50%;flex-shrink:0;border:2px solid var(--ink-150);
+   display:flex;align-items:center;justify-content:center;color:transparent}
+ .as-row.on .as-check{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+ .as-row .as-check svg{width:15px;height:15px}
+ .as-row .as-info{margin-left:auto;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--accent);
+   color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}
  .as-surface{background:var(--paper);border:1px solid var(--ink-100);border-radius:var(--r-2)}
  .as-sheet{background:var(--paper);border-radius:var(--r-2) var(--r-2) 0 0;box-shadow:var(--lift)}
  .as-grab{width:36px;height:4px;border-radius:2px;background:var(--ink-150);margin:10px auto}
@@ -931,7 +992,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.draw-on #layerBar{display:none}
  #layerStrip{display:flex;flex-direction:column;gap:var(--sp2)}
  .ls-row{display:flex;flex-direction:column;gap:6px}
- .ls-tag{display:block}
+ .ls-tag{display:block;color:var(--accent);letter-spacing:.10em}
  .ls-chips{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;
    -webkit-overflow-scrolling:touch;padding:1px 1px 2px;
    -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent);
@@ -969,9 +1030,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #progBar input[type=range]{flex:1;accent-color:var(--accent);min-width:0;height:30px}
  #progConfVal{font-size:12.5px;font-weight:800;color:var(--ink-900);min-width:38px;text-align:right}
  #bottomPanel{position:absolute;z-index:1000;bottom:0;left:0;right:0;
-   background:rgba(255,255,255,.8);border-top:1px solid rgba(255,255,255,.5);box-shadow:0 -1px 0 var(--bd),0 -4px 20px var(--ink-100);transition:none;padding-bottom:max(env(safe-area-inset-bottom, 0px) - 18px, 4px);overflow:hidden}
+   background:var(--paper);border-top:1px solid var(--ink-100);box-shadow:none;transition:none;padding-bottom:max(env(safe-area-inset-bottom, 0px) - 18px, 4px);overflow:hidden}
  #btmMain{padding:6px 14px 2px}
- #timeline{display:block;border:1px solid var(--bd);background:rgba(237,242,248,.5);border-radius:var(--r)}
+ #timeline{display:block;border:1px solid var(--ink-100);background:var(--ink-050);border-radius:var(--r-1)}
  #presets::-webkit-scrollbar{display:none}
  #presets.can-scroll{-webkit-mask-image:linear-gradient(90deg,#000 86%,transparent);mask-image:linear-gradient(90deg,#000 86%,transparent)}
  .winlbl{font-size:13px;font-weight:700;color:var(--fg);letter-spacing:-.01em}
@@ -1015,7 +1076,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .asp-crisp img{image-rendering:pixelated;image-rendering:crisp-edges}
  .legend{position:absolute;z-index:950;bottom:calc(var(--btm-h,80px) + 40px);left:12px;background:var(--paper);border:1px solid rgba(255,255,255,.5);padding:10px 12px;border-radius:var(--r);box-shadow:0 2px 12px var(--ink-100);font-size:12px;max-width:220px;line-height:1.5;color:var(--fg2);display:none}
  .legend.show{display:block}
- #legendBtn{position:absolute;z-index:960;bottom:var(--btm-h,80px);left:12px;width:40px;height:40px;border-radius:14px;border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.72);color:var(--fg2);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.09);transition:all .18s cubic-bezier(.34,1.56,.64,1)}
+ #legendBtn{position:absolute;z-index:960;bottom:var(--btm-h,80px);left:12px;width:40px;height:40px;border-radius:var(--r-1);border:1px solid var(--ink-100);background:var(--paper);color:var(--ink-700);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--lift);transition:background var(--dur-1) var(--ease)}
  #legendBtn svg{width:20px;height:20px}
  #legendBtn:active{transform:scale(.92)}
  #legendBtn:hover,#legendBtn.active{color:var(--acc);background:var(--paper)}
@@ -1112,9 +1173,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #demoPill.on{background:var(--ink-900);color:#fff;border-color:var(--ink-900)}
  #demoPill.on .dp-dot{background:#5ee68a}
  #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 116px);left:12px;width:230px;max-width:calc(100vw - 24px)}
- #searchWrap input{width:100%;padding:10px 12px 10px 34px;border-radius:12px;border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.72);color:var(--fg);font-size:14px;font-weight:500;outline:none;box-shadow:0 2px 8px rgba(0,0,0,.07);font-family:inherit}
+ #searchWrap input{width:100%;min-height:var(--tap);padding:0 12px 0 34px;border-radius:var(--r-1);border:1px solid var(--ink-100);background:var(--paper);color:var(--ink-900);font-size:15px;font-weight:500;outline:none;box-shadow:var(--lift);font-family:inherit}
  #searchWrap input::placeholder{color:var(--mut);font-weight:400}
- #searchWrap input:focus{border-color:var(--acc);background:#fff;box-shadow:0 0 0 3px var(--glow)}
+ #searchWrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
  #searchWrap .icn{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--mut);font-size:15px}
  /* Right-side control rail */
  #ctrlRail{position:absolute;z-index:1050;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:10px}
@@ -1294,7 +1355,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #mapQr[hidden]~#mapFab{bottom:calc(var(--btm-h,90px) + 96px)!important}
  #mapDraw{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 14px)!important;z-index:900}
  #mapDraw:active{transform:scale(.9)}
- .feed-draw{border-color:rgba(37,99,235,.9)!important;color:var(--accent)!important}
+ .feed-draw{background:var(--paper)!important;border-color:var(--accent)!important;color:var(--accent)!important}
  .feed-draw svg{color:var(--accent)}
  #drawWrap{position:fixed;inset:0;z-index:4000;display:none}
  #drawCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
@@ -1742,6 +1803,18 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .prof-item .chev{margin-left:auto;color:var(--mut);font-size:17px;font-weight:600}
  .prof-back{border:none;background:none;color:var(--fg2);font-size:14px;font-weight:750;font-family:inherit;cursor:pointer;padding:8px 0 2px;margin-left:-2px;display:block}
  .prof-hint{font-size:12px;color:var(--mut);margin-top:12px;line-height:1.55}
+ .prof-input{width:100%;box-sizing:border-box;background:var(--ink-050);border:1px solid var(--ink-100);
+   border-radius:var(--r-1);min-height:var(--tap);padding:0 var(--sp3);font-family:inherit;font-size:15px;
+   color:var(--ink-900);margin-bottom:var(--sp2)}
+ .prof-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+ select.prof-input{appearance:none;-webkit-appearance:none;padding-right:34px;
+   background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+   background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+ .prof-seg{display:flex;gap:4px;background:var(--ink-050);border-radius:var(--r-1);padding:3px;margin-bottom:var(--sp3)}
+ .prof-seg button{flex:1;min-height:var(--tap-sm);border:none;border-radius:6px;background:transparent;
+   font-family:inherit;font-size:13px;font-weight:700;color:var(--ink-500);cursor:pointer;white-space:nowrap}
+ .prof-seg button.on{background:var(--accent);color:var(--paper)}
+ .prof-seg button:active{transform:scale(.97)}
  .prof-seg{display:flex;background:var(--fill);border:1px solid var(--hair);border-radius:13px;padding:3px;gap:3px;margin-bottom:4px}
  .prof-seg button{flex:1;border:none;background:none;padding:10px 6px;border-radius:10px;font-size:13px;font-weight:700;color:var(--mut);font-family:inherit;cursor:pointer;transition:.15s}
  .prof-seg button.active{background:#fff;color:var(--fg);box-shadow:var(--elev1)}
@@ -1877,7 +1950,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .qr-prev{width:100%;max-height:150px;object-fit:cover;border-radius:14px;margin-top:10px}
  .qr-adj{display:block;margin:12px auto 0;border:none;background:none;color:var(--acc2);font-size:13px;font-weight:750;font-family:inherit;cursor:pointer}
  .qr-skip{width:100%;margin-top:8px;border:none;background:none;color:var(--mut);font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;padding:9px}
- #mapFab{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 14px);width:56px;height:56px;z-index:900}
+ #mapFab{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 14px);width:56px;height:56px;z-index:900;background:var(--ink-900)!important;color:var(--paper)!important;border-color:var(--ink-900)!important}
  #mapFab:active{transform:scale(.9)}
  #mapFab span{display:none}
  #mapQr{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 94px);z-index:900}
@@ -1933,6 +2006,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rpt-cluster span{color:#fff;font-weight:800;font-size:14px;letter-spacing:-.02em;text-shadow:0 1px 2px rgba(0,0,0,.35)}
  .rpt-cluster .rc-ph{position:absolute;top:-4px;right:-4px;background:#fff;color:var(--ink-900);font-size:9px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:2px;padding:0 3px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
  .rpt-cluster .rc-ph svg{width:8px;height:8px}
+ /* Drawn-report marker: a real circle, crisp at any DPR, showing the snow
+    type that dominates the drawing. */
+ .rpt-snowmark{width:46px;height:46px;border-radius:50%;background:var(--paper);border:2.5px solid var(--paper);
+   box-shadow:0 3px 12px rgba(14,17,22,.28);cursor:pointer;overflow:hidden;display:flex;
+   transition:transform .16s var(--ease)}
+ .rpt-snowmark:hover{transform:scale(1.1)}
+ .rpt-snow{flex:1;border-radius:50%;display:block}
  .rpt-photo{position:relative;width:52px;height:52px;border-radius:50%;padding:3px;background:var(--cc);box-shadow:0 5px 16px rgba(0,0,0,.32);cursor:pointer;transition:transform .16s cubic-bezier(.34,1.56,.64,1)}
  .rpt-photo:hover{transform:scale(1.12)}
  .rpt-photo>img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;border:2px solid #fff}
@@ -2285,10 +2365,37 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <div class="prof-view" id="profViewPers" style="display:none">
         <button class="prof-back" onclick="profNav('main')">‹ Zurück</button>
         <div class="prof-sec-title">Personalisieren</div>
+        <label class="prof-lbl">Anzeigename</label>
+        <input class="prof-input" id="profDisplay" maxlength="32" placeholder="Wie du im Feed erscheinst" oninput="profDirty()"/>
         <label class="prof-lbl">Über dich <span class="prof-cnt" id="profBioCnt">0/200</span></label>
         <textarea class="prof-bio" id="profBio" maxlength="1400" placeholder="Kurze Beschreibung (max. 200 Wörter, keine Links)…" oninput="profBioInput()"></textarea>
+
+        <div class="prof-sec-title">Darstellung</div>
+        <label class="prof-lbl">Farbschema</label>
+        <div class="prof-seg" id="profTheme">
+          <button data-v="system">System</button><button data-v="light">Hell</button><button data-v="dark">Dunkel</button>
+        </div>
+        <label class="prof-lbl">Kartenbeschriftung</label>
+        <div class="prof-seg" id="profLabels">
+          <button data-v="on">Skigebiete an</button><button data-v="off">Aus</button>
+        </div>
+
+        <div class="prof-sec-title">Start &amp; Karte</div>
+        <label class="prof-lbl">Startansicht</label>
+        <div class="prof-seg" id="profStart">
+          <button data-v="country">Schweiz</button><button data-v="last">Letzte Position</button><button data-v="home">Heimatgebiet</button>
+        </div>
+        <label class="prof-lbl">Heimatgebiet</label>
+        <select class="prof-input" id="profHome" onchange="profDirty()"></select>
+        <label class="prof-lbl">Ebene beim Öffnen</label>
+        <select class="prof-input" id="profLayer" onchange="profDirty()"></select>
+        <label class="prof-lbl">Standard-Zeitfenster</label>
+        <div class="prof-seg" id="profWindow">
+          <button data-v="24">24 h</button><button data-v="48">48 h</button><button data-v="72">72 h</button>
+        </div>
+
         <button class="prof-save" id="profSave" onclick="profSave()">Speichern</button>
-        <div class="prof-hint">Tippe oben auf dein Profilbild, um es zu ändern. Dein Name und deine Beschreibung erscheinen auf deinem öffentlichen Profil.</div>
+        <div class="prof-hint">Tippe oben auf dein Profilbild, um es zu ändern. Anzeigename und Beschreibung erscheinen auf deinem öffentlichen Profil; alles unter „Darstellung“ und „Start &amp; Karte“ bleibt auf diesem Gerät.</div>
       </div>
       <div class="prof-view" id="profViewPriv" style="display:none">
         <button class="prof-back" onclick="profNav('main')">‹ Zurück</button>
@@ -2565,13 +2672,22 @@ const snowEvents=[];
 function sinceLastSnowfall(){let ls=nowIdx;for(const[s,e]of snowEvents){if(s<=nowIdx)ls=s;}return[ls,Math.min(T,nowIdx+1)];}
 function tillTomorrow(){for(let t=nowIdx+1;t<T;t++){const d=new Date(M.times[t]+'Z');if(d.getUTCHours()===8)return[nowIdx,t];}return[nowIdx,Math.min(T,nowIdx+24)];}
 function fmtTime(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+'Z');return d.getUTCHours()+':00';}
+// The timeline is a canvas, so it cannot inherit CSS variables -- it reads them
+// once per paint instead, which is what makes it follow the theme.
+function tlPalette(){
+  const cs=getComputedStyle(document.documentElement);
+  const g=(v,f)=>{const q=cs.getPropertyValue(v).trim();return q||f;};
+  return {ink:g('--ink-900','#0B1520'),mut:g('--ink-500','#5C728A'),
+          hair:g('--ink-100','#DCE7F1'),fill:g('--ink-050','#EFF5FA'),
+          paper:g('--paper','#fff'),accent:g('--accent','#0B6BCB')};
+}
 function drawTimeline(){const tc=document.getElementById('timeline');const rect=tc.getBoundingClientRect();
   if(!rect.width)return;
   const cw=rect.width,ch=rect.height||120,dpr=window.devicePixelRatio||1;
   if(tc.width!==Math.round(cw*dpr)||tc.height!==Math.round(ch*dpr)){tc.width=Math.round(cw*dpr);tc.height=Math.round(ch*dpr);}
   const ctx2=tc.getContext('2d');ctx2.setTransform(dpr,0,0,dpr,0,0);ctx2.clearRect(0,0,cw,ch);
   function rr(x,y,w,h,r){r=Math.max(0,Math.min(r,w/2,h/2));ctx2.beginPath();if(ctx2.roundRect){ctx2.roundRect(x,y,w,h,r);}else{ctx2.moveTo(x+r,y);ctx2.arcTo(x+w,y,x+w,y+h,r);ctx2.arcTo(x+w,y+h,x,y+h,r);ctx2.arcTo(x,y+h,x,y,r);ctx2.arcTo(x,y,x+w,y,r);ctx2.closePath();}}
-  const nx=nowIdx/T*cw,x1=a/T*cw,x2=b/T*cw,baseY=ch-24;
+  const _P=tlPalette();const nx=nowIdx/T*cw,x1=a/T*cw,x2=b/T*cw,baseY=ch-24;
   // soft selection band (rounded) — tinted with the active layer colour
   ctx2.fillStyle=tlSelTint;rr(x1,2,x2-x1,ch-4,10);ctx2.fill();
   // day gridlines + readable date labels
@@ -2586,8 +2702,8 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   // snowfall bars — rounded tops, vertical gradient (snow stays blue)
   let mx=0;for(const s of hSnow)if(s>mx)mx=s;mx=Math.max(.05,mx);
   const barH=ch-48,bw=Math.max(2,cw/T);
-  const gSel=ctx2.createLinearGradient(0,baseY-barH,0,baseY);gSel.addColorStop(0,'#9b8cff');gSel.addColorStop(1,'#4844c9');
-  const gSelPast=ctx2.createLinearGradient(0,baseY-barH,0,baseY);gSelPast.addColorStop(0,'#a9cde8');gSelPast.addColorStop(1,'#6f9cc0');
+  const gSel=ctx2.createLinearGradient(0,baseY-barH,0,baseY);gSel.addColorStop(0,_P.accent);gSel.addColorStop(1,_P.accent);
+  const gSelPast=ctx2.createLinearGradient(0,baseY-barH,0,baseY);gSelPast.addColorStop(0,_P.hair);gSelPast.addColorStop(1,_P.mut);
   for(let t=0;t<T;t++){const v=hSnow[t];if(v<.002)continue;const h=Math.max(2,v/mx*barH);const x=t/T*cw;
     const inSel=(t>=a&&t<b),fut=t>=nowIdx;
     ctx2.fillStyle=inSel?(fut?gSel:gSelPast):(fut?'rgba(94,92,230,.2)':'rgba(150,165,185,.2)');
@@ -2608,9 +2724,9 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     ctx2.textAlign='right';ctx2.fillText(tB,x2-9,19);
   }
   // NOW marker: dashed line + dark pill (neutral so it never clashes with the layer colour)
-  ctx2.strokeStyle='#16152e';ctx2.globalAlpha=.55;ctx2.lineWidth=1.5;ctx2.setLineDash([3,3]);ctx2.beginPath();ctx2.moveTo(nx,19);ctx2.lineTo(nx,baseY);ctx2.stroke();ctx2.setLineDash([]);ctx2.globalAlpha=1;
-  const nlx=Math.max(19,Math.min(cw-19,nx));ctx2.fillStyle='#16152e';rr(nlx-17,3,34,14,7);ctx2.fill();
-  ctx2.fillStyle='#fff';ctx2.font='800 9.5px Inter,system-ui';ctx2.textAlign='center';ctx2.fillText('NOW',nlx,12.5);}
+  ctx2.strokeStyle=_P.ink;ctx2.globalAlpha=.55;ctx2.lineWidth=1.5;ctx2.setLineDash([3,3]);ctx2.beginPath();ctx2.moveTo(nx,19);ctx2.lineTo(nx,baseY);ctx2.stroke();ctx2.setLineDash([]);ctx2.globalAlpha=1;
+  const nlx=Math.max(19,Math.min(cw-19,nx));ctx2.fillStyle=_P.ink;rr(nlx-17,3,34,14,7);ctx2.fill();
+  ctx2.fillStyle=_P.paper;ctx2.font='800 9.5px Inter,system-ui';ctx2.textAlign='center';ctx2.fillText('NOW',nlx,12.5);}
 // Karte + Layer
 const [laMin,loMin,laMax,loMax]=M.bounds;
 const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
@@ -2668,22 +2784,26 @@ CH_RESORTS.forEach(function(r){
 // Tiles are transparent at the initial (fully zoomed-out) view and only reach
 // full strength at the deepest zoom, so the map starts abstract and gains
 // detail as you come closer.
+const BASE_FLOOR=0.22;   // terrain never fully disappears, even zoomed right out
 function baseFadeT(){
   const z0=map.getMinZoom(),z1=map.getMaxZoom();
   const t=(map.getZoom()-z0)/Math.max(.001,z1-z0);
   return Math.max(0,Math.min(1,t));
 }
 function updateBaseFade(){
-  const t=baseFadeT(),op=Math.pow(t,1.7);            // slow start, 1.0 only at max zoom
+  const t=baseFadeT();
+  // The country view is abstract but no longer blank: the terrain starts at
+  // BASE_FLOOR rather than 0, so you can already read where the mountains are.
+  const op=BASE_FLOOR+(1-BASE_FLOOR)*Math.pow(t,1.45);
   base.setOpacity(op);
-  chOutline.setStyle({weight:1.1+1.5*(1-op),opacity:.18+.77*(1-op),fillOpacity:1-op*.6});
-  // Context layers follow the same idea from the other end: barely there on the
-  // country view, clearly readable once you are looking at a single region.
-  chCantons.setStyle({opacity:.14+.46*t,weight:.8+.9*t});
-  const rt=Math.max(0,Math.min(1,(t-0.18)/0.5));     // resorts appear a bit later
+  chOutline.setStyle({weight:1.1+1.5*(1-op),opacity:.30+.65*(1-op),fillOpacity:Math.max(0,.72-op*.72)});
+  // Canton borders are legible from the very first view and only sharpen.
+  chCantons.setStyle({opacity:.42+.34*t,weight:.9+.9*t});
+  // Ski resorts pop in as soon as you leave the country view.
+  const rt=Math.max(0,Math.min(1,(t-0.06)/0.28));
   const el=document.getElementById('map');
   if(el){el.style.setProperty('--resort-op',rt.toFixed(3));
-    el.style.setProperty('--resort-lbl',(t>0.30?Math.min(1,(t-0.30)/0.25):0).toFixed(3));}
+    el.style.setProperty('--resort-lbl',Math.max(0,Math.min(1,(t-0.14)/0.20)).toFixed(3));}
 }
 map.on('zoom zoomend',updateBaseFade);updateBaseFade();
 // Keine weisse Maske mehr: die gedimmte OSM-Unterlage zeigt die Nachbarlaender,
@@ -2955,14 +3075,22 @@ function progZones(){
 const PROG_SC_KM=11;      // spatial decay scale
 const PROG_ELEV_SD=180;   // elevation roll-off outside the reported band [m]
 const PROG_AGE_H=72;      // report half-life-ish for recency weighting
+const PROG_ASP_SD_MIN=30; // aspect tolerance of a tightly drawn report [deg]
+const PROG_ASP_SD_MAX=85; // aspect tolerance of a diffuse one [deg]
 function progAspectMatch(asp,zAsp,conc){
   if(zAsp==null||asp==null)return 0.6;
   let d=Math.abs(asp-zAsp)%360;if(d>180)d=360-d;
-  const m=d<=22.5?1:(d<=67.5?0.55:(d<=112.5?0.15:0));
   const c=Math.max(0,Math.min(1,conc==null?0.7:conc));
-  // Only a genuinely diffuse report (low concentration) keeps an aspect-agnostic
-  // floor; squaring (1-c) makes a well-defined report exclude opposite slopes.
-  return m*c+0.45*(1-c)*(1-c);
+  // Concentration controls HOW FAST the match falls off with angle -- it must
+  // never discount a perfect match. (It used to: m*c + 0.45(1-c)^2 capped an
+  // exactly-matching slope at 0.84 for a typical conc of 0.82, so a north slope
+  // right next to a north-facing report could never read as near-certain.)
+  // A tightly drawn report tolerates ~30 deg, a diffuse one ~85 deg.
+  const sigma=PROG_ASP_SD_MIN+(PROG_ASP_SD_MAX-PROG_ASP_SD_MIN)*(1-c);
+  let m=Math.exp(-(d*d)/(2*sigma*sigma));
+  // Beyond two sectors only a genuinely diffuse report carries any signal.
+  if(d>112.5)m*=(1-c);
+  return m;
 }
 function progElevMatch(elev,e0,e1){
   if(e0==null||e1==null)return 0.7;
@@ -3434,9 +3562,9 @@ function setTopic(t,itemIdx,varIdx){
   curTopic=t;
   // Colour law: exactly one accent is live, and it is the one belonging to the
   // model group the selected layer came from.
-  const acc=(t==='report')?'var(--accent-report)':'var(--accent-meteo)';
-  document.documentElement.style.setProperty('--accent',
-    getComputedStyle(document.documentElement).getPropertyValue(t==='report'?'--accent-report':'--accent-meteo').trim());
+  const rep=(t==='report');
+  document.documentElement.style.setProperty('--accent',rep?'var(--accent-report)':'var(--accent-meteo)');
+  document.documentElement.style.setProperty('--accent-soft',rep?'var(--accent-report-soft)':'var(--accent-meteo-soft)');
   const tc=TOPIC_COLOR[t]||TOPIC_COLOR.meteo;
   tlSel=tc[0];tlSelTint=tc[1];
   document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.setAttribute('content','#ffffff'));
@@ -4043,6 +4171,9 @@ function _gotoCountry(){try{map.stop();map.invalidateSize({animate:false});
   const go=davos?_gotoDavos:_gotoCountry;go();setTimeout(go,400);})();
 window.__APP_OK=true;
 setTopic('meteo',0,0);dismissIntro();
+// Personal preferences (opening layer, time window, where the map lands) are
+// applied once the map and the layer strip exist.
+requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}});
 try{const _pid=new URLSearchParams(location.search).get('post');
   if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);}catch(e){}
 if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(reg=>{try{reg.update();}catch(e){}}).catch(()=>{});});}
@@ -4352,9 +4483,30 @@ function reportPopupHTML(r){
     +(r.caption?('<p class="rpop-cap">'+escapeHtml(r.caption)+'</p>'):'')
     +'<button class="rpop-cta" onclick="feedOpenAt(\''+r.id+'\')">Details ansehen \u2192</button>'
     +'</div></div>';}
+// A drawn snow map is about the SNOW, so its marker shows the dominant snow
+// type as an icon rather than a photo thumbnail -- and as a true circle at
+// device resolution instead of a stretched, blurry photo.
+function _rptDominantType(r){
+  const z=(r.condition_data&&r.condition_data.zones)||[];
+  if(!z.length)return null;
+  const area={};z.forEach(q=>{if(q&&q.type)area[q.type]=(area[q.type]||0)+(q.n||1);});
+  let best=null,bn=-1;for(const k in area)if(area[k]>bn){bn=area[k];best=k;}
+  return best;
+}
+function _rptSnowIcon(type,size){
+  const p=DRAW_PENS[type];
+  const solid=(type==='powder');
+  const bg=solid?('rgb('+((snowCol(30)||[74,163,255]).join(','))+')')
+                :'url('+snowPatternURL(type)+') repeat';
+  return '<span class="rpt-snow" style="background:'+bg+';background-size:'+(solid?'auto':'12px 12px')+'"></span>';
+}
 function _rptMarker(r,mode){
   const col=_rptColor(r);let html,w,h;
-  if(mode==='photo'&&r.img){html='<div class="rpt-photo" style="--cc:'+col+'"><img src="'+r.img+'" loading="lazy" alt=""/><i class="rp-cat" style="background:'+(CAT_COLORS[r.cat]||'#333')+'">'+(CAT_SVG[r.cat]||'')+'</i></div>';w=h=58;}
+  const dom=_rptDominantType(r);
+  if(mode==='photo'&&dom){
+    html='<div class="rpt-snowmark" style="--cc:'+col+'" title="'+escapeHtml((DRAW_PENS[dom]&&DRAW_PENS[dom].label)||dom)+'">'+
+      _rptSnowIcon(dom)+'</div>';w=h=52;}
+  else if(mode==='photo'&&r.img){html='<div class="rpt-photo" style="--cc:'+col+'"><img src="'+r.img+'" loading="lazy" alt=""/><i class="rp-cat" style="background:'+(CAT_COLORS[r.cat]||'#333')+'">'+(CAT_SVG[r.cat]||'')+'</i></div>';w=h=58;}
   else if(mode==='chip'){const cm=_rptDepth(r);const lab=(cm!=null)?(cm+' cm'):_rptShort(r);html='<div class="rpt-chip" style="--cc:'+col+'">'+(CAT_SVG[r.cat]||'')+'<b>'+escapeHtml(lab)+'</b></div>';w=Math.round(30+lab.length*8.6);h=30;}
   else if(mode==='dot'){html='<div class="rpt-tiny" style="--cc:'+col+'"></div>';w=h=12;}
   else{html='<div class="rpt-pin" style="--cc:'+col+'">'+(CAT_SVG[r.cat]||'')+(r.img?'<i class="rp-dot"></i>':'')+'</div>';w=h=38;}
@@ -4373,7 +4525,7 @@ function loadReportMarkers(){
   reportMarkers.clearLayers();
   if(!window._drawOv)window._drawOv=L.layerGroup().addTo(map);
   _drawOv.clearLayers();
-  (allReports||[]).forEach(r=>{const cd=r.condition_data||{};const _im=cd.drawImage||r.img;if(cd.draw&&cd.bounds&&_im){try{L.imageOverlay(_im,cd.bounds,{opacity:.62,interactive:false}).addTo(_drawOv);}catch(e){}}});
+  (allReports||[]).forEach(r=>{const cd=r.condition_data||{};const _im=cd.drawImage||r.img;if(cd.draw&&cd.bounds&&_im){try{L.imageOverlay(_im,cd.bounds,{opacity:DRAW_DIM,interactive:false}).addTo(_drawOv);}catch(e){}}});
   if(!allReports||!allReports.length)return;
   const z=map.getZoom(),cellPx=66,tiny=z<9.5,clusterOn=z<12.5,rich=z>=12.5;
   if(tiny){allReports.forEach(r=>_rptMarker(r,'dot'));return;}
@@ -4707,6 +4859,28 @@ function showBioLock(){const el=document.getElementById('bioLock');
 async function bioUnlock(auto){try{await bioVerify(sbUser.id);bioUnlocked=true;document.getElementById('bioLock').style.display='none';}catch(e){if(!auto)alert('Entsperren fehlgeschlagen. Bitte erneut versuchen.');}}
 function bioSignOut(){document.getElementById('bioLock').style.display='none';bioUnlocked=true;if(sb)sb.auth.signOut();}
 function authMenu(){openProfile();}
+// --- Personal preferences ---------------------------------------------------
+// Device-local, so they work before sign-in and never need a round trip.
+const PREF_KEY='ssm_prefs_v1';
+const PREF_DEFAULTS={theme:'system',labels:'on',start:'country',home:'',layer:'meteo:0',window:'48'};
+let prefs=Object.assign({},PREF_DEFAULTS);
+function prefsLoad(){try{const v=JSON.parse(localStorage.getItem(PREF_KEY)||'{}');
+  prefs=Object.assign({},PREF_DEFAULTS,v||{});}catch(e){prefs=Object.assign({},PREF_DEFAULTS);}
+  return prefs;}
+function prefsSave(){try{localStorage.setItem(PREF_KEY,JSON.stringify(prefs));}catch(e){}}
+// Theme: 'system' removes the attribute so the media query decides.
+function applyTheme(){
+  const r=document.documentElement;
+  if(prefs.theme==='system')r.removeAttribute('data-theme');
+  else r.setAttribute('data-theme',prefs.theme);
+  try{const dark=(prefs.theme==='dark')||(prefs.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
+    document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.setAttribute('content',dark?'#0E1A26':'#ffffff'));}catch(e){}
+}
+function applyLabels(){try{const el=document.getElementById('map');
+  if(el)el.classList.toggle('no-resort-labels',prefs.labels==='off');}catch(e){}}
+function prefsApplyAll(){applyTheme();applyLabels();}
+prefsLoad();applyTheme();
+try{matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(prefs.theme==='system')applyTheme();});}catch(e){}
 // --- Profile & Settings ---
 let myProfile=null,profAvatarFile=null,profAvatarUrl=null;
 function profNav(v){['Main','Pers','Priv','Notif','App'].forEach(k=>{const el=document.getElementById('profView'+k);if(el)el.style.display=(v===k.toLowerCase())?'':'none';});try{haptic(4);}catch(e){}}
@@ -4782,7 +4956,8 @@ async function openProfile(){
   document.getElementById('profName').textContent=name;
   document.getElementById('profAvInitial').textContent=name[0].toUpperCase();
   document.getElementById('profEndo').textContent='… Trust Score';
-  profAvatarFile=null;profLoadPosts();
+  profAvatarFile=null;profLoadPosts();profRenderPrefs();
+  try{const d=document.getElementById('profDisplay');if(d)d.value=name;}catch(e){}
   try{
     const{data}=await sb.from('profiles').select('bio,avatar_url,push_enabled').eq('id',sbUser.id).single();
     myProfile=data||{};
@@ -4801,6 +4976,55 @@ async function openProfile(){
   }catch(e){document.getElementById('profEndo').textContent='';}
 }
 function profClose(){document.getElementById('profModal').style.display='none';}
+let _profDirty=false;
+function profDirty(){_profDirty=true;const b=document.getElementById('profSave');if(b)b.classList.add('on');}
+// A segmented control that writes straight into prefs and applies immediately,
+// so the user sees the effect (especially the theme) while the sheet is open.
+function profSeg(id,key,after){
+  const box=document.getElementById(id);if(!box)return;
+  box.querySelectorAll('button').forEach(b=>{
+    b.classList.toggle('on',b.dataset.v===String(prefs[key]));
+    b.onclick=()=>{prefs[key]=b.dataset.v;prefsSave();
+      box.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+      if(after)after();try{haptic(4);}catch(e){}};});
+}
+function profRenderPrefs(){
+  prefsLoad();
+  profSeg('profTheme','theme',applyTheme);
+  profSeg('profLabels','labels',applyLabels);
+  profSeg('profStart','start');
+  profSeg('profWindow','window');
+  const home=document.getElementById('profHome');
+  if(home&&!home._filled){home._filled=true;
+    home.innerHTML='<option value="">— kein Heimatgebiet —</option>'+
+      CH_RESORTS.slice().sort((a,b)=>a.name.localeCompare(b.name))
+        .map(r=>'<option value="'+r.name+'">'+r.name+'</option>').join('');}
+  if(home)home.value=prefs.home||'';
+  const lay=document.getElementById('profLayer');
+  if(lay&&!lay._filled){lay._filled=true;
+    lay.innerHTML=Object.keys(GROUPS).map(g=>GROUPS[g].items.map((it,i)=>
+      '<option value="'+g+':'+i+'">'+GROUPS[g].tag+' · '+it.label+'</option>').join('')).join('');}
+  if(lay)lay.value=prefs.layer||'meteo:0';
+}
+// Applied once at startup: window length, opening layer and where the map lands.
+function prefsApplyStartup(){
+  try{
+    const w=parseInt(prefs.window||'48');
+    if(w&&w!==(b-a)){windowSize=w;a=Math.max(0,Math.min(T-w,nowIdx-Math.floor(w/2)));b=Math.min(T,a+w);}
+    const lv=(prefs.layer||'meteo:0').split(':');
+    if(GROUPS[lv[0]])setTopic(lv[0],parseInt(lv[1])||0,0);
+    if(prefs.start==='home'&&prefs.home){
+      const r=CH_RESORTS.find(x=>x.name===prefs.home);
+      if(r){map.setView([r.lat,r.lng],12.5,{animate:false});updateBaseFade();}
+    }else if(prefs.start==='last'){
+      const v=JSON.parse(localStorage.getItem('ssm_lastview')||'null');
+      if(v&&v.lat!=null){map.setView([v.lat,v.lng],v.z,{animate:false});updateBaseFade();}
+    }
+    applyLabels();
+  }catch(e){}
+}
+try{map.on('moveend',()=>{try{const c=map.getCenter();
+  localStorage.setItem('ssm_lastview',JSON.stringify({lat:c.lat,lng:c.lng,z:map.getZoom()}));}catch(e){}});}catch(e){}
 function profSetAvatar(inp){if(!inp.files||!inp.files[0])return;profAvatarFile=inp.files[0];
   const url=URL.createObjectURL(profAvatarFile);const av=document.getElementById('profAv');av.classList.add('has-img');av.style.backgroundImage='url('+url+')';}
 async function profTogglePush(){
@@ -4809,6 +5033,14 @@ async function profTogglePush(){
   t.classList.toggle('on',willOn);
 }
 async function profSave(){
+  try{const d=document.getElementById('profDisplay');
+    const home=document.getElementById('profHome'),lay=document.getElementById('profLayer');
+    if(home)prefs.home=home.value;if(lay)prefs.layer=lay.value;prefsSave();
+    if(d&&d.value.trim()&&sb&&sbUser){await sb.auth.updateUser({data:{username:d.value.trim()}});
+      await sb.from('profiles').update({username:d.value.trim()}).eq('id',sbUser.id);
+      document.getElementById('profName').textContent=d.value.trim();}
+  }catch(e){}
+  _profDirty=false;
   if(!sb||!sbUser)return;
   const btn=document.getElementById('profSave');btn.disabled=true;btn.textContent='Speichert…';
   try{
@@ -5551,10 +5783,14 @@ function drawPenPattern(ctx,type){
     m[type]=ctx.createPattern(tile,'repeat');}
   return m[type];
 }
+// The drawing is painted at DRAW_DIM while you work, and the version that gets
+// posted must look the same -- it used to be exported at .85, so the posted
+// snapshot was noticeably heavier than what the user actually drew.
+const DRAW_DIM=0.5;
 function drawRepaint(expAlpha){
   const ctx=drawCtx;if(!ctx)return;const cv=document.getElementById('drawCanvas');
   const W=cv.clientWidth,H=cv.clientHeight;ctx.clearRect(0,0,W,H);
-  if(drawZoneCanvas){const r=drawRefRect();ctx.globalAlpha=expAlpha||.5;
+  if(drawZoneCanvas){const r=drawRefRect();ctx.globalAlpha=expAlpha||DRAW_DIM;
     ctx.drawImage(drawZoneCanvas,0,0,drawZoneW,drawZoneH,r.x,r.y,r.w,r.h);ctx.globalAlpha=1;}
   drawPaintTrack(ctx);
   drawRoutes.forEach(rt=>drawPaintRoute(ctx,rt));
@@ -5729,7 +5965,7 @@ function drawSummary(){
   return out;
 }
 let drawPhotoFile=null,drawSnapData=null,drawPaintData=null,drawFinCen=null,drawFinBnds=null,drawFinNames=null,drawFinPeak=null;
-function drawPaintingPNG(){try{drawRepaint(.85);const png=document.getElementById('drawCanvas').toDataURL('image/png');drawRepaint();return png;}catch(e){return null;}}
+function drawPaintingPNG(){try{drawRepaint(DRAW_DIM);const png=document.getElementById('drawCanvas').toDataURL('image/png');drawRepaint();return png;}catch(e){return null;}}
 // Composite the map behind the drawing. Base tiles are re-loaded through fresh
 // crossOrigin images so the canvas is never tainted (a non-CORS tile simply
 // fails to load and is skipped rather than blanking the whole snapshot).
