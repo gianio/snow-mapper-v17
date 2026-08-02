@@ -2944,6 +2944,12 @@ const PROG_MIN_CONF=75;      // Reported Powder is defined as "confidence > 75%"
 const pcv=document.createElement('canvas');pcv.width=PROG_GW*2;pcv.height=PROG_GH*2;const pcx=pcv.getContext('2d');
 let prognosisOverlay=L.imageOverlay(pcv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:1});
 let PROG_ASP=null,PROG_ELEV=null,PROG_SLP=null,PROG_LA=null,PROG_LO=null,PROG_Q=null;
+// The grid used to be baked once over the WHOLE COUNTRY: 340x240 cells across
+// 355 km is ~1 km per cell, so at the zoom people actually use (one slope on
+// screen) the entire viewport was 1.2 cells wide -- a single cell either
+// covered the screen or missed it, which is why the layer looked broken.
+// It is now rebuilt for the visible area, so a cell is metres, not kilometres.
+let PROG_BOUNDS=null;
 let _progField=null,_progConf=null,_progType=null,_progModel=null,_progDiff=null;
 const PROG_COL={powder:[74,163,255],drift:[232,89,12],wet:[245,158,11],suncrust:[244,208,63],windpressed:[150,168,196],firn:[63,178,127],scoured:[154,135,120]};
 // Colourful, perceptually ordered ramp for the 0-100% confidence map.
@@ -2958,18 +2964,62 @@ function progConfColor(t){
   const l=PROG_CONF_STOPS[PROG_CONF_STOPS.length-1];return [l[1],l[2],l[3]];
 }
 const PROG_LABEL={powder:'Powder',drift:'Triebschnee',wet:'Nassschnee',suncrust:'Sonnendeckel',windpressed:'Windgepresst',firn:'Firn',scoured:'Abgeweht'};
-function progTerrain(){
-  if(PROG_ASP)return;const N=PROG_GW*PROG_GH;
+// The area the grid is built over: the current view, clamped to the data, with
+// a little margin so a small pan does not immediately show an empty edge.
+function progViewBounds(){
+  let s0=laMin,n0=laMax,w0=loMin,e0=loMax;
+  try{const b=map.getBounds(),dLa=(b.getNorth()-b.getSouth())*0.15,dLo=(b.getEast()-b.getWest())*0.15;
+    s0=Math.max(laMin,b.getSouth()-dLa);n0=Math.min(laMax,b.getNorth()+dLa);
+    w0=Math.max(loMin,b.getWest()-dLo);e0=Math.min(loMax,b.getEast()+dLo);
+    if(!(n0>s0&&e0>w0)){s0=laMin;n0=laMax;w0=loMin;e0=loMax;}}catch(e){}
+  return {s:s0,n:n0,w:w0,e:e0};
+}
+function progTerrain(force){
+  const bb=progViewBounds();
+  if(PROG_ASP&&PROG_BOUNDS&&!force){
+    // rebuild only when the view really moved (a few % of the current span)
+    const tl=(PROG_BOUNDS.n-PROG_BOUNDS.s)*0.04,to=(PROG_BOUNDS.e-PROG_BOUNDS.w)*0.04;
+    if(Math.abs(bb.s-PROG_BOUNDS.s)<tl&&Math.abs(bb.n-PROG_BOUNDS.n)<tl&&
+       Math.abs(bb.w-PROG_BOUNDS.w)<to&&Math.abs(bb.e-PROG_BOUNDS.e)<to)return;
+  }
+  PROG_BOUNDS=bb;
+  const N=PROG_GW*PROG_GH;
   PROG_ASP=new Float32Array(N);PROG_ELEV=new Float32Array(N);PROG_SLP=new Float32Array(N);PROG_LA=new Float32Array(N);PROG_LO=new Float32Array(N);
   PROG_Q=new Int32Array(N);
   for(let gy=0;gy<PROG_GH;gy++)for(let gx=0;gx<PROG_GW;gx++){const idx=gy*PROG_GW+gx;
-    const lat=laMax-gy/(PROG_GH-1)*(laMax-laMin),lon=loMin+gx/(PROG_GW-1)*(loMax-loMin);
+    const lat=bb.n-gy/(PROG_GH-1)*(bb.n-bb.s),lon=bb.w+gx/(PROG_GW-1)*(bb.e-bb.w);
     PROG_LA[idx]=lat;PROG_LO[idx]=lon;PROG_Q[idx]=-1;
     const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
     if(cx<0||cx>=W||cy<0||cy>=H){PROG_ELEV[idx]=-1;continue;}
     const q=cy*W+cx;PROG_Q[idx]=q;const fa=fineAspectDeg(lat,lon),fe=fineElev(lat,lon),fs=fineSlope(lat,lon);
     PROG_ASP[idx]=(fa!=null?fa:maspv(q));PROG_ELEV[idx]=(fe!=null?fe:melevv(q));
     PROG_SLP[idx]=(fs!=null?fs:mslpv(q));}
+}
+// Every report layer paints into the same canvas and must anchor it to the area
+// the grid was actually built for.
+function progCommit(){
+  try{prognosisOverlay.setBounds([[PROG_BOUNDS.s,PROG_BOUNDS.w],[PROG_BOUNDS.n,PROG_BOUNDS.e]]);}catch(e){}
+  prognosisOverlay.setUrl(pcv.toDataURL());
+}
+// Only zones that can actually reach the visible area are worth scoring: the
+// distance term is exp(-(d/11km)^2), so beyond ~3 scale lengths a zone
+// contributes ~1e-4. Culling keeps a pan O(visible reports) instead of
+// O(every report in Switzerland).
+function progNearZones(zones){
+  if(!PROG_BOUNDS)return zones;
+  const pad=3*PROG_SC_KM;
+  const dLa=pad/111,mid=(PROG_BOUNDS.s+PROG_BOUNDS.n)/2;
+  const dLo=pad/(111*Math.max(0.2,Math.cos(mid*Math.PI/180)));
+  return zones.filter(z=>z.lat>=PROG_BOUNDS.s-dLa&&z.lat<=PROG_BOUNDS.n+dLa&&
+                         z.lng>=PROG_BOUNDS.w-dLo&&z.lng<=PROG_BOUNDS.e+dLo);
+}
+// Grid index for a lat/lon inside the current grid (or -1).
+function progIdxAt(lat,lon){
+  if(!PROG_BOUNDS)return -1;
+  const gx=Math.round((lon-PROG_BOUNDS.w)/(PROG_BOUNDS.e-PROG_BOUNDS.w)*(PROG_GW-1));
+  const gy=Math.round((PROG_BOUNDS.n-lat)/(PROG_BOUNDS.n-PROG_BOUNDS.s)*(PROG_GH-1));
+  if(gx<0||gx>=PROG_GW||gy<0||gy>=PROG_GH)return -1;
+  return gy*PROG_GW+gx;
 }
 // Report age in hours: DB rows carry created_at, demo rows a "vor 5h/3d" label.
 function progAgeH(r){
@@ -3016,7 +3066,9 @@ function progZoneFromPoint(r,type,cm,conc){
   const e=(d&&d.elev!=null)?Math.round(d.elev):null;
   return {type:type,lat:r.lat,lng:r.lng,
     e0:e!=null?e-250:null,e1:e!=null?e+250:null,
-    asp:(d&&d.aspectDeg!=null)?d.aspectDeg:null,conc:conc,cm:cm,ageH:progAgeH(r)};
+    asp:(d&&d.aspectDeg!=null)?d.aspectDeg:null,conc:conc,
+    slp:(d&&d.slope!=null)?d.slope:null,slpSd:14,
+    cm:cm,ageH:progAgeH(r)};
 }
 // --- Report credibility: confirmations on the post + author trust score -----
 // "Bestätigen" writes a report_reactions row, so r.likes IS the number of
@@ -3053,7 +3105,8 @@ function progZones(){
       if(!useDraw)return;
       cd.zones.forEach(z=>{if(!z||!z.type)return;const c=z.centroid||[r.lat,r.lng];if(c[0]==null)return;
         out.push({type:z.type,lat:c[0],lng:c[1],e0:z.elevMin,e1:z.elevMax,asp:z.aspectDeg,
-          conc:z.aspectConc==null?0.6:z.aspectConc,cm:z.cm==null?null:z.cm,ageH:progAgeH(r),w:w});});
+          conc:z.aspectConc==null?0.6:z.aspectConc,slp:z.slope==null?null:z.slope,
+          slpSd:z.slopeSd==null?null:z.slopeSd,cm:z.cm==null?null:z.cm,ageH:progAgeH(r),w:w});});
       return;}
     if(cd.quick){
       if(!useQuick)return;
@@ -3077,6 +3130,8 @@ const PROG_ELEV_SD=180;   // elevation roll-off outside the reported band [m]
 const PROG_AGE_H=72;      // report half-life-ish for recency weighting
 const PROG_ASP_SD_MIN=30; // aspect tolerance of a tightly drawn report [deg]
 const PROG_ASP_SD_MAX=85; // aspect tolerance of a diffuse one [deg]
+const PROG_SLP_SD_MIN=9;  // slope tolerance [deg] -- steepness changes the snow
+const PROG_SLP_FLOOR=0.30;// a very different steepness still is not zero evidence
 function progAspectMatch(asp,zAsp,conc){
   if(zAsp==null||asp==null)return 0.6;
   let d=Math.abs(asp-zAsp)%360;if(d>180)d=360-d;
@@ -3092,6 +3147,17 @@ function progAspectMatch(asp,zAsp,conc){
   if(d>112.5)m*=(1-c);
   return m;
 }
+// Steepness matters as much as aspect: powder on a 35 deg north face says
+// little about a 5 deg shoulder at the same aspect and height. The report's own
+// slope spread widens the tolerance, and the floor keeps a mismatch from wiping
+// the evidence out entirely.
+function progSlopeMatch(slp,zSlp,zSd){
+  if(zSlp==null||slp==null)return 1;
+  const sd=Math.max(PROG_SLP_SD_MIN,zSd==null?PROG_SLP_SD_MIN:zSd);
+  const d=slp-zSlp;
+  const m=Math.exp(-(d*d)/(2*sd*sd));
+  return PROG_SLP_FLOOR+(1-PROG_SLP_FLOOR)*m;
+}
 function progElevMatch(elev,e0,e1){
   if(e0==null||e1==null)return 0.7;
   if(elev>=e0&&elev<=e1)return 1;                       // inside the reported band
@@ -3101,8 +3167,11 @@ function progElevMatch(elev,e0,e1){
 function progEnvelope(asp,elev,slp,z){
   if(elev<0)return 0;
   const em=progElevMatch(elev,z.e0,z.e1);
-  const am=(slp!=null&&slp<12)?0.5:progAspectMatch(asp,z.asp,z.conc); // flats: aspect-neutral
-  return em*am;
+  // On genuinely flat ground aspect carries no information, so it is not held
+  // against the cell; the slope term below is what separates flats from faces.
+  const am=(slp!=null&&slp<12)?0.75:progAspectMatch(asp,z.asp,z.conc);
+  const sm=progSlopeMatch(slp,z.slp,z.slpSd);
+  return em*am*sm;
 }
 function progDistKm(lat,lon,z){const dLat=(lat-z.lat)*111,dLo=(lon-z.lng)*111*Math.cos(lat*Math.PI/180);return Math.hypot(dLat,dLo);}
 function progRecency(z){const a=z.ageH==null?12:z.ageH;return 0.35+0.65*Math.exp(-a/PROG_AGE_H);}
@@ -3134,7 +3203,7 @@ function progCell(asp,elev,slp,lat,lon,sel,oth){
 }
 function renderPrognosis(type){
   progTerrain();_progType=type;
-  const zones=progZones(),sel=zones.filter(z=>z.type===type),oth=zones.filter(z=>z.type!==type);
+  const zones=progNearZones(progZones()),sel=zones.filter(z=>z.type===type),oth=zones.filter(z=>z.type!==type);
   const N=PROG_GW*PROG_GH;
   _progField=new Float32Array(N);_progConf=new Float32Array(N);
   const col=PROG_COL[type]||[74,163,255];
@@ -3151,7 +3220,7 @@ function renderPrognosis(type){
   }
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
-  prognosisOverlay.setUrl(pcv.toDataURL());
+  progCommit();
 }
 // Powder-Finder: where powder is expected, painted in the SLF new-snow depth
 // colours, filtered by a minimum confidence the user picks.
@@ -3168,7 +3237,8 @@ function renderPowderFind(){
   progTerrain();_progType='powder';
   const _keep=progSrc;progSrc='draw';                 // drawn reports only, by definition
   const zones=progZones();progSrc=_keep;
-  const sel=zones.filter(z=>z.type==='powder'),oth=zones.filter(z=>z.type!=='powder');
+  const near=progNearZones(zones);
+  const sel=near.filter(z=>z.type==='powder'),oth=near.filter(z=>z.type!=='powder');
   const N=PROG_GW*PROG_GH;
   _progField=new Float32Array(N);_progConf=new Float32Array(N);
   const img=new ImageData(PROG_GW,PROG_GH),d=img.data;
@@ -3185,7 +3255,7 @@ function renderPowderFind(){
   }
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
-  prognosisOverlay.setUrl(pcv.toDataURL());
+  progCommit();
 }
 // --- Abweichung: report-based powder prognosis vs. the model "Ski > Powder" --
 // Both layers answer the same question from different evidence, so the
@@ -3201,7 +3271,7 @@ function progModelPowder(q,cache){
 }
 function renderProgDiff(){
   progTerrain();_progType='powder';
-  const zones=progZones(),sel=zones.filter(z=>z.type==='powder'),oth=zones.filter(z=>z.type!=='powder');
+  const zones=progNearZones(progZones()),sel=zones.filter(z=>z.type==='powder'),oth=zones.filter(z=>z.type!=='powder');
   const N=PROG_GW*PROG_GH;
   _progField=new Float32Array(N);_progConf=new Float32Array(N);_progModel=new Float32Array(N);_progDiff=new Float32Array(N);
   const cache=new Map();
@@ -3231,7 +3301,7 @@ function renderProgDiff(){
   }
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
-  prognosisOverlay.setUrl(pcv.toDataURL());
+  progCommit();
 }
 // --- One pattern language for every snow type except Powder -----------------
 // Powder is the only type that keeps a solid colour (blue, and on the map the
@@ -3296,7 +3366,7 @@ const _progPatCache={};
 function renderProgPattern(type){
   progTerrain();_progType=type;
   const _keep=progSrc;progSrc='draw';                 // drawn reports only
-  const zones=progZones();progSrc=_keep;
+  const zones=progNearZones(progZones());progSrc=_keep;
   const sel=zones.filter(z=>z.type===type),oth=zones.filter(z=>z.type!==type);
   const N=PROG_GW*PROG_GH;
   _progField=new Float32Array(N);_progConf=new Float32Array(N);
@@ -3321,19 +3391,17 @@ function renderProgPattern(type){
   pcx.fillStyle=pcx.createPattern(tile,'repeat');
   pcx.fillRect(0,0,pcv.width,pcv.height);
   pcx.globalCompositeOperation='source-over';
-  prognosisOverlay.setUrl(pcv.toDataURL());
+  progCommit();
 }
 function progDiffAt(lat,lon){
   if(!_progDiff)return null;
-  const gx=Math.round((lon-loMin)/(loMax-loMin)*(PROG_GW-1)),gy=Math.round((laMax-lat)/(laMax-laMin)*(PROG_GH-1));
-  if(gx<0||gx>=PROG_GW||gy<0||gy>=PROG_GH)return null;const idx=gy*PROG_GW+gx;
+  const idx=progIdxAt(lat,lon);if(idx<0)return null;
   return {rep:Math.round(_progField[idx]*100),model:Math.round(_progModel[idx]*100),
           conf:_progConf[idx],diff:isNaN(_progDiff[idx])?null:Math.round(_progDiff[idx]*100)};
 }
 function prognosisAt(lat,lon){
   if(!_progField)return null;
-  const gx=Math.round((lon-loMin)/(loMax-loMin)*(PROG_GW-1)),gy=Math.round((laMax-lat)/(laMax-laMin)*(PROG_GH-1));
-  if(gx<0||gx>=PROG_GW||gy<0||gy>=PROG_GH)return null;const idx=gy*PROG_GW+gx;
+  const idx=progIdxAt(lat,lon);if(idx<0)return null;
   return {type:_progType,like:Math.round(_progField[idx]*100),conf:_progConf[idx]};
 }
 const windArr=L.layerGroup(); const stnGroup=L.layerGroup().addTo(map);
@@ -3424,6 +3492,19 @@ function renderStations(){stnGroup.clearLayers();if(!showStn)return;
     const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:html,iconSize:iSize,iconAnchor:iAnc}),zIndexOffset:500});
     m.bindPopup(stationCard(s),{maxWidth:isMobile?240:260});m.addTo(stnGroup);}
 }
+// A viewport-scoped raster has to follow the viewport.
+let _progMoveT=null;
+function progRefresh(){
+  if(!(layer==='prog'||layer==='powfind'||layer==='progdiff'||layer==='progpat'))return;
+  if(_progMoveT)clearTimeout(_progMoveT);
+  _progMoveT=setTimeout(()=>{try{
+    if(layer==='powfind')renderPowderFind();
+    else if(layer==='progdiff')renderProgDiff();
+    else if(layer==='progpat')renderProgPattern(stat);
+    else renderPrognosis(stat);
+  }catch(e){}},140);
+}
+map.on('moveend zoomend',progRefresh);
 let _lastTier=-1;
 map.on('zoomend',()=>{try{const t=detailTier();if(t!==_lastTier){_lastTier=t;renderStations();}loadReportMarkers();}catch(e){}});
 function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");const wd=['So','Mo','Di','Mi','Do','Fr','Sa'][d.getUTCDay()];return wd+' '+d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'., '+d.getUTCHours()+':00';}
@@ -5735,15 +5816,20 @@ function drawComputeZones(){
     // if it leaked in here the prognosis would read it as a snow type that
     // CONFLICTS with the powder painted on the same slope.
     if(!DRAW_PENS[type]||DRAW_PENS[type].kind!=='zone')continue;
-    let slat=0,slng=0,emin=1e9,emax=-1e9,sx=0,sy=0,na=0;
+    let slat=0,slng=0,emin=1e9,emax=-1e9,sx=0,sy=0,na=0,ssl=0,ssl2=0,ns=0;
     for(const pr of pts){const la=pr[0],lo=pr[1];slat+=la;slng+=lo;const d=drawDemFull(la,lo);if(!d)continue;
       if(d.elev!=null){if(d.elev<emin)emin=d.elev;if(d.elev>emax)emax=d.elev;}
+      if(d.slope!=null){ssl+=d.slope;ssl2+=d.slope*d.slope;ns++;}
       if(d.slope>=6&&d.aspectDeg!=null){const r=d.aspectDeg*Math.PI/180;sx+=Math.cos(r);sy+=Math.sin(r);na++;}}
     const _pen=DRAW_PENS[type];
     const _cm=(_pen&&_pen.slider&&(type==='powder'||type==='drift'))?_pen.slider.val:null;
+    const _sMean=ns?ssl/ns:null;
+    const _sSd=(ns>1)?Math.sqrt(Math.max(0,ssl2/ns-_sMean*_sMean)):null;
     zones.push({type:type,centroid:[slat/pts.length,slng/pts.length],
       elevMin:emin<1e9?Math.round(emin):null,elevMax:emax>-1e9?Math.round(emax):null,
       aspectDeg:na?((Math.atan2(sy,sx)*180/Math.PI)+360)%360:null,aspectConc:na?Math.hypot(sx,sy)/na:0,
+      slope:_sMean!=null?Math.round(_sMean*10)/10:null,
+      slopeSd:_sSd!=null?Math.round(_sSd*10)/10:null,
       cm:_cm,n:pts.length});
   }
   return zones;
