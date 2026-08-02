@@ -986,6 +986,87 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* every focusable control gets the same visible focus ring (§9) */
  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,
  [tabindex]:focus-visible{outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+ /* ===================== Level 0: the dock ================================
+    The only permanent chrome. Four targets; everything else is one tap deeper.
+    ---------------------------------------------------------------------- */
+ #dock{position:fixed;z-index:1200;left:10px;right:10px;
+   bottom:calc(env(safe-area-inset-bottom,0px) + 10px);
+   display:flex;align-items:stretch;gap:6px;padding:6px;
+   background:var(--paper);border:1px solid var(--ink-100);border-radius:18px;
+   box-shadow:var(--lift)}
+ body.draw-on #dock,body.sheet-open #dock{opacity:0;pointer-events:none;transform:translateY(8px)}
+ #dock{transition:opacity var(--dur-2) var(--ease),transform var(--dur-2) var(--ease)}
+ #dock button{border:none;background:none;font-family:inherit;cursor:pointer;
+   min-height:52px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+   color:var(--ink-700);transition:background var(--dur-1) var(--ease)}
+ #dock button:active{transform:scale(.97)}
+ #dockSearch{width:52px;flex:0 0 auto}
+ #dockSearch svg{width:21px;height:21px}
+ #dockLayer,#dockTime{flex-direction:column;align-items:flex-start;gap:1px;padding:0 14px;text-align:left}
+ #dockLayer{flex:1 1 auto;min-width:0}
+ #dockTime{flex:0 0 auto}
+ .dk-k{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-500)}
+ .dk-v{font-size:15px;font-weight:800;color:var(--ink-900);letter-spacing:-.01em;
+   max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ #dockLayer .dk-k{color:var(--accent)}
+ /* id-on-element, so it outranks the "#dock button" reset above: the plus is
+    the one filled primary action on the whole map screen. */
+ #dock button#dockAdd{width:52px;flex:0 0 auto;background:var(--ink-900);color:var(--paper)}
+ #dockAdd svg{width:22px;height:22px}
+ /* ===================== The sheet: every depth lives here ================ */
+ #sheetScrim{position:fixed;inset:0;z-index:3400;background:rgba(14,17,22,.34);
+   opacity:0;pointer-events:none;transition:opacity var(--dur-2) var(--ease)}
+ body.sheet-open #sheetScrim{opacity:1;pointer-events:auto}
+ #sheet{position:fixed;z-index:3500;left:0;right:0;bottom:0;
+   max-height:82vh;display:flex;flex-direction:column;
+   background:var(--paper);border-radius:var(--r-2) var(--r-2) 0 0;box-shadow:var(--lift);
+   transform:translateY(101%);transition:transform var(--dur-2) var(--ease);
+   padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px);will-change:transform}
+ body.sheet-open #sheet{transform:translateY(0)}
+ #sheetGrab{width:36px;height:4px;border-radius:2px;background:var(--ink-150);margin:10px auto 2px;flex-shrink:0;cursor:grab;touch-action:none}
+ #sheetHead{display:flex;align-items:center;gap:var(--sp2);padding:var(--sp2) var(--sp3) var(--sp2);flex-shrink:0}
+ #sheetHead h2{flex:1;margin:0;font-size:17px;font-weight:800;color:var(--ink-900);letter-spacing:-.01em;
+   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ #sheetBack,#sheetClose{width:var(--tap);height:var(--tap);flex-shrink:0;border:none;background:none;
+   border-radius:var(--r-1);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer}
+ #sheetBack svg,#sheetClose svg{width:21px;height:21px}
+ #sheetBack:active,#sheetClose:active{transform:scale(.94)}
+ #sheet:not(.has-back) #sheetBack{visibility:hidden}
+ #sheetBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 var(--sp4) var(--sp4)}
+ /* the content of a level fades up as it arrives, staggered a little */
+ .sv-in>*{animation:svIn .26s var(--ease) both}
+ .sv-in>*:nth-child(2){animation-delay:.03s}
+ .sv-in>*:nth-child(3){animation-delay:.06s}
+ .sv-in>*:nth-child(n+4){animation-delay:.09s}
+ @keyframes svIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+ /* a big, obvious row for drilling one level deeper */
+ .sv-item{display:flex;align-items:center;gap:var(--sp3);width:100%;min-height:60px;
+   padding:0 var(--sp3);border:none;border-bottom:1px solid var(--ink-100);background:none;
+   font-family:inherit;text-align:left;cursor:pointer;color:var(--ink-900)}
+ .sv-item:last-child{border-bottom:none}
+ .sv-item .sv-t{flex:1;min-width:0}
+ .sv-item .sv-t b{display:block;font-size:16px;font-weight:700;letter-spacing:-.01em}
+ .sv-item .sv-t span{display:block;font-size:13px;color:var(--ink-500);margin-top:1px}
+ .sv-item .sv-go{color:var(--ink-300);flex-shrink:0}
+ .sv-item .sv-go svg{width:20px;height:20px}
+ .sv-item.on .sv-t b{color:var(--accent)}
+ .sv-item .sv-dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--ink-150);flex-shrink:0;
+   display:flex;align-items:center;justify-content:center;color:transparent}
+ .sv-item.on .sv-dot{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+ .sv-item .sv-dot svg{width:14px;height:14px}
+ .sv-item:active{background:var(--ink-050)}
+ .sv-sec{font-size:10px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;
+   color:var(--accent);padding:var(--sp4) var(--sp3) var(--sp2)}
+ .sv-note{font-size:12.5px;color:var(--ink-500);padding:var(--sp3);line-height:1.5}
+ .sv-slide{padding:var(--sp3);border-bottom:1px solid var(--ink-100)}
+ .sv-slide:last-child{border-bottom:none}
+ .sv-slide-h{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp2)}
+ .sv-slide-h b{font-size:16px;font-weight:700;color:var(--ink-900);letter-spacing:-.01em}
+ .sv-slide-h span{font-size:16px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+ .sv-slide em{display:block;font-style:normal;font-size:12.5px;color:var(--ink-500);margin-top:2px;line-height:1.45}
+ .sv-slide input[type=range]{width:100%;height:34px;margin-top:var(--sp2);accent-color:var(--accent)}
+ @media (prefers-reduced-motion:reduce){
+   #sheet,#dock{transition:none}.sv-in>*{animation:none}}
  /* --- The console: layers + time on one docked surface ---------------- */
  #layerBar{display:flex;flex-direction:column;gap:var(--sp2);padding:var(--sp4) var(--sp4) var(--sp3);
    border-bottom:1px solid var(--ink-100);--topic-accent:var(--accent);--topic-tint:var(--accent-soft)}
@@ -1031,6 +1112,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #progConfVal{font-size:12.5px;font-weight:800;color:var(--ink-900);min-width:38px;text-align:right}
  #bottomPanel{position:absolute;z-index:1000;bottom:0;left:0;right:0;
    background:var(--paper);border-top:1px solid var(--ink-100);box-shadow:none;transition:none;padding-bottom:max(env(safe-area-inset-bottom, 0px) - 18px, 4px);overflow:hidden}
+ /* Level 0 shows the map, not the console: its rows are borrowed by the sheet. */
+ #bottomPanel{display:none!important}
  #btmMain{padding:6px 14px 2px}
  #timeline{display:block;border:1px solid var(--ink-100);background:var(--ink-050);border-radius:var(--r-1)}
  #presets::-webkit-scrollbar{display:none}
@@ -1076,6 +1159,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .asp-crisp img{image-rendering:pixelated;image-rendering:crisp-edges}
  .legend{position:absolute;z-index:950;bottom:calc(var(--btm-h,80px) + 40px);left:12px;background:var(--paper);border:1px solid rgba(255,255,255,.5);padding:10px 12px;border-radius:var(--r);box-shadow:0 2px 12px var(--ink-100);font-size:12px;max-width:220px;line-height:1.5;color:var(--fg2);display:none}
  .legend.show{display:block}
+ /* The legend is a level of the sheet; the floating button and card are gone. */
+ #legendBtn,.legend{display:none!important}
  #legendBtn{position:absolute;z-index:960;bottom:var(--btm-h,80px);left:12px;width:40px;height:40px;border-radius:var(--r-1);border:1px solid var(--ink-100);background:var(--paper);color:var(--ink-700);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--lift);transition:background var(--dur-1) var(--ease)}
  #legendBtn svg{width:20px;height:20px}
  #legendBtn:active{transform:scale(.92)}
@@ -1168,17 +1253,24 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .leaflet-control-attribution a{color:inherit!important}
  .leaflet-control-scale-line{background:rgba(255,255,255,.6)!important;border-color:rgba(22,21,46,.35)!important;color:var(--fg2)!important;font-family:'Inter',system-ui!important;font-size:10px!important;font-weight:600!important;}
  .leaflet-control-scale{margin-bottom:6px!important;margin-right:8px!important}
- #demoPill{min-height:var(--tap-sm);position:fixed;z-index:1050;top:calc(env(safe-area-inset-top,0px) + 172px);left:12px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--hair);background:var(--paper);color:var(--fg2);font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:var(--elev1)}
+ /* The pill sits under the top edge at every level — it used to jump back to
+    the old console offset the moment a sheet opened. */
+ #demoPill{min-height:var(--tap-sm);position:fixed;z-index:1050;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--hair);background:var(--paper);color:var(--fg2);font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:var(--elev1)}
  #demoPill .dp-dot{width:7px;height:7px;border-radius:50%;background:rgba(20,20,25,.35)}
- #demoPill.on{background:var(--ink-900);color:#fff;border-color:var(--ink-900)}
+ #demoPill.on{background:var(--ink-900);color:var(--paper);border-color:var(--ink-900)}
  #demoPill.on .dp-dot{background:#5ee68a}
+ /* Search lives in its own sheet now; this element is borrowed into it and is
+    invisible everywhere else. */
+ #searchWrap:not(.sv-borrowed){display:none!important}
+ #sheetBody #searchWrap{position:static!important;width:auto;max-width:none;margin-bottom:var(--sp3)}
+ #sheetBody #searchWrap input{box-shadow:none}
  #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 116px);left:12px;width:230px;max-width:calc(100vw - 24px)}
  #searchWrap input{width:100%;min-height:var(--tap);padding:0 12px 0 34px;border-radius:var(--r-1);border:1px solid var(--ink-100);background:var(--paper);color:var(--ink-900);font-size:15px;font-weight:500;outline:none;box-shadow:var(--lift);font-family:inherit}
  #searchWrap input::placeholder{color:var(--mut);font-weight:400}
  #searchWrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
  #searchWrap .icn{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--mut);font-size:15px}
  /* Right-side control rail */
- #ctrlRail{position:absolute;z-index:1050;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:10px}
+ #ctrlRail{gap:8px;position:absolute;z-index:1050;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:10px}
  .rail-btn{position:relative;width:46px;height:46px;border-radius:var(--r-1);border:1px solid var(--ink-100);background:var(--paper);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:none;transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease)}
  .rail-btn:hover{background:#fff;color:var(--fg);transform:translateY(-1px)}
  .rail-btn:active{transform:scale(.95)}
@@ -1277,7 +1369,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    .scard{font-size:14px;min-width:160px}
    .leaflet-popup-content-wrapper{max-width:calc(100vw - 32px)!important}
    .legend{max-width:180px;font-size:12px}
-   #ctrlRail{top:calc(env(safe-area-inset-top,0px) + 12px);right:8px;gap:11px}
+   #ctrlRail{gap:8px;top:calc(env(safe-area-inset-top,0px) + 12px);right:8px;gap:11px}
    .rail-btn{width:48px;height:48px}
    #legendBtn{width:40px;height:40px;font-size:18px}
    .seg button{padding:9px 14px;font-size:15px;min-height:44px}
@@ -1950,6 +2042,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .qr-prev{width:100%;max-height:150px;object-fit:cover;border-radius:14px;margin-top:10px}
  .qr-adj{display:block;margin:12px auto 0;border:none;background:none;color:var(--acc2);font-size:13px;font-weight:750;font-family:inherit;cursor:pointer}
  .qr-skip{width:100%;margin-top:8px;border:none;background:none;color:var(--mut);font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;padding:9px}
+ /* Reporting is reached from the dock's "+", so the floating stack is gone. */
+ #mapFab,#mapQr,#mapDraw{display:none!important}
  #mapFab{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 14px);width:56px;height:56px;z-index:900;background:var(--ink-900)!important;color:var(--paper)!important;border-color:var(--ink-900)!important}
  #mapFab:active{transform:scale(.9)}
  #mapFab span{display:none}
@@ -2080,13 +2174,47 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="ctrlRail">
   <button class="rail-btn" id="accountBtn" onclick="accountTap()" title="Anmelden" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.6"/><path d="M3.5 20a6.5 6.5 0 0 1 13 0"/><line x1="19" y1="6" x2="19" y2="12"/><line x1="16" y1="9" x2="22" y2="9"/></svg></button>
   <button class="rail-btn feed-accent" id="feedBtn" onclick="feedOpen()" title="Community-Feed" aria-label="Community-Feed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
-  <button class="rail-btn active" id="railToggles" onclick="toggleStations()" title="Messstationen ein/aus" aria-label="Messstationen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0" stroke-dasharray="0"/></svg></button>
-  <button class="rail-btn" id="btn3dFloat" title="3D-Ansicht" aria-label="3D-Ansicht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg></button>
-  <button class="rail-btn" id="locBtn" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg></button>
+  <!-- Stations, 3D and locate moved into the map-options sheet: at level 0 the
+       rail is the two surfaces you actually switch to. -->
+  <button class="rail-btn" id="railToggles" onclick="toggleStations()" hidden aria-hidden="true"></button>
+  <button class="rail-btn" id="btn3dFloat" hidden aria-hidden="true"></button>
+  <button class="rail-btn" id="locBtn" onclick="flyToMe()" hidden aria-hidden="true"></button>
 </div>
 <button class="feed-qr" id="mapQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><i class="fab-v">v2</i><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Schnee-Karte zeichnen"><i class="fab-v">v3</i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Zeichnen</span></button>
 <button class="feed-fab" id="mapFab" onclick="obsOpen()" title="Beobachtung melden"><i class="fab-v">v1</i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
+<!-- Level 0: the only chrome that is always on screen. Four targets. -->
+<div id="dock">
+  <button id="dockSearch" aria-label="Ort suchen" onclick="navOpen('search')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg>
+  </button>
+  <button id="dockLayer" onclick="navOpen('layers')">
+    <span class="dk-k" id="dockLayerTag">Ebene</span>
+    <span class="dk-v" id="dockLayerVal">Powder</span>
+  </button>
+  <button id="dockTime" onclick="navOpen('time')">
+    <span class="dk-k">Zeit</span>
+    <span class="dk-v" id="dockTimeVal">48 h</span>
+  </button>
+  <button id="dockAdd" aria-label="Melden" onclick="navOpen('report')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+</div>
+<!-- One sheet for every depth. Content is pushed and popped by the nav stack. -->
+<div id="sheetScrim" onclick="navClose()"></div>
+<section id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div id="sheetGrab"></div>
+  <header id="sheetHead">
+    <button id="sheetBack" aria-label="Zurück" onclick="navBack()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <h2 id="sheetTitle"></h2>
+    <button id="sheetClose" aria-label="Schliessen" onclick="navClose()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </header>
+  <div id="sheetBody"></div>
+</section>
 <div id="bottomPanel" class="detail">
   <div id="tlToggle"></div>
   <!-- The console. One surface, sectioned by hairlines: every map layer of both
@@ -2944,6 +3072,12 @@ const PROG_MIN_CONF=75;      // Reported Powder is defined as "confidence > 75%"
 const pcv=document.createElement('canvas');pcv.width=PROG_GW*2;pcv.height=PROG_GH*2;const pcx=pcv.getContext('2d');
 let prognosisOverlay=L.imageOverlay(pcv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:1});
 let PROG_ASP=null,PROG_ELEV=null,PROG_SLP=null,PROG_LA=null,PROG_LO=null,PROG_Q=null;
+// The grid used to be baked once over the WHOLE COUNTRY: 340x240 cells across
+// 355 km is ~1 km per cell, so at the zoom people actually use (one slope on
+// screen) the entire viewport was 1.2 cells wide -- a single cell either
+// covered the screen or missed it, which is why the layer looked broken.
+// It is now rebuilt for the visible area, so a cell is metres, not kilometres.
+let PROG_BOUNDS=null;
 let _progField=null,_progConf=null,_progType=null,_progModel=null,_progDiff=null;
 const PROG_COL={powder:[74,163,255],drift:[232,89,12],wet:[245,158,11],suncrust:[244,208,63],windpressed:[150,168,196],firn:[63,178,127],scoured:[154,135,120]};
 // Colourful, perceptually ordered ramp for the 0-100% confidence map.
@@ -2958,18 +3092,62 @@ function progConfColor(t){
   const l=PROG_CONF_STOPS[PROG_CONF_STOPS.length-1];return [l[1],l[2],l[3]];
 }
 const PROG_LABEL={powder:'Powder',drift:'Triebschnee',wet:'Nassschnee',suncrust:'Sonnendeckel',windpressed:'Windgepresst',firn:'Firn',scoured:'Abgeweht'};
-function progTerrain(){
-  if(PROG_ASP)return;const N=PROG_GW*PROG_GH;
+// The area the grid is built over: the current view, clamped to the data, with
+// a little margin so a small pan does not immediately show an empty edge.
+function progViewBounds(){
+  let s0=laMin,n0=laMax,w0=loMin,e0=loMax;
+  try{const b=map.getBounds(),dLa=(b.getNorth()-b.getSouth())*0.15,dLo=(b.getEast()-b.getWest())*0.15;
+    s0=Math.max(laMin,b.getSouth()-dLa);n0=Math.min(laMax,b.getNorth()+dLa);
+    w0=Math.max(loMin,b.getWest()-dLo);e0=Math.min(loMax,b.getEast()+dLo);
+    if(!(n0>s0&&e0>w0)){s0=laMin;n0=laMax;w0=loMin;e0=loMax;}}catch(e){}
+  return {s:s0,n:n0,w:w0,e:e0};
+}
+function progTerrain(force){
+  const bb=progViewBounds();
+  if(PROG_ASP&&PROG_BOUNDS&&!force){
+    // rebuild only when the view really moved (a few % of the current span)
+    const tl=(PROG_BOUNDS.n-PROG_BOUNDS.s)*0.04,to=(PROG_BOUNDS.e-PROG_BOUNDS.w)*0.04;
+    if(Math.abs(bb.s-PROG_BOUNDS.s)<tl&&Math.abs(bb.n-PROG_BOUNDS.n)<tl&&
+       Math.abs(bb.w-PROG_BOUNDS.w)<to&&Math.abs(bb.e-PROG_BOUNDS.e)<to)return;
+  }
+  PROG_BOUNDS=bb;
+  const N=PROG_GW*PROG_GH;
   PROG_ASP=new Float32Array(N);PROG_ELEV=new Float32Array(N);PROG_SLP=new Float32Array(N);PROG_LA=new Float32Array(N);PROG_LO=new Float32Array(N);
   PROG_Q=new Int32Array(N);
   for(let gy=0;gy<PROG_GH;gy++)for(let gx=0;gx<PROG_GW;gx++){const idx=gy*PROG_GW+gx;
-    const lat=laMax-gy/(PROG_GH-1)*(laMax-laMin),lon=loMin+gx/(PROG_GW-1)*(loMax-loMin);
+    const lat=bb.n-gy/(PROG_GH-1)*(bb.n-bb.s),lon=bb.w+gx/(PROG_GW-1)*(bb.e-bb.w);
     PROG_LA[idx]=lat;PROG_LO[idx]=lon;PROG_Q[idx]=-1;
     const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
     if(cx<0||cx>=W||cy<0||cy>=H){PROG_ELEV[idx]=-1;continue;}
     const q=cy*W+cx;PROG_Q[idx]=q;const fa=fineAspectDeg(lat,lon),fe=fineElev(lat,lon),fs=fineSlope(lat,lon);
     PROG_ASP[idx]=(fa!=null?fa:maspv(q));PROG_ELEV[idx]=(fe!=null?fe:melevv(q));
     PROG_SLP[idx]=(fs!=null?fs:mslpv(q));}
+}
+// Every report layer paints into the same canvas and must anchor it to the area
+// the grid was actually built for.
+function progCommit(){
+  try{prognosisOverlay.setBounds([[PROG_BOUNDS.s,PROG_BOUNDS.w],[PROG_BOUNDS.n,PROG_BOUNDS.e]]);}catch(e){}
+  prognosisOverlay.setUrl(pcv.toDataURL());
+}
+// Only zones that can actually reach the visible area are worth scoring: the
+// distance term is exp(-(d/11km)^2), so beyond ~3 scale lengths a zone
+// contributes ~1e-4. Culling keeps a pan O(visible reports) instead of
+// O(every report in Switzerland).
+function progNearZones(zones){
+  if(!PROG_BOUNDS)return zones;
+  const pad=3*PROG_SC_KM;
+  const dLa=pad/111,mid=(PROG_BOUNDS.s+PROG_BOUNDS.n)/2;
+  const dLo=pad/(111*Math.max(0.2,Math.cos(mid*Math.PI/180)));
+  return zones.filter(z=>z.lat>=PROG_BOUNDS.s-dLa&&z.lat<=PROG_BOUNDS.n+dLa&&
+                         z.lng>=PROG_BOUNDS.w-dLo&&z.lng<=PROG_BOUNDS.e+dLo);
+}
+// Grid index for a lat/lon inside the current grid (or -1).
+function progIdxAt(lat,lon){
+  if(!PROG_BOUNDS)return -1;
+  const gx=Math.round((lon-PROG_BOUNDS.w)/(PROG_BOUNDS.e-PROG_BOUNDS.w)*(PROG_GW-1));
+  const gy=Math.round((PROG_BOUNDS.n-lat)/(PROG_BOUNDS.n-PROG_BOUNDS.s)*(PROG_GH-1));
+  if(gx<0||gx>=PROG_GW||gy<0||gy>=PROG_GH)return -1;
+  return gy*PROG_GW+gx;
 }
 // Report age in hours: DB rows carry created_at, demo rows a "vor 5h/3d" label.
 function progAgeH(r){
@@ -3000,7 +3178,7 @@ function demoFitZones(){
 // reports, and the longer field/observation reports.
 let progSrc='both';
 const PROG_SRC_LABEL={draw:'Zeichnen',quick:'Quick',both:'Zeichnen + Quick',all:'Alle Reports'};
-function progSetSrc(v){progSrc=v;progRenderBar();
+function progSetSrc(v){progSrc=v;progRenderBar();try{dockSync();}catch(e){}
   try{if(layer==='prog'||layer==='powfind'||layer==='progdiff'){showOverlay();legend();}}catch(e){}}
 // map free text from a written report onto a snow type
 function progTypeFromText(t){t=(t||'').toLowerCase();
@@ -3016,7 +3194,9 @@ function progZoneFromPoint(r,type,cm,conc){
   const e=(d&&d.elev!=null)?Math.round(d.elev):null;
   return {type:type,lat:r.lat,lng:r.lng,
     e0:e!=null?e-250:null,e1:e!=null?e+250:null,
-    asp:(d&&d.aspectDeg!=null)?d.aspectDeg:null,conc:conc,cm:cm,ageH:progAgeH(r)};
+    asp:(d&&d.aspectDeg!=null)?d.aspectDeg:null,conc:conc,
+    slp:(d&&d.slope!=null)?d.slope:null,slpSd:14,
+    cm:cm,ageH:progAgeH(r)};
 }
 // --- Report credibility: confirmations on the post + author trust score -----
 // "Bestätigen" writes a report_reactions row, so r.likes IS the number of
@@ -3053,7 +3233,8 @@ function progZones(){
       if(!useDraw)return;
       cd.zones.forEach(z=>{if(!z||!z.type)return;const c=z.centroid||[r.lat,r.lng];if(c[0]==null)return;
         out.push({type:z.type,lat:c[0],lng:c[1],e0:z.elevMin,e1:z.elevMax,asp:z.aspectDeg,
-          conc:z.aspectConc==null?0.6:z.aspectConc,cm:z.cm==null?null:z.cm,ageH:progAgeH(r),w:w});});
+          conc:z.aspectConc==null?0.6:z.aspectConc,slp:z.slope==null?null:z.slope,
+          slpSd:z.slopeSd==null?null:z.slopeSd,cm:z.cm==null?null:z.cm,ageH:progAgeH(r),w:w});});
       return;}
     if(cd.quick){
       if(!useQuick)return;
@@ -3077,6 +3258,8 @@ const PROG_ELEV_SD=180;   // elevation roll-off outside the reported band [m]
 const PROG_AGE_H=72;      // report half-life-ish for recency weighting
 const PROG_ASP_SD_MIN=30; // aspect tolerance of a tightly drawn report [deg]
 const PROG_ASP_SD_MAX=85; // aspect tolerance of a diffuse one [deg]
+const PROG_SLP_SD_MIN=9;  // slope tolerance [deg] -- steepness changes the snow
+const PROG_SLP_FLOOR=0.30;// a very different steepness still is not zero evidence
 function progAspectMatch(asp,zAsp,conc){
   if(zAsp==null||asp==null)return 0.6;
   let d=Math.abs(asp-zAsp)%360;if(d>180)d=360-d;
@@ -3092,6 +3275,17 @@ function progAspectMatch(asp,zAsp,conc){
   if(d>112.5)m*=(1-c);
   return m;
 }
+// Steepness matters as much as aspect: powder on a 35 deg north face says
+// little about a 5 deg shoulder at the same aspect and height. The report's own
+// slope spread widens the tolerance, and the floor keeps a mismatch from wiping
+// the evidence out entirely.
+function progSlopeMatch(slp,zSlp,zSd){
+  if(zSlp==null||slp==null)return 1;
+  const sd=Math.max(PROG_SLP_SD_MIN,zSd==null?PROG_SLP_SD_MIN:zSd);
+  const d=slp-zSlp;
+  const m=Math.exp(-(d*d)/(2*sd*sd));
+  return PROG_SLP_FLOOR+(1-PROG_SLP_FLOOR)*m;
+}
 function progElevMatch(elev,e0,e1){
   if(e0==null||e1==null)return 0.7;
   if(elev>=e0&&elev<=e1)return 1;                       // inside the reported band
@@ -3101,8 +3295,11 @@ function progElevMatch(elev,e0,e1){
 function progEnvelope(asp,elev,slp,z){
   if(elev<0)return 0;
   const em=progElevMatch(elev,z.e0,z.e1);
-  const am=(slp!=null&&slp<12)?0.5:progAspectMatch(asp,z.asp,z.conc); // flats: aspect-neutral
-  return em*am;
+  // On genuinely flat ground aspect carries no information, so it is not held
+  // against the cell; the slope term below is what separates flats from faces.
+  const am=(slp!=null&&slp<12)?0.75:progAspectMatch(asp,z.asp,z.conc);
+  const sm=progSlopeMatch(slp,z.slp,z.slpSd);
+  return em*am*sm;
 }
 function progDistKm(lat,lon,z){const dLat=(lat-z.lat)*111,dLo=(lon-z.lng)*111*Math.cos(lat*Math.PI/180);return Math.hypot(dLat,dLo);}
 function progRecency(z){const a=z.ageH==null?12:z.ageH;return 0.35+0.65*Math.exp(-a/PROG_AGE_H);}
@@ -3134,7 +3331,7 @@ function progCell(asp,elev,slp,lat,lon,sel,oth){
 }
 function renderPrognosis(type){
   progTerrain();_progType=type;
-  const zones=progZones(),sel=zones.filter(z=>z.type===type),oth=zones.filter(z=>z.type!==type);
+  const zones=progNearZones(progZones()),sel=zones.filter(z=>z.type===type),oth=zones.filter(z=>z.type!==type);
   const N=PROG_GW*PROG_GH;
   _progField=new Float32Array(N);_progConf=new Float32Array(N);
   const col=PROG_COL[type]||[74,163,255];
@@ -3151,7 +3348,7 @@ function renderPrognosis(type){
   }
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
-  prognosisOverlay.setUrl(pcv.toDataURL());
+  progCommit();
 }
 // Powder-Finder: where powder is expected, painted in the SLF new-snow depth
 // colours, filtered by a minimum confidence the user picks.
@@ -3168,7 +3365,8 @@ function renderPowderFind(){
   progTerrain();_progType='powder';
   const _keep=progSrc;progSrc='draw';                 // drawn reports only, by definition
   const zones=progZones();progSrc=_keep;
-  const sel=zones.filter(z=>z.type==='powder'),oth=zones.filter(z=>z.type!=='powder');
+  const near=progNearZones(zones);
+  const sel=near.filter(z=>z.type==='powder'),oth=near.filter(z=>z.type!=='powder');
   const N=PROG_GW*PROG_GH;
   _progField=new Float32Array(N);_progConf=new Float32Array(N);
   const img=new ImageData(PROG_GW,PROG_GH),d=img.data;
@@ -3185,7 +3383,7 @@ function renderPowderFind(){
   }
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
-  prognosisOverlay.setUrl(pcv.toDataURL());
+  progCommit();
 }
 // --- Abweichung: report-based powder prognosis vs. the model "Ski > Powder" --
 // Both layers answer the same question from different evidence, so the
@@ -3201,7 +3399,7 @@ function progModelPowder(q,cache){
 }
 function renderProgDiff(){
   progTerrain();_progType='powder';
-  const zones=progZones(),sel=zones.filter(z=>z.type==='powder'),oth=zones.filter(z=>z.type!=='powder');
+  const zones=progNearZones(progZones()),sel=zones.filter(z=>z.type==='powder'),oth=zones.filter(z=>z.type!=='powder');
   const N=PROG_GW*PROG_GH;
   _progField=new Float32Array(N);_progConf=new Float32Array(N);_progModel=new Float32Array(N);_progDiff=new Float32Array(N);
   const cache=new Map();
@@ -3231,7 +3429,7 @@ function renderProgDiff(){
   }
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
-  prognosisOverlay.setUrl(pcv.toDataURL());
+  progCommit();
 }
 // --- One pattern language for every snow type except Powder -----------------
 // Powder is the only type that keeps a solid colour (blue, and on the map the
@@ -3296,7 +3494,7 @@ const _progPatCache={};
 function renderProgPattern(type){
   progTerrain();_progType=type;
   const _keep=progSrc;progSrc='draw';                 // drawn reports only
-  const zones=progZones();progSrc=_keep;
+  const zones=progNearZones(progZones());progSrc=_keep;
   const sel=zones.filter(z=>z.type===type),oth=zones.filter(z=>z.type!==type);
   const N=PROG_GW*PROG_GH;
   _progField=new Float32Array(N);_progConf=new Float32Array(N);
@@ -3321,19 +3519,17 @@ function renderProgPattern(type){
   pcx.fillStyle=pcx.createPattern(tile,'repeat');
   pcx.fillRect(0,0,pcv.width,pcv.height);
   pcx.globalCompositeOperation='source-over';
-  prognosisOverlay.setUrl(pcv.toDataURL());
+  progCommit();
 }
 function progDiffAt(lat,lon){
   if(!_progDiff)return null;
-  const gx=Math.round((lon-loMin)/(loMax-loMin)*(PROG_GW-1)),gy=Math.round((laMax-lat)/(laMax-laMin)*(PROG_GH-1));
-  if(gx<0||gx>=PROG_GW||gy<0||gy>=PROG_GH)return null;const idx=gy*PROG_GW+gx;
+  const idx=progIdxAt(lat,lon);if(idx<0)return null;
   return {rep:Math.round(_progField[idx]*100),model:Math.round(_progModel[idx]*100),
           conf:_progConf[idx],diff:isNaN(_progDiff[idx])?null:Math.round(_progDiff[idx]*100)};
 }
 function prognosisAt(lat,lon){
   if(!_progField)return null;
-  const gx=Math.round((lon-loMin)/(loMax-loMin)*(PROG_GW-1)),gy=Math.round((laMax-lat)/(laMax-laMin)*(PROG_GH-1));
-  if(gx<0||gx>=PROG_GW||gy<0||gy>=PROG_GH)return null;const idx=gy*PROG_GW+gx;
+  const idx=progIdxAt(lat,lon);if(idx<0)return null;
   return {type:_progType,like:Math.round(_progField[idx]*100),conf:_progConf[idx]};
 }
 const windArr=L.layerGroup(); const stnGroup=L.layerGroup().addTo(map);
@@ -3424,6 +3620,252 @@ function renderStations(){stnGroup.clearLayers();if(!showStn)return;
     const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:html,iconSize:iSize,iconAnchor:iAnc}),zIndexOffset:500});
     m.bindPopup(stationCard(s),{maxWidth:isMobile?240:260});m.addTo(stnGroup);}
 }
+// ===================== Navigation: one sheet, a stack of views =============
+// Every level is a view pushed onto navStack. There is always a way back:
+// the chevron, a downward swipe, the scrim, Escape and the browser back button
+// all pop exactly one level.
+const NAV_VIEWS={};
+let navStack=[],_navPopping=false,_navPushed=false;
+function navRender(){
+  const sh=document.getElementById('sheet');
+  const top=navStack[navStack.length-1];
+  if(!top)return;
+  const v=NAV_VIEWS[top.id];if(!v)return;
+  document.getElementById('sheetTitle').textContent=
+    (typeof v.title==='function'?v.title(top.arg):v.title)||'';
+  sh.classList.toggle('has-back',navStack.length>1);
+  const body=document.getElementById('sheetBody');
+  body.classList.remove('sv-in');
+  svReturnAll();
+  body.innerHTML='';
+  v.render(body,top.arg);
+  // restart the staggered entrance
+  void body.offsetWidth;body.classList.add('sv-in');
+  body.scrollTop=0;
+}
+function navOpen(id,arg){
+  navStack=[{id:id,arg:arg}];
+  document.body.classList.add('sheet-open');
+  navRender();
+  // Exactly one history entry per opening, tracked explicitly: chaining
+  // history.back() calls would walk past the app's own entry and leave the page.
+  try{if(!_navPushed){history.pushState({ssmSheet:1},'');_navPushed=true;}}catch(e){}
+  try{haptic(6);}catch(e){}
+}
+function navPush(id,arg){
+  navStack.push({id:id,arg:arg});navRender();
+  try{haptic(4);}catch(e){}
+}
+function navBack(){
+  if(navStack.length>1){navStack.pop();navRender();try{haptic(4);}catch(e){}return true;}
+  navClose();return false;
+}
+function navClose(){
+  if(!document.body.classList.contains('sheet-open'))return;
+  document.body.classList.remove('sheet-open');
+  svReturnAll();
+  navStack=[];
+  try{if(_navPushed&&!_navPopping){_navPushed=false;history.back();}}catch(e){}
+  _navPushed=false;
+  try{haptic(4);}catch(e){}
+}
+// the phone's back gesture pops a level instead of leaving the app
+addEventListener('popstate',()=>{
+  if(!document.body.classList.contains('sheet-open'))return;
+  _navPopping=true;_navPushed=false;
+  if(navStack.length>1){navStack.pop();navRender();
+    try{history.pushState({ssmSheet:1},'');_navPushed=true;}catch(e){}}
+  else navClose();
+  _navPopping=false;
+});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('sheet-open'))navBack();});
+// drag the grab handle down to pop
+(function(){
+  const g=document.getElementById('sheetGrab'),sh=document.getElementById('sheet');
+  if(!g||!sh)return;let y0=null,dy=0;
+  const down=e=>{y0=(e.touches?e.touches[0]:e).clientY;dy=0;sh.style.transition='none';};
+  const move=e=>{if(y0==null)return;dy=Math.max(0,(e.touches?e.touches[0]:e).clientY-y0);
+    sh.style.transform='translateY('+dy+'px)';};
+  const up=()=>{if(y0==null)return;y0=null;sh.style.transition='';sh.style.transform='';
+    if(dy>70)navBack();};
+  g.addEventListener('touchstart',down,{passive:true});g.addEventListener('mousedown',down);
+  addEventListener('touchmove',move,{passive:true});addEventListener('mousemove',move);
+  addEventListener('touchend',up);addEventListener('mouseup',up);
+})();
+const _CHEV='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
+const _TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>';
+function svRow(o){
+  const b=document.createElement('button');
+  b.className='sv-item'+(o.on?' on':'');
+  b.innerHTML=(o.on!=null&&!o.go?'<span class="sv-dot">'+_TICK+'</span>':'')+
+    '<span class="sv-t"><b>'+o.title+'</b>'+(o.sub?'<span>'+o.sub+'</span>':'')+'</span>'+
+    (o.go?'<span class="sv-go">'+_CHEV+'</span>':'');
+  b.onclick=o.onClick;return b;
+}
+function svSlider(o){
+  const d=document.createElement('div');d.className='sv-slide';
+  const h=document.createElement('div');h.className='sv-slide-h';
+  const b=document.createElement('b');b.textContent=o.title;
+  const v=document.createElement('span');v.textContent=o.fmt(o.value);
+  h.appendChild(b);h.appendChild(v);d.appendChild(h);
+  if(o.sub){const n=document.createElement('em');n.textContent=o.sub;d.appendChild(n);}
+  const inp=document.createElement('input');inp.type='range';
+  inp.min=o.min;inp.max=o.max;inp.step=o.step;inp.value=o.value;
+  inp.oninput=()=>{v.textContent=o.fmt(inp.value);o.onInput(inp.value);};
+  d.appendChild(inp);return d;
+}
+function svSection(t){const d=document.createElement('div');d.className='sv-sec';d.textContent=t;return d;}
+function svNote(t){const d=document.createElement('div');d.className='sv-note';d.textContent=t;return d;}
+// Borrow an existing element (with all its wiring intact) into the sheet, and
+// hand it back to its original parent when the level is left.
+let _svHeld=[];
+function svAdopt(body,id){
+  const el=document.getElementById(id);if(!el)return;
+  if(!el._home){el._home=el.parentNode;el._next=el.nextSibling;}
+  el.style.display='';el.classList.add('sv-borrowed');body.appendChild(el);
+  if(_svHeld.indexOf(el)<0)_svHeld.push(el);
+}
+// Held by reference, never looked up by id: the moment #sheetBody is cleared
+// the borrowed node is detached and getElementById can no longer find it —
+// which used to lose the search field and the whole timeline for good.
+function svReturnAll(){
+  const held=_svHeld;_svHeld=[];
+  held.forEach(el=>{el.classList.remove('sv-borrowed');
+    if(!el._home||el.parentNode===el._home)return;
+    const at=(el._next&&el._next.parentNode===el._home)?el._next:null;
+    try{el._home.insertBefore(el,at);}catch(e){try{el._home.appendChild(el);}catch(e2){}}});
+}
+
+// The Report-Modell layers each carry settings (which reports to trust, and how
+// certain the model has to be). They used to sit in the console's #progBar; the
+// console is gone, so they get a level of their own.
+const PROG_OPT_LAYERS={prog:1,powfind:1,progdiff:1,progpat:1};
+function itemHasProgOpts(it){try{return !!PROG_OPT_LAYERS[it.vars[0].l];}catch(e){return false;}}
+function progOptsSummary(it){
+  const l=it.vars[0].l;
+  const src=(l==='powfind'||l==='progpat')?'Zeichnen-Reports':PROG_SRC_LABEL[progSrc];
+  return (l==='prog')?src:src+' · Vertrauen ab '+progConfMin+'%';
+}
+
+// ---- the views -----------------------------------------------------------
+NAV_VIEWS.layers={title:'Karte',render(body){
+  Object.keys(GROUPS).forEach(g=>{
+    const items=groupItems(g);if(!items.length)return;
+    body.appendChild(svSection(GROUPS[g].tag+' · '+GROUPS[g].label));
+    items.forEach((it,i)=>{
+      const active=(g===curTopic&&i===curItem);
+      const many=it.vars.length>1,opts=itemHasProgOpts(it);
+      body.appendChild(svRow({title:it.label,
+        sub:many?(active?it.vars[curVar].label:it.vars.length+' Varianten')
+            :(opts?(active?progOptsSummary(it):'Einstellbar'):null),
+        on:active,go:(many||opts),
+        onClick:()=>{setTopic(g,i,0);
+          if(many)navPush('variants',{g:g,i:i});
+          else if(opts)navPush('progopts',{g:g,i:i});
+          else navClose();}}));
+    });
+  });
+  body.appendChild(svSection('Darstellung'));
+  body.appendChild(svRow({title:'Karten-Optionen',sub:'Stationen, 3D, Farbschema',go:true,
+    onClick:()=>navPush('mapopts')}));
+}};
+NAV_VIEWS.variants={title:a=>{try{return groupItems(a.g)[a.i].label;}catch(e){return 'Varianten';}},
+  render(body,a){
+    const it=groupItems(a.g)[a.i];if(!it)return;
+    it.vars.forEach((v,k)=>body.appendChild(svRow({title:v.label,on:(k===curVar),
+      onClick:()=>{setTopic(a.g,a.i,k);navRender();}})));
+    body.appendChild(svNote('Die Karte aktualisiert sich sofort — zurück, wenn du fertig bist.'));
+}};
+NAV_VIEWS.progopts={title:a=>{try{return groupItems(a.g)[a.i].label;}catch(e){return 'Einstellungen';}},
+  render(body,a){
+    const it=groupItems(a.g)[a.i];if(!it)return;
+    const l=it.vars[0].l;
+    body.appendChild(svSection('Welche Reports'));
+    if(l==='powfind'||l==='progpat'){
+      body.appendChild(svRow({title:'Zeichnen-Reports',sub:'Diese Ebene wertet nur gezeichnete Karten aus',on:true,onClick:()=>{}}));
+    }else{
+      ['draw','quick','both','all'].forEach(k=>body.appendChild(svRow({
+        title:PROG_SRC_LABEL[k],on:progSrc===k,
+        onClick:()=>{progSetSrc(k);navRender();}})));
+    }
+    if(l==='powfind'||l==='progdiff'||l==='progpat'){
+      body.appendChild(svSection('Vertrauen'));
+      body.appendChild(svSlider({title:'Nur ab',value:progConfMin,min:0,max:95,step:5,
+        sub:'Blendet Flächen aus, bei denen das Modell zu wenig sicher ist.',
+        fmt:v=>v+'%',onInput:v=>progSetConfMin(v)}));
+    }
+    body.appendChild(svNote('Die Karte aktualisiert sich sofort — zurück, wenn du fertig bist.'));
+}};
+NAV_VIEWS.time={title:'Zeitfenster',render(body){
+  svAdopt(body,'btmMain');
+}};
+NAV_VIEWS.search={title:'Ort suchen',render(body){
+  svAdopt(body,'searchWrap');
+  const inp=document.getElementById('searchIn');
+  if(inp)setTimeout(()=>{try{inp.focus();}catch(e){}},260);
+}};
+NAV_VIEWS.mapopts={title:'Karten-Optionen',render(body){
+  const stationsOn=()=>{try{return document.getElementById('railToggles').classList.contains('active');}catch(e){return false;}};
+  body.appendChild(svSection('Karte'));
+  body.appendChild(svRow({title:'Messstationen',sub:'Werte direkt auf der Karte',on:stationsOn(),
+    onClick:()=>{toggleStations();navRender();}}));
+  body.appendChild(svRow({title:'3D-Ansicht',go:true,
+    onClick:()=>{navClose();try{document.getElementById('btn3dFloat').click();}catch(e){}}}));
+  body.appendChild(svRow({title:'Zu meinem Standort',go:true,
+    onClick:()=>{navClose();try{flyToMe();}catch(e){}}}));
+  body.appendChild(svRow({title:'Legende',sub:'Was die Farben bedeuten',go:true,
+    onClick:()=>navPush('legend')}));
+  body.appendChild(svSection('Darstellung'));
+  ['system','light','dark'].forEach(t=>body.appendChild(svRow({
+    title:{system:'Farbschema: System',light:'Farbschema: Hell',dark:'Farbschema: Dunkel'}[t],
+    on:prefs.theme===t,
+    onClick:()=>{prefs.theme=t;prefsSave();applyTheme();navRender();}})));
+}};
+NAV_VIEWS.legend={title:'Legende',render(body){
+  const d=document.createElement('div');d.className='sv-note';
+  d.style.fontSize='13px';d.style.color='var(--ink-700)';
+  try{d.innerHTML=legendFor(layer);}catch(e){d.textContent='—';}
+  body.appendChild(d);
+}};
+NAV_VIEWS.report={title:'Melden',render(body){
+  body.appendChild(svRow({title:'Schnee-Karte zeichnen',sub:'Verhältnisse direkt auf die Karte malen',go:true,
+    onClick:()=>{navClose();setTimeout(()=>{try{drawOpen();}catch(e){}},220);}}));
+  if(FEATURES.observation)body.appendChild(svRow({title:'Beobachtung melden',sub:'Lawine, Wumm-Geräusch, Triebschnee …',go:true,
+    onClick:()=>{navClose();setTimeout(()=>{try{obsOpen();}catch(e){}},220);}}));
+  if(FEATURES.quickPowder)body.appendChild(svRow({title:'Quick Powder',sub:'Ein Fingertipp',go:true,
+    onClick:()=>{navClose();setTimeout(()=>{try{qrOpen();}catch(e){}},220);}}));
+  body.appendChild(svSection('Community'));
+  body.appendChild(svRow({title:'Feed',sub:'Meldungen aus der ganzen Schweiz',go:true,
+    onClick:()=>{navClose();setTimeout(()=>{try{feedOpen();}catch(e){}},220);}}));
+  body.appendChild(svRow({title:'Mein Profil',go:true,
+    onClick:()=>{navClose();setTimeout(()=>{try{accountTap();}catch(e){}},220);}}));
+}};
+
+// ---- the dock reflects the current state ---------------------------------
+function dockSync(){
+  try{
+    const items=groupItems(curTopic),it=items[curItem];
+    const g=GROUPS[curTopic];
+    const tag=document.getElementById('dockLayerTag'),val=document.getElementById('dockLayerVal');
+    if(tag)tag.textContent=g?g.tag+' · '+g.label.replace('-Modell',''):'Ebene';
+    if(val&&it)val.textContent=(it.vars.length>1?it.vars[curVar].label:it.label);
+    const tv=document.getElementById('dockTimeVal');
+    if(tv)tv.textContent=(b-a)+' h';
+  }catch(e){}
+}
+// A viewport-scoped raster has to follow the viewport.
+let _progMoveT=null;
+function progRefresh(){
+  if(!(layer==='prog'||layer==='powfind'||layer==='progdiff'||layer==='progpat'))return;
+  if(_progMoveT)clearTimeout(_progMoveT);
+  _progMoveT=setTimeout(()=>{try{
+    if(layer==='powfind')renderPowderFind();
+    else if(layer==='progdiff')renderProgDiff();
+    else if(layer==='progpat')renderProgPattern(stat);
+    else renderPrognosis(stat);
+  }catch(e){}},140);
+}
+map.on('moveend zoomend',progRefresh);
 let _lastTier=-1;
 map.on('zoomend',()=>{try{const t=detailTier();if(t!==_lastTier){_lastTier=t;renderStations();}loadReportMarkers();}catch(e){}});
 function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");const wd=['So','Mo','Di','Mi','Do','Fr','Sa'][d.getUTCDay()];return wd+' '+d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'., '+d.getUTCHours()+':00';}
@@ -3489,7 +3931,7 @@ function showOverlay(){
 function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefresh();if(tlMode==='detail')drawTimeline();
   if(layer=="rad"||layer=="radsun")renderRadiation();
   if(layer=="wind"){buildFlow();if(wtimer)clearTimeout(wtimer);wtimer=setTimeout(renderWind,120);}
-  document.getElementById('window').innerHTML=`${b-a}h Fenster`;syncTl();legend();}
+  document.getElementById('window').innerHTML=`${b-a}h Fenster`;syncTl();legend();dockSync();}
 // --- Simple / Detailed timeline mode (detailed = default) ---
 let tlMode='detail',sliderActive=false;
 function syncTl(){const wv=b-a;
@@ -3576,7 +4018,7 @@ function setTopic(t,itemIdx,varIdx){
   const vb=document.getElementById('variants');
   vb.innerHTML=vars.length>1?vars.map((v,i)=>'<button data-i="'+i+'"'+(i===curVar?' class="on"':'')+'>'+v.label+'</button>').join(''):'';
   vb.querySelectorAll('button').forEach(btn=>{btn.onclick=()=>setTopic(t,curItem,parseInt(btn.dataset.i));});
-  const sel=vars[curVar];layer=sel.l;stat=sel.s;renderAll();progRenderBar();
+  const sel=vars[curVar];layer=sel.l;stat=sel.s;renderAll();progRenderBar();dockSync();
   if(typeof panelRestore==='function')requestAnimationFrame(()=>{try{panelRestore();}catch(e){}});
 }
 // Both models are on screen at once, so any layer is a single tap (P4). The
@@ -3630,12 +4072,9 @@ function progRenderBar(){
 // measured bottom edge rather than to a fixed offset.
 // The layer card no longer floats over the map, so search sits at the top edge
 // and the demo pill tucks underneath it.
-function positionSearch(){try{
-  var sw=document.getElementById('searchWrap');if(!sw)return;
-  sw.style.top='calc(env(safe-area-inset-top,0px) + 12px)';
-  var dp=document.getElementById('demoPill');
-  if(dp)dp.style.top=(sw.getBoundingClientRect().bottom+8)+'px';
-}catch(e){}}
+// Search is adopted into its sheet, so there is nothing left to position at
+// level 0. Kept as a no-op because several places still call it.
+function positionSearch(){}
 addEventListener('resize',positionSearch);requestAnimationFrame(positionSearch);
 function presetsFade(){const p=document.getElementById('presets');if(!p)return;p.classList.toggle('can-scroll',p.scrollWidth-p.clientWidth-p.scrollLeft>4);}
 (function(){const p=document.getElementById('presets');if(p)p.addEventListener('scroll',presetsFade,{passive:true});addEventListener('resize',presetsFade);requestAnimationFrame(presetsFade);})();
@@ -3714,7 +4153,11 @@ let panelRestore=null,panelCollapsed=false;
 (function(){const bp=document.getElementById('bottomPanel'),tl=document.getElementById('tlToggle'),btm=document.getElementById('btmMain');
   const minH=16;
   function invalidate(){try{map.invalidateSize({animate:false,pan:false});}catch(e){}}
-  function updH(){document.documentElement.style.setProperty('--btm-h',bp.offsetHeight+'px');}
+  // The console is no longer docked; the dock is. Anything that positions
+  // itself above the bottom edge measures the dock instead.
+  function updH(){const d=document.getElementById('dock');
+    const h=d?Math.round(d.getBoundingClientRect().height)+18:0;
+    document.documentElement.style.setProperty('--btm-h',h+'px');}
   // Collapse only hides the detailed chart — the mode toggle + presets stay
   // visible, so the time controls are never fully hidden.
   function apply(){bp.classList.toggle('collapsed',panelCollapsed);bp.style.height='';btm.style.display='';
@@ -3941,7 +4384,8 @@ function miniMapTools(mapObj,wrapEl){if(!wrapEl||wrapEl.querySelector('.mm-tools
   bs.onclick=e=>{e.stopPropagation();const q=prompt('Ort suchen…');if(!q)return;
     fetch('https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText='+encodeURIComponent(q)+'&limit=1&sr=4326')
       .then(r=>r.json()).then(j=>{const a2=j.results&&j.results[0]&&j.results[0].attrs;
-        if(a2){mapObj.setView([a2.lat||a2.y,a2.lon||a2.x],13.5);}else toast('Kein Ort gefunden.','err');})
+        if(a2){mapObj.setView([a2.lat||a2.y,a2.lon||a2.x],13.5);
+          try{navClose();}catch(e){}}else toast('Kein Ort gefunden.','err');})
       .catch(()=>toast('Suche fehlgeschlagen.','err'));};
   bl.onclick=e=>{e.stopPropagation();if(!navigator.geolocation){toast('Kein GPS verfügbar.','err');return;}
     navigator.geolocation.getCurrentPosition(pos=>{mapObj.setView([pos.coords.latitude,pos.coords.longitude],13.5);try{haptic(6);}catch(_){}},
@@ -4173,7 +4617,11 @@ window.__APP_OK=true;
 setTopic('meteo',0,0);dismissIntro();
 // Personal preferences (opening layer, time window, where the map lands) are
 // applied once the map and the layer strip exist.
-requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}});
+requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}
+  try{dockSync();}catch(e){}
+  try{document.documentElement.style.setProperty('--btm-h',
+    (Math.round(document.getElementById('dock').getBoundingClientRect().height)+18)+'px');
+    map.invalidateSize({animate:false});}catch(e){}});
 try{const _pid=new URLSearchParams(location.search).get('post');
   if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);}catch(e){}
 if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(reg=>{try{reg.update();}catch(e){}}).catch(()=>{});});}
@@ -5735,15 +6183,20 @@ function drawComputeZones(){
     // if it leaked in here the prognosis would read it as a snow type that
     // CONFLICTS with the powder painted on the same slope.
     if(!DRAW_PENS[type]||DRAW_PENS[type].kind!=='zone')continue;
-    let slat=0,slng=0,emin=1e9,emax=-1e9,sx=0,sy=0,na=0;
+    let slat=0,slng=0,emin=1e9,emax=-1e9,sx=0,sy=0,na=0,ssl=0,ssl2=0,ns=0;
     for(const pr of pts){const la=pr[0],lo=pr[1];slat+=la;slng+=lo;const d=drawDemFull(la,lo);if(!d)continue;
       if(d.elev!=null){if(d.elev<emin)emin=d.elev;if(d.elev>emax)emax=d.elev;}
+      if(d.slope!=null){ssl+=d.slope;ssl2+=d.slope*d.slope;ns++;}
       if(d.slope>=6&&d.aspectDeg!=null){const r=d.aspectDeg*Math.PI/180;sx+=Math.cos(r);sy+=Math.sin(r);na++;}}
     const _pen=DRAW_PENS[type];
     const _cm=(_pen&&_pen.slider&&(type==='powder'||type==='drift'))?_pen.slider.val:null;
+    const _sMean=ns?ssl/ns:null;
+    const _sSd=(ns>1)?Math.sqrt(Math.max(0,ssl2/ns-_sMean*_sMean)):null;
     zones.push({type:type,centroid:[slat/pts.length,slng/pts.length],
       elevMin:emin<1e9?Math.round(emin):null,elevMax:emax>-1e9?Math.round(emax):null,
       aspectDeg:na?((Math.atan2(sy,sx)*180/Math.PI)+360)%360:null,aspectConc:na?Math.hypot(sx,sy)/na:0,
+      slope:_sMean!=null?Math.round(_sMean*10)/10:null,
+      slopeSd:_sSd!=null?Math.round(_sSd*10)/10:null,
       cm:_cm,n:pts.length});
   }
   return zones;
