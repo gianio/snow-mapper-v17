@@ -652,14 +652,20 @@ def export_split_app(data, out_dir: Path) -> Path:
 # progress bar on the intro), set window.__D, then inject the app script.
 _BOOT_SPLIT = r"""<script>
 (function(){
-  function bar(){return document.querySelector('#intro .bar');}
-  function prog(f){var b=bar();if(b){b.style.animation='none';b.style.transformOrigin='left';b.style.transform='scaleX('+Math.max(0.03,Math.min(1,f))+')';}}
-  function fail(m){var i=document.getElementById('intro');if(!i)return;
-    var s=i.querySelector('.sub');if(s)s.textContent=m;
-    if(!i.querySelector('.retry')){var b=document.createElement('button');b.className='retry';b.textContent='Erneut versuchen';
-      b.style.cssText='margin-top:14px;padding:11px 22px;border-radius:12px;border:1px solid rgba(0,0,0,.15);background:var(--ink-900);color:#fff;font:700 14px Inter,system-ui;cursor:pointer';
-      b.onclick=function(){location.reload();};i.appendChild(b);}
-    try{if(window.Sentry)window.Sentry.captureMessage(m);}catch(e){}}
+  function prog(f){var b=document.querySelector('#boot i');
+    if(b)b.style.width=(Math.max(2,Math.min(1,f)*100))+'%';}
+  function bootDone(){var e=document.getElementById('boot');if(!e)return;
+    prog(1);e.classList.add('done');setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e);},300);}
+  window.__bootDone=bootDone;
+  function fail(m){
+    var e=document.getElementById('boot');if(e&&e.parentNode)e.parentNode.removeChild(e);
+    var d=document.getElementById('bootErr');
+    if(!d){d=document.createElement('div');d.id='bootErr';document.body.appendChild(d);}
+    d.textContent=m;
+    var b=document.createElement('button');b.textContent='Erneut versuchen';
+    b.onclick=function(){location.reload();};d.appendChild(b);
+    d.classList.add('show');
+    try{if(window.Sentry)window.Sentry.captureMessage(m);}catch(e2){}}
   function fetchT(url,opts,ms){var c=('AbortController'in window)?new AbortController():null;
     if(c){opts=opts||{};opts.signal=c.signal;setTimeout(function(){c.abort();},ms||30000);}
     return fetch(url,opts);}
@@ -808,22 +814,26 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <!-- Sentry error tracking: paste your browser DSN into SENTRY_DSN to enable. -->
 <script>
 (function(){
-  function stuck(msg){var i=document.getElementById('intro');if(!i)return;
-    var s=i.querySelector('.sub');if(s)s.textContent=msg;
-    var f=i.querySelector('.flake');if(f)f.style.animationPlayState='paused';
-    if(!i.querySelector('.retry')){var b=document.createElement('button');b.className='retry';b.textContent='Erneut versuchen';
-      b.style.cssText='margin-top:14px;padding:11px 22px;border-radius:12px;border:1px solid rgba(0,0,0,.15);background:var(--ink-900);color:#fff;font:700 14px Inter,system-ui;cursor:pointer';
-      b.onclick=function(){location.reload();};i.appendChild(b);}}
+  function stuck(msg){if(window.__APP_OK)return;
+    var d=document.getElementById('bootErr');
+    if(!d){d=document.createElement('div');d.id='bootErr';document.body.appendChild(d);}
+    if(d.classList.contains('show'))return;
+    d.textContent=msg;
+    var b=document.createElement('button');b.textContent='Erneut versuchen';
+    b.onclick=function(){location.reload();};d.appendChild(b);
+    d.classList.add('show');
+    var e=document.getElementById('boot');if(e&&e.parentNode)e.parentNode.removeChild(e);}
   window.__introStuck=stuck;
   window.addEventListener('error',function(e){
-    if(document.getElementById('intro')&&!window.__APP_OK)
-      stuck('Fehler beim Start: '+String((e&&e.message)||'unbekannt').slice(0,120));});
-  setTimeout(function(){
-    if(document.getElementById('intro')&&!window.__APP_OK)
-      stuck('Der Start dauert ungewöhnlich lange — Verbindung prüfen.');},45000);
+    if(!window.__APP_OK)stuck('Fehler beim Start: '+String((e&&e.message)||'unbekannt').slice(0,120));});
+  setTimeout(function(){if(!window.__APP_OK)stuck('Der Start dauert ungewöhnlich lange — Verbindung prüfen.');},45000);
 })();
 </script>
 <script>window.SENTRY_DSN='';(function(){if(!window.SENTRY_DSN)return;var s=document.createElement('script');s.src='https://browser.sentry-cdn.com/7.120.0/bundle.tracing.min.js';s.crossOrigin='anonymous';s.onload=function(){try{window.Sentry.init({dsn:window.SENTRY_DSN,tracesSampleRate:0,release:'snow-mapper'});}catch(e){}};document.head.appendChild(s);window.addEventListener('error',function(e){try{if(window.Sentry&&e.error)window.Sentry.captureException(e.error);}catch(_){}});window.addEventListener('unhandledrejection',function(e){try{if(window.Sentry)window.Sentry.captureException(e.reason);}catch(_){}});})();</script>
+<!-- The map tiles are the first thing a user waits for: do the DNS + TLS
+     handshake with the tile host while the scripts are still parsing. -->
+<link rel="preconnect" href="https://wmts.geo.admin.ch" crossorigin>
+<link rel="dns-prefetch" href="https://wmts.geo.admin.ch">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -866,31 +876,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    --blur:none;--dur:var(--dur-2);--ease-spring:var(--ease);
    --panel-h:52px;
    --topic-accent:var(--accent);--topic-tint:var(--accent-soft)}
- /* --- Dark theme -----------------------------------------------------------
-    Only the ramp flips; not one component rule changes, because every surface
-    is built from these tokens. Follows the system setting, and the profile
-    switch can force it with data-theme on <html>. */
- @media (prefers-color-scheme:dark){
-   :root:not([data-theme="light"]){
-     --ink-900:#EAF2FA;--ink-700:#BACBDD;--ink-500:#8399B1;--ink-300:#5A6E86;
-     --ink-150:#33455A;--ink-100:#25364A;--ink-050:#162535;--paper:#0E1A26;
-     --accent:#4FA8F5;--accent-soft:rgba(79,168,245,.18);
-     --accent-meteo:#4FA8F5;--accent-report:#4FD3E8;
-     --accent-meteo-soft:rgba(79,168,245,.18);--accent-report-soft:rgba(79,211,232,.20);
-     --ok:#3DBE84;--warn:#F0A93B;--danger:#F0645C;--danger-tint:rgba(240,100,92,.16);
-     --lift:0 10px 30px rgba(0,0,0,.55)}
- }
- :root[data-theme="dark"]{
-   --ink-900:#EAF2FA;--ink-700:#BACBDD;--ink-500:#8399B1;--ink-300:#5A6E86;
-   --ink-150:#33455A;--ink-100:#25364A;--ink-050:#162535;--paper:#0E1A26;
-   --accent:#4FA8F5;--accent-soft:rgba(79,168,245,.18);
-   --accent-meteo:#4FA8F5;--accent-report:#4FD3E8;
-   --accent-meteo-soft:rgba(79,168,245,.18);--accent-report-soft:rgba(79,211,232,.20);
-   --ok:#3DBE84;--warn:#F0A93B;--danger:#F0645C;--danger-tint:rgba(240,100,92,.16);
-   --lift:0 10px 30px rgba(0,0,0,.55)}
- /* the map itself keeps its own light cartography; only the chrome flips */
- :root[data-theme="dark"] #map,:root[data-theme="dark"] .leaflet-container{background:#0E1A26}
- @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #map{background:#0E1A26}}
+ /* One palette. The app is read outdoors in snow glare against a light map,
+    so the chrome is light too — there is no dark variant to drift out of sync. */
  /* P5: numbers a user compares are tabular so columns line up */
  .num,.snow-val,#tlLenVal,#progConfVal,#drawDepthVVal,#drawBrushVVal,.insp-chip,.tl-range{font-variant-numeric:tabular-nums}
  /* Micro-label (section labels, field labels) */
@@ -986,87 +973,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* every focusable control gets the same visible focus ring (§9) */
  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,
  [tabindex]:focus-visible{outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
- /* ===================== Level 0: the dock ================================
-    The only permanent chrome. Four targets; everything else is one tap deeper.
-    ---------------------------------------------------------------------- */
- #dock{position:fixed;z-index:1200;left:10px;right:10px;
-   bottom:calc(env(safe-area-inset-bottom,0px) + 10px);
-   display:flex;align-items:stretch;gap:6px;padding:6px;
-   background:var(--paper);border:1px solid var(--ink-100);border-radius:18px;
-   box-shadow:var(--lift)}
- body.draw-on #dock,body.sheet-open #dock{opacity:0;pointer-events:none;transform:translateY(8px)}
- #dock{transition:opacity var(--dur-2) var(--ease),transform var(--dur-2) var(--ease)}
- #dock button{border:none;background:none;font-family:inherit;cursor:pointer;
-   min-height:52px;border-radius:13px;display:flex;align-items:center;justify-content:center;
-   color:var(--ink-700);transition:background var(--dur-1) var(--ease)}
- #dock button:active{transform:scale(.97)}
- #dockSearch{width:52px;flex:0 0 auto}
- #dockSearch svg{width:21px;height:21px}
- #dockLayer,#dockTime{flex-direction:column;align-items:flex-start;gap:1px;padding:0 14px;text-align:left}
- #dockLayer{flex:1 1 auto;min-width:0}
- #dockTime{flex:0 0 auto}
- .dk-k{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-500)}
- .dk-v{font-size:15px;font-weight:800;color:var(--ink-900);letter-spacing:-.01em;
-   max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
- #dockLayer .dk-k{color:var(--accent)}
- /* id-on-element, so it outranks the "#dock button" reset above: the plus is
-    the one filled primary action on the whole map screen. */
- #dock button#dockAdd{width:52px;flex:0 0 auto;background:var(--ink-900);color:var(--paper)}
- #dockAdd svg{width:22px;height:22px}
- /* ===================== The sheet: every depth lives here ================ */
- #sheetScrim{position:fixed;inset:0;z-index:3400;background:rgba(14,17,22,.34);
-   opacity:0;pointer-events:none;transition:opacity var(--dur-2) var(--ease)}
- body.sheet-open #sheetScrim{opacity:1;pointer-events:auto}
- #sheet{position:fixed;z-index:3500;left:0;right:0;bottom:0;
-   max-height:82vh;display:flex;flex-direction:column;
-   background:var(--paper);border-radius:var(--r-2) var(--r-2) 0 0;box-shadow:var(--lift);
-   transform:translateY(101%);transition:transform var(--dur-2) var(--ease);
-   padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px);will-change:transform}
- body.sheet-open #sheet{transform:translateY(0)}
- #sheetGrab{width:36px;height:4px;border-radius:2px;background:var(--ink-150);margin:10px auto 2px;flex-shrink:0;cursor:grab;touch-action:none}
- #sheetHead{display:flex;align-items:center;gap:var(--sp2);padding:var(--sp2) var(--sp3) var(--sp2);flex-shrink:0}
- #sheetHead h2{flex:1;margin:0;font-size:17px;font-weight:800;color:var(--ink-900);letter-spacing:-.01em;
-   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
- #sheetBack,#sheetClose{width:var(--tap);height:var(--tap);flex-shrink:0;border:none;background:none;
-   border-radius:var(--r-1);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer}
- #sheetBack svg,#sheetClose svg{width:21px;height:21px}
- #sheetBack:active,#sheetClose:active{transform:scale(.94)}
- #sheet:not(.has-back) #sheetBack{visibility:hidden}
- #sheetBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 var(--sp4) var(--sp4)}
- /* the content of a level fades up as it arrives, staggered a little */
- .sv-in>*{animation:svIn .26s var(--ease) both}
- .sv-in>*:nth-child(2){animation-delay:.03s}
- .sv-in>*:nth-child(3){animation-delay:.06s}
- .sv-in>*:nth-child(n+4){animation-delay:.09s}
- @keyframes svIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
- /* a big, obvious row for drilling one level deeper */
- .sv-item{display:flex;align-items:center;gap:var(--sp3);width:100%;min-height:60px;
-   padding:0 var(--sp3);border:none;border-bottom:1px solid var(--ink-100);background:none;
-   font-family:inherit;text-align:left;cursor:pointer;color:var(--ink-900)}
- .sv-item:last-child{border-bottom:none}
- .sv-item .sv-t{flex:1;min-width:0}
- .sv-item .sv-t b{display:block;font-size:16px;font-weight:700;letter-spacing:-.01em}
- .sv-item .sv-t span{display:block;font-size:13px;color:var(--ink-500);margin-top:1px}
- .sv-item .sv-go{color:var(--ink-300);flex-shrink:0}
- .sv-item .sv-go svg{width:20px;height:20px}
- .sv-item.on .sv-t b{color:var(--accent)}
- .sv-item .sv-dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--ink-150);flex-shrink:0;
-   display:flex;align-items:center;justify-content:center;color:transparent}
- .sv-item.on .sv-dot{background:var(--accent);border-color:var(--accent);color:var(--paper)}
- .sv-item .sv-dot svg{width:14px;height:14px}
- .sv-item:active{background:var(--ink-050)}
- .sv-sec{font-size:10px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;
-   color:var(--accent);padding:var(--sp4) var(--sp3) var(--sp2)}
- .sv-note{font-size:12.5px;color:var(--ink-500);padding:var(--sp3);line-height:1.5}
- .sv-slide{padding:var(--sp3);border-bottom:1px solid var(--ink-100)}
- .sv-slide:last-child{border-bottom:none}
- .sv-slide-h{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp2)}
- .sv-slide-h b{font-size:16px;font-weight:700;color:var(--ink-900);letter-spacing:-.01em}
- .sv-slide-h span{font-size:16px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
- .sv-slide em{display:block;font-style:normal;font-size:12.5px;color:var(--ink-500);margin-top:2px;line-height:1.45}
- .sv-slide input[type=range]{width:100%;height:34px;margin-top:var(--sp2);accent-color:var(--accent)}
- @media (prefers-reduced-motion:reduce){
-   #sheet,#dock{transition:none}.sv-in>*{animation:none}}
  /* --- The console: layers + time on one docked surface ---------------- */
  #layerBar{display:flex;flex-direction:column;gap:var(--sp2);padding:var(--sp4) var(--sp4) var(--sp3);
    border-bottom:1px solid var(--ink-100);--topic-accent:var(--accent);--topic-tint:var(--accent-soft)}
@@ -1112,8 +1018,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #progConfVal{font-size:12.5px;font-weight:800;color:var(--ink-900);min-width:38px;text-align:right}
  #bottomPanel{position:absolute;z-index:1000;bottom:0;left:0;right:0;
    background:var(--paper);border-top:1px solid var(--ink-100);box-shadow:none;transition:none;padding-bottom:max(env(safe-area-inset-bottom, 0px) - 18px, 4px);overflow:hidden}
- /* Level 0 shows the map, not the console: its rows are borrowed by the sheet. */
- #bottomPanel{display:none!important}
  #btmMain{padding:6px 14px 2px}
  #timeline{display:block;border:1px solid var(--ink-100);background:var(--ink-050);border-radius:var(--r-1)}
  #presets::-webkit-scrollbar{display:none}
@@ -1159,8 +1063,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .asp-crisp img{image-rendering:pixelated;image-rendering:crisp-edges}
  .legend{position:absolute;z-index:950;bottom:calc(var(--btm-h,80px) + 40px);left:12px;background:var(--paper);border:1px solid rgba(255,255,255,.5);padding:10px 12px;border-radius:var(--r);box-shadow:0 2px 12px var(--ink-100);font-size:12px;max-width:220px;line-height:1.5;color:var(--fg2);display:none}
  .legend.show{display:block}
- /* The legend is a level of the sheet; the floating button and card are gone. */
- #legendBtn,.legend{display:none!important}
  #legendBtn{position:absolute;z-index:960;bottom:var(--btm-h,80px);left:12px;width:40px;height:40px;border-radius:var(--r-1);border:1px solid var(--ink-100);background:var(--paper);color:var(--ink-700);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--lift);transition:background var(--dur-1) var(--ease)}
  #legendBtn svg{width:20px;height:20px}
  #legendBtn:active{transform:scale(.92)}
@@ -1200,16 +1102,23 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* Super-transparent glass: the map stays clearly visible through the panel,
     blur+saturate keeps the content readable. Draggable via the header. */
  body.insp-open #mapQr,body.insp-open #mapFab,body.insp-open #mapDraw{opacity:0;pointer-events:none;transition:opacity .2s}
- .insp-panel{position:fixed;z-index:2600;background:rgba(255,255,255,.38);display:none;flex-direction:column;box-shadow:var(--elev3);overflow:hidden;border:1px solid rgba(255,255,255,.55)}
- .insp-panel::before{content:'';flex-shrink:0;width:38px;height:4px;border-radius:2px;background:rgba(22,21,46,.28);margin:7px auto -3px}
- .insp-panel .insp-head{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
- .insp-panel.dragging .insp-head{cursor:grabbing}
- .insp-chip{background:var(--paper)}
- .insp-tile{background:rgba(255,255,255,.5);border-color:rgba(255,255,255,.55)}
- .insp-head button{background:rgba(255,255,255,.6)}
+ /* Docked, not floating: the panel sits flush against an edge and against the
+    console, so it reads as part of the screen instead of a card on top of it.
+    It does not move, and there is nothing to drag. */
+ .insp-panel{position:fixed;z-index:2600;background:var(--paper);display:none;flex-direction:column;overflow:hidden;border:0 solid var(--ink-100)}
+ .insp-chip{background:var(--ink-050)}
+ .insp-tile{background:var(--ink-050);border-color:var(--ink-100)}
+ .insp-head button{background:var(--ink-050)}
  .insp-panel.open{display:flex;animation:inspIn .3s cubic-bezier(.32,.72,.42,1)}
- @media(min-width:561px){.insp-panel{top:auto;right:16px;bottom:calc(var(--btm-h,0px) + 16px);width:320px;height:320px;border-radius:var(--r-xl)}@keyframes inspIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}}
- @media(max-width:560px){.insp-panel{left:auto;right:12px;bottom:calc(var(--btm-h,0px) + 12px);width:min(60vw,260px);height:min(60vw,260px);border-radius:var(--r-xl)}@keyframes inspIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}}
+ /* Desktop: a column against the right edge, from the top down to the console. */
+ @media(min-width:561px){.insp-panel{top:0;right:0;left:auto;bottom:var(--btm-h,0px);width:340px;
+   border-left-width:1px;border-radius:0}
+   @keyframes inspIn{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}}
+ /* Phone: a band across the bottom edge, resting directly on the console. */
+ @media(max-width:560px){.insp-panel{left:0;right:0;bottom:var(--btm-h,0px);width:auto;
+   max-height:min(52vh,calc(100vh - var(--btm-h,0px) - 190px));
+   border-top-width:1px;border-radius:var(--r-2) var(--r-2) 0 0}
+   @keyframes inspIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}}
  .insp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:16px 16px 12px;border-bottom:1px solid var(--hair);flex-shrink:0}
  .insp-head .insp-t{min-width:0}
  .insp-head .insp-t b{font-size:15px;color:var(--fg);font-weight:800;letter-spacing:-.01em}
@@ -1253,24 +1162,17 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .leaflet-control-attribution a{color:inherit!important}
  .leaflet-control-scale-line{background:rgba(255,255,255,.6)!important;border-color:rgba(22,21,46,.35)!important;color:var(--fg2)!important;font-family:'Inter',system-ui!important;font-size:10px!important;font-weight:600!important;}
  .leaflet-control-scale{margin-bottom:6px!important;margin-right:8px!important}
- /* The pill sits under the top edge at every level — it used to jump back to
-    the old console offset the moment a sheet opened. */
- #demoPill{min-height:var(--tap-sm);position:fixed;z-index:1050;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--hair);background:var(--paper);color:var(--fg2);font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:var(--elev1)}
+ #demoPill{min-height:var(--tap-sm);position:fixed;z-index:1050;top:calc(env(safe-area-inset-top,0px) + 172px);left:12px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--hair);background:var(--paper);color:var(--fg2);font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:var(--elev1)}
  #demoPill .dp-dot{width:7px;height:7px;border-radius:50%;background:rgba(20,20,25,.35)}
- #demoPill.on{background:var(--ink-900);color:var(--paper);border-color:var(--ink-900)}
+ #demoPill.on{background:var(--ink-900);color:#fff;border-color:var(--ink-900)}
  #demoPill.on .dp-dot{background:#5ee68a}
- /* Search lives in its own sheet now; this element is borrowed into it and is
-    invisible everywhere else. */
- #searchWrap:not(.sv-borrowed){display:none!important}
- #sheetBody #searchWrap{position:static!important;width:auto;max-width:none;margin-bottom:var(--sp3)}
- #sheetBody #searchWrap input{box-shadow:none}
  #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 116px);left:12px;width:230px;max-width:calc(100vw - 24px)}
  #searchWrap input{width:100%;min-height:var(--tap);padding:0 12px 0 34px;border-radius:var(--r-1);border:1px solid var(--ink-100);background:var(--paper);color:var(--ink-900);font-size:15px;font-weight:500;outline:none;box-shadow:var(--lift);font-family:inherit}
  #searchWrap input::placeholder{color:var(--mut);font-weight:400}
  #searchWrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
  #searchWrap .icn{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--mut);font-size:15px}
  /* Right-side control rail */
- #ctrlRail{gap:8px;position:absolute;z-index:1050;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:10px}
+ #ctrlRail{position:absolute;z-index:1050;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:10px}
  .rail-btn{position:relative;width:46px;height:46px;border-radius:var(--r-1);border:1px solid var(--ink-100);background:var(--paper);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:none;transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease)}
  .rail-btn:hover{background:#fff;color:var(--fg);transform:translateY(-1px)}
  .rail-btn:active{transform:scale(.95)}
@@ -1300,17 +1202,18 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #searchRes .sr:last-child{border-bottom:none}
  #searchRes .sr:hover,#searchRes .sr.sel{background:rgba(0,112,184,.08);color:var(--fg)}
  #searchRes .sr .sub{font-size:11px;color:var(--mut);margin-top:2px}
- #intro{--intro-flat:1;position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;background:#ffffff;transition:opacity .24s ease}
- #intro.hide{opacity:0;pointer-events:none}
- #intro .fall{animation:flakeFall 2.9s ease-in-out infinite}
- #intro .flake{display:block;width:74px;height:74px;color:var(--ink-900);animation:flakeSpin 6.5s linear infinite;filter:drop-shadow(0 10px 18px rgba(0,0,0,.14))}
- @keyframes flakeSpin{to{transform:rotate(360deg)}}
- @keyframes flakeFall{0%{transform:translate(0,-12px)}25%{transform:translate(5px,-4px)}50%{transform:translate(-4px,4px)}75%{transform:translate(4px,9px)}100%{transform:translate(0,-12px)}}
- @media (prefers-reduced-motion:reduce){#intro .fall,#intro .flake{animation:none}}
- #intro .track{width:132px;height:3px;border-radius:2px;background:var(--ink-100);overflow:hidden}
- #intro .bar{height:100%;width:100%;border-radius:2px;background:linear-gradient(90deg,#141419,#3c3c42);transform-origin:left;transform:scaleX(.12);animation:introLoad 1.15s ease-in-out infinite alternate}
- @keyframes introLoad{from{transform:scaleX(.12)}to{transform:scaleX(1)}}
- #intro .sub{font-size:12px;color:var(--mut);letter-spacing:.02em;min-height:14px}
+ /* The only thing the load shows: a 2 px rule along the top edge, filled by
+    the actual number of bytes received. It removes itself when done. */
+ #boot{position:fixed;top:0;left:0;right:0;height:2px;z-index:9999;background:transparent;pointer-events:none}
+ #boot i{display:block;height:100%;width:0;background:var(--ink-900);transition:width .18s linear}
+ #boot.done{opacity:0;transition:opacity .25s ease}
+ /* A load that failed needs words, not a stalled bar. */
+ #bootErr{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:9999;
+   display:none;background:var(--paper);border:1px solid var(--ink-100);border-radius:var(--r-2);
+   box-shadow:var(--lift);padding:14px 16px;font-size:14px;color:var(--ink-900);line-height:1.45}
+ #bootErr.show{display:block}
+ #bootErr button{margin-top:12px;min-height:44px;padding:0 18px;border:none;border-radius:var(--r-1);
+   background:var(--ink-900);color:var(--paper);font:800 14px Inter,system-ui;cursor:pointer}
  /* --- First-run legal / safety disclaimer gate --- */
  #disc{position:fixed;inset:0;z-index:9800;display:none;align-items:flex-end;justify-content:center;background:rgba(6,14,26,.55);}
  #disc.show{display:flex;animation:discBg .3s ease}
@@ -1347,8 +1250,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #a2hs .later{width:100%;margin-top:8px;border:none;background:none;color:var(--mut);font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;padding:9px}
  .a2hs-hint{font-size:12.5px;color:var(--mut);line-height:1.45;padding:10px 12px;background:var(--fill);border-radius:12px;margin-bottom:6px}
  body.standalone #profInstall{display:none}
- .sf{position:absolute;top:-10px;width:6px;height:6px;background:white;border-radius:50%;opacity:.6;animation:sfDrop linear infinite}
- @keyframes sfDrop{0%{transform:translateY(0) translateX(0)}25%{transform:translateY(25vh) translateX(15px)}50%{transform:translateY(50vh) translateX(-10px)}75%{transform:translateY(75vh) translateX(20px)}100%{transform:translateY(110vh) translateX(5px)}}
  /* --- Onboarding coach marks --- */
  #coach{position:fixed;inset:0;z-index:8000}
  #coachSpot{position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(14,17,22,.32);transition:all .35s cubic-bezier(.4,0,.2,1);pointer-events:none}
@@ -1369,7 +1270,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    .scard{font-size:14px;min-width:160px}
    .leaflet-popup-content-wrapper{max-width:calc(100vw - 32px)!important}
    .legend{max-width:180px;font-size:12px}
-   #ctrlRail{gap:8px;top:calc(env(safe-area-inset-top,0px) + 12px);right:8px;gap:11px}
+   #ctrlRail{top:calc(env(safe-area-inset-top,0px) + 12px);right:8px;gap:11px}
    .rail-btn{width:48px;height:48px}
    #legendBtn{width:40px;height:40px;font-size:18px}
    .seg button{padding:9px 14px;font-size:15px;min-height:44px}
@@ -2042,8 +1943,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .qr-prev{width:100%;max-height:150px;object-fit:cover;border-radius:14px;margin-top:10px}
  .qr-adj{display:block;margin:12px auto 0;border:none;background:none;color:var(--acc2);font-size:13px;font-weight:750;font-family:inherit;cursor:pointer}
  .qr-skip{width:100%;margin-top:8px;border:none;background:none;color:var(--mut);font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;padding:9px}
- /* Reporting is reached from the dock's "+", so the floating stack is gone. */
- #mapFab,#mapQr,#mapDraw{display:none!important}
  #mapFab{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 14px);width:56px;height:56px;z-index:900;background:var(--ink-900)!important;color:var(--paper)!important;border-color:var(--ink-900)!important}
  #mapFab:active{transform:scale(.9)}
  #mapFab span{display:none}
@@ -2144,7 +2043,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rpop-cta:active{transform:scale(.97)}
  @media(prefers-reduced-motion:reduce){.cat-chip,.sub-chip,.bucket,.slide-knob,.radial-seg{transition:none!important}}
 </style></head><body>
-<div id="intro"><div class="fall"><svg class="flake" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M24 3v42M5.8 13.5l36.4 21M42.2 13.5L5.8 34.5"/><path d="M24 9l4.5-4.5M24 9l-4.5-4.5M24 39l4.5 4.5M24 39l-4.5 4.5"/><path d="M10 16.9l-6.2-1.2M10 16.9l1.2-6.2M38 31.1l6.2 1.2M38 31.1l-1.2 6.2"/><path d="M38 16.9l6.2-1.2M38 16.9l-1.2-6.2M10 31.1l-6.2 1.2M10 31.1l1.2 6.2"/><circle cx="24" cy="24" r="3.2"/><path d="M24 15.5l3 3M24 15.5l-3 3M24 32.5l3-3M24 32.5l-3-3M16.6 19.7l1.1 4.1M31.4 19.7l-1.1 4.1M16.6 28.3l4.1-1.1M31.4 28.3l-4.1 1.1"/></svg></div><div class="track"><div class="bar"></div></div><div class="sub"></div></div>
+<!-- No splash. The app is the first thing on screen; while the forecast data
+     streams in, a hairline at the top edge carries the real progress. -->
+<div id="boot"><i></i></div>
 <div id="toastWrap" aria-live="polite"></div>
 <div id="disc"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="discH"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><h2 id="discH">Bevor du startest</h2><p><b>Experimentelle Modelldaten.</b> Diese App zeigt modellierte Schnee-, Pulver- und Skitauglichkeits-Sch&auml;tzungen. Sie ist <b>kein Lawinenbulletin</b> und ersetzt nicht die offizielle Beurteilung des <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation.html" target="_blank" rel="noopener">SLF</a> bzw. <a href="https://whiterisk.ch" target="_blank" rel="noopener">White Risk</a>. Entscheidungen im Gel&auml;nde triffst du auf <b>eigenes Risiko</b>.</p><p class="fine">Datenschutz: F&uuml;r Konto, Meldungen und Fotos werden E-Mail, Standort und Bilddaten bei Supabase (EU) gespeichert. Du kannst Konto und Beitr&auml;ge jederzeit l&ouml;schen.</p><label class="chk"><input type="checkbox" id="discChk" onchange="var b=document.getElementById('discBtn');if(b)b.disabled=!this.checked"><span>Ich habe verstanden, dass dies experimentelle Daten sind und kein Lawinenbulletin ersetzt.</span></label><button class="accept" id="discBtn" disabled onclick="acceptDisc()">Verstanden &ndash; loslegen</button></div></div>
 <div id="a2hs" onclick="if(event.target===this)a2hsLater()"><div class="sheet" role="dialog" aria-modal="true">
@@ -2174,47 +2075,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="ctrlRail">
   <button class="rail-btn" id="accountBtn" onclick="accountTap()" title="Anmelden" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.6"/><path d="M3.5 20a6.5 6.5 0 0 1 13 0"/><line x1="19" y1="6" x2="19" y2="12"/><line x1="16" y1="9" x2="22" y2="9"/></svg></button>
   <button class="rail-btn feed-accent" id="feedBtn" onclick="feedOpen()" title="Community-Feed" aria-label="Community-Feed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
-  <!-- Stations, 3D and locate moved into the map-options sheet: at level 0 the
-       rail is the two surfaces you actually switch to. -->
-  <button class="rail-btn" id="railToggles" onclick="toggleStations()" hidden aria-hidden="true"></button>
-  <button class="rail-btn" id="btn3dFloat" hidden aria-hidden="true"></button>
-  <button class="rail-btn" id="locBtn" onclick="flyToMe()" hidden aria-hidden="true"></button>
+  <button class="rail-btn active" id="railToggles" onclick="toggleStations()" title="Messstationen ein/aus" aria-label="Messstationen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0" stroke-dasharray="0"/></svg></button>
+  <button class="rail-btn" id="btn3dFloat" title="3D-Ansicht" aria-label="3D-Ansicht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg></button>
+  <button class="rail-btn" id="locBtn" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg></button>
 </div>
 <button class="feed-qr" id="mapQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><i class="fab-v">v2</i><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Schnee-Karte zeichnen"><i class="fab-v">v3</i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Zeichnen</span></button>
 <button class="feed-fab" id="mapFab" onclick="obsOpen()" title="Beobachtung melden"><i class="fab-v">v1</i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
-<!-- Level 0: the only chrome that is always on screen. Four targets. -->
-<div id="dock">
-  <button id="dockSearch" aria-label="Ort suchen" onclick="navOpen('search')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg>
-  </button>
-  <button id="dockLayer" onclick="navOpen('layers')">
-    <span class="dk-k" id="dockLayerTag">Ebene</span>
-    <span class="dk-v" id="dockLayerVal">Powder</span>
-  </button>
-  <button id="dockTime" onclick="navOpen('time')">
-    <span class="dk-k">Zeit</span>
-    <span class="dk-v" id="dockTimeVal">48 h</span>
-  </button>
-  <button id="dockAdd" aria-label="Melden" onclick="navOpen('report')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-  </button>
-</div>
-<!-- One sheet for every depth. Content is pushed and popped by the nav stack. -->
-<div id="sheetScrim" onclick="navClose()"></div>
-<section id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-  <div id="sheetGrab"></div>
-  <header id="sheetHead">
-    <button id="sheetBack" aria-label="Zurück" onclick="navBack()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
-    </button>
-    <h2 id="sheetTitle"></h2>
-    <button id="sheetClose" aria-label="Schliessen" onclick="navClose()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
-  </header>
-  <div id="sheetBody"></div>
-</section>
 <div id="bottomPanel" class="detail">
   <div id="tlToggle"></div>
   <!-- The console. One surface, sectioned by hairlines: every map layer of both
@@ -2499,10 +2366,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         <textarea class="prof-bio" id="profBio" maxlength="1400" placeholder="Kurze Beschreibung (max. 200 Wörter, keine Links)…" oninput="profBioInput()"></textarea>
 
         <div class="prof-sec-title">Darstellung</div>
-        <label class="prof-lbl">Farbschema</label>
-        <div class="prof-seg" id="profTheme">
-          <button data-v="system">System</button><button data-v="light">Hell</button><button data-v="dark">Dunkel</button>
-        </div>
         <label class="prof-lbl">Kartenbeschriftung</label>
         <div class="prof-seg" id="profLabels">
           <button data-v="on">Skigebiete an</button><button data-v="off">Aus</button>
@@ -2939,15 +2802,23 @@ map.on('zoom zoomend',updateBaseFade);updateBaseFade();
 const slopeWMTS=L.tileLayer(swissTile('ch.swisstopo.hangneigung-ueber_30','png'),{opacity:.7});
 const reliefWMTS=L.tileLayer(swissTile('ch.swisstopo.swissalti3d-reliefschattierung_monodirektional','png'),{opacity:.85});
 const roughImg=L.imageOverlay(ROUGH_PNG,[[M.png_bounds[0],M.png_bounds[1]],[M.png_bounds[2],M.png_bounds[3]]],{opacity:.78});
+// Defer work until the browser has actually painted once. Two frames, because
+// the first only commits the layout; the second is when pixels are on screen.
+function _afterFirstPaint(fn){
+  requestAnimationFrame(function(){requestAnimationFrame(function(){
+    if(window.requestIdleCallback)requestIdleCallback(fn,{timeout:600});else setTimeout(fn,0);});});}
 // Aspect: load high-res classified PNG into offscreen canvas, render via GridLayer with nearest-neighbor
 const [aspS,aspWest,aspN,aspEast]=M.png_bounds;
 let aspData=null,aspPW=0,aspPH=0;
-const aspI=new Image();aspI.src=ASPECT_PNG;
-aspI.onload=function(){aspPW=aspI.width;aspPH=aspI.height;const c=document.createElement('canvas');c.width=aspPW;c.height=aspPH;const x=c.getContext('2d');x.drawImage(aspI,0,0);try{aspData=x.getImageData(0,0,aspPW,aspPH).data;}catch(e){}};
+const aspI=new Image();
+// Decoding starts after the first frame: nothing on screen depends on it.
+_afterFirstPaint(function(){aspI.src=ASPECT_PNG;});
+aspI.onload=function(){aspPW=aspI.width;aspPH=aspI.height;const c=document.createElement('canvas');c.width=aspPW;c.height=aspPH;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(aspI,0,0);try{aspData=x.getImageData(0,0,aspPW,aspPH).data;}catch(e){}};
 // --- Fine terrain sampling: 60 m aspect (8-way) + fine elevation raster ---
 let elevData=null,elevPW=0,elevPH=0;
-const elevI=new Image();elevI.src=ELEV_PNG;
-elevI.onload=function(){elevPW=elevI.width;elevPH=elevI.height;const c=document.createElement('canvas');c.width=elevPW;c.height=elevPH;const x=c.getContext('2d');x.drawImage(elevI,0,0);try{elevData=x.getImageData(0,0,elevPW,elevPH).data;}catch(e){}
+const elevI=new Image();
+_afterFirstPaint(function(){elevI.src=ELEV_PNG;});
+elevI.onload=function(){elevPW=elevI.width;elevPH=elevI.height;const c=document.createElement('canvas');c.width=elevPW;c.height=elevPH;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(elevI,0,0);try{elevData=x.getImageData(0,0,elevPW,elevPH).data;}catch(e){}
   try{if(demoFitZones()){loadReportMarkers();if(layer==='prog')renderPrognosis(stat);}}catch(e){}};
 const ASP8DEG=[[0x4A,0x90,0xD9,0],[0x45,0xC0,0xC0,45],[0x66,0xBB,0x6A,90],[0xBE,0xDB,0x39,135],[0xEF,0x53,0x50,180],[0xFF,0x9E,0x42,225],[0xFF,0xC1,0x07,270],[0xA9,0x87,0xE0,315]];
 function _pngSample(data,pw,ph,bnds,lat,lng){if(!data||!bnds)return null;const S=bnds[0],Wst=bnds[1],N=bnds[2],E=bnds[3];
@@ -3178,7 +3049,7 @@ function demoFitZones(){
 // reports, and the longer field/observation reports.
 let progSrc='both';
 const PROG_SRC_LABEL={draw:'Zeichnen',quick:'Quick',both:'Zeichnen + Quick',all:'Alle Reports'};
-function progSetSrc(v){progSrc=v;progRenderBar();try{dockSync();}catch(e){}
+function progSetSrc(v){progSrc=v;progRenderBar();
   try{if(layer==='prog'||layer==='powfind'||layer==='progdiff'){showOverlay();legend();}}catch(e){}}
 // map free text from a written report onto a snow type
 function progTypeFromText(t){t=(t||'').toLowerCase();
@@ -3537,8 +3408,20 @@ let layer="snow",stat="avg",windowSize=48,a=nowIdx,b=Math.min(T,nowIdx+48),showS
 const isMobile=window.innerWidth<=560;
 
 function depthCol(v){const x=Math.min(1,v/300);let r,g,bl;if(x<.33){const k=x/.33;r=220-k*120|0;g=240-k*50|0;bl=255-k*5|0;}else if(x<.66){const k=(x-.33)/.33;r=100-k*80|0;g=190-k*90|0;bl=250-k*65|0;}else{const k=(x-.66)/.34;r=20+k*100|0;g=100-k*85|0;bl=185-k*105|0;}return[r,g,bl];}
+// --- Domain edge mask -----------------------------------------------------
+// A gridded forecast is unreliable in the cells at its own boundary: they have
+// no upwind neighbours, so advection and the wind field are one-sided there.
+// The outermost EDGE_KM are therefore left blank rather than drawn as if they
+// were data. Computed once from the grid geometry, in cells, per axis.
+const EDGE_KM=3;
+const _kmPerRow=((laMax-laMin)*110.574)/Math.max(1,H-1);
+const _kmPerCol=((loMax-loMin)*111.320*Math.cos((laMin+laMax)/2*Math.PI/180))/Math.max(1,W-1);
+const EDGE_ROWS=Math.min(Math.floor((H-1)/2),Math.ceil(EDGE_KM/Math.max(1e-6,_kmPerRow)));
+const EDGE_COLS=Math.min(Math.floor((W-1)/2),Math.ceil(EDGE_KM/Math.max(1e-6,_kmPerCol)));
+function inDomainEdge(p){const y=(p/W)|0,x=p-y*W;
+  return x<EDGE_COLS||x>=W-EDGE_COLS||y<EDGE_ROWS||y>=H-EDGE_ROWS;}
 function setRaster(get,border){const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;
-  for(let p=0;p<NP;p++){const r=get(p);const o=p*4;if(r){d[o]=r[0];d[o+1]=r[1];d[o+2]=r[2];d[o+3]=r[3]==null?210:r[3];if(cls)cls[p]=r[4];}else{d[o+3]=0;if(cls)cls[p]=-999;}}
+  for(let p=0;p<NP;p++){const r=inDomainEdge(p)?null:get(p);const o=p*4;if(r){d[o]=r[0];d[o+1]=r[1];d[o+2]=r[2];d[o+3]=r[3]==null?210:r[3];if(cls)cls[p]=r[4];}else{d[o+3]=0;if(cls)cls[p]=-999;}}
   if(border){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=y*W+x;if(cls[p]==-999)continue;const rt=x<W-1?cls[p+1]:cls[p],bt=y<H-1?cls[p+W]:cls[p];if(rt!=cls[p]||bt!=cls[p]){const o=p*4;d[o]=20;d[o+1]=20;d[o+2]=30;d[o+3]=230;}}}
   cx.putImageData(img,0,0);raster.setUrl(cv.toDataURL());}
 function aggT(p,m){let mn=1e9,mx=-1e9,su=0,c=0,cold=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;if(v<0)cold++;}return m=="max"?mx:m=="min"?mn:m=="sub0"?cold:m=="max05"?mx:su/Math.max(1,c);}
@@ -3620,239 +3503,6 @@ function renderStations(){stnGroup.clearLayers();if(!showStn)return;
     const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:html,iconSize:iSize,iconAnchor:iAnc}),zIndexOffset:500});
     m.bindPopup(stationCard(s),{maxWidth:isMobile?240:260});m.addTo(stnGroup);}
 }
-// ===================== Navigation: one sheet, a stack of views =============
-// Every level is a view pushed onto navStack. There is always a way back:
-// the chevron, a downward swipe, the scrim, Escape and the browser back button
-// all pop exactly one level.
-const NAV_VIEWS={};
-let navStack=[],_navPopping=false,_navPushed=false;
-function navRender(){
-  const sh=document.getElementById('sheet');
-  const top=navStack[navStack.length-1];
-  if(!top)return;
-  const v=NAV_VIEWS[top.id];if(!v)return;
-  document.getElementById('sheetTitle').textContent=
-    (typeof v.title==='function'?v.title(top.arg):v.title)||'';
-  sh.classList.toggle('has-back',navStack.length>1);
-  const body=document.getElementById('sheetBody');
-  body.classList.remove('sv-in');
-  svReturnAll();
-  body.innerHTML='';
-  v.render(body,top.arg);
-  // restart the staggered entrance
-  void body.offsetWidth;body.classList.add('sv-in');
-  body.scrollTop=0;
-}
-function navOpen(id,arg){
-  navStack=[{id:id,arg:arg}];
-  document.body.classList.add('sheet-open');
-  navRender();
-  // Exactly one history entry per opening, tracked explicitly: chaining
-  // history.back() calls would walk past the app's own entry and leave the page.
-  try{if(!_navPushed){history.pushState({ssmSheet:1},'');_navPushed=true;}}catch(e){}
-  try{haptic(6);}catch(e){}
-}
-function navPush(id,arg){
-  navStack.push({id:id,arg:arg});navRender();
-  try{haptic(4);}catch(e){}
-}
-function navBack(){
-  if(navStack.length>1){navStack.pop();navRender();try{haptic(4);}catch(e){}return true;}
-  navClose();return false;
-}
-function navClose(){
-  if(!document.body.classList.contains('sheet-open'))return;
-  document.body.classList.remove('sheet-open');
-  svReturnAll();
-  navStack=[];
-  try{if(_navPushed&&!_navPopping){_navPushed=false;history.back();}}catch(e){}
-  _navPushed=false;
-  try{haptic(4);}catch(e){}
-}
-// the phone's back gesture pops a level instead of leaving the app
-addEventListener('popstate',()=>{
-  if(!document.body.classList.contains('sheet-open'))return;
-  _navPopping=true;_navPushed=false;
-  if(navStack.length>1){navStack.pop();navRender();
-    try{history.pushState({ssmSheet:1},'');_navPushed=true;}catch(e){}}
-  else navClose();
-  _navPopping=false;
-});
-addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('sheet-open'))navBack();});
-// drag the grab handle down to pop
-(function(){
-  const g=document.getElementById('sheetGrab'),sh=document.getElementById('sheet');
-  if(!g||!sh)return;let y0=null,dy=0;
-  const down=e=>{y0=(e.touches?e.touches[0]:e).clientY;dy=0;sh.style.transition='none';};
-  const move=e=>{if(y0==null)return;dy=Math.max(0,(e.touches?e.touches[0]:e).clientY-y0);
-    sh.style.transform='translateY('+dy+'px)';};
-  const up=()=>{if(y0==null)return;y0=null;sh.style.transition='';sh.style.transform='';
-    if(dy>70)navBack();};
-  g.addEventListener('touchstart',down,{passive:true});g.addEventListener('mousedown',down);
-  addEventListener('touchmove',move,{passive:true});addEventListener('mousemove',move);
-  addEventListener('touchend',up);addEventListener('mouseup',up);
-})();
-const _CHEV='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
-const _TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>';
-function svRow(o){
-  const b=document.createElement('button');
-  b.className='sv-item'+(o.on?' on':'');
-  b.innerHTML=(o.on!=null&&!o.go?'<span class="sv-dot">'+_TICK+'</span>':'')+
-    '<span class="sv-t"><b>'+o.title+'</b>'+(o.sub?'<span>'+o.sub+'</span>':'')+'</span>'+
-    (o.go?'<span class="sv-go">'+_CHEV+'</span>':'');
-  b.onclick=o.onClick;return b;
-}
-function svSlider(o){
-  const d=document.createElement('div');d.className='sv-slide';
-  const h=document.createElement('div');h.className='sv-slide-h';
-  const b=document.createElement('b');b.textContent=o.title;
-  const v=document.createElement('span');v.textContent=o.fmt(o.value);
-  h.appendChild(b);h.appendChild(v);d.appendChild(h);
-  if(o.sub){const n=document.createElement('em');n.textContent=o.sub;d.appendChild(n);}
-  const inp=document.createElement('input');inp.type='range';
-  inp.min=o.min;inp.max=o.max;inp.step=o.step;inp.value=o.value;
-  inp.oninput=()=>{v.textContent=o.fmt(inp.value);o.onInput(inp.value);};
-  d.appendChild(inp);return d;
-}
-function svSection(t){const d=document.createElement('div');d.className='sv-sec';d.textContent=t;return d;}
-function svNote(t){const d=document.createElement('div');d.className='sv-note';d.textContent=t;return d;}
-// Borrow an existing element (with all its wiring intact) into the sheet, and
-// hand it back to its original parent when the level is left.
-let _svHeld=[];
-function svAdopt(body,id){
-  const el=document.getElementById(id);if(!el)return;
-  if(!el._home){el._home=el.parentNode;el._next=el.nextSibling;}
-  el.style.display='';el.classList.add('sv-borrowed');body.appendChild(el);
-  if(_svHeld.indexOf(el)<0)_svHeld.push(el);
-}
-// Held by reference, never looked up by id: the moment #sheetBody is cleared
-// the borrowed node is detached and getElementById can no longer find it —
-// which used to lose the search field and the whole timeline for good.
-function svReturnAll(){
-  const held=_svHeld;_svHeld=[];
-  held.forEach(el=>{el.classList.remove('sv-borrowed');
-    if(!el._home||el.parentNode===el._home)return;
-    const at=(el._next&&el._next.parentNode===el._home)?el._next:null;
-    try{el._home.insertBefore(el,at);}catch(e){try{el._home.appendChild(el);}catch(e2){}}});
-}
-
-// The Report-Modell layers each carry settings (which reports to trust, and how
-// certain the model has to be). They used to sit in the console's #progBar; the
-// console is gone, so they get a level of their own.
-const PROG_OPT_LAYERS={prog:1,powfind:1,progdiff:1,progpat:1};
-function itemHasProgOpts(it){try{return !!PROG_OPT_LAYERS[it.vars[0].l];}catch(e){return false;}}
-function progOptsSummary(it){
-  const l=it.vars[0].l;
-  const src=(l==='powfind'||l==='progpat')?'Zeichnen-Reports':PROG_SRC_LABEL[progSrc];
-  return (l==='prog')?src:src+' · Vertrauen ab '+progConfMin+'%';
-}
-
-// ---- the views -----------------------------------------------------------
-NAV_VIEWS.layers={title:'Karte',render(body){
-  Object.keys(GROUPS).forEach(g=>{
-    const items=groupItems(g);if(!items.length)return;
-    body.appendChild(svSection(GROUPS[g].tag+' · '+GROUPS[g].label));
-    items.forEach((it,i)=>{
-      const active=(g===curTopic&&i===curItem);
-      const many=it.vars.length>1,opts=itemHasProgOpts(it);
-      body.appendChild(svRow({title:it.label,
-        sub:many?(active?it.vars[curVar].label:it.vars.length+' Varianten')
-            :(opts?(active?progOptsSummary(it):'Einstellbar'):null),
-        on:active,go:(many||opts),
-        onClick:()=>{setTopic(g,i,0);
-          if(many)navPush('variants',{g:g,i:i});
-          else if(opts)navPush('progopts',{g:g,i:i});
-          else navClose();}}));
-    });
-  });
-  body.appendChild(svSection('Darstellung'));
-  body.appendChild(svRow({title:'Karten-Optionen',sub:'Stationen, 3D, Farbschema',go:true,
-    onClick:()=>navPush('mapopts')}));
-}};
-NAV_VIEWS.variants={title:a=>{try{return groupItems(a.g)[a.i].label;}catch(e){return 'Varianten';}},
-  render(body,a){
-    const it=groupItems(a.g)[a.i];if(!it)return;
-    it.vars.forEach((v,k)=>body.appendChild(svRow({title:v.label,on:(k===curVar),
-      onClick:()=>{setTopic(a.g,a.i,k);navRender();}})));
-    body.appendChild(svNote('Die Karte aktualisiert sich sofort — zurück, wenn du fertig bist.'));
-}};
-NAV_VIEWS.progopts={title:a=>{try{return groupItems(a.g)[a.i].label;}catch(e){return 'Einstellungen';}},
-  render(body,a){
-    const it=groupItems(a.g)[a.i];if(!it)return;
-    const l=it.vars[0].l;
-    body.appendChild(svSection('Welche Reports'));
-    if(l==='powfind'||l==='progpat'){
-      body.appendChild(svRow({title:'Zeichnen-Reports',sub:'Diese Ebene wertet nur gezeichnete Karten aus',on:true,onClick:()=>{}}));
-    }else{
-      ['draw','quick','both','all'].forEach(k=>body.appendChild(svRow({
-        title:PROG_SRC_LABEL[k],on:progSrc===k,
-        onClick:()=>{progSetSrc(k);navRender();}})));
-    }
-    if(l==='powfind'||l==='progdiff'||l==='progpat'){
-      body.appendChild(svSection('Vertrauen'));
-      body.appendChild(svSlider({title:'Nur ab',value:progConfMin,min:0,max:95,step:5,
-        sub:'Blendet Flächen aus, bei denen das Modell zu wenig sicher ist.',
-        fmt:v=>v+'%',onInput:v=>progSetConfMin(v)}));
-    }
-    body.appendChild(svNote('Die Karte aktualisiert sich sofort — zurück, wenn du fertig bist.'));
-}};
-NAV_VIEWS.time={title:'Zeitfenster',render(body){
-  svAdopt(body,'btmMain');
-}};
-NAV_VIEWS.search={title:'Ort suchen',render(body){
-  svAdopt(body,'searchWrap');
-  const inp=document.getElementById('searchIn');
-  if(inp)setTimeout(()=>{try{inp.focus();}catch(e){}},260);
-}};
-NAV_VIEWS.mapopts={title:'Karten-Optionen',render(body){
-  const stationsOn=()=>{try{return document.getElementById('railToggles').classList.contains('active');}catch(e){return false;}};
-  body.appendChild(svSection('Karte'));
-  body.appendChild(svRow({title:'Messstationen',sub:'Werte direkt auf der Karte',on:stationsOn(),
-    onClick:()=>{toggleStations();navRender();}}));
-  body.appendChild(svRow({title:'3D-Ansicht',go:true,
-    onClick:()=>{navClose();try{document.getElementById('btn3dFloat').click();}catch(e){}}}));
-  body.appendChild(svRow({title:'Zu meinem Standort',go:true,
-    onClick:()=>{navClose();try{flyToMe();}catch(e){}}}));
-  body.appendChild(svRow({title:'Legende',sub:'Was die Farben bedeuten',go:true,
-    onClick:()=>navPush('legend')}));
-  body.appendChild(svSection('Darstellung'));
-  ['system','light','dark'].forEach(t=>body.appendChild(svRow({
-    title:{system:'Farbschema: System',light:'Farbschema: Hell',dark:'Farbschema: Dunkel'}[t],
-    on:prefs.theme===t,
-    onClick:()=>{prefs.theme=t;prefsSave();applyTheme();navRender();}})));
-}};
-NAV_VIEWS.legend={title:'Legende',render(body){
-  const d=document.createElement('div');d.className='sv-note';
-  d.style.fontSize='13px';d.style.color='var(--ink-700)';
-  try{d.innerHTML=legendFor(layer);}catch(e){d.textContent='—';}
-  body.appendChild(d);
-}};
-NAV_VIEWS.report={title:'Melden',render(body){
-  body.appendChild(svRow({title:'Schnee-Karte zeichnen',sub:'Verhältnisse direkt auf die Karte malen',go:true,
-    onClick:()=>{navClose();setTimeout(()=>{try{drawOpen();}catch(e){}},220);}}));
-  if(FEATURES.observation)body.appendChild(svRow({title:'Beobachtung melden',sub:'Lawine, Wumm-Geräusch, Triebschnee …',go:true,
-    onClick:()=>{navClose();setTimeout(()=>{try{obsOpen();}catch(e){}},220);}}));
-  if(FEATURES.quickPowder)body.appendChild(svRow({title:'Quick Powder',sub:'Ein Fingertipp',go:true,
-    onClick:()=>{navClose();setTimeout(()=>{try{qrOpen();}catch(e){}},220);}}));
-  body.appendChild(svSection('Community'));
-  body.appendChild(svRow({title:'Feed',sub:'Meldungen aus der ganzen Schweiz',go:true,
-    onClick:()=>{navClose();setTimeout(()=>{try{feedOpen();}catch(e){}},220);}}));
-  body.appendChild(svRow({title:'Mein Profil',go:true,
-    onClick:()=>{navClose();setTimeout(()=>{try{accountTap();}catch(e){}},220);}}));
-}};
-
-// ---- the dock reflects the current state ---------------------------------
-function dockSync(){
-  try{
-    const items=groupItems(curTopic),it=items[curItem];
-    const g=GROUPS[curTopic];
-    const tag=document.getElementById('dockLayerTag'),val=document.getElementById('dockLayerVal');
-    if(tag)tag.textContent=g?g.tag+' · '+g.label.replace('-Modell',''):'Ebene';
-    if(val&&it)val.textContent=(it.vars.length>1?it.vars[curVar].label:it.label);
-    const tv=document.getElementById('dockTimeVal');
-    if(tv)tv.textContent=(b-a)+' h';
-  }catch(e){}
-}
 // A viewport-scoped raster has to follow the viewport.
 let _progMoveT=null;
 function progRefresh(){
@@ -3931,7 +3581,7 @@ function showOverlay(){
 function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefresh();if(tlMode==='detail')drawTimeline();
   if(layer=="rad"||layer=="radsun")renderRadiation();
   if(layer=="wind"){buildFlow();if(wtimer)clearTimeout(wtimer);wtimer=setTimeout(renderWind,120);}
-  document.getElementById('window').innerHTML=`${b-a}h Fenster`;syncTl();legend();dockSync();}
+  document.getElementById('window').innerHTML=`${b-a}h Fenster`;syncTl();legend();}
 // --- Simple / Detailed timeline mode (detailed = default) ---
 let tlMode='detail',sliderActive=false;
 function syncTl(){const wv=b-a;
@@ -4018,7 +3668,7 @@ function setTopic(t,itemIdx,varIdx){
   const vb=document.getElementById('variants');
   vb.innerHTML=vars.length>1?vars.map((v,i)=>'<button data-i="'+i+'"'+(i===curVar?' class="on"':'')+'>'+v.label+'</button>').join(''):'';
   vb.querySelectorAll('button').forEach(btn=>{btn.onclick=()=>setTopic(t,curItem,parseInt(btn.dataset.i));});
-  const sel=vars[curVar];layer=sel.l;stat=sel.s;renderAll();progRenderBar();dockSync();
+  const sel=vars[curVar];layer=sel.l;stat=sel.s;renderAll();progRenderBar();
   if(typeof panelRestore==='function')requestAnimationFrame(()=>{try{panelRestore();}catch(e){}});
 }
 // Both models are on screen at once, so any layer is a single tap (P4). The
@@ -4072,9 +3722,12 @@ function progRenderBar(){
 // measured bottom edge rather than to a fixed offset.
 // The layer card no longer floats over the map, so search sits at the top edge
 // and the demo pill tucks underneath it.
-// Search is adopted into its sheet, so there is nothing left to position at
-// level 0. Kept as a no-op because several places still call it.
-function positionSearch(){}
+function positionSearch(){try{
+  var sw=document.getElementById('searchWrap');if(!sw)return;
+  sw.style.top='calc(env(safe-area-inset-top,0px) + 12px)';
+  var dp=document.getElementById('demoPill');
+  if(dp)dp.style.top=(sw.getBoundingClientRect().bottom+8)+'px';
+}catch(e){}}
 addEventListener('resize',positionSearch);requestAnimationFrame(positionSearch);
 function presetsFade(){const p=document.getElementById('presets');if(!p)return;p.classList.toggle('can-scroll',p.scrollWidth-p.clientWidth-p.scrollLeft>4);}
 (function(){const p=document.getElementById('presets');if(p)p.addEventListener('scroll',presetsFade,{passive:true});addEventListener('resize',presetsFade);requestAnimationFrame(presetsFade);})();
@@ -4148,31 +3801,25 @@ function flyToMe(){haptic(8);
       map.flyTo(ll,13,{duration:1.1});
     }catch(e){}},
     ()=>{toast('Standort konnte nicht ermittelt werden','err');},{enableHighAccuracy:true,timeout:9000});}
-// --- Bottom panel: expand (content height) / collapse (tap or swipe the handle) ---
+// --- Bottom panel: expand / collapse by tapping the handle (no swipe) ---
 let panelRestore=null,panelCollapsed=false;
 (function(){const bp=document.getElementById('bottomPanel'),tl=document.getElementById('tlToggle'),btm=document.getElementById('btmMain');
   const minH=16;
   function invalidate(){try{map.invalidateSize({animate:false,pan:false});}catch(e){}}
-  // The console is no longer docked; the dock is. Anything that positions
-  // itself above the bottom edge measures the dock instead.
-  function updH(){const d=document.getElementById('dock');
-    const h=d?Math.round(d.getBoundingClientRect().height)+18:0;
-    document.documentElement.style.setProperty('--btm-h',h+'px');}
+  function updH(){document.documentElement.style.setProperty('--btm-h',bp.offsetHeight+'px');}
   // Collapse only hides the detailed chart — the mode toggle + presets stay
   // visible, so the time controls are never fully hidden.
   function apply(){bp.classList.toggle('collapsed',panelCollapsed);bp.style.height='';btm.style.display='';
     updH();requestAnimationFrame(()=>{updH();invalidate();});}
   requestAnimationFrame(apply);
   window.addEventListener('resize',()=>{if(!panelCollapsed){updH();invalidate();}});
-  let sy=0,drag=false,moved=0;
-  function down(e){drag=true;sy=e.touches?e.touches[0].clientY:e.clientY;moved=0;}
-  function move(e){if(!drag)return;const y=e.touches?e.touches[0].clientY:e.clientY;moved=y-sy;}
-  function up(){if(!drag)return;drag=false;
-    if(moved>24)panelCollapsed=true;else if(moved<-24)panelCollapsed=false;else panelCollapsed=!panelCollapsed;
-    apply();}
-  tl.addEventListener('mousedown',down);tl.addEventListener('touchstart',down,{passive:true});
-  document.addEventListener('mousemove',move);document.addEventListener('touchmove',move,{passive:true});
-  document.addEventListener('mouseup',up);document.addEventListener('touchend',up);
+  // One tap toggles the detail chart. A gesture that can be started by accident
+  // while panning the map has no business moving a docked surface.
+  tl.setAttribute('role','button');tl.setAttribute('tabindex','0');
+  tl.setAttribute('aria-label','Zeitdetails ein- oder ausblenden');
+  function toggle(){panelCollapsed=!panelCollapsed;apply();try{haptic(4);}catch(e){}}
+  tl.addEventListener('click',toggle);
+  tl.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});
   // Called after content changes (e.g. Simple↔Detailed) to recompute height
   panelRestore=function(){if(panelCollapsed){panelCollapsed=false;}apply();};
 })();
@@ -4254,7 +3901,6 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
      '<div class="insp-sec"><h4>Strahlung <em>% vom Tagesmaximum</em></h4><canvas id="icRad"></canvas></div>'+
    '</div>';
   pan.classList.add('open');
-  inspApplyDrag(pan,false);inspAttachDrag(pan);
   requestAnimationFrame(()=>{
     icNewSnow(document.getElementById('icNew'),p);
     icDepth(document.getElementById('icDepth'),p);
@@ -4263,36 +3909,8 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
     icRad(document.getElementById('icRad'),p);
   });
 }
-// --- Inspect panel: drag anywhere, snap to the nearest side edge on release.
-// Offsets persist for the session so the panel reopens where the user left it.
-let inspDX=0,inspDY=0;
-function inspApplyDrag(pan,animate){
-  pan.style.transition=animate?'transform .32s cubic-bezier(.34,1.4,.64,1)':'none';
-  pan.style.transform=(inspDX||inspDY)?('translate('+inspDX+'px,'+inspDY+'px)'):'';}
-function inspSnap(pan){
-  const r=pan.getBoundingClientRect(),vw=window.innerWidth,vh=window.innerHeight,m=12;
-  if(r.width<vw-2*m-20){ // free horizontal space -> snap to nearest side edge
-    const target=(r.left+r.width/2<vw/2)?m:(vw-m-r.width);
-    inspDX+=target-r.left;}
-  const top=Math.max(m,Math.min(r.top,vh-r.height-m)); // keep fully on screen
-  inspDY+=top-r.top;
-  inspApplyDrag(pan,true);}
-function inspAttachDrag(pan){
-  if(pan._drag)return;pan._drag=true;
-  pan.style.touchAction='pan-y';
-  let sx=0,sy=0,bx=0,by=0,on=false,decided=false,doDrag=false;
-  function begin(e){pan.classList.add('dragging');pan.style.transition='none';try{pan.setPointerCapture(e.pointerId);}catch(_){}}
-  pan.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;
-    on=true;sx=e.clientX;sy=e.clientY;bx=inspDX;by=inspDY;
-    doDrag=!!e.target.closest('.insp-head');decided=doDrag;if(doDrag)begin(e);});
-  pan.addEventListener('pointermove',e=>{if(!on)return;
-    const dx=e.clientX-sx,dy=e.clientY-sy;
-    if(!decided){if(Math.abs(dx)<7&&Math.abs(dy)<7)return;
-      decided=true;doDrag=Math.abs(dx)>=Math.abs(dy);
-      if(doDrag)begin(e);else{on=false;return;}}
-    if(!doDrag)return;inspDX=bx+dx;inspDY=by+dy;inspApplyDrag(pan,false);});
-  const fin=()=>{if(!on)return;on=false;if(doDrag){pan.classList.remove('dragging');inspSnap(pan);}};
-  pan.addEventListener('pointerup',fin);pan.addEventListener('pointercancel',fin);}
+// The inspect panel is docked by CSS: no drag, no snap, no stored offset. It
+// always appears in the same place, which is what makes it feel built in.
 function icSetup(cv,hh,wOverride){const dpr=window.devicePixelRatio||1;const ww=wOverride||cv.getBoundingClientRect().width||320;
   cv.width=Math.round(ww*dpr);cv.height=Math.round(hh*dpr);cv.style.height=hh+'px';if(wOverride)cv.style.width=ww+'px';
   const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,ww,hh);return{ctx,w:ww,h:hh};}
@@ -4384,8 +4002,7 @@ function miniMapTools(mapObj,wrapEl){if(!wrapEl||wrapEl.querySelector('.mm-tools
   bs.onclick=e=>{e.stopPropagation();const q=prompt('Ort suchen…');if(!q)return;
     fetch('https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText='+encodeURIComponent(q)+'&limit=1&sr=4326')
       .then(r=>r.json()).then(j=>{const a2=j.results&&j.results[0]&&j.results[0].attrs;
-        if(a2){mapObj.setView([a2.lat||a2.y,a2.lon||a2.x],13.5);
-          try{navClose();}catch(e){}}else toast('Kein Ort gefunden.','err');})
+        if(a2){mapObj.setView([a2.lat||a2.y,a2.lon||a2.x],13.5);}else toast('Kein Ort gefunden.','err');})
       .catch(()=>toast('Suche fehlgeschlagen.','err'));};
   bl.onclick=e=>{e.stopPropagation();if(!navigator.geolocation){toast('Kein GPS verfügbar.','err');return;}
     navigator.geolocation.getCurrentPosition(pos=>{mapObj.setView([pos.coords.latitude,pos.coords.longitude],13.5);try{haptic(6);}catch(_){}},
@@ -4508,16 +4125,14 @@ function sync3dTo2d(){if(!map3d||syncLock)return;syncLock=true;
   const c=map3d.getCenter(),z=map3d.getZoom();
   map.setView([c.lat,c.lng],z,{animate:false});syncLock=false;}
 map.on('moveend',sync2dTo3d);
-// --- Intro Animation ---
-const _introStart=Date.now();
-function dismissIntro(){const el=document.getElementById('intro');if(!el){maybeDisclaimer();return;}
-  el.classList.add('hide');setTimeout(()=>{el.remove();maybeDisclaimer();},240);}
-// --- Snow animation for intro ---
-(function(){const w=document.getElementById('snowWrap');if(!w)return;
-  for(let i=0;i<30;i++){const s=document.createElement('div');s.className='sf';
-    s.style.left=Math.random()*100+'%';s.style.animationDuration=(2+Math.random()*4)+'s';
-    s.style.animationDelay=Math.random()*3+'s';s.style.opacity=0.2+Math.random()*0.5;
-    s.style.width=s.style.height=(2+Math.random()*4)+'px';w.appendChild(s);}})();
+// Declared here, above the boot call below, on purpose: maybeDisclaimer() runs
+// during module evaluation, so a const declared further down would still be in
+// its temporal dead zone and the gate would re-prompt everyone on every start.
+const DISC_VER='1';
+// There is no splash to dismiss: the app is already on screen. All that is
+// left is to retire the loading hairline and put the disclaimer up.
+function dismissIntro(){try{if(window.__bootDone)window.__bootDone();}catch(e){}
+  maybeDisclaimer();}
 // --- First-run onboarding coach marks ---
 // These pointed at the old floating layer card, which no longer exists — they
 // now walk the one-screen console.
@@ -4617,11 +4232,7 @@ window.__APP_OK=true;
 setTopic('meteo',0,0);dismissIntro();
 // Personal preferences (opening layer, time window, where the map lands) are
 // applied once the map and the layer strip exist.
-requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}
-  try{dockSync();}catch(e){}
-  try{document.documentElement.style.setProperty('--btm-h',
-    (Math.round(document.getElementById('dock').getBoundingClientRect().height)+18)+'px');
-    map.invalidateSize({animate:false});}catch(e){}});
+requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}});
 try{const _pid=new URLSearchParams(location.search).get('post');
   if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);}catch(e){}
 if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(reg=>{try{reg.update();}catch(e){}}).catch(()=>{});});}
@@ -4660,7 +4271,6 @@ function toast(msg,kind){const w=document.getElementById('toastWrap');
   if(kind==='err'){try{haptic(18);}catch(e){}}
   setTimeout(()=>{t.classList.add('out');setTimeout(()=>{t.remove();},260);},kind==='err'?4200:2600);}
 // --- First-run legal / safety disclaimer gate (must accept before onboarding) ---
-const DISC_VER='1';
 function maybeDisclaimer(){
   try{if(localStorage.getItem('ssm_disclaimer_v'+DISC_VER)){maybeOnboard();return;}}catch(e){}
   const el=document.getElementById('disc');if(!el){maybeOnboard();return;}el.classList.add('show');}
@@ -5310,25 +4920,16 @@ function authMenu(){openProfile();}
 // --- Personal preferences ---------------------------------------------------
 // Device-local, so they work before sign-in and never need a round trip.
 const PREF_KEY='ssm_prefs_v1';
-const PREF_DEFAULTS={theme:'system',labels:'on',start:'country',home:'',layer:'meteo:0',window:'48'};
+const PREF_DEFAULTS={labels:'on',start:'country',home:'',layer:'meteo:0',window:'48'};
 let prefs=Object.assign({},PREF_DEFAULTS);
 function prefsLoad(){try{const v=JSON.parse(localStorage.getItem(PREF_KEY)||'{}');
   prefs=Object.assign({},PREF_DEFAULTS,v||{});}catch(e){prefs=Object.assign({},PREF_DEFAULTS);}
   return prefs;}
 function prefsSave(){try{localStorage.setItem(PREF_KEY,JSON.stringify(prefs));}catch(e){}}
-// Theme: 'system' removes the attribute so the media query decides.
-function applyTheme(){
-  const r=document.documentElement;
-  if(prefs.theme==='system')r.removeAttribute('data-theme');
-  else r.setAttribute('data-theme',prefs.theme);
-  try{const dark=(prefs.theme==='dark')||(prefs.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
-    document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.setAttribute('content',dark?'#0E1A26':'#ffffff'));}catch(e){}
-}
 function applyLabels(){try{const el=document.getElementById('map');
   if(el)el.classList.toggle('no-resort-labels',prefs.labels==='off');}catch(e){}}
-function prefsApplyAll(){applyTheme();applyLabels();}
-prefsLoad();applyTheme();
-try{matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(prefs.theme==='system')applyTheme();});}catch(e){}
+function prefsApplyAll(){applyLabels();}
+prefsLoad();
 // --- Profile & Settings ---
 let myProfile=null,profAvatarFile=null,profAvatarUrl=null;
 function profNav(v){['Main','Pers','Priv','Notif','App'].forEach(k=>{const el=document.getElementById('profView'+k);if(el)el.style.display=(v===k.toLowerCase())?'':'none';});try{haptic(4);}catch(e){}}
@@ -5438,7 +5039,6 @@ function profSeg(id,key,after){
 }
 function profRenderPrefs(){
   prefsLoad();
-  profSeg('profTheme','theme',applyTheme);
   profSeg('profLabels','labels',applyLabels);
   profSeg('profStart','start');
   profSeg('profWindow','window');
