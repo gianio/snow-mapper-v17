@@ -28,13 +28,15 @@ rules and a strict grid, with colour spent only where it carries information.
 
 ## 2. The six principles
 
-### P1 — One screen, no stacking
-The map is the application. Everything else **docks to an edge** of it. Nothing
-opens on top of something else that is already on top. A user is never more than
-one dismiss away from the map.
+### P1 — One screen, one surface at a time
+The map is the application, and at rest it owns the screen: the only permanent
+chrome is a four-target dock. Everything else opens in **the same sheet**, one
+level at a time. Nothing opens on top of something else that is already on top —
+a deeper level *replaces* the content of the sheet, it does not stack a second
+surface over it.
 
-Practically: no nested menus, no modal over modal, no flyout that hides the
-thing it belongs to. Panels are docked or they are dismissed.
+Practically: no modal over modal, no flyout that hides the thing it belongs to.
+There is exactly one sheet, and it is either showing a level or it is closed.
 
 ### P2 — Colour is data. Chrome is neutral.
 See §4. This is the load-bearing rule of the whole system.
@@ -44,10 +46,16 @@ Hierarchy comes from **hairlines, spacing and type weight**. Not from blur, not
 from layered drop shadows, not from tinted glass. Exactly one elevation token
 exists, and it is only for surfaces that are temporary.
 
-### P4 — One tap to anything you look at often
-Depth costs taps and taps cost gloves. Any map layer is **one tap**. Secondary
-variants of a layer (Wind → Max, Temperatur → Oberfläche) cost a second tap, and
-only if you want them. Nothing routine costs three.
+### P4 — Simple first, deep on demand — and always a way back
+Depth costs taps and taps cost gloves, so the *frequency* of a thing decides how
+deep it sits. The dock shows live state at zero taps. Any map layer is **two**
+(dock → row). Variants and settings (Wind → Max, Reported Powder → Vertrauen)
+cost a third, and only if you want them. Nothing routine costs four.
+
+Every level deeper than the first shows a back chevron, and **five gestures pop
+exactly one level**: the chevron, a downward drag on the grab handle, the scrim,
+Escape, and the phone's back gesture. You can always retreat one step; you are
+never trapped and never thrown all the way out by accident.
 
 ### P5 — Type carries hierarchy
 Size and weight separate levels. Colour does not. A "more important" label is
@@ -63,26 +71,56 @@ exactly one filled element per group of choices.
 
 ### The one-screen model
 
+Level 0 — at rest, the map is ~90 % of the screen:
+
 ```
 ┌─────────────────────────────────────┐
-│  search                     ▏rail▕  │   top: search only.  right: icon rail
+│  demo                       ▏rail▕  │   right rail: profile · feed
 │                                     │
 │                                     │
 │              M A P                  │   the map is never boxed in
 │                                     │
-│                                 (+) │   primary actions, thumb-reachable
-│                                 (✎) │
-├─────────────────────────────────────┤
-│  LAYERS   ▸ all layers, one tap     │   the console: one surface,
-│  ─────────────────────────────────  │   sectioned by hairlines
-│  TIME     ▸ presets · scrubber      │
+│                                     │
+│ ┌─────────────────────────────────┐ │
+│ │ ○ │ A·METEO   │ ZEIT  │   ＋    │ │   the dock: four targets, and
+│ │   │ Powder    │ 48 h  │         │ │   two of them are live readouts
+│ └─────────────────────────────────┘ │
 └─────────────────────────────────────┘
 ```
 
-The **console** at the bottom is a single surface holding every recurring
-control. It is sectioned by hairlines, never by separate floating cards. This is
-what "many features on one screen" means here: the features are *unfolded onto
-one surface*, not distributed across menus.
+Level 1+ — one sheet rises; the map stays visible behind the scrim:
+
+```
+┌─────────────────────────────────────┐
+│              M A P                  │
+│ ┌────────────────────────────────┐  │
+│ │            ▬▬▬▬                │  │   grab handle: drag down to pop
+│ │  ‹   Reported Powder        ✕  │  │   back chevron from level 2 on
+│ │  ──────────────────────────────│  │
+│ │  WELCHE REPORTS                │  │   sections by hairline + label
+│ │  ● Zeichnen                    │  │
+│ │  ○ Zeichnen + Quick        ›   │  │
+│ │  VERTRAUEN                     │  │
+│ │  Nur ab                   60%  │  │
+│ │  ────────●───────────────      │  │
+│ └────────────────────────────────┘  │
+└─────────────────────────────────────┘
+```
+
+The **dock** is the whole permanent interface: search, the active layer, the
+time window, and report. Two of its four targets are *readouts as well as
+buttons* — they show what is on the map right now (P6) and open the level that
+changes it.
+
+Everything else is a **view** pushed onto a navigation stack and rendered into
+that one sheet. A view is a list of full-width rows; a row with a chevron goes
+one level deeper, a row with a tick is a choice. Deep functionality is not
+hidden, it is *ordered*: `dock → Karte → Reported Powder → Vertrauen`.
+
+Two long-lived controls — the timeline and the search field — are **borrowed**
+into the sheet rather than rebuilt, so they keep their wiring, and are handed
+back to their own parent when the level is left. Never look one up by `id` after
+the sheet body has been cleared; hold the reference (see `svAdopt`/`svReturnAll`).
 
 ### Grid and spacing
 
@@ -281,7 +319,21 @@ Focus: `border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft)`.
 ### Sheet
 Docks to the bottom edge, `--r-2` on the top corners only, grab handle
 (`36×4`, `--ink-150`), `--sp4` padding, `--lift`. Backdrop is
-`rgba(14,17,22,.32)` — a scrim, not a blur.
+`rgba(14,17,22,.32)` — a scrim, not a blur. Max height `82vh`, so the map is
+always still visible behind it. It animates on `transform` only.
+
+### Sheet row (`.sv-item`)
+The one navigation element. Full width, `min-height 60px`, hairline underneath,
+title 16/700 with an optional 13 px sub-line in `--ink-500`.
+- **Chevron** on the right → goes one level deeper.
+- **Tick circle** on the left → it is a choice; filled `--accent` when chosen,
+  and the title turns accent too.
+A row is never both. `:active` fills `--ink-050`, nothing else.
+
+### Sheet slider (`.sv-slide`)
+For continuous settings. Label left, live value right in `--accent` with
+tabular numerals, optional explanatory line, then a 34 px-high range input.
+The value updates while dragging — the map does too.
 
 ### Icon
 1.75 px stroke, `currentColor`, 20 px in controls and 18 px inline. Custom SVG
@@ -300,14 +352,22 @@ only — **no emoji anywhere in the UI**.
 One easing curve. No springs, no bounce — this is an instrument. Everything is
 wrapped by `prefers-reduced-motion`.
 
+Two coordinated moves, both on `--dur-2` and both on `transform`/`opacity` so
+they stay on the compositor: the dock drops away as the sheet rises, and the
+scrim fades with them. Arriving content is staggered — rows fade up 9 px with
+30 ms between the first three (`.sv-in`), which reads as the level *unfolding*
+rather than flashing in. Going back does not re-stagger a level you have
+already seen within the same gesture.
+
 ---
 
 ## 8. Per-screen application
 
 | screen | how the language applies |
 |---|---|
-| **Map** | Full bleed. Abstract at country view, detail fading in with zoom. Chrome docks to edges only. |
-| **Console** | One surface. `LAYERS` section, hairline, `TIME` section. All layers one tap. |
+| **Map** | Full bleed and ~90 % of the screen. Abstract at country view, detail fading in with zoom. Chrome docks to edges only. |
+| **Dock** | The only permanent chrome. Four targets; two of them read out the live state. Hidden while a sheet or the drawing canvas is open. |
+| **Sheet views** (layers, variants, prognosis settings, time, search, map options, legend, report) | One recipe: grab handle, back chevron + title + close, then full-width rows. A chevron means deeper; a tick means chosen. Sections are hairline + accent label. |
 | **Feed** | White cards on `--ink-050`, hairline separated, photo full-bleed inside the card. Action row is quiet buttons; only counts are dark. |
 | **Sheets** (comments, profile, condition, location) | Identical sheet recipe, inheriting whatever accent is currently live. |
 | **Report / draw** | The drawing canvas is the surface; controls dock left (brush) and right (depth) and along the bottom. Pen swatches show the actual texture. |
@@ -331,10 +391,12 @@ wrapped by `prefers-reduced-motion`.
 
 ## 10. Adding something new
 
-1. Can it live on a surface that already exists? Put it there. (P1)
+1. Can it be a row in a sheet view that already exists? Put it there. (P1)
+   If it needs its own level, add it to `NAV_VIEWS` — never a new modal.
 2. Which of the three colour families does it belong to? If chrome — it is ink
    plus, at most, the accent. (P2)
-3. Is it a recurring choice? Then it is one tap. (P4)
+3. How often is it used? That decides its depth — and every level below the
+   first must show the back chevron. (P4)
 4. Does it need a shadow? Only if it is temporary. (P3)
 5. Are the targets 44 px? (§3)
 6. Desaturate it. Does it still work? (§4.5)
