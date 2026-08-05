@@ -709,29 +709,16 @@ _BOOT_SPLIT = r"""<script>
 </script>"""
 
 
-def _snowflake_icon(size: int) -> Image.Image:
-    """Simple branded PWA icon: navy rounded square + white 6-arm snowflake."""
-    import math
+def _firn_icon(size: int) -> Image.Image:
+    """The Firn mark: a twin-peak silhouette (the firn line runs along a
+    ridge), white on ink-900, matching the in-app brand glyph exactly."""
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     rad = int(size * 0.22)
-    d.rounded_rectangle([0, 0, size - 1, size - 1], radius=rad, fill=(8, 8, 10, 255))
-    cx = cy = size / 2
-    arm = size * 0.34
-    lw = max(2, int(size * 0.035))
-    white = (255, 255, 255, 235)
-    for k in range(6):
-        a = math.radians(60 * k)
-        ex, ey = cx + arm * math.cos(a), cy + arm * math.sin(a)
-        d.line([cx, cy, ex, ey], fill=white, width=lw)
-        # two side branches per arm
-        for frac, blen in ((0.55, 0.16), (0.8, 0.12)):
-            bx, by = cx + arm * frac * math.cos(a), cy + arm * frac * math.sin(a)
-            for da in (math.radians(35), -math.radians(35)):
-                d.line([bx, by,
-                        bx + size * blen * math.cos(a + da),
-                        by + size * blen * math.sin(a + da)],
-                       fill=white, width=max(1, lw - 1))
+    d.rounded_rectangle([0, 0, size - 1, size - 1], radius=rad, fill=(11, 21, 32, 255))
+    u = size / 24.0  # same coordinate space as the inline SVG mark
+    pts = [(3 * u, 19 * u), (10 * u, 6 * u), (13.5 * u, 12 * u), (15 * u, 9 * u), (21 * u, 19 * u)]
+    d.polygon(pts, fill=(255, 255, 255, 235))
     return img
 
 
@@ -740,19 +727,19 @@ def _write_pwa_assets(out_dir: Path) -> None:
     installable (Add to Home Screen) and loads offline with the last data."""
     for px, name in [(180, "icon-180.png"), (192, "icon-192.png"), (512, "icon-512.png")]:
         try:
-            _snowflake_icon(px).save(out_dir / name)
+            _firn_icon(px).save(out_dir / name)
         except Exception:  # icon is cosmetic; never fail the build over it
             pass
     manifest = {
-        "name": "Swiss Snow Model",
-        "short_name": "SnowModel",
+        "name": "Firn",
+        "short_name": "Firn",
         "start_url": "./",
         "scope": "./",
         "display": "standalone",
         "orientation": "portrait",
         "background_color": "#ffffff",
         "theme_color": "#ffffff",
-        "description": "Interaktive Neuschnee-, Pulver- und Skitauglichkeits-Karte für die Schweiz.",
+        "description": "Firn — interaktive Neuschnee-, Pulver- und Skitauglichkeits-Karte für die Schweiz.",
         "icons": [
             {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
             {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
@@ -763,7 +750,7 @@ def _write_pwa_assets(out_dir: Path) -> None:
     (out_dir / "sw.js").write_text(_SERVICE_WORKER, encoding="utf-8")
 
 
-_SERVICE_WORKER = r"""// Swiss Snow Model — service worker (installable + offline last-data).
+_SERVICE_WORKER = r"""// Firn — service worker (installable + offline last-data).
 // Network-first for all same-origin GETs (shell, app.js, data blob, icons) so
 // online users always get the latest, and offline falls back to the last cache.
 const C='ssm-v6';
@@ -799,8 +786,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="theme-color" content="#ffffff"/>
 <meta name="mobile-web-app-capable" content="yes"/>
-<title>Swiss Snow Model</title>
-<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAG8UlEQVR4nO2XW2xU1xWGv7X3uczFNhgDMXdMkxBABBFupcQBhKo2hEaKImibtEimShu1aslD26BKwXEfCC+VkkolLVWrVmmlJpaaCtK+JFCcmKQJSi9OioAgCCBibLDB2B57xnPOrvaeGdvjC+UhUl+6pJHnjNf+17//tfba68D/2GTyfzUqNqI+lSgtxNAU3/6C7a/oTyXwbWDKJL8Zlu67k+SUjUg0FxNXYFCY2IAYMIIxoj2xX01kf7ZmjLjlTjc1hKg+Yj4m6jlO2zPn/xsBobFRaGoyrH5hPyrxPXSQQGSY04ijDSKYbL7wHHoQx5gRl1FmIMoOSJQ7aCq6vs8mYhejCChlEjXviFj9/H5SM58md8NgiMbRtZ/IQCbHipWzMcbQ9s92SAagrSITblMTVIsMdB4wJ3Z/ZzgWwwQalSuS1c8tIpz6EaIMJhZEVAlRnBJg8jFzZlUSZvM8cP9Ct5E3Wy+QDTSXr/QhXqFuLbEREeyDikSUlxrKrOh/96k2GhsVTU2x5xxstdtKDdJbSKQVUSYPyhWNEsEgmCgCpZz8HoYffXsds6elXYbq753Fs786gXiCsasig/jariJ2ZaOE2GCCJFmVfRBo45irlLj8mAXUEWqwxWWpBUIcRZgoT830FGFKQ0Jz4XqGb+47Snd/luv9OZ7Yd4RLNzKQUIQpj5oZKbfGriVUw1j4gvhq3uiQXhkBX1daJ1dmdue5iDUrZ9FxpZcNK+cwOBRx6MhH+FOT5LqGOPTeRTybdzEkqgJyNwbYWl9HOunRcuIStbOqOHGyAwl1IQueoJVOD9lYM5e5HKlyAsZzBDzH1EkaBoo9O1exbd18pk1NEGVzqFC53a1aPIPPLrmDOI4Kv2Vz1FQn2LZ2Pnt2riYRWAyQIqZTVNujOqkCqiAVyrYuVODTerKdqrTPb3ZvYs70NF09Gf509AwNX13JtjXzXI088bVV/LL5H2z74j08vvEzLJtXTcNPW3jrZDuqMijUga13iz8m617hzyagCQIVOyejHHCcy3PP3TP4wtoFrN/7GiaG725dyq4ti6mbPYVdB4+Ty8f89sn7eWjFHM5dz7DrF60ufbu3LuN8zwAnL3SjQq9AIrAEZAICm1y/Bk/lnZMRpwCez6muXnb/+m2wzaZ3kCMn29n5ZD0rnznM779Vj6+Fh1/4K6//8PM8d+DfnG+/4XqCW5PyIe0T26NslbepiCZUoGiBNgWWalSLEoJkkvzAEOvWLuCPT21m6d7DbF5ay49fa2P53KmsWFDNir2HaKi/izPXerk5lEfSPvk4Lu93FjsqvxK88TVQkmlEqsgeYzE8/9ganv3zB5y92MXNfERndx+vn/oEHfpuYz9rOY2X9IlKta1H7daUCBRxtwPNYwkktFUBYsuy6OjuG8H2B5uWB+6ayc9nVNB5vc+mzAWJtOCFvnPPRzHoCS4+ewwt9i1TkNBCUuPaWbH1FkgIogIamt+jeecGLu5/lL+dv8obZztp/fgabR093OwddGRUqlhwo9eXCCRLmytJwDgC2hYNYndTAjBu55LyONWbYfmBN3hkyWy+saqOpgeXE2hFV3+Wv5xu5ydvn+VfHTeQwC+/C4bxfYj9WyhQERQ+ahSB0lVvBwJb0cbw6rkrvHq2nSmVSR6+8w72bVzC1+9byKPL57H+d6180NmD8rXzLTN7Y3JLAj5UWgLWcbw5JWyDqgrdc09seOnMZd7vHeDv29eT8jU77p1L2/E+dKrUgEalIG1xg0n6QBPWwWDBJRydgTKzSlgi2taFPd6BsGHhdNcPrF21gSxGInBDyogJpEPEhLdQoDIcdCkwEytAMXBkDPl8RKXvsee+RTy9eK7rnN25PC9fu45Up9zRLSNvv1eGSORn3fOMYzJBEQadVISGyKahBFBEsVVtDFEUobWmobaGH9TVcncq4f6djWO+/OE5riiDqkyMz799rAiN5PyrE6RgU0Grge43UTVCRVicYkbOkv1ixfvKtCqaFtQy30pctKtDeXacvsix/gy6KuUUGmcGIwktifzgWwNu0VUzQkDETpQKkXel9f1mU7doOx0dQ4XptzCNWcwKrZGET1NnN335wrjoifBO/wDnM4PoiuREwd1AxfSZfnD5Usv2w384erAQa/RMSHGkhikvvji193ObXzI10x8ytqO5fj48doPtdGNNKVRh6hozZ9vpWaGiiLCnp2V+24ePnX78kU+I3bw5ZioukRBx2lcde+dLuerqLQgLBZOKYzsmGfEQVx5uUC8Ss8N5ZNyZGB7htahYi8noyFxI9PUe66hfd8jehaUYk7+YmOLEMiHD8kUTvgaMhRuLPSr4ZPglZzXujeT2Yo7FLG2o/B3j/0bB/gOG6axjOF75uQAAAABJRU5ErkJggg=="/>
+<title>Firn</title>
+<link rel="icon" type="image/png" href="icon-192.png"/>
 <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,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"/>
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -829,7 +816,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   setTimeout(function(){if(!window.__APP_OK)stuck('Der Start dauert ungewöhnlich lange — Verbindung prüfen.');},45000);
 })();
 </script>
-<script>window.SENTRY_DSN='';(function(){if(!window.SENTRY_DSN)return;var s=document.createElement('script');s.src='https://browser.sentry-cdn.com/7.120.0/bundle.tracing.min.js';s.crossOrigin='anonymous';s.onload=function(){try{window.Sentry.init({dsn:window.SENTRY_DSN,tracesSampleRate:0,release:'snow-mapper'});}catch(e){}};document.head.appendChild(s);window.addEventListener('error',function(e){try{if(window.Sentry&&e.error)window.Sentry.captureException(e.error);}catch(_){}});window.addEventListener('unhandledrejection',function(e){try{if(window.Sentry)window.Sentry.captureException(e.reason);}catch(_){}});})();</script>
+<script>window.SENTRY_DSN='';(function(){if(!window.SENTRY_DSN)return;var s=document.createElement('script');s.src='https://browser.sentry-cdn.com/7.120.0/bundle.tracing.min.js';s.crossOrigin='anonymous';s.onload=function(){try{window.Sentry.init({dsn:window.SENTRY_DSN,tracesSampleRate:0,release:'firn'});}catch(e){}};document.head.appendChild(s);window.addEventListener('error',function(e){try{if(window.Sentry&&e.error)window.Sentry.captureException(e.error);}catch(_){}});window.addEventListener('unhandledrejection',function(e){try{if(window.Sentry)window.Sentry.captureException(e.reason);}catch(_){}});})();</script>
 <!-- The map tiles are the first thing a user waits for: do the DNS + TLS
      handshake with the tile host while the scripts are still parsing. -->
 <link rel="preconnect" href="https://wmts.geo.admin.ch" crossorigin>
@@ -847,18 +834,23 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    /* --- ink: every bar, panel, border and label comes from here.
           The ramp is BLUE-TINTED, not neutral grey: the whole product reads as
           one cold, alpine family (see docs/design-system.md §4.1). --- */
-   --ink-900:#0B1520;--ink-700:#283A4D;--ink-500:#5C728A;--ink-300:#9BAEC4;
-   --ink-150:#C8D6E4;--ink-100:#DCE7F1;--ink-050:#EFF5FA;--paper:#FFFFFF;
+   --ink-900:#14142B;--ink-700:#33334F;--ink-500:#6B6B8A;--ink-300:#A7A7C0;
+   --ink-150:#D2D2E2;--ink-100:#E4E4F0;--ink-050:#F4F4FA;--paper:#FFFFFF;
    /* --- accent: exactly one live at a time, set per region --- */
-   --accent:#0B6BCB;--accent-soft:rgba(11,107,203,.12);
-   --accent-meteo:#0B6BCB;--accent-meteo-soft:rgba(11,107,203,.12);
-   --accent-report:#1D8FB0;--accent-report-soft:rgba(29,143,176,.14);
+   --accent:#5B4BE8;--accent-soft:rgba(91,75,232,.13);
+   --accent-meteo:#5B4BE8;--accent-meteo-soft:rgba(91,75,232,.13);
+   --accent-report:#0C7D99;--accent-report-soft:rgba(12,125,153,.14);
    /* --- semantic: fixed meanings, never decorative --- */
-   --ok:#1B7F4F;--warn:#E08A00;--danger:#C62828;--danger-tint:rgba(198,40,40,.10);
+   --ok:#0E9F6E;--warn:#D97706;--danger:#DC2626;--danger-tint:rgba(220,38,38,.10);
    /* --- scales --- */
    --sp1:4px;--sp2:8px;--sp3:12px;--sp4:16px;--sp5:24px;--sp6:32px;
    --r-1:8px;--r-2:14px;--r-full:999px;
-   --lift:0 10px 30px rgba(14,17,22,.16);        /* the only shadow */
+   --lift:0 8px 32px rgba(20,20,43,.14),0 2px 8px rgba(20,20,43,.08);
+   /* --- glass: translucency is deliberate again (see design-system §3) --- */
+   --glass-1:rgba(255,255,255,.62);   /* over the map: you should see through it */
+   --glass-2:rgba(255,255,255,.80);   /* over content: readable first */
+   --glass-edge:rgba(255,255,255,.60);/* the 1px highlight that sells the pane */
+   --blur-1:saturate(180%) blur(20px);
    --dur-1:.12s;--dur-2:.22s;--ease:cubic-bezier(.2,0,0,1);
    --tap:44px;--tap-sm:36px;
 
@@ -869,15 +861,32 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    --fg:var(--ink-900);--fg2:var(--ink-700);--mut:var(--ink-500);
    --acc:var(--accent);--acc2:var(--accent);
    --bd:var(--ink-150);--hair:var(--ink-100);--ring:var(--accent);
-   --glass:var(--paper);--glass2:var(--paper);--glow:var(--accent-soft);
+   --glass:var(--glass-1);--glass2:var(--glass-2);--glow:var(--accent-soft);
    --card:var(--paper);--fill:var(--ink-050);--fill2:var(--ink-100);--page:var(--ink-050);
    --r-sm:var(--r-1);--r:var(--r-1);--r-lg:var(--r-2);--r-xl:var(--r-2);
-   --elev1:none;--elev2:var(--lift);--elev3:var(--lift);
-   --blur:none;--dur:var(--dur-2);--ease-spring:var(--ease);
+   --elev1:0 1px 3px rgba(20,20,43,.07);--elev2:var(--lift);--elev3:var(--lift);
+   --blur:var(--blur-1);--dur:var(--dur-2);--ease-spring:var(--ease);
    --panel-h:52px;
    --topic-accent:var(--accent);--topic-tint:var(--accent-soft)}
- /* One palette. The app is read outdoors in snow glare against a light map,
-    so the chrome is light too — there is no dark variant to drift out of sync. */
+ /* One palette, light only: the app is read outdoors against a light map, so
+    there is no dark variant to drift out of sync.
+
+    Glass: one recipe, applied through .glass so it degrades in one place.
+    Two fallbacks, because both cases are real — a browser without
+    backdrop-filter would otherwise render near-transparent unreadable panels,
+    and a user who asked for less transparency has asked for exactly that. */
+ .glass{background:var(--glass-2);backdrop-filter:var(--blur-1);-webkit-backdrop-filter:var(--blur-1);
+   border:1px solid var(--glass-edge);box-shadow:var(--lift)}
+ .glass-thin{background:var(--glass-1);backdrop-filter:var(--blur-1);-webkit-backdrop-filter:var(--blur-1);
+   border:1px solid var(--glass-edge)}
+ @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+   :root{--glass:var(--paper);--glass2:var(--paper);--glass-1:var(--paper);--glass-2:var(--paper)}
+   .glass,.glass-thin{background:var(--paper);border-color:var(--ink-100)}
+ }
+ @media (prefers-reduced-transparency:reduce){
+   :root{--glass:var(--paper);--glass2:var(--paper);--glass-1:var(--paper);--glass-2:var(--paper);--blur:none;--blur-1:none}
+   .glass,.glass-thin{background:var(--paper);backdrop-filter:none;-webkit-backdrop-filter:none;border-color:var(--ink-100)}
+ }
  /* P5: numbers a user compares are tabular so columns line up */
  .num,.snow-val,#tlLenVal,#progConfVal,#drawDepthVVal,#drawBrushVVal,.insp-chip,.tl-range{font-variant-numeric:tabular-nums}
  /* Micro-label (section labels, field labels) */
@@ -911,7 +920,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
  html{background:#ffffff}
  html,body{margin:0;padding:0;height:100%;height:100dvh;width:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--fg);overscroll-behavior:none;background:#ffffff;position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
- #map{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);background:#fff;--resort-op:0;--resort-lbl:0}
+ #map{position:absolute;top:0;left:0;right:0;bottom:var(--btm-h,0px);background:#fff;--resort-op:0;--resort-lbl:0}
  /* Resort markers: a dot that fades in with zoom, and a label that follows a
     little later so the country view stays uncluttered. */
  .resort-pin{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:4px;white-space:nowrap;opacity:var(--resort-op);transition:opacity .25s linear}
@@ -919,7 +928,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #map.no-resort-labels .resort-pin span{display:none}
  .resort-pin span{font-size:10.5px;font-weight:800;color:var(--ink-700);letter-spacing:-.01em;opacity:var(--resort-lbl);text-shadow:0 0 3px #fff,0 0 6px #fff,0 1px 0 #fff}
  .leaflet-control-scale{margin-right:92px!important;margin-bottom:10px!important}
- #flow{position:fixed;top:0;left:0;right:0;bottom:var(--btm-h,0px);z-index:450;pointer-events:none}
+ #flow{position:absolute;top:0;left:0;right:0;bottom:var(--btm-h,0px);z-index:450;pointer-events:none}
  #modeGlow{display:none}
  .rail-btn svg,#legendBtn svg{color:currentColor}
  /* ============ Alpin Grid component recipes (docs/design-system.md §6) ====
@@ -973,10 +982,181 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* every focusable control gets the same visible focus ring (§9) */
  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,
  [tabindex]:focus-visible{outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
- /* --- The console: layers + time on one docked surface ---------------- */
- #layerBar{display:flex;flex-direction:column;gap:var(--sp2);padding:var(--sp4) var(--sp4) var(--sp3);
-   border-bottom:1px solid var(--ink-100);--topic-accent:var(--accent);--topic-tint:var(--accent-soft)}
+ /* ===================== Search: finder (1) vs map (2) ==================
+    State 1 is the default: the map is a card and the query sits under it.
+    Sliding the handle down gives the map the screen. --------------------- */
+ #paneSearch{--map-h:46vh}
+ body:not(.map-full) #map,body:not(.map-full) #flow{
+   bottom:auto;height:var(--map-h);border-radius:0 0 var(--r-2) var(--r-2)}
+ body:not(.map-full) #bottomPanel,body:not(.map-full) #legendBtn,
+ body:not(.map-full) .legend,body:not(.map-full) #inspPanel{display:none!important}
+ body.map-full #finder{display:none}
+ #mapGrab{position:absolute;z-index:1150;left:50%;transform:translateX(-50%);
+   top:calc(var(--map-h) - 17px);width:76px;height:34px;border:none;background:none;
+   display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
+ body.map-full #mapGrab{top:auto;bottom:calc(var(--btm-h,0px) + 2px)}
+ #mapGrab i{display:block;width:42px;height:5px;border-radius:3px;background:var(--ink-300);
+   box-shadow:0 0 0 6px var(--glass-2)}
+ #mapGrab:active{cursor:grabbing}
+ #finder{position:absolute;z-index:1000;left:0;right:0;top:var(--map-h);bottom:0;
+   overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--ink-050);
+   padding:var(--sp5) 26px calc(env(safe-area-inset-bottom,0px) + var(--sp5));
+   display:flex;flex-direction:column;gap:var(--sp4)}
+ .fd-head{display:flex;align-items:center;gap:var(--sp3)}
+ .fd-star{width:26px;height:26px;color:var(--accent);flex-shrink:0}
+ .fd-head b{display:block;font-size:19px;font-weight:800;letter-spacing:-.02em;color:var(--ink-900)}
+ .fd-head span{display:block;font-size:13px;color:var(--ink-500);margin-top:1px}
+ .fd-field{display:flex;flex-direction:column;gap:var(--sp2)}
+ .fd-field .lbl-micro em{font-style:normal;color:var(--accent);margin-left:6px}
+ /* two thumbs over one track: the pair reads as a band, which is what it is */
+ .fd-range{position:relative;height:34px}
+ .fd-range::before{content:"";position:absolute;left:0;right:0;top:50%;height:4px;
+   margin-top:-2px;border-radius:2px;background:var(--ink-150)}
+ .fd-range input{position:absolute;left:0;right:0;top:0;width:100%;height:34px;margin:0;
+   background:none;pointer-events:none;-webkit-appearance:none;appearance:none}
+ .fd-range input::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:auto;
+   width:24px;height:24px;border-radius:50%;background:var(--paper);
+   border:3px solid var(--accent);box-shadow:var(--elev1);cursor:pointer}
+ .fd-range input::-moz-range-thumb{pointer-events:auto;width:24px;height:24px;border-radius:50%;
+   background:var(--paper);border:3px solid var(--accent);cursor:pointer}
+ .fd-asp{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+ .fd-asp button,.fd-seg button{min-height:var(--tap);border-radius:var(--r-1);cursor:pointer;
+   border:1px solid var(--ink-100);background:var(--paper);color:var(--ink-700);
+   font-family:inherit;font-size:13px;font-weight:700}
+ .fd-asp button.on,.fd-seg button.on{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+ .fd-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+ .fd-results{display:flex;flex-direction:column;gap:var(--sp2)}
+ .fd-row{display:flex;align-items:center;gap:var(--sp3);width:100%;min-height:60px;
+   padding:0 var(--sp3);border-radius:var(--r-1);cursor:pointer;text-align:left;
+   background:var(--paper);border:1px solid var(--ink-100);font-family:inherit}
+ .fd-row:active{transform:scale(.99)}
+ .fd-dot{width:34px;height:34px;border-radius:50%;flex-shrink:0;
+   display:flex;align-items:center;justify-content:center;
+   font-size:11.5px;font-weight:800;color:var(--paper)}
+ .fd-row .fd-t{flex:1;min-width:0}
+ .fd-row .fd-t b{display:block;font-size:14.5px;font-weight:700;color:var(--ink-900)}
+ .fd-row .fd-t span{display:block;font-size:12.5px;color:var(--ink-500);margin-top:1px}
+ .fd-empty{padding:var(--sp5) var(--sp3);text-align:center;font-size:13.5px;color:var(--ink-500);line-height:1.5}
+ /* ===================== The screen shell ==============================
+    One launcher, then three topic screens on a wrap-around carousel:
+    Search -> Report -> Feed -> Search. Each pane is its own fixed,
+    viewport-sized layer with its own transform; there is no shared wrapper,
+    which is what lets the feed page act as a pane where it already stands.
+    --------------------------------------------------------------------- */
+ .pane{position:fixed;inset:0;z-index:1;overflow:hidden;
+   transition:transform .34s cubic-bezier(.32,.72,.42,1);will-change:transform;
+   backface-visibility:hidden}
+ body.pane-dragging .pane{transition:none}
+ /* Panes off to the side must not eat taps meant for the live one. */
+ .pane[data-at="-1"],.pane[data-at="1"]{pointer-events:none}
+ .pane[data-at="0"]{pointer-events:auto}
+ #paneReport{background:var(--ink-050);display:flex;flex-direction:column}
+ /* the feed page is a pane now, not a slide-over overlay */
+ #feedPage.pane{z-index:1;transform:none}
+ /* --- the small bar every non-map pane carries --- */
+ .pane-top{display:flex;align-items:center;gap:var(--sp3);flex-shrink:0;
+   padding:calc(env(safe-area-inset-top,0px) + 12px) var(--sp4) 12px}
+ .pt-home{display:inline-flex;align-items:center;gap:7px;min-height:var(--tap-sm);
+   padding:0 10px 0 6px;border:none;background:none;border-radius:var(--r-1);
+   font-family:inherit;font-size:14.5px;font-weight:800;color:var(--ink-900);cursor:pointer}
+ .pt-home svg{width:19px;height:19px;flex-shrink:0}
+ .pt-home:active{transform:scale(.96)}
+ .pt-acc{margin-left:auto;width:var(--tap);height:var(--tap);border-radius:50%;
+   border:1px solid var(--glass-edge);background:var(--glass-2);
+   backdrop-filter:var(--blur-1);-webkit-backdrop-filter:var(--blur-1);
+   color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer}
+ .pt-acc svg{width:21px;height:21px}
+ /* --- edge tabs: the affordance the sketches draw on every screen ------ */
+ .edge-tab{position:fixed;z-index:40;top:50%;transform:translateY(-50%);
+   display:flex;align-items:center;justify-content:center;min-height:74px;width:22px;padding:0;
+   border:1px solid var(--glass-edge);background:var(--glass-1);
+   backdrop-filter:var(--blur-1);-webkit-backdrop-filter:var(--blur-1);
+   color:var(--ink-700);font-family:inherit;font-size:10.5px;font-weight:800;
+   letter-spacing:.06em;text-transform:uppercase;cursor:pointer;box-shadow:var(--elev1)}
+ .edge-tab span{writing-mode:vertical-rl}
+ .edge-tab.left{left:0;border-left:none;border-radius:0 var(--r-2) var(--r-2) 0}
+ .edge-tab.right{right:0;border-right:none;border-radius:var(--r-2) 0 0 var(--r-2);}
+ .edge-tab.left span{transform:rotate(180deg)}
+ .edge-tab svg{display:none}
+ /* content keeps clear of the tabs rather than running under them */
+ .si-grid,.rp-body,.rp-h{padding-left:26px;padding-right:26px}
+ .si-grid{padding-left:26px;padding-right:26px}
+ .edge-tab:active{background:var(--glass-2)}
+ body.draw-on .edge-tab,body.scr-home .edge-tab{display:none}
+ /* ===================== Screen 1: the launcher ======================== */
+ #scrInitial{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;
+   justify-content:center;gap:var(--sp6);padding:var(--sp6) var(--sp5);
+   background:var(--paper);
+   transition:opacity .3s var(--ease),transform .3s var(--ease)}
+ body:not(.scr-home) #scrInitial{opacity:0;transform:scale(1.04);pointer-events:none}
+ .si-aurora{position:absolute;inset:0;z-index:-1;
+   background:
+     radial-gradient(60% 45% at 12% 8%,rgba(91,75,232,.30),transparent 70%),
+     radial-gradient(55% 40% at 92% 22%,rgba(12,125,153,.26),transparent 70%),
+     radial-gradient(70% 50% at 50% 108%,rgba(91,75,232,.16),transparent 70%)}
+ .si-head{position:relative}
+ .si-mark{width:38px;height:38px;color:var(--accent-meteo);display:block}
+ .si-head h1{margin:var(--sp3) 0 0;font-size:38px;font-weight:800;letter-spacing:-.035em;color:var(--ink-900)}
+ .si-head p{margin:6px 0 0;font-size:15px;color:var(--ink-500);max-width:22ch;line-height:1.45}
+ .si-grid{display:flex;flex-direction:column;gap:var(--sp3)}
+ .si-card{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;
+   gap:2px var(--sp3);align-items:center;text-align:left;
+   min-height:82px;padding:var(--sp4);border-radius:var(--r-2);cursor:pointer;
+   background:var(--glass-2);backdrop-filter:var(--blur-1);-webkit-backdrop-filter:var(--blur-1);
+   border:1px solid var(--glass-edge);box-shadow:var(--lift);font-family:inherit;
+   transition:transform var(--dur-1) var(--ease)}
+ .si-card:active{transform:scale(.985)}
+ .si-ic{grid-row:1/3;width:46px;height:46px;border-radius:var(--r-1);
+   display:flex;align-items:center;justify-content:center;
+   background:var(--accent-soft);color:var(--accent-meteo)}
+ .si-ic svg{width:23px;height:23px}
+ .si-card b{font-size:19px;font-weight:800;color:var(--ink-900);letter-spacing:-.02em}
+ .si-card>span:last-child{font-size:13.5px;color:var(--ink-500)}
+ /* ===================== Pane: Report ================================== */
+ .rp-body{flex:1;display:flex;flex-direction:column;justify-content:center;
+   gap:var(--sp5);padding:var(--sp4) var(--sp4) calc(env(safe-area-inset-bottom,0px) + var(--sp6))}
+ .rp-h{margin:0;font-size:24px;font-weight:800;letter-spacing:-.025em;color:var(--ink-900)}
+ .rp-choices{display:flex;flex-direction:column;gap:var(--sp3)}
+ .rp-choice{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;
+   gap:4px var(--sp3);align-items:start;text-align:left;padding:var(--sp4);
+   border-radius:var(--r-2);cursor:pointer;font-family:inherit;
+   background:var(--glass-2);backdrop-filter:var(--blur-1);-webkit-backdrop-filter:var(--blur-1);
+   border:1px solid var(--glass-edge);box-shadow:var(--lift);
+   transition:transform var(--dur-1) var(--ease)}
+ .rp-choice:active{transform:scale(.985)}
+ .rp-ic{grid-row:1/3;width:52px;height:52px;border-radius:var(--r-1);
+   display:flex;align-items:center;justify-content:center;
+   background:var(--accent-soft);color:var(--accent)}
+ .rp-ic svg{width:25px;height:25px}
+ .rp-choice b{font-size:17.5px;font-weight:800;color:var(--ink-900);letter-spacing:-.015em}
+ .rp-choice>span:last-child{font-size:13.5px;color:var(--ink-500);line-height:1.45}
+ /* --- The console: layers collapse behind one trigger, time stays put --- */
+ #layerBar{border-bottom:1px solid var(--ink-100);--topic-accent:var(--accent);--topic-tint:var(--accent-soft)}
  body.draw-on #layerBar{display:none}
+ /* The row you always see: current group + layer, tap to open the grid. */
+ #layerTrig{width:100%;min-height:52px;display:flex;align-items:center;gap:10px;
+   padding:0 var(--sp4);border:none;background:none;cursor:pointer;font-family:inherit;
+   text-align:left;color:var(--ink-900)}
+ #layerTrig:active{background:var(--ink-050)}
+ .lt-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
+ .lt-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+ .lt-k{font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+ .lt-v{font-size:15.5px;font-weight:800;color:var(--ink-900);letter-spacing:-.01em;
+   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .lt-car{width:18px;height:18px;color:var(--ink-300);flex-shrink:0;
+   transition:transform var(--dur-2) var(--ease)}
+ #layerTrig[aria-expanded="true"] .lt-car{transform:rotate(180deg)}
+ /* The grid itself: collapsed to a zero-height row until opened. This is a
+    pure-CSS accordion (grid-template-rows 0fr -> 1fr) -- no measured pixel
+    height, no JS resize loop, and nothing to drag. */
+ #layerPop{display:grid;grid-template-rows:0fr;transition:grid-template-rows var(--dur-2) var(--ease)}
+ #layerPop.open{grid-template-rows:1fr}
+ /* The grid item being forced to zero height must itself carry no padding --
+    a border-box can shrink to 0, but never below its own padding, so any
+    padding here becomes a floor the animation can't collapse past. The real
+    padding lives one level deeper, on .lp-body, which the grid never sizes. */
+ #layerPop>.lp-inner{overflow:hidden;min-height:0}
+ .lp-body{display:flex;flex-direction:column;gap:var(--sp2);padding:0 var(--sp4) var(--sp3)}
  #layerStrip{display:flex;flex-direction:column;gap:var(--sp2)}
  .ls-row{display:flex;flex-direction:column;gap:6px}
  .ls-tag{display:block;color:var(--accent);letter-spacing:.10em}
@@ -1016,7 +1196,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .pb-seg button.active{background:var(--accent);border-color:var(--accent);color:var(--paper)}
  #progBar input[type=range]{flex:1;accent-color:var(--accent);min-width:0;height:30px}
  #progConfVal{font-size:12.5px;font-weight:800;color:var(--ink-900);min-width:38px;text-align:right}
- #bottomPanel{position:absolute;z-index:1000;bottom:0;left:0;right:0;
+ #bottomPanel{position:absolute;z-index:1000;bottom:0;left:0;right:0;backdrop-filter:var(--blur-1);-webkit-backdrop-filter:var(--blur-1);
    background:var(--paper);border-top:1px solid var(--ink-100);box-shadow:none;transition:none;padding-bottom:max(env(safe-area-inset-bottom, 0px) - 18px, 4px);overflow:hidden}
  #btmMain{padding:6px 14px 2px}
  #timeline{display:block;border:1px solid var(--ink-100);background:var(--ink-050);border-radius:var(--r-1)}
@@ -1105,7 +1285,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* Docked, not floating: the panel sits flush against an edge and against the
     console, so it reads as part of the screen instead of a card on top of it.
     It does not move, and there is nothing to drag. */
- .insp-panel{position:fixed;z-index:2600;background:var(--paper);display:none;flex-direction:column;overflow:hidden;border:0 solid var(--ink-100)}
+ .insp-panel{position:absolute;z-index:2600;background:var(--paper);display:none;flex-direction:column;overflow:hidden;border:0 solid var(--ink-100)}
  .insp-chip{background:var(--ink-050)}
  .insp-tile{background:var(--ink-050);border-color:var(--ink-100)}
  .insp-head button{background:var(--ink-050)}
@@ -1162,18 +1342,23 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .leaflet-control-attribution a{color:inherit!important}
  .leaflet-control-scale-line{background:rgba(255,255,255,.6)!important;border-color:rgba(22,21,46,.35)!important;color:var(--fg2)!important;font-family:'Inter',system-ui!important;font-size:10px!important;font-weight:600!important;}
  .leaflet-control-scale{margin-bottom:6px!important;margin-right:8px!important}
- #demoPill{min-height:var(--tap-sm);position:fixed;z-index:1050;top:calc(env(safe-area-inset-top,0px) + 172px);left:12px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--hair);background:var(--paper);color:var(--fg2);font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:var(--elev1)}
+ #demoPill{min-height:var(--tap-sm);position:absolute;z-index:1050;top:calc(env(safe-area-inset-top,0px) + 172px);left:12px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--hair);background:var(--paper);color:var(--fg2);font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:var(--elev1)}
  #demoPill .dp-dot{width:7px;height:7px;border-radius:50%;background:rgba(20,20,25,.35)}
  #demoPill.on{background:var(--ink-900);color:#fff;border-color:var(--ink-900)}
  #demoPill.on .dp-dot{background:#5ee68a}
+ /* The empty strip above the search bar is where the brand mark lives. */
+ /* On the map screen the mark doubles as the way back to the launcher. */
+ #brandMark{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 76px);left:10px;
+   background:var(--glass-2);backdrop-filter:var(--blur-1);-webkit-backdrop-filter:var(--blur-1);
+   border:1px solid var(--glass-edge);box-shadow:var(--elev1)}
  #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 116px);left:12px;width:230px;max-width:calc(100vw - 24px)}
- #searchWrap input{width:100%;min-height:var(--tap);padding:0 12px 0 34px;border-radius:var(--r-1);border:1px solid var(--ink-100);background:var(--paper);color:var(--ink-900);font-size:15px;font-weight:500;outline:none;box-shadow:var(--lift);font-family:inherit}
+ #searchWrap input{width:100%;min-height:var(--tap);padding:0 12px 0 34px;border-radius:var(--r-1);border:1px solid var(--glass-edge);background:var(--glass-2);backdrop-filter:var(--blur-1);-webkit-backdrop-filter:var(--blur-1);color:var(--ink-900);font-size:15px;font-weight:500;outline:none;box-shadow:var(--lift);font-family:inherit}
  #searchWrap input::placeholder{color:var(--mut);font-weight:400}
  #searchWrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
  #searchWrap .icn{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--mut);font-size:15px}
  /* Right-side control rail */
  #ctrlRail{position:absolute;z-index:1050;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:10px}
- .rail-btn{position:relative;width:46px;height:46px;border-radius:var(--r-1);border:1px solid var(--ink-100);background:var(--paper);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:none;transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease)}
+ .rail-btn{position:relative;width:46px;height:46px;border-radius:var(--r-1);border:1px solid var(--glass-edge);background:var(--glass-2);backdrop-filter:var(--blur-1);-webkit-backdrop-filter:var(--blur-1);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:none;transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease)}
  .rail-btn:hover{background:#fff;color:var(--fg);transform:translateY(-1px)}
  .rail-btn:active{transform:scale(.95)}
  .rail-btn.active{background:var(--ink-900);color:var(--paper);border-color:var(--ink-900)}
@@ -1337,7 +1522,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* --- Report sheet (Alpenglühen dark) --- */
  /* --- Report wizard: centered light modal --- */
  /* --- Draw-based snow report (v3) --- */
- body.draw-on #ctrlRail,body.draw-on #layerBar,body.draw-on #searchWrap,body.draw-on #demoPill,body.draw-on #mapQr,body.draw-on #mapFab,body.draw-on #mapDraw,body.draw-on #bottomPanel,body.draw-on #legendBtn,body.draw-on .legend{display:none!important}
+ body.draw-on #ctrlRail,body.draw-on #layerBar,body.draw-on #searchWrap,body.draw-on #brandMark,body.draw-on #demoPill,body.draw-on #mapQr,body.draw-on #mapFab,body.draw-on #mapDraw,body.draw-on #bottomPanel,body.draw-on #legendBtn,body.draw-on .legend{display:none!important}
  .fab-v{position:absolute;top:-3px;left:-3px;min-width:16px;height:15px;padding:0 3px;border-radius:7px;background:var(--ink-900);color:#fff;font-size:8.5px;font-weight:900;line-height:15px;text-align:center;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
  .feed-fab .fab-v{background:#fff;color:var(--ink-900);border-color:var(--ink-900)}
  /* v1 on top, then v2, then v3 -- the stack closes up when a FAB is hidden
@@ -1943,6 +2128,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .qr-prev{width:100%;max-height:150px;object-fit:cover;border-radius:14px;margin-top:10px}
  .qr-adj{display:block;margin:12px auto 0;border:none;background:none;color:var(--acc2);font-size:13px;font-weight:750;font-family:inherit;cursor:pointer}
  .qr-skip{width:100%;margin-top:8px;border:none;background:none;color:var(--mut);font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;padding:9px}
+ #mapFab[hidden],#mapQr[hidden],#mapDraw[hidden]{display:none!important}
  #mapFab{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 14px);width:56px;height:56px;z-index:900;background:var(--ink-900)!important;color:var(--paper)!important;border-color:var(--ink-900)!important}
  #mapFab:active{transform:scale(.9)}
  #mapFab span{display:none}
@@ -2050,8 +2236,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="disc"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="discH"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><h2 id="discH">Bevor du startest</h2><p><b>Experimentelle Modelldaten.</b> Diese App zeigt modellierte Schnee-, Pulver- und Skitauglichkeits-Sch&auml;tzungen. Sie ist <b>kein Lawinenbulletin</b> und ersetzt nicht die offizielle Beurteilung des <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation.html" target="_blank" rel="noopener">SLF</a> bzw. <a href="https://whiterisk.ch" target="_blank" rel="noopener">White Risk</a>. Entscheidungen im Gel&auml;nde triffst du auf <b>eigenes Risiko</b>.</p><p class="fine">Datenschutz: F&uuml;r Konto, Meldungen und Fotos werden E-Mail, Standort und Bilddaten bei Supabase (EU) gespeichert. Du kannst Konto und Beitr&auml;ge jederzeit l&ouml;schen.</p><label class="chk"><input type="checkbox" id="discChk" onchange="var b=document.getElementById('discBtn');if(b)b.disabled=!this.checked"><span>Ich habe verstanden, dass dies experimentelle Daten sind und kein Lawinenbulletin ersetzt.</span></label><button class="accept" id="discBtn" disabled onclick="acceptDisc()">Verstanden &ndash; loslegen</button></div></div>
 <div id="a2hs" onclick="if(event.target===this)a2hsLater()"><div class="sheet" role="dialog" aria-modal="true">
   <div class="a2hs-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="4.2" y1="7.5" x2="19.8" y2="16.5"/><line x1="4.2" y1="16.5" x2="19.8" y2="7.5"/></svg></div>
-  <h2>Snow Mapper aufs Home-Screen</h2>
-  <p>Als App installiert läuft Snow Mapper im Vollbild (randlos), startet offline mit den letzten Daten und ist einen Fingertipp entfernt.</p>
+  <h2>Firn aufs Home-Screen</h2>
+  <p>Als App installiert läuft Firn im Vollbild (randlos), startet offline mit den letzten Daten und ist einen Fingertipp entfernt.</p>
   <div id="a2hsIos" style="display:none">
     <div class="a2hs-step"><span class="n">1</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg><span>Tippe unten auf das <b>Teilen</b>-Symbol</span></div>
     <div class="a2hs-step"><span class="n">2</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Wähle <b>Zum Home-Bildschirm</b></span></div>
@@ -2062,15 +2248,46 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   </div>
   <button class="later" onclick="a2hsLater()">Später</button>
 </div></div>
+<!-- ===================== Screen 1: the launcher ======================= -->
+<div id="scrInitial">
+  <div class="si-aurora" aria-hidden="true"></div>
+  <div class="si-head">
+    <svg class="si-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L10 6L13.5 12L15 9L21 19Z"/><path d="M8.6 11.4h2.8"/></svg>
+    <h1>Firn</h1>
+    <p>Schnee, Pulver und Verhältnisse in der Schweiz.</p>
+  </div>
+  <nav class="si-grid">
+    <button class="si-card" onclick="scrGo('report')">
+      <span class="si-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg></span>
+      <b>Report</b><span>Verhältnisse melden</span>
+    </button>
+    <button class="si-card" onclick="scrGo('search')">
+      <span class="si-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span>
+      <b>Search</b><span>Karte &amp; Powder finden</span>
+    </button>
+    <button class="si-card" onclick="scrGo('feed')">
+      <span class="si-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></span>
+      <b>Feed</b><span>Meldungen der Community</span>
+    </button>
+  </nav>
+</div>
+<!-- ===================== Pane: Search ================================== -->
+<section class="pane" id="paneSearch" aria-label="Karte und Suche">
 <div id="map"></div>
 <canvas id="flow"></canvas>
 <div id="modeGlow"></div>
 <div id="statusScrim"></div>
 <div id="statusScrimB"></div>
 <div id="inspPanel" class="insp-panel"></div>
-
-</div>
 <button id="demoPill" onclick="demoToggle()" title="Demo-Modus umschalten"><span class="dp-dot"></span><span id="demoPillTxt">Demo</span></button>
+<!-- The one brand mark on the map screen: quiet, non-interactive, the same
+     twin-peak glyph as the app icon. Rebranding lives here and in the names
+     the app uses when it talks about itself (title, share sheet, PWA
+     install) -- not in new chrome competing with the map. -->
+<button id="brandMark" class="pt-home" onclick="scrHome()" aria-label="Startseite">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L10 6L13.5 12L15 9L21 19Z"/><path d="M8.6 11.4h2.8"/></svg>
+  <span>Firn</span>
+</button>
 <div id="searchWrap"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Ort suchen…" autocomplete="off"/><div id="searchRes"></div></div>
 <div id="ctrlRail">
   <button class="rail-btn" id="accountBtn" onclick="accountTap()" title="Anmelden" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.6"/><path d="M3.5 20a6.5 6.5 0 0 1 13 0"/><line x1="19" y1="6" x2="19" y2="12"/><line x1="16" y1="9" x2="22" y2="9"/></svg></button>
@@ -2080,16 +2297,23 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button class="rail-btn" id="locBtn" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg></button>
 </div>
 <button class="feed-qr" id="mapQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><i class="fab-v">v2</i><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
-<button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Schnee-Karte zeichnen"><i class="fab-v">v3</i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Zeichnen</span></button>
-<button class="feed-fab" id="mapFab" onclick="obsOpen()" title="Beobachtung melden"><i class="fab-v">v1</i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
+<button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Schnee-Karte zeichnen" hidden><i class="fab-v">v3</i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Zeichnen</span></button>
+<button class="feed-fab" id="mapFab" onclick="obsOpen()" title="Beobachtung melden" hidden><i class="fab-v">v1</i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
 <div id="bottomPanel" class="detail">
   <div id="tlToggle"></div>
   <!-- The console. One surface, sectioned by hairlines: every map layer of both
        models is visible and one tap away, the time controls sit underneath. -->
   <div id="layerBar">
-    <div id="layerStrip"></div>
-    <div id="variants"></div>
-    <div id="progBar"></div>
+    <button id="layerTrig" onclick="layerPopToggle()" aria-expanded="false" aria-controls="layerPop">
+      <span class="lt-dot" id="layerTrigDot"></span>
+      <span class="lt-txt"><span class="lt-k" id="layerTrigTag">Ebene</span><span class="lt-v" id="layerTrigVal"></span></span>
+      <svg class="lt-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div id="layerPop"><div class="lp-inner"><div class="lp-body">
+      <div id="layerStrip"></div>
+      <div id="variants"></div>
+      <div id="progBar"></div>
+    </div></div></div>
   </div>
   <div id="btmMain">
     <div id="tlHead">
@@ -2118,7 +2342,55 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     </div>
   </div>
 </div>
+<!-- The map's own grab handle. Pulling it down hands the whole screen to the
+     map (state 2); pulling it up brings the finder back (state 1). -->
+<button id="mapGrab" aria-label="Karte vergrössern oder verkleinern"><i></i></button>
+<div id="finder">
+  <div class="fd-head">
+    <svg class="fd-star" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 6.4L21 10.8l-6.6 2.4L12 22l-2.4-8.8L3 10.8l6.6-2.4z"/></svg>
+    <div><b>Powder finden</b><span id="fdCount">—</span></div>
+  </div>
+  <div class="fd-field">
+    <label class="lbl-micro">Höhenband <em id="fdElevVal"></em></label>
+    <div class="fd-range">
+      <input type="range" id="fdElevLo" min="800" max="4000" step="100" value="1400" oninput="fdSet()"/>
+      <input type="range" id="fdElevHi" min="800" max="4000" step="100" value="2500" oninput="fdSet()"/>
+    </div>
+  </div>
+  <div class="fd-field">
+    <label class="lbl-micro">Exposition</label>
+    <div class="fd-asp" id="fdAsp"></div>
+  </div>
+  <div class="fd-field">
+    <label class="lbl-micro">Quelle</label>
+    <div class="fd-seg" id="fdSrc"></div>
+  </div>
+  <div class="fd-results" id="fdResults"></div>
+</div>
 <button id="legendBtn" title="Legende" aria-label="Legende"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg></button><div class="legend" id="legend"></div>
+</section>
+<!-- ===================== Pane: Report ================================== -->
+<section class="pane" id="paneReport" aria-label="Melden">
+  <div class="pane-top">
+    <button class="pt-home" onclick="scrHome()" aria-label="Startseite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L10 6L13.5 12L15 9L21 19Z"/><path d="M8.6 11.4h2.8"/></svg><span>Firn</span></button>
+    <button class="pt-acc" onclick="accountTap()" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg></button>
+  </div>
+  <div class="rp-body">
+    <h2 class="rp-h">Was möchtest du melden?</h2>
+    <div class="rp-choices">
+      <button class="rp-choice" onclick="drawOpen()">
+        <span class="rp-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg></span>
+        <b>Schnee-Karte zeichnen</b>
+        <span>Male die Verhältnisse direkt auf die Karte — daraus entsteht das Report-Modell.</span>
+      </button>
+      <button class="rp-choice" onclick="obsOpen()">
+        <span class="rp-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+        <b>Beobachtung melden</b>
+        <span>Lawine, Wumm-Geräusch, Triebschnee oder Schneequalität.</span>
+      </button>
+    </div>
+  </div>
+</section>
 <div id="three-wrap"><div id="map3d" style="width:100%;height:100%"></div><button id="btn3dClose">✕ 2D</button>
 <div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="30" style="width:100px;accent-color:var(--acc)"> Map <span id="mapOpacLbl">30%</span></label>
 <button id="btn3dExag">×1.5</button>
@@ -2177,7 +2449,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="bio-lock" id="bioLock" style="display:none">
   <div class="bio-lock-card">
     <div class="auth-bio-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10a3 3 0 0 1 6 0M8.5 15.5c1 1 5 1 7 0M12 10v3.5"/></svg></div>
-    <div class="bio-lock-t">Swiss Snow Model</div>
+    <div class="bio-lock-t">Firn</div>
     <div class="bio-lock-s">Entsperre mit <b id="bioLockName">Biometrie</b></div>
     <button class="auth-btn primary" onclick="haptic(6);bioUnlock()">Mit <span id="bioLockName2">Face ID</span> entsperren</button>
     <button class="bio-lock-out" onclick="bioSignOut()">Abmelden</button>
@@ -2241,9 +2513,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 </div>
 </div>
 <input type="file" id="obsFile" accept="image/*" multiple onchange="obsAddMedia(this)" hidden/>
-<div class="feed-page" id="feedPage">
+<div class="feed-page pane" id="feedPage">
 <div class="feed-nav">
-<button class="feed-back" onclick="feedClose()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+<button class="feed-back pt-home" onclick="scrHome()" aria-label="Startseite"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
 <span class="feed-title">Community</span>
 <button class="feed-back" style="margin-left:auto" title="Leute finden" aria-label="Leute finden" onclick="usOpen()"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
 </div>
@@ -2448,6 +2720,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     </div>
   </div>
 </div>
+<button class="edge-tab left" id="edgeL" onclick="scrPrev()" aria-label="Vorheriger Screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg><span></span></button>
+<button class="edge-tab right" id="edgeR" onclick="scrNext()" aria-label="Nächster Screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg><span></span></button>
 <div id="coach" style="display:none"><div id="coachSpot"></div><div id="coachCard"><div id="coachText"></div><div id="coachNav"><span id="coachDots"></span><button id="coachSkip">Überspringen</button><button id="coachNext">Weiter</button></div></div></div>
 <!--__BOOT__-->
 <script id="appjs">/*__APP_START__*/
@@ -2819,7 +3093,8 @@ let elevData=null,elevPW=0,elevPH=0;
 const elevI=new Image();
 _afterFirstPaint(function(){elevI.src=ELEV_PNG;});
 elevI.onload=function(){elevPW=elevI.width;elevPH=elevI.height;const c=document.createElement('canvas');c.width=elevPW;c.height=elevPH;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(elevI,0,0);try{elevData=x.getImageData(0,0,elevPW,elevPH).data;}catch(e){}
-  try{if(demoFitZones()){loadReportMarkers();if(layer==='prog')renderPrognosis(stat);}}catch(e){}};
+  try{if(demoFitZones()){loadReportMarkers();if(layer==='prog')renderPrognosis(stat);}}catch(e){}
+  try{fdRender();}catch(e){}};
 const ASP8DEG=[[0x4A,0x90,0xD9,0],[0x45,0xC0,0xC0,45],[0x66,0xBB,0x6A,90],[0xBE,0xDB,0x39,135],[0xEF,0x53,0x50,180],[0xFF,0x9E,0x42,225],[0xFF,0xC1,0x07,270],[0xA9,0x87,0xE0,315]];
 function _pngSample(data,pw,ph,bnds,lat,lng){if(!data||!bnds)return null;const S=bnds[0],Wst=bnds[1],N=bnds[2],E=bnds[3];
   if(lat>N||lat<S||lng<Wst||lng>E)return null;
@@ -3667,12 +3942,26 @@ function setTopic(t,itemIdx,varIdx){
   curVar=Math.max(0,Math.min(vars.length-1,varIdx||0));
   const vb=document.getElementById('variants');
   vb.innerHTML=vars.length>1?vars.map((v,i)=>'<button data-i="'+i+'"'+(i===curVar?' class="on"':'')+'>'+v.label+'</button>').join(''):'';
-  vb.querySelectorAll('button').forEach(btn=>{btn.onclick=()=>setTopic(t,curItem,parseInt(btn.dataset.i));});
+  vb.querySelectorAll('button').forEach(btn=>{btn.onclick=()=>{setTopic(t,curItem,parseInt(btn.dataset.i));layerPopClose();};});
   const sel=vars[curVar];layer=sel.l;stat=sel.s;renderAll();progRenderBar();
+  const trigTag=document.getElementById('layerTrigTag'),trigVal=document.getElementById('layerTrigVal');
+  if(trigTag)trigTag.textContent=GROUPS[t].tag+' · '+GROUPS[t].label.replace('-Modell','');
+  if(trigVal)trigVal.textContent=sel.label;
   if(typeof panelRestore==='function')requestAnimationFrame(()=>{try{panelRestore();}catch(e){}});
 }
-// Both models are on screen at once, so any layer is a single tap (P4). The
-// group is implied by which row you tapped in — there is nothing to switch.
+// Collapsed by default (P4': depth is one tap, not zero) -- the trigger row
+// always shows the live state, and opening it reveals both model groups.
+let layerPopOpen=false;
+function layerPopApply(){
+  const pop=document.getElementById('layerPop'),trig=document.getElementById('layerTrig');
+  if(pop)pop.classList.toggle('open',layerPopOpen);
+  if(trig)trig.setAttribute('aria-expanded',String(layerPopOpen));
+  if(typeof panelRestore==='function')requestAnimationFrame(()=>{try{panelRestore();}catch(e){}});
+}
+function layerPopToggle(){layerPopOpen=!layerPopOpen;layerPopApply();try{haptic(4);}catch(e){}}
+function layerPopClose(){if(!layerPopOpen)return;layerPopOpen=false;layerPopApply();}
+document.addEventListener('click',e=>{if(layerPopOpen&&!e.target.closest('#layerBar'))layerPopClose();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&layerPopOpen)layerPopClose();});
 function renderLayerStrip(){
   const host=document.getElementById('layerStrip');if(!host)return;
   host.innerHTML=Object.keys(GROUPS).map(g=>{
@@ -3687,7 +3976,10 @@ function renderLayerStrip(){
     const on=row.querySelector('.ls-chip.on');
     if(on)requestAnimationFrame(()=>{try{on.scrollIntoView({block:'nearest',inline:'nearest'});}catch(e){}});});
   host.querySelectorAll('.ls-chip').forEach(btn=>{
-    btn.onclick=()=>setTopic(btn.dataset.g,parseInt(btn.dataset.i),0);
+    btn.onclick=()=>{const g=btn.dataset.g,i=parseInt(btn.dataset.i);setTopic(g,i,0);
+      // A layer with no variants has nothing more to pick -- collapse right
+      // back down. One with variants stays open for the second tap.
+      const it=groupItems(g)[i];if(!it||it.vars.length<=1)layerPopClose();};
     btn.onmouseenter=()=>{const it=groupItems(btn.dataset.g)[parseInt(btn.dataset.i)];if(it)legend(it.vars[0].l);};
     btn.onmouseleave=()=>legend();});
 }
@@ -3726,7 +4018,10 @@ function positionSearch(){try{
   var sw=document.getElementById('searchWrap');if(!sw)return;
   sw.style.top='calc(env(safe-area-inset-top,0px) + 12px)';
   var dp=document.getElementById('demoPill');
-  if(dp)dp.style.top=(sw.getBoundingClientRect().bottom+8)+'px';
+  var bottom=sw.getBoundingClientRect().bottom;
+  if(dp){dp.style.top=(bottom+8)+'px';bottom=dp.getBoundingClientRect().bottom;}
+  var bm=document.getElementById('brandMark');
+  if(bm)bm.style.top=(bottom+14)+'px';
 }catch(e){}}
 addEventListener('resize',positionSearch);requestAnimationFrame(positionSearch);
 function presetsFade(){const p=document.getElementById('presets');if(!p)return;p.classList.toggle('can-scroll',p.scrollWidth-p.clientWidth-p.scrollLeft>4);}
@@ -3801,6 +4096,221 @@ function flyToMe(){haptic(8);
       map.flyTo(ll,13,{duration:1.1});
     }catch(e){}},
     ()=>{toast('Standort konnte nicht ermittelt werden','err');},{enableHighAccuracy:true,timeout:9000});}
+// ===================== Search state 1: the powder finder =================
+// The query is the three things the sketch asks for -- elevation band, aspect,
+// which reports to trust -- run against the same zones the Reported-Powder
+// layer uses, so the list and the map can never disagree.
+const FD_ASPECTS=['N','NE','E','SE','S','SW','W','NW'];
+const FD_ASP_DEG={N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315};
+let fdElev=[1400,2500],fdAsp=[],fdSrc='draw';
+function fdInit(){
+  const ab=document.getElementById('fdAsp'),sb=document.getElementById('fdSrc');
+  if(!ab||!sb)return;
+  ab.innerHTML=FD_ASPECTS.map(a=>'<button data-a="'+a+'">'+a+'</button>').join('');
+  ab.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    const a=b.dataset.a,i=fdAsp.indexOf(a);
+    if(i<0)fdAsp.push(a);else fdAsp.splice(i,1);
+    b.classList.toggle('on',i<0);fdRender();try{haptic(4);}catch(e){}});
+  sb.innerHTML=[['draw','Zeichnen'],['both','+ Quick'],['all','Alle']]
+    .map(([k,l])=>'<button data-s="'+k+'"'+(fdSrc===k?' class="on"':'')+'>'+l+'</button>').join('');
+  sb.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    fdSrc=b.dataset.s;
+    sb.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    fdRender();try{haptic(4);}catch(e){}});
+  fdSet();
+}
+// Two thumbs on one track can be dragged past each other; keep them ordered
+// so the band never reads inverted.
+function fdSet(){
+  const lo=document.getElementById('fdElevLo'),hi=document.getElementById('fdElevHi');
+  if(!lo||!hi)return;
+  let a=+lo.value,b2=+hi.value;
+  if(a>b2){const t=a;a=b2;b2=t;}
+  fdElev=[a,b2];
+  const out=document.getElementById('fdElevVal');
+  if(out)out.textContent=a+'–'+b2+' m';
+  fdRender();
+}
+function fdZones(){
+  const keep=progSrc;progSrc=fdSrc;
+  let z=[];try{z=progZones();}catch(e){z=[];}
+  progSrc=keep;
+  return z.filter(x=>x&&x.type==='powder');
+}
+function fdMatch(z){
+  // elevation: how much of the report's band falls inside the asked-for one
+  const e0=z.e0==null?0:z.e0,e1=z.e1==null?9000:z.e1;
+  const ov=Math.min(e1,fdElev[1])-Math.max(e0,fdElev[0]);
+  if(ov<=0)return 0;
+  const span=Math.max(1,Math.min(e1,fdElev[1])-Math.min(e0,fdElev[0]));
+  let m=Math.max(.25,Math.min(1,ov/span));
+  if(fdAsp.length){
+    if(z.asp==null)m*=.6;
+    else{
+      let best=0;
+      fdAsp.forEach(a=>{let d=Math.abs(z.asp-FD_ASP_DEG[a])%360;if(d>180)d=360-d;
+        best=Math.max(best,Math.exp(-(d*d)/(2*45*45)));});
+      if(best<.08)return 0;
+      m*=best;
+    }
+  }
+  return m;
+}
+function fdRender(){
+  const box=document.getElementById('fdResults');if(!box)return;
+  const rows=fdZones().map(z=>({z:z,m:fdMatch(z)})).filter(r=>r.m>0)
+    .sort((a,b2)=>b2.m-a.m).slice(0,12);
+  const cnt=document.getElementById('fdCount');
+  if(cnt)cnt.textContent=rows.length?(rows.length+' Treffer im gewählten Band')
+    :'Keine Meldung in diesem Band';
+  if(!rows.length){
+    box.innerHTML='<div class="fd-empty">Nichts gefunden. Erweitere das Höhenband oder die Exposition — oder wechsle die Quelle.</div>';
+    return;}
+  box.innerHTML=rows.map((r,i)=>{
+    const z=r.z,col=(typeof snowCol==='function'&&z.cm!=null)?snowCol(z.cm):null;
+    const bg=col?('rgb('+col[0]+','+col[1]+','+col[2]+')'):'var(--accent)';
+    const asp=(z.asp==null)?'—':FD_ASPECTS[Math.round(((z.asp%360)+360)%360/45)%8];
+    const cm=z.cm==null?'':(z.cm+' cm · ');
+    return '<button class="fd-row" data-i="'+i+'">'+
+      '<span class="fd-dot" style="background:'+bg+'">'+Math.round(r.m*100)+'</span>'+
+      '<span class="fd-t"><b>'+cm+asp+' · '+(z.e0==null?'?':Math.round(z.e0))+'–'+(z.e1==null?'?':Math.round(z.e1))+' m</b>'+
+      '<span>'+(z.ageH==null?'':('vor '+Math.round(z.ageH)+' h · '))+'Zeichnen-Report</span></span></button>';}).join('');
+  box.querySelectorAll('.fd-row').forEach(btn=>btn.onclick=()=>{
+    const z=rows[+btn.dataset.i].z;
+    mapFull(true);
+    setTimeout(()=>{try{map.setView([z.lat,z.lng],13.5,{animate:true});}catch(e){}},260);
+  });
+}
+// ---- state 1 <-> state 2 -------------------------------------------------
+function mapFull(on){
+  const was=document.body.classList.contains('map-full');
+  document.body.classList.toggle('map-full',!!on);
+  if(was===!!on)return;
+  try{haptic(5);}catch(e){}
+  // Leaflet only learns its box changed if we tell it, and the raster layers
+  // are sized from that box.
+  requestAnimationFrame(()=>{try{map.invalidateSize({animate:false});updateBaseFade();}catch(e){}});
+  setTimeout(()=>{try{map.invalidateSize({animate:false});}catch(e){}},340);
+}
+(function(){
+  const g=document.getElementById('mapGrab');if(!g)return;
+  let y0=null,dy=0,moved=false;
+  const down=e=>{y0=(e.touches?e.touches[0]:e).clientY;dy=0;moved=false;
+    if(e.cancelable)e.preventDefault();};
+  const move=e=>{if(y0==null)return;
+    dy=(e.touches?e.touches[0]:e).clientY-y0;
+    if(Math.abs(dy)>6)moved=true;};
+  const up=()=>{if(y0==null)return;y0=null;
+    // a tap toggles; a drag follows the direction it was pulled
+    if(!moved)mapFull(!document.body.classList.contains('map-full'));
+    else if(dy>26)mapFull(true);
+    else if(dy<-26)mapFull(false);};
+  g.addEventListener('touchstart',down,{passive:false});
+  g.addEventListener('mousedown',down);
+  addEventListener('touchmove',move,{passive:true});addEventListener('mousemove',move);
+  addEventListener('touchend',up);addEventListener('mouseup',up);
+})();
+// ===================== Screen router =====================================
+// Three topic screens on a wrap-around carousel. The order is the cycle the
+// sketches encode: swiping forward goes Search -> Report -> Feed -> Search,
+// and back the other way, so there is no dead end at either edge.
+const SCREENS=['search','report','feed'];
+const SCREEN_EL={search:'paneSearch',report:'paneReport',feed:'feedPage'};
+const SCREEN_LABEL={search:'Search',report:'Report',feed:'Feed'};
+let scrIdx=0,_scrDragging=false;
+function scrPaneOf(name){return document.getElementById(SCREEN_EL[name]);}
+function scrCurrent(){return SCREENS[scrIdx];}
+// Where each pane sits relative to the live one: -1 (left), 0 (centre), +1
+// (right). With three panes every pane always has one of those slots, which
+// is what makes the wrap seamless -- there is no "jump" frame at the seam.
+function scrSlot(i){return ((i-scrIdx+1)%3+3)%3-1;}
+function scrLayout(dxPx){
+  const dx=dxPx||0;
+  SCREENS.forEach((name,i)=>{
+    const el=scrPaneOf(name);if(!el)return;
+    const slot=scrSlot(i);
+    el.style.transform='translate3d(calc('+(slot*100)+'% + '+dx+'px),0,0)';
+    el.setAttribute('data-at',String(slot));
+    el.setAttribute('aria-hidden',slot===0?'false':'true');
+  });
+}
+function scrSettle(){
+  try{map.invalidateSize({animate:false});}catch(e){}
+  if(scrCurrent()==='feed'){try{feedRefresh();}catch(e){}}
+  scrRenderTabs();
+}
+function scrGoTo(i,silent){
+  scrIdx=((i%3)+3)%3;
+  document.body.classList.remove('scr-home');
+  document.body.setAttribute('data-screen',scrCurrent());
+  scrLayout(0);
+  if(!silent){try{haptic(5);}catch(e){}}
+  setTimeout(scrSettle,360);
+  scrRenderTabs();
+}
+function scrGo(name){const i=SCREENS.indexOf(name);if(i<0)return;scrGoTo(i);}
+function scrNext(){scrGoTo(scrIdx+1);}
+function scrPrev(){scrGoTo(scrIdx-1);}
+function scrHome(){
+  document.body.classList.add('scr-home');
+  document.body.removeAttribute('data-screen');
+  try{haptic(5);}catch(e){}
+}
+// The two edge tabs name the screens either side, so the gesture is
+// discoverable without having to try it first.
+function scrRenderTabs(){
+  const L=document.getElementById('edgeL'),R=document.getElementById('edgeR');
+  if(!L||!R)return;
+  const prev=SCREENS[((scrIdx-1)%3+3)%3],next=SCREENS[(scrIdx+1)%3];
+  L.querySelector('span').textContent=SCREEN_LABEL[prev];
+  R.querySelector('span').textContent=SCREEN_LABEL[next];
+}
+(function(){
+  // Horizontal drag. On the map pane the gesture has to start at the screen
+  // edge, because anywhere else it is a map pan; on the other panes the whole
+  // surface is fair game once the movement is clearly horizontal.
+  const EDGE=30,TAKEOVER=10;
+  let x0=0,y0=0,dx=0,on=false,decided=false,fromEdge=false;
+  function start(e){
+    if(document.body.classList.contains('scr-home'))return;
+    if(document.body.classList.contains('draw-on'))return;
+    const t=e.touches?e.touches[0]:e;
+    x0=t.clientX;y0=t.clientY;dx=0;decided=false;
+    fromEdge=(x0<=EDGE||x0>=window.innerWidth-EDGE);
+    on=(scrCurrent()==='search')?fromEdge:true;
+  }
+  function move(e){
+    if(!on)return;
+    const t=e.touches?e.touches[0]:e;
+    const ddx=t.clientX-x0,ddy=t.clientY-y0;
+    if(!decided){
+      if(Math.abs(ddx)<TAKEOVER&&Math.abs(ddy)<TAKEOVER)return;
+      // a vertical intent belongs to whatever is scrolling underneath
+      if(Math.abs(ddy)>Math.abs(ddx)){on=false;return;}
+      decided=true;_scrDragging=true;document.body.classList.add('pane-dragging');
+    }
+    dx=ddx;scrLayout(dx);
+    if(e.cancelable)e.preventDefault();
+  }
+  function end(){
+    if(!on)return;on=false;
+    if(!decided)return;
+    decided=false;_scrDragging=false;document.body.classList.remove('pane-dragging');
+    const need=Math.min(96,window.innerWidth*0.22);
+    if(dx<=-need)scrGoTo(scrIdx+1);
+    else if(dx>=need)scrGoTo(scrIdx-1);
+    else scrLayout(0);
+    dx=0;
+  }
+  addEventListener('touchstart',start,{passive:true});
+  addEventListener('touchmove',move,{passive:false});
+  addEventListener('touchend',end);addEventListener('touchcancel',end);
+  addEventListener('keydown',e=>{
+    if(document.body.classList.contains('scr-home'))return;
+    if(/^(INPUT|TEXTAREA|SELECT)$/.test((e.target&&e.target.tagName)||''))return;
+    if(e.key==='ArrowRight')scrNext();else if(e.key==='ArrowLeft')scrPrev();
+  });
+})();
 // --- Bottom panel: expand / collapse by tapping the handle (no swipe) ---
 let panelRestore=null,panelCollapsed=false;
 (function(){const bp=document.getElementById('bottomPanel'),tl=document.getElementById('tlToggle'),btm=document.getElementById('btmMain');
@@ -4137,10 +4647,10 @@ function dismissIntro(){try{if(window.__bootDone)window.__bootDone();}catch(e){}
 // These pointed at the old floating layer card, which no longer exists — they
 // now walk the one-screen console.
 const COACH_STEPS=[
-  {sel:'#layerStrip',html:'<b>Alle Ebenen auf einen Blick.</b><br>Oben das <b>Meteo-Modell</b>, darunter das <b>Report-Modell</b> aus der Community. Ein Tipp genügt.'},
+  {sel:'#layerTrig',html:'<b>Ebenen.</b><br>Tippe hier, um zwischen <b>Meteo-Modell</b> und <b>Report-Modell</b> aus der Community zu wechseln.'},
   {sel:'#btmMain',html:'<b>Zeitfenster.</b><br>Wähle den Zeitraum – die Karte rechnet sofort neu.'},
   {sel:'#searchWrap',html:'<b>Spring zu einem Ort.</b><br>Suche einen Berg oder Ort und zoome direkt dorthin.'},
-  {sel:'#mapDraw',html:'<b>Schnee-Karte melden.</b><br>Male die Verhältnisse direkt auf die Karte – daraus entsteht das Report-Modell.'},
+  {sel:'#edgeR',html:'<b>Wisch dich durch.</b><br>Nach rechts geht es zu <b>Report</b>, nach links zum <b>Feed</b> – oder tippe auf die Laschen am Rand.'},
   {sel:'#feedBtn',html:'<b>Community-Feed.</b><br>Hier siehst du aktuelle Meldungen von Tourengängern in der ganzen Schweiz.'}
 ];
 let coachIdx=0;
@@ -4232,7 +4742,11 @@ window.__APP_OK=true;
 setTopic('meteo',0,0);dismissIntro();
 // Personal preferences (opening layer, time window, where the map lands) are
 // applied once the map and the layer strip exist.
-requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}});
+requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}
+  // The launcher is where the app opens; the carousel is laid out behind it so
+  // the first navigation is a cross-fade onto a screen that is already drawn.
+  try{document.body.classList.add('scr-home');scrLayout(0);scrRenderTabs();}catch(e){}
+  try{fdInit();}catch(e){}});
 try{const _pid=new URLSearchParams(location.search).get('post');
   if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);}catch(e){}
 if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(reg=>{try{reg.update();}catch(e){}}).catch(()=>{});});}
@@ -4892,7 +5406,7 @@ function bioEnabledFor(uid){try{return !!localStorage.getItem('ssm_bio_'+uid);}c
 async function bioEnroll(uid,email){
   const challenge=crypto.getRandomValues(new Uint8Array(32));
   const cred=await navigator.credentials.create({publicKey:{
-    challenge,rp:{name:'Swiss Snow Model',id:location.hostname},
+    challenge,rp:{name:'Firn',id:location.hostname},
     user:{id:new TextEncoder().encode(uid),name:email||uid,displayName:email||'User'},
     pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
     authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},
@@ -5110,8 +5624,8 @@ async function profSave(){
 }
 function profSignOut(){if(sb)sb.auth.signOut();profClose();authUpdateUI(null);}
 function sendFeedback(){try{haptic(8);}catch(e){}
-  const body=encodeURIComponent('\n\n---\nSwiss Snow Model\n'+(navigator.userAgent||''));
-  window.location.href='mailto:giani.morf@bluewin.ch?subject='+encodeURIComponent('Snow-Mapper Feedback')+'&body='+body;}
+  const body=encodeURIComponent('\n\n---\nFirn\n'+(navigator.userAgent||''));
+  window.location.href='mailto:giani.morf@bluewin.ch?subject='+encodeURIComponent('Firn Feedback')+'&body='+body;}
 // --- View another user's profile ---
 let uvUid=null;
 async function viewUser(uid,username){
@@ -5168,7 +5682,7 @@ async function profExportData(btn){if(!sb||!sbUser)return;
     try{const{data:f}=await sb.from('follows').select('*').eq('follower_id',uid);out.follows=f||[];}catch(e){out.follows=[];}
     const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
     const a2=document.createElement('a');a2.href=URL.createObjectURL(blob);
-    a2.download='snowmapper-daten-'+new Date().toISOString().slice(0,10)+'.json';
+    a2.download='firn-daten-'+new Date().toISOString().slice(0,10)+'.json';
     document.body.appendChild(a2);a2.click();a2.remove();
     toast('Datenexport erstellt.','ok');
   }catch(e){toast('Export fehlgeschlagen: '+(e.message||e),'err');}
@@ -6359,7 +6873,7 @@ function sharePost(id,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
   const text=r?((r.user||'')+': '+(r.caption||r.sub||'Schnee-Report')):'Schnee-Report';
   try{haptic(6);}catch(e){}
   if(typeof nativeShare==='function'&&nativeShare(text,url))return;
-  if(navigator.share){navigator.share({title:'Swiss Snow Model',text,url}).catch(()=>{});return;}
+  if(navigator.share){navigator.share({title:'Firn',text,url}).catch(()=>{});return;}
   try{navigator.clipboard.writeText(url).then(()=>toast('Link kopiert!','ok'));}catch(e){toast(url,'ok');}}
 function feedImgTap(id,ev){ev.stopPropagation();
   const now=Date.now(),el=ev.currentTarget;
@@ -6371,9 +6885,11 @@ function feedImgTap(id,ev){ev.stopPropagation();
     if(r&&r.dbRow&&!r.liked)toggleEndorse(id,ev);
     try{haptic(10);}catch(e){}
   }else{el._t=now;}}
-function feedOpen(){
+// The feed is a screen now, not an overlay: "open the feed" means "go to the
+// feed screen". Everything that used to call feedOpen()/feedClose() keeps
+// working, it just navigates instead of sliding a panel over the map.
+function feedRefresh(){
   try{localStorage.setItem('ssm_feed_seen',String(Date.now()));const fd=document.querySelector('#feedBtn .feed-dot');if(fd)fd.classList.remove('on');}catch(e){}
-  const fp=document.getElementById('feedPage');fp.classList.add('open');
   document.getElementById('feedScope').innerHTML=FEED_SCOPES.map(s=>
     `<button data-s="${s.id}" class="${feedScope===s.id?'active':''}" onclick="feedSetScope('${s.id}')">${s.icon}${s.label}</button>`).join('');
   document.getElementById('feedFilter').innerHTML=['all','avalanche','whumpf','wind_slab','other'].map(f=>{
@@ -6382,8 +6898,9 @@ function feedOpen(){
   document.getElementById('feedLoc').style.display=feedScope==='near'?'flex':'none';
   feedRender();
 }
-function feedClose(){document.getElementById('feedPage').classList.remove('open');}
-function feedCreatePost(){if(!sb||!sbUser){authShow();return;}feedClose();setTimeout(()=>{obsOpen();},370);}
+function feedOpen(){feedRefresh();scrGo('feed');}
+function feedClose(){scrGo('search');}
+function feedCreatePost(){if(!sb||!sbUser){authShow();return;}scrGo('report');}
 // --- Comments ---
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 let cmtReportId=null;
