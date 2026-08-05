@@ -2,8 +2,11 @@
 
 The visual and interaction language for **Firn** (formerly "Swiss Snow Model" /
 "Snow Mapper" — the product was renamed, the system underneath was not rebuilt).
-It is a flat, grid-driven, instrument-like system: opaque surfaces, hairlines
-instead of shadows, and colour spent only where it carries information.
+**The palette and surface treatment are the app's original ones**, restored
+verbatim: soft white glass floating over the map, one bright alpine blue, and
+generous 14/18 px corners. The structure underneath — the one-screen console,
+the collapsed layer trigger, the colour law — is what the later passes added
+and kept.
 
 The name is Swiss-German for the layer of old, granular, multi-year snow that
 sits above the firn line — the exact thing the app is trying to tell you about.
@@ -22,7 +25,8 @@ value outside `:root`, that is the bug.
 Snow Mapper is read outdoors, on a phone, in glare, often with gloves on, by
 someone deciding where to ski. That pushes every decision:
 
-- **Glare** kills low-contrast translucency. Surfaces are opaque.
+- **Glare** is why the glass sits at 82 % white rather than a faint wash, and
+  why text on it is full-strength ink.
 - **Gloves** need 44 px targets and no precision gestures.
 - **Deciding** means the map is the product. Chrome must never compete with it.
 - **The map is already colourful.** So the interface must not be.
@@ -45,10 +49,17 @@ thing it belongs to. Panels are docked or they are dismissed.
 ### P2 — Colour is data. Chrome is neutral.
 See §4. This is the load-bearing rule of the whole system.
 
-### P3 — Structure by rules, not by shadows
-Hierarchy comes from **hairlines, spacing and type weight**. Not from blur, not
-from layered drop shadows, not from tinted glass. Exactly one elevation token
-exists, and it is only for surfaces that are temporary.
+### P3 — Frosted where it floats, structured where it sits
+Surfaces that **float over the map** are the original frosted glass: `--glass`
+(82 % white) with `blur(24px) saturate(1.5)` and a light 1 px edge — the layer
+card, the search field, the rail, the pills, the inspect panel.
+
+Everything **docked, or inside a screen**, is opaque and structured by
+hairlines, spacing and type weight instead.
+
+`prefers-reduced-transparency` resolves the glass to solid white. If a surface
+becomes illegible then, its contrast was coming from the blur — that is the
+bug, not the setting.
 
 ### P4 — Progressive disclosure: nothing is shown until it's asked for
 Depth costs taps and taps cost gloves, but *seeing every option before you've
@@ -122,8 +133,8 @@ Two steps and a pill. More than that reads as noise.
 
 | token | value | use |
 |---|---|---|
-| `--r-1` | 8px | controls: buttons, chips, inputs, swatches |
-| `--r-2` | 14px | surfaces: console, sheets, cards |
+| `--r-1` (`--r`) | 14px | controls: buttons, chips, inputs, swatches |
+| `--r-2` (`--r-lg`) | 18px | surfaces: console, sheets, cards |
 | `--r-full` | 999px | only genuinely pill-shaped things (badges, avatars) |
 
 ### Elevation
@@ -159,16 +170,22 @@ Three families, and they never mix.
 Every bar, panel, button, border and label is drawn from this ramp and nothing
 else.
 
-| token | value | use |
-|---|---|---|
-| `--ink-900` | `#0E1116` | primary text, filled buttons |
-| `--ink-700` | `#333A45` | secondary text |
-| `--ink-500` | `#6B7480` | muted text, inactive icons |
-| `--ink-300` | `#AAB2BD` | disabled, placeholder |
-| `--ink-150` | `#D6DBE2` | strong borders |
-| `--ink-100` | `#E7EAEF` | hairlines |
-| `--ink-050` | `#F4F6F9` | recessed fills, tracks |
-| `--paper`   | `#FFFFFF` | surfaces |
+| token | value | also known as | use |
+|---|---|---|---|
+| `--ink-900` | `#0f1d2f` | `--fg` | primary text, filled buttons |
+| `--ink-700` | `#2c3e54` | `--fg2` | secondary text |
+| `--ink-500` | `#6b7f96` | `--mut` | muted text, inactive icons |
+| `--ink-300` | `#9bacc0` | — | disabled, placeholder |
+| `--ink-150` | `#c6d3e0` | — | strong borders |
+| `--ink-100` | `rgba(14,95,163,.12)` | `--bd`, `--hair` | hairlines |
+| `--ink-050` | `#f1f6fb` | `--fill` | recessed fills, tracks |
+| `--paper`   | `#FFFFFF` | `--card` | opaque surfaces |
+| `--glass`   | `rgba(255,255,255,.82)` | — | floating over the map |
+| `--glass2`  | `rgba(248,251,255,.92)` | — | floating, carrying text |
+
+The third column is the name most component rules actually reference. That
+alias layer has been carried through every redesign deliberately: it is what
+lets the whole palette be swapped in one block instead of rule by rule.
 
 A chrome element that needs emphasis gets **darker ink or heavier type** — not
 a colour.
@@ -180,8 +197,8 @@ it means **"this is the thing you selected"**.
 
 | context | token value | meaning |
 |---|---|---|
-| Meteo model (A) selected | `--accent-meteo` `#0B6BCB` | forecast-model layers |
-| Report model (B) selected | `--accent-report` `#1D8FB0` | community-report layers |
+| Meteo model (A) selected | `--accent-meteo` `#1a7fd4` | forecast-model layers |
+| Report model (B) selected | `--accent-report` `#0e5fa3` | community-report layers |
 
 The accent is **global, not per screen**: whichever map layer is selected sets
 `--accent` on `:root`, and every surface in the app — feed, sheets, profile,
@@ -204,9 +221,9 @@ Rules:
 
 | token | value | meaning |
 |---|---|---|
-| `--danger` | `#C62828` | destructive action, avalanche/danger reports |
-| `--warn` | `#E08A00` | caution, degraded confidence |
-| `--ok` | `#1B7F4F` | confirmed, success |
+| `--danger` | `#e0483c` | destructive action, avalanche/danger reports |
+| `--warn` | `#d98a1f` | caution, degraded confidence |
+| `--ok` | `#1a9e6a` | confirmed, success |
 
 If it is not that meaning, it does not get that colour.
 
@@ -386,6 +403,7 @@ wrapped by `prefers-reduced-motion`.
    plus, at most, the accent. (P2)
 3. Is it a recurring choice with many options? Collapse it behind a trigger
    that shows the live state; don't lay every option out at rest. (P4)
-4. Does it need a shadow? Only if it is temporary. (P3)
+4. Does it float over the map? Then it is frosted glass, and it must stay
+   readable when that resolves to solid white. Otherwise: opaque. (P3)
 5. Are the targets 44 px? (§3)
 6. Desaturate it. Does it still work? (§4.5)

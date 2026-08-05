@@ -831,38 +831,56 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     Nothing outside this block may declare a raw colour for chrome.
     =================================================================== */
  :root{
-   /* --- ink: every bar, panel, border and label comes from here.
-          The ramp is BLUE-TINTED, not neutral grey: the whole product reads as
-          one cold, alpine family (see docs/design-system.md §4.1). --- */
-   --ink-900:#0B1520;--ink-700:#283A4D;--ink-500:#5C728A;--ink-300:#9BAEC4;
-   --ink-150:#C8D6E4;--ink-100:#DCE7F1;--ink-050:#EFF5FA;--paper:#FFFFFF;
-   /* --- accent: exactly one live at a time, set per region --- */
-   --accent:#0B6BCB;--accent-soft:rgba(11,107,203,.12);
-   --accent-meteo:#0B6BCB;--accent-meteo-soft:rgba(11,107,203,.12);
-   --accent-report:#1D8FB0;--accent-report-soft:rgba(29,143,176,.14);
-   /* --- semantic: fixed meanings, never decorative --- */
-   --ok:#1B7F4F;--warn:#E08A00;--danger:#C62828;--danger-tint:rgba(198,40,40,.10);
-   /* --- scales --- */
-   --sp1:4px;--sp2:8px;--sp3:12px;--sp4:16px;--sp5:24px;--sp6:32px;
-   --r-1:8px;--r-2:14px;--r-full:999px;
-   --lift:0 10px 30px rgba(14,17,22,.16);        /* the only shadow */
-   --dur-1:.12s;--dur-2:.22s;--ease:cubic-bezier(.2,0,0,1);
-   --tap:44px;--tap-sm:36px;
+   /* ===== The original palette =========================================
+      Restored verbatim from the last build before any design pass: soft
+      white glass over the map, one bright alpine blue, generous 14/18 px
+      corners. These names are the primary source of truth again, because
+      most component rules across the app still reference them -- the alias
+      layer was kept through every redesign, so setting the values here
+      moves the whole product at once, including the surfaces that did not
+      exist back then. ==================================================== */
+   --fg:#0f1d2f;--fg2:#2c3e54;--mut:#6b7f96;
+   --acc:#1a7fd4;--acc2:#0e5fa3;
+   --bd:rgba(14,95,163,.1);
+   --glass:rgba(255,255,255,.82);--glass2:rgba(248,251,255,.92);
+   --glow:rgba(26,127,212,.12);
+   --panel-h:52px;--r:14px;--r-lg:18px;
+   /* the original frosted card: this is what made it feel like that build */
+   --blur:blur(24px) saturate(1.5);
+   --elev1:0 1px 3px rgba(15,29,47,.08);
+   --elev2:0 6px 20px rgba(15,29,47,.11);
+   --elev3:0 10px 34px rgba(15,29,47,.13);
 
-   /* --- compatibility aliases -------------------------------------
-      Older rules across the app reference these names. They now resolve
-      onto the Alpin Grid ramp, so every surface moves together. Prefer the
-      names above in new code. */
-   --fg:var(--ink-900);--fg2:var(--ink-700);--mut:var(--ink-500);
-   --acc:var(--accent);--acc2:var(--accent);
-   --bd:var(--ink-150);--hair:var(--ink-100);--ring:var(--accent);
-   --glass:var(--paper);--glass2:var(--paper);--glow:var(--accent-soft);
-   --card:var(--paper);--fill:var(--ink-050);--fill2:var(--ink-100);--page:var(--ink-050);
-   --r-sm:var(--r-1);--r:var(--r-1);--r-lg:var(--r-2);--r-xl:var(--r-2);
-   --elev1:none;--elev2:var(--lift);--elev3:var(--lift);
-   --blur:none;--dur:var(--dur-2);--ease-spring:var(--ease);
-   --panel-h:52px;
+   /* --- everything the newer components ask for, derived from the above so
+          they follow the original palette rather than sitting beside it --- */
+   --ink-900:var(--fg);--ink-700:var(--fg2);--ink-500:var(--mut);
+   --ink-300:#9bacc0;--ink-150:#c6d3e0;--ink-100:rgba(14,95,163,.12);--ink-050:#f1f6fb;
+   --paper:#FFFFFF;
+   --accent:var(--acc);--accent-soft:var(--glow);
+   --accent-meteo:#1a7fd4;--accent-meteo-soft:rgba(26,127,212,.12);
+   --accent-report:#0e5fa3;--accent-report-soft:rgba(14,95,163,.14);
+   --ok:#1a9e6a;--warn:#d98a1f;--danger:#e0483c;--danger-tint:rgba(224,72,60,.12);
+   --sp1:4px;--sp2:8px;--sp3:12px;--sp4:16px;--sp5:24px;--sp6:32px;
+   --r-1:var(--r);--r-2:var(--r-lg);--r-full:999px;
+   --r-sm:10px;--r-xl:var(--r-lg);
+   --lift:var(--elev3);
+   --dur-1:.12s;--dur-2:.22s;--ease:cubic-bezier(.4,0,.2,1);
+   --dur:.22s;--ease-spring:cubic-bezier(.34,1.4,.64,1);
+   --tap:44px;--tap-sm:36px;
+   --hair:var(--bd);--ring:var(--acc);
+   --card:#ffffff;--fill:#f1f6fb;--fill2:#e4edf7;--page:#f7fafd;
    --topic-accent:var(--accent);--topic-tint:var(--accent-soft)}
+ /* The frosted surfaces the original build floated over the map. Only the
+    things that actually float get this; docked panels stay opaque so text on
+    them never has to fight the terrain underneath. */
+ #layerBar,#searchWrap input,.rail-btn,#demoPill,#legendBtn,.legend,
+ .insp-panel,.toast,#coachCard,.feed-nav,.auth-modal,#disc .sheet{
+   backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur)}
+ @media (prefers-reduced-transparency:reduce){
+   :root{--glass:#fff;--glass2:#fff}
+   #layerBar,#searchWrap input,.rail-btn,#demoPill,#legendBtn,.legend,
+   .insp-panel,.toast,#coachCard,.feed-nav,.auth-modal,#disc .sheet{
+     backdrop-filter:none;-webkit-backdrop-filter:none;background:#fff}}
  /* One palette. The app is read outdoors in snow glare against a light map,
     so the chrome is light too — there is no dark variant to drift out of sync. */
  /* P5: numbers a user compares are tabular so columns line up */
@@ -1182,13 +1200,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #brandMark svg{width:19px;height:19px;color:var(--ink-900)}
  #brandMark span{font-size:14.5px;font-weight:800;letter-spacing:.005em;color:var(--ink-900)}
  #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 116px);left:12px;width:230px;max-width:calc(100vw - 24px)}
- #searchWrap input{width:100%;min-height:var(--tap);padding:0 12px 0 34px;border-radius:var(--r-1);border:1px solid var(--ink-100);background:var(--paper);color:var(--ink-900);font-size:15px;font-weight:500;outline:none;box-shadow:var(--lift);font-family:inherit}
+ #searchWrap input{width:100%;min-height:var(--tap);padding:0 12px 0 34px;border-radius:var(--r-1);border:1px solid rgba(255,255,255,.6);background:var(--glass);color:var(--ink-900);font-size:15px;font-weight:500;outline:none;box-shadow:var(--lift);font-family:inherit}
  #searchWrap input::placeholder{color:var(--mut);font-weight:400}
  #searchWrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
  #searchWrap .icn{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--mut);font-size:15px}
  /* Right-side control rail */
  #ctrlRail{position:absolute;z-index:1050;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:10px}
- .rail-btn{position:relative;width:46px;height:46px;border-radius:var(--r-1);border:1px solid var(--ink-100);background:var(--paper);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:none;transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease)}
+ .rail-btn{position:relative;width:46px;height:46px;border-radius:var(--r-1);border:1px solid rgba(255,255,255,.6);background:var(--glass);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:none;transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease)}
  .rail-btn:hover{background:#fff;color:var(--fg);transform:translateY(-1px)}
  .rail-btn:active{transform:scale(.95)}
  .rail-btn.active{background:var(--ink-900);color:var(--paper);border-color:var(--ink-900)}
