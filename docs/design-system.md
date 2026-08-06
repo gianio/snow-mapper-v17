@@ -2,11 +2,14 @@
 
 The visual and interaction language for **Firn** (formerly "Swiss Snow Model" /
 "Snow Mapper" — the product was renamed, the system underneath was not rebuilt).
-**The palette and surface treatment are the app's original ones**, restored
-verbatim: soft white glass floating over the map, one bright alpine blue, and
-generous 14/18 px corners. The structure underneath — the one-screen console,
-the collapsed layer trigger, the colour law — is what the later passes added
-and kept.
+
+The look is **data in snow, data in stone**. Surfaces are warm bone — the colour
+of old snow in shade, and of the stock a topographic map is printed on — and the
+ink is a warm charcoal rather than a cold navy. The two accents come off the
+mountain: glacier for the forecast model, larch bark for the community one.
+Nothing in the chrome is white and nothing is sky blue. The only blues left in
+the product are the SLF snow-depth scale and the drawing pens, where blue is a
+number, not a decoration.
 
 The name is Swiss-German for the layer of old, granular, multi-year snow that
 sits above the firn line — the exact thing the app is trying to tell you about.
@@ -38,38 +41,43 @@ rules and a strict grid, with colour spent only where it carries information.
 
 ## 2. The six principles
 
-### P1 — One screen, no stacking
-The map is the application. Everything else **docks to an edge** of it. Nothing
-opens on top of something else that is already on top. A user is never more than
-one dismiss away from the map.
+### P1 — Three screens side by side, nothing stacked
+The product is three peer screens — **Search, Report, Feed** — laid out left to
+right and reached by swiping between them. Within a screen, everything **docks
+to an edge**; nothing opens on top of something that is already on top.
+
+The screens are peers, not a hierarchy: there is no "back out of Feed into the
+map", there is only sliding one screen over. A launcher sits in front of the
+three on first open and is reachable again from the brand mark on any screen.
 
 Practically: no nested menus, no modal over modal, no flyout that hides the
-thing it belongs to. Panels are docked or they are dismissed.
+thing it belongs to. Panels are docked, or they are dismissed.
 
 ### P2 — Colour is data. Chrome is neutral.
 See §4. This is the load-bearing rule of the whole system.
 
 ### P3 — Frosted where it floats, structured where it sits
-Surfaces that **float over the map** are the original frosted glass: `--glass`
-(82 % white) with `blur(24px) saturate(1.5)` and a light 1 px edge — the layer
-card, the search field, the rail, the pills, the inspect panel.
+Surfaces that **float over the map** are frosted bone: `--glass` (84 % bone)
+with `blur(22px) saturate(1.25)` and a hairline edge — the layer bar, the search
+field, the rail, the pills, the inspect panel.
 
 Everything **docked, or inside a screen**, is opaque and structured by
 hairlines, spacing and type weight instead.
 
-`prefers-reduced-transparency` resolves the glass to solid white. If a surface
-becomes illegible then, its contrast was coming from the blur — that is the
-bug, not the setting.
+`prefers-reduced-transparency` resolves the glass to solid `--paper`. If a
+surface becomes illegible then, its contrast was coming from the blur — that is
+the bug, not the setting.
 
-### P4 — Progressive disclosure: nothing is shown until it's asked for
+### P4 — A few things at hand, the rest one tap away
 Depth costs taps and taps cost gloves, but *seeing every option before you've
 asked for one* costs something too — it's the first thing a new user has to
-parse, on every single visit. At rest, the console shows only the **live
-state**: which layer, which group, in one line. Every map layer is **behind
-one tap** on that line; a variant (Wind → Max, Temperatur → Oberfläche) costs a
-second tap, and only if you want it. Picking a layer collapses the list back
-down automatically — the console returns to showing state, not options.
-Nothing routine costs three.
+parse, on every visit. So the map carries a short row of the layers people
+actually switch between, plus one button for the rest.
+
+The corollary matters as much: **the first thing you read is a layer name, not
+a taxonomy.** Which model a layer comes from (A · Meteo, B · Report) is real,
+and it is still there — as a small mark on the row inside the full list, not as
+two headings you have to get past before you reach a layer.
 
 ### P5 — Type carries hierarchy
 Size and weight separate levels. Colour does not. A "more important" label is
@@ -83,33 +91,60 @@ exactly one filled element per group of choices.
 
 ## 3. Layout
 
-### The one-screen model
+### The three-screen carousel
+
+```
+        ┌──────────┐
+        │ launcher │   first open; back via the brand mark on any screen
+        └────┬─────┘
+             │
+  ┌──────────┼──────────┐
+  ▼          ▼          ▼
+REPORT  ⟷  SEARCH  ⟷  FEED  ⟷  (wraps back to REPORT)
+```
+
+Three peer screens on a wrap-around carousel. Each is its own
+`position:fixed; inset:0` layer with its own `transform` — **there is no shared
+track**. With exactly three, every screen always holds one of three slots
+(`-1 | 0 | +1`), which is what makes the wrap seamless in both directions:
+
+```js
+function scrSlot(i){return ((i-scrIdx+1)%3+3)%3-1;}
+```
+
+Two consequences that are easy to get wrong:
+
+- A transformed element is a **containing block for `position:fixed`
+  descendants**. Anything that must cover the whole app — auth, the report
+  wizard, toasts, the disclaimer — lives *outside* the panes. Only surfaces
+  that genuinely belong to one screen (the layer sheet belongs to the map) sit
+  inside one, and they close when that screen leaves.
+- On the map pane the swipe must start within 30 px of a screen edge, because
+  anywhere else the gesture is a map pan. On the other panes the whole surface
+  is fair game once the movement is clearly horizontal; vertical always yields
+  to the scroller.
+
+### The Search screen
 
 ```
 ┌─────────────────────────────────────┐
-│  ⛰ Firn      search        ▏rail▕  │   top: quiet brand mark, search, icon rail
-│                                     │
+│ [Powder][Neuschnee][Schneehöhe] Alle│   layers: a few + everything else
+│  search…                     ▏rail▕ │
+│  ⛰ Firn                             │
 │                                     │
 │              M A P                  │   the map is never boxed in
-│                                     │
 │                                 (+) │   primary actions, thumb-reachable
 │                                 (✎) │
 ├─────────────────────────────────────┤
-│  ● A · METEO  Powder            ⌄  │   the trigger: live state, one tap
-│  ─────────────────────────────────  │   opens the grid below it (§6, layerTrig)
-│  TIME     ▸ presets · scrubber      │
+│  TIME     ▸ presets · scrubber      │   the console is time only now
 └─────────────────────────────────────┘
 ```
 
-The **console** at the bottom is a single surface holding every recurring
-control. It is sectioned by hairlines, never by separate floating cards — but
-the layer grid inside it is **collapsed by default**. What you see at rest is
-one row: the group tag, the current layer, a chevron. Tapping it expands the
-full grid in place (a CSS `grid-template-rows` accordion — no drag, no
-takeover, no separate surface) and tapping a layer collapses it straight back
-down. This is what "many features on one screen, none of them shown until
-asked for" means here: everything is *reachable* from one surface, but the
-surface itself stays quiet.
+The layer bar is the first thing at the top of the map, and its height is not
+fixed (chips wrap on a narrow phone), so search, the demo pill and the brand
+mark are stacked off its **measured** bottom edge by `positionSearch()` rather
+than off hardcoded offsets. The bottom console is left holding time — plus the
+variant and prognosis rows, which appear only when the live layer has them.
 
 ### Grid and spacing
 
@@ -172,16 +207,23 @@ else.
 
 | token | value | also known as | use |
 |---|---|---|---|
-| `--ink-900` | `#0f1d2f` | `--fg` | primary text, filled buttons |
-| `--ink-700` | `#2c3e54` | `--fg2` | secondary text |
-| `--ink-500` | `#6b7f96` | `--mut` | muted text, inactive icons |
-| `--ink-300` | `#9bacc0` | — | disabled, placeholder |
-| `--ink-150` | `#c6d3e0` | — | strong borders |
-| `--ink-100` | `rgba(14,95,163,.12)` | `--bd`, `--hair` | hairlines |
-| `--ink-050` | `#f1f6fb` | `--fill` | recessed fills, tracks |
-| `--paper`   | `#FFFFFF` | `--card` | opaque surfaces |
-| `--glass`   | `rgba(255,255,255,.82)` | — | floating over the map |
-| `--glass2`  | `rgba(248,251,255,.92)` | — | floating, carrying text |
+| `--ink-900` | `#211E19` | `--fg` | primary text, filled buttons |
+| `--ink-700` | `#403B33` | `--fg2` | secondary text |
+| `--ink-500` | `#736C61` | `--mut` | muted text, inactive icons |
+| `--ink-300` | `#A79E90` | — | disabled, placeholder |
+| `--ink-150` | `#CFC7B9` | — | strong borders |
+| `--ink-100` | `rgba(33,30,25,.11)` | `--bd`, `--hair` | hairlines |
+| `--ink-050` | `#F0ECE3` | — | recessed fills, tracks |
+| `--paper`   | `#F7F4EE` | — | opaque surfaces (bone, not white) |
+| `--card`    | `#FCFAF6` | — | cards: one shade lighter than the page |
+| `--page`    | `#F2EEE6` | — | the ground a screen's cards sit on |
+| `--fill`    | `#EFEBE2` | — | inputs and tracks: one shade darker |
+| `--glass`   | `rgba(246,243,237,.84)` | — | floating over the map |
+| `--glass2`  | `rgba(250,248,244,.93)` | — | floating, carrying text |
+
+Card, page and fill are three steps on the same bone. Nothing in the chrome is
+`#fff` — a white card punches a hole in the paper, which is the exact thing this
+palette exists to avoid.
 
 The third column is the name most component rules actually reference. That
 alias layer has been carried through every redesign deliberately: it is what
@@ -197,8 +239,12 @@ it means **"this is the thing you selected"**.
 
 | context | token value | meaning |
 |---|---|---|
-| Meteo model (A) selected | `--accent-meteo` `#1a7fd4` | forecast-model layers |
-| Report model (B) selected | `--accent-report` `#0e5fa3` | community-report layers |
+| Meteo model (A) selected | `--accent-meteo` `#1D6A6A` — glacier | forecast-model layers |
+| Report model (B) selected | `--accent-report` `#8C4F27` — larch bark | community-report layers |
+
+`TOPIC_COLOR` (JS) carries the same law onto the canvas surfaces the CSS cannot
+reach — the timeline selection, the frame hairline, the vignette. Its entries
+are drawn from the same natural range; none of them is a screen blue.
 
 The accent is **global, not per screen**: whichever map layer is selected sets
 `--accent` on `:root`, and every surface in the app — feed, sheets, profile,
@@ -221,9 +267,9 @@ Rules:
 
 | token | value | meaning |
 |---|---|---|
-| `--danger` | `#e0483c` | destructive action, avalanche/danger reports |
-| `--warn` | `#d98a1f` | caution, degraded confidence |
-| `--ok` | `#1a9e6a` | confirmed, success |
+| `--danger` | `#A83A2E` — rowan | destructive action, avalanche/danger reports |
+| `--warn` | `#C08A2E` — amber | caution, degraded confidence |
+| `--ok` | `#4A7A3F` — moss | confirmed, success |
 
 If it is not that meaning, it does not get that colour.
 
@@ -296,29 +342,27 @@ background: var(--accent); border-color: var(--accent); color: var(--paper);
 ```
 Filled, not tinted (P6). No shadow on the selected state.
 
-### Disclosure trigger (`#layerTrig` + `#layerPop`)
-The one row that is always visible for something that has many options. A dot
-in the live accent, a two-line label (micro-tag + value, same pattern as a
-form field), a chevron that rotates 180° when open.
-```
-min-height: 52px; padding: 0 var(--sp4); background: none; border: none;
-```
-The panel it opens is a **pure-CSS accordion**, not a modal:
-```
-#layerPop{display:grid;grid-template-rows:0fr;transition:grid-template-rows var(--dur-2) var(--ease)}
-#layerPop.open{grid-template-rows:1fr}
-#layerPop>.lp-inner{overflow:hidden;min-height:0}   /* no padding here — see below */
-.lp-body{padding:0 var(--sp4) var(--sp3)}           /* padding lives one level deeper */
-```
-The padding trap: a border-box item can shrink to zero height, but never below
-its own padding — an item with `padding-bottom` collapses to that padding, not
-to nothing. Keep the grid item that is being forced to zero completely
-unpadded; put the real padding on a child the grid never measures.
+### Layer bar (`#lbBar`) + full list (`#lbSheet`)
+The pattern for "a recurring choice with more options than fit". Two parts:
 
-Selecting an item **closes the panel automatically** unless the item has
-further variants to choose from — then it stays open for the second tap, and
-closes once a variant is picked. It also closes on an outside click, on
-`Escape`, and never re-opens itself; the console does not decide this for you.
+**The bar** floats at the top of the map: a scrollable row of chips
+(`LB_QUICK`) plus one `Alle ⌄` button. The row is the handful people actually
+switch between — and **whatever is live always has a chip**, even when it is not
+one of the few, so the bar is never lying about the state. Its right edge is a
+mask-image fade, not a hard cut, so a half-visible chip reads as "scroll me".
+
+**The sheet** is the whole list, one row per layer, in a bottom sheet:
+```
+.lb-row  → [ mark ] [ name / variant count ] [ ✓ if live ]
+.lb-mark → 22×22, 10.5px/800, --accent-*-soft fill    /* "A" or "B" */
+```
+The mark is the **only** place the model taxonomy appears. Picking a layer with
+no variants closes the sheet; one with variants leaves it open for the second
+tap. `Escape` and the scrim close it, and so does changing screens — it belongs
+to the map.
+
+Both render from one entry point (`renderLayerStrip()`), because deep-zoom
+layers appear and disappear with the zoom and the two must never disagree.
 
 ### Button
 - **Primary** — `--ink-900` fill, `--paper` text. One per screen.
@@ -373,9 +417,11 @@ wrapped by `prefers-reduced-motion`.
 
 | screen | how the language applies |
 |---|---|
-| **Map** | Full bleed. Abstract at country view, detail fading in with zoom. Chrome docks to edges only. The one brand mark on this screen sits quietly above the search field. |
-| **Console** | One surface. A collapsed disclosure trigger for layers, hairline, `TIME` section. Every layer is one tap to reveal, one more to pick. |
-| **Feed** | White cards on `--ink-050`, hairline separated, photo full-bleed inside the card. Action row is quiet buttons; only counts are dark. |
+| **Launcher** | Bone field with faint contour lines, the mark, and three rows — one per screen. No chrome, no map, no data. |
+| **Search (map)** | Full bleed. Abstract at country view, detail fading in with zoom. Layer bar at the top edge, chrome docked to edges only, brand mark chained below the search field. |
+| **Console** | One surface, now time only — presets and the scrubber, plus the variant and prognosis rows when the live layer has them. |
+| **Report** | The two ways in — draw a snow map, or file an observation — as two large rows on the page. No wizard chrome until one is chosen. |
+| **Feed** | `--card` cards on `--page`, hairline separated, photo full-bleed inside the card. Action row is quiet buttons; only counts are dark. |
 | **Sheets** (comments, profile, condition, location) | Identical sheet recipe, inheriting whatever accent is currently live. |
 | **Report / draw** | The drawing canvas is the surface; controls dock left (brush) and right (depth) and along the bottom. Pen swatches show the actual texture. |
 | **Inspect panel** | Docked card, tabular numbers, charts in ink with the data palettes only for the values themselves. |
