@@ -47,8 +47,11 @@ right and reached by swiping between them. Within a screen, everything **docks
 to an edge**; nothing opens on top of something that is already on top.
 
 The screens are peers, not a hierarchy: there is no "back out of Feed into the
-map", there is only sliding one screen over. A launcher sits in front of the
-three on first open and is reachable again from the brand mark on any screen.
+map", there is only sliding one screen over. The launcher in front of them is a
+**startup screen** — shown once, picked from once, and never returned to. A
+screen you can go back to is a place you have to leave; a startup screen is
+not. Every "home" affordance in the app therefore leads to the **map**, which
+is the real home.
 
 Practically: no nested menus, no modal over modal, no flyout that hides the
 thing it belongs to. Panels are docked, or they are dismissed.
@@ -68,16 +71,20 @@ hairlines, spacing and type weight instead.
 surface becomes illegible then, its contrast was coming from the blur — that is
 the bug, not the setting.
 
-### P4 — A few things at hand, the rest one tap away
-Depth costs taps and taps cost gloves, but *seeing every option before you've
-asked for one* costs something too — it's the first thing a new user has to
-parse, on every visit. So the map carries a short row of the layers people
-actually switch between, plus one button for the rest.
+### P4 — Controls live with the thing they control, not over it
+Anything floating over the map is competing with the map, and on a phone the
+top-left corner is already the search field's. So the layer picker sits in the
+**console**, in the same row as the time presets: it is a setting, and the
+console is where settings live.
 
-The corollary matters as much: **the first thing you read is a layer name, not
-a taxonomy.** Which model a layer comes from (A · Meteo, B · Report) is real,
-and it is still there — as a small mark on the row inside the full list, not as
-two headings you have to get past before you reach a layer.
+Two further rules fall out of that:
+
+- **The first thing you read is a layer name, not a taxonomy.** The picker
+  offers five layers. Which model a layer comes from is not something a user
+  should have to get past to reach one.
+- **The gesture is the choice.** The picker is two scrollers — sideways for the
+  layer, up and down for its sub-layer — not a menu that opens, waits, and has
+  to be dismissed.
 
 ### P5 — Type carries hierarchy
 Size and weight separate levels. Colour does not. A "more important" label is
@@ -127,24 +134,24 @@ Two consequences that are easy to get wrong:
 ### The Search screen
 
 ```
-┌─────────────────────────────────────┐
-│ [Powder][Neuschnee][Schneehöhe] Alle│   layers: a few + everything else
-│  search…                     ▏rail▕ │
-│  ⛰ Firn                             │
-│                                     │
-│              M A P                  │   the map is never boxed in
-│                                 (+) │   primary actions, thumb-reachable
-│                                 (✎) │
-├─────────────────────────────────────┤
-│  TIME     ▸ presets · scrubber      │   the console is time only now
-└─────────────────────────────────────┘
+┌───────────────────────────────────────────┐
+│  search…                          ▏rail▕  │
+│  ⛰ Firn                                   │
+│                                           │
+│                 M A P                     │   the map is never boxed in
+│                                      (+)  │   primary actions, thumb-reachable
+│                                      (✎)  │
+├───────────────────────────────────────────┤
+│ 48h Fenster                               │
+│ [Letzter Schnee][Bis morgen]│[Powder][Neu…│   one row, scrolls sideways
+│                             └ layers ──── │   ↕ sub-layer sticks right
+│ ▸ scrubber                                │
+└───────────────────────────────────────────┘
 ```
 
-The layer bar is the first thing at the top of the map, and its height is not
-fixed (chips wrap on a narrow phone), so search, the demo pill and the brand
-mark are stacked off its **measured** bottom edge by `positionSearch()` rather
-than off hardcoded offsets. The bottom console is left holding time — plus the
-variant and prognosis rows, which appear only when the live layer has them.
+Nothing floats above the search field, so it takes the top edge and the demo
+pill and brand mark chain off its measured bottom. The console holds time *and*
+the layer field, in one scroller — see §6.
 
 ### Grid and spacing
 
@@ -331,6 +338,15 @@ Temporary surfaces add `box-shadow: var(--lift)`. Docked surfaces do not.
 Micro-label, `--sp2` below it, hairline above it when it follows another
 section.
 
+### Avatar
+```
+background-color: var(--ink-100);   /* never `background:` — see §9b */
+background-size: cover; background-position: center;
+```
+The initial is the fallback and is simply omitted when there is a picture. One
+call site (`updateAccountBtn`) sets it everywhere at once, and it is called with
+`null` too, so signing in as someone without a picture clears the last one.
+
 ### Chip / selectable (layer chips, filters, segmented options)
 ```
 min-height: 44px; padding: 0 15px; border-radius: var(--r-1);
@@ -342,27 +358,33 @@ background: var(--accent); border-color: var(--accent); color: var(--paper);
 ```
 Filled, not tinted (P6). No shadow on the selected state.
 
-### Layer bar (`#lbBar`) + full list (`#lbSheet`)
-The pattern for "a recurring choice with more options than fit". Two parts:
+### Two-axis picker (`#lyStrip` + `#lyVars`)
+The pattern for a recurring choice with a second level. One control, two axes,
+both of them real scrollers — there is nothing to open and nothing to dismiss.
 
-**The bar** floats at the top of the map: a scrollable row of chips
-(`LB_QUICK`) plus one `Alle ⌄` button. The row is the handful people actually
-switch between — and **whatever is live always has a chip**, even when it is not
-one of the few, so the bar is never lying about the state. Its right edge is a
-mask-image fade, not a hard cut, so a half-visible chip reads as "scroll me".
+**Sideways — the layer.** `#lyStrip` is a run of chips inside the same
+horizontally scrolling row as the time presets, after a hairline separator. The
+live chip is filled (P6). On a change the row scrolls the **minimum** that
+brings that chip fully into view — never `scrollIntoView()`, which parks it
+against an edge and shoves the presets out of the row entirely.
 
-**The sheet** is the whole list, one row per layer, in a bottom sheet:
+**Up and down — the sub-layer.** `#lyVars` is one option tall with
+`scroll-snap-type:y mandatory`; whatever ends up centred *is* the selection.
+It is `position:sticky; right:0`, so it stays reachable however far the strip
+has scrolled — which means the usable right edge for the scroll maths above is
+short by its width, or the live chip ends up "in view" but underneath it. A
+layer with a single variant hides the column rather than showing a dead one.
+
 ```
-.lb-row  → [ mark ] [ name / variant count ] [ ✓ if live ]
-.lb-mark → 22×22, 10.5px/800, --accent-*-soft fill    /* "A" or "B" */
+[Letzter Schnee][Bis morgen] │ [Powder][Neuschnee][Schneehöhe][Wind]…  [ Max ↕ ]
+                             └──────── slides sideways ────────┘       └ sticky ┘
 ```
-The mark is the **only** place the model taxonomy appears. Picking a layer with
-no variants closes the sheet; one with variants leaves it open for the second
-tap. `Escape` and the scrim close it, and so does changing screens — it belongs
-to the map.
 
-Both render from one entry point (`renderLayerStrip()`), because deep-zoom
-layers appear and disappear with the zoom and the two must never disagree.
+Both are rebuilt from one entry point (`renderLayerStrip()`), because deep-zoom
+layers appear and disappear with the zoom and the two must never disagree. Order
+matters inside `setTopic()`: the render must come **after** `curVar` is
+assigned, or the sub-layer column shows the previous selection — one step behind on
+every change.
 
 ### Button
 - **Primary** — `--ink-900` fill, `--paper` text. One per screen.
@@ -417,9 +439,9 @@ wrapped by `prefers-reduced-motion`.
 
 | screen | how the language applies |
 |---|---|
-| **Launcher** | Bone field with faint contour lines, the mark, and three rows — one per screen. No chrome, no map, no data. |
+| **Launcher** | Startup only. Bone field with faint contour lines, the mark, and three rows — one per screen. No chrome, no map, no data, and no way back to it. |
 | **Search (map)** | Full bleed. Abstract at country view, detail fading in with zoom. Layer bar at the top edge, chrome docked to edges only, brand mark chained below the search field. |
-| **Console** | One surface, now time only — presets and the scrubber, plus the variant and prognosis rows when the live layer has them. |
+| **Console** | One surface: the window label, then one scrolling row holding the time presets *and* the layer field, then the scrubber. The prognosis row appears only when the live layer has one. |
 | **Report** | The two ways in — draw a snow map, or file an observation — as two large rows on the page. No wizard chrome until one is chosen. |
 | **Feed** | `--card` cards on `--page`, hairline separated, photo full-bleed inside the card. Action row is quiet buttons; only counts are dark. |
 | **Sheets** (comments, profile, condition, location) | Identical sheet recipe, inheriting whatever accent is currently live. |
@@ -442,13 +464,28 @@ wrapped by `prefers-reduced-motion`.
 
 ---
 
+## 9b. Two traps this system has already fallen into
+
+**A canvas cannot read a token.** `ctx.fillStyle = 'var(--paper)'` is silently
+ignored and the *previous* fill is reused, so a shape ends up wearing some
+unrelated chart's colour. Everything drawn on a canvas resolves its tokens
+through `cvTok()` / `tlPalette()` first.
+
+**`background: <colour>` is a shorthand.** Writing it on an element that also
+carries an inline `background-image` resets that image to `none` — and with
+`!important` it cannot be undone from the markup. Anything that may carry a
+user picture (avatars, account buttons) sets `background-color`, never
+`background`.
+
+---
+
 ## 10. Adding something new
 
 1. Can it live on a surface that already exists? Put it there. (P1)
 2. Which of the three colour families does it belong to? If chrome — it is ink
    plus, at most, the accent. (P2)
-3. Is it a recurring choice with many options? Collapse it behind a trigger
-   that shows the live state; don't lay every option out at rest. (P4)
+3. Is it a recurring choice with many options? It belongs in the console as a
+   scroller, not floating over the map. (P4, §6)
 4. Does it float over the map? Then it is frosted glass, and it must stay
    readable when that resolves to solid white. Otherwise: opaque. (P3)
 5. Are the targets 44 px? (§3)

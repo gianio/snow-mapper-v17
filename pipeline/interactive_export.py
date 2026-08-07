@@ -1005,6 +1005,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    font-family:inherit;font-size:14.5px;font-weight:800;color:var(--ink-900);cursor:pointer}
  .pt-home svg{width:19px;height:19px;flex-shrink:0}
  .pt-home:active{transform:scale(.96)}
+ .pt-acc.has-img{background-size:cover;background-position:center;border-color:var(--bd)}
+ .pt-acc.has-img svg{display:none}
  .pt-acc{margin-left:auto;width:var(--tap);height:var(--tap);border-radius:50%;
    border:1px solid var(--bd);background:var(--glass2);
    backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
@@ -1022,9 +1024,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .edge-tab.right{right:0;border-right:none;border-radius:var(--r) 0 0 var(--r)}
  .edge-tab.left span{transform:rotate(180deg)}
  .edge-tab:active{background:var(--glass2)}
- body.draw-on .edge-tab,body.scr-home .edge-tab,
- body.lb-open .edge-tab,body.insp-open .edge-tab{display:none}
+ body.draw-on .edge-tab,body.scr-home .edge-tab,body.insp-open .edge-tab{display:none}
  /* ===================== Screen 1: the launcher ======================== */
+ /* The startup screen. It is shown once, you pick a screen, and it is gone --
+    there is no way back to it, so it never becomes a place you have to leave. */
  #scrInitial{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;
    justify-content:center;gap:var(--sp6);padding:var(--sp6) 26px;
    background:var(--paper);
@@ -1071,77 +1074,39 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rp-ic svg{width:25px;height:25px}
  .rp-choice b{font-size:17.5px;font-weight:800;color:var(--ink-900);letter-spacing:-.015em}
  .rp-choice>span:last-child{font-size:13.5px;color:var(--ink-500);line-height:1.45}
- /* ===================== Layers: the bar on the map ====================
-    A short scrollable row of the layers people actually switch between, and
-    one button for the rest. The model a layer belongs to (A/B) is no longer
-    the first thing you read -- it is a small mark inside the full list.
-    --------------------------------------------------------------------- */
- #lbBar{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 12px);
-   left:10px;right:10px;display:flex;align-items:center;gap:7px}
- body.draw-on #lbBar{display:none}
- #lbQuick{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;
-   -webkit-overflow-scrolling:touch;padding:1px;
-   -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);
-   mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent)}
- #lbQuick::-webkit-scrollbar{display:none}
- .lb-chip{flex:0 0 auto;min-height:38px;padding:0 13px;border-radius:var(--r);
-   border:1px solid var(--bd);background:var(--glass);
-   backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
-   color:var(--ink-700);font-family:inherit;font-size:13.5px;font-weight:700;
-   white-space:nowrap;cursor:pointer;box-shadow:var(--elev1);
-   transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
- .lb-chip.on{background:var(--accent);border-color:var(--accent);color:var(--paper)}
- .lb-chip:active{transform:scale(.97)}
- #lbMore{flex:0 0 auto;min-height:38px;padding:0 10px 0 13px;border-radius:var(--r);
-   border:1px solid var(--bd);background:var(--glass2);
-   backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
-   color:var(--ink-900);font-family:inherit;font-size:13.5px;font-weight:800;
-   display:inline-flex;align-items:center;gap:2px;cursor:pointer;box-shadow:var(--elev1)}
- #lbMore svg{width:16px;height:16px}
- #lbMore:active{transform:scale(.97)}
- /* the full list */
- #lbScrim{position:fixed;inset:0;z-index:3300;background:rgba(33,30,25,.32);
-   opacity:0;pointer-events:none;transition:opacity var(--dur-2) var(--ease)}
- body.lb-open #lbScrim{opacity:1;pointer-events:auto}
- #lbSheet{position:fixed;z-index:3400;left:0;right:0;bottom:0;max-height:78vh;
-   display:flex;flex-direction:column;background:var(--paper);
-   border-radius:var(--r-lg) var(--r-lg) 0 0;box-shadow:var(--elev3);
-   transform:translateY(101%);transition:transform var(--dur-2) var(--ease);
-   padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px);will-change:transform}
- body.lb-open #lbSheet{transform:translateY(0)}
- #lbGrab{width:36px;height:4px;border-radius:2px;background:var(--ink-150);
-   margin:10px auto 2px;flex-shrink:0}
- #lbSheet header{display:flex;align-items:center;gap:var(--sp2);
-   padding:var(--sp2) var(--sp4);flex-shrink:0}
- #lbSheet header h2{flex:1;margin:0;font-size:17px;font-weight:800;color:var(--ink-900);letter-spacing:-.01em}
- #lbSheet header button{width:var(--tap);height:var(--tap);border:none;background:none;
-   border-radius:var(--r-1);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer}
- #lbSheet header button svg{width:21px;height:21px}
- #lbList{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 var(--sp4) var(--sp4)}
- .lb-row{display:flex;align-items:center;gap:var(--sp3);width:100%;min-height:58px;
-   padding:0 4px;border:none;border-bottom:1px solid var(--bd);background:none;
-   font-family:inherit;text-align:left;cursor:pointer;color:var(--ink-900)}
- .lb-row:last-child{border-bottom:none}
- .lb-row:active{background:var(--ink-050)}
- /* the model mark: small, quiet, and the only place A/B still appears */
- .lb-mark{width:22px;height:22px;flex-shrink:0;border-radius:6px;
-   display:flex;align-items:center;justify-content:center;
-   font-size:10.5px;font-weight:800;letter-spacing:0}
- .lb-meteo{background:var(--accent-meteo-soft);color:var(--accent-meteo)}
- .lb-report{background:var(--accent-report-soft);color:var(--accent-report)}
- .lb-t{flex:1;min-width:0}
- .lb-t b{display:block;font-size:15.5px;font-weight:700;letter-spacing:-.01em}
- .lb-t span{display:block;font-size:12.5px;color:var(--ink-500);margin-top:1px}
- .lb-tick{color:var(--accent);flex-shrink:0}
- .lb-tick svg{width:18px;height:18px}
- .lb-row.on .lb-t b{color:var(--accent)}
- /* the search field drops below the layer bar */
- /* --- The console: time controls; the layers moved to the map --- */
+ /* ================= The layer field, at the end of the presets =========
+    Two axes in one control: the strip slides sideways for the layer, the
+    column on its right slides up and down for that layer's sub-layer. Both
+    are real scrollers, so the gesture is the choice -- nothing to confirm.
+    -------------------------------------------------------------------- */
+ .ps-sep{flex:0 0 auto;width:1px;align-self:stretch;margin:4px 3px;background:var(--bd)}
+ #lyStrip{flex:0 0 auto;display:flex;gap:5px}
+ .ly-chip{flex:0 0 auto;min-height:var(--tap-sm);padding:0 13px;border-radius:var(--r-1);
+   border:1px solid var(--bd);background:var(--paper);color:var(--ink-700);
+   font-family:inherit;font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer;
+   transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease)}
+ .ly-chip.on{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+ .ly-chip:active{transform:scale(.97)}
+ /* the sub-layer column: one option tall, the rest a slide away. It sticks to
+    the right edge so it stays reachable however far the strip is scrolled. */
+ #lyVars{flex:0 0 auto;display:none;position:sticky;right:0;z-index:2;
+   width:96px;height:var(--tap-sm);overflow-y:auto;overflow-x:hidden;
+   scroll-snap-type:y mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+   border:1px solid var(--bd);border-radius:var(--r-1);background:var(--fill);
+   box-shadow:inset 0 -6px 6px -6px rgba(33,30,25,.18),inset 0 6px 6px -6px rgba(33,30,25,.18)}
+ #lyVars.on{display:block}
+ #lyVars::-webkit-scrollbar{display:none}
+ .ly-opt{display:flex;align-items:center;justify-content:center;
+   height:var(--tap-sm);scroll-snap-align:center;padding:0 8px;
+   font-size:12.5px;font-weight:700;color:var(--ink-500);white-space:nowrap;cursor:pointer;
+   transition:color var(--dur-1) var(--ease)}
+ .ly-opt.on{color:var(--accent)}
+ /* --- The console: time controls; the layer field rides with the presets --- */
+
  #layerBar{--topic-accent:var(--accent);--topic-tint:var(--accent-soft)}
- #layerBar:empty,#variants:empty{display:none}
- /* keep a hairline only when the variant/prognosis rows actually show */
- #layerBar:has(#variants:not(:empty)),#layerBar:has(#progBar.on){
-   border-bottom:1px solid var(--bd);padding:var(--sp3) var(--sp4)}
+ #layerBar:empty{display:none}
+ /* keep a hairline only when the prognosis row actually shows */
+ #layerBar:has(#progBar.on){border-bottom:1px solid var(--bd);padding:var(--sp3) var(--sp4)}
  body.draw-on #layerBar{display:none}
  /* Variants of the active layer: a quieter second rank (P5, size + weight) */
  #variants{display:flex;flex-wrap:wrap;gap:4px}
@@ -1325,7 +1290,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #brandMark{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 76px);left:10px;
    background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
    border:1px solid var(--bd);box-shadow:var(--elev1)}
- #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 62px);left:12px;width:230px;max-width:calc(100vw - 24px)}
+ #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;width:230px;max-width:calc(100vw - 24px)}
  #searchWrap input{width:100%;min-height:var(--tap);padding:0 12px 0 34px;border-radius:var(--r-1);border:1px solid var(--bd);background:var(--glass);color:var(--ink-900);font-size:15px;font-weight:500;outline:none;box-shadow:var(--lift);font-family:inherit}
  #searchWrap input::placeholder{color:var(--mut);font-weight:400}
  #searchWrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
@@ -1568,6 +1533,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #drawActions .db svg{width:20px;height:20px}
  #drawPostBtn{flex:1;height:46px;border-radius:14px;border:none;background:var(--fg);color:#fff;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer}
  #drawPostBtn:active{transform:scale(.98)}
+ /* A drawing has a transparent background -- on the card it gets the paper to
+    sit on, not the map it was drawn over. */
+ .feed-card-visual.draw,.fc-slide.draw{background:var(--ink-050)}
+ .feed-card-visual.draw img,.fc-slide.draw img{object-fit:contain}
  /* draw finalize sheet + feed snapshot image */
  #drawFinish{position:fixed;inset:0;z-index:4100;display:none;align-items:flex-end;justify-content:center}
  #drawFinish::before{content:"";position:absolute;inset:0;background:rgba(14,17,22,.32);}
@@ -2001,8 +1970,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-card.flash{box-shadow:0 0 0 3px var(--acc) inset;animation:cardFlash 1.8s ease}
  @keyframes cardFlash{0%,100%{background:var(--card)}30%{background:rgba(20,20,25,.08)}}
  .feed-card-head{display:flex;align-items:center;gap:11px;padding:14px 16px 10px}
-  .feed-card-avatar{width:42px;height:42px;border-radius:var(--r-1);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0;letter-spacing:.02em;color:var(--ink-700);background:var(--ink-100)!important;background-image:none;border:1px solid var(--ink-100);box-shadow:none;overflow:hidden}
-  .feed-card-avatar[style*="url("]{background-image:inherit}
+  .feed-card-avatar{width:42px;height:42px;border-radius:var(--r-1);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0;letter-spacing:.02em;color:var(--ink-700);background-color:var(--ink-100);background-size:cover;background-position:center;border:1px solid var(--ink-100);box-shadow:none;overflow:hidden}
  .feed-card-info{flex:1;min-width:0}
  .feed-card-user{font-size:14px;font-weight:700;color:var(--fg);letter-spacing:-.01em;display:block}
  .feed-card-loc{font-size:12px;color:var(--mut);font-weight:500;display:flex;align-items:center;gap:3px}
@@ -2171,6 +2139,21 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rpt-photo>img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;border:2px solid #fff}
  .rpt-photo .rp-cat{position:absolute;bottom:-1px;right:-1px;width:21px;height:21px;border-radius:50%;border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff}
  .rpt-photo .rp-cat svg{width:11px;height:11px}
+ /* the list behind a merged drawing circle */
+ .rmg{min-width:210px}
+ .rmg-head{display:flex;flex-direction:column;gap:1px;padding:2px 2px 8px;border-bottom:1px solid var(--bd);margin-bottom:4px}
+ .rmg-head b{font-size:14px;font-weight:800;color:var(--ink-900)}
+ .rmg-head span{font-size:11.5px;color:var(--ink-500);font-weight:600}
+ .rmg-row{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;padding:0 2px;
+   border:none;background:none;font-family:inherit;text-align:left;cursor:pointer;color:var(--ink-900)}
+ .rmg-row:active{background:var(--ink-050)}
+ .rmg-av{width:26px;height:26px;flex-shrink:0;border-radius:50%;background:var(--ink-900) center/cover;
+   color:var(--paper);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+ .rmg-t{flex:1;min-width:0}
+ .rmg-t b{display:block;font-size:13px;font-weight:700}
+ .rmg-t span{display:block;font-size:11px;color:var(--ink-500);font-weight:600}
+ .rmg-cm{flex-shrink:0;font-size:12px;font-weight:800;color:var(--cc);
+   background:var(--ink-050);border-radius:999px;padding:3px 9px}
  .rpt-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px 5px 8px;border-radius:999px;background:var(--card);border:1.5px solid var(--cc);color:var(--cc);font-weight:800;font-size:12.5px;white-space:nowrap;box-shadow:0 3px 11px rgba(0,0,0,.20);cursor:pointer;transition:transform .15s}
  .rpt-chip:hover{transform:scale(1.06)}
  .rpt-chip svg{width:14px;height:14px}
@@ -2258,22 +2241,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
      twin-peak glyph as the app icon. Rebranding lives here and in the names
      the app uses when it talks about itself (title, share sheet, PWA
      install) -- not in new chrome competing with the map. -->
-<button id="brandMark" class="pt-home" onclick="scrHome()" aria-label="Startseite">
+<button id="brandMark" class="pt-home" onclick="scrGo('search')" aria-label="Zur Karte">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L10 6L13.5 12L15 9L21 19Z"/><path d="M8.6 11.4h2.8"/></svg>
   <span>Firn</span>
 </button>
-<!-- The layers people actually reach for, at the top of the map. Everything
-     else -- and which model a layer belongs to -- lives behind "Alle". -->
-<div id="lbBar">
-  <div id="lbQuick"></div>
-  <button id="lbMore" onclick="lbSheetOpen()">Alle<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
-</div>
-<div id="lbScrim" onclick="lbSheetClose()"></div>
-<section id="lbSheet" role="dialog" aria-modal="true" aria-label="Alle Ebenen">
-  <div id="lbGrab"></div>
-  <header><h2>Ebenen</h2><button onclick="lbSheetClose()" aria-label="Schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
-  <div id="lbList"></div>
-</section>
 <div id="searchWrap"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Ort suchen…" autocomplete="off"/><div id="searchRes"></div></div>
 <div id="ctrlRail">
   <button class="rail-btn" id="accountBtn" onclick="accountTap()" title="Anmelden" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.6"/><path d="M3.5 20a6.5 6.5 0 0 1 13 0"/><line x1="19" y1="6" x2="19" y2="12"/><line x1="16" y1="9" x2="22" y2="9"/></svg></button>
@@ -2290,7 +2261,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <!-- The console. One surface, sectioned by hairlines: every map layer of both
        models is visible and one tap away, the time controls sit underneath. -->
   <div id="layerBar">
-    <div id="variants"></div>
     <div id="progBar"></div>
   </div>
   <div id="btmMain">
@@ -2304,6 +2274,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <div class="seg" id="presets" style="gap:5px;margin-top:2px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch">
       <button id="btnSinceSnow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><path d="M12 2v20M4.2 6.5l15.6 11M4.2 17.5l15.6-11"/></svg>Letzter Schnee</button>
       <button data-r="tomorrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>Bis morgen</button>
+      <!-- the layer field: slide sideways for the layer, up and down for the
+           sub-layer. It rides at the end of the same row as the presets. -->
+      <span class="ps-sep" aria-hidden="true"></span>
+      <span id="lyStrip" role="group" aria-label="Ebene"></span>
+      <span id="lyVars" role="group" aria-label="Unterebene" onscroll="lyVarsScrolled()"></span>
     </div>
     <div id="tlDetail">
       <canvas id="timeline" width="900" height="94" style="width:100%;height:94px;border-radius:10px;cursor:default;margin-top:8px"></canvas>
@@ -2325,7 +2300,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <!-- ===================== Pane: Report ================================== -->
 <section class="pane" id="paneReport" aria-label="Melden">
   <div class="pane-top">
-    <button class="pt-home" onclick="scrHome()" aria-label="Startseite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L10 6L13.5 12L15 9L21 19Z"/><path d="M8.6 11.4h2.8"/></svg><span>Firn</span></button>
+    <button class="pt-home" onclick="scrGo('search')" aria-label="Zur Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L10 6L13.5 12L15 9L21 19Z"/><path d="M8.6 11.4h2.8"/></svg><span>Firn</span></button>
     <button class="pt-acc" onclick="accountTap()" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg></button>
   </div>
   <div class="rp-body">
@@ -2468,7 +2443,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <input type="file" id="obsFile" accept="image/*" multiple onchange="obsAddMedia(this)" hidden/>
 <div class="feed-page pane" id="feedPage">
 <div class="feed-nav">
-<button class="feed-back pt-home" onclick="scrHome()" aria-label="Startseite"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+<button class="feed-back pt-home" onclick="scrGo('search')" aria-label="Zur Karte"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
 <span class="feed-title">Community</span>
 <button class="feed-back" style="margin-left:auto" title="Leute finden" aria-label="Leute finden" onclick="usOpen()"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
 </div>
@@ -3850,7 +3825,10 @@ const GROUPS={
     {id:'wind',label:'Wind',vars:[{l:'wind',s:'lt10',label:'<10 km/h'},{l:'wind',s:'avg',label:'Mittel'},{l:'wind',s:'max',label:'Max'},{l:'wind',s:'min',label:'Min'}]},
     {id:'temp',label:'Temperatur',vars:[{l:'temp',s:'sub0',label:'<0 °C'},{l:'tsurf',s:'avg',label:'Oberfläche'},{l:'temp',s:'avg',label:'Mittel'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'temp',s:'max05',label:'0–5 °C'}]}
   ]},
-  report:{tag:'B',label:'Report-Modell',items:[
+  // The Report-Modell layers still exist and the drawings still feed the
+  // prognosis -- they are just not in the picker. Drop `menu:false` to bring
+  // the whole group back.
+  report:{tag:'B',label:'Report-Modell',menu:false,items:[
     {id:'reppow',label:'Reported Powder',vars:[{l:'powfind',s:'powder',label:'Reported Powder'}]},
     {id:'diff',label:'Abweichung',vars:[{l:'progdiff',s:'powder',label:'Abweichung'}]},
     // The remaining snow types only appear once you are close enough for them
@@ -3884,6 +3862,9 @@ const TOPIC_COLOR={
 let tlSel='#1D6A6A',tlSelTint='rgba(29,106,106,.12)';
 function groupItems(g){const z=(function(){try{return map.getZoom();}catch(e){return 99;}})();
   return (GROUPS[g]||GROUPS.meteo).items.filter(it=>it.minZoom==null||z>=it.minZoom);}
+// The groups the picker offers, in order. A group with `menu:false` is still a
+// working layer set -- it just is not something you can switch to by hand.
+function menuGroups(){return Object.keys(GROUPS).filter(g=>GROUPS[g].menu!==false);}
 function setTopic(t,itemIdx,varIdx){
   if(!GROUPS[t])t='meteo';
   curTopic=t;
@@ -3897,69 +3878,79 @@ function setTopic(t,itemIdx,varIdx){
   document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.setAttribute('content','#F7F4EE'));
   const items=groupItems(t);
   curItem=Math.max(0,Math.min(items.length-1,itemIdx||0));
-  renderLayerStrip();
   const it=items[curItem],vars=it.vars;
   curVar=Math.max(0,Math.min(vars.length-1,varIdx||0));
-  const vb=document.getElementById('variants');
-  vb.innerHTML=vars.length>1?vars.map((v,i)=>'<button data-i="'+i+'"'+(i===curVar?' class="on"':'')+'>'+v.label+'</button>').join(''):'';
-  vb.querySelectorAll('button').forEach(btn=>{btn.onclick=()=>setTopic(t,curItem,parseInt(btn.dataset.i));});
+  // after curVar, not before: the sub-layer column shows the live option, and
+  // rendering it first left it a step behind on every change
+  renderLayerStrip();
   const sel=vars[curVar];layer=sel.l;stat=sel.s;renderAll();progRenderBar();
-  try{lbRender();}catch(e){}
   if(typeof panelRestore==='function')requestAnimationFrame(()=>{try{panelRestore();}catch(e){}});
 }
-// ===================== Layers: a few at the top, the rest behind "Alle" ===
-// The model a layer belongs to used to be the first thing you had to read --
-// two big "A · Meteo-Modell" / "B · Report-Modell" headings before any layer
-// name. It is demoted here to a small mark on the row inside the full list.
-// What sits on the map is the handful people actually switch between.
-const LB_QUICK=[['meteo',0],['meteo',1],['meteo',2],['report',0]];
-function lbItem(g,i){const items=groupItems(g);return items&&items[i]?items[i]:null;}
-function lbRender(){
-  const q=document.getElementById('lbQuick');if(!q)return;
-  const seen=[];
-  LB_QUICK.forEach(([g,i])=>{const it=lbItem(g,i);if(it)seen.push([g,i,it]);});
-  // whatever is live always has a chip, even when it is not one of the few
-  if(!seen.some(([g,i])=>g===curTopic&&i===curItem)){
-    const it=lbItem(curTopic,curItem);if(it)seen.unshift([curTopic,curItem,it]);}
-  q.innerHTML=seen.map(([g,i,it])=>'<button class="lb-chip'+
-    (g===curTopic&&i===curItem?' on':'')+'" data-g="'+g+'" data-i="'+i+'">'+it.label+'</button>').join('');
-  q.querySelectorAll('.lb-chip').forEach(b=>b.onclick=()=>{
+// ===================== The layer field, in the console ====================
+// Two axes, one control. Sliding it sideways picks the layer; sliding the
+// column on its right picks that layer's sub-layer. It sits at the end of the
+// preset row rather than over the map, because on a phone anything floating
+// top-left lands on the search field.
+function lyRender(){
+  const strip=document.getElementById('lyStrip');if(!strip)return;
+  const cells=[];
+  menuGroups().forEach(g=>groupItems(g).forEach((it,i)=>cells.push([g,i,it])));
+  strip.innerHTML=cells.map(([g,i,it])=>'<button class="ly-chip'+
+    ((g===curTopic&&i===curItem)?' on':'')+'" data-g="'+g+'" data-i="'+i+'">'+it.label+'</button>').join('');
+  strip.querySelectorAll('.ly-chip').forEach(b=>b.onclick=()=>{
     setTopic(b.dataset.g,parseInt(b.dataset.i),0);try{haptic(4);}catch(e){}});
-  const on=q.querySelector('.lb-chip.on');
-  if(on)requestAnimationFrame(()=>{try{on.scrollIntoView({block:'nearest',inline:'nearest'});}catch(e){}});
-  // the bar's height sets where search and the pills start
-  requestAnimationFrame(()=>{try{positionSearch();}catch(e){}});
+  // Scroll the minimum that brings the live chip fully into view -- never
+  // more. scrollIntoView() would park it against an edge and shove the time
+  // presets out of the row entirely; both belong to the same strip and both
+  // should stay at least partly visible.
+  const on=strip.querySelector('.ly-chip.on');
+  if(on)requestAnimationFrame(()=>{try{
+    const row=document.getElementById('presets');
+    const vb=document.getElementById('lyVars');
+    // the sub-layer column is sticky, so the usable right edge is short by its
+    // width -- otherwise the live chip is "in view" but sitting under it
+    const vw=(vb&&vb.classList.contains('on'))?vb.getBoundingClientRect().width:0;
+    const cr=row.getBoundingClientRect(),br=on.getBoundingClientRect(),pad=8;
+    const right=cr.right-vw-pad,left=cr.left+pad;
+    let d=0;
+    if(br.right>right)d=br.right-right;
+    else if(br.left<left)d=br.left-left;
+    if(d)row.scrollBy({left:d,behavior:'smooth'});}catch(e){}});
+  lyVarsRender();
 }
-function lbSheetRender(){
-  const host=document.getElementById('lbList');if(!host)return;
-  const rows=[];
-  Object.keys(GROUPS).forEach(g=>groupItems(g).forEach((it,i)=>rows.push([g,i,it])));
-  host.innerHTML=rows.map(([g,i,it])=>{
-    const on=(g===curTopic&&i===curItem);
-    const many=it.vars.length>1;
-    return '<button class="lb-row'+(on?' on':'')+'" data-g="'+g+'" data-i="'+i+'">'+
-      '<span class="lb-mark lb-'+g+'">'+GROUPS[g].tag+'</span>'+
-      '<span class="lb-t"><b>'+it.label+'</b>'+
-        (many?'<span>'+(on?it.vars[curVar].label:it.vars.length+' Varianten')+'</span>':'')+'</span>'+
-      (on?'<span class="lb-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg></span>':'')+
-      '</button>';}).join('');
-  host.querySelectorAll('.lb-row').forEach(b=>b.onclick=()=>{
-    const g=b.dataset.g,i=parseInt(b.dataset.i);
-    setTopic(g,i,0);lbSheetRender();
-    const it=lbItem(g,i);
-    // nothing more to choose -> get out of the way; variants stay for tap two
-    if(!it||it.vars.length<=1)lbSheetClose();});
+// The sub-layer column: one option tall, the rest reachable by sliding it up
+// and down. Whatever ends up centred is the selection, so the gesture itself
+// is the choice -- there is nothing extra to confirm.
+let _lyScrollT=null;
+function lyVarsRender(){
+  const box=document.getElementById('lyVars');if(!box)return;
+  const it=groupItems(curTopic)[curItem];
+  const vars=(it&&it.vars)||[];
+  if(vars.length<2){box.innerHTML='';box.classList.remove('on');return;}
+  box.classList.add('on');
+  box.innerHTML=vars.map((v,i)=>'<span class="ly-opt'+(i===curVar?' on':'')+'" data-i="'+i+'">'+v.label+'</span>').join('');
+  const opts=box.querySelectorAll('.ly-opt');
+  opts.forEach(o=>o.onclick=()=>setTopic(curTopic,curItem,parseInt(o.dataset.i)));
+  // park the live option in the middle without firing the scroll handler
+  box._lock=1;
+  requestAnimationFrame(()=>{try{box.scrollTop=curVar*box.clientHeight;}catch(e){}
+    setTimeout(()=>{box._lock=0;},120);});
 }
-function lbSheetOpen(){document.body.classList.add('lb-open');lbSheetRender();try{haptic(5);}catch(e){}}
-function lbSheetClose(){document.body.classList.remove('lb-open');}
-document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'&&document.body.classList.contains('lb-open'))lbSheetClose();});
-// Deep-zoom layers appear and disappear with the zoom, so keep both in sync.
-function renderLayerStrip(){try{lbRender();
-  if(document.body.classList.contains('lb-open'))lbSheetRender();}catch(e){}}
+function lyVarsScrolled(){
+  const box=document.getElementById('lyVars');if(!box||box._lock)return;
+  clearTimeout(_lyScrollT);
+  _lyScrollT=setTimeout(()=>{
+    const h=box.clientHeight||1,i=Math.round(box.scrollTop/h);
+    const it=groupItems(curTopic)[curItem],vars=(it&&it.vars)||[];
+    if(i!==curVar&&i>=0&&i<vars.length){setTopic(curTopic,curItem,i);try{haptic(3);}catch(e){}}
+  },140);
+}
+// Deep-zoom layers appear and disappear with the zoom, so the strip is rebuilt
+// from the same entry point the rest of the app already calls.
+function renderLayerStrip(){try{lyRender();}catch(e){}}
 // Deep-zoom items appear/disappear as the user zooms, so keep the row in sync.
 map.on('zoomend',function(){try{
-  const shown=document.querySelectorAll('#lbList .lb-row').length||document.querySelectorAll('#lbQuick .lb-chip').length;
+  const shown=document.querySelectorAll('#lyStrip .ly-chip').length;
   const want=Object.keys(GROUPS).reduce((n,g)=>n+groupItems(g).length,0);
   if(shown!==want)setTopic(curTopic,Math.min(curItem,groupItems(curTopic).length-1),curVar);}catch(e){}});
 
@@ -3983,15 +3974,11 @@ function progRenderBar(){
   bar.innerHTML=html;
   bar.querySelectorAll('.pb-seg button[data-src]').forEach(b=>b.onclick=()=>progSetSrc(b.dataset.src));
 }
-// The layer bar is the first thing at the top of the map, and its height is
-// not fixed (chips wrap on a narrow phone), so everything below it -- search,
-// the demo pill, the brand mark -- is stacked off its measured bottom edge
-// rather than off a hardcoded offset.
+// Nothing floats above the search field any more, so it takes the top edge and
+// the demo pill and brand mark chain off its measured bottom.
 function positionSearch(){try{
   var sw=document.getElementById('searchWrap');if(!sw)return;
-  var lb=document.getElementById('lbBar');
-  var top=lb?Math.round(lb.getBoundingClientRect().bottom)+10:12;
-  sw.style.top=top+'px';
+  sw.style.top='calc(env(safe-area-inset-top,0px) + 12px)';
   var dp=document.getElementById('demoPill');
   var bottom=sw.getBoundingClientRect().bottom;
   if(dp){dp.style.top=(bottom+8)+'px';bottom=dp.getBoundingClientRect().bottom;}
@@ -4053,7 +4040,12 @@ function toggleStations(){showStn=!showStn;renderStations();
   clearTimeout(note._t);note._t=setTimeout(()=>note.classList.remove('show'),1500);haptic(6);}
 // --- Rail: account button + locate-me ---
 function accountTap(){if(sbUser)openProfile();else authShow();}
-function updateAccountBtn(avatarUrl){const btn=document.getElementById('accountBtn');if(!btn)return;
+function updateAccountBtn(avatarUrl){
+  // the same picture on the rail and on the pane headers
+  document.querySelectorAll('.pt-acc').forEach(b=>{
+    if(avatarUrl){b.classList.add('has-img');b.style.backgroundImage='url('+encodeURI(avatarUrl)+')';}
+    else{b.classList.remove('has-img');b.style.backgroundImage='';}});
+  const btn=document.getElementById('accountBtn');if(!btn)return;
   if(!sbUser){btn.classList.remove('signed');btn.title='Anmelden';
     // person + plus reads unambiguously as "sign in"; the old door-and-arrow
     // glyph is the same shape the convention uses for "log out".
@@ -4099,8 +4091,6 @@ function scrRenderTabs(){
   R.querySelector('span').textContent=SCREEN_LABEL[SCREENS[(scrIdx+1)%3]];
 }
 function scrGoTo(i,silent){
-  // the layer sheet lives inside the map pane, so it leaves with the map
-  try{lbSheetClose();}catch(e){}
   scrIdx=((i%3)+3)%3;
   document.body.classList.remove('scr-home');
   document.body.setAttribute('data-screen',scrCurrent());
@@ -4112,8 +4102,6 @@ function scrGoTo(i,silent){
 function scrGo(name){const i=SCREENS.indexOf(name);if(i>=0)scrGoTo(i);}
 function scrNext(){scrGoTo(scrIdx+1);}
 function scrPrev(){scrGoTo(scrIdx-1);}
-function scrHome(){document.body.classList.add('scr-home');
-  document.body.removeAttribute('data-screen');try{haptic(5);}catch(e){}}
 (function(){
   // On the map the swipe has to start at a screen edge, because anywhere else
   // the gesture is a map pan. On the other panes the whole surface is fair
@@ -4493,7 +4481,7 @@ function dismissIntro(){try{if(window.__bootDone)window.__bootDone();}catch(e){}
 // These pointed at the old floating layer card, which no longer exists — they
 // now walk the one-screen console.
 const COACH_STEPS=[
-  {sel:'#lbBar',html:'<b>Ebenen.</b><br>Die wichtigsten liegen oben auf der Karte — <b>Alle</b> öffnet die ganze Liste.'},
+  {sel:'#lyStrip',html:'<b>Ebenen.</b><br>Die wichtigsten liegen oben auf der Karte — <b>Alle</b> öffnet die ganze Liste.'},
   {sel:'#btmMain',html:'<b>Zeitfenster.</b><br>Wähle den Zeitraum – die Karte rechnet sofort neu.'},
   {sel:'#searchWrap',html:'<b>Spring zu einem Ort.</b><br>Suche einen Berg oder Ort und zoome direkt dorthin.'},
   {sel:'#edgeR',html:'<b>Wisch dich durch.</b><br>Nach rechts geht es zu <b>Report</b>, nach links zum <b>Feed</b> – oder tippe auf die Laschen am Rand.'},
@@ -4590,7 +4578,7 @@ setTopic('meteo',0,0);dismissIntro();
 // applied once the map and the layer strip exist.
 requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}
   try{document.body.classList.add('scr-home');scrLayout(0);scrRenderTabs();}catch(e){}
-  try{lbRender();}catch(e){}});
+  try{lyRender();}catch(e){}});
 try{const _pid=new URLSearchParams(location.search).get('post');
   if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);}catch(e){}
 if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(reg=>{try{reg.update();}catch(e){}}).catch(()=>{});});}
@@ -4855,7 +4843,9 @@ const DEMO_REPORTS=(FEATURES.demoOther?DEMO_DEFS:[]).map((d,i2)=>({id:'d'+(i2+1)
     add({user:U2[(k*5+2)%U2.length],cat:'snow',sub:'Schnee-Karte',
       measurement:meas,caption:cap,lat:la,lng:lo,
       time:'vor '+(2+Math.floor(rnd()*40))+'h',img:photo||snap,
-      condition_data:{draw:true,snapshot:snap,measurement:meas,demoFit:true,label0:DCL[ty],
+      // drawImage is what a real drawing carries, so the demo posts take the
+      // same path through the feed as a posted one
+      condition_data:{draw:true,snapshot:snap,drawImage:snap,measurement:meas,demoFit:true,label0:DCL[ty],
         zones:[{type:ty,centroid:[la,lo],elevMin:e0,elevMax:e1,aspectDeg:asp,aspectConc:0.82,n:120,cm:cm}]}});});
 })();
 // Apply the feature switches to the entry points.
@@ -4928,6 +4918,63 @@ function _rptMarker(r,mode){
   else{html='<div class="rpt-pin" style="--cc:'+col+'">'+(CAT_SVG[r.cat]||'')+(r.img?'<i class="rp-dot"></i>':'')+'</div>';w=h=38;}
   const m=_rptAdd(r.lat,r.lng,html,w,h,null,700);
   m.bindPopup(reportPopupHTML(r),{maxWidth:236,className:'rpt-pop',closeButton:true});}
+// Several drawings of the same slope are one statement about that slope, not
+// several. Anything within RPT_MERGE_M of another drawing joins it, at every
+// zoom, and the merged circle reports the importance-weighted position, depth
+// and dominant type -- the same weighting the prognosis engine uses, so the
+// map and the model cannot disagree. Tapping it lists the drawings behind it.
+const RPT_MERGE_M=400;
+function _rptImportance(r){
+  let w=1;try{w=progReportWeight(r);}catch(e){}
+  let rec=1;try{rec=progRecency({ageH:progAgeH(r)});}catch(e){}
+  return Math.max(0.05,w*rec);
+}
+function _rptIsDraw(r){const cd=r.condition_data;return !!(cd&&cd.draw);}
+// Grouped by real distance, not by a grid: a grid cell splits a pair that
+// happens to straddle a boundary, which is exactly the case that matters here
+// (two people drawing the same slope). The strongest report seeds each group,
+// so the grouping does not depend on load order.
+function _rptMergeGroups(list){
+  const out=[];
+  list.slice().sort((a,b)=>_rptImportance(b)-_rptImportance(a)).forEach(r=>{
+    for(let i=0;i<out.length;i++){const g=out[i];
+      if(haversineKm(g.lat,g.lng,r.lat,r.lng)*1000<=RPT_MERGE_M){
+        g.items.push(r);const n=g.items.length;
+        g.lat+=(r.lat-g.lat)/n;g.lng+=(r.lng-g.lng)/n;return;}}
+    out.push({lat:r.lat,lng:r.lng,items:[r]});});
+  return out.map(g=>g.items);
+}
+function _rptDrawMerged(g){
+  let sw=0,lat=0,lng=0,dsum=0,dw=0;const area={};
+  g.forEach(r=>{const w=_rptImportance(r);sw+=w;lat+=r.lat*w;lng+=r.lng*w;
+    const cm=_rptDepth(r);if(cm!=null){dsum+=cm*w;dw+=w;}
+    ((r.condition_data&&r.condition_data.zones)||[]).forEach(z=>{
+      if(z&&z.type)area[z.type]=(area[z.type]||0)+Math.max(1,z.n||1)*w;});});
+  lat/=sw;lng/=sw;
+  let dom=null,bn=-1;for(const k in area)if(area[k]>bn){bn=area[k];dom=k;}
+  return {lat:lat,lng:lng,cm:dw?Math.round(dsum/dw):null,type:dom,n:g.length};
+}
+function _rptMergedPopup(g,m){
+  const rows=g.slice().sort((a,b)=>_rptImportance(b)-_rptImportance(a)).map(r=>{
+    const cm=_rptDepth(r),col=_rptColor(r);
+    return '<button class="rmg-row" onclick="feedOpenAt(\''+r.id+'\')">'+
+      '<span class="rmg-av"'+(r.avatar?(' style="background-image:url('+encodeURI(r.avatar)+')"'):'')+'>'+
+        (r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase()))+'</span>'+
+      '<span class="rmg-t"><b>'+escapeHtml(r.user||'User')+'</b><span>'+escapeHtml(r.time||'')+'</span></span>'+
+      (cm!=null?('<span class="rmg-cm" style="--cc:'+col+'">'+cm+' cm</span>'):'')+
+      '</button>';}).join('');
+  return '<div class="rmg"><div class="rmg-head"><b>'+g.length+' Zeichnungen</b>'+
+    (m.cm!=null?('<span>\u2300 '+m.cm+' cm, gewichtet</span>'):'<span>am selben Ort</span>')+'</div>'+rows+'</div>';
+}
+function _rptDrawMarker(g){
+  const m=_rptDrawMerged(g);
+  const col=(m.cm!=null&&snowCol(m.cm))?('rgb('+snowCol(m.cm).join(',')+')'):'#8C4F27';
+  const inner=m.type?_rptSnowIcon(m.type):'';
+  const badge=(m.n>1)?('<i class="rc-ph">'+m.n+'</i>'):'';
+  const mk=_rptAdd(m.lat,m.lng,'<div class="rpt-snowmark" style="--cc:'+col+'">'+inner+badge+'</div>',52,52,null,700);
+  mk.bindPopup(m.n>1?_rptMergedPopup(g,m):reportPopupHTML(g[0]),
+    {maxWidth:250,className:'rpt-pop',closeButton:true});
+}
 function _rptCluster(g,zoom){
   let lat=0,lng=0,dsum=0,dn=0,ph=0;
   g.forEach(r=>{lat+=r.lat;lng+=r.lng;const cm=_rptDepth(r);if(cm!=null){dsum+=cm;dn++;}if(r.img)ph++;});
@@ -4944,12 +4991,17 @@ function loadReportMarkers(){
   (allReports||[]).forEach(r=>{const cd=r.condition_data||{};const _im=cd.drawImage||r.img;if(cd.draw&&cd.bounds&&_im){try{L.imageOverlay(_im,cd.bounds,{opacity:DRAW_DIM,interactive:false}).addTo(_drawOv);}catch(e){}}});
   if(!allReports||!allReports.length)return;
   const z=map.getZoom(),cellPx=66,tiny=z<9.5,clusterOn=z<12.5,rich=z>=12.5;
+  // Drawings merge by real distance before anything else looks at them, so a
+  // slope that four people drew shows one circle, not four stacked ones.
+  const draws=allReports.filter(_rptIsDraw),rest=allReports.filter(r=>!_rptIsDraw(r));
+  if(!tiny)_rptMergeGroups(draws).forEach(_rptDrawMarker);
   if(tiny){allReports.forEach(r=>_rptMarker(r,'dot'));return;}
   const cells={};
-  allReports.forEach(r=>{let key;
+  rest.forEach(r=>{let key;
     if(clusterOn){try{const pt=map.latLngToLayerPoint([r.lat,r.lng]);key=Math.round(pt.x/cellPx)+'|'+Math.round(pt.y/cellPx);}catch(e){key='s'+r.id;}}
     else key='s'+r.id;
     (cells[key]||(cells[key]=[])).push(r);});
+  if(!Object.keys(cells).length)return;
   Object.keys(cells).forEach(k=>{const g=cells[k];
     if(clusterOn&&g.length>=2){_rptCluster(g,z);return;}
     g.forEach(r=>{ if(rich)_rptMarker(r,r.img?'photo':'chip'); else _rptMarker(r,'pin'); });});
@@ -4970,7 +5022,6 @@ function authUpdateUI(user){
       <div class="user-avatar" id="userPillAv"><span>${name[0].toUpperCase()}</span></div>
       <span class="user-name">${name}</span></div>`;
     loadMyProfileAvatar();
-    updateAccountBtn(null);
     banner.style.display=user.email_confirmed_at?'none':'flex';
     // biometric lock on a restored session (not right after an explicit login)
     if(!justLoggedIn&&!bioUnlocked&&bioEnabledFor(user.id))showBioLock();
@@ -5350,8 +5401,10 @@ function profBioInput(){const ta=document.getElementById('profBio');const words=
   const cnt=document.getElementById('profBioCnt');cnt.textContent=words+'/200';cnt.classList.toggle('over',words>200);}
 async function loadMyProfileAvatar(){if(!sb||!sbUser)return;
   try{const{data}=await sb.from('profiles').select('avatar_url').eq('id',sbUser.id).single();
-    if(data&&data.avatar_url){const av=document.getElementById('userPillAv');if(av){av.style.backgroundImage='url('+data.avatar_url+')';av.style.backgroundSize='cover';av.querySelector('span').style.display='none';}
-      updateAccountBtn(data.avatar_url);}}catch(e){}}
+    const url=(data&&data.avatar_url)||null;
+    if(url){const av=document.getElementById('userPillAv');if(av){av.style.backgroundImage='url('+encodeURI(url)+')';av.style.backgroundSize='cover';av.style.backgroundPosition='center';const sp=av.querySelector('span');if(sp)sp.style.display='none';}}
+    // always, so signing in as someone without a picture clears the last one
+    updateAccountBtn(url);}catch(e){updateAccountBtn(null);}}
 async function openProfile(){
   if(!sb||!sbUser){authShow();return;}
   document.getElementById('profModal').style.display='flex';
@@ -5999,6 +6052,10 @@ function drawC2O(cx,cy){const r=drawRefRect();return [(cx-r.x)/r.w*drawZoneW,(cy
 function drawOScale(){const r=drawRefRect();return drawZoneW/r.w;}
 
 function drawOpen(){
+  // You draw ON the map, so the map screen has to be the one underneath before
+  // the canvas goes over it -- otherwise the pen lands on a blank pane.
+  if(typeof scrCurrent==='function'&&scrCurrent()!=='search'){
+    scrGo('search');setTimeout(drawOpen,380);return;}
   drawRoutes=[];drawTracks=[];drawZoneUsed=new Set();drawHistory=[];drawPanOn=false;_drawPainting=false;drawZoneCanvas=null;_drawTrackGrid=new Set();drawTrackZoom=null;drawZoneSamples={};
   document.body.classList.remove('draw-pan');document.body.classList.add('draw-on');
   document.getElementById('drawWrap').style.display='block';
@@ -6376,7 +6433,7 @@ function drawSummary(){
   return out;
 }
 let drawPhotoFile=null,drawSnapData=null,drawPaintData=null,drawFinCen=null,drawFinBnds=null,drawFinNames=null,drawFinPeak=null;
-function drawPaintingPNG(){try{drawRepaint(DRAW_DIM);const png=document.getElementById('drawCanvas').toDataURL('image/png');drawRepaint();return png;}catch(e){return null;}}
+function drawPaintingPNG(){try{drawRepaint(1);const png=document.getElementById('drawCanvas').toDataURL('image/png');drawRepaint();return png;}catch(e){return null;}}
 // Composite the map behind the drawing. Base tiles are re-loaded through fresh
 // crossOrigin images so the canvas is never tainted (a non-CORS tile simply
 // fails to load and is skipped rather than blanking the whole snapshot).
@@ -6403,10 +6460,20 @@ async function drawMapSnapshot(){
     try{const g=mk();drawRepaint(.92);g.x.drawImage(cv,0,0,W,H);drawRepaint();return g.s.toDataURL('image/png');}catch(_){return drawPaintData||null;}
   }
 }
+// Where a drawing *is*: the area-weighted centroid of the zones that were
+// actually painted. The viewport centre is only the fallback for a drawing
+// that produced no zones at all.
+function drawZonesCentre(zns,fallback){
+  let sx=0,sy=0,w=0;
+  (zns||[]).forEach(z=>{const c=z&&z.centroid;if(!c||c[0]==null)return;
+    const q=Math.max(1,z.n||1);sx+=c[0]*q;sy+=c[1]*q;w+=q;});
+  return w?{lat:sx/w,lng:sy/w}:fallback;
+}
 async function drawOpenFinish(){
   if(!drawHasContent()){toast('Zeichne zuerst mindestens eine Zone ein.','err');return;}
   drawFinNames=drawSummary();
   try{const vb=drawViewBounds();drawFinBnds=[[vb.getSouth(),vb.getWest()],[vb.getNorth(),vb.getEast()]];const cc=vb.getCenter();drawFinCen={lat:cc.lat,lng:cc.lng};}catch(e){drawFinCen={lat:46.8,lng:8.2};drawFinBnds=null;}
+  try{drawFinCen=drawZonesCentre(drawComputeZones(),drawFinCen);}catch(e){}
   drawPhotoFile=null;
   drawPaintData=drawPaintingPNG();drawSnapData=null;
   const img=document.getElementById('drawSnapImg');if(img)img.src=drawPaintData||'';
@@ -6432,7 +6499,7 @@ async function drawPublish(){
   const cd={draw:true,bounds:drawFinBnds,types:names,measurement:zlabel,snapshot:drawSnapData||null,drawImage:drawPaintData||null,zones:zns,peak:drawFinPeak||null};
   if(demoActive()||!sb){
     let photoUrl=null;if(drawPhotoFile){try{photoUrl=URL.createObjectURL(drawPhotoFile);}catch(e){}}
-    allReports.unshift({id:'draw'+Date.now(),user:'Du',cat:'snow',sub:'Schnee-Karte',measurement:cd.measurement,caption:cap,lat:cen.lat,lng:cen.lng,time:'gerade eben',img:photoUrl||drawSnapData||drawPaintData,likes:0,comments:0,stars:0,condition_data:cd});
+    allReports.unshift({id:'draw'+Date.now(),user:'Du',cat:'snow',sub:'Schnee-Karte',measurement:cd.measurement,caption:cap,lat:cen.lat,lng:cen.lng,time:'gerade eben',img:photoUrl||drawPaintData||drawSaintData,likes:0,comments:0,stars:0,condition_data:cd});
     loadReportMarkers();drawFinishClose();drawClearSilent();drawClose();toast('Schnee-Karte gespeichert (Demo).','ok');return;
   }
   if(!sbUser){authShow();return;}
@@ -6446,7 +6513,9 @@ async function drawPublish(){
     const paintUrl=drawPaintData?await up(drawPaintData,'png','image/png'):null;
     const snapUrl=drawSnapData?await up(drawSnapData,'png','image/png'):null;
     cd.snapshot=snapUrl;cd.drawImage=paintUrl;
-    const row={user_id:sbUser.id,location:'POINT('+cen.lng+' '+cen.lat+')',image_url:photoUrl||snapUrl||paintUrl,
+    // the drawing is the post; the map composite stays in condition_data for
+    // sharing, but it is not what the feed shows
+    const row={user_id:sbUser.id,location:'POINT('+cen.lng+' '+cen.lat+')',image_url:photoUrl||paintUrl||snapUrl,
       primary_categories:['snow'],subtype:'Schnee-Karte',condition_data:cd,
       caption:cap,completion_score:(cap||photoUrl)?70:50,captured_at:new Date().toISOString()};
     const{error}=await sb.from('reports').insert(row);if(error)throw error;
@@ -6950,14 +7019,20 @@ function locPickerFilter(q){const list=(locPickerMode==='peak'?PEAKS:DESTS);q=(q
 function locPickerPick(i){const p=(locPickerMode==='peak'?PEAKS:DESTS)[i];
   feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:locPickerMode});locPickerClose();haptic(6);}
 const _SNAP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;vertical-align:-1px"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/></svg>';
+// A post shows what the person contributed -- their photo, their drawing --
+// not the map underneath it. The map is one tap away on the "Karte" action,
+// and that is where it belongs: live, pannable, at the right zoom.
 function feedVisual(r,col){
-  const snap=r.condition_data&&r.condition_data.snapshot;
-  if(r.img&&snap&&snap!==r.img){
+  const cd=r.condition_data||{};
+  const paint=cd.draw?(cd.drawImage||null):null;
+  if(r.img&&paint&&paint!==r.img){
     return '<div class="fc-wrap"><div class="fc-carousel" id="fcar-'+r.id+'">'+
       '<div class="fc-slide"><img src="'+r.img+'" alt="" loading="lazy" decoding="async"/></div>'+
-      '<div class="fc-slide"><img src="'+snap+'" alt="" loading="lazy" decoding="async"/><span class="fc-snap-tag">'+_SNAP_ICON+' Zeichnung auf Karte</span></div>'+
+      '<div class="fc-slide draw"><img src="'+paint+'" alt="" loading="lazy" decoding="async"/><span class="fc-snap-tag">'+_SNAP_ICON+' Zeichnung</span></div>'+
       '</div><div class="fc-dots" id="fcd-'+r.id+'"><i class="on"></i><i></i></div></div>';
   }
+  if(paint&&(!r.img||r.img===paint))
+    return '<div class="feed-card-visual draw" onclick="feedImgTap(\''+r.id+'\',event)"><img src="'+paint+'" alt="" loading="lazy" decoding="async"/></div>';
   if(r.img)return '<div class="feed-card-visual" onclick="feedImgTap(\''+r.id+'\',event)"><img src="'+r.img+'" alt="" loading="lazy" decoding="async"/></div>';
   if(r.caption)return '<div class="feed-tx" style="background:linear-gradient(150deg,'+col+'14,rgba(255,255,255,0) 75%)"><span class="feed-tx-bar" style="background:'+col+'"></span>'+escapeHtml(r.caption)+'</div>';
   return '';
@@ -6986,15 +7061,13 @@ function feedRender(){
   list.innerHTML=filtered.map(r=>{
     const col=CAT_COLORS[r.cat]||'#666';
     const bg=CAT_BG[r.cat]||'linear-gradient(135deg,#f0f0f0,#e0e0e0)';
-    // Avatars are chrome: a neutral tile with the initial, never a category hue.
-    const avatarBg='var(--ink-100)';
     const distTag=(feedAnchor&&r._km!=null)?`<span class="feed-card-dist">${r._km<1?Math.round(r._km*1000)+' m':r._km.toFixed(r._km<10?1:0)+' km'}</span>`:'';
     const canFollow=r.dbRow&&r.userId&&(!sbUser||r.userId!==sbUser.id);
     const followBtn=canFollow?`<button class="feed-follow ${myFollowing.has(r.userId)?'following':''}" onclick="toggleFollow('${r.userId}',event)">${myFollowing.has(r.userId)?'Folge ich':'Folgen'}</button>`:'';
     const endBtn=r.dbRow?`<button class="endorse-btn ${r.liked?'endorsed':''}" onclick="toggleEndorse('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> ${r.likes||0}<span class="endorse-lbl">${r.liked?'Bestätigt':'Bestätigen'}</span></button>`:'';
     return`<div class="feed-card${r.img?' photo':' text'}" id="feedcard-${r.id}" onclick="feedFlyTo(${r.lat},${r.lng})">
       <div class="feed-card-head">
-        <div class="feed-card-avatar" style="${r.avatar?`background-image:url(${r.avatar});background-size:cover;background-position:center`:`background:${avatarBg}`}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['\"<>]/g,'')}')"`:''}>${r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase())}</div>
+        <div class="feed-card-avatar" style="${r.avatar?`background-image:url(${encodeURI(r.avatar)})`:''}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['\"<>]/g,'')}')"`:''}>${r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase())}</div>
         <div class="feed-card-info">
           <span class="feed-card-user"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['"<>]/g,'')}')"`:''}>${escapeHtml(r.user)}</span>
           <span class="feed-card-loc"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> ${r.peak?escapeHtml(r.peak):(r.lat.toFixed(2)+'°N, '+r.lng.toFixed(2)+'°E')}</span>
