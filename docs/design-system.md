@@ -1,15 +1,19 @@
-# Firn — design system
+# Snowmapper — design system
 
-The visual and interaction language for **Firn** (formerly "Swiss Snow Model" /
-"Snow Mapper" — the product was renamed, the system underneath was not rebuilt).
+The visual and interaction language for **Snowmapper**.
 
-The look is **data in snow, data in stone**. Surfaces are warm bone — the colour
-of old snow in shade, and of the stock a topographic map is printed on — and the
-ink is a warm charcoal rather than a cold navy. The two accents come off the
-mountain: glacier for the forecast model, larch bark for the community one.
-Nothing in the chrome is white and nothing is sky blue. The only blues left in
-the product are the SLF snow-depth scale and the drawing pens, where blue is a
-number, not a decoration.
+The look is **an instrument for winter**, drawn in snow and stone. Surfaces are
+warm bone — the colour of old snow in shade, and of the stock a topographic map
+is printed on — and the ink is a warm charcoal rather than a cold navy. The two
+accents come off the mountain: glacier for the forecast model, larch bark for
+the community one. Nothing in the chrome is white and nothing is sky blue; the
+only blues left in the product are the SLF snow-depth scale and the drawing
+pens, where blue is a number rather than a decoration.
+
+What makes it read as an instrument and not an app is the second half: it is
+**built from rules and boxes rather than pillows and shadows**, its figures are
+tabular so columns of numbers line up, and the console leads with a **live
+readout of the conditions where you are looking** instead of with controls.
 
 The name is Swiss-German for the layer of old, granular, multi-year snow that
 sits above the firn line — the exact thing the app is trying to tell you about.
@@ -136,7 +140,7 @@ Two consequences that are easy to get wrong:
 ```
 ┌───────────────────────────────────────────┐
 │  search…                          ▏rail▕  │
-│  ⛰ Firn                                   │
+│  ⛰ Snowmapper                             │
 │                                           │
 │                 M A P                     │   the map is never boxed in
 │                                      (+)  │   primary actions, thumb-reachable
@@ -175,18 +179,21 @@ Two steps and a pill. More than that reads as noise.
 
 | token | value | use |
 |---|---|---|
-| `--r-1` (`--r`) | 14px | controls: buttons, chips, inputs, swatches |
-| `--r-2` (`--r-lg`) | 18px | surfaces: console, sheets, cards |
+| `--r-1` (`--r`) | 9px | controls: buttons, chips, inputs, swatches |
+| `--r-2` (`--r-lg`) | 13px | surfaces: console, sheets, cards |
+| `--r-sm` | 6px | keys inside a ruled panel |
 | `--r-full` | 999px | only genuinely pill-shaped things (badges, avatars) |
 
-### Elevation
+### Elevation and rules
 
 | token | use |
 |---|---|
 | `--lift` | the *only* shadow. Temporary surfaces: sheets, toasts, popovers. |
+| `--rule` | the rule that structures a panel — between its sections |
+| `--rule-soft` | the rule that divides cells *within* one section |
 
-Docked surfaces get a **hairline**, not a shadow. Nothing has more than one
-shadow. Nothing has an inset highlight.
+Docked surfaces get a **rule**, not a shadow. Nothing has more than one shadow,
+and nothing has an inset highlight. An instrument is built from lines.
 
 ### Touch targets
 
@@ -315,8 +322,15 @@ One family (system UI stack). Hierarchy by size and weight only.
 | Meta | 12.5 / 600 | timestamps, captions |
 | Micro-label | 10 / 800, `letter-spacing:.08em`, UPPERCASE, `--ink-500` | section labels in the console, form field labels |
 
-Numbers that a user compares (cm, %, °C, km/h) use
-`font-variant-numeric: tabular-nums`.
+**Every** figure in the product is tabular (`font-variant-numeric` on `body`),
+not just the ones in tables: a readout that reflows as it ticks cannot be read
+at a glance.
+
+The **micro-label** (`.lbl-micro`, `.dsh i`, `.lyf-k`) is the only uppercase in
+the product, and it is what turns a value into a reading. 9 px / 800 /
+`.11em`, `--ink-500`. In the readout it tightens to 8.5 px / `.05em`, because
+four German labels have to fit across a phone and "Schneehöhe" sets the width —
+with `line-height:1.5`, or `overflow:hidden` shaves the diaeresis off the Ö.
 
 `letter-spacing: -.01em` on 14 px and above; never on the micro-label.
 
@@ -358,33 +372,64 @@ background: var(--accent); border-color: var(--accent); color: var(--paper);
 ```
 Filled, not tinted (P6). No shadow on the selected state.
 
-### Two-axis picker (`#lyStrip` + `#lyVars`)
-The pattern for a recurring choice with a second level. One control, two axes,
-both of them real scrollers — there is nothing to open and nothing to dismiss.
-
-**Sideways — the layer.** `#lyStrip` is a run of chips inside the same
-horizontally scrolling row as the time presets, after a hairline separator. The
-live chip is filled (P6). On a change the row scrolls the **minimum** that
-brings that chip fully into view — never `scrollIntoView()`, which parks it
-against an edge and shoves the presets out of the row entirely.
-
-**Up and down — the sub-layer.** `#lyVars` is one option tall with
-`scroll-snap-type:y mandatory`; whatever ends up centred *is* the selection.
-It is `position:sticky; right:0`, so it stays reachable however far the strip
-has scrolled — which means the usable right edge for the scroll maths above is
-short by its width, or the live chip ends up "in view" but underneath it. A
-layer with a single variant hides the column rather than showing a dead one.
+### Two-axis field (`#lyField`)
+The pattern for a recurring choice with a second level. **One** control, two
+axes, no menu:
 
 ```
-[Letzter Schnee][Bis morgen] │ [Powder][Neuschnee][Schneehöhe][Wind]…  [ Max ↕ ]
-                             └──────── slides sideways ────────┘       └ sticky ┘
+┌────────────────────────────────────────────────────┐
+│ EBENE ‹ ›                            ● ● ● ● ●   ↕ │
+│ Temperatur                          Oberfläche   ▮ │
+└────────────────────────────────────────────────────┘
+   drag ⟷ layer          drag ↕ sub-layer          ▪
 ```
 
-Both are rebuilt from one entry point (`renderLayerStrip()`), because deep-zoom
-layers appear and disappear with the zoom and the two must never disagree. Order
-matters inside `setTopic()`: the render must come **after** `curVar` is
-assigned, or the sub-layer column shows the previous selection — one step behind on
-every change.
+- **Dragging across it** steps the layer; **dragging up and down** steps that
+  layer's sub-layer. One step is `LYF_STEP` (46 px) of travel and it **commits
+  as you cross it**, so the map moves with your thumb rather than waiting for
+  you to let go. That immediacy is what makes one field enough.
+- **The axis locks** on the first real movement (8 px) and stays locked for the
+  rest of the drag. Without that, a diagonal thumb changes both at once and you
+  cannot tell which gesture did what.
+- **Both axes clamp, they do not wrap.** A picker that silently loops past the
+  end is how you lose track of where you are without looking.
+- **Two dot ladders** report position: horizontal for the layer, vertical for
+  the sub-layer. They are the readout, not the control — you cannot tap a dot.
+- **A clean tap near either edge steps the layer**, so the control still works
+  for someone who has not discovered the gesture. Arrow keys and the wheel do
+  the same on a desktop; the field takes focus, and the screen router must skip
+  its arrow handling while it has it.
+- A layer with a single variant drops the whole right-hand column rather than
+  showing a dead one.
+
+It is rebuilt from one entry point (`renderLayerStrip()`), because deep-zoom
+layers appear and disappear with the zoom. Order matters inside `setTopic()`:
+the render must come **after** `curVar` is assigned, or the field shows the
+previous selection — one step behind on every change.
+
+Its own row, full width. It was tried inside the preset row as a sticky
+174 px tile and covered "Bis morgen" at rest: 274 px of presets plus the field
+does not fit across a phone, and the most central control should not be the one
+covering another.
+
+### Readout (`#dash`)
+The thing that makes the console a dashboard instead of a control panel: four
+ruled cells reporting **new snow, snow depth, wind and temperature at the centre
+of what you are looking at**, over the time window you have selected. It reads
+the same cells the inspect panel reads, and updates on pan, zoom and every
+`renderAll()`.
+
+```
+NEUSCHNEE │ SCHNEEHÖHE │ WIND   │ TEMP
+13        │ 18         │ 24     │ -1
+cm        │ cm         │ km/h   │ °C
+```
+
+Label in the micro ramp, value in the ink at 17 px, unit in `--ink-300` — the
+eye lands on the number, not on "cm". A value crossing a threshold that changes
+a decision takes the accent (`.hot`): 10 cm of new snow, 40 km/h of wind. Two
+thresholds, both meaningful; a readout where everything lights up reports
+nothing.
 
 ### Button
 - **Primary** — `--ink-900` fill, `--paper` text. One per screen.
@@ -411,7 +456,7 @@ Docks to the bottom edge, `--r-2` on the top corners only, grab handle
 only — **no emoji anywhere in the UI**.
 
 ### Brand mark (`#brandMark`)
-The twin-peak glyph + "Firn", in the same stroke-icon language as everything
+The twin-peak glyph + "Snowmapper", in the same stroke-icon language as everything
 else — it is not a logo lockup with its own rules. `pointer-events:none`: it is
 not a button and does not open anything. It sits in the strip above the search
 bar, chained below the search field and the demo pill via `positionSearch()` so
@@ -441,7 +486,7 @@ wrapped by `prefers-reduced-motion`.
 |---|---|
 | **Launcher** | Startup only. Bone field with faint contour lines, the mark, and three rows — one per screen. No chrome, no map, no data, and no way back to it. |
 | **Search (map)** | Full bleed. Abstract at country view, detail fading in with zoom. Layer bar at the top edge, chrome docked to edges only, brand mark chained below the search field. |
-| **Console** | One surface: the window label, then one scrolling row holding the time presets *and* the layer field, then the scrubber. The prognosis row appears only when the live layer has one. |
+| **Console** | One surface, read top to bottom as *what* → *which layer* → *when*: the window label, the four-cell readout, the two-axis layer field, the time presets, the scrubber. The prognosis row appears only when the live layer has one. |
 | **Report** | The two ways in — draw a snow map, or file an observation — as two large rows on the page. No wizard chrome until one is chosen. |
 | **Feed** | `--card` cards on `--page`, hairline separated, photo full-bleed inside the card. Action row is quiet buttons; only counts are dark. |
 | **Sheets** (comments, profile, condition, location) | Identical sheet recipe, inheriting whatever accent is currently live. |
