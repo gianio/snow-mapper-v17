@@ -709,9 +709,9 @@ _BOOT_SPLIT = r"""<script>
 </script>"""
 
 
-def _firn_icon(size: int) -> Image.Image:
-    """The Firn mark: a twin-peak silhouette (the firn line runs along a
-    ridge), white on ink-900, matching the in-app brand glyph exactly."""
+def _brand_icon(size: int) -> Image.Image:
+    """The Snowmapper mark: a twin-peak silhouette, white on ink-900, matching
+    the in-app brand glyph exactly."""
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     rad = int(size * 0.22)
@@ -727,19 +727,19 @@ def _write_pwa_assets(out_dir: Path) -> None:
     installable (Add to Home Screen) and loads offline with the last data."""
     for px, name in [(180, "icon-180.png"), (192, "icon-192.png"), (512, "icon-512.png")]:
         try:
-            _firn_icon(px).save(out_dir / name)
+            _brand_icon(px).save(out_dir / name)
         except Exception:  # icon is cosmetic; never fail the build over it
             pass
     manifest = {
-        "name": "Firn",
-        "short_name": "Firn",
+        "name": "Snowmapper",
+        "short_name": "Snowmapper",
         "start_url": "./",
         "scope": "./",
         "display": "standalone",
         "orientation": "portrait",
         "background_color": "#ffffff",
         "theme_color": "#ffffff",
-        "description": "Firn — interaktive Neuschnee-, Pulver- und Skitauglichkeits-Karte für die Schweiz.",
+        "description": "Snowmapper — interaktive Neuschnee-, Pulver- und Skitauglichkeits-Karte für die Schweiz.",
         "icons": [
             {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
             {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
@@ -750,7 +750,7 @@ def _write_pwa_assets(out_dir: Path) -> None:
     (out_dir / "sw.js").write_text(_SERVICE_WORKER, encoding="utf-8")
 
 
-_SERVICE_WORKER = r"""// Firn — service worker (installable + offline last-data).
+_SERVICE_WORKER = r"""// Snowmapper — service worker (installable + offline last-data).
 // Network-first for all same-origin GETs (shell, app.js, data blob, icons) so
 // online users always get the latest, and offline falls back to the last cache.
 const C='ssm-v6';
@@ -786,7 +786,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="theme-color" content="#ffffff"/>
 <meta name="mobile-web-app-capable" content="yes"/>
-<title>Firn</title>
+<title>Snowmapper</title>
 <link rel="icon" type="image/png" href="icon-192.png"/>
 <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,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"/>
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -831,7 +831,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     Nothing outside this block may declare a raw colour for chrome.
     =================================================================== */
  :root{
-   /* ===== Firn: data in snow, data in stone ============================
+   /* ===== Snowmapper: data in snow, data in stone ======================
       Warm bone paper -- old snow in shade, and the stock a topographic map
       is printed on -- with warm charcoal ink instead of a cold navy. The two
       model accents are taken off the mountain: glacier for the forecast
@@ -844,12 +844,16 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    --bd:rgba(33,30,25,.13);
    --glass:rgba(246,243,237,.84);--glass2:rgba(250,248,244,.93);
    --glow:rgba(29,106,106,.13);
-   --panel-h:52px;--r:14px;--r-lg:18px;
-   --blur:blur(22px) saturate(1.25);
-   /* shadows carry the paper's warmth, so nothing greys out on the bone */
-   --elev1:0 1px 3px rgba(33,30,25,.07);
-   --elev2:0 6px 20px rgba(33,30,25,.10);
-   --elev3:0 10px 34px rgba(33,30,25,.13);
+   /* An instrument is drawn with rules and boxes, not pillows: the corners
+      come in, the shadows flatten, and structure is carried by hairlines. */
+   --panel-h:52px;--r:9px;--r-lg:13px;
+   --blur:blur(20px) saturate(1.2);
+   --elev1:0 1px 2px rgba(33,30,25,.06);
+   --elev2:0 3px 12px rgba(33,30,25,.09);
+   --elev3:0 8px 28px rgba(33,30,25,.13);
+   /* the rule that structures a panel, and the one that separates its cells */
+   --rule:1px solid rgba(33,30,25,.13);
+   --rule-soft:1px solid rgba(33,30,25,.07);
 
    /* --- the newer component names, derived so nothing drifts apart --- */
    --ink-900:var(--fg);--ink-700:var(--fg2);--ink-500:var(--mut);
@@ -861,7 +865,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    --ok:#4A7A3F;--warn:#C08A2E;--danger:#A83A2E;--danger-tint:rgba(168,58,46,.11);
    --sp1:4px;--sp2:8px;--sp3:12px;--sp4:16px;--sp5:24px;--sp6:32px;
    --r-1:var(--r);--r-2:var(--r-lg);--r-full:999px;
-   --r-sm:10px;--r-xl:var(--r-lg);
+   --r-sm:6px;--r-xl:var(--r-lg);
    --lift:var(--elev3);
    --dur-1:.12s;--dur-2:.22s;--ease:cubic-bezier(.4,0,.2,1);
    --dur:.22s;--ease-spring:cubic-bezier(.34,1.4,.64,1);
@@ -884,6 +888,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
      backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--paper)}}
  /* One palette. The app is read outdoors in snow glare against a light map,
     so the chrome is light too — there is no dark variant to drift out of sync. */
+ /* An instrument reads in columns, so every figure is tabular and never
+    reflows as it ticks. */
+ body{font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1,'cv05' 1}
+ /* the micro-label: the only uppercase in the product, and the thing that
+    turns a value into a reading */
+ .lbl-micro,.dsh i,.lyf-k{font-size:9px;font-weight:800;letter-spacing:.11em;
+   text-transform:uppercase;color:var(--ink-500)}
  /* P5: numbers a user compares are tabular so columns line up */
  .num,.snow-val,#tlLenVal,#progConfVal,#drawDepthVVal,#drawBrushVVal,.insp-chip,.tl-range{font-variant-numeric:tabular-nums}
  /* Micro-label (section labels, field labels) */
@@ -1079,28 +1090,42 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     column on its right slides up and down for that layer's sub-layer. Both
     are real scrollers, so the gesture is the choice -- nothing to confirm.
     -------------------------------------------------------------------- */
- .ps-sep{flex:0 0 auto;width:1px;align-self:stretch;margin:4px 3px;background:var(--bd)}
- #lyStrip{flex:0 0 auto;display:flex;gap:5px}
- .ly-chip{flex:0 0 auto;min-height:var(--tap-sm);padding:0 13px;border-radius:var(--r-1);
-   border:1px solid var(--bd);background:var(--paper);color:var(--ink-700);
-   font-family:inherit;font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer;
-   transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease)}
- .ly-chip.on{background:var(--accent);border-color:var(--accent);color:var(--paper)}
- .ly-chip:active{transform:scale(.97)}
- /* the sub-layer column: one option tall, the rest a slide away. It sticks to
-    the right edge so it stays reachable however far the strip is scrolled. */
- #lyVars{flex:0 0 auto;display:none;position:sticky;right:0;z-index:2;
-   width:96px;height:var(--tap-sm);overflow-y:auto;overflow-x:hidden;
-   scroll-snap-type:y mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;
-   border:1px solid var(--bd);border-radius:var(--r-1);background:var(--fill);
-   box-shadow:inset 0 -6px 6px -6px rgba(33,30,25,.18),inset 0 6px 6px -6px rgba(33,30,25,.18)}
- #lyVars.on{display:block}
- #lyVars::-webkit-scrollbar{display:none}
- .ly-opt{display:flex;align-items:center;justify-content:center;
-   height:var(--tap-sm);scroll-snap-align:center;padding:0 8px;
-   font-size:12.5px;font-weight:700;color:var(--ink-500);white-space:nowrap;cursor:pointer;
-   transition:color var(--dur-1) var(--ease)}
- .ly-opt.on{color:var(--accent)}
+ .ps-sep{flex:0 0 auto;width:1px;align-self:stretch;margin:2px 4px;background:var(--bd)}
+ #presets{align-items:stretch;padding-bottom:2px}
+ #presets>button{border-radius:var(--r-sm)!important}
+ /* ONE field. The dot ladder along the top says where you are among the
+    layers, the one down the right says where you are among that layer's
+    sub-layers, and dragging the field itself is what moves either. */
+ #lyField{margin:0 -14px;padding:6px 14px 8px;
+   display:grid;grid-template-columns:1fr auto auto;grid-template-rows:auto auto;
+   align-items:center;column-gap:12px;row-gap:1px;
+   border-bottom:var(--rule);background:var(--card);
+   cursor:grab;touch-action:none;overflow:hidden;font-family:inherit;
+   user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
+   transition:background var(--dur-1) var(--ease)}
+ #lyField:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--accent)}
+ #lyField.drag{cursor:grabbing;background:var(--fill)}
+ .lyf-k{grid-column:1;grid-row:1;display:flex;align-items:center;gap:5px;
+   font-size:9px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-500)}
+ .lyf-ax::before{content:'\2039\2003\203A';letter-spacing:0;font-size:10px;font-style:normal;color:var(--ink-300)}
+ .lyf-dots{grid-column:2/span 2;grid-row:1;display:flex;gap:4px;align-items:center;justify-self:end}
+ .lyf-dots i{width:4px;height:4px;border-radius:50%;background:var(--ink-150);transition:.16s var(--ease)}
+ .lyf-dots i.on{width:12px;border-radius:2px;background:var(--accent)}
+ .lyf-name{grid-column:1;grid-row:2;font-size:19px;font-weight:800;letter-spacing:-.02em;
+   color:var(--ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .lyf-var{grid-column:2;grid-row:2;display:none;font-size:13px;font-weight:800;color:var(--accent);
+   white-space:nowrap;justify-self:end}
+ #lyField.has-var .lyf-var{display:block}
+ .lyf-lad{grid-column:3;grid-row:1/span 2;display:none;flex-direction:column;align-items:center;gap:3px}
+ #lyField.has-var .lyf-lad{display:flex}
+ .lyf-lad::before{content:'\2195';font-size:9px;color:var(--ink-300);margin-bottom:1px}
+ /* nothing to choose on this layer: the right-hand column simply is not there */
+ #lyField:not(.has-var) .lyf-name{grid-column:1/span 2}
+ .lyf-lad i{width:4px;height:4px;border-radius:50%;background:var(--ink-150);transition:.16s var(--ease)}
+ .lyf-lad i.on{height:11px;border-radius:2px;background:var(--accent)}
+ /* the axis the drag locked onto is the one that lights up */
+ #lyField[data-ax="x"] .lyf-dots i.on{box-shadow:0 0 0 3px var(--accent-soft)}
+ #lyField[data-ax="y"] .lyf-lad i.on{box-shadow:0 0 0 3px var(--accent-soft)}
  /* --- The console: time controls; the layer field rides with the presets --- */
 
  #layerBar{--topic-accent:var(--accent);--topic-tint:var(--accent-soft)}
@@ -1133,8 +1158,24 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #timeline{display:block;border:1px solid var(--ink-100);background:var(--ink-050);border-radius:var(--r-1)}
  #presets::-webkit-scrollbar{display:none}
  #presets.can-scroll{-webkit-mask-image:linear-gradient(90deg,#000 86%,transparent);mask-image:linear-gradient(90deg,#000 86%,transparent)}
- .winlbl{font-size:13px;font-weight:700;color:var(--fg);letter-spacing:-.01em}
+ .winlbl{font-size:11px;font-weight:800;color:var(--ink-500);letter-spacing:.09em;text-transform:uppercase}
  #tlHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:10px}
+ /* The readout. Four cells divided by rules, values in the ink and units in
+    the muted ramp, so the eye lands on the number and not on "cm". */
+ #dash{display:grid;grid-template-columns:repeat(4,1fr);
+   border-top:var(--rule);border-bottom:var(--rule);margin:0 -14px 6px;
+   background:var(--card)}
+ .dsh{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+   gap:1px;padding:6px 10px 7px;border-left:var(--rule-soft);min-width:0}
+ .dsh:first-child{border-left:none}
+ /* four labels have to fit across a phone, so this ramp is tighter than the
+    micro-label elsewhere -- "Schneehöhe" is the one that sets the width */
+ .dsh i{font-style:normal;font-size:8.5px;letter-spacing:.05em;line-height:1.5;
+   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+ .dsh b{font-size:17px;font-weight:800;line-height:1.05;color:var(--ink-900);letter-spacing:-.02em}
+ .dsh em{font-style:normal;font-size:9.5px;font-weight:700;color:var(--ink-300);margin-top:-1px}
+ .dsh.hot b{color:var(--accent)}
+ body.draw-on #dash{display:none}
  #tlModeToggle{display:none!important}
  #tlModeToggleOFF{display:inline-flex;background:rgba(0,0,0,.05);border-radius:999px;padding:3px;flex-shrink:0}
  #tlModeToggle button{border:none;background:none;padding:5px 13px;border-radius:999px;font-size:12px;font-weight:600;color:var(--mut);cursor:pointer;font-family:inherit;transition:.15s}
@@ -1276,6 +1317,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     the opposite one instead of stacking under them */
  .leaflet-control-scale{position:fixed!important;left:12px!important;right:auto!important;
    bottom:calc(var(--btm-h,0px) + 62px)!important;margin:0!important;z-index:800}
+ .leaflet-control-scale,.leaflet-control-attribution{left:48px!important}
  /* the attribution shares the quiet left edge instead of the FAB corner */
  .leaflet-control-attribution{position:fixed!important;left:12px!important;right:auto!important;
    bottom:calc(var(--btm-h,0px) + 44px)!important;margin:0!important;z-index:800;
@@ -2193,8 +2235,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="disc"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="discH"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><h2 id="discH">Bevor du startest</h2><p><b>Experimentelle Modelldaten.</b> Diese App zeigt modellierte Schnee-, Pulver- und Skitauglichkeits-Sch&auml;tzungen. Sie ist <b>kein Lawinenbulletin</b> und ersetzt nicht die offizielle Beurteilung des <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation.html" target="_blank" rel="noopener">SLF</a> bzw. <a href="https://whiterisk.ch" target="_blank" rel="noopener">White Risk</a>. Entscheidungen im Gel&auml;nde triffst du auf <b>eigenes Risiko</b>.</p><p class="fine">Datenschutz: F&uuml;r Konto, Meldungen und Fotos werden E-Mail, Standort und Bilddaten bei Supabase (EU) gespeichert. Du kannst Konto und Beitr&auml;ge jederzeit l&ouml;schen.</p><label class="chk"><input type="checkbox" id="discChk" onchange="var b=document.getElementById('discBtn');if(b)b.disabled=!this.checked"><span>Ich habe verstanden, dass dies experimentelle Daten sind und kein Lawinenbulletin ersetzt.</span></label><button class="accept" id="discBtn" disabled onclick="acceptDisc()">Verstanden &ndash; loslegen</button></div></div>
 <div id="a2hs" onclick="if(event.target===this)a2hsLater()"><div class="sheet" role="dialog" aria-modal="true">
   <div class="a2hs-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="4.2" y1="7.5" x2="19.8" y2="16.5"/><line x1="4.2" y1="16.5" x2="19.8" y2="7.5"/></svg></div>
-  <h2>Firn aufs Home-Screen</h2>
-  <p>Als App installiert läuft Firn im Vollbild (randlos), startet offline mit den letzten Daten und ist einen Fingertipp entfernt.</p>
+  <h2>Snowmapper aufs Home-Screen</h2>
+  <p>Als App installiert läuft Snowmapper im Vollbild (randlos), startet offline mit den letzten Daten und ist einen Fingertipp entfernt.</p>
   <div id="a2hsIos" style="display:none">
     <div class="a2hs-step"><span class="n">1</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg><span>Tippe unten auf das <b>Teilen</b>-Symbol</span></div>
     <div class="a2hs-step"><span class="n">2</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Wähle <b>Zum Home-Bildschirm</b></span></div>
@@ -2210,7 +2252,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div class="si-ridge" aria-hidden="true"></div>
   <div class="si-head">
     <svg class="si-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L10 6L13.5 12L15 9L21 19Z"/><path d="M8.6 11.4h2.8"/></svg>
-    <h1>Firn</h1>
+    <h1>Snowmapper</h1>
     <p>Schnee, Pulver und Verhältnisse in der Schweiz.</p>
   </div>
   <nav class="si-grid">
@@ -2243,7 +2285,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
      install) -- not in new chrome competing with the map. -->
 <button id="brandMark" class="pt-home" onclick="scrGo('search')" aria-label="Zur Karte">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L10 6L13.5 12L15 9L21 19Z"/><path d="M8.6 11.4h2.8"/></svg>
-  <span>Firn</span>
+  <span>Snowmapper</span>
 </button>
 <div id="searchWrap"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Ort suchen…" autocomplete="off"/><div id="searchRes"></div></div>
 <div id="ctrlRail">
@@ -2271,14 +2313,26 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         <button data-m="detail" class="active">Detail</button>
       </div>
     </div>
+    <!-- The dashboard proper: what it is doing where you are looking, right
+         now, in the window you have selected. Updates on pan, zoom and time. -->
+    <div id="dash" aria-live="polite" aria-label="Verhältnisse in der Kartenmitte">
+      <div class="dsh"><i>Neuschnee</i><b id="dshSnow">–</b><em>cm</em></div>
+      <div class="dsh"><i>Schneehöhe</i><b id="dshDepth">–</b><em>cm</em></div>
+      <div class="dsh"><i>Wind</i><b id="dshWind">–</b><em>km/h</em></div>
+      <div class="dsh"><i>Temp</i><b id="dshTemp">–</b><em>°C</em></div>
+    </div>
+    <!-- ONE field, two axes: slide sideways for the layer, up and down for
+         its sub-layer. Nothing opens and nothing has to be dismissed. -->
+    <div id="lyField" tabindex="0" role="group" aria-label="Ebene">
+      <span class="lyf-k">Ebene<i class="lyf-ax" aria-hidden="true"></i></span>
+      <span class="lyf-dots" aria-hidden="true"></span>
+      <b class="lyf-name">—</b>
+      <span class="lyf-var"></span>
+      <span class="lyf-lad" aria-hidden="true"></span>
+    </div>
     <div class="seg" id="presets" style="gap:5px;margin-top:2px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch">
       <button id="btnSinceSnow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><path d="M12 2v20M4.2 6.5l15.6 11M4.2 17.5l15.6-11"/></svg>Letzter Schnee</button>
       <button data-r="tomorrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>Bis morgen</button>
-      <!-- the layer field: slide sideways for the layer, up and down for the
-           sub-layer. It rides at the end of the same row as the presets. -->
-      <span class="ps-sep" aria-hidden="true"></span>
-      <span id="lyStrip" role="group" aria-label="Ebene"></span>
-      <span id="lyVars" role="group" aria-label="Unterebene" onscroll="lyVarsScrolled()"></span>
     </div>
     <div id="tlDetail">
       <canvas id="timeline" width="900" height="94" style="width:100%;height:94px;border-radius:10px;cursor:default;margin-top:8px"></canvas>
@@ -2300,7 +2354,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <!-- ===================== Pane: Report ================================== -->
 <section class="pane" id="paneReport" aria-label="Melden">
   <div class="pane-top">
-    <button class="pt-home" onclick="scrGo('search')" aria-label="Zur Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L10 6L13.5 12L15 9L21 19Z"/><path d="M8.6 11.4h2.8"/></svg><span>Firn</span></button>
+    <button class="pt-home" onclick="scrGo('search')" aria-label="Zur Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L10 6L13.5 12L15 9L21 19Z"/><path d="M8.6 11.4h2.8"/></svg><span>Snowmapper</span></button>
     <button class="pt-acc" onclick="accountTap()" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg></button>
   </div>
   <div class="rp-body">
@@ -2377,7 +2431,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="bio-lock" id="bioLock" style="display:none">
   <div class="bio-lock-card">
     <div class="auth-bio-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10a3 3 0 0 1 6 0M8.5 15.5c1 1 5 1 7 0M12 10v3.5"/></svg></div>
-    <div class="bio-lock-t">Firn</div>
+    <div class="bio-lock-t">Snowmapper</div>
     <div class="bio-lock-s">Entsperre mit <b id="bioLockName">Biometrie</b></div>
     <button class="auth-btn primary" onclick="haptic(6);bioUnlock()">Mit <span id="bioLockName2">Face ID</span> entsperren</button>
     <button class="bio-lock-out" onclick="bioSignOut()">Abmelden</button>
@@ -3788,7 +3842,8 @@ function showOverlay(){
   else if(layer=="progpat"){map.addLayer(prognosisOverlay);renderProgPattern(stat);}
   if(layer=="wind"){map.addLayer(windArr);startFlow();}else{map.removeLayer(windArr);stopFlow();}
 }
-function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefresh();if(tlMode==='detail')drawTimeline();
+function renderAll(){
+  try{dashUpdate();}catch(e){}showOverlay();renderRaster();renderStations();inspAutoRefresh();if(tlMode==='detail')drawTimeline();
   if(layer=="rad"||layer=="radsun")renderRadiation();
   if(layer=="wind"){buildFlow();if(wtimer)clearTimeout(wtimer);wtimer=setTimeout(renderWind,120);}
   document.getElementById('window').innerHTML=`${b-a}h Fenster`;syncTl();legend();}
@@ -3886,71 +3941,98 @@ function setTopic(t,itemIdx,varIdx){
   const sel=vars[curVar];layer=sel.l;stat=sel.s;renderAll();progRenderBar();
   if(typeof panelRestore==='function')requestAnimationFrame(()=>{try{panelRestore();}catch(e){}});
 }
-// ===================== The layer field, in the console ====================
-// Two axes, one control. Sliding it sideways picks the layer; sliding the
-// column on its right picks that layer's sub-layer. It sits at the end of the
-// preset row rather than over the map, because on a phone anything floating
-// top-left lands on the search field.
+// ===================== One field, two axes ================================
+// Every layer and every sub-layer behind a single control. Dragging across it
+// steps the layer; dragging up and down steps that layer's sub-layer. The step
+// commits the moment you cross it, so the map moves with your thumb instead of
+// waiting for you to let go -- which is what makes one field enough.
+const LYF_STEP=46;                       // px of travel per step
+function lyLayers(){const out=[];
+  menuGroups().forEach(g=>groupItems(g).forEach((it,i)=>out.push([g,i,it])));return out;}
+function lyIndex(){const L=lyLayers();
+  for(let i=0;i<L.length;i++)if(L[i][0]===curTopic&&L[i][1]===curItem)return i;
+  return 0;}
+// Both axes clamp rather than wrap: a picker that silently loops past the end
+// is how you lose track of where you are without looking.
+function lyStep(axis,d){
+  if(!d)return false;
+  if(axis==='x'){const L=lyLayers();
+    const i=Math.max(0,Math.min(L.length-1,lyIndex()+d)),t=L[i];
+    if(!t||(t[0]===curTopic&&t[1]===curItem))return false;
+    setTopic(t[0],t[1],0);}
+  else{const it=groupItems(curTopic)[curItem],n=(it&&it.vars.length)||1;
+    const v=Math.max(0,Math.min(n-1,curVar+d));
+    if(v===curVar)return false;
+    setTopic(curTopic,curItem,v);}
+  try{haptic(3);}catch(e){}
+  return true;
+}
 function lyRender(){
-  const strip=document.getElementById('lyStrip');if(!strip)return;
-  const cells=[];
-  menuGroups().forEach(g=>groupItems(g).forEach((it,i)=>cells.push([g,i,it])));
-  strip.innerHTML=cells.map(([g,i,it])=>'<button class="ly-chip'+
-    ((g===curTopic&&i===curItem)?' on':'')+'" data-g="'+g+'" data-i="'+i+'">'+it.label+'</button>').join('');
-  strip.querySelectorAll('.ly-chip').forEach(b=>b.onclick=()=>{
-    setTopic(b.dataset.g,parseInt(b.dataset.i),0);try{haptic(4);}catch(e){}});
-  // Scroll the minimum that brings the live chip fully into view -- never
-  // more. scrollIntoView() would park it against an edge and shove the time
-  // presets out of the row entirely; both belong to the same strip and both
-  // should stay at least partly visible.
-  const on=strip.querySelector('.ly-chip.on');
-  if(on)requestAnimationFrame(()=>{try{
-    const row=document.getElementById('presets');
-    const vb=document.getElementById('lyVars');
-    // the sub-layer column is sticky, so the usable right edge is short by its
-    // width -- otherwise the live chip is "in view" but sitting under it
-    const vw=(vb&&vb.classList.contains('on'))?vb.getBoundingClientRect().width:0;
-    const cr=row.getBoundingClientRect(),br=on.getBoundingClientRect(),pad=8;
-    const right=cr.right-vw-pad,left=cr.left+pad;
-    let d=0;
-    if(br.right>right)d=br.right-right;
-    else if(br.left<left)d=br.left-left;
-    if(d)row.scrollBy({left:d,behavior:'smooth'});}catch(e){}});
-  lyVarsRender();
+  const f=document.getElementById('lyField');if(!f)return;
+  const L=lyLayers(),i=lyIndex(),it=L[i]&&L[i][2],vars=(it&&it.vars)||[];
+  f.querySelector('.lyf-dots').innerHTML=L.map((_,k)=>'<i'+(k===i?' class="on"':'')+'></i>').join('');
+  f.querySelector('.lyf-name').textContent=it?it.label:'\u2014';
+  const many=vars.length>1;
+  f.classList.toggle('has-var',many);
+  f.querySelector('.lyf-var').textContent=many?vars[curVar].label:'';
+  f.querySelector('.lyf-lad').innerHTML=many
+    ? vars.map((_,k)=>'<i'+(k===curVar?' class="on"':'')+'></i>').join('') : '';
+  f.setAttribute('aria-label','Ebene '+(it?it.label:'')+(many?(', Unterebene '+vars[curVar].label):''));
 }
-// The sub-layer column: one option tall, the rest reachable by sliding it up
-// and down. Whatever ends up centred is the selection, so the gesture itself
-// is the choice -- there is nothing extra to confirm.
-let _lyScrollT=null;
-function lyVarsRender(){
-  const box=document.getElementById('lyVars');if(!box)return;
-  const it=groupItems(curTopic)[curItem];
-  const vars=(it&&it.vars)||[];
-  if(vars.length<2){box.innerHTML='';box.classList.remove('on');return;}
-  box.classList.add('on');
-  box.innerHTML=vars.map((v,i)=>'<span class="ly-opt'+(i===curVar?' on':'')+'" data-i="'+i+'">'+v.label+'</span>').join('');
-  const opts=box.querySelectorAll('.ly-opt');
-  opts.forEach(o=>o.onclick=()=>setTopic(curTopic,curItem,parseInt(o.dataset.i)));
-  // park the live option in the middle without firing the scroll handler
-  box._lock=1;
-  requestAnimationFrame(()=>{try{box.scrollTop=curVar*box.clientHeight;}catch(e){}
-    setTimeout(()=>{box._lock=0;},120);});
-}
-function lyVarsScrolled(){
-  const box=document.getElementById('lyVars');if(!box||box._lock)return;
-  clearTimeout(_lyScrollT);
-  _lyScrollT=setTimeout(()=>{
-    const h=box.clientHeight||1,i=Math.round(box.scrollTop/h);
-    const it=groupItems(curTopic)[curItem],vars=(it&&it.vars)||[];
-    if(i!==curVar&&i>=0&&i<vars.length){setTopic(curTopic,curItem,i);try{haptic(3);}catch(e){}}
-  },140);
-}
-// Deep-zoom layers appear and disappear with the zoom, so the strip is rebuilt
+(function(){
+  let on=false,ax=null,x0=0,y0=0,bx=0,by=0,moved=0;
+  const fld=()=>document.getElementById('lyField');
+  function down(e){const f=fld();if(!f)return;
+    on=true;ax=null;moved=0;x0=bx=e.clientX;y0=by=e.clientY;
+    try{f.setPointerCapture(e.pointerId);}catch(_){}
+    f.classList.add('drag');}
+  function move(e){
+    if(!on)return;const f=fld();if(!f)return;
+    const dx=e.clientX-x0,dy=e.clientY-y0;
+    moved=Math.max(moved,Math.abs(dx),Math.abs(dy));
+    if(!ax){
+      if(Math.max(Math.abs(dx),Math.abs(dy))<8)return;
+      // the axis locks on the first real movement and stays locked for the
+      // rest of the drag -- otherwise a diagonal thumb changes both at once
+      ax=Math.abs(dx)>Math.abs(dy)?'x':'y';
+      f.setAttribute('data-ax',ax);}
+    const cur=ax==='x'?e.clientX:e.clientY,base=ax==='x'?bx:by;
+    const n=Math.trunc((cur-base)/LYF_STEP);
+    if(n){lyStep(ax,n);if(ax==='x')bx+=n*LYF_STEP;else by+=n*LYF_STEP;}
+    if(e.cancelable)e.preventDefault();}
+  function up(e){
+    if(!on)return;on=false;const f=fld();
+    if(f){f.classList.remove('drag');f.removeAttribute('data-ax');}
+    // A clean tap near an edge steps the layer, so the control still works for
+    // someone who has not discovered the gesture yet.
+    if(!ax&&moved<6&&f){const r=f.getBoundingClientRect(),x=e.clientX-r.left;
+      if(x<r.width*0.28)lyStep('x',-1);else if(x>r.width*0.72)lyStep('x',1);}
+    ax=null;}
+  addEventListener('pointerdown',e=>{
+    if(e.target&&e.target.closest&&e.target.closest('#lyField'))down(e);});
+  addEventListener('pointermove',move,{passive:false});
+  addEventListener('pointerup',up);addEventListener('pointercancel',up);
+  addEventListener('wheel',e=>{
+    if(!(e.target&&e.target.closest&&e.target.closest('#lyField')))return;
+    if(e.cancelable)e.preventDefault();
+    if(Math.abs(e.deltaX)>Math.abs(e.deltaY))lyStep('x',e.deltaX>0?1:-1);
+    else lyStep('y',e.deltaY>0?1:-1);},{passive:false});
+  addEventListener('keydown',e=>{
+    const f=document.getElementById('lyField');
+    if(!f||document.activeElement!==f)return;
+    if(e.key==='ArrowRight')lyStep('x',1);
+    else if(e.key==='ArrowLeft')lyStep('x',-1);
+    else if(e.key==='ArrowDown')lyStep('y',1);
+    else if(e.key==='ArrowUp')lyStep('y',-1);
+    else return;
+    e.preventDefault();e.stopPropagation();});
+})();
+// Deep-zoom layers appear and disappear with the zoom, so the field is rebuilt
 // from the same entry point the rest of the app already calls.
 function renderLayerStrip(){try{lyRender();}catch(e){}}
 // Deep-zoom items appear/disappear as the user zooms, so keep the row in sync.
 map.on('zoomend',function(){try{
-  const shown=document.querySelectorAll('#lyStrip .ly-chip').length;
+  const shown=lyLayers().length;
   const want=Object.keys(GROUPS).reduce((n,g)=>n+groupItems(g).length,0);
   if(shown!==want)setTopic(curTopic,Math.min(curItem,groupItems(curTopic).length-1),curVar);}catch(e){}});
 
@@ -3976,6 +4058,28 @@ function progRenderBar(){
 }
 // Nothing floats above the search field any more, so it takes the top edge and
 // the demo pill and brand mark chain off its measured bottom.
+// The readout: the same cells the inspect panel reads, at the centre of what
+// you are looking at, over the window you have selected. It is the difference
+// between a map with controls and an instrument.
+function dashUpdate(){try{
+  const c=map.getCenter();
+  const cx=Math.round((c.lng-loMin)/(loMax-loMin)*(W-1)),
+        cy=Math.round((laMax-c.lat)/(laMax-laMin)*(H-1));
+  const set=(id,v,hot)=>{const e=document.getElementById(id);if(!e)return;
+    e.textContent=(v==null||!isFinite(v))?'\u2013':v;
+    e.parentNode.classList.toggle('hot',!!hot);};
+  if(cx<0||cx>=W||cy<0||cy>=H){
+    ['dshSnow','dshDepth','dshWind','dshTemp'].forEach(id=>set(id,null,false));return;}
+  const pt=cy*W+cx,wk=mainToWind[pt];
+  const nw=cum[b*NP+pt]-cum[a*NP+pt],dp=cum[b*NP+pt];
+  let ws=0;for(let t=a;t<b;t++)ws+=SPD[t*P+wk]/M.spd_mul*3.6;
+  const wm=ws/Math.max(1,b-a);
+  let ts=0,tn=0;for(let t=a;t<b;t++){const v=tv(t,pt);if(v!=null&&isFinite(v)){ts+=v;tn++;}}
+  set('dshSnow',Math.round(nw),nw>=10);          // 10 cm is where it starts to matter
+  set('dshDepth',Math.round(dp),false);
+  set('dshWind',Math.round(wm),wm>=40);          // above 40 km/h you get drifting
+  set('dshTemp',tn?Math.round(ts/tn):null,false);
+}catch(e){}}
 function positionSearch(){try{
   var sw=document.getElementById('searchWrap');if(!sw)return;
   sw.style.top='calc(env(safe-area-inset-top,0px) + 12px)';
@@ -3986,6 +4090,8 @@ function positionSearch(){try{
   if(bm)bm.style.top=(bottom+14)+'px';
 }catch(e){}}
 addEventListener('resize',positionSearch);requestAnimationFrame(positionSearch);
+map.on('moveend zoomend',()=>{try{dashUpdate();}catch(e){}});
+requestAnimationFrame(()=>{try{dashUpdate();}catch(e){}});
 function presetsFade(){const p=document.getElementById('presets');if(!p)return;p.classList.toggle('can-scroll',p.scrollWidth-p.clientWidth-p.scrollLeft>4);}
 (function(){const p=document.getElementById('presets');if(p)p.addEventListener('scroll',presetsFade,{passive:true});addEventListener('resize',presetsFade);requestAnimationFrame(presetsFade);})();
 function clearPresets(){document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('active'));}
@@ -4140,6 +4246,7 @@ function scrPrev(){scrGoTo(scrIdx-1);}
   addEventListener('keydown',e=>{
     if(document.body.classList.contains('scr-home'))return;
     if(/^(INPUT|TEXTAREA|SELECT)$/.test((e.target&&e.target.tagName)||''))return;
+    if(document.activeElement&&document.activeElement.id==='lyField')return;
     if(e.key==='ArrowRight')scrNext();else if(e.key==='ArrowLeft')scrPrev();});
 })();
 // --- Bottom panel: expand / collapse by tapping the handle (no swipe) ---
@@ -4481,7 +4588,7 @@ function dismissIntro(){try{if(window.__bootDone)window.__bootDone();}catch(e){}
 // These pointed at the old floating layer card, which no longer exists — they
 // now walk the one-screen console.
 const COACH_STEPS=[
-  {sel:'#lyStrip',html:'<b>Ebenen.</b><br>Die wichtigsten liegen oben auf der Karte — <b>Alle</b> öffnet die ganze Liste.'},
+  {sel:'#lyField',html:'<b>Ebenen.</b><br>Wische seitlich für die Ebene, hoch und runter für die Unterebene.'},
   {sel:'#btmMain',html:'<b>Zeitfenster.</b><br>Wähle den Zeitraum – die Karte rechnet sofort neu.'},
   {sel:'#searchWrap',html:'<b>Spring zu einem Ort.</b><br>Suche einen Berg oder Ort und zoome direkt dorthin.'},
   {sel:'#edgeR',html:'<b>Wisch dich durch.</b><br>Nach rechts geht es zu <b>Report</b>, nach links zum <b>Feed</b> – oder tippe auf die Laschen am Rand.'},
@@ -5301,7 +5408,7 @@ function bioEnabledFor(uid){try{return !!localStorage.getItem('ssm_bio_'+uid);}c
 async function bioEnroll(uid,email){
   const challenge=crypto.getRandomValues(new Uint8Array(32));
   const cred=await navigator.credentials.create({publicKey:{
-    challenge,rp:{name:'Firn',id:location.hostname},
+    challenge,rp:{name:'Snowmapper',id:location.hostname},
     user:{id:new TextEncoder().encode(uid),name:email||uid,displayName:email||'User'},
     pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
     authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},
@@ -5521,8 +5628,8 @@ async function profSave(){
 }
 function profSignOut(){if(sb)sb.auth.signOut();profClose();authUpdateUI(null);}
 function sendFeedback(){try{haptic(8);}catch(e){}
-  const body=encodeURIComponent('\n\n---\nFirn\n'+(navigator.userAgent||''));
-  window.location.href='mailto:giani.morf@bluewin.ch?subject='+encodeURIComponent('Firn Feedback')+'&body='+body;}
+  const body=encodeURIComponent('\n\n---\nSnowmapper\n'+(navigator.userAgent||''));
+  window.location.href='mailto:giani.morf@bluewin.ch?subject='+encodeURIComponent('Snowmapper Feedback')+'&body='+body;}
 // --- View another user's profile ---
 let uvUid=null;
 async function viewUser(uid,username){
@@ -6786,7 +6893,7 @@ function sharePost(id,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
   const text=r?((r.user||'')+': '+(r.caption||r.sub||'Schnee-Report')):'Schnee-Report';
   try{haptic(6);}catch(e){}
   if(typeof nativeShare==='function'&&nativeShare(text,url))return;
-  if(navigator.share){navigator.share({title:'Firn',text,url}).catch(()=>{});return;}
+  if(navigator.share){navigator.share({title:'Snowmapper',text,url}).catch(()=>{});return;}
   try{navigator.clipboard.writeText(url).then(()=>toast('Link kopiert!','ok'));}catch(e){toast(url,'ok');}}
 function feedImgTap(id,ev){ev.stopPropagation();
   const now=Date.now(),el=ev.currentTarget;

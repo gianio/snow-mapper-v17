@@ -22,7 +22,12 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The critical step alone (shell + live data at res 3000) runs ~27 min, and
+    # the optional demo build may add up to 13 more. At 30 the job was being
+    # killed part-way through the demo step, which SKIPS everything after it --
+    # including upload-pages-artifact -- so the site silently stopped
+    # redeploying while every run still reported "cancelled" rather than failed.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
 
@@ -81,6 +86,10 @@ jobs:
         # cached; the deploy still succeeds and demo mode falls back to live
         # data (handled in the boot loader) until a later run caches it.
         if: steps.demo-cache.outputs.cache-hit != 'true'
+        # A step timeout fails the STEP; a job timeout kills the run and skips
+        # the deploy. This step is optional, so it must never be the thing that
+        # ends the job -- hence its own bound on top of the inner `timeout`.
+        timeout-minutes: 15
         continue-on-error: true
         run: |
           timeout 780 python run_interactive.py --split --date 2026-04-01 --res 3000 --weather-step 0.1 --out-dir dist_demo \
