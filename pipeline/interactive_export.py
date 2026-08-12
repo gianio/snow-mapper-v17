@@ -893,7 +893,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body{font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1,'cv05' 1}
  /* the micro-label: the only uppercase in the product, and the thing that
     turns a value into a reading */
- .lbl-micro,.dsh i,.lyf-k{font-size:9px;font-weight:800;letter-spacing:.11em;
+ .lbl-micro,.lyf-k{font-size:9px;font-weight:800;letter-spacing:.11em;
    text-transform:uppercase;color:var(--ink-500)}
  /* P5: numbers a user compares are tabular so columns line up */
  .num,.snow-val,#tlLenVal,#progConfVal,#drawDepthVVal,#drawBrushVVal,.insp-chip,.tl-range{font-variant-numeric:tabular-nums}
@@ -1113,19 +1113,23 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .lyf-dots i.on{width:12px;border-radius:2px;background:var(--accent)}
  .lyf-name{grid-column:1;grid-row:2;font-size:19px;font-weight:800;letter-spacing:-.02em;
    color:var(--ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
- .lyf-var{grid-column:2;grid-row:2;display:none;font-size:13px;font-weight:800;color:var(--accent);
-   white-space:nowrap;justify-self:end}
- #lyField.has-var .lyf-var{display:block}
- .lyf-lad{grid-column:3;grid-row:1/span 2;display:none;flex-direction:column;align-items:center;gap:3px}
- #lyField.has-var .lyf-lad{display:flex}
- .lyf-lad::before{content:'\2195';font-size:9px;color:var(--ink-300);margin-bottom:1px}
+ /* The sub-layer is a button and has to look like one: a filled key with the
+    live value, its position in the cycle, and the icon for "press for the
+    next". Nothing here is a gesture you have to be told about. */
+ .lyf-sub{grid-column:2/span 2;grid-row:2;display:none;align-items:center;gap:7px;
+   min-height:var(--tap-sm);padding:0 11px;justify-self:end;
+   border:1px solid var(--accent);border-radius:var(--r-sm);
+   background:var(--accent-soft);color:var(--accent);
+   font-family:inherit;font-size:13px;font-weight:800;white-space:nowrap;cursor:pointer;
+   -webkit-tap-highlight-color:transparent;transition:background var(--dur-1) var(--ease)}
+ #lyField.has-var .lyf-sub{display:inline-flex}
+ .lyf-sub:active{background:var(--accent);color:var(--paper)}
+ .lyf-sub svg{width:14px;height:14px;flex-shrink:0;opacity:.8}
+ .lyf-sub-n{font-size:10px;font-weight:800;letter-spacing:.02em;opacity:.75;
+   font-variant-numeric:tabular-nums}
  /* nothing to choose on this layer: the right-hand column simply is not there */
  #lyField:not(.has-var) .lyf-name{grid-column:1/span 2}
- .lyf-lad i{width:4px;height:4px;border-radius:50%;background:var(--ink-150);transition:.16s var(--ease)}
- .lyf-lad i.on{height:11px;border-radius:2px;background:var(--accent)}
- /* the axis the drag locked onto is the one that lights up */
  #lyField[data-ax="x"] .lyf-dots i.on{box-shadow:0 0 0 3px var(--accent-soft)}
- #lyField[data-ax="y"] .lyf-lad i.on{box-shadow:0 0 0 3px var(--accent-soft)}
  /* --- The console: time controls; the layer field rides with the presets --- */
 
  #layerBar{--topic-accent:var(--accent);--topic-tint:var(--accent-soft)}
@@ -1160,22 +1164,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #presets.can-scroll{-webkit-mask-image:linear-gradient(90deg,#000 86%,transparent);mask-image:linear-gradient(90deg,#000 86%,transparent)}
  .winlbl{font-size:11px;font-weight:800;color:var(--ink-500);letter-spacing:.09em;text-transform:uppercase}
  #tlHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:10px}
- /* The readout. Four cells divided by rules, values in the ink and units in
-    the muted ramp, so the eye lands on the number and not on "cm". */
- #dash{display:grid;grid-template-columns:repeat(4,1fr);
-   border-top:var(--rule);border-bottom:var(--rule);margin:0 -14px 6px;
-   background:var(--card)}
- .dsh{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
-   gap:1px;padding:6px 10px 7px;border-left:var(--rule-soft);min-width:0}
- .dsh:first-child{border-left:none}
- /* four labels have to fit across a phone, so this ramp is tighter than the
-    micro-label elsewhere -- "Schneehöhe" is the one that sets the width */
- .dsh i{font-style:normal;font-size:8.5px;letter-spacing:.05em;line-height:1.5;
-   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
- .dsh b{font-size:17px;font-weight:800;line-height:1.05;color:var(--ink-900);letter-spacing:-.02em}
- .dsh em{font-style:normal;font-size:9.5px;font-weight:700;color:var(--ink-300);margin-top:-1px}
- .dsh.hot b{color:var(--accent)}
- body.draw-on #dash{display:none}
  #tlModeToggle{display:none!important}
  #tlModeToggleOFF{display:inline-flex;background:rgba(0,0,0,.05);border-radius:999px;padding:3px;flex-shrink:0}
  #tlModeToggle button{border:none;background:none;padding:5px 13px;border-radius:999px;font-size:12px;font-weight:600;color:var(--mut);cursor:pointer;font-family:inherit;transition:.15s}
@@ -1255,39 +1243,46 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     blur+saturate keeps the content readable. Draggable via the header. */
  body.insp-open #mapQr,body.insp-open #mapFab,body.insp-open #mapDraw{opacity:0;pointer-events:none;transition:opacity .2s}
  /* Docked, not floating: the panel sits flush against an edge and against the
-    console, so it reads as part of the screen instead of a card on top of it.
-    It does not move, and there is nothing to drag. */
- .insp-panel{position:absolute;z-index:2600;background:var(--paper);display:none;flex-direction:column;overflow:hidden;border:0 solid var(--ink-100)}
- .insp-chip{background:var(--ink-050)}
- .insp-tile{background:var(--ink-050);border-color:var(--ink-100)}
- .insp-head button{background:var(--ink-050)}
- .insp-panel.open{display:flex;animation:inspIn .3s cubic-bezier(.32,.72,.42,1)}
- /* Desktop: a column against the right edge, from the top down to the console. */
- @media(min-width:561px){.insp-panel{top:0;right:0;left:auto;bottom:var(--btm-h,0px);width:340px;
-   border-left-width:1px;border-radius:0}
-   @keyframes inspIn{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}}
- /* Phone: a band across the bottom edge, resting directly on the console. */
- @media(max-width:560px){.insp-panel{left:0;right:0;bottom:var(--btm-h,0px);width:auto;
-   max-height:min(52vh,calc(100vh - var(--btm-h,0px) - 190px));
-   border-top-width:1px;border-radius:var(--r-2) var(--r-2) 0 0}
-   @keyframes inspIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}}
- .insp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:16px 16px 12px;border-bottom:1px solid var(--hair);flex-shrink:0}
+    A card that floats over the map. It is deliberately small -- you tapped a
+    point to read it, and a panel that fills the screen hides the terrain the
+    reading is about -- and it is translucent and draggable so it can be pushed
+    off whatever you are looking at. */
+ .insp-panel{position:absolute;z-index:2600;display:none;flex-direction:column;overflow:hidden;
+   background:rgba(250,248,244,.76);border:1px solid var(--bd);border-radius:var(--r-2);
+   box-shadow:var(--elev2);will-change:transform}
+ @media (prefers-reduced-transparency:reduce){.insp-panel{background:var(--paper)}}
+ .insp-chip{background:rgba(33,30,25,.06)}
+ .insp-tile{background:rgba(33,30,25,.05);border-color:var(--bd)}
+ .insp-head button{background:rgba(33,30,25,.06)}
+ .insp-panel.open{display:flex;animation:inspIn .26s var(--ease)}
+ .insp-panel.dragging{transition:none;box-shadow:var(--elev3)}
+ @keyframes inspIn{from{opacity:0;transform:translateY(10px)}to{opacity:1}}
+ @media(min-width:561px){.insp-panel{top:auto;right:16px;left:auto;
+   bottom:calc(var(--btm-h,0px) + 16px);width:310px;max-height:min(38vh,340px)}}
+ @media(max-width:560px){.insp-panel{left:10px;right:10px;width:auto;
+   bottom:calc(var(--btm-h,0px) + 10px);max-height:min(33vh,270px)}}
+ /* the grab bar: the only part of the head that starts a drag */
+ .insp-grab{flex-shrink:0;height:16px;display:flex;align-items:center;justify-content:center;
+   cursor:grab;touch-action:none}
+ .insp-grab::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--ink-150)}
+ .insp-panel.dragging .insp-grab{cursor:grabbing}
+ .insp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:2px 12px 9px;border-bottom:1px solid var(--bd);flex-shrink:0}
  .insp-head .insp-t{min-width:0}
- .insp-head .insp-t b{font-size:15px;color:var(--fg);font-weight:800;letter-spacing:-.01em}
+ .insp-head .insp-t b{font-size:13px;color:var(--fg);font-weight:800;letter-spacing:-.01em}
  .insp-chips{display:flex;gap:6px;margin-top:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-right:12px;-webkit-mask-image:linear-gradient(90deg,#000 91%,transparent);mask-image:linear-gradient(90deg,#000 91%,transparent)}
  .insp-chips::-webkit-scrollbar{display:none}
  .insp-chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--fill);color:var(--fg2);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
  .insp-chip.accent{background:rgba(20,20,25,.12);color:var(--acc2)}
- .insp-head button{background:var(--fill);border:none;width:34px;height:34px;border-radius:11px;color:var(--fg2);font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:.15s}
+ .insp-head button{background:var(--fill);border:none;width:28px;height:28px;border-radius:9px;color:var(--fg2);font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:.15s}
  .insp-head button:hover{background:var(--fill2);color:var(--fg)}
- .insp-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 18px calc(env(safe-area-inset-bottom,0px) + 16px)}
- .insp-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 0 6px}
- .insp-tile{background:var(--fill);border-radius:14px;padding:11px 13px;border:1px solid var(--hair)}
+ .insp-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 12px 10px}
+ .insp-tiles{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:9px 0 4px}
+ .insp-tile{background:var(--fill);border-radius:var(--r-sm);padding:7px 9px;border:1px solid var(--hair)}
  .insp-tile .tl{font-size:10.5px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
- .insp-tile .tv{font-size:21px;font-weight:800;color:var(--fg);letter-spacing:-.02em;margin-top:3px;line-height:1}
+ .insp-tile .tv{font-size:17px;font-weight:800;color:var(--fg);letter-spacing:-.02em;margin-top:2px;line-height:1}
  .insp-tile .tv small{font-size:12px;font-weight:700;color:var(--mut)}
  .insp-tile.accent .tv{color:var(--acc2)}
- .insp-sec{padding:11px 0;border-bottom:1px solid var(--hair)}
+ .insp-sec{padding:8px 0;border-bottom:1px solid var(--hair)}
  .insp-sec:last-child{border-bottom:none}
  .insp-sec h4{margin:0 0 9px;font-size:13px;font-weight:800;color:var(--fg);letter-spacing:-.01em;display:flex;justify-content:space-between;align-items:baseline}
  .insp-sec h4 em{font-style:normal;font-weight:700;color:var(--acc2);font-size:12.5px}
@@ -2196,6 +2191,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rmg-t span{display:block;font-size:11px;color:var(--ink-500);font-weight:600}
  .rmg-cm{flex-shrink:0;font-size:12px;font-weight:800;color:var(--cc);
    background:var(--ink-050);border-radius:999px;padding:3px 9px}
+ /* the snowflake that marks a drawn snow map */
+ .rpt-flake{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+   background:var(--paper);border:2px solid var(--cc);color:var(--cc);
+   box-shadow:var(--elev1);position:relative}
+ .rpt-flake svg{width:24px;height:24px}
  .rpt-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px 5px 8px;border-radius:999px;background:var(--card);border:1.5px solid var(--cc);color:var(--cc);font-weight:800;font-size:12.5px;white-space:nowrap;box-shadow:0 3px 11px rgba(0,0,0,.20);cursor:pointer;transition:transform .15s}
  .rpt-chip:hover{transform:scale(1.06)}
  .rpt-chip svg{width:14px;height:14px}
@@ -2313,22 +2313,16 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         <button data-m="detail" class="active">Detail</button>
       </div>
     </div>
-    <!-- The dashboard proper: what it is doing where you are looking, right
-         now, in the window you have selected. Updates on pan, zoom and time. -->
-    <div id="dash" aria-live="polite" aria-label="Verhältnisse in der Kartenmitte">
-      <div class="dsh"><i>Neuschnee</i><b id="dshSnow">–</b><em>cm</em></div>
-      <div class="dsh"><i>Schneehöhe</i><b id="dshDepth">–</b><em>cm</em></div>
-      <div class="dsh"><i>Wind</i><b id="dshWind">–</b><em>km/h</em></div>
-      <div class="dsh"><i>Temp</i><b id="dshTemp">–</b><em>°C</em></div>
-    </div>
     <!-- ONE field, two axes: slide sideways for the layer, up and down for
          its sub-layer. Nothing opens and nothing has to be dismissed. -->
     <div id="lyField" tabindex="0" role="group" aria-label="Ebene">
       <span class="lyf-k">Ebene<i class="lyf-ax" aria-hidden="true"></i></span>
       <span class="lyf-dots" aria-hidden="true"></span>
       <b class="lyf-name">—</b>
-      <span class="lyf-var"></span>
-      <span class="lyf-lad" aria-hidden="true"></span>
+      <button type="button" class="lyf-sub" onclick="lySubNext(event)">
+        <span class="lyf-sub-l"></span><span class="lyf-sub-n"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15.5-6.2M21 12a9 9 0 0 1-15.5 6.2"/><path d="M18.5 2v4h-4M5.5 22v-4h4"/></svg>
+      </button>
     </div>
     <div class="seg" id="presets" style="gap:5px;margin-top:2px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch">
       <button id="btnSinceSnow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><path d="M12 2v20M4.2 6.5l15.6 11M4.2 17.5l15.6-11"/></svg>Letzter Schnee</button>
@@ -3842,8 +3836,7 @@ function showOverlay(){
   else if(layer=="progpat"){map.addLayer(prognosisOverlay);renderProgPattern(stat);}
   if(layer=="wind"){map.addLayer(windArr);startFlow();}else{map.removeLayer(windArr);stopFlow();}
 }
-function renderAll(){
-  try{dashUpdate();}catch(e){}showOverlay();renderRaster();renderStations();inspAutoRefresh();if(tlMode==='detail')drawTimeline();
+function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefresh();if(tlMode==='detail')drawTimeline();
   if(layer=="rad"||layer=="radsun")renderRadiation();
   if(layer=="wind"){buildFlow();if(wtimer)clearTimeout(wtimer);wtimer=setTimeout(renderWind,120);}
   document.getElementById('window').innerHTML=`${b-a}h Fenster`;syncTl();legend();}
@@ -3967,6 +3960,16 @@ function lyStep(axis,d){
   try{haptic(3);}catch(e){}
   return true;
 }
+// The sub-layer is a button, not a gesture. A hidden second axis on a control
+// is a thing you have to be told about; a button that says what it will do next
+// is not.
+function lySubNext(e){
+  if(e){e.stopPropagation();e.preventDefault();}
+  const it=groupItems(curTopic)[curItem],n=(it&&it.vars.length)||1;
+  if(n<2)return;
+  setTopic(curTopic,curItem,(curVar+1)%n);   // wraps: it is a cycle button
+  try{haptic(4);}catch(e2){}
+}
 function lyRender(){
   const f=document.getElementById('lyField');if(!f)return;
   const L=lyLayers(),i=lyIndex(),it=L[i]&&L[i][2],vars=(it&&it.vars)||[];
@@ -3974,16 +3977,18 @@ function lyRender(){
   f.querySelector('.lyf-name').textContent=it?it.label:'\u2014';
   const many=vars.length>1;
   f.classList.toggle('has-var',many);
-  f.querySelector('.lyf-var').textContent=many?vars[curVar].label:'';
-  f.querySelector('.lyf-lad').innerHTML=many
-    ? vars.map((_,k)=>'<i'+(k===curVar?' class="on"':'')+'></i>').join('') : '';
-  f.setAttribute('aria-label','Ebene '+(it?it.label:'')+(many?(', Unterebene '+vars[curVar].label):''));
+  const bt=f.querySelector('.lyf-sub');
+  bt.querySelector('.lyf-sub-l').textContent=many?vars[curVar].label:'';
+  bt.querySelector('.lyf-sub-n').textContent=many?((curVar+1)+'/'+vars.length):'';
+  if(many)bt.setAttribute('aria-label','Unterebene '+vars[curVar].label+
+    ', tippen für '+vars[(curVar+1)%vars.length].label);
+  f.setAttribute('aria-label','Ebene '+(it?it.label:''));
 }
 (function(){
-  let on=false,ax=null,x0=0,y0=0,bx=0,by=0,moved=0;
+  let on=false,ax=null,x0=0,y0=0,bx=0,moved=0;
   const fld=()=>document.getElementById('lyField');
   function down(e){const f=fld();if(!f)return;
-    on=true;ax=null;moved=0;x0=bx=e.clientX;y0=by=e.clientY;
+    on=true;ax=null;moved=0;x0=bx=e.clientX;y0=e.clientY;
     try{f.setPointerCapture(e.pointerId);}catch(_){}
     f.classList.add('drag');}
   function move(e){
@@ -3991,14 +3996,13 @@ function lyRender(){
     const dx=e.clientX-x0,dy=e.clientY-y0;
     moved=Math.max(moved,Math.abs(dx),Math.abs(dy));
     if(!ax){
-      if(Math.max(Math.abs(dx),Math.abs(dy))<8)return;
-      // the axis locks on the first real movement and stays locked for the
-      // rest of the drag -- otherwise a diagonal thumb changes both at once
-      ax=Math.abs(dx)>Math.abs(dy)?'x':'y';
-      f.setAttribute('data-ax',ax);}
-    const cur=ax==='x'?e.clientX:e.clientY,base=ax==='x'?bx:by;
-    const n=Math.trunc((cur-base)/LYF_STEP);
-    if(n){lyStep(ax,n);if(ax==='x')bx+=n*LYF_STEP;else by+=n*LYF_STEP;}
+      if(Math.abs(dx)<8)return;
+      // A vertical drag here is almost always the page, not an intent to
+      // change anything, so it is left alone.
+      if(Math.abs(dy)>Math.abs(dx)){on=false;return;}
+      ax='x';f.setAttribute('data-ax','x');}
+    const n=Math.trunc((e.clientX-bx)/LYF_STEP);
+    if(n){lyStep('x',n);bx+=n*LYF_STEP;}
     if(e.cancelable)e.preventDefault();}
   function up(e){
     if(!on)return;on=false;const f=fld();
@@ -4009,21 +4013,20 @@ function lyRender(){
       if(x<r.width*0.28)lyStep('x',-1);else if(x>r.width*0.72)lyStep('x',1);}
     ax=null;}
   addEventListener('pointerdown',e=>{
+    if(e.target&&e.target.closest&&e.target.closest('.lyf-sub'))return;
     if(e.target&&e.target.closest&&e.target.closest('#lyField'))down(e);});
   addEventListener('pointermove',move,{passive:false});
   addEventListener('pointerup',up);addEventListener('pointercancel',up);
   addEventListener('wheel',e=>{
     if(!(e.target&&e.target.closest&&e.target.closest('#lyField')))return;
     if(e.cancelable)e.preventDefault();
-    if(Math.abs(e.deltaX)>Math.abs(e.deltaY))lyStep('x',e.deltaX>0?1:-1);
-    else lyStep('y',e.deltaY>0?1:-1);},{passive:false});
+    lyStep('x',(e.deltaX||e.deltaY)>0?1:-1);},{passive:false});
   addEventListener('keydown',e=>{
     const f=document.getElementById('lyField');
     if(!f||document.activeElement!==f)return;
     if(e.key==='ArrowRight')lyStep('x',1);
     else if(e.key==='ArrowLeft')lyStep('x',-1);
-    else if(e.key==='ArrowDown')lyStep('y',1);
-    else if(e.key==='ArrowUp')lyStep('y',-1);
+    else if(e.key==='ArrowDown'||e.key==='ArrowUp')lySubNext();
     else return;
     e.preventDefault();e.stopPropagation();});
 })();
@@ -4058,28 +4061,6 @@ function progRenderBar(){
 }
 // Nothing floats above the search field any more, so it takes the top edge and
 // the demo pill and brand mark chain off its measured bottom.
-// The readout: the same cells the inspect panel reads, at the centre of what
-// you are looking at, over the window you have selected. It is the difference
-// between a map with controls and an instrument.
-function dashUpdate(){try{
-  const c=map.getCenter();
-  const cx=Math.round((c.lng-loMin)/(loMax-loMin)*(W-1)),
-        cy=Math.round((laMax-c.lat)/(laMax-laMin)*(H-1));
-  const set=(id,v,hot)=>{const e=document.getElementById(id);if(!e)return;
-    e.textContent=(v==null||!isFinite(v))?'\u2013':v;
-    e.parentNode.classList.toggle('hot',!!hot);};
-  if(cx<0||cx>=W||cy<0||cy>=H){
-    ['dshSnow','dshDepth','dshWind','dshTemp'].forEach(id=>set(id,null,false));return;}
-  const pt=cy*W+cx,wk=mainToWind[pt];
-  const nw=cum[b*NP+pt]-cum[a*NP+pt],dp=cum[b*NP+pt];
-  let ws=0;for(let t=a;t<b;t++)ws+=SPD[t*P+wk]/M.spd_mul*3.6;
-  const wm=ws/Math.max(1,b-a);
-  let ts=0,tn=0;for(let t=a;t<b;t++){const v=tv(t,pt);if(v!=null&&isFinite(v)){ts+=v;tn++;}}
-  set('dshSnow',Math.round(nw),nw>=10);          // 10 cm is where it starts to matter
-  set('dshDepth',Math.round(dp),false);
-  set('dshWind',Math.round(wm),wm>=40);          // above 40 km/h you get drifting
-  set('dshTemp',tn?Math.round(ts/tn):null,false);
-}catch(e){}}
 function positionSearch(){try{
   var sw=document.getElementById('searchWrap');if(!sw)return;
   sw.style.top='calc(env(safe-area-inset-top,0px) + 12px)';
@@ -4090,8 +4071,6 @@ function positionSearch(){try{
   if(bm)bm.style.top=(bottom+14)+'px';
 }catch(e){}}
 addEventListener('resize',positionSearch);requestAnimationFrame(positionSearch);
-map.on('moveend zoomend',()=>{try{dashUpdate();}catch(e){}});
-requestAnimationFrame(()=>{try{dashUpdate();}catch(e){}});
 function presetsFade(){const p=document.getElementById('presets');if(!p)return;p.classList.toggle('can-scroll',p.scrollWidth-p.clientWidth-p.scrollLeft>4);}
 (function(){const p=document.getElementById('presets');if(p)p.addEventListener('scroll',presetsFade,{passive:true});addEventListener('resize',presetsFade);requestAnimationFrame(presetsFade);})();
 function clearPresets(){document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('active'));}
@@ -4311,6 +4290,41 @@ function inspClose(){document.getElementById('inspPanel').classList.remove('open
 map.on('click',function(e){inspOpen(e.latlng.lat,e.latlng.lng);});
 let inspLast=null;
 function inspAutoRefresh(){try{if(inspLast&&document.getElementById('inspPanel').classList.contains('open'))inspOpen(inspLast.lat,inspLast.lon);}catch(e){}}
+// Where the user last parked it, kept for the session so it does not jump back
+// under their thumb on every tap.
+let _inspDx=0,_inspDy=0;
+function inspApplyPos(){const e=document.getElementById('inspPanel');
+  if(e)e.style.transform=(_inspDx||_inspDy)?('translate('+_inspDx+'px,'+_inspDy+'px)'):'';}
+(function(){
+  let on=false,sx=0,sy=0,ox=0,oy=0;
+  function clamp(){
+    const e=document.getElementById('inspPanel');if(!e)return;
+    // keep at least a corner of it on screen, whatever the drag asked for
+    const r=e.getBoundingClientRect();
+    const minX=-(r.left-_inspDx)+8,maxX=innerWidth-(r.left-_inspDx)-r.width-8;
+    const minY=-(r.top-_inspDy)+8,maxY=innerHeight-(r.top-_inspDy)-r.height-8;
+    _inspDx=Math.max(Math.min(_inspDx,maxX),minX);
+    _inspDy=Math.max(Math.min(_inspDy,maxY),minY);
+  }
+  addEventListener('pointerdown',e=>{
+    const g=e.target&&e.target.closest&&e.target.closest('.insp-grab');if(!g)return;
+    const pn=document.getElementById('inspPanel');if(!pn)return;
+    on=true;sx=e.clientX;sy=e.clientY;ox=_inspDx;oy=_inspDy;
+    pn.classList.add('dragging');
+    try{g.setPointerCapture(e.pointerId);}catch(_){}
+  });
+  addEventListener('pointermove',e=>{
+    if(!on)return;
+    _inspDx=ox+(e.clientX-sx);_inspDy=oy+(e.clientY-sy);
+    inspApplyPos();
+    if(e.cancelable)e.preventDefault();
+  },{passive:false});
+  function end(){if(!on)return;on=false;
+    const pn=document.getElementById('inspPanel');if(pn)pn.classList.remove('dragging');
+    clamp();inspApplyPos();}
+  addEventListener('pointerup',end);addEventListener('pointercancel',end);
+  addEventListener('resize',()=>{if(_inspDx||_inspDy){clamp();inspApplyPos();}});
+})();
 function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-open');
   const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
   if(cx2<0||cx2>=W||cy2<0||cy2>=H)return;
@@ -4324,6 +4338,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   const QD8={N:'Nord',NO:'Nordost',O:'Ost',SO:'Südost',S:'Süd',SW:'Südwest',W:'West',NW:'Nordwest'},QD4={N:'Nord',E:'Ost',S:'Süd',W:'West'};
   const aspDeg=(_fa!=null?_fa:maspv(p)),aspLbl=(_fa!=null?QD8[asp8(_fa)]:(QD4[aspectQ(maspv(p))]||''));
   const pan=document.getElementById('inspPanel');
+  requestAnimationFrame(inspApplyPos);
   let progSec='';
   if(layer==='prog'){try{const pr=prognosisAt(lat,lon);if(pr){const cl=(PROG_LABEL[pr.type]||pr.type);const zc=progZones().filter(z=>z.type===pr.type).length;
     progSec='<div class="insp-sec insp-prog"><h4>Prognose '+cl+' <em>'+pr.like+'% wahrsch.</em></h4>'+
@@ -4338,6 +4353,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
       '<div class="prog-conf"><div class="prog-bar"><i style="width:'+pd.model+'%"></i></div><span>Modell '+pd.model+'%</span></div>'+
       '<div class="prog-note">'+verdict+' Vertrauen der Meldungen: '+pd.conf+'%.</div></div>';}}catch(e){}}
   pan.innerHTML=
+   '<div class="insp-grab" aria-hidden="true"></div>'+
    '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b>'+
      '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+
    '</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
@@ -5017,8 +5033,7 @@ function _rptMarker(r,mode){
   const col=_rptColor(r);let html,w,h;
   const dom=_rptDominantType(r);
   if(mode==='photo'&&dom){
-    html='<div class="rpt-snowmark" style="--cc:'+col+'" title="'+escapeHtml((DRAW_PENS[dom]&&DRAW_PENS[dom].label)||dom)+'">'+
-      _rptSnowIcon(dom)+'</div>';w=h=52;}
+    html=_rptDrawMark(col,(DRAW_PENS[dom]&&DRAW_PENS[dom].label)||dom);w=h=44;}
   else if(mode==='photo'&&r.img){html='<div class="rpt-photo" style="--cc:'+col+'"><img src="'+r.img+'" loading="lazy" alt=""/><i class="rp-cat" style="background:'+(CAT_COLORS[r.cat]||'#333')+'">'+(CAT_SVG[r.cat]||'')+'</i></div>';w=h=58;}
   else if(mode==='chip'){const cm=_rptDepth(r);const lab=(cm!=null)?(cm+' cm'):_rptShort(r);html='<div class="rpt-chip" style="--cc:'+col+'">'+(CAT_SVG[r.cat]||'')+'<b>'+escapeHtml(lab)+'</b></div>';w=Math.round(30+lab.length*8.6);h=30;}
   else if(mode==='dot'){html='<div class="rpt-tiny" style="--cc:'+col+'"></div>';w=h=12;}
@@ -5073,14 +5088,25 @@ function _rptMergedPopup(g,m){
   return '<div class="rmg"><div class="rmg-head"><b>'+g.length+' Zeichnungen</b>'+
     (m.cm!=null?('<span>\u2300 '+m.cm+' cm, gewichtet</span>'):'<span>am selben Ort</span>')+'</div>'+rows+'</div>';
 }
+// A drawn snow map is marked by a snowflake, not by a swatch of its texture:
+// on a busy map a patterned disc reads as "something", a snowflake reads as
+// "someone drew the snow here".
+const _RPT_FLAKE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+
+  '<line x1="12" y1="2.5" x2="12" y2="21.5"/><line x1="4" y1="7" x2="20" y2="17"/><line x1="4" y1="17" x2="20" y2="7"/>'+
+  '<path d="M12 2.5l2.2 2.4M12 2.5L9.8 4.9M12 21.5l2.2-2.4M12 21.5l-2.2-2.4"/>'+
+  '<path d="M4 7l3.2.2M4 7l.2 3.2M20 17l-3.2-.2M20 17l-.2-3.2"/>'+
+  '<path d="M20 7l-3.2.2M20 7l-.2 3.2M4 17l3.2-.2M4 17l.2-3.2"/></svg>';
+function _rptDrawMark(col,title,badge){
+  return '<div class="rpt-flake" style="--cc:'+col+'"'+(title?(' title="'+escapeHtml(title)+'"'):'')+'>'+
+    _RPT_FLAKE+(badge||'')+'</div>';
+}
 function _rptDrawMarker(g){
   const m=_rptDrawMerged(g);
   const col=(m.cm!=null&&snowCol(m.cm))?('rgb('+snowCol(m.cm).join(',')+')'):'#8C4F27';
-  const inner=m.type?_rptSnowIcon(m.type):'';
   const badge=(m.n>1)?('<i class="rc-ph">'+m.n+'</i>'):'';
-  const mk=_rptAdd(m.lat,m.lng,'<div class="rpt-snowmark" style="--cc:'+col+'">'+inner+badge+'</div>',52,52,null,700);
+  const mk=_rptAdd(m.lat,m.lng,_rptDrawMark(col,null,badge),44,44,null,700);
   mk.bindPopup(m.n>1?_rptMergedPopup(g,m):reportPopupHTML(g[0]),
-    {maxWidth:250,className:'rpt-pop',closeButton:true});
+    {maxWidth:236,className:'rpt-pop',closeButton:true});
 }
 function _rptCluster(g,zoom){
   let lat=0,lng=0,dsum=0,dn=0,ph=0;
@@ -7126,21 +7152,16 @@ function locPickerFilter(q){const list=(locPickerMode==='peak'?PEAKS:DESTS);q=(q
 function locPickerPick(i){const p=(locPickerMode==='peak'?PEAKS:DESTS)[i];
   feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:locPickerMode});locPickerClose();haptic(6);}
 const _SNAP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;vertical-align:-1px"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/></svg>';
-// A post shows what the person contributed -- their photo, their drawing --
-// not the map underneath it. The map is one tap away on the "Karte" action,
-// and that is where it belongs: live, pannable, at the right zoom.
+// A drawing is a statement about terrain, and terrain does not survive being
+// shrunk into a card -- a thumbnail of a few painted blobs says nothing you
+// could not read from the badges. So a drawn snow map shows no image at all
+// here; "Karte" puts it back where it means something, at the right zoom.
 function feedVisual(r,col){
   const cd=r.condition_data||{};
-  const paint=cd.draw?(cd.drawImage||null):null;
-  if(r.img&&paint&&paint!==r.img){
-    return '<div class="fc-wrap"><div class="fc-carousel" id="fcar-'+r.id+'">'+
-      '<div class="fc-slide"><img src="'+r.img+'" alt="" loading="lazy" decoding="async"/></div>'+
-      '<div class="fc-slide draw"><img src="'+paint+'" alt="" loading="lazy" decoding="async"/><span class="fc-snap-tag">'+_SNAP_ICON+' Zeichnung</span></div>'+
-      '</div><div class="fc-dots" id="fcd-'+r.id+'"><i class="on"></i><i></i></div></div>';
-  }
-  if(paint&&(!r.img||r.img===paint))
-    return '<div class="feed-card-visual draw" onclick="feedImgTap(\''+r.id+'\',event)"><img src="'+paint+'" alt="" loading="lazy" decoding="async"/></div>';
-  if(r.img)return '<div class="feed-card-visual" onclick="feedImgTap(\''+r.id+'\',event)"><img src="'+r.img+'" alt="" loading="lazy" decoding="async"/></div>';
+  const drawn=!!cd.draw;
+  const photo=(!drawn||(r.img&&r.img!==cd.drawImage&&r.img!==cd.snapshot))?r.img:null;
+  if(photo)return '<div class="feed-card-visual" onclick="feedImgTap(\''+r.id+'\',event)"><img src="'+photo+'" alt="" loading="lazy" decoding="async"/></div>';
+  if(drawn)return '';
   if(r.caption)return '<div class="feed-tx" style="background:linear-gradient(150deg,'+col+'14,rgba(255,255,255,0) 75%)"><span class="feed-tx-bar" style="background:'+col+'"></span>'+escapeHtml(r.caption)+'</div>';
   return '';
 }
