@@ -11,9 +11,8 @@ only blues left in the product are the SLF snow-depth scale and the drawing
 pens, where blue is a number rather than a decoration.
 
 What makes it read as an instrument and not an app is the second half: it is
-**built from rules and boxes rather than pillows and shadows**, its figures are
-tabular so columns of numbers line up, and the console leads with a **live
-readout of the conditions where you are looking** instead of with controls.
+**built from rules and boxes rather than pillows and shadows**, and its figures
+are tabular so columns of numbers line up.
 
 The name is Swiss-German for the layer of old, granular, multi-year snow that
 sits above the firn line — the exact thing the app is trying to tell you about.
@@ -323,14 +322,13 @@ One family (system UI stack). Hierarchy by size and weight only.
 | Micro-label | 10 / 800, `letter-spacing:.08em`, UPPERCASE, `--ink-500` | section labels in the console, form field labels |
 
 **Every** figure in the product is tabular (`font-variant-numeric` on `body`),
-not just the ones in tables: a readout that reflows as it ticks cannot be read
+not just the ones in tables: a number that reflows as it ticks cannot be read
 at a glance.
 
-The **micro-label** (`.lbl-micro`, `.dsh i`, `.lyf-k`) is the only uppercase in
-the product, and it is what turns a value into a reading. 9 px / 800 /
-`.11em`, `--ink-500`. In the readout it tightens to 8.5 px / `.05em`, because
-four German labels have to fit across a phone and "Schneehöhe" sets the width —
-with `line-height:1.5`, or `overflow:hidden` shaves the diaeresis off the Ö.
+The **micro-label** (`.lbl-micro`, `.lyf-k`) is the only uppercase in the
+product, and it is what turns a value into a reading. 9 px / 800 / `.11em`,
+`--ink-500`. Give any uppercase German label `line-height:1.5` if its box clips
+— `overflow:hidden` shaves the diaeresis off an Ö.
 
 `letter-spacing: -.01em` on 14 px and above; never on the micro-label.
 
@@ -378,29 +376,32 @@ axes, no menu:
 
 ```
 ┌────────────────────────────────────────────────────┐
-│ EBENE ‹ ›                            ● ● ● ● ●   ↕ │
-│ Temperatur                          Oberfläche   ▮ │
+│ EBENE ‹ ›                              ● ● ● ● ●   │
+│ Temperatur                    [ Oberfläche 2/6 ⟳ ] │
 └────────────────────────────────────────────────────┘
-   drag ⟷ layer          drag ↕ sub-layer          ▪
+   drag ⟷ layer                        press = next
 ```
 
-- **Dragging across it** steps the layer; **dragging up and down** steps that
-  layer's sub-layer. One step is `LYF_STEP` (46 px) of travel and it **commits
-  as you cross it**, so the map moves with your thumb rather than waiting for
-  you to let go. That immediacy is what makes one field enough.
-- **The axis locks** on the first real movement (8 px) and stays locked for the
-  rest of the drag. Without that, a diagonal thumb changes both at once and you
-  cannot tell which gesture did what.
-- **Both axes clamp, they do not wrap.** A picker that silently loops past the
-  end is how you lose track of where you are without looking.
-- **Two dot ladders** report position: horizontal for the layer, vertical for
-  the sub-layer. They are the readout, not the control — you cannot tap a dot.
+- **Dragging across it** steps the layer. One step is `LYF_STEP` (46 px) of
+  travel and it **commits as you cross it**, so the map moves with your thumb
+  rather than waiting for you to let go.
+- **The sub-layer is a button, not a second axis.** It shows the live value,
+  its position in the cycle (`2/6`) and the icon for "press for the next", and
+  it is filled in the accent so it reads as pressable. A hidden gesture is a
+  thing you have to be told about; this is not.
+- **The layer axis clamps, the sub-layer button wraps.** A drag past the end
+  should stop where the list stops — but a button you press repeatedly should
+  come back round rather than dead-end.
+- **A dot ladder** reports the layer position. It is the readout, not the
+  control — you cannot tap a dot.
 - **A clean tap near either edge steps the layer**, so the control still works
-  for someone who has not discovered the gesture. Arrow keys and the wheel do
-  the same on a desktop; the field takes focus, and the screen router must skip
-  its arrow handling while it has it.
-- A layer with a single variant drops the whole right-hand column rather than
-  showing a dead one.
+  for someone who has not discovered the drag. Arrow keys and the wheel do the
+  same on a desktop; the field takes focus, and the screen router must skip its
+  arrow handling while it has it.
+- A vertical drag on the field is ignored rather than captured: on a phone it
+  is almost always the page, not an intent to change anything.
+- A layer with a single variant drops the button rather than showing a dead
+  one.
 
 It is rebuilt from one entry point (`renderLayerStrip()`), because deep-zoom
 layers appear and disappear with the zoom. Order matters inside `setTopic()`:
@@ -412,24 +413,17 @@ Its own row, full width. It was tried inside the preset row as a sticky
 does not fit across a phone, and the most central control should not be the one
 covering another.
 
-### Readout (`#dash`)
-The thing that makes the console a dashboard instead of a control panel: four
-ruled cells reporting **new snow, snow depth, wind and temperature at the centre
-of what you are looking at**, over the time window you have selected. It reads
-the same cells the inspect panel reads, and updates on pan, zoom and every
-`renderAll()`.
+### Map popup (`.insp-panel`)
+A card that floats over the map, not a band docked to it. Three properties, and
+they are all consequences of one fact — you tapped a *point* to read it:
 
-```
-NEUSCHNEE │ SCHNEEHÖHE │ WIND   │ TEMP
-13        │ 18         │ 24     │ -1
-cm        │ cm         │ km/h   │ °C
-```
-
-Label in the micro ramp, value in the ink at 17 px, unit in `--ink-300` — the
-eye lands on the number, not on "cm". A value crossing a threshold that changes
-a decision takes the accent (`.hot`): 10 cm of new snow, 40 km/h of wind. Two
-thresholds, both meaningful; a readout where everything lights up reports
-nothing.
+- **Small.** A panel that fills the screen hides the terrain the reading is
+  about. It is ~33 vh on a phone and its body scrolls.
+- **Translucent.** `rgba(paper, .76)` over `--blur`, so the map stays legible
+  underneath. It resolves to solid under `prefers-reduced-transparency`.
+- **Movable.** A grab bar drags it anywhere and it stays where it was put for
+  the rest of the session, clamped so a corner is always on screen. Only the
+  grab bar starts a drag; the head is still tappable.
 
 ### Button
 - **Primary** — `--ink-900` fill, `--paper` text. One per screen.
@@ -454,6 +448,12 @@ Docks to the bottom edge, `--r-2` on the top corners only, grab handle
 ### Icon
 1.75 px stroke, `currentColor`, 20 px in controls and 18 px inline. Custom SVG
 only — **no emoji anywhere in the UI**.
+
+A **map marker says what kind of thing it is, not what it contains.** A drawn
+snow map is a snowflake ringed in its depth colour (`.rpt-flake`), because on a
+busy map a disc filled with that snow type's texture reads as "something" while
+a snowflake reads as "someone drew the snow here". The texture belongs on the
+raster, where there is room for it to be a pattern.
 
 ### Brand mark (`#brandMark`)
 The twin-peak glyph + "Snowmapper", in the same stroke-icon language as everything
@@ -486,9 +486,9 @@ wrapped by `prefers-reduced-motion`.
 |---|---|
 | **Launcher** | Startup only. Bone field with faint contour lines, the mark, and three rows — one per screen. No chrome, no map, no data, and no way back to it. |
 | **Search (map)** | Full bleed. Abstract at country view, detail fading in with zoom. Layer bar at the top edge, chrome docked to edges only, brand mark chained below the search field. |
-| **Console** | One surface, read top to bottom as *what* → *which layer* → *when*: the window label, the four-cell readout, the two-axis layer field, the time presets, the scrubber. The prognosis row appears only when the live layer has one. |
+| **Console** | One surface, read top to bottom as *which layer* → *when*: the window label, the layer field, the time presets, the scrubber. The prognosis row appears only when the live layer has one. |
 | **Report** | The two ways in — draw a snow map, or file an observation — as two large rows on the page. No wizard chrome until one is chosen. |
-| **Feed** | `--card` cards on `--page`, hairline separated, photo full-bleed inside the card. Action row is quiet buttons; only counts are dark. |
+| **Feed** | `--card` cards on `--page`, hairline separated, photo full-bleed inside the card. **A drawn snow map shows no image**: a thumbnail of a few painted blobs says nothing the badges do not, and terrain does not survive being shrunk into a card — "Karte" puts it back at a zoom where it means something. A real photo still shows. |
 | **Sheets** (comments, profile, condition, location) | Identical sheet recipe, inheriting whatever accent is currently live. |
 | **Report / draw** | The drawing canvas is the surface; controls dock left (brush) and right (depth) and along the bottom. Pen swatches show the actual texture. |
 | **Inspect panel** | Docked card, tabular numbers, charts in ink with the data palettes only for the values themselves. |
