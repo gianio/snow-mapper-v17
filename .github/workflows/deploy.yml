@@ -73,9 +73,9 @@ jobs:
       # build it once (real ERA5 archive weather) and cache it. Re-fetching
       # ~1200 archive points on every run (4x/day) is what blew past the old
       # 15-min timeout and cancelled the deploy.
-      - name: Cache demo dataset (historical, static)
+      - name: Restore demo dataset (historical, static)
         id: demo-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: dist_demo
           key: demo-dataset-20260401-res3000-ws01-v1
@@ -94,6 +94,18 @@ jobs:
         run: |
           timeout 780 python run_interactive.py --split --date 2026-04-01 --res 3000 --weather-step 0.1 --out-dir dist_demo \
             || { echo "demo build slow/failed — leaving it out, app uses live data in demo mode"; rm -rf dist_demo; }
+
+      # Saving is split from restoring on purpose. actions/cache saves in a post
+      # step that runs even when the build step was KILLED by its timeout -- and
+      # a half-written dist_demo stored under this fixed key would be restored
+      # as a cache hit forever after, so the dataset would never be rebuilt.
+      # This only saves what the build actually finished.
+      - name: Cache the demo dataset (only when it completed)
+        if: steps.demo-cache.outputs.cache-hit != 'true' && hashFiles('dist_demo/data/snowdata-*.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: dist_demo
+          key: demo-dataset-20260401-res3000-ws01-v1
 
       - name: Assemble demo dataset into dist (if present)
         run: |

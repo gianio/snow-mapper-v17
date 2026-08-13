@@ -898,7 +898,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* P5: numbers a user compares are tabular so columns line up */
  .num,.snow-val,#tlLenVal,#progConfVal,#drawDepthVVal,#drawBrushVVal,.insp-chip,.tl-range{font-variant-numeric:tabular-nums}
  /* Micro-label (section labels, field labels) */
- .lbl-micro{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-500)}
  /* Respect reduced-motion: kill non-essential animation/transition globally */
  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
  /* Higher-contrast borders/text for snow-glare / accessibility */
@@ -1256,7 +1255,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .insp-head button{background:rgba(33,30,25,.06)}
  .insp-panel.open{display:flex;animation:inspIn .26s var(--ease)}
  .insp-panel.dragging{transition:none;box-shadow:var(--elev3)}
- @keyframes inspIn{from{opacity:0;transform:translateY(10px)}to{opacity:1}}
+ /* opacity only. A keyframe that touches `transform` outranks the inline
+    style the drag writes there, so the panel would sit at its animated
+    position for the length of the animation and then jump to the dragged one
+    -- and anything measuring it in between (the clamp) would read a lie. */
+ @keyframes inspIn{from{opacity:0}to{opacity:1}}
  @media(min-width:561px){.insp-panel{top:auto;right:16px;left:auto;
    bottom:calc(var(--btm-h,0px) + 16px);width:310px;max-height:min(38vh,340px)}}
  @media(max-width:560px){.insp-panel{left:10px;right:10px;width:auto;
@@ -1310,11 +1313,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .leaflet-control-scale-line{background:rgba(247,244,238,.72)!important;border-color:rgba(33,30,25,.32)!important;color:var(--fg2)!important;font-family:'Inter',system-ui!important;font-size:10px!important;font-weight:600!important;}
  /* the right-hand corner belongs to the FABs, so the scale bar is pinned to
     the opposite one instead of stacking under them */
- .leaflet-control-scale{position:fixed!important;left:12px!important;right:auto!important;
+ .leaflet-control-scale{position:fixed!important;left:48px!important;right:auto!important;
    bottom:calc(var(--btm-h,0px) + 62px)!important;margin:0!important;z-index:800}
- .leaflet-control-scale,.leaflet-control-attribution{left:48px!important}
+
  /* the attribution shares the quiet left edge instead of the FAB corner */
- .leaflet-control-attribution{position:fixed!important;left:12px!important;right:auto!important;
+ .leaflet-control-attribution{position:fixed!important;left:48px!important;right:auto!important;
    bottom:calc(var(--btm-h,0px) + 44px)!important;margin:0!important;z-index:800;
    border-radius:5px!important}
  body.draw-on .leaflet-control-attribution{display:none!important}
@@ -2162,8 +2165,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rpt-cluster{position:relative;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 34%,color-mix(in srgb,var(--cc) 58%,#fff),var(--cc));border:2.5px solid #fff;box-shadow:0 5px 16px rgba(0,0,0,.30);cursor:pointer;transition:transform .16s cubic-bezier(.34,1.56,.64,1)}
  .rpt-cluster:hover{transform:scale(1.09)}
  .rpt-cluster span{color:#fff;font-weight:800;font-size:14px;letter-spacing:-.02em;text-shadow:0 1px 2px rgba(0,0,0,.35)}
- .rpt-cluster .rc-ph{position:absolute;top:-4px;right:-4px;background:var(--card);color:var(--ink-900);font-size:9px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:2px;padding:0 3px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
- .rpt-cluster .rc-ph svg{width:8px;height:8px}
+ .rpt-flake .rc-ph,.rpt-cluster .rc-ph{position:absolute;top:-4px;right:-4px;background:var(--card);color:var(--ink-900);font-size:9px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:2px;padding:0 3px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+ .rpt-flake .rc-ph svg,.rpt-cluster .rc-ph svg{width:8px;height:8px}
  /* Drawn-report marker: a real circle, crisp at any DPR, showing the snow
     type that dominates the drawing. */
  .rpt-snowmark{width:46px;height:46px;border-radius:50%;background:var(--paper);border:2.5px solid var(--paper);
@@ -3996,10 +3999,13 @@ function lyRender(){
     const dx=e.clientX-x0,dy=e.clientY-y0;
     moved=Math.max(moved,Math.abs(dx),Math.abs(dy));
     if(!ax){
-      if(Math.abs(dx)<8)return;
+      // nothing decided yet -- keep waiting, but test BOTH axes, or a purely
+      // vertical drag never reaches the release below and the field stays
+      // stuck in its held-down state
+      if(Math.max(Math.abs(dx),Math.abs(dy))<8)return;
       // A vertical drag here is almost always the page, not an intent to
-      // change anything, so it is left alone.
-      if(Math.abs(dy)>Math.abs(dx)){on=false;return;}
+      // change anything, so it is handed back.
+      if(Math.abs(dy)>Math.abs(dx)){on=false;f.classList.remove('drag');return;}
       ax='x';f.setAttribute('data-ax','x');}
     const n=Math.trunc((e.clientX-bx)/LYF_STEP);
     if(n){lyStep('x',n);bx+=n*LYF_STEP;}
@@ -4297,15 +4303,28 @@ function inspApplyPos(){const e=document.getElementById('inspPanel');
   if(e)e.style.transform=(_inspDx||_inspDy)?('translate('+_inspDx+'px,'+_inspDy+'px)'):'';}
 (function(){
   let on=false,sx=0,sy=0,ox=0,oy=0;
+  // Clamp so the whole panel stays on screen. Measuring only means anything
+  // while it is actually laid out -- a hidden element is 0x0, and clamping
+  // against that resolves to "current + 8" on both axes, which is how the
+  // remembered position used to walk off the screen one resize at a time.
   function clamp(){
-    const e=document.getElementById('inspPanel');if(!e)return;
-    // keep at least a corner of it on screen, whatever the drag asked for
+    const e=document.getElementById('inspPanel');if(!e)return false;
     const r=e.getBoundingClientRect();
-    const minX=-(r.left-_inspDx)+8,maxX=innerWidth-(r.left-_inspDx)-r.width-8;
-    const minY=-(r.top-_inspDy)+8,maxY=innerHeight-(r.top-_inspDy)-r.height-8;
-    _inspDx=Math.max(Math.min(_inspDx,maxX),minX);
-    _inspDy=Math.max(Math.min(_inspDy,maxY),minY);
+    if(!r.width||!r.height)return false;
+    const x0=r.left-_inspDx,y0=r.top-_inspDy;          // its undragged position
+    const minX=8-x0,maxX=innerWidth-x0-r.width-8;
+    const minY=8-y0,maxY=innerHeight-y0-r.height-8;
+    _inspDx=maxX<minX?0:Math.max(Math.min(_inspDx,maxX),minX);
+    _inspDy=maxY<minY?0:Math.max(Math.min(_inspDy,maxY),minY);
+    return true;
   }
+  // re-clamped whenever the panel changes size, not just when the window does:
+  // the prognosis section makes it taller, and an offset that fit the short one
+  // can strand the tall one above the viewport
+  window._inspClamp=()=>{
+    if(!(_inspDx||_inspDy))return;
+    inspApplyPos();                 // measure what is actually on screen
+    if(clamp())inspApplyPos();};
   addEventListener('pointerdown',e=>{
     const g=e.target&&e.target.closest&&e.target.closest('.insp-grab');if(!g)return;
     const pn=document.getElementById('inspPanel');if(!pn)return;
@@ -4323,7 +4342,7 @@ function inspApplyPos(){const e=document.getElementById('inspPanel');
     const pn=document.getElementById('inspPanel');if(pn)pn.classList.remove('dragging');
     clamp();inspApplyPos();}
   addEventListener('pointerup',end);addEventListener('pointercancel',end);
-  addEventListener('resize',()=>{if(_inspDx||_inspDy){clamp();inspApplyPos();}});
+  addEventListener('resize',()=>{try{window._inspClamp();}catch(e){}});
 })();
 function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-open');
   const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
@@ -4338,7 +4357,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   const QD8={N:'Nord',NO:'Nordost',O:'Ost',SO:'Südost',S:'Süd',SW:'Südwest',W:'West',NW:'Nordwest'},QD4={N:'Nord',E:'Ost',S:'Süd',W:'West'};
   const aspDeg=(_fa!=null?_fa:maspv(p)),aspLbl=(_fa!=null?QD8[asp8(_fa)]:(QD4[aspectQ(maspv(p))]||''));
   const pan=document.getElementById('inspPanel');
-  requestAnimationFrame(inspApplyPos);
+  requestAnimationFrame(()=>{try{window._inspClamp();}catch(e){}});
   let progSec='';
   if(layer==='prog'){try{const pr=prognosisAt(lat,lon);if(pr){const cl=(PROG_LABEL[pr.type]||pr.type);const zc=progZones().filter(z=>z.type===pr.type).length;
     progSec='<div class="insp-sec insp-prog"><h4>Prognose '+cl+' <em>'+pr.like+'% wahrsch.</em></h4>'+
@@ -4604,7 +4623,7 @@ function dismissIntro(){try{if(window.__bootDone)window.__bootDone();}catch(e){}
 // These pointed at the old floating layer card, which no longer exists — they
 // now walk the one-screen console.
 const COACH_STEPS=[
-  {sel:'#lyField',html:'<b>Ebenen.</b><br>Wische seitlich für die Ebene, hoch und runter für die Unterebene.'},
+  {sel:'#lyField',html:'<b>Ebenen.</b><br>Wische seitlich für die Ebene — die Unterebene wechselt der Knopf rechts.'},
   {sel:'#btmMain',html:'<b>Zeitfenster.</b><br>Wähle den Zeitraum – die Karte rechnet sofort neu.'},
   {sel:'#searchWrap',html:'<b>Spring zu einem Ort.</b><br>Suche einen Berg oder Ort und zoome direkt dorthin.'},
   {sel:'#edgeR',html:'<b>Wisch dich durch.</b><br>Nach rechts geht es zu <b>Report</b>, nach links zum <b>Feed</b> – oder tippe auf die Laschen am Rand.'},
@@ -5604,7 +5623,8 @@ function prefsApplyStartup(){
     const w=parseInt(prefs.window||'48');
     if(w&&w!==(b-a)){windowSize=w;a=Math.max(0,Math.min(T-w,nowIdx-Math.floor(w/2)));b=Math.min(T,a+w);}
     const lv=(prefs.layer||'meteo:0').split(':');
-    if(GROUPS[lv[0]])setTopic(lv[0],parseInt(lv[1])||0,0);
+    const grp=(GROUPS[lv[0]]&&GROUPS[lv[0]].menu!==false)?lv[0]:'meteo';
+    setTopic(grp,grp===lv[0]?(parseInt(lv[1])||0):0,0);
     if(prefs.start==='home'&&prefs.home){
       const r=CH_RESORTS.find(x=>x.name===prefs.home);
       if(r){map.setView([r.lat,r.lng],12.5,{animate:false});updateBaseFade();}
