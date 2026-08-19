@@ -1013,7 +1013,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.pane-dragging .pane{transition:none}
  .pane[data-at="-1"],.pane[data-at="1"]{pointer-events:none}
  .pane[data-at="0"]{pointer-events:auto}
- #paneReport{background:var(--ink-050);display:flex;flex-direction:column}
+ #paneReport{background:var(--paper);display:flex;flex-direction:column}
  #feedPage.pane{z-index:1;transform:none}
  .pane-top{display:flex;align-items:center;gap:var(--sp3);flex-shrink:0;
    padding:calc(env(safe-area-inset-top,0px) + 10px) var(--sp4) 8px}
@@ -1369,15 +1369,15 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    border-radius:5px!important}
  body.draw-on .leaflet-control-attribution{display:none!important}
  body.draw-on .leaflet-control-scale{display:none!important}
- #demoPill{min-height:var(--tap-sm);position:absolute;z-index:1050;top:calc(env(safe-area-inset-top,0px) + 172px);left:12px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--hair);background:var(--paper);color:var(--fg2);font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:var(--elev1)}
+ #demoPill{min-height:var(--tap-sm);position:absolute;z-index:1050;top:calc(env(safe-area-inset-top,0px) + 106px);left:12px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--hair);background:var(--paper);color:var(--fg2);font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:var(--elev1)}
  #demoPill .dp-dot{width:7px;height:7px;border-radius:50%;background:rgba(20,20,25,.35)}
  #demoPill.on{background:var(--ink-900);color:#fff;border-color:var(--ink-900)}
  #demoPill.on .dp-dot{background:#5ee68a}
  /* The empty strip above the search bar is where the brand mark lives. */
- #brandMark{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 76px);left:10px;
+ #brandMark{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 10px);left:10px;
    background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
    border:1px solid var(--bd);box-shadow:var(--elev1)}
- #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;width:230px;max-width:calc(100vw - 24px)}
+ #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 58px);left:12px;width:230px;max-width:calc(100vw - 24px)}
  #searchWrap input{width:100%;min-height:var(--tap-sm);padding:0 12px 0 32px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);color:var(--ink-900);font-size:13px;font-weight:500;outline:none;box-shadow:none;font-family:inherit}
  #searchWrap input::placeholder{color:var(--mut);font-weight:400}
  #searchWrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
@@ -1476,7 +1476,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #coachNext{background:var(--fg);color:#fff;border:none;border-radius:11px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
  #coachNext:hover{background:#000}
  @media (max-width:560px){
-   #searchWrap{top:calc(env(safe-area-inset-top,0px) + 118px);left:8px;right:auto;width:calc(100vw - 84px);max-width:230px}
+   #searchWrap{left:8px;right:auto;width:calc(100vw - 84px);max-width:230px}
    .icard{font-size:14px;max-width:calc(100vw - 50px);min-width:200px}
    .scard{font-size:14px;min-width:160px}
    .leaflet-popup-content-wrapper{max-width:calc(100vw - 32px)!important}
@@ -1986,7 +1986,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* --- Public user profile (hero layout) --- */
  .uv-sheet{overflow:hidden}
  #userViewModal{justify-content:stretch;align-items:stretch;padding:0}
- #userViewModal .prof-sheet{width:100%;max-width:none;height:100%;max-height:none;border-radius:0;display:flex;flex-direction:column}
+ #userViewModal .prof-sheet{width:100%;max-width:none;height:100%;max-height:none;border-radius:0;
+   background:var(--paper);display:flex;flex-direction:column}
  #userViewModal .uv-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
  .uv-posts{margin-top:16px;text-align:left}
  .uv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;border-radius:0;overflow:hidden;margin-bottom:12px}
@@ -2119,7 +2120,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    padding:2px;color:var(--mut);display:flex;align-items:center;gap:4px;
    font-size:12px;font-weight:400;font-family:var(--mono)}
  .feed-card-actions button svg{width:14px;height:14px}
- .fc-depth{font-size:12px;font-weight:700;color:var(--mut);font-family:var(--mono);flex:none}
+ .fc-depth{font-size:12px;font-weight:700;color:var(--mut);font-family:var(--mono);
+   flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .feed-card-actions .fc-sp{margin-left:auto}
  .feed-card-actions button:hover{color:var(--fg)}
  .feed-card-actions .flag-btn{color:var(--mut)}
@@ -4163,12 +4165,14 @@ function progRenderBar(){
 // the demo pill and brand mark chain off its measured bottom.
 function positionSearch(){try{
   var sw=document.getElementById('searchWrap');if(!sw)return;
-  sw.style.top='calc(env(safe-area-inset-top,0px) + 12px)';
-  var dp=document.getElementById('demoPill');
-  var bottom=sw.getBoundingClientRect().bottom;
-  if(dp){dp.style.top=(bottom+8)+'px';bottom=dp.getBoundingClientRect().bottom;}
   var bm=document.getElementById('brandMark');
-  if(bm)bm.style.top=(bottom+14)+'px';
+  var bottom=0;
+  if(bm){bm.style.top='calc(env(safe-area-inset-top,0px) + 10px)';
+    bottom=bm.getBoundingClientRect().bottom;}
+  sw.style.top=(bottom+8)+'px';
+  bottom=sw.getBoundingClientRect().bottom;
+  var dp=document.getElementById('demoPill');
+  if(dp)dp.style.top=(bottom+8)+'px';
 }catch(e){}}
 addEventListener('resize',positionSearch);requestAnimationFrame(positionSearch);
 function presetsFade(){const p=document.getElementById('presets');if(!p)return;p.classList.toggle('can-scroll',p.scrollWidth-p.clientWidth-p.scrollLeft>4);}
@@ -7363,7 +7367,7 @@ function feedRender(){
         ${r.img&&r.caption?`<div class="feed-card-caption"><b>${escapeHtml(r.user)}</b> ${escapeHtml(r.caption)}</div>`:''}
       </div>
       <div class="feed-card-actions">
-        ${r.measurement?`<span class="fc-depth">${escapeHtml(r.measurement)}</span>`:''}
+        ${r.measurement?`<span class="fc-depth" title="${escapeHtml(r.measurement)}">${escapeHtml(r.measurement)}</span>`:''}
         ${r.dbRow?`<button onclick="openComments('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg> ${r.comments||0}</button>`:''}
         <button class="fc-sp" title="Auf der Karte zeigen" aria-label="Auf der Karte zeigen" onclick="event.stopPropagation();feedFlyTo(${r.lat},${r.lng})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
         <button title="Teilen" aria-label="Teilen" onclick="sharePost('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>

@@ -2,17 +2,17 @@
 
 The visual and interaction language for **Snowmapper**.
 
-The look is **an instrument for winter**, drawn in snow and stone. Surfaces are
-warm bone — the colour of old snow in shade, and of the stock a topographic map
-is printed on — and the ink is a warm charcoal rather than a cold navy. The two
-accents come off the mountain: glacier for the forecast model, larch bark for
-the community one. Nothing in the chrome is white and nothing is sky blue; the
-only blues left in the product are the SLF snow-depth scale and the drawing
-pens, where blue is a number rather than a decoration.
+The look is **an instrument for winter**: near-white paper, graphite ink, and
+one blue. Cards are white and sit a shade above the page; every division on
+screen is a hairline rather than a shadow. The two model accents are that one
+blue at two depths — daylight blue for the forecast model, night blue for the
+community one — which is what keeps the colour law intact: one accent live at a
+time, and colour outside the chrome always meaning data.
 
 What makes it read as an instrument and not an app is the second half: it is
-**built from rules and boxes rather than pillows and shadows**, and its figures
-are tabular so columns of numbers line up.
+**built from rules and boxes rather than pillows and shadows**, and everything
+the eye compares — times, depths, counts, initials — is set in a mono face so
+columns of figures line up.
 
 The name is Swiss-German for the layer of old, granular, multi-year snow that
 sits above the firn line — the exact thing the app is trying to tell you about.
@@ -31,7 +31,7 @@ value outside `:root`, that is the bug.
 Snow Mapper is read outdoors, on a phone, in glare, often with gloves on, by
 someone deciding where to ski. That pushes every decision:
 
-- **Glare** is why the glass sits at 82 % white rather than a faint wash, and
+- **Glare** is why the glass sits at 86 % white rather than a faint wash, and
   why text on it is full-strength ink.
 - **Gloves** need 44 px targets and no precision gestures.
 - **Deciding** means the map is the product. Chrome must never compete with it.
@@ -220,23 +220,25 @@ else.
 
 | token | value | also known as | use |
 |---|---|---|---|
-| `--ink-900` | `#211E19` | `--fg` | primary text, filled buttons |
-| `--ink-700` | `#403B33` | `--fg2` | secondary text |
-| `--ink-500` | `#736C61` | `--mut` | muted text, inactive icons |
-| `--ink-300` | `#A79E90` | — | disabled, placeholder |
-| `--ink-150` | `#CFC7B9` | — | strong borders |
-| `--ink-100` | `rgba(33,30,25,.11)` | `--bd`, `--hair` | hairlines |
-| `--ink-050` | `#F0ECE3` | — | recessed fills, tracks |
-| `--paper`   | `#F7F4EE` | — | opaque surfaces (bone, not white) |
-| `--card`    | `#FCFAF6` | — | cards: one shade lighter than the page |
-| `--page`    | `#F2EEE6` | — | the ground a screen's cards sit on |
-| `--fill`    | `#EFEBE2` | — | inputs and tracks: one shade darker |
-| `--glass`   | `rgba(246,243,237,.84)` | — | floating over the map |
-| `--glass2`  | `rgba(250,248,244,.93)` | — | floating, carrying text |
+| `--ink-900` | `#12151A` | `--fg` | primary text, filled buttons |
+| `--ink-700` | `#4B5158` | `--fg2` | secondary text |
+| `--ink-500` | `#8A9099` | `--mut` | muted text, inactive icons |
+| `--ink-300` | `#A8AEB5` | — | disabled, placeholder |
+| `--ink-150` | `#C9CDD2` | — | strong borders |
+| `--ink-100` | `rgba(18,21,26,.09)` | — | hairlines, second step |
+| `--bd` / `--hair` | `rgba(18,21,26,.10)` | — | **the** hairline |
+| `--ink-050` | `#F0F1EF` | — | recessed fills, tracks |
+| `--paper`   | `#F7F8F7` | — | the ground a screen sits on |
+| `--card`    | `#FFFFFF` | — | cards and plates: white |
+| `--page`    | `#F0F1EF` | — | the ground a list of cards sits on |
+| `--fill`    | `#F0F1EF` | — | inputs, tracks, avatars |
+| `--map-bg`  | `#EDEEEC` | — | the ground under the map tiles |
+| `--glass`   | `rgba(247,248,247,.86)` | — | floating over the map |
+| `--glass2`  | `rgba(255,255,255,.94)` | — | floating, carrying text |
 
-Card, page and fill are three steps on the same bone. Nothing in the chrome is
-`#fff` — a white card punches a hole in the paper, which is the exact thing this
-palette exists to avoid.
+Paper, page and card are three steps apart: the page is a shade below the paper,
+and a card is white. A card is told from its ground by that one step plus a
+hairline — never by a shadow.
 
 The third column is the name most component rules actually reference. That
 alias layer has been carried through every redesign deliberately: it is what
@@ -252,12 +254,19 @@ it means **"this is the thing you selected"**.
 
 | context | token value | meaning |
 |---|---|---|
-| Meteo model (A) selected | `--accent-meteo` `#1D6A6A` — glacier | forecast-model layers |
-| Report model (B) selected | `--accent-report` `#8C4F27` — larch bark | community-report layers |
+| Meteo model (A) selected | `--accent-meteo` `#1868C4` — daylight blue | forecast-model layers |
+| Report model (B) selected | `--accent-report` `#0F3E80` — night blue | community-report layers |
+
+One hue at two depths, not two hues. The models are two readings of the same
+mountain, and the palette says so: they are told apart by how deep the blue
+goes, which survives desaturation (§4.5) where two arbitrary hues would not.
 
 `TOPIC_COLOR` (JS) carries the same law onto the canvas surfaces the CSS cannot
-reach — the timeline selection, the frame hairline, the vignette. Its entries
-are drawn from the same natural range; none of them is a screen blue.
+reach — the timeline selection, the frame hairline, the vignette.
+
+The one place this blue could collide with a data palette is the SLF depth
+scale, which is also blue. It does not, because the two never share a surface:
+the depth scale exists on the map and in legends, the accent only on chrome.
 
 The accent is **global, not per screen**: whichever map layer is selected sets
 `--accent` on `:root`, and every surface in the app — feed, sheets, profile,
@@ -280,9 +289,13 @@ Rules:
 
 | token | value | meaning |
 |---|---|---|
-| `--danger` | `#A83A2E` — rowan | destructive action, avalanche/danger reports |
-| `--warn` | `#C08A2E` — amber | caution, degraded confidence |
-| `--ok` | `#4A7A3F` — moss | confirmed, success |
+| `--danger` | `#C23B2E` | destructive action, avalanche/danger reports |
+| `--warn` | `#B8791E` | caution, degraded confidence |
+| `--ok` | `#3D8B5F` | confirmed, success |
+
+`CAT_COLORS` — the per-category hues on markers and feed dots — is a **data**
+palette, not this one. It keeps its own values through a restyle, for the same
+reason the depth scale does.
 
 If it is not that meaning, it does not get that colour.
 
@@ -310,20 +323,35 @@ grey mush, hierarchy was being carried by colour and needs fixing.
 
 ## 5. Type
 
-One family (system UI stack). Hierarchy by size and weight only.
+**Two faces, and the split between them is the whole rule.**
+
+| token | stack | carries |
+|---|---|---|
+| `--font` | `-apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif` | language |
+| `--mono` | `'SF Mono', 'IBM Plex Mono', ui-monospace, 'Roboto Mono', Menlo, monospace` | anything the eye compares |
+
+The grotesk carries words: names, labels, prose, buttons. The mono carries
+**readings** — times, depths, counts, percentages, coordinates, avatar
+initials. If a value would ever be scanned down a column or watched while it
+ticks, it is mono. If it is a sentence, it is not.
+
+Hierarchy inside each face is by size and weight only.
 
 | role | size / weight | notes |
 |---|---|---|
-| Display | 22 / 800 | screen titles, one per screen |
+| Screen title | 22 / 800, `-.01em` | one per screen, under the brand row |
+| Brand row | 16 / 800 beside the mark; 12 / 700 `--mut` when the title carries the screen |
 | Title | 17 / 800 | sheet headers |
+| Card name | 13.5 / 700 | feed author, list row title |
 | Body-strong | 15 / 700 | button labels, list titles |
-| Body | 14 / 500 | prose |
-| Meta | 12.5 / 600 | timestamps, captions |
-| Micro-label | 10 / 800, `letter-spacing:.08em`, UPPERCASE, `--ink-500` | section labels in the console, form field labels |
+| Body | 13.5 / 1.5, `--ink-700` | prose, captions |
+| Meta | 11.5, **mono**, `--ink-500` | timestamps, place, distance |
+| Stat value | 17 / 800, **mono** | the number on a tile |
+| Micro-label | 9 / 800, `letter-spacing:.08em`, UPPERCASE, `--ink-500` | section labels, form field labels |
 
 **Every** figure in the product is tabular (`font-variant-numeric` on `body`),
 not just the ones in tables: a number that reflows as it ticks cannot be read
-at a glance.
+at a glance. The mono face makes that structural rather than a setting.
 
 The **micro-label** (`.lbl-micro`, `.lyf-k`) is the only uppercase in the
 product, and it is what turns a value into a reading. 9 px / 800 / `.11em`,
@@ -485,13 +513,14 @@ wrapped by `prefers-reduced-motion`.
 | screen | how the language applies |
 |---|---|
 | **Launcher** | Startup only. Bone field with faint contour lines, the mark, and three rows — one per screen. No chrome, no map, no data, and no way back to it. |
-| **Search (map)** | Full bleed. Abstract at country view, detail fading in with zoom. Layer bar at the top edge, chrome docked to edges only, brand mark chained below the search field. |
+| **Search (map)** | Full bleed. Abstract at country view, detail fading in with zoom. The brand mark sits at the top edge with the search field chained beneath it — the name titles the field, so it comes first — and the rest of the chrome docks to the edges. Floating controls are white plates with a hairline, not frosted pillows. |
 | **Console** | One surface, read top to bottom as *which layer* → *when*: the window label, the layer field, the time presets, the scrubber. The prognosis row appears only when the live layer has one. |
-| **Report** | The two ways in — draw a snow map, or file an observation — as two large rows on the page. No wizard chrome until one is chosen. |
-| **Feed** | `--card` cards on `--page`, hairline separated, photo full-bleed inside the card. **A drawn snow map shows no image**: a thumbnail of a few painted blobs says nothing the badges do not, and terrain does not survive being shrunk into a card — "Karte" puts it back at a zoom where it means something. A real photo still shows. |
+| **Report** | Titled **Melden**. The two ways in — draw a snow map, or file an observation — as two 76 px rows: an accent-tinted 44 px icon tile, the name and one line of explanation, a chevron. No wizard chrome until one is chosen. Below a hairline, **Meine Meldungen** lists what you have already sent, read straight out of `allReports`: a category dot, the title, mono meta, the measurement, and the confirmation count in `--ok`. |
+| **Feed** | Full-bleed white plates on `--page`, divided by a bottom hairline — no radius, no shadow, no gutter. A 30 px round avatar, the name, and the meta line (`time · place · distance`) in mono; the category rides at the end of the head as an outlined pill in its own colour. Photo 160 px at `--r`. The row underneath is a line of readings, not a toolbar: the measurement in mono, the counts, and the one thing you can add — **Bestätigen**, an outlined pill in `--ok` that fills once pressed. **A drawn snow map shows no image**: a thumbnail of a few painted blobs says nothing the badges do not, and terrain does not survive being shrunk into a card — "Karte" puts it back at a zoom where it means something. A real photo still shows. |
 | **Sheets** (comments, profile, condition, location) | Identical sheet recipe, inheriting whatever accent is currently live. |
 | **Report / draw** | The drawing canvas is the surface; controls dock left (brush) and right (depth) and along the bottom. Pen swatches show the actual texture. |
-| **Inspect panel** | Docked card, tabular numbers, charts in ink with the data palettes only for the values themselves. |
+| **Inspect panel** | A small floating card — translucent and draggable, because you tapped a point to read it and a panel that fills the screen hides the terrain the reading is about. Tabular numbers, charts in ink, data palettes only for the values themselves. |
+| **Profile** | The avatar (64 px, round, initials in mono) stands next to the name, with the person's standing on the line below it — a shield and the confirmation count in `--ok`. Then the bio, three outlined stat tiles at `--r-md`, and the posts as a three-column grid with a 2 px gutter. |
 | **Auth / intro / disclaimer** | Centred single-column, one primary button, no decoration. |
 
 ---
