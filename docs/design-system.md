@@ -483,6 +483,28 @@ busy map a disc filled with that snow type's texture reads as "something" while
 a snowflake reads as "someone drew the snow here". The texture belongs on the
 raster, where there is room for it to be a pattern.
 
+### Header (every screen)
+
+Two lines, always in this order:
+
+```
+[ridge mark]  Snowmapper          [account badge]     <- brand row
+Feed                                                  <- .scr-title, 22/800
+```
+
+The brand row is **quiet**: the mark is 18 px in `--accent`, the name 12 / 700
+in `--ink-500`. The screen's own name is the thing you read — 22 / 800,
+`-.01em`, directly underneath. Only the map screen inverts this
+(`.pt-home.lg`): it has no title of its own, so there the name *is* the title
+at 16 / 800 in ink, with the search field chained under it.
+
+The mark is a **ridge line**, `polyline points="3,17 8,10 12,13 16,5 21,17"`,
+stroke 2, round caps — not a filled peak.
+
+The account badge is 36 px, round, `--fill` inside a 1.5 px `--accent` ring,
+carrying the user's initials in the mono face. Signed out it falls back to the
+person glyph.
+
 ### Brand mark (`#brandMark`)
 The twin-peak glyph + "Snowmapper", in the same stroke-icon language as everything
 else — it is not a logo lockup with its own rules. `pointer-events:none`: it is
@@ -513,10 +535,10 @@ wrapped by `prefers-reduced-motion`.
 | screen | how the language applies |
 |---|---|
 | **Launcher** | Startup only. Bone field with faint contour lines, the mark, and three rows — one per screen. No chrome, no map, no data, and no way back to it. |
-| **Search (map)** | Full bleed. Abstract at country view, detail fading in with zoom. The brand mark sits at the top edge with the search field chained beneath it — the name titles the field, so it comes first — and the rest of the chrome docks to the edges. Floating controls are white plates with a hairline, not frosted pillows. |
+| **Search (map)** | A **header band** — a surface on `--paper` with a hairline under it — carrying the brand row and, chained beneath it, the full-width search field. The map is inset below the band (`--head-h`, measured at runtime because the safe-area inset is only known then). Everything else still floats: the rail, the legend, the report button, all white plates with a hairline rather than frosted pillows. |
 | **Console** | One surface, read top to bottom as *which layer* → *when*: the window label, the layer field, the time presets, the scrubber. The prognosis row appears only when the live layer has one. |
 | **Report** | Titled **Melden**. The two ways in — draw a snow map, or file an observation — as two 76 px rows: an accent-tinted 44 px icon tile, the name and one line of explanation, a chevron. No wizard chrome until one is chosen. Below a hairline, **Meine Meldungen** lists what you have already sent, read straight out of `allReports`: a category dot, the title, mono meta, the measurement, and the confirmation count in `--ok`. |
-| **Feed** | Full-bleed white plates on `--page`, divided by a bottom hairline — no radius, no shadow, no gutter. A 30 px round avatar, the name, and the meta line (`time · place · distance`) in mono; the category rides at the end of the head as an outlined pill in its own colour. Photo 160 px at `--r`. The row underneath is a line of readings, not a toolbar: the measurement in mono, the counts, and the one thing you can add — **Bestätigen**, an outlined pill in `--ok` that fills once pressed. **A drawn snow map shows no image**: a thumbnail of a few painted blobs says nothing the badges do not, and terrain does not survive being shrunk into a card — "Karte" puts it back at a zoom where it means something. A real photo still shows. |
+| **Feed** | Header band, then the chips, then the list. A card has exactly four bands — head, picture, one line of caption, one line of readings — and anything that adds a fifth is what stops it reading as this design: the caption does not repeat the author two lines under the author, and the star rating sits with the other readings rather than in a badge row of its own. Full-bleed white plates on `--page`, divided by a bottom hairline — no radius, no shadow, no gutter. A 30 px round avatar, the name, and the meta line (`time · place · distance`) in mono; the category rides at the end of the head as an outlined pill in its own colour. Photo 160 px at `--r`. The row underneath is a line of readings, not a toolbar: the measurement in mono, the counts, and the one thing you can add — **Bestätigen**, an outlined pill in `--ok` that fills once pressed. **A drawn snow map shows no image**: a thumbnail of a few painted blobs says nothing the badges do not, and terrain does not survive being shrunk into a card — "Karte" puts it back at a zoom where it means something. A real photo still shows. |
 | **Sheets** (comments, profile, condition, location) | Identical sheet recipe, inheriting whatever accent is currently live. |
 | **Report / draw** | The drawing canvas is the surface; controls dock left (brush) and right (depth) and along the bottom. Pen swatches show the actual texture. |
 | **Inspect panel** | A small floating card — translucent and draggable, because you tapped a point to read it and a panel that fills the screen hides the terrain the reading is about. Tabular numbers, charts in ink, data palettes only for the values themselves. |

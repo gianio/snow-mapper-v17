@@ -934,7 +934,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
  html{background:#EDEEEC}
  html,body{margin:0;padding:0;height:100%;height:100dvh;width:100%;overflow:hidden;font-family:var(--font);color:var(--fg);overscroll-behavior:none;background:var(--map-bg);position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
- #map{position:absolute;top:0;left:0;right:0;bottom:var(--btm-h,0px);background:#F7F8F7;--resort-op:0;--resort-lbl:0}
+ #map{position:absolute;top:var(--head-h,0px);left:0;right:0;bottom:var(--btm-h,0px);background:#F7F8F7;--resort-op:0;--resort-lbl:0}
  /* Resort markers: a dot that fades in with zoom, and a label that follows a
     little later so the country view stays uncluttered. */
  .resort-pin{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:4px;white-space:nowrap;opacity:var(--resort-op);transition:opacity .25s linear}
@@ -1016,14 +1016,18 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #paneReport{background:var(--paper);display:flex;flex-direction:column}
  #feedPage.pane{z-index:1;transform:none}
  .pane-top{display:flex;align-items:center;gap:var(--sp3);flex-shrink:0;
-   padding:calc(env(safe-area-inset-top,0px) + 10px) var(--sp4) 8px}
+   padding:calc(env(safe-area-inset-top,0px) + 14px) 20px 2px}
  /* The brand row. The mark carries the only accent in the header; the name
-    is set quietly beside it, because the screen title is what you read. */
- .pt-home{display:inline-flex;align-items:center;gap:8px;min-height:var(--tap-sm);
-   padding:0 8px 0 2px;border:none;background:none;border-radius:var(--r-1);
-   font-family:inherit;font-size:16px;font-weight:800;letter-spacing:-.01em;
-   color:var(--ink-900);cursor:pointer}
- .pt-home svg{width:22px;height:22px;flex-shrink:0;color:var(--accent)}
+    is set small and muted beside it, because the screen's own title is what
+    you are meant to read. The map screen is the exception -- it has no title
+    of its own, so there the name is the title (.pt-home.lg). */
+ .pt-home{display:inline-flex;align-items:center;gap:8px;min-height:26px;
+   padding:0;border:none;background:none;border-radius:var(--r-1);
+   font-family:inherit;font-size:12px;font-weight:700;letter-spacing:0;
+   color:var(--ink-500);cursor:pointer}
+ .pt-home svg{width:18px;height:18px;flex-shrink:0;color:var(--accent)}
+ .pt-home.lg{font-size:16px;font-weight:800;letter-spacing:-.01em;color:var(--ink-900)}
+ .pt-home.lg svg{width:22px;height:22px}
  .pt-home:active{transform:scale(.96)}
  .pt-acc.has-img{background-size:cover;background-position:center}
  .pt-acc.has-img svg,.pt-acc.has-img .pt-ini{display:none}
@@ -1092,10 +1096,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .si-card>span:last-child{font-size:13.5px;color:var(--ink-500)}
  /* ===================== Pane: Report ================================== */
  .rp-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;
-   gap:var(--sp3);padding:var(--sp4) 20px calc(env(safe-area-inset-bottom,0px) + 56px)}
+   gap:var(--sp3);padding:6px 20px calc(env(safe-area-inset-bottom,0px) + 56px)}
+ /* one per screen, directly under the brand row */
  .scr-title{font-size:22px;font-weight:800;letter-spacing:-.01em;color:var(--ink-900);
-   padding:0 var(--sp4) 2px;flex-shrink:0}
- .rp-h{margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em;color:var(--ink-900)}
+   padding:0 20px 10px;flex-shrink:0;margin:0}
+
  .rp-choices{display:flex;flex-direction:column;gap:var(--sp3)}
  /* A row, not a card: a white plate with a hairline round it, an accent tile
     for the icon, and a chevron saying it leads somewhere. */
@@ -1369,21 +1374,26 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    border-radius:5px!important}
  body.draw-on .leaflet-control-attribution{display:none!important}
  body.draw-on .leaflet-control-scale{display:none!important}
- #demoPill{min-height:var(--tap-sm);position:absolute;z-index:1050;top:calc(env(safe-area-inset-top,0px) + 106px);left:12px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--hair);background:var(--paper);color:var(--fg2);font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:var(--elev1)}
+ #demoPill{min-height:30px;position:absolute;z-index:1050;top:calc(var(--head-h,0px) + 10px);left:12px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--hair);background:var(--paper);color:var(--fg2);font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:var(--elev1)}
  #demoPill .dp-dot{width:7px;height:7px;border-radius:50%;background:rgba(20,20,25,.35)}
  #demoPill.on{background:var(--ink-900);color:#fff;border-color:var(--ink-900)}
  #demoPill.on .dp-dot{background:#5ee68a}
  /* The empty strip above the search bar is where the brand mark lives. */
- #brandMark{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 10px);left:10px;
-   background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
-   border:1px solid var(--bd);box-shadow:var(--elev1)}
- #searchWrap{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 58px);left:12px;width:230px;max-width:calc(100vw - 24px)}
- #searchWrap input{width:100%;min-height:var(--tap-sm);padding:0 12px 0 32px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);color:var(--ink-900);font-size:13px;font-weight:500;outline:none;box-shadow:none;font-family:inherit}
+ /* The map screen's header: a surface, not a set of buttons on the terrain.
+    The name is the title here -- there is no second line -- and the field it
+    titles sits directly underneath it, full width. */
+ #mapHead{position:absolute;z-index:1100;top:0;left:0;right:0;
+   padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 8px;
+   background:var(--paper);border-bottom:1px solid var(--hair)}
+ #mapHead .mh-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+ #mapHead .pt-acc{margin-left:auto}
+ #searchWrap{position:relative;z-index:1;top:auto;left:auto;width:auto;max-width:none}
+ #searchWrap input{width:100%;min-height:34px;padding:0 12px 0 30px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);color:var(--ink-900);font-size:13px;font-weight:500;outline:none;box-shadow:none;font-family:inherit}
  #searchWrap input::placeholder{color:var(--mut);font-weight:400}
  #searchWrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
- #searchWrap .icn{position:absolute;left:11px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--mut);font-size:13px}
+ #searchWrap .icn{position:absolute;left:10px;top:17px;transform:translateY(-50%);pointer-events:none;color:var(--mut);font-size:12px}
  /* Right-side control rail */
- #ctrlRail{position:absolute;z-index:1050;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:10px}
+ #ctrlRail{position:absolute;z-index:1050;right:12px;top:calc(var(--head-h,0px) + 10px);display:flex;flex-direction:column;gap:10px}
  .rail-btn{position:relative;width:44px;height:44px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:none;transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease)}
  .rail-btn:hover{background:var(--glass2);color:var(--fg);transform:translateY(-1px)}
  .rail-btn:active{transform:scale(.95)}
@@ -1476,20 +1486,18 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #coachNext{background:var(--fg);color:#fff;border:none;border-radius:11px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
  #coachNext:hover{background:#000}
  @media (max-width:560px){
-   #searchWrap{left:8px;right:auto;width:calc(100vw - 84px);max-width:230px}
    .icard{font-size:14px;max-width:calc(100vw - 50px);min-width:200px}
    .scard{font-size:14px;min-width:160px}
    .leaflet-popup-content-wrapper{max-width:calc(100vw - 32px)!important}
    .legend{max-width:180px;font-size:12px}
-   #ctrlRail{top:calc(env(safe-area-inset-top,0px) + 12px);right:8px;gap:11px}
+   #ctrlRail{right:8px;gap:11px}
    .rail-btn{width:48px;height:48px}
    #legendBtn{width:40px;height:40px;font-size:18px}
    .seg button{padding:9px 14px;font-size:15px;min-height:44px}
    .itab{padding:10px 6px;font-size:14px}
  }
  @media (max-width:380px){
-   #searchWrap{max-width:160px}
-   .legend{max-width:140px;font-size:11px}
+     .legend{max-width:140px;font-size:11px}
  }
  /* --- Auth & Reports --- */
  #userBar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 18px);right:12px;z-index:1100;display:flex;gap:8px;align-items:center}
@@ -1548,7 +1556,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* --- Report sheet (Alpenglühen dark) --- */
  /* --- Report wizard: centered light modal --- */
  /* --- Draw-based snow report (v3) --- */
- body.draw-on #ctrlRail,body.draw-on #layerBar,body.draw-on #searchWrap,body.draw-on #brandMark,body.draw-on #demoPill,body.draw-on #mapQr,body.draw-on #mapFab,body.draw-on #mapDraw,body.draw-on #bottomPanel,body.draw-on #legendBtn,body.draw-on .legend{display:none!important}
+ body.draw-on #ctrlRail,body.draw-on #layerBar,body.draw-on #mapHead,body.draw-on #demoPill,body.draw-on #mapQr,body.draw-on #mapFab,body.draw-on #mapDraw,body.draw-on #bottomPanel,body.draw-on #legendBtn,body.draw-on .legend{display:none!important}
  .fab-v{position:absolute;top:-3px;left:-3px;min-width:16px;height:15px;padding:0 3px;border-radius:7px;background:var(--ink-900);color:#fff;font-size:8.5px;font-weight:900;line-height:15px;text-align:center;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
  .feed-fab .fab-v{background:var(--card);color:var(--ink-900);border-color:var(--ink-900)}
  /* v1 on top, then v2, then v3 -- the stack closes up when a FAB is hidden
@@ -1859,15 +1867,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* --- Feed (full-page, Instagram-style) --- */
  .feed-page{position:fixed;inset:0;z-index:3000;background:var(--page);transform:translateX(100%);transition:transform .35s cubic-bezier(.32,.72,.42,1);display:flex;flex-direction:column;will-change:transform}
  .feed-page.open{transform:translateX(0)}
- .feed-nav{display:flex;align-items:center;gap:10px;padding:10px 20px;background:var(--paper);border-bottom:none;position:sticky;top:0;z-index:2;padding-top:calc(10px + env(safe-area-inset-top,0px))}
- .feed-back{background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;color:var(--fg);border-radius:8px}
- .feed-back:hover{background:rgba(0,0,0,.04)}
- .feed-title{font-size:22px;font-weight:800;color:var(--fg);letter-spacing:-.01em;flex:1}
- .feed-filter{display:flex;gap:6px;padding:10px 16px;overflow-x:auto;scrollbar-width:none;background:transparent;border-bottom:none}
+ .feed-nav{display:flex;align-items:center;gap:10px;padding:2px 20px 2px;background:var(--paper);border-bottom:none;position:sticky;top:0;z-index:2;padding-top:calc(14px + env(safe-area-inset-top,0px))}
+ .feed-title{background:var(--paper)}
+ .feed-filter{display:flex;gap:6px;padding:0 20px 10px;overflow-x:auto;scrollbar-width:none;background:var(--paper);border-bottom:none}
  .feed-filter::-webkit-scrollbar{display:none}
- .feed-filter button{min-height:32px;padding:0 12px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);font-size:12.5px;font-weight:700;color:var(--fg2);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s var(--ease);font-family:inherit;display:flex;align-items:center;gap:6px;box-shadow:none}
- .feed-filter button .cat-ico{width:16px;height:16px;display:flex;align-items:center;justify-content:center}
- .feed-filter button .cat-ico svg{width:14px;height:14px}
+ .feed-filter button{height:32px;min-height:32px;padding:0 12px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);font-size:12.5px;font-weight:700;color:var(--fg2);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s var(--ease);font-family:inherit;display:flex;align-items:center;gap:5px;box-shadow:none}
+ .feed-filter button .cat-ico{width:13px;height:13px;display:flex;align-items:center;justify-content:center}
+ .feed-filter button .cat-ico svg{width:13px;height:13px}
  .feed-filter button.active{background:var(--accent);color:var(--paper);border-color:var(--accent)}
  .feed-filter button.active .cat-ico svg{stroke:currentColor}
  .feed-loc{display:flex;gap:8px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none;background:transparent}
@@ -1883,10 +1889,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-card-dist{font-size:11.5px;font-weight:400;color:var(--mut);font-family:var(--mono);
    background:none;padding:0;border-radius:0;flex-shrink:0}
  /* Feed scope segmented control */
- .feed-scope{display:flex;gap:6px;padding:10px 16px 10px;overflow-x:auto;scrollbar-width:none;background:transparent}
+ .feed-scope{display:flex;gap:6px;padding:0 20px 8px;overflow-x:auto;scrollbar-width:none;background:var(--paper)}
  .feed-scope::-webkit-scrollbar{display:none}
- .feed-scope button{min-height:32px;flex:1;min-width:max-content;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);font-size:12.5px;font-weight:700;color:var(--fg2);cursor:pointer;font-family:inherit;white-space:nowrap;transition:.18s var(--ease)}
- .feed-scope button svg{width:16px;height:16px}
+ .feed-scope button{height:32px;min-height:32px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;padding:0 12px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);font-size:12.5px;font-weight:700;color:var(--fg2);cursor:pointer;font-family:inherit;white-space:nowrap;transition:.18s var(--ease)}
+ /* the scope is named in words; its icons were decoration the design does not have */
+ .feed-scope button svg{display:none}
  .feed-scope button.active{background:var(--accent);color:var(--paper);border-color:var(--accent)}
  /* Feed group chips row */
  .feed-groups{display:flex;gap:8px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none;background:transparent}
@@ -2093,8 +2100,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-card-visual .card-placeholder>span:first-child svg{width:56px;height:56px;opacity:.5}
  .feed-card-visual .card-placeholder>span:last-child{font-size:15px;font-weight:700;opacity:.45;letter-spacing:.02em}
  .feed-card-body{padding:10px 20px 0}
- .feed-card-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
- .feed-card-badges:empty{display:none}
+ .feed-card-body:empty{display:none}
  .feed-badge{padding:3px 9px;border-radius:var(--r-full);font-size:11px;font-weight:800;
    letter-spacing:.02em;display:flex;align-items:center;gap:5px;background:none;
    border:1px solid currentColor;flex:none}
@@ -2105,7 +2111,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-badge.cat-snow,.feed-badge.cat-route,.feed-badge.cat-tour,
  .feed-badge.cat-info,.feed-badge.cat-wind_slab,.feed-badge.cat-whumpf{background:none;color:var(--accent)}
  .feed-badge.cat-snow svg,.feed-badge.cat-route svg,.feed-badge.cat-tour svg,
- .feed-badge.cat-info svg,.feed-badge.cat-wind_slab svg,.feed-badge.cat-whumpf svg{stroke:var(--ink-700)}
+ .feed-badge.cat-info svg,.feed-badge.cat-wind_slab svg,.feed-badge.cat-whumpf svg{stroke:currentColor}
  .feed-badge.cat-danger,.feed-badge.cat-avalanche{background:none;color:var(--danger)}
  .feed-badge.cat-danger svg,.feed-badge.cat-avalanche svg{stroke:var(--danger)}
  .feed-badge.cat-other{background:none;color:var(--ink-500)}.feed-badge.cat-other svg{stroke:currentColor}
@@ -2120,6 +2126,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    padding:2px;color:var(--mut);display:flex;align-items:center;gap:4px;
    font-size:12px;font-weight:400;font-family:var(--mono)}
  .feed-card-actions button svg{width:14px;height:14px}
+ .fc-stars{display:flex;align-items:center;gap:3px;flex:none;
+   font-size:12px;font-weight:700;color:var(--warn);font-family:var(--mono)}
+ .fc-stars svg{width:12px;height:12px}
  .fc-depth{font-size:12px;font-weight:700;color:var(--mut);font-family:var(--mono);
    flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .feed-card-actions .fc-sp{margin-left:auto}
@@ -2338,7 +2347,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="scrInitial">
   <div class="si-ridge" aria-hidden="true"></div>
   <div class="si-head">
-    <svg class="si-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L10 6L13.5 12L15 9L21 19Z"/><path d="M8.6 11.4h2.8"/></svg>
+    <svg class="si-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg>
     <h1>Snowmapper</h1>
     <p>Schnee, Pulver und Verhältnisse in der Schweiz.</p>
   </div>
@@ -2370,13 +2379,15 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
      twin-peak glyph as the app icon. Rebranding lives here and in the names
      the app uses when it talks about itself (title, share sheet, PWA
      install) -- not in new chrome competing with the map. -->
-<button id="brandMark" class="pt-home" onclick="scrGo('search')" aria-label="Zur Karte">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L10 6L13.5 12L15 9L21 19Z"/><path d="M8.6 11.4h2.8"/></svg>
-  <span>Snowmapper</span>
-</button>
-<div id="searchWrap"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Ort suchen…" autocomplete="off"/><div id="searchRes"></div></div>
+
+<div id="mapHead">
+  <div class="mh-row">
+    <button id="brandMark" class="pt-home lg" onclick="scrGo('search')" aria-label="Snowmapper"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg><span>Snowmapper</span></button>
+    <button class="pt-acc" onclick="accountTap()" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="pt-ini"></span></button>
+  </div>
+  <div id="searchWrap"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Ort suchen…" autocomplete="off"/><div id="searchRes"></div></div>
+</div>
 <div id="ctrlRail">
-  <button class="rail-btn" id="accountBtn" onclick="accountTap()" title="Anmelden" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.6"/><path d="M3.5 20a6.5 6.5 0 0 1 13 0"/><line x1="19" y1="6" x2="19" y2="12"/><line x1="16" y1="9" x2="22" y2="9"/></svg></button>
   <button class="rail-btn feed-accent" id="feedBtn" onclick="feedOpen()" title="Community-Feed" aria-label="Community-Feed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
   <button class="rail-btn active" id="railToggles" onclick="toggleStations()" title="Messstationen ein/aus" aria-label="Messstationen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0" stroke-dasharray="0"/></svg></button>
   <button class="rail-btn" id="btn3dFloat" title="3D-Ansicht" aria-label="3D-Ansicht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg></button>
@@ -2435,11 +2446,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <!-- ===================== Pane: Report ================================== -->
 <section class="pane" id="paneReport" aria-label="Melden">
   <div class="pane-top">
-    <button class="pt-home" onclick="scrGo('search')" aria-label="Zur Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L10 6L13.5 12L15 9L21 19Z"/><path d="M8.6 11.4h2.8"/></svg><span>Snowmapper</span></button>
+    <button class="pt-home" onclick="scrGo('search')" aria-label="Zur Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg><span>Snowmapper</span></button>
     <button class="pt-acc" onclick="accountTap()" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="pt-ini"></span></button>
   </div>
+  <h2 class="scr-title">Melden</h2>
   <div class="rp-body">
-    <h2 class="rp-h">Melden</h2>
     <div class="rp-choices">
       <button class="rp-choice" onclick="drawOpen()">
         <span class="rp-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg></span>
@@ -2585,10 +2596,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <input type="file" id="obsFile" accept="image/*" multiple onchange="obsAddMedia(this)" hidden/>
 <div class="feed-page pane" id="feedPage">
 <div class="feed-nav">
-<button class="feed-back pt-home" onclick="scrGo('search')" aria-label="Zur Karte"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
-<span class="feed-title">Community</span>
-<button class="feed-back" style="margin-left:auto" title="Leute finden" aria-label="Leute finden" onclick="usOpen()"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
+<button class="pt-home" onclick="scrGo('search')" aria-label="Zur Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg><span>Snowmapper</span></button>
+<button class="pt-acc" style="border-radius:var(--r-1);border-width:1px;border-color:var(--hair)" title="Leute finden" aria-label="Leute finden" onclick="usOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
 </div>
+<h2 class="feed-title scr-title">Feed</h2>
 <div class="feed-scope" id="feedScope"></div>
 <div class="feed-filter" id="feedFilter"></div>
 <div class="feed-loc" id="feedLoc" style="display:none">
@@ -4163,18 +4174,17 @@ function progRenderBar(){
 }
 // Nothing floats above the search field any more, so it takes the top edge and
 // the demo pill and brand mark chain off its measured bottom.
+// The map is inset below the header band, so the band's real height has to
+// reach the CSS that positions everything under it. Measured, because the
+// safe-area inset is only known at runtime.
 function positionSearch(){try{
-  var sw=document.getElementById('searchWrap');if(!sw)return;
-  var bm=document.getElementById('brandMark');
-  var bottom=0;
-  if(bm){bm.style.top='calc(env(safe-area-inset-top,0px) + 10px)';
-    bottom=bm.getBoundingClientRect().bottom;}
-  sw.style.top=(bottom+8)+'px';
-  bottom=sw.getBoundingClientRect().bottom;
-  var dp=document.getElementById('demoPill');
-  if(dp)dp.style.top=(bottom+8)+'px';
+  var hd=document.getElementById('mapHead');if(!hd)return;
+  var h=Math.round(hd.getBoundingClientRect().height);
+  if(h)document.documentElement.style.setProperty('--head-h',h+'px');
 }catch(e){}}
-addEventListener('resize',positionSearch);requestAnimationFrame(positionSearch);
+addEventListener('resize',()=>{positionSearch();try{map.invalidateSize({animate:false});}catch(e){}});
+requestAnimationFrame(positionSearch);
+addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:false});}catch(e){}});
 function presetsFade(){const p=document.getElementById('presets');if(!p)return;p.classList.toggle('can-scroll',p.scrollWidth-p.clientWidth-p.scrollLeft>4);}
 (function(){const p=document.getElementById('presets');if(p)p.addEventListener('scroll',presetsFade,{passive:true});addEventListener('resize',presetsFade);requestAnimationFrame(presetsFade);})();
 function clearPresets(){document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('active'));}
@@ -7060,8 +7070,8 @@ const FEED_SCOPES=[
   {id:'all',label:'Entdecken',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.2 7.8 14 14 7.8 16.2 10 10"/></svg>'},
   {id:'following',label:'Folge ich',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>'},
   {id:'near',label:'Nähe',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>'},
-  {id:'map',label:'Kartenausschnitt',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21 1 6"/><line x1="8" y1="3" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="21"/></svg>'},
-  {id:'saved',label:'Gespeichert',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>'}
+  {id:'map',label:'Karte',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21 1 6"/><line x1="8" y1="3" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="21"/></svg>'},
+  {id:'saved',label:'Gemerkt',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>'}
 ];
 let savedPosts=new Set();try{savedPosts=new Set(JSON.parse(localStorage.getItem('ssm_saved')||'[]'));}catch(e){}
 function toggleSave(id,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
@@ -7361,13 +7371,11 @@ function feedRender(){
       </div>
       ${feedVisual(r,col)}
       <div class="feed-card-body">
-        <div class="feed-card-badges">
-          ${r.stars?`<span class="feed-badge cat-${r.cat}"><svg class="ic-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z" fill="var(--warn)" stroke="none"/></svg> ${r.stars}/5</span>`:''}
-        </div>
-        ${r.img&&r.caption?`<div class="feed-card-caption"><b>${escapeHtml(r.user)}</b> ${escapeHtml(r.caption)}</div>`:''}
+        ${r.img&&r.caption?`<div class="feed-card-caption">${escapeHtml(r.caption)}</div>`:''}
       </div>
       <div class="feed-card-actions">
         ${r.measurement?`<span class="fc-depth" title="${escapeHtml(r.measurement)}">${escapeHtml(r.measurement)}</span>`:''}
+        ${r.stars?`<span class="fc-stars"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z" fill="currentColor" stroke="none"/></svg>${r.stars}/5</span>`:''}
         ${r.dbRow?`<button onclick="openComments('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg> ${r.comments||0}</button>`:''}
         <button class="fc-sp" title="Auf der Karte zeigen" aria-label="Auf der Karte zeigen" onclick="event.stopPropagation();feedFlyTo(${r.lat},${r.lng})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
         <button title="Teilen" aria-label="Teilen" onclick="sharePost('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>
