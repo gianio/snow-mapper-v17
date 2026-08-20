@@ -754,12 +754,32 @@ _SERVICE_WORKER = r"""// Snowmapper — service worker (installable + offline la
 // Network-first for all same-origin GETs (shell, app.js, data blob, icons) so
 // online users always get the latest, and offline falls back to the last cache.
 const C='ssm-v6';
+const T='ssm-tiles-v1';
+const TILE_MAX=1200;             // roughly a canton at working zooms
+let _trim=0;
+// Cheap and approximate on purpose: an exact LRU would cost more than the
+// bytes it saves.
+async function tileTrim(c){
+  if(_trim++%64)return;
+  const ks=await c.keys();
+  if(ks.length<=TILE_MAX)return;
+  for(const k of ks.slice(0,ks.length-TILE_MAX))c.delete(k);
+}
 const CORE=['./','./index.html','./app.js','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(CORE).catch(()=>{})));});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C&&k!==T).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
   const url=new URL(r.url);
-  if(url.origin!==location.origin)return; // map tiles / Supabase / CDNs -> network
+  // swisstopo tiles are addressed by z/x/y and never change, so the second
+  // look at a valley -- and an offline one -- costs nothing.
+  if(url.host==='wmts.geo.admin.ch'){
+    e.respondWith(caches.open(T).then(c=>c.match(r).then(m=>m||fetch(r).then(resp=>{
+      if(resp&&resp.status===200){const cp=resp.clone();
+        c.put(r,cp).then(()=>tileTrim(c)).catch(()=>{});}
+      return resp;}).catch(()=>m))));
+    return;
+  }
+  if(url.origin!==location.origin)return; // Supabase / CDNs -> network
   // Content-stamped data blobs are immutable -> cache-first (repeat loads use 0 network),
   // and stale stamps are purged whenever a new one is stored.
   if(url.pathname.includes('/data/snowdata-')){
@@ -1039,14 +1059,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     that follows from that: modals live OUTSIDE every pane, or they would be
     trapped in one and travel when you swipe.
     --------------------------------------------------------------------- */
- .pane{position:fixed;inset:0;z-index:1;overflow:hidden;
-   transition:transform .34s cubic-bezier(.32,.72,.42,1);will-change:transform;
-   backface-visibility:hidden}
- body.pane-dragging .pane{transition:none}
- .pane[data-at="-1"],.pane[data-at="1"]{pointer-events:none}
- .pane[data-at="0"]{pointer-events:auto}
- #paneReport{background:var(--paper);display:flex;flex-direction:column}
- #feedPage.pane{z-index:1;transform:none}
+ .pane{position:fixed;inset:0;z-index:1;overflow:hidden}
  .pane-top{display:flex;align-items:center;gap:var(--sp3);flex-shrink:0;
    padding:calc(env(safe-area-inset-top,0px) + 14px) 20px 2px}
  /* The brand row. The mark carries the only accent in the header; the name
@@ -1071,36 +1084,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    cursor:pointer;flex-shrink:0;padding:0}
  .pt-acc svg{width:18px;height:18px}
  .pt-ini{font-family:var(--mono);font-size:12px;font-weight:800;letter-spacing:.01em}
- /* Where the carousel is: three dots, the current one drawn out into a bar.
-    It reads the same state the edge tabs read. */
- #scrDots{position:fixed;z-index:45;left:0;right:0;
-   bottom:calc(env(safe-area-inset-bottom,0px) + 8px);
-   display:none;justify-content:center;align-items:center;gap:6px;pointer-events:none}
- body[data-screen="report"] #scrDots,body[data-screen="feed"] #scrDots{display:flex}
- body.draw-on #scrDots,body.scr-home #scrDots,body.insp-open #scrDots{display:none}
- #scrDots i{width:6px;height:6px;border-radius:var(--r-full);background:var(--bd);
-   transition:width .2s var(--ease),background .2s var(--ease)}
- #scrDots i.on{width:16px;background:var(--ink-700)}
- /* Edge tabs: slim slivers naming the screens either side. */
- .edge-tab{position:fixed;z-index:40;top:50%;transform:translateY(-50%);
-   display:flex;align-items:center;justify-content:center;min-height:74px;width:22px;padding:0;
-   border:1px solid var(--bd);background:var(--glass);
-   backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
-   color:var(--ink-500);font-family:inherit;font-size:10px;font-weight:800;
-   letter-spacing:.08em;text-transform:uppercase;cursor:pointer;box-shadow:var(--elev1)}
- .edge-tab span{writing-mode:vertical-rl}
- .edge-tab.left{left:0;border-left:none;border-radius:0 var(--r) var(--r) 0}
- .edge-tab.right{right:0;border-right:none;border-radius:var(--r) 0 0 var(--r)}
- .edge-tab.left span{transform:rotate(180deg)}
- .edge-tab:active{background:var(--glass2)}
- body.draw-on .edge-tab,body.scr-home .edge-tab,body.insp-open .edge-tab{display:none}
- /* ===================== Screen 1: the launcher ======================== */
- /* The startup screen. It is shown once, you pick a screen, and it is gone --
-    there is no way back to it, so it never becomes a place you have to leave. */
- #scrInitial{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;
-   justify-content:center;gap:var(--sp6);padding:var(--sp6) 26px;
-   background:var(--paper);
-   transition:opacity .3s var(--ease),transform .3s var(--ease)}
  body:not(.scr-home) #scrInitial{opacity:0;transform:scale(1.03);pointer-events:none}
  /* Contour lines, the way a map draws a mountain. Two stacked repeating
     gradients read as a ridge without shipping an image. */
@@ -1167,14 +1150,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    color:var(--ok);font-family:var(--mono);flex:none}
  .rp-mine-ok svg{width:12px;height:12px}
  .rp-mine-empty{font-size:12.5px;color:var(--ink-500);padding:4px 0 2px}
- /* ================= The layer field, at the end of the presets =========
+ /* ================= The layer panel ==================================
     Two axes in one control: the strip slides sideways for the layer, the
     column on its right slides up and down for that layer's sub-layer. Both
     are real scrollers, so the gesture is the choice -- nothing to confirm.
     -------------------------------------------------------------------- */
  .ps-sep{flex:0 0 auto;width:1px;align-self:stretch;margin:2px 4px;background:var(--bd)}
- #presets{align-items:stretch;padding-bottom:2px}
- #presets>button{border-radius:7px!important}
  /* ================= The layer panel ==================================
     Slides in from the right over the map, so the choosing happens where the
     consequence is visible. Layers first as pictograms -- a shape is quicker to
@@ -1203,6 +1184,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    padding:0 12px;border-radius:var(--r-md);border:1px solid var(--hair);background:var(--card);
    font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink-900);cursor:pointer;text-align:left}
  .set-rows button svg{width:18px;height:18px;color:var(--ink-500);flex-shrink:0}
+ .set-av{width:22px;height:22px;border-radius:var(--r-full);flex-shrink:0;
+   background-size:cover;background-position:center}
  .set-rows button .st{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-500)}
  .set-rows button.on{border-color:var(--accent)}
  .set-rows button.on svg,.set-rows button.on .st{color:var(--accent)}
@@ -1254,7 +1237,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    cursor:pointer;box-shadow:var(--elev3)}
  .ly-x svg{width:24px;height:24px}
  .ly-x:active{transform:scale(.92)}
- /* --- The console: time controls; the layer field rides with the presets --- */
+ /* --- The console: the time axis, and nothing else --- */
 
  #layerBar{--topic-accent:var(--accent);--topic-tint:var(--accent-soft)}
  #layerBar:empty{display:none}
@@ -1289,8 +1272,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    border:1px solid var(--hair);border-radius:var(--r-lg);box-shadow:var(--elev2);
    transition:none;padding-bottom:6px;overflow:hidden}
  #btmMain{padding:2px 14px 2px}
- /* collapsed: the window label and the presets, and nothing else */
- #bottomPanel.collapsed #presets{display:none}
+ /* collapsed: the scrubber, and the way to bring the rest back */
  #bottomPanel.collapsed #btmMain{padding:0 14px 6px}
  #bottomPanel.collapsed #tlHead{margin-bottom:0;min-height:30px}
  #bottomPanel .tl-more{margin-left:auto;display:inline-flex;align-items:center;gap:5px;
@@ -1299,9 +1281,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #bottomPanel .tl-more svg{width:13px;height:13px;transition:transform .2s var(--ease)}
  #bottomPanel:not(.collapsed) .tl-more svg{transform:rotate(180deg)}
  #timeline{display:block;border:1px solid var(--ink-100);background:var(--ink-050);border-radius:var(--r-1)}
- #presets::-webkit-scrollbar{display:none}
- #presets.can-scroll{-webkit-mask-image:linear-gradient(90deg,#000 86%,transparent);mask-image:linear-gradient(90deg,#000 86%,transparent)}
- .winlbl{font-size:11px;font-weight:800;color:var(--ink-500);letter-spacing:.09em;text-transform:uppercase}
+ .winlbl[hidden]{display:none}
+ .tl-hint{font-size:10px;font-weight:700;color:var(--ink-500);letter-spacing:.01em}
+ #bottomPanel.collapsed .tl-hint{display:none}
  #tlHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:10px}
  #tlModeToggle{display:none!important}
  #tlModeToggleOFF{display:inline-flex;background:rgba(0,0,0,.05);border-radius:999px;padding:3px;flex-shrink:0}
@@ -1388,7 +1370,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* Map-click inspect panel */
  /* Super-transparent glass: the map stays clearly visible through the panel,
     blur+saturate keeps the content readable. Draggable via the header. */
- body.insp-open #mapQr,body.insp-open #mapFab,body.insp-open #mapDraw{opacity:0;pointer-events:none;transition:opacity .2s}
+ body.insp-open #mapFabs{opacity:0;pointer-events:none;transition:opacity .2s}
  /* Docked, not floating: the panel sits flush against an edge and against the
     A card that floats over the map. It is deliberately small -- you tapped a
     point to read it, and a panel that fills the screen hides the terrain the
@@ -1480,6 +1462,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     reachable from the column at the bottom right, where a thumb already is. */
  #mapAcc{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 12px);right:14px;
    margin-left:0;background:var(--card);box-shadow:var(--elev2)}
+ /* the same mark, in the same place, on a surface it can be read against */
+ #brandMark{position:absolute;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 12px);left:14px;
+   height:36px;padding:0 12px 0 10px;border-radius:var(--r-full);
+   background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+   border:1px solid var(--hair);box-shadow:var(--elev2)}
+ body.draw-on #brandMark,body.ly-open #brandMark,body.insp-open #brandMark{display:none}
  /* The search field is not on screen until the search button asks for it. */
  #searchWrap{position:absolute;z-index:1200;top:calc(env(safe-area-inset-top,0px) + 12px);
    left:14px;right:64px;width:auto;max-width:none;
@@ -1653,17 +1641,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* --- Report sheet (Alpenglühen dark) --- */
  /* --- Report wizard: centered light modal --- */
  /* --- Draw-based snow report (v3) --- */
- body.draw-on #ctrlRail,body.draw-on #layerBar,body.draw-on #mapHead,body.draw-on #demoPill,body.draw-on #mapQr,body.draw-on #mapFab,body.draw-on #mapDraw,body.draw-on #bottomPanel,body.draw-on #legendBtn,body.draw-on .legend{display:none!important}
+ body.draw-on #ctrlRail,body.draw-on #layerBar,body.draw-on #demoPill,body.draw-on #mapFabs,body.draw-on #bottomPanel,body.draw-on #legendBtn,body.draw-on .legend{display:none!important}
  .fab-v{position:absolute;top:-3px;left:-3px;min-width:16px;height:15px;padding:0 3px;border-radius:7px;background:var(--ink-900);color:#fff;font-size:8.5px;font-weight:900;line-height:15px;text-align:center;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
  .feed-fab .fab-v{background:var(--card);color:var(--ink-900);border-color:var(--ink-900)}
  /* v1 on top, then v2, then v3 -- the stack closes up when a FAB is hidden
     (Quick Powder is off in this version), so no empty slot is left behind. */
  [hidden]{display:none!important}
- #mapFab{bottom:calc(var(--btm-h,90px) + 178px)!important}
- #mapQr{bottom:calc(var(--btm-h,90px) + 96px)!important}
- #mapQr[hidden]~#mapFab{bottom:calc(var(--btm-h,90px) + 96px)!important}
- #mapDraw{position:fixed;left:auto;right:14px;transform:none;bottom:calc(var(--btm-h,90px) + 14px)!important;z-index:900}
- #mapDraw:active{transform:scale(.9)}
  .feed-draw{background:var(--paper)!important;border-color:var(--accent)!important;color:var(--accent)!important}
  .feed-draw svg{color:var(--accent)}
  #drawWrap{position:fixed;inset:0;z-index:4000;display:none}
@@ -1962,9 +1945,21 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .undo-bar button{background:none;border:none;color:#FF8A5B;font-weight:700;font-size:14px;cursor:pointer}
  @keyframes undoIn{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
  /* --- Feed (full-page, Instagram-style) --- */
- .feed-page{position:fixed;inset:0;z-index:3000;background:var(--page);transform:translateX(100%);transition:transform .35s cubic-bezier(.32,.72,.42,1);display:flex;flex-direction:column;will-change:transform}
- .feed-page.open{transform:translateX(0)}
- .feed-nav{display:flex;align-items:center;gap:10px;padding:2px 20px 2px;background:var(--paper);border-bottom:none;position:sticky;top:0;z-index:2;padding-top:calc(14px + env(safe-area-inset-top,0px))}
+ /* The feed comes in over the map from the right and can be pushed back to a
+    column, so the map it is describing stays in view. */
+ .feed-page{position:fixed;top:0;bottom:0;right:0;left:0;z-index:3000;background:var(--page);
+   transform:translateX(100%);opacity:0;
+   transition:transform .28s cubic-bezier(.32,.72,.42,1),opacity .2s var(--ease),left .28s cubic-bezier(.32,.72,.42,1);
+   display:flex;flex-direction:column;will-change:transform;contain:layout paint}
+ .feed-page.open{transform:translateX(0);opacity:1}
+ .feed-page.side{left:auto;width:min(420px,86vw);box-shadow:var(--elev3);border-left:1px solid var(--hair)}
+ @media(max-width:560px){.feed-page.side{width:88vw}}
+ .fn-btn{width:36px;height:36px;flex-shrink:0;border-radius:var(--r-1);border:1px solid var(--hair);
+   background:var(--card);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+ .fn-btn svg{width:17px;height:17px}
+ .fn-btn:first-of-type{margin-left:auto}
+ .feed-page.wide #feedExpand svg{transform:rotate(180deg)}
+ .feed-nav{display:flex;align-items:center;gap:8px;padding:2px 20px 2px;background:var(--paper);border-bottom:none;position:sticky;top:0;z-index:2;padding-top:calc(14px + env(safe-area-inset-top,0px))}
  .feed-title{background:var(--paper)}
  .feed-filter{display:flex;flex-wrap:wrap;gap:6px;padding:0;overflow:visible;background:none;border-bottom:none}
  .feed-filter::-webkit-scrollbar{display:none}
@@ -2068,13 +2063,29 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .cmt-head button{background:none;border:none;font-size:19px;color:var(--mut);cursor:pointer}
  .cmt-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;min-height:120px}
  .cmt-row{display:flex;gap:10px;padding:8px 0}
+ /* The mention list sits on top of the input, where the eye already is. */
+ .cmt-mentions{position:absolute;left:0;right:0;bottom:100%;z-index:2;
+   background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+   border-top:1px solid var(--hair);max-height:196px;overflow-y:auto;
+   box-shadow:0 -6px 18px rgba(18,21,26,.10)}
+ .cmt-mentions[hidden]{display:none}
+ .cmt-mentions button{display:flex;align-items:center;gap:10px;width:100%;
+   padding:9px 16px;border:none;background:none;cursor:pointer;text-align:left;
+   font-family:inherit;font-size:14px;font-weight:700;color:var(--ink-900)}
+ .cmt-mentions button.on,.cmt-mentions button:hover{background:var(--accent-soft)}
+ .cmt-mentions .mn-av{width:28px;height:28px;border-radius:var(--r-full);flex-shrink:0;
+   background:var(--fill) center/cover;color:var(--ink-700);
+   display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700}
+ .cmt-mentions .mn-h{margin-left:auto;font-family:var(--mono);font-size:11.5px;font-weight:400;color:var(--ink-500)}
+ .cmt-av.has-img{background-size:cover;background-position:center;color:transparent}
  .cmt-av{width:32px;height:32px;border-radius:50%;background:var(--fg);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
  .cmt-b{flex:1;min-width:0}
  .cmt-u{font-size:13px;font-weight:700;color:var(--fg)}
  .cmt-t{font-size:14px;color:var(--fg2);line-height:1.4}
  .cmt-time{font-size:11px;color:var(--mut);margin-top:2px;font-weight:500}
  .cmt-empty{text-align:center;color:var(--mut);padding:30px 20px;font-size:14px}
- .cmt-input{display:flex;gap:8px;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 12px);border-top:1px solid var(--hair);background:transparent}
+ .cmt-mn{color:var(--accent);font-weight:700}
+ .cmt-input{position:relative;display:flex;gap:8px;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 12px);border-top:1px solid var(--hair);background:transparent}
  .cmt-input input{flex:1;padding:12px 16px;border:1.5px solid var(--hair);border-radius:999px;font-size:15px;font-family:inherit;outline:none;background:var(--fill)}
  .cmt-input input:focus{border-color:var(--acc);background:var(--card);box-shadow:0 0 0 3px var(--glow)}
  .cmt-input button{width:46px;height:46px;border-radius:50%;border:none;background:var(--acc);color:#fff;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
@@ -2133,6 +2144,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .uv-hero{position:relative;height:calc(env(safe-area-inset-top,0px) + 44px);padding-top:env(safe-area-inset-top,0px);background:var(--paper);border-bottom:1px solid var(--hair)}
  .uv-hero::after{content:'Profil';position:absolute;left:0;right:0;bottom:12px;text-align:center;
    font-size:13px;font-weight:700;color:var(--ink-900)}
+ .uv-msg{position:absolute;top:calc(env(safe-area-inset-top,0px) + 6px);left:12px;z-index:1;
+   width:32px;height:32px;border-radius:var(--r-1);border:1px solid var(--hair);
+   background:var(--card);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+ .uv-msg[hidden]{display:none}
+ .uv-msg svg{width:16px;height:16px}
  .uv-close{position:absolute;top:calc(env(safe-area-inset-top,0px) + 6px);right:12px;z-index:1;width:32px;height:32px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);color:var(--ink-700);font-size:15px;cursor:pointer;}
  .uv-body{text-align:left;padding:14px 20px 18px!important}
  /* 64 px, round, initials in the mono face -- the same badge as the header */
@@ -2334,17 +2350,33 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     do (report), and the two small things you occasionally need. */
  #mapFabs{position:absolute;z-index:900;right:14px;bottom:calc(var(--btm-h,90px) + 14px);
    display:flex;flex-direction:column;align-items:flex-end;gap:10px}
- .mfab{width:48px;height:48px;border-radius:var(--r-full);border:1px solid var(--hair);
+ .mfab{position:relative;width:48px;height:48px;border-radius:var(--r-full);border:1px solid var(--hair);
    background:var(--card);color:var(--ink-900);display:flex;align-items:center;justify-content:center;
-   cursor:pointer;box-shadow:var(--elev2);padding:0;
+   cursor:pointer;box-shadow:var(--elev2);padding:0;flex-shrink:0;
    transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
  .mfab svg{width:22px;height:22px}
  .mfab:active{transform:scale(.9)}
+ /* Layers and Melden are the same kind of thing -- the two ways you act on
+    the map -- so they are the same size and the same shape. */
  .mfab.primary{width:56px;height:56px;background:var(--ink-900);color:var(--paper);border-color:var(--ink-900)}
  .mfab.primary svg{width:24px;height:24px}
  .mfab.sm{width:40px;height:40px}
  .mfab.sm svg{width:18px;height:18px}
- .mfab-row{display:flex;gap:10px}
+ .mfab-row{display:flex;align-items:center;gap:10px}
+ /* the two ways to report, folded behind the plus until it is asked */
+ .mfab.act{width:48px;height:48px;opacity:0;transform:translateX(14px) scale(.8);
+   pointer-events:none;transition:opacity .18s var(--ease),transform .22s cubic-bezier(.34,1.56,.64,1)}
+ body.fab-open .mfab.act{opacity:1;transform:none;pointer-events:auto}
+ body.fab-open .mfab.act:nth-of-type(2){transition-delay:.04s}
+ body.fab-open #mapFab svg{transform:rotate(45deg)}
+ #mapFab svg{transition:transform .22s var(--ease)}
+ .mfab.act i{position:absolute;right:56px;white-space:nowrap;font-style:normal;
+   font-size:11.5px;font-weight:800;color:var(--ink-900);
+   background:var(--glass2);border:1px solid var(--hair);border-radius:var(--r-full);
+   padding:4px 9px;box-shadow:var(--elev1)}
+ #mapFeedFab .feed-dot{position:absolute;top:2px;right:2px;width:9px;height:9px;border-radius:var(--r-full);
+   background:var(--danger);border:2px solid var(--card);display:none}
+ #mapFeedFab .feed-dot.on{display:block}
  body.insp-open #mapFabs{opacity:0;pointer-events:none;transition:opacity .2s}
  body.draw-on #mapFabs,body.ly-open #mapFabs{display:none}
  #mapFab:active{transform:scale(.9)}
@@ -2377,11 +2409,55 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  @keyframes dblHeart{0%{opacity:0;transform:scale(.4)}25%{opacity:1;transform:scale(1.12)}55%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.15)}}
  .feed-card-actions .save-btn.saved{color:var(--fg)}
  .us-list{max-height:52vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin-top:8px}
+ /* Messages. A sheet, like every other conversation surface in the app. */
+ .dm-wrap{position:fixed;inset:0;z-index:5600;background:rgba(18,21,26,.32);
+   display:flex;align-items:flex-end}
+ @media(min-width:561px){.dm-wrap{align-items:center;justify-content:center;padding:16px}}
+ .dm-sheet{width:100%;height:86vh;display:flex;flex-direction:column;background:var(--paper);
+   border-radius:var(--r-lg) var(--r-lg) 0 0;overflow:hidden;box-shadow:var(--elev3)}
+ @media(min-width:561px){.dm-sheet{max-width:460px;height:min(680px,86vh);border-radius:var(--r-lg)}}
+ .dm-head{display:flex;align-items:center;gap:10px;padding:16px 18px 12px;border-bottom:1px solid var(--hair);flex-shrink:0}
+ .dm-head b{font-size:17px;font-weight:800;color:var(--ink-900);letter-spacing:-.01em;flex:1;
+   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .dm-back,.dm-x{width:32px;height:32px;flex-shrink:0;border-radius:var(--r-1);border:1px solid var(--hair);
+   background:var(--card);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+ .dm-back[hidden]{display:none}
+ .dm-back svg,.dm-x svg{width:16px;height:16px}
+ .dm-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px 0}
+ .dm-empty{padding:28px 22px;text-align:center;font-size:13.5px;color:var(--ink-500);line-height:1.55}
+ /* the thread list */
+ .dm-row{display:flex;align-items:center;gap:12px;width:100%;padding:11px 18px;border:none;
+   background:none;cursor:pointer;text-align:left;font-family:inherit}
+ .dm-row:hover{background:var(--card)}
+ .dm-row .av{width:42px;height:42px;border-radius:var(--r-full);flex-shrink:0;
+   background:var(--fill) center/cover;color:var(--ink-700);display:flex;align-items:center;justify-content:center;
+   font-family:var(--mono);font-size:15px;font-weight:700}
+ .dm-row .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+ .dm-row .tx b{font-size:14.5px;font-weight:700;color:var(--ink-900)}
+ .dm-row .tx span{font-size:12.5px;color:var(--ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .dm-row .when{font-family:var(--mono);font-size:11px;color:var(--ink-500);flex-shrink:0;align-self:flex-start;margin-top:3px}
+ .dm-row .unread{width:8px;height:8px;border-radius:var(--r-full);background:var(--accent);flex-shrink:0}
+ /* the conversation */
+ .dm-msg{max-width:78%;margin:4px 18px;padding:9px 13px;border-radius:var(--r-lg);
+   font-size:14.5px;line-height:1.45;color:var(--ink-900);background:var(--card);
+   border:1px solid var(--hair);width:fit-content}
+ .dm-msg.me{margin-left:auto;background:var(--accent);border-color:var(--accent);color:var(--paper)}
+ .dm-msg .t{display:block;margin-top:3px;font-family:var(--mono);font-size:10.5px;opacity:.7}
+ .dm-input{display:flex;align-items:center;gap:8px;padding:10px 14px calc(env(safe-area-inset-bottom,0px) + 12px);
+   border-top:1px solid var(--hair);flex-shrink:0;background:var(--paper)}
+ .dm-input[hidden]{display:none}
+ .dm-input input{flex:1;min-height:var(--tap);padding:0 14px;border-radius:var(--r-full);
+   border:1px solid var(--hair);background:var(--card);font-family:inherit;font-size:15px;color:var(--ink-900);outline:none}
+ .dm-input input:focus{border-color:var(--accent)}
+ .dm-input button{width:var(--tap);height:var(--tap);flex-shrink:0;border:none;border-radius:var(--r-full);
+   background:var(--accent);color:var(--paper);display:flex;align-items:center;justify-content:center;cursor:pointer}
+ .dm-input button svg{width:19px;height:19px}
  .us-row{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--hair);cursor:pointer}
  .us-row .av{width:42px;height:42px;border-radius:50%;background:var(--ink-900) center/cover;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0}
  .us-row b{flex:1;font-size:15px;color:var(--fg)}
  .us-row .feed-follow{flex-shrink:0}
  .us-empty{color:var(--mut);font-size:13px;text-align:center;padding:18px 0}
+ .feed-more{padding:18px;text-align:center;font-size:12.5px;color:var(--ink-500)}
  .feed-empty{text-align:center;padding:80px 20px;color:var(--mut);font-size:15px}
  /* Instagram-style centered create button at the very bottom of the feed */
  .feed-fab{position:absolute;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);left:auto;right:14px;transform:none;width:56px;height:56px;padding:0;border-radius:var(--r-full);border:none;background:var(--ink-900);color:var(--paper);display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;box-shadow:0 6px 16px rgba(18,21,26,.28);z-index:5;transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s}
@@ -2506,15 +2582,15 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <p>Schnee, Pulver und Verhältnisse in der Schweiz.</p>
   </div>
   <nav class="si-grid">
-    <button class="si-card" onclick="scrGo('report')">
+    <button class="si-card" onclick="acceptDisc&&0;scrGo('search');setTimeout(rpOpen,200)">
       <span class="si-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg></span>
-      <b>Report</b><span>Verhältnisse melden</span>
+      <b>Melden</b><span>Verhältnisse melden</span>
     </button>
     <button class="si-card" onclick="scrGo('search')">
       <span class="si-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span>
       <b>Powder Map</b><span>Karte &amp; Ebenen</span>
     </button>
-    <button class="si-card" onclick="scrGo('feed')">
+    <button class="si-card" onclick="scrGo('search');setTimeout(feedOpen,200)">
       <span class="si-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></span>
       <b>Feed</b><span>Meldungen der Community</span>
     </button>
@@ -2534,6 +2610,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
      the app uses when it talks about itself (title, share sheet, PWA
      install) -- not in new chrome competing with the map. -->
 
+<button id="brandMark" class="pt-home lg float" onclick="scrGo('search')" aria-label="Snowmapper"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg><span>Snowmapper</span></button>
 <button class="pt-acc" id="mapAcc" onclick="accountTap()" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="pt-ini"></span></button>
 <div id="searchWrap" class="hid"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Ort suchen…" autocomplete="off"/><div id="searchRes"></div></div>
 <div id="ctrlRail" hidden>
@@ -2545,11 +2622,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <button class="feed-qr" id="mapQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Schnee-Karte zeichnen" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Zeichnen</span></button>
 <div id="mapFabs">
-  <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
-  <button class="mfab primary" id="mapFab" onclick="scrGo('report')" title="Melden" aria-label="Melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-  <div class="mfab-row">
-    <button class="mfab sm" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
-    <button class="mfab sm" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
+  <button class="mfab sm" id="mapFeedFab" onclick="feedOpen()" title="Community" aria-label="Community"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
+  <button class="mfab sm" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
+  <button class="mfab sm" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
+  <button class="mfab primary" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
+  <div class="mfab-row" id="reportRow">
+    <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Schnee-Karte zeichnen" aria-label="Schnee-Karte zeichnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><i>Zeichnen</i></button>
+    <button class="mfab act" id="fabObs" onclick="fabMenu(false);obsOpen()" title="Beobachtung melden" aria-label="Beobachtung melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><i>Beobachtung</i></button>
+    <button class="mfab primary" id="mapFab" onclick="fabMenu()" title="Melden" aria-label="Melden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
   </div>
 </div>
 <div id="bottomPanel" class="detail collapsed">
@@ -2561,7 +2641,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   </div>
   <div id="btmMain">
     <div id="tlHead">
-      <span class="winlbl" id="window"></span>
+      <span class="winlbl" id="window" hidden></span>
+      <span class="tl-hint">Zwei Finger: Zeitachse zoomen</span>
       <button type="button" class="tl-more" id="tlMore" aria-expanded="false">
         <span>Zeitraum</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><polyline points="6,15 12,9 18,15"/></svg>
@@ -2570,10 +2651,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         <button data-m="simple">Einfach</button>
         <button data-m="detail" class="active">Detail</button>
       </div>
-    </div>
-    <div class="seg" id="presets" style="gap:5px;margin-top:2px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch">
-      <button id="btnSinceSnow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><path d="M12 2v20M4.2 6.5l15.6 11M4.2 17.5l15.6-11"/></svg>Letzter Schnee</button>
-      <button data-r="tomorrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>Bis morgen</button>
     </div>
     <div id="tlDetail">
       <canvas id="timeline" width="900" height="94" style="width:100%;height:94px;border-radius:10px;cursor:default;margin-top:8px"></canvas>
@@ -2602,13 +2679,18 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <span class="lbl-micro">Karte</span>
     <div class="set-rows">
       <button id="setStations" onclick="toggleStations();setRender()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0"/></svg>Messstationen<span class="st"></span></button>
-      <button onclick="setClose();document.getElementById('legendBtn').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>Legende der Ebene</button>
-      <button onclick="setClose();document.getElementById('btn3dFloat').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg>3D-Ansicht</button>
-      <button onclick="setClose();demoToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Demo-Daten umschalten</button>
+      <button onclick="_setCameFromProfile=false;setClose();document.getElementById('legendBtn').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>Legende der Ebene</button>
+      <button onclick="_setCameFromProfile=false;setClose();document.getElementById('btn3dFloat').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg>3D-Ansicht</button>
+      <button onclick="_setCameFromProfile=false;setClose();demoToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Demo-Daten umschalten</button>
+    </div>
+    <span class="lbl-micro">Melden</span>
+    <div class="set-rows">
+      <button onclick="_setCameFromProfile=false;setClose();rpOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg>Meine Meldungen &amp; melden</button>
     </div>
     <span class="lbl-micro">Konto</span>
     <div class="set-rows">
-      <button id="setAccount" onclick="setClose();accountTap()">Anmelden</button>
+      <button id="setAccount" onclick="_setCameFromProfile=false;setClose();accountTap()">Anmelden</button>
+      <button data-dm hidden onclick="_setCameFromProfile=false;setClose();dmOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 4l-1.4 4.1A8.5 8.5 0 0 1 21 11.5z"/></svg>Nachrichten</button>
     </div>
   </div>
 </div>
@@ -2622,35 +2704,29 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 </div>
 <button id="legendBtn" title="Legende" aria-label="Legende"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg></button><div class="legend" id="legend"></div>
 </section>
-<!-- ===================== Pane: Report ================================== -->
-<section class="pane" id="paneReport" aria-label="Melden">
-  <div class="pane-top">
-    <button class="pt-home" onclick="scrGo('search')" aria-label="Zur Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg><span>Snowmapper</span></button>
-    <button class="pt-acc" onclick="accountTap()" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="pt-ini"></span></button>
-  </div>
-  <h2 class="scr-title">Melden</h2>
-  <div class="rp-body">
+<!-- Melden: a sheet, not a screen. The two ways in live on the plus. -->
+<div class="set-sheet" id="rpSheet" onclick="if(event.target===this)rpClose()">
+  <div class="set-in" role="dialog" aria-modal="true" aria-label="Meine Meldungen">
+    <div class="set-head"><b>Meine Meldungen</b><button onclick="rpClose()" aria-label="Schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>
     <div class="rp-choices">
-      <button class="rp-choice" onclick="drawOpen()">
+      <button class="rp-choice" onclick="rpClose();drawOpen()">
         <span class="rp-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg></span>
         <b>Schnee-Karte zeichnen</b>
         <span>Verhältnisse direkt auf die Karte malen</span>
-        <svg class="rp-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><polyline points="9,6 15,12 9,18"/></svg>
       </button>
-      <button class="rp-choice" onclick="obsOpen()">
+      <button class="rp-choice" onclick="rpClose();obsOpen()">
         <span class="rp-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
         <b>Beobachtung melden</b>
         <span>Lawine, Wumm, Triebschnee, Qualität</span>
-        <svg class="rp-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><polyline points="9,6 15,12 9,18"/></svg>
       </button>
     </div>
     <div class="rp-mine">
       <div class="rp-mine-rule"></div>
-      <div class="lbl-micro">Meine Meldungen</div>
+      <div class="lbl-micro">Bisher gemeldet</div>
       <div id="rpMine"></div>
     </div>
   </div>
-</section>
+</div>
 <div id="three-wrap"><div id="map3d" style="width:100%;height:100%"></div><button id="btn3dClose">✕ 2D</button>
 <div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="30" style="width:100px;accent-color:var(--acc)"> Map <span id="mapOpacLbl">30%</span></label>
 <button id="btn3dExag">×1.5</button>
@@ -2774,10 +2850,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 </div>
 </div>
 <input type="file" id="obsFile" accept="image/*" multiple onchange="obsAddMedia(this)" hidden/>
-<div class="feed-page pane" id="feedPage">
+<div class="feed-page side" id="feedPage">
 <div class="feed-nav">
-<button class="pt-home" onclick="scrGo('search')" aria-label="Zur Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg><span>Snowmapper</span></button>
-<button class="pt-acc" style="border-radius:var(--r-1);border-width:1px;border-color:var(--hair)" title="Leute finden" aria-label="Leute finden" onclick="usOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
+<button class="pt-home" onclick="feedClose()" aria-label="Zur Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg><span>Snowmapper</span></button>
+<button class="fn-btn" id="feedExpand" title="Breiter" aria-label="Breiter" onclick="feedToggleWide()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,5 4,5 4,10"/><polyline points="15,19 20,19 20,14"/><line x1="4" y1="5" x2="10" y2="11"/><line x1="20" y1="19" x2="14" y2="13"/></svg></button>
+<button class="fn-btn" title="Leute finden" aria-label="Leute finden" onclick="usOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
+<button class="fn-btn" title="Schliessen" aria-label="Schliessen" onclick="feedClose()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
 </div>
 <h2 class="feed-title scr-title">Feed</h2>
 <div class="feed-sheet" id="feedSheet" onclick="if(event.target===this)feedFilterClose()">
@@ -2815,7 +2893,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div class="cmt-sheet">
     <div class="cmt-head"><span>Kommentare</span><button onclick="commentsClose()">✕</button></div>
     <div class="cmt-list" id="cmtList"></div>
-    <div class="cmt-input"><input id="cmtInput" type="text" placeholder="Kommentar schreiben…" maxlength="500" onkeydown="if(event.key==='Enter')addComment()"/><button onclick="addComment()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div>
+    <div class="cmt-mentions" id="cmtMentions" hidden></div>
+    <div class="cmt-input"><input id="cmtInput" type="text" placeholder="Kommentar schreiben… @ für Namen" maxlength="500" autocomplete="off" oninput="mentionInput()" onkeydown="mentionKey(event)"/><button onclick="addComment()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div>
   </div>
 </div>
 <div class="cond-modal" id="condModal" style="display:none" onclick="if(event.target===this)condClose()">
@@ -2892,7 +2971,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         <div class="prof-sec-title">Meine Beiträge</div>
         <div class="uv-posts" id="profPosts"><div class="prof-hint">Lade …</div></div>
         <div class="prof-sec-title">Einstellungen</div>
-        <button class="prof-item nav" onclick="setOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>Darstellung &amp; Karte<span class="chev">›</span></button>
+        <button class="prof-item nav" onclick="setOpen(true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>Darstellung &amp; Karte<span class="chev">›</span></button>
         <button class="prof-item nav" onclick="profNav('pers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Personalisieren<span class="chev">›</span></button>
         <button class="prof-item nav" onclick="profNav('priv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Privatsphäre &amp; Daten<span class="chev">›</span></button>
         <button class="prof-item nav" onclick="profNav('notif')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Benachrichtigungen<span class="chev">›</span></button>
@@ -2962,6 +3041,20 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     </div>
   </div>
 </div>
+<div class="dm-wrap" id="dmModal" style="display:none" onclick="if(event.target===this)dmClose()">
+  <div class="dm-sheet" role="dialog" aria-modal="true" aria-label="Nachrichten">
+    <div class="dm-head">
+      <button class="dm-back" id="dmBack" onclick="dmList()" hidden aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,6 9,12 15,18"/></svg></button>
+      <b id="dmTitle">Nachrichten</b>
+      <button class="dm-x" onclick="dmClose()" aria-label="Schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+    </div>
+    <div class="dm-body" id="dmBody"></div>
+    <div class="dm-input" id="dmInputRow" hidden>
+      <input id="dmInput" type="text" placeholder="Nachricht…" maxlength="2000" autocomplete="off" onkeydown="if(event.key==='Enter')dmSend()"/>
+      <button onclick="dmSend()" aria-label="Senden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
+    </div>
+  </div>
+</div>
 <div class="prof-modal" id="usModal" style="display:none" onclick="if(event.target===this)usClose()">
   <div class="prof-sheet">
     <div class="prof-head"><span>Leute finden</span><button onclick="usClose()">✕</button></div>
@@ -2973,7 +3066,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 </div>
 <div class="prof-modal" id="userViewModal" style="display:none" onclick="if(event.target===this)userViewClose()">
   <div class="prof-sheet uv-sheet">
-    <div class="uv-hero"><button class="uv-close" onclick="userViewClose()" aria-label="Schliessen">✕</button></div>
+    <div class="uv-hero"><button class="uv-close" onclick="userViewClose()" aria-label="Schliessen">✕</button>
+      <button class="uv-msg" id="uvMsg" data-dm hidden onclick="userViewClose();dmWith(uvUid,document.getElementById('uvName').textContent)" aria-label="Nachricht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 4l-1.4 4.1A8.5 8.5 0 0 1 21 11.5z"/></svg></button></div>
     <div class="prof-body uv-body">
       <div class="uv-top">
         <div class="prof-av uv-av" id="uvAv"><span id="uvInitial"></span></div>
@@ -2994,9 +3088,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     </div>
   </div>
 </div>
-<button class="edge-tab left" id="edgeL" onclick="scrPrev()" aria-label="Vorheriger Screen"><span></span></button>
-<button class="edge-tab right" id="edgeR" onclick="scrNext()" aria-label="Nächster Screen"><span></span></button>
-<div id="scrDots" aria-hidden="true"><i></i><i></i><i></i></div>
 <div id="coach" style="display:none"><div id="coachSpot"></div><div id="coachCard"><div id="coachText"></div><div id="coachNav"><span id="coachDots"></span><button id="coachSkip">Überspringen</button><button id="coachNext">Weiter</button></div></div></div>
 <!--__BOOT__-->
 <script id="appjs">/*__APP_START__*/
@@ -3229,7 +3320,36 @@ function tlPalette(){
           hair:g('--ink-100','#DCE7F1'),fill:g('--ink-050','#EFF5FA'),
           paper:g('--paper','#fff'),accent:g('--accent','#0B6BCB')};
 }
+// The slice of the run the canvas is showing. Pinching changes its width;
+// dragging the selection past an edge pushes it along.
+let tv0=0,tv1=0;                      // set once T is known
+function tvSpan(){return Math.max(TV_MIN,tv1-tv0);}
+const TV_MIN=8;                       // never closer than eight hours across
+function tvInit(){tv0=0;tv1=T;}
+function tvClamp(){
+  let span=Math.max(TV_MIN,Math.min(T,tv1-tv0));
+  if(tv0<0){tv0=0;}
+  tv1=tv0+span;
+  if(tv1>T){tv1=T;tv0=T-span;}
+  if(tv0<0)tv0=0;
+}
+// Keep the selection in view: a window you cannot see is one you cannot judge.
+function tvFollow(){
+  const span=tvSpan();
+  if(a<tv0){tv0=Math.max(0,a-1);tv1=tv0+span;}
+  else if(b>tv1){tv1=Math.min(T,b+1);tv0=tv1-span;}
+  tvClamp();
+}
+function tvZoom(factor,anchorFrac){
+  const span=tvSpan(),mid=tv0+span*(anchorFrac==null?0.5:anchorFrac);
+  let ns=Math.max(TV_MIN,Math.min(T,span/factor));
+  tv0=mid-ns*(anchorFrac==null?0.5:anchorFrac);tv1=tv0+ns;tvClamp();
+}
+// t <-> x, in view coordinates
+function tvX(t,cw){return (t-tv0)/tvSpan()*cw;}
+function tvT(x,cw){return tv0+x/cw*tvSpan();}
 function drawTimeline(){const tc=document.getElementById('timeline');const rect=tc.getBoundingClientRect();
+  if(!tv1)tvInit();
   if(!rect.width)return;
   const cw=rect.width,ch=rect.height||120,dpr=window.devicePixelRatio||1;
   if(tc.width!==Math.round(cw*dpr)||tc.height!==Math.round(ch*dpr)){tc.width=Math.round(cw*dpr);tc.height=Math.round(ch*dpr);}
@@ -3241,24 +3361,33 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   // the bars at all.
   const compact=ch<56;
   const topPad=compact?3:22,botPad=compact?3:24;
-  const nx=nowIdx/T*cw,x1=a/T*cw,x2=b/T*cw,baseY=ch-botPad;
+  const nx=tvX(nowIdx,cw),x1=tvX(a,cw),x2=tvX(b,cw),baseY=ch-botPad;
   // soft selection band (rounded) — tinted with the active layer colour
   ctx2.fillStyle=tlSelTint;rr(x1,2,x2-x1,ch-4,10);ctx2.fill();
   // day gridlines + readable date labels
   ctx2.textAlign='left';let _lastLabX=-1e9;
-  for(let t=0;t<T;t++){const d=new Date(M.times[t]+'Z');if(d.getUTCHours()===0){const x=t/T*cw;
+  // At a wide view the gridlines are days; zoomed in they become hours, which
+  // is the whole point of being able to zoom.
+  const _hSpan=tvSpan(),_step=_hSpan<=36?(_hSpan<=14?1:3):0;
+  for(let t=Math.max(0,Math.floor(tv0));t<Math.min(T,Math.ceil(tv1)+1);t++){
+    const d=new Date(M.times[t]+'Z');
+    const isTick=_step?(d.getUTCHours()%_step===0):(d.getUTCHours()===0);
+    if(isTick){const x=tvX(t,cw);
     ctx2.strokeStyle=_P.fill;ctx2.lineWidth=1;ctx2.beginPath();ctx2.moveTo(x,topPad);ctx2.lineTo(x,baseY);ctx2.stroke();
     // only label a day if it clears the previous label → no overlap on narrow phones
-    if(!compact&&x-_lastLabX>=48){ctx2.fillStyle=_P.mut;ctx2.font='700 11.5px Inter,system-ui';
-      ctx2.fillText(['So','Mo','Di','Mi','Do','Fr','Sa'][d.getUTCDay()]+' '+d.getUTCDate()+'.',x+6,ch-7);_lastLabX=x;}}}
+    if(!compact&&x-_lastLabX>=46){ctx2.fillStyle=_P.mut;ctx2.font='700 11.5px Inter,system-ui';
+      const lab=_step?(d.getUTCHours()+':00')
+        :(['So','Mo','Di','Mi','Do','Fr','Sa'][d.getUTCDay()]+' '+d.getUTCDate()+'.');
+      ctx2.fillText(lab,x+6,ch-7);_lastLabX=x;}}}
   // baseline
   ctx2.strokeStyle=_P.hair;ctx2.lineWidth=1;ctx2.beginPath();ctx2.moveTo(0,baseY+.5);ctx2.lineTo(cw,baseY+.5);ctx2.stroke();
   // snowfall bars — rounded tops, vertical gradient (snow stays blue)
   let mx=0;for(const s of hSnow)if(s>mx)mx=s;mx=Math.max(.05,mx);
-  const barH=Math.max(6,ch-topPad-botPad-2),bw=Math.max(2,cw/T);
+  const barH=Math.max(6,ch-topPad-botPad-2),bw=Math.max(2,cw/tvSpan());
   const gSel=ctx2.createLinearGradient(0,baseY-barH,0,baseY);gSel.addColorStop(0,_P.accent);gSel.addColorStop(1,_P.accent);
   const gSelPast=ctx2.createLinearGradient(0,baseY-barH,0,baseY);gSelPast.addColorStop(0,_P.hair);gSelPast.addColorStop(1,_P.mut);
-  for(let t=0;t<T;t++){const v=hSnow[t];if(v<.002)continue;const h=Math.max(2,v/mx*barH);const x=t/T*cw;
+  for(let t=Math.max(0,Math.floor(tv0));t<Math.min(T,Math.ceil(tv1)+1);t++){
+    const v=hSnow[t];if(v<.002)continue;const h=Math.max(2,v/mx*barH);const x=tvX(t,cw);
     const inSel=(t>=a&&t<b),fut=t>=nowIdx;
     if(inSel){ctx2.fillStyle=fut?gSel:gSelPast;ctx2.globalAlpha=1;}
     else{ctx2.fillStyle=fut?_P.accent:_P.mut;ctx2.globalAlpha=.22;}
@@ -3270,10 +3399,17 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   ctx2.fillStyle=_P.paper;{const gr=compact?1:1;for(let i=-gr;i<=gr;i++){
     ctx2.fillRect(x1-1.25,hy+hh/2+i*(compact?4:5),2.5,2.2);
     ctx2.fillRect(x2-1.25,hy+hh/2+i*(compact?4:5),2.5,2.2);}}
+  // The size of the window, printed on the window. It used to sit in a corner
+  // of the panel, where it described something you had to look away to see.
+  if(!compact){const lab=(b-a)+' h';ctx2.font='800 10px Inter,system-ui';
+   const w=ctx2.measureText(lab).width+12,cx=Math.max(w/2+2,Math.min(cw-w/2-2,(x1+x2)/2));
+   const ly=24;
+   ctx2.fillStyle=tlSel;rr(cx-w/2,ly-6.5,w,13,6.5);ctx2.fill();
+   ctx2.fillStyle=_P.paper;ctx2.textAlign='center';ctx2.fillText(lab,cx,ly+3.5);}
   if(compact){
     // the dashed NOW line is the only annotation that still fits
     ctx2.strokeStyle=_P.ink;ctx2.globalAlpha=.5;ctx2.lineWidth=1.5;ctx2.setLineDash([3,3]);
-    ctx2.beginPath();ctx2.moveTo(nx,2);ctx2.lineTo(nx,ch-2);ctx2.stroke();
+    ctx2.beginPath();ctx2.moveTo(nx,0);ctx2.lineTo(nx,ch);ctx2.stroke();
     ctx2.setLineDash([]);ctx2.globalAlpha=1;return;}
   // selected start / end times — pushed to the OUTER bounds when the selection is narrow
   ctx2.font='800 14px Inter,system-ui';ctx2.fillStyle=tlSel;
@@ -3286,9 +3422,11 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     ctx2.textAlign='right';ctx2.fillText(tB,x2-9,19);
   }
   // NOW marker: dashed line + dark pill (neutral so it never clashes with the layer colour)
-  ctx2.strokeStyle=_P.ink;ctx2.globalAlpha=.55;ctx2.lineWidth=1.5;ctx2.setLineDash([3,3]);ctx2.beginPath();ctx2.moveTo(nx,19);ctx2.lineTo(nx,baseY);ctx2.stroke();ctx2.setLineDash([]);ctx2.globalAlpha=1;
-  const nlx=Math.max(19,Math.min(cw-19,nx));ctx2.fillStyle=_P.ink;rr(nlx-17,3,34,14,7);ctx2.fill();
-  ctx2.fillStyle=_P.paper;ctx2.font='800 9.5px Inter,system-ui';ctx2.textAlign='center';ctx2.fillText('NOW',nlx,12.5);}
+  ctx2.strokeStyle=_P.ink;ctx2.globalAlpha=.55;ctx2.lineWidth=1.5;ctx2.setLineDash([3,3]);
+  ctx2.beginPath();ctx2.moveTo(nx,0);ctx2.lineTo(nx,ch);ctx2.stroke();
+  ctx2.setLineDash([]);ctx2.globalAlpha=1;
+  const nlx=Math.max(20,Math.min(cw-20,nx));ctx2.fillStyle=_P.ink;rr(nlx-19,1,38,14,7);ctx2.fill();
+  ctx2.fillStyle=_P.paper;ctx2.font='800 9.5px Inter,system-ui';ctx2.textAlign='center';ctx2.fillText('JETZT',nlx,10.5);}
 // Karte + Layer
 const [laMin,loMin,laMax,loMax]=M.bounds;
 const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
@@ -3309,9 +3447,17 @@ map.setMaxBounds([[laMin-_padLa,loMin-_padLo],[laMax+_padLa,loMax+_padLo]]);
 function swissTile(id,ext){return "https://wmts.geo.admin.ch/1.0.0/"+id+"/default/current/3857/{z}/{x}/{y}."+(ext||"jpeg");}
 const BASE_TILE='ch.swisstopo.pixelkarte-farbe-winter';
 const BASE_ATTR="© swisstopo / MeteoSwiss / SLF / Copernicus";
+// keepBuffer is the whole trick: two rings of tiles either side of the
+// viewport stay in the DOM, so a pan back over ground you have just seen is a
+// transform rather than a network round trip. updateWhenIdle stops us asking
+// for tiles at every intermediate zoom of a pinch.
 function swissBaseLayer(opts){return L.tileLayer(swissTile(BASE_TILE),
-  Object.assign({maxZoom:17,crossOrigin:true,attribution:BASE_ATTR},opts||{}));}
+  Object.assign({maxZoom:17,crossOrigin:true,attribution:BASE_ATTR,
+    keepBuffer:2,updateWhenIdle:false,updateWhenZooming:false},opts||{}));}
 const base=swissBaseLayer().addTo(map);
+// The tiles are independent of the forecast blob, so there is no reason for
+// them to wait behind it.
+try{base.options.className='base-tiles';}catch(e){}
 // --- Abstract far-zoom base: white page + the Swiss border, nothing else -----
 // Simplified national outline (Natural Earth 10 m, Douglas-Peucker 0.006 deg),
 // delta-encoded in 1e-4 degree steps as lat,lon pairs. Baked in so the abstract
@@ -4153,6 +4299,10 @@ function showOverlay(){
   else if(layer=="progpat"){map.addLayer(prognosisOverlay);renderProgPattern(stat);}
   if(layer=="wind"){map.addLayer(windArr);startFlow();}else{map.removeLayer(windArr);stopFlow();}
 }
+// Everything that asks for a redraw during a gesture asks many times a
+// second; the work is worth doing once per frame.
+let _raf=0;
+function renderSoon(){if(_raf)return;_raf=requestAnimationFrame(()=>{_raf=0;renderAll();});}
 function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefresh();if(tlMode==='detail')drawTimeline();
   if(layer=="rad"||layer=="radsun")renderRadiation();
   if(layer=="wind"){buildFlow();if(wtimer)clearTimeout(wtimer);wtimer=setTimeout(renderWind,120);}
@@ -4371,45 +4521,76 @@ function positionSearch(){try{
 addEventListener('resize',()=>{positionSearch();try{map.invalidateSize({animate:false});}catch(e){}});
 requestAnimationFrame(positionSearch);
 addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:false});}catch(e){}});
-function presetsFade(){const p=document.getElementById('presets');if(!p)return;p.classList.toggle('can-scroll',p.scrollWidth-p.clientWidth-p.scrollLeft>4);}
-(function(){const p=document.getElementById('presets');if(p)p.addEventListener('scroll',presetsFade,{passive:true});addEventListener('resize',presetsFade);requestAnimationFrame(presetsFade);})();
-function clearPresets(){document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('active'));}
-document.querySelectorAll('#presets button[data-d]').forEach(btn=>{btn.onclick=()=>{
-  clearPresets();btn.classList.add('active');
-  windowSize=parseInt(btn.dataset.d);const center=Math.round((a+b)/2);
-  a=Math.max(0,Math.min(T-windowSize,center-Math.floor(windowSize/2)));b=Math.min(T,a+windowSize);renderAll();};});
-document.querySelectorAll('#presets button[data-r]').forEach(btn=>{btn.onclick=()=>{
-  const p=tillTomorrow();a=p[0];b=p[1];windowSize=b-a;
-  clearPresets();btn.classList.add('active');renderAll();};});
-document.getElementById('btnSinceSnow').onclick=()=>{const p=sinceLastSnowfall();a=p[0];b=p[1];windowSize=b-a;
-  clearPresets();document.getElementById('btnSinceSnow').classList.add('active');renderAll();};
+// The preset row is gone: two frozen windows are not worth a permanent strip
+// of a panel you can now drag and pinch to any window you like.
 // --- Timeline Drag (desktop + mobile, edge resize + click-to-jump) ---
-(function(){const tc=document.getElementById('timeline');let mode=null,dragStartX=0,dragStartA=0,dragStartB=0,ws=0;
-  const EDGE=12;
+(function(){const tc=document.getElementById('timeline');
+  let mode=null,dragStartX=0,dragStartA=0,dragStartB=0,ws=0;
+  let pinch=0,pinchSpan=0,pinchMid=0;
+  const EDGE=14;
+  const W=()=>tc.getBoundingClientRect().width;
   function getZone(cx){const rect=tc.getBoundingClientRect();
-    const x1=a/T*rect.width+rect.left,x2=b/T*rect.width+rect.left;
+    const x1=tvX(a,rect.width)+rect.left,x2=tvX(b,rect.width)+rect.left;
     if(Math.abs(cx-x1)<EDGE)return'left';
     if(Math.abs(cx-x2)<EDGE)return'right';
     if(cx>x1&&cx<x2)return'center';
     return'outside';}
-  function startDrag(e){const cx=e.touches?e.touches[0].clientX:e.clientX;
+  // Two fingers on the axis widen or narrow how much of the run is in reach:
+  // apart for hours, together for the whole forecast.
+  function pinchStart(e){
+    if(!e.touches||e.touches.length<2)return false;
+    const [t1,t2]=[e.touches[0],e.touches[1]];
+    pinch=Math.abs(t1.clientX-t2.clientX)||1;
+    pinchSpan=tvSpan();
+    const rect=tc.getBoundingClientRect();
+    pinchMid=Math.max(0,Math.min(1,((t1.clientX+t2.clientX)/2-rect.left)/rect.width));
+    mode=null;return true;}
+  function pinchMove(e){
+    if(!pinch||!e.touches||e.touches.length<2)return false;
+    const d=Math.abs(e.touches[0].clientX-e.touches[1].clientX)||1;
+    const span=Math.max(TV_MIN,Math.min(T,pinchSpan*(pinch/d)));
+    const mid=tv0+tvSpan()*pinchMid;
+    tv0=mid-span*pinchMid;tv1=tv0+span;tvClamp();
+    drawTimeline();
+    if(e.cancelable)e.preventDefault();
+    return true;}
+  function startDrag(e){
+    if(pinchStart(e)){if(e.cancelable)e.preventDefault();return;}
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
     const zone=getZone(cx);
     if(zone==='outside'){
-      const rect=tc.getBoundingClientRect();const clickT=Math.round((cx-rect.left)/rect.width*T);
+      const rect=tc.getBoundingClientRect();
+      const clickT=Math.round(tvT(cx-rect.left,rect.width));
       const hw=Math.floor(windowSize/2);a=Math.max(0,Math.min(T-windowSize,clickT-hw));b=a+windowSize;
-      renderAll();return;}
-    mode=zone;dragStartX=cx;dragStartA=a;dragStartB=b;ws=b-a;tc.style.cursor=zone==='center'?'grabbing':'col-resize';e.preventDefault();}
+      tvFollow();renderAll();return;}
+    mode=zone;dragStartX=cx;dragStartA=a;dragStartB=b;ws=b-a;
+    tc.style.cursor=zone==='center'?'grabbing':'col-resize';
+    if(e.cancelable)e.preventDefault();}
   tc.addEventListener('mousedown',startDrag);tc.addEventListener('touchstart',startDrag,{passive:false});
-  function onDrag(e){if(!mode)return;e.preventDefault();const cx=e.touches?e.touches[0].clientX:e.clientX;
-    const rect=tc.getBoundingClientRect();const delta=Math.round((cx-dragStartX)/rect.width*T);
-    if(mode==='center'){let na=Math.max(0,Math.min(T-ws,dragStartA+delta));a=na;b=na+ws;}
+  function onDrag(e){
+    if(pinchMove(e))return;
+    if(!mode)return;
+    if(e.cancelable)e.preventDefault();
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
+    const delta=Math.round((cx-dragStartX)/W()*tvSpan());
+    if(mode==='center'){const na=Math.max(0,Math.min(T-ws,dragStartA+delta));a=na;b=na+ws;}
     else if(mode==='left'){a=Math.max(0,Math.min(dragStartB-4,dragStartA+delta));windowSize=b-a;}
     else if(mode==='right'){b=Math.min(T,Math.max(dragStartA+4,dragStartB+delta));windowSize=b-a;}
-    drawTimeline();document.getElementById('window').innerHTML=(b-a)+'h Fenster';}
+    tvFollow();drawTimeline();}
   document.addEventListener('mousemove',onDrag);document.addEventListener('touchmove',onDrag,{passive:false});
-  function endDrag(){if(mode){mode=null;tc.style.cursor='default';renderAll();}}
-  document.addEventListener('mouseup',endDrag);document.addEventListener('touchend',endDrag);
-  tc.addEventListener('mousemove',function(e){if(mode)return;const cx=e.clientX;const zone=getZone(cx);
+  function endDrag(e){
+    if(pinch&&(!e||!e.touches||e.touches.length<2)){pinch=0;renderAll();return;}
+    if(mode){mode=null;tc.style.cursor='default';renderAll();}}
+  document.addEventListener('mouseup',endDrag);
+  document.addEventListener('touchend',endDrag);document.addEventListener('touchcancel',endDrag);
+  // A trackpad or a wheel is the same intent as a pinch.
+  tc.addEventListener('wheel',e=>{
+    if(e.cancelable)e.preventDefault();
+    const rect=tc.getBoundingClientRect();
+    tvZoom((e.deltaY||e.deltaX)>0?1/1.18:1.18,(e.clientX-rect.left)/rect.width);
+    drawTimeline();},{passive:false});
+  tc.addEventListener('dblclick',()=>{tvInit();drawTimeline();});
+  tc.addEventListener('mousemove',function(e){if(mode)return;const zone=getZone(e.clientX);
     tc.style.cursor=zone==='center'?'grab':zone==='left'||zone==='right'?'col-resize':'crosshair';});
 })();
 
@@ -4423,6 +4604,20 @@ function toggleStations(){showStn=!showStn;renderStations();
 // --- Rail: account button + locate-me ---
 // The field is not worth a permanent strip of the map: it appears where it
 // always was, with the keyboard already up, and leaves when it is done.
+// The plus is two things, so it opens rather than acts. Tapping it again, or
+// anywhere else, folds it back.
+function fabMenu(open){
+  const on=(open===undefined)?!document.body.classList.contains('fab-open'):!!open;
+  document.body.classList.toggle('fab-open',on);
+  const b=document.getElementById('mapFab');
+  if(b)b.setAttribute('aria-expanded',String(on));
+  if(on)try{haptic(4);}catch(e){}
+}
+addEventListener('pointerdown',e=>{
+  if(!document.body.classList.contains('fab-open'))return;
+  if(e.target&&e.target.closest&&e.target.closest('#reportRow'))return;
+  fabMenu(false);
+},true);
 function searchFieldOpen(){
   const w=document.getElementById('searchWrap'),i=document.getElementById('searchIn');
   if(!w||!i)return;
@@ -4474,9 +4669,19 @@ try{if(window.matchMedia){const mq=window.matchMedia('(prefers-color-scheme: dar
 // --- Einstellungen ------------------------------------------------------
 // Reachable signed in or out, because the theme and the map switches are
 // properties of this device, not of an account.
-function setOpen(){const sh=document.getElementById('setSheet');if(!sh)return;
+// Opened from the profile, it replaces the profile rather than covering it --
+// two stacked sheets is two things to dismiss and one scrim too many.
+let _setCameFromProfile=false;
+function setOpen(fromProfile){
+  const sh=document.getElementById('setSheet');if(!sh)return;
+  const pm=document.getElementById('profModal');
+  _setCameFromProfile=!!fromProfile&&!!pm&&pm.style.display!=='none';
+  if(_setCameFromProfile)pm.style.display='none';
   setRender();sh.classList.add('open');try{haptic(4);}catch(e){}}
-function setClose(){const sh=document.getElementById('setSheet');if(sh)sh.classList.remove('open');}
+function setClose(){
+  const sh=document.getElementById('setSheet');if(sh)sh.classList.remove('open');
+  if(_setCameFromProfile){_setCameFromProfile=false;
+    const pm=document.getElementById('profModal');if(pm)pm.style.display='flex';}}
 function setRender(){
   const v=themePref();
   document.querySelectorAll('#setTheme button').forEach(b=>
@@ -4485,7 +4690,10 @@ function setRender(){
   if(st){st.classList.toggle('on',!!showStn);
     const q=st.querySelector('.st');if(q)q.textContent=showStn?'an':'aus';}
   const acc=document.getElementById('setAccount');
-  if(acc)acc.textContent=sbUser?'Mein Profil':'Anmelden';
+  if(acc){const url=sbUser?avatarOf(sbUser.id):null;
+    acc.innerHTML=(url?('<span class="set-av" style="background-image:url('+encodeURI(url)+')"></span>')
+      :'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>')
+      +(sbUser?'Mein Profil':'Anmelden');}
 }
 addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
@@ -4531,45 +4739,26 @@ function flyToMe(){haptic(8);
     ()=>{toast('Standort konnte nicht ermittelt werden','err');},{enableHighAccuracy:true,timeout:9000});}
 // ===================== Screen router =====================================
 // Three screens on a wrap-around carousel: Search -> Report -> Feed -> Search.
-const SCREENS=['search','report','feed'];
-const SCREEN_EL={search:'paneSearch',report:'paneReport',feed:'feedPage'};
-const SCREEN_LABEL={search:'Powder Map',report:'Report',feed:'Feed'};
-let scrIdx=0;
-function scrPaneOf(n){return document.getElementById(SCREEN_EL[n]);}
-function scrCurrent(){return SCREENS[scrIdx];}
-// -1 left, 0 centre, +1 right. With three panes every pane always holds one
-// of those slots, which is what makes the wrap seamless.
-function scrSlot(i){return ((i-scrIdx+1)%3+3)%3-1;}
-function scrLayout(dxPx){
-  const dx=dxPx||0;
-  SCREENS.forEach((name,i)=>{
-    const el=scrPaneOf(name);if(!el)return;
-    const slot=scrSlot(i);
-    el.style.transform='translate3d(calc('+(slot*100)+'% + '+dx+'px),0,0)';
-    el.setAttribute('data-at',String(slot));
-    el.setAttribute('aria-hidden',slot===0?'false':'true');
-  });
-}
-function scrRenderTabs(){
-  const L=document.getElementById('edgeL'),R=document.getElementById('edgeR');
-  if(!L||!R)return;
-  L.querySelector('span').textContent=SCREEN_LABEL[SCREENS[((scrIdx-1)%3+3)%3]];
-  R.querySelector('span').textContent=SCREEN_LABEL[SCREENS[(scrIdx+1)%3]];
-}
-function scrGoTo(i,silent){
-  scrIdx=((i%3)+3)%3;
+// The app is one screen. scrGo survives as the name everything already calls:
+// 'search' is the map, 'feed' opens the panel over it, 'report' opens the
+// Melden sheet. Nothing translates, nothing wraps, nothing has to be swiped.
+function scrGo(name){
+  if(name==='feed'){feedOpen();return;}
+  if(name==='report'){rpOpen();return;}
+  feedClose();rpClose();
   document.body.classList.remove('scr-home');
-  document.body.setAttribute('data-screen',scrCurrent());
-  scrLayout(0);scrRenderTabs();scrRenderDots();
-  if(!silent){try{haptic(5);}catch(e){}}
-  if(scrCurrent()==='report'){try{renderMyReports();}catch(e){}}
-  setTimeout(()=>{try{map.invalidateSize({animate:false});}catch(e){}
-    if(scrCurrent()==='feed'){try{feedRefresh();}catch(e){}}},360);
+  document.body.setAttribute('data-screen','search');
+  try{map.invalidateSize({animate:false});}catch(e){}
 }
-function scrRenderDots(){
-  const d=document.getElementById('scrDots');if(!d)return;
-  d.querySelectorAll('i').forEach((el,i)=>el.classList.toggle('on',i===scrIdx));
+function scrCurrent(){
+  const f=document.getElementById('feedPage');
+  return (f&&f.classList.contains('open'))?'feed':'search';
 }
+function scrNext(){}
+function scrPrev(){}
+function rpOpen(){const sh=document.getElementById('rpSheet');if(!sh)return;
+  try{renderMyReports();}catch(e){}sh.classList.add('open');try{haptic(4);}catch(e){}}
+function rpClose(){const sh=document.getElementById('rpSheet');if(sh)sh.classList.remove('open');}
 // Everything here is already in allReports; this only reads it back.
 function renderMyReports(){
   const el=document.getElementById('rpMine');if(!el)return;
@@ -4589,58 +4778,20 @@ function renderMyReports(){
       <span class="rp-mine-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>${r.likes||0}</span>
     </button>`;}).join('');
 }
-function scrGo(name){const i=SCREENS.indexOf(name);if(i>=0)scrGoTo(i);}
-function scrNext(){scrGoTo(scrIdx+1);}
-function scrPrev(){scrGoTo(scrIdx-1);}
-(function(){
-  // On the map the swipe has to start at a screen edge, because anywhere else
-  // the gesture is a map pan. On the other panes the whole surface is fair
-  // game once the movement is clearly horizontal.
-  const EDGE=30,TAKEOVER=10;
-  let x0=0,y0=0,dx=0,on=false,decided=false;
-  function start(e){
-    if(document.body.classList.contains('scr-home'))return;
-    if(document.body.classList.contains('draw-on'))return;
-    const t=e.touches?e.touches[0]:e;
-    x0=t.clientX;y0=t.clientY;dx=0;decided=false;
-    on=(scrCurrent()==='search')?(x0<=EDGE||x0>=innerWidth-EDGE):true;
-  }
-  function move(e){
-    if(!on)return;
-    const t=e.touches?e.touches[0]:e,ddx=t.clientX-x0,ddy=t.clientY-y0;
-    if(!decided){
-      if(Math.abs(ddx)<TAKEOVER&&Math.abs(ddy)<TAKEOVER)return;
-      if(Math.abs(ddy)>Math.abs(ddx)){on=false;return;}  // vertical belongs to the scroller
-      decided=true;document.body.classList.add('pane-dragging');
-    }
-    dx=ddx;scrLayout(dx);
-    if(e.cancelable)e.preventDefault();
-  }
-  function end(){
-    if(!on)return;on=false;
-    if(!decided)return;
-    decided=false;document.body.classList.remove('pane-dragging');
-    const need=Math.min(96,innerWidth*0.22);
-    if(dx<=-need)scrGoTo(scrIdx+1);else if(dx>=need)scrGoTo(scrIdx-1);else scrLayout(0);
-    dx=0;
-  }
-  addEventListener('touchstart',start,{passive:true});
-  addEventListener('touchmove',move,{passive:false});
-  addEventListener('touchend',end);addEventListener('touchcancel',end);
-  addEventListener('keydown',e=>{
-    if(document.body.classList.contains('scr-home'))return;
-    if(/^(INPUT|TEXTAREA|SELECT)$/.test((e.target&&e.target.tagName)||''))return;
-    if(document.body.classList.contains('ly-open'))return;
-    if(e.key==='ArrowRight')scrNext();else if(e.key==='ArrowLeft')scrPrev();});
-})();
+// A left/right key used to move between screens. There is one screen; the keys
+// close whatever is open over it instead.
+addEventListener('keydown',e=>{
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test((e.target&&e.target.tagName)||''))return;
+  if(e.key!=='Escape')return;
+  if(document.getElementById('feedPage').classList.contains('open')){feedClose();e.preventDefault();}
+});
 // --- Bottom panel: expand / collapse by tapping the handle (no swipe) ---
 let panelRestore=null,panelCollapsed=true;
 (function(){const bp=document.getElementById('bottomPanel'),tl=document.getElementById('tlToggle'),btm=document.getElementById('btmMain');
   const minH=16;
   function invalidate(){try{map.invalidateSize({animate:false,pan:false});}catch(e){}}
   function updH(){document.documentElement.style.setProperty('--btm-h',bp.offsetHeight+'px');}
-  // Collapse only hides the detailed chart — the mode toggle + presets stay
-  // visible, so the time controls are never fully hidden.
+  // Collapsed keeps the scrubber; only the labels and the extra rows go.
   function apply(){bp.classList.toggle('collapsed',panelCollapsed);bp.style.height='';btm.style.display='';
     updH();requestAnimationFrame(()=>{updH();invalidate();
       try{if(tlMode==='detail')drawTimeline();}catch(e){}});}
@@ -5031,7 +5182,7 @@ const COACH_STEPS=[
   {sel:'#layersFab',html:'<b>Ebenen.</b><br>Öffnet die Ebenen — zuerst die Ebene, darunter ihre Unterebenen.'},
   {sel:'#btmMain',html:'<b>Zeitfenster.</b><br>Wähle den Zeitraum – die Karte rechnet sofort neu.'},
   {sel:'#searchFab',html:'<b>Spring zu einem Ort.</b><br>Suche einen Berg oder Ort und zoome direkt dorthin.'},
-  {sel:'#edgeR',html:'<b>Wisch dich durch.</b><br>Nach rechts geht es zu <b>Report</b>, nach links zum <b>Feed</b> – oder tippe auf die Laschen am Rand.'},
+  {sel:'#mapFeedFab',html:'<b>Community.</b><br>Meldungen aus dem sichtbaren Kartenausschnitt und dem gewählten Zeitfenster.'},
   {sel:'#mapFab',html:'<b>Melden.</b><br>Zeichne eine Schnee-Karte oder melde eine Beobachtung.'}
 ];
 let coachIdx=0;
@@ -5124,7 +5275,7 @@ setTopic('meteo',0,0);dismissIntro();
 // Personal preferences (opening layer, time window, where the map lands) are
 // applied once the map and the layer strip exist.
 requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}
-  try{document.body.classList.add('scr-home');scrLayout(0);scrRenderTabs();}catch(e){}
+  try{document.body.classList.add('scr-home');}catch(e){}
   try{lyRender();}catch(e){}});
 try{const _pid=new URLSearchParams(location.search).get('post');
   if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);}catch(e){}
@@ -5573,7 +5724,7 @@ function feedOpenAt(id){feedScope='all';feedFilter='all';feedAnchor=null;
 function authUpdateUI(user){
   sbUser=user;
   const btn=document.getElementById('btnLogin');
-  const feedB=document.getElementById('feedBtn'),banner=document.getElementById('emailBanner');
+  const feedB=document.getElementById('mapFeedFab'),banner=document.getElementById('emailBanner');
   if(user){
     const name=user.user_metadata?.username||user.email?.split('@')[0]||'User';
     btn.outerHTML=`<div class="user-pill" id="userPill" onclick="openProfile()">
@@ -5610,13 +5761,13 @@ async function loadDbReports(){
     const{data}=await sb.from('reports').select('*').order('created_at',{ascending:false}).limit(60);
     if(!data||!data.length){return;}
     try{const nw=new Date(data[0].created_at).getTime();const seen=+(localStorage.getItem('ssm_feed_seen')||0);
-      const fd=document.querySelector('#feedBtn .feed-dot');if(fd)fd.classList.toggle('on',nw>seen);}catch(e){}
+      const fd=document.querySelector('#mapFeedFab .feed-dot');if(fd)fd.classList.toggle('on',nw>seen);}catch(e){}
     try{dbQpr=data.filter(r=>r.condition_data&&r.condition_data.quick).map(r=>{const ll=parseGeo(r.location);const cd=r.condition_data;
         return ll?[ll[0],ll[1],+cd.powderAmountCm||0,+cd.powderQuality||0]:null;}).filter(Boolean);
       if(layer==='qprheat')renderQprHeat();if(layer==='prog')renderPrognosis(stat);if(layer==='powfind')renderPowderFind();if(layer==='progdiff')renderProgDiff();if(layer==='progpat')renderProgPattern(stat);}catch(e){}
     const ids=data.map(r=>r.id),uids=[...new Set(data.map(r=>r.user_id).filter(Boolean))];
     // usernames
-    let nameMap={},avatarMap={};try{const{data:pr}=await sb.from('profiles').select('id,username,avatar_url').in('id',uids);(pr||[]).forEach(p=>{nameMap[p.id]=p.username;if(p.avatar_url)avatarMap[p.id]=p.avatar_url;});}catch(e){}
+    let nameMap={},avatarMap={};try{const{data:pr}=await sb.from('profiles').select('id,username,avatar_url').in('id',uids);(pr||[]).forEach(p=>{nameMap[p.id]=p.username;if(p.avatar_url){avatarMap[p.id]=p.avatar_url;avatarPut(p.id,p.avatar_url);}});}catch(e){}
     // likes (reuse report_reactions type=like)
     let likeCount={},likedByMe={};try{const{data:rx}=await sb.from('report_reactions').select('report_id,user_id').eq('type','like').in('report_id',ids);
       (rx||[]).forEach(x=>{likeCount[x.report_id]=(likeCount[x.report_id]||0)+1;if(sbUser&&x.user_id===sbUser.id)likedByMe[x.report_id]=true;});}catch(e){}
@@ -5711,7 +5862,7 @@ if(sb){sb.auth.onAuthStateChange((ev,session)=>{
     if(ev==='PASSWORD_RECOVERY'){authUpdateUI(session?.user||null);authOnRecovery();return;}
     authUpdateUI(session?.user||null);});
   sb.auth.getSession().then(({data})=>{authUpdateUI(data.session?.user||null);});}
-else{document.getElementById('feedBtn').style.display='flex';loadReportMarkers();}
+else{const fb=document.getElementById('mapFeedFab');if(fb)fb.style.display='flex';loadReportMarkers();}
 let authPendingEmail=null,justLoggedIn=false;
 function authShow(){authMode='login';authRender();document.getElementById('authOverlay').style.display='flex';}
 function authHide(){document.getElementById('authOverlay').style.display='none';document.getElementById('authErr').textContent='';document.getElementById('authCodeErr').textContent='';}
@@ -5900,6 +6051,17 @@ function prefsApplyAll(){applyLabels();}
 prefsLoad();
 // --- Profile & Settings ---
 let myProfile=null,profAvatarFile=null,profAvatarUrl=null;
+// Every picture the app has seen, by user id. Filled wherever profiles are
+// already being fetched, so nothing makes an extra round trip to draw a face.
+const AVATARS=Object.create(null);
+function avatarPut(id,url){if(id&&url)AVATARS[id]=url;}
+function avatarOf(id){return (id&&AVATARS[id])||null;}
+// One recipe for a face: the picture if there is one, the initial if not.
+function avatarHtml(id,name,cls){
+  const url=avatarOf(id),ini=escapeHtml(((name||'U')[0]||'U').toUpperCase());
+  return '<div class="'+(cls||'cmt-av')+(url?' has-img':'')+'"'+
+    (url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':ini)+'</div>';
+}
 function profNav(v){['Main','Pers','Priv','Notif','App'].forEach(k=>{const el=document.getElementById('profView'+k);if(el)el.style.display=(v===k.toLowerCase())?'':'none';});try{haptic(4);}catch(e){}}
 function profSetVis(v){try{localStorage.setItem('ssm_visibility',v);}catch(e){}
   document.querySelectorAll('#profVis button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
@@ -5961,11 +6123,13 @@ function profBioInput(){const ta=document.getElementById('profBio');const words=
 async function loadMyProfileAvatar(){if(!sb||!sbUser)return;
   try{const{data}=await sb.from('profiles').select('avatar_url').eq('id',sbUser.id).single();
     const url=(data&&data.avatar_url)||null;
+    avatarPut(sbUser.id,url);
     if(url){const av=document.getElementById('userPillAv');if(av){av.style.backgroundImage='url('+encodeURI(url)+')';av.style.backgroundSize='cover';av.style.backgroundPosition='center';const sp=av.querySelector('span');if(sp)sp.style.display='none';}}
     // always, so signing in as someone without a picture clears the last one
     updateAccountBtn(url);}catch(e){updateAccountBtn(null);}}
 async function openProfile(){
   if(!sb||!sbUser){authShow();return;}
+  try{dmAvailable();}catch(e){}
   document.getElementById('profModal').style.display='flex';
   profNav('main');
   try{const vv=localStorage.getItem('ssm_visibility')||'all';document.querySelectorAll('#profVis button').forEach(b2=>b2.classList.toggle('active',b2.dataset.v===vv));}catch(e){}
@@ -5982,7 +6146,7 @@ async function openProfile(){
     myProfile=data||{};
     document.getElementById('profBio').value=data?.bio||'';profBioInput();
     const av=document.getElementById('profAv');
-    if(data?.avatar_url){av.classList.add('has-img');av.style.backgroundImage='url('+data.avatar_url+')';profAvatarUrl=data.avatar_url;}
+    if(data?.avatar_url){av.classList.add('has-img');av.style.backgroundImage='url('+data.avatar_url+')';profAvatarUrl=data.avatar_url;avatarPut(sbUser.id,data.avatar_url);}
     else{av.classList.remove('has-img');av.style.backgroundImage='';}
     document.getElementById('profPush').classList.toggle('on',!!data?.push_enabled);
   }catch(e){myProfile={};}
@@ -6087,6 +6251,8 @@ function sendFeedback(){try{haptic(8);}catch(e){}
 let uvUid=null;
 async function viewUser(uid,username){
   if(!uid){return;} uvUid=uid;
+  try{dmAvailable().then(ok=>{const m=document.getElementById('uvMsg');
+    if(m)m.hidden=!(ok&&sbUser&&uid!==sbUser.id);});}catch(e){}
   if(sbUser&&uid===sbUser.id){openProfile();return;}
   document.getElementById('userViewModal').style.display='flex';
   document.getElementById('uvName').textContent=username||'User';
@@ -6100,7 +6266,7 @@ async function viewUser(uid,username){
     if(data){document.getElementById('uvName').textContent=data.username||username||'User';document.getElementById('uvInitial').textContent=(data.username||'U')[0].toUpperCase();
       document.getElementById('uvBio').textContent=data.bio||'';
       if(data.created_at){const d=new Date(data.created_at);document.getElementById('uvSince').textContent=d.toLocaleDateString('de-CH',{month:'short',year:'2-digit'});}
-      if(data.avatar_url){av.classList.add('has-img');av.style.backgroundImage='url('+data.avatar_url+')';}}
+      if(data.avatar_url){av.classList.add('has-img');av.style.backgroundImage='url('+data.avatar_url+')';avatarPut(uid,data.avatar_url);}}
   }catch(e){}
   try{const{count:fc}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',uid);
     const el=document.getElementById('uvFollowers');if(el)el.textContent=fc||0;}catch(e){}
@@ -6160,6 +6326,115 @@ async function profDeleteAccount(btn){if(!sb||!sbUser)return;
   }catch(e){toast('Löschen fehlgeschlagen: '+(e.message||e),'err');if(btn)btn.disabled=false;}}
 function userViewClose(){document.getElementById('userViewModal').style.display='none';}
 let _usT=null;
+// --- Direct messages -----------------------------------------------------
+// The table is created by web/migration-messages.sql. Until that has been run
+// the entry points stay hidden, because a button that always fails is worse
+// than no button.
+let dmReady=null,dmThread=null,dmOther=null,dmSub=null,dmThreads=[];
+async function dmAvailable(){
+  if(dmReady!==null)return dmReady;
+  if(!sb){dmReady=false;return false;}
+  try{const{error}=await sb.from('dm_threads').select('id').limit(1);
+    dmReady=!error;}catch(e){dmReady=false;}
+  try{document.querySelectorAll('[data-dm]').forEach(el=>{el.hidden=!dmReady;});}catch(e){}
+  return dmReady;
+}
+function dmClose(){
+  document.getElementById('dmModal').style.display='none';
+  dmUnsub();dmThread=null;dmOther=null;
+}
+function dmUnsub(){if(dmSub){try{sb.removeChannel(dmSub);}catch(e){}dmSub=null;}}
+async function dmOpen(){
+  if(!sb||!sbUser){authShow();return;}
+  if(!await dmAvailable()){toast('Nachrichten sind noch nicht eingerichtet.','err');return;}
+  document.getElementById('dmModal').style.display='flex';
+  dmList();
+}
+// The list of conversations, newest first.
+async function dmList(){
+  dmUnsub();dmThread=null;dmOther=null;
+  document.getElementById('dmBack').hidden=true;
+  document.getElementById('dmInputRow').hidden=true;
+  document.getElementById('dmTitle').textContent='Nachrichten';
+  const body=document.getElementById('dmBody');
+  body.innerHTML='<div class="dm-empty">Lade…</div>';
+  try{
+    const{data:th}=await sb.from('dm_threads').select('*').order('last_at',{ascending:false}).limit(50);
+    dmThreads=th||[];
+    if(!dmThreads.length){body.innerHTML='<div class="dm-empty">Noch keine Nachrichten. Öffne ein Profil und tippe auf das Nachrichten-Symbol.</div>';return;}
+    const others=dmThreads.map(t=>t.user_a===sbUser.id?t.user_b:t.user_a);
+    const names={};
+    try{const{data:pr}=await sb.from('profiles').select('id,username,avatar_url').in('id',others);
+      (pr||[]).forEach(u=>{names[u.id]=u.username||'User';avatarPut(u.id,u.avatar_url);});}catch(e){}
+    // one query for the last line of every thread, rather than one per thread
+    const last={};
+    try{const{data:ms}=await sb.from('dm_messages').select('thread_id,body,created_at,sender_id,read_at')
+      .in('thread_id',dmThreads.map(t=>t.id)).order('created_at',{ascending:false}).limit(300);
+      (ms||[]).forEach(m=>{if(!last[m.thread_id])last[m.thread_id]=m;});}catch(e){}
+    body.innerHTML=dmThreads.map(t=>{
+      const oid=t.user_a===sbUser.id?t.user_b:t.user_a;
+      const nm=names[oid]||'User',url=avatarOf(oid),m=last[t.id];
+      const unread=m&&m.sender_id!==sbUser.id&&!m.read_at;
+      return '<button class="dm-row" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+escapeHtml(nm).replace(/'/g,'')+'\')">'+
+        '<span class="av"'+(url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'+
+        '<span class="tx"><b>'+escapeHtml(nm)+'</b><span>'+(m?escapeHtml(m.body):'—')+'</span></span>'+
+        (m?('<span class="when">'+timeAgo(m.created_at)+'</span>'):'')+
+        (unread?'<span class="unread"></span>':'')+
+      '</button>';}).join('');
+  }catch(e){body.innerHTML='<div class="dm-empty">Konnte nicht geladen werden.</div>';}
+}
+// Open (or start) the conversation with someone.
+async function dmWith(uid,name){
+  if(!sb||!sbUser){authShow();return;}
+  if(uid===sbUser.id)return;
+  if(!await dmAvailable()){toast('Nachrichten sind noch nicht eingerichtet.','err');return;}
+  document.getElementById('dmModal').style.display='flex';
+  document.getElementById('dmBody').innerHTML='<div class="dm-empty">Lade…</div>';
+  try{
+    const{data,error}=await sb.rpc('dm_open_thread',{other:uid});
+    if(error)throw error;
+    dmThreadOpen(data,uid,name);
+  }catch(e){document.getElementById('dmBody').innerHTML='<div class="dm-empty">Konnte nicht geöffnet werden.</div>';}
+}
+async function dmThreadOpen(tid,uid,name){
+  dmUnsub();dmThread=tid;dmOther=uid;
+  document.getElementById('dmBack').hidden=false;
+  document.getElementById('dmInputRow').hidden=false;
+  document.getElementById('dmTitle').textContent=name||'Nachricht';
+  await dmRender();
+  // live, so a reply lands without anyone pulling to refresh
+  try{
+    dmSub=sb.channel('dm-'+tid)
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'dm_messages',filter:'thread_id=eq.'+tid},
+        ()=>{dmRender();})
+      .subscribe();
+  }catch(e){}
+  setTimeout(()=>{try{document.getElementById('dmInput').focus();}catch(e){}},120);
+}
+async function dmRender(){
+  const body=document.getElementById('dmBody');
+  try{
+    const{data}=await sb.from('dm_messages').select('*').eq('thread_id',dmThread)
+      .order('created_at',{ascending:true}).limit(400);
+    if(!data||!data.length){body.innerHTML='<div class="dm-empty">Noch nichts. Schreib die erste Nachricht.</div>';return;}
+    body.innerHTML=data.map(m=>'<div class="dm-msg'+(m.sender_id===sbUser.id?' me':'')+'">'+
+      escapeHtml(m.body)+'<span class="t">'+timeAgo(m.created_at)+'</span></div>').join('');
+    body.scrollTop=body.scrollHeight;
+    // anything addressed to me that is on screen has been read
+    const unread=data.filter(m=>m.sender_id!==sbUser.id&&!m.read_at).map(m=>m.id);
+    if(unread.length){try{await sb.from('dm_messages').update({read_at:new Date().toISOString()}).in('id',unread);}catch(e){}}
+  }catch(e){body.innerHTML='<div class="dm-empty">Konnte nicht geladen werden.</div>';}
+}
+async function dmSend(){
+  const inp=document.getElementById('dmInput');const body=(inp.value||'').trim();
+  if(!body||!dmThread)return;
+  inp.value='';
+  try{
+    const{error}=await sb.from('dm_messages').insert({thread_id:dmThread,sender_id:sbUser.id,body});
+    if(error)throw error;
+    dmRender();
+  }catch(e){toast('Senden fehlgeschlagen','err');inp.value=body;}
+}
 function usOpen(){document.getElementById('usModal').style.display='flex';setTimeout(()=>{try{document.getElementById('usInput').focus();}catch(e){}},80);}
 function usClose(){document.getElementById('usModal').style.display='none';}
 function usInput(){clearTimeout(_usT);_usT=setTimeout(usSearch,280);}
@@ -7326,8 +7601,21 @@ function obsBuildCD(){const s=obsState;const cd={obsType:s.type,source:s.locatio
   return cd;}
 function obsSubLabel(){const s=obsState;if(s.type==='avalanche')return s.avalanche.characteristics.size!=='unknown'?('Lawine '+obsSizeMeta(s.avalanche.characteristics.size).l):'Lawine';if(s.type==='whumpf')return 'Wumm';if(s.type==='wind_slab')return 'Triebschnee';if(s.type==='snow')return snowKindLabel(s.snow.kind)||'Schnee';return 'Beobachtung';}
 // --- Feed (Instagram-style full page) ---
-let feedFilter='all',feedAnchor=null,feedScope='all',feedGroup=null;
+let feedFilter='all',feedAnchor=null,feedScope='here',feedGroup=null;
+// The selected window, as real dates, so a report can be tested against it.
+function feedWindowMs(){
+  try{const t0=new Date(M.times[Math.max(0,Math.min(T-1,a))]+'Z').getTime();
+      const t1=new Date(M.times[Math.max(0,Math.min(T-1,b-1))]+'Z').getTime();
+      return [Math.min(t0,t1),Math.max(t0,t1)+3600000];}catch(e){return null;}
+}
+function feedInWindow(r){
+  const w=feedWindowMs();if(!w)return true;
+  const t=Date.parse(r.createdAt||'');
+  if(!isFinite(t))return true;          // demo rows carry no timestamp
+  return t>=w[0]&&t<=w[1];
+}
 const FEED_SCOPES=[
+  {id:'here',label:'Hier & jetzt',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v4l3 2"/></svg>'},
   {id:'all',label:'Entdecken',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.2 7.8 14 14 7.8 16.2 10 10"/></svg>'},
   {id:'following',label:'Folge ich',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>'},
   {id:'near',label:'Nähe',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>'},
@@ -7360,7 +7648,7 @@ function feedImgTap(id,ev){ev.stopPropagation();
   }else{el._t=now;}}
 // The feed is a screen now: "open the feed" means "go to the feed screen".
 function feedRefresh(){
-  try{localStorage.setItem('ssm_feed_seen',String(Date.now()));const fd=document.querySelector('#feedBtn .feed-dot');if(fd)fd.classList.remove('on');}catch(e){}
+  try{localStorage.setItem('ssm_feed_seen',String(Date.now()));const fd=document.querySelector('#mapFeedFab .feed-dot');if(fd)fd.classList.remove('on');}catch(e){}
   document.getElementById('feedScope').innerHTML=FEED_SCOPES.map(s=>
     `<button data-s="${s.id}" class="${feedScope===s.id?'active':''}" onclick="feedSetScope('${s.id}')">${s.icon}${s.label}</button>`).join('');
   document.getElementById('feedFilter').innerHTML=['all','avalanche','whumpf','wind_slab','other'].map(f=>{
@@ -7377,6 +7665,16 @@ function feedFiltMark(){
   const b=document.getElementById('feedFiltFab');if(!b)return;
   b.classList.toggle('on',feedFilter!=='all'||feedScope!==FEED_SCOPES[0].id);
 }
+// "Hier & jetzt" is a live question: panning the map or moving the window
+// changes the answer, so the list follows them while it is open.
+let _feedLiveT=null;
+function feedLiveRefresh(){
+  if(feedScope!=='here')return;
+  const el=document.getElementById('feedPage');
+  if(!el||!el.classList.contains('open'))return;
+  clearTimeout(_feedLiveT);_feedLiveT=setTimeout(()=>{try{feedRender();}catch(e){}},180);
+}
+try{map.on('moveend zoomend',feedLiveRefresh);}catch(e){}
 function feedFilterOpen(){
   const sh=document.getElementById('feedSheet');if(!sh)return;
   sh.classList.add('open');try{haptic(4);}catch(e){}
@@ -7389,8 +7687,25 @@ addEventListener('keydown',e=>{
   const sh=document.getElementById('feedSheet');
   if(sh&&sh.classList.contains('open')){feedFilterClose();e.preventDefault();}
 });
-function feedOpen(){feedRefresh();scrGo('feed');}
-function feedClose(){scrGo('search');}
+function feedOpen(){
+  const el=document.getElementById('feedPage');if(!el)return;
+  feedRefresh();el.classList.add('open');
+  document.body.setAttribute('data-screen','feed');
+  try{haptic(4);}catch(e){}
+}
+function feedClose(){
+  const el=document.getElementById('feedPage');if(!el)return;
+  el.classList.remove('open');
+  document.body.setAttribute('data-screen','search');
+}
+// A column beside the map, or the whole screen. Both are useful: one to
+// compare a post against the terrain, the other to read.
+function feedToggleWide(){
+  const el=document.getElementById('feedPage');if(!el)return;
+  const wide=el.classList.toggle('wide');
+  el.classList.toggle('side',!wide);
+  try{haptic(3);}catch(e){}
+}
 function feedCreatePost(){if(!sb||!sbUser){authShow();return;}scrGo('report');}
 // --- Comments ---
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -7525,6 +7840,9 @@ async function qrSubmit(){if(!sb||!sbUser||qrAmount===null||qrQuality===null)ret
   }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e),'err');}
   btn.disabled=false;btn.textContent='Posten';}
 const CMT_SKELETON='<div class="cmt-row"><div class="cmt-av skel"></div><div class="cmt-b" style="flex:1"><div class="skel" style="height:12px;width:38%;margin-bottom:7px"></div><div class="skel" style="height:11px;width:85%;margin-bottom:5px"></div><div class="skel" style="height:11px;width:55%"></div></div></div>'.repeat(3);
+// A mention is a name, so it is set as one rather than as prose.
+function cmtBody(t){return escapeHtml(t||'').replace(/(^|\s)@([A-Za-z0-9_.\-]{2,32})/g,
+  (m,pre,n)=>pre+'<b class="cmt-mn">@'+n+'</b>');}
 function openComments(id,ev){if(ev)ev.stopPropagation();cmtReportId=id;
   document.getElementById('cmtModal').style.display='flex';
   document.getElementById('cmtList').innerHTML=CMT_SKELETON;
@@ -7535,18 +7853,93 @@ async function loadComments(id){
   try{
     const{data}=await sb.from('report_comments').select('*').eq('report_id',id).order('created_at',{ascending:true});
     let names={};const uids=[...new Set((data||[]).map(c=>c.user_id).filter(Boolean))];
-    if(uids.length){try{const{data:pr}=await sb.from('profiles').select('id,username').in('id',uids);(pr||[]).forEach(p=>names[p.id]=p.username);}catch(e){}}
+    if(uids.length){try{const{data:pr}=await sb.from('profiles').select('id,username,avatar_url').in('id',uids);
+      (pr||[]).forEach(p=>{names[p.id]=p.username;avatarPut(p.id,p.avatar_url);});}catch(e){}}
     const list=document.getElementById('cmtList');
     if(!data||!data.length){list.innerHTML='<div class="cmt-empty">Noch keine Kommentare. Sei der Erste!</div>';return;}
     list.innerHTML=data.map(c=>{const nm=names[c.user_id]||(c.user_id?c.user_id.substring(0,8):'User');
-      return`<div class="cmt-row"><div class="cmt-av">${nm[0].toUpperCase()}</div><div class="cmt-b"><span class="cmt-u">${escapeHtml(nm)}</span> <span class="cmt-t">${escapeHtml(c.body)}</span><div class="cmt-time">${timeAgo(c.created_at)}</div></div></div>`;}).join('');
+      return`<div class="cmt-row">${avatarHtml(c.user_id,nm)}<div class="cmt-b"><span class="cmt-u">${escapeHtml(nm)}</span> <span class="cmt-t">${cmtBody(c.body)}</span><div class="cmt-time">${timeAgo(c.created_at)}</div></div></div>`;}).join('');
     list.scrollTop=list.scrollHeight;
   }catch(e){document.getElementById('cmtList').innerHTML='<div class="cmt-empty">Fehler beim Laden.</div>';}
+}
+// --- @mentions -----------------------------------------------------------
+let _mnHits=[],_mnSel=0,_mnAt=-1,_mnT=null;
+function mentionClose(){const box=document.getElementById('cmtMentions');
+  if(box){box.hidden=true;box.innerHTML='';}_mnHits=[];_mnAt=-1;}
+// The @ that is being typed right now: the last one before the caret with no
+// space after it. Anything else is a mention already finished.
+function mentionToken(){
+  const inp=document.getElementById('cmtInput');if(!inp)return null;
+  const pos=inp.selectionStart||0,left=inp.value.slice(0,pos);
+  const at=left.lastIndexOf('@');
+  if(at<0)return null;
+  if(at>0&&!/[\s(]/.test(left[at-1]))return null;
+  const q=left.slice(at+1);
+  if(/[\s@]/.test(q))return null;
+  return {at:at,q:q};
+}
+function mentionInput(){
+  const tok=mentionToken();
+  if(!tok||tok.q.length<1){mentionClose();return;}
+  _mnAt=tok.at;
+  clearTimeout(_mnT);_mnT=setTimeout(()=>mentionSearch(tok.q),160);
+}
+async function mentionSearch(q){
+  // People already in this thread first -- they are who you usually mean --
+  // then anyone else the name matches.
+  const seen=new Map();
+  const lq=q.toLowerCase();
+  document.querySelectorAll('#cmtList .cmt-u').forEach(el=>{
+    const n=(el.textContent||'').trim();
+    if(n&&n.toLowerCase().startsWith(lq))seen.set(n,{username:n,id:null});});
+  if(sb){try{
+    const{data}=await sb.from('profiles').select('id,username,avatar_url')
+      .ilike('username','%'+q.replace(/[%_]/g,'')+'%').limit(8);
+    (data||[]).forEach(u=>{if(!u.username)return;avatarPut(u.id,u.avatar_url);
+      seen.set(u.username,{username:u.username,id:u.id});});
+  }catch(e){}}
+  _mnHits=[...seen.values()].slice(0,8);_mnSel=0;
+  mentionRender();
+}
+function mentionRender(){
+  const box=document.getElementById('cmtMentions');if(!box)return;
+  if(!_mnHits.length){mentionClose();return;}
+  box.innerHTML=_mnHits.map((u,i)=>{
+    const url=avatarOf(u.id);
+    return '<button type="button" class="'+(i===_mnSel?'on':'')+'" onmousedown="event.preventDefault()" '+
+      'onclick="mentionPick('+i+')">'+
+      '<span class="mn-av"'+(url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+
+        (url?'':escapeHtml(u.username[0].toUpperCase()))+'</span>'+
+      escapeHtml(u.username)+'<span class="mn-h">@'+escapeHtml(u.username)+'</span></button>';}).join('');
+  box.hidden=false;
+}
+function mentionPick(i){
+  const u=_mnHits[i];const inp=document.getElementById('cmtInput');
+  if(!u||!inp||_mnAt<0)return;
+  const pos=inp.selectionStart||0;
+  const before=inp.value.slice(0,_mnAt),after=inp.value.slice(pos);
+  const ins='@'+u.username+' ';
+  inp.value=before+ins+after;
+  const caret=before.length+ins.length;
+  try{inp.setSelectionRange(caret,caret);}catch(e){}
+  inp.focus();mentionClose();
+}
+function mentionKey(e){
+  const box=document.getElementById('cmtMentions');
+  const open=box&&!box.hidden&&_mnHits.length;
+  if(open){
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+      _mnSel=(_mnSel+(e.key==='ArrowDown'?1:-1)+_mnHits.length)%_mnHits.length;
+      mentionRender();e.preventDefault();return;}
+    if(e.key==='Enter'||e.key==='Tab'){mentionPick(_mnSel);e.preventDefault();return;}
+    if(e.key==='Escape'){mentionClose();e.preventDefault();return;}
+  }
+  if(e.key==='Enter')addComment();
 }
 async function addComment(){
   if(!sb||!sbUser){authShow();return;}
   const inp=document.getElementById('cmtInput');const body=(inp.value||'').trim();if(!body||!cmtReportId)return;
-  inp.value='';
+  inp.value='';mentionClose();
   try{
     const{error}=await sb.from('report_comments').insert({report_id:cmtReportId,user_id:sbUser.id,body});
     if(error)throw error;
@@ -7619,7 +8012,11 @@ function feedWireCarousels(){document.querySelectorAll('.fc-carousel').forEach(c
 function feedRender(){
   const list=document.getElementById('feedList');
   let base=allReports.slice();
-  if(feedScope==='following'){
+  if(feedScope==='here'){
+    const bnds=map.getBounds();
+    base=base.filter(r=>bnds.contains([r.lat,r.lng])&&feedInWindow(r));
+    if(!base.length){list.innerHTML='<div class="feed-empty">Nichts im sichtbaren Ausschnitt und im gewählten Zeitfenster. Zoome heraus, verschiebe die Karte oder wähle ein grösseres Fenster — oder tippe auf Filter und wechsle zu „Entdecken".</div>';return;}
+  }else if(feedScope==='following'){
     if(!sbUser){list.innerHTML='<div class="feed-empty">Melde dich an, um Leuten zu folgen und ihre Reports hier zu sehen.</div>';return;}
     base=base.filter(r=>r.dbRow&&r.userId&&myFollowing.has(r.userId));
     if(!base.length){list.innerHTML='<div class="feed-empty">Du folgst noch niemandem. Tippe bei einem Report auf „Folgen".</div>';return;}
@@ -7633,7 +8030,11 @@ function feedRender(){
   let filtered=feedFilter==='all'?base:base.filter(r=>r.cat===feedFilter);
   if(feedAnchor){filtered=filtered.map(r=>({r,km:haversineKm(feedAnchor.lat,feedAnchor.lng,r.lat,r.lng)})).sort((a,b)=>a.km-b.km).map(o=>{o.r._km=o.km;return o.r;});}
   if(!filtered.length){list.innerHTML='<div class="feed-empty">Noch keine Reports in dieser Kategorie.</div>';return;}
-  list.innerHTML=filtered.map(r=>{
+  // Building four hundred cards to show six is most of what made opening the
+  // feed feel slow. Nobody scrolls past the first page before it re-renders.
+  const FEED_PAGE=40;
+  const shown=filtered.slice(0,FEED_PAGE),more=filtered.length-shown.length;
+  list.innerHTML=shown.map(r=>{
     const col=CAT_COLORS[r.cat]||'#666';
     const bg=CAT_BG[r.cat]||'linear-gradient(135deg,#f0f0f0,#e0e0e0)';
     const distTag=(feedAnchor&&r._km!=null)?`<span class="feed-card-dist">${r._km<1?Math.round(r._km*1000)+' m':r._km.toFixed(r._km<10?1:0)+' km'}</span>`:'';
@@ -7668,7 +8069,7 @@ function feedRender(){
         ${r.dbRow&&sbUser&&r.userId===sbUser.id?`<button class="del-btn" title="Löschen" aria-label="Beitrag löschen" onclick="deleteReport('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`:''}
       </div>
     </div>`;
-  }).join('');
+  }).join('')+(more>0?('<div class="feed-more">'+more+' weitere</div>'):'');
   feedAnimateCards();feedWireCarousels();
 }
 // First-appearance card entrance (skips re-animating on like/flag re-renders).

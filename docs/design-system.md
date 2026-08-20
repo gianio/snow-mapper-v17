@@ -44,7 +44,7 @@ rules and a strict grid, with colour spent only where it carries information.
 
 ## 2. The six principles
 
-### P1 — Three screens side by side, nothing stacked
+### P1 — One screen, and things that come over it
 The product is three peer screens — **Search, Report, Feed** — laid out left to
 right and reached by swiping between them. Within a screen, everything **docks
 to an edge**; nothing opens on top of something that is already on top.
@@ -543,6 +543,17 @@ The account badge is 36 px, round, `--fill` inside a 1.5 px `--accent` ring,
 carrying the user's initials in the mono face. Signed out it falls back to the
 person glyph.
 
+### Messages
+
+`web/migration-messages.sql` creates `dm_threads`, `dm_messages` and
+`dm_open_thread()`. Membership of a thread is what grants access to its
+messages — the RLS subquery is the whole enforcement — and the pair on a thread
+is ordered and unique, so two people cannot end up with two threads.
+
+The client asks once whether the table is there (`dmAvailable()`), and hides
+every entry point if it is not. A button that always fails is worse than no
+button.
+
 ### Brand mark (`#brandMark`)
 The twin-peak glyph + "Snowmapper", in the same stroke-icon language as everything
 else — it is not a logo lockup with its own rules. `pointer-events:none`: it is
@@ -573,12 +584,13 @@ wrapped by `prefers-reduced-motion`.
 | screen | how the language applies |
 |---|---|
 | **Launcher** | Startup only. Bone field with faint contour lines, the mark, and three rows — one per screen. No chrome, no map, no data, and no way back to it. |
-| **Powder Map** | Full bleed, and almost empty. One account badge at the top right; one column of round controls at the bottom right, where a thumb already is — **layers**, the **plus** that opens Melden, and a small **search** and **locate** pair. Nothing else: no brand mark, no demo pill, no rail, no legend button. Anything a map switch used to do (stations, 3D, legend) is an entry in the layer panel, because that is the panel about what the map is showing. |
-| **Layer panel** | Layers, and nothing else — the map switches live in Einstellungen. Pictogram tiles, because a shape is quicker to re-find than a word, and the sub-layers of the chosen one open **inside the grid, directly under that tile's row**, tinted and joined to it with a notch pointing at the tile that opened them. Anywhere else and nothing would say which layer they belonged to. It closes with a 56 px ink circle at the bottom right, level with the column that opened it. |
+| **Powder Map** | The app. Everything else arrives over it and leaves again — there is no second screen and nothing slides. The mark sits top left and the account badge top right, in the same place on every surface. One column at the bottom right, where a thumb already is: **community**, **search** and **locate** small, then **layers** and the **plus**, which are the same size and shape because they are the same kind of thing — the two ways you act on the map. The plus opens rather than acts: two circles unfold to its left, Zeichnen and Beobachtung. |
+| **Melden** | Not a screen. Its two ways in are on the plus; the record of what you have sent is a sheet, reachable from Einstellungen. |
+| **Layer panel** | Layers, and nothing else — stations, 3D and the legend live in Einstellungen, because they are properties of the device rather than of the layer. Pictogram tiles, because a shape is quicker to re-find than a word, and the sub-layers of the chosen one open **inside the grid, directly under that tile's row**, tinted and joined to it with a notch pointing at the tile that opened them. Anywhere else and nothing would say which layer they belonged to. It closes with a 56 px ink circle at the bottom right, level with the column that opened it. |
 | **Einstellungen** | What belongs to this device rather than to an account: the theme, the station switch, the legend, 3D, the demo data. Reachable signed in (from the profile's settings list) or out (from the sign-in sheet), because none of it needs a login. |
-| **Console** | A card lifted off the bottom edge so the terrain keeps running underneath it, and **collapsed at rest** — but collapsed keeps the scrubber, at 34 px. It is the control the console exists for; it is the labels, the presets and the step buttons that go. A short canvas is not a scaled-down tall one: `drawTimeline()` drops the gutters that carry the day labels and the time readouts below 56 px, or there is no room left for the bars at all. Tapping *Zeitraum* restores them. A layer change recomputes its height but never re-opens it — that would take back the map the user just got. |
+| **Console** | A card lifted off the bottom edge so the terrain keeps running underneath it, and **collapsed at rest** — but collapsed keeps the scrubber, at 34 px. The axis has a **viewport**: two fingers on it widen or narrow how much of the run is in reach, from the whole forecast down to eight hours, and the gridlines become hours as you go in. The window's size is printed on the window, not in a corner of the panel. There are no presets — two frozen windows are not worth a permanent row when any window is a drag away. It is the control the console exists for; it is the labels, the presets and the step buttons that go. A short canvas is not a scaled-down tall one: `drawTimeline()` drops the gutters that carry the day labels and the time readouts below 56 px, or there is no room left for the bars at all. Tapping *Zeitraum* restores them. A layer change recomputes its height but never re-opens it — that would take back the map the user just got. |
 | **Report** | Titled **Melden**. The two ways in — draw a snow map, or file an observation — as two **squares side by side**, each with a 52 px accent tile above a centred name and one short line: the shape says *pick one*, and neither sits above the other. No wizard chrome until one is chosen. Below a hairline, **Meine Meldungen** lists what you have already sent, read straight out of `allReports`: a category dot, the title, mono meta, the measurement, and the confirmation count in `--ok`. |
-| **Feed** | Header, then the list — the filters are not the feed, and live behind one button at the bottom right that carries a dot whenever something is filtered. The cards are roomy: a 38 px avatar, 15 px name and caption, the picture full-bleed at 4:3, and every glyph on the action row 22 px at the same stroke so no action looks louder than another. A card has exactly four bands — head, picture, one line of caption, one line of readings — and anything that adds a fifth is what stops it reading as this design: the caption does not repeat the author two lines under the author, and the star rating sits with the other readings rather than in a badge row of its own. Full-bleed white plates on `--page`, divided by a bottom hairline — no radius, no shadow, no gutter. A 30 px round avatar, the name, and the meta line (`time · place · distance`) in mono; the category rides at the end of the head as an outlined pill in its own colour. Photo 160 px at `--r`. The row underneath is a line of readings, not a toolbar: the measurement in mono, the counts, and the one thing you can add — **Bestätigen**, an outlined pill in `--ok` that fills once pressed. **A drawn snow map shows no image**: a thumbnail of a few painted blobs says nothing the badges do not, and terrain does not survive being shrunk into a card — "Karte" puts it back at a zoom where it means something. A real photo still shows. |
+| **Feed** | A panel that comes in from the right over the map, as a column (so the terrain it describes stays visible) or full width — the expand button switches between them. It opens on **Hier & jetzt**: what is inside the current map bounds *and* inside the selected time window, which is the only question the map is ever actually asking. Panning or moving the window updates it live. Header, then the list — the filters are not the feed, and live behind one button at the bottom right that carries a dot whenever something is filtered. The cards are roomy: a 38 px avatar, 15 px name and caption, the picture full-bleed at 4:3, and every glyph on the action row 22 px at the same stroke so no action looks louder than another. A card has exactly four bands — head, picture, one line of caption, one line of readings — and anything that adds a fifth is what stops it reading as this design: the caption does not repeat the author two lines under the author, and the star rating sits with the other readings rather than in a badge row of its own. Full-bleed white plates on `--page`, divided by a bottom hairline — no radius, no shadow, no gutter. A 30 px round avatar, the name, and the meta line (`time · place · distance`) in mono; the category rides at the end of the head as an outlined pill in its own colour. Photo 160 px at `--r`. The row underneath is a line of readings, not a toolbar: the measurement in mono, the counts, and the one thing you can add — **Bestätigen**, an outlined pill in `--ok` that fills once pressed. **A drawn snow map shows no image**: a thumbnail of a few painted blobs says nothing the badges do not, and terrain does not survive being shrunk into a card — "Karte" puts it back at a zoom where it means something. A real photo still shows. |
 | **Sheets** (comments, profile, condition, location) | Identical sheet recipe, inheriting whatever accent is currently live. |
 | **Report / draw** | The drawing canvas is the surface; controls dock left (brush) and right (depth) and along the bottom. Pen swatches show the actual texture. |
 | **Inspect panel** | A small **square** floating card — translucent and draggable, because you tapped a point to read it and a panel that fills the screen hides the terrain the reading is about. Tabular numbers, charts in ink, data palettes only for the values themselves. |
@@ -599,6 +611,22 @@ wrapped by `prefers-reduced-motion`.
 - Focus is always visible: `box-shadow: 0 0 0 3px var(--accent-soft)`.
 
 ---
+
+## 9a. Speed is a design property
+
+Four things, in the order they were costing:
+
+- **Tiles.** Leaflet dropped every tile that left the viewport, so panning back
+  re-fetched what it had just had. `keepBuffer: 2` keeps two rings, and the
+  service worker keeps the tiles themselves in their own cache (`ssm-tiles-v1`,
+  trimmed at ~1200) — a second look at a valley, and an offline one, cost
+  nothing. swisstopo tiles are addressed by z/x/y and never change, so this is
+  cache-first without a staleness question.
+- **The carousel.** Three live panes and a touch handler on every gesture, to
+  move between screens that are now one screen.
+- **Redraws.** Anything asking for one during a gesture asks many times a
+  second. `renderSoon()` coalesces to one per frame.
+- **The feed.** It built a card for every report to show six. It builds a page.
 
 ## 9b. Two traps this system has already fallen into
 
