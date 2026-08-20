@@ -880,6 +880,38 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    --card:#FFFFFF;--fill:#F0F1EF;--fill2:#E3E5E2;--page:#F0F1EF;
    --map-bg:#EDEEEC;
    --topic-accent:var(--accent);--topic-tint:var(--accent-soft)}
+ /* ===== Dark ==========================================================
+    The same names, one stop deeper. Night sky rather than a dimmed day: the
+    grounds go blue-black, the ink comes up to a soft white, and the accent
+    lifts to a daylight blue that still reads on it. Set explicitly on the
+    root, never by media query alone, so the switch in Einstellungen wins.
+    ==================================================================== */
+ :root[data-theme="dark"]{
+   --fg:#EDEFF2;--fg2:#A7AEB8;--mut:#6B727C;
+   --acc:#4FA8F0;--acc2:#2E6FB0;
+   --bd:rgba(255,255,255,.12);
+   --glass:rgba(14,17,22,.86);--glass2:rgba(23,27,33,.94);
+   --glow:rgba(79,168,240,.20);
+   --elev1:0 1px 2px rgba(0,0,0,.40);
+   --elev2:0 3px 12px rgba(0,0,0,.48);
+   --elev3:0 8px 28px rgba(0,0,0,.56);
+   --rule:1px solid rgba(255,255,255,.12);
+   --rule-soft:1px solid rgba(255,255,255,.07);
+   --ink-300:#575E68;--ink-150:#3A414B;--ink-100:rgba(255,255,255,.10);--ink-050:#20252C;
+   --paper:#0E1116;
+   --accent-meteo:#4FA8F0;--accent-meteo-soft:rgba(79,168,240,.20);
+   --accent-report:#2E6FB0;--accent-report-soft:rgba(46,111,176,.24);
+   --ok:#5AAE7C;--warn:#D9A94F;--danger:#D9564A;--danger-tint:rgba(217,86,74,.16);
+   --card:#171B21;--fill:#20252C;--fill2:#2A3038;--page:#0B0E12;
+   --map-bg:#141821}
+ /* The basemap is dimmed, never inverted. Every data palette in the product --
+    the SLF depth scale, the wind field, the nine snow textures -- is built to
+    read against light terrain; invert the ground and none of them mean what
+    they mean any more. Only the tile pane is touched, so the overlays sit on
+    a darker version of exactly the map they were drawn for. */
+ :root[data-theme="dark"] .leaflet-tile-pane{filter:brightness(.52) saturate(.8) contrast(1.06)}
+ :root[data-theme="dark"] .feed-card-visual,
+ :root[data-theme="dark"] .fc-wrap{background:var(--fill2)}
  /* The frosted surfaces the original build floated over the map. Only the
     things that actually float get this; docked panels stay opaque so text on
     them never has to fight the terrain underneath. */
@@ -891,8 +923,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    #layerBar,#searchWrap input,.rail-btn,#demoPill,#legendBtn,.legend,
    .insp-panel,.toast,#coachCard,.feed-nav,.auth-modal,#disc .sheet{
      backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--paper)}}
- /* One palette. The app is read outdoors in snow glare against a light map,
-    so the chrome is light too — there is no dark variant to drift out of sync. */
+ /* Two palettes, one token block each -- see :root[data-theme="dark"] above.
+    The data palettes are in neither of them; those are readings, not chrome. */
  /* An instrument reads in columns, so every figure is tabular and never
     reflows as it ticks. */
  body{font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1,'cv05' 1}
@@ -934,7 +966,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
  html{background:#EDEEEC}
  html,body{margin:0;padding:0;height:100%;height:100dvh;width:100%;overflow:hidden;font-family:var(--font);color:var(--fg);overscroll-behavior:none;background:var(--map-bg);position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
- #map{position:absolute;top:0;left:0;right:0;bottom:0;background:#F7F8F7;--resort-op:0;--resort-lbl:0}
+ #map{position:absolute;top:0;left:0;right:0;bottom:0;background:var(--map-bg);--resort-op:0;--resort-lbl:0}
  /* Resort markers: a dot that fades in with zoom, and a label that follows a
     little later so the country view stays uncluttered. */
  .resort-pin{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:4px;white-space:nowrap;opacity:var(--resort-op);transition:opacity .25s linear}
@@ -1148,6 +1180,32 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     consequence is visible. Layers first as pictograms -- a shape is quicker to
     re-find than a word -- and the sub-layers of the chosen one underneath,
     which is why they only appear once there is something to choose. */
+ /* Einstellungen: what belongs to this device rather than to an account, so
+    it opens whether or not anyone is signed in. */
+ .set-sheet{position:fixed;inset:0;z-index:6000;background:rgba(0,0,0,.36);
+   display:none;align-items:flex-end}
+ .set-sheet.open{display:flex}
+ .set-in{width:100%;max-height:88vh;overflow-y:auto;background:var(--paper);
+   border-radius:var(--r-lg) var(--r-lg) 0 0;
+   padding:18px 20px calc(env(safe-area-inset-bottom,0px) + 20px);
+   animation:sheetUp .28s var(--ease) both}
+ @media(min-width:561px){.set-sheet{align-items:center;justify-content:center;padding:16px}
+   .set-in{max-width:420px;border-radius:var(--r-lg)}}
+ .set-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+ .set-head b{font-size:17px;font-weight:800;color:var(--ink-900);letter-spacing:-.01em}
+ .set-head button{width:32px;height:32px;border-radius:var(--r-1);border:1px solid var(--hair);
+   background:var(--card);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer}
+ .set-head button svg{width:16px;height:16px}
+ .set-in .lbl-micro{display:block;margin:0 0 10px}
+ .set-in .prof-seg+.lbl-micro,.set-rows+.lbl-micro{margin-top:22px}
+ .set-rows{display:flex;flex-direction:column;gap:8px}
+ .set-rows button{display:flex;align-items:center;gap:10px;min-height:var(--tap);
+   padding:0 12px;border-radius:var(--r-md);border:1px solid var(--hair);background:var(--card);
+   font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink-900);cursor:pointer;text-align:left}
+ .set-rows button svg{width:18px;height:18px;color:var(--ink-500);flex-shrink:0}
+ .set-rows button .st{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-500)}
+ .set-rows button.on{border-color:var(--accent)}
+ .set-rows button.on svg,.set-rows button.on .st{color:var(--accent)}
  #lyScrim{position:absolute;inset:0;z-index:2400;background:rgba(18,21,26,.28);
    opacity:0;pointer-events:none;transition:opacity .28s var(--ease)}
  body.ly-open #lyScrim{opacity:1;pointer-events:auto}
@@ -1172,22 +1230,23 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ly-tile.on{background:var(--accent);border-color:var(--accent);color:var(--paper)}
  .ly-tile.on svg{color:currentColor}
  .ly-tile:active{transform:scale(.97)}
- /* the sub-layers of the chosen layer, which is why they are not always here */
- .ly-subs{display:flex;flex-wrap:wrap;gap:6px}
+ /* The sub-layers belong to one tile, so they open in the grid directly under
+    that tile's row rather than in a section of their own further down, where
+    nothing would say which layer they were for. */
+ .ly-subs{position:relative;grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;
+   padding:10px 12px 12px;margin-top:-2px;
+   border:1px solid var(--accent);border-top:none;
+   border-radius:0 0 var(--r-md) var(--r-md);background:var(--accent-soft);
+   animation:lySubsIn .2s var(--ease) both}
+ /* the tray is as wide as the grid, so a notch says which tile opened it */
+ .ly-subs::before{content:'';position:absolute;top:-1px;left:var(--notch,25%);
+   transform:translateX(-50%);width:26px;height:3px;border-radius:0 0 3px 3px;background:var(--accent)}
+ @keyframes lySubsIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+ .ly-tile.on{border-bottom-left-radius:0;border-bottom-right-radius:0}
  .ly-sub{min-height:var(--tap-sm);padding:0 12px;border-radius:var(--r-1);
    border:1px solid var(--hair);background:var(--card);
    font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink-700);cursor:pointer}
  .ly-sub.on{background:var(--accent);border-color:var(--accent);color:var(--paper)}
- .ly-none{font-size:12.5px;color:var(--ink-500)}
- /* the two map switches that used to live on the rail */
- .ly-tog{display:flex;flex-direction:column;gap:8px}
- .ly-tog button{display:flex;align-items:center;gap:10px;min-height:var(--tap);
-   padding:0 12px;border-radius:var(--r-md);border:1px solid var(--hair);background:var(--card);
-   font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink-900);cursor:pointer;text-align:left}
- .ly-tog button svg{width:18px;height:18px;color:var(--ink-500);flex-shrink:0}
- .ly-tog button .st{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-500)}
- .ly-tog button.on{border-color:var(--accent)}
- .ly-tog button.on svg,.ly-tog button.on .st{color:var(--accent)}
  /* the way out, where the thumb already is */
  .ly-x{position:absolute;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);
    width:56px;height:56px;border-radius:var(--r-full);border:none;
@@ -1232,8 +1291,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #btmMain{padding:2px 14px 2px}
  /* collapsed: the window label and the presets, and nothing else */
  #bottomPanel.collapsed #presets{display:none}
- #bottomPanel.collapsed #btmMain{padding:0 14px}
- #bottomPanel.collapsed #tlHead{margin-bottom:0;min-height:34px}
+ #bottomPanel.collapsed #btmMain{padding:0 14px 6px}
+ #bottomPanel.collapsed #tlHead{margin-bottom:0;min-height:30px}
  #bottomPanel .tl-more{margin-left:auto;display:inline-flex;align-items:center;gap:5px;
    border:none;background:none;padding:6px 0;cursor:pointer;font-family:inherit;
    font-size:11.5px;font-weight:800;letter-spacing:.02em;color:var(--accent)}
@@ -1250,7 +1309,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #tlModeToggle button.active{background:var(--card);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
  #tlDetail{display:none}
  #bottomPanel.detail #tlDetail{display:block}
- #bottomPanel.collapsed #tlDetail{display:none}
+ /* Collapsed keeps the scrubber -- it is the thing the console is for -- and
+    drops everything that only describes it. */
+ #bottomPanel.collapsed #tlExtended{display:none}
+ #bottomPanel.collapsed #timeline{height:34px!important;margin-top:2px}
+ #bottomPanel.collapsed .winlbl{font-size:10px}
  #bottomPanel.collapsed #tlModeToggle{opacity:.5;pointer-events:none}
  #tlExtended{margin-top:8px}
  #tlLen{width:100%;accent-color:var(--acc);margin:8px 0 2px;cursor:pointer}
@@ -2402,7 +2465,19 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rpop-cta{width:100%;padding:10px;border-radius:12px;border:none;background:var(--fg);color:#fff;font-size:13.5px;font-weight:800;font-family:inherit;cursor:pointer}
  .rpop-cta:active{transform:scale(.97)}
  @media(prefers-reduced-motion:reduce){.cat-chip,.sub-chip,.bucket,.slide-knob,.radial-seg{transition:none!important}}
-</style></head><body>
+</style>
+<script>
+/* Theme, before anything is painted: a flash of the wrong palette is worse
+   than any of the work below. "system" resolves once here and then follows
+   the OS while it stays on system. */
+(function(){try{
+  var k='ssm_theme',v=localStorage.getItem(k)||'system';
+  var dark=v==='dark'||(v==='system'&&window.matchMedia&&
+    window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.setAttribute('data-theme',dark?'dark':'light');
+}catch(e){}})();
+</script>
+</head><body>
 <!-- No splash. The app is the first thing on screen; while the forecast data
      streams in, a hairline at the top edge carries the real progress. -->
 <div id="boot"><i></i></div>
@@ -2515,19 +2590,33 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     </div>
   </div>
 </div>
+<div class="set-sheet" id="setSheet" onclick="if(event.target===this)setClose()">
+  <div class="set-in" role="dialog" aria-modal="true" aria-label="Einstellungen">
+    <div class="set-head"><b>Einstellungen</b><button onclick="setClose()" aria-label="Schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>
+    <span class="lbl-micro">Darstellung</span>
+    <div class="prof-seg" id="setTheme">
+      <button data-v="system" onclick="themeSet('system')">System</button>
+      <button data-v="light" onclick="themeSet('light')">Hell</button>
+      <button data-v="dark" onclick="themeSet('dark')">Dunkel</button>
+    </div>
+    <span class="lbl-micro">Karte</span>
+    <div class="set-rows">
+      <button id="setStations" onclick="toggleStations();setRender()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0"/></svg>Messstationen<span class="st"></span></button>
+      <button onclick="setClose();document.getElementById('legendBtn').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>Legende der Ebene</button>
+      <button onclick="setClose();document.getElementById('btn3dFloat').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg>3D-Ansicht</button>
+      <button onclick="setClose();demoToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Demo-Daten umschalten</button>
+    </div>
+    <span class="lbl-micro">Konto</span>
+    <div class="set-rows">
+      <button id="setAccount" onclick="setClose();accountTap()">Anmelden</button>
+    </div>
+  </div>
+</div>
 <div id="lyScrim" onclick="lyPanelClose()"></div>
 <div id="lyPanel" class="ly-panel" role="dialog" aria-modal="true" aria-label="Ebenen">
   <div class="ly-scroll">
     <span class="lbl-micro">Ebene</span>
     <div class="ly-grid" id="lyGrid"></div>
-    <span class="lbl-micro" id="lySubK">Unterebene</span>
-    <div class="ly-subs" id="lySubs"></div>
-    <span class="lbl-micro">Karte</span>
-    <div class="ly-tog">
-      <button id="lyStations" onclick="toggleStations();lyRender()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0"/></svg>Messstationen<span class="st"></span></button>
-      <button id="ly3d" onclick="lyPanelClose();document.getElementById('btn3dFloat').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg>3D-Ansicht</button>
-      <button id="lyLegend" onclick="lyPanelClose();document.getElementById('legendBtn').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>Legende</button>
-    </div>
   </div>
   <button class="ly-x" onclick="lyPanelClose()" aria-label="Ebenen schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
 </div>
@@ -2615,6 +2704,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button class="auth-btn ghost" onclick="authSkipBio()">Später</button>
 </div>
 <div class="auth-switch" id="authSwitch">Kein Account? <button onclick="authToggle()">Registrieren</button></div>
+<div class="auth-switch"><button onclick="authHide();setOpen()">Einstellungen &amp; Darstellung</button></div>
 </div>
 </div>
 <div class="bio-lock" id="bioLock" style="display:none">
@@ -2802,6 +2892,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         <div class="prof-sec-title">Meine Beiträge</div>
         <div class="uv-posts" id="profPosts"><div class="prof-hint">Lade …</div></div>
         <div class="prof-sec-title">Einstellungen</div>
+        <button class="prof-item nav" onclick="setOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>Darstellung &amp; Karte<span class="chev">›</span></button>
         <button class="prof-item nav" onclick="profNav('pers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Personalisieren<span class="chev">›</span></button>
         <button class="prof-item nav" onclick="profNav('priv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Privatsphäre &amp; Daten<span class="chev">›</span></button>
         <button class="prof-item nav" onclick="profNav('notif')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Benachrichtigungen<span class="chev">›</span></button>
@@ -3144,32 +3235,46 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   if(tc.width!==Math.round(cw*dpr)||tc.height!==Math.round(ch*dpr)){tc.width=Math.round(cw*dpr);tc.height=Math.round(ch*dpr);}
   const ctx2=tc.getContext('2d');ctx2.setTransform(dpr,0,0,dpr,0,0);ctx2.clearRect(0,0,cw,ch);
   function rr(x,y,w,h,r){r=Math.max(0,Math.min(r,w/2,h/2));ctx2.beginPath();if(ctx2.roundRect){ctx2.roundRect(x,y,w,h,r);}else{ctx2.moveTo(x+r,y);ctx2.arcTo(x+w,y,x+w,y+h,r);ctx2.arcTo(x+w,y+h,x,y+h,r);ctx2.arcTo(x,y+h,x,y,r);ctx2.arcTo(x,y,x+w,y,r);ctx2.closePath();}}
-  const _P=tlPalette();const nx=nowIdx/T*cw,x1=a/T*cw,x2=b/T*cw,baseY=ch-24;
+  const _P=tlPalette();
+  // A short canvas is not a scaled-down tall one: the gutters that carry the
+  // day labels and the time readouts have to go, or there is no room left for
+  // the bars at all.
+  const compact=ch<56;
+  const topPad=compact?3:22,botPad=compact?3:24;
+  const nx=nowIdx/T*cw,x1=a/T*cw,x2=b/T*cw,baseY=ch-botPad;
   // soft selection band (rounded) — tinted with the active layer colour
   ctx2.fillStyle=tlSelTint;rr(x1,2,x2-x1,ch-4,10);ctx2.fill();
   // day gridlines + readable date labels
   ctx2.textAlign='left';let _lastLabX=-1e9;
   for(let t=0;t<T;t++){const d=new Date(M.times[t]+'Z');if(d.getUTCHours()===0){const x=t/T*cw;
-    ctx2.strokeStyle=_P.fill;ctx2.lineWidth=1;ctx2.beginPath();ctx2.moveTo(x,22);ctx2.lineTo(x,baseY);ctx2.stroke();
+    ctx2.strokeStyle=_P.fill;ctx2.lineWidth=1;ctx2.beginPath();ctx2.moveTo(x,topPad);ctx2.lineTo(x,baseY);ctx2.stroke();
     // only label a day if it clears the previous label → no overlap on narrow phones
-    if(x-_lastLabX>=48){ctx2.fillStyle=_P.mut;ctx2.font='700 11.5px Inter,system-ui';
+    if(!compact&&x-_lastLabX>=48){ctx2.fillStyle=_P.mut;ctx2.font='700 11.5px Inter,system-ui';
       ctx2.fillText(['So','Mo','Di','Mi','Do','Fr','Sa'][d.getUTCDay()]+' '+d.getUTCDate()+'.',x+6,ch-7);_lastLabX=x;}}}
   // baseline
   ctx2.strokeStyle=_P.hair;ctx2.lineWidth=1;ctx2.beginPath();ctx2.moveTo(0,baseY+.5);ctx2.lineTo(cw,baseY+.5);ctx2.stroke();
   // snowfall bars — rounded tops, vertical gradient (snow stays blue)
   let mx=0;for(const s of hSnow)if(s>mx)mx=s;mx=Math.max(.05,mx);
-  const barH=ch-48,bw=Math.max(2,cw/T);
+  const barH=Math.max(6,ch-topPad-botPad-2),bw=Math.max(2,cw/T);
   const gSel=ctx2.createLinearGradient(0,baseY-barH,0,baseY);gSel.addColorStop(0,_P.accent);gSel.addColorStop(1,_P.accent);
   const gSelPast=ctx2.createLinearGradient(0,baseY-barH,0,baseY);gSelPast.addColorStop(0,_P.hair);gSelPast.addColorStop(1,_P.mut);
   for(let t=0;t<T;t++){const v=hSnow[t];if(v<.002)continue;const h=Math.max(2,v/mx*barH);const x=t/T*cw;
     const inSel=(t>=a&&t<b),fut=t>=nowIdx;
-    ctx2.fillStyle=inSel?(fut?gSel:gSelPast):(fut?'rgba(24,104,196,.18)':'rgba(122,114,102,.20)');
-    rr(x+.5,baseY-h,Math.max(bw-1,1.4),h,Math.min(2.5,bw/2.2));ctx2.fill();}
+    if(inSel){ctx2.fillStyle=fut?gSel:gSelPast;ctx2.globalAlpha=1;}
+    else{ctx2.fillStyle=fut?_P.accent:_P.mut;ctx2.globalAlpha=.22;}
+    rr(x+.5,baseY-h,Math.max(bw-1,1.4),h,Math.min(2.5,bw/2.2));ctx2.fill();ctx2.globalAlpha=1;}
   // selection frame + rounded grab handles (layer colour)
   ctx2.strokeStyle=tlSel;ctx2.globalAlpha=.65;ctx2.lineWidth=2;rr(x1+1,2,x2-x1-2,ch-4,10);ctx2.stroke();ctx2.globalAlpha=1;
-  const hh=28,hy=(ch-hh)/2;ctx2.fillStyle=tlSel;
+  const hh=compact?Math.max(14,ch-8):28,hy=(ch-hh)/2;ctx2.fillStyle=tlSel;
   rr(x1-3.5,hy,7,hh,3.5);ctx2.fill();rr(x2-3.5,hy,7,hh,3.5);ctx2.fill();
-  ctx2.fillStyle=_P.paper;for(let i=-1;i<=1;i++){ctx2.fillRect(x1-1.25,hy+hh/2+i*5,2.5,2.4);ctx2.fillRect(x2-1.25,hy+hh/2+i*5,2.5,2.4);}
+  ctx2.fillStyle=_P.paper;{const gr=compact?1:1;for(let i=-gr;i<=gr;i++){
+    ctx2.fillRect(x1-1.25,hy+hh/2+i*(compact?4:5),2.5,2.2);
+    ctx2.fillRect(x2-1.25,hy+hh/2+i*(compact?4:5),2.5,2.2);}}
+  if(compact){
+    // the dashed NOW line is the only annotation that still fits
+    ctx2.strokeStyle=_P.ink;ctx2.globalAlpha=.5;ctx2.lineWidth=1.5;ctx2.setLineDash([3,3]);
+    ctx2.beginPath();ctx2.moveTo(nx,2);ctx2.lineTo(nx,ch-2);ctx2.stroke();
+    ctx2.setLineDash([]);ctx2.globalAlpha=1;return;}
   // selected start / end times — pushed to the OUTER bounds when the selection is narrow
   ctx2.font='800 14px Inter,system-ui';ctx2.fillStyle=tlSel;
   const tA=fmtTime(a),tB=fmtTime(b-1),wA=ctx2.measureText(tA).width,wB=ctx2.measureText(tB).width;
@@ -4194,22 +4299,23 @@ const LY_ICON={
 function lyIconFor(id){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '+
   'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+
   (LY_ICON[id]||'<circle cx="12" cy="12" r="7"/>')+'</svg>';}
+const LY_COLS=2;
 function lyRender(){
   const grid=document.getElementById('lyGrid');if(!grid)return;
   const L=lyLayers(),i=lyIndex(),it=L[i]&&L[i][2],vars=(it&&it.vars)||[];
+  const many=vars.length>1;
+  // the sub-layers go after the last tile of the row the chosen tile is on,
+  // so they read as belonging to it and nothing below has to move sideways
+  const afterIdx=Math.min(L.length-1,Math.floor(i/LY_COLS)*LY_COLS+LY_COLS-1);
+  const subsHtml=many?('<div class="ly-subs" id="lySubs" role="group" aria-label="Unterebene" '+
+    'style="--notch:'+(((i%LY_COLS)+0.5)/LY_COLS*100)+'%">'+
+    vars.map((v,n)=>'<button type="button" class="ly-sub'+(n===curVar?' on':'')+'" '+
+      'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join('')+'</div>'):'';
   grid.innerHTML=L.map(([g,k,item],n)=>
     '<button type="button" class="ly-tile'+(n===i?' on':'')+'" onclick="lyPick('+n+')"'+
     (n===i?' aria-current="true"':'')+'>'+lyIconFor(item.id)+
-    '<span>'+escapeHtml(item.label)+'</span></button>').join('');
-  const subs=document.getElementById('lySubs'),k=document.getElementById('lySubK');
-  const many=vars.length>1;
-  k.style.display=many?'':'none';
-  subs.innerHTML=many?vars.map((v,n)=>
-    '<button type="button" class="ly-sub'+(n===curVar?' on':'')+'" onclick="lyPickVar('+n+')">'+
-    escapeHtml(v.label)+'</button>').join(''):'';
-  const st=document.getElementById('lyStations');
-  if(st){st.classList.toggle('on',!!showStn);
-    st.querySelector('.st').textContent=showStn?'an':'aus';}
+    '<span>'+escapeHtml(item.label)+'</span></button>'+
+    (n===afterIdx?subsHtml:'')).join('');
 }
 function lyPick(n){const t=lyLayers()[n];if(!t)return;
   setTopic(t[0],t[1],0);try{haptic(3);}catch(e){}}
@@ -4335,6 +4441,56 @@ addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
   const w=document.getElementById('searchWrap');
   if(w&&!w.classList.contains('hid'))searchFieldClose();
+});
+// --- Theme -------------------------------------------------------------
+// Three states, because "follow the phone" is the one most people want and
+// neither of the other two can express it.
+function themePref(){try{return localStorage.getItem('ssm_theme')||'system';}catch(e){return 'system';}}
+function themeIsDark(v){
+  v=v||themePref();
+  if(v==='dark')return true;
+  if(v==='light')return false;
+  try{return !!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}catch(e){return false;}
+}
+function themeApply(v){
+  document.documentElement.setAttribute('data-theme',themeIsDark(v)?'dark':'light');
+  // Canvas cannot see a CSS custom property, so everything drawn rather than
+  // styled has to be told to redraw: the timeline, the raster, the stations.
+  try{if(tlMode==='detail')drawTimeline();}catch(e){}
+  try{renderAll();}catch(e){}
+  try{progRenderBar();}catch(e){}
+  try{lyRender();}catch(e){}
+}
+function themeSet(v){
+  try{localStorage.setItem('ssm_theme',v);}catch(e){}
+  themeApply(v);setRender();
+  try{haptic(4);}catch(e){}
+}
+try{if(window.matchMedia){const mq=window.matchMedia('(prefers-color-scheme: dark)');
+  const onSys=()=>{if(themePref()==='system')themeApply('system');};
+  if(mq.addEventListener)mq.addEventListener('change',onSys);else if(mq.addListener)mq.addListener(onSys);}
+}catch(e){}
+
+// --- Einstellungen ------------------------------------------------------
+// Reachable signed in or out, because the theme and the map switches are
+// properties of this device, not of an account.
+function setOpen(){const sh=document.getElementById('setSheet');if(!sh)return;
+  setRender();sh.classList.add('open');try{haptic(4);}catch(e){}}
+function setClose(){const sh=document.getElementById('setSheet');if(sh)sh.classList.remove('open');}
+function setRender(){
+  const v=themePref();
+  document.querySelectorAll('#setTheme button').forEach(b=>
+    b.classList.toggle('active',b.dataset.v===v));
+  const st=document.getElementById('setStations');
+  if(st){st.classList.toggle('on',!!showStn);
+    const q=st.querySelector('.st');if(q)q.textContent=showStn?'an':'aus';}
+  const acc=document.getElementById('setAccount');
+  if(acc)acc.textContent=sbUser?'Mein Profil':'Anmelden';
+}
+addEventListener('keydown',e=>{
+  if(e.key!=='Escape')return;
+  const sh=document.getElementById('setSheet');
+  if(sh&&sh.classList.contains('open')){setClose();e.preventDefault();}
 });
 function accountTap(){if(sbUser)openProfile();else authShow();}
 // At most two letters, from the name the user actually goes by.
@@ -4486,7 +4642,8 @@ let panelRestore=null,panelCollapsed=true;
   // Collapse only hides the detailed chart — the mode toggle + presets stay
   // visible, so the time controls are never fully hidden.
   function apply(){bp.classList.toggle('collapsed',panelCollapsed);bp.style.height='';btm.style.display='';
-    updH();requestAnimationFrame(()=>{updH();invalidate();});}
+    updH();requestAnimationFrame(()=>{updH();invalidate();
+      try{if(tlMode==='detail')drawTimeline();}catch(e){}});}
   requestAnimationFrame(apply);
   window.addEventListener('resize',()=>{if(!panelCollapsed){updH();invalidate();}});
   // One tap toggles the detail chart. A gesture that can be started by accident

@@ -236,6 +236,44 @@ else.
 | `--glass`   | `rgba(247,248,247,.86)` | — | floating over the map |
 | `--glass2`  | `rgba(255,255,255,.94)` | — | floating, carrying text |
 
+### 4.1b Dark
+
+The same names, one stop deeper — set on `:root[data-theme="dark"]`.
+
+| token | light | dark |
+|---|---|---|
+| `--paper` | `#F7F8F7` | `#0E1116` |
+| `--page` | `#F0F1EF` | `#0B0E12` |
+| `--card` | `#FFFFFF` | `#171B21` |
+| `--fill` | `#F0F1EF` | `#20252C` |
+| `--fg` | `#12151A` | `#EDEFF2` |
+| `--fg2` | `#4B5158` | `#A7AEB8` |
+| `--mut` | `#8A9099` | `#6B727C` |
+| `--bd` / `--hair` | `rgba(18,21,26,.10)` | `rgba(255,255,255,.12)` |
+| `--accent-meteo` | `#1868C4` | `#4FA8F0` |
+| `--accent-report` | `#0F3E80` | `#2E6FB0` |
+| `--map-bg` | `#EDEEEC` | `#141821` |
+
+Three settings — **System / Hell / Dunkel** — in Einstellungen, stored in
+`localStorage` under `ssm_theme` and resolved by a script in `<head>` before
+the first paint, because a flash of the wrong palette is worse than anything
+the resolution saves. On *System* the app follows `prefers-color-scheme` live.
+
+Two rules the dark theme does **not** break:
+
+1. **The data palettes are not redefined.** The SLF depth scale, the nine snow
+   textures and `CAT_COLORS` are identical in both themes. A reading that
+   changes with the chrome is a different number.
+2. **The basemap is dimmed, never inverted** (`brightness(.52) saturate(.8)` on
+   `.leaflet-tile-pane`). Every data palette in the product is built to read
+   against light terrain; invert the ground and none of them mean what they
+   mean any more.
+
+Anything drawn on a canvas rather than styled must be redrawn on a theme
+change — a canvas cannot see a custom property (§9b). `themeApply()` calls
+`drawTimeline()`, `renderAll()`, `progRenderBar()` and `lyRender()` for exactly
+that reason.
+
 Paper, page and card are three steps apart: the page is a shade below the paper,
 and a card is white. A card is told from its ground by that one step plus a
 hairline — never by a shadow.
@@ -536,8 +574,9 @@ wrapped by `prefers-reduced-motion`.
 |---|---|
 | **Launcher** | Startup only. Bone field with faint contour lines, the mark, and three rows — one per screen. No chrome, no map, no data, and no way back to it. |
 | **Powder Map** | Full bleed, and almost empty. One account badge at the top right; one column of round controls at the bottom right, where a thumb already is — **layers**, the **plus** that opens Melden, and a small **search** and **locate** pair. Nothing else: no brand mark, no demo pill, no rail, no legend button. Anything a map switch used to do (stations, 3D, legend) is an entry in the layer panel, because that is the panel about what the map is showing. |
-| **Layer panel** | Slides in from the right over the map, so the choosing happens where the consequence is visible. Layers first, as pictogram tiles — a shape is quicker to re-find than a word — and the sub-layers of the chosen one underneath, which is why they only appear once there is something to choose. It closes with a 56 px ink circle at the bottom right, level with the column that opened it. |
-| **Console** | A card lifted off the bottom edge so the terrain keeps running underneath it, and **collapsed at rest**: the window label and the way to open it, nothing more. Tapping *Zeitraum* brings up the presets and the scrubber; tapping again puts them away. A layer change recomputes its height but never re-opens it — that would take back the map the user just got. |
+| **Layer panel** | Layers, and nothing else — the map switches live in Einstellungen. Pictogram tiles, because a shape is quicker to re-find than a word, and the sub-layers of the chosen one open **inside the grid, directly under that tile's row**, tinted and joined to it with a notch pointing at the tile that opened them. Anywhere else and nothing would say which layer they belonged to. It closes with a 56 px ink circle at the bottom right, level with the column that opened it. |
+| **Einstellungen** | What belongs to this device rather than to an account: the theme, the station switch, the legend, 3D, the demo data. Reachable signed in (from the profile's settings list) or out (from the sign-in sheet), because none of it needs a login. |
+| **Console** | A card lifted off the bottom edge so the terrain keeps running underneath it, and **collapsed at rest** — but collapsed keeps the scrubber, at 34 px. It is the control the console exists for; it is the labels, the presets and the step buttons that go. A short canvas is not a scaled-down tall one: `drawTimeline()` drops the gutters that carry the day labels and the time readouts below 56 px, or there is no room left for the bars at all. Tapping *Zeitraum* restores them. A layer change recomputes its height but never re-opens it — that would take back the map the user just got. |
 | **Report** | Titled **Melden**. The two ways in — draw a snow map, or file an observation — as two **squares side by side**, each with a 52 px accent tile above a centred name and one short line: the shape says *pick one*, and neither sits above the other. No wizard chrome until one is chosen. Below a hairline, **Meine Meldungen** lists what you have already sent, read straight out of `allReports`: a category dot, the title, mono meta, the measurement, and the confirmation count in `--ok`. |
 | **Feed** | Header, then the list — the filters are not the feed, and live behind one button at the bottom right that carries a dot whenever something is filtered. The cards are roomy: a 38 px avatar, 15 px name and caption, the picture full-bleed at 4:3, and every glyph on the action row 22 px at the same stroke so no action looks louder than another. A card has exactly four bands — head, picture, one line of caption, one line of readings — and anything that adds a fifth is what stops it reading as this design: the caption does not repeat the author two lines under the author, and the star rating sits with the other readings rather than in a badge row of its own. Full-bleed white plates on `--page`, divided by a bottom hairline — no radius, no shadow, no gutter. A 30 px round avatar, the name, and the meta line (`time · place · distance`) in mono; the category rides at the end of the head as an outlined pill in its own colour. Photo 160 px at `--r`. The row underneath is a line of readings, not a toolbar: the measurement in mono, the counts, and the one thing you can add — **Bestätigen**, an outlined pill in `--ok` that fills once pressed. **A drawn snow map shows no image**: a thumbnail of a few painted blobs says nothing the badges do not, and terrain does not survive being shrunk into a card — "Karte" puts it back at a zoom where it means something. A real photo still shows. |
 | **Sheets** (comments, profile, condition, location) | Identical sheet recipe, inheriting whatever accent is currently live. |
