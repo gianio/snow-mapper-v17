@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image
 from rasterio.warp import Resampling, calculate_default_transform, reproject
 from rasterio.transform import array_bounds, from_origin
 from pyproj import Transformer
@@ -709,17 +709,16 @@ _BOOT_SPLIT = r"""<script>
 </script>"""
 
 
+_ASSETS_DIR = Path(__file__).resolve().parent / "assets"
+
+
 def _brand_icon(size: int) -> Image.Image:
-    """The Snowmapper mark: a twin-peak silhouette, white on ink-900, matching
-    the in-app brand glyph exactly."""
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    rad = int(size * 0.22)
-    d.rounded_rectangle([0, 0, size - 1, size - 1], radius=rad, fill=(11, 21, 32, 255))
-    u = size / 24.0  # same coordinate space as the inline SVG mark
-    pts = [(3 * u, 19 * u), (10 * u, 6 * u), (13.5 * u, 12 * u), (15 * u, 9 * u), (21 * u, 19 * u)]
-    d.polygon(pts, fill=(255, 255, 255, 235))
-    return img
+    """The Snowmapper mark (twin peaks, snowflake, route pin), resampled from
+    the source artwork in assets/brand_icon.png. Left un-rounded on purpose:
+    iOS and Android both apply their own corner mask to a square source icon,
+    so a source that is already rounded gets rounded twice."""
+    src = Image.open(_ASSETS_DIR / "brand_icon.png").convert("RGBA")
+    return src.resize((size, size), Image.LANCZOS)
 
 
 def _write_pwa_assets(out_dir: Path) -> None:
