@@ -1959,6 +1959,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     category drops under the name rather than squeezing it to three letters. */
  .feed-page.side .feed-card-head{flex-wrap:wrap;row-gap:8px}
  .feed-page.side .feed-badge.head{order:3;margin-left:48px;width:fit-content}
+ /* The action row has up to six icons -- on a 260 px column they do not fit
+    on one line, so it wraps rather than clipping the last one or two off
+    the edge of the card. The confirm label is dropped for the same reason;
+    the icon and count still say what the button does. */
+ .feed-page.side .feed-card-actions{flex-wrap:wrap;row-gap:8px;gap:8px 12px}
+ .feed-page.side .endorse-lbl{display:none}
+ .feed-page.side .feed-card-read{flex-wrap:wrap;row-gap:6px}
  /* The remaining third is for the map to point with, so the console and the
     button column get out of its way -- the panel carries its own. */
  body.feed-side #bottomPanel,body.feed-side #mapFabs{display:none}
@@ -4855,7 +4862,20 @@ function iTabSw(el,tab){const c=el.closest('.icard');c.querySelectorAll('.itab')
 // --- Map-click inspect panel with charts + red X marker ---
 let inspMarker=null;
 function inspClose(){document.getElementById('inspPanel').classList.remove('open');document.body.classList.remove('insp-open');if(inspMarker){map.removeLayer(inspMarker);inspMarker=null;}}
-map.on('click',function(e){inspOpen(e.latlng.lat,e.latlng.lng);});
+// Tapping the sliver of map that stays visible beside an open feed is a
+// dismiss, not a probe -- the point inspector would fight the panel for
+// the same screen space, so it is skipped while the feed is open.
+map.on('click',function(e){
+  if(document.body.classList.contains('feed-side')){feedClose();return;}
+  inspOpen(e.latlng.lat,e.latlng.lng);
+});
+// Marker popups (reports, stations) open through Leaflet's own click
+// handling rather than the map's 'click' event above, so they need the
+// same guard: while the feed is open beside the map, a tap closes the
+// feed instead of popping a card open on top of it.
+map.on('popupopen',function(e){
+  if(document.body.classList.contains('feed-side')){map.closePopup(e.popup);feedClose();}
+});
 let inspLast=null;
 function inspAutoRefresh(){try{if(inspLast&&document.getElementById('inspPanel').classList.contains('open'))inspOpen(inspLast.lat,inspLast.lon);}catch(e){}}
 // Where the user last parked it, kept for the session so it does not jump back
