@@ -1291,8 +1291,19 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #tlModeToggleOFF{display:inline-flex;background:rgba(0,0,0,.05);border-radius:999px;padding:3px;flex-shrink:0}
  #tlModeToggle button{border:none;background:none;padding:5px 13px;border-radius:999px;font-size:12px;font-weight:600;color:var(--mut);cursor:pointer;font-family:inherit;transition:.15s}
  #tlModeToggle button.active{background:var(--card);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
- #tlDetail{display:none}
+ #tlDetail{display:none;position:relative}
  #bottomPanel.detail #tlDetail{display:block}
+ /* Two shortcuts riding on the timeline's own top corners, above the canvas
+    rather than in the step row (which is off) -- the two jumps someone
+    checking snow actually wants, without a drag. */
+ .tl-corner{position:absolute;top:6px;z-index:3;height:22px;padding:0 10px;
+   border-radius:999px;border:1px solid var(--hair);background:var(--card);
+   color:var(--ink-700);font-size:10.5px;font-weight:800;font-family:inherit;
+   cursor:pointer;display:inline-flex;align-items:center;box-shadow:var(--elev1);
+   white-space:nowrap;transition:transform .15s var(--ease)}
+ .tl-corner:active{transform:scale(.93)}
+ .tl-corner-l{left:6px}
+ .tl-corner-r{right:6px}
  /* Collapsed keeps the scrubber -- it is the thing the console is for -- and
     drops everything that only describes it. */
 
@@ -1621,6 +1632,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .bio-lock-s{font-size:14px;color:rgba(255,255,255,.7);margin:4px 0 22px}
  .bio-lock-card .auth-btn.primary{background:var(--card);color:var(--fg)}
  .bio-lock-out{background:none;border:none;color:rgba(255,255,255,.6);font-size:14px;font-weight:600;cursor:pointer;margin-top:14px;font-family:inherit}
+ .bio-lock-reset{background:none;border:none;color:rgba(255,158,66,.85);font-size:12.5px;font-weight:600;cursor:pointer;margin-top:16px;font-family:inherit;display:block;width:100%}
  .auth-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;color:var(--mut);cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center}
  .auth-close:hover{background:rgba(0,0,0,.05)}
  .auth-switch{text-align:center;margin-top:20px;font-size:13px;color:var(--mut)}
@@ -2483,12 +2495,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .us-empty{color:var(--mut);font-size:13px;text-align:center;padding:18px 0}
  .feed-more{padding:18px;text-align:center;font-size:12.5px;color:var(--ink-500)}
  .feed-empty{text-align:center;padding:80px 20px;color:var(--mut);font-size:15px}
- /* Instagram-style centered create button at the very bottom of the feed */
- .feed-fab{position:absolute;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);left:auto;right:14px;transform:none;width:56px;height:56px;padding:0;border-radius:var(--r-full);border:none;background:var(--ink-900);color:var(--paper);display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;box-shadow:0 6px 16px rgba(18,21,26,.28);z-index:5;transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s}
- .feed-fab svg{width:24px;height:24px}
+ /* Same button as the map's own side icons (.mfab): white card, dark glyph,
+    one size. A black pill here was a second FAB language for the same
+    action the map already has a plus for. */
+ .feed-fab{position:absolute;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);left:auto;right:14px;transform:none;width:var(--fab);height:var(--fab);padding:0;border-radius:var(--r-full);border:1px solid var(--hair);background:var(--card);color:var(--ink-900);display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;box-shadow:var(--elev2);z-index:5;transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s}
+ .feed-fab svg{width:22px;height:22px}
  .feed-fab span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:.03em;color:var(--fg2);text-shadow:0 1px 2px rgba(255,255,255,.8)}
  .feed-fab:active{transform:scale(.9)}
- .feed-fab:hover{box-shadow:0 8px 22px rgba(18,21,26,.34)}
  /* Text-only posts: first-class "quote" cards with a category tint wash */
  .feed-tx{position:relative;margin:2px 16px 0;padding:16px 18px 15px 22px;border-radius:16px;font-size:17px;line-height:1.5;font-weight:550;color:var(--fg);letter-spacing:-.012em;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
  .feed-tx-bar{position:absolute;left:8px;top:14px;bottom:14px;width:4px;border-radius:2px;opacity:.75}
@@ -2649,14 +2662,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button class="rail-btn" id="locBtn" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg></button>
 </div>
 <button class="feed-qr" id="mapQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
-<button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Schnee-Karte zeichnen" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Zeichnen</span></button>
+<button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Report Powder" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Report Powder</span></button>
 <div id="mapFabs">
   <button class="mfab" id="mapFeedFab" onclick="feedOpen()" title="Community" aria-label="Community"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
   <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
   <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
   <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
   <div class="mfab-row" id="reportRow">
-    <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Schnee-Karte zeichnen" aria-label="Schnee-Karte zeichnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><i>Zeichnen</i></button>
+    <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><i>Report Powder</i></button>
     <button class="mfab act" id="fabObs" onclick="fabMenu(false);obsOpen()" title="Beobachtung melden" aria-label="Beobachtung melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><i>Beobachtung</i></button>
     <button class="mfab" id="mapFab" onclick="fabMenu()" title="Melden" aria-label="Melden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
   </div>
@@ -2669,6 +2682,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   </div>
   <div id="btmMain">
     <div id="tlDetail">
+      <button class="tl-corner tl-corner-l" id="tlLastSnowBtn" onclick="tlGotoLastSnow()" title="Zum letzten Schneefall springen">Letzter Schnee</button>
+      <button class="tl-corner tl-corner-r" id="tlTomorrowBtn" onclick="tlGotoTomorrow()" title="Fenster bis morgen Abend">Bis morgen</button>
       <canvas id="timeline" width="900" height="108" style="width:100%;height:108px;border-radius:10px;cursor:default;margin-top:0"></canvas>
       <div id="tlExtended">
         <div class="tl-steprow">
@@ -2805,6 +2820,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <div class="bio-lock-t">Snowmapper</div>
     <div class="bio-lock-s">Entsperre mit <b id="bioLockName">Biometrie</b></div>
     <button class="auth-btn primary" onclick="haptic(6);bioUnlock()">Mit <span id="bioLockName2">Face ID</span> entsperren</button>
+    <!-- Hidden until an attempt actually fails: the common case is that this
+         works, and a reset offer sitting there always would read as if the
+         app already expects it not to. -->
+    <button class="bio-lock-reset" id="bioLockReset" style="display:none" onclick="bioReset()">Funktioniert nicht mehr? Zurücksetzen</button>
     <button class="bio-lock-out" onclick="bioSignOut()">Abmelden</button>
   </div>
 </div>
@@ -3050,6 +3069,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         <button class="prof-back" onclick="profNav('main')">‹ Zurück</button>
         <div class="prof-sec-title">App &amp; Rechtliches</div>
         <button class="prof-item" id="profBioBtn" style="display:none" onclick="profEnableBio()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10a3 3 0 0 1 6 0M8.5 15.5c1 1 5 1 7 0M12 10v3.5"/></svg>Biometrisches Login aktivieren</button>
+        <!-- The platform can lose track of the passkey behind this (Face ID
+             reset, Keychain not synced, a new OS install) while the app's
+             own "is it set up" flag still says yes -- which used to show up
+             as a login screen that says a passkey exists but can't be used
+             for one. Re-enrolling here replaces it with a working one. -->
+        <button class="prof-item" id="profBioOffBtn" style="display:none" onclick="profDisableBio()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><line x1="4" y1="4" x2="20" y2="20"/></svg>Biometrisches Login zurücksetzen</button>
         <button class="prof-item" id="profInstall" onclick="profClose();a2hsShow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="7" x2="12" y2="13"/><polyline points="9.5 10.5 12 13 14.5 10.5"/><line x1="9" y1="17" x2="15" y2="17"/></svg>App installieren</button>
         <button class="prof-item" onclick="profShowLegal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Datenschutz &amp; Haftung anzeigen</button>
         <button class="prof-item" onclick="sendFeedback()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>Feedback senden</button>
@@ -3329,6 +3354,7 @@ function cvTok(n,fb){if(_cvTok[n])return _cvTok[n];
   return (_cvTok[n]=v||fb);}
 // The timeline is a canvas, so it cannot inherit CSS variables -- it reads them
 // once per paint instead, which is what makes it follow the theme.
+const TL_NOW_COLOR='#FF9E42';   // the SW-orange already used for aspect/warmth elsewhere
 function tlPalette(){
   const cs=getComputedStyle(document.documentElement);
   const g=(v,f)=>{const q=cs.getPropertyValue(v).trim();return q||f;};
@@ -3371,7 +3397,7 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   // day labels and the time readouts have to go, or there is no room left for
   // the bars at all.
   const compact=ch<56;
-  const topPad=compact?3:26,botPad=compact?3:28;
+  const topPad=compact?3:20,botPad=compact?3:26;
   const nx=tvX(nowIdx,cw),x1=tvX(a,cw),x2=tvX(b,cw),baseY=ch-botPad;
   // soft selection band (rounded) — tinted with the active layer colour
   ctx2.fillStyle=tlSelTint;rr(x1,2,x2-x1,ch-4,10);ctx2.fill();
@@ -3397,11 +3423,11 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   const gSel=ctx2.createLinearGradient(0,baseY-barH,0,baseY);gSel.addColorStop(0,_P.accent);gSel.addColorStop(1,_P.accent);
   const gSelPast=ctx2.createLinearGradient(0,baseY-barH,0,baseY);gSelPast.addColorStop(0,_P.hair);gSelPast.addColorStop(1,_P.mut);
   for(let t=Math.max(0,Math.floor(tv0));t<Math.min(T,Math.ceil(tv1)+1);t++){
-    const v=hSnow[t];if(v<.002)continue;const h=Math.max(2,v/mx*barH);const x=tvX(t,cw);
+    const v=hSnow[t];if(v<.002)continue;const h=Math.max(3,v/mx*barH);const x=tvX(t,cw);
     const inSel=(t>=a&&t<b),fut=t>=nowIdx;
     if(inSel){ctx2.fillStyle=fut?gSel:gSelPast;ctx2.globalAlpha=1;}
-    else{ctx2.fillStyle=fut?_P.accent:_P.mut;ctx2.globalAlpha=.22;}
-    rr(x+.5,baseY-h,Math.max(bw-1,1.4),h,Math.min(2.5,bw/2.2));ctx2.fill();ctx2.globalAlpha=1;}
+    else{ctx2.fillStyle=fut?_P.accent:_P.mut;ctx2.globalAlpha=.28;}
+    rr(x+.5,baseY-h,Math.max(bw-1,1.8),h,Math.min(2.5,bw/2.2));ctx2.fill();ctx2.globalAlpha=1;}
   // selection frame + rounded grab handles (layer colour)
   ctx2.strokeStyle=tlSel;ctx2.globalAlpha=.65;ctx2.lineWidth=2;rr(x1+1,2,x2-x1-2,ch-4,10);ctx2.stroke();ctx2.globalAlpha=1;
   const hh=compact?Math.max(14,ch-8):34,hy=(ch-hh)/2;ctx2.fillStyle=tlSel;
@@ -3409,18 +3435,21 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   ctx2.fillStyle=_P.paper;{const gr=compact?1:1;for(let i=-gr;i<=gr;i++){
     ctx2.fillRect(x1-1.25,hy+hh/2+i*(compact?4:5),2.5,2.2);
     ctx2.fillRect(x2-1.25,hy+hh/2+i*(compact?4:5),2.5,2.2);}}
-  // The size of the window, printed on the window. It used to sit in a corner
-  // of the panel, where it described something you had to look away to see.
+  // The size of the window, printed under where the start time goes -- not
+  // centred on the selection, which put it over whichever bar happened to
+  // be in the middle rather than anywhere that reads as belonging to it.
   if(!compact){const lab=(b-a)+' h';ctx2.font='800 12px Inter,system-ui';
-   const w=ctx2.measureText(lab).width+16,cx=Math.max(w/2+2,Math.min(cw-w/2-2,(x1+x2)/2));
-   const ly=28;
+   const w=ctx2.measureText(lab).width+16,cx=Math.max(w/2+2,Math.min(cw-w/2-2,x1+w/2+8));
+   const ly=40;
    ctx2.fillStyle=tlSel;rr(cx-w/2,ly-8,w,16,8);ctx2.fill();
    ctx2.fillStyle=_P.paper;ctx2.textAlign='center';ctx2.fillText(lab,cx,ly+4.5);}
-  if(compact){
-    // the dashed NOW line is the only annotation that still fits
-    ctx2.strokeStyle=_P.ink;ctx2.globalAlpha=.5;ctx2.lineWidth=1.5;ctx2.setLineDash([3,3]);
-    ctx2.beginPath();ctx2.moveTo(nx,0);ctx2.lineTo(nx,ch);ctx2.stroke();
-    ctx2.setLineDash([]);ctx2.globalAlpha=1;return;}
+  // NOW marker: a dashed line only. It used to carry a "JETZT" pill too, which
+  // repeated what the line itself already says by being where it is; orange
+  // is enough to keep the two selected-time labels either side of it.
+  ctx2.strokeStyle=TL_NOW_COLOR;ctx2.globalAlpha=.85;ctx2.lineWidth=1.5;ctx2.setLineDash([3,3]);
+  ctx2.beginPath();ctx2.moveTo(nx,0);ctx2.lineTo(nx,ch);ctx2.stroke();
+  ctx2.setLineDash([]);ctx2.globalAlpha=1;
+  if(compact)return;
   // selected start / end times — pushed to the OUTER bounds when the selection is narrow
   ctx2.font='800 16px Inter,system-ui';ctx2.fillStyle=tlSel;
   const tA=fmtTime(a),tB=fmtTime(b-1),wA=ctx2.measureText(tA).width,wB=ctx2.measureText(tB).width;
@@ -3430,17 +3459,17 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   }else{
     ctx2.textAlign='left';ctx2.fillText(tA,x1+10,21);
     ctx2.textAlign='right';ctx2.fillText(tB,x2-10,21);
-  }
-  // NOW marker: dashed line + dark pill (neutral so it never clashes with the layer colour)
-  ctx2.strokeStyle=_P.ink;ctx2.globalAlpha=.55;ctx2.lineWidth=1.5;ctx2.setLineDash([3,3]);
-  ctx2.beginPath();ctx2.moveTo(nx,0);ctx2.lineTo(nx,ch);ctx2.stroke();
-  ctx2.setLineDash([]);ctx2.globalAlpha=1;
-  const nlx=Math.max(23,Math.min(cw-23,nx));ctx2.fillStyle=_P.ink;rr(nlx-22,1,44,17,8.5);ctx2.fill();
-  ctx2.fillStyle=_P.paper;ctx2.font='800 11px Inter,system-ui';ctx2.textAlign='center';ctx2.fillText('JETZT',nlx,12.5);}
+  }}
 // Karte + Layer
 const [laMin,loMin,laMax,loMax]=M.bounds;
 const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
 const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,wheelPxPerZoomLevel:_desktop?38:90,wheelDebounceTime:_desktop?12:40,maxBoundsViscosity:1.0,inertia:true}).fitBounds([[laMin,loMin],[laMax,loMax]],{padding:[6,6]});
+// Leaflet's default attribution control prefixes its own "Leaflet" credit
+// with a small Ukrainian-flag SVG. The control sits bottom-left here and is
+// collapsed to a 22px pill until hovered, so that flag was the only thing
+// visible in the corner. The data sources still get credited -- just
+// without Leaflet's own link riding along.
+if(map.attributionControl)map.attributionControl.setPrefix(false);
 L.control.scale({imperial:false,maxWidth:120,position:'bottomright'}).addTo(map);
 if(_desktop&&map.scrollWheelZoom&&map.scrollWheelZoom.setWheelPxPerZoomLevel)map.scrollWheelZoom.setWheelPxPerZoomLevel(38);
 // Constrain panning + zoom to the meteo grid, with a thin white frame around the data
@@ -3546,7 +3575,7 @@ let elevData=null,elevPW=0,elevPH=0;
 const elevI=new Image();
 _afterFirstPaint(function(){elevI.src=ELEV_PNG;});
 elevI.onload=function(){elevPW=elevI.width;elevPH=elevI.height;const c=document.createElement('canvas');c.width=elevPW;c.height=elevPH;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(elevI,0,0);try{elevData=x.getImageData(0,0,elevPW,elevPH).data;}catch(e){}
-  try{if(demoFitZones()){loadReportMarkers();if(layer==='prog')renderPrognosis(stat);}}catch(e){}};
+  try{if(demoFitZones()){loadReportMarkers();if(layer==='prog')renderPrognosis(stat);else if(layer==='powfind')renderPowderFind();}}catch(e){}};
 const ASP8DEG=[[0x4A,0x90,0xD9,0],[0x45,0xC0,0xC0,45],[0x66,0xBB,0x6A,90],[0xBE,0xDB,0x39,135],[0xEF,0x53,0x50,180],[0xFF,0x9E,0x42,225],[0xFF,0xC1,0x07,270],[0xA9,0x87,0xE0,315]];
 function _pngSample(data,pw,ph,bnds,lat,lng){if(!data||!bnds)return null;const S=bnds[0],Wst=bnds[1],N=bnds[2],E=bnds[3];
   if(lat>N||lat<S||lng<Wst||lng>E)return null;
@@ -4132,6 +4161,13 @@ function prognosisAt(lat,lon){
 }
 const windArr=L.layerGroup(); const stnGroup=L.layerGroup().addTo(map);
 let layer="snow",stat="avg",windowSize=48,a=nowIdx,b=Math.min(T,nowIdx+48),showStn=true,wtimer=null;
+// Declared here (empty) rather than where it is actually populated further
+// down: the default layer is now Reported Powder, which reads this array
+// during the very first render at boot -- before demoActive()/DEMO_REPORTS
+// exist. Without this, that first render throws "allReports before
+// initialization" and takes the whole app down with it (this happened once
+// already with a different variable; same class of bug).
+let allReports=[];
 const isMobile=window.innerWidth<=560;
 
 function depthCol(v){const x=Math.min(1,v/300);let r,g,bl;if(x<.33){const k=x/.33;r=220-k*120|0;g=240-k*50|0;bl=255-k*5|0;}else if(x<.66){const k=(x-.33)/.33;r=100-k*80|0;g=190-k*90|0;bl=250-k*65|0;}else{const k=(x-.66)/.34;r=20+k*100|0;g=100-k*85|0;bl=185-k*105|0;}return[r,g,bl];}
@@ -4337,12 +4373,34 @@ document.querySelectorAll('#tlModeToggle button').forEach(x=>x.onclick=()=>setTl
   document.getElementById('tlNext').onclick=()=>{const ws=b-a;b=Math.min(T,b+ws);a=Math.max(0,b-ws);renderAll();};
   document.getElementById('tlNow').onclick=()=>{const ws=b-a;a=Math.max(0,Math.min(T-ws,nowIdx-Math.floor(ws/2)));b=Math.min(T,a+ws);renderAll();};
 })();
+// Two shortcuts that sit on the timeline itself rather than in the step row:
+// jump to when it last actually snowed, or open the window through the end
+// of tomorrow -- the two questions someone checking snow conditions asks
+// most, so they should not cost a drag.
+function tlGotoLastSnow(){
+  let idx=-1;
+  for(let t=Math.min(T-1,nowIdx);t>=0;t--){if(hSnow[t]>0.05){idx=t;break;}}
+  if(idx<0){try{toast('Kein Schneefall in den Daten.');}catch(e){}return;}
+  const ws=Math.max(TV_MIN,b-a);
+  a=Math.max(0,Math.min(T-ws,idx-Math.floor(ws/2)));b=Math.min(T,a+ws);
+  tvFollow();renderAll();try{haptic(3);}catch(e){}
+}
+function tlGotoTomorrow(){
+  const now=new Date(M.times[nowIdx]+'Z');
+  const dayStart=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate());
+  const tomorrowEnd=dayStart+2*86400000;   // start of the day after tomorrow = end of tomorrow
+  let endIdx=T-1;
+  for(let t=nowIdx;t<T;t++){if(new Date(M.times[t]+'Z').getTime()>=tomorrowEnd){endIdx=t;break;}}
+  a=nowIdx;b=Math.min(T,Math.max(a+TV_MIN,endIdx));windowSize=b-a;
+  tvFollow();renderAll();try{haptic(3);}catch(e){}
+}
 // ===== Layer menu: A Meteo-Modell (forecast model) / B Report-Modell ========
 // Two groups, both visible at the top. A group holds items; an item with more
 // than one variant gets a third row. The order inside "vars" is the order the
 // buttons appear in, and vars[0] is what a fresh selection shows.
 const GROUPS={
   meteo:{tag:'A',label:'Meteo-Modell',items:[
+    {id:'reppow',label:'Gemeldetes Powder',vars:[{l:'powfind',s:'powder',label:'Gemeldetes Powder'}]},
     {id:'powder',label:'Powder',vars:[{l:'powder',s:'avg',label:'Powder'}]},
     {id:'newsnow',label:'Neuschnee',vars:[{l:'snow',s:'avg',label:'Neuschnee'}]},
     {id:'depth',label:'Schneehöhe',vars:[{l:'depth',s:'avg',label:'Schneehöhe'}]},
@@ -4449,6 +4507,7 @@ function lySubNext(e){
 // A shape per layer. The pictogram is what you re-find the layer by after the
 // first time; the word underneath is what you learn it with.
 const LY_ICON={
+  reppow:'<circle cx="12" cy="12" r="7"/><path d="M8.5 12.5l2.5 2.5 5-5"/>',
   powder:'<circle cx="12" cy="12" r="7"/>',
   newsnow:'<polygon points="12,4 20,18 4,18"/>',
   depth:'<line x1="5" y1="20" x2="19" y2="20"/><line x1="12" y1="4" x2="12" y2="17"/><polyline points="8,8 12,4 16,8"/><polyline points="8,13 12,17 16,13"/>',
@@ -4462,6 +4521,9 @@ function lyIconFor(id){return '<svg viewBox="0 0 24 24" fill="none" stroke="curr
 // Written for someone who has just installed the app: the point of the panel is
 // that a pictogram cannot say "this is a model estimate, not a measurement".
 const LY_TEXT={
+  reppow:{t:'Von der Community gemeldetes Powder',
+    d:'Schneehöhe aus den Zeichnen-Reports in der Nähe, gemittelt pro Exposition und Höhenband — keine Modellschätzung, sondern was Leute tatsächlich vorgefunden haben.',
+    u:'cm, aus Meldungen'},
   powder:{t:'Wie gut die Abfahrt wäre',
     d:'Modellschätzung aus Neuschneemenge, Wind und Temperatur — wo lockerer, ungepresster Schnee zu erwarten ist. Keine Messung und kein Lawinenbulletin.',
     u:'Skala 0–100'},
@@ -4479,6 +4541,7 @@ const LY_TEXT={
     u:'°C'}
 };
 const LY_VAR_TEXT={
+  'reppow|Gemeldetes Powder':'Nur Zeichnen-Reports, Vertrauen ab dem eingestellten Minimum.',
   'powder|Powder':'Die Schätzung selbst.',
   'newsnow|Neuschnee':'Alles, was im Fenster neu gefallen ist.',
   'depth|Schneehöhe':'Die ganze Decke, Altschnee eingerechnet.',
@@ -4583,6 +4646,7 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
 // --- Timeline Drag (desktop + mobile, edge resize + click-to-jump) ---
 (function(){const tc=document.getElementById('timeline');
   let mode=null,dragStartX=0,dragStartA=0,dragStartB=0,ws=0;
+  let pinch=0,pinchSpan=0,pinchMid=0;
   const EDGE=14;
   const W=()=>tc.getBoundingClientRect().width;
   function getZone(cx){const rect=tc.getBoundingClientRect();
@@ -4591,7 +4655,27 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
     if(Math.abs(cx-x2)<EDGE)return'right';
     if(cx>x1&&cx<x2)return'center';
     return'outside';}
+  // Two fingers on the axis widen or narrow how much of the run is in reach:
+  // apart for hours, together for the whole forecast.
+  function pinchStart(e){
+    if(!e.touches||e.touches.length<2)return false;
+    const [t1,t2]=[e.touches[0],e.touches[1]];
+    pinch=Math.abs(t1.clientX-t2.clientX)||1;
+    pinchSpan=tvSpan();
+    const rect=tc.getBoundingClientRect();
+    pinchMid=Math.max(0,Math.min(1,((t1.clientX+t2.clientX)/2-rect.left)/rect.width));
+    mode=null;return true;}
+  function pinchMove(e){
+    if(!pinch||!e.touches||e.touches.length<2)return false;
+    const d=Math.abs(e.touches[0].clientX-e.touches[1].clientX)||1;
+    const span=Math.max(TV_MIN,Math.min(T,pinchSpan*(pinch/d)));
+    const mid=tv0+tvSpan()*pinchMid;
+    tv0=mid-span*pinchMid;tv1=tv0+span;tvClamp();
+    drawTimeline();
+    if(e.cancelable)e.preventDefault();
+    return true;}
   function startDrag(e){
+    if(pinchStart(e)){if(e.cancelable)e.preventDefault();return;}
     const cx=e.touches?e.touches[0].clientX:e.clientX;
     const zone=getZone(cx);
     if(zone==='outside'){
@@ -4604,6 +4688,7 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
     if(e.cancelable)e.preventDefault();}
   tc.addEventListener('mousedown',startDrag);tc.addEventListener('touchstart',startDrag,{passive:false});
   function onDrag(e){
+    if(pinchMove(e))return;
     if(!mode)return;
     if(e.cancelable)e.preventDefault();
     const cx=e.touches?e.touches[0].clientX:e.clientX;
@@ -4613,9 +4698,18 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
     else if(mode==='right'){b=Math.min(T,Math.max(dragStartA+4,dragStartB+delta));windowSize=b-a;}
     tvFollow();drawTimeline();}
   document.addEventListener('mousemove',onDrag);document.addEventListener('touchmove',onDrag,{passive:false});
-  function endDrag(){if(mode){mode=null;tc.style.cursor='default';renderAll();}}
+  function endDrag(e){
+    if(pinch&&(!e||!e.touches||e.touches.length<2)){pinch=0;renderAll();return;}
+    if(mode){mode=null;tc.style.cursor='default';renderAll();}}
   document.addEventListener('mouseup',endDrag);
   document.addEventListener('touchend',endDrag);document.addEventListener('touchcancel',endDrag);
+  // A trackpad or a wheel is the same intent as a pinch.
+  tc.addEventListener('wheel',e=>{
+    if(e.cancelable)e.preventDefault();
+    const rect=tc.getBoundingClientRect();
+    tvZoom((e.deltaY||e.deltaX)>0?1/1.18:1.18,(e.clientX-rect.left)/rect.width);
+    drawTimeline();},{passive:false});
+  tc.addEventListener('dblclick',()=>{tvInit();drawTimeline();});
   tc.addEventListener('mousemove',function(e){if(mode)return;const zone=getZone(e.clientX);
     tc.style.cursor=zone==='center'?'grab':zone==='left'||zone==='right'?'col-resize':'crosshair';});
 })();
@@ -4745,8 +4839,18 @@ function updateAccountBtn(avatarUrl){
     const slot=b.querySelector('.pt-ini'),glyph=b.querySelector('svg');
     if(slot)slot.textContent=ini;
     if(glyph)glyph.style.display=ini?'none':'';
-    if(avatarUrl){b.classList.add('has-img');b.style.backgroundImage='url('+encodeURI(avatarUrl)+')';}
-    else{b.classList.remove('has-img');b.style.backgroundImage='';}});
+    // .has-img hides both of those, so a background-image that never loads
+    // (dead link, storage permissions, a slow network) used to leave the
+    // button blank -- just the ring colour, nothing inside it. A
+    // background-image has no load event of its own, so this is loaded as a
+    // real Image() first and only switched over once it is known to work;
+    // until then, or if it fails, the initials stay up.
+    b.classList.remove('has-img');b.style.backgroundImage='';
+    if(avatarUrl){
+      const img=new Image();
+      img.onload=()=>{b.classList.add('has-img');b.style.backgroundImage='url('+encodeURI(avatarUrl)+')';};
+      img.src=avatarUrl;
+    }});
   const btn=document.getElementById('accountBtn');if(!btn)return;
   if(!sbUser){btn.classList.remove('signed');btn.title='Anmelden';
     // person + plus reads unambiguously as "sign in"; the old door-and-arrow
@@ -5601,7 +5705,7 @@ function demoToggle(){try{const u=new URL(location.href);
   location.href=u.toString();}catch(e){}}
 (function(){try{const b=document.getElementById('demoPill');if(!b)return;
   if(location.search.indexOf('demo')>=0){b.classList.add('on');document.getElementById('demoPillTxt').textContent='DEMO · 1.4.2026';}}catch(e){}})();
-let allReports=demoActive()?[...DEMO_REPORTS]:[];
+allReports=demoActive()?[...DEMO_REPORTS]:[];
 function _rptDepth(r){const cd=r.condition_data||{};let cm=(cd.quick&&cd.powderAmountCm!=null)?+cd.powderAmountCm:null;if(cm==null&&r.measurement){const mm=/(\d+)\s*cm/.exec(r.measurement);if(mm)cm=+mm[1];}return cm;}
 function _rptColor(r){const cm=_rptDepth(r);if(cm!=null&&cm>=5){const sc=snowCol(cm);if(sc)return 'rgb('+sc.join(',')+')';}return CAT_COLORS[r.cat]||'#16152e';}
 function _rptShort(r){const t=(r.sub||r.cat||'').toString();return t.length>11?t.slice(0,10)+'\u2026':t;}
@@ -5844,6 +5948,10 @@ async function loadDbReports(){
         condN:condAgg[r.id]?condAgg[r.id].n:0,condAvg:condAgg[r.id]?condAgg[r.id].sum/condAgg[r.id].n:0,condPow:condAgg[r.id]?condAgg[r.id].pow:0,myCond:myCond[r.id]||null,dbRow:true};
     }).filter(Boolean);
     allReports=demoActive()?[...dbR,...DEMO_REPORTS]:dbR;loadReportMarkers();
+    // The line above is the first point allReports is actually complete --
+    // the powfind/prog renders a few lines up ran on whatever was there
+    // before this fetch, so a report-driven layer needs a second pass now.
+    if(layer==='powfind'||layer==='prog'||layer==='progdiff'||layer==='progpat')renderSoon();
     if(document.getElementById('feedPage').classList.contains('open'))feedRender();
     try{renderMyReports();}catch(e){}
   }catch(e){console.warn('loadDbReports',e);}
@@ -6056,10 +6164,19 @@ function authEnableBio(){
 function authFinishBio(){authHide();authMode='login';}
 function authSkipBio(){try{if(sbUser)localStorage.setItem('ssm_bio_skip_'+sbUser.id,'1');}catch(e){}authFinishBio();}
 function profEnableBio(){if(!sbUser)return;
+  // Re-enrolling overwrites whatever credential id was stored before, so this
+  // is also the fix when biometric login is "on" but broken: it replaces the
+  // stale id with one the platform actually just created and can verify.
   bioEnroll(sbUser.id,sbUser.email).then(()=>{toast('Biometrisches Login aktiviert','ok');
     try{localStorage.removeItem('ssm_bio_skip_'+sbUser.id);}catch(e){}
-    const b2=document.getElementById('profBioBtn');if(b2)b2.style.display='none';})
+    const b1=document.getElementById('profBioBtn');if(b1)b1.style.display='none';
+    const b2=document.getElementById('profBioOffBtn');if(b2)b2.style.display='';})
   .catch(e=>toast('Aktivierung fehlgeschlagen: '+(e.message||e),'err'));}
+function profDisableBio(){if(!sbUser)return;
+  try{localStorage.removeItem('ssm_bio_'+sbUser.id);}catch(e){}
+  toast('Biometrisches Login zurückgesetzt','ok');
+  const b1=document.getElementById('profBioBtn');if(b1)b1.style.display='';
+  const b2=document.getElementById('profBioOffBtn');if(b2)b2.style.display='none';}
 async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email});const b=document.getElementById('emailBanner').querySelector('button');if(b)b.textContent='Gesendet!';}
 // --- Biometric (WebAuthn platform authenticator) ---
 function _b64u(buf){let s=btoa(String.fromCharCode.apply(null,new Uint8Array(buf)));return s.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
@@ -6092,7 +6209,22 @@ function showBioLock(){const el=document.getElementById('bioLock');
   // NOTE: iOS Safari requires a user gesture for navigator.credentials.get(), so we
   // do NOT auto-trigger Face ID (it was silently rejected → "doesn't always work" +
   // an extra failed prompt). The user taps "Entsperren", which is a valid gesture.
-async function bioUnlock(auto){try{await bioVerify(sbUser.id);bioUnlocked=true;document.getElementById('bioLock').style.display='none';}catch(e){if(!auto)alert('Entsperren fehlgeschlagen. Bitte erneut versuchen.');}}
+async function bioUnlock(auto){try{await bioVerify(sbUser.id);bioUnlocked=true;document.getElementById('bioLock').style.display='none';}
+  catch(e){
+    // The platform can genuinely lose the credential behind ssm_bio_<uid>
+    // (a Face ID reset, a fresh OS install, Keychain not synced) while this
+    // flag says it is still set up -- the browser's own "no passkey saved"
+    // error surfaces here. One failure is ambiguous (it is also what a
+    // cancelled prompt looks like), so this only offers the reset rather
+    // than doing it automatically.
+    const rb=document.getElementById('bioLockReset');if(rb)rb.style.display='block';
+    if(!auto)alert('Entsperren fehlgeschlagen. Falls das öfter passiert, nutze "Zurücksetzen" unten.');
+  }}
+function bioReset(){
+  try{if(sbUser)localStorage.removeItem('ssm_bio_'+sbUser.id);}catch(e){}
+  bioUnlocked=true;document.getElementById('bioLock').style.display='none';
+  try{toast('Biometrisches Login zurückgesetzt — in den Einstellungen neu einrichten.','ok');}catch(e){}
+}
 function bioSignOut(){document.getElementById('bioLock').style.display='none';bioUnlocked=true;if(sb)sb.auth.signOut();}
 function authMenu(){openProfile();}
 // --- Personal preferences ---------------------------------------------------
@@ -6192,8 +6324,10 @@ async function openProfile(){
   document.getElementById('profModal').style.display='flex';
   profNav('main');
   try{const vv=localStorage.getItem('ssm_visibility')||'all';document.querySelectorAll('#profVis button').forEach(b2=>b2.classList.toggle('active',b2.dataset.v===vv));}catch(e){}
-  try{const bb=document.getElementById('profBioBtn');
-    if(bb)bioAvailable().then(av=>{bb.style.display=(av&&!bioEnabledFor(sbUser.id))?'':'none';});}catch(e){}
+  try{const bb=document.getElementById('profBioBtn'),bo=document.getElementById('profBioOffBtn');
+    if(bb||bo)bioAvailable().then(av=>{const on=av&&bioEnabledFor(sbUser.id);
+      if(bb)bb.style.display=(av&&!on)?'':'none';
+      if(bo)bo.style.display=on?'':'none';});}catch(e){}
   const name=sbUser.user_metadata?.username||sbUser.email?.split('@')[0]||'User';
   document.getElementById('profName').textContent=name;
   document.getElementById('profAvInitial').textContent=name[0].toUpperCase();
