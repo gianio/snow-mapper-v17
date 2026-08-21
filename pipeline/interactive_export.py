@@ -985,13 +985,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
  html{background:#EDEEEC}
  html,body{margin:0;padding:0;height:100%;height:100dvh;width:100%;overflow:hidden;font-family:var(--font);color:var(--fg);overscroll-behavior:none;background:var(--map-bg);position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
- #map{position:absolute;top:0;left:0;right:0;bottom:0;background:var(--map-bg);--resort-op:0;--resort-lbl:0}
- /* Resort markers: a dot that fades in with zoom, and a label that follows a
-    little later so the country view stays uncluttered. */
- .resort-pin{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:4px;white-space:nowrap;opacity:var(--resort-op);transition:opacity .25s linear}
- .resort-pin i{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--paper);flex-shrink:0}
- #map.no-resort-labels .resort-pin span{display:none}
- .resort-pin span{font-size:10.5px;font-weight:800;color:var(--ink-700);letter-spacing:-.01em;opacity:var(--resort-lbl);text-shadow:0 0 3px #fff,0 0 6px #fff,0 1px 0 #fff}
+ #map{position:absolute;top:0;left:0;right:0;bottom:0;background:var(--map-bg)}
  .leaflet-control-scale{margin-right:92px!important;margin-bottom:10px!important}
  #flow{position:absolute;top:0;left:0;right:0;bottom:0;z-index:450;pointer-events:none}
  #modeGlow{display:none}
@@ -1239,6 +1233,18 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ly-info .li-sub h4{color:var(--accent)}
  .ly-info .li-unit{display:inline-block;margin-top:8px;font-family:var(--mono);
    font-size:11px;font-weight:700;color:var(--ink-500)}
+ /* The colour key for whatever is picked above, right where you just picked
+    it -- it used to live behind a separate button in Settings, one tap
+    removed from the layer it was explaining. */
+ .ly-legend{margin-top:10px;padding:12px 14px;border-radius:var(--r-md);
+   border:1px solid var(--hair);background:var(--card);font-size:11.5px;
+   line-height:1.6;color:var(--fg2)}
+ .ly-legend:empty{display:none}
+ .ly-legend b{display:block;font-size:10px;font-weight:800;letter-spacing:.06em;
+   text-transform:uppercase;color:var(--ink-500);margin-bottom:6px}
+ .ly-legend i{display:inline-block;width:12px;height:12px;margin-right:6px;
+   vertical-align:-2px;border-radius:2px;flex-shrink:0}
+ .ly-legend div>span:not(.stn){font-family:var(--mono);font-size:10px;color:var(--ink-500)}
  /* the way out, where the thumb already is */
  .ly-x{position:absolute;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);
    width:56px;height:56px;border-radius:var(--r-full);border:none;
@@ -1622,16 +1628,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .auth-paste{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:1.5px dashed rgba(20,20,25,.3);border-radius:12px;background:rgba(20,20,25,.05);color:var(--acc2);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px}
  .auth-paste svg{width:17px;height:17px}
  .auth-paste:hover{background:rgba(20,20,25,.1)}
- .auth-bio-ic{width:64px;height:64px;margin:6px auto 12px;border-radius:20px;background:rgba(20,20,25,.1);color:var(--acc);display:flex;align-items:center;justify-content:center}
- .auth-bio-ic svg{width:36px;height:36px}
- .bio-lock{position:fixed;inset:0;z-index:8500;background:linear-gradient(160deg,#0e0c22,#0c0c0f 60%,#26262c);display:flex;align-items:center;justify-content:center;padding:24px}
- .bio-lock-card{text-align:center;color:#fff;max-width:300px;width:100%}
- .bio-lock-card .auth-bio-ic{background:rgba(255,255,255,.12);color:#fff;width:76px;height:76px}
- .bio-lock-t{font-size:22px;font-weight:800;letter-spacing:-.02em}
- .bio-lock-s{font-size:14px;color:rgba(255,255,255,.7);margin:4px 0 22px}
- .bio-lock-card .auth-btn.primary{background:var(--card);color:var(--fg)}
- .bio-lock-out{background:none;border:none;color:rgba(255,255,255,.6);font-size:14px;font-weight:600;cursor:pointer;margin-top:14px;font-family:inherit}
- .bio-lock-reset{background:none;border:none;color:rgba(255,158,66,.85);font-size:12.5px;font-weight:600;cursor:pointer;margin-top:16px;font-family:inherit;display:block;width:100%}
  .auth-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;color:var(--mut);cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center}
  .auth-close:hover{background:rgba(0,0,0,.05)}
  .auth-switch{text-align:center;margin-top:20px;font-size:13px;color:var(--mut)}
@@ -1664,8 +1660,16 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.draw-pan #drawCanvas{pointer-events:none;cursor:grab}
  body.draw-pan #drawWrap{pointer-events:none}
  body.draw-pan #drawClose,body.draw-pan #drawPan{pointer-events:auto}
+ /* Same hand-off as draw-pan, just entered by a second finger touching down
+    instead of the button -- the canvas steps out of the way so the map
+    underneath actually receives the two-finger gesture. */
+ body.draw-gesture-pan #drawCanvas{pointer-events:none}
  #drawClose{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;z-index:4002;width:40px;height:40px;border-radius:50%;border:none;background:var(--paper);box-shadow:var(--elev1);font-size:17px;color:var(--fg);cursor:pointer}
- #drawPan{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);right:12px;z-index:4002;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--hair);background:var(--paper);box-shadow:var(--elev1);font-size:12px;font-weight:800;font-family:inherit;color:var(--fg2);cursor:pointer;white-space:nowrap}
+ /* Bottom, right above the eraser tab (the last of the four category tabs
+    right below it) -- not a top corner you have to look away from the
+    canvas to find. */
+ #drawPanRow{display:flex;justify-content:flex-end;margin-bottom:8px}
+ #drawPan{position:relative;z-index:4002;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--hair);background:var(--paper);box-shadow:var(--elev1);font-size:12px;font-weight:800;font-family:inherit;color:var(--fg2);cursor:pointer;white-space:nowrap}
  #drawPan svg{width:16px;height:16px;flex-shrink:0}
  #drawPan.on{background:var(--accent);color:#fff;border-color:var(--accent)}
  #drawHint{position:fixed;top:calc(env(safe-area-inset-top,0px) + 60px);left:50%;transform:translateX(-50%) translateY(-8px);z-index:4002;background:var(--ink-900);color:#fff;font-size:12.5px;font-weight:700;padding:9px 15px;border-radius:999px;opacity:0;transition:.3s;pointer-events:none;box-shadow:var(--elev2);max-width:82vw;text-align:center}
@@ -2409,9 +2413,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    background:var(--glass2);border:1px solid var(--hair);border-radius:var(--r-full);
    padding:4px 9px;box-shadow:var(--elev1);opacity:0;transition:opacity .16s var(--ease) .12s}
  body.fab-open .mfab.act i{opacity:1}
- #mapFeedFab .feed-dot{position:absolute;top:2px;right:2px;width:9px;height:9px;border-radius:var(--r-full);
-   background:var(--danger);border:2px solid var(--card);display:none}
- #mapFeedFab .feed-dot.on{display:block}
+ /* A count, not just a dot: comments on your own posts and new posts from
+    people you follow, both since the feed was last opened. Sized to grow
+    with the digits rather than clipping a two-digit count into a dot. */
+ #mapFeedFab .feed-dot{position:absolute;top:-3px;right:-3px;min-width:17px;height:17px;
+   padding:0 4px;border-radius:var(--r-full);background:var(--danger);border:2px solid var(--card);
+   display:none;align-items:center;justify-content:center;font-family:var(--mono);
+   font-size:10px;font-weight:800;line-height:1;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+ #mapFeedFab .feed-dot.on{display:flex}
  body.insp-open #mapFabs{opacity:0;pointer-events:none;transition:opacity .2s}
  body.draw-on #mapFabs,body.ly-open #mapFabs{display:none}
  #mapFab:active{transform:scale(.9)}
@@ -2729,6 +2738,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <span class="lbl-micro">Ebene</span>
     <div class="ly-grid" id="lyGrid"></div>
     <div class="ly-info" id="lyInfo"></div>
+    <div class="ly-legend" id="lyLegend"></div>
   </div>
   <button class="ly-x" onclick="lyPanelClose()" aria-label="Ebenen schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
 </div>
@@ -2803,34 +2813,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button class="auth-btn primary" id="authNewPassBtn" onclick="authSetNewPassword()">Passwort speichern</button>
   <div class="auth-switch"><button onclick="authBackToForm()">Abbrechen</button></div>
 </div>
-<div id="authBioBox" style="display:none">
-  <div class="auth-bio-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10a3 3 0 0 1 6 0M8.5 15.5c1 1 5 1 7 0M12 10v3.5"/></svg></div>
-  <p class="auth-sub" style="text-align:center;margin-bottom:14px">Nächstes Mal schneller & sicher mit <b id="authBioName">Biometrie</b> anmelden?</p>
-  <button class="auth-btn primary" onclick="authEnableBio()">Aktivieren</button>
-  <button class="auth-btn ghost" onclick="authSkipBio()">Später</button>
-</div>
 <div class="auth-switch" id="authSwitch">Kein Account? <button onclick="authToggle()">Registrieren</button></div>
 <div class="auth-switch"><button onclick="authHide();setOpen()">Einstellungen &amp; Darstellung</button></div>
 </div>
 </div>
-<div class="bio-lock" id="bioLock" style="display:none">
-  <div class="bio-lock-card">
-    <div class="auth-bio-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10a3 3 0 0 1 6 0M8.5 15.5c1 1 5 1 7 0M12 10v3.5"/></svg></div>
-    <div class="bio-lock-t">Snowmapper</div>
-    <div class="bio-lock-s">Entsperre mit <b id="bioLockName">Biometrie</b></div>
-    <button class="auth-btn primary" onclick="haptic(6);bioUnlock()">Mit <span id="bioLockName2">Face ID</span> entsperren</button>
-    <!-- Hidden until an attempt actually fails: the common case is that this
-         works, and a reset offer sitting there always would read as if the
-         app already expects it not to. -->
-    <button class="bio-lock-reset" id="bioLockReset" style="display:none" onclick="bioReset()">Funktioniert nicht mehr? Zurücksetzen</button>
-    <button class="bio-lock-out" onclick="bioSignOut()">Abmelden</button>
-  </div>
-</div>
 <div id="drawWrap">
   <canvas id="drawCanvas"></canvas>
   <button id="drawClose" onclick="drawClose()" aria-label="Schliessen">✕</button>
-  <button id="drawPan" onclick="drawTogglePan()" title="Karte bewegen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg><span>Karte bewegen</span></button>
-  <div id="drawHint">Male die Zonen — oben rechts kannst du die Karte bewegen</div>
+  <div id="drawHint">Male die Zonen — mit zwei Fingern bewegst du die Karte</div>
   <div id="drawBrushV" aria-label="Pinselgrösse">
     <span class="dbv-cap">Pinsel</span>
     <input type="range" min="12" max="80" step="2" value="34" orient="vertical" aria-label="Pinselgrösse"/>
@@ -2845,6 +2835,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div id="drawBar">
     <div id="drawBrush"></div>
     <div id="drawSlider"></div>
+    <div id="drawPanRow"><button id="drawPan" onclick="drawTogglePan()" title="Karte bewegen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg><span>Karte bewegen</span></button></div>
     <div id="drawCats"></div>
     <div id="drawPens"></div>
     <div id="drawActions">
@@ -3020,12 +3011,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         <label class="prof-lbl">Über dich <span class="prof-cnt" id="profBioCnt">0/200</span></label>
         <textarea class="prof-bio" id="profBio" maxlength="1400" placeholder="Kurze Beschreibung (max. 200 Wörter, keine Links)…" oninput="profBioInput()"></textarea>
 
-        <div class="prof-sec-title">Darstellung</div>
-        <label class="prof-lbl">Kartenbeschriftung</label>
-        <div class="prof-seg" id="profLabels">
-          <button data-v="on">Skigebiete an</button><button data-v="off">Aus</button>
-        </div>
-
         <div class="prof-sec-title">Start &amp; Karte</div>
         <label class="prof-lbl">Startansicht</label>
         <div class="prof-seg" id="profStart">
@@ -3067,13 +3052,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <div class="prof-view" id="profViewApp" style="display:none">
         <button class="prof-back" onclick="profNav('main')">‹ Zurück</button>
         <div class="prof-sec-title">App &amp; Rechtliches</div>
-        <button class="prof-item" id="profBioBtn" style="display:none" onclick="profEnableBio()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10a3 3 0 0 1 6 0M8.5 15.5c1 1 5 1 7 0M12 10v3.5"/></svg>Biometrisches Login aktivieren</button>
-        <!-- The platform can lose track of the passkey behind this (Face ID
-             reset, Keychain not synced, a new OS install) while the app's
-             own "is it set up" flag still says yes -- which used to show up
-             as a login screen that says a passkey exists but can't be used
-             for one. Re-enrolling here replaces it with a working one. -->
-        <button class="prof-item" id="profBioOffBtn" style="display:none" onclick="profDisableBio()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><line x1="4" y1="4" x2="20" y2="20"/></svg>Biometrisches Login zurücksetzen</button>
         <button class="prof-item" id="profInstall" onclick="profClose();a2hsShow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="7" x2="12" y2="13"/><polyline points="9.5 10.5 12 13 14.5 10.5"/><line x1="9" y1="17" x2="15" y2="17"/></svg>App installieren</button>
         <button class="prof-item" onclick="profShowLegal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Datenschutz &amp; Haftung anzeigen</button>
         <button class="prof-item" onclick="sendFeedback()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>Feedback senden</button>
@@ -3153,6 +3131,28 @@ for(let t=0;t<T;t++){const o0=t*NP,o1=(t+1)*NP,s=t*NP,sc=M.snow_scale;for(let p=
 const tv=(t,p)=>TEMP[t*NP+p]/M.temp_mul-M.temp_off, sunv=(t,p)=>SUN[t*NP+p]/M.sun_mul;
 const SB=M.slf_bounds,SC=M.slf_colors,RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
 function snowCol(v){if(v<SB[0])return null;for(let i=SB.length-1;i>=1;i--)if(v>=SB[i-1])return RGB[Math.min(i-1,RGB.length-1)];return RGB[0];}
+// The stepped legend above is right for the model layers (an official
+// SLF-style band scale), but a field built by blending overlapping reports
+// already varies continuously (progCell averages cm across every report
+// that touches a cell, weighted by how well each one matches the terrain)
+// -- painting that with hard band edges threw the continuity away and made
+// touching reports look like they disagreed at the seam even when they
+// didn't. This interpolates between the same band colours instead of
+// snapping to one, anchored at each band's own lower bound.
+function snowColLerp(v){
+  if(v==null)return null;
+  if(v<=SB[0])return RGB[0];
+  const last=RGB.length-1;
+  if(v>=SB[last])return RGB[last];
+  for(let i=1;i<=last;i++){
+    if(v<SB[i]){
+      const t=(v-SB[i-1])/(SB[i]-SB[i-1]);
+      const c0=RGB[i-1],c1=RGB[i];
+      return[c0[0]+(c1[0]-c0[0])*t,c0[1]+(c1[1]-c0[1])*t,c0[2]+(c1[2]-c0[2])*t];
+    }
+  }
+  return RGB[last];
+}
 // --- Powder Decision Engine: named constants ---
 const PD_RAIN_LOOKBACK_H=48;
 const PD_RAIN_TEMP_C=1.0;
@@ -3522,11 +3522,10 @@ const chCantons=L.polyline(CH_CANTONS,{pane:'abstractPane',interactive:false,smo
   color:'#9fb0c4',weight:1,opacity:.18,fill:false}).addTo(map);
 const chOutline=L.polygon(CH_BORDER,{pane:'abstractPane',interactive:false,smoothFactor:0.35,
   color:'#7c8ca3',weight:2.2,opacity:.95,fillColor:'#eef3f8',fillOpacity:1,lineJoin:'round'}).addTo(map);
+// Resort names/dots used to be drawn straight onto the map as you zoomed in;
+// CH_RESORTS itself stays (the home-area picker in Settings still lists by
+// name), it just no longer gets a marker of its own.
 const resortGroup=L.layerGroup([],{pane:'resortPane'}).addTo(map);
-CH_RESORTS.forEach(function(r){
-  L.marker([r.lat,r.lng],{pane:'resortPane',interactive:false,keyboard:false,
-    icon:L.divIcon({className:'',html:'<div class="resort-pin"><i></i><span>'+r.name+'</span></div>',
-      iconSize:[0,0],iconAnchor:[0,0]})}).addTo(resortGroup);});
 // Tiles are transparent at the initial (fully zoomed-out) view and only reach
 // full strength at the deepest zoom, so the map starts abstract and gains
 // detail as you come closer.
@@ -3545,11 +3544,6 @@ function updateBaseFade(){
   chOutline.setStyle({weight:1.1+1.5*(1-op),opacity:.30+.65*(1-op),fillOpacity:Math.max(0,.72-op*.72)});
   // Canton borders are legible from the very first view and only sharpen.
   chCantons.setStyle({opacity:.42+.34*t,weight:.9+.9*t});
-  // Ski resorts pop in as soon as you leave the country view.
-  const rt=Math.max(0,Math.min(1,(t-0.06)/0.28));
-  const el=document.getElementById('map');
-  if(el){el.style.setProperty('--resort-op',rt.toFixed(3));
-    el.style.setProperty('--resort-lbl',Math.max(0,Math.min(1,(t-0.14)/0.20)).toFixed(3));}
 }
 map.on('zoom zoomend',updateBaseFade);updateBaseFade();
 // Keine weisse Maske mehr: die gedimmte OSM-Unterlage zeigt die Nachbarlaender,
@@ -3694,7 +3688,7 @@ function renderQprHeat(){
 // ===== Schnee-Prognose: Aspekt + Höhen-Heuristik aus Zeichnen-Reports =====
 const PROG_GW=340,PROG_GH=240;
 const PROG_TYPE_ZOOM=11.5;   // below this only Reported Powder is offered
-const PROG_MIN_CONF=75;      // Reported Powder is defined as "confidence > 75%"
+const PROG_MIN_CONF=65;      // Reported Powder is defined as "confidence > 65%" -- fixed, not a control the UI exposes
 const pcv=document.createElement('canvas');pcv.width=PROG_GW*2;pcv.height=PROG_GH*2;const pcx=pcv.getContext('2d');
 let prognosisOverlay=L.imageOverlay(pcv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:1});
 let PROG_ASP=null,PROG_ELEV=null,PROG_SLP=null,PROG_LA=null,PROG_LO=null,PROG_Q=null;
@@ -3977,7 +3971,7 @@ function renderPrognosis(type){
   progCommit();
 }
 // Powder-Finder: where powder is expected, painted in the SLF new-snow depth
-// colours, filtered by a minimum confidence the user picks.
+// colours, filtered by a fixed minimum confidence (PROG_MIN_CONF).
 let progConfMin=PROG_MIN_CONF;
 function progSetConfMin(v){progConfMin=+v;
   const o=document.getElementById('progConfVal');if(o)o.textContent=progConfMin+'%';
@@ -4003,9 +3997,12 @@ function renderPowderFind(){
     _progField[idx]=r.like;_progConf[idx]=r.conf;
     if(r.conf<progConfMin||r.like<0.05){d[o+3]=0;continue;}
     const cm=r.cm!=null?r.cm:25;                       // depth drives the colour
-    const c=snowCol(cm)||[120,170,255];
+    const c=snowColLerp(cm)||[120,170,255];
     d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];
-    d[o+3]=Math.min(255,200+55*Math.pow(r.like,0.7))|0; // ~80% coverage and up, clearly readable
+    // Lighter than the model layers on purpose: this is inferred from a
+    // handful of drawn reports rather than measured everywhere, so it reads
+    // as a wash over the terrain rather than a solid coat of paint.
+    d[o+3]=Math.min(170,90+80*Math.pow(r.like,0.7))|0;
   }
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
@@ -4377,8 +4374,13 @@ document.querySelectorAll('#tlModeToggle button').forEach(x=>x.onclick=()=>setTl
 // of tomorrow -- the two questions someone checking snow conditions asks
 // most, so they should not cost a drag.
 function tlGotoLastSnow(){
+  // Same threshold the bars themselves use to decide whether an hour is
+  // worth a bar at all (hSnow is a whole-country spatial mean, so even a
+  // real, locally heavy snowfall reads as a small number here) -- a higher
+  // cutoff here disagreed with what the timeline visibly showed and often
+  // came up empty on days that plainly had snow.
   let idx=-1;
-  for(let t=Math.min(T-1,nowIdx);t>=0;t--){if(hSnow[t]>0.05){idx=t;break;}}
+  for(let t=Math.min(T-1,nowIdx);t>=0;t--){if(hSnow[t]>=.002){idx=t;break;}}
   if(idx<0){try{toast('Kein Schneefall in den Daten.');}catch(e){}return;}
   const ws=Math.max(TV_MIN,b-a);
   a=Math.max(0,Math.min(T-ws,idx-Math.floor(ws/2)));b=Math.min(T,a+ws);
@@ -4556,7 +4558,10 @@ const LY_VAR_TEXT={
   'temp|0–5 °C':'Nur Flächen mit einem Maximum zwischen 0 und 5 °C — Firn-Bedingungen.'
 };
 function lyInfoRender(){
-  const el=document.getElementById('lyInfo');if(!el)return;
+  const el=document.getElementById('lyInfo');
+  const lg=document.getElementById('lyLegend');
+  if(lg)lg.innerHTML=legendFor(layer);
+  if(!el)return;
   const L=lyLayers(),it=L[lyIndex()]&&L[lyIndex()][2];
   const info=it&&LY_TEXT[it.id];
   if(!info){el.innerHTML='';return;}
@@ -4607,25 +4612,17 @@ map.on('zoomend',function(){try{
   const want=Object.keys(GROUPS).reduce((n,g)=>n+groupItems(g).length,0);
   if(shown!==want)setTopic(curTopic,Math.min(curItem,groupItems(curTopic).length-1),curVar);}catch(e){}});
 
+// The "Quelle" (report source) and "Vertrauen" (confidence) controls used to
+// show above the timeline whenever a report-driven layer was active -- which
+// is now the default layer, so they were up on every fresh load. Confidence
+// is a fixed threshold (PROG_MIN_CONF) rather than something to tune from the
+// console, and the source is drawn-reports-only for every layer that reaches
+// the UI, so there is nothing left worth a row for. Kept as a no-op (rather
+// than deleted) so #progBar's on/off CSS and the layer-bar padding that keys
+// off it stay correct if a report-source control is ever reintroduced.
 function progRenderBar(){
   const bar=document.getElementById('progBar');if(!bar)return;
-  const on=(layer==='prog'||layer==='powfind'||layer==='progdiff'||layer==='progpat');
-  bar.classList.toggle('on',on);
-  if(!on){bar.innerHTML='';return;}
-  const srcs=['draw','quick','both','all'];
-  // Reported Powder and the pattern layers are defined as drawn-reports-only,
-  // so there is no source to choose there.
-  let html=(layer==='powfind'||layer==='progpat')
-    ?'<div class="pb-row"><span class="pb-lbl">Quelle</span><div class="pb-seg"><button class="active" disabled>Zeichnen-Reports</button></div></div>'
-    :'<div class="pb-row"><span class="pb-lbl">Quelle</span><div class="pb-seg">'+
-      srcs.map(k=>'<button data-src="'+k+'"'+(progSrc===k?' class="active"':'')+'>'+PROG_SRC_LABEL[k]+'</button>').join('')+
-      '</div></div>';
-  if(layer==='powfind'||layer==='progdiff'||layer==='progpat')
-    html+='<div class="pb-row"><span class="pb-lbl">Vertrauen</span>'+
-      '<input type="range" min="0" max="95" step="5" value="'+progConfMin+'" oninput="progSetConfMin(this.value)"/>'+
-      '<b id="progConfVal">'+progConfMin+'%</b></div>';
-  bar.innerHTML=html;
-  bar.querySelectorAll('.pb-seg button[data-src]').forEach(b=>b.onclick=()=>progSetSrc(b.dataset.src));
+  bar.classList.remove('on');bar.innerHTML='';
 }
 // Nothing floats above the search field any more, so it takes the top edge and
 // the demo pill and brand mark chain off its measured bottom.
@@ -5380,7 +5377,7 @@ document.addEventListener('keydown',function(e){
   if(vis('reportOverlay')){obsClose();return;}
   if(document.getElementById('feedPage').classList.contains('open')){feedClose();return;}
   if(document.getElementById('inspPanel').classList.contains('open')){inspClose();return;}
-  if(vis('authOverlay')&&authMode!=='biometric'){authHide();return;}
+  if(vis('authOverlay')){authHide();return;}
 });
 // Prevent the whole page (UI) from zooming — the map keeps its own zoom
 document.addEventListener('gesturestart',e=>e.preventDefault());
@@ -5429,7 +5426,11 @@ requestAnimationFrame(()=>{document.documentElement.style.setProperty('--btm-h',
 const SB_URL='https://gdtxwowcqtbdkcoksivb.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdkdHh3b3djcXRiZGtjb2tzaXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NzA1ODUsImV4cCI6MjA5NzM0NjU4NX0.5t4UHGLnnWbDoPVZE0LnmN1bS_jvEU3mmk4-1JpvXmM';
 let sb=null,sbUser=null,authMode='login';
-try{sb=window.supabase.createClient(SB_URL,SB_KEY);}catch(e){console.warn('Supabase SDK not loaded',e);}
+// Explicit, not relying on the SDK's current defaults: the session (refresh
+// token) lives in localStorage and renews itself in the background, so
+// signing in once keeps you in until you sign out or the browser evicts its
+// storage -- there is no re-lock step of the app's own to get in the way.
+try{sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});}catch(e){console.warn('Supabase SDK not loaded',e);}
 function haptic(ms){try{const H=_capPlugin('Haptics');if(H){H.impact({style:(ms||8)>=15?'MEDIUM':'LIGHT'});return;}navigator.vibrate(ms||8);}catch(e){}}
 // --- Custom inline icon set (replaces emoji everywhere in the UI chrome) ---
 const IC={
@@ -5894,9 +5895,6 @@ function authUpdateUI(user){
       <span class="user-name">${name}</span></div>`;
     loadMyProfileAvatar();
     banner.style.display=user.email_confirmed_at?'none':'flex';
-    // biometric lock on a restored session (not right after an explicit login)
-    if(!justLoggedIn&&!bioUnlocked&&bioEnabledFor(user.id))showBioLock();
-    justLoggedIn=false;
   } else {
     const pill=document.getElementById('userPill');
     if(pill)pill.outerHTML='<button class="login-btn" id="btnLogin" onclick="authShow()">Anmelden</button>';
@@ -5917,13 +5915,22 @@ async function loadSocial(){
     }else{myFollowing=new Set();}
   }catch(e){console.warn('loadSocial',e);}
 }
+// The feed icon's badge: a count, not just a dot -- comments on your own
+// posts and posts from people you follow, both since you last opened the
+// feed. Written to whichever .feed-dot elements exist (only #mapFeedFab's
+// is visible today, but the rail carries a second one).
+function feedNotifRender(n){
+  document.querySelectorAll('.feed-dot').forEach(el=>{
+    el.textContent=n>0?(n>99?'99+':String(n)):'';
+    el.classList.toggle('on',n>0);
+  });
+}
 async function loadDbReports(){
   if(!sb)return;
   try{
     const{data}=await sb.from('reports').select('*').order('created_at',{ascending:false}).limit(60);
     if(!data||!data.length){return;}
-    try{const nw=new Date(data[0].created_at).getTime();const seen=+(localStorage.getItem('ssm_feed_seen')||0);
-      const fd=document.querySelector('#mapFeedFab .feed-dot');if(fd)fd.classList.toggle('on',nw>seen);}catch(e){}
+    const feedSeenAt=+(localStorage.getItem('ssm_feed_seen')||0);
     try{dbQpr=data.filter(r=>r.condition_data&&r.condition_data.quick).map(r=>{const ll=parseGeo(r.location);const cd=r.condition_data;
         return ll?[ll[0],ll[1],+cd.powderAmountCm||0,+cd.powderQuality||0]:null;}).filter(Boolean);
       if(layer==='qprheat')renderQprHeat();if(layer==='prog')renderPrognosis(stat);if(layer==='powfind')renderPowderFind();if(layer==='progdiff')renderProgDiff();if(layer==='progpat')renderProgPattern(stat);}catch(e){}
@@ -5933,9 +5940,11 @@ async function loadDbReports(){
     // likes (reuse report_reactions type=like)
     let likeCount={},likedByMe={};try{const{data:rx}=await sb.from('report_reactions').select('report_id,user_id').eq('type','like').in('report_id',ids);
       (rx||[]).forEach(x=>{likeCount[x.report_id]=(likeCount[x.report_id]||0)+1;if(sbUser&&x.user_id===sbUser.id)likedByMe[x.report_id]=true;});}catch(e){}
-    // comment counts
-    let cmtCount={};try{const{data:cc}=await sb.from('report_comments').select('report_id').in('report_id',ids);
-      (cc||[]).forEach(x=>{cmtCount[x.report_id]=(cmtCount[x.report_id]||0)+1;});}catch(e){}
+    // comment counts (created_at too, so the notification badge can tell a
+    // comment that arrived since the feed was last opened from an old one)
+    let cmtCount={},cmtNew={};try{const{data:cc}=await sb.from('report_comments').select('report_id,created_at').in('report_id',ids);
+      (cc||[]).forEach(x=>{cmtCount[x.report_id]=(cmtCount[x.report_id]||0)+1;
+        if(new Date(x.created_at).getTime()>feedSeenAt)cmtNew[x.report_id]=(cmtNew[x.report_id]||0)+1;});}catch(e){}
     // condition ratings (crowdsourced snow quality: stars 1–5 + powder)
     let condAgg={},myCond={};try{const{data:cnd}=await sb.from('report_conditions').select('report_id,user_id,stars,powder').in('report_id',ids);
       (cnd||[]).forEach(x=>{const g=condAgg[x.report_id]||(condAgg[x.report_id]={n:0,sum:0,pow:0});g.n++;g.sum+=x.stars||0;if(x.powder)g.pow++;if(sbUser&&x.user_id===sbUser.id)myCond[x.report_id]={stars:x.stars,powder:!!x.powder};});}catch(e){}
@@ -5951,6 +5960,17 @@ async function loadDbReports(){
     // the powfind/prog renders a few lines up ran on whatever was there
     // before this fetch, so a report-driven layer needs a second pass now.
     if(layer==='powfind'||layer==='prog'||layer==='progdiff'||layer==='progpat')renderSoon();
+    // Notification badge: comments on your own posts, and posts from people
+    // you follow, both since the feed was last opened -- one number rather
+    // than two dots, since either is a reason to go look.
+    try{
+      let n=0;
+      dbR.forEach(r=>{
+        if(sbUser&&r.userId===sbUser.id)n+=cmtNew[r.id]||0;
+        else if(r.userId&&myFollowing.has(r.userId)&&new Date(r.createdAt).getTime()>feedSeenAt)n++;
+      });
+      feedNotifRender(n);
+    }catch(e){}
     if(document.getElementById('feedPage').classList.contains('open'))feedRender();
     try{renderMyReports();}catch(e){}
   }catch(e){console.warn('loadDbReports',e);}
@@ -6029,7 +6049,7 @@ if(sb){sb.auth.onAuthStateChange((ev,session)=>{
     authUpdateUI(session?.user||null);});
   sb.auth.getSession().then(({data})=>{authUpdateUI(data.session?.user||null);});}
 else{const fb=document.getElementById('mapFeedFab');if(fb)fb.style.display='flex';loadReportMarkers();}
-let authPendingEmail=null,justLoggedIn=false;
+let authPendingEmail=null;
 function authShow(){authMode='login';authRender();document.getElementById('authOverlay').style.display='flex';}
 function authHide(){document.getElementById('authOverlay').style.display='none';document.getElementById('authErr').textContent='';document.getElementById('authCodeErr').textContent='';}
 function authToggle(){authMode=authMode==='login'?'register':'login';authRender();}
@@ -6074,16 +6094,15 @@ async function authSetNewPassword(){
   btn.disabled=false;btn.textContent='Passwort speichern';
 }
 function authRender(){
-  const isReg=authMode==='register',isCode=authMode==='code',isBio=authMode==='biometric';
+  const isReg=authMode==='register',isCode=authMode==='code';
   const isForgot=authMode==='forgot',isNew=authMode==='newpass',isSent=authMode==='sent';
-  document.getElementById('authForm').style.display=(isCode||isBio||isNew||isSent)?'none':'flex';
+  document.getElementById('authForm').style.display=(isCode||isNew||isSent)?'none':'flex';
   document.getElementById('authCodeBox').style.display=isCode?'block':'none';
-  document.getElementById('authBioBox').style.display=isBio?'block':'none';
   document.getElementById('authNewPassBox').style.display=isNew?'block':'none';
   document.getElementById('authSentBox').style.display=isSent?'block':'none';
-  document.getElementById('authSwitch').style.display=(isCode||isBio||isNew||isSent)?'none':'block';
-  document.getElementById('authNote').style.display=(isCode||isBio||isNew||isSent||isForgot)?'none':'';
-  document.getElementById('authClose').style.display=isBio?'none':'flex';
+  document.getElementById('authSwitch').style.display=(isCode||isNew||isSent)?'none':'block';
+  document.getElementById('authNote').style.display=(isCode||isNew||isSent||isForgot)?'none':'';
+  document.getElementById('authClose').style.display='flex';
   document.getElementById('authPass').style.display=isForgot?'none':'';
   document.getElementById('authPass').required=!isForgot;
   document.getElementById('authForgotBtn').style.display=(isReg||isForgot||isSent)?'none':'block';
@@ -6098,8 +6117,6 @@ function authRender(){
     document.getElementById('authSwitch').innerHTML='<button onclick="authBackToForm()">Zurück zur Anmeldung</button>';return;}
   if(isCode){document.getElementById('authTitle').textContent='E-Mail bestätigen';document.getElementById('authSub').style.display='none';
     document.getElementById('authCodeSub').textContent='Wir haben einen 6-stelligen Code an '+(authPendingEmail||'deine E-Mail')+' geschickt.';return;}
-  if(isBio){document.getElementById('authTitle').textContent='Biometrischer Login';document.getElementById('authSub').style.display='none';
-    document.getElementById('authBioName').textContent=bioName();return;}
   document.getElementById('authSub').style.display='';
   document.getElementById('authTitle').textContent=isReg?'Account erstellen':'Anmelden';
   document.getElementById('authSub').textContent=isReg?'Erstelle ein Konto für die Community':'Anmelden für Community & Meldungen';
@@ -6150,94 +6167,19 @@ async function authVerifyCode(){
 }
 async function authResendCode(){if(!sb||!authPendingEmail)return;try{await sb.auth.resend({type:'signup',email:authPendingEmail});const err=document.getElementById('authCodeErr');err.style.color='#0a8f4f';err.textContent='Neuer Code gesendet.';}catch(e){}}
 async function authAfterLogin(){
-  justLoggedIn=true;
-  const uid=sbUser?.id;
-  const avail=await bioAvailable();
-  let skip=false;try{skip=!!localStorage.getItem('ssm_bio_skip_'+uid);}catch(e){}
-  if(avail&&uid&&!bioEnabledFor(uid)&&!skip){authMode='biometric';authRender();return;}
   authHide();
 }
-function authEnableBio(){
-  bioEnroll(sbUser.id,sbUser.email).then(()=>{authFinishBio();}).catch(e=>{alert('Biometrie konnte nicht aktiviert werden: '+(e.message||e));authFinishBio();});
-}
-function authFinishBio(){authHide();authMode='login';}
-function authSkipBio(){try{if(sbUser)localStorage.setItem('ssm_bio_skip_'+sbUser.id,'1');}catch(e){}authFinishBio();}
-function profEnableBio(){if(!sbUser)return;
-  // Re-enrolling overwrites whatever credential id was stored before, so this
-  // is also the fix when biometric login is "on" but broken: it replaces the
-  // stale id with one the platform actually just created and can verify.
-  bioEnroll(sbUser.id,sbUser.email).then(()=>{toast('Biometrisches Login aktiviert','ok');
-    try{localStorage.removeItem('ssm_bio_skip_'+sbUser.id);}catch(e){}
-    const b1=document.getElementById('profBioBtn');if(b1)b1.style.display='none';
-    const b2=document.getElementById('profBioOffBtn');if(b2)b2.style.display='';})
-  .catch(e=>toast('Aktivierung fehlgeschlagen: '+(e.message||e),'err'));}
-function profDisableBio(){if(!sbUser)return;
-  try{localStorage.removeItem('ssm_bio_'+sbUser.id);}catch(e){}
-  toast('Biometrisches Login zurückgesetzt','ok');
-  const b1=document.getElementById('profBioBtn');if(b1)b1.style.display='';
-  const b2=document.getElementById('profBioOffBtn');if(b2)b2.style.display='none';}
 async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email});const b=document.getElementById('emailBanner').querySelector('button');if(b)b.textContent='Gesendet!';}
-// --- Biometric (WebAuthn platform authenticator) ---
-function _b64u(buf){let s=btoa(String.fromCharCode.apply(null,new Uint8Array(buf)));return s.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
-function _b64uDec(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const bin=atob(s),b=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return b.buffer;}
-async function bioAvailable(){try{return !!(window.PublicKeyCredential&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());}catch(e){return false;}}
-function bioName(){const ua=navigator.userAgent;if(/iPhone|iPad|Macintosh/.test(ua))return 'Face ID / Touch ID';if(/Android/.test(ua))return 'Fingerabdruck';return 'Biometrie';}
-function bioEnabledFor(uid){try{return !!localStorage.getItem('ssm_bio_'+uid);}catch(e){return false;}}
-async function bioEnroll(uid,email){
-  const challenge=crypto.getRandomValues(new Uint8Array(32));
-  const cred=await navigator.credentials.create({publicKey:{
-    challenge,rp:{name:'Snowmapper',id:location.hostname},
-    user:{id:new TextEncoder().encode(uid),name:email||uid,displayName:email||'User'},
-    pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
-    authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},
-    timeout:60000,attestation:'none'}});
-  localStorage.setItem('ssm_bio_'+uid,_b64u(cred.rawId));
-}
-async function bioVerify(uid){
-  const id=localStorage.getItem('ssm_bio_'+uid);if(!id)throw new Error('no credential');
-  const challenge=crypto.getRandomValues(new Uint8Array(32));
-  await navigator.credentials.get({publicKey:{challenge,timeout:60000,userVerification:'required',allowCredentials:[{type:'public-key',id:_b64uDec(id)}]}});
-}
-let bioUnlocked=false;
-let bioAutoTried=false;
-function showBioLock(){const el=document.getElementById('bioLock');
-  if(el.style.display==='flex')return; // already showing — no second prompt
-  document.getElementById('bioLockName').textContent=bioName();
-  const bn2=document.getElementById('bioLockName2');if(bn2)bn2.textContent=bioName();
-  el.style.display='flex';}
-  // NOTE: iOS Safari requires a user gesture for navigator.credentials.get(), so we
-  // do NOT auto-trigger Face ID (it was silently rejected → "doesn't always work" +
-  // an extra failed prompt). The user taps "Entsperren", which is a valid gesture.
-async function bioUnlock(auto){try{await bioVerify(sbUser.id);bioUnlocked=true;document.getElementById('bioLock').style.display='none';}
-  catch(e){
-    // The platform can genuinely lose the credential behind ssm_bio_<uid>
-    // (a Face ID reset, a fresh OS install, Keychain not synced) while this
-    // flag says it is still set up -- the browser's own "no passkey saved"
-    // error surfaces here. One failure is ambiguous (it is also what a
-    // cancelled prompt looks like), so this only offers the reset rather
-    // than doing it automatically.
-    const rb=document.getElementById('bioLockReset');if(rb)rb.style.display='block';
-    if(!auto)alert('Entsperren fehlgeschlagen. Falls das öfter passiert, nutze "Zurücksetzen" unten.');
-  }}
-function bioReset(){
-  try{if(sbUser)localStorage.removeItem('ssm_bio_'+sbUser.id);}catch(e){}
-  bioUnlocked=true;document.getElementById('bioLock').style.display='none';
-  try{toast('Biometrisches Login zurückgesetzt — in den Einstellungen neu einrichten.','ok');}catch(e){}
-}
-function bioSignOut(){document.getElementById('bioLock').style.display='none';bioUnlocked=true;if(sb)sb.auth.signOut();}
 function authMenu(){openProfile();}
 // --- Personal preferences ---------------------------------------------------
 // Device-local, so they work before sign-in and never need a round trip.
 const PREF_KEY='ssm_prefs_v1';
-const PREF_DEFAULTS={labels:'on',start:'country',home:'',layer:'meteo:0',window:'48'};
+const PREF_DEFAULTS={start:'country',home:'',layer:'meteo:0',window:'48'};
 let prefs=Object.assign({},PREF_DEFAULTS);
 function prefsLoad(){try{const v=JSON.parse(localStorage.getItem(PREF_KEY)||'{}');
   prefs=Object.assign({},PREF_DEFAULTS,v||{});}catch(e){prefs=Object.assign({},PREF_DEFAULTS);}
   return prefs;}
 function prefsSave(){try{localStorage.setItem(PREF_KEY,JSON.stringify(prefs));}catch(e){}}
-function applyLabels(){try{const el=document.getElementById('map');
-  if(el)el.classList.toggle('no-resort-labels',prefs.labels==='off');}catch(e){}}
-function prefsApplyAll(){applyLabels();}
 prefsLoad();
 // --- Profile & Settings ---
 let myProfile=null,profAvatarFile=null,profAvatarUrl=null;
@@ -6323,10 +6265,6 @@ async function openProfile(){
   document.getElementById('profModal').style.display='flex';
   profNav('main');
   try{const vv=localStorage.getItem('ssm_visibility')||'all';document.querySelectorAll('#profVis button').forEach(b2=>b2.classList.toggle('active',b2.dataset.v===vv));}catch(e){}
-  try{const bb=document.getElementById('profBioBtn'),bo=document.getElementById('profBioOffBtn');
-    if(bb||bo)bioAvailable().then(av=>{const on=av&&bioEnabledFor(sbUser.id);
-      if(bb)bb.style.display=(av&&!on)?'':'none';
-      if(bo)bo.style.display=on?'':'none';});}catch(e){}
   const name=sbUser.user_metadata?.username||sbUser.email?.split('@')[0]||'User';
   document.getElementById('profName').textContent=name;
   document.getElementById('profAvInitial').textContent=name[0].toUpperCase();
@@ -6365,7 +6303,6 @@ function profSeg(id,key,after){
 }
 function profRenderPrefs(){
   prefsLoad();
-  profSeg('profLabels','labels',applyLabels);
   profSeg('profStart','start');
   profSeg('profWindow','window');
   const home=document.getElementById('profHome');
@@ -6395,7 +6332,6 @@ function prefsApplyStartup(){
       const v=JSON.parse(localStorage.getItem('ssm_lastview')||'null');
       if(v&&v.lat!=null){map.setView([v.lat,v.lng],v.z,{animate:false});updateBaseFade();}
     }
-    applyLabels();
   }catch(e){}
 }
 try{map.on('moveend',()=>{try{const c=map.getCenter();
@@ -7052,8 +6988,22 @@ let drawCtx=null,drawPen=DRAW_PENS.powder,drawCat='snow',drawPanOn=false;
 let drawZoneCanvas=null,drawZoneW=0,drawZoneH=0,drawDpr=1,drawRefBounds=null;
 let drawRoutes=[],drawTracks=[],drawZoneUsed=new Set(),drawHistory=[];
 let _drawPainting=false,_drawLastPt=null,_drawCurRoute=null,_drawCurTrack=null,_drawDashAcc=0;
+// Which fingers are currently down on the canvas, so a second one can be told
+// apart from the first (see drawSetupCanvas): a momentary pan/zoom gesture,
+// not a second brush.
+let _drawActivePointers=new Set(),_drawGesturePan=false,_drawCapturedId=null;
 let _drawTrackGrid=new Set(),drawTrackZoom=null;
 let drawBrushSize=34,drawZoneSamples={},_drawLastTrackC=null,_drawBtmH='';
+// The slider sets the baseline; a stylus or a force-sensing screen can push
+// each individual segment wider or narrower than that as you draw. 0.5 is
+// what a plain finger or a mouse reports at rest -- the spec's constant for
+// devices with no real pressure sensing -- so that maps to 1x (unchanged),
+// and only a device that actually varies its pressure moves off it.
+let drawBrushEff=drawBrushSize;
+function drawPressureScale(pr){
+  if(pr==null||pr<=0)return 1;
+  return Math.max(0.55,Math.min(1.6,0.5+pr));
+}
 const DRAW_ZONE_W=34; // base zone brush width (CSS px)
 
 function drawHasContent(){return drawZoneUsed.size||drawRoutes.length||drawTracks.length;}
@@ -7084,7 +7034,8 @@ function drawOpen(){
   if(typeof scrCurrent==='function'&&scrCurrent()!=='search'){
     scrGo('search');setTimeout(drawOpen,380);return;}
   drawRoutes=[];drawTracks=[];drawZoneUsed=new Set();drawHistory=[];drawPanOn=false;_drawPainting=false;drawZoneCanvas=null;_drawTrackGrid=new Set();drawTrackZoom=null;drawZoneSamples={};
-  document.body.classList.remove('draw-pan');document.body.classList.add('draw-on');
+  _drawActivePointers=new Set();_drawGesturePan=false;_drawCapturedId=null;
+  document.body.classList.remove('draw-pan','draw-gesture-pan');document.body.classList.add('draw-on');
   document.getElementById('drawWrap').style.display='block';
   _drawBtmH=document.documentElement.style.getPropertyValue('--btm-h');
   document.documentElement.style.setProperty('--btm-h','0px');
@@ -7098,7 +7049,8 @@ function drawOpen(){
 function drawClose(){
   if(drawHasContent()&&!confirm('Zeichnung verwerfen?'))return;
   document.getElementById('drawWrap').style.display='none';
-  document.body.classList.remove('draw-on','draw-pan');drawPanOn=false;
+  document.body.classList.remove('draw-on','draw-pan','draw-gesture-pan');drawPanOn=false;
+  _drawActivePointers=new Set();_drawGesturePan=false;_drawCapturedId=null;
   if(_drawBtmH)document.documentElement.style.setProperty('--btm-h',_drawBtmH);
   try{map.invalidateSize({animate:false,pan:false});}catch(e){}
   try{map.dragging.enable();map.touchZoom.enable();map.doubleClickZoom.enable();if(_desktop)map.scrollWheelZoom.enable();}catch(e){}
@@ -7126,10 +7078,34 @@ function drawSetupCanvas(){
   try{if(drawTrackZoom==null)drawTrackZoom=map.getZoom();}catch(e){drawTrackZoom=13;}
   if(!cv._wired){cv._wired=true;
     const pt=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
-    cv.addEventListener('pointerdown',e=>{if(drawPanOn)return;try{cv.setPointerCapture(e.pointerId);}catch(_){}
-      _drawPainting=true;drawPushHistory();drawStrokeBegin(pt(e));drawRepaint();try{haptic(4);}catch(_){}});
-    cv.addEventListener('pointermove',e=>{if(drawPanOn||!_drawPainting)return;drawStrokeExtend(pt(e));drawRepaint();});
-    const end=()=>{if(!_drawPainting)return;_drawPainting=false;_drawCurRoute=null;_drawCurTrack=null;_drawLastPt=null;};
+    // A second finger touching down mid-stroke is a pinch/pan starting, not a
+    // second brush -- without this, both fingers painted, and the shared
+    // _drawLastPt jumped between them into a jagged line neither one drew.
+    // The accidental dot the first finger already left gets undone (a whole
+    // pre-stroke snapshot, so this is exact) and the map takes the gesture
+    // until every finger lifts.
+    cv.addEventListener('pointerdown',e=>{
+      _drawActivePointers.add(e.pointerId);
+      if(drawPanOn)return;
+      if(_drawActivePointers.size>=2){
+        if(_drawPainting){drawUndo();_drawPainting=false;_drawCurRoute=null;_drawCurTrack=null;_drawLastPt=null;}
+        // The first finger's pointer is captured (below) so it keeps
+        // painting even if it slides off the canvas -- that capture also
+        // overrides pointer-events, so it has to be let go explicitly or
+        // its own moves would keep targeting the canvas instead of the map.
+        if(_drawCapturedId!=null){try{cv.releasePointerCapture(_drawCapturedId);}catch(_e){}_drawCapturedId=null;}
+        if(!_drawGesturePan){_drawGesturePan=true;document.body.classList.add('draw-gesture-pan');
+          try{map.dragging.enable();map.touchZoom.enable();}catch(_e){}}
+        return;
+      }
+      try{cv.setPointerCapture(e.pointerId);_drawCapturedId=e.pointerId;}catch(_){}
+      _drawPainting=true;drawPushHistory();drawStrokeBegin(pt(e),e.pressure);drawRepaint();try{haptic(4);}catch(_){}});
+    cv.addEventListener('pointermove',e=>{if(drawPanOn||_drawGesturePan||!_drawPainting)return;drawStrokeExtend(pt(e),e.pressure);drawRepaint();});
+    const end=e=>{
+      if(e&&e.pointerId!=null){_drawActivePointers.delete(e.pointerId);if(_drawCapturedId===e.pointerId)_drawCapturedId=null;}
+      if(_drawGesturePan&&_drawActivePointers.size===0){_drawGesturePan=false;document.body.classList.remove('draw-gesture-pan');
+        if(!drawPanOn){try{map.dragging.disable();map.touchZoom.disable();}catch(_e){}}}
+      if(!_drawPainting)return;_drawPainting=false;_drawCurRoute=null;_drawCurTrack=null;_drawLastPt=null;};
     cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);cv.addEventListener('pointerleave',end);
   }
   if(!map._drawMoveBound){map._drawMoveBound=true;
@@ -7144,16 +7120,20 @@ function drawReanchor(){
   drawZoneCanvas=nc;try{drawRefBounds=drawViewBounds();}catch(e){}
   drawRepaint();
 }
-function drawStrokeBegin(p){
+function drawStrokeBegin(p,pressure){
   const k=drawPen.kind;
-  if(k==='zone'||k==='eraser'){_drawDashAcc=0;_drawLastPt=drawC2O(p[0],p[1]);drawCommitSeg(_drawLastPt,_drawLastPt);if(k==='zone')drawSampleAt(p);}
+  if(k==='zone'||k==='eraser'){_drawDashAcc=0;_drawLastPt=drawC2O(p[0],p[1]);
+    drawBrushEff=drawBrushSize*drawPressureScale(pressure);
+    drawCommitSeg(_drawLastPt,_drawLastPt);if(k==='zone')drawSampleAt(p);}
   else if(k==='route'){const ll=map.containerPointToLatLng(p);
     _drawCurRoute={pen:drawPen.id,pts:[ll],elev:[routeElevAt(ll)],dir:[0]};drawRoutes.push(_drawCurRoute);}
   else if(k==='tracks'){_drawLastTrackC=p;drawTrackAt(p[0],p[1]);}
 }
-function drawStrokeExtend(p){
+function drawStrokeExtend(p,pressure){
   const k=drawPen.kind;
-  if(k==='zone'||k==='eraser'){const o=drawC2O(p[0],p[1]);drawCommitSeg(_drawLastPt,o);_drawLastPt=o;if(k==='zone')drawSampleAt(p);}
+  if(k==='zone'||k==='eraser'){const o=drawC2O(p[0],p[1]);
+    drawBrushEff=drawBrushSize*drawPressureScale(pressure);
+    drawCommitSeg(_drawLastPt,o);_drawLastPt=o;if(k==='zone')drawSampleAt(p);}
   else if(k==='route'&&_drawCurRoute)routeAddPoint(_drawCurRoute,map.containerPointToLatLng(p));
   else if(k==='tracks'){drawTrackStep(p);}
 }
@@ -7252,7 +7232,7 @@ function drawCommitSeg(a,b){
   const octx=drawZoneCanvas.getContext('2d');octx.lineJoin='round';
   const scale=drawOScale(),isEr=drawPen.kind==='eraser';
   if(isEr){octx.globalCompositeOperation='destination-out';octx.lineCap='round';octx.setLineDash([]);
-    octx.strokeStyle='rgba(0,0,0,1)';octx.lineWidth=drawBrushSize*scale;
+    octx.strokeStyle='rgba(0,0,0,1)';octx.lineWidth=drawBrushEff*scale;
   }else{octx.globalCompositeOperation='destination-over'; // no overpainting: new paint stays under existing
     // Powder is the one type that paints as a solid colour (the SLF depth
     // scale); every other snow type paints as its texture, so the drawing is
@@ -7261,7 +7241,7 @@ function drawCommitSeg(a,b){
     if(drawPen.slfDepth)col='rgb('+((snowCol(drawPen.slider.val)||[74,163,255]).join(','))+')';
     else if(SNOW_PATTERNS[drawPen.id])col=drawPenPattern(octx,drawPen.id);
     else col=drawPen.color;
-    octx.strokeStyle=col;octx.lineWidth=drawBrushSize*scale;
+    octx.strokeStyle=col;octx.lineWidth=drawBrushEff*scale;
     if(drawPen.dash){octx.lineCap='butt';octx.setLineDash(drawPen.dash.map(d=>d*scale));octx.lineDashOffset=-_drawDashAcc;}
     else{octx.lineCap='round';octx.setLineDash([]);octx.lineDashOffset=0;}
   }
@@ -7840,7 +7820,7 @@ function feedImgTap(id,ev){ev.stopPropagation();
   }else{el._t=now;}}
 // The feed is a screen now: "open the feed" means "go to the feed screen".
 function feedRefresh(){
-  try{localStorage.setItem('ssm_feed_seen',String(Date.now()));const fd=document.querySelector('#mapFeedFab .feed-dot');if(fd)fd.classList.remove('on');}catch(e){}
+  try{localStorage.setItem('ssm_feed_seen',String(Date.now()));feedNotifRender(0);}catch(e){}
   document.getElementById('feedScope').innerHTML=FEED_SCOPES.map(s=>
     `<button data-s="${s.id}" class="${feedScope===s.id?'active':''}" onclick="feedSetScope('${s.id}')">${s.icon}${s.label}</button>`).join('');
   document.getElementById('feedFilter').innerHTML=['all','avalanche','whumpf','wind_slab','other'].map(f=>{
