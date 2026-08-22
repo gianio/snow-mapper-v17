@@ -675,7 +675,15 @@ _BOOT_SPLIT = r"""<script>
     (function poll(){if(window.L)return res();if(Date.now()-t0>20000)return rej(new Error('Leaflet timeout'));setTimeout(poll,150);})();});}
   (async function(){
     try{
-      var isDemo=location.search.indexOf('demo')>=0;
+      // Default view is the 1 April 2026 demo dataset; live/current weather is
+      // an explicit opt-in (Settings, or ?live=1) persisted in localStorage,
+      // since app.js's own demoActive() (below) can't run yet at boot time.
+      var isDemo=true;
+      try{
+        if(location.search.indexOf('live')>=0)isDemo=false;
+        else if(location.search.indexOf('demo')>=0)isDemo=true;
+        else if(localStorage.getItem('ssm_live')==='1')isDemo=false;
+      }catch(e){}
       var ljr=await fetchT(isDemo?'data/demo-latest.json':'data/latest.json',{cache:'no-cache'},15000);
       if(!ljr.ok&&isDemo)ljr=await fetchT('data/latest.json',{cache:'no-cache'},15000);
       var lj=await ljr.json();
@@ -1289,8 +1297,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    border:1px solid var(--hair);border-radius:var(--r-lg);box-shadow:var(--elev2);
    transition:none;padding:8px 0;overflow:hidden}
  #btmMain{padding:0 12px}
- #timeline{display:block;border:1px solid var(--ink-100);background:var(--ink-050);border-radius:var(--r-1);
-   touch-action:none}
+ /* The canvas itself only clears+paints specific shapes each frame (see
+    drawTimeline), never an opaque rect, so a translucent/blurred CSS
+    background actually shows through in the gaps -- a genuine frosted-glass
+    surface, not just a flat fill behind the drawing. */
+ #timeline{display:block;border:1px solid var(--hair);background:var(--glass);
+   backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:var(--r-1);
+   box-shadow:inset 0 1px 0 rgba(255,255,255,.3);touch-action:none}
  #tlHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:10px}
  #tlModeToggle{display:none!important}
  #tlModeToggleOFF{display:inline-flex;background:rgba(0,0,0,.05);border-radius:999px;padding:3px;flex-shrink:0}
@@ -1298,16 +1311,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #tlModeToggle button.active{background:var(--card);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
  #tlDetail{display:none;position:relative}
  #bottomPanel.detail #tlDetail{display:block}
- /* Two shortcuts riding on the timeline's own top corners, above the canvas
-    rather than in the step row (which is off) -- the two jumps someone
-    checking snow actually wants, without a drag. */
+ /* Rides on the timeline's own top corner, above the canvas rather than in
+    the step row (which is off) -- without a drag. */
  .tl-corner{position:absolute;top:6px;z-index:3;height:22px;padding:0 10px;
    border-radius:999px;border:1px solid var(--hair);background:var(--card);
    color:var(--ink-700);font-size:10.5px;font-weight:800;font-family:inherit;
    cursor:pointer;display:inline-flex;align-items:center;box-shadow:var(--elev1);
    white-space:nowrap;transition:transform .15s var(--ease)}
  .tl-corner:active{transform:scale(.93)}
- .tl-corner-l{left:6px}
  .tl-corner-r{right:6px}
  /* Collapsed keeps the scrubber -- it is the thing the console is for -- and
     drops everything that only describes it. */
@@ -2042,6 +2053,25 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-filt-fab .ff-dot{position:absolute;top:9px;right:9px;width:8px;height:8px;
    border-radius:var(--r-full);background:var(--accent);border:2px solid var(--card);display:none}
  .feed-filt-fab.on .ff-dot{display:block}
+ /* Same rail, one slot further up -- "Leute finden" already existed as a
+    small icon in the feed's top nav bar, easy to miss next to the far more
+    prominent Filter/Melden FABs, so it gets a matching FAB here too. */
+ .feed-friends-fab{position:absolute;z-index:5;right:16px;
+   bottom:calc(env(safe-area-inset-bottom,0px) + 158px);
+   width:48px;height:48px;border-radius:var(--r-full);border:1px solid var(--hair);
+   background:var(--card);color:var(--ink-900);display:flex;align-items:center;justify-content:center;
+   cursor:pointer;box-shadow:var(--elev2)}
+ .feed-friends-fab svg{width:22px;height:22px}
+ .feed-friends-fab:active{transform:scale(.92)}
+ /* One slot further still -- hidden via [data-dm] until dmAvailable()
+    confirms the messages tables exist (see dmAvailable/feedOpen). */
+ .feed-msg-fab{position:absolute;z-index:5;right:16px;
+   bottom:calc(env(safe-area-inset-bottom,0px) + 228px);
+   width:48px;height:48px;border-radius:var(--r-full);border:1px solid var(--hair);
+   background:var(--card);color:var(--ink-900);display:flex;align-items:center;justify-content:center;
+   cursor:pointer;box-shadow:var(--elev2)}
+ .feed-msg-fab svg{width:21px;height:21px}
+ .feed-msg-fab:active{transform:scale(.92)}
  .feed-scope{display:flex;flex-wrap:wrap;gap:6px;padding:0;overflow:visible;background:none}
  .feed-scope::-webkit-scrollbar{display:none}
  .feed-scope button{height:36px;min-height:36px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;padding:0 12px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);font-size:12.5px;font-weight:700;color:var(--fg2);cursor:pointer;font-family:inherit;white-space:nowrap;transition:.18s var(--ease)}
@@ -2158,7 +2188,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .prof-save:hover{background:var(--acc2)}
  .prof-feedback{width:100%;margin-top:10px;padding:13px;border-radius:14px;border:1px solid var(--bd);background:none;color:var(--acc2);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
  .prof-signout{width:100%;margin-top:10px;padding:13px;border-radius:14px;border:none;background:none;color:var(--danger);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
- .prof-bioview{font-size:14px;color:var(--fg2);line-height:1.55;margin-top:4px;white-space:pre-wrap;min-height:12px}
+ .prof-bioview{font-size:14px;color:var(--fg2);line-height:1.55;margin:-6px 0 18px;white-space:pre-wrap}
+ .prof-bioview:empty{display:none}
  /* --- Public user profile (hero layout) --- */
  .uv-sheet{overflow:hidden}
  #userViewModal{justify-content:stretch;align-items:stretch;padding:0}
@@ -2667,7 +2698,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="searchWrap" class="hid"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Ort suchen…" autocomplete="off"/><div id="searchRes"></div></div>
 <div id="ctrlRail" hidden>
   <button class="rail-btn feed-accent" id="feedBtn" onclick="feedOpen()" title="Community-Feed" aria-label="Community-Feed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
-  <button class="rail-btn active" id="railToggles" onclick="toggleStations()" title="Messstationen ein/aus" aria-label="Messstationen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0" stroke-dasharray="0"/></svg></button>
+  <button class="rail-btn" id="railToggles" onclick="toggleStations()" title="Messstationen ein/aus" aria-label="Messstationen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0" stroke-dasharray="0"/></svg></button>
   <button class="rail-btn" id="btn3dFloat" title="3D-Ansicht" aria-label="3D-Ansicht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg></button>
   <button class="rail-btn" id="locBtn" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg></button>
 </div>
@@ -2692,7 +2723,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   </div>
   <div id="btmMain">
     <div id="tlDetail">
-      <button class="tl-corner tl-corner-l" id="tlLastSnowBtn" onclick="tlGotoLastSnow()" title="Zum letzten Schneefall springen">Letzter Schnee</button>
       <button class="tl-corner tl-corner-r" id="tlTomorrowBtn" onclick="tlGotoTomorrow()" title="Fenster bis morgen Abend">Bis morgen</button>
       <canvas id="timeline" width="900" height="108" style="width:100%;height:108px;border-radius:10px;cursor:default;margin-top:0"></canvas>
       <div id="tlExtended">
@@ -2721,7 +2751,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <button id="setStations" onclick="toggleStations();setRender()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0"/></svg>Messstationen<span class="st"></span></button>
       <button onclick="_setCameFromProfile=false;setClose();document.getElementById('legendBtn').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>Legende der Ebene</button>
       <button onclick="_setCameFromProfile=false;setClose();document.getElementById('btn3dFloat').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg>3D-Ansicht</button>
-      <button id="setDemo" onclick="demoToggle()" title="Für Vorführungen: springt auf den 1. April 2026 mit den echten Wetterdaten von damals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Demo: 1. April 2026<span class="st"></span></button>
+      <button id="setDemo" onclick="demoToggle()" title="Standardmässig zeigt die App die Demo-Daten vom 1. April 2026. Hier auf aktuelle, echte Live-Wetterdaten umschalten."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Live-Wetterdaten verwenden<span class="st"></span></button>
     </div>
     <span class="lbl-micro">Melden</span>
     <div class="set-rows">
@@ -2903,6 +2933,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="feed-anchor-bar" id="feedAnchorBar" style="display:none"></div>
 <div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Lade Beiträge…</div></div></div>
 <button class="feed-qr" id="feedQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
+<button class="feed-msg-fab" id="feedMsgFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 4l-1.4 4.1A8.5 8.5 0 0 1 21 11.5z"/></svg></button>
+<button class="feed-friends-fab" id="feedFriendsFab" onclick="usOpen()" title="Leute finden" aria-label="Leute finden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
 <button class="feed-filt-fab" id="feedFiltFab" onclick="feedFilterOpen()" title="Filter" aria-label="Filter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg><i class="ff-dot"></i></button>
 <button class="feed-fab" id="feedFab" onclick="feedCreatePost()" title="Bedingungen melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
 </div>
@@ -2994,6 +3026,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         <input type="file" id="profAvFile" accept="image/*" hidden onchange="profSetAvatar(this)"/>
         <div class="prof-meta"><div class="prof-name" id="profName">User</div><div class="prof-endo" id="profEndo">– Endorsements</div></div>
       </div>
+      <div class="prof-bioview" id="profBioView"></div>
       <div class="prof-view" id="profViewMain">
         <div class="prof-sec-title">Meine Beiträge</div>
         <div class="uv-posts" id="profPosts"><div class="prof-hint">Lade …</div></div>
@@ -3155,6 +3188,17 @@ function snowColLerp(v){
   }
   return RGB[last];
 }
+// A strong, saturated blue rather than the near-white pastel this layer used
+// to paint every "powdered" pixel the same two flat tones -- continuous by
+// how much new snow actually fell there, so it reads as a scale, not a
+// stable/reduced switch. Caps at PD_STRONG_BLUE_CM since Powder Conditions is
+// a go/no-go read, not a depth map (that's Neuschnee's job).
+const PD_STRONG_BLUE_CM=30;
+function powderColLerp(cm){
+  const t=Math.max(0,Math.min(1,(cm||0)/PD_STRONG_BLUE_CM));
+  const c0=[93,181,255],c1=[10,71,209];
+  return[c0[0]+(c1[0]-c0[0])*t,c0[1]+(c1[1]-c0[1])*t,c0[2]+(c1[2]-c0[2])*t];
+}
 // --- Powder Decision Engine: named constants ---
 const PD_RAIN_LOOKBACK_H=48;
 const PD_RAIN_TEMP_C=1.0;
@@ -3265,6 +3309,7 @@ function computePowder(p,ta,tb){
   // I1/D0': ohne Neuschnee kein Powder — ausser Decke blieb kalt (I4)
   const s0=Math.max(0,tb-PD_NEWSNOW_LOOKBACK_H);
   const newSnow=cum[tb*NP+p]-cum[s0*NP+p];
+  res.newSnow=newSnow;
   let aged=false;
   if(newSnow<PD_MIN_NEWSNOW_CM){
     const w0=Math.max(0,tb-PD_PERSIST_CHECK_H);let warm=0;
@@ -3850,6 +3895,11 @@ function progZones(){
   demoFitZones();progInvalidateTrust();
   const useDraw=progSrc!=='quick',useQuick=progSrc!=='draw',useRep=(progSrc==='all');
   const out=[];(allReports||[]).forEach(r=>{const cd=r.condition_data;if(!cd)return;
+    // Weather can be demo (1 April 2026, real archived data) without the
+    // Gemeldetes Powder layer following suit -- it reads as user reports, so
+    // it must only ever reflect real ones, never the synthetic fleet that
+    // otherwise fills the demo view (see demoFit below and drawDemos above).
+    if(cd.demoFit)return;
     const w=progReportWeight(r);
     if(cd.zones&&cd.zones.length){
       if(!useDraw)return;
@@ -4010,7 +4060,7 @@ function renderPowderFind(){
     // Base wash is inferred from a handful of drawn reports rather than
     // measured everywhere, so even at the most visible zoom it stays a wash
     // rather than a coat of paint that hides the map underneath it.
-    d[o+3]=Math.min(190,(32+46*Math.pow(r.like,0.7))*zoomMul)|0;
+    d[o+3]=Math.min(210,(42+50*Math.pow(r.like,0.7))*zoomMul)|0;
   }
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
@@ -4164,7 +4214,7 @@ function prognosisAt(lat,lon){
   return {type:_progType,like:Math.round(_progField[idx]*100),conf:_progConf[idx]};
 }
 const windArr=L.layerGroup(); const stnGroup=L.layerGroup().addTo(map);
-let layer="snow",stat="avg",windowSize=48,a=nowIdx,b=Math.min(T,nowIdx+48),showStn=true,wtimer=null;
+let layer="snow",stat="avg",windowSize=48,a=nowIdx,b=Math.min(T,nowIdx+48),showStn=false,wtimer=null;
 // Declared here (empty) rather than where it is actually populated further
 // down: the default layer is now Reported Powder, which reads this array
 // during the very first render at boot -- before demoActive()/DEMO_REPORTS
@@ -4193,7 +4243,7 @@ function setRaster(get,border){const img=cx.createImageData(W,H),d=img.data;cons
   cx.putImageData(img,0,0);raster.setUrl(cv.toDataURL());}
 function aggT(p,m){let mn=1e9,mx=-1e9,su=0,c=0,cold=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;if(v<0)cold++;}return m=="max"?mx:m=="min"?mn:m=="sub0"?cold:m=="max05"?mx:su/Math.max(1,c);}
 function renderRaster(){
-  if(layer=="snow"){const ca=a*NP,cb=b*NP;setRaster(p=>{const v=cum[cb+p]-cum[ca+p];const c=snowCol(v);return c?[c[0],c[1],c[2],235]:null;});}
+  if(layer=="snow"){const ca=a*NP,cb=b*NP;setRaster(p=>{const v=cum[cb+p]-cum[ca+p];const c=snowCol(v);return c?[c[0],c[1],c[2],170]:null;});}
   else if(layer=="depth"){const cb2=b*NP;setRaster(p=>{const v=cum[cb2+p];if(v<1)return null;const c=depthCol(v);return[c[0],c[1],c[2],215];});}
   else if(layer=="temp"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[40,120-(x*60|0),255,215];}
@@ -4209,7 +4259,9 @@ function renderRaster(){
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[200,140-(x*80|0),255-(x*200|0),235];}
       const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);const col=tempCol(v);return[col[0],col[1],col[2],205];});}
   else if(layer=="skiable"){const ca2=a*NP,cb2=b*NP;setRaster(p=>{const slp=mslpv(p);if(slp>55)return[80,0,0,150];const snow=cum[cb2+p]-cum[ca2+p];if(snow<1)return null;const need=minSnowNeeded(p);const r=snow/Math.max(1,need);if(r>=1.5)return[100,220,100,190];if(r>=1.0)return[160,220,100,180];if(r>=.7)return[255,220,50,180];if(r>=.4)return[255,140,40,170];return[255,60,40,160];});}
-  else if(layer=="powder"){setRaster(p=>{const r=computePowder(p,a,b);if(!r.powdered)return null;return r.quality==='reduced'?[180,205,245,140]:[200,220,255,180];});}
+  else if(layer=="powder"){setRaster(p=>{const r=computePowder(p,a,b);if(!r.powdered)return null;
+    const c=powderColLerp(r.newSnow);const alpha=r.quality==='reduced'?128:172;
+    return[c[0]|0,c[1]|0,c[2]|0,alpha];});}
   else setRaster(_=>null);
 }
 function windStat(k){let mn=1e9,mx=-1e9,su=0,c=0,ss=0,sc=0;
@@ -4324,7 +4376,9 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
       '<div style="font-size:11px">Farbe = <b>Vertrauen</b>, Deckkraft = Wahrscheinlichkeit für '+cl+'.</div>'+
       '<div style="margin-top:3px;font-size:11px">Hänge mit gleichem Aspekt &amp; gleicher Höhe nahe einer Meldung · Quelle: '+(PROG_SRC_LABEL[progSrc]||progSrc)+'</div>';}
   if(l=="qprheat")return '<b>Powder-Reports (Heatmap)</b><br><div><i style="background:#cde4ff"></i>vereinzelt / wenig</div><div><i style="background:#5b83d9"></i>guter Powder</div><div><i style="background:#0f2a7d"></i>tief &amp; fluffy</div><div style="margin-top:4px;font-size:11px">aus Quick-Powder-Reports · inkl. Demo-Daten</div>';
-  if(l=="powder")return '<b>Powder Conditions</b><br><div><i style="background:rgba(200,220,255,.7)"></i>Powder (stable)</div><div><i style="background:rgba(180,205,245,.55)"></i>Powder (reduced)</div><div style="margin-top:4px;font-size:11px">Gust ≈ mean wind × 1.5</div>';
+  if(l=="powder")return '<b>Powder Conditions</b><br><div style="margin:3px 0 2px"><span style="display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,rgb(93,181,255),rgb(10,71,209))"></span>'+
+    '<span style="display:flex;justify-content:space-between;font-size:10px;margin-top:2px"><span>0 cm</span><span>'+(PD_STRONG_BLUE_CM/2)+' cm</span><span>'+PD_STRONG_BLUE_CM+'+ cm</span></span></div>'+
+    '<div style="font-size:11px">Farbe = Neuschnee, Deckkraft = <b>stable</b> vs. <b>reduced</b></div><div style="margin-top:3px;font-size:11px">Gust ≈ mean wind × 1.5</div>';
   return "<b>Hillshade / Relief (swisstopo)</b>";}
 function legend(l){document.getElementById('legend').innerHTML=legendFor(l||layer);}
 // It has no button of its own on the map any more, so it is its own dismiss.
@@ -4377,23 +4431,9 @@ document.querySelectorAll('#tlModeToggle button').forEach(x=>x.onclick=()=>setTl
   document.getElementById('tlNext').onclick=()=>{const ws=b-a;b=Math.min(T,b+ws);a=Math.max(0,b-ws);renderAll();};
   document.getElementById('tlNow').onclick=()=>{const ws=b-a;a=Math.max(0,Math.min(T-ws,nowIdx-Math.floor(ws/2)));b=Math.min(T,a+ws);renderAll();};
 })();
-// Two shortcuts that sit on the timeline itself rather than in the step row:
-// jump to when it last actually snowed, or open the window through the end
-// of tomorrow -- the two questions someone checking snow conditions asks
-// most, so they should not cost a drag.
-function tlGotoLastSnow(){
-  // Same threshold the bars themselves use to decide whether an hour is
-  // worth a bar at all (hSnow is a whole-country spatial mean, so even a
-  // real, locally heavy snowfall reads as a small number here) -- a higher
-  // cutoff here disagreed with what the timeline visibly showed and often
-  // came up empty on days that plainly had snow.
-  let idx=-1;
-  for(let t=Math.min(T-1,nowIdx);t>=0;t--){if(hSnow[t]>=.002){idx=t;break;}}
-  if(idx<0){try{toast('Kein Schneefall in den Daten.');}catch(e){}return;}
-  const ws=Math.max(TV_MIN,b-a);
-  a=Math.max(0,Math.min(T-ws,idx-Math.floor(ws/2)));b=Math.min(T,a+ws);
-  tvFollow();renderAll();try{haptic(3);}catch(e){}
-}
+// Sits on the timeline itself rather than in the step row: open the window
+// through the end of tomorrow, one of the two questions someone checking
+// snow conditions asks most, so it should not cost a drag.
 function tlGotoTomorrow(){
   const now=new Date(M.times[nowIdx]+'Z');
   const dayStart=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate());
@@ -4816,8 +4856,8 @@ function setRender(){
   if(st){st.classList.toggle('on',!!showStn);
     const q=st.querySelector('.st');if(q)q.textContent=showStn?'an':'aus';}
   const dm=document.getElementById('setDemo');
-  if(dm){const on=demoActive();dm.classList.toggle('on',on);
-    const q=dm.querySelector('.st');if(q)q.textContent=on?'an':'aus';}
+  if(dm){const liveOn=!demoActive();dm.classList.toggle('on',liveOn);
+    const q=dm.querySelector('.st');if(q)q.textContent=liveOn?'an':'aus';}
   const acc=document.getElementById('setAccount');
   if(acc){const url=sbUser?avatarOf(sbUser.id):null;
     acc.innerHTML=(url?('<span class="set-av" style="background-image:url('+encodeURI(url)+')"></span>')
@@ -5710,12 +5750,28 @@ const DEMO_REPORTS=(FEATURES.demoOther?DEMO_DEFS:[]).map((d,i2)=>({id:'d'+(i2+1)
     const el=document.getElementById(id);if(el)el.hidden=!on;});
 }catch(e){}})();
 let reportMarkers=L.layerGroup().addTo(map);
-function demoActive(){try{if(location.search.indexOf('demo')>=0)return true;}catch(e){}return !sb;}
-function demoToggle(){try{const u=new URL(location.href);
-  if(u.searchParams.has('demo'))u.searchParams.delete('demo');else u.searchParams.set('demo','1');
+// Default is the 1 April 2026 demo dataset; live/current weather is an
+// explicit opt-in, remembered in localStorage so it survives a fresh load
+// with no URL params (the ?demo/?live params still work as one-off overrides
+// for sharing a link). Mirrors the boot-time check above, which can't call
+// this function yet since it runs before app.js exists.
+function demoActive(){try{
+  if(location.search.indexOf('live')>=0)return false;
+  if(location.search.indexOf('demo')>=0)return true;
+  if(localStorage.getItem('ssm_live')==='1')return false;
+}catch(e){}return true;}
+function demoToggle(){try{
+  const live=localStorage.getItem('ssm_live')==='1';
+  if(live)localStorage.removeItem('ssm_live');else localStorage.setItem('ssm_live','1');
+  const u=new URL(location.href);u.searchParams.delete('demo');u.searchParams.delete('live');
   location.href=u.toString();}catch(e){}}
 (function(){try{const b=document.getElementById('demoPill');if(!b)return;
-  if(location.search.indexOf('demo')>=0){b.classList.add('on');document.getElementById('demoPillTxt').textContent='DEMO · 1.4.2026';}}catch(e){}})();
+  // Demo is the default view now, so this needs to actually show (it was
+  // permanently [hidden] in the markup before, with nothing ever clearing
+  // that attribute) -- it's the one on-map indicator that you're looking at
+  // 1 April 2026, not live data, and doubles as a quick way back to live.
+  if(demoActive()){b.hidden=false;b.classList.add('on');document.getElementById('demoPillTxt').textContent='DEMO · 1.4.2026';}
+  else{b.hidden=true;}}catch(e){}})();
 allReports=demoActive()?[...DEMO_REPORTS]:[];
 function _rptDepth(r){const cd=r.condition_data||{};let cm=(cd.quick&&cd.powderAmountCm!=null)?+cd.powderAmountCm:null;if(cm==null&&r.measurement){const mm=/(\d+)\s*cm/.exec(r.measurement);if(mm)cm=+mm[1];}return cm;}
 function _rptColor(r){const cm=_rptDepth(r);if(cm!=null&&cm>=5){const sc=snowCol(cm);if(sc)return 'rgb('+sc.join(',')+')';}return CAT_COLORS[r.cat]||'#16152e';}
@@ -6285,6 +6341,7 @@ async function openProfile(){
     const{data}=await sb.from('profiles').select('bio,avatar_url,push_enabled').eq('id',sbUser.id).single();
     myProfile=data||{};
     document.getElementById('profBio').value=data?.bio||'';profBioInput();
+    document.getElementById('profBioView').textContent=data?.bio||'';
     const av=document.getElementById('profAv');
     if(data?.avatar_url){av.classList.add('has-img');av.style.backgroundImage='url('+data.avatar_url+')';profAvatarUrl=data.avatar_url;avatarPut(sbUser.id,data.avatar_url);}
     else{av.classList.remove('has-img');av.style.backgroundImage='';}
@@ -6377,6 +6434,7 @@ async function profSave(){
     const push=document.getElementById('profPush').classList.contains('on');
     const{error}=await sb.from('profiles').update({bio:bio||null,avatar_url:avatarUrl||null,push_enabled:push}).eq('id',sbUser.id);
     if(error)throw error;
+    const bv=document.getElementById('profBioView');if(bv)bv.textContent=bio||'';
     profAvatarUrl=avatarUrl;loadMyProfileAvatar();profClose();
   }catch(e){alert('Fehler: '+(e.message||e));}
   btn.disabled=false;btn.textContent='Speichern';
@@ -7909,6 +7967,10 @@ addEventListener('keydown',e=>{
 });
 function feedOpen(){
   const el=document.getElementById('feedPage');if(!el)return;
+  // [data-dm] entry points (this screen's messages FAB included) otherwise
+  // only ever get unhidden from openProfile() -- someone who never opens
+  // their profile would never see messaging even when it's fully set up.
+  try{dmAvailable();}catch(e){}
   feedRefresh();el.classList.add('open');
   document.body.setAttribute('data-screen','feed');
   feedSideSync();
