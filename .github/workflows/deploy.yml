@@ -73,12 +73,23 @@ jobs:
       # build it once (real ERA5 archive weather) and cache it. Re-fetching
       # ~1200 archive points on every run (4x/day) is what blew past the old
       # 15-min timeout and cancelled the deploy.
+      #
+      # v1 -> v2: whichever run first populated the v1 cache did so while
+      # 2026-04-01 was still in the future -- _select_endpoint() (run_pipeline.py)
+      # only switches to the ERA5 archive once the target date is more than
+      # ARCHIVE_THRESHOLD_DAYS (80) in the past, so that build silently used the
+      # regular forecast endpoint instead, which has no real skill that far out
+      # and returned wrong/low-quality data for the "historical" date. Bumping
+      # the key forces one real rebuild; today the date genuinely is >80 days
+      # old, so this run resolves to the archive endpoint correctly. Do not
+      # bump this again for no reason -- it is what makes the demo dataset
+      # NOT get re-fetched on every deploy.
       - name: Restore demo dataset (historical, static)
         id: demo-cache
         uses: actions/cache/restore@v4
         with:
           path: dist_demo
-          key: demo-dataset-20260401-res3000-ws01-v1
+          key: demo-dataset-20260401-res3000-ws01-v2
 
       - name: Build demo dataset (real ERA5 archive, cache miss only)
         # Best-effort + time-bounded: if the archive fetch is slow/rate-limited
@@ -105,7 +116,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: dist_demo
-          key: demo-dataset-20260401-res3000-ws01-v1
+          key: demo-dataset-20260401-res3000-ws01-v2
 
       - name: Assemble demo dataset into dist (if present)
         run: |
