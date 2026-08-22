@@ -6314,8 +6314,11 @@ async function profLoadPosts(){
   try{
     const{data:rs0}=await sb.from('reports').select('id,caption,subtype,image_url,condition_data,location,created_at')
       .eq('user_id',sbUser.id).order('created_at',{ascending:false}).limit(40);
-    // Drawn snow-maps are model input, not posts -- kept out of the profile grid.
-    const rs=(rs0||[]).filter(r=>!(r.condition_data&&r.condition_data.draw));
+    // Drawn snow-maps are model input, not public posts -- still kept out of
+    // the feed and off the map for everyone else (see _rptIsDraw), but shown
+    // here on your OWN profile so you have something to point at confirming
+    // a drawing actually saved, since this is a direct query, not allReports.
+    const rs=rs0||[];
     if(!rs.length){box.innerHTML='<div class="prof-hint">Noch keine Beiträge.</div>';return;}
     const withImg=rs.filter(r=>r.image_url),noImg=rs.filter(r=>!r.image_url);
     const grid=withImg.length?('<div class="uv-grid">'+withImg.map(r=>{const ll=parseGeo(r.location);
