@@ -1657,12 +1657,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-draw svg{color:var(--accent)}
  #drawWrap{position:fixed;inset:0;z-index:4000;display:none}
  #drawCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
- /* A second finger touching down mid-stroke hands the gesture to the map --
-    the canvas steps out of the way (pointer-events:none) so the map
-    underneath actually receives it. Scroll/trackpad zoom is forwarded
-    manually instead (see the wheel listener in drawSetupCanvas), since that
-    needs the canvas to keep receiving single-pointer events for drawing. */
- body.draw-gesture-pan #drawCanvas{pointer-events:none}
+ /* A second finger touching down mid-stroke turns the gesture into a pan/zoom
+    instead of a second brush stroke. This is done by hand (see drawSetupCanvas)
+    rather than handed off to Leaflet's own touch handling: a touch's events are
+    permanently targeted at whichever element it started on, so once a touch
+    has landed on this canvas there is no CSS/JS trick that redirects it to the
+    map underneath -- the canvas has to keep receiving the pointer events and
+    drive map.panBy/setZoomAround itself, the same way the wheel listener below
+    forwards scroll/trackpad zoom manually. */
  #drawClose{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;z-index:4002;width:40px;height:40px;border-radius:50%;border:none;background:var(--paper);box-shadow:var(--elev1);font-size:17px;color:var(--fg);cursor:pointer}
  /* Bottom, right above the eraser tab (the last of the four category tabs
     right below it) -- an explanation, not a mode switch: there is nothing
@@ -3981,6 +3983,11 @@ function progSetConfMin(v){progConfMin=+v;
 // "Reported Powder": where drawn reports say powder, painted in the SLF snow
 // depth colours. The depth shown is progCell's report-weighted mean, i.e. the
 // nearby drawn reports averaged per aspect sector and elevation band.
+// Zoomed out, the wash needs to read as "there's snow over there" at a
+// glance; zoomed in, the same opacity would just paint over the map detail
+// you zoomed in to see. So opacity scales with zoom instead of staying
+// fixed: ~1.9x at the fully-zoomed-out view, ~0.5x at the deepest zoom.
+function progZoomAlphaMul(){return 1.9-1.4*baseFadeT();}
 function renderPowderFind(){
   progTerrain();_progType='powder';
   const _keep=progSrc;progSrc='draw';                 // drawn reports only, by definition
@@ -3990,6 +3997,7 @@ function renderPowderFind(){
   const N=PROG_GW*PROG_GH;
   _progField=new Float32Array(N);_progConf=new Float32Array(N);
   const img=new ImageData(PROG_GW,PROG_GH),d=img.data;
+  const zoomMul=progZoomAlphaMul();
   for(let idx=0;idx<N;idx++){
     const elev=PROG_ELEV[idx];const o=idx*4;
     if(elev<0){d[o+3]=0;continue;}
@@ -3999,12 +4007,10 @@ function renderPowderFind(){
     const cm=r.cm!=null?r.cm:25;                       // depth drives the colour
     const c=snowColLerp(cm)||[120,170,255];
     d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];
-    // Lighter than the model layers on purpose, and lighter again than the
-    // first pass at this: this is inferred from a handful of drawn reports
-    // rather than measured everywhere, so it reads as a faint wash over the
-    // terrain -- ~70% transparent even at full confidence -- rather than a
-    // coat of paint that hides the map underneath it.
-    d[o+3]=Math.min(78,32+46*Math.pow(r.like,0.7))|0;
+    // Base wash is inferred from a handful of drawn reports rather than
+    // measured everywhere, so even at the most visible zoom it stays a wash
+    // rather than a coat of paint that hides the map underneath it.
+    d[o+3]=Math.min(190,(32+46*Math.pow(r.like,0.7))*zoomMul)|0;
   }
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
@@ -6996,6 +7002,7 @@ let _drawPainting=false,_drawLastPt=null,_drawCurRoute=null,_drawCurTrack=null,_
 // apart from the first (see drawSetupCanvas): a momentary pan/zoom gesture,
 // not a second brush.
 let _drawActivePointers=new Set(),_drawGesturePan=false,_drawCapturedId=null;
+let _drawPointerPos=new Map(),_drawGestureC=null,_drawGestureD=0;
 let _drawTrackGrid=new Set(),drawTrackZoom=null;
 let drawBrushSize=34,drawZoneSamples={},_drawLastTrackC=null,_drawBtmH='';
 // The slider sets the baseline; a stylus or a force-sensing screen can push
@@ -7039,6 +7046,7 @@ function drawOpen(){
     scrGo('search');setTimeout(drawOpen,380);return;}
   drawRoutes=[];drawTracks=[];drawZoneUsed=new Set();drawHistory=[];_drawPainting=false;drawZoneCanvas=null;_drawTrackGrid=new Set();drawTrackZoom=null;drawZoneSamples={};
   _drawActivePointers=new Set();_drawGesturePan=false;_drawCapturedId=null;
+  _drawPointerPos=new Map();_drawGestureC=null;_drawGestureD=0;
   document.body.classList.remove('draw-gesture-pan');document.body.classList.add('draw-on');
   document.getElementById('drawWrap').style.display='block';
   _drawBtmH=document.documentElement.style.getPropertyValue('--btm-h');
@@ -7059,9 +7067,19 @@ function drawClose(){
   document.getElementById('drawWrap').style.display='none';
   document.body.classList.remove('draw-on','draw-gesture-pan');
   _drawActivePointers=new Set();_drawGesturePan=false;_drawCapturedId=null;
+  _drawPointerPos=new Map();_drawGestureC=null;_drawGestureD=0;
   if(_drawBtmH)document.documentElement.style.setProperty('--btm-h',_drawBtmH);
   try{map.invalidateSize({animate:false,pan:false});}catch(e){}
   try{map.dragging.enable();map.touchZoom.enable();map.doubleClickZoom.enable();if(_desktop)map.scrollWheelZoom.enable();}catch(e){}
+}
+// Centroid + spread of the first two active touches (client coords), for the
+// hand-rolled two-finger pan/zoom in drawSetupCanvas below.
+function _drawGestureRead(){
+  const ids=[..._drawActivePointers].slice(0,2);
+  if(ids.length<2)return null;
+  const a=_drawPointerPos.get(ids[0]),b=_drawPointerPos.get(ids[1]);
+  if(!a||!b)return null;
+  return {c:{x:(a.x+b.x)/2,y:(a.y+b.y)/2},d:Math.hypot(a.x-b.x,a.y-b.y)};
 }
 function drawSetupCanvas(){
   const cv=drawFitCanvas();
@@ -7083,25 +7101,44 @@ function drawSetupCanvas(){
     // until every finger lifts.
     cv.addEventListener('pointerdown',e=>{
       _drawActivePointers.add(e.pointerId);
+      _drawPointerPos.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(_drawActivePointers.size>=2){
         if(_drawPainting){drawUndo();_drawPainting=false;_drawCurRoute=null;_drawCurTrack=null;_drawLastPt=null;}
-        // The first finger's pointer is captured (below) so it keeps
-        // painting even if it slides off the canvas -- that capture also
-        // overrides pointer-events, so it has to be let go explicitly or
-        // its own moves would keep targeting the canvas instead of the map.
         if(_drawCapturedId!=null){try{cv.releasePointerCapture(_drawCapturedId);}catch(_e){}_drawCapturedId=null;}
-        if(!_drawGesturePan){_drawGesturePan=true;document.body.classList.add('draw-gesture-pan');
-          try{map.dragging.enable();map.touchZoom.enable();}catch(_e){}}
+        if(!_drawGesturePan){_drawGesturePan=true;document.body.classList.add('draw-gesture-pan');}
+        const g=_drawGestureRead();if(g){_drawGestureC=g.c;_drawGestureD=g.d;}
         return;
       }
       try{cv.setPointerCapture(e.pointerId);_drawCapturedId=e.pointerId;}catch(_){}
       _drawPainting=true;drawPushHistory();drawStrokeBegin(pt(e),e.pressure);drawRepaint();try{haptic(4);}catch(_){}});
-    cv.addEventListener('pointermove',e=>{if(_drawGesturePan||!_drawPainting)return;drawStrokeExtend(pt(e),e.pressure);drawRepaint();});
+    cv.addEventListener('pointermove',e=>{
+      if(_drawGesturePan){
+        if(!_drawActivePointers.has(e.pointerId))return;
+        _drawPointerPos.set(e.pointerId,{x:e.clientX,y:e.clientY});
+        const g=_drawGestureRead();
+        if(g&&_drawGestureC){
+          try{
+            if(g.d>0&&_drawGestureD>0&&Math.abs(g.d-_drawGestureD)>0.5){
+              const anchor=map.mouseEventToLatLng({clientX:_drawGestureC.x,clientY:_drawGestureC.y});
+              const nz=map.getScaleZoom(g.d/_drawGestureD,map.getZoom());
+              map.setZoomAround(anchor,nz,{animate:false});
+            }
+            map.panBy([g.c.x-_drawGestureC.x,g.c.y-_drawGestureC.y],{animate:false,duration:0});
+          }catch(_e){}
+          _drawGestureC=g.c;_drawGestureD=g.d;
+          drawRepaint();
+        }
+        return;
+      }
+      if(!_drawPainting)return;drawStrokeExtend(pt(e),e.pressure);drawRepaint();});
     const end=e=>{
-      if(e&&e.pointerId!=null){_drawActivePointers.delete(e.pointerId);if(_drawCapturedId===e.pointerId)_drawCapturedId=null;}
-      if(_drawGesturePan&&_drawActivePointers.size===0){_drawGesturePan=false;document.body.classList.remove('draw-gesture-pan');
-        try{map.dragging.disable();map.touchZoom.disable();}catch(_e){}
-        drawReanchor();}
+      if(e&&e.pointerId!=null){_drawActivePointers.delete(e.pointerId);_drawPointerPos.delete(e.pointerId);if(_drawCapturedId===e.pointerId)_drawCapturedId=null;}
+      if(_drawGesturePan){
+        if(_drawActivePointers.size<2){_drawGesturePan=false;document.body.classList.remove('draw-gesture-pan');
+          _drawGestureC=null;_drawGestureD=0;
+          drawReanchor();}
+        else{const g=_drawGestureRead();if(g){_drawGestureC=g.c;_drawGestureD=g.d;}}
+      }
       if(!_drawPainting)return;_drawPainting=false;_drawCurRoute=null;_drawCurTrack=null;_drawLastPt=null;};
     cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);cv.addEventListener('pointerleave',end);
     // Scroll wheel and trackpad pinch-to-zoom both fire as 'wheel' -- the

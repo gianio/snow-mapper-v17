@@ -93,17 +93,28 @@ jobs:
 
       - name: Build demo dataset (real ERA5 archive, cache miss only)
         # Best-effort + time-bounded: if the archive fetch is slow/rate-limited
-        # it is killed at 13 min and dist_demo is removed so nothing partial is
-        # cached; the deploy still succeeds and demo mode falls back to live
-        # data (handled in the boot loader) until a later run caches it.
+        # it is killed and dist_demo is removed so nothing partial is cached;
+        # the deploy still succeeds and demo mode falls back to live data
+        # (handled in the boot loader) until a later run caches it.
+        #
+        # weather-step 0.1 -> 0.2: at 0.1 deg this step queries ~4x the points
+        # of the live build (which uses the 0.2 default) while ALSO hitting the
+        # slower ERA5 archive endpoint for an 11-day window -- that combination
+        # never finished inside the old 780s budget (confirmed: the step ran
+        # the full 13 min with zero log output, got killed, and dist_demo was
+        # discarded every single run). Matching the live build's weather-step
+        # keeps the same interpolation quality already used for production
+        # data every day, while cutting the point count back to what actually
+        # finishes in time. `python -u` so a future timeout still shows
+        # progress in the log instead of buffered silence.
         if: steps.demo-cache.outputs.cache-hit != 'true'
         # A step timeout fails the STEP; a job timeout kills the run and skips
         # the deploy. This step is optional, so it must never be the thing that
         # ends the job -- hence its own bound on top of the inner `timeout`.
-        timeout-minutes: 15
+        timeout-minutes: 27
         continue-on-error: true
         run: |
-          timeout 780 python run_interactive.py --split --date 2026-04-01 --res 3000 --weather-step 0.1 --out-dir dist_demo \
+          timeout 1500 python -u run_interactive.py --split --date 2026-04-01 --res 3000 --weather-step 0.2 --out-dir dist_demo \
             || { echo "demo build slow/failed — leaving it out, app uses live data in demo mode"; rm -rf dist_demo; }
 
       # Saving is split from restoring on purpose. actions/cache saves in a post
