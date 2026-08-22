@@ -1214,6 +1214,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ly-tile.on{background:var(--accent);border-color:var(--accent);color:var(--paper)}
  .ly-tile.on svg{color:currentColor}
  .ly-tile:active{transform:scale(.97)}
+ /* Calls out Gemeldetes Powder in the overview grid -- real reports, not a
+    modelled estimate, worth a nudge among the otherwise equal-weight tiles. */
+ .ly-tile.ly-hi{position:relative;border-color:var(--accent)}
+ .ly-tile.ly-hi:not(.on){box-shadow:0 0 0 1px var(--accent) inset}
+ .ly-hi-dot{position:absolute;top:9px;right:9px;width:7px;height:7px;border-radius:50%;
+   background:var(--accent);box-shadow:0 0 0 2px var(--card)}
+ .ly-tile.ly-hi.on .ly-hi-dot{background:var(--paper);box-shadow:0 0 0 2px var(--accent)}
  /* The sub-layers belong to one tile, so they open in the grid directly under
     that tile's row rather than in a section of their own further down, where
     nothing would say which layer they were for. */
@@ -1253,6 +1260,15 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ly-legend i{display:inline-block;width:12px;height:12px;margin-right:6px;
    vertical-align:-2px;border-radius:2px;flex-shrink:0}
  .ly-legend div>span:not(.stn){font-family:var(--mono);font-size:10px;color:var(--ink-500)}
+ /* Sits at the very bottom of the panel's scroll area, after the legend --
+    a global fade applied on top of each layer's own tuned opacity, not a
+    replacement for it (0% here = untouched baseline). */
+ .ly-op{margin-top:10px;padding:12px 14px;border-radius:var(--r-md);
+   border:1px solid var(--hair);background:var(--card)}
+ .ly-op-lbl{display:flex;justify-content:space-between;align-items:center;font-size:10px;
+   font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-500);margin-bottom:8px}
+ .ly-op-lbl b{font-family:var(--mono);font-size:11px;color:var(--fg2);font-weight:700;
+   letter-spacing:0;text-transform:none}
  /* the way out, where the thumb already is */
  .ly-x{position:absolute;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);
    width:56px;height:56px;border-radius:var(--r-full);border:none;
@@ -1301,9 +1317,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     drawTimeline), never an opaque rect, so a translucent/blurred CSS
     background actually shows through in the gaps -- a genuine frosted-glass
     surface, not just a flat fill behind the drawing. */
- #timeline{display:block;border:1px solid var(--hair);background:var(--glass);
-   backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:var(--r-1);
-   box-shadow:inset 0 1px 0 rgba(255,255,255,.3);touch-action:none}
+ #timeline{display:block;border:1px solid var(--hair);
+   background:color-mix(in srgb,var(--glass) 55%,transparent);
+   backdrop-filter:blur(26px) saturate(1.3);-webkit-backdrop-filter:blur(26px) saturate(1.3);
+   border-radius:var(--r-1);
+   box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.06);
+   touch-action:none}
  #tlHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:10px}
  #tlModeToggle{display:none!important}
  #tlModeToggleOFF{display:inline-flex;background:rgba(0,0,0,.05);border-radius:999px;padding:3px;flex-shrink:0}
@@ -2771,6 +2790,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <div class="ly-grid" id="lyGrid"></div>
     <div class="ly-info" id="lyInfo"></div>
     <div class="ly-legend" id="lyLegend"></div>
+    <div class="ly-op">
+      <div class="ly-op-lbl"><span>Transparenz</span><b id="lyOpacityVal">0%</b></div>
+      <input type="range" class="obs-range" id="lyOpacitySlider" min="0" max="80" step="5" value="0" oninput="layerOpacitySet(+this.value)">
+    </div>
   </div>
   <button class="ly-x" onclick="lyPanelClose()" aria-label="Ebenen schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
 </div>
@@ -4386,21 +4409,38 @@ document.getElementById('legend').onclick=()=>{
   document.getElementById('legend').classList.remove('show');
   const b=document.getElementById('legendBtn');if(b)b.classList.remove('active');};
 document.getElementById('legendBtn').onclick=()=>{const lg=document.getElementById('legend'),btn=document.getElementById('legendBtn');lg.classList.toggle('show');btn.classList.toggle('active');};
+// Layer transparency intensity: a user-facing "0" here means unchanged from
+// each layer's own tuned baseline opacity below; dragging right (up to 80)
+// fades all of them out proportionally, never past a 20% floor so a layer
+// never fully vanishes through this control alone.
+let layerTranspPct=0;
+try{const v=parseInt(localStorage.getItem('ssm_layer_transp'),10);if(!isNaN(v)&&v>=0&&v<=80)layerTranspPct=v;}catch(e){}
+try{const sl0=document.getElementById('lyOpacitySlider'),lb0=document.getElementById('lyOpacityVal');
+  if(sl0)sl0.value=layerTranspPct;if(lb0)lb0.textContent=layerTranspPct+'%';}catch(e){}
+function layerOpacityMul(){return 1-layerTranspPct/100;}
+function layerOpacitySet(pct){
+  layerTranspPct=Math.max(0,Math.min(80,+pct||0));
+  try{localStorage.setItem('ssm_layer_transp',String(layerTranspPct));}catch(e){}
+  const lbl=document.getElementById('lyOpacityVal');if(lbl)lbl.textContent=layerTranspPct+'%';
+  const sl=document.getElementById('lyOpacitySlider');if(sl&&+sl.value!==layerTranspPct)sl.value=layerTranspPct;
+  showOverlay();
+}
 function showOverlay(){
   [slopeWMTS,reliefWMTS,aspectGrid,roughImg,radOverlay,qprOverlay,prognosisOverlay].forEach(x=>map.removeLayer(x));
   const grid=(layer=="snow"||layer=="depth"||layer=="temp"||layer=="sun"||layer=="wind"||layer=="powder"||layer=="tsurf"||layer=="skiable");
   const radg=(layer=="rad"||layer=="radsun");
-  raster.setOpacity(grid?0.94:0);
-  if(radg)map.addLayer(radOverlay);
-  if(layer=="slope")map.addLayer(slopeWMTS);
-  else if(layer=="shade")map.addLayer(reliefWMTS);
-  else if(layer=="aspect")map.addLayer(aspectGrid);
-  else if(layer=="rough")map.addLayer(roughImg);
-  else if(layer=="qprheat"){map.addLayer(qprOverlay);renderQprHeat();}
-  else if(layer=="prog"){map.addLayer(prognosisOverlay);renderPrognosis(stat);}
-  else if(layer=="powfind"){map.addLayer(prognosisOverlay);renderPowderFind();}
-  else if(layer=="progdiff"){map.addLayer(prognosisOverlay);renderProgDiff();}
-  else if(layer=="progpat"){map.addLayer(prognosisOverlay);renderProgPattern(stat);}
+  const om=layerOpacityMul();
+  raster.setOpacity(grid?0.94*om:0);
+  if(radg){radOverlay.setOpacity(0.9*om);map.addLayer(radOverlay);}
+  if(layer=="slope"){slopeWMTS.setOpacity(0.7*om);map.addLayer(slopeWMTS);}
+  else if(layer=="shade"){reliefWMTS.setOpacity(0.85*om);map.addLayer(reliefWMTS);}
+  else if(layer=="aspect"){aspectGrid.setOpacity(0.78*om);map.addLayer(aspectGrid);}
+  else if(layer=="rough"){roughImg.setOpacity(0.78*om);map.addLayer(roughImg);}
+  else if(layer=="qprheat"){qprOverlay.setOpacity(0.82*om);map.addLayer(qprOverlay);renderQprHeat();}
+  else if(layer=="prog"){prognosisOverlay.setOpacity(om);map.addLayer(prognosisOverlay);renderPrognosis(stat);}
+  else if(layer=="powfind"){prognosisOverlay.setOpacity(om);map.addLayer(prognosisOverlay);renderPowderFind();}
+  else if(layer=="progdiff"){prognosisOverlay.setOpacity(om);map.addLayer(prognosisOverlay);renderProgDiff();}
+  else if(layer=="progpat"){prognosisOverlay.setOpacity(om);map.addLayer(prognosisOverlay);renderProgPattern(stat);}
   if(layer=="wind"){map.addLayer(windArr);startFlow();}else{map.removeLayer(windArr);stopFlow();}
 }
 // Everything that asks for a redraw during a gesture asks many times a
@@ -4632,11 +4672,12 @@ function lyRender(){
     'style="--notch:'+(((i%LY_COLS)+0.5)/LY_COLS*100)+'%">'+
     vars.map((v,n)=>'<button type="button" class="ly-sub'+(n===curVar?' on':'')+'" '+
       'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join('')+'</div>'):'';
-  grid.innerHTML=L.map(([g,k,item],n)=>
-    '<button type="button" class="ly-tile'+(n===i?' on':'')+'" onclick="lyPick('+n+')"'+
-    (n===i?' aria-current="true"':'')+'>'+lyIconFor(item.id)+
-    '<span>'+escapeHtml(item.label)+'</span></button>'+
-    (n===afterIdx?subsHtml:'')).join('');
+  grid.innerHTML=L.map(([g,k,item],n)=>{
+    const hi=item.id==='reppow';
+    return '<button type="button" class="ly-tile'+(n===i?' on':'')+(hi?' ly-hi':'')+'" onclick="lyPick('+n+')"'+
+    (n===i?' aria-current="true"':'')+' title="'+(hi?'Echte Meldungen, nicht modelliert':'')+'">'+lyIconFor(item.id)+
+    '<span>'+escapeHtml(item.label)+'</span>'+(hi?'<i class="ly-hi-dot"></i>':'')+'</button>'+
+    (n===afterIdx?subsHtml:'');}).join('');
   lyInfoRender();
 }
 function lyPick(n){const t=lyLayers()[n];if(!t)return;
@@ -7610,10 +7651,15 @@ async function drawPublish(){
   const names=drawFinNames||drawSummary(),cen=drawFinCen||{lat:46.8,lng:8.2};
   const zns=drawComputeZones();const zlabel=drawZoneLabel(zns)||names.join(', ');
   const cd={draw:true,bounds:drawFinBnds,types:names,measurement:zlabel,snapshot:drawSnapData||null,drawImage:drawPaintData||null,zones:zns,peak:drawFinPeak||null};
-  if(demoActive()||!sb){
+  // Demo mode only swaps which WEATHER dataset is shown (1 April 2026 vs
+  // live) -- it says nothing about whether the backend is reachable, so a
+  // drawn report must still go through the real save path below whenever sb
+  // is actually available. Only a genuinely missing/broken Supabase client
+  // falls back to this local-only, never-persisted stand-in.
+  if(!sb){
     let photoUrl=null;if(drawPhotoFile){try{photoUrl=URL.createObjectURL(drawPhotoFile);}catch(e){}}
     allReports.unshift({id:'draw'+Date.now(),user:'Du',cat:'snow',sub:'Schnee-Karte',measurement:cd.measurement,caption:cap,lat:cen.lat,lng:cen.lng,time:'gerade eben',img:photoUrl||drawPaintData||drawSaintData,likes:0,comments:0,stars:0,condition_data:cd});
-    loadReportMarkers();drawFinishClose();drawClearSilent();drawClose();toast('Schnee-Karte gespeichert (Demo).','ok');return;
+    loadReportMarkers();drawFinishClose();drawClearSilent();drawClose();toast('Schnee-Karte gespeichert (nur lokal).','ok');return;
   }
   if(!sbUser){authShow();return;}
   const btn=document.getElementById('drawPublishBtn');btn.disabled=true;btn.textContent='Postet…';
@@ -7879,7 +7925,7 @@ function obsBuildCD(){const s=obsState;const cd={obsType:s.type,source:s.locatio
   return cd;}
 function obsSubLabel(){const s=obsState;if(s.type==='avalanche')return s.avalanche.characteristics.size!=='unknown'?('Lawine '+obsSizeMeta(s.avalanche.characteristics.size).l):'Lawine';if(s.type==='whumpf')return 'Wumm';if(s.type==='wind_slab')return 'Triebschnee';if(s.type==='snow')return snowKindLabel(s.snow.kind)||'Schnee';return 'Beobachtung';}
 // --- Feed (Instagram-style full page) ---
-let feedFilter='all',feedAnchor=null,feedScope='here',feedGroup=null;
+let feedFilter='all',feedAnchor=null,feedScope='all',feedGroup=null;
 // The selected window, as real dates, so a report can be tested against it.
 function feedWindowMs(){
   try{const t0=new Date(M.times[Math.max(0,Math.min(T-1,a))]+'Z').getTime();
