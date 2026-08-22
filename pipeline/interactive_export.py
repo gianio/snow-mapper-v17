@@ -2719,7 +2719,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <button id="setStations" onclick="toggleStations();setRender()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0"/></svg>Messstationen<span class="st"></span></button>
       <button onclick="_setCameFromProfile=false;setClose();document.getElementById('legendBtn').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>Legende der Ebene</button>
       <button onclick="_setCameFromProfile=false;setClose();document.getElementById('btn3dFloat').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg>3D-Ansicht</button>
-      <button onclick="_setCameFromProfile=false;setClose();demoToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Demo-Daten umschalten</button>
+      <button id="setDemo" onclick="demoToggle()" title="Für Vorführungen: springt auf den 1. April 2026 mit den echten Wetterdaten von damals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Demo: 1. April 2026<span class="st"></span></button>
     </div>
     <span class="lbl-micro">Melden</span>
     <div class="set-rows">
@@ -4807,6 +4807,9 @@ function setRender(){
   const st=document.getElementById('setStations');
   if(st){st.classList.toggle('on',!!showStn);
     const q=st.querySelector('.st');if(q)q.textContent=showStn?'an':'aus';}
+  const dm=document.getElementById('setDemo');
+  if(dm){const on=demoActive();dm.classList.toggle('on',on);
+    const q=dm.querySelector('.st');if(q)q.textContent=on?'an':'aus';}
   const acc=document.getElementById('setAccount');
   if(acc){const url=sbUser?avatarOf(sbUser.id):null;
     acc.innerHTML=(url?('<span class="set-av" style="background-image:url('+encodeURI(url)+')"></span>')
