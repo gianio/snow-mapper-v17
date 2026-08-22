@@ -1657,21 +1657,21 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-draw svg{color:var(--accent)}
  #drawWrap{position:fixed;inset:0;z-index:4000;display:none}
  #drawCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
- body.draw-pan #drawCanvas{pointer-events:none;cursor:grab}
- body.draw-pan #drawWrap{pointer-events:none}
- body.draw-pan #drawClose,body.draw-pan #drawPan{pointer-events:auto}
- /* Same hand-off as draw-pan, just entered by a second finger touching down
-    instead of the button -- the canvas steps out of the way so the map
-    underneath actually receives the two-finger gesture. */
+ /* A second finger touching down mid-stroke hands the gesture to the map --
+    the canvas steps out of the way (pointer-events:none) so the map
+    underneath actually receives it. Scroll/trackpad zoom is forwarded
+    manually instead (see the wheel listener in drawSetupCanvas), since that
+    needs the canvas to keep receiving single-pointer events for drawing. */
  body.draw-gesture-pan #drawCanvas{pointer-events:none}
  #drawClose{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;z-index:4002;width:40px;height:40px;border-radius:50%;border:none;background:var(--paper);box-shadow:var(--elev1);font-size:17px;color:var(--fg);cursor:pointer}
  /* Bottom, right above the eraser tab (the last of the four category tabs
-    right below it) -- not a top corner you have to look away from the
-    canvas to find. */
+    right below it) -- an explanation, not a mode switch: there is nothing
+    to toggle any more, drawing and navigating are told apart by touch count. */
  #drawPanRow{display:flex;justify-content:flex-end;margin-bottom:8px}
- #drawPan{position:relative;z-index:4002;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--hair);background:var(--paper);box-shadow:var(--elev1);font-size:12px;font-weight:800;font-family:inherit;color:var(--fg2);cursor:pointer;white-space:nowrap}
- #drawPan svg{width:16px;height:16px;flex-shrink:0}
- #drawPan.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+ #drawPanHint{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;
+   border-radius:14px;background:var(--fill);color:var(--mut);font-size:11.5px;font-weight:600;
+   line-height:1.4;font-family:inherit;max-width:100%}
+ #drawPanHint svg{width:15px;height:15px;flex-shrink:0}
  #drawHint{position:fixed;top:calc(env(safe-area-inset-top,0px) + 60px);left:50%;transform:translateX(-50%) translateY(-8px);z-index:4002;background:var(--ink-900);color:#fff;font-size:12.5px;font-weight:700;padding:9px 15px;border-radius:999px;opacity:0;transition:.3s;pointer-events:none;box-shadow:var(--elev2);max-width:82vw;text-align:center}
  #drawHint.show{opacity:1;transform:translateX(-50%) translateY(0)}
  #drawBar{position:fixed;left:0;right:0;bottom:0;z-index:4002;padding:14px 12px calc(env(safe-area-inset-bottom,0px) + 12px);background:linear-gradient(180deg,rgba(255,255,255,0),var(--paper) 24%)}
@@ -2835,7 +2835,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div id="drawBar">
     <div id="drawBrush"></div>
     <div id="drawSlider"></div>
-    <div id="drawPanRow"><button id="drawPan" onclick="drawTogglePan()" title="Karte bewegen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg><span>Karte bewegen</span></button></div>
+    <div id="drawPanRow"><span id="drawPanHint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>1 Finger zeichnet · 2 Finger bewegen · Scrollen zoomt</span></div>
     <div id="drawCats"></div>
     <div id="drawPens"></div>
     <div id="drawActions">
@@ -3999,10 +3999,12 @@ function renderPowderFind(){
     const cm=r.cm!=null?r.cm:25;                       // depth drives the colour
     const c=snowColLerp(cm)||[120,170,255];
     d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];
-    // Lighter than the model layers on purpose: this is inferred from a
-    // handful of drawn reports rather than measured everywhere, so it reads
-    // as a wash over the terrain rather than a solid coat of paint.
-    d[o+3]=Math.min(170,90+80*Math.pow(r.like,0.7))|0;
+    // Lighter than the model layers on purpose, and lighter again than the
+    // first pass at this: this is inferred from a handful of drawn reports
+    // rather than measured everywhere, so it reads as a faint wash over the
+    // terrain -- ~70% transparent even at full confidence -- rather than a
+    // coat of paint that hides the map underneath it.
+    d[o+3]=Math.min(78,32+46*Math.pow(r.like,0.7))|0;
   }
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
@@ -4894,7 +4896,7 @@ function rpClose(){const sh=document.getElementById('rpSheet');if(sh)sh.classLis
 function renderMyReports(){
   const el=document.getElementById('rpMine');if(!el)return;
   if(!sbUser){el.innerHTML='<div class="rp-mine-empty">Melde dich an, um deine Meldungen hier zu sehen.</div>';return;}
-  const mine=(allReports||[]).filter(r=>r.dbRow&&r.userId===sbUser.id)
+  const mine=(allReports||[]).filter(r=>r.dbRow&&r.userId===sbUser.id&&!_rptIsDraw(r))
     .sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).slice(0,20);
   if(!mine.length){el.innerHTML='<div class="rp-mine-empty">Noch keine Meldung von dir. Zeichne eine Karte oder melde eine Beobachtung.</div>';return;}
   el.innerHTML=mine.map(r=>{
@@ -5860,16 +5862,13 @@ function _rptCluster(g,zoom){
   _rptAdd(lat,lng,html,sz,sz,()=>map.flyTo([lat,lng],Math.min(15,zoom+2.3),{duration:.7}),500,g.map(r=>r.id));}
 function loadReportMarkers(){
   reportMarkers.clearLayers();
-  if(!window._drawOv)window._drawOv=L.layerGroup().addTo(map);
-  _drawOv.clearLayers();
-  (allReports||[]).forEach(r=>{const cd=r.condition_data||{};const _im=cd.drawImage||r.img;if(cd.draw&&cd.bounds&&_im){try{L.imageOverlay(_im,cd.bounds,{opacity:DRAW_DIM,interactive:false}).addTo(_drawOv);}catch(e){}}});
   if(!allReports||!allReports.length)return;
   const z=map.getZoom(),cellPx=66,tiny=z<9.5,clusterOn=z<12.5,rich=z>=12.5;
-  // Drawings merge by real distance before anything else looks at them, so a
-  // slope that four people drew shows one circle, not four stacked ones.
-  const draws=allReports.filter(_rptIsDraw),rest=allReports.filter(r=>!_rptIsDraw(r));
-  if(!tiny)_rptMergeGroups(draws).forEach(_rptDrawMarker);
-  if(tiny){allReports.forEach(r=>_rptMarker(r,'dot'));return;}
+  // Drawn snow-maps are model input for Reported Powder, not posts -- they
+  // feed progZones() straight out of allReports but never get a marker, an
+  // overlay snapshot, or a feed/profile entry of their own.
+  const rest=allReports.filter(r=>!_rptIsDraw(r));
+  if(tiny){rest.forEach(r=>_rptMarker(r,'dot'));return;}
   const cells={};
   rest.forEach(r=>{let key;
     if(clusterOn){try{const pt=map.latLngToLayerPoint([r.lat,r.lng]);key=Math.round(pt.x/cellPx)+'|'+Math.round(pt.y/cellPx);}catch(e){key='s'+r.id;}}
@@ -6210,9 +6209,11 @@ async function profLoadPosts(){
   const del=id=>'<button class="uv-del" title="Löschen" aria-label="Beitrag löschen" onclick="uvDeletePost(\''+id+'\',event)">'+
     '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>';
   try{
-    const{data:rs}=await sb.from('reports').select('id,caption,subtype,image_url,condition_data,location,created_at')
+    const{data:rs0}=await sb.from('reports').select('id,caption,subtype,image_url,condition_data,location,created_at')
       .eq('user_id',sbUser.id).order('created_at',{ascending:false}).limit(40);
-    if(!rs||!rs.length){box.innerHTML='<div class="prof-hint">Noch keine Beiträge.</div>';return;}
+    // Drawn snow-maps are model input, not posts -- kept out of the profile grid.
+    const rs=(rs0||[]).filter(r=>!(r.condition_data&&r.condition_data.draw));
+    if(!rs.length){box.innerHTML='<div class="prof-hint">Noch keine Beiträge.</div>';return;}
     const withImg=rs.filter(r=>r.image_url),noImg=rs.filter(r=>!r.image_url);
     const grid=withImg.length?('<div class="uv-grid">'+withImg.map(r=>{const ll=parseGeo(r.location);
       return '<div class="uv-cell" onclick="profClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'"><img src="'+r.image_url+'" loading="lazy" alt=""/>'+del(r.id)+'</div>';}).join('')+'</div>'):'';
@@ -6987,7 +6988,7 @@ const DRAW_CATS=[
  {id:'tracks',label:'Spuren',icon:_SVG_TRACKS,pens:['tracks']},
  {id:'eraser',label:'Radierer',icon:_SVG_ERASER,pens:['eraser']}
 ];
-let drawCtx=null,drawPen=DRAW_PENS.powder,drawCat='snow',drawPanOn=false;
+let drawCtx=null,drawPen=DRAW_PENS.powder,drawCat='snow';
 let drawZoneCanvas=null,drawZoneW=0,drawZoneH=0,drawDpr=1,drawRefBounds=null;
 let drawRoutes=[],drawTracks=[],drawZoneUsed=new Set(),drawHistory=[];
 let _drawPainting=false,_drawLastPt=null,_drawCurRoute=null,_drawCurTrack=null,_drawDashAcc=0;
@@ -7036,15 +7037,19 @@ function drawOpen(){
   // the canvas goes over it -- otherwise the pen lands on a blank pane.
   if(typeof scrCurrent==='function'&&scrCurrent()!=='search'){
     scrGo('search');setTimeout(drawOpen,380);return;}
-  drawRoutes=[];drawTracks=[];drawZoneUsed=new Set();drawHistory=[];drawPanOn=false;_drawPainting=false;drawZoneCanvas=null;_drawTrackGrid=new Set();drawTrackZoom=null;drawZoneSamples={};
+  drawRoutes=[];drawTracks=[];drawZoneUsed=new Set();drawHistory=[];_drawPainting=false;drawZoneCanvas=null;_drawTrackGrid=new Set();drawTrackZoom=null;drawZoneSamples={};
   _drawActivePointers=new Set();_drawGesturePan=false;_drawCapturedId=null;
-  document.body.classList.remove('draw-pan','draw-gesture-pan');document.body.classList.add('draw-on');
+  document.body.classList.remove('draw-gesture-pan');document.body.classList.add('draw-on');
   document.getElementById('drawWrap').style.display='block';
   _drawBtmH=document.documentElement.style.getPropertyValue('--btm-h');
   document.documentElement.style.setProperty('--btm-h','0px');
   try{map.invalidateSize({animate:false,pan:false});}catch(e){}
+  // Dragging/pinch stay off by default -- a single-finger drag has to mean
+  // "draw", not "pan" -- and come on only for the length of an actual
+  // two-finger touch (drawSetupCanvas). Wheel/trackpad zoom is handled by
+  // this tool's own listener instead of Leaflet's, so it works without
+  // needing a mode switch at all.
   try{map.dragging.disable();map.touchZoom.disable();map.doubleClickZoom.disable();map.scrollWheelZoom.disable();}catch(e){}
-  const pb=document.getElementById('drawPan');if(pb){pb.classList.remove('on');pb.querySelector('span').textContent='Karte bewegen';}
   drawSetupCanvas();drawRenderCats();drawSelectCat('snow');drawShowBrush();
   try{haptic(8);}catch(e){}
   const h=document.getElementById('drawHint');h.classList.add('show');setTimeout(()=>h.classList.remove('show'),3200);
@@ -7052,22 +7057,11 @@ function drawOpen(){
 function drawClose(){
   if(drawHasContent()&&!confirm('Zeichnung verwerfen?'))return;
   document.getElementById('drawWrap').style.display='none';
-  document.body.classList.remove('draw-on','draw-pan','draw-gesture-pan');drawPanOn=false;
+  document.body.classList.remove('draw-on','draw-gesture-pan');
   _drawActivePointers=new Set();_drawGesturePan=false;_drawCapturedId=null;
   if(_drawBtmH)document.documentElement.style.setProperty('--btm-h',_drawBtmH);
   try{map.invalidateSize({animate:false,pan:false});}catch(e){}
   try{map.dragging.enable();map.touchZoom.enable();map.doubleClickZoom.enable();if(_desktop)map.scrollWheelZoom.enable();}catch(e){}
-}
-function drawTogglePan(){
-  drawPanOn=!drawPanOn;document.body.classList.toggle('draw-pan',drawPanOn);
-  const btn=document.getElementById('drawPan'),lbl=btn?btn.querySelector('span'):null;
-  if(drawPanOn){if(btn)btn.classList.add('on');if(lbl)lbl.textContent='Fertig — zeichnen';
-    try{map.dragging.enable();map.touchZoom.enable();map.doubleClickZoom.enable();if(_desktop)map.scrollWheelZoom.enable();}catch(e){}
-  }else{if(btn)btn.classList.remove('on');if(lbl)lbl.textContent='Karte bewegen';
-    try{map.dragging.disable();map.touchZoom.disable();map.doubleClickZoom.disable();map.scrollWheelZoom.disable();}catch(e){}
-    drawReanchor();
-  }
-  try{haptic(6);}catch(e){}
 }
 function drawSetupCanvas(){
   const cv=drawFitCanvas();
@@ -7089,7 +7083,6 @@ function drawSetupCanvas(){
     // until every finger lifts.
     cv.addEventListener('pointerdown',e=>{
       _drawActivePointers.add(e.pointerId);
-      if(drawPanOn)return;
       if(_drawActivePointers.size>=2){
         if(_drawPainting){drawUndo();_drawPainting=false;_drawCurRoute=null;_drawCurTrack=null;_drawLastPt=null;}
         // The first finger's pointer is captured (below) so it keeps
@@ -7103,13 +7096,28 @@ function drawSetupCanvas(){
       }
       try{cv.setPointerCapture(e.pointerId);_drawCapturedId=e.pointerId;}catch(_){}
       _drawPainting=true;drawPushHistory();drawStrokeBegin(pt(e),e.pressure);drawRepaint();try{haptic(4);}catch(_){}});
-    cv.addEventListener('pointermove',e=>{if(drawPanOn||_drawGesturePan||!_drawPainting)return;drawStrokeExtend(pt(e),e.pressure);drawRepaint();});
+    cv.addEventListener('pointermove',e=>{if(_drawGesturePan||!_drawPainting)return;drawStrokeExtend(pt(e),e.pressure);drawRepaint();});
     const end=e=>{
       if(e&&e.pointerId!=null){_drawActivePointers.delete(e.pointerId);if(_drawCapturedId===e.pointerId)_drawCapturedId=null;}
       if(_drawGesturePan&&_drawActivePointers.size===0){_drawGesturePan=false;document.body.classList.remove('draw-gesture-pan');
-        if(!drawPanOn){try{map.dragging.disable();map.touchZoom.disable();}catch(_e){}}}
+        try{map.dragging.disable();map.touchZoom.disable();}catch(_e){}
+        drawReanchor();}
       if(!_drawPainting)return;_drawPainting=false;_drawCurRoute=null;_drawCurTrack=null;_drawLastPt=null;};
     cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);cv.addEventListener('pointerleave',end);
+    // Scroll wheel and trackpad pinch-to-zoom both fire as 'wheel' -- the
+    // canvas has to keep pointer-events:auto for single-finger drawing, which
+    // also means it keeps native wheel events from ever reaching the map
+    // underneath, so this forwards them manually instead of relying on
+    // Leaflet's own (disabled) scrollWheelZoom handler.
+    cv.addEventListener('wheel',e=>{
+      if(_drawGesturePan)return;
+      e.preventDefault();
+      const latlng=map.mouseEventToLatLng(e);
+      const step=Math.max(.25,Math.min(1,Math.abs(e.deltaY||e.deltaX)/100));
+      const dir=(e.deltaY||e.deltaX)>0?-1:1;
+      try{map.setZoomAround(latlng,map.getZoom()+dir*step,{animate:false});}catch(_e){}
+      drawRepaint();
+    },{passive:false});
   }
   if(!map._drawMoveBound){map._drawMoveBound=true;
     map.on('move zoom moveend zoomend',()=>{if(document.body.classList.contains('draw-on'))drawRepaint();});}
@@ -8198,7 +8206,10 @@ function feedWireCarousels(){document.querySelectorAll('.fc-carousel').forEach(c
     if(dots)dots.querySelectorAll('i').forEach((d,k)=>d.classList.toggle('on',k===i));},{passive:true});});}
 function feedRender(){
   const list=document.getElementById('feedList');
-  let base=allReports.slice();
+  // Drawn snow-maps feed the Reported Powder model (progZones() reads
+  // allReports directly), but they are not posts -- nobody drew them to be
+  // read, so they never show up as feed cards.
+  let base=allReports.filter(r=>!_rptIsDraw(r));
   if(feedScope==='here'){
     const bnds=map.getBounds();
     base=base.filter(r=>bnds.contains([r.lat,r.lng])&&feedInWindow(r));
