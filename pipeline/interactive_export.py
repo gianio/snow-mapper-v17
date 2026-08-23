@@ -3217,6 +3217,17 @@ function snowColLerp(v){
 // stable/reduced switch. Caps at PD_STRONG_BLUE_CM since Powder Conditions is
 // a go/no-go read, not a depth map (that's Neuschnee's job).
 const PD_STRONG_BLUE_CM=30;
+// Pushes an RGB triple away from its own luminance -- more vivid/"knalliger"
+// at amt>0, unchanged at amt=0 -- without shifting the hue. Used to make a
+// spot with several agreeing reports read as more vibrant than one with a
+// single report, on top of (not instead of) the existing colour-by-depth.
+function satBoost(c,amt){
+  if(!amt)return c;
+  const l=0.299*c[0]+0.587*c[1]+0.114*c[2];
+  return[Math.max(0,Math.min(255,l+(c[0]-l)*(1+amt))),
+    Math.max(0,Math.min(255,l+(c[1]-l)*(1+amt))),
+    Math.max(0,Math.min(255,l+(c[2]-l)*(1+amt)))];
+}
 function powderColLerp(cm){
   const t=Math.max(0,Math.min(1,(cm||0)/PD_STRONG_BLUE_CM));
   const c0=[93,181,255],c1=[10,71,209];
@@ -4022,7 +4033,12 @@ function progCell(asp,elev,slp,lat,lon,sel,oth){
   const nEff=sw2>0?(sw*sw)/sw2:0;                        // effective independent reports
   const multi=0.97+0.03*Math.min(1,Math.max(0,nEff-1));
   const like=Math.min(1,best*(0.45+0.55*agree));
-  return {like:like,conf:Math.round(100*agree*evid*multi),cm:cmW>0?(cmS/cmW):null};
+  // nEff: effective count of independent supporting reports at this spot
+  // (1 report -> ~1, several agreeing reports -> grows toward their count,
+  // one report split across many near-duplicate weights doesn't inflate it).
+  // Exposed so a renderer can tell "one report says so" apart from "several
+  // reports say so here" without recomputing the terrain-match sums itself.
+  return {like:like,conf:Math.round(100*agree*evid*multi),cm:cmW>0?(cmS/cmW):null,n:nEff};
 }
 function renderPrognosis(type){
   progTerrain();_progType=type;
@@ -4078,12 +4094,18 @@ function renderPowderFind(){
     _progField[idx]=r.like;_progConf[idx]=r.conf;
     if(r.conf<progConfMin||r.like<0.05){d[o+3]=0;continue;}
     const cm=r.cm!=null?r.cm:25;                       // depth drives the colour
-    const c=snowColLerp(cm)||[120,170,255];
-    d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];
+    // 0 where a single report reaches this spot, up to 1 once several
+    // independent ones agree here -- so a cluster of drawings on the same
+    // slope reads as punchier/less transparent than one lone drawing does,
+    // visible at a glance without having to zoom or tap anything.
+    const dens=Math.min(1,Math.max(0,(r.n||1)-1));
+    const c=satBoost(snowColLerp(cm)||[120,170,255],dens*0.55);
+    d[o]=c[0]|0;d[o+1]=c[1]|0;d[o+2]=c[2]|0;
     // Base wash is inferred from a handful of drawn reports rather than
     // measured everywhere, so even at the most visible zoom it stays a wash
-    // rather than a coat of paint that hides the map underneath it.
-    d[o+3]=Math.min(210,(42+50*Math.pow(r.like,0.7))*zoomMul)|0;
+    // rather than a coat of paint that hides the map underneath it -- unless
+    // several reports actually agree here, which earns extra opacity too.
+    d[o+3]=Math.min(235,(42+50*Math.pow(r.like,0.7)+70*dens)*zoomMul)|0;
   }
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
@@ -5897,7 +5919,16 @@ function _rptImportance(r){
   let rec=1;try{rec=progRecency({ageH:progAgeH(r)});}catch(e){}
   return Math.max(0.05,w*rec);
 }
-function _rptIsDraw(r){const cd=r.condition_data;return !!(cd&&cd.draw);}
+// A pure drawn zone (colour on the map, no real photo) still has no business
+// as a post -- nobody drew it to be read. But once a real photo is attached,
+// it stops being just model input: it earns a normal marker/feed card like
+// any other report, same as everything else here. "Real photo" means the
+// display image is neither the drawing's own composite nor its zone
+// snapshot -- those are the two URLs a pure drawing without a photo falls
+// back to for image_url.
+function _rptDrawHasPhoto(r){const cd=r.condition_data;
+  return !!(cd&&cd.draw&&r.img&&r.img!==cd.drawImage&&r.img!==cd.snapshot);}
+function _rptIsDraw(r){const cd=r.condition_data;return !!(cd&&cd.draw)&&!_rptDrawHasPhoto(r);}
 // Grouped by real distance, not by a grid: a grid cell splits a pair that
 // happens to straddle a boundary, which is exactly the case that matters here
 // (two people drawing the same slope). The strongest report seeds each group,
@@ -7935,12 +7966,11 @@ function feedWindowMs(){
       const t1=new Date(M.times[Math.max(0,Math.min(T-1,b-1))]+'Z').getTime();
       return [Math.min(t0,t1),Math.max(t0,t1)+3600000];}catch(e){return null;}
 }
-function feedInWindow(r){
-  const w=feedWindowMs();if(!w)return true;
-  const t=Date.parse(r.createdAt||'');
-  if(!isFinite(t))return true;          // demo rows carry no timestamp
-  return t>=w[0]&&t<=w[1];
-}
+// Disabled for now (per request) -- posts were going missing and this was a
+// suspected cause: it silently dropped a report from "Hier & jetzt" whenever
+// its timestamp fell outside the timeline's currently selected window, which
+// reads as "not stored" rather than "filtered out" from the user's side.
+function feedInWindow(r){return true;}
 const FEED_SCOPES=[
   {id:'here',label:'Hier & jetzt',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v4l3 2"/></svg>'},
   {id:'all',label:'Entdecken',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.2 7.8 14 14 7.8 16.2 10 10"/></svg>'},
