@@ -1383,6 +1383,19 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .legend>div{display:inline-flex;align-items:center;margin:1px 10px 1px 0;white-space:nowrap}
  .legend div>span:not(.stn){font-family:var(--mono);font-size:8.5px;color:var(--ink-500)}
  .legend.show{display:block}
+ /* Same corner as .legend, sitting underneath it (lower z-index) -- always
+    on rather than tap-to-show, but reduced to just a colour strip + a
+    couple of numbers so it reads at a glance without repeating the fuller
+    popup's text. Tapping it opens that fuller legend. */
+ #miniLegend{position:absolute;z-index:940;bottom:calc(var(--btm-h,80px) + 14px);left:12px;right:auto;top:auto;
+   cursor:pointer;background:var(--card);border:1px solid var(--hair);padding:6px 9px;border-radius:var(--r-1);
+   max-width:min(220px,calc(100vw - 24px));color:var(--fg2);display:none}
+ #miniLegend.show{display:block}
+ #miniLegendTitle{display:block;font-size:8.5px;font-weight:800;letter-spacing:.07em;
+   text-transform:uppercase;color:var(--ink-500);margin-bottom:4px}
+ #miniLegendBar{display:flex;height:8px;border-radius:4px;overflow:hidden}
+ #miniLegendBar>span{flex:1;min-width:2px}
+ #miniLegendNums{display:flex;justify-content:space-between;font-size:8.5px;font-family:var(--mono);color:var(--ink-500);margin-top:3px}
  #legendBtn{display:none!important}
  #legendBtnOFF{position:absolute;z-index:960;bottom:var(--btm-h,80px);left:12px;width:40px;height:40px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);color:var(--ink-700);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background var(--dur-1) var(--ease)}
  #legendBtn svg{width:20px;height:20px}
@@ -1685,7 +1698,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* --- Report sheet (Alpenglühen dark) --- */
  /* --- Report wizard: centered light modal --- */
  /* --- Draw-based snow report (v3) --- */
- body.draw-on #ctrlRail,body.draw-on #layerBar,body.draw-on #demoPill,body.draw-on #mapFabs,body.draw-on #bottomPanel,body.draw-on #legendBtn,body.draw-on .legend{display:none!important}
+ body.draw-on #ctrlRail,body.draw-on #layerBar,body.draw-on #demoPill,body.draw-on #mapFabs,body.draw-on #bottomPanel,body.draw-on #legendBtn,body.draw-on .legend,body.draw-on #miniLegend{display:none!important}
  .fab-v{position:absolute;top:-3px;left:-3px;min-width:16px;height:15px;padding:0 3px;border-radius:7px;background:var(--ink-900);color:#fff;font-size:8.5px;font-weight:900;line-height:15px;text-align:center;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
  .feed-fab .fab-v{background:var(--card);color:var(--ink-900);border-color:var(--ink-900)}
  /* v1 on top, then v2, then v3 -- the stack closes up when a FAB is hidden
@@ -2806,6 +2819,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button class="ly-x" onclick="lyPanelClose()" aria-label="Ebenen schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
 </div>
 <button id="legendBtn" title="Legende" aria-label="Legende"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg></button><div class="legend" id="legend"></div>
+<div id="miniLegend" onclick="document.getElementById('legendBtn').click()">
+  <b id="miniLegendTitle"></b>
+  <div id="miniLegendBar"></div>
+  <div id="miniLegendNums"></div>
+</div>
 </section>
 <!-- Melden: a sheet, not a screen. The two ways in live on the plus. -->
 <div class="set-sheet" id="rpSheet" onclick="if(event.target===this)rpClose()">
@@ -4115,12 +4133,51 @@ function progSetConfMin(v){progConfMin=+v;
 // you zoomed in to see. So opacity scales with zoom instead of staying
 // fixed: ~1.9x at the fully-zoomed-out view, ~0.5x at the deepest zoom.
 function progZoomAlphaMul(){return 1.9-1.4*baseFadeT();}
+// Zoomed way out, per-pixel terrain matching is both invisible (a slope-sized
+// cell is sub-pixel at that scale) and the most expensive thing this layer
+// does. Below detailTier 0 it's replaced with a coarse "there's reported
+// powder around here, averaging X cm" glow -- a soft splat per report,
+// weighted by trust/recency exactly like the real model, coloured by the
+// weighted-average depth -- and switches back to the real per-pixel render
+// the moment you zoom past that threshold.
+function renderPowderFindAbstract(sel){
+  const N=PROG_GW*PROG_GH;
+  _progField=new Float32Array(N);_progConf=new Float32Array(N);
+  const img=new ImageData(PROG_GW,PROG_GH),d=img.data;
+  if(!sel.length){
+    const tmp0=document.createElement('canvas');tmp0.width=PROG_GW;tmp0.height=PROG_GH;tmp0.getContext('2d').putImageData(img,0,0);
+    pcx.clearRect(0,0,pcv.width,pcv.height);pcx.drawImage(tmp0,0,0,pcv.width,pcv.height);progCommit();return;
+  }
+  let wSum=0,cmSum=0;sel.forEach(z=>{const w=(z.w==null?1:z.w)*progRecency(z);if(z.cm!=null){cmSum+=z.cm*w;wSum+=w;}});
+  const col=snowColLerp(wSum>0?cmSum/wSum:25)||[120,170,255];
+  const f=new Float32Array(N),R=Math.max(PROG_GW,PROG_GH)*0.14,sig=R*0.45;
+  sel.forEach(z=>{
+    const gx=(z.lng-PROG_BOUNDS.w)/(PROG_BOUNDS.e-PROG_BOUNDS.w)*(PROG_GW-1);
+    const gy=(PROG_BOUNDS.n-z.lat)/(PROG_BOUNDS.n-PROG_BOUNDS.s)*(PROG_GH-1);
+    const w=(z.w==null?1:z.w)*progRecency(z);
+    const x0=Math.max(0,Math.round(gx-R)),x1=Math.min(PROG_GW-1,Math.round(gx+R));
+    const y0=Math.max(0,Math.round(gy-R)),y1=Math.min(PROG_GH-1,Math.round(gy+R));
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+      const dx=x-gx,dy=y-gy,d2=dx*dx+dy*dy;if(d2>R*R)continue;
+      f[y*PROG_GW+x]+=w*Math.exp(-d2/(2*sig*sig));
+    }
+  });
+  let mx=0.001;for(let i=0;i<N;i++)if(f[i]>mx)mx=f[i];
+  for(let i=0;i<N;i++){const v=f[i]/mx;const o=i*4;
+    if(v<0.05){d[o+3]=0;continue;}
+    d[o]=col[0];d[o+1]=col[1];d[o+2]=col[2];
+    d[o+3]=Math.min(150,30+120*Math.pow(v,0.6))|0;}
+  const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
+  pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
+  progCommit();
+}
 function renderPowderFind(){
   progTerrain();_progType='powder';
   const _keep=progSrc;progSrc='draw';                 // drawn reports only, by definition
   const zones=progZones();progSrc=_keep;
   const near=progNearZones(zones);
   const sel=near.filter(z=>z.type==='powder'),oth=near.filter(z=>z.type!=='powder');
+  if(detailTier()===0){renderPowderFindAbstract(sel);return;}
   const N=PROG_GW*PROG_GH;
   _progField=new Float32Array(N);_progConf=new Float32Array(N);
   const img=new ImageData(PROG_GW,PROG_GH),d=img.data;
@@ -4307,7 +4364,13 @@ let layer="snow",stat="avg",windowSize=48,a=nowIdx,b=Math.min(T,nowIdx+48),showS
 let allReports=[];
 const isMobile=window.innerWidth<=560;
 
-function depthCol(v){const x=Math.min(1,v/300);let r,g,bl;if(x<.33){const k=x/.33;r=220-k*120|0;g=240-k*50|0;bl=255-k*5|0;}else if(x<.66){const k=(x-.33)/.33;r=100-k*80|0;g=190-k*90|0;bl=250-k*65|0;}else{const k=(x-.66)/.34;r=20+k*100|0;g=100-k*85|0;bl=185-k*105|0;}return[r,g,bl];}
+// Same 9-colour SLF palette the Neuschnee layer uses, but banded for total
+// snow depth (typically 0-300cm+ at a base) instead of new-snow-per-window
+// (typically 0-100cm) -- discrete steps, not the old continuous gradient.
+const DEPTH_BOUNDS=[10,25,50,75,100,150,200,250,300,450];
+function depthCol(v){if(v<DEPTH_BOUNDS[0])return null;
+  for(let i=DEPTH_BOUNDS.length-1;i>=1;i--)if(v>=DEPTH_BOUNDS[i-1])return RGB[Math.min(i-1,RGB.length-1)];
+  return RGB[0];}
 // --- Domain edge mask -----------------------------------------------------
 // A gridded forecast is unreliable in the cells at its own boundary: they have
 // no upwind neighbours, so advection and the wind field are one-sided there.
@@ -4424,7 +4487,7 @@ function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");const
 function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString('de-CH',{day:'2-digit',month:'short'});}
 function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
   if(l=="snow"){let h="<b>Neuschnee [cm] (SLF-Skala)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (click for details)</div>";}
-  if(l=="depth")return '<b>Snow Depth [cm]</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(220,240,255),rgb(100,190,250),rgb(30,130,210),rgb(20,100,185),rgb(80,30,140),rgb(120,15,80));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:10px"><span>0</span><span>100</span><span>200</span><span>300+</span></div>';
+  if(l=="depth"){let h="<b>Schneehöhe [cm] (SLF-Skala)</b><br>";for(let i=0;i<DEPTH_BOUNDS.length-1;i++)h+=`<div><i style="background:${SC[Math.min(i,SC.length-1)]}"></i>${DEPTH_BOUNDS[i]}${i===DEPTH_BOUNDS.length-2?'+':'–'+DEPTH_BOUNDS[i+1]}</div>`;return h;}
   if(l=="temp"){let extra="blue=cold · red=warm";if(stat=="sub0")extra="only cells staying below 0°C for entire window";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>Temp 2 m [°C] (${sn})</b><br>${extra}`;}
   if(l=="wind"){if(stat=="lt10")return "<b>Wind 10 m ("+sn+")</b><br>green = max wind stays below 10 km/h";return '<b>Wind 10 m (km/h, '+sn+')</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(30,120,255),rgb(30,240,135),rgb(255,240,0),rgb(255,40,0));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:10px"><span>0</span><span>25</span><span>50</span><span>70+</span></div><div style="margin-top:4px;font-size:11px">Arrows show flow direction</div>';}
   if(l=="sun")return "<b>Σ Sunshine Hours</b><br>Scale 0–48 h+ · light→orange = more sun";
@@ -4463,7 +4526,39 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
     '<span style="display:flex;justify-content:space-between;font-size:10px;margin-top:2px"><span>0 cm</span><span>'+(PD_STRONG_BLUE_CM/2)+' cm</span><span>'+PD_STRONG_BLUE_CM+'+ cm</span></span></div>'+
     '<div style="font-size:11px">Farbe = Neuschnee, Deckkraft = <b>stable</b> vs. <b>reduced</b></div><div style="margin-top:3px;font-size:11px">Gust ≈ mean wind × 1.5</div>';
   return "<b>Hillshade / Relief (swisstopo)</b>";}
-function legend(l){document.getElementById('legend').innerHTML=legendFor(l||layer);}
+function legend(l){document.getElementById('legend').innerHTML=legendFor(l||layer);try{miniLegendRender(l||layer);}catch(e){}}
+// A compact, always-on version of the full legend above: just the current
+// layer's name, a horizontal strip of its colours, and a couple of numbers
+// -- built by reading the SAME markup legendFor() already produces (off-DOM,
+// never inserted) rather than hand-duplicating every layer's colour table a
+// second time, so it can never drift out of sync with the real legend.
+function miniLegendRender(l){
+  const box=document.getElementById('miniLegend');if(!box)return;
+  const title=document.getElementById('miniLegendTitle'),bar=document.getElementById('miniLegendBar'),nums=document.getElementById('miniLegendNums');
+  const it=(groupItems(curTopic)||[])[curItem],vlabel=(it&&it.vars&&it.vars[curVar]&&it.vars[curVar].label)||l||layer;
+  const tmp=document.createElement('div');tmp.style.cssText='position:absolute;left:-9999px;top:-9999px';
+  tmp.innerHTML=legendFor(l||layer);document.body.appendChild(tmp);
+  // legendFor() isn't consistent about div vs span for the gradient bar or
+  // the numbers row across its ~15 cases, so both element types are checked.
+  const swatches=[...tmp.querySelectorAll('div>i')].map(i=>i.style.background).filter(Boolean);
+  const gradEl=[...tmp.querySelectorAll('div,span')].find(s=>/linear-gradient/.test(s.style.background||''));
+  let barHtml='',numHtml='';
+  if(swatches.length){
+    barHtml=swatches.map(c=>'<span style="background:'+c+'"></span>').join('');
+    const rows=[...tmp.querySelectorAll('div')].filter(r=>r.querySelector(':scope>i'));
+    const texts=rows.map(r=>{const c=r.cloneNode(true);const ic=c.querySelector('i');if(ic)ic.remove();return c.textContent.trim();}).filter(Boolean);
+    if(texts.length)numHtml='<span>'+escapeHtml(texts[0])+'</span><span>'+escapeHtml(texts[texts.length-1])+'</span>';
+  }else if(gradEl){
+    barHtml='<span style="flex:10;background:'+gradEl.style.background+'"></span>';
+    const numsEl=[...tmp.querySelectorAll('div,span')].find(d=>d.style.display==='flex'&&d.style.justifyContent==='space-between');
+    if(numsEl)numHtml=[...numsEl.children].map(s=>'<span>'+escapeHtml(s.textContent)+'</span>').join('');
+  }
+  document.body.removeChild(tmp);
+  if(title)title.textContent=vlabel;
+  if(bar)bar.innerHTML=barHtml;
+  if(nums)nums.innerHTML=numHtml;
+  box.classList.toggle('show',!!barHtml);
+}
 // It has no button of its own on the map any more, so it is its own dismiss.
 document.getElementById('legend').onclick=()=>{
   document.getElementById('legend').classList.remove('show');
@@ -4614,7 +4709,7 @@ function setTopic(t,itemIdx,varIdx){
   // after curVar, not before: the sub-layer column shows the live option, and
   // rendering it first left it a step behind on every change
   renderLayerStrip();
-  const sel=vars[curVar];layer=sel.l;stat=sel.s;renderAll();progRenderBar();
+  const sel=vars[curVar];layer=sel.l;stat=sel.s;renderAll();progRenderBar();legend();
   if(typeof panelRestore==='function')requestAnimationFrame(()=>{try{panelRestore();}catch(e){}});
 }
 // ===================== One field, two axes ================================
