@@ -1309,7 +1309,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     a control you have to unfold first is a control you use less. */
  #bottomPanel{position:absolute;z-index:1000;left:10px;right:10px;
    bottom:calc(env(safe-area-inset-bottom,0px) + 10px);
-   background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+   background:color-mix(in srgb,var(--glass2) 30%,transparent);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
    border:1px solid var(--hair);border-radius:var(--r-lg);box-shadow:var(--elev2);
    transition:none;padding:8px 0;overflow:hidden}
  #btmMain{padding:0 12px}
@@ -1318,7 +1318,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     background actually shows through in the gaps -- a genuine frosted-glass
     surface, not just a flat fill behind the drawing. */
  #timeline{display:block;border:1px solid var(--hair);
-   background:color-mix(in srgb,var(--glass) 55%,transparent);
+   background:color-mix(in srgb,var(--glass) 30%,transparent);
    backdrop-filter:blur(26px) saturate(1.3);-webkit-backdrop-filter:blur(26px) saturate(1.3);
    border-radius:var(--r-1);
    box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.06);
@@ -1370,10 +1370,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  @media (max-width:560px){#three-wrap .ctrl3d{bottom:calc(16px + env(safe-area-inset-bottom,0px));gap:5px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 14px;font-size:15px;min-height:46px;border-radius:12px}#btn3dClose{top:calc(8px + env(safe-area-inset-top,0px));right:8px;padding:10px 18px;font-size:16px;border-radius:14px}}
  .sub{font-size:12px;color:var(--mut)}
  .asp-crisp img{image-rendering:pixelated;image-rendering:crisp-edges}
- /* Always the bottom-left corner regardless of which layer is active -- the
-    scale control is pinned to the opposite corner (bottomright, see
-    L.control.scale below) so the two never share space. */
- .legend{position:absolute;z-index:950;bottom:calc(var(--btm-h,80px) + 14px);left:12px;right:auto;top:auto;cursor:pointer;background:var(--card);border:1px solid var(--hair);padding:8px 10px;border-radius:var(--r-1);box-shadow:none;font-size:11.5px;max-width:min(300px,calc(100vw - 24px));line-height:1.5;color:var(--fg2);display:none}
+ /* Always the bottom-left corner regardless of which layer is active. */
+ .legend{position:absolute;z-index:950;bottom:calc(var(--btm-h,80px) + 14px);left:12px;right:auto;top:auto;cursor:pointer;background:var(--card);border:1px solid var(--hair);padding:9px 12px;border-radius:var(--r-1);box-shadow:none;font-size:12.5px;max-width:min(420px,calc(100vw - 24px));line-height:1.6;color:var(--fg2);display:none}
  .legend b{display:block;font-size:9px;font-weight:800;letter-spacing:.08em;
    text-transform:uppercase;color:var(--ink-500);margin-bottom:5px}
  /* Each class/colour row reads as a chip flowing left-to-right and wrapping
@@ -1388,14 +1386,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     couple of numbers so it reads at a glance without repeating the fuller
     popup's text. Tapping it opens that fuller legend. */
  #miniLegend{position:absolute;z-index:940;bottom:calc(var(--btm-h,80px) + 14px);left:12px;right:auto;top:auto;
-   cursor:pointer;background:var(--card);border:1px solid var(--hair);padding:6px 9px;border-radius:var(--r-1);
-   max-width:min(220px,calc(100vw - 24px));color:var(--fg2);display:none}
+   cursor:pointer;background:var(--card);border:1px solid var(--hair);padding:8px 12px;border-radius:var(--r-1);
+   max-width:min(340px,calc(100vw - 24px));min-width:min(240px,calc(100vw - 24px));color:var(--fg2);display:none}
  #miniLegend.show{display:block}
- #miniLegendTitle{display:block;font-size:8.5px;font-weight:800;letter-spacing:.07em;
-   text-transform:uppercase;color:var(--ink-500);margin-bottom:4px}
- #miniLegendBar{display:flex;height:8px;border-radius:4px;overflow:hidden}
+ #miniLegendTitle{display:block;font-size:9.5px;font-weight:800;letter-spacing:.07em;
+   text-transform:uppercase;color:var(--ink-500);margin-bottom:5px}
+ #miniLegendBar{display:flex;height:10px;border-radius:5px;overflow:hidden}
  #miniLegendBar>span{flex:1;min-width:2px}
- #miniLegendNums{display:flex;justify-content:space-between;font-size:8.5px;font-family:var(--mono);color:var(--ink-500);margin-top:3px}
+ #miniLegendNums{display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--ink-500);margin-top:4px}
  #legendBtn{display:none!important}
  #legendBtnOFF{position:absolute;z-index:960;bottom:var(--btm-h,80px);left:12px;width:40px;height:40px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);color:var(--ink-700);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background var(--dur-1) var(--ease)}
  #legendBtn svg{width:20px;height:20px}
@@ -1640,7 +1638,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    .icard{font-size:14px;max-width:calc(100vw - 50px);min-width:200px}
    .scard{font-size:14px;min-width:160px}
    .leaflet-popup-content-wrapper{max-width:calc(100vw - 32px)!important}
-   .legend{max-width:180px;font-size:12px}
+   .legend{max-width:280px;font-size:13px}
+   #miniLegend{max-width:min(300px,calc(100vw - 24px))}
    #ctrlRail{right:8px;gap:11px}
    .rail-btn{width:48px;height:48px}
    #legendBtn{width:40px;height:40px;font-size:18px}
@@ -1648,7 +1647,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    .itab{padding:10px 6px;font-size:14px}
  }
  @media (max-width:380px){
-     .legend{max-width:140px;font-size:11px}
+     .legend{max-width:230px;font-size:12px}
+     #miniLegend{max-width:min(250px,calc(100vw - 24px))}
  }
  /* --- Auth & Reports --- */
  #userBar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 18px);right:12px;z-index:1100;display:flex;gap:8px;align-items:center}
@@ -3606,7 +3606,6 @@ const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,wheelPxPerZoomL
 // visible in the corner. The data sources still get credited -- just
 // without Leaflet's own link riding along.
 if(map.attributionControl)map.attributionControl.setPrefix(false);
-L.control.scale({imperial:false,maxWidth:120,position:'bottomright'}).addTo(map);
 if(_desktop&&map.scrollWheelZoom&&map.scrollWheelZoom.setWheelPxPerZoomLevel)map.scrollWheelZoom.setWheelPxPerZoomLevel(38);
 // Constrain panning + zoom to the meteo grid, with a thin white frame around the data
 const _fitZoom=map.getZoom();
@@ -4151,24 +4150,29 @@ function renderPowderFindAbstract(sel){
     const tmp0=document.createElement('canvas');tmp0.width=PROG_GW;tmp0.height=PROG_GH;tmp0.getContext('2d').putImageData(img,0,0);
     pcx.clearRect(0,0,pcv.width,pcv.height);pcx.drawImage(tmp0,0,0,pcv.width,pcv.height);progCommit();return;
   }
-  let wSum=0,cmSum=0;sel.forEach(z=>{const w=(z.w==null?1:z.w)*progRecency(z);if(z.cm!=null){cmSum+=z.cm*w;wSum+=w;}});
-  const col=snowColLerp(wSum>0?cmSum/wSum:25)||[120,170,255];
-  const f=new Float32Array(N),R=Math.max(PROG_GW,PROG_GH)*0.14,sig=R*0.45;
+  // Splat radius kept tight (was 0.14 of the grid span, blurring every
+  // report into one country-wide smear) so the overview still reads as
+  // "roughly where the reports are", not just "there are reports somewhere".
+  // Colour is now per-location (SLF depth bands, same scale as Schneehöhe)
+  // rather than one blended tint for the whole map.
+  const f=new Float32Array(N),fcm=new Float32Array(N),R=Math.max(PROG_GW,PROG_GH)*0.055,sig=R*0.5;
   sel.forEach(z=>{
     const gx=(z.lng-PROG_BOUNDS.w)/(PROG_BOUNDS.e-PROG_BOUNDS.w)*(PROG_GW-1);
     const gy=(PROG_BOUNDS.n-z.lat)/(PROG_BOUNDS.n-PROG_BOUNDS.s)*(PROG_GH-1);
-    const w=(z.w==null?1:z.w)*progRecency(z);
+    const w=(z.w==null?1:z.w)*progRecency(z),cm=z.cm==null?25:z.cm;
     const x0=Math.max(0,Math.round(gx-R)),x1=Math.min(PROG_GW-1,Math.round(gx+R));
     const y0=Math.max(0,Math.round(gy-R)),y1=Math.min(PROG_GH-1,Math.round(gy+R));
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
       const dx=x-gx,dy=y-gy,d2=dx*dx+dy*dy;if(d2>R*R)continue;
-      f[y*PROG_GW+x]+=w*Math.exp(-d2/(2*sig*sig));
+      const g=w*Math.exp(-d2/(2*sig*sig)),idx=y*PROG_GW+x;
+      f[idx]+=g;fcm[idx]+=g*cm;
     }
   });
   let mx=0.001;for(let i=0;i<N;i++)if(f[i]>mx)mx=f[i];
   for(let i=0;i<N;i++){const v=f[i]/mx;const o=i*4;
     if(v<0.05){d[o+3]=0;continue;}
-    d[o]=col[0];d[o+1]=col[1];d[o+2]=col[2];
+    const c=depthCol(fcm[i]/f[i])||RGB[0];
+    d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];
     d[o+3]=Math.min(150,30+120*Math.pow(v,0.6))|0;}
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
@@ -4198,7 +4202,7 @@ function renderPowderFind(){
     // slope reads as punchier/less transparent than one lone drawing does,
     // visible at a glance without having to zoom or tap anything.
     const dens=Math.min(1,Math.max(0,(r.n||1)-1));
-    const c=satBoost(snowColLerp(cm)||[120,170,255],dens*0.55);
+    const c=satBoost(depthCol(cm)||RGB[0],dens*0.55);
     d[o]=c[0]|0;d[o+1]=c[1]|0;d[o+2]=c[2]|0;
     // Base wash is inferred from a handful of drawn reports rather than
     // measured everywhere, so even at the most visible zoom it stays a wash
