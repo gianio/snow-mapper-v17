@@ -3836,6 +3836,9 @@ let PROG_ASP=null,PROG_ELEV=null,PROG_SLP=null,PROG_LA=null,PROG_LO=null,PROG_Q=
 // It is now rebuilt for the visible area, so a cell is metres, not kilometres.
 let PROG_BOUNDS=null;
 let _progField=null,_progConf=null,_progType=null,_progModel=null,_progDiff=null;
+// Zones behind the last renderPowderFind() paint, cached so a map tap can ask
+// "how much snow near here" without recomputing progZones()/progNearZones().
+let _progFindSel=null,_progFindOth=null;
 const PROG_COL={powder:[74,163,255],drift:[232,89,12],wet:[245,158,11],suncrust:[244,208,63],windpressed:[150,168,196],firn:[63,178,127],scoured:[154,135,120]};
 // Colourful, perceptually ordered ramp for the 0-100% confidence map.
 const PROG_CONF_STOPS=[[0.00,48,18,59],[0.15,62,73,204],[0.30,33,144,231],[0.45,26,196,171],
@@ -4177,6 +4180,7 @@ function renderPowderFind(){
   const zones=progZones();progSrc=_keep;
   const near=progNearZones(zones);
   const sel=near.filter(z=>z.type==='powder'),oth=near.filter(z=>z.type!=='powder');
+  _progFindSel=sel;_progFindOth=oth;
   if(detailTier()===0){renderPowderFindAbstract(sel);return;}
   const N=PROG_GW*PROG_GH;
   _progField=new Float32Array(N);_progConf=new Float32Array(N);
@@ -4352,6 +4356,16 @@ function prognosisAt(lat,lon){
   if(!_progField)return null;
   const idx=progIdxAt(lat,lon);if(idx<0)return null;
   return {type:_progType,like:Math.round(_progField[idx]*100),conf:_progConf[idx]};
+}
+// Classic point reports (Personen, Verspurtheitsgrad, Lawine, Warnzeichen, ...)
+// within radiusKm of a tap -- excludes drawn snow-maps and quick powder posts,
+// which the powfind layer itself already reads via progZones()/progCell().
+function nearbyPointReports(lat,lon,radiusKm){
+  return (allReports||[]).filter(r=>{
+    if(r.lat==null||r.lng==null)return false;
+    const cd=r.condition_data;if(cd&&(cd.zones||cd.quick))return false;
+    return progDistKm(lat,lon,r)<=radiusKm;
+  }).sort((x,y)=>progDistKm(lat,lon,x)-progDistKm(lat,lon,y));
 }
 const windArr=L.layerGroup(); const stnGroup=L.layerGroup().addTo(map);
 let layer="snow",stat="avg",windowSize=48,a=nowIdx,b=Math.min(T,nowIdx+48),showStn=false,wtimer=null;
@@ -5310,6 +5324,38 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
       '<div class="prog-conf"><div class="prog-bar"><i style="width:'+pd.rep+'%"></i></div><span>Meldungen '+pd.rep+'%</span></div>'+
       '<div class="prog-conf"><div class="prog-bar"><i style="width:'+pd.model+'%"></i></div><span>Modell '+pd.model+'%</span></div>'+
       '<div class="prog-note">'+verdict+' Vertrauen der Meldungen: '+pd.conf+'%.</div></div>';}}catch(e){}}
+  if(layer==='powfind'){try{
+    const near=nearbyPointReports(lat,lon,3);
+    let cmTxt=null;
+    if(_progFindSel){const r=progCell(aspDeg,elevD,slp,lat,lon,_progFindSel,_progFindOth);
+      if(r.conf>=progConfMin&&r.cm!=null)cmTxt=Math.round(r.cm)+' cm';}
+    const PEOPLE_ORDER=['0','1-2','3-5','6-10','10+'];
+    const peopleReports=near.filter(r=>r.cat==='route'&&r.sub==='Personen'&&r.condition_data&&r.condition_data.details&&r.condition_data.details.people);
+    let peopleTxt=null;
+    if(peopleReports.length){
+      let best=peopleReports[0].condition_data.details.people;
+      peopleReports.forEach(r=>{const v=r.condition_data.details.people;if(PEOPLE_ORDER.indexOf(v)>PEOPLE_ORDER.indexOf(best))best=v;});
+      peopleTxt=best+' Personen'+(peopleReports.length>1?' ('+peopleReports.length+' Meldungen)':'');
+    }
+    const trackReports=near.filter(r=>r.cat==='route'&&r.sub==='Verspurtheitsgrad'&&r.condition_data&&r.condition_data.details&&r.condition_data.details.tracked);
+    let trackTxt=null;
+    if(trackReports.length){
+      const vals=trackReports.map(r=>parseInt(r.condition_data.details.tracked)||0);
+      trackTxt=Math.round(vals.reduce((s,v)=>s+v,0)/vals.length)+'% verspurt';
+    }
+    const otherChips=near.filter(r=>!(r.cat==='route'&&r.sub==='Personen')).slice(0,4).map(r=>{
+      let lbl=r.sub||catLabel(r.cat);
+      const d=r.condition_data&&r.condition_data.details;
+      if(r.cat==='danger'&&r.sub==='Warnzeichen'&&d&&d.sign)lbl=Array.isArray(d.sign)?d.sign.join(', '):d.sign;
+      return '<span class="insp-chip">'+catSvg(r.cat,12)+' '+escapeHtml(lbl)+'</span>';
+    }).join('');
+    const note=[peopleTxt,trackTxt].filter(Boolean).join(' · ');
+    progSec='<div class="insp-sec insp-prog"><h4>Gemeldetes Powder'+(cmTxt?' <em>'+cmTxt+'</em>':'')+'</h4>'+
+      (note?'<div class="prog-note">'+note+'</div>':'')+
+      (otherChips?'<div class="insp-chips" style="overflow-x:visible;flex-wrap:wrap;margin-top:8px">'+otherChips+'</div>':'')+
+      (!cmTxt&&!note&&!otherChips?'<div class="prog-note">Keine Meldungen in der Nähe.</div>':'')+
+      '</div>';
+  }catch(e){}}
   pan.innerHTML=
    '<div class="insp-grab" aria-hidden="true"></div>'+
    '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b>'+
