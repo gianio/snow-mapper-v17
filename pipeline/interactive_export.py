@@ -1380,19 +1380,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .legend>div{display:inline-flex;align-items:center;margin:1px 10px 1px 0;white-space:nowrap}
  .legend div>span:not(.stn){font-family:var(--mono);font-size:8.5px;color:var(--ink-500)}
  .legend.show{display:block}
- /* Same corner as .legend, sitting underneath it (lower z-index) -- always
-    on rather than tap-to-show, but reduced to just a colour strip + a
-    couple of numbers so it reads at a glance without repeating the fuller
-    popup's text. Tapping it opens that fuller legend. */
- #miniLegend{position:absolute;z-index:940;bottom:calc(var(--btm-h,80px) + 14px);left:12px;right:auto;top:auto;
-   cursor:pointer;background:var(--card);border:1px solid var(--hair);padding:8px 12px;border-radius:var(--r-1);
-   max-width:min(340px,calc(100vw - 24px));min-width:min(240px,calc(100vw - 24px));color:var(--fg2);display:none}
- #miniLegend.show{display:block}
- #miniLegendTitle{display:block;font-size:9.5px;font-weight:800;letter-spacing:.07em;
-   text-transform:uppercase;color:var(--ink-500);margin-bottom:5px}
- #miniLegendBar{display:flex;height:10px;border-radius:5px;overflow:hidden}
- #miniLegendBar>span{flex:1;min-width:2px}
- #miniLegendNums{display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--ink-500);margin-top:4px}
  #legendBtn{display:none!important}
  #legendBtnOFF{position:absolute;z-index:960;bottom:var(--btm-h,80px);left:12px;width:40px;height:40px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);color:var(--ink-700);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background var(--dur-1) var(--ease)}
  #legendBtn svg{width:20px;height:20px}
@@ -1640,7 +1627,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    .scard{font-size:14px;min-width:160px}
    .leaflet-popup-content-wrapper{max-width:calc(100vw - 32px)!important}
    .legend{max-width:280px;font-size:13px}
-   #miniLegend{max-width:min(300px,calc(100vw - 24px))}
    #ctrlRail{right:8px;gap:11px}
    .rail-btn{width:48px;height:48px}
    #legendBtn{width:40px;height:40px;font-size:18px}
@@ -1649,7 +1635,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  }
  @media (max-width:380px){
      .legend{max-width:230px;font-size:12px}
-     #miniLegend{max-width:min(250px,calc(100vw - 24px))}
  }
  /* --- Auth & Reports --- */
  #userBar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 18px);right:12px;z-index:1100;display:flex;gap:8px;align-items:center}
@@ -1699,7 +1684,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* --- Report sheet (Alpenglühen dark) --- */
  /* --- Report wizard: centered light modal --- */
  /* --- Draw-based snow report (v3) --- */
- body.draw-on #ctrlRail,body.draw-on #layerBar,body.draw-on #demoPill,body.draw-on #mapFabs,body.draw-on #bottomPanel,body.draw-on #legendBtn,body.draw-on .legend,body.draw-on #miniLegend{display:none!important}
+ body.draw-on #ctrlRail,body.draw-on #layerBar,body.draw-on #demoPill,body.draw-on #mapFabs,body.draw-on #bottomPanel,body.draw-on #legendBtn,body.draw-on .legend{display:none!important}
  .fab-v{position:absolute;top:-3px;left:-3px;min-width:16px;height:15px;padding:0 3px;border-radius:7px;background:var(--ink-900);color:#fff;font-size:8.5px;font-weight:900;line-height:15px;text-align:center;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
  .feed-fab .fab-v{background:var(--card);color:var(--ink-900);border-color:var(--ink-900)}
  /* v1 on top, then v2, then v3 -- the stack closes up when a FAB is hidden
@@ -2820,11 +2805,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button class="ly-x" onclick="lyPanelClose()" aria-label="Ebenen schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
 </div>
 <button id="legendBtn" title="Legende" aria-label="Legende"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg></button><div class="legend" id="legend"></div>
-<div id="miniLegend" onclick="document.getElementById('legendBtn').click()">
-  <b id="miniLegendTitle"></b>
-  <div id="miniLegendBar"></div>
-  <div id="miniLegendNums"></div>
-</div>
 </section>
 <!-- Melden: a sheet, not a screen. The two ways in live on the plus. -->
 <div class="set-sheet" id="rpSheet" onclick="if(event.target===this)rpClose()">
@@ -4172,9 +4152,11 @@ function renderPowderFindAbstract(sel){
   let mx=0.001;for(let i=0;i<N;i++)if(f[i]>mx)mx=f[i];
   for(let i=0;i<N;i++){const v=f[i]/mx;const o=i*4;
     if(v<0.05){d[o+3]=0;continue;}
-    const c=depthCol(fcm[i]/f[i])||RGB[0];
+    const c=satBoost(depthCol(fcm[i]/f[i])||RGB[0],0.2+0.3*v);
     d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];
-    d[o+3]=Math.min(150,30+120*Math.pow(v,0.6))|0;}
+    // Bolder than before (was 30-150) -- this is the overview a user sees
+    // zoomed all the way out, so it needs to read clearly at a glance.
+    d[o+3]=Math.min(215,60+155*Math.pow(v,0.55))|0;}
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
   progCommit();
@@ -4409,7 +4391,7 @@ function setRaster(get,border){const img=cx.createImageData(W,H),d=img.data;cons
 function aggT(p,m){let mn=1e9,mx=-1e9,su=0,c=0,cold=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;if(v<0)cold++;}return m=="max"?mx:m=="min"?mn:m=="sub0"?cold:m=="max05"?mx:su/Math.max(1,c);}
 function renderRaster(){
   if(layer=="snow"){const ca=a*NP,cb=b*NP;setRaster(p=>{const v=cum[cb+p]-cum[ca+p];const c=snowCol(v);return c?[c[0],c[1],c[2],170]:null;});}
-  else if(layer=="depth"){const cb2=b*NP;setRaster(p=>{const v=cum[cb2+p];if(v<1)return null;const c=depthCol(v);return[c[0],c[1],c[2],215];});}
+  else if(layer=="depth"){const cb2=b*NP;setRaster(p=>{const v=cum[cb2+p];if(v<1)return null;const c=depthCol(v);return c?[c[0],c[1],c[2],215]:null;});}
   else if(layer=="temp"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[40,120-(x*60|0),255,215];}
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[255,200-(x*110|0),60,235];}
@@ -4545,39 +4527,7 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
     '<span style="display:flex;justify-content:space-between;font-size:10px;margin-top:2px"><span>0 cm</span><span>'+(PD_STRONG_BLUE_CM/2)+' cm</span><span>'+PD_STRONG_BLUE_CM+'+ cm</span></span></div>'+
     '<div style="font-size:11px">Farbe = Neuschnee, Deckkraft = <b>stable</b> vs. <b>reduced</b></div><div style="margin-top:3px;font-size:11px">Gust ≈ mean wind × 1.5</div>';
   return "<b>Hillshade / Relief (swisstopo)</b>";}
-function legend(l){document.getElementById('legend').innerHTML=legendFor(l||layer);try{miniLegendRender(l||layer);}catch(e){}}
-// A compact, always-on version of the full legend above: just the current
-// layer's name, a horizontal strip of its colours, and a couple of numbers
-// -- built by reading the SAME markup legendFor() already produces (off-DOM,
-// never inserted) rather than hand-duplicating every layer's colour table a
-// second time, so it can never drift out of sync with the real legend.
-function miniLegendRender(l){
-  const box=document.getElementById('miniLegend');if(!box)return;
-  const title=document.getElementById('miniLegendTitle'),bar=document.getElementById('miniLegendBar'),nums=document.getElementById('miniLegendNums');
-  const it=(groupItems(curTopic)||[])[curItem],vlabel=(it&&it.vars&&it.vars[curVar]&&it.vars[curVar].label)||l||layer;
-  const tmp=document.createElement('div');tmp.style.cssText='position:absolute;left:-9999px;top:-9999px';
-  tmp.innerHTML=legendFor(l||layer);document.body.appendChild(tmp);
-  // legendFor() isn't consistent about div vs span for the gradient bar or
-  // the numbers row across its ~15 cases, so both element types are checked.
-  const swatches=[...tmp.querySelectorAll('div>i')].map(i=>i.style.background).filter(Boolean);
-  const gradEl=[...tmp.querySelectorAll('div,span')].find(s=>/linear-gradient/.test(s.style.background||''));
-  let barHtml='',numHtml='';
-  if(swatches.length){
-    barHtml=swatches.map(c=>'<span style="background:'+c+'"></span>').join('');
-    const rows=[...tmp.querySelectorAll('div')].filter(r=>r.querySelector(':scope>i'));
-    const texts=rows.map(r=>{const c=r.cloneNode(true);const ic=c.querySelector('i');if(ic)ic.remove();return c.textContent.trim();}).filter(Boolean);
-    if(texts.length)numHtml='<span>'+escapeHtml(texts[0])+'</span><span>'+escapeHtml(texts[texts.length-1])+'</span>';
-  }else if(gradEl){
-    barHtml='<span style="flex:10;background:'+gradEl.style.background+'"></span>';
-    const numsEl=[...tmp.querySelectorAll('div,span')].find(d=>d.style.display==='flex'&&d.style.justifyContent==='space-between');
-    if(numsEl)numHtml=[...numsEl.children].map(s=>'<span>'+escapeHtml(s.textContent)+'</span>').join('');
-  }
-  document.body.removeChild(tmp);
-  if(title)title.textContent=vlabel;
-  if(bar)bar.innerHTML=barHtml;
-  if(nums)nums.innerHTML=numHtml;
-  box.classList.toggle('show',!!barHtml);
-}
+function legend(l){document.getElementById('legend').innerHTML=legendFor(l||layer);}
 // It has no button of its own on the map any more, so it is its own dismiss.
 document.getElementById('legend').onclick=()=>{
   document.getElementById('legend').classList.remove('show');
