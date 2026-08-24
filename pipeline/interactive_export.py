@@ -1370,9 +1370,17 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  @media (max-width:560px){#three-wrap .ctrl3d{bottom:calc(16px + env(safe-area-inset-bottom,0px));gap:5px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 14px;font-size:15px;min-height:46px;border-radius:12px}#btn3dClose{top:calc(8px + env(safe-area-inset-top,0px));right:8px;padding:10px 18px;font-size:16px;border-radius:14px}}
  .sub{font-size:12px;color:var(--mut)}
  .asp-crisp img{image-rendering:pixelated;image-rendering:crisp-edges}
- .legend{position:absolute;z-index:950;bottom:calc(var(--btm-h,80px) + 14px);left:12px;cursor:pointer;background:var(--card);border:1px solid var(--hair);padding:8px 10px;border-radius:var(--r-1);box-shadow:none;font-size:11.5px;max-width:200px;line-height:1.5;color:var(--fg2);display:none}
+ /* Always the bottom-left corner regardless of which layer is active -- the
+    scale control is pinned to the opposite corner (bottomright, see
+    L.control.scale below) so the two never share space. */
+ .legend{position:absolute;z-index:950;bottom:calc(var(--btm-h,80px) + 14px);left:12px;right:auto;top:auto;cursor:pointer;background:var(--card);border:1px solid var(--hair);padding:8px 10px;border-radius:var(--r-1);box-shadow:none;font-size:11.5px;max-width:min(300px,calc(100vw - 24px));line-height:1.5;color:var(--fg2);display:none}
  .legend b{display:block;font-size:9px;font-weight:800;letter-spacing:.08em;
    text-transform:uppercase;color:var(--ink-500);margin-bottom:5px}
+ /* Each class/colour row reads as a chip flowing left-to-right and wrapping
+    like text, rather than one row per line -- most legends list several
+    classes (SLF bands, aspect sectors, comparison colours...) and stacking
+    those vertically was needlessly tall. */
+ .legend>div{display:inline-flex;align-items:center;margin:1px 10px 1px 0;white-space:nowrap}
  .legend div>span:not(.stn){font-family:var(--mono);font-size:8.5px;color:var(--ink-500)}
  .legend.show{display:block}
  #legendBtn{display:none!important}
@@ -3465,6 +3473,12 @@ function tvZoom(factor,anchorFrac){
 // t <-> x, in view coordinates
 function tvX(t,cw){return (t-tv0)/tvSpan()*cw;}
 function tvT(x,cw){return tv0+x/cw*tvSpan();}
+// Ski > Powder is the one layer whose model genuinely answers "what does it
+// look like right now" (computePowder aggregates backward from b over a
+// fixed lookback) rather than "what happened between two times I pick" --
+// so it gets a single point to drag instead of a two-handle range. Every
+// other layer keeps the range untouched.
+function tlSingleMode(){return layer==='powder';}
 function drawTimeline(){const tc=document.getElementById('timeline');const rect=tc.getBoundingClientRect();
   if(!tv1)tvInit();
   if(!rect.width)return;
@@ -3479,8 +3493,11 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   const compact=ch<56;
   const topPad=compact?3:20,botPad=compact?3:26;
   const nx=tvX(nowIdx,cw),x1=tvX(a,cw),x2=tvX(b,cw),baseY=ch-botPad;
-  // soft selection band (rounded) — tinted with the active layer colour
-  ctx2.fillStyle=tlSelTint;rr(x1,2,x2-x1,ch-4,10);ctx2.fill();
+  const single=tlSingleMode();
+  // soft selection band (rounded) — tinted with the active layer colour.
+  // In single-point mode there's no range to shade, just the point itself
+  // (drawn further down, after the bars so it sits on top of them).
+  if(!single){ctx2.fillStyle=tlSelTint;rr(x1,2,x2-x1,ch-4,10);ctx2.fill();}
   // day gridlines + readable date labels
   ctx2.textAlign='left';let _lastLabX=-1e9;
   // At a wide view the gridlines are days; zoomed in they become hours, which
@@ -3508,21 +3525,33 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     if(inSel){ctx2.fillStyle=fut?gSel:gSelPast;ctx2.globalAlpha=1;}
     else{ctx2.fillStyle=fut?_P.accent:_P.mut;ctx2.globalAlpha=.28;}
     rr(x+.5,baseY-h,Math.max(bw-1,1.8),h,Math.min(2.5,bw/2.2));ctx2.fill();ctx2.globalAlpha=1;}
-  // selection frame + rounded grab handles (layer colour)
-  ctx2.strokeStyle=tlSel;ctx2.globalAlpha=.65;ctx2.lineWidth=2;rr(x1+1,2,x2-x1-2,ch-4,10);ctx2.stroke();ctx2.globalAlpha=1;
-  const hh=compact?Math.max(14,ch-8):34,hy=(ch-hh)/2;ctx2.fillStyle=tlSel;
-  rr(x1-3.5,hy,7,hh,3.5);ctx2.fill();rr(x2-3.5,hy,7,hh,3.5);ctx2.fill();
-  ctx2.fillStyle=_P.paper;{const gr=compact?1:1;for(let i=-gr;i<=gr;i++){
-    ctx2.fillRect(x1-1.25,hy+hh/2+i*(compact?4:5),2.5,2.2);
-    ctx2.fillRect(x2-1.25,hy+hh/2+i*(compact?4:5),2.5,2.2);}}
-  // The size of the window, printed under where the start time goes -- not
-  // centred on the selection, which put it over whichever bar happened to
-  // be in the middle rather than anywhere that reads as belonging to it.
-  if(!compact){const lab=(b-a)+' h';ctx2.font='800 12px Inter,system-ui';
-   const w=ctx2.measureText(lab).width+16,cx=Math.max(w/2+2,Math.min(cw-w/2-2,x1+w/2+8));
-   const ly=40;
-   ctx2.fillStyle=tlSel;rr(cx-w/2,ly-8,w,16,8);ctx2.fill();
-   ctx2.fillStyle=_P.paper;ctx2.textAlign='center';ctx2.fillText(lab,cx,ly+4.5);}
+  if(single){
+    // "Powder zu diesem Zeitpunkt": one point, not a range -- a full-height
+    // accent line and a single rounded grab handle, no window-length pill
+    // (the lookback window is a fixed implementation detail here, not
+    // something this control exposes; still adjustable via #tlLen).
+    ctx2.strokeStyle=tlSel;ctx2.globalAlpha=.85;ctx2.lineWidth=2;
+    ctx2.beginPath();ctx2.moveTo(x2,2);ctx2.lineTo(x2,ch-2);ctx2.stroke();ctx2.globalAlpha=1;
+    const hhS=compact?Math.max(14,ch-8):34,hyS=(ch-hhS)/2;ctx2.fillStyle=tlSel;
+    rr(x2-5,hyS,10,hhS,4);ctx2.fill();
+    ctx2.fillStyle=_P.paper;for(let i=-1;i<=1;i++)ctx2.fillRect(x2-1.25,hyS+hhS/2+i*(compact?4:5),2.5,2.2);
+  }else{
+    // selection frame + rounded grab handles (layer colour)
+    ctx2.strokeStyle=tlSel;ctx2.globalAlpha=.65;ctx2.lineWidth=2;rr(x1+1,2,x2-x1-2,ch-4,10);ctx2.stroke();ctx2.globalAlpha=1;
+    const hh=compact?Math.max(14,ch-8):34,hy=(ch-hh)/2;ctx2.fillStyle=tlSel;
+    rr(x1-3.5,hy,7,hh,3.5);ctx2.fill();rr(x2-3.5,hy,7,hh,3.5);ctx2.fill();
+    ctx2.fillStyle=_P.paper;{const gr=compact?1:1;for(let i=-gr;i<=gr;i++){
+      ctx2.fillRect(x1-1.25,hy+hh/2+i*(compact?4:5),2.5,2.2);
+      ctx2.fillRect(x2-1.25,hy+hh/2+i*(compact?4:5),2.5,2.2);}}
+    // The size of the window, printed under where the start time goes -- not
+    // centred on the selection, which put it over whichever bar happened to
+    // be in the middle rather than anywhere that reads as belonging to it.
+    if(!compact){const lab=(b-a)+' h';ctx2.font='800 12px Inter,system-ui';
+     const w=ctx2.measureText(lab).width+16,cx=Math.max(w/2+2,Math.min(cw-w/2-2,x1+w/2+8));
+     const ly=40;
+     ctx2.fillStyle=tlSel;rr(cx-w/2,ly-8,w,16,8);ctx2.fill();
+     ctx2.fillStyle=_P.paper;ctx2.textAlign='center';ctx2.fillText(lab,cx,ly+4.5);}
+  }
   // NOW marker: a dashed line only. It used to carry a "JETZT" pill too, which
   // repeated what the line itself already says by being where it is; orange
   // is enough to keep the two selected-time labels either side of it.
@@ -3530,6 +3559,15 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   ctx2.beginPath();ctx2.moveTo(nx,0);ctx2.lineTo(nx,ch);ctx2.stroke();
   ctx2.setLineDash([]);ctx2.globalAlpha=1;
   if(compact)return;
+  if(single){
+    // one time label, centred on the point, nudged inward so it never
+    // clips off either edge of the canvas.
+    ctx2.font='800 16px Inter,system-ui';ctx2.fillStyle=tlSel;ctx2.textAlign='center';
+    const tP=fmtTime(b-1),wP=ctx2.measureText(tP).width;
+    let px=x2;if(px-wP/2<2)px=wP/2+2;if(px+wP/2>cw-2)px=cw-2-wP/2;
+    ctx2.fillText(tP,px,21);
+    return;
+  }
   // selected start / end times — pushed to the OUTER bounds when the selection is narrow
   ctx2.font='800 16px Inter,system-ui';ctx2.fillStyle=tlSel;
   const tA=fmtTime(a),tB=fmtTime(b-1),wA=ctx2.measureText(tA).width,wB=ctx2.measureText(tB).width;
@@ -4781,9 +4819,16 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
     drawTimeline();
     if(e.cancelable)e.preventDefault();
     return true;}
+  function pointDragTo(cx){const rect=tc.getBoundingClientRect();
+    const t=Math.round(tvT(cx-rect.left,rect.width));
+    b=Math.max(1,Math.min(T,t+1));a=Math.max(0,b-windowSize);}
   function startDrag(e){
     if(pinchStart(e)){if(e.cancelable)e.preventDefault();return;}
     const cx=e.touches?e.touches[0].clientX:e.clientX;
+    if(tlSingleMode()){
+      pointDragTo(cx);mode='point';dragStartX=cx;
+      tc.style.cursor='grabbing';tvFollow();renderAll();
+      if(e.cancelable)e.preventDefault();return;}
     const zone=getZone(cx);
     if(zone==='outside'){
       const rect=tc.getBoundingClientRect();
@@ -4799,6 +4844,7 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
     if(!mode)return;
     if(e.cancelable)e.preventDefault();
     const cx=e.touches?e.touches[0].clientX:e.clientX;
+    if(mode==='point'){pointDragTo(cx);tvFollow();drawTimeline();return;}
     const delta=Math.round((cx-dragStartX)/W()*tvSpan());
     if(mode==='center'){const na=Math.max(0,Math.min(T-ws,dragStartA+delta));a=na;b=na+ws;}
     else if(mode==='left'){a=Math.max(0,Math.min(dragStartB-4,dragStartA+delta));windowSize=b-a;}
@@ -4817,7 +4863,9 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
     tvZoom((e.deltaY||e.deltaX)>0?1/1.18:1.18,(e.clientX-rect.left)/rect.width);
     drawTimeline();},{passive:false});
   tc.addEventListener('dblclick',()=>{tvInit();drawTimeline();});
-  tc.addEventListener('mousemove',function(e){if(mode)return;const zone=getZone(e.clientX);
+  tc.addEventListener('mousemove',function(e){if(mode)return;
+    if(tlSingleMode()){tc.style.cursor='grab';return;}
+    const zone=getZone(e.clientX);
     tc.style.cursor=zone==='center'?'grab':zone==='left'||zone==='right'?'col-resize':'crosshair';});
 })();
 
@@ -7368,8 +7416,13 @@ function routeSummary(rt){
   let up=0,down=0;for(let i=1;i<rt.dir.length;i++){if(rt.dir[i]>0)up++;else down++;}
   return up>down*1.15?'Aufstieg':(down>up*1.15?'Abfahrt':'Route (auf + ab)');
 }
-function drawSampleAt(p){let ll;try{ll=map.containerPointToLatLng(p);}catch(e){return;}drawRecordSample(drawPen.id,ll.lat,ll.lng);}
-function drawRecordSample(type,lat,lng){if(!type)return;const a=(drawZoneSamples[type]=drawZoneSamples[type]||[]);if(a.length<600)a.push([lat,lng]);}
+function drawSampleAt(p){let ll;try{ll=map.containerPointToLatLng(p);}catch(e){return;}
+  // The depth slider's value at THIS instant, not read again later at export
+  // time -- painting 10cm here and then dragging the slider to 25cm before
+  // painting elsewhere must not silently relabel the first stroke too.
+  const cm=(drawPen&&drawPen.slider&&(drawPen.id==='powder'||drawPen.id==='drift'))?drawPen.slider.val:null;
+  drawRecordSample(drawPen.id,ll.lat,ll.lng,cm);}
+function drawRecordSample(type,lat,lng,cm){if(!type)return;const a=(drawZoneSamples[type]=drawZoneSamples[type]||[]);if(a.length<600)a.push([lat,lng,cm]);}
 function drawDemFull(lat,lon){const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
   const fe=fineElev(lat,lon),fa=fineAspectDeg(lat,lon);
   let ce=null,ca=null,cs=null;if(cx>=0&&cx<W&&cy>=0&&cy<H){const q=cy*W+cx;ce=melevv(q);ca=maspv(q);cs=mslpv(q);}
@@ -7386,21 +7439,31 @@ function drawComputeZones(){
     // if it leaked in here the prognosis would read it as a snow type that
     // CONFLICTS with the powder painted on the same slope.
     if(!DRAW_PENS[type]||DRAW_PENS[type].kind!=='zone')continue;
-    let slat=0,slng=0,emin=1e9,emax=-1e9,sx=0,sy=0,na=0,ssl=0,ssl2=0,ns=0;
-    for(const pr of pts){const la=pr[0],lo=pr[1];slat+=la;slng+=lo;const d=drawDemFull(la,lo);if(!d)continue;
-      if(d.elev!=null){if(d.elev<emin)emin=d.elev;if(d.elev>emax)emax=d.elev;}
-      if(d.slope!=null){ssl+=d.slope;ssl2+=d.slope*d.slope;ns++;}
-      if(d.slope>=6&&d.aspectDeg!=null){const r=d.aspectDeg*Math.PI/180;sx+=Math.cos(r);sy+=Math.sin(r);na++;}}
     const _pen=DRAW_PENS[type];
-    const _cm=(_pen&&_pen.slider&&(type==='powder'||type==='drift'))?_pen.slider.val:null;
-    const _sMean=ns?ssl/ns:null;
-    const _sSd=(ns>1)?Math.sqrt(Math.max(0,ssl2/ns-_sMean*_sMean)):null;
-    zones.push({type:type,centroid:[slat/pts.length,slng/pts.length],
-      elevMin:emin<1e9?Math.round(emin):null,elevMax:emax>-1e9?Math.round(emax):null,
-      aspectDeg:na?((Math.atan2(sy,sx)*180/Math.PI)+360)%360:null,aspectConc:na?Math.hypot(sx,sy)/na:0,
-      slope:_sMean!=null?Math.round(_sMean*10)/10:null,
-      slopeSd:_sSd!=null?Math.round(_sSd*10)/10:null,
-      cm:_cm,n:pts.length});
+    const hasDepth=!!(_pen&&_pen.slider&&(type==='powder'||type==='drift'));
+    // A depth-bearing pen painted at two different settings is two different
+    // colour segments, not one area to average over -- group by the depth
+    // captured per sample (drawSampleAt), one zone per distinct value, so
+    // each keeps its own elevation band instead of merging into a single
+    // bounding box stamped with whichever value the slider read last.
+    const groups=hasDepth?{}:{'':pts};
+    if(hasDepth)pts.forEach(pr=>{const k=String(pr[2]);(groups[k]=groups[k]||[]).push(pr);});
+    for(const gk in groups){const gpts=groups[gk];if(gpts.length<2)continue;
+      let slat=0,slng=0,emin=1e9,emax=-1e9,sx=0,sy=0,na=0,ssl=0,ssl2=0,ns=0;
+      for(const pr of gpts){const la=pr[0],lo=pr[1];slat+=la;slng+=lo;const d=drawDemFull(la,lo);if(!d)continue;
+        if(d.elev!=null){if(d.elev<emin)emin=d.elev;if(d.elev>emax)emax=d.elev;}
+        if(d.slope!=null){ssl+=d.slope;ssl2+=d.slope*d.slope;ns++;}
+        if(d.slope>=6&&d.aspectDeg!=null){const r=d.aspectDeg*Math.PI/180;sx+=Math.cos(r);sy+=Math.sin(r);na++;}}
+      const _cm=hasDepth?(gpts[0][2]!=null?gpts[0][2]:null):null;
+      const _sMean=ns?ssl/ns:null;
+      const _sSd=(ns>1)?Math.sqrt(Math.max(0,ssl2/ns-_sMean*_sMean)):null;
+      zones.push({type:type,centroid:[slat/gpts.length,slng/gpts.length],
+        elevMin:emin<1e9?Math.round(emin):null,elevMax:emax>-1e9?Math.round(emax):null,
+        aspectDeg:na?((Math.atan2(sy,sx)*180/Math.PI)+360)%360:null,aspectConc:na?Math.hypot(sx,sy)/na:0,
+        slope:_sMean!=null?Math.round(_sMean*10)/10:null,
+        slopeSd:_sSd!=null?Math.round(_sSd*10)/10:null,
+        cm:_cm,n:gpts.length});
+    }
   }
   return zones;
 }
