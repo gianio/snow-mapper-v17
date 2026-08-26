@@ -2366,6 +2366,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .fc-stars svg{width:14px;height:14px}
  .fc-depth{font-size:13px;font-weight:700;color:var(--mut);font-family:var(--mono);
    flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ /* Elevation-band mountain glyph + aspect rose: replaces the plain-text
+    "Powder · 1500-2100 m · N" reading wherever a report carries zones. */
+ .rpt-viz{display:flex;align-items:center;gap:6px;color:var(--ink-700);flex:0 1 auto;min-width:0}
+ .rpt-mtn,.rpt-rose{flex:none;display:block}
+ .rpt-viz-txt{display:flex;flex-direction:column;gap:1px;font-family:var(--mono);line-height:1.25;min-width:0}
+ .rpt-viz-txt b{font-size:12.5px;font-weight:800;color:var(--fg2);white-space:nowrap}
+ .rpt-viz-txt span{font-size:11px;font-weight:700;color:var(--mut)}
  .feed-card-actions .fc-sp{margin-left:auto}
  .feed-card-actions button:hover{color:var(--fg)}
  .feed-card-actions .flag-btn{color:var(--mut)}
@@ -4055,15 +4062,29 @@ function progRecency(z){const a=z.ageH==null?12:z.ageH;return 0.35+0.65*Math.exp
 // property of the terrain, not of the reporter. It scales the *evidence*, so a
 // confirmed report by a trusted user carries more weight when several reports
 // overlap — it wins the agree/conflict tug-of-war and lifts confidence faster.
+// Beyond this, exp(-dd^2/PROG_SC_KM^2) is under 1e-4 -- negligible next to a
+// typical evidence sum -- so it's a safe cutoff, not just a speed/accuracy
+// tradeoff. progCell() runs once per grid cell (up to PROG_GW*PROG_GH of
+// them) per near zone, so skipping the expensive terrain match (several
+// Math.exp calls in progEnvelope) for pairs this cheap check already rules
+// out is what keeps zooming responsive once a view has many nearby reports.
+const PROG_CUT_KM=PROG_SC_KM*3.2,PROG_CUT_KM2=PROG_CUT_KM*PROG_CUT_KM;
 function progCell(asp,elev,slp,lat,lon,sel,oth){
   let sS=0,sO=0,best=0,sw=0,sw2=0,cmS=0,cmW=0;
-  for(const z of sel){const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;
-    const dd=progDistKm(lat,lon,z),m0=e*Math.exp(-(dd*dd)/(PROG_SC_KM*PROG_SC_KM))*progRecency(z);
+  const cosLat=Math.cos(lat*Math.PI/180);
+  for(const z of sel){
+    const dLat=(lat-z.lat)*111,dLo=(lon-z.lng)*111*cosLat,d2=dLat*dLat+dLo*dLo;
+    if(d2>PROG_CUT_KM2)continue;
+    const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;
+    const dd=Math.sqrt(d2),m0=e*Math.exp(-(dd*dd)/(PROG_SC_KM*PROG_SC_KM))*progRecency(z);
     const m=m0*(z.w==null?1:z.w);
     sS+=m;sw+=m;sw2+=m*m;if(m0>best)best=m0;
     if(z.cm!=null){cmS+=z.cm*m;cmW+=m;}}
-  for(const z of oth){const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;
-    const dd=progDistKm(lat,lon,z);sO+=e*Math.exp(-(dd*dd)/(PROG_SC_KM*PROG_SC_KM))*progRecency(z)*(z.w==null?1:z.w);}
+  for(const z of oth){
+    const dLat=(lat-z.lat)*111,dLo=(lon-z.lng)*111*cosLat,d2=dLat*dLat+dLo*dLo;
+    if(d2>PROG_CUT_KM2)continue;
+    const e=progEnvelope(asp,elev,slp,z);if(e<=0.04)continue;
+    const dd=Math.sqrt(d2);sO+=e*Math.exp(-(dd*dd)/(PROG_SC_KM*PROG_SC_KM))*progRecency(z)*(z.w==null?1:z.w);}
   const tot=sS+sO,agree=tot>0?sS/tot:0;
   // Standing on terrain that matches a nearby report IS close to an
   // observation, so evidence saturates quickly and a single good report can
@@ -4131,12 +4152,12 @@ function renderPowderFindAbstract(sel){
     const tmp0=document.createElement('canvas');tmp0.width=PROG_GW;tmp0.height=PROG_GH;tmp0.getContext('2d').putImageData(img,0,0);
     pcx.clearRect(0,0,pcv.width,pcv.height);pcx.drawImage(tmp0,0,0,pcv.width,pcv.height);progCommit();return;
   }
-  // Splat radius kept tight (was 0.14 of the grid span, blurring every
-  // report into one country-wide smear) so the overview still reads as
-  // "roughly where the reports are", not just "there are reports somewhere".
-  // Colour is now per-location (SLF depth bands, same scale as Schneehöhe)
-  // rather than one blended tint for the whole map.
-  const f=new Float32Array(N),fcm=new Float32Array(N),R=Math.max(PROG_GW,PROG_GH)*0.055,sig=R*0.5;
+  // Splat radius: wide enough that reports from the same slope/valley blend
+  // into one region (mixing is the point of a zoomed-out overview), tight
+  // enough that a single isolated report still reads as its own spot rather
+  // than smearing across the whole visible map (was 0.14 of the grid span
+  // originally, then a too-tight 0.055; this splits the difference).
+  const f=new Float32Array(N),fcm=new Float32Array(N),R=Math.max(PROG_GW,PROG_GH)*0.075,sig=R*0.5;
   sel.forEach(z=>{
     const gx=(z.lng-PROG_BOUNDS.w)/(PROG_BOUNDS.e-PROG_BOUNDS.w)*(PROG_GW-1);
     const gy=(PROG_BOUNDS.n-z.lat)/(PROG_BOUNDS.n-PROG_BOUNDS.s)*(PROG_GH-1);
@@ -4149,14 +4170,21 @@ function renderPowderFindAbstract(sel){
       f[idx]+=g;fcm[idx]+=g*cm;
     }
   });
-  let mx=0.001;for(let i=0;i<N;i++)if(f[i]>mx)mx=f[i];
-  for(let i=0;i<N;i++){const v=f[i]/mx;const o=i*4;
-    if(v<0.05){d[o+3]=0;continue;}
-    const c=satBoost(depthCol(fcm[i]/f[i])||RGB[0],0.2+0.3*v);
+  // Density on an ABSOLUTE scale, not "relative to the busiest spot on the
+  // whole map" -- with the old f[i]/max normalisation, one report in a quiet
+  // valley faded to nothing whenever some other valley had twenty overlapping
+  // ones. Saturating instead means a single report already reads clearly on
+  // its own, and a spot where several reports agree still saturates further
+  // toward full opacity -- so "many reports, not much snow" (pale, opaque),
+  // "many reports AND much snow" (deep colour, opaque) and "just one report"
+  // (whatever colour, softer) stay visually distinct from each other.
+  const DK=1.15;
+  for(let i=0;i<N;i++){const o=i*4;
+    const v=1-Math.exp(-f[i]/DK);
+    if(v<0.08){d[o+3]=0;continue;}
+    const c=satBoost(depthCol(fcm[i]/f[i])||RGB[0],0.15+0.3*v);
     d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];
-    // Bolder than before (was 30-150) -- this is the overview a user sees
-    // zoomed all the way out, so it needs to read clearly at a glance.
-    d[o+3]=Math.min(215,60+155*Math.pow(v,0.55))|0;}
+    d[o+3]=Math.min(215,60+155*Math.pow(v,0.7))|0;}
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
   progCommit();
@@ -4353,6 +4381,13 @@ function nearbyPointReports(lat,lon,radiusKm){
     const cd=r.condition_data;if(cd&&(cd.zones||cd.quick))return false;
     return progDistKm(lat,lon,r)<=radiusKm;
   }).sort((x,y)=>progDistKm(lat,lon,x)-progDistKm(lat,lon,y));
+}
+// Drawn-report powder zones near a tap, straight from the same cache
+// renderPowderFind() already built -- lets the tap popup show the same
+// elevation-band/aspect summary a feed card shows, for whatever is nearby.
+function nearbyPowderZones(lat,lon,radiusKm){
+  if(!_progFindSel)return [];
+  return _progFindSel.filter(z=>progDistKm(lat,lon,z)<=radiusKm);
 }
 const windArr=L.layerGroup(); const stnGroup=L.layerGroup().addTo(map);
 let layer="snow",stat="avg",windowSize=48,a=nowIdx,b=Math.min(T,nowIdx+48),showStn=false,wtimer=null;
@@ -5305,10 +5340,12 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
       return '<span class="insp-chip">'+catSvg(r.cat,12)+' '+escapeHtml(lbl)+'</span>';
     }).join('');
     const note=[peopleTxt,trackTxt].filter(Boolean).join(' · ');
+    const vizHtml=rptVizHTML(nearbyPowderZones(lat,lon,3),42);
     progSec='<div class="insp-sec insp-prog"><h4>Gemeldetes Powder'+(cmTxt?' <em>'+cmTxt+'</em>':'')+'</h4>'+
+      (vizHtml?'<div style="margin-top:2px">'+vizHtml+'</div>':'')+
       (note?'<div class="prog-note">'+note+'</div>':'')+
       (otherChips?'<div class="insp-chips" style="overflow-x:visible;flex-wrap:wrap;margin-top:8px">'+otherChips+'</div>':'')+
-      (!cmTxt&&!note&&!otherChips?'<div class="prog-note">Keine Meldungen in der Nähe.</div>':'')+
+      (!cmTxt&&!note&&!otherChips&&!vizHtml?'<div class="prog-note">Keine Meldungen in der Nähe.</div>':'')+
       '</div>';
   }catch(e){}}
   pan.innerHTML=
@@ -7377,6 +7414,12 @@ function drawSetupCanvas(){
     // pre-stroke snapshot, so this is exact) and the map takes the gesture
     // until every finger lifts.
     cv.addEventListener('pointerdown',e=>{
+      // iOS Safari does not fully honour touch-action:none for a second
+      // simultaneous touch point unless pointerdown/pointermove also call
+      // preventDefault() themselves -- without it a second finger can start
+      // a native page gesture instead of reaching this handler, which is
+      // what made two-finger pan intermittently do nothing on iPhone.
+      e.preventDefault();
       _drawActivePointers.add(e.pointerId);
       _drawPointerPos.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(_drawActivePointers.size>=2){
@@ -7389,6 +7432,7 @@ function drawSetupCanvas(){
       try{cv.setPointerCapture(e.pointerId);_drawCapturedId=e.pointerId;}catch(_){}
       _drawPainting=true;drawPushHistory();drawStrokeBegin(pt(e),e.pressure);drawRepaint();try{haptic(4);}catch(_){}});
     cv.addEventListener('pointermove',e=>{
+      e.preventDefault();
       if(_drawGesturePan){
         if(!_drawActivePointers.has(e.pointerId))return;
         _drawPointerPos.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -8524,6 +8568,61 @@ function locPickerFilter(q){const list=(locPickerMode==='peak'?PEAKS:DESTS);q=(q
 function locPickerPick(i){const p=(locPickerMode==='peak'?PEAKS:DESTS)[i];
   feedSetAnchor({name:p.n,lat:p.lat,lng:p.lng,src:locPickerMode});locPickerClose();haptic(6);}
 const _SNAP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;vertical-align:-1px"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/></svg>';
+// --- Report visual summary: elevation-band mountain glyph + aspect rose ---
+// Turns "Powder · 1500-2100 m · N" style text into two small glyphs: a
+// mountain silhouette with the reported elevation band filled in, and an
+// 8-sector compass with the reported aspect(s) tinted. Multiple zones (a
+// multi-segment drawn report) stack as multiple bands/sectors on the SAME
+// icon rather than picking one and discarding the rest. rptNormZone() reads
+// either shape zones come in: straight off a submission (elevMin/elevMax/
+// aspectDeg/aspectConc) or out of progZones() (e0/e1/asp/conc).
+const RPTVIZ_ELEV_LO=500,RPTVIZ_ELEV_HI=4000;
+function rptNormZone(z){
+  return {elevMin:z.elevMin!=null?z.elevMin:z.e0,elevMax:z.elevMax!=null?z.elevMax:z.e1,
+    aspectDeg:z.aspectDeg!=null?z.aspectDeg:z.asp,aspectConc:z.aspectConc!=null?z.aspectConc:z.conc,cm:z.cm};
+}
+function rptMountainSVG(nz,size){
+  const mw=size*0.92,mh=size*0.8,tipY=size*0.06,baseY=tipY+mh,tipX=size/2,lx=(size-mw)/2,rx=lx+mw;
+  const eY=e=>{const t=Math.max(0,Math.min(1,(e-RPTVIZ_ELEV_LO)/(RPTVIZ_ELEV_HI-RPTVIZ_ELEV_LO)));return baseY-t*(baseY-tipY);};
+  const cid='rvm'+Math.random().toString(36).slice(2,9);
+  let bands='';
+  nz.forEach(z=>{if(z.elevMin==null||z.elevMax==null)return;
+    const y1=eY(Math.max(z.elevMin,z.elevMax)),y0=eY(Math.min(z.elevMin,z.elevMax));
+    bands+='<rect x="'+lx.toFixed(1)+'" y="'+y1.toFixed(1)+'" width="'+(rx-lx).toFixed(1)+'" height="'+Math.max(1.6,y0-y1).toFixed(1)+'" fill="#171923" opacity=".7"/>';});
+  return '<svg class="rpt-mtn" viewBox="0 0 '+size+' '+size+'" width="'+size+'" height="'+size+'" aria-hidden="true">'+
+    '<defs><clipPath id="'+cid+'"><polygon points="'+lx.toFixed(1)+','+baseY.toFixed(1)+' '+tipX.toFixed(1)+','+tipY.toFixed(1)+' '+rx.toFixed(1)+','+baseY.toFixed(1)+'"/></clipPath></defs>'+
+    '<polygon points="'+lx.toFixed(1)+','+baseY.toFixed(1)+' '+tipX.toFixed(1)+','+tipY.toFixed(1)+' '+rx.toFixed(1)+','+baseY.toFixed(1)+'" fill="rgba(74,163,255,.10)" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>'+
+    '<g clip-path="url(#'+cid+')">'+bands+'</g></svg>';
+}
+function rptRoseSVG(nz,size){
+  const cx=size/2,cy=size/2,r=size*0.44;
+  const dirs=[0,45,90,135,180,225,270,315];
+  const str=dirs.map(brg=>{let m=0;nz.forEach(z=>{if(z.aspectDeg==null)return;
+    const mm=progAspectMatch(brg,z.aspectDeg,z.aspectConc==null?0.7:z.aspectConc);if(mm>m)m=mm;});return m;});
+  const pt=(brg,rad)=>{const a=brg*Math.PI/180;return [cx+rad*Math.sin(a),cy-rad*Math.cos(a)];};
+  let wedges='';
+  for(let i=0;i<8;i++){
+    const p0=pt(dirs[i]-22.5,r),p1=pt(dirs[i]+22.5,r);
+    const op=(0.10+0.78*str[i]).toFixed(2);
+    wedges+='<path d="M'+cx+','+cy+' L'+p0[0].toFixed(1)+','+p0[1].toFixed(1)+' A'+r.toFixed(1)+','+r.toFixed(1)+' 0 0 1 '+p1[0].toFixed(1)+','+p1[1].toFixed(1)+' Z" fill="rgb(74,163,255)" fill-opacity="'+op+'"/>';
+  }
+  return '<svg class="rpt-rose" viewBox="0 0 '+size+' '+size+'" width="'+size+'" height="'+size+'" aria-hidden="true">'+wedges+
+    '<circle cx="'+cx+'" cy="'+cy+'" r="'+r.toFixed(1)+'" fill="none" stroke="currentColor" stroke-width="1" opacity=".3"/></svg>';
+}
+function rptVizHTML(zones,size){
+  if(!zones||!zones.length)return '';
+  size=size||34;
+  const nz=zones.map(rptNormZone).filter(z=>z.elevMin!=null||z.elevMax!=null||z.aspectDeg!=null);
+  if(!nz.length)return '';
+  const elevs=nz.filter(z=>z.elevMin!=null&&z.elevMax!=null);
+  const eLo=elevs.length?Math.min(...elevs.map(z=>z.elevMin)):null;
+  const eHi=elevs.length?Math.max(...elevs.map(z=>z.elevMax)):null;
+  const cms=nz.map(z=>z.cm).filter(v=>v!=null);
+  const cmTxt=cms.length?Math.round(cms.reduce((a,b)=>a+b,0)/cms.length)+' cm'+(cms.length>1?' Ø':''):'';
+  const elevTxt=(eLo!=null&&eHi!=null)?Math.round(eLo)+'–'+Math.round(eHi)+' m':'';
+  return '<div class="rpt-viz">'+rptMountainSVG(nz,size)+rptRoseSVG(nz,size)+
+    '<div class="rpt-viz-txt">'+(elevTxt?'<b>'+elevTxt+'</b>':'')+(cmTxt?'<span>'+cmTxt+'</span>':'')+'</div></div>';
+}
 // A drawing is a statement about terrain, and terrain does not survive being
 // shrunk into a card -- a thumbnail of a few painted blobs says nothing you
 // could not read from the badges. So a drawn snow map shows no image at all
@@ -8591,7 +8690,8 @@ function feedRender(){
         ${r.img&&r.caption?`<div class="feed-card-caption">${escapeHtml(r.caption)}</div>`:''}
       </div>
       <div class="feed-card-read">
-        ${r.measurement?`<span class="fc-depth" title="${escapeHtml(r.measurement)}">${escapeHtml(r.measurement)}</span>`:''}
+        ${(r.condition_data&&r.condition_data.zones&&r.condition_data.zones.length)?rptVizHTML(r.condition_data.zones,36):
+          (r.measurement?`<span class="fc-depth" title="${escapeHtml(r.measurement)}">${escapeHtml(r.measurement)}</span>`:'')}
         ${r.stars?`<span class="fc-stars"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z" fill="currentColor" stroke="none"/></svg>${r.stars}/5</span>`:''}
       </div>
       <div class="feed-card-actions">
