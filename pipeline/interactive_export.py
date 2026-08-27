@@ -2470,7 +2470,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     do (report), and the two small things you occasionally need. */
  /* One size, one colour. Five buttons in three sizes was three decisions to
     make before you could pick one of them. */
- #mapFabs{position:absolute;z-index:900;right:14px;bottom:calc(var(--btm-h,120px) + 22px);
+ /* --btm-h is only the bottom panel's own offsetHeight; the panel is ALSO
+    lifted off the true viewport edge by env(safe-area-inset-bottom)+10px
+    (see #bottomPanel), which this must add back in too or the FAB column
+    -- including the "+" report button at its foot -- sits that much too
+    low and disappears behind the panel on any device with a bottom
+    safe-area inset (iPhone home-indicator models). */
+ #mapFabs{position:absolute;z-index:900;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,120px) + 32px);
    display:flex;flex-direction:column;align-items:flex-end;gap:12px}
  .mfab{position:relative;width:var(--fab);height:var(--fab);border-radius:var(--r-full);
    border:1px solid var(--hair);background:var(--card);color:var(--ink-900);
@@ -4189,16 +4195,30 @@ function renderPowderFindAbstract(sel){
   // a visible clipped circle. Where two clouds' boxes overlap, both the
   // density (f) and the depth-weighted colour (fcm) accumulate together,
   // so the blend across that overlap is as continuous as the fade-out is.
-  const f=new Float32Array(N),fcm=new Float32Array(N),R=Math.max(PROG_GW,PROG_GH)*0.05,sig=R*0.3;
+  //
+  // Grid cells are NOT square on the ground: PROG_GW/PROG_GH follow the
+  // (viewport-shaped) lat/lon bounding box, and a degree of longitude is
+  // physically shorter than a degree of latitude away from the equator.
+  // A splat built from raw dx/dy grid-index differences was an ellipse on
+  // the map, not a circle. Converting to real kilometres per axis first
+  // fixes that -- Web Mercator's local scale distortion is the same in
+  // both directions, so a circle in km stays a circle on screen.
+  const midLat=(PROG_BOUNDS.n+PROG_BOUNDS.s)/2;
+  const kmPerGX=(PROG_BOUNDS.e-PROG_BOUNDS.w)*111.32*Math.cos(midLat*Math.PI/180)/Math.max(1,PROG_GW-1);
+  const kmPerGY=(PROG_BOUNDS.n-PROG_BOUNDS.s)*110.574/Math.max(1,PROG_GH-1);
+  const spanXkm=(PROG_GW-1)*kmPerGX,spanYkm=(PROG_GH-1)*kmPerGY;
+  const f=new Float32Array(N),fcm=new Float32Array(N);
+  const Rkm=Math.min(spanXkm,spanYkm)*0.075,sigKm=Rkm*0.3;
+  const Rx=Rkm/kmPerGX,Ry=Rkm/kmPerGY;
   sel.forEach(z=>{
     const gx=(z.lng-PROG_BOUNDS.w)/(PROG_BOUNDS.e-PROG_BOUNDS.w)*(PROG_GW-1);
     const gy=(PROG_BOUNDS.n-z.lat)/(PROG_BOUNDS.n-PROG_BOUNDS.s)*(PROG_GH-1);
     const w=(z.w==null?1:z.w)*progRecency(z),cm=z.cm==null?25:z.cm;
-    const x0=Math.max(0,Math.round(gx-R)),x1=Math.min(PROG_GW-1,Math.round(gx+R));
-    const y0=Math.max(0,Math.round(gy-R)),y1=Math.min(PROG_GH-1,Math.round(gy+R));
+    const x0=Math.max(0,Math.round(gx-Rx)),x1=Math.min(PROG_GW-1,Math.round(gx+Rx));
+    const y0=Math.max(0,Math.round(gy-Ry)),y1=Math.min(PROG_GH-1,Math.round(gy+Ry));
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
-      const dx=x-gx,dy=y-gy,d2=dx*dx+dy*dy;if(d2>R*R)continue;
-      const g=w*Math.exp(-d2/(2*sig*sig)),idx=y*PROG_GW+x;
+      const dxKm=(x-gx)*kmPerGX,dyKm=(y-gy)*kmPerGY,d2=dxKm*dxKm+dyKm*dyKm;if(d2>Rkm*Rkm)continue;
+      const g=w*Math.exp(-d2/(2*sigKm*sigKm)),idx=y*PROG_GW+x;
       f[idx]+=g;fcm[idx]+=g*cm;
     }
   });
@@ -4555,7 +4575,14 @@ function progRefresh(){
 }
 map.on('moveend zoomend',progRefresh);
 let _lastTier=-1;
-map.on('zoomend',()=>{try{const t=detailTier();if(t!==_lastTier){_lastTier=t;renderStations();}loadReportMarkers();}catch(e){}});
+// Skipped while the draw tool is open: its manual two-finger pan/zoom calls
+// panBy()/setZoomAround() with animate:false, which fire zoomend SYNCHRONOUSLY
+// on every gesture frame (an animated pan only fires it once, at the end) --
+// re-clustering every report marker on every one of those frames is what
+// made two-finger panning feel laggy there. None of this is visible under
+// the drawing canvas anyway; it settles once for real the next time the
+// map is used normally.
+map.on('zoomend',()=>{if(document.body.classList.contains('draw-on'))return;try{const t=detailTier();if(t!==_lastTier){_lastTier=t;renderStations();}loadReportMarkers();}catch(e){}});
 function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");const wd=['So','Mo','Di','Mi','Do','Fr','Sa'][d.getUTCDay()];return wd+' '+d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'., '+d.getUTCHours()+':00';}
 function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString('de-CH',{day:'2-digit',month:'short'});}
 function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
@@ -4924,7 +4951,7 @@ addEventListener('keydown',e=>{
 // from the same entry point the rest of the app already calls.
 function renderLayerStrip(){try{lyRender();}catch(e){}}
 // Deep-zoom items appear/disappear as the user zooms, so keep the row in sync.
-map.on('zoomend',function(){try{
+map.on('zoomend',function(){if(document.body.classList.contains('draw-on'))return;try{
   const shown=lyLayers().length;
   const want=Object.keys(GROUPS).reduce((n,g)=>n+groupItems(g).length,0);
   if(shown!==want)setTopic(curTopic,Math.min(curItem,groupItems(curTopic).length-1),curVar);}catch(e){}});
@@ -7402,7 +7429,7 @@ let _drawPainting=false,_drawLastPt=null,_drawCurRoute=null,_drawCurTrack=null,_
 // apart from the first (see drawSetupCanvas): a momentary pan/zoom gesture,
 // not a second brush.
 let _drawActivePointers=new Set(),_drawGesturePan=false,_drawCapturedId=null;
-let _drawPointerPos=new Map(),_drawGestureC=null,_drawGestureD=0;
+let _drawPointerPos=new Map(),_drawGestureC=null,_drawGestureD=0,_drawGestureRAF=null;
 let _drawTrackGrid=new Set(),drawTrackZoom=null;
 let drawBrushSize=34,drawZoneSamples={},_drawLastTrackC=null,_drawBtmH='';
 // The slider sets the baseline; a stylus or a force-sensing screen can push
@@ -7447,6 +7474,7 @@ function drawOpen(){
   drawRoutes=[];drawTracks=[];drawZoneUsed=new Set();drawHistory=[];_drawPainting=false;drawZoneCanvas=null;_drawTrackGrid=new Set();drawTrackZoom=null;drawZoneSamples={};
   _drawActivePointers=new Set();_drawGesturePan=false;_drawCapturedId=null;
   _drawPointerPos=new Map();_drawGestureC=null;_drawGestureD=0;
+  if(_drawGestureRAF!=null){cancelAnimationFrame(_drawGestureRAF);_drawGestureRAF=null;}
   document.body.classList.remove('draw-gesture-pan');document.body.classList.add('draw-on');
   document.getElementById('drawWrap').style.display='block';
   _drawBtmH=document.documentElement.style.getPropertyValue('--btm-h');
@@ -7468,6 +7496,7 @@ function drawClose(){
   document.body.classList.remove('draw-on','draw-gesture-pan');
   _drawActivePointers=new Set();_drawGesturePan=false;_drawCapturedId=null;
   _drawPointerPos=new Map();_drawGestureC=null;_drawGestureD=0;
+  if(_drawGestureRAF!=null){cancelAnimationFrame(_drawGestureRAF);_drawGestureRAF=null;}
   if(_drawBtmH)document.documentElement.style.setProperty('--btm-h',_drawBtmH);
   try{map.invalidateSize({animate:false,pan:false});}catch(e){}
   try{map.dragging.enable();map.touchZoom.enable();map.doubleClickZoom.enable();if(_desktop)map.scrollWheelZoom.enable();}catch(e){}
@@ -7480,6 +7509,30 @@ function _drawGestureRead(){
   const a=_drawPointerPos.get(ids[0]),b=_drawPointerPos.get(ids[1]);
   if(!a||!b)return null;
   return {c:{x:(a.x+b.x)/2,y:(a.y+b.y)/2},d:Math.hypot(a.x-b.x,a.y-b.y)};
+}
+// Touch move events can fire well above the display's paint rate (coalesced
+// samples, high-polling-rate digitisers) -- panBy()/setZoomAround() on every
+// single one of them was doing multiple times the map/canvas work an actual
+// frame could ever show, which is most of what made two-finger panning feel
+// like it was lagging behind the fingers. pointermove now only records the
+// latest finger positions (cheap); the actual map update runs at most once
+// per animation frame, reading whatever the latest position was by then.
+function _drawGestureApply(){
+  _drawGestureRAF=null;
+  if(!_drawGesturePan)return;
+  const g=_drawGestureRead();
+  if(g&&_drawGestureC){
+    try{
+      if(g.d>0&&_drawGestureD>0&&Math.abs(g.d-_drawGestureD)>0.5){
+        const anchor=map.mouseEventToLatLng({clientX:_drawGestureC.x,clientY:_drawGestureC.y});
+        const nz=map.getScaleZoom(g.d/_drawGestureD,map.getZoom());
+        map.setZoomAround(anchor,nz,{animate:false});
+      }
+      map.panBy([g.c.x-_drawGestureC.x,g.c.y-_drawGestureC.y],{animate:false,duration:0});
+    }catch(_e){}
+    _drawGestureC=g.c;_drawGestureD=g.d;
+    drawRepaint();
+  }
 }
 function drawSetupCanvas(){
   const cv=drawFitCanvas();
@@ -7522,19 +7575,7 @@ function drawSetupCanvas(){
       if(_drawGesturePan){
         if(!_drawActivePointers.has(e.pointerId))return;
         _drawPointerPos.set(e.pointerId,{x:e.clientX,y:e.clientY});
-        const g=_drawGestureRead();
-        if(g&&_drawGestureC){
-          try{
-            if(g.d>0&&_drawGestureD>0&&Math.abs(g.d-_drawGestureD)>0.5){
-              const anchor=map.mouseEventToLatLng({clientX:_drawGestureC.x,clientY:_drawGestureC.y});
-              const nz=map.getScaleZoom(g.d/_drawGestureD,map.getZoom());
-              map.setZoomAround(anchor,nz,{animate:false});
-            }
-            map.panBy([g.c.x-_drawGestureC.x,g.c.y-_drawGestureC.y],{animate:false,duration:0});
-          }catch(_e){}
-          _drawGestureC=g.c;_drawGestureD=g.d;
-          drawRepaint();
-        }
+        if(_drawGestureRAF==null)_drawGestureRAF=requestAnimationFrame(_drawGestureApply);
         return;
       }
       if(!_drawPainting)return;drawStrokeExtend(pt(e),e.pressure);drawRepaint();});
