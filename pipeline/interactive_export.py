@@ -1370,7 +1370,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .sub{font-size:12px;color:var(--mut)}
  .asp-crisp img{image-rendering:pixelated;image-rendering:crisp-edges}
  /* Always the bottom-left corner regardless of which layer is active. */
- .legend{position:absolute;z-index:950;bottom:calc(var(--btm-h,80px) + 14px);left:12px;right:auto;top:auto;cursor:pointer;background:var(--card);border:1px solid var(--hair);padding:9px 12px;border-radius:var(--r-1);box-shadow:none;font-size:12.5px;max-width:min(420px,calc(100vw - 24px));line-height:1.6;color:var(--fg2);display:none}
+ /* --btm-h is only the panel's own offsetHeight; the panel itself is ALSO
+    lifted off the true viewport edge by env(safe-area-inset-bottom)+10px
+    (see #bottomPanel below), which this must add back in too or the legend
+    sits that much too low and overlaps the panel on any device with a
+    bottom safe-area inset (iPhone home-indicator models). */
+ .legend{position:absolute;z-index:950;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 24px);left:12px;right:auto;top:auto;cursor:pointer;background:var(--card);border:1px solid var(--hair);padding:9px 12px;border-radius:var(--r-1);box-shadow:none;font-size:12.5px;max-width:min(420px,calc(100vw - 24px));line-height:1.6;color:var(--fg2);display:none}
  .legend b{display:block;font-size:9px;font-weight:800;letter-spacing:.08em;
    text-transform:uppercase;color:var(--ink-500);margin-bottom:5px}
  /* Each class/colour row reads as a chip flowing left-to-right and wrapping
@@ -1384,7 +1389,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     on rather than tap-to-show, but reduced to just a colour strip + a
     couple of numbers so it reads at a glance without repeating the fuller
     popup's text. Tapping it opens that fuller legend. */
- #miniLegend{position:absolute;z-index:940;bottom:calc(var(--btm-h,80px) + 14px);left:12px;right:auto;top:auto;
+ #miniLegend{position:absolute;z-index:940;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 24px);left:12px;right:auto;top:auto;
    cursor:pointer;background:var(--card);border:1px solid var(--hair);padding:8px 12px;border-radius:var(--r-1);
    max-width:min(340px,calc(100vw - 24px));min-width:min(240px,calc(100vw - 24px));color:var(--fg2);display:none}
  #miniLegend.show{display:block}
@@ -4176,12 +4181,15 @@ function renderPowderFindAbstract(sel){
     const tmp0=document.createElement('canvas');tmp0.width=PROG_GW;tmp0.height=PROG_GH;tmp0.getContext('2d').putImageData(img,0,0);
     pcx.clearRect(0,0,pcv.width,pcv.height);pcx.drawImage(tmp0,0,0,pcv.width,pcv.height);progCommit();return;
   }
-  // Splat radius: wide enough that reports from the same slope/valley blend
-  // into one region (mixing is the point of a zoomed-out overview), tight
-  // enough that a single isolated report still reads as its own spot rather
-  // than smearing across the whole visible map (was 0.14 of the grid span
-  // originally, then a too-tight 0.055; this splits the difference).
-  const f=new Float32Array(N),fcm=new Float32Array(N),R=Math.max(PROG_GW,PROG_GH)*0.075,sig=R*0.5;
+  // Each report gets its own small cloud rather than a wide smear: the
+  // accumulation box (R) is kept bigger than the visible core (sig=R*0.3,
+  // ~3 standard deviations to the box edge) so the Gaussian has already
+  // decayed to under 0.5% of its peak by the time the box cuts it off --
+  // the fade to nothing is smooth and finished well before that edge, not
+  // a visible clipped circle. Where two clouds' boxes overlap, both the
+  // density (f) and the depth-weighted colour (fcm) accumulate together,
+  // so the blend across that overlap is as continuous as the fade-out is.
+  const f=new Float32Array(N),fcm=new Float32Array(N),R=Math.max(PROG_GW,PROG_GH)*0.05,sig=R*0.3;
   sel.forEach(z=>{
     const gx=(z.lng-PROG_BOUNDS.w)/(PROG_BOUNDS.e-PROG_BOUNDS.w)*(PROG_GW-1);
     const gy=(PROG_BOUNDS.n-z.lat)/(PROG_BOUNDS.n-PROG_BOUNDS.s)*(PROG_GH-1);
@@ -4195,20 +4203,25 @@ function renderPowderFindAbstract(sel){
     }
   });
   // Density on an ABSOLUTE scale, not "relative to the busiest spot on the
-  // whole map" -- with the old f[i]/max normalisation, one report in a quiet
+  // whole map" -- with an f[i]/max normalisation, one report in a quiet
   // valley faded to nothing whenever some other valley had twenty overlapping
   // ones. Saturating instead means a single report already reads clearly on
   // its own, and a spot where several reports agree still saturates further
   // toward full opacity -- so "many reports, not much snow" (pale, opaque),
   // "many reports AND much snow" (deep colour, opaque) and "just one report"
   // (whatever colour, softer) stay visually distinct from each other.
-  const DK=1.15;
+  const DK=0.9;
   for(let i=0;i<N;i++){const o=i*4;
     const v=1-Math.exp(-f[i]/DK);
-    if(v<0.08){d[o+3]=0;continue;}
-    const c=satBoost(depthCol(fcm[i]/f[i])||RGB[0],0.15+0.3*v);
+    if(v<0.005){d[o+3]=0;continue;}
+    // Continuous interpolation between the SLF colour stops (not the
+    // discrete depth bands) so the colour itself fades/blends smoothly too
+    // -- no hard band edges inside a cloud or across an overlap.
+    const c=satBoost(snowColLerp(fcm[i]/f[i])||RGB[0],0.15+0.3*v);
     d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];
-    d[o+3]=Math.min(215,60+155*Math.pow(v,0.7))|0;}
+    // No opacity floor either -- alpha is a pure function of v, so it fades
+    // to true transparency at the same rate the density itself fades out.
+    d[o+3]=Math.min(215,215*Math.pow(v,0.55))|0;}
   const tmp=document.createElement('canvas');tmp.width=PROG_GW;tmp.height=PROG_GH;tmp.getContext('2d').putImageData(img,0,0);
   pcx.clearRect(0,0,pcv.width,pcv.height);pcx.imageSmoothingEnabled=true;pcx.drawImage(tmp,0,0,pcv.width,pcv.height);
   progCommit();
