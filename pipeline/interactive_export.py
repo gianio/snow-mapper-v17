@@ -1369,6 +1369,15 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  @media (max-width:560px){#three-wrap .ctrl3d{bottom:calc(16px + env(safe-area-inset-bottom,0px));gap:5px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 14px;font-size:15px;min-height:46px;border-radius:12px}#btn3dClose{top:calc(8px + env(safe-area-inset-top,0px));right:8px;padding:10px 18px;font-size:16px;border-radius:14px}}
  .sub{font-size:12px;color:var(--mut)}
  .asp-crisp img{image-rendering:pixelated;image-rendering:crisp-edges}
+ /* The classed/banded layers (Neuschnee, Schneehöhe, Temp, Wind, ...) are
+    already discrete colour steps under the hood (setRaster() looks each
+    cell up in a fixed palette) -- the browser's default smooth upscaling
+    of the small source canvas was blurring those hard class boundaries
+    into a soft gradient between cells. Pixelating this one overlay's <img>
+    (left off prognosisOverlay/qprOverlay etc., which are deliberately
+    smooth heatmaps) makes every classed layer's cell borders exact again,
+    the same crisp-edge look the SLF new-snow legend already implies. */
+ .raster-crisp{image-rendering:pixelated;image-rendering:crisp-edges;image-rendering:-moz-crisp-edges}
  /* Always the bottom-left corner regardless of which layer is active. */
  /* --btm-h is only the panel's own offsetHeight; the panel itself is ALSO
     lifted off the true viewport edge by env(safe-area-inset-bottom)+10px
@@ -1389,15 +1398,20 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     on rather than tap-to-show, but reduced to just a colour strip + a
     couple of numbers so it reads at a glance without repeating the fuller
     popup's text. Tapping it opens that fuller legend. */
+ /* A vertical strip on the left edge, like a printed map's colour key,
+    rather than a horizontal bar competing with the timeslider for the
+    same strip of screen. 60% transparent (card colour at 40% opacity) so
+    the map stays legible underneath it. */
  #miniLegend{position:absolute;z-index:940;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 24px);left:12px;right:auto;top:auto;
-   cursor:pointer;background:var(--card);border:1px solid var(--hair);padding:8px 12px;border-radius:var(--r-1);
-   max-width:min(340px,calc(100vw - 24px));min-width:min(240px,calc(100vw - 24px));color:var(--fg2);display:none}
+   cursor:pointer;background:color-mix(in srgb,var(--card) 40%,transparent);border:1px solid var(--hair);padding:8px 9px;border-radius:var(--r-1);
+   max-width:min(120px,calc(100vw - 24px));color:var(--fg2);display:none}
  #miniLegend.show{display:block}
- #miniLegendTitle{display:block;font-size:9.5px;font-weight:800;letter-spacing:.07em;
-   text-transform:uppercase;color:var(--ink-500);margin-bottom:5px}
- #miniLegendBar{display:flex;height:10px;border-radius:5px;overflow:hidden}
- #miniLegendBar>span{flex:1;min-width:2px}
- #miniLegendNums{display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--ink-500);margin-top:4px}
+ #miniLegendTitle{display:block;font-size:9px;font-weight:800;letter-spacing:.06em;
+   text-transform:uppercase;color:var(--ink-500);margin-bottom:6px;line-height:1.25}
+ #miniLegendBody{display:flex;flex-direction:row;align-items:stretch;gap:7px}
+ #miniLegendBar{display:flex;flex-direction:column;width:9px;height:104px;border-radius:5px;overflow:hidden;flex:none}
+ #miniLegendBar>span{flex:1;min-height:1px}
+ #miniLegendNums{display:flex;flex-direction:column;justify-content:space-between;height:104px;font-size:9.5px;font-family:var(--mono);color:var(--ink-500)}
  #legendBtn{display:none!important}
  #legendBtnOFF{position:absolute;z-index:960;bottom:var(--btm-h,80px);left:12px;width:40px;height:40px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);color:var(--ink-700);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background var(--dur-1) var(--ease)}
  #legendBtn svg{width:20px;height:20px}
@@ -1645,7 +1659,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    .scard{font-size:14px;min-width:160px}
    .leaflet-popup-content-wrapper{max-width:calc(100vw - 32px)!important}
    .legend{max-width:280px;font-size:13px}
-   #miniLegend{max-width:min(300px,calc(100vw - 24px))}
    #ctrlRail{right:8px;gap:11px}
    .rail-btn{width:48px;height:48px}
    #legendBtn{width:40px;height:40px;font-size:18px}
@@ -1654,7 +1667,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  }
  @media (max-width:380px){
      .legend{max-width:230px;font-size:12px}
-     #miniLegend{max-width:min(250px,calc(100vw - 24px))}
  }
  /* --- Auth & Reports --- */
  #userBar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 18px);right:12px;z-index:1100;display:flex;gap:8px;align-items:center}
@@ -2840,8 +2852,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <button id="legendBtn" title="Legende" aria-label="Legende"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg></button><div class="legend" id="legend"></div>
 <div id="miniLegend" onclick="document.getElementById('legendBtn').click()">
   <b id="miniLegendTitle"></b>
-  <div id="miniLegendBar"></div>
-  <div id="miniLegendNums"></div>
+  <div id="miniLegendBody">
+    <div id="miniLegendBar"></div>
+    <div id="miniLegendNums"></div>
+  </div>
 </div>
 </section>
 <!-- Melden: a sheet, not a screen. The two ways in live on the plus. -->
@@ -3144,6 +3158,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
           <button data-v="all" class="active" onclick="profSetVis('all')">Alle</button>
         </div>
         <div class="prof-hint" style="margin-top:8px">«Freunde» heisst: ihr folgt euch gegenseitig. Die Einstellung gilt für deine Beiträge auf der Karte und im Feed.</div>
+        <div class="prof-row"><span>Meine Meldungen im Feed zeigen</span><button class="prof-toggle" id="profShowMine" onclick="profToggleShowMine()"><span></span></button></div>
+        <div class="prof-hint">Standardmässig blendet der Feed deine eigenen Meldungen aus, damit er die Community zeigt statt dich selbst. Aktiviere dies, um sie dort auch zu sehen.</div>
         <div class="prof-sec-title">Meine Daten</div>
         <button class="prof-item" onclick="profExportData(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Meine Daten exportieren (JSON)</button>
         <button class="prof-item" onclick="profDeleteContent(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>Alle meine Beiträge löschen</button>
@@ -3555,16 +3571,18 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
       ctx2.fillText(lab,x+6,ch-7);_lastLabX=x;}}}
   // baseline
   ctx2.strokeStyle=_P.hair;ctx2.lineWidth=1;ctx2.beginPath();ctx2.moveTo(0,baseY+.5);ctx2.lineTo(cw,baseY+.5);ctx2.stroke();
-  // snowfall bars — rounded tops, vertical gradient (snow stays blue)
+  // snowfall bars — each bar coloured by its own value on the SLF new-snow
+  // scale (the same discrete steps/colours as the Neuschnee legend), not a
+  // single flat accent -- so the bar heights AND colours both read as "how
+  // much", consistently with every other SLF-scaled layer.
   let mx=0;for(const s of hSnow)if(s>mx)mx=s;mx=Math.max(.05,mx);
   const barH=Math.max(6,ch-topPad-botPad-2),bw=Math.max(2,cw/tvSpan());
-  const gSel=ctx2.createLinearGradient(0,baseY-barH,0,baseY);gSel.addColorStop(0,_P.accent);gSel.addColorStop(1,_P.accent);
-  const gSelPast=ctx2.createLinearGradient(0,baseY-barH,0,baseY);gSelPast.addColorStop(0,_P.hair);gSelPast.addColorStop(1,_P.mut);
   for(let t=Math.max(0,Math.floor(tv0));t<Math.min(T,Math.ceil(tv1)+1);t++){
     const v=hSnow[t];if(v<.002)continue;const h=Math.max(3,v/mx*barH);const x=tvX(t,cw);
     const inSel=(t>=a&&t<b),fut=t>=nowIdx;
-    if(inSel){ctx2.fillStyle=fut?gSel:gSelPast;ctx2.globalAlpha=1;}
-    else{ctx2.fillStyle=fut?_P.accent:_P.mut;ctx2.globalAlpha=.28;}
+    const c=snowCol(v)||RGB[0];
+    ctx2.fillStyle='rgb('+c[0]+','+c[1]+','+c[2]+')';
+    ctx2.globalAlpha=inSel?(fut?1:.7):.28;
     rr(x+.5,baseY-h,Math.max(bw-1,1.8),h,Math.min(2.5,bw/2.2));ctx2.fill();ctx2.globalAlpha=1;}
   if(single){
     // "Powder zu diesem Zeitpunkt": one point, not a range -- a full-height
@@ -3768,7 +3786,7 @@ const AspectGrid=L.GridLayer.extend({createTile:function(coords){
   ctx.putImageData(img,0,0);return tile;}});
 const aspectGrid=new AspectGrid({opacity:.78,tileSize:256});
 const cv=document.createElement('canvas');cv.width=W;cv.height=H;const cx=cv.getContext('2d');
-let raster=L.imageOverlay(cv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:.94}).addTo(map);
+let raster=L.imageOverlay(cv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:.94,className:'raster-crisp'}).addTo(map);
 const rcv=document.createElement('canvas');rcv.width=RW;rcv.height=RH;const rcx=rcv.getContext('2d');
 let radOverlay=L.imageOverlay(rcv.toDataURL(),[[RbS,RlW],[RbN,RlE]],{opacity:.9});
 const rad2cube=new Int32Array(RNP);
@@ -4640,18 +4658,22 @@ function miniLegendRender(l){
   tmp.innerHTML=legendFor(l||layer);document.body.appendChild(tmp);
   // legendFor() isn't consistent about div vs span for the gradient bar or
   // the numbers row across its ~15 cases, so both element types are checked.
+  // Everything is built low-to-high (left-to-right in the full legend); the
+  // mini bar is vertical, read top-down like a printed map's colour key, so
+  // both the swatches and the gradient direction are flipped high-to-low.
   const swatches=[...tmp.querySelectorAll('div>i')].map(i=>i.style.background).filter(Boolean);
   const gradEl=[...tmp.querySelectorAll('div,span')].find(s=>/linear-gradient/.test(s.style.background||''));
   let barHtml='',numHtml='';
   if(swatches.length){
-    barHtml=swatches.map(c=>'<span style="background:'+c+'"></span>').join('');
+    barHtml=swatches.slice().reverse().map(c=>'<span style="background:'+c+'"></span>').join('');
     const rows=[...tmp.querySelectorAll('div')].filter(r=>r.querySelector(':scope>i'));
     const texts=rows.map(r=>{const c=r.cloneNode(true);const ic=c.querySelector('i');if(ic)ic.remove();return c.textContent.trim();}).filter(Boolean);
-    if(texts.length)numHtml='<span>'+escapeHtml(texts[0])+'</span><span>'+escapeHtml(texts[texts.length-1])+'</span>';
+    if(texts.length)numHtml='<span>'+escapeHtml(texts[texts.length-1])+'</span><span>'+escapeHtml(texts[0])+'</span>';
   }else if(gradEl){
-    barHtml='<span style="flex:10;background:'+gradEl.style.background+'"></span>';
+    const vertGrad=(gradEl.style.background||'').replace(/-?\d+(\.\d+)?deg/,'0deg');
+    barHtml='<span style="flex:10;background:'+vertGrad+'"></span>';
     const numsEl=[...tmp.querySelectorAll('div,span')].find(d=>d.style.display==='flex'&&d.style.justifyContent==='space-between');
-    if(numsEl)numHtml=[...numsEl.children].map(s=>'<span>'+escapeHtml(s.textContent)+'</span>').join('');
+    if(numsEl)numHtml=[...numsEl.children].map(s=>'<span>'+escapeHtml(s.textContent)+'</span>').reverse().join('');
   }
   document.body.removeChild(tmp);
   if(title)title.textContent=vlabel;
@@ -6598,7 +6620,7 @@ function authMenu(){openProfile();}
 // --- Personal preferences ---------------------------------------------------
 // Device-local, so they work before sign-in and never need a round trip.
 const PREF_KEY='ssm_prefs_v1';
-const PREF_DEFAULTS={start:'country',home:'',layer:'meteo:0',window:'48'};
+const PREF_DEFAULTS={start:'country',home:'',layer:'meteo:0',window:'48',showMyReports:false};
 let prefs=Object.assign({},PREF_DEFAULTS);
 function prefsLoad(){try{const v=JSON.parse(localStorage.getItem(PREF_KEY)||'{}');
   prefs=Object.assign({},PREF_DEFAULTS,v||{});}catch(e){prefs=Object.assign({},PREF_DEFAULTS);}
@@ -6633,20 +6655,13 @@ async function profLoadPosts(){
   try{
     const{data:rs0}=await sb.from('reports').select('id,caption,subtype,image_url,condition_data,location,created_at')
       .eq('user_id',sbUser.id).order('created_at',{ascending:false}).limit(40);
-    // Drawn snow-maps are model input, not public posts -- kept out of the
-    // feed and off the map for everyone else (see _rptIsDraw), and off your
-    // own profile too unless a photo was actually attached to it, same rule
-    // as everywhere else a post is shown.
-    const rs=(rs0||[]).filter(r=>!(r.condition_data&&r.condition_data.draw&&!r.image_url));
-    if(!rs.length){box.innerHTML='<div class="prof-hint">Noch keine Beiträge.</div>';return;}
-    const withImg=rs.filter(r=>r.image_url),noImg=rs.filter(r=>!r.image_url);
-    const grid=withImg.length?('<div class="uv-grid">'+withImg.map(r=>{const ll=parseGeo(r.location);
-      return '<div class="uv-cell" onclick="profClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'"><img src="'+r.image_url+'" loading="lazy" alt=""/>'+del(r.id)+'</div>';}).join('')+'</div>'):'';
-    const rows=noImg.map(r=>{const ll=parseGeo(r.location);const cap=escapeHtml(r.caption||r.subtype||'');
-      const meta=escapeHtml((r.condition_data&&r.condition_data.measurement)||r.subtype||'Beitrag');
-      return '<div class="uv-post own" onclick="profClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'">'+
-        '<div class="b"><b>'+meta+'</b>'+(cap?(' — '+cap):'')+'<div class="t">'+timeAgo(r.created_at)+'</div></div>'+del(r.id)+'</div>';}).join('');
-    box.innerHTML=grid+rows;
+    // The profile only shows posts with a photo attached -- no drawings and
+    // no text-only reports, same rule as everywhere else a post is shown.
+    const withImg=(rs0||[]).filter(r=>r.image_url);
+    if(!withImg.length){box.innerHTML='<div class="prof-hint">Noch keine Beiträge.</div>';return;}
+    const grid='<div class="uv-grid">'+withImg.map(r=>{const ll=parseGeo(r.location);
+      return '<div class="uv-cell" onclick="profClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'"><img src="'+r.image_url+'" loading="lazy" alt=""/>'+del(r.id)+'</div>';}).join('')+'</div>';
+    box.innerHTML=grid;
   }catch(e){box.innerHTML='<div class="prof-hint">Beiträge konnten nicht geladen werden.</div>';}
 }
 // Delete straight from a profile list — the post may be older than the 60 rows
@@ -6752,6 +6767,14 @@ function profRenderPrefs(){
     lay.innerHTML=Object.keys(GROUPS).map(g=>GROUPS[g].items.map((it,i)=>
       '<option value="'+g+':'+i+'">'+GROUPS[g].tag+' · '+it.label+'</option>').join('')).join('');}
   if(lay)lay.value=prefs.layer||'meteo:0';
+  const sm=document.getElementById('profShowMine');
+  if(sm)sm.classList.toggle('on',!!prefs.showMyReports);
+}
+function profToggleShowMine(){
+  const t=document.getElementById('profShowMine');const willOn=!t.classList.contains('on');
+  t.classList.toggle('on',willOn);
+  prefs.showMyReports=willOn;prefsSave();
+  try{feedRender();}catch(e){}
 }
 // Applied once at startup: window length, opening layer and where the map lands.
 function prefsApplyStartup(){
@@ -8773,6 +8796,7 @@ function feedRender(){
   // allReports directly), but they are not posts -- nobody drew them to be
   // read, so they never show up as feed cards.
   let base=allReports.filter(r=>!_rptIsDraw(r));
+  if(!prefs.showMyReports&&sbUser)base=base.filter(r=>r.userId!==sbUser.id);
   if(feedScope==='here'){
     const bnds=map.getBounds();
     base=base.filter(r=>bnds.contains([r.lat,r.lng])&&feedInWindow(r));
