@@ -814,7 +814,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <meta name="theme-color" content="#ffffff"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <title>Snowmapper</title>
-<link rel="icon" type="image/png" href="icon-192.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2"/>
+<link rel="shortcut icon" type="image/png" href="icon-192.png?v=2"/>
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://wmts.geo.admin.ch" crossorigin>
@@ -823,7 +824,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- maplibre-gl (3D, ~800 KB) wird erst beim ersten 3D-Klick geladen -->
 <link rel="manifest" href="manifest.webmanifest"/>
-<link rel="apple-touch-icon" href="icon-180.png"/>
+<link rel="apple-touch-icon" href="icon-180.png?v=2"/>
 <!-- Sentry error tracking: paste your browser DSN into SENTRY_DSN to enable. -->
 <script>
 (function(){
@@ -1398,20 +1399,25 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     on rather than tap-to-show, but reduced to just a colour strip + a
     couple of numbers so it reads at a glance without repeating the fuller
     popup's text. Tapping it opens that fuller legend. */
- /* A vertical strip on the left edge, like a printed map's colour key,
+ /* A vertical strip on the right edge, like a printed map's colour key,
     rather than a horizontal bar competing with the timeslider for the
     same strip of screen. 60% transparent (card colour at 40% opacity) so
-    the map stays legible underneath it. */
- #miniLegend{position:absolute;z-index:940;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 24px);left:12px;right:auto;top:auto;
-   cursor:pointer;background:color-mix(in srgb,var(--card) 40%,transparent);border:1px solid var(--hair);padding:8px 9px;border-radius:var(--r-1);
-   max-width:min(120px,calc(100vw - 24px));color:var(--fg2);display:none}
+    the map stays legible underneath it. Stacked directly above #mapFabs
+    (right:14px, same edge) so the two columns read as one composition and
+    never overlap: #mapFabs is 5 stacked 48px buttons + 4x12px gaps = 288px
+    tall, sitting 32px above the bottom panel, so the legend's own bottom
+    offset clears all of that (32 + 288 + 14px breathing room = 334px)
+    before it starts. */
+ #miniLegend{position:absolute;z-index:940;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 334px);left:auto;right:14px;top:auto;
+   cursor:pointer;background:color-mix(in srgb,var(--card) 40%,transparent);border:1px solid var(--hair);padding:9px 10px;border-radius:var(--r-1);
+   max-width:min(126px,calc(100vw - 24px));color:var(--fg2);display:none}
  #miniLegend.show{display:block}
  #miniLegendTitle{display:block;font-size:9px;font-weight:800;letter-spacing:.06em;
    text-transform:uppercase;color:var(--ink-500);margin-bottom:6px;line-height:1.25}
  #miniLegendBody{display:flex;flex-direction:row;align-items:stretch;gap:7px}
- #miniLegendBar{display:flex;flex-direction:column;width:9px;height:104px;border-radius:5px;overflow:hidden;flex:none}
+ #miniLegendBar{display:flex;flex-direction:column;width:9px;height:172px;border-radius:5px;overflow:hidden;flex:none}
  #miniLegendBar>span{flex:1;min-height:1px}
- #miniLegendNums{display:flex;flex-direction:column;justify-content:space-between;height:104px;font-size:9.5px;font-family:var(--mono);color:var(--ink-500)}
+ #miniLegendNums{display:flex;flex-direction:column;justify-content:space-between;height:172px;font-size:9.5px;font-family:var(--mono);color:var(--ink-500)}
  #legendBtn{display:none!important}
  #legendBtnOFF{position:absolute;z-index:960;bottom:var(--btm-h,80px);left:12px;width:40px;height:40px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);color:var(--ink-700);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background var(--dur-1) var(--ease)}
  #legendBtn svg{width:20px;height:20px}
@@ -2054,7 +2060,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-page.side .feed-card-read{flex-wrap:wrap;row-gap:6px}
  /* The remaining third is for the map to point with, so the console and the
     button column get out of its way -- the panel carries its own. */
- body.feed-side #bottomPanel,body.feed-side #mapFabs{display:none}
+ body.feed-side #bottomPanel,body.feed-side #mapFabs,body.feed-side #miniLegend{display:none}
  /* the filter sheet belongs to the panel, not to the screen */
  .feed-page .feed-sheet{position:absolute;inset:0}
  .feed-page .feed-sheet-in{border-radius:var(--r-lg) var(--r-lg) 0 0}
@@ -2688,6 +2694,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rpop-meta b{font-size:14px;color:var(--fg);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .rpop-meta span{font-size:11.5px;color:var(--mut)}
  .rpop-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+ .rpop-viz{margin:-2px 0 9px}
  .rpop-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;background:var(--fill);border:1px solid var(--hair);font-size:12px;font-weight:800;color:var(--fg2)}
  .rpop-chip.dep{background:color-mix(in srgb,var(--cc) 15%,#fff);border-color:color-mix(in srgb,var(--cc) 32%,#fff);color:var(--cc)}
  .rpop-chip svg{width:12px;height:12px}
@@ -6175,7 +6182,12 @@ function reportPopupHTML(r){
   const col=_rptColor(r),cm=_rptDepth(r);
   const catBadge='<span class="rpop-cat'+(r.img?'':' sm')+'" style="background:'+(CAT_COLORS[r.cat]||'#333')+'">'+(CAT_SVG[r.cat]||'')+(r.img?(' '+escapeHtml(r.sub||r.cat)):'')+'</span>';
   const stars=r.stars?'<span class="rpop-chip"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z" fill="var(--warn)" stroke="none"/></svg>'+r.stars+'/5</span>':'';
-  const other=(r.measurement&&!/\d+\s*cm/.test(r.measurement))?'<span class="rpop-chip">'+escapeHtml(r.measurement)+'</span>':'';
+  // Elevation-band + aspect glyphs (rptVizHTML), same as the feed, instead of
+  // a plain "Powder \u00b7 2200-2800 m \u00b7 NE" text chip -- only fall back to text
+  // for the rare report with a measurement string but no zones data at all.
+  const zones=(r.condition_data&&r.condition_data.zones&&r.condition_data.zones.length)?r.condition_data.zones:null;
+  const vizHtml=zones?rptVizHTML(zones,34):'';
+  const other=(!zones&&r.measurement&&!/\d+\s*cm/.test(r.measurement))?'<span class="rpop-chip">'+escapeHtml(r.measurement)+'</span>':'';
   return '<div class="rpop">'
     +(r.img?('<div class="rpop-img" onclick="feedOpenAt(\''+r.id+'\')"><img src="'+r.img+'" loading="lazy" alt=""/>'+catBadge+'</div>'):'')
     +'<div class="rpop-body"><div class="rpop-head">'
@@ -6183,6 +6195,7 @@ function reportPopupHTML(r){
       +'<div class="rpop-meta"><b>'+escapeHtml(r.user||'User')+'</b><span>'+escapeHtml(r.time||'')+'</span></div>'
       +(r.img?'':catBadge)
     +'</div>'
+    +(vizHtml?('<div class="rpop-viz">'+vizHtml+'</div>'):'')
     +'<div class="rpop-chips">'
       +(cm!=null?('<span class="rpop-chip dep" style="--cc:'+col+'">'+cm+' cm</span>'):'')
       +other+stars
@@ -6655,9 +6668,17 @@ async function profLoadPosts(){
   try{
     const{data:rs0}=await sb.from('reports').select('id,caption,subtype,image_url,condition_data,location,created_at')
       .eq('user_id',sbUser.id).order('created_at',{ascending:false}).limit(40);
-    // The profile only shows posts with a photo attached -- no drawings and
-    // no text-only reports, same rule as everywhere else a post is shown.
-    const withImg=(rs0||[]).filter(r=>r.image_url);
+    // The profile only shows posts with a REAL photo attached -- no drawings
+    // and no text-only reports. A drawn snow-map's image_url can point at its
+    // own snapshot/paint canvas rather than an actual photo, so that alone
+    // doesn't count (same distinction _rptDrawHasPhoto/_rptIsDraw make for
+    // the feed and the map).
+    const withImg=(rs0||[]).filter(r=>{
+      if(!r.image_url)return false;
+      const cd=r.condition_data;
+      if(cd&&cd.draw&&(r.image_url===cd.drawImage||r.image_url===cd.snapshot))return false;
+      return true;
+    });
     if(!withImg.length){box.innerHTML='<div class="prof-hint">Noch keine Beiträge.</div>';return;}
     const grid='<div class="uv-grid">'+withImg.map(r=>{const ll=parseGeo(r.location);
       return '<div class="uv-cell" onclick="profClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'"><img src="'+r.image_url+'" loading="lazy" alt=""/>'+del(r.id)+'</div>';}).join('')+'</div>';
