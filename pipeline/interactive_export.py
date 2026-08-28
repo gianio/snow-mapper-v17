@@ -1369,6 +1369,15 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  @media (max-width:560px){#three-wrap .ctrl3d{bottom:calc(16px + env(safe-area-inset-bottom,0px));gap:5px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 14px;font-size:15px;min-height:46px;border-radius:12px}#btn3dClose{top:calc(8px + env(safe-area-inset-top,0px));right:8px;padding:10px 18px;font-size:16px;border-radius:14px}}
  .sub{font-size:12px;color:var(--mut)}
  .asp-crisp img{image-rendering:pixelated;image-rendering:crisp-edges}
+ /* The classed/banded layers (Neuschnee, Schneehöhe, Temp, Wind, ...) are
+    already discrete colour steps under the hood (setRaster() looks each
+    cell up in a fixed palette) -- the browser's default smooth upscaling
+    of the small source canvas was blurring those hard class boundaries
+    into a soft gradient between cells. Pixelating this one overlay's <img>
+    (left off prognosisOverlay/qprOverlay etc., which are deliberately
+    smooth heatmaps) makes every classed layer's cell borders exact again,
+    the same crisp-edge look the SLF new-snow legend already implies. */
+ .raster-crisp{image-rendering:pixelated;image-rendering:crisp-edges;image-rendering:-moz-crisp-edges}
  /* Always the bottom-left corner regardless of which layer is active. */
  /* --btm-h is only the panel's own offsetHeight; the panel itself is ALSO
     lifted off the true viewport edge by env(safe-area-inset-bottom)+10px
@@ -1389,15 +1398,20 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     on rather than tap-to-show, but reduced to just a colour strip + a
     couple of numbers so it reads at a glance without repeating the fuller
     popup's text. Tapping it opens that fuller legend. */
+ /* A vertical strip on the left edge, like a printed map's colour key,
+    rather than a horizontal bar competing with the timeslider for the
+    same strip of screen. 60% transparent (card colour at 40% opacity) so
+    the map stays legible underneath it. */
  #miniLegend{position:absolute;z-index:940;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 24px);left:12px;right:auto;top:auto;
-   cursor:pointer;background:var(--card);border:1px solid var(--hair);padding:8px 12px;border-radius:var(--r-1);
-   max-width:min(340px,calc(100vw - 24px));min-width:min(240px,calc(100vw - 24px));color:var(--fg2);display:none}
+   cursor:pointer;background:color-mix(in srgb,var(--card) 40%,transparent);border:1px solid var(--hair);padding:8px 9px;border-radius:var(--r-1);
+   max-width:min(120px,calc(100vw - 24px));color:var(--fg2);display:none}
  #miniLegend.show{display:block}
- #miniLegendTitle{display:block;font-size:9.5px;font-weight:800;letter-spacing:.07em;
-   text-transform:uppercase;color:var(--ink-500);margin-bottom:5px}
- #miniLegendBar{display:flex;height:10px;border-radius:5px;overflow:hidden}
- #miniLegendBar>span{flex:1;min-width:2px}
- #miniLegendNums{display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--ink-500);margin-top:4px}
+ #miniLegendTitle{display:block;font-size:9px;font-weight:800;letter-spacing:.06em;
+   text-transform:uppercase;color:var(--ink-500);margin-bottom:6px;line-height:1.25}
+ #miniLegendBody{display:flex;flex-direction:row;align-items:stretch;gap:7px}
+ #miniLegendBar{display:flex;flex-direction:column;width:9px;height:104px;border-radius:5px;overflow:hidden;flex:none}
+ #miniLegendBar>span{flex:1;min-height:1px}
+ #miniLegendNums{display:flex;flex-direction:column;justify-content:space-between;height:104px;font-size:9.5px;font-family:var(--mono);color:var(--ink-500)}
  #legendBtn{display:none!important}
  #legendBtnOFF{position:absolute;z-index:960;bottom:var(--btm-h,80px);left:12px;width:40px;height:40px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);color:var(--ink-700);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background var(--dur-1) var(--ease)}
  #legendBtn svg{width:20px;height:20px}
@@ -1645,7 +1659,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    .scard{font-size:14px;min-width:160px}
    .leaflet-popup-content-wrapper{max-width:calc(100vw - 32px)!important}
    .legend{max-width:280px;font-size:13px}
-   #miniLegend{max-width:min(300px,calc(100vw - 24px))}
    #ctrlRail{right:8px;gap:11px}
    .rail-btn{width:48px;height:48px}
    #legendBtn{width:40px;height:40px;font-size:18px}
@@ -1654,7 +1667,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  }
  @media (max-width:380px){
      .legend{max-width:230px;font-size:12px}
-     #miniLegend{max-width:min(250px,calc(100vw - 24px))}
  }
  /* --- Auth & Reports --- */
  #userBar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 18px);right:12px;z-index:1100;display:flex;gap:8px;align-items:center}
@@ -2470,7 +2482,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     do (report), and the two small things you occasionally need. */
  /* One size, one colour. Five buttons in three sizes was three decisions to
     make before you could pick one of them. */
- #mapFabs{position:absolute;z-index:900;right:14px;bottom:calc(var(--btm-h,120px) + 22px);
+ /* --btm-h is only the bottom panel's own offsetHeight; the panel is ALSO
+    lifted off the true viewport edge by env(safe-area-inset-bottom)+10px
+    (see #bottomPanel), which this must add back in too or the FAB column
+    -- including the "+" report button at its foot -- sits that much too
+    low and disappears behind the panel on any device with a bottom
+    safe-area inset (iPhone home-indicator models). */
+ #mapFabs{position:absolute;z-index:900;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,120px) + 32px);
    display:flex;flex-direction:column;align-items:flex-end;gap:12px}
  .mfab{position:relative;width:var(--fab);height:var(--fab);border-radius:var(--r-full);
    border:1px solid var(--hair);background:var(--card);color:var(--ink-900);
@@ -2834,8 +2852,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <button id="legendBtn" title="Legende" aria-label="Legende"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg></button><div class="legend" id="legend"></div>
 <div id="miniLegend" onclick="document.getElementById('legendBtn').click()">
   <b id="miniLegendTitle"></b>
-  <div id="miniLegendBar"></div>
-  <div id="miniLegendNums"></div>
+  <div id="miniLegendBody">
+    <div id="miniLegendBar"></div>
+    <div id="miniLegendNums"></div>
+  </div>
 </div>
 </section>
 <!-- Melden: a sheet, not a screen. The two ways in live on the plus. -->
@@ -3138,6 +3158,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
           <button data-v="all" class="active" onclick="profSetVis('all')">Alle</button>
         </div>
         <div class="prof-hint" style="margin-top:8px">«Freunde» heisst: ihr folgt euch gegenseitig. Die Einstellung gilt für deine Beiträge auf der Karte und im Feed.</div>
+        <div class="prof-row"><span>Meine Meldungen im Feed zeigen</span><button class="prof-toggle" id="profShowMine" onclick="profToggleShowMine()"><span></span></button></div>
+        <div class="prof-hint">Standardmässig blendet der Feed deine eigenen Meldungen aus, damit er die Community zeigt statt dich selbst. Aktiviere dies, um sie dort auch zu sehen.</div>
         <div class="prof-sec-title">Meine Daten</div>
         <button class="prof-item" onclick="profExportData(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Meine Daten exportieren (JSON)</button>
         <button class="prof-item" onclick="profDeleteContent(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>Alle meine Beiträge löschen</button>
@@ -3549,16 +3571,18 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
       ctx2.fillText(lab,x+6,ch-7);_lastLabX=x;}}}
   // baseline
   ctx2.strokeStyle=_P.hair;ctx2.lineWidth=1;ctx2.beginPath();ctx2.moveTo(0,baseY+.5);ctx2.lineTo(cw,baseY+.5);ctx2.stroke();
-  // snowfall bars — rounded tops, vertical gradient (snow stays blue)
+  // snowfall bars — each bar coloured by its own value on the SLF new-snow
+  // scale (the same discrete steps/colours as the Neuschnee legend), not a
+  // single flat accent -- so the bar heights AND colours both read as "how
+  // much", consistently with every other SLF-scaled layer.
   let mx=0;for(const s of hSnow)if(s>mx)mx=s;mx=Math.max(.05,mx);
   const barH=Math.max(6,ch-topPad-botPad-2),bw=Math.max(2,cw/tvSpan());
-  const gSel=ctx2.createLinearGradient(0,baseY-barH,0,baseY);gSel.addColorStop(0,_P.accent);gSel.addColorStop(1,_P.accent);
-  const gSelPast=ctx2.createLinearGradient(0,baseY-barH,0,baseY);gSelPast.addColorStop(0,_P.hair);gSelPast.addColorStop(1,_P.mut);
   for(let t=Math.max(0,Math.floor(tv0));t<Math.min(T,Math.ceil(tv1)+1);t++){
     const v=hSnow[t];if(v<.002)continue;const h=Math.max(3,v/mx*barH);const x=tvX(t,cw);
     const inSel=(t>=a&&t<b),fut=t>=nowIdx;
-    if(inSel){ctx2.fillStyle=fut?gSel:gSelPast;ctx2.globalAlpha=1;}
-    else{ctx2.fillStyle=fut?_P.accent:_P.mut;ctx2.globalAlpha=.28;}
+    const c=snowCol(v)||RGB[0];
+    ctx2.fillStyle='rgb('+c[0]+','+c[1]+','+c[2]+')';
+    ctx2.globalAlpha=inSel?(fut?1:.7):.28;
     rr(x+.5,baseY-h,Math.max(bw-1,1.8),h,Math.min(2.5,bw/2.2));ctx2.fill();ctx2.globalAlpha=1;}
   if(single){
     // "Powder zu diesem Zeitpunkt": one point, not a range -- a full-height
@@ -3762,7 +3786,7 @@ const AspectGrid=L.GridLayer.extend({createTile:function(coords){
   ctx.putImageData(img,0,0);return tile;}});
 const aspectGrid=new AspectGrid({opacity:.78,tileSize:256});
 const cv=document.createElement('canvas');cv.width=W;cv.height=H;const cx=cv.getContext('2d');
-let raster=L.imageOverlay(cv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:.94}).addTo(map);
+let raster=L.imageOverlay(cv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:.94,className:'raster-crisp'}).addTo(map);
 const rcv=document.createElement('canvas');rcv.width=RW;rcv.height=RH;const rcx=rcv.getContext('2d');
 let radOverlay=L.imageOverlay(rcv.toDataURL(),[[RbS,RlW],[RbN,RlE]],{opacity:.9});
 const rad2cube=new Int32Array(RNP);
@@ -4189,16 +4213,30 @@ function renderPowderFindAbstract(sel){
   // a visible clipped circle. Where two clouds' boxes overlap, both the
   // density (f) and the depth-weighted colour (fcm) accumulate together,
   // so the blend across that overlap is as continuous as the fade-out is.
-  const f=new Float32Array(N),fcm=new Float32Array(N),R=Math.max(PROG_GW,PROG_GH)*0.05,sig=R*0.3;
+  //
+  // Grid cells are NOT square on the ground: PROG_GW/PROG_GH follow the
+  // (viewport-shaped) lat/lon bounding box, and a degree of longitude is
+  // physically shorter than a degree of latitude away from the equator.
+  // A splat built from raw dx/dy grid-index differences was an ellipse on
+  // the map, not a circle. Converting to real kilometres per axis first
+  // fixes that -- Web Mercator's local scale distortion is the same in
+  // both directions, so a circle in km stays a circle on screen.
+  const midLat=(PROG_BOUNDS.n+PROG_BOUNDS.s)/2;
+  const kmPerGX=(PROG_BOUNDS.e-PROG_BOUNDS.w)*111.32*Math.cos(midLat*Math.PI/180)/Math.max(1,PROG_GW-1);
+  const kmPerGY=(PROG_BOUNDS.n-PROG_BOUNDS.s)*110.574/Math.max(1,PROG_GH-1);
+  const spanXkm=(PROG_GW-1)*kmPerGX,spanYkm=(PROG_GH-1)*kmPerGY;
+  const f=new Float32Array(N),fcm=new Float32Array(N);
+  const Rkm=Math.min(spanXkm,spanYkm)*0.075,sigKm=Rkm*0.3;
+  const Rx=Rkm/kmPerGX,Ry=Rkm/kmPerGY;
   sel.forEach(z=>{
     const gx=(z.lng-PROG_BOUNDS.w)/(PROG_BOUNDS.e-PROG_BOUNDS.w)*(PROG_GW-1);
     const gy=(PROG_BOUNDS.n-z.lat)/(PROG_BOUNDS.n-PROG_BOUNDS.s)*(PROG_GH-1);
     const w=(z.w==null?1:z.w)*progRecency(z),cm=z.cm==null?25:z.cm;
-    const x0=Math.max(0,Math.round(gx-R)),x1=Math.min(PROG_GW-1,Math.round(gx+R));
-    const y0=Math.max(0,Math.round(gy-R)),y1=Math.min(PROG_GH-1,Math.round(gy+R));
+    const x0=Math.max(0,Math.round(gx-Rx)),x1=Math.min(PROG_GW-1,Math.round(gx+Rx));
+    const y0=Math.max(0,Math.round(gy-Ry)),y1=Math.min(PROG_GH-1,Math.round(gy+Ry));
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
-      const dx=x-gx,dy=y-gy,d2=dx*dx+dy*dy;if(d2>R*R)continue;
-      const g=w*Math.exp(-d2/(2*sig*sig)),idx=y*PROG_GW+x;
+      const dxKm=(x-gx)*kmPerGX,dyKm=(y-gy)*kmPerGY,d2=dxKm*dxKm+dyKm*dyKm;if(d2>Rkm*Rkm)continue;
+      const g=w*Math.exp(-d2/(2*sigKm*sigKm)),idx=y*PROG_GW+x;
       f[idx]+=g;fcm[idx]+=g*cm;
     }
   });
@@ -4555,7 +4593,14 @@ function progRefresh(){
 }
 map.on('moveend zoomend',progRefresh);
 let _lastTier=-1;
-map.on('zoomend',()=>{try{const t=detailTier();if(t!==_lastTier){_lastTier=t;renderStations();}loadReportMarkers();}catch(e){}});
+// Skipped while the draw tool is open: its manual two-finger pan/zoom calls
+// panBy()/setZoomAround() with animate:false, which fire zoomend SYNCHRONOUSLY
+// on every gesture frame (an animated pan only fires it once, at the end) --
+// re-clustering every report marker on every one of those frames is what
+// made two-finger panning feel laggy there. None of this is visible under
+// the drawing canvas anyway; it settles once for real the next time the
+// map is used normally.
+map.on('zoomend',()=>{if(document.body.classList.contains('draw-on'))return;try{const t=detailTier();if(t!==_lastTier){_lastTier=t;renderStations();}loadReportMarkers();}catch(e){}});
 function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");const wd=['So','Mo','Di','Mi','Do','Fr','Sa'][d.getUTCDay()];return wd+' '+d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'., '+d.getUTCHours()+':00';}
 function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString('de-CH',{day:'2-digit',month:'short'});}
 function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
@@ -4613,18 +4658,22 @@ function miniLegendRender(l){
   tmp.innerHTML=legendFor(l||layer);document.body.appendChild(tmp);
   // legendFor() isn't consistent about div vs span for the gradient bar or
   // the numbers row across its ~15 cases, so both element types are checked.
+  // Everything is built low-to-high (left-to-right in the full legend); the
+  // mini bar is vertical, read top-down like a printed map's colour key, so
+  // both the swatches and the gradient direction are flipped high-to-low.
   const swatches=[...tmp.querySelectorAll('div>i')].map(i=>i.style.background).filter(Boolean);
   const gradEl=[...tmp.querySelectorAll('div,span')].find(s=>/linear-gradient/.test(s.style.background||''));
   let barHtml='',numHtml='';
   if(swatches.length){
-    barHtml=swatches.map(c=>'<span style="background:'+c+'"></span>').join('');
+    barHtml=swatches.slice().reverse().map(c=>'<span style="background:'+c+'"></span>').join('');
     const rows=[...tmp.querySelectorAll('div')].filter(r=>r.querySelector(':scope>i'));
     const texts=rows.map(r=>{const c=r.cloneNode(true);const ic=c.querySelector('i');if(ic)ic.remove();return c.textContent.trim();}).filter(Boolean);
-    if(texts.length)numHtml='<span>'+escapeHtml(texts[0])+'</span><span>'+escapeHtml(texts[texts.length-1])+'</span>';
+    if(texts.length)numHtml='<span>'+escapeHtml(texts[texts.length-1])+'</span><span>'+escapeHtml(texts[0])+'</span>';
   }else if(gradEl){
-    barHtml='<span style="flex:10;background:'+gradEl.style.background+'"></span>';
+    const vertGrad=(gradEl.style.background||'').replace(/-?\d+(\.\d+)?deg/,'0deg');
+    barHtml='<span style="flex:10;background:'+vertGrad+'"></span>';
     const numsEl=[...tmp.querySelectorAll('div,span')].find(d=>d.style.display==='flex'&&d.style.justifyContent==='space-between');
-    if(numsEl)numHtml=[...numsEl.children].map(s=>'<span>'+escapeHtml(s.textContent)+'</span>').join('');
+    if(numsEl)numHtml=[...numsEl.children].map(s=>'<span>'+escapeHtml(s.textContent)+'</span>').reverse().join('');
   }
   document.body.removeChild(tmp);
   if(title)title.textContent=vlabel;
@@ -4924,7 +4973,7 @@ addEventListener('keydown',e=>{
 // from the same entry point the rest of the app already calls.
 function renderLayerStrip(){try{lyRender();}catch(e){}}
 // Deep-zoom items appear/disappear as the user zooms, so keep the row in sync.
-map.on('zoomend',function(){try{
+map.on('zoomend',function(){if(document.body.classList.contains('draw-on'))return;try{
   const shown=lyLayers().length;
   const want=Object.keys(GROUPS).reduce((n,g)=>n+groupItems(g).length,0);
   if(shown!==want)setTopic(curTopic,Math.min(curItem,groupItems(curTopic).length-1),curVar);}catch(e){}});
@@ -6571,7 +6620,7 @@ function authMenu(){openProfile();}
 // --- Personal preferences ---------------------------------------------------
 // Device-local, so they work before sign-in and never need a round trip.
 const PREF_KEY='ssm_prefs_v1';
-const PREF_DEFAULTS={start:'country',home:'',layer:'meteo:0',window:'48'};
+const PREF_DEFAULTS={start:'country',home:'',layer:'meteo:0',window:'48',showMyReports:false};
 let prefs=Object.assign({},PREF_DEFAULTS);
 function prefsLoad(){try{const v=JSON.parse(localStorage.getItem(PREF_KEY)||'{}');
   prefs=Object.assign({},PREF_DEFAULTS,v||{});}catch(e){prefs=Object.assign({},PREF_DEFAULTS);}
@@ -6606,20 +6655,13 @@ async function profLoadPosts(){
   try{
     const{data:rs0}=await sb.from('reports').select('id,caption,subtype,image_url,condition_data,location,created_at')
       .eq('user_id',sbUser.id).order('created_at',{ascending:false}).limit(40);
-    // Drawn snow-maps are model input, not public posts -- kept out of the
-    // feed and off the map for everyone else (see _rptIsDraw), and off your
-    // own profile too unless a photo was actually attached to it, same rule
-    // as everywhere else a post is shown.
-    const rs=(rs0||[]).filter(r=>!(r.condition_data&&r.condition_data.draw&&!r.image_url));
-    if(!rs.length){box.innerHTML='<div class="prof-hint">Noch keine Beiträge.</div>';return;}
-    const withImg=rs.filter(r=>r.image_url),noImg=rs.filter(r=>!r.image_url);
-    const grid=withImg.length?('<div class="uv-grid">'+withImg.map(r=>{const ll=parseGeo(r.location);
-      return '<div class="uv-cell" onclick="profClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'"><img src="'+r.image_url+'" loading="lazy" alt=""/>'+del(r.id)+'</div>';}).join('')+'</div>'):'';
-    const rows=noImg.map(r=>{const ll=parseGeo(r.location);const cap=escapeHtml(r.caption||r.subtype||'');
-      const meta=escapeHtml((r.condition_data&&r.condition_data.measurement)||r.subtype||'Beitrag');
-      return '<div class="uv-post own" onclick="profClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'">'+
-        '<div class="b"><b>'+meta+'</b>'+(cap?(' — '+cap):'')+'<div class="t">'+timeAgo(r.created_at)+'</div></div>'+del(r.id)+'</div>';}).join('');
-    box.innerHTML=grid+rows;
+    // The profile only shows posts with a photo attached -- no drawings and
+    // no text-only reports, same rule as everywhere else a post is shown.
+    const withImg=(rs0||[]).filter(r=>r.image_url);
+    if(!withImg.length){box.innerHTML='<div class="prof-hint">Noch keine Beiträge.</div>';return;}
+    const grid='<div class="uv-grid">'+withImg.map(r=>{const ll=parseGeo(r.location);
+      return '<div class="uv-cell" onclick="profClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'"><img src="'+r.image_url+'" loading="lazy" alt=""/>'+del(r.id)+'</div>';}).join('')+'</div>';
+    box.innerHTML=grid;
   }catch(e){box.innerHTML='<div class="prof-hint">Beiträge konnten nicht geladen werden.</div>';}
 }
 // Delete straight from a profile list — the post may be older than the 60 rows
@@ -6725,6 +6767,14 @@ function profRenderPrefs(){
     lay.innerHTML=Object.keys(GROUPS).map(g=>GROUPS[g].items.map((it,i)=>
       '<option value="'+g+':'+i+'">'+GROUPS[g].tag+' · '+it.label+'</option>').join('')).join('');}
   if(lay)lay.value=prefs.layer||'meteo:0';
+  const sm=document.getElementById('profShowMine');
+  if(sm)sm.classList.toggle('on',!!prefs.showMyReports);
+}
+function profToggleShowMine(){
+  const t=document.getElementById('profShowMine');const willOn=!t.classList.contains('on');
+  t.classList.toggle('on',willOn);
+  prefs.showMyReports=willOn;prefsSave();
+  try{feedRender();}catch(e){}
 }
 // Applied once at startup: window length, opening layer and where the map lands.
 function prefsApplyStartup(){
@@ -7402,7 +7452,7 @@ let _drawPainting=false,_drawLastPt=null,_drawCurRoute=null,_drawCurTrack=null,_
 // apart from the first (see drawSetupCanvas): a momentary pan/zoom gesture,
 // not a second brush.
 let _drawActivePointers=new Set(),_drawGesturePan=false,_drawCapturedId=null;
-let _drawPointerPos=new Map(),_drawGestureC=null,_drawGestureD=0;
+let _drawPointerPos=new Map(),_drawGestureC=null,_drawGestureD=0,_drawGestureRAF=null;
 let _drawTrackGrid=new Set(),drawTrackZoom=null;
 let drawBrushSize=34,drawZoneSamples={},_drawLastTrackC=null,_drawBtmH='';
 // The slider sets the baseline; a stylus or a force-sensing screen can push
@@ -7447,6 +7497,7 @@ function drawOpen(){
   drawRoutes=[];drawTracks=[];drawZoneUsed=new Set();drawHistory=[];_drawPainting=false;drawZoneCanvas=null;_drawTrackGrid=new Set();drawTrackZoom=null;drawZoneSamples={};
   _drawActivePointers=new Set();_drawGesturePan=false;_drawCapturedId=null;
   _drawPointerPos=new Map();_drawGestureC=null;_drawGestureD=0;
+  if(_drawGestureRAF!=null){cancelAnimationFrame(_drawGestureRAF);_drawGestureRAF=null;}
   document.body.classList.remove('draw-gesture-pan');document.body.classList.add('draw-on');
   document.getElementById('drawWrap').style.display='block';
   _drawBtmH=document.documentElement.style.getPropertyValue('--btm-h');
@@ -7468,6 +7519,7 @@ function drawClose(){
   document.body.classList.remove('draw-on','draw-gesture-pan');
   _drawActivePointers=new Set();_drawGesturePan=false;_drawCapturedId=null;
   _drawPointerPos=new Map();_drawGestureC=null;_drawGestureD=0;
+  if(_drawGestureRAF!=null){cancelAnimationFrame(_drawGestureRAF);_drawGestureRAF=null;}
   if(_drawBtmH)document.documentElement.style.setProperty('--btm-h',_drawBtmH);
   try{map.invalidateSize({animate:false,pan:false});}catch(e){}
   try{map.dragging.enable();map.touchZoom.enable();map.doubleClickZoom.enable();if(_desktop)map.scrollWheelZoom.enable();}catch(e){}
@@ -7480,6 +7532,30 @@ function _drawGestureRead(){
   const a=_drawPointerPos.get(ids[0]),b=_drawPointerPos.get(ids[1]);
   if(!a||!b)return null;
   return {c:{x:(a.x+b.x)/2,y:(a.y+b.y)/2},d:Math.hypot(a.x-b.x,a.y-b.y)};
+}
+// Touch move events can fire well above the display's paint rate (coalesced
+// samples, high-polling-rate digitisers) -- panBy()/setZoomAround() on every
+// single one of them was doing multiple times the map/canvas work an actual
+// frame could ever show, which is most of what made two-finger panning feel
+// like it was lagging behind the fingers. pointermove now only records the
+// latest finger positions (cheap); the actual map update runs at most once
+// per animation frame, reading whatever the latest position was by then.
+function _drawGestureApply(){
+  _drawGestureRAF=null;
+  if(!_drawGesturePan)return;
+  const g=_drawGestureRead();
+  if(g&&_drawGestureC){
+    try{
+      if(g.d>0&&_drawGestureD>0&&Math.abs(g.d-_drawGestureD)>0.5){
+        const anchor=map.mouseEventToLatLng({clientX:_drawGestureC.x,clientY:_drawGestureC.y});
+        const nz=map.getScaleZoom(g.d/_drawGestureD,map.getZoom());
+        map.setZoomAround(anchor,nz,{animate:false});
+      }
+      map.panBy([g.c.x-_drawGestureC.x,g.c.y-_drawGestureC.y],{animate:false,duration:0});
+    }catch(_e){}
+    _drawGestureC=g.c;_drawGestureD=g.d;
+    drawRepaint();
+  }
 }
 function drawSetupCanvas(){
   const cv=drawFitCanvas();
@@ -7522,19 +7598,7 @@ function drawSetupCanvas(){
       if(_drawGesturePan){
         if(!_drawActivePointers.has(e.pointerId))return;
         _drawPointerPos.set(e.pointerId,{x:e.clientX,y:e.clientY});
-        const g=_drawGestureRead();
-        if(g&&_drawGestureC){
-          try{
-            if(g.d>0&&_drawGestureD>0&&Math.abs(g.d-_drawGestureD)>0.5){
-              const anchor=map.mouseEventToLatLng({clientX:_drawGestureC.x,clientY:_drawGestureC.y});
-              const nz=map.getScaleZoom(g.d/_drawGestureD,map.getZoom());
-              map.setZoomAround(anchor,nz,{animate:false});
-            }
-            map.panBy([g.c.x-_drawGestureC.x,g.c.y-_drawGestureC.y],{animate:false,duration:0});
-          }catch(_e){}
-          _drawGestureC=g.c;_drawGestureD=g.d;
-          drawRepaint();
-        }
+        if(_drawGestureRAF==null)_drawGestureRAF=requestAnimationFrame(_drawGestureApply);
         return;
       }
       if(!_drawPainting)return;drawStrokeExtend(pt(e),e.pressure);drawRepaint();});
@@ -8732,6 +8796,7 @@ function feedRender(){
   // allReports directly), but they are not posts -- nobody drew them to be
   // read, so they never show up as feed cards.
   let base=allReports.filter(r=>!_rptIsDraw(r));
+  if(!prefs.showMyReports&&sbUser)base=base.filter(r=>r.userId!==sbUser.id);
   if(feedScope==='here'){
     const bnds=map.getBounds();
     base=base.filter(r=>bnds.contains([r.lat,r.lng])&&feedInWindow(r));
