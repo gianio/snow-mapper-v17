@@ -1408,16 +1408,18 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     tall, sitting 32px above the bottom panel, so the legend's own bottom
     offset clears all of that (32 + 288 + 14px breathing room = 334px)
     before it starts. */
+ /* No wider than the mapFabs icons it sits above (var(--fab), 48px) and no
+    label text -- just the colour strip and its two end numbers, so it reads
+    as a compact key rather than another panel competing for width. */
  #miniLegend{position:absolute;z-index:940;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 334px);left:auto;right:14px;top:auto;
-   cursor:pointer;background:color-mix(in srgb,var(--card) 40%,transparent);border:1px solid var(--hair);padding:9px 10px;border-radius:var(--r-1);
-   max-width:min(126px,calc(100vw - 24px));color:var(--fg2);display:none}
+   cursor:pointer;background:color-mix(in srgb,var(--card) 40%,transparent);border:1px solid var(--hair);padding:6px;border-radius:var(--r-1);
+   width:var(--fab,48px);box-sizing:border-box;color:var(--fg2);display:none}
  #miniLegend.show{display:block}
- #miniLegendTitle{display:block;font-size:9px;font-weight:800;letter-spacing:.06em;
-   text-transform:uppercase;color:var(--ink-500);margin-bottom:6px;line-height:1.25}
- #miniLegendBody{display:flex;flex-direction:row;align-items:stretch;gap:7px}
- #miniLegendBar{display:flex;flex-direction:column;width:9px;height:172px;border-radius:5px;overflow:hidden;flex:none}
+ #miniLegendTitle{display:none}
+ #miniLegendBody{display:flex;flex-direction:row;align-items:stretch;gap:4px;justify-content:center}
+ #miniLegendBar{display:flex;flex-direction:column;width:8px;height:172px;border-radius:4px;overflow:hidden;flex:none}
  #miniLegendBar>span{flex:1;min-height:1px}
- #miniLegendNums{display:flex;flex-direction:column;justify-content:space-between;height:172px;font-size:9.5px;font-family:var(--mono);color:var(--ink-500)}
+ #miniLegendNums{display:flex;flex-direction:column;justify-content:space-between;height:172px;font-size:8.5px;font-family:var(--mono);color:var(--ink-500);white-space:nowrap}
  #legendBtn{display:none!important}
  #legendBtnOFF{position:absolute;z-index:960;bottom:var(--btm-h,80px);left:12px;width:40px;height:40px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);color:var(--ink-700);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background var(--dur-1) var(--ease)}
  #legendBtn svg{width:20px;height:20px}
@@ -3578,17 +3580,23 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
       ctx2.fillText(lab,x+6,ch-7);_lastLabX=x;}}}
   // baseline
   ctx2.strokeStyle=_P.hair;ctx2.lineWidth=1;ctx2.beginPath();ctx2.moveTo(0,baseY+.5);ctx2.lineTo(cw,baseY+.5);ctx2.stroke();
-  // snowfall bars — each bar coloured by its own value on the SLF new-snow
-  // scale (the same discrete steps/colours as the Neuschnee legend), not a
-  // single flat accent -- so the bar heights AND colours both read as "how
-  // much", consistently with every other SLF-scaled layer.
+  // snowfall bars — each bar coloured on the SLF new-snow palette (the same
+  // hue progression as the Neuschnee legend), not a single flat accent -- so
+  // bar heights AND colours both read as "how much". hSnow holds an HOURLY
+  // rate though, almost always well under the SLF scale's own 1 cm floor (its
+  // bands are built for multi-day totals), so mapping v through it directly
+  // left every bar the same barely-there pale green regardless of height.
+  // Rescaling each bar's fraction of the tallest bar in view (mx -- the same
+  // denominator the bar HEIGHT already uses) onto the SLF colour ramp's full
+  // span keeps the exact palette/order while actually using all of it.
   let mx=0;for(const s of hSnow)if(s>mx)mx=s;mx=Math.max(.05,mx);
+  const slfTop=SB[SB.length-1];
   const barH=Math.max(6,ch-topPad-botPad-2),bw=Math.max(2,cw/tvSpan());
   for(let t=Math.max(0,Math.floor(tv0));t<Math.min(T,Math.ceil(tv1)+1);t++){
     const v=hSnow[t];if(v<.002)continue;const h=Math.max(3,v/mx*barH);const x=tvX(t,cw);
     const inSel=(t>=a&&t<b),fut=t>=nowIdx;
-    const c=snowCol(v)||RGB[0];
-    ctx2.fillStyle='rgb('+c[0]+','+c[1]+','+c[2]+')';
+    const c=snowColLerp(v/mx*slfTop)||RGB[0];
+    ctx2.fillStyle='rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')';
     ctx2.globalAlpha=inSel?(fut?1:.7):.28;
     rr(x+.5,baseY-h,Math.max(bw-1,1.8),h,Math.min(2.5,bw/2.2));ctx2.fill();ctx2.globalAlpha=1;}
   if(single){
@@ -4670,17 +4678,21 @@ function miniLegendRender(l){
   // both the swatches and the gradient direction are flipped high-to-low.
   const swatches=[...tmp.querySelectorAll('div>i')].map(i=>i.style.background).filter(Boolean);
   const gradEl=[...tmp.querySelectorAll('div,span')].find(s=>/linear-gradient/.test(s.style.background||''));
+  // Short numbers only -- no units, no words -- so the card stays as narrow
+  // as the icon column it sits above. Takes just the first number a label
+  // contains ("100–150 cm" -> "100", "70+" -> "70").
+  const shortNum=s=>{const m=/-?\d+(\.\d+)?/.exec(s);return m?m[0]:s;};
   let barHtml='',numHtml='';
   if(swatches.length){
     barHtml=swatches.slice().reverse().map(c=>'<span style="background:'+c+'"></span>').join('');
     const rows=[...tmp.querySelectorAll('div')].filter(r=>r.querySelector(':scope>i'));
     const texts=rows.map(r=>{const c=r.cloneNode(true);const ic=c.querySelector('i');if(ic)ic.remove();return c.textContent.trim();}).filter(Boolean);
-    if(texts.length)numHtml='<span>'+escapeHtml(texts[texts.length-1])+'</span><span>'+escapeHtml(texts[0])+'</span>';
+    if(texts.length)numHtml='<span>'+escapeHtml(shortNum(texts[texts.length-1]))+'</span><span>'+escapeHtml(shortNum(texts[0]))+'</span>';
   }else if(gradEl){
     const vertGrad=(gradEl.style.background||'').replace(/-?\d+(\.\d+)?deg/,'0deg');
     barHtml='<span style="flex:10;background:'+vertGrad+'"></span>';
     const numsEl=[...tmp.querySelectorAll('div,span')].find(d=>d.style.display==='flex'&&d.style.justifyContent==='space-between');
-    if(numsEl)numHtml=[...numsEl.children].map(s=>'<span>'+escapeHtml(s.textContent)+'</span>').reverse().join('');
+    if(numsEl)numHtml=[...numsEl.children].map(s=>'<span>'+escapeHtml(shortNum(s.textContent))+'</span>').reverse().join('');
   }
   document.body.removeChild(tmp);
   if(title)title.textContent=vlabel;
