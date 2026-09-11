@@ -141,11 +141,20 @@ iOS app talks to the same API. No second backend, no local DB, no data move.
    table (`profiles`, `reports`, `report_comments`, `follows`,
    `report_reactions`, `groups`, `group_members`) — which is why that is safe —
    but it deserves an audit pass before release.
-2. **Photo uploads.** Native camera images are far larger than web-picked ones.
-   Downscale client-side (~1600 px) before hitting Storage, or upload
-   cost/latency spikes. Already on the Teil A P1 list.
+2. **Photo uploads — already handled.** I previously listed client-side
+   downscaling as a to-do here; that was wrong. `downscaleImage()` already runs
+   at every one of the six upload sites (1600 px long edge, JPEG q=0.85, EXIF
+   orientation honoured, skips re-encoding when it would not help). Native
+   camera sizes are covered.
 3. **Offline writes.** Reports currently go straight to Supabase. In the
    mountains they should queue locally and sync — natural fit with SwiftData.
+
+**Account deletion is now implemented**: `supabase/functions/delete-account/`
+verifies the caller's own JWT, clears their storage, deletes the profile, and
+then deletes the `auth.users` row (the part needing the service role). The
+client calls it and falls back to content-only deletion if it is not deployed,
+so it is safe to ship before deploying. **It still has to be deployed** —
+`supabase functions deploy delete-account` — or the release blocker stands.
 
 Still missing in the DB: `dm_threads` / `dm_messages` (verified absent), so the
 messaging screen stays hidden behind `dmAvailable()`. Run
@@ -153,11 +162,40 @@ messaging screen stays hidden behind `dmAvailable()`. Run
 
 ---
 
+---
+
+## What only you can do — the unblock list
+
+Everything on this list needs a human with an account, a card, or a Mac. Until
+these exist, no amount of code gets the app into TestFlight. Ordered so the
+cheapest and most blocking come first.
+
+| # | What | Why it's yours | Blocks |
+|---|---|---|---|
+| 1 | **Run `ios-testflight.yml` with `upload: false`** | Needs a click in the Actions tab | Nothing — free, no account, no secrets. Proves the whole chain on a hosted Mac. **Do this first.** |
+| 2 | **Deploy the delete-account function**: `supabase functions deploy delete-account` | Needs your Supabase login/CLI | App Store release (Guideline 5.1.1(v)) |
+| 3 | **Confirm the bundle ID** — `ch.snowmapper.app`, or tell me otherwise | Must be a domain you control | Everything downstream; changing it later means a new App Store record |
+| 4 | **Apple Developer Program**, 99 $/yr | Card + identity verification, 24–48 h | TestFlight and everything after |
+| 5 | **App Store Connect app record** with that bundle ID | Needs the enrolled account | Upload |
+| 6 | **Signing assets** → four repo secrets: `APPLE_CERTIFICATE_P12`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_PROVISIONING_PROFILE`, `APPSTORE_API_KEY_JSON` | Generated in your Apple account; must never be in the repo | `upload: true` |
+| 7 | **Host a Privacy Policy + Support URL** | Your legal text, your domain | App Store review |
+| 8 | **App Privacy labels** in App Store Connect (mirror `ios-config/PrivacyInfo.xcprivacy`) | Only the account holder can | App Store review |
+| 9 | **A demo account** for App Review to log in with | Your call what data it shows | App Store review |
+| 10 | **Set `SNOW_REMOTE_DATA_BASE`** to the real data origin (default assumes `https://gianio.github.io/snow-mapper-v17`) | Depends on where you host data | Fresh forecasts in the shipped app |
+| 11 | **MapKit vs Mapbox** decision | Cost/dependency call | Phase 3 native map |
+| 12 | *(optional)* Run `web/migration-messages.sql` | Your database | Unhides the messaging screen |
+
+Items 1, 2, 3 and 12 cost nothing and unblock the most. Item 4 has the longest
+lead time, so start it early even if nothing else is ready.
+
+Once 1–6 are done I can drive the rest: the workflow builds, signs and uploads,
+and I can iterate on failures without a Mac.
+
 ## What I would do next
 
-1. Run `ios-testflight.yml` with `upload: false` — proves the chain on a hosted
-   Mac, needs no Apple account and no secrets. Cheapest possible next step.
-2. In parallel: the account-deletion Edge Function, since it is the one hard
-   rejection blocker and is independent of everything else.
-3. Then Apple Developer enrolment → TestFlight with internal testers.
-4. Then Phase 3, starting with PencilKit and push.
+1. You: item 1 (`upload: false` run) and item 2 (deploy the function).
+2. Me: react to whatever that build surfaces — the first `cap add ios` on a real
+   runner is where unknowns show up.
+3. You: items 3–5 (bundle ID, enrolment, App Store record) — longest lead time.
+4. Me: Phase 3, starting with the native map decision and the PencilKit canvas,
+   both seeded in `ios-native/`.

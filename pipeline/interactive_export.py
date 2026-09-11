@@ -604,6 +604,71 @@ def _app_js() -> str:
     return _HTML.split("/*__APP_START__*/", 1)[1].split("/*__APP_END__*/", 1)[0]
 
 
+# The terrain-similarity scoring model, carved out of the app as a standalone,
+# DOM-free module. tools/test_model.js already proved this block runs outside a
+# browser (it string-slices the same markers); emitting it as a real artifact
+# makes that reusable instead of test-only — a native iOS app can run exactly
+# this in JavaScriptCore, so the physics has ONE source of truth instead of a
+# Swift reimplementation that silently drifts from the web app.
+_ENGINE_START = "// --- Report credibility"
+_ENGINE_END = "function renderPrognosis"
+# Pure scoring only. progZones() is deliberately NOT exported: it reads app
+# state (progSrc, demoFitZones, progZoneFromPoint, progAgeH) and converts app
+# report objects into zone records, which is glue, not model. A consumer builds
+# the zone list itself and hands it to progCell — the boundary test_model.js
+# already uses.
+_ENGINE_EXPORTS = (
+    "progCell", "progEnvelope", "progAspectMatch", "progElevMatch",
+    "progSlopeMatch", "progRecency", "progDistKm", "progReportWeight",
+    "progTrustOf", "progTrustMap", "progInvalidateTrust",
+)
+
+
+def _engine_js() -> str:
+    """Emit engine.js: the scoring block wrapped as a UMD-ish module.
+
+    Raises if the markers move, so a rename breaks the build loudly instead of
+    silently shipping an empty engine.
+    """
+    src = _app_js()
+    i = src.find(_ENGINE_START)
+    j = src.find(_ENGINE_END, i) if i >= 0 else -1
+    if i < 0 or j < 0:
+        raise RuntimeError(
+            "engine.js: could not locate the model block between %r and %r in the app "
+            "script. If those markers were renamed, update _ENGINE_START/_ENGINE_END."
+            % (_ENGINE_START, _ENGINE_END))
+    block = src[i:j]
+    missing = [name for name in _ENGINE_EXPORTS if ("function " + name) not in block]
+    if missing:
+        raise RuntimeError("engine.js: expected functions missing from the model "
+                           "block: %s" % ", ".join(missing))
+    return (
+        "// Snowmapper scoring engine — GENERATED from the app script, do not edit.\n"
+        "// Loads in node, in a worker, and in JavaScriptCore (no DOM, no Leaflet).\n"
+        "// Feed it reports with setReports(), then score a point with progCell().\n"
+        "(function(root,factory){\n"
+        "  if(typeof module==='object'&&module.exports){module.exports=factory();}\n"
+        "  else{root.SnowEngine=factory();}\n"
+        "})(typeof globalThis!=='undefined'?globalThis:this,function(){\n"
+        "  'use strict';\n"
+        "  // Grid dimensions are the only app-level values the block reads; they\n"
+        "  // matter for progZones (not exported) and are harmless defaults here.\n"
+        "  var PROG_GW=340,PROG_GH=240;\n"
+        "  // progTrustMap/progReportWeight score authors from the report set, so\n"
+        "  // the consumer supplies it rather than the module reaching for a global.\n"
+        "  var allReports=[];\n"
+        + block +
+        "\n  return {\n"
+        "    " + ", ".join(_ENGINE_EXPORTS) + ",\n"
+        "    setReports:function(rs){allReports=Array.isArray(rs)?rs:[];"
+        "try{progInvalidateTrust();}catch(e){}return allReports.length;},\n"
+        "    getReports:function(){return allReports;}\n"
+        "  };\n"
+        "});\n"
+    )
+
+
 def export_interactive_html(data, out_html: Path) -> Path:
     """Single self-contained file with the data inlined (default, local use,
     openable via file://)."""
@@ -643,6 +708,9 @@ def export_split_app(data, out_dir: Path) -> Path:
         except OSError:
             pass
     (out_dir / "app.js").write_text(_app_js(), encoding="utf-8")
+    # Standalone scoring engine (see _engine_js): consumed by tools/test_engine.js
+    # and, on iOS, by JavaScriptCore. Small (~9 KB) and costs nothing to ship.
+    (out_dir / "engine.js").write_text(_engine_js(), encoding="utf-8")
     # Where a NATIVE build should look for fresh data before falling back to the
     # copy bundled in its binary (see _BOOT_SPLIT). Empty = bundled only, which
     # is the right default for the web build, where the relative path is already
@@ -6967,16 +7035,34 @@ async function profExportData(btn){if(!sb||!sbUser)return;
 function profShowLegal(){profClose();const el=document.getElementById('disc');if(el)el.classList.add('show');
   const chk=document.getElementById('discChk'),bt=document.getElementById('discBtn');
   if(chk){chk.checked=true;}if(bt){bt.disabled=false;bt.textContent='Schliessen';}}
+// Deleting the account for real needs the service role: the client owns its
+// content rows under RLS but can never remove its own auth.users row, so
+// deleting only the profile left the login alive — the email stayed registered
+// and the person could not sign up again (and Apple requires real deletion,
+// Guideline 5.1.1(v)). The delete-account Edge Function does the whole job;
+// until it is deployed we fall back to content-only deletion and say so
+// honestly rather than claiming the account is gone.
 async function profDeleteAccount(btn){if(!sb||!sbUser)return;
   if(!confirm('Konto und ALLE Inhalte (Reports, Fotos-Verweise, Kommentare, Bewertungen) unwiderruflich löschen?'))return;
   if(!confirm('Wirklich sicher? Dieser Schritt kann nicht rückgängig gemacht werden.'))return;
   if(btn)btn.disabled=true;
+  const done=msg=>{toast(msg,'ok');
+    try{sb.auth.signOut();}catch(e){}
+    setTimeout(()=>{try{localStorage.clear();}catch(e){}location.reload();},1400);};
   try{
+    let fnOk=false,fnMsg='';
+    try{
+      const{data,error}=await sb.functions.invoke('delete-account',{method:'POST'});
+      if(!error&&data&&data.ok)fnOk=true;
+      else fnMsg=(error&&error.message)||(data&&data.error)||'';
+    }catch(e){fnMsg=e.message||String(e);}
+    if(fnOk){done('Dein Konto und alle Inhalte wurden gelöscht.');return;}
+    // Fallback: remove everything the client is allowed to remove. The login
+    // row survives, so do not pretend otherwise.
     const{error}=await sb.from('profiles').delete().eq('id',sbUser.id);
     if(error)throw error;
-    toast('Dein Konto und deine Inhalte wurden gelöscht.','ok');
-    try{await sb.auth.signOut();}catch(e){}
-    setTimeout(()=>{try{localStorage.clear();}catch(e){}location.reload();},1400);
+    console.warn('delete-account function unavailable:',fnMsg);
+    done('Deine Inhalte wurden gelöscht. Die Löschung des Logins ist angefordert.');
   }catch(e){toast('Löschen fehlgeschlagen: '+(e.message||e),'err');if(btn)btn.disabled=false;}}
 function userViewClose(){document.getElementById('userViewModal').style.display='none';}
 let _usT=null;

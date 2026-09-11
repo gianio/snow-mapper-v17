@@ -47,3 +47,8 @@ jobs:
 
       - name: Snow-prognosis model test
         run: node tools/test_model.js dist/app.js
+
+      - name: Standalone engine module
+        # Checks dist/engine.js loads and scores with no DOM — this is the exact
+        # file a native iOS app runs in JavaScriptCore.
+        run: node tools/test_engine.js dist/engine.js
