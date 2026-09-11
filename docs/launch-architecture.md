@@ -84,8 +84,128 @@ und startet offline mit den letzten Daten — im Gelände Gold wert.
 ## Bewusst NICHT empfohlen für den Herbst
 - Kein Framework-Rewrite (React etc.) — der Single-File-Ansatz ist für diese
   Teamgröße ein Feature, kein Bug. Erst bei >3 Mitwirkenden überdenken.
-- Kein eigener Backend-Server — Supabase Free-Tier reicht für 50 Nutzer locker.
-- Kein natives App-Store-Release — PWA deckt die Testphase ab.
+- ~~Kein eigener Backend-Server~~ → **überholt, siehe Teil B** (Sept 2026): das
+  SNOWPACK/Alpine3D-Layer braucht einen zustandsbehafteten Rechen-Host. Für
+  *Auth/Feed/Reports* bleibt Supabase aber richtig — der Host rechnet nur.
+- ~~Kein natives App-Store-Release~~ → **überholt, siehe `apple-app/ROADMAP.md`**
+  (Sept 2026): iOS ist beschlossen, Capacitor-Gerüst existiert.
+
+---
+---
+
+# Teil B — Backend für das SNOWPACK/Alpine3D-Layer
+
+Stand: September 2026. Gilt zusätzlich zu Teil A oben. Anlass: das
+Skiqualitäts-Layer wird von einem **numerischen Modell** (SNOWPACK, später
+Alpine3D) gerechnet, das **täglich läuft und den Schneedeckenzustand
+fortschreibt**. Das ist architektonisch etwas anderes als alles bisherige und
+sprengt den bisherigen „alles in GitHub Actions"-Ansatz.
+
+## B1 — Warum das nicht in CI laufen kann
+
+Der Lauf von heute startet aus dem Zustand von gestern. Daraus folgt:
+
+- **Der Zustand ist das eigentliche Asset.** Gehen die `.sno`-Zustandsdateien
+  verloren, muss die **ganze Saison** ab Schneejahresbeginn neu gerechnet
+  werden. Nicht der Code ist das Wertvolle, sondern der fortgeschriebene
+  Zustand.
+- **GitHub Actions ist ephemer.** Container sind weg, Caches unzuverlässig —
+  genau diese Fehlerklasse ist in `deploy.yml` schon dokumentiert (ein
+  Cache-Key lieferte monatelang einen halbfertigen Demo-Datensatz aus).
+  Sequenzieller Zustand + wegwerfbare Runner ist die falsche Kombination.
+- **Rechenbudget.** Der Deploy-Job ist bei 60 min bereits knapp. SNOWPACK pro
+  Säule ist um Größenordnungen teurer als die heutige Rasterarithmetik.
+
+→ **Eigener Host mit persistenter Disk.** Klein (1D-SNOWPACK auf einem
+stratifizierten Punktsatz: wenige €/Monat), groß nur für Alpine3D
+(Cluster/Burst-Instanz).
+
+## B2 — Zwei Läufe, nicht einer
+
+| Lauf | Antrieb | Zustand | Zweck |
+|---|---|---|---|
+| **Analyse** (autoritativ) | Vergangenheit/Analyse | schreibt den Zustand fort | die Saison |
+| **Prognose** (Zweig) | Vorhersage | **verwirft** den Zustand | Zukunft im Timeslider |
+
+Der Prognoselauf zweigt vom aktuellen Zustand ab, rechnet n Tage vor und wird
+täglich weggeworfen. Er darf **nie** in den Zustand zurückfließen, sonst
+akkumuliert sich Prognosefehler über die Saison. Das entspricht genau dem, was
+die App heute schon zeigt (Vergangenheit + Zukunft in einem Zeitstrahl).
+
+## B3 — Lücken sind Gift
+
+Ein ausgefallener Tag blockiert den nächsten. Nötig:
+
+- **Antriebsdaten validieren, bevor gerechnet wird** (nicht erst hinterher).
+- **Lückenfüllung** für fehlende Meteo-Eingaben — MeteoIO kann das.
+- **Catch-up-Modus**: n verpasste Tage der Reihe nach nachrechnen.
+- **Datierte Zustands-Snapshots** statt nur „latest" → Replay ab beliebigem Tag,
+  wenn Antriebsdaten revidiert werden oder ein Modellfehler behoben ist.
+- **Backups** der Zustandsdateien. Siehe B1: das ist die Saison.
+- **Alerting**, wenn ein Lauf ausfällt — sonst fällt es erst Tage später auf.
+
+## B4 — Zwei Ebenen, App fasst den Host nie an
+
+```
+[Rechen-Host: privat, zustandsbehaftet, persistente Disk]
+   täglicher Analyselauf  -> Zustand(t) + abgeleitetes Skiqualitäts-Feld
+   täglicher Prognoselauf -> Prognosezweig (wegwerfbar)
+        |
+        v  publiziert unveränderliche, versionierte Artefakte
+[Object Storage / CDN: öffentlich, zustandslos]
+   data/<stamp>.json(.gz) + latest.json (Pointer)
+        |
+        v  nur lesend
+[Web-App (GitHub Pages) + iOS-App]
+```
+
+- **Atomar publizieren**: schreiben, dann den Pointer umlegen. Das ist exakt das
+  `latest.json`-Muster, das die Pipeline schon benutzt — nie ein Teilergebnis
+  veröffentlichen.
+- **Ein fehlgeschlagener Lauf degradiert auf das letzte gute Artefakt**, statt
+  die App zu brechen. Die App darf nie von der Verfügbarkeit des Hosts abhängen.
+- Der `--split`-Build trennt Shell und Datenblob bereits → clientseitig ändert
+  sich fast nichts.
+
+## B5 — Lizenz: Modell bleibt auf dem Host
+
+SNOWPACK/Alpine3D stehen unter GPL-Familie. **Nur abgeleitete Zahlen** dürfen
+die Grenze zur App überschreiten, das Programm selbst bleibt auf dem Host.
+Damit wird das Modell nicht „distributed" und die GPL-Pflichten reichen nicht in
+ein geschlossenes iOS-Binary hinein. Das ist ein Lizenz- *und* ein
+Rechenbudget-Argument für dieselbe Trennung.
+
+Zusätzlich: **Attribution/Zitation** für SLF/WSL-Modelle, und nirgends den
+Eindruck einer SLF-Billigung oder eines Bulletin-Ersatzes erzeugen (Teil A §4).
+
+## B6 — Zusammenfall mit iOS
+
+Derselbe Host liefert das, was die iOS-App ohnehin braucht: **frische
+Prognosedaten ohne neues App-Store-Release**. Der Boot-Loader kann das schon
+(`SNOW_REMOTE_DATA_BASE`, remote-first mit Fallback auf die im Binary
+gebündelte Kopie). Also **eine** Infrastruktur für drei Bedürfnisse:
+Skiqualitäts-Layer, Datenaktualität in der App, und Rechnen außerhalb von CI.
+
+## B7 — Reihenfolge
+
+1. SLF/WSL kontaktieren (Datenzugang/Kollaboration) — lange Vorlaufzeit, kostet nichts.
+2. SNOWPACK 1D an einigen IMIS-Stationen prototypen, gegen gemessene HS
+   validieren (`validation/` existiert). Beweist die Antriebskette — das ist das
+   Hauptrisiko.
+3. Skiqualitäts-Index aus den Profilen ableiten; gegen **eigene Nutzer-Reports**
+   kalibrieren (der `progdiff`-Layer vergleicht Modell vs. Meldungen schon).
+4. Auf stratifizierte virtuelle Hänge skalieren, als neues Layer ausliefern —
+   parallel zum bestehenden „Powder Conditions", zum Vergleich.
+5. Rechnen von CI auf den Host umziehen (gemeinsam mit iOS-Datenlieferung).
+6. Optional: Alpine3D für **eine** Region — nur damit kommen Triebschnee und
+   Abgeweht *räumlich* heraus (laterale Prozesse, 1D kann das nicht).
+
+## B8 — Kosten (Größenordnung, zusätzlich zu Teil A)
+
+Kleine VM mit persistenter Disk für 1D-SNOWPACK ~5–20 €/M · Object
+Storage/CDN für die Artefakte ~1–5 €/M · Alpine3D nur bei Bedarf als
+Burst-Instanz (deutlich teurer, stunden- statt monatsweise buchen) ·
+Apple Developer Program 99 $/Jahr.
 
 ## Kosten Testphase
 GitHub (Pages+Actions) 0 CHF · Supabase Free 0 CHF · Sentry Free 0 CHF ·

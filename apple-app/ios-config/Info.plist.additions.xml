@@ -23,7 +23,7 @@
 
 <!-- App display name (optional; overrides appName for the home screen). -->
 <key>CFBundleDisplayName</key>
-<string>Snow Model</string>
+<string>Snowmapper</string>
 
 <!-- Portrait only, matching the web app layout. -->
 <key>UISupportedInterfaceOrientations</key>
