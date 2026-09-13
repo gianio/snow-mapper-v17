@@ -31,6 +31,12 @@ settings:
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
+    # Required for the INFOPLIST_KEY_* settings below to do anything: they feed
+    # Xcode's SYNTHESISED Info.plist, and without this no plist is produced at
+    # all — the build then fails right at the end, on "Validate Snowmapper.app",
+    # with a missing-input error for Info.plist. Keeping the plist generated
+    # means there is no checked-in file to drift from project.yml.
+    GENERATE_INFOPLIST_FILE: YES
     # No team here on purpose: signing is set in Xcode (or by CI secrets), and
     # hardcoding a team id would break every other machine.
     CODE_SIGN_STYLE: Automatic
