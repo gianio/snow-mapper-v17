@@ -48,12 +48,16 @@ targets:
     platform: iOS
     sources:
       - path: Sources
-    resources:
       # Generated — see bootstrap.sh / tools/make_engine.py. This is the SAME
       # engine.js the web app and tools/test_engine.js validate, so the physics
       # cannot diverge between platforms.
+      #
+      # NOTE: XcodeGen has no target-level `resources:` key — resources are just
+      # sources with an explicit buildPhase. A `resources:` block is silently
+      # IGNORED, which is how the first simulator run ended up with all nine
+      # tests failing on engineScriptMissing.
       - path: Resources/engine.js
-        type: file
+        buildPhase: resources
         optional: true
     settings:
       base:
@@ -78,11 +82,10 @@ targets:
     platform: iOS
     sources:
       - path: Tests
-    resources:
       # The tests load engine.js from their OWN bundle, so they can assert the
       # Swift bridge agrees with tools/test_engine.js without launching the app.
       - path: Resources/engine.js
-        type: file
+        buildPhase: resources
         optional: true
     dependencies:
       - target: Snowmapper

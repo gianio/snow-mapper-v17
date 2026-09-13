@@ -84,6 +84,21 @@ jobs:
         working-directory: ios-native
         run: xcodegen generate --spec project.yml
 
+      # Fail in seconds rather than after a three-minute simulator run. An
+      # unknown key in project.yml is silently ignored by XcodeGen, so a
+      # mis-specified resource shows up only as every test failing on a missing
+      # file — which is a slow and confusing way to learn about a typo.
+      - name: Assert engine.js is bundled into both targets
+        working-directory: ios-native
+        run: |
+          refs=$(grep -c 'engine.js' Snowmapper.xcodeproj/project.pbxproj || true)
+          echo "engine.js references in project.pbxproj: $refs"
+          if [ "$refs" -lt 2 ]; then
+            echo "::error::engine.js is not bundled (expected references for both \
+          the app and test targets). Check the sources/buildPhase entries in project.yml."
+            exit 1
+          fi
+
       - name: Run unit tests on a simulator
         run: |
           set -o pipefail
