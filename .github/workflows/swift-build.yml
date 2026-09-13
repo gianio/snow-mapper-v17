@@ -1,0 +1,62 @@
+name: Swift type-check (ios-native)
+
+# Type-checks ios-native/Sources against the real iOS SDK on a hosted Mac.
+#
+# WHY THIS EXISTS
+# The native sources are written in an environment with no Apple frameworks, so
+# without this they are unverified prose that happens to look like Swift. This
+# is the cheapest possible way to make the compiler the judge instead:
+#   • needs NO Apple Developer account and NO signing (type-checking only)
+#   • macOS runner minutes are free on a public repo
+#   • ~2 minutes, so it is a usable fix-and-retry loop
+#
+# It does NOT build an app, run a simulator, or verify anything visual. It
+# catches syntax and type errors — which is exactly the class of mistake that
+# writing Swift without a compiler produces.
+
+on:
+  push:
+    branches: ["main"]
+    paths: ["ios-native/**", ".github/workflows/swift-build.yml"]
+  pull_request:
+    branches: ["main"]
+    paths: ["ios-native/**", ".github/workflows/swift-build.yml"]
+  workflow_dispatch:
+
+jobs:
+  typecheck:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Show toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+          xcrun --sdk iphoneos --show-sdk-version
+
+      # -typecheck stops before codegen/linking: it resolves every import and
+      # checks every type without needing an app target, a project file, or a
+      # provisioning profile. Deployment target is kept in step with the CSS
+      # floor the web app already has (color-mix needs iOS 16.2), so both halves
+      # of the product support the same devices.
+      - name: Type-check Swift sources against the iOS SDK
+        run: |
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          FILES=$(find ios-native/Sources -name '*.swift' | sort)
+          echo "Type-checking:"; echo "$FILES" | sed 's/^/  /'
+          # shellcheck disable=SC2086
+          # Deliberately NOT -warnings-as-errors yet: the first signal from this
+          # job should be about real type errors, not a deprecation or an unused
+          # binding. Tighten it once the sources compile clean.
+          xcrun swiftc \
+            -sdk "$SDK" \
+            -target arm64-apple-ios16.2 \
+            -typecheck \
+            $FILES
+
+      - name: Result
+        if: success()
+        run: echo "Swift sources type-check cleanly against the iOS SDK."

@@ -99,28 +99,27 @@ public struct DrawCanvasView: UIViewRepresentable {
             onStrokesChanged(samples)
         }
 
-        /// Walks the strokes and thins them to roughly one sample per few points.
-        /// The zone maths groups samples by pressure-derived depth, so it wants
-        /// coverage, not every interpolated point PencilKit generates.
+        /// Samples the strokes at even spacing along the path.
+        ///
+        /// `interpolatedPoints(by: .distance(_:))` is the documented way to walk
+        /// a PKStrokePath and is better than indexing its control points: the
+        /// zone maths wants even ground coverage, and control points bunch up
+        /// wherever the pen moved slowly or changed direction.
         static func samples(from drawing: PKDrawing, penType: String,
-                            projection: CanvasProjection, stride: Int = 4) -> [DrawSample] {
+                            projection: CanvasProjection,
+                            spacing: CGFloat = 6) -> [DrawSample] {
             var out: [DrawSample] = []
             for stroke in drawing.strokes {
-                let path = stroke.path
-                var i = 0
-                while i < path.count {
-                    let p = path[i]
-                    // PencilKit gives points in the stroke's own space; the
-                    // stroke transform puts them back into canvas space.
+                for p in stroke.path.interpolatedPoints(by: .distance(spacing)) {
+                    // Points come in the stroke's own space; its transform puts
+                    // them back into canvas space.
                     let canvasPoint = p.location.applying(stroke.transform)
-                    if let c = projection.coordinate(at: canvasPoint) {
-                        // force is 0 for a finger and can exceed 1 with a firm
-                        // Pencil press, so clamp rather than trust it.
-                        let pressure = max(0, min(1, Double(p.force)))
-                        out.append(DrawSample(lat: c.lat, lon: c.lon,
-                                              pressure: pressure, penType: penType))
-                    }
-                    i += stride
+                    guard let c = projection.coordinate(at: canvasPoint) else { continue }
+                    // force is 0 for a finger and can exceed 1 on a firm Pencil
+                    // press, so clamp rather than trust it.
+                    let pressure = max(0, min(1, Double(p.force)))
+                    out.append(DrawSample(lat: c.lat, lon: c.lon,
+                                          pressure: pressure, penType: penType))
                 }
             }
             return out
