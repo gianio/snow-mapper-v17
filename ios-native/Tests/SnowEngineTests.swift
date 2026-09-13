@@ -9,6 +9,12 @@
 
 import XCTest
 
+// The tests are a separate module from the app, so the app's types have to be
+// imported. @testable rather than a plain import so internal members stay
+// reachable as the app grows (it needs ENABLE_TESTABILITY, which Debug sets by
+// default — and the test scheme runs Debug).
+@testable import Snowmapper
+
 final class SnowEngineTests: XCTestCase {
 
     /// Reference report: powder, N-facing, 1700–2300 m, 2 h old, at Davos.
