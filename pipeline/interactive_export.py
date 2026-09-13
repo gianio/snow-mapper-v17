@@ -37,6 +37,13 @@ from data_connectors.synthetic_weather import synthetic_forecast
 from model.snow_model import WeatherGrid, compute_new_snow
 from model.terrain_features import compute_terrain_features, roughness
 from model.raster_engine import build_grid_coordinates
+
+# Importable both as `pipeline.engine_extract` (normal, from the repo root) and
+# as a bare sibling (when pipeline/ itself is put on sys.path).
+try:
+    from pipeline.engine_extract import build_engine_js
+except ImportError:  # pragma: no cover
+    from engine_extract import build_engine_js
 from pipeline.geo_utils import weather_sample_grid
 from pipeline.overlay_export import SLF_BOUNDS, SLF_COLORS
 
@@ -610,63 +617,14 @@ def _app_js() -> str:
 # makes that reusable instead of test-only — a native iOS app can run exactly
 # this in JavaScriptCore, so the physics has ONE source of truth instead of a
 # Swift reimplementation that silently drifts from the web app.
-_ENGINE_START = "// --- Report credibility"
-_ENGINE_END = "function renderPrognosis"
-# Pure scoring only. progZones() is deliberately NOT exported: it reads app
-# state (progSrc, demoFitZones, progZoneFromPoint, progAgeH) and converts app
-# report objects into zone records, which is glue, not model. A consumer builds
-# the zone list itself and hands it to progCell — the boundary test_model.js
-# already uses.
-_ENGINE_EXPORTS = (
-    "progCell", "progEnvelope", "progAspectMatch", "progElevMatch",
-    "progSlopeMatch", "progRecency", "progDistKm", "progReportWeight",
-    "progTrustOf", "progTrustMap", "progInvalidateTrust",
-)
-
-
+#
+# The markers and the module wrapper live in pipeline/engine_extract.py, which
+# imports nothing beyond the stdlib, so tools/make_engine.py can emit the same
+# engine.js on a machine with none of this module's heavy dependencies
+# installed (see that file, and ios-native/bootstrap.sh).
 def _engine_js() -> str:
-    """Emit engine.js: the scoring block wrapped as a UMD-ish module.
-
-    Raises if the markers move, so a rename breaks the build loudly instead of
-    silently shipping an empty engine.
-    """
-    src = _app_js()
-    i = src.find(_ENGINE_START)
-    j = src.find(_ENGINE_END, i) if i >= 0 else -1
-    if i < 0 or j < 0:
-        raise RuntimeError(
-            "engine.js: could not locate the model block between %r and %r in the app "
-            "script. If those markers were renamed, update _ENGINE_START/_ENGINE_END."
-            % (_ENGINE_START, _ENGINE_END))
-    block = src[i:j]
-    missing = [name for name in _ENGINE_EXPORTS if ("function " + name) not in block]
-    if missing:
-        raise RuntimeError("engine.js: expected functions missing from the model "
-                           "block: %s" % ", ".join(missing))
-    return (
-        "// Snowmapper scoring engine — GENERATED from the app script, do not edit.\n"
-        "// Loads in node, in a worker, and in JavaScriptCore (no DOM, no Leaflet).\n"
-        "// Feed it reports with setReports(), then score a point with progCell().\n"
-        "(function(root,factory){\n"
-        "  if(typeof module==='object'&&module.exports){module.exports=factory();}\n"
-        "  else{root.SnowEngine=factory();}\n"
-        "})(typeof globalThis!=='undefined'?globalThis:this,function(){\n"
-        "  'use strict';\n"
-        "  // Grid dimensions are the only app-level values the block reads; they\n"
-        "  // matter for progZones (not exported) and are harmless defaults here.\n"
-        "  var PROG_GW=340,PROG_GH=240;\n"
-        "  // progTrustMap/progReportWeight score authors from the report set, so\n"
-        "  // the consumer supplies it rather than the module reaching for a global.\n"
-        "  var allReports=[];\n"
-        + block +
-        "\n  return {\n"
-        "    " + ", ".join(_ENGINE_EXPORTS) + ",\n"
-        "    setReports:function(rs){allReports=Array.isArray(rs)?rs:[];"
-        "try{progInvalidateTrust();}catch(e){}return allReports.length;},\n"
-        "    getReports:function(){return allReports;}\n"
-        "  };\n"
-        "});\n"
-    )
+    """Emit engine.js: the scoring block wrapped as a UMD-ish module."""
+    return build_engine_js(_app_js())
 
 
 def export_interactive_html(data, out_html: Path) -> Path:

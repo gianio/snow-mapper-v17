@@ -49,34 +49,64 @@ native app builds its zone list itself and hands it to `progCell`. Same boundary
 | `Sources/SnowEngine.swift` | JavaScriptCore bridge. Loads `engine.js`, exposes `score(aspect:elevation:slope:lat:lon:supporting:conflicting:)` returning a typed `PowderScore`. Serialises onto one queue because `JSContext` is not thread-safe. |
 | `Sources/DrawCanvasView.swift` | PencilKit canvas for drawing snow zones. Real pressure/tilt, palm rejection, predictive smoothing, and `drawingPolicy = .pencilOnly` so a finger pans the map instead of drawing — the thing the web tool emulates by hand. |
 
-## Getting it building (on a Mac)
+## Getting it running on a Mac
 
-There is no Xcode project here on purpose — a generated `.xcodeproj` is a large
-binary-ish file that is painful to review and to keep in sync. Create it once:
+One command:
 
-1. Xcode → **New Project** → iOS App, SwiftUI, name `Snowmapper`, bundle ID
-   `ch.snowmapper.app` (same as `apple-app/capacitor.config.ts`, so both
-   builds can share the App Store record — decide which one owns it before you
-   upload both).
-2. Drag `ios-native/Sources/` into the project.
-3. Build `engine.js` and add it as a **bundle resource**:
-   ```bash
-   python run_interactive.py --split --offline --out-dir /tmp/snowbuild
-   # then drag /tmp/snowbuild/engine.js into the Xcode target
-   ```
-   Or add a build phase that runs the pipeline, so the engine can never go
-   stale relative to the web app.
-4. Smoke test the bridge before building any UI:
-   ```swift
-   let engine = try SnowEngine()                       // loads engine.js from the bundle
-   let zone = EngineZone(type: "powder", lat: 46.80, lng: 9.83,
-                         e0: 1700, e1: 2300, asp: 0, conc: 0.85, ageH: 2)
-   let s = engine.score(aspect: 0, elevation: 2000, slope: 30,
-                        lat: 46.80, lon: 9.83, supporting: [zone])
-   // expect likelihood ≈ 0.98, confidence ≈ 96  (same numbers CI asserts)
-   ```
-   Those exact values come from `tools/test_engine.js`, so if Swift disagrees
-   with them the bridge is wrong, not the model.
+```bash
+cd ios-native && ./bootstrap.sh
+```
+
+That checks your toolchain (and tells you exactly what to install if something
+is missing), generates `Resources/engine.js`, generates `Snowmapper.xcodeproj`
+from `project.yml`, and opens Xcode. **No Apple Developer account needed** —
+simulator builds require no signing; only shipping to a device or TestFlight
+does.
+
+Prerequisites it will check for you: full **Xcode** (not just Command Line
+Tools — those have no iOS SDK), **XcodeGen** (`brew install xcodegen`, it offers
+to do this), and **python3** (macOS ships one).
+
+Or run the tests straight from the command line:
+
+```bash
+xcodebuild test -project ios-native/Snowmapper.xcodeproj -scheme Snowmapper \
+  -destination 'platform=iOS Simulator,name=iPhone 16'
+```
+
+### Why there is no `.xcodeproj` in git
+
+It is generated from `project.yml` by XcodeGen. A checked-in `.xcodeproj` is a
+large, merge-hostile bundle meant to be edited through a GUI; ~60 lines of YAML
+is reviewable in a diff, cannot drift from the repo, and lets targets, build
+settings, Info.plist keys and entitlements be changed as ordinary code. It also
+means no regex-patching of `project.pbxproj` — compare `apple-app/scripts/
+apply-ios-config.py`, which has to do exactly that for the Capacitor path.
+
+The tradeoff: **changes made in Xcode's project-settings GUI are overwritten on
+the next generate.** Edit `project.yml` instead.
+
+### `engine.js` is generated, not committed
+
+`tools/make_engine.py` emits it using **stdlib python only** — deliberately, so
+a Mac does not need numpy, rasterio, pyproj, scipy and GDAL installed just to
+produce a 10 KB JavaScript file. `tools/test_engine_extract.py` asserts that
+path produces byte-identical output to the full pipeline, so the iOS app can
+never ship an engine that differs from the one the web app uses.
+
+## What the first screen is
+
+A deliberate **dev harness**, not the product — it exercises the three things
+that cannot be verified without real hardware:
+
+| Section | What it proves | Expected |
+|---|---|---|
+| **Engine** | The JavaScriptCore bridge loads `engine.js` on-device and agrees with node | `0.982` / `96%` — the values `tools/test_engine.js` pins. A mismatch means the *bridge* is wrong, not the model. |
+| **Haptics** | Every CoreHaptics pattern, so it can be felt | Nothing — the intensity/sharpness values are **untuned guesses**. This is where you fix them. |
+| **Draw** | PencilKit with a real Apple Pencil | Needs an **iPad + Pencil**. No simulator produces pressure or tilt. |
+
+The real UI comes after the MapKit-vs-Mapbox decision, which shapes the whole
+map layer.
 
 ## What still has to be decided
 

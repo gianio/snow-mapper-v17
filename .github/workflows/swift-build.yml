@@ -63,6 +63,48 @@ jobs:
             -warnings-as-errors \
             $FILES
 
+      # Beyond type-checking: generate the project exactly as a Mac would and
+      # RUN the unit tests in a simulator. This is what proves the Swift bridge
+      # and the JS engine agree numerically, rather than merely compiling.
+      # Still no Apple Developer account and no signing — simulator builds need
+      # neither (CODE_SIGNING_ALLOWED=NO).
+      - name: Install XcodeGen + xcbeautify
+        run: brew install xcodegen xcbeautify
+
+      - name: Generate engine.js (dependency-free path)
+        run: python3 tools/make_engine.py -o ios-native/Resources/engine.js
+
+      - name: Validate engine.js
+        run: node tools/test_engine.js ios-native/Resources/engine.js
+
+      - name: Assert both engine generators agree
+        run: python3 tools/test_engine_extract.py
+
+      - name: Generate Xcode project
+        working-directory: ios-native
+        run: xcodegen generate --spec project.yml
+
+      - name: Run unit tests on a simulator
+        run: |
+          set -o pipefail
+          # Pick whatever iPhone simulator this runner image actually has.
+          # Hardcoding a name (e.g. "iPhone 16") breaks silently whenever the
+          # image is updated, which is a maddening failure to debug remotely.
+          DEVICE="$(xcrun simctl list devices available \
+            | grep -oE '^ *iPhone [^(]+' | head -1 | sed 's/^ *//;s/ *$//')"
+          if [ -z "$DEVICE" ]; then
+            echo "::error::no iPhone simulator available on this runner"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Testing on: $DEVICE"
+          xcodebuild test \
+            -project ios-native/Snowmapper.xcodeproj \
+            -scheme Snowmapper \
+            -destination "platform=iOS Simulator,name=$DEVICE" \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions
+
       - name: Result
         if: success()
-        run: echo "Swift sources type-check cleanly against the iOS SDK."
+        run: echo "Swift type-checks, the project generates, and the simulator tests pass."
