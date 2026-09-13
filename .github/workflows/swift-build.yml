@@ -48,13 +48,19 @@ jobs:
           FILES=$(find ios-native/Sources -name '*.swift' | sort)
           echo "Type-checking:"; echo "$FILES" | sed 's/^/  /'
           # shellcheck disable=SC2086
-          # Deliberately NOT -warnings-as-errors yet: the first signal from this
-          # job should be about real type errors, not a deprecation or an unused
-          # binding. Tighten it once the sources compile clean.
+          # -warnings-as-errors is on because these sources are written without
+          # a local compiler: a warning is the only early signal that something
+          # is off, so it must not be ignorable. Run 1 was clean (no errors AND
+          # no warnings) on Xcode 26.6 / Swift 6.3.3, so this costs nothing now.
+          # NOTE: macos-latest floats, so a future runner image can introduce a
+          # new deprecation warning and turn this red on an unrelated day. When
+          # that happens, fix the deprecation — or drop this flag temporarily —
+          # rather than assuming the code broke.
           xcrun swiftc \
             -sdk "$SDK" \
             -target arm64-apple-ios16.2 \
             -typecheck \
+            -warnings-as-errors \
             $FILES
 
       - name: Result
