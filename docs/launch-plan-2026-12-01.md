@@ -43,10 +43,21 @@ improving through the season beats missing the season entirely.
 
 Nothing ships without all of these.
 
-### 1. Run `supabase/migrations/20260901000000_privacy_moderation_ratings.sql` — today
-Every user's email is currently readable by anyone with the anon key. It is a
-DSG/GDPR exposure, it will be a lie in your App Privacy labels, and the fix is
-already written and verified idempotent. Two minutes in the SQL editor.
+### 1. Adopt the migrations under the Supabase CLI
+**Corrected 14 Sep 2026.** An earlier version of this plan said every user's
+email was readable with the anon key. That was wrong — checked against
+production, `20260901000000_privacy_moderation_ratings.sql` **is** applied and
+`profiles.email` is correctly column-scoped away from `anon`. No live exposure.
+
+What is genuinely pending is `20260914000000_harden_functions.sql`:
+`handle_new_user()` is still `SECURITY DEFINER` with a mutable `search_path`,
+and `anon` can still `EXECUTE` both trigger functions over `/rest/v1/rpc/`.
+Neither is exploitable in an obvious way today, but both matter more once the
+anon key ships inside an app binary.
+
+The deeper problem is that none of the above was knowable without querying
+production. `supabase link` + `migration repair` + `db push` fixes that
+permanently. Half an hour, and it stops being a guess.
 
 ### 2. Apple Developer Program enrolment — start today
 Longest lead time on the whole list. Individual enrolment is usually 24–48 h;

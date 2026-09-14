@@ -3,12 +3,16 @@
 ## Why this exists
 
 Schema changes used to be loose SQL files you were expected to remember to
-paste into the dashboard. That is how a **privacy fix sat written, committed
-and unapplied for months** while production kept exposing every user's email
-address: the code was right, the process had no way to notice.
+paste into the dashboard. Nothing recorded which ones had been run.
 
-With migrations under the CLI, "is this live?" becomes a query instead of a
-memory test.
+Checked against production on 14 Sep 2026: the privacy migration **is**
+applied (`profiles.email` is correctly column-scoped away from `anon`), the
+messaging one is not, and the hardening one is not. None of that was knowable
+from the repo — it took a query against the live database to find out, and an
+earlier version of this file confidently asserted the opposite.
+
+That is the actual problem. With migrations under the CLI, "is this live?"
+becomes `supabase migration list` instead of a memory test.
 
 ```
 supabase/
@@ -38,9 +42,11 @@ supabase link --project-ref gdtxwowcqtbdkcoksivb
 
 ### Adopting migrations on a database that already exists
 
-The live database already has the baseline applied (and, depending on when you
-read this, possibly more). The CLI does not know that yet, so tell it what is
-already there rather than letting it re-apply blindly:
+The live database has the baseline **and** the privacy migration applied
+(verified 14 Sep 2026); the messaging and hardening migrations are not. The CLI
+knows none of this — `supabase_migrations.schema_migrations` does not exist yet,
+so nothing has ever been tracked. Tell it what is already there rather than
+letting it re-apply blindly:
 
 ```bash
 supabase migration list        # local files vs what the remote has recorded
@@ -51,10 +57,11 @@ Two ways forward, and the choice matters:
 **Option A — mark the baseline as already applied (cleanest).**
 
 ```bash
-supabase migration repair --status applied 20260618000000
+supabase migration repair --status applied 20260618000000 20260901000000
 ```
 
-Then `supabase db push` applies only what genuinely has not run.
+Then `supabase db push` applies only what genuinely has not run — here, the
+messaging and hardening migrations.
 
 **Option B — just push everything.** Safe *specifically here*, because all
 four migrations are written idempotently — `CREATE TABLE IF NOT EXISTS`,
@@ -129,7 +136,7 @@ client.
 | File | Contents |
 |---|---|
 | `20260618000000_baseline_schema.sql` | Core schema: `profiles`, `reports`, `report_comments`, `follows`, `report_reactions`, `groups`, `group_members`, the `handle_new_user` trigger, RLS policies, storage bucket. |
-| `20260901000000_privacy_moderation_ratings.sql` | **The important one — not yet applied as of 14 Sep 2026.** §5 stops exposing `profiles.email` and `webauthn_credentials`; plus storage policies and size/mime limits, `bio`/`push_enabled`/`visibility` columns, moderation (`report_flags` + auto-hide at 3 flags), a 20-reports-per-24 h rate limit, per-post condition ratings, own-profile and own-report deletion. |
+| `20260901000000_privacy_moderation_ratings.sql` | **Verified applied in production, 14 Sep 2026.** §5 stops exposing `profiles.email` and `webauthn_credentials`; plus storage policies and size/mime limits, `bio`/`push_enabled`/`visibility` columns, moderation (`report_flags` + auto-hide at 3 flags), a 20-reports-per-24 h rate limit, per-post condition ratings, own-profile and own-report deletion. |
 | `20260902000000_messaging.sql` | `dm_threads` + `dm_messages` with RLS. Until applied, the app hides its messaging UI behind `dmAvailable()`. |
 | `20260914000000_harden_functions.sql` | Pins `search_path` on `handle_new_user()` and revokes `EXECUTE` on both trigger functions from `anon`/`authenticated`. Closes the two actionable security advisories below. |
 
