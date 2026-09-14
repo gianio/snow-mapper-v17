@@ -35,6 +35,9 @@ jobs:
       - name: Terrain aspect unit test
         run: python tools/test_aspect.py
 
+      - name: Ablation unit test
+        run: python tools/test_ablation.py
+
       - name: Build app (offline, synthetic data)
         run: |
           mkdir -p dist

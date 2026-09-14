@@ -36,6 +36,7 @@ from data_connectors.open_meteo_client import OpenMeteoClient
 from data_connectors.synthetic_weather import synthetic_forecast
 from model.snow_model import WeatherGrid, compute_new_snow
 from model.terrain_features import compute_terrain_features, roughness
+from model import ablation as abl_mod
 from model.raster_engine import build_grid_coordinates
 
 # Importable both as `pipeline.engine_extract` (normal, from the repo root) and
@@ -48,6 +49,7 @@ from pipeline.geo_utils import weather_sample_grid
 from pipeline.overlay_export import SLF_BOUNDS, SLF_COLORS
 
 _SNOW_SCALE = 0.2
+_ABL_SCALE = 0.05         # cm Hoehenverlust je Schritt, uint8 -> max 12.75 cm/h
 _TEMP_OFF, _TEMP_MUL = 60.0, 2.0
 _SPD_MUL = 5.0
 _DIR_DIV = 2.0
@@ -418,6 +420,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
 
     print(f"[INT] Modelliere {T} Stunden ...")
     snow_c = np.zeros((T, *shape), "float32")
+    abl_c = np.zeros((T, *shape), "float32")
     temp_c = np.zeros((T, *shape), "float32")
     sun_c = np.zeros((T, *shape), "float32")
     wind_c = np.zeros((T, *shape), "float32")
@@ -425,6 +428,19 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     p_spd = np.zeros((T, P), "float32")
     p_dir = np.zeros((T, P), "float32")
     lapse = params["altitude"]["temp_lapse_k_per_m"]
+
+    # Ablation braucht die Breite je Zelle (Sonnenstand) sowie Neigung und
+    # Exposition im Bogenmass. Die Schneedecke wird hier mitgefuehrt, damit
+    # der abgegebene Verlust nie groesser ist als die vorhandene Hoehe -- der
+    # Client reproduziert das mit max(0, cum + SNOW - ABL) exakt.
+    _tf_ll = Transformer.from_crs(aoi.crs, "EPSG:4326", always_xy=True)
+    _lon_g, _lat_g = _tf_ll.transform(grid_x.ravel(), grid_y.ravel())
+    lat_grid = np.asarray(_lat_g, dtype="float64").reshape(shape)
+    slope_r = np.nan_to_num(terrain.slope_rad, nan=0.0).astype("float64")
+    aspect_r = np.radians(np.nan_to_num(terrain.aspect_deg, nan=0.0)).astype("float64")
+    depth_cm = np.zeros(shape, "float64")
+    since_snow = np.full(shape, float(params["ablation"]["albedo_tau_h"]))
+
     for t in range(T):
         temp_g = _apply(temp_m[:, t], idx, w).reshape(shape)
         ws_g = _apply(wspd_m[:, t], idx, w).reshape(shape)
@@ -439,6 +455,11 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         snow_c[t] = compute_new_snow(terrain, wg, params)["new_snow_cm"]
         temp_c[t] = temp_g + lapse * (terrain.elevation - ref_elev)
         sun_c[t] = np.clip(_apply(sun_m[:, t], idx, w).reshape(shape) / 3600.0, 0, 1)
+        _dt = datetime.strptime(times[t][:13], "%Y-%m-%dT%H")
+        _sin_el, _az = abl_mod.solar_geometry(_dt.timetuple().tm_yday, _dt.hour, lat_grid)
+        _irr = abl_mod.slope_irradiance(_sin_el, _az, slope_r, aspect_r, params)
+        depth_cm, since_snow, abl_c[t] = abl_mod.step_snowpack(
+            depth_cm, snow_c[t], since_snow, temp_c[t], _irr, sun_c[t], params)
         wind_c[t] = ws_g
         prec_c[t] = prec_g
         p_spd[t] = _apply(wspd_m[:, t], p_idx, p_w) * expo_mult  # topografisch moduliert
@@ -447,6 +468,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
 
     dst_t, dw, dh = calculate_default_transform(aoi.crs, "EPSG:4326", shape[1], shape[0], *bounds)
     snow_w = _reproj_cube(snow_c, dem.transform, aoi.crs, dst_t, dh, dw)
+    abl_w = _reproj_cube(abl_c, dem.transform, aoi.crs, dst_t, dh, dw)
     temp_w = _reproj_cube(temp_c, dem.transform, aoi.crs, dst_t, dh, dw)
     sun_w = _reproj_cube(sun_c, dem.transform, aoi.crs, dst_t, dh, dw)
     wind_w = _reproj_cube(wind_c, dem.transform, aoi.crs, dst_t, dh, dw)
@@ -473,7 +495,8 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     return {
         "times": times, "T": T, "width": dw, "height": dh,
         "bounds": (bottom, left, top, right), "today_index": _today_idx(times),
-        "snow": snow_w, "temp": temp_w, "sun": sun_w, "wind_grid": wind_w,
+        "snow": snow_w, "ablation": abl_w, "temp": temp_w, "sun": sun_w,
+        "wind_grid": wind_w,
         "prec": prec_w, "main_aspect": aspect_main, "main_slope": slope_main,
         "main_elev": elev_main,
         "wind": {"lat": wind["lat"], "lon": wind["lon"], "nx": wind["nx"], "ny": wind["ny"],
@@ -566,6 +589,7 @@ def _build_meta_blobs(data):
     rad = data["rad"]
     blobs = {
         "SNOW": u8(data["snow"], lambda a: np.round(a / _SNOW_SCALE)),
+        "ABL": u8(data["ablation"], lambda a: np.round(a / _ABL_SCALE)),
         "TEMP": u8(data["temp"], lambda a: np.round((a + _TEMP_OFF) * _TEMP_MUL)),
         "SUN": u8(data["sun"], lambda a: np.round(a * _SUN_MUL)),
         "SPD": u8(data["wind"]["spd"], lambda a: np.round(a * _SPD_MUL)),
@@ -586,7 +610,7 @@ def _build_meta_blobs(data):
     meta = {
         "T": data["T"], "width": data["width"], "height": data["height"],
         "bounds": data["bounds"], "times": data["times"], "today_index": data["today_index"],
-        "snow_scale": _SNOW_SCALE, "temp_off": _TEMP_OFF, "temp_mul": _TEMP_MUL,
+        "snow_scale": _SNOW_SCALE, "abl_scale": _ABL_SCALE, "temp_off": _TEMP_OFF, "temp_mul": _TEMP_MUL,
         "spd_mul": _SPD_MUL, "dir_div": _DIR_DIV, "sun_mul": _SUN_MUL, "prec_mul": _PREC_MUL,
         "elev_scale": _ELEV_SCALE,
         "slf_bounds": SLF_BOUNDS, "slf_colors": SLF_COLORS,
@@ -3310,6 +3334,7 @@ if(_isNative){try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'DA
   try{const SP=_capPlugin('SplashScreen');if(SP)setTimeout(()=>{try{SP.hide();}catch(e){}},450);}catch(e){}}
 function dec(b){const s=atob(b),n=s.length,a=new Uint8Array(n);for(let i=0;i<n;i++)a[i]=s.charCodeAt(i);return a;}
 const SNOW=dec(db('SNOW')),TEMP=dec(db('TEMP')),SUN=dec(db('SUN')),SPD=dec(db('SPD')),WDIR=dec(db('DIR'));
+const ABL=dec(db('ABL'));
 const WINDG=dec(db('WINDG')),RSLOPE=dec(db('RSLOPE')),RASPECT=dec(db('RASPECT')),RHOR=dec(db('RHOR'));
 const PREC=dec(db('PREC')),MASPECT=dec(db('MASPECT')),MSLOPE=dec(db('MSLOPE')),MELEV=dec(db('MELEV')),ROUGHG=dec(db('ROUGHGRID'));
 const ASPECT_PNG="data:image/png;base64,"+db('ASPECTPNG'),ROUGH_PNG="data:image/png;base64,"+db('ROUGHPNG'),ELEV_PNG="data:image/png;base64,"+db('ELEVPNG');
@@ -3318,7 +3343,18 @@ const RW=M.rad.width,RH=M.rad.height,RK=M.rad.K,RNP=RW*RH;
 const [RbS,RlW,RbN,RlE]=M.rad.bounds;
 const wg_=(t,p)=>WINDG[t*NP+p]/M.spd_mul;
 const cum=new Float32Array((T+1)*NP);
-for(let t=0;t<T;t++){const o0=t*NP,o1=(t+1)*NP,s=t*NP,sc=M.snow_scale;for(let p=0;p<NP;p++)cum[o1+p]=cum[o0+p]+SNOW[s+p]*sc;}
+// Massenbilanz statt Kumulativsumme: ABL traegt Schmelze (Temperatur +
+// hangkorrigierte Einstrahlung) und Setzung, in der Pipeline auf die
+// vorhandene Hoehe begrenzt -- deshalb genuegt hier max(0, ...).
+// Ein aelterer Daten-Blob (gehostete Daten werden unabhaengig vom Binary
+// aktualisiert) kennt ABL nicht. db() gibt dann "" und dec("") ein leeres
+// Array -- ABL[i] waere undefined und wuerde die Summe zu NaN machen.
+// Also nur bilanzieren, wenn Skala UND vollstaendiger Wuerfel da sind.
+const _ascale=+M.abl_scale||0;
+const _hasAbl=_ascale>0&&ABL.length>=T*NP;
+for(let t=0;t<T;t++){const o0=t*NP,o1=(t+1)*NP,s=t*NP,sc=M.snow_scale;
+  if(_hasAbl){for(let p=0;p<NP;p++){const v=cum[o0+p]+SNOW[s+p]*sc-ABL[s+p]*_ascale;cum[o1+p]=v>0?v:0;}}
+  else {for(let p=0;p<NP;p++)cum[o1+p]=cum[o0+p]+SNOW[s+p]*sc;}}
 const tv=(t,p)=>TEMP[t*NP+p]/M.temp_mul-M.temp_off, sunv=(t,p)=>SUN[t*NP+p]/M.sun_mul;
 const SB=M.slf_bounds,SC=M.slf_colors,RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
 function snowCol(v){if(v<SB[0])return null;for(let i=SB.length-1;i>=1;i--)if(v>=SB[i-1])return RGB[Math.min(i-1,RGB.length-1)];return RGB[0];}
