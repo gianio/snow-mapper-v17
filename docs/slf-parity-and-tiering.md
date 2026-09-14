@@ -234,6 +234,103 @@ Worth doing at the current resolution regardless.
 
 ## Order of work
 
+---
+
+## Measured: what the grid actually costs
+
+`build_interactive_data` used to hold six `T x cells` **float32** cubes plus a
+reprojected copy of each. Measured at 250 m, that is 1.30 GB per cube and per
+copy — the run was **killed by the OOM killer after 601 s at 12.7 GB peak.**
+250 m was not slow, it was impossible.
+
+Fixed by reprojecting and quantising **per hour, straight into uint8**
+(`_quantisers()`), so no float32 cube is ever held. Output is unchanged —
+same operation order (reproject, then quantise), verified identical (depth
+mean 6.7 cm, peak 19 cm, before and after).
+
+| Resolution | Before | After |
+|---|---|---|
+| 4 km | 96 s | 94 s |
+| 500 m | ~186 s, ~8 GB | **216 s, 4.07 GB, 38.5 MB gz** |
+| 250 m | **OOM at 601 s / 12.7 GB** | see below |
+
+The extra ~30 s at 500 m is the new horizon computation, not the refactor.
+
+**Delivery is still the limit, not compute.** At 250 m the blob is ~140 MB
+gzipped and its uncompressed JSON is ~2.6 GB, which has to be written and
+held. So 250 m needs the tiled *delivery* from Part 2; **500 m is the highest
+resolution that ships as a single blob**, and at 38.5 MB even that wants the
+static-terrain split first.
+
+### Radiation: horizon shading now feeds the mass balance
+
+`_horizon_angles()` was factored out of `_radiation_inputs()` and is now also
+computed on the **model grid** and passed into the ablation — so a north face
+in a valley that gets no sun in January no longer melts snow it never
+received. It is **not shipped**: the blob grows by zero bytes, because only
+the mass balance needs it. The shipped `RHOR` field still serves the display
+layer alone.
+
+Raising `_RAD_RES` to 250 m was the original plan and was **rejected on
+measurement**: `RHOR` is `K x cells`, so at 250 m it would add ~16 MB of
+base64 to every blob for a display layer. Server-side horizon gets the
+physics for free instead.
+
+The horizon search was also resolution-dependent by accident — a fixed 25
+*cells*, so 25 km at 1 km resolution and 6 km at 250 m. It is now specified
+in **metres** (20 km, denser sampling near, coarser far), which is what
+makes it physically meaningful at any grid.
+
+---
+
+## Part 3 — the bulletin, the routes, and scoring a tour
+
+### Licences, checked
+
+| Source | Licence | Obligation |
+|---|---|---|
+| SLF avalanche bulletin (`aws.slf.ch/api/bulletin`) | **CC BY 4.0** | name SLF; same terms as the IMIS feed already shipping |
+| SLF IMIS measurements | CC BY 4.0 | already attributed |
+| swisstopo ski/snowshoe routes | **OGD** — free for any purpose, commercial included | "Source: Federal Office of Topography swisstopo" or "© swisstopo" |
+| BAFU wildlife rest zones | OGD | "© BAFU" |
+| Bulletin archive | since 1 Jan 1998 | via SLF archive |
+| Accident data (EnviDat) | free, own terms | read them; not CC BY by default |
+
+Worth mailing `data@slf.ch` to join the "Avalanche Bulletin" list for terms
+and outage notices.
+
+### The line we do not cross
+
+The app **displays** SLF's bulletin, attributed, linked to the original. It
+does **not** compute a danger level of its own. That distinction is the whole
+liability argument: a viewer is defensible, a forecaster is not. It is
+enforced in code — `slf_bulletin.py` only parses and renders, and
+`tour_score.py` consumes the bulletin's own core zone rather than deriving
+anything.
+
+### Why a powder score needs the bulletin first
+
+A powder score is a *quality* metric. Left alone it would light up a 38°
+north face at danger level 3 — steering people into exactly the core zone the
+bulletin warns about. So `tour_score.py` **clamps its verdict** once
+`CORE_ZONE_CLAMP_SHARE` (15 %) of a route lies in the core zone: the powder
+share is still reported honestly, but the verdict becomes "Kernzone betroffen
+– Bulletin zuerst" and never praises the snow. That property has its own test.
+
+Scoring follows Skitourenguru's geometry (SLABS: non-linear in slope, linear
+in danger level, elevation and aspect; 57,800 km of tracks, 1,250 accidents)
+but keeps our own objective — snow quality, not risk. Results are a
+**distribution**, not a mean: "40 % cold powder, 35 % wind-pressed, 25 % sun
+crust" is the useful answer, because a mean hides the one good couloir.
+Weighting is by segment *length* and only over 22–50° terrain, so a flat
+approach track cannot dominate.
+
+Routes are *cartographic* lines from the 1:50,000 snow-sport maps, not GPS
+tracks — fine for a statistic along a route, wrong as navigation, and the UI
+must not imply otherwise.
+
+---
+
 | # | Change | Effort | Risk | Do it |
 |---|---|---|---|---|
 | 1 | Ablation: melt + settling from existing radiation | days | medium — changes model output | **done** |
@@ -242,6 +339,9 @@ Worth doing at the current resolution regardless.
 | 4 | `_RAD_RES` → 250 m | hours | low | with #2 |
 | 5 | Weather grid → 1 km (ICON-CH1) | days | medium — API volume | after #2 |
 | 6 | Pro tiling + gating | ~2 weeks | high — new delivery path | season 2 |
+| 7 | Bulletin layer (CC BY 4.0) | days | low — degrades to hidden | **done** |
+| 8 | Ski-route + wildlife overlays (OGD) | hours | low | **done** |
+| 9 | Tour powder score, core-zone clamped | days | low — pure functions, tested | **done (engine)** |
 
 **#2 moved up.** It was "refinement" until the measurement above showed the
 aspect signal is zero at 3 km. Ablation is implemented and correct but has

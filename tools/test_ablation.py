@@ -52,6 +52,34 @@ check("all irradiance non-negative", bool(np.all(irr >= 0)))
 irr_n = A.slope_irradiance(*A.solar_geometry(80, 2, np.array([47.0] * 3)), slope, aspect, P)
 check("no irradiance at night", bool(np.all(irr_n == 0)), f"max {irr_n.max():.2f}")
 
+print("\nhorizon shading")
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from pipeline.interactive_export import _horizon_angles   # noqa: E402
+# A ridge running north-south, west of the valley floor.
+z = np.zeros((9, 9), "float64")
+z[:, 0:2] = 2000.0                       # high wall on the west edge
+hor = _horizon_angles(z, 100.0, k=4)     # k=4 -> N, E, S, W
+check("horizon has shape (k, rows, cols)", hor.shape == (4, 9, 9), f"{hor.shape}")
+check("west sector sees the wall", hor[3, 4, 4] > 30, f"{hor[3,4,4]:.1f} deg")
+check("east sector sees flat ground", hor[1, 4, 4] < 1, f"{hor[1,4,4]:.1f} deg")
+check("all horizon angles non-negative", bool(np.all(hor >= 0)))
+# Resolution independence: the same terrain in metres gives a similar horizon.
+z2 = np.zeros((33, 33), "float64"); z2[:, 0:8] = 2000.0
+hor2 = _horizon_angles(z2, 25.0, k=4)
+check("horizon search is distance-based, not cell-based",
+      abs(hor[3, 4, 4] - hor2[3, 16, 16]) < 25,
+      f"{hor[3,4,4]:.0f} vs {hor2[3,16,16]:.0f} deg")
+
+# Shading actually suppresses the beam.
+sl = np.radians(np.array([[30.0]])); asp = np.radians(np.array([[180.0]]))
+se, az = A.solar_geometry(80, 12, np.array([[47.0]]))
+open_sky = A.slope_irradiance(se, az, sl, asp, P)
+walled = A.slope_irradiance(se, az, sl, asp, P,
+                            horizon_deg=np.full((12, 1, 1), 80.0, "float32"))
+check("a high horizon removes the direct beam", walled[0, 0] < open_sky[0, 0] * 0.35,
+      f"{walled[0,0]:.0f} vs {open_sky[0,0]:.0f} W/m2")
+check("diffuse light survives shading", walled[0, 0] > 0, f"{walled[0,0]:.1f} W/m2")
+
 print("\nalbedo")
 a0, a5, a30 = (A.snow_albedo(np.array([h]), P)[0] for h in (0.0, 120.0, 720.0))
 check("fresh snow albedo = albedo_fresh", abs(a0 - P["ablation"]["albedo_fresh"]) < 1e-9)

@@ -68,11 +68,23 @@ def solar_geometry(day_of_year: int, hour_utc: float, lat_deg):
     return sin_el, np.broadcast_to(np.asarray(az), np.shape(sin_el)).copy()
 
 
-def slope_irradiance(sin_el, az_rad, slope_rad, aspect_rad, params):
+def slope_irradiance(sin_el, az_rad, slope_rad, aspect_rad, params,
+                     horizon_deg=None):
     """Kurzwellige Klarhimmeleinstrahlung auf die geneigte Flaeche [W/m^2].
 
-    Direkt + diffus. Der Direktanteil verschwindet, wenn die Sonne hinter
-    dem eigenen Hang steht (cos i <= 0) -- das ist der Selbstschatten.
+    Direkt + diffus. Der Direktanteil verschwindet in zwei Faellen:
+
+    * **Selbstschatten** -- die Sonne steht hinter dem eigenen Hang
+      (cos i <= 0). Immer beruecksichtigt.
+    * **Geländeschatten** -- die Sonne steht unter dem Horizont der
+      umliegenden Berge. Nur wenn ``horizon_deg`` uebergeben wird: ein
+      Array der Form (K, *shape) mit dem Horizontwinkel je Azimutsektor,
+      wie ``_horizon_angles`` es liefert. Ohne das Argument bleibt das
+      Verhalten unveraendert (der Client rechnet so).
+
+    Der Geländeschatten ist der Grund, warum eine Nordflanke im Talgrund
+    im Januar wochenlang gar keine Sonne sieht -- ohne ihn schmilzt dort
+    Schnee, der in Wirklichkeit liegen bleibt.
     """
     p = params["ablation"]
     tau = float(p["transmissivity"])
@@ -85,7 +97,17 @@ def slope_irradiance(sin_el, az_rad, slope_rad, aspect_rad, params):
 
     cos_i = (np.cos(slope_rad) * sin_el
              + np.sin(slope_rad) * np.cos(np.arcsin(sin_el)) * np.cos(az_rad - aspect_rad))
-    beam = np.where(lit & (cos_i > 0), beam_normal * cos_i, 0.0)
+    visible = lit & (cos_i > 0)
+
+    if horizon_deg is not None:
+        k = horizon_deg.shape[0]
+        # Azimut -> Sektorindex, gleiche Konvention wie _horizon_angles
+        # (0 = Nord, im Uhrzeigersinn).
+        sector = np.mod((az_rad / (2 * np.pi) * k).astype("int64"), k)
+        hor = np.take_along_axis(horizon_deg, sector[None, ...], axis=0)[0]
+        visible = visible & (np.degrees(np.arcsin(sin_el)) > hor)
+
+    beam = np.where(visible, beam_normal * cos_i, 0.0)
 
     # Himmelssichtfaktor: eine flache Flaeche sieht den ganzen Himmel.
     skyview = (1.0 + np.cos(slope_rad)) / 2.0
