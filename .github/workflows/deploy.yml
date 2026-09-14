@@ -151,6 +151,7 @@ jobs:
         run: |
           python tools/test_aspect.py
           node tools/test_model.js dist/app.js
+          node tools/test_engine.js dist/engine.js
 
       - uses: actions/upload-pages-artifact@v5
         with:

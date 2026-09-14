@@ -16,6 +16,7 @@ from __future__ import annotations
 import base64
 import io
 import json
+import os
 from datetime import date as date_cls
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -36,6 +37,13 @@ from data_connectors.synthetic_weather import synthetic_forecast
 from model.snow_model import WeatherGrid, compute_new_snow
 from model.terrain_features import compute_terrain_features, roughness
 from model.raster_engine import build_grid_coordinates
+
+# Importable both as `pipeline.engine_extract` (normal, from the repo root) and
+# as a bare sibling (when pipeline/ itself is put on sys.path).
+try:
+    from pipeline.engine_extract import build_engine_js
+except ImportError:  # pragma: no cover
+    from engine_extract import build_engine_js
 from pipeline.geo_utils import weather_sample_grid
 from pipeline.overlay_export import SLF_BOUNDS, SLF_COLORS
 
@@ -603,6 +611,22 @@ def _app_js() -> str:
     return _HTML.split("/*__APP_START__*/", 1)[1].split("/*__APP_END__*/", 1)[0]
 
 
+# The terrain-similarity scoring model, carved out of the app as a standalone,
+# DOM-free module. tools/test_model.js already proved this block runs outside a
+# browser (it string-slices the same markers); emitting it as a real artifact
+# makes that reusable instead of test-only — a native iOS app can run exactly
+# this in JavaScriptCore, so the physics has ONE source of truth instead of a
+# Swift reimplementation that silently drifts from the web app.
+#
+# The markers and the module wrapper live in pipeline/engine_extract.py, which
+# imports nothing beyond the stdlib, so tools/make_engine.py can emit the same
+# engine.js on a machine with none of this module's heavy dependencies
+# installed (see that file, and ios-native/bootstrap.sh).
+def _engine_js() -> str:
+    """Emit engine.js: the scoring block wrapped as a UMD-ish module."""
+    return build_engine_js(_app_js())
+
+
 def export_interactive_html(data, out_html: Path) -> Path:
     """Single self-contained file with the data inlined (default, local use,
     openable via file://)."""
@@ -642,7 +666,16 @@ def export_split_app(data, out_dir: Path) -> Path:
         except OSError:
             pass
     (out_dir / "app.js").write_text(_app_js(), encoding="utf-8")
-    shell = _HTML.split('<script id="appjs">', 1)[0].replace("<!--__BOOT__-->", _BOOT_SPLIT) + "</body></html>"
+    # Standalone scoring engine (see _engine_js): consumed by tools/test_engine.js
+    # and, on iOS, by JavaScriptCore. Small (~9 KB) and costs nothing to ship.
+    (out_dir / "engine.js").write_text(_engine_js(), encoding="utf-8")
+    # Where a NATIVE build should look for fresh data before falling back to the
+    # copy bundled in its binary (see _BOOT_SPLIT). Empty = bundled only, which
+    # is the right default for the web build, where the relative path is already
+    # the host. The iOS build sets it (apple-app/scripts/build-web.mjs) to the
+    # hosted data origin — GitHub Pages today, the model host once that exists.
+    boot = _BOOT_SPLIT.replace("__REMOTE_DATA_BASE__", os.environ.get("SNOW_REMOTE_DATA_BASE", ""))
+    shell = _HTML.split('<script id="appjs">', 1)[0].replace("<!--__BOOT__-->", boot) + "</body></html>"
     (out_dir / "index.html").write_text(shell, encoding="utf-8")
     _write_pwa_assets(out_dir)
     return out_dir / "index.html"
@@ -673,22 +706,27 @@ _BOOT_SPLIT = r"""<script>
   var appJsP=fetchT('app.js',{cache:'no-cache'},30000).then(function(r){if(!r.ok)throw new Error('app.js HTTP '+r.status);return r.text();});
   function waitLeaflet(){return new Promise(function(res,rej){var t0=Date.now();
     (function poll(){if(window.L)return res();if(Date.now()-t0>20000)return rej(new Error('Leaflet timeout'));setTimeout(poll,150);})();});}
-  (async function(){
-    try{
-      // Default view is the 1 April 2026 demo dataset; live/current weather is
-      // an explicit opt-in (Settings, or ?live=1) persisted in localStorage,
-      // since app.js's own demoActive() (below) can't run yet at boot time.
-      var isDemo=true;
-      try{
-        if(location.search.indexOf('live')>=0)isDemo=false;
-        else if(location.search.indexOf('demo')>=0)isDemo=true;
-        else if(localStorage.getItem('ssm_live')==='1')isDemo=false;
-      }catch(e){}
-      var ljr=await fetchT(isDemo?'data/demo-latest.json':'data/latest.json',{cache:'no-cache'},15000);
-      if(!ljr.ok&&isDemo)ljr=await fetchT('data/latest.json',{cache:'no-cache'},15000);
+  // A native build (Capacitor/iOS) bundles a seed dataset inside the binary, so
+  // the very first launch works with no signal at all -- but a forecast frozen
+  // at build time is useless a day later, and refreshing it must not mean
+  // shipping a new App Store release. So natively we load the HOSTED data first
+  // and fall back to the bundled copy when offline or when the host is down.
+  // In a browser this is inert: the relative path already IS the host, so
+  // `bases` is [''] and the sequence below is exactly what it always was.
+  var NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+  var REMOTE='__REMOTE_DATA_BASE__'.replace(/\/+$/,'');
+  // The pointer and the blob it names have to come from the SAME base: a remote
+  // latest.json names a remote filename, which the bundled copy does not have.
+  // So a base is tried as a whole and only falls back as a whole.
+  function loadFrom(base,isDemo){
+    var pre=base?(base+'/'):'';
+    return (async function(){
+      var ljr=await fetchT(pre+(isDemo?'data/demo-latest.json':'data/latest.json'),{cache:'no-cache'},15000);
+      if(!ljr.ok&&isDemo)ljr=await fetchT(pre+'data/latest.json',{cache:'no-cache'},15000);
+      if(!ljr.ok)throw new Error('latest.json HTTP '+ljr.status);
       var lj=await ljr.json();
       var useGz=!!(lj.gz&&window.DecompressionStream);
-      var res=await fetchT('data/'+(useGz?lj.gz:lj.data),{cache:'force-cache'},90000);
+      var res=await fetchT(pre+'data/'+(useGz?lj.gz:lj.data),{cache:'force-cache'},90000);
       if(!res.ok)throw new Error('HTTP '+res.status);
       var total=+(res.headers.get('Content-Length')||0),text;
       if(res.body&&total&&window.ReadableStream){
@@ -705,7 +743,28 @@ _BOOT_SPLIT = r"""<script>
         var ds2=(await res.blob()).stream().pipeThrough(new DecompressionStream('gzip'));
         text=await new Response(ds2).text();prog(1);
       }else{text=await res.text();prog(1);}
-      window.__D=JSON.parse(text);text=null;
+      return JSON.parse(text);
+    })();
+  }
+  (async function(){
+    try{
+      // Default view is the 1 April 2026 demo dataset; live/current weather is
+      // an explicit opt-in (Settings, or ?live=1) persisted in localStorage,
+      // since app.js's own demoActive() (below) can't run yet at boot time.
+      var isDemo=true;
+      try{
+        if(location.search.indexOf('live')>=0)isDemo=false;
+        else if(location.search.indexOf('demo')>=0)isDemo=true;
+        else if(localStorage.getItem('ssm_live')==='1')isDemo=false;
+      }catch(e){}
+      var bases=(NATIVE&&REMOTE&&REMOTE.indexOf('__')!==0)?[REMOTE,'']:[''];
+      var D=null,lastErr=null;
+      for(var bi=0;bi<bases.length;bi++){
+        try{D=await loadFrom(bases[bi],isDemo);break;}
+        catch(e){lastErr=e;prog(0.02);}
+      }
+      if(!D)throw lastErr||new Error('no data source');
+      window.__D=D;D=null;
       var code=await appJsP;
       try{await waitLeaflet();}catch(e){fail('Karten-Bibliothek nicht erreichbar — Verbindung prüfen.');return;}
       await new Promise(function(res){var t0=Date.now();(function poll(){if(window.supabase||Date.now()-t0>2500)return res();setTimeout(poll,120);})();});
@@ -6934,16 +6993,34 @@ async function profExportData(btn){if(!sb||!sbUser)return;
 function profShowLegal(){profClose();const el=document.getElementById('disc');if(el)el.classList.add('show');
   const chk=document.getElementById('discChk'),bt=document.getElementById('discBtn');
   if(chk){chk.checked=true;}if(bt){bt.disabled=false;bt.textContent='Schliessen';}}
+// Deleting the account for real needs the service role: the client owns its
+// content rows under RLS but can never remove its own auth.users row, so
+// deleting only the profile left the login alive — the email stayed registered
+// and the person could not sign up again (and Apple requires real deletion,
+// Guideline 5.1.1(v)). The delete-account Edge Function does the whole job;
+// until it is deployed we fall back to content-only deletion and say so
+// honestly rather than claiming the account is gone.
 async function profDeleteAccount(btn){if(!sb||!sbUser)return;
   if(!confirm('Konto und ALLE Inhalte (Reports, Fotos-Verweise, Kommentare, Bewertungen) unwiderruflich löschen?'))return;
   if(!confirm('Wirklich sicher? Dieser Schritt kann nicht rückgängig gemacht werden.'))return;
   if(btn)btn.disabled=true;
+  const done=msg=>{toast(msg,'ok');
+    try{sb.auth.signOut();}catch(e){}
+    setTimeout(()=>{try{localStorage.clear();}catch(e){}location.reload();},1400);};
   try{
+    let fnOk=false,fnMsg='';
+    try{
+      const{data,error}=await sb.functions.invoke('delete-account',{method:'POST'});
+      if(!error&&data&&data.ok)fnOk=true;
+      else fnMsg=(error&&error.message)||(data&&data.error)||'';
+    }catch(e){fnMsg=e.message||String(e);}
+    if(fnOk){done('Dein Konto und alle Inhalte wurden gelöscht.');return;}
+    // Fallback: remove everything the client is allowed to remove. The login
+    // row survives, so do not pretend otherwise.
     const{error}=await sb.from('profiles').delete().eq('id',sbUser.id);
     if(error)throw error;
-    toast('Dein Konto und deine Inhalte wurden gelöscht.','ok');
-    try{await sb.auth.signOut();}catch(e){}
-    setTimeout(()=>{try{localStorage.clear();}catch(e){}location.reload();},1400);
+    console.warn('delete-account function unavailable:',fnMsg);
+    done('Deine Inhalte wurden gelöscht. Die Löschung des Logins ist angefordert.');
   }catch(e){toast('Löschen fehlgeschlagen: '+(e.message||e),'err');if(btn)btn.disabled=false;}}
 function userViewClose(){document.getElementById('userViewModal').style.display='none';}
 let _usT=null;

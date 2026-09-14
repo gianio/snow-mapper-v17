@@ -1,0 +1,106 @@
+# XcodeGen spec — the Xcode project is GENERATED from this file.
+#
+# WHY NOT A CHECKED-IN .xcodeproj
+# A .xcodeproj is a large, merge-hostile bundle meant to be edited through
+# Xcode's GUI. Generating it from ~60 reviewable lines of YAML instead means:
+#   • adding a target, file, entitlement or build setting is a readable diff
+#   • the project can never drift from the repo
+#   • CI regenerates it fresh, so it is reproducible
+#   • no regex-patching of project.pbxproj (compare apply-ios-config.py, which
+#     has to do exactly that for the Capacitor path)
+#
+# Regenerate any time with:  xcodegen generate   (or ./bootstrap.sh)
+# Caveat: edits made in Xcode's project settings GUI are overwritten on the next
+# generate. Change things here instead.
+
+name: Snowmapper
+options:
+  bundleIdPrefix: ch.snowmapper
+  deploymentTarget:
+    # Matches the web app's own floor (CSS color-mix needs iOS 16.2), so both
+    # halves of the product support exactly the same devices.
+    iOS: "16.2"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+attributes:
+  ORGANIZATIONNAME: Snowmapper
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Required for the INFOPLIST_KEY_* settings below to do anything: they feed
+    # Xcode's SYNTHESISED Info.plist, and without this no plist is produced at
+    # all — the build then fails right at the end, on "Validate Snowmapper.app",
+    # with a missing-input error for Info.plist. Keeping the plist generated
+    # means there is no checked-in file to drift from project.yml.
+    GENERATE_INFOPLIST_FILE: YES
+    # No team here on purpose: signing is set in Xcode (or by CI secrets), and
+    # hardcoding a team id would break every other machine.
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+targets:
+  Snowmapper:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      # Generated — see bootstrap.sh / tools/make_engine.py. This is the SAME
+      # engine.js the web app and tools/test_engine.js validate, so the physics
+      # cannot diverge between platforms.
+      #
+      # NOTE: XcodeGen has no target-level `resources:` key — resources are just
+      # sources with an explicit buildPhase. A `resources:` block is silently
+      # IGNORED, which is how the first simulator run ended up with all nine
+      # tests failing on engineScriptMissing.
+      - path: Resources/engine.js
+        buildPhase: resources
+        optional: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ch.snowmapper.app
+        INFOPLIST_KEY_CFBundleDisplayName: Snowmapper
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        # Purpose strings are MANDATORY — Apple rejects a build that touches
+        # these APIs without them. Declarative here, rather than pasted into a
+        # generated Info.plist by hand.
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: >-
+          Snowmapper uses your location to show snow conditions and reports near you.
+        INFOPLIST_KEY_NSCameraUsageDescription: >-
+          Take a photo to attach it to a snow report.
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: >-
+          Attach a photo from your library to a snow report.
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: >-
+          Save a snow map or report image to your photo library.
+
+  SnowmapperTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+      # The tests load engine.js from their OWN bundle, so they can assert the
+      # Swift bridge agrees with tools/test_engine.js without launching the app.
+      - path: Resources/engine.js
+        buildPhase: resources
+        optional: true
+    dependencies:
+      - target: Snowmapper
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ch.snowmapper.app.tests
+
+schemes:
+  Snowmapper:
+    build:
+      targets:
+        Snowmapper: all
+        SnowmapperTests: [test]
+    test:
+      targets: [SnowmapperTests]
+      gatherCoverageData: false
+    run:
+      config: Debug

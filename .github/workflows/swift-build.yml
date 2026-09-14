@@ -1,0 +1,125 @@
+name: Swift type-check (ios-native)
+
+# Type-checks ios-native/Sources against the real iOS SDK on a hosted Mac.
+#
+# WHY THIS EXISTS
+# The native sources are written in an environment with no Apple frameworks, so
+# without this they are unverified prose that happens to look like Swift. This
+# is the cheapest possible way to make the compiler the judge instead:
+#   • needs NO Apple Developer account and NO signing (type-checking only)
+#   • macOS runner minutes are free on a public repo
+#   • ~2 minutes, so it is a usable fix-and-retry loop
+#
+# It does NOT build an app, run a simulator, or verify anything visual. It
+# catches syntax and type errors — which is exactly the class of mistake that
+# writing Swift without a compiler produces.
+
+on:
+  push:
+    branches: ["main"]
+    paths: ["ios-native/**", ".github/workflows/swift-build.yml"]
+  pull_request:
+    branches: ["main"]
+    paths: ["ios-native/**", ".github/workflows/swift-build.yml"]
+  workflow_dispatch:
+
+jobs:
+  typecheck:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Show toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+          xcrun --sdk iphoneos --show-sdk-version
+
+      # -typecheck stops before codegen/linking: it resolves every import and
+      # checks every type without needing an app target, a project file, or a
+      # provisioning profile. Deployment target is kept in step with the CSS
+      # floor the web app already has (color-mix needs iOS 16.2), so both halves
+      # of the product support the same devices.
+      - name: Type-check Swift sources against the iOS SDK
+        run: |
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          FILES=$(find ios-native/Sources -name '*.swift' | sort)
+          echo "Type-checking:"; echo "$FILES" | sed 's/^/  /'
+          # shellcheck disable=SC2086
+          # -warnings-as-errors is on because these sources are written without
+          # a local compiler: a warning is the only early signal that something
+          # is off, so it must not be ignorable. Run 1 was clean (no errors AND
+          # no warnings) on Xcode 26.6 / Swift 6.3.3, so this costs nothing now.
+          # NOTE: macos-latest floats, so a future runner image can introduce a
+          # new deprecation warning and turn this red on an unrelated day. When
+          # that happens, fix the deprecation — or drop this flag temporarily —
+          # rather than assuming the code broke.
+          xcrun swiftc \
+            -sdk "$SDK" \
+            -target arm64-apple-ios16.2 \
+            -typecheck \
+            -warnings-as-errors \
+            $FILES
+
+      # Beyond type-checking: generate the project exactly as a Mac would and
+      # RUN the unit tests in a simulator. This is what proves the Swift bridge
+      # and the JS engine agree numerically, rather than merely compiling.
+      # Still no Apple Developer account and no signing — simulator builds need
+      # neither (CODE_SIGNING_ALLOWED=NO).
+      - name: Install XcodeGen + xcbeautify
+        run: brew install xcodegen xcbeautify
+
+      - name: Generate engine.js (dependency-free path)
+        run: python3 tools/make_engine.py -o ios-native/Resources/engine.js
+
+      - name: Validate engine.js
+        run: node tools/test_engine.js ios-native/Resources/engine.js
+
+      - name: Assert both engine generators agree
+        run: python3 tools/test_engine_extract.py
+
+      - name: Generate Xcode project
+        working-directory: ios-native
+        run: xcodegen generate --spec project.yml
+
+      # Fail in seconds rather than after a three-minute simulator run. An
+      # unknown key in project.yml is silently ignored by XcodeGen, so a
+      # mis-specified resource shows up only as every test failing on a missing
+      # file — which is a slow and confusing way to learn about a typo.
+      - name: Assert engine.js is bundled into both targets
+        working-directory: ios-native
+        run: |
+          refs=$(grep -c 'engine.js' Snowmapper.xcodeproj/project.pbxproj || true)
+          echo "engine.js references in project.pbxproj: $refs"
+          if [ "$refs" -lt 2 ]; then
+            echo "::error::engine.js is not bundled (expected references for both \
+          the app and test targets). Check the sources/buildPhase entries in project.yml."
+            exit 1
+          fi
+
+      - name: Run unit tests on a simulator
+        run: |
+          set -o pipefail
+          # Pick whatever iPhone simulator this runner image actually has.
+          # Hardcoding a name (e.g. "iPhone 16") breaks silently whenever the
+          # image is updated, which is a maddening failure to debug remotely.
+          DEVICE="$(xcrun simctl list devices available \
+            | grep -oE '^ *iPhone [^(]+' | head -1 | sed 's/^ *//;s/ *$//')"
+          if [ -z "$DEVICE" ]; then
+            echo "::error::no iPhone simulator available on this runner"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Testing on: $DEVICE"
+          xcodebuild test \
+            -project ios-native/Snowmapper.xcodeproj \
+            -scheme Snowmapper \
+            -destination "platform=iOS Simulator,name=$DEVICE" \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions
+
+      - name: Result
+        if: success()
+        run: echo "Swift type-checks, the project generates, and the simulator tests pass."

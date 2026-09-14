@@ -3,8 +3,8 @@ import type { CapacitorConfig } from '@capacitor/cli';
 // ── App identity ────────────────────────────────────────────────────────────
 // Change these two lines to rebrand. `appId` must be a reverse-domain string you
 // control and must match the Bundle Identifier you register in App Store Connect.
-const APP_ID = 'ch.snowmodel.app';
-const APP_NAME = 'Snow Model';
+const APP_ID = 'ch.snowmapper.app';
+const APP_NAME = 'Snowmapper';
 
 const config: CapacitorConfig = {
   appId: APP_ID,

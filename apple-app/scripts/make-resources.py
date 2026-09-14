@@ -1,85 +1,86 @@
 #!/usr/bin/env python3
 """Generate the App Store icon + splash source images for @capacitor/assets.
 
+Both are derived from the SAME artwork the web app's favicon and home-screen
+icon use -- ../../pipeline/assets/brand_icon.png (see _brand_icon() in
+pipeline/interactive_export.py). This script used to draw its own charcoal
+snowflake from the app's older monochrome era, which meant the iOS icon did
+not match the icon users already knew from the web app.
+
 Outputs (into apple-app/resources/):
-  icon.png    1024x1024, fully opaque, NO transparency / NO rounded corners
-              (Apple rounds the corners itself; alpha/rounding => App Store reject).
-  splash.png  2732x2732, light background with the centred violet snowflake mark,
-              matching the web app's minimal loader.
+  icon.png        1024x1024, fully opaque, NO transparency / NO rounded corners
+                  (Apple rounds the corners itself; alpha or pre-rounding is an
+                  App Store rejection). The mark is cropped to its own bounding
+                  box and scaled to fill the canvas the way an app icon should,
+                  rather than inheriting the source artwork's wide margins.
+  splash.png      2732x2732, mark centred small on the web loader's white.
+  splash-dark.png same, on near-black (capacitor-assets picks it up if present).
 
 Run: python3 scripts/make-resources.py   (from apple-app/)
 Then: npx capacitor-assets generate --ios  (produces every required size).
 """
-import math
 from pathlib import Path
-from PIL import Image, ImageDraw
 
-OUT = Path(__file__).resolve().parent.parent / "resources"
+from PIL import Image
+
+HERE = Path(__file__).resolve().parent
+OUT = HERE.parent / "resources"
+SRC = HERE.parent.parent / "pipeline" / "assets" / "brand_icon.png"
 OUT.mkdir(parents=True, exist_ok=True)
 
-# Black & white identity (matches the app's monochrome steering UI)
-INDIGO = (34, 34, 38)       # dark charcoal (gradient top)
-VIOLET = (58, 58, 64)       # mid charcoal
-NIGHT = (0, 0, 0)           # pure black (gradient bottom)
-PAGE = (255, 255, 255)      # white app background
+PAGE = (255, 255, 255)      # the web app's paper white
+NIGHT = (10, 10, 12)        # dark-splash background
+
+# How much of the icon's width the mark should span. Apple's own icons leave a
+# little air; filling edge to edge looks cramped once the corner mask is on.
+ICON_FILL = 0.78
+SPLASH_FILL = 0.20
 
 
-def _vgrad(size, top, bottom):
-    img = Image.new("RGB", (size, size), top)
-    px = img.load()
-    for y in range(size):
-        t = y / (size - 1)
-        r = int(top[0] + (bottom[0] - top[0]) * t)
-        g = int(top[1] + (bottom[1] - top[1]) * t)
-        b = int(top[2] + (bottom[2] - top[2]) * t)
-        for x in range(size):
-            px[x, y] = (r, g, b)
-    return img
+def _mark() -> Image.Image:
+    """The brand mark, cropped to its bounding box, with white keyed out to alpha.
+
+    The source is an opaque RGB logo (blue mark on white), so the alpha has to
+    be derived from luminance -- that is what lets the same mark sit on both the
+    light and the dark splash without a white box around it.
+    """
+    src = Image.open(SRC).convert("RGB")
+    lum = src.convert("L")
+    # white -> 0 alpha, ink -> 255 alpha, with a soft ramp so edges stay smooth
+    alpha = lum.point(lambda v: 0 if v >= 250 else (255 if v <= 235 else int((250 - v) / 15 * 255)))
+    mark = src.convert("RGBA")
+    mark.putalpha(alpha)
+    box = alpha.getbbox()
+    return mark.crop(box) if box else mark
 
 
-def _snowflake(draw, cx, cy, arm, lw, color):
-    for k in range(6):
-        a = math.pi / 3 * k
-        ex, ey = cx + math.cos(a) * arm, cy + math.sin(a) * arm
-        draw.line([(cx, cy), (ex, ey)], fill=color, width=lw)
-        for frac, blen in ((0.45, arm * 0.28), (0.72, arm * 0.22)):
-            bx, by = cx + math.cos(a) * arm * frac, cy + math.sin(a) * arm * frac
-            for s in (a + math.pi / 3, a - math.pi / 3):
-                draw.line([(bx, by), (bx + math.cos(s) * blen, by + math.sin(s) * blen)],
-                          fill=color, width=max(2, int(lw * 0.7)))
+def _centred(mark: Image.Image, size: int, bg, fill: float) -> Image.Image:
+    """Scale the mark to `fill` of the canvas width and centre it on `bg`."""
+    target = max(1, int(size * fill))
+    w, h = mark.size
+    scale = target / max(w, h)
+    m = mark.resize((max(1, int(w * scale)), max(1, int(h * scale))), Image.LANCZOS)
+    canvas = Image.new("RGBA", (size, size), bg + (255,))
+    canvas.paste(m, ((size - m.width) // 2, (size - m.height) // 2), m)
+    return canvas
 
 
 def make_icon(size=1024):
-    img = _vgrad(size, INDIGO, NIGHT).convert("RGBA")
-    d = ImageDraw.Draw(img)
-    _snowflake(d, size / 2, size / 2, size * 0.30, max(6, int(size * 0.028)), (255, 255, 255, 255))
-    img.convert("RGB").save(OUT / "icon.png")
+    # Flattened to RGB on purpose: an app icon with an alpha channel is rejected.
+    img = _centred(_mark(), size, PAGE, ICON_FILL).convert("RGB")
+    img.save(OUT / "icon.png")
     print("wrote", OUT / "icon.png")
 
 
 def make_splash(size=2732):
-    img = Image.new("RGB", (size, size), PAGE).convert("RGBA")
-    d = ImageDraw.Draw(img)
-    # centred rounded-square mark (matches the web loader's .mark)
-    m = int(size * 0.135)
-    x0, y0 = (size - m) // 2, (size - m) // 2
-    rad = int(m * 0.30)
-    # simple two-tone fill
-    tile = _vgrad(m, VIOLET, INDIGO).convert("RGBA")
-    mask = Image.new("L", (m, m), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([0, 0, m - 1, m - 1], radius=rad, fill=255)
-    img.paste(tile, (x0, y0), mask)
-    _snowflake(d, size / 2, size / 2, m * 0.30, max(4, int(m * 0.035)), (255, 255, 255, 255))
-    img.convert("RGB").save(OUT / "splash.png")
-    # dark splash variant (optional; capacitor-assets picks it up if present)
-    dark = Image.new("RGB", (size, size), NIGHT).convert("RGBA")
-    dd = ImageDraw.Draw(dark)
-    dark.paste(tile, (x0, y0), mask)
-    _snowflake(dd, size / 2, size / 2, m * 0.30, max(4, int(m * 0.035)), (255, 255, 255, 255))
-    dark.convert("RGB").save(OUT / "splash-dark.png")
+    mark = _mark()
+    _centred(mark, size, PAGE, SPLASH_FILL).convert("RGB").save(OUT / "splash.png")
+    _centred(mark, size, NIGHT, SPLASH_FILL).convert("RGB").save(OUT / "splash-dark.png")
     print("wrote", OUT / "splash.png", "and splash-dark.png")
 
 
 if __name__ == "__main__":
+    if not SRC.exists():
+        raise SystemExit("brand artwork not found: %s" % SRC)
     make_icon()
     make_splash()
