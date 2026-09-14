@@ -105,6 +105,86 @@ def install_privacy_manifest() -> None:
     print("project.pbxproj: registered PrivacyInfo.xcprivacy")
 
 
+SCHEME_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<Scheme LastUpgradeVersion="1500" version="1.7">
+   <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES">
+      <BuildActionEntries>
+         <BuildActionEntry buildForTesting="YES" buildForRunning="YES" \
+buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES">
+            <BuildableReference BuildableIdentifier="primary" \
+BlueprintIdentifier="{uuid}" BuildableName="App.app" BlueprintName="App" \
+ReferencedContainer="container:App.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <TestAction buildConfiguration="Debug" \
+selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" \
+selectedLauncherIdentifier="Xcode.DebuggerFoundation.Launcher.LLDB" \
+shouldUseLaunchSchemeArgsEnv="YES">
+      <Testables>
+      </Testables>
+   </TestAction>
+   <LaunchAction buildConfiguration="Debug" \
+selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" \
+selectedLauncherIdentifier="Xcode.DebuggerFoundation.Launcher.LLDB" \
+launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" \
+debugDocumentVersioning="YES" debugServiceExtension="internal" \
+allowLocationSimulation="YES">
+      <BuildableProductRunnable runnableDebuggingMode="0">
+         <BuildableReference BuildableIdentifier="primary" \
+BlueprintIdentifier="{uuid}" BuildableName="App.app" BlueprintName="App" \
+ReferencedContainer="container:App.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </LaunchAction>
+   <ProfileAction buildConfiguration="Release" shouldUseLaunchSchemeArgsEnv="YES" \
+savedToolIdentifier="" useCustomWorkingDirectory="NO" debugDocumentVersioning="YES">
+      <BuildableProductRunnable runnableDebuggingMode="0">
+         <BuildableReference BuildableIdentifier="primary" \
+BlueprintIdentifier="{uuid}" BuildableName="App.app" BlueprintName="App" \
+ReferencedContainer="container:App.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </ProfileAction>
+   <AnalyzeAction buildConfiguration="Debug">
+   </AnalyzeAction>
+   <ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES">
+   </ArchiveAction>
+</Scheme>
+"""
+
+
+def ensure_shared_scheme() -> None:
+    """Write a shared `App` scheme if the project has none.
+
+    Capacitor's iOS template ships no scheme at all. Xcode normally autocreates
+    one per user on first open, but that is stored in xcuserdata and is NOT in
+    the project — so the scheme picker can come up empty ("No Scheme", nothing
+    to select), and `xcodebuild -scheme App` fails outright, which breaks any
+    CI build. A SHARED scheme lives in the project and fixes both.
+    """
+    scheme_dir = PBXPROJ.parent / "xcshareddata" / "xcschemes"
+    scheme = scheme_dir / "App.xcscheme"
+    if scheme.exists():
+        print("scheme: App.xcscheme already present")
+        return
+
+    pbx = PBXPROJ.read_text(encoding="utf-8")
+    # The App application target's object id. Matching on PBXNativeTarget is
+    # what distinguishes it from the same-named PBXGroup and build phases.
+    m = re.search(r"([0-9A-F]{24})\s*/\* App \*/\s*=\s*\{\s*\n\s*isa = PBXNativeTarget;",
+                  pbx)
+    if not m:
+        print("  WARNING: could not find the App native target — create the scheme "
+              "in Xcode (Product > Scheme > Manage Schemes > Autocreate).")
+        return
+
+    scheme_dir.mkdir(parents=True, exist_ok=True)
+    scheme.write_text(SCHEME_XML.format(uuid=m.group(1)), encoding="utf-8")
+    print(f"scheme: wrote {scheme.relative_to(APP)} (target {m.group(1)})")
+
+
 def main() -> int:
     if not INFO_PLIST.exists():
         print(f"error: {INFO_PLIST} not found — run `npx cap add ios` first.", file=sys.stderr)
@@ -115,6 +195,7 @@ def main() -> int:
             return 1
     merge_info_plist()
     install_privacy_manifest()
+    ensure_shared_scheme()
     print("iOS config applied.")
     return 0
 
