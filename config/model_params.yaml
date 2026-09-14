@@ -50,6 +50,33 @@ wind_redistribution:
   factor_max: 2.5
   # Vereinfachte Heuristik; ersetzt kein Saltations-/SnowTran-3D-Modell.
 
+# --- Ablation: Schmelze + Setzung -------------------------------------------
+# Erweiterter Temperatur-Strahlungs-Index:
+#   melt [mm w.e./h] = tf * max(0, T - t_melt) + srf * (1 - albedo) * I
+# Referenz: Hock (1999), Pellicciotti et al. (2005). Deutlich aspektsensitiver
+# als ein reiner Gradtagfaktor, ungleich billiger als eine Energiebilanz.
+# Bewusst konservativ gewaehlt: lieber etwas zu wenig Schmelze als eine
+# Schneedecke, die im Modell verschwindet, waehrend sie im Feld liegt.
+ablation:
+  tf_mm_per_h_per_k: 0.055       # Temperaturfaktor [mm/h/K]
+  srf_mm_per_h_per_wm2: 0.0094   # Strahlungsfaktor [mm/h/(W/m^2)]
+  t_melt_c: 0.0                  # Schmelzschwelle [degC]
+  albedo_fresh: 0.85             # Neuschnee
+  albedo_old: 0.55               # gealterte Oberflaeche
+  albedo_tau_h: 120.0            # e-Faltungszeit des Albedoabfalls [h]
+  fresh_snow_threshold_cm: 0.5   # ab hier gilt die Oberflaeche als erneuert
+  # mm w.e. -> cm Hoehe (100/rho). Eine schmelzende Fruehjahrsdecke ist
+  # durchgesetzt, also 400-500, nicht die 100-150 von Neuschnee.
+  melt_density_kg_m3: 420.0
+  # Setzung: Neuschnee setzt sich schnell, eine alte Decke praktisch nicht
+  # mehr. Eine konstante Rate auf die Gesamthoehe angewandt frisst sonst die
+  # ganze Decke weg und uebertoent das Strahlungssignal.
+  settling_frac_per_h: 0.0060    # frischer Schnee [1/h] ~ 13 %/Tag
+  settling_frac_min_per_h: 0.0003  # gealterte Decke [1/h] ~ 0.7 %/Tag
+  settling_tau_h: 72.0           # e-Faltungszeit des Setzungszerfalls [h]
+  transmissivity: 0.72           # atmosphaerische Durchlaessigkeit
+  diffuse_frac: 0.13             # diffuser Anteil von I0
+
 # --- Globale Begrenzungen ----------------------------------------------------
 limits:
   max_new_snow_cm: 300.0   # Plausibilitaetsdeckel pro Zeitfenster

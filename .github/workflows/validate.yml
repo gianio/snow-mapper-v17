@@ -35,6 +35,15 @@ jobs:
       - name: Terrain aspect unit test
         run: python tools/test_aspect.py
 
+      - name: Ablation unit test
+        run: python tools/test_ablation.py
+
+      - name: SLF bulletin parser unit test
+        run: python tools/test_slf_bulletin.py
+
+      - name: Tour powder score unit test
+        run: python tools/test_tour_score.py
+
       - name: Build app (offline, synthetic data)
         run: |
           mkdir -p dist

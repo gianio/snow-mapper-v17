@@ -36,6 +36,7 @@ from data_connectors.open_meteo_client import OpenMeteoClient
 from data_connectors.synthetic_weather import synthetic_forecast
 from model.snow_model import WeatherGrid, compute_new_snow
 from model.terrain_features import compute_terrain_features, roughness
+from model import ablation as abl_mod
 from model.raster_engine import build_grid_coordinates
 
 # Importable both as `pipeline.engine_extract` (normal, from the repo root) and
@@ -48,6 +49,26 @@ from pipeline.geo_utils import weather_sample_grid
 from pipeline.overlay_export import SLF_BOUNDS, SLF_COLORS
 
 _SNOW_SCALE = 0.2
+_ABL_SCALE = 0.05         # cm Hoehenverlust je Schritt, uint8 -> max 12.75 cm/h
+
+
+def _quantisers():
+    """uint8-Quantisierung je Feld -- EINE Definition fuer Pipeline und Blob.
+
+    Die Wuerfel werden stundenweise direkt nach uint8 quantisiert, statt erst
+    als float32-Wuerfel gehalten und am Ende umgerechnet zu werden. Bei 250 m
+    waren das 1.30 GB je Feld und Kopie; der Lauf wurde nach 601 s vom
+    OOM-Killer beendet (Peak 12.7 GB). uint8 pro Stunde macht daraus 0.33 GB
+    je Feld und nichts Zwischengespeichertes.
+    """
+    return {
+        "snow":      lambda a: np.round(a / _SNOW_SCALE),
+        "ablation":  lambda a: np.round(a / _ABL_SCALE),
+        "temp":      lambda a: np.round((a + _TEMP_OFF) * _TEMP_MUL),
+        "sun":       lambda a: np.round(a * _SUN_MUL),
+        "wind_grid": lambda a: np.round(np.clip(a, 0, 51) * _SPD_MUL),
+        "prec":      lambda a: np.round(a * _PREC_MUL),
+    }
 _TEMP_OFF, _TEMP_MUL = 60.0, 2.0
 _SPD_MUL = 5.0
 _DIR_DIV = 2.0
@@ -91,13 +112,6 @@ def _reproj_frame(arr, src_t, src_crs, dst_t, dh, dw, rs=Resampling.bilinear):
     out = np.zeros((dh, dw), dtype="float32")
     reproject(source=arr.astype("float32"), destination=out, src_transform=src_t,
               src_crs=src_crs, dst_transform=dst_t, dst_crs="EPSG:4326", resampling=rs)
-    return out
-
-
-def _reproj_cube(cube, src_t, src_crs, dst_t, dh, dw):
-    out = np.zeros((cube.shape[0], dh, dw), dtype="float32")
-    for t in range(cube.shape[0]):
-        out[t] = _reproj_frame(cube[t], src_t, src_crs, dst_t, dh, dw)
     return out
 
 
@@ -317,6 +331,45 @@ def _fine_terrain(bounds, aoi, use_synthetic):
             "elev_png": elev_png, "elev_bounds": elev_b, "expo_at": expo_at}
 
 
+def _horizon_angles(z, res, k=_RAD_K, max_dist_m=20000.0):
+    """Horizont-Hoehenwinkel je Azimutsektor [Grad], Form (k, rows, cols).
+
+    Fuer jeden Azimut wird entlang der Sichtlinie der maximale Steigungswinkel
+    zu allen Punkten dahinter gesucht -- das ist der Winkel, unter dem die
+    Sonne gerade noch verdeckt ist (Geländeschattierung durch umliegende
+    Berge, nicht Selbstschatten).
+
+    Die Suchweite ist in METERN angegeben, nicht in Zellen. Vorher waren es
+    fix 25 Zellen, was bei 1 km Raster 25 km bedeutete und bei einem 250-m-
+    Raster nur noch 6 km -- der Horizont haette sich also mit der Auflösung
+    veraendert, was physikalisch keinen Sinn hat. Die Abstaende werden nach
+    aussen groeber, weil nahe Kanten den Horizont dominieren.
+    """
+    from scipy.ndimage import map_coordinates
+
+    rows, cols = z.shape
+    yy, xx = np.mgrid[0:rows, 0:cols].astype("float64")
+
+    # Dichte Abstaende nahe, groebere weit weg; dann auf Zellen abbilden.
+    dists_m = ([res * i for i in range(1, 11)]
+               + [1500.0, 2000.0, 3000.0, 4000.0, 6000.0, 8000.0,
+                  11000.0, 14000.0, 17000.0, 20000.0])
+    steps = sorted({round(d / res, 3) for d in dists_m
+                    if d <= max_dist_m and d / res >= 1.0})
+
+    horizon = np.zeros((k, rows, cols), "float32")
+    for a in range(k):
+        az = 2 * np.pi * a / k               # 0=N, im Uhrzeigersinn
+        ddx, ddy = np.sin(az), -np.cos(az)   # Norden = Zeilen aufwaerts
+        maxslope = np.zeros((rows, cols), "float64")
+        for d in steps:
+            zs = map_coordinates(z, [yy + ddy * d, xx + ddx * d],
+                                 order=1, mode="nearest")
+            maxslope = np.maximum(maxslope, (zs - z) / (d * res))
+        horizon[a] = np.degrees(np.arctan(maxslope))
+    return horizon
+
+
 def _radiation_inputs(bounds, aoi, use_synthetic):
     """Terrain-Inputs fuer das (im Browser gerechnete) Solarmodell:
     Hangneigung, Exposition und Horizont-Hoehenwinkel je Azimutsektor
@@ -337,18 +390,7 @@ def _radiation_inputs(bounds, aoi, use_synthetic):
     rows, cols = z.shape
 
     # Horizont-Hoehenwinkel je Azimut (Schattenwurf umliegender Berge).
-    from scipy.ndimage import map_coordinates
-    yy, xx = np.mgrid[0:rows, 0:cols].astype("float64")
-    horizon = np.zeros((_RAD_K, rows, cols), "float32")
-    dists = list(range(1, 26))  # bis ~ 25 Zellen entfernt
-    for a in range(_RAD_K):
-        az = 2 * np.pi * a / _RAD_K          # 0=N, im Uhrzeigersinn
-        ddx, ddy = np.sin(az), -np.cos(az)   # Norden = Zeilen aufwaerts
-        maxslope = np.zeros((rows, cols), "float64")
-        for d in dists:
-            zs = map_coordinates(z, [yy + ddy * d, xx + ddx * d], order=1, mode="nearest")
-            maxslope = np.maximum(maxslope, (zs - z) / (d * res))
-        horizon[a] = np.degrees(np.arctan(maxslope))
+    horizon = _horizon_angles(z, res, _RAD_K)
 
     dst_t, dw, dh = calculate_default_transform(aoi.crs, "EPSG:4326", cols, rows, *bounds)
     slope_w = _reproj_frame(slope, dem.transform, aoi.crs, dst_t, dh, dw)
@@ -416,15 +458,45 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     expo_mult, expo_tpi = fine["expo_at"](wind["xy"])
     P = len(wind["lat"])
 
-    print(f"[INT] Modelliere {T} Stunden ...")
-    snow_c = np.zeros((T, *shape), "float32")
-    temp_c = np.zeros((T, *shape), "float32")
-    sun_c = np.zeros((T, *shape), "float32")
-    wind_c = np.zeros((T, *shape), "float32")
-    prec_c = np.zeros((T, *shape), "float32")
+    # Zielgitter schon hier, damit jede Stunde direkt reprojiziert und
+    # quantisiert werden kann (siehe _quantisers).
+    dst_t, dw, dh = calculate_default_transform(
+        aoi.crs, "EPSG:4326", shape[1], shape[0], *bounds)
+    QZ = _quantisers()
+    FIELDS = ("snow", "ablation", "temp", "sun", "wind_grid", "prec")
+    cubes = {k: np.zeros((T, dh, dw), "uint8") for k in FIELDS}
+
+    def _store(key, t, frame_lv95):
+        """Eine Stunde: LV95 -> WGS84 -> uint8, direkt in den Zielwuerfel."""
+        f = _reproj_frame(frame_lv95, dem.transform, aoi.crs, dst_t, dh, dw)
+        cubes[key][t] = np.clip(QZ[key](f), 0, 255).astype("uint8")
+        return f
+
+    print(f"[INT] Modelliere {T} Stunden ({dw}x{dh} Ausgabegitter) ...")
+    hourly_snow = []
     p_spd = np.zeros((T, P), "float32")
     p_dir = np.zeros((T, P), "float32")
     lapse = params["altitude"]["temp_lapse_k_per_m"]
+
+    # Ablation braucht die Breite je Zelle (Sonnenstand) sowie Neigung und
+    # Exposition im Bogenmass. Die Schneedecke wird hier mitgefuehrt, damit
+    # der abgegebene Verlust nie groesser ist als die vorhandene Hoehe -- der
+    # Client reproduziert das mit max(0, cum + SNOW - ABL) exakt.
+    _tf_ll = Transformer.from_crs(aoi.crs, "EPSG:4326", always_xy=True)
+    _lon_g, _lat_g = _tf_ll.transform(grid_x.ravel(), grid_y.ravel())
+    lat_grid = np.asarray(_lat_g, dtype="float64").reshape(shape)
+    slope_r = np.nan_to_num(terrain.slope_rad, nan=0.0).astype("float64")
+    aspect_r = np.radians(np.nan_to_num(terrain.aspect_deg, nan=0.0)).astype("float64")
+    depth_cm = np.zeros(shape, "float64")
+    since_snow = np.full(shape, float(params["ablation"]["albedo_tau_h"]))
+    # Geländeschatten fuer die Massenbilanz, auf dem MODELLGITTER gerechnet und
+    # NICHT ausgeliefert -- der Blob waechst dadurch um kein Byte. Das
+    # ausgelieferte RHOR-Feld dient weiter nur der Anzeige.
+    print(f"[INT] Horizont ({_RAD_K} Azimute) fuer die Massenbilanz ...")
+    abl_horizon = _horizon_angles(
+        np.nan_to_num(dem.elevation, nan=float(np.nanmean(dem.elevation))),
+        dem.res, _RAD_K)
+
     for t in range(T):
         temp_g = _apply(temp_m[:, t], idx, w).reshape(shape)
         ws_g = _apply(wspd_m[:, t], idx, w).reshape(shape)
@@ -436,21 +508,30 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
             wind_speed_ms=ws_g,
             wind_direction_deg=(np.degrees(np.arctan2(
                 _apply(sin_d[:, t], idx, w), _apply(cos_d[:, t], idx, w))) % 360).reshape(shape))
-        snow_c[t] = compute_new_snow(terrain, wg, params)["new_snow_cm"]
-        temp_c[t] = temp_g + lapse * (terrain.elevation - ref_elev)
-        sun_c[t] = np.clip(_apply(sun_m[:, t], idx, w).reshape(shape) / 3600.0, 0, 1)
-        wind_c[t] = ws_g
-        prec_c[t] = prec_g
+        snow_t = compute_new_snow(terrain, wg, params)["new_snow_cm"]
+        temp_t = temp_g + lapse * (terrain.elevation - ref_elev)
+        sun_t = np.clip(_apply(sun_m[:, t], idx, w).reshape(shape) / 3600.0, 0, 1)
+
+        _dt = datetime.strptime(times[t][:13], "%Y-%m-%dT%H")
+        _sin_el, _az = abl_mod.solar_geometry(_dt.timetuple().tm_yday, _dt.hour, lat_grid)
+        _irr = abl_mod.slope_irradiance(_sin_el, _az, slope_r, aspect_r, params,
+                                        horizon_deg=abl_horizon)
+        depth_cm, since_snow, abl_t = abl_mod.step_snowpack(
+            depth_cm, snow_t, since_snow, temp_t, _irr, sun_t, params)
+
+        # Jede Stunde sofort reprojizieren und quantisieren -- kein float32-
+        # Wuerfel bleibt liegen. hourly_snow braucht das reprojizierte Feld,
+        # also den Rueckgabewert von _store nutzen, nicht das LV95-Feld.
+        hourly_snow.append(float(np.mean(_store("snow", t, snow_t))))
+        _store("ablation", t, abl_t)
+        _store("temp", t, temp_t)
+        _store("sun", t, sun_t)
+        _store("wind_grid", t, ws_g)
+        _store("prec", t, prec_g)
         p_spd[t] = _apply(wspd_m[:, t], p_idx, p_w) * expo_mult  # topografisch moduliert
         p_dir[t] = np.degrees(np.arctan2(_apply(sin_d[:, t], p_idx, p_w),
                                          _apply(cos_d[:, t], p_idx, p_w))) % 360
 
-    dst_t, dw, dh = calculate_default_transform(aoi.crs, "EPSG:4326", shape[1], shape[0], *bounds)
-    snow_w = _reproj_cube(snow_c, dem.transform, aoi.crs, dst_t, dh, dw)
-    temp_w = _reproj_cube(temp_c, dem.transform, aoi.crs, dst_t, dh, dw)
-    sun_w = _reproj_cube(sun_c, dem.transform, aoi.crs, dst_t, dh, dw)
-    wind_w = _reproj_cube(wind_c, dem.transform, aoi.crs, dst_t, dh, dw)
-    prec_w = _reproj_cube(prec_c, dem.transform, aoi.crs, dst_t, dh, dw)
     aspect_main = _reproj_frame(terrain.aspect_deg.astype("float32"),
                                 dem.transform, aoi.crs, dst_t, dh, dw,
                                 rs=Resampling.nearest)
@@ -461,26 +542,30 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     rough_main = roughness(np.nan_to_num(dem.elevation, nan=0).astype("float64"))
     rough_w = _reproj_frame(rough_main.astype("float32"),
                             dem.transform, aoi.crs, dst_t, dh, dw)
-    hourly_snow = [float(np.mean(snow_w[t])) for t in range(T)]
     left, bottom, right, top = array_bounds(dh, dw, dst_t)
 
     rad = _radiation_inputs(bounds, aoi, use_synthetic)
 
     stations = []
+    avalanche = None
     if not use_synthetic:
         stations = _slf_stations(times, n_stations, days_each_side)
+        avalanche = _slf_avalanche()
 
     return {
         "times": times, "T": T, "width": dw, "height": dh,
         "bounds": (bottom, left, top, right), "today_index": _today_idx(times),
-        "snow": snow_w, "temp": temp_w, "sun": sun_w, "wind_grid": wind_w,
-        "prec": prec_w, "main_aspect": aspect_main, "main_slope": slope_main,
+        "snow": cubes["snow"], "ablation": cubes["ablation"],
+        "temp": cubes["temp"], "sun": cubes["sun"],
+        "wind_grid": cubes["wind_grid"], "prec": cubes["prec"],
+        "main_aspect": aspect_main, "main_slope": slope_main,
         "main_elev": elev_main,
         "wind": {"lat": wind["lat"], "lon": wind["lon"], "nx": wind["nx"], "ny": wind["ny"],
                  "spd": p_spd, "dir": p_dir, "tpi": expo_tpi},
         "aspect_png": fine["aspect_png"], "rough_png": fine["rough_png"],
         "png_bounds": fine["png_bounds"], "elev_png": fine["elev_png"],
         "elev_bounds": fine["elev_bounds"], "rad": rad, "stations": stations,
+        "avalanche": avalanche,
         "rough_grid": rough_w, "hourly_snow": hourly_snow,
     }
 
@@ -505,6 +590,29 @@ def _sample(dem, pts, shape):
         row = min(h - 1, max(0, int((n1 - ny) / dem.res)))
         out.append(float(dem.elevation[row, col]))
     return out
+
+
+def _slf_avalanche():
+    """Lawinenbulletin (SLF, CC BY 4.0) fuer den Anzeige-Layer.
+
+    Rein anzeigend -- wir rechnen keine eigene Gefahrenstufe (das waere
+    Prognose mit der entsprechenden Haftung). Faellt die API aus, bleibt der
+    Layer ausgeblendet, genau wie der Messaging-Screen ohne seine Tabellen.
+    """
+    from config.settings import DATA_DIR
+    try:
+        from data_connectors.slf_bulletin import fetch_bulletin
+        doc = fetch_bulletin(cache_path=DATA_DIR / "slf_cache" / "bulletin.json")
+    except Exception as e:                       # noqa: BLE001
+        print(f"[INT] Lawinenbulletin nicht verfuegbar: {e!r}")
+        return None
+    if not doc:
+        return None
+    n = len(doc.get("regions") or [])
+    with_geom = sum(1 for r in doc["regions"] if r.get("geometry"))
+    print(f"[INT] Lawinenbulletin: {n} Regionen ({with_geom} mit Geometrie)"
+          + (" [stale]" if doc.get("stale") else ""))
+    return doc
 
 
 def _slf_stations(times, n_stations, period_days):
@@ -562,10 +670,17 @@ def _build_meta_blobs(data):
     Returns (meta, blobs) where blobs maps the client key -> base64 string.
     Shared by the single-file and split exporters so the encoding lives once."""
     def u8(a, fn):
+        # Die grossen Zeitwuerfel kommen schon als uint8 aus der Modellschleife
+        # (siehe _quantisers) -- dann ist fn bereits angewandt und ein
+        # zweites Mal Runden wuerde die Werte zerstoeren. Einzelbilder und
+        # Punktreihen sind weiter float und werden hier quantisiert.
+        if getattr(a, "dtype", None) == np.uint8:
+            return base64.b64encode(np.ascontiguousarray(a).tobytes()).decode()
         return base64.b64encode(np.clip(fn(a), 0, 255).astype("uint8").tobytes()).decode()
     rad = data["rad"]
     blobs = {
         "SNOW": u8(data["snow"], lambda a: np.round(a / _SNOW_SCALE)),
+        "ABL": u8(data["ablation"], lambda a: np.round(a / _ABL_SCALE)),
         "TEMP": u8(data["temp"], lambda a: np.round((a + _TEMP_OFF) * _TEMP_MUL)),
         "SUN": u8(data["sun"], lambda a: np.round(a * _SUN_MUL)),
         "SPD": u8(data["wind"]["spd"], lambda a: np.round(a * _SPD_MUL)),
@@ -586,10 +701,11 @@ def _build_meta_blobs(data):
     meta = {
         "T": data["T"], "width": data["width"], "height": data["height"],
         "bounds": data["bounds"], "times": data["times"], "today_index": data["today_index"],
-        "snow_scale": _SNOW_SCALE, "temp_off": _TEMP_OFF, "temp_mul": _TEMP_MUL,
+        "snow_scale": _SNOW_SCALE, "abl_scale": _ABL_SCALE, "temp_off": _TEMP_OFF, "temp_mul": _TEMP_MUL,
         "spd_mul": _SPD_MUL, "dir_div": _DIR_DIV, "sun_mul": _SUN_MUL, "prec_mul": _PREC_MUL,
         "elev_scale": _ELEV_SCALE,
         "slf_bounds": SLF_BOUNDS, "slf_colors": SLF_COLORS,
+        "avalanche": data.get("avalanche"),
         "png_bounds": data["png_bounds"],
         "elev_bounds": data["elev_bounds"], "elev_q": _ELEV_Q,
         "rad": {"width": rad["width"], "height": rad["height"], "K": rad["K"],
@@ -1263,6 +1379,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    padding:calc(env(safe-area-inset-top,0px) + 20px) 18px 96px}
  .ly-scroll .lbl-micro{display:block;margin:0 0 10px}
  .ly-scroll .lbl-micro+.lbl-micro,.ly-grid+.lbl-micro,.ly-subs+.lbl-micro{margin-top:22px}
+/* An overlay whose data did not arrive (the bulletin, if SLF was down) is
+   shown but visibly inert -- better than a button that silently does
+   nothing, and better than hiding it and leaving the user wondering. */
+#lyOverlays .ly-b.on{outline:2px solid var(--acc);outline-offset:-2px}
+#lyOverlays .ly-b.na{opacity:.38;pointer-events:none}
+#lyOverlays .ly-b.na::after{content:' –';opacity:.7}
  /* one pictogram tile per layer */
  .ly-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
  .ly-tile{display:flex;flex-direction:column;align-items:flex-start;gap:8px;
@@ -2908,6 +3030,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div class="ly-scroll">
     <span class="lbl-micro">Ebene</span>
     <div class="ly-grid" id="lyGrid"></div>
+    <span class="lbl-micro">Overlays</span>
+    <div class="ly-grid" id="lyOverlays"></div>
     <div class="ly-info" id="lyInfo"></div>
     <div class="ly-legend" id="lyLegend"></div>
     <div class="ly-op">
@@ -3310,6 +3434,7 @@ if(_isNative){try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'DA
   try{const SP=_capPlugin('SplashScreen');if(SP)setTimeout(()=>{try{SP.hide();}catch(e){}},450);}catch(e){}}
 function dec(b){const s=atob(b),n=s.length,a=new Uint8Array(n);for(let i=0;i<n;i++)a[i]=s.charCodeAt(i);return a;}
 const SNOW=dec(db('SNOW')),TEMP=dec(db('TEMP')),SUN=dec(db('SUN')),SPD=dec(db('SPD')),WDIR=dec(db('DIR'));
+const ABL=dec(db('ABL'));
 const WINDG=dec(db('WINDG')),RSLOPE=dec(db('RSLOPE')),RASPECT=dec(db('RASPECT')),RHOR=dec(db('RHOR'));
 const PREC=dec(db('PREC')),MASPECT=dec(db('MASPECT')),MSLOPE=dec(db('MSLOPE')),MELEV=dec(db('MELEV')),ROUGHG=dec(db('ROUGHGRID'));
 const ASPECT_PNG="data:image/png;base64,"+db('ASPECTPNG'),ROUGH_PNG="data:image/png;base64,"+db('ROUGHPNG'),ELEV_PNG="data:image/png;base64,"+db('ELEVPNG');
@@ -3318,7 +3443,18 @@ const RW=M.rad.width,RH=M.rad.height,RK=M.rad.K,RNP=RW*RH;
 const [RbS,RlW,RbN,RlE]=M.rad.bounds;
 const wg_=(t,p)=>WINDG[t*NP+p]/M.spd_mul;
 const cum=new Float32Array((T+1)*NP);
-for(let t=0;t<T;t++){const o0=t*NP,o1=(t+1)*NP,s=t*NP,sc=M.snow_scale;for(let p=0;p<NP;p++)cum[o1+p]=cum[o0+p]+SNOW[s+p]*sc;}
+// Massenbilanz statt Kumulativsumme: ABL traegt Schmelze (Temperatur +
+// hangkorrigierte Einstrahlung) und Setzung, in der Pipeline auf die
+// vorhandene Hoehe begrenzt -- deshalb genuegt hier max(0, ...).
+// Ein aelterer Daten-Blob (gehostete Daten werden unabhaengig vom Binary
+// aktualisiert) kennt ABL nicht. db() gibt dann "" und dec("") ein leeres
+// Array -- ABL[i] waere undefined und wuerde die Summe zu NaN machen.
+// Also nur bilanzieren, wenn Skala UND vollstaendiger Wuerfel da sind.
+const _ascale=+M.abl_scale||0;
+const _hasAbl=_ascale>0&&ABL.length>=T*NP;
+for(let t=0;t<T;t++){const o0=t*NP,o1=(t+1)*NP,s=t*NP,sc=M.snow_scale;
+  if(_hasAbl){for(let p=0;p<NP;p++){const v=cum[o0+p]+SNOW[s+p]*sc-ABL[s+p]*_ascale;cum[o1+p]=v>0?v:0;}}
+  else {for(let p=0;p<NP;p++)cum[o1+p]=cum[o0+p]+SNOW[s+p]*sc;}}
 const tv=(t,p)=>TEMP[t*NP+p]/M.temp_mul-M.temp_off, sunv=(t,p)=>SUN[t*NP+p]/M.sun_mul;
 const SB=M.slf_bounds,SC=M.slf_colors,RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
 function snowCol(v){if(v<SB[0])return null;for(let i=SB.length-1;i>=1;i--)if(v>=SB[i-1])return RGB[Math.min(i-1,RGB.length-1)];return RGB[0];}
@@ -3800,6 +3936,102 @@ map.on('zoom zoomend',updateBaseFade);updateBaseFade();
 // Keine weisse Maske mehr: die gedimmte OSM-Unterlage zeigt die Nachbarlaender,
 // die Winter-Pixelkarte liegt fuer die Schweiz darueber.
 const slopeWMTS=L.tileLayer(swissTile('ch.swisstopo.hangneigung-ueber_30','png'),{opacity:.7});
+// --- Overlays -------------------------------------------------------------
+// These are NOT part of the exclusive layer picker. A ski route is only
+// useful drawn ON TOP of whatever snow layer you are looking at, so they
+// toggle independently.
+//
+// swisstopo geodata is OGD: free for any purpose including commercial, on
+// one condition -- the source must be named. BASE_ATTR already carries
+// "© swisstopo"; ovAttr() adds the specific products when they are on.
+const OVERLAYS={
+  skitour:{label:'Skitouren',wmts:'ch.swisstopo-karto.skitouren',op:.95,
+           attr:'Skitouren © swisstopo'},
+  snowshoe:{label:'Schneeschuh',wmts:'ch.swisstopo-karto.schneeschuhrouten',op:.95,
+            attr:'Schneeschuhrouten © swisstopo'},
+  // Shown with the routes on purpose: entering a wildlife rest zone is an
+  // offence in several cantons, and swisstopo publishes the two together.
+  wildlife:{label:'Wildruhezonen',wmts:'ch.bafu.wrz-wildruhezonen_portal',op:.6,
+            attr:'Wildruhezonen © BAFU'},
+  avalanche:{label:'Lawinenbulletin',vector:true,
+             attr:'Lawinenbulletin © SLF (CC BY 4.0)'}
+};
+const ovOn={};
+const ovLayer={};
+function ovAvailable(k){
+  if(k==='avalanche'){const a=M.avalanche;return !!(a&&a.regions&&a.regions.some(r=>r.geometry));}
+  return true;
+}
+function ovBuild(k){
+  if(ovLayer[k])return ovLayer[k];
+  const o=OVERLAYS[k];
+  if(o.wmts){ovLayer[k]=L.tileLayer(swissTile(o.wmts,'png'),{opacity:o.op,pane:'overlayPane'});}
+  else if(k==='avalanche'){ovLayer[k]=avBuildLayer();}
+  return ovLayer[k];
+}
+function ovToggle(k){
+  if(!ovAvailable(k))return;
+  const l=ovBuild(k);if(!l)return;
+  ovOn[k]=!ovOn[k];
+  if(ovOn[k])map.addLayer(l);else map.removeLayer(l);
+  ovSyncUI();ovAttrSync();
+}
+function ovAttrSync(){
+  const extra=Object.keys(OVERLAYS).filter(k=>ovOn[k]).map(k=>OVERLAYS[k].attr);
+  const el=document.querySelector('.leaflet-control-attribution');
+  if(el)el.innerHTML=BASE_ATTR+(extra.length?' · '+extra.join(' · '):'');
+}
+function ovSyncUI(){
+  Object.keys(OVERLAYS).forEach(k=>{
+    const b=document.getElementById('ov_'+k);if(!b)return;
+    b.classList.toggle('on',!!ovOn[k]);
+    b.classList.toggle('na',!ovAvailable(k));
+    b.setAttribute('aria-pressed',ovOn[k]?'true':'false');
+  });
+}
+
+// --- Avalanche bulletin ---------------------------------------------------
+// A VIEWER, not a forecast. We render SLF's danger levels in SLF's own EAWS
+// colours and link to the original. We never compute a danger level of our
+// own -- that is forecasting, with the liability that implies.
+const AV_COLORS={1:'#CCFF66',2:'#FFFF00',3:'#FF9900',4:'#FF0000',5:'#800000'};
+const AV_LABELS={1:'gering',2:'mässig',3:'erheblich',4:'gross',5:'sehr gross'};
+function avRegions(){const a=M.avalanche;return (a&&a.regions)||[];}
+function avByRegion(){const m={};avRegions().forEach(r=>{m[r.id]=r;});return m;}
+function avBuildLayer(){
+  const feats=avRegions().filter(r=>r.geometry)
+    .map(r=>({type:'Feature',properties:r,geometry:r.geometry}));
+  if(!feats.length)return null;
+  return L.geoJSON({type:'FeatureCollection',features:feats},{
+    style:f=>({color:'#222',weight:.8,opacity:.55,
+               fillColor:AV_COLORS[f.properties.danger]||'#999',fillOpacity:.42}),
+    onEachFeature:(f,lyr)=>{
+      const p=f.properties;
+      const asp=(p.aspects&&p.aspects.length)?p.aspects.join(' '):'alle';
+      const band=(p.elev_lo!=null||p.elev_hi!=null)
+        ? ((p.elev_lo!=null?p.elev_lo+' m':'')+'–'+(p.elev_hi!=null?p.elev_hi+' m':''))
+        : 'alle Höhen';
+      lyr.bindPopup(
+        '<b>Stufe '+p.danger+' – '+(AV_LABELS[p.danger]||'')+'</b>'
+        +'<br>Kernzone: '+band+', '+asp
+        +(p.problems&&p.problems.length?'<br>Problem: '+p.problems.join(', '):'')
+        +'<div style="margin-top:6px;font-size:11px;opacity:.75">Quelle: SLF ·'
+        +' <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation/"'
+        +' target="_blank" rel="noopener">Bulletin öffnen</a></div>');
+    }});
+}
+// Is a point inside the bulletin's core zone? Used by the tour score, and
+// deliberately conservative: unknown aspect or elevation counts as inside.
+function avCoreZone(danger,elevM,aspectDeg){
+  if(!danger)return false;
+  const r=danger;
+  if(r.elev_lo!=null&&elevM!=null&&elevM<r.elev_lo)return false;
+  if(r.elev_hi!=null&&elevM!=null&&elevM>r.elev_hi)return false;
+  if(!r.aspects||!r.aspects.length)return true;
+  if(aspectDeg==null)return true;
+  const oct=['N','NE','E','SE','S','SW','W','NW'][Math.round(((aspectDeg%360)+360)%360/45)%8];
+  return r.aspects.indexOf(oct)>=0;
+}
 const reliefWMTS=L.tileLayer(swissTile('ch.swisstopo.swissalti3d-reliefschattierung_monodirektional','png'),{opacity:.85});
 const roughImg=L.imageOverlay(ROUGH_PNG,[[M.png_bounds[0],M.png_bounds[1]],[M.png_bounds[2],M.png_bounds[3]]],{opacity:.78});
 // Defer work until the browser has actually painted once. Two frames, because
@@ -5033,7 +5265,19 @@ function lyRender(){
     (n===i?' aria-current="true"':'')+' title="'+(hi?'Echte Meldungen, nicht modelliert':'')+'">'+lyIconFor(item.id)+
     '<span>'+escapeHtml(item.label)+'</span>'+(hi?'<i class="ly-hi-dot"></i>':'')+'</button>'+
     (n===afterIdx?subsHtml:'');}).join('');
+  ovRender();
   lyInfoRender();
+}
+function ovRender(){
+  const g=document.getElementById('lyOverlays');if(!g)return;
+  g.innerHTML=Object.keys(OVERLAYS).map(k=>{
+    const o=OVERLAYS[k],na=!ovAvailable(k);
+    return '<button type="button" id="ov_'+k+'" class="ly-tile ly-b'
+      +(ovOn[k]?' on':'')+(na?' na':'')+'" aria-pressed="'+(ovOn[k]?'true':'false')+'"'
+      +' onclick="ovToggle(\''+k+'\')" title="'
+      +escapeHtml(na?o.label+' – keine Daten':o.attr)+'">'
+      +'<span>'+escapeHtml(o.label)+'</span></button>';
+  }).join('');
 }
 function lyPick(n){const t=lyLayers()[n];if(!t)return;
   setTopic(t[0],t[1],0);try{haptic(3);}catch(e){}}
