@@ -61,8 +61,13 @@ targets:
         optional: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: ch.snowmapper.app
-        INFOPLIST_KEY_CFBundleDisplayName: Snowmapper
+        # NOT ch.snowmapper.app — that belongs to the shipping Capacitor build
+        # in apple-app/, which is what goes to TestFlight and the App Store.
+        # Same bundle id would mean installing one REPLACES the other on the
+        # phone, and only one can exist in TestFlight. This harness is a
+        # separate app so both can sit side by side while developing.
+        PRODUCT_BUNDLE_IDENTIFIER: ch.snowmapper.harness
+        INFOPLIST_KEY_CFBundleDisplayName: SM Harness
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         # Purpose strings are MANDATORY — Apple rejects a build that touches
@@ -91,7 +96,7 @@ targets:
       - target: Snowmapper
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: ch.snowmapper.app.tests
+        PRODUCT_BUNDLE_IDENTIFIER: ch.snowmapper.harness.tests
 
 schemes:
   Snowmapper:
