@@ -43,7 +43,7 @@ improving through the season beats missing the season entirely.
 
 Nothing ships without all of these.
 
-### 1. Run `web/migration-latest.sql` — today
+### 1. Run `supabase/migrations/20260901000000_privacy_moderation_ratings.sql` — today
 Every user's email is currently readable by anyone with the anon key. It is a
 DSG/GDPR exposure, it will be a lie in your App Privacy labels, and the fix is
 already written and verified idempotent. Two minutes in the SQL editor.

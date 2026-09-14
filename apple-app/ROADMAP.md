@@ -158,7 +158,7 @@ so it is safe to ship before deploying. **It still has to be deployed** —
 
 Still missing in the DB: `dm_threads` / `dm_messages` (verified absent), so the
 messaging screen stays hidden behind `dmAvailable()`. Run
-`web/migration-messages.sql` to unhide it.
+`supabase/migrations/20260902000000_messaging.sql` to unhide it.
 
 ---
 
@@ -183,7 +183,7 @@ cheapest and most blocking come first.
 | 9 | **A demo account** for App Review to log in with | Your call what data it shows | App Store review |
 | 10 | **Set `SNOW_REMOTE_DATA_BASE`** to the real data origin (default assumes `https://gianio.github.io/snow-mapper-v17`) | Depends on where you host data | Fresh forecasts in the shipped app |
 | 11 | **MapKit vs Mapbox** decision | Cost/dependency call | Phase 3 native map |
-| 12 | *(optional)* Run `web/migration-messages.sql` | Your database | Unhides the messaging screen |
+| 12 | *(optional)* Run `supabase/migrations/20260902000000_messaging.sql` | Your database | Unhides the messaging screen |
 
 Items 1, 2, 3 and 12 cost nothing and unblock the most. Item 4 has the longest
 lead time, so start it early even if nothing else is ready.
