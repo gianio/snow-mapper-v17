@@ -1,0 +1,15 @@
+# Supabase CLI config.
+#
+# Deliberately minimal: only what is needed to link this repo to the project.
+# Extra keys vary between CLI versions and a stale one makes every command fail
+# with a config parse error, which is a miserable thing to debug.
+#
+# The project ref is NOT a secret — it appears in every client request URL — so
+# it belongs in git. Secrets (service role key, DB password) never do: the CLI
+# prompts for them or reads them from the environment.
+#
+# First-time setup:
+#   supabase login
+#   supabase link --project-ref gdtxwowcqtbdkcoksivb
+#
+project_id = "gdtxwowcqtbdkcoksivb"

@@ -11,10 +11,10 @@ Legend: ✅ done in code · 🟡 needs a manual step from you · ⬜ deferred
 | Item | Status | Where |
 |---|---|---|
 | Liability / avalanche disclaimer + privacy consent gate (first-run) | ✅ | `interactive_export.py` (`ssm_disclaimer_v1`) |
-| Stop exposing `profiles.email` (+ `webauthn_credentials`) | ✅ | `web/migration-latest.sql` §5 |
-| Report moderation: `flagged` column + `report_flags` + auto-flag | ✅ | `web/migration-latest.sql` §6 + feed "Melden" button |
-| Per-user report rate-limit (20 / 24 h) | ✅ | `web/migration-latest.sql` §7 |
-| Storage size + mime limits on `report-images` | ✅ | `web/migration-latest.sql` §8 |
+| Stop exposing `profiles.email` (+ `webauthn_credentials`) | ✅ | `supabase/migrations/20260901000000_privacy_moderation_ratings.sql` §5 |
+| Report moderation: `flagged` column + `report_flags` + auto-flag | ✅ | `supabase/migrations/20260901000000_privacy_moderation_ratings.sql` §6 + feed "Melden" button |
+| Per-user report rate-limit (20 / 24 h) | ✅ | `supabase/migrations/20260901000000_privacy_moderation_ratings.sql` §7 |
+| Storage size + mime limits on `report-images` | ✅ | `supabase/migrations/20260901000000_privacy_moderation_ratings.sql` §8 |
 | Run the migration SQL in Supabase | 🟡 | see **Manual steps** |
 | "Confirm signup" email template contains 6-digit `{{ .Token }}` | 🟡 | see **Manual steps** |
 | GitHub Pages Source = **GitHub Actions** | 🟡 | see **Manual steps** |
@@ -56,7 +56,7 @@ Legend: ✅ done in code · 🟡 needs a manual step from you · ⬜ deferred
 
 ## Manual steps (only you can do these)
 
-1. **Supabase → SQL Editor:** run `web/migration-latest.sql` (safe to re-run).
+1. **Supabase → SQL Editor:** run `supabase/migrations/20260901000000_privacy_moderation_ratings.sql` (safe to re-run).
    Then **Database → Backups:** enable daily backups.
 2. **Supabase → Authentication → Email Templates → "Confirm signup":** make sure
    the body includes the 6-digit code token `{{ .Token }}` (the app uses

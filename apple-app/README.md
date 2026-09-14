@@ -148,7 +148,7 @@ Still **your** manual steps (documented, can't be done from code):
 - ⬜ **Demo account** for App Review (a test email login they can use).
 - ⬜ Confirm Supabase **account-deletion Edge Function** removes the `auth.users`
   row (the client deletes the profile + cascades content; deleting the login
-  row itself needs the service role — see `web/migration-latest.sql` notes).
+  row itself needs the service role — see `supabase/migrations/20260901000000_privacy_moderation_ratings.sql` notes).
 
 ---
 

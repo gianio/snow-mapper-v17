@@ -7025,7 +7025,7 @@ async function profDeleteAccount(btn){if(!sb||!sbUser)return;
 function userViewClose(){document.getElementById('userViewModal').style.display='none';}
 let _usT=null;
 // --- Direct messages -----------------------------------------------------
-// The table is created by web/migration-messages.sql. Until that has been run
+// The table is created by supabase/migrations/20260902000000_messaging.sql. Until that has been run
 // the entry points stay hidden, because a button that always fails is worse
 // than no button.
 let dmReady=null,dmThread=null,dmOther=null,dmSub=null,dmThreads=[];

@@ -29,7 +29,7 @@ Steht noch aus (Settings → Pages). Ohne das liefert Pages die
 Jekyll-Platzhalterseite statt der App.
 
 ### 3. Supabase-Migration einspielen + E-Mail-Template
-`web/migration-latest.sql` ausführen (Storage-Policies, Kommentare, Profile),
+`supabase/migrations/20260901000000_privacy_moderation_ratings.sql` ausführen (Storage-Policies, Kommentare, Profile),
 im „Confirm signup"-Template `{{ .Token }}` ergänzen (6-stelliger Code).
 
 ### 4. Haftungs-Disclaimer (nicht optional)

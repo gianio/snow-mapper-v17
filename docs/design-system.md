@@ -545,7 +545,7 @@ person glyph.
 
 ### Messages
 
-`web/migration-messages.sql` creates `dm_threads`, `dm_messages` and
+`supabase/migrations/20260902000000_messaging.sql` creates `dm_threads`, `dm_messages` and
 `dm_open_thread()`. Membership of a thread is what grants access to its
 messages — the RLS subquery is the whole enforcement — and the pair on a thread
 is ordered and unique, so two people cannot end up with two threads.
