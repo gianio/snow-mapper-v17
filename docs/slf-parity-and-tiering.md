@@ -252,15 +252,46 @@ mean 6.7 cm, peak 19 cm, before and after).
 |---|---|---|
 | 4 km | 96 s | 94 s |
 | 500 m | ~186 s, ~8 GB | **216 s, 4.07 GB, 38.5 MB gz** |
-| 250 m | **OOM at 601 s / 12.7 GB** | see below |
+| 250 m | **OOM at 601 s / 12.7 GB** | **649 s, 8.12 GB, 93.6 MB gz — completes** |
+
+250 m now finishes inside the 60 minute deploy timeout. 8.12 GB peak leaves
+usable headroom on a 16 GB runner but not a lot; if it ever needs more, the
+next step is spatial block processing (`pipeline/switzerland.py` already has
+`_run_tiled` for the non-interactive path).
 
 The extra ~30 s at 500 m is the new horizon computation, not the refactor.
 
-**Delivery is still the limit, not compute.** At 250 m the blob is ~140 MB
-gzipped and its uncompressed JSON is ~2.6 GB, which has to be written and
-held. So 250 m needs the tiled *delivery* from Part 2; **500 m is the highest
+**Delivery is the limit, not compute.** Measured at 250 m: the blob is
+**93.6 MB gzipped** and the intermediate uncompressed JSON is **2.2 GB** on
+disk. So 250 m needs the tiled *delivery* from Part 2; **500 m is the highest
 resolution that ships as a single blob**, and at 38.5 MB even that wants the
 static-terrain split first.
+
+### Does the aspect signal actually appear? Yes — measured on real terrain
+
+The earlier 0.99 x null result was not a synthetic-DEM artifact. Repeated on
+**real Copernicus DEM** over a 24 x 24 km box at Davos/Parsenn, 11 days of
+mid-April forcing at 70 % sunshine, with horizon shading on:
+
+| Resolution | Slope p50/p90/max | Cells >= 25 deg | S/N ablation | Depth left |
+|---|---|---|---|---|
+| 3 km | 4 / 6 / **8 deg** | **0 of 64** | immeasurable | — |
+| 250 m | 19 / 29 / **42 deg** | **1,984 of 9,216 (22 %)** | **1.20 x** | S 52 cm, N 68 cm |
+
+At 3 km, real Alpine terrain flattens to a maximum of 8 degrees. There is not
+a single cell above 25 degrees anywhere in the Davos box -- the aspect physics
+has literally nothing to act on, which is why the national run measured 0.99 x.
+
+At 250 m, 22 % of cells are steep, and the south/north difference is real:
+**1.20 x more ablation on south faces, 16 cm less snow left after eleven
+days.** Less than the 2 x from the idealised 35 degree unit test, and that is
+correct rather than disappointing -- this is a real mixed-aspect population
+including gentler slopes, with cloud cover and with horizon shading
+suppressing radiation on *both* aspects in the valleys.
+
+So the chain works end to end: ablation physics + horizon shading + a 250 m
+grid together produce the aspect differentiation that makes SLF's map look the
+way it does, and none of the three is sufficient alone.
 
 ### Radiation: horizon shading now feeds the mass balance
 
