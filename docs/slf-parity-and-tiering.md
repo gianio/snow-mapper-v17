@@ -232,6 +232,83 @@ Worth doing at the current resolution regardless.
 
 ---
 
+## Tiling A, measured
+
+`tools/tile_terrain.py` is a working prototype: it turns the static terrain
+field into a Web Mercator `z/x/y` PNG pyramid using the **same RGBA encoding
+as `_elev_to_png_b64`**, so the client's existing decode applies unchanged:
+
+    (R * 256 + G) * _ELEV_Q = elevation [m]
+    B                       = slope [deg]
+    A                       = 255 where data exists
+
+### All of Switzerland, real Copernicus DEM at 52 m
+
+| Zoom | Ground res | Tiles | Size | Mean tile | Time |
+|---|---|---|---|---|---|
+| z9 | 209 m/px | 36 (4 empty skipped) | 2.57 MB | 70 KB | 11 s |
+| z10 | 105 m/px | 142 (8 skipped) | 8.82 MB | 61 KB | 48 s |
+| z11 | **52 m/px** | 490 (14 skipped) | 28.12 MB | 56 KB | 187 s |
+| **total** | | **668** | **39.5 MB** | | **246 s** |
+
+Plus 88 s to load the national DEM: **5.6 minutes end to end**, comfortably
+inside the 60 minute deploy budget.
+
+### The number that decides it
+
+A viewer downloads their viewport, not the country:
+
+| Device | Tiles at z11 | Download |
+|---|---|---|
+| Phone, 400x800 | ~6 | **336 KB** |
+| Tablet, 820x1180 | ~12 | 672 KB |
+| Desktop, 1440x900 | ~20 | 1.1 MB |
+
+Against the alternatives, at the same 50 m resolution:
+
+| Approach | First view | Repeat cost |
+|---|---|---|
+| Single national 50 m PNG | **5.64 MB** | re-downloaded with the blob |
+| Terrain inside the blob today (58-249 m/px) | 3.2 MB | **again every 6 h** |
+| **Tiles, z11** | **336 KB** | **zero — immutable, cached forever** |
+
+So tiling the static terrain is a ~17x smaller first view than a single 50 m
+raster, at finer resolution than anything shipping today, and it stops being
+re-downloaded on every data refresh.
+
+### Correctness checks
+
+* **Encoding round-trips exactly**: max elevation error 2.00 m against a
+  quantisation step of 4 m (bound 2.0 m); slope within 0.5 deg; alpha marks
+  data everywhere it exists; 4600 m still fits in 16 bits.
+* **Geography is right**: interior tiles over Davos/Parsenn come back 64-98 %
+  covered with elevations of 784-3104 m. The apparent "0.3 % coverage" tiles
+  are edge tiles that merely clip the test box -- not a bug.
+* Comparing a tile pixel against a nearest-neighbour DEM lookup gives a mean
+  difference of 13.8 m, which is **resampling, not encoding**: on a 26 m DEM
+  at 45 degrees, a half-cell offset is ~13 m of elevation by construction.
+
+### What it costs to adopt
+
+Site size grows by 39.5 MB (to roughly 74 MB with the current 1 km blob),
+far inside the 1 GB GitHub Pages limit -- and the tiles are immutable, so
+they are fetched once per deploy rather than four times a day.
+
+### Known rough edges in the prototype
+
+1. **Per-tile reprojection reads the whole source array.** z11 spends 0.38 s
+   per tile for that reason. A windowed read would cut it substantially;
+   246 s is acceptable today but it will not scale to z12+ (2,052 tiles).
+2. **No minimum-coverage threshold.** A tile clipping the border by 0.3 %
+   still costs ~14 KB. Skipping below a few percent would trim the edges.
+3. **Aspect and roughness are not tiled yet** -- only elevation and slope.
+   Aspect is the layer already at 58 m/px, so it is the obvious next one.
+4. **Nothing consumes the tiles yet.** Wiring them in means a
+   `L.tileLayer` plus changing the snow render to weight by fine terrain,
+   which is the part that touches the render path and wants care.
+
+---
+
 ## Order of work
 
 ---
