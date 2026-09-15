@@ -123,6 +123,55 @@ def load_routes(path: Path) -> List[Dict[str, Any]]:
         return []
 
 
+def _routes_from_zip_url(href: str, timeout: float) -> List[Dict[str, Any]]:
+    """Ein gezipptes Shapefile/GeoPackage von data.geo.admin.ch lesen.
+
+    swisstopo liefert die Vektorfassung als ZIP (bestaetigt gegen die
+    STAC-Sammlung). Wird in ein temporaeres Verzeichnis entpackt und ueber
+    fiona gelesen; ohne fiona gibt es nichts zu tun, und das wird gesagt
+    statt stillschweigend nichts zurueckzugeben.
+    """
+    import shutil
+    import tempfile
+    import zipfile
+
+    import requests
+
+    try:
+        import fiona                                # noqa: F401
+    except ImportError:
+        print("[TOPO] fiona fehlt -- gezippte Vektordaten koennen nicht "
+              "gelesen werden (pip install fiona).")
+        return []
+
+    tmp = Path(tempfile.mkdtemp(prefix="skitouren-"))
+    try:
+        zpath = tmp / "routes.zip"
+        with requests.get(href, timeout=timeout, stream=True) as rr:
+            rr.raise_for_status()
+            with open(zpath, "wb") as fh:
+                for chunk in rr.iter_content(1 << 20):
+                    fh.write(chunk)
+        with zipfile.ZipFile(zpath) as zf:
+            names = zf.namelist()
+            print(f"[TOPO] ZIP {href.rsplit('/', 1)[-1]}: {len(names)} Dateien")
+            # GeoPackage bevorzugen (eine Datei, ein Layer-Katalog),
+            # sonst Shapefile -- das braucht seine Begleitdateien, also alles
+            # entpacken statt nur die .shp.
+            inner = ([n for n in names if n.lower().endswith(".gpkg")]
+                     or [n for n in names if n.lower().endswith(".shp")])
+            if not inner:
+                print(f"[TOPO] Keine .gpkg/.shp im ZIP: {names[:12]}")
+                return []
+            zf.extractall(tmp)
+        return load_routes(tmp / inner[0])
+    except Exception as e:                           # noqa: BLE001
+        print(f"[TOPO] ZIP {href} nicht lesbar: {e!r}")
+        return []
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def fetch_routes(cache_path: Optional[Path] = None,
                  timeout: float = 60.0) -> List[Dict[str, Any]]:
     """Routen beschaffen: Cache, sonst Download ueber die STAC-Sammlung.
@@ -140,15 +189,26 @@ def fetch_routes(cache_path: Optional[Path] = None,
         r = requests.get(STAC_COLLECTION, timeout=timeout)
         r.raise_for_status()
         items = (r.json() or {}).get("features") or []
-        # Die STAC-Items verlinken die eigentlichen Dateien in ihren Assets.
-        hrefs = [a.get("href") for it in items
+        hrefs = [a["href"] for it in items
                  for a in (it.get("assets") or {}).values()
-                 if isinstance(a, dict) and isinstance(a.get("href"), str)
-                 and a["href"].lower().endswith((".geojson", ".json"))]
+                 if isinstance(a, dict) and isinstance(a.get("href"), str)]
+        # Verified against the live STAC collection on 15 Sep 2026: the single
+        # item carries TWO assets and both are .zip -- there is no GeoJSON to
+        # fetch. The reader previously filtered for .geojson/.json only and so
+        # found nothing while reporting "no vector version available", which
+        # was misleading: the data is there, just packaged.
+        hrefs.sort(key=lambda h: (not h.lower().endswith((".geojson", ".json")),
+                                  not h.lower().endswith(".zip")))
         for href in hrefs:
-            rr = requests.get(href, timeout=timeout)
-            rr.raise_for_status()
-            routes = parse_routes(rr.json())
+            low = href.lower()
+            if low.endswith((".geojson", ".json")):
+                rr = requests.get(href, timeout=timeout)
+                rr.raise_for_status()
+                routes = parse_routes(rr.json())
+            elif low.endswith(".zip"):
+                routes = _routes_from_zip_url(href, timeout)
+            else:
+                continue
             if routes:
                 if cache_path:
                     try:

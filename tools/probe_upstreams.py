@@ -67,8 +67,15 @@ def probe_bulletin(lang="de") -> bool:
             print("    aspects seen:", sorted({a for x in regions for a in x["aspects"]}))
             print("    sample:", _short({k: v for k, v in regions[0].items()
                                          if k != "geometry"}))
+        elif B._looks_empty(payload):
+            # This is the normal summer answer, not a bug. Calling it a shape
+            # mismatch sent me hunting for a parser problem that did not exist.
+            print("    empty but well-formed -> no active bulletin "
+                  "(outside the avalanche season). Parser assumptions hold.")
+            ok = True
         else:
-            print("    !! parser returned nothing — live shape differs from the fixtures")
+            print("    !! parser returned nothing AND the payload is not empty")
+            print("       -> live shape differs from the fixtures")
             print("    raw:", _short(payload, 1200))
     return ok
 
@@ -88,9 +95,10 @@ def probe_routes() -> bool:
             print(f"    {len(items)} items")
             for it in items[:3]:
                 assets = it.get("assets") or {}
-                fmts = sorted({(v or {}).get("href", "").rsplit(".", 1)[-1].lower()
-                               for v in assets.values()})
-                print(f"    item {it.get('id')}: {len(assets)} assets, formats {fmts}")
+                print(f"    item {it.get('id')}: {len(assets)} assets")
+                for k, v in list(assets.items())[:8]:
+                    href = (v or {}).get("href", "")
+                    print(f"      {k}: ...{href[-70:]}")
     except Exception as e:                           # noqa: BLE001
         print(f"    ERROR {e!r}")
 

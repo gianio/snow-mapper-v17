@@ -186,6 +186,22 @@ def _parse_geojson(fc: dict) -> List[Dict[str, Any]]:
     return out
 
 
+def _looks_empty(payload) -> bool:
+    """A well-formed response that simply carries no bulletin.
+
+    Distinguishes "no danger ratings published today" (summer) from "the
+    response shape changed and the parser is broken" -- which otherwise look
+    identical from the outside: zero regions either way.
+    """
+    if isinstance(payload, dict):
+        if payload.get("type") == "FeatureCollection":
+            return payload.get("features") == []
+        for key in ("bulletins", "Bulletin", "bulletin"):
+            if key in payload:
+                return payload[key] in ([], None)
+    return payload == []
+
+
 def fetch_bulletin(lang: str = "de", timeout: float = 20.0,
                    cache_path: Path | None = None) -> Optional[Dict[str, Any]]:
     """Bulletin holen. Gibt ``None`` zurueck, wenn es nicht erreichbar ist.
@@ -196,13 +212,29 @@ def fetch_bulletin(lang: str = "de", timeout: float = 20.0,
     import requests
 
     urls = [f"{_BASE}/caaml/{lang}/geojson", f"{_BASE}/caaml/{lang}/json"]
+    empty_ok = False
     for url in urls:
         try:
             r = requests.get(url, timeout=timeout,
                              headers={"Accept": "application/json"})
             r.raise_for_status()
-            regions = parse_bulletin(r.json())
+            payload = r.json()
+            regions = parse_bulletin(payload)
             if not regions:
+                # A 200 with an empty collection is the NORMAL summer answer:
+                # Switzerland has no avalanche bulletin outside roughly
+                # November-May. Verified against the live API on 15 Sep 2026,
+                # which returned {"type":"FeatureCollection","features":[]}
+                # and {"bulletins":[]}. That is not a parse failure, and
+                # reporting it as one sent me looking for a bug that was not
+                # there -- so distinguish the two.
+                if _looks_empty(payload):
+                    empty_ok = True
+                    print(f"[SLF] Bulletin {url}: keine aktive Gefahrenstufe "
+                          f"(ausserhalb der Lawinensaison).")
+                else:
+                    print(f"[SLF] Bulletin {url}: Antwort nicht interpretierbar "
+                          f"-- Struktur weicht ab.")
                 continue
             doc = {"regions": regions, "source": url,
                    "attribution": ATTRIBUTION, "url": BULLETIN_URL}
@@ -215,6 +247,11 @@ def fetch_bulletin(lang: str = "de", timeout: float = 20.0,
             return doc
         except Exception as e:                      # noqa: BLE001
             print(f"[SLF] Bulletin {url} nicht verfuegbar: {e!r}")
+
+    if empty_ok:
+        # Out of season: the layer stays hidden, and a stale winter bulletin
+        # would be worse than nothing.
+        return None
 
     if cache_path and cache_path.exists():
         try:
