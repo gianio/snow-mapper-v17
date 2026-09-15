@@ -232,6 +232,83 @@ Worth doing at the current resolution regardless.
 
 ---
 
+## Tiling A, measured
+
+`tools/tile_terrain.py` is a working prototype: it turns the static terrain
+field into a Web Mercator `z/x/y` PNG pyramid using the **same RGBA encoding
+as `_elev_to_png_b64`**, so the client's existing decode applies unchanged:
+
+    (R * 256 + G) * _ELEV_Q = elevation [m]
+    B                       = slope [deg]
+    A                       = 255 where data exists
+
+### All of Switzerland, real Copernicus DEM at 52 m
+
+| Zoom | Ground res | Tiles | Size | Mean tile | Time |
+|---|---|---|---|---|---|
+| z9 | 209 m/px | 36 (4 empty skipped) | 2.57 MB | 70 KB | 11 s |
+| z10 | 105 m/px | 142 (8 skipped) | 8.82 MB | 61 KB | 48 s |
+| z11 | **52 m/px** | 490 (14 skipped) | 28.12 MB | 56 KB | 187 s |
+| **total** | | **668** | **39.5 MB** | | **246 s** |
+
+Plus 88 s to load the national DEM: **5.6 minutes end to end**, comfortably
+inside the 60 minute deploy budget.
+
+### The number that decides it
+
+A viewer downloads their viewport, not the country:
+
+| Device | Tiles at z11 | Download |
+|---|---|---|
+| Phone, 400x800 | ~6 | **336 KB** |
+| Tablet, 820x1180 | ~12 | 672 KB |
+| Desktop, 1440x900 | ~20 | 1.1 MB |
+
+Against the alternatives, at the same 50 m resolution:
+
+| Approach | First view | Repeat cost |
+|---|---|---|
+| Single national 50 m PNG | **5.64 MB** | re-downloaded with the blob |
+| Terrain inside the blob today (58-249 m/px) | 3.2 MB | **again every 6 h** |
+| **Tiles, z11** | **336 KB** | **zero — immutable, cached forever** |
+
+So tiling the static terrain is a ~17x smaller first view than a single 50 m
+raster, at finer resolution than anything shipping today, and it stops being
+re-downloaded on every data refresh.
+
+### Correctness checks
+
+* **Encoding round-trips exactly**: max elevation error 2.00 m against a
+  quantisation step of 4 m (bound 2.0 m); slope within 0.5 deg; alpha marks
+  data everywhere it exists; 4600 m still fits in 16 bits.
+* **Geography is right**: interior tiles over Davos/Parsenn come back 64-98 %
+  covered with elevations of 784-3104 m. The apparent "0.3 % coverage" tiles
+  are edge tiles that merely clip the test box -- not a bug.
+* Comparing a tile pixel against a nearest-neighbour DEM lookup gives a mean
+  difference of 13.8 m, which is **resampling, not encoding**: on a 26 m DEM
+  at 45 degrees, a half-cell offset is ~13 m of elevation by construction.
+
+### What it costs to adopt
+
+Site size grows by 39.5 MB (to roughly 74 MB with the current 1 km blob),
+far inside the 1 GB GitHub Pages limit -- and the tiles are immutable, so
+they are fetched once per deploy rather than four times a day.
+
+### Known rough edges in the prototype
+
+1. **Per-tile reprojection reads the whole source array.** z11 spends 0.38 s
+   per tile for that reason. A windowed read would cut it substantially;
+   246 s is acceptable today but it will not scale to z12+ (2,052 tiles).
+2. **No minimum-coverage threshold.** A tile clipping the border by 0.3 %
+   still costs ~14 KB. Skipping below a few percent would trim the edges.
+3. **Aspect and roughness are not tiled yet** -- only elevation and slope.
+   Aspect is the layer already at 58 m/px, so it is the obvious next one.
+4. **Nothing consumes the tiles yet.** Wiring them in means a
+   `L.tileLayer` plus changing the snow render to weight by fine terrain,
+   which is the part that touches the render path and wants care.
+
+---
+
 ## Order of work
 
 ---
@@ -312,6 +389,45 @@ The horizon search was also resolution-dependent by accident — a fixed 25
 in **metres** (20 km, denser sampling near, coarser far), which is what
 makes it physically meaningful at any grid.
 
+### What the deploy actually runs now, and why not 250 m
+
+The live deploy was still `--res 3000`, which is why the app looked coarse
+however good the physics got. It is now **`--res 1000 --gz-only`**.
+
+The blocker was not compute — measured, the national Copernicus DEM loads in
+**26 s at 250 m** (18 tiles, decimated through the COG overviews) and the model
+run takes ~11 min. The blocker is a **hard GitHub Pages limit: a published site
+may be at most 1 GB, and it counts the UNCOMPRESSED blob.** The pipeline was
+writing both the plain JSON and the `.gz`:
+
+| Model res | gzipped | uncompressed | dist (live + demo) | publishable |
+|---|---|---|---|---|
+| 3 km (old) | 6 MB | 19 MB | ~50 MB | yes |
+| **1 km (now)** | **16.5 MB** | *not written* | **~34 MB** | **yes** |
+| 500 m | 38.5 MB | ~900 MB | ~1.9 GB | **no** |
+| 250 m | 93.6 MB | **2.2 GB** | ~4.6 GB | **no** |
+
+`--gz-only` drops the plain file, so 1 km ships **9x more cells than 3 km in a
+SMALLER published site than before**. It also makes 500 m (77 MB) and 250 m
+(187 MB) publishable at all, should the download cost ever be acceptable.
+
+The cost of `--gz-only` is the fallback it removes: the plain file is what
+browsers without `DecompressionStream` read, i.e. **iOS 16.2-16.3**. The floor
+becomes **iOS 16.4** (March 2023). On an unreleased app that is close to free,
+and the boot loader now says so explicitly instead of fetching
+`data/undefined` and reporting a baffling 404.
+
+**Why 1 km and not 250 m.** 250 m means a **93.6 MB download at boot**, on a
+phone, often on a mountain connection. That is the product cost, not a
+technical one. 1 km is also exactly ICON-CH1's native resolution, so it is the
+honest ceiling for *weather*; below it the extra detail is terrain-driven, and
+terrain is far better delivered as a static field than as 264 hourly frames
+(Part 2). Going to 250 m is a one-word change in `deploy.yml` once the
+static-terrain split lands and the download cost goes away.
+
+A CI step now fails the build if `dist` exceeds 900 MB, rather than discovering
+it at upload time.
+
 ---
 
 ## Part 3 — the bulletin, the routes, and scoring a tour
@@ -359,6 +475,33 @@ approach track cannot dominate.
 Routes are *cartographic* lines from the 1:50,000 snow-sport maps, not GPS
 tracks — fine for a statistic along a route, wrong as navigation, and the UI
 must not imply otherwise.
+
+### Tappable tours
+
+The routes ship as **vector geometry** (`M.tours`), simplified at 40 m — well
+below the resolving power of a 1:50,000 map and below the client's own 75 m
+resampling — so they can be tapped rather than just looked at. Each route gets
+a wide transparent hit line under the visible 3 px one, because a 3 px polyline
+is not a thumb target.
+
+Scoring runs **client-side**, and that is deliberate: the score depends on the
+selected time window, so it has to follow the timeline scrubber. Baking it in
+at build time would freeze it to one window. `tourRecolor()` is therefore
+called from `renderAll()`.
+
+The split follows `model/tour_score.py` exactly. The **pure** half —
+`tourResample`, `tourAggregate`, `tourVerdict`, `tourDistM`, `tourIsDescent` —
+lives in the engine block, so it is shared with the native build and tested
+under node (`tools/test_tour_js.js`, 48 checks). The **glue** —
+`tourSampleSeg`, `tourScoreRoute`, `tourBuildLayer`, `tourOpen` — reads `M`,
+the rasters, `computePowder` and the bulletin, and is deliberately *not*
+exported from the engine. `test_tour_js.js` asserts that it is absent.
+
+Line colour follows the verdict, and a clamped route is **never green** — the
+same refusal as `tourVerdict`, expressed visually.
+
+Both halves exist because the same route can be scored in either language, and
+they must agree.
 
 ---
 

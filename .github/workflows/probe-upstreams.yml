@@ -1,0 +1,137 @@
+# Probe the upstream data sources from a runner with open internet.
+#
+# Why this exists: the agent build environment's egress policy blocks
+# aws.slf.ch and data.geo.admin.ch (403 at the proxy), so the avalanche
+# bulletin parser and the swisstopo route reader were written against
+# fixtures and have never met a real payload. A GitHub runner has open
+# internet, so this workflow runs the real parsers against the real
+# endpoints and prints exactly what came back.
+#
+# It writes nothing to the site and touches no production data. Run it
+# manually from the Actions tab.
+name: Probe upstream data sources
+
+on:
+  workflow_dispatch:
+    inputs:
+      lang:
+        description: Bulletin language (de/fr/it/en)
+        default: de
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+
+      - name: Reachability
+        continue-on-error: true
+        run: |
+          for h in aws.slf.ch data.geo.admin.ch api3.geo.admin.ch measurement-api.slf.ch; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "https://$h/" || echo "000")
+            echo "$h -> $code"
+          done
+
+      - name: SLF avalanche bulletin — real payload through the real parser
+        continue-on-error: true
+        env:
+          LANG_CODE: ${{ inputs.lang || 'de' }}
+        run: |
+          mkdir -p probe
+          python - <<'PY'
+          import json, os, requests
+          from data_connectors import slf_bulletin as B
+
+          lang = os.environ.get("LANG_CODE", "de")
+          for suffix in ("geojson", "json", ""):
+              url = f"{B._BASE}/caaml/{lang}/{suffix}".rstrip("/")
+              try:
+                  r = requests.get(url, timeout=30, headers={"Accept": "application/json"})
+              except Exception as e:
+                  print(f"{url} -> ERROR {e!r}")
+                  continue
+              print(f"\n=== {url} -> HTTP {r.status_code} "
+                    f"({r.headers.get('content-type','?')}, {len(r.content)} bytes)")
+              if r.status_code != 200:
+                  continue
+              try:
+                  payload = r.json()
+              except Exception as e:
+                  print(f"    not JSON: {e!r}; first 300 chars:\n{r.text[:300]}")
+                  continue
+              # What SHAPE did we actually get? This is the thing the fixtures guessed at.
+              if isinstance(payload, dict):
+                  print("    top-level keys:", sorted(payload)[:20])
+              elif isinstance(payload, list):
+                  print(f"    top-level list, {len(payload)} items")
+                  if payload and isinstance(payload[0], dict):
+                      print("    item[0] keys:", sorted(payload[0])[:20])
+              regions = B.parse_bulletin(payload)
+              print(f"    parse_bulletin -> {len(regions)} regions")
+              if regions:
+                  print("    sample:", json.dumps(
+                      {k: v for k, v in regions[0].items() if k != 'geometry'},
+                      ensure_ascii=False))
+                  print("    with geometry:", sum(1 for x in regions if x.get('geometry')))
+                  print("    danger levels:", sorted({x['danger'] for x in regions}))
+                  print("    aspects seen:", sorted({a for x in regions for a in x['aspects']}))
+              else:
+                  print("    !! parser returned nothing — shape differs from the fixtures.")
+                  print("    raw sample:", json.dumps(payload, ensure_ascii=False)[:1200])
+              open(f"probe/bulletin-{suffix or 'root'}.json", "w").write(
+                  json.dumps(payload, ensure_ascii=False)[:4_000_000])
+          PY
+
+      - name: swisstopo ski routes — real payload through the real parser
+        continue-on-error: true
+        run: |
+          mkdir -p probe
+          python - <<'PY'
+          import json, requests
+          from data_connectors import swisstopo_routes as R
+
+          print("=== STAC collection:", R.STAC_COLLECTION)
+          try:
+              r = requests.get(R.STAC_COLLECTION, timeout=60)
+              print("   HTTP", r.status_code, r.headers.get("content-type"))
+              if r.status_code == 200:
+                  items = (r.json() or {}).get("features") or []
+                  print(f"   {len(items)} STAC items")
+                  for it in items[:3]:
+                      assets = it.get("assets") or {}
+                      print(f"   item {it.get('id')}: assets -> "
+                            f"{[(k, (v or {}).get('href','')[-40:]) for k, v in list(assets.items())[:6]]}")
+                  open("probe/stac.json", "w").write(json.dumps(r.json())[:4_000_000])
+          except Exception as e:
+              print("   ERROR", repr(e))
+
+          routes = R.fetch_routes()
+          print(f"\nfetch_routes -> {len(routes)} routes")
+          if routes:
+              pts = sum(len(x["coords"]) for x in routes)
+              named = sum(1 for x in routes if x.get("name"))
+              print(f"   {pts} vertices total, {named} named")
+              s = routes[0]
+              print("   sample:", s["id"], "|", s.get("name"), "|",
+                    len(s["coords"]), "pts | first:", s["coords"][0])
+              open("probe/routes.json", "w").write(json.dumps(routes)[:4_000_000])
+          else:
+              print("   !! nothing parsed — the STAC assets are probably not GeoJSON.")
+              print("   Next step: read probe/stac.json for the real asset formats.")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: upstream-probe
+          path: probe/
+          if-no-files-found: warn

@@ -41,6 +41,10 @@ def main() -> None:
     ap.add_argument("--split", action="store_true",
                     help="App-Shell + separater Daten-Blob (data/latest.json) statt Ein-Datei; "
                          "für GitHub Pages / die iOS-App. Muss über HTTP(S) ausgeliefert werden.")
+    ap.add_argument("--gz-only", action="store_true",
+                    help="Nur den .gz-Blob schreiben (GitHub-Pages-Limit ist 1 GB "
+                         "und zaehlt die UNkomprimierte Datei). Setzt "
+                         "DecompressionStream voraus -> iOS >= 16.4.")
     ap.add_argument("--out-dir", type=str, default="dist",
                     help="Zielverzeichnis für den --split-Build (Default: dist)")
     args = ap.parse_args()
@@ -55,7 +59,7 @@ def main() -> None:
         n_stations=args.stations,
     )
     if args.split:
-        out = export_split_app(data, Path(args.out_dir))
+        out = export_split_app(data, Path(args.out_dir), gz_only=args.gz_only)
         print(f"[OUT] App-Shell + Daten-Blob: {out} (+ app.js, data/latest.json)")
         print("      Über HTTP(S) ausliefern (nicht file://). Daten aktualisieren = nur data/ neu bauen.")
     else:

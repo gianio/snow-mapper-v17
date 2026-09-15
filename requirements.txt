@@ -5,6 +5,13 @@ pandas>=2.0
 requests>=2.31
 pyyaml>=6.0
 rasterio>=1.3
+# Vektorleser fuer die swisstopo-Skitourenrouten. Die STAC-Sammlung liefert
+# die Geometrie ausschliesslich als ZIP (Shapefile/GeoPackage) -- bestaetigt
+# gegen die Live-API -- also braucht es einen OGR-Leser. fiona bringt GDAL
+# im Wheel mit, genau wie rasterio, und ist deshalb billiger als geopandas
+# (das unten bewusst optional bleibt). Der Routenabruf ist gekapselt: fehlt
+# fiona, bleibt der Tourenlayer aus und der Deploy laeuft weiter.
+fiona>=1.9
 pyproj>=3.5
 matplotlib>=3.7
 Pillow>=10.0

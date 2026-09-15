@@ -157,6 +157,35 @@ for name, bad in [("None", None), ("a list", []), ("no features", {}),
     check(f"{name} -> no invented routes", got == [] or all(len(x["coords"]) >= 4 for x in got),
           f"got {got}")
 check("missing file returns empty", R.load_routes(Path("/tmp/no-such-routes.geojson")) == [])
+
+# The live GeoPackage is LV95 and puts placeholder strings in the name column.
+# Both were found by running the real parser on a runner, not by inspection.
+print("\nLV95 reprojection (the live data is EPSG:2056, not WGS84)")
+lv95 = [{"id": "x", "name": None,
+         "coords": [[2600000.0, 1200000.0], [2601000.0, 1201000.0]]}]
+out = R._to_wgs84([dict(r) for r in lv95], "EPSG:2056")
+check("LV95 metres become degrees", out and 5 < out[0]["coords"][0][0] < 11
+      and 45 < out[0]["coords"][0][1] < 48,
+      f"{out[0]['coords'][0] if out else 'none'}")
+wgs = [{"id": "y", "name": None, "coords": [[7.5, 46.5], [7.6, 46.6]]}]
+same = R._to_wgs84([dict(r) for r in wgs], "EPSG:4326")
+check("already-degrees data is left alone", same[0]["coords"][0] == [7.5, 46.5],
+      f"{same[0]['coords'][0]}")
+check("empty input is safe", R._to_wgs84([], "EPSG:2056") == [])
+
+print("\nplaceholder names are not names")
+for bad in ("Keine Routeninfo verfügbar", "keine angabe", "No route info",
+            "unbekannt", "n/a"):
+    check(f"{bad!r} rejected", R._is_placeholder(bad))
+for good in ("Rothorn", "Piz Sol", "Chli Windgällen"):
+    check(f"{good!r} kept", not R._is_placeholder(good))
+fc_ph = {"features": [{"id": "p", "properties": {"name": "Keine Routeninfo verfügbar"},
+                       "geometry": {"type": "LineString",
+                                    "coordinates": [[7, 46], [7.01, 46.01],
+                                                    [7.02, 46.02], [7.03, 46.03]]}}]}
+check("placeholder yields name=None, route still parsed",
+      R.parse_routes(fc_ph)[0]["name"] is None,
+      f"{R.parse_routes(fc_ph)[0]['name']!r}")
 check("attribution names swisstopo", "swisstopo" in R.ATTRIBUTION, R.ATTRIBUTION)
 
 print("\nend to end: a parsed route can be scored")

@@ -44,6 +44,19 @@ STAC_COLLECTION = ("https://data.geo.admin.ch/api/stac/v0.9/collections/"
                    "ch.swisstopo-karto.skitouren/items")
 
 
+# The live GeoPackage puts literal placeholder strings in the name column --
+# "Keine Routeninfo verfügbar" came back as the name of the first route. That
+# is a data value, not a name, and showing it as a tour title would be worse
+# than showing nothing.
+_PLACEHOLDERS = ("keine routeninfo", "keine angabe", "no route info",
+                 "pas d'info", "nessuna info", "unbekannt", "unknown", "n/a")
+
+
+def _is_placeholder(v: str) -> bool:
+    low = v.strip().lower()
+    return any(low.startswith(p) for p in _PLACEHOLDERS)
+
+
 def _linestrings(geom: Any) -> List[List[list]]:
     """LineString / MultiLineString -> Liste von Koordinatenlisten."""
     if not isinstance(geom, dict):
@@ -76,7 +89,7 @@ def parse_routes(fc: Any, min_points: int = 4) -> List[Dict[str, Any]]:
         name = None
         for k in ("name", "NAME", "bezeichnung", "route_name", "label"):
             v = props.get(k)
-            if isinstance(v, str) and v.strip():
+            if isinstance(v, str) and v.strip() and not _is_placeholder(v):
                 name = v.strip()
                 break
         for i, coords in enumerate(_linestrings(f.get("geometry"))):
@@ -108,19 +121,104 @@ def load_routes(path: Path) -> List[Dict[str, Any]]:
     try:
         import fiona
     except ImportError:
-        print("[TOPO] fiona fehlt -- GeoPackage kann nicht gelesen werden.")
+        print("[TOPO] fiona fehlt -- GeoPackage kann nicht gelesen werden "
+              "(steht in requirements.txt).")
         return []
     try:
         feats = []
         with fiona.open(str(path)) as src:
+            # WICHTIG: swisstopo liefert LV95 (EPSG:2056), nicht WGS84 -- der
+            # Dateiname sagt es sogar (skitouren_2056.gpkg). Bestaetigt an der
+            # Live-Datei: die erste Koordinate war [2573311.9, 1080362.5].
+            # Ohne Umprojektion landen alle Routen irgendwo weit ausserhalb
+            # der Karte, weil der Client Grad erwartet.
+            src_crs = None
+            try:
+                src_crs = src.crs.to_string() if hasattr(src.crs, "to_string") else str(src.crs)
+            except Exception:                     # noqa: BLE001
+                pass
             for rec in src:
                 feats.append({"id": rec.get("id"),
                               "properties": dict(rec.get("properties") or {}),
                               "geometry": dict(rec["geometry"])})
-        return parse_routes({"features": feats})
+        routes = parse_routes({"features": feats})
+        return _to_wgs84(routes, src_crs)
     except Exception as e:                        # noqa: BLE001
         print(f"[TOPO] GeoPackage {path.name} nicht lesbar: {e!r}")
         return []
+
+
+def _to_wgs84(routes, src_crs):
+    """Routen nach WGS84 umprojizieren, falls noetig."""
+    if not routes:
+        return routes
+    x, y = routes[0]["coords"][0]
+    looks_degrees = -180 <= x <= 180 and -90 <= y <= 90
+    if looks_degrees and not (src_crs and "2056" in str(src_crs)):
+        return routes
+    crs = src_crs or "EPSG:2056"
+    try:
+        from pyproj import Transformer
+        tf = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
+    except Exception as e:                        # noqa: BLE001
+        print(f"[TOPO] Umprojektion von {crs} nicht moeglich: {e!r}")
+        return []
+    print(f"[TOPO] Routen von {crs} nach EPSG:4326 umprojiziert.")
+    for r in routes:
+        xs = [c[0] for c in r["coords"]]
+        ys = [c[1] for c in r["coords"]]
+        lon, lat = tf.transform(xs, ys)
+        r["coords"] = [[float(a), float(b)] for a, b in zip(lon, lat)]
+    return routes
+
+
+def _routes_from_zip_url(href: str, timeout: float) -> List[Dict[str, Any]]:
+    """Ein gezipptes Shapefile/GeoPackage von data.geo.admin.ch lesen.
+
+    swisstopo liefert die Vektorfassung als ZIP (bestaetigt gegen die
+    STAC-Sammlung). Wird in ein temporaeres Verzeichnis entpackt und ueber
+    fiona gelesen; ohne fiona gibt es nichts zu tun, und das wird gesagt
+    statt stillschweigend nichts zurueckzugeben.
+    """
+    import shutil
+    import tempfile
+    import zipfile
+
+    import requests
+
+    try:
+        import fiona                                # noqa: F401
+    except ImportError:
+        print("[TOPO] fiona fehlt -- gezippte Vektordaten koennen nicht "
+              "gelesen werden (steht in requirements.txt).")
+        return []
+
+    tmp = Path(tempfile.mkdtemp(prefix="skitouren-"))
+    try:
+        zpath = tmp / "routes.zip"
+        with requests.get(href, timeout=timeout, stream=True) as rr:
+            rr.raise_for_status()
+            with open(zpath, "wb") as fh:
+                for chunk in rr.iter_content(1 << 20):
+                    fh.write(chunk)
+        with zipfile.ZipFile(zpath) as zf:
+            names = zf.namelist()
+            print(f"[TOPO] ZIP {href.rsplit('/', 1)[-1]}: {len(names)} Dateien")
+            # GeoPackage bevorzugen (eine Datei, ein Layer-Katalog),
+            # sonst Shapefile -- das braucht seine Begleitdateien, also alles
+            # entpacken statt nur die .shp.
+            inner = ([n for n in names if n.lower().endswith(".gpkg")]
+                     or [n for n in names if n.lower().endswith(".shp")])
+            if not inner:
+                print(f"[TOPO] Keine .gpkg/.shp im ZIP: {names[:12]}")
+                return []
+            zf.extractall(tmp)
+        return load_routes(tmp / inner[0])
+    except Exception as e:                           # noqa: BLE001
+        print(f"[TOPO] ZIP {href} nicht lesbar: {e!r}")
+        return []
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def fetch_routes(cache_path: Optional[Path] = None,
@@ -140,15 +238,26 @@ def fetch_routes(cache_path: Optional[Path] = None,
         r = requests.get(STAC_COLLECTION, timeout=timeout)
         r.raise_for_status()
         items = (r.json() or {}).get("features") or []
-        # Die STAC-Items verlinken die eigentlichen Dateien in ihren Assets.
-        hrefs = [a.get("href") for it in items
+        hrefs = [a["href"] for it in items
                  for a in (it.get("assets") or {}).values()
-                 if isinstance(a, dict) and isinstance(a.get("href"), str)
-                 and a["href"].lower().endswith((".geojson", ".json"))]
+                 if isinstance(a, dict) and isinstance(a.get("href"), str)]
+        # Verified against the live STAC collection on 15 Sep 2026: the single
+        # item carries TWO assets and both are .zip -- there is no GeoJSON to
+        # fetch. The reader previously filtered for .geojson/.json only and so
+        # found nothing while reporting "no vector version available", which
+        # was misleading: the data is there, just packaged.
+        hrefs.sort(key=lambda h: (not h.lower().endswith((".geojson", ".json")),
+                                  not h.lower().endswith(".zip")))
         for href in hrefs:
-            rr = requests.get(href, timeout=timeout)
-            rr.raise_for_status()
-            routes = parse_routes(rr.json())
+            low = href.lower()
+            if low.endswith((".geojson", ".json")):
+                rr = requests.get(href, timeout=timeout)
+                rr.raise_for_status()
+                routes = parse_routes(rr.json())
+            elif low.endswith(".zip"):
+                routes = _routes_from_zip_url(href, timeout)
+            else:
+                continue
             if routes:
                 if cache_path:
                     try:
