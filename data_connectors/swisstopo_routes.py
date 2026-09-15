@@ -108,7 +108,8 @@ def load_routes(path: Path) -> List[Dict[str, Any]]:
     try:
         import fiona
     except ImportError:
-        print("[TOPO] fiona fehlt -- GeoPackage kann nicht gelesen werden.")
+        print("[TOPO] fiona fehlt -- GeoPackage kann nicht gelesen werden "
+              "(steht in requirements.txt).")
         return []
     try:
         feats = []
@@ -141,7 +142,7 @@ def _routes_from_zip_url(href: str, timeout: float) -> List[Dict[str, Any]]:
         import fiona                                # noqa: F401
     except ImportError:
         print("[TOPO] fiona fehlt -- gezippte Vektordaten koennen nicht "
-              "gelesen werden (pip install fiona).")
+              "gelesen werden (steht in requirements.txt).")
         return []
 
     tmp = Path(tempfile.mkdtemp(prefix="skitouren-"))
