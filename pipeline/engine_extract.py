@@ -33,6 +33,10 @@ ENGINE_EXPORTS = (
     "progCell", "progEnvelope", "progAspectMatch", "progElevMatch",
     "progSlopeMatch", "progRecency", "progDistKm", "progReportWeight",
     "progTrustOf", "progTrustMap", "progInvalidateTrust",
+    # Tour scoring: the pure half only. tourSampleSeg/tourScoreRoute read app
+    # state (the grids, computePowder, the bulletin) and are glue, not model --
+    # a consumer samples the segments itself and hands them to tourAggregate.
+    "tourResample", "tourAggregate", "tourVerdict", "tourDistM", "tourIsDescent",
 )
 
 

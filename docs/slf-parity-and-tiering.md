@@ -312,6 +312,45 @@ The horizon search was also resolution-dependent by accident — a fixed 25
 in **metres** (20 km, denser sampling near, coarser far), which is what
 makes it physically meaningful at any grid.
 
+### What the deploy actually runs now, and why not 250 m
+
+The live deploy was still `--res 3000`, which is why the app looked coarse
+however good the physics got. It is now **`--res 1000 --gz-only`**.
+
+The blocker was not compute — measured, the national Copernicus DEM loads in
+**26 s at 250 m** (18 tiles, decimated through the COG overviews) and the model
+run takes ~11 min. The blocker is a **hard GitHub Pages limit: a published site
+may be at most 1 GB, and it counts the UNCOMPRESSED blob.** The pipeline was
+writing both the plain JSON and the `.gz`:
+
+| Model res | gzipped | uncompressed | dist (live + demo) | publishable |
+|---|---|---|---|---|
+| 3 km (old) | 6 MB | 19 MB | ~50 MB | yes |
+| **1 km (now)** | **16.5 MB** | *not written* | **~34 MB** | **yes** |
+| 500 m | 38.5 MB | ~900 MB | ~1.9 GB | **no** |
+| 250 m | 93.6 MB | **2.2 GB** | ~4.6 GB | **no** |
+
+`--gz-only` drops the plain file, so 1 km ships **9x more cells than 3 km in a
+SMALLER published site than before**. It also makes 500 m (77 MB) and 250 m
+(187 MB) publishable at all, should the download cost ever be acceptable.
+
+The cost of `--gz-only` is the fallback it removes: the plain file is what
+browsers without `DecompressionStream` read, i.e. **iOS 16.2-16.3**. The floor
+becomes **iOS 16.4** (March 2023). On an unreleased app that is close to free,
+and the boot loader now says so explicitly instead of fetching
+`data/undefined` and reporting a baffling 404.
+
+**Why 1 km and not 250 m.** 250 m means a **93.6 MB download at boot**, on a
+phone, often on a mountain connection. That is the product cost, not a
+technical one. 1 km is also exactly ICON-CH1's native resolution, so it is the
+honest ceiling for *weather*; below it the extra detail is terrain-driven, and
+terrain is far better delivered as a static field than as 264 hourly frames
+(Part 2). Going to 250 m is a one-word change in `deploy.yml` once the
+static-terrain split lands and the download cost goes away.
+
+A CI step now fails the build if `dist` exceeds 900 MB, rather than discovering
+it at upload time.
+
 ---
 
 ## Part 3 — the bulletin, the routes, and scoring a tour
@@ -359,6 +398,33 @@ approach track cannot dominate.
 Routes are *cartographic* lines from the 1:50,000 snow-sport maps, not GPS
 tracks — fine for a statistic along a route, wrong as navigation, and the UI
 must not imply otherwise.
+
+### Tappable tours
+
+The routes ship as **vector geometry** (`M.tours`), simplified at 40 m — well
+below the resolving power of a 1:50,000 map and below the client's own 75 m
+resampling — so they can be tapped rather than just looked at. Each route gets
+a wide transparent hit line under the visible 3 px one, because a 3 px polyline
+is not a thumb target.
+
+Scoring runs **client-side**, and that is deliberate: the score depends on the
+selected time window, so it has to follow the timeline scrubber. Baking it in
+at build time would freeze it to one window. `tourRecolor()` is therefore
+called from `renderAll()`.
+
+The split follows `model/tour_score.py` exactly. The **pure** half —
+`tourResample`, `tourAggregate`, `tourVerdict`, `tourDistM`, `tourIsDescent` —
+lives in the engine block, so it is shared with the native build and tested
+under node (`tools/test_tour_js.js`, 48 checks). The **glue** —
+`tourSampleSeg`, `tourScoreRoute`, `tourBuildLayer`, `tourOpen` — reads `M`,
+the rasters, `computePowder` and the bulletin, and is deliberately *not*
+exported from the engine. `test_tour_js.js` asserts that it is absent.
+
+Line colour follows the verdict, and a clamped route is **never green** — the
+same refusal as `tourVerdict`, expressed visually.
+
+Both halves exist because the same route can be scored in either language, and
+they must agree.
 
 ---
 

@@ -548,9 +548,11 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
 
     stations = []
     avalanche = None
+    tours = []
     if not use_synthetic:
         stations = _slf_stations(times, n_stations, days_each_side)
         avalanche = _slf_avalanche()
+        tours = _tour_routes()
 
     return {
         "times": times, "T": T, "width": dw, "height": dh,
@@ -565,7 +567,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         "aspect_png": fine["aspect_png"], "rough_png": fine["rough_png"],
         "png_bounds": fine["png_bounds"], "elev_png": fine["elev_png"],
         "elev_bounds": fine["elev_bounds"], "rad": rad, "stations": stations,
-        "avalanche": avalanche,
+        "avalanche": avalanche, "tours": tours,
         "rough_grid": rough_w, "hourly_snow": hourly_snow,
     }
 
@@ -589,6 +591,49 @@ def _sample(dem, pts, shape):
         col = min(wdt - 1, max(0, int((ex - e0) / dem.res)))
         row = min(h - 1, max(0, int((n1 - ny) / dem.res)))
         out.append(float(dem.elevation[row, col]))
+    return out
+
+
+def _tour_routes(max_routes=1200, tol_m=40.0):
+    """Skitouren-Geometrie (swisstopo, OGD) fuer die antippbaren Routen.
+
+    Vereinfacht und rundet, bevor es in den Blob geht: die kartografischen
+    Linien haben teils Stuetzpunkte im Meterabstand, was den Blob unnoetig
+    aufblaeht. 40 m Toleranz ist weit unter der Aussagekraft einer
+    50'000er-Karte und weit unter dem 75-m-Resampling im Client.
+
+    Faellt bei jedem Fehler auf [] zurueck -- dann bleibt der Vektor-Layer
+    ausgeblendet und nur die WMTS-Kachel uebrig.
+    """
+    from config.settings import DATA_DIR
+    try:
+        from data_connectors.swisstopo_routes import fetch_routes
+        routes = fetch_routes(cache_path=DATA_DIR / "topo_cache" / "skitouren.geojson")
+    except Exception as e:                       # noqa: BLE001
+        print(f"[INT] Skitouren nicht verfuegbar: {e!r}")
+        return []
+    if not routes:
+        return []
+
+    def simplify(coords):
+        out = [coords[0]]
+        for c in coords[1:-1]:
+            px, py = out[-1]
+            # grob in Metern: 1 deg lat ~ 111 km, 1 deg lon ~ 78 km bei 47 N
+            if ((c[0] - px) * 78000.0) ** 2 + ((c[1] - py) * 111000.0) ** 2 >= tol_m ** 2:
+                out.append(c)
+        if len(coords) > 1:
+            out.append(coords[-1])
+        return [[round(x, 5), round(y, 5)] for x, y in out]
+
+    out = []
+    for r in routes[:max_routes]:
+        cs = simplify(r["coords"])
+        if len(cs) < 2:
+            continue
+        out.append({"id": r["id"], "name": r.get("name"), "coords": cs})
+    pts = sum(len(r["coords"]) for r in out)
+    print(f"[INT] {len(out)} Skitouren, {pts} Stuetzpunkte nach Vereinfachung.")
     return out
 
 
@@ -705,7 +750,7 @@ def _build_meta_blobs(data):
         "spd_mul": _SPD_MUL, "dir_div": _DIR_DIV, "sun_mul": _SUN_MUL, "prec_mul": _PREC_MUL,
         "elev_scale": _ELEV_SCALE,
         "slf_bounds": SLF_BOUNDS, "slf_colors": SLF_COLORS,
-        "avalanche": data.get("avalanche"),
+        "avalanche": data.get("avalanche"), "tours": data.get("tours") or [],
         "png_bounds": data["png_bounds"],
         "elev_bounds": data["elev_bounds"], "elev_q": _ELEV_Q,
         "rad": {"width": rad["width"], "height": rad["height"], "K": rad["K"],
@@ -754,7 +799,7 @@ def export_interactive_html(data, out_html: Path) -> Path:
     return out_html
 
 
-def export_split_app(data, out_dir: Path) -> Path:
+def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     """App-shell + external data blob + latest.json pointer. The shell/binary is
     stable and small; forecast data updates independently (for GitHub Pages and
     the iOS app). Must be served over HTTP(S) — not file:// (fetch is blocked)."""
@@ -764,17 +809,39 @@ def export_split_app(data, out_dir: Path) -> Path:
     stamp = datetime.now().strftime("%Y%m%d%H%M")
     dataname = "snowdata-%s.json" % stamp
     payload = json.dumps({"meta": meta, "b": blobs})
-    (ddir / dataname).write_text(payload, encoding="utf-8")
+
     # real gzip alongside (GitHub Pages does not reliably compress huge JSON);
     # the boot loader picks .gz when DecompressionStream is available.
     import gzip as _gzip
     with _gzip.GzipFile(str(ddir / (dataname + ".gz")), "wb", compresslevel=6, mtime=0) as gf:
         gf.write(payload.encode("utf-8"))
-    (ddir / "latest.json").write_text(json.dumps(
-        {"version": stamp, "data": dataname, "gz": dataname + ".gz",
-         "generated": datetime.now().replace(microsecond=0).isoformat() + "Z"}),
-        encoding="utf-8")
+
+    # gz_only exists because of a hard GitHub Pages limit, not tidiness: a
+    # published site may be at most 1 GB, and the UNCOMPRESSED blob is what
+    # counts against it. Measured: 2.2 GB at 250 m, ~900 MB at 500 m -- both
+    # over the limit on their own, before the demo copy. Dropping the plain
+    # file makes fine resolutions publishable at all.
+    #
+    # The cost is the fallback: the plain file is what browsers WITHOUT
+    # DecompressionStream read, i.e. iOS 16.2-16.3. With gz_only the floor
+    # becomes iOS 16.4 (March 2023). See docs/slf-parity-and-tiering.md.
+    pointer = {"version": stamp, "gz": dataname + ".gz",
+               "generated": datetime.now().replace(microsecond=0).isoformat() + "Z"}
+    if gz_only:
+        plain_mb = len(payload) / 1e6
+        print(f"[OUT] gz-only: uncompressed blob ({plain_mb:.0f} MB) not written "
+              f"-- requires DecompressionStream (iOS >= 16.4).")
+    else:
+        (ddir / dataname).write_text(payload, encoding="utf-8")
+        pointer["data"] = dataname
+    (ddir / "latest.json").write_text(json.dumps(pointer), encoding="utf-8")
     # keep the last few snapshots for rollback, prune older ones
+    for old in sorted(ddir.glob("snowdata-*.json.gz"))[:-4]:
+        try:
+            old.unlink()
+            (old.parent / old.name[:-3]).unlink(missing_ok=True)
+        except OSError:
+            pass
     for old in sorted(ddir.glob("snowdata-*.json"))[:-4]:
         try:
             old.unlink()
@@ -842,7 +909,15 @@ _BOOT_SPLIT = r"""<script>
       if(!ljr.ok)throw new Error('latest.json HTTP '+ljr.status);
       var lj=await ljr.json();
       var useGz=!!(lj.gz&&window.DecompressionStream);
-      var res=await fetchT(pre+'data/'+(useGz?lj.gz:lj.data),{cache:'force-cache'},90000);
+      // A gz-only build (see export_split_app) omits lj.data entirely. Without
+      // DecompressionStream there is then nothing to read, and fetching
+      // 'data/undefined' would surface as a baffling 404 -- so say what is
+      // actually wrong and let the caller fall back to the bundled copy.
+      var name=useGz?lj.gz:lj.data;
+      if(!name)throw new Error(lj.gz
+        ? 'gzip-only data needs DecompressionStream (iOS 16.4+)'
+        : 'latest.json names no data file');
+      var res=await fetchT(pre+'data/'+name,{cache:'force-cache'},90000);
       if(!res.ok)throw new Error('HTTP '+res.status);
       var total=+(res.headers.get('Content-Length')||0),text;
       if(res.body&&total&&window.ReadableStream){
@@ -1560,6 +1635,33 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     smooth heatmaps) makes every classed layer's cell borders exact again,
     the same crisp-edge look the SLF new-snow legend already implies. */
  .raster-crisp{image-rendering:pixelated;image-rendering:crisp-edges;image-rendering:-moz-crisp-edges}
+ /* Tour sheet: sits above the timeline, below the layer panel. Stays out of
+    the way until a route is actually tapped. */
+ .tour-sheet{position:absolute;z-index:960;left:14px;right:14px;
+   bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 14px);
+   background:color-mix(in srgb,var(--card) 92%,transparent);
+   border:1px solid var(--hair);border-radius:var(--r-2,14px);
+   padding:12px 14px;box-shadow:0 8px 28px rgba(0,0,0,.18);
+   display:none;max-height:46vh;overflow-y:auto;max-width:520px;margin:0 auto}
+ body.tour-open .tour-sheet{display:block}
+ .tour-hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+ .tour-hd b{font-size:15px;line-height:1.2}
+ .tour-x{background:none;border:0;font-size:22px;line-height:1;cursor:pointer;
+   color:var(--fg2);padding:0 2px;min-width:28px}
+ .tour-verdict{font-size:13px;font-weight:600;margin-top:2px}
+ .tour-meta{font-size:11.5px;color:var(--fg2);margin-top:2px}
+ .tour-dist{margin-top:9px;display:flex;flex-direction:column;gap:5px}
+ /* Each quality is a labelled bar: the share is the point, so it is shown
+    as a proportion and not just a number. */
+ .tour-row{position:relative;display:flex;justify-content:space-between;
+   font-size:12px;padding:3px 6px;border-radius:6px;overflow:hidden;
+   background:color-mix(in srgb,var(--fg) 6%,transparent)}
+ .tour-row span,.tour-row b{position:relative;z-index:1}
+ .tour-row i{position:absolute;left:0;top:0;bottom:0;z-index:0;
+   background:color-mix(in srgb,var(--acc,#1868C4) 22%,transparent)}
+ .tour-cav{margin-top:9px;font-size:10.5px;color:var(--fg2);line-height:1.35;
+   border-top:1px solid var(--hair);padding-top:7px}
+ @media (max-width:420px){.tour-sheet{max-height:52vh}}
  /* Always the bottom-left corner regardless of which layer is active. */
  /* --btm-h is only the panel's own offsetHeight; the panel itself is ALSO
     lifted off the true viewport edge by env(safe-area-inset-bottom)+10px
@@ -3026,6 +3128,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   </div>
 </div>
 <div id="lyScrim" onclick="lyPanelClose()"></div>
+<div id="tourSheet" class="tour-sheet" role="dialog" aria-label="Skitour"></div>
 <div id="lyPanel" class="ly-panel" role="dialog" aria-modal="true" aria-label="Ebenen">
   <div class="ly-scroll">
     <span class="lbl-micro">Ebene</span>
@@ -3945,7 +4048,11 @@ const slopeWMTS=L.tileLayer(swissTile('ch.swisstopo.hangneigung-ueber_30','png')
 // one condition -- the source must be named. BASE_ATTR already carries
 // "© swisstopo"; ovAttr() adds the specific products when they are on.
 const OVERLAYS={
-  skitour:{label:'Skitouren',wmts:'ch.swisstopo-karto.skitouren',op:.95,
+  // Two entries for the same routes on purpose: the vector one is tappable
+  // and carries the powder score, the WMTS one is the fallback picture when
+  // the build could not reach swisstopo for the geometry.
+  skitourVec:{label:'Skitouren',vector:true,attr:'Skitouren © swisstopo'},
+  skitour:{label:'Skitouren (Karte)',wmts:'ch.swisstopo-karto.skitouren',op:.95,
            attr:'Skitouren © swisstopo'},
   snowshoe:{label:'Schneeschuh',wmts:'ch.swisstopo-karto.schneeschuhrouten',op:.95,
             attr:'Schneeschuhrouten © swisstopo'},
@@ -3960,6 +4067,7 @@ const ovOn={};
 const ovLayer={};
 function ovAvailable(k){
   if(k==='avalanche'){const a=M.avalanche;return !!(a&&a.regions&&a.regions.some(r=>r.geometry));}
+  if(k==='skitourVec')return tourList().length>0;
   return true;
 }
 function ovBuild(k){
@@ -3967,6 +4075,7 @@ function ovBuild(k){
   const o=OVERLAYS[k];
   if(o.wmts){ovLayer[k]=L.tileLayer(swissTile(o.wmts,'png'),{opacity:o.op,pane:'overlayPane'});}
   else if(k==='avalanche'){ovLayer[k]=avBuildLayer();}
+  else if(k==='skitourVec'){ovLayer[k]=tourBuildLayer();}
   return ovLayer[k];
 }
 function ovToggle(k){
@@ -3974,6 +4083,7 @@ function ovToggle(k){
   const l=ovBuild(k);if(!l)return;
   ovOn[k]=!ovOn[k];
   if(ovOn[k])map.addLayer(l);else map.removeLayer(l);
+  if(k==='skitourVec'){if(ovOn[k])tourRecolor();else tourClose();}
   ovSyncUI();ovAttrSync();
 }
 function ovAttrSync(){
@@ -4020,6 +4130,127 @@ function avBuildLayer(){
         +' target="_blank" rel="noopener">Bulletin öffnen</a></div>');
     }});
 }
+// --- Ski tours: clickable routes with a powder score ----------------------
+// The WMTS overlay above is a picture; these are the same routes as VECTORS,
+// so they can be tapped. When the pipeline could not fetch the vector data
+// (swisstopo unreachable at build time) the WMTS picture is all there is, and
+// the tour layer simply stays unavailable rather than pretending.
+function tourList(){return (M.tours&&M.tours.length)?M.tours:[];}
+function tourCell(lat,lon){
+  const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1));
+  const cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
+  if(cx2<0||cy2<0||cx2>W-1||cy2>H-1)return -1;
+  return cy2*W+cx2;
+}
+// App glue: fills one segment from the grids. Kept out of the engine block on
+// purpose -- it reads M, the rasters, computePowder and the bulletin.
+function tourSampleSeg(seg){
+  const p=tourCell(seg.lat,seg.lon);
+  if(p<0){seg.quality='unknown';return;}
+  seg.elev=melevv(p);seg.slope=mslpv(p);seg.aspect=maspv(p);
+  const pw=computePowder(p,a,b);
+  seg.powdered=!!pw.powdered;
+  seg.quality=pw.powdered?(pw.quality==='reduced'?'powder-reduced':'powder'):'kein Powder';
+  if(!pw.powdered&&pw.reason_flags&&pw.reason_flags.length)seg.quality=tourFlagLabel(pw.reason_flags);
+  // Core zone comes from SLF's own bulletin, never from our own reckoning.
+  const reg=tourRegionAt(seg.lat,seg.lon);
+  seg.core=reg?avCoreZone(reg,seg.elev,seg.aspect):false;
+}
+const TOUR_FLAG_LABEL={D3_solar_melt:'Sonnendeckel',I3_wet_pm:'nass',
+  D1_rain:'Regen',D2_freeze_thaw:'Harsch',I4_no_persist:'alt/umgewandelt'};
+function tourFlagLabel(flags){
+  for(const f of flags){if(TOUR_FLAG_LABEL[f])return TOUR_FLAG_LABEL[f];}
+  return 'kein Powder';
+}
+// Which bulletin region contains this point? Only meaningful when the
+// bulletin shipped with geometry; a ray-cast is enough for ~150 polygons.
+function tourRegionAt(lat,lon){
+  const rs=avRegions();
+  for(const r of rs){
+    if(!r.geometry)continue;
+    if(_ptInGeom(lon,lat,r.geometry))return r;
+  }
+  return null;
+}
+function _ptInRing(x,y,ring){
+  let inside=false;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];
+    if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))inside=!inside;
+  }
+  return inside;
+}
+function _ptInGeom(x,y,g){
+  if(!g)return false;
+  if(g.type==='Polygon')return (g.coordinates||[]).length?_ptInRing(x,y,g.coordinates[0]):false;
+  if(g.type==='MultiPolygon')return (g.coordinates||[]).some(poly=>poly.length&&_ptInRing(x,y,poly[0]));
+  return false;
+}
+function tourScoreRoute(t){
+  const segs=tourResample(t.coords,TOUR_STEP_M);
+  segs.forEach(tourSampleSeg);
+  const r=tourAggregate(segs);
+  r.name=t.name||'Skitour';r.id=t.id;
+  return r;
+}
+// Colour the line by its verdict, but a clamped route is NEVER green --
+// consistent with tourVerdict refusing to praise it.
+function tourColor(r){
+  if(r.clamped)return '#8A6A9E';
+  if(r.powderShare>=0.6)return '#1E9E5A';
+  if(r.powderShare>=0.3)return '#7FB800';
+  if(r.powderShare>0)return '#E8A33D';
+  return '#8A8F98';
+}
+let tourLayerGroup=null,tourScoresDirty=true;
+function tourBuildLayer(){
+  const ts=tourList();
+  if(!ts.length)return null;
+  tourLayerGroup=L.layerGroup();
+  ts.forEach(t=>{
+    if(!t.coords||t.coords.length<2)return;
+    const latlngs=t.coords.map(c=>[c[1],c[0]]);
+    // A wide transparent line under the visible one: a 3 px route is
+    // impossible to hit with a thumb.
+    const hit=L.polyline(latlngs,{color:'#000',opacity:0,weight:22,interactive:true});
+    const line=L.polyline(latlngs,{color:'#2A6BB5',weight:3,opacity:.9,interactive:false});
+    const open=()=>{try{haptic(4);}catch(e){}tourOpen(t);};
+    hit.on('click',open);
+    tourLayerGroup.addLayer(line);tourLayerGroup.addLayer(hit);
+    t._line=line;
+  });
+  return tourLayerGroup;
+}
+// Recolour every route for the current time window. Called when the window
+// moves, because the score is window-dependent -- that is the whole reason
+// scoring happens client-side instead of being baked in at build time.
+function tourRecolor(){
+  const ts=tourList();if(!ts.length||!ovOn.skitourVec)return;
+  ts.forEach(t=>{
+    if(!t._line)return;
+    try{const r=tourScoreRoute(t);t._score=r;t._line.setStyle({color:tourColor(r)});}
+    catch(e){}
+  });
+  tourScoresDirty=false;
+}
+function tourOpen(t){
+  const r=t._score||tourScoreRoute(t);
+  const rows=Object.keys(r.distribution).map(k=>
+    '<div class="tour-row"><span>'+escapeHtml(k)+'</span><b>'+Math.round(r.distribution[k]*100)+' %</b>'
+    +'<i style="width:'+Math.round(r.distribution[k]*100)+'%"></i></div>').join('');
+  const el=document.getElementById('tourSheet');if(!el)return;
+  el.innerHTML='<div class="tour-hd"><b>'+escapeHtml(r.name)+'</b>'
+    +'<button type="button" class="tour-x" onclick="tourClose()" aria-label="Schliessen">×</button></div>'
+    +'<div class="tour-verdict" style="color:'+tourColor(r)+'">'+escapeHtml(r.verdict)+'</div>'
+    +'<div class="tour-meta">'+(r.lengthM?Math.round(r.lengthM/100)/10+' km':'')
+    +(r.gain?' · '+r.gain+' Hm':'')
+    +(r.descentM?' · '+Math.round(r.descentM/100)/10+' km abfahrtsrelevant':'')+'</div>'
+    +(rows?'<div class="tour-dist">'+rows+'</div>':'')
+    +'<div class="tour-cav">'+r.caveats.map(c=>'<div>'+escapeHtml(c)+'</div>').join('')+'</div>';
+  document.body.classList.add('tour-open');
+}
+function tourClose(){document.body.classList.remove('tour-open');}
+
 // Is a point inside the bulletin's core zone? Used by the tour score, and
 // deliberately conservative: unknown aspect or elevation counts as inside.
 function avCoreZone(danger,elevM,aspectDeg){
@@ -4459,6 +4690,102 @@ function progCell(asp,elev,slp,lat,lon,sel,oth){
   // reports say so here" without recomputing the terrain-match sums itself.
   return {like:like,conf:Math.round(100*agree*evid*multi),cm:cmW>0?(cmS/cmW):null,n:nEff};
 }
+// --- Tour scoring: powder along a ski route -------------------------------
+// Mirrors model/tour_score.py. Split the same way and for the same reason:
+// the PURE part (resample + aggregate) lives here in the engine block so it
+// is shared with the native build and testable under node, while sampling the
+// grids is app glue and stays outside.
+//
+// The reason it returns a DISTRIBUTION and not a mean: a mean over a route is
+// worthless. "40 % cold powder, 35 % wind-pressed, 25 % crust" answers the
+// question people actually have -- is it good ANYWHERE -- whereas a mean
+// smears out exactly the one good couloir.
+const TOUR_STEP_M=75;            // resample spacing
+const TOUR_MIN_SLOPE=22;         // below this it is an approach track
+const TOUR_MAX_SLOPE=50;         // above this it is steep terrain, not a powder run
+const TOUR_CLAMP_SHARE=0.15;     // core-zone share at which the verdict is clamped
+const _ER=6371008.8;
+function tourDistM(lo1,la1,lo2,la2){
+  const p1=la1*Math.PI/180,p2=la2*Math.PI/180;
+  const dp=p2-p1,dl=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  return 2*_ER*Math.asin(Math.sqrt(Math.min(1,a)));
+}
+// swisstopo routes are cartographic lines with very uneven vertex spacing.
+// Without resampling, a densely digitised stretch would dominate the
+// statistics purely because it has more points.
+function tourResample(coords,stepM){
+  stepM=stepM||TOUR_STEP_M;
+  const pts=(coords||[]).filter(c=>c&&c.length>=2&&isFinite(c[0])&&isFinite(c[1]));
+  if(pts.length<2)return pts.slice(0,1).map(c=>({lon:+c[0],lat:+c[1],dist:0}));
+  const out=[{lon:+pts[0][0],lat:+pts[0][1],dist:0}];
+  let carry=0,total=0;
+  for(let i=0;i<pts.length-1;i++){
+    const x0=+pts[i][0],y0=+pts[i][1],x1=+pts[i+1][0],y1=+pts[i+1][1];
+    const seg=tourDistM(x0,y0,x1,y1);
+    if(seg<=0)continue;
+    let walked=stepM-carry;
+    while(walked<=seg){
+      const f=walked/seg;
+      out.push({lon:x0+(x1-x0)*f,lat:y0+(y1-y0)*f,dist:total+walked});
+      walked+=stepM;
+    }
+    carry=(carry+seg)%stepM;total+=seg;
+  }
+  if(out[out.length-1].dist<total-1e-6)
+    out.push({lon:+pts[pts.length-1][0],lat:+pts[pts.length-1][1],dist:total});
+  return out;
+}
+function tourIsDescent(s){
+  return s.slope!=null&&s.slope>=TOUR_MIN_SLOPE&&s.slope<=TOUR_MAX_SLOPE;
+}
+// Weight by segment LENGTH, never by segment count.
+function tourAggregate(segs){
+  const n=segs?segs.length:0;
+  const res={segments:segs||[],lengthM:0,distribution:{},descentM:0,
+             coreShare:0,powderShare:0,verdict:'keine Abfahrtsbewertung',
+             clamped:false,caveats:[],gain:null};
+  if(!n)return res;
+  res.lengthM=segs[n-1].dist||0;
+  const w=i=>n<2?1:(i===0?(segs[1].dist-segs[0].dist):(segs[i].dist-segs[i-1].dist));
+  let allW=0,coreW=0,descW=0,powW=0;const dist={};
+  let lo=null,hi=null;
+  for(let i=0;i<n;i++){
+    const s=segs[i],ww=w(i);allW+=ww;
+    if(s.elev!=null){lo=(lo==null||s.elev<lo)?s.elev:lo;hi=(hi==null||s.elev>hi)?s.elev:hi;}
+    if(s.core)coreW+=ww;
+    if(tourIsDescent(s)){
+      descW+=ww;
+      dist[s.quality||'unknown']=(dist[s.quality||'unknown']||0)+ww;
+      if(s.powdered)powW+=ww;
+    }
+  }
+  if(descW>0){
+    Object.keys(dist).sort((x,y)=>dist[y]-dist[x]).forEach(k=>{res.distribution[k]=dist[k]/descW;});
+  }
+  res.descentM=descW;
+  res.coreShare=allW>0?coreW/allW:0;
+  res.powderShare=descW>0?powW/descW:0;
+  res.gain=(lo!=null&&hi!=null)?Math.round(hi-lo):null;
+  res.clamped=res.coreShare>=TOUR_CLAMP_SHARE;
+  if(res.clamped)res.caveats.push(Math.round(res.coreShare*100)+' % der Route liegt in der Kernzone des Lawinenbulletins.');
+  if(descW===0)res.caveats.push('Keine abfahrtsrelevanten Segmente ('+TOUR_MIN_SLOPE+'–'+TOUR_MAX_SLOPE+'°).');
+  res.caveats.push('Schneequalität, keine Lawinenbeurteilung. Das Bulletin des SLF bleibt maßgeblich.');
+  res.verdict=tourVerdict(res.powderShare,descW,res.clamped);
+  return res;
+}
+// The clamped branch deliberately returns NO praise, however good the snow is.
+// A powder score that makes avalanche terrain look attractive would be worse
+// than no score at all.
+function tourVerdict(powderShare,descentM,clamped){
+  if(!(descentM>0))return 'keine Abfahrtsbewertung';
+  if(clamped)return 'Kernzone betroffen – Bulletin zuerst';
+  if(powderShare>=0.6)return 'überwiegend Powder';
+  if(powderShare>=0.3)return 'teilweise Powder';
+  if(powderShare>0)return 'vereinzelt Powder';
+  return 'kein Powder erwartet';
+}
+
 function renderPrognosis(type){
   progTerrain();_progType=type;
   const zones=progNearZones(progZones()),sel=zones.filter(z=>z.type===type),oth=zones.filter(z=>z.type!==type);
@@ -5034,7 +5361,12 @@ function showOverlay(){
 // second; the work is worth doing once per frame.
 let _raf=0;
 function renderSoon(){if(_raf)return;_raf=requestAnimationFrame(()=>{_raf=0;renderAll();});}
-function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefresh();if(tlMode==='detail')drawTimeline();
+function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefresh();
+  // The tour score is window-dependent, so it has to follow the timeline.
+  // That is exactly why scoring runs client-side instead of being baked in
+  // at build time.
+  if(ovOn.skitourVec)tourRecolor();
+  if(tlMode==='detail')drawTimeline();
   if(layer=="rad"||layer=="radsun")renderRadiation();
   if(layer=="wind"){buildFlow();if(wtimer)clearTimeout(wtimer);wtimer=setTimeout(renderWind,120);}
   syncTl();legend();}

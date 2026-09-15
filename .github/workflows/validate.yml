@@ -44,6 +44,9 @@ jobs:
       - name: Tour powder score unit test
         run: python tools/test_tour_score.py
 
+      - name: Tour powder score (engine build)
+        run: node tools/test_tour_js.js dist/engine.js
+
       - name: Build app (offline, synthetic data)
         run: |
           mkdir -p dist
