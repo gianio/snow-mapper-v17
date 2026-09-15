@@ -47,6 +47,18 @@ jobs:
       - name: Tour powder score (engine build)
         run: node tools/test_tour_js.js dist/engine.js
 
+      # Upstream shape check. The agent build environment cannot reach
+      # aws.slf.ch or data.geo.admin.ch (egress policy, 403 at the proxy), so
+      # the bulletin and route parsers are fixture-tested only. A runner can
+      # reach them, so confirm the REAL response shape here.
+      #
+      # Never blocking: an SLF outage or a swisstopo schema change must not
+      # fail an unrelated PR. It reports, the suites above enforce.
+      # Deliberately light -- two small GETs, no bulk download.
+      - name: Upstream shape check (non-blocking)
+        continue-on-error: true
+        run: python tools/probe_upstreams.py
+
       - name: Build app (offline, synthetic data)
         run: |
           mkdir -p dist
