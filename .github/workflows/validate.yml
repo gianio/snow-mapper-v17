@@ -44,9 +44,6 @@ jobs:
       - name: Tour powder score unit test
         run: python tools/test_tour_score.py
 
-      - name: Tour powder score (engine build)
-        run: node tools/test_tour_js.js dist/engine.js
-
       # Upstream shape check. The agent build environment cannot reach
       # aws.slf.ch or data.geo.admin.ch (egress policy, 403 at the proxy), so
       # the bulletin and route parsers are fixture-tested only. A runner can
@@ -76,3 +73,9 @@ jobs:
         # Checks dist/engine.js loads and scores with no DOM — this is the exact
         # file a native iOS app runs in JavaScriptCore.
         run: node tools/test_engine.js dist/engine.js
+
+      # Needs dist/engine.js, so it has to come AFTER the build step -- it was
+      # briefly placed with the other unit tests above, which run before the
+      # app is built, and failed on a missing file.
+      - name: Tour powder score (engine build)
+        run: node tools/test_tour_js.js dist/engine.js
