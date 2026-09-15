@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import base64
 import io
+import math
 import json
 import os
 from datetime import date as date_cls
@@ -552,7 +553,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     if not use_synthetic:
         stations = _slf_stations(times, n_stations, days_each_side)
         avalanche = _slf_avalanche()
-        tours = _tour_routes()
+        tours = _tour_routes(dem=dem)
 
     return {
         "times": times, "T": T, "width": dw, "height": dh,
@@ -594,7 +595,8 @@ def _sample(dem, pts, shape):
     return out
 
 
-def _tour_routes(max_routes=1200, tol_m=40.0):
+def _tour_routes(max_routes=1500, tol_m=40.0, min_len_m=2500.0, min_gain_m=350.0,
+                 dem=None):
     """Skitouren-Geometrie (swisstopo, OGD) fuer die antippbaren Routen.
 
     Vereinfacht und rundet, bevor es in den Blob geht: die kartografischen
@@ -614,6 +616,7 @@ def _tour_routes(max_routes=1200, tol_m=40.0):
         return []
     if not routes:
         return []
+    print(f"[INT] {len(routes)} Routen von swisstopo.")
 
     def simplify(coords):
         out = [coords[0]]
@@ -626,15 +629,67 @@ def _tour_routes(max_routes=1200, tol_m=40.0):
             out.append(coords[-1])
         return [[round(x, 5), round(y, 5)] for x, y in out]
 
-    out = []
-    for r in routes[:max_routes]:
+    # Die Live-Datei enthaelt das ganze Skiroutennetz -- 10'921 Linien,
+    # darunter sehr viele kurze Verbindungsstuecke. Gefragt sind Touren
+    # "vom Tal auf einen Gipfel", also wird nach Laenge UND Hoehendifferenz
+    # gefiltert. Ohne das haette der Blob tausende Fragmente, der Client
+    # tausende Polylines, und die Tourenliste waere unbrauchbar.
+    def length_m(cs):
+        tot = 0.0
+        for (x0, y0), (x1, y1) in zip(cs, cs[1:]):
+            tot += math.hypot((x1 - x0) * 78000.0, (y1 - y0) * 111000.0)
+        return tot
+
+    def gain_m(cs):
+        if dem is None:
+            return None
+        zs = [_elev_at_lonlat(dem, x, y) for x, y in cs]
+        zs = [z for z in zs if z is not None]
+        return (max(zs) - min(zs)) if len(zs) >= 2 else None
+
+    cand = []
+    for r in routes:
         cs = simplify(r["coords"])
         if len(cs) < 2:
             continue
-        out.append({"id": r["id"], "name": r.get("name"), "coords": cs})
+        ln = length_m(cs)
+        if ln < min_len_m:
+            continue
+        g = gain_m(cs)
+        if g is not None and g < min_gain_m:
+            continue
+        cand.append({"id": r["id"], "name": r.get("name"), "coords": cs,
+                     "_len": ln, "_gain": g})
+
+    # Die laengsten zuerst -- das sind die echten Touren, nicht die Zubringer.
+    cand.sort(key=lambda r: -(r["_gain"] or 0) * 10 - r["_len"])
+    out = [{k: v for k, v in r.items() if not k.startswith("_")}
+           for r in cand[:max_routes]]
     pts = sum(len(r["coords"]) for r in out)
-    print(f"[INT] {len(out)} Skitouren, {pts} Stuetzpunkte nach Vereinfachung.")
+    kept_gain = sum(1 for r in cand[:max_routes] if r.get("_gain"))
+    print(f"[INT] {len(out)} Skitouren behalten (von {len(routes)}), "
+          f"{pts} Stuetzpunkte, {kept_gain} mit Hoehendifferenz.")
     return out
+
+
+def _elev_at_lonlat(dem, lon, lat):
+    """Hoehe aus dem DEM an einer WGS84-Koordinate (nearest neighbour)."""
+    try:
+        from pyproj import Transformer
+        if not hasattr(_elev_at_lonlat, "_tf"):
+            _elev_at_lonlat._tf = Transformer.from_crs(
+                "EPSG:4326", "EPSG:2056", always_xy=True)
+        ex, ny = _elev_at_lonlat._tf.transform(lon, lat)
+        e0, n0, e1, n1 = dem.bounds
+        h, w = dem.elevation.shape
+        col = int((ex - e0) / dem.res)
+        row = int((n1 - ny) / dem.res)
+        if 0 <= row < h and 0 <= col < w:
+            v = float(dem.elevation[row, col])
+            return None if v != v else v
+    except Exception:                              # noqa: BLE001
+        pass
+    return None
 
 
 def _slf_avalanche():

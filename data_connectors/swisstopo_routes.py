@@ -44,6 +44,19 @@ STAC_COLLECTION = ("https://data.geo.admin.ch/api/stac/v0.9/collections/"
                    "ch.swisstopo-karto.skitouren/items")
 
 
+# The live GeoPackage puts literal placeholder strings in the name column --
+# "Keine Routeninfo verfügbar" came back as the name of the first route. That
+# is a data value, not a name, and showing it as a tour title would be worse
+# than showing nothing.
+_PLACEHOLDERS = ("keine routeninfo", "keine angabe", "no route info",
+                 "pas d'info", "nessuna info", "unbekannt", "unknown", "n/a")
+
+
+def _is_placeholder(v: str) -> bool:
+    low = v.strip().lower()
+    return any(low.startswith(p) for p in _PLACEHOLDERS)
+
+
 def _linestrings(geom: Any) -> List[List[list]]:
     """LineString / MultiLineString -> Liste von Koordinatenlisten."""
     if not isinstance(geom, dict):
@@ -76,7 +89,7 @@ def parse_routes(fc: Any, min_points: int = 4) -> List[Dict[str, Any]]:
         name = None
         for k in ("name", "NAME", "bezeichnung", "route_name", "label"):
             v = props.get(k)
-            if isinstance(v, str) and v.strip():
+            if isinstance(v, str) and v.strip() and not _is_placeholder(v):
                 name = v.strip()
                 break
         for i, coords in enumerate(_linestrings(f.get("geometry"))):
@@ -114,14 +127,49 @@ def load_routes(path: Path) -> List[Dict[str, Any]]:
     try:
         feats = []
         with fiona.open(str(path)) as src:
+            # WICHTIG: swisstopo liefert LV95 (EPSG:2056), nicht WGS84 -- der
+            # Dateiname sagt es sogar (skitouren_2056.gpkg). Bestaetigt an der
+            # Live-Datei: die erste Koordinate war [2573311.9, 1080362.5].
+            # Ohne Umprojektion landen alle Routen irgendwo weit ausserhalb
+            # der Karte, weil der Client Grad erwartet.
+            src_crs = None
+            try:
+                src_crs = src.crs.to_string() if hasattr(src.crs, "to_string") else str(src.crs)
+            except Exception:                     # noqa: BLE001
+                pass
             for rec in src:
                 feats.append({"id": rec.get("id"),
                               "properties": dict(rec.get("properties") or {}),
                               "geometry": dict(rec["geometry"])})
-        return parse_routes({"features": feats})
+        routes = parse_routes({"features": feats})
+        return _to_wgs84(routes, src_crs)
     except Exception as e:                        # noqa: BLE001
         print(f"[TOPO] GeoPackage {path.name} nicht lesbar: {e!r}")
         return []
+
+
+def _to_wgs84(routes, src_crs):
+    """Routen nach WGS84 umprojizieren, falls noetig."""
+    if not routes:
+        return routes
+    x, y = routes[0]["coords"][0]
+    looks_degrees = -180 <= x <= 180 and -90 <= y <= 90
+    if looks_degrees and not (src_crs and "2056" in str(src_crs)):
+        return routes
+    crs = src_crs or "EPSG:2056"
+    try:
+        from pyproj import Transformer
+        tf = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
+    except Exception as e:                        # noqa: BLE001
+        print(f"[TOPO] Umprojektion von {crs} nicht moeglich: {e!r}")
+        return []
+    print(f"[TOPO] Routen von {crs} nach EPSG:4326 umprojiziert.")
+    for r in routes:
+        xs = [c[0] for c in r["coords"]]
+        ys = [c[1] for c in r["coords"]]
+        lon, lat = tf.transform(xs, ys)
+        r["coords"] = [[float(a), float(b)] for a, b in zip(lon, lat)]
+    return routes
 
 
 def _routes_from_zip_url(href: str, timeout: float) -> List[Dict[str, Any]]:
