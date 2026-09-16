@@ -1680,7 +1680,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #three-wrap .ctrl3d button:hover{border-color:var(--acc);color:var(--fg)}
  @media (max-width:560px){#three-wrap .ctrl3d{bottom:calc(16px + env(safe-area-inset-bottom,0px));gap:5px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 14px;font-size:15px;min-height:46px;border-radius:12px}#btn3dClose{top:calc(8px + env(safe-area-inset-top,0px));right:8px;padding:10px 18px;font-size:16px;border-radius:14px}}
  .sub{font-size:12px;color:var(--mut)}
- .asp-crisp img{image-rendering:pixelated;image-rendering:crisp-edges}
  /* The classed/banded layers (Neuschnee, Schneehöhe, Temp, Wind, ...) are
     already discrete colour steps under the hood (setRaster() looks each
     cell up in a fixed palette) -- the browser's default smooth upscaling
@@ -1689,7 +1688,25 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     (left off prognosisOverlay/qprOverlay etc., which are deliberately
     smooth heatmaps) makes every classed layer's cell borders exact again,
     the same crisp-edge look the SLF new-snow legend already implies. */
- .raster-crisp{image-rendering:pixelated;image-rendering:crisp-edges;image-rendering:-moz-crisp-edges}
+ /* The model raster is now SMOOTHED, which reverses the earlier "crisp
+    raster borders" choice on purpose.
+    At 3 km a cell was ~40 px on screen and hard edges were honest: they said
+    "this is a coarse model, do not read a slope out of it". At 1 km a cell is
+    ~10 px, and the same hard edges no longer communicate coarseness -- they
+    just read as a pixelated image, which is what prompted this change.
+    Smoothing is also what SLF does: their own 250 m field is "subsequently
+    smoothed for cartographic representation".
+    Default browser scaling is bilinear, so this costs nothing and needs no
+    extra data. To go back, restore image-rendering:pixelated here. */
+ .raster-smooth{image-rendering:auto}
+ /* Aspect must NOT be smoothed -- it is eight discrete classes, and
+    interpolating between them would invent directions that are not in the
+    data (blending N and E into a fake NE). That is already guaranteed in JS:
+    AspectGrid.createTile copies aspData pixels straight through, so there is
+    no interpolation step to disable. This rule is a leftover from before the
+    GridLayer existed and is currently applied to nothing; kept only because
+    it is the right rule should an <img> path ever come back. */
+ .asp-crisp img{image-rendering:pixelated;image-rendering:crisp-edges}
  /* Tour sheet: sits above the timeline, below the layer panel. Stays out of
     the way until a route is actually tapped. */
  .tour-sheet{position:absolute;z-index:960;left:14px;right:14px;
@@ -4008,7 +4025,21 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
 // Karte + Layer
 const [laMin,loMin,laMax,loMax]=M.bounds;
 const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
-const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,wheelPxPerZoomLevel:_desktop?38:90,wheelDebounceTime:_desktop?12:40,maxBoundsViscosity:1.0,inertia:true}).fitBounds([[laMin,loMin],[laMax,loMax]],{padding:[6,6]});
+// A macOS trackpad emits a stream of small wheel deltas rather than the
+// discrete notches of a mouse wheel. At wheelPxPerZoomLevel 38 with a 12 ms
+// debounce, one two-finger swipe fired a long queue of separate zoom
+// animations back to back -- which is what made zooming feel heavy and
+// sticky rather than smooth. Roughly one gesture to one zoom level, with a
+// longer debounce so the deltas coalesce before a zoom starts, is what
+// Leaflet's own guidance suggests for trackpads.
+//
+// A real mouse wheel still works: its notches are large, so it crosses the
+// threshold in one or two clicks.
+const _trackpad=_desktop&&/Mac/.test(navigator.platform||navigator.userAgent||'');
+const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,
+  wheelPxPerZoomLevel:_trackpad?120:(_desktop?38:90),
+  wheelDebounceTime:_trackpad?34:(_desktop?12:40),
+  maxBoundsViscosity:1.0,inertia:true}).fitBounds([[laMin,loMin],[laMax,loMax]],{padding:[6,6]});
 // Leaflet's default attribution control prefixes its own "Leaflet" credit
 // with a small Ukrainian-flag SVG. The control sits bottom-left here and is
 // collapsed to a 22px pill until hovered, so that flag was the only thing
@@ -4080,17 +4111,44 @@ function baseFadeT(){
   const t=(map.getZoom()-z0)/Math.max(.001,z1-z0);
   return Math.max(0,Math.min(1,t));
 }
-function updateBaseFade(){
+// Split deliberately into a cheap part and an expensive part.
+//
+// base.setOpacity() is one CSS property on one element -- free, and it has to
+// track the zoom continuously or the terrain visibly steps.
+//
+// setStyle() on the outline and the 39 canton polylines is the opposite: it
+// rewrites SVG attributes on every path. With zoomSnap:0 the 'zoom' event
+// fires once per animation frame, so a trackpad pinch was doing that ~60x a
+// second for a change too small to see -- which is what made zooming feel
+// heavy on a Mac. Now it only runs when the value has actually moved.
+let _lastFadeOp=-1,_fadeRaf=0;
+const _FADE_EPS=0.02;          // below this the restyle is invisible
+function _applyVectorFade(op,t){
+  chOutline.setStyle({weight:1.1+1.5*(1-op),opacity:.30+.65*(1-op),fillOpacity:Math.max(0,.72-op*.72)});
+  // Canton borders are legible from the very first view and only sharpen.
+  chCantons.setStyle({opacity:.42+.34*t,weight:.9+.9*t});
+}
+function updateBaseFade(force){
   const t=baseFadeT();
   // The country view is abstract but no longer blank: the terrain starts at
   // BASE_FLOOR rather than 0, so you can already read where the mountains are.
   const op=BASE_FLOOR+(1-BASE_FLOOR)*Math.pow(t,1.45);
   base.setOpacity(op);
-  chOutline.setStyle({weight:1.1+1.5*(1-op),opacity:.30+.65*(1-op),fillOpacity:Math.max(0,.72-op*.72)});
-  // Canton borders are legible from the very first view and only sharpen.
-  chCantons.setStyle({opacity:.42+.34*t,weight:.9+.9*t});
+  if(!force&&Math.abs(op-_lastFadeOp)<_FADE_EPS)return;
+  // Coalesce to one restyle per frame even if several zoom events land.
+  if(_fadeRaf)return;
+  _fadeRaf=requestAnimationFrame(function(){
+    _fadeRaf=0;
+    const t2=baseFadeT();
+    const op2=BASE_FLOOR+(1-BASE_FLOOR)*Math.pow(t2,1.45);
+    _lastFadeOp=op2;
+    _applyVectorFade(op2,t2);
+  });
 }
-map.on('zoom zoomend',updateBaseFade);updateBaseFade();
+map.on('zoom',updateBaseFade);
+// zoomend always restyles, so the final state is exact rather than within EPS.
+map.on('zoomend',function(){updateBaseFade(true);});
+updateBaseFade(true);
 // Keine weisse Maske mehr: die gedimmte OSM-Unterlage zeigt die Nachbarlaender,
 // die Winter-Pixelkarte liegt fuer die Schweiz darueber.
 const slopeWMTS=L.tileLayer(swissTile('ch.swisstopo.hangneigung-ueber_30','png'),{opacity:.7});
@@ -4378,7 +4436,7 @@ const AspectGrid=L.GridLayer.extend({createTile:function(coords){
   ctx.putImageData(img,0,0);return tile;}});
 const aspectGrid=new AspectGrid({opacity:.78,tileSize:256});
 const cv=document.createElement('canvas');cv.width=W;cv.height=H;const cx=cv.getContext('2d');
-let raster=L.imageOverlay(cv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:.94,className:'raster-crisp'}).addTo(map);
+let raster=L.imageOverlay(cv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:.94,className:'raster-smooth'}).addTo(map);
 const rcv=document.createElement('canvas');rcv.width=RW;rcv.height=RH;const rcx=rcv.getContext('2d');
 let radOverlay=L.imageOverlay(rcv.toDataURL(),[[RbS,RlW],[RbN,RlE]],{opacity:.9});
 const rad2cube=new Int32Array(RNP);
