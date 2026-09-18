@@ -22,7 +22,7 @@ import argparse, csv
 from datetime import datetime
 
 from variant_a import config, subregions, select_points, forcing, snowpack_runner
-from variant_a import gridding, profiles, export
+from variant_a import gridding, profiles, export, publish as publish_mod
 
 
 def _points_from_csv(grid, path):
@@ -71,6 +71,8 @@ def main():
     ap.add_argument("--step-h", type=int, default=6, help="output timestep [h]")
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--model", default="best_match")
+    ap.add_argument("--publish", action="store_true",
+                    help="publish export to VARIANT_A_PUBLISH_DIR + Supabase (if configured)")
     args = ap.parse_args()
     datetime.strptime(args.date, "%Y-%m-%d")
 
@@ -109,6 +111,10 @@ def main():
     print(f"  manifest: {out_dir/'manifest.json'}  ({len(ts)} timestamps, "
           f"{len(payload['points'])} profile points)")
     print(f"  preview : {prev}")
+
+    # 8) publish to the app (static dir + Supabase, both optional/env-gated)
+    if args.publish:
+        publish_mod.publish(out_dir)
 
 
 if __name__ == "__main__":
