@@ -79,3 +79,6 @@ jobs:
       # app is built, and failed on a missing file.
       - name: Tour powder score (engine build)
         run: node tools/test_tour_js.js dist/engine.js
+
+      - name: Variant A consumer contract
+        run: node tools/test_variant_a.js dist/app.js

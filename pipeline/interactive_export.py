@@ -1699,6 +1699,24 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     Default browser scaling is bilinear, so this costs nothing and needs no
     extra data. To go back, restore image-rendering:pixelated here. */
  .raster-smooth{image-rendering:auto}
+ /* Variant A: sub-layer picker, manifest-driven legend, snow profile. */
+ .va-subs{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 4px;grid-column:1/-1}
+ .va-leg{grid-column:1/-1;font-size:10px;line-height:1.5;color:var(--fg2);
+   max-height:168px;overflow-y:auto;columns:2;column-gap:10px}
+ .va-leg div{break-inside:avoid;display:flex;align-items:center;gap:5px}
+ .va-leg span{flex:0 0 12px;height:9px;border:1px solid var(--hair);border-radius:2px}
+ .va-leg-ramp{columns:1}
+ /* The density ramp mirrors _rgba_density in variant_a/export.py (blue->red). */
+ .va-leg-ramp i{display:block;height:9px;border-radius:2px;margin-bottom:3px;
+   background:linear-gradient(90deg,#2b56c8,#49b0c8,#cfd43a,#e07a2a,#c02020)}
+ .va-prof-row{display:flex;align-items:flex-start;gap:7px;margin-top:4px}
+ .va-grain{flex:0 0 auto;border:1px solid var(--hair);border-radius:2px}
+ .va-dens{flex:1 1 auto;color:var(--fg);min-width:0}
+ .va-prof-ax{display:flex;flex-direction:column;justify-content:space-between;
+   font-size:9px;color:var(--fg2);height:118px}
+ .va-grain-leg{display:flex;flex-wrap:wrap;gap:3px 7px;margin-top:5px;font-size:9.5px;color:var(--fg2)}
+ .va-grain-leg span{display:inline-flex;align-items:center;gap:3px}
+ .va-grain-leg i{width:8px;height:8px;border-radius:2px;display:inline-block}
  /* Aspect must NOT be smoothed -- it is eight discrete classes, and
     interpolating between them would invent directions that are not in the
     data (blending N and E into a fake NE). That is already guaranteed in JS:
@@ -4174,13 +4192,19 @@ const OVERLAYS={
   wildlife:{label:'Wildruhezonen',wmts:'ch.bafu.wrz-wildruhezonen_portal',op:.6,
             attr:'Wildruhezonen © BAFU'},
   avalanche:{label:'Lawinenbulletin',vector:true,
-             attr:'Lawinenbulletin © SLF (CC BY 4.0)'}
+             attr:'Lawinenbulletin © SLF (CC BY 4.0)'},
+  // Demo only -- see vaLoad(). Its three views are picked inside the panel
+  // rather than as separate toggles: they are one product and only one can be
+  // on top at a time.
+  variantA:{label:'Skiqualität (SNOWPACK)',vector:true,
+            attr:'Skiqualität: SNOWPACK / SLF-Modellkette'}
 };
 const ovOn={};
 const ovLayer={};
 function ovAvailable(k){
   if(k==='avalanche'){const a=M.avalanche;return !!(a&&a.regions&&a.regions.some(r=>r.geometry));}
   if(k==='skitourVec')return tourList().length>0;
+  if(k==='variantA')return vaAvailable();
   return true;
 }
 function ovBuild(k){
@@ -4189,6 +4213,7 @@ function ovBuild(k){
   if(o.wmts){ovLayer[k]=L.tileLayer(swissTile(o.wmts,'png'),{opacity:o.op,pane:'overlayPane'});}
   else if(k==='avalanche'){ovLayer[k]=avBuildLayer();}
   else if(k==='skitourVec'){ovLayer[k]=tourBuildLayer();}
+  else if(k==='variantA'){ovLayer[k]=vaBuildLayer();}
   return ovLayer[k];
 }
 function ovToggle(k){
@@ -4197,6 +4222,7 @@ function ovToggle(k){
   ovOn[k]=!ovOn[k];
   if(ovOn[k])map.addLayer(l);else map.removeLayer(l);
   if(k==='skitourVec'){if(ovOn[k])tourRecolor();else tourClose();}
+  if(k==='variantA'&&ovOn[k])vaRefresh();
   ovSyncUI();ovAttrSync();
 }
 function ovAttrSync(){
@@ -4243,6 +4269,200 @@ function avBuildLayer(){
         +' target="_blank" rel="noopener">Bulletin öffnen</a></div>');
     }});
 }
+// --- Variant A: SNOWPACK ski-quality layer + snow profiles ----------------
+// Consumes what variant_a/export.py writes (manifest.json + layer PNGs +
+// profiles.json). Loose coupling on purpose: the SNOWPACK run is an OFFLINE
+// step needing an external binary, so the app only ever reads its artifacts
+// and shows nothing when they are absent.
+//
+// DEMO ONLY, deliberately. The exported timestamps belong to the demo window
+// (the 1 April 2026 dataset); on live data they would be stale by months, and
+// a ski-quality layer showing March snow in December is worse than no layer.
+const VA_BASE='data/variant_a';
+let vaMan=null,vaProf=null,vaOv=null,vaKey='ski18',vaTried=false;
+const vaFrames={};                     // "<layer>|<tag>" -> object URL / path
+function vaAvailable(){return !!(vaMan&&vaMan.layers&&vaMan.tags&&vaMan.tags.length);}
+function vaProfAvailable(){return !!(vaProf&&vaProf.points&&vaProf.points.length);}
+
+async function vaLoad(){
+  if(vaTried)return;vaTried=true;
+  if(!demoActive())return;             // see above
+  try{
+    const r=await fetch(VA_BASE+'/manifest.json',{cache:'force-cache'});
+    if(!r.ok)return;
+    const m=await r.json();
+    if(!m||!m.layers||!m.bounds||!(m.tags||[]).length)return;
+    vaMan=m;
+    // Profiles are only needed once someone taps the map, so they are fetched
+    // alongside but failure is non-fatal: the layer still works without them.
+    try{
+      const pr=await fetch(VA_BASE+'/'+(m.profiles||'profiles/profiles.json'),{cache:'force-cache'});
+      if(pr.ok){const pj=await pr.json();if(pj&&pj.points&&pj.profiles)vaProf=pj;}
+    }catch(e){}
+    ovSyncUI();
+  }catch(e){}
+}
+
+// Which exported frame matches what the timeline is showing? The app's window
+// is hourly; variant_a exports every few hours, so snap to the nearest.
+function vaTagIndex(){
+  if(!vaAvailable())return 0;
+  const want=(M.times&&M.times[Math.max(0,Math.min(M.times.length-1,b-1))])||'';
+  const wt=Date.parse(want.length>16?want:(want+':00'));
+  if(!isFinite(wt))return 0;
+  let best=0,bd=Infinity;
+  (vaMan.timestamps||vaMan.tags).forEach((t,i)=>{
+    const d=Math.abs(Date.parse(t.replace(/T(\d{2})(\d{2})$/,'T$1:$2'))-wt);
+    if(d<bd){bd=d;best=i;}
+  });
+  return best;
+}
+function vaFrameUrl(key,idx){
+  const L=vaMan.layers[key];if(!L)return null;
+  const tag=vaMan.tags[idx];
+  return VA_BASE+'/'+String(L.file).replace('{tag}',tag);
+}
+function vaBuildLayer(){
+  if(!vaAvailable())return null;
+  const bnds=vaMan.bounds;
+  vaOv=L.imageOverlay(vaFrameUrl(vaKey,vaTagIndex()),bnds,
+    {opacity:.82,className:'raster-smooth',pane:'overlayPane'});
+  return vaOv;
+}
+// Called from renderAll(), so the layer follows the timeline like every other
+// time-dependent layer.
+function vaRefresh(){
+  if(!vaOv||!ovOn.variantA||!vaAvailable())return;
+  const u=vaFrameUrl(vaKey,vaTagIndex());
+  if(u&&u!==vaOv._url){try{vaOv.setUrl(u);}catch(e){}}
+}
+function vaPickLayer(k){
+  if(!vaAvailable()||!vaMan.layers[k])return;
+  vaKey=k;
+  if(vaOv){const u=vaFrameUrl(k,vaTagIndex());if(u)try{vaOv.setUrl(u);}catch(e){}}
+  ovRender();
+}
+// The legend comes from the manifest, never from a copy in here: classify.py
+// owns the label list and the colours, and a second copy would drift.
+function vaLegendHTML(){
+  if(!vaAvailable())return '';
+  const L=vaMan.layers[vaKey];if(!L)return '';
+  if(vaKey==='density'){
+    const r=L.range||[100,450];
+    return '<div class="va-leg va-leg-ramp"><i></i><span>'+r[0]+'–'+r[1]+' '+(L.unit||'kg/m3')+'</span></div>';
+  }
+  const leg=L.legend||{};
+  return '<div class="va-leg">'+Object.keys(leg).map(k=>{
+    const e=leg[k];if(!e)return '';
+    return '<div><span style="background:rgb('+(e[1]||[0,0,0]).join(',')+')"></span>'
+      +escapeHtml(String(e[0]).replace(/_/g,' '))+'</div>';
+  }).join('')+'</div>';
+}
+
+// --- Snow profile at a clicked point --------------------------------------
+// KNN over the representative points in (x, y, elevation, aspect) -- the same
+// interpolation variant_a's own preview does, and the reason profiles.json
+// ships points rather than a per-cell grid: 175 points is portable, a national
+// per-cell weight matrix is not.
+function vaProfileAt(lat,lon,elev,aspectDeg){
+  if(!vaProfAvailable())return null;
+  const step=vaProf.profiles[Math.min(vaTagIndex(),vaProf.profiles.length-1)];
+  if(!step)return null;
+  const pts=vaProf.points;
+
+  // TWO STAGES, and the order matters.
+  //
+  // variant_a's own gridding is *subregion-local* KNN: horizontal distance is
+  // already bounded by the subregion, so elevation and aspect are what
+  // actually choose the profile. A single national metric does the opposite --
+  // with 175 points spread over Switzerland, horizontal distance dominates and
+  // elevation gets swamped. Measured with the contract fixture: a point at
+  // 2400 m and the same point at 1000 m returned an identical profile, because
+  // a 1400 m elevation difference scored ~2 % of the total.
+  //
+  // So: first take the horizontally nearest candidates (the "local" part, and
+  // the client cannot read the subregion raster -- it is not shipped), then
+  // rank those by elevation and aspect.
+  const near=[];
+  for(let i=0;i<pts.length;i++){
+    const q=pts[i],pr=step[i];
+    if(!pr||!pr.hs)continue;           // no snow modelled at that point
+    const dx=(q.lon-lon)*78.0,dy=(q.lat-lat)*111.0;      // km
+    near.push([dx*dx+dy*dy,i]);
+  }
+  if(!near.length)return null;
+  near.sort((x,y)=>x[0]-y[0]);
+  const LOCAL=Math.min(24,near.length);
+
+  const scored=[];
+  for(let n=0;n<LOCAL;n++){
+    const i=near[n][1],q=pts[i];
+    // Within a neighbourhood, 100 m of elevation matters about as much as
+    // 5 km horizontally, and 45 deg of aspect about the same -- both change
+    // the snowpack far more than a few kilometres of ground do.
+    const dz=(elev!=null&&q.elev!=null)?(q.elev-elev)/100.0*5.0:0;
+    let da=0;
+    if(aspectDeg!=null&&q.aspect!=null){
+      const d=Math.abs(((q.aspect-aspectDeg)%360+540)%360-180);  // 0..180
+      da=d/45.0*5.0;
+    }
+    scored.push([near[n][0]*0.05+dz*dz+da*da,i]);
+  }
+  scored.sort((x,y)=>x[0]-y[0]);
+  const K=Math.min(4,scored.length);
+  const nb=vaProf.nb||28;
+  const db=new Float64Array(nb);let wsum=0,hs=0;
+  const gvotes=[];for(let k=0;k<nb;k++)gvotes.push({});
+  for(let k=0;k<K;k++){
+    const w=1/(scored[k][0]+0.25),pr=step[scored[k][1]];
+    wsum+=w;hs+=pr.hs*w;
+    for(let j=0;j<nb;j++){
+      db[j]+=(pr.db[j]||0)*w;
+      const g=pr.gb[j]||0;gvotes[j][g]=(gvotes[j][g]||0)+w;
+    }
+  }
+  const dens=[],grain=[];
+  for(let j=0;j<nb;j++){
+    dens.push(db[j]/wsum);
+    let bg=0,bv=-1;for(const g in gvotes[j])if(gvotes[j][g]>bv){bv=gvotes[j][g];bg=+g;}
+    grain.push(bg);
+  }
+  return {hs:Math.round(hs/wsum),dens:dens,grain:grain,
+          exact:scored[0][0]<0.02,n:K};
+}
+// Density curve + grain-type column, the same two things variant_a's preview
+// shows. Drawn as inline SVG so it costs no library and scales crisply.
+function vaProfileHTML(pf){
+  if(!pf)return '';
+  const nb=pf.dens.length,H=118,Wp=96,GW=13;
+  const gl=(vaProf&&vaProf.grain)||{};
+  const dmin=100,dmax=450;
+  let bars='',seen={};
+  for(let j=0;j<nb;j++){
+    const g=pf.grain[j],e=gl[g]||gl[String(g)];
+    const col=e?('rgb('+e[1].join(',')+')'):'#ddd';
+    if(e&&g)seen[g]=e[0];
+    bars+='<rect x="0" y="'+(j*H/nb).toFixed(1)+'" width="'+GW+'" height="'+(H/nb+0.6).toFixed(1)+'" fill="'+col+'"/>';
+  }
+  let pathd='';
+  for(let j=0;j<nb;j++){
+    const x=Math.max(0,Math.min(1,(pf.dens[j]-dmin)/(dmax-dmin)))*Wp;
+    pathd+=(j?'L':'M')+x.toFixed(1)+' '+(j*H/nb+H/nb/2).toFixed(1);
+  }
+  const chips=Object.keys(seen).map(g=>{
+    const e=gl[g]||gl[String(g)];
+    return '<span><i style="background:rgb('+e[1].join(',')+')"></i>'+escapeHtml(e[0])+'</span>';
+  }).join('');
+  return '<div class="insp-sec va-prof"><h4>Schneeprofil <em>HS '+pf.hs+' cm'
+    +(pf.exact?'':' · interpoliert')+'</em></h4>'
+    +'<div class="va-prof-row">'
+    +'<svg class="va-grain" viewBox="0 0 '+GW+' '+H+'" width="'+GW+'" height="'+H+'" aria-label="Kornform">'+bars+'</svg>'
+    +'<svg class="va-dens" viewBox="0 0 '+Wp+' '+H+'" width="'+Wp+'" height="'+H+'" aria-label="Dichte">'
+    +'<path d="'+pathd+'" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>'
+    +'<div class="va-prof-ax"><b>'+dmin+'</b><b>'+dmax+' kg/m³</b></div>'
+    +'</div><div class="va-grain-leg">'+chips+'</div></div>';
+}
+
 // --- Ski tours: clickable routes with a powder score ----------------------
 // The WMTS overlay above is a picture; these are the same routes as VECTORS,
 // so they can be tapped. When the pipeline could not fetch the vector data
@@ -5479,6 +5699,7 @@ function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefre
   // That is exactly why scoring runs client-side instead of being baked in
   // at build time.
   if(ovOn.skitourVec)tourRecolor();
+  if(ovOn.variantA)vaRefresh();
   if(tlMode==='detail')drawTimeline();
   if(layer=="rad"||layer=="radsun")renderRadiation();
   if(layer=="wind"){buildFlow();if(wtimer)clearTimeout(wtimer);wtimer=setTimeout(renderWind,120);}
@@ -5717,11 +5938,22 @@ function ovRender(){
   const g=document.getElementById('lyOverlays');if(!g)return;
   g.innerHTML=Object.keys(OVERLAYS).map(k=>{
     const o=OVERLAYS[k],na=!ovAvailable(k);
+    let extra='';
+    // Three views (18-class, simplified, density) plus a legend that comes
+    // from the manifest -- classify.py owns those labels and colours, and a
+    // second copy in here would drift out of date silently.
+    if(k==='variantA'&&ovOn[k]&&vaAvailable()){
+      const names={ski18:'Ski (18)',simple:'Vereinfacht',density:'Dichte'};
+      extra='<div class="va-subs">'+Object.keys(vaMan.layers).map(lk=>
+        '<button type="button" class="ly-sub'+(lk===vaKey?' on':'')+'"'
+        +' onclick="vaPickLayer(\''+lk+'\')">'+escapeHtml(names[lk]||lk)+'</button>').join('')
+        +'</div>'+vaLegendHTML();
+    }
     return '<button type="button" id="ov_'+k+'" class="ly-tile ly-b'
       +(ovOn[k]?' on':'')+(na?' na':'')+'" aria-pressed="'+(ovOn[k]?'true':'false')+'"'
       +' onclick="ovToggle(\''+k+'\')" title="'
       +escapeHtml(na?o.label+' – keine Daten':o.attr)+'">'
-      +'<span>'+escapeHtml(o.label)+'</span></button>';
+      +'<span>'+escapeHtml(o.label)+'</span></button>'+extra;
   }).join('');
 }
 function lyPick(n){const t=lyLayers()[n];if(!t)return;
@@ -6196,6 +6428,11 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   const QD8={N:'Nord',NO:'Nordost',O:'Ost',SO:'Südost',S:'Süd',SW:'Südwest',W:'West',NW:'Nordwest'},QD4={N:'Nord',E:'Ost',S:'Süd',W:'West'};
   const aspDeg=(_fa!=null?_fa:maspv(p)),aspLbl=(_fa!=null?QD8[asp8(_fa)]:(QD4[aspectQ(maspv(p))]||''));
   const pan=document.getElementById('inspPanel');
+  // SNOWPACK profile for this spot, when the demo artifacts are present. It
+  // goes in the SAME popup as the meteo numbers rather than a second window:
+  // density and grain type are what you look at next after depth.
+  let vaSec='';
+  try{vaSec=vaProfileHTML(vaProfileAt(lat,lon,fineElev(lat,lon),fineAspectDeg(lat,lon)));}catch(e){}
   requestAnimationFrame(()=>{try{window._inspClamp();}catch(e){}});
   let progSec='';
   if(layer==='prog'){try{const pr=prognosisAt(lat,lon);if(pr){const cl=(PROG_LABEL[pr.type]||pr.type);const zc=progZones().filter(z=>z.type===pr.type).length;
@@ -6249,7 +6486,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
    '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b>'+
      '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+
    '</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
-   '<div class="insp-body">'+progSec+
+   '<div class="insp-body">'+vaSec+progSec+
      '<div class="insp-sec"><h4>Neuschnee <em>+'+newSnow.toFixed(1)+' cm</em></h4><canvas id="icNew"></canvas></div>'+
      '<div class="insp-sec"><h4>Schneehöhe <em>'+depthNow.toFixed(0)+' cm</em></h4><canvas id="icDepth"></canvas></div>'+
      '<div class="insp-sec"><h4>Temperatur <em>Luft · Oberfläche</em></h4><canvas id="icTemp"></canvas></div>'+
@@ -6895,6 +7132,9 @@ let reportMarkers=L.layerGroup().addTo(map);
 // with no URL params (the ?demo/?live params still work as one-off overrides
 // for sharing a link). Mirrors the boot-time check above, which can't call
 // this function yet since it runs before app.js exists.
+// Fetched after first paint: nothing on screen waits for it, and on live data
+// vaLoad() returns immediately without touching the network.
+_afterFirstPaint(function(){try{vaLoad();}catch(e){}});
 function demoActive(){try{
   if(location.search.indexOf('live')>=0)return false;
   if(location.search.indexOf('demo')>=0)return true;
