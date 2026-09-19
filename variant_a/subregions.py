@@ -88,7 +88,11 @@ def wgs84_bounds(grid: NationalGrid):
 
 
 def tile_ids(grid: NationalGrid):
-    return [t for t in sorted(np.unique(grid.tile)) if t != 0]
+    # int(), not the np.int64 that np.unique hands back. The id is carried on
+    # every representative point as p["tile"] and ends up in profiles.json,
+    # and json.dump refuses a numpy scalar -- which killed the export at the
+    # very last step, after the whole model run.
+    return [int(t) for t in sorted(np.unique(grid.tile)) if t != 0]
 
 
 _T_WGS84_LV03 = Transformer.from_crs(4326, config.DEM_EPSG, always_xy=True)

@@ -41,6 +41,22 @@ def _save_png(im, path):
     Image.fromarray(im, "RGBA").save(path, "PNG", optimize=True)
 
 
+def _jsonable(o):
+    """Coerce numpy scalars/arrays that leaked into the payload.
+
+    Defence in depth for the export boundary. A single np.int64 anywhere in
+    the payload makes json.dump raise, and it raises at the END of the
+    pipeline -- after the forcing, after the model, after the PNGs. Losing a
+    40-minute national run to a type that prints as "2" is not a reasonable
+    failure mode, so numpy scalars are converted rather than fatal.
+    """
+    if isinstance(o, np.generic):
+        return o.item()
+    if isinstance(o, np.ndarray):
+        return o.tolist()
+    raise TypeError(f"{type(o).__name__} is not JSON serializable")
+
+
 def export_all(grid: NationalGrid, grids_by_ts, profile_payload, out_dir: Path | None = None):
     out_dir = out_dir or config.OUTPUT_DIR
     (out_dir / "layers").mkdir(parents=True, exist_ok=True)
@@ -55,7 +71,8 @@ def export_all(grid: NationalGrid, grids_by_ts, profile_payload, out_dir: Path |
         _save_png(_rgba_from_labels(g["ski18"], classify.SKI_RGBA), out_dir / "layers" / f"ski18_{tag}.png")
         _save_png(_rgba_from_labels(g["simple"], classify.SIMPLE_RGBA), out_dir / "layers" / f"simple_{tag}.png")
         _save_png(_rgba_density(g["density"], valid), out_dir / "layers" / f"density_{tag}.png")
-    json.dump(profile_payload, open(out_dir / "profiles" / "profiles.json", "w"))
+    json.dump(profile_payload, open(out_dir / "profiles" / "profiles.json", "w"),
+              default=_jsonable)
     manifest = {
         "product": "variant_a_ski_quality",
         "crs": "EPSG:4326",
@@ -75,7 +92,8 @@ def export_all(grid: NationalGrid, grids_by_ts, profile_payload, out_dir: Path |
         "profiles": "profiles/profiles.json",
         "subregions": grid.tile_names,
     }
-    json.dump(manifest, open(out_dir / "manifest.json", "w"), indent=2)
+    json.dump(manifest, open(out_dir / "manifest.json", "w"), indent=2,
+              default=_jsonable)
     return out_dir, manifest
 
 

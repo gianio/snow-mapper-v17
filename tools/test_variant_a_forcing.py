@@ -219,10 +219,56 @@ def test_selection_is_stable():
           digest == "dff9519c62fe17dc", digest)
 
 
+def test_export_survives_numpy_types():
+    print("export JSON safety")
+    import numpy as np
+    from datetime import datetime
+    from variant_a import export, subregions
+    # np.unique hands back np.int64, that id rides on every point as
+    # p["tile"], and json.dump refuses it -- which killed a whole CI run at
+    # the very last step, after the forcing, the model and the PNGs. Fixed at
+    # the source (tile_ids) and guarded at the boundary (_jsonable).
+    g = _synth_grid(24, 30, 3)
+    ids = subregions.tile_ids(g)
+    check("tile_ids returns plain ints, not np.int64",
+          bool(ids) and all(type(t) is int for t in ids), str([type(t).__name__ for t in ids]))
+
+    dt = datetime(2026, 4, 1)
+    grids = {dt: {"ski18": np.ones((24, 30), np.int32),
+                  "simple": np.ones((24, 30), np.int32),
+                  "density": np.full((24, 30), 250.0)}}
+    payload = {"nb": 2, "grain": {0: ["-", [1, 2, 3]]}, "labels": ["2026-04-01T00:00"],
+               # deliberately numpy-typed, the way the real payload was
+               "points": [{"id": "t2_x", "lat": 46.5, "lon": 8.0, "elev": np.float64(1600),
+                           "aspect": np.float32(5), "slope": 25.0, "tile": np.int64(2)}],
+               "profiles": [[{"hs": np.int64(80), "db": np.array([200.0, 220.0]), "gb": [1, 3]}]]}
+    with tempfile.TemporaryDirectory() as td:
+        out, manifest = export.export_all(g, grids, payload, Path(td))
+        mf = json.load(open(out / "manifest.json"))
+        pr = json.load(open(out / "profiles" / "profiles.json"))
+        check("manifest.json is written and reloads", mf["product"] == "variant_a_ski_quality")
+        check("every declared layer PNG exists",
+              all((out / "layers" / f"{k}_{mf['tags'][0]}.png").exists()
+                  for k in ("ski18", "simple", "density")))
+        check("numpy scalars survive as plain numbers",
+              pr["points"][0]["tile"] == 2 and pr["profiles"][0][0]["hs"] == 80)
+        check("numpy arrays survive as lists",
+              pr["profiles"][0][0]["db"] == [200.0, 220.0])
+        # A type that genuinely cannot be represented must still be fatal --
+        # the guard exists to save numpy runs, not to swallow real bugs.
+        bad = dict(payload); bad["points"] = [{"oops": object()}]
+        try:
+            export.export_all(g, grids, bad, Path(td))
+            check("an unserialisable object still raises", False, "no error raised")
+        except TypeError:
+            check("an unserialisable object still raises", True)
+
+
 if __name__ == "__main__":
     for t in (test_forcing_starts_before_profile_date, test_covers_rejects_a_stale_smet,
               test_ini, test_timestamp_window, test_prof_start_derivation,
               test_selection_cache, test_win_count_matches_sliding_window,
+              test_export_survives_numpy_types,
               test_selection_is_stable):
         t()
     print("\nVARIANT A PIPELINE " + ("OK" if not FAILS else f"FAILED: {FAILS}"))
