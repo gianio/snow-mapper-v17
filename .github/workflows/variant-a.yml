@@ -137,10 +137,20 @@ jobs:
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Points run | $N |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Wall clock | ${ELAPSED:-?} s |" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${N:-0}" -gt 0 ] && [ -n "${ELAPSED:-}" ]; then
-            PER=$(python -c "print(f'{${ELAPSED}/${N}:.1f}')")
-            FULL=$(python -c "print(f'{${ELAPSED}/${N}*978/60:.0f}')")
-            echo "| Per point | ${PER} s |" >> "$GITHUB_STEP_SUMMARY"
+          # Point selection scans the whole 920x1440 national grid and took
+          # ~7 min in the first run -- entirely independent of --limit and of
+          # the model. Separating it keeps the per-point projection honest.
+          # run_variant_a.py prints one machine-readable "[timing] ..." line.
+          TIMING=$(grep -oP '(?<=^\[timing\] ).*' run.log | tail -1 || true)
+          [ -n "$TIMING" ] && echo "| Phases | \`$TIMING\` |" >> "$GITHUB_STEP_SUMMARY"
+          # Project from the SNOWPACK phase alone. Point selection is a fixed
+          # national cost that does not scale with the point count, so folding
+          # it in would inflate the estimate several-fold.
+          PER=$(grep -oP '(?<=snowpack_per_point=)[0-9.]+' run.log | tail -1 || true)
+          if [ -n "$PER" ] && [ "${N:-0}" -gt 0 ]; then
+            SEL=$(grep -oP '(?<=select=)[0-9.]+' run.log | tail -1 || echo 0)
+            FULL=$(python -c "print(f'{($PER*978+$SEL)/60:.0f}')")
+            echo "| SNOWPACK per point | ${PER} s |" >> "$GITHUB_STEP_SUMMARY"
             echo "| **Projected national (978 pts)** | **~${FULL} min** |" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "" >> "$GITHUB_STEP_SUMMARY"

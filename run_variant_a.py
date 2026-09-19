@@ -78,7 +78,16 @@ def main():
     args = ap.parse_args()
     datetime.strptime(args.date, "%Y-%m-%d")
 
+    # Phase timings, printed in one machine-readable line at the end. The CI
+    # job needs them separated: point selection scans the whole 920x1440
+    # national grid and is independent of --limit and of the model, so folding
+    # it into a per-point cost would make the national projection nonsense.
+    import time as _time
+    _t = {}
+    _t0 = _time.time()
+
     grid = subregions.load_national_grid()
+    _t["grid"] = _time.time() - _t0
     print(f"national grid {grid.nr}x{grid.nc}, tiles {subregions.tile_ids(grid)}")
 
     # 1) points
@@ -87,7 +96,9 @@ def main():
         print(f"{len(points)} points loaded from {args.points_csv}")
         runs_dir = args.runs_dir
     else:
+        _ts = _time.time()
         _, points = select_points.select_national(grid, only_tile=args.only_tile)
+        _t["select"] = _time.time() - _ts
         if args.limit and args.limit < len(points):
             # Stride rather than truncate: the selection is ordered by tile,
             # then elevation band, then aspect, so points[:N] would be one
@@ -96,11 +107,20 @@ def main():
             step = len(points) / float(args.limit)
             points = [points[int(i * step)] for i in range(args.limit)]
             print(f"--limit {args.limit}: sampled every {step:.1f}th point")
+        # export_all() creates OUTPUT_DIR, but that runs at the very END --
+        # and this write happens first. On a dev machine the directory already
+        # exists from an earlier run, so the gap never showed; in a fresh
+        # checkout (CI) it is a FileNotFoundError seven minutes into the job.
+        config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         select_points.write_csv(points, config.OUTPUT_DIR / "points.csv")
         print(f"{len(points)} representative points selected")
         # 2) forcing + 3) SNOWPACK
+        _ts = _time.time()
         forcing.build_forcing(points, args.date, model=args.model)
+        _t["forcing"] = _time.time() - _ts
+        _ts = _time.time()
         runs_dir = snowpack_runner.run_points(points, args.date, workers=args.workers)
+        _t["snowpack"] = _time.time() - _ts
 
     # 4) classify points
     series = gridding.classify_points(points, runs_dir)
@@ -121,6 +141,11 @@ def main():
     print(f"  manifest: {out_dir/'manifest.json'}  ({len(ts)} timestamps, "
           f"{len(payload['points'])} profile points)")
     print(f"  preview : {prev}")
+    _t["total"] = _time.time() - _t0
+    npts = len(points)
+    per = (_t.get("snowpack", 0.0) / npts) if npts else 0.0
+    print("[timing] " + " ".join(f"{k}={v:.1f}s" for k, v in _t.items())
+          + f" points={npts} snowpack_per_point={per:.2f}s")
 
 
 if __name__ == "__main__":
