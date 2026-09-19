@@ -8,6 +8,7 @@ Writes one .smet per point (spin-up window -> target date), cached under data/.
 """
 from __future__ import annotations
 import json, time, urllib.parse, urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -26,16 +27,28 @@ def _endpoint(start: str):
     return OPEN_METEO_URL, True
 
 
-def _get(url, params, retries=5, backoff=2.0):
+# Worst case per point used to be ~8 min: five 90 s timeouts plus 2+4+6+8 s of
+# backoff, all of it silent. Across the national 978 that is longer than the
+# GitHub job limit, so the budget is now explicit and bounded.
+_TIMEOUT_S = 40.0
+_RETRY_BUDGET_S = 75.0
+
+
+def _get(url, params, retries=4, backoff=2.0, budget=_RETRY_BUDGET_S):
     q = urllib.parse.urlencode(params, safe=",")
+    t0 = time.time()
+    last = None
     for i in range(retries):
         try:
-            with urllib.request.urlopen(f"{url}?{q}", timeout=90) as r:
+            with urllib.request.urlopen(f"{url}?{q}", timeout=_TIMEOUT_S) as r:
                 return json.load(r)
-        except Exception:
-            if i == retries - 1:
+        except Exception as e:
+            last = e
+            wait = backoff * (i + 1)
+            if i == retries - 1 or time.time() - t0 + wait > budget:
                 raise
-            time.sleep(backoff * (i + 1))
+            time.sleep(wait)
+    raise last  # unreachable; kept so the contract is obvious
 
 
 def fetch_point(lat, lon, start_date, end_date, model="best_match"):
@@ -99,7 +112,7 @@ def _covers(path: Path, start: str) -> bool:
 
 
 def build_forcing(points, target_date, spinup_days=None, model="best_match",
-                  meteo_dir: Path | None = None, lead_days=None):
+                  meteo_dir: Path | None = None, lead_days=None, workers=6):
     """Fetch + write .smet for every point. Returns dir with <id>.smet files."""
     spinup_days = spinup_days or config.SPINUP_DAYS
     lead_days = config.FORCING_LEAD_DAYS if lead_days is None else lead_days
@@ -109,17 +122,40 @@ def build_forcing(points, target_date, spinup_days=None, model="best_match",
     # spin-up window + lead-in, so the .smet starts strictly before the
     # .sno ProfileDate (= end - spinup_days). See config.FORCING_LEAD_DAYS.
     start = (end - timedelta(days=spinup_days + lead_days)).isoformat()
-    for k, p in enumerate(points, 1):
+    todo = [p for p in points if not _covers(meteo_dir / f"{p['id']}.smet", start)]
+    print(f"  forcing: {len(points) - len(todo)}/{len(points)} already cached, "
+          f"fetching {len(todo)} ({start} .. {end})")
+
+    def one(p):
         dst = meteo_dir / f"{p['id']}.smet"
-        if _covers(dst, start):
-            continue
         try:
             h = fetch_point(p["lat"], p["lon"], start, end.isoformat(), model)
             hourly_to_smet(p["id"], p["lat"], p["lon"], p["elev"], h, dst)
+            return p["id"], None
         except Exception as e:
-            print(f"  [forcing] {p['id']} failed: {e}")
-        if k % 20 == 0:
-            print(f"  forcing {k}/{len(points)}")
+            return p["id"], f"{type(e).__name__}: {e}"
+
+    # Modest concurrency. Open-Meteo allows far more than this per minute, and
+    # the archive endpoint is slow rather than rate-limiting, so a handful of
+    # workers turns a serial stall into a bounded one. Writes go to distinct
+    # paths, so no locking is needed.
+    t0 = time.time()
+    failed = []
+    done = 0
+    if todo:
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            for pid, err in ex.map(one, todo):
+                done += 1
+                if err:
+                    failed.append((pid, err))
+                # Frequent enough that a stall is visible in the CI log rather
+                # than looking like a hang.
+                if done % 25 == 0 or done == len(todo):
+                    rate = done / max(1e-6, time.time() - t0)
+                    print(f"  forcing {done}/{len(todo)}  {rate:.1f}/s  "
+                          f"{len(failed)} failed", flush=True)
+    if failed:
+        print(f"  [forcing] {len(failed)} failed; first few: {failed[:3]}")
     # Summarise unconditionally. The progress line above only fires every 20
     # points, so a short run (a CI smoke test with --limit 8) printed NOTHING
     # -- including when every fetch failed. An empty .smet is also the likeliest

@@ -138,10 +138,15 @@ def select_national(grid: NationalGrid | None = None, only_tile: int | None = No
             except Exception as e:
                 print(f"  [select] cache unreadable ({e}) — reselecting")
     out = []
-    for t in tile_ids(grid):
-        if only_tile is not None and t != only_tile:
-            continue
+    # Per-subregion progress: a cold selection is ~7 min of pure numpy with no
+    # output at all, which in a CI log is indistinguishable from a hang.
+    todo = [t for t in tile_ids(grid) if only_tile is None or t == only_tile]
+    import time as _t
+    t0 = _t.time()
+    for i, t in enumerate(todo, 1):
         out.extend(select_for_mask(grid, grid.tile == t, t))
+        print(f"  [select] subregion {t} ({i}/{len(todo)}) — "
+              f"{len(out)} points, {_t.time()-t0:.0f}s", flush=True)
     if cpath is not None and out:
         try:
             cpath.parent.mkdir(parents=True, exist_ok=True)
