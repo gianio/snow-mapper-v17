@@ -34,9 +34,15 @@ on:
         description: Output timestep in hours
         default: "12"
         required: false
+      publish:
+        description: "Commit the export to variant_a_export/ so the deploy publishes it"
+        type: boolean
+        default: false
 
 permissions:
-  contents: read
+  # write only so an opt-in publish run can commit variant_a_export/.
+  # Every other run leaves the repository untouched.
+  contents: write
 
 env:
   SNOWPACK_REF: master
@@ -246,9 +252,32 @@ jobs:
             exit 1
           fi
 
-      # Uploaded rather than committed: an artifact is reviewable before it
-      # goes anywhere near the published site, and keeps binaries out of git
-      # history until someone decides to promote them.
+      # Promotion is opt-in, and ticking `publish` IS the decision this
+      # workflow previously left to a manual download. The artifact below is
+      # still produced on every run and is still what you review; this step
+      # only saves the download/unzip/commit round trip. deploy.yml copies
+      # variant_a_export/ into dist/data/variant_a/ when it exists, so this
+      # is what makes the layer appear in the app.
+      - name: Commit the export
+        if: success() && inputs.publish
+        run: |
+          set -e
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A variant_a_export
+          if git diff --cached --quiet; then
+            echo "variant_a_export/ is unchanged — nothing to commit."
+            exit 0
+          fi
+          du -sh variant_a_export
+          git commit -m "variant_a: export for ${{ inputs.date }} (run ${{ github.run_id }})"
+          # The branch may have moved while the model ran; rebase rather than
+          # force, so a concurrent push is never discarded.
+          git pull --rebase origin "${{ github.ref_name }}"
+          git push origin "HEAD:${{ github.ref_name }}"
+
+      # Uploaded whether or not it was committed: the artifact is what you
+      # review, and it keeps a copy outside git history.
       - uses: actions/upload-artifact@v4
         if: always()
         with:
