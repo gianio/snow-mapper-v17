@@ -146,6 +146,20 @@ jobs:
             echo "no demo dataset this run — demo mode falls back to live data."
           fi
 
+      # Variant A (SNOWPACK ski quality) is computed OFFLINE -- it needs an
+      # external SNOWPACK binary and a DEM that is not in the repo, so it
+      # cannot run here. If its exported artifacts have been committed under
+      # variant_a_export/, publish them; otherwise the app hides the layer.
+      - name: Assemble Variant A artifacts (if committed)
+        run: |
+          if [ -f variant_a_export/manifest.json ]; then
+            mkdir -p dist/data/variant_a
+            cp -r variant_a_export/. dist/data/variant_a/
+            echo "Variant A: $(du -sh dist/data/variant_a | cut -f1) published."
+          else
+            echo "Variant A: no variant_a_export/manifest.json — layer stays hidden."
+          fi
+
       - name: Validate JS (node --check)
         run: |
           python tools/check_inline_js.py dist/index.html

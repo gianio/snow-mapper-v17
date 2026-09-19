@@ -1,0 +1,178 @@
+# Variant A (SNOWPACK ski quality) — build the binaries, run the model, export.
+#
+# This exists because "SNOWPACK is an external binary, so it cannot run in CI"
+# turned out to be wrong. The upstream GitHub repo bundles MeteoIO, SNOWPACK
+# and Alpine3D in one tree with no submodules, and both build from source on a
+# stock runner in about 80 seconds:
+#
+#     MeteoIO   59 s      SNOWPACK  23 s      (4 cores, -DCMAKE_BUILD_TYPE=release)
+#
+# Cached, that becomes a few seconds. The git-ignored national DEM is likewise
+# not a blocker: tools/make_variant_a_dem.py rebuilds it from Copernicus in
+# ~24 s, aligned to the committed subregion labels.
+#
+# Deliberately NOT part of deploy.yml. The deploy is the critical path (~27 min
+# at a 60 min timeout) and must never be held up by a model run.
+name: Variant A ski quality
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: Target date (YYYY-MM-DD)
+        default: "2026-04-01"
+        required: true
+      limit:
+        description: "Points to run (blank = all 978; start small to measure)"
+        default: "8"
+        required: false
+      only_tile:
+        description: "Restrict to one subregion id (2-8), blank = national"
+        default: ""
+        required: false
+      step_h:
+        description: Output timestep in hours
+        default: "12"
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  SNOWPACK_REF: master
+  PREFIX: ${{ github.workspace }}/snowpack-build/install
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    # Generous on purpose: the per-point SNOWPACK cost is the one number that
+    # was never measured, and a timeout that kills the run teaches nothing.
+    # The job limit is 6 h; this leaves room to find out.
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Restore SNOWPACK build
+        id: spcache
+        uses: actions/cache@v4
+        with:
+          path: snowpack-build/install
+          key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
+
+      - name: Build MeteoIO + SNOWPACK
+        if: steps.spcache.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          git clone --depth 1 --branch "$SNOWPACK_REF" \
+            https://github.com/snowpack-model/snowpack.git snowpack-build/src
+          for m in meteoio snowpack; do
+            echo "::group::build $m"
+            cmake -S "snowpack-build/src/Source/$m" -B "snowpack-build/b-$m" \
+              -DCMAKE_BUILD_TYPE=release \
+              -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+              -DCMAKE_PREFIX_PATH="$PREFIX" -DMETEOIO_ROOT="$PREFIX"
+            cmake --build "snowpack-build/b-$m" -j"$(nproc)"
+            cmake --install "snowpack-build/b-$m"
+            echo "::endgroup::"
+          done
+          rm -rf snowpack-build/src snowpack-build/b-*
+
+      - name: Verify the binary
+        run: |
+          export LD_LIBRARY_PATH="$PREFIX/lib:$LD_LIBRARY_PATH"
+          "$PREFIX/bin/snowpack" --version
+
+      - run: pip install -r requirements.txt
+
+      # The DEM depends only on the committed tile_meta.json and Copernicus,
+      # so it is cacheable indefinitely.
+      - name: Restore national DEM
+        id: demcache
+        uses: actions/cache@v4
+        with:
+          path: variant_a/data/dem
+          key: variant-a-dem-lv03-250m-v1
+
+      - name: Build national DEM from Copernicus
+        if: steps.demcache.outputs.cache-hit != 'true'
+        run: python tools/make_variant_a_dem.py
+
+      # Forcing is the part most likely to bite: one Open-Meteo archive request
+      # per point, and the demo build has already been rate-limited once at a
+      # comparable volume. Cached per date so a re-run does not re-fetch.
+      - name: Restore forcing cache
+        uses: actions/cache@v4
+        with:
+          path: data/variant_a_cache/work/meteo
+          key: variant-a-forcing-${{ inputs.date }}-${{ inputs.limit }}-${{ inputs.only_tile }}-v1
+
+      - name: Run the pipeline
+        env:
+          SNOWPACK_BIN: ${{ github.workspace }}/snowpack-build/install/bin/snowpack
+          SNOWPACK_LIBS: ${{ github.workspace }}/snowpack-build/install/lib
+        run: |
+          set -o pipefail
+          ARGS="--date ${{ inputs.date }} --step-h ${{ inputs.step_h }}"
+          [ -n "${{ inputs.limit }}" ]     && ARGS="$ARGS --limit ${{ inputs.limit }}"
+          [ -n "${{ inputs.only_tile }}" ] && ARGS="$ARGS --only-tile ${{ inputs.only_tile }}"
+          echo "run_variant_a.py $ARGS"
+          START=$(date +%s)
+          python -u run_variant_a.py $ARGS 2>&1 | tee run.log
+          echo "ELAPSED=$(( $(date +%s) - START ))" >> "$GITHUB_ENV"
+
+      # The point of the smoke run: turn "unknown per-point cost" into a number,
+      # and project it, so the national run is a decision rather than a gamble.
+      - name: Report timing
+        if: always()
+        run: |
+          N=$(grep -oP '\d+(?= representative points selected)' run.log | tail -1 || echo 0)
+          echo "### Variant A timing" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| | |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Points run | $N |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Wall clock | ${ELAPSED:-?} s |" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${N:-0}" -gt 0 ] && [ -n "${ELAPSED:-}" ]; then
+            PER=$(python -c "print(f'{${ELAPSED}/${N}:.1f}')")
+            FULL=$(python -c "print(f'{${ELAPSED}/${N}*978/60:.0f}')")
+            echo "| Per point | ${PER} s |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| **Projected national (978 pts)** | **~${FULL} min** |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Projection assumes the same parallelism and a comparable mix of" >> "$GITHUB_STEP_SUMMARY"
+          echo "elevations; --limit samples evenly, so it should not be far off." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Package the export
+        if: success()
+        run: |
+          if [ -f outputs/variant_a/manifest.json ]; then
+            mkdir -p variant_a_export
+            rsync -a --delete outputs/variant_a/ variant_a_export/
+            du -sh variant_a_export
+            python - <<'PY'
+          import json
+          m = json.load(open('variant_a_export/manifest.json'))
+          print(f"{len(m['tags'])} timestamps, layers {list(m['layers'])}")
+          PY
+          else
+            echo "::error::no manifest.json — the pipeline did not reach export"
+            exit 1
+          fi
+
+      # Uploaded rather than committed: an artifact is reviewable before it
+      # goes anywhere near the published site, and keeps binaries out of git
+      # history until someone decides to promote them.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: variant-a-${{ inputs.date }}
+          path: |
+            variant_a_export/
+            run.log
+          if-no-files-found: warn
+          retention-days: 14
