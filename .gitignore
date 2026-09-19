@@ -21,3 +21,8 @@ web/.env
 web/.env.local
 # NOTE: tools/cache/ is intentionally NOT ignored — commit it to activate the
 # offline powder-engine regression gate in CI (see docs/launch-checklist.md).
+
+# Variant A (offline SNOWPACK ski-quality pipeline)
+outputs/variant_a/
+data/variant_a_cache/
+variant_a/data/dem/*.dem          # large national DEM — provide locally / via dem_loader
