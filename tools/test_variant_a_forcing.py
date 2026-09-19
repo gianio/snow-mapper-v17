@@ -8,7 +8,7 @@ the ProfileDate has nothing to accumulate from and the run dies on its first
 timestep with "missing { precipitation }" -- after exiting 0.
 """
 from __future__ import annotations
-import re, sys, tempfile, types
+import hashlib, json, re, sys, tempfile, types
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -152,10 +152,78 @@ def test_selection_cache():
         config.CACHE_DIR, config.ELEV_BANDS = real_cache, real_bands
 
 
+def _synth_grid(nr, nc, seed):
+    """Smooth mountain-like terrain: slopes and aspects span the target classes."""
+    import numpy as np
+    from variant_a.subregions import NationalGrid
+    rng = np.random.default_rng(seed)
+    z = rng.normal(0, 1, (nr, nc))
+    for _ in range(6):
+        z = (z + np.roll(z, 1, 0) + np.roll(z, -1, 0)
+             + np.roll(z, 1, 1) + np.roll(z, -1, 1)) / 5
+    dem = 1200 + 2200 * (z - z.min()) / max(1e-9, float(z.max() - z.min()))
+    dem[rng.random((nr, nc)) < 0.03] = np.nan          # holes, like a real DEM
+    gy, gx = np.gradient(np.nan_to_num(dem, nan=0.0), 250.0)
+    slope = np.degrees(np.arctan(np.hypot(gx, gy)))
+    aspect = (np.degrees(np.arctan2(-gx, gy)) + 360) % 360
+    aspect[np.isnan(dem)] = np.nan
+    return NationalGrid(elevation=dem, slope=slope, aspect=aspect,
+                        tile=np.full((nr, nc), 2, np.int32), nr=nr, nc=nc,
+                        xll=480000.0, yll=70000.0, cs=250.0, tile_names={2: "test"})
+
+
+def test_win_count_matches_sliding_window():
+    print("_win_count")
+    import numpy as np
+    from numpy.lib.stride_tricks import sliding_window_view
+    from variant_a import select_points as sp
+    # _win_count is a summed-area table for speed. The sliding-window form it
+    # replaced is the definition, so that is what it is checked against --
+    # bit-identical, not merely close, because the counts are small integers.
+    rng = np.random.default_rng(0)
+    worst = 0.0
+    for shape in [(50, 70), (220, 300), (7, 5), (1, 9)]:
+        for hw in (1, 2, 5):
+            m = rng.random(shape) < 0.3
+            w = 2 * hw + 1
+            ref = sliding_window_view(np.pad(m.astype(np.float32), hw),
+                                      (w, w)).sum(axis=(-1, -2))
+            got = sp._win_count(m, hw)
+            check(f"{shape} hw={hw}: shape preserved", got.shape == m.shape, str(got.shape))
+            if got.shape == ref.shape:
+                worst = max(worst, float(np.abs(ref - got).max()))
+                check(f"{shape} hw={hw}: bit-identical to the window sum",
+                      np.array_equal(ref, got))
+    check("no shape/window differed at all", worst == 0.0, f"max |diff| {worst}")
+
+
+def test_selection_is_stable():
+    print("select_for_mask golden")
+    import numpy as np
+    from variant_a import select_points as sp
+    # The scoring was optimised by hoisting loop invariants and swapping the
+    # window sum for a summed-area table, both of which must leave the CHOSEN
+    # POINTS untouched. A digest over a seeded synthetic terrain pins that:
+    # any change to the selection maths breaks it loudly. The value below was
+    # taken from the PRE-optimisation implementation, so it pins the original
+    # behaviour rather than merely the current one.
+    g = _synth_grid(220, 300, 1)
+    pts = sp.select_for_mask(g, ~np.isnan(g.elevation), 2)
+    check("a realistic synthetic terrain fills the target grid",
+          len(pts) == 143, f"{len(pts)} points")
+    digest = hashlib.sha256(json.dumps(
+        [[str(p["id"]), int(p["row"]), int(p["col"]), float(p["elev"]),
+          float(p["aspect"]), float(p["slope"])] for p in pts],
+        sort_keys=True).encode()).hexdigest()[:16]
+    check("the selection is unchanged (golden digest)",
+          digest == "dff9519c62fe17dc", digest)
+
+
 if __name__ == "__main__":
     for t in (test_forcing_starts_before_profile_date, test_covers_rejects_a_stale_smet,
               test_ini, test_timestamp_window, test_prof_start_derivation,
-              test_selection_cache):
+              test_selection_cache, test_win_count_matches_sliding_window,
+              test_selection_is_stable):
         t()
     print("\nVARIANT A PIPELINE " + ("OK" if not FAILS else f"FAILED: {FAILS}"))
     sys.exit(1 if FAILS else 0)

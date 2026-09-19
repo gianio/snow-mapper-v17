@@ -9,7 +9,6 @@ from __future__ import annotations
 import csv, hashlib, json
 from pathlib import Path
 import numpy as np
-from numpy.lib.stride_tricks import sliding_window_view
 
 from . import config
 from .subregions import NationalGrid, load_national_grid, cell_to_lv03, lv03_to_wgs84, lv03_to_lv95, tile_ids
@@ -18,6 +17,10 @@ _ELEV_TOL = 200.0
 _ASP_TOLS = (12, 20, 30, 45, 60)
 _WIN_BIG = 5
 _MIN_CANDS = 3
+# Bump when the selection MATHS changes, so on-disk caches from the old
+# behaviour are not reused. Pure speedups that leave the chosen points
+# identical (proved in tools/test_variant_a_forcing.py) do not need a bump.
+_SELECT_VERSION = 1
 _DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 
 
@@ -31,9 +34,20 @@ def _asp_dist(aspect, target):
 
 
 def _win_count(mask, hw):
+    """Count set cells in the (2*hw+1)^2 neighbourhood of every cell.
+
+    Summed-area table rather than a sliding window: same sums, O(n) instead of
+    O(n*w^2), and no (nr, nc, w, w) temporary. The counts are small integers, so
+    a float64 cumsum represents every partial sum exactly and the four-corner
+    difference is bit-identical to summing the window directly.
+    """
     w = 2 * hw + 1
-    p = np.pad(mask.astype(np.float32), hw, mode="constant")
-    return sliding_window_view(p, (w, w)).sum(axis=(-1, -2))
+    p = np.pad(mask.astype(np.float64), hw, mode="constant")
+    ii = np.zeros((p.shape[0] + 1, p.shape[1] + 1), np.float64)
+    np.cumsum(np.cumsum(p, axis=0), axis=1, out=ii[1:, 1:])
+    nr, nc = mask.shape
+    return (ii[w:w + nr, w:w + nc] - ii[0:nr, w:w + nc]
+            - ii[w:w + nr, 0:nc] + ii[0:nr, 0:nc]).astype(np.float32)
 
 
 def select_for_mask(grid: NationalGrid, mask, tile_id):
@@ -42,23 +56,30 @@ def select_for_mask(grid: NationalGrid, mask, tile_id):
     aspects = [i * 360.0 / config.N_ASPECTS for i in range(config.N_ASPECTS)]
     used = np.zeros(dem.shape, bool)
     pts = []
+    # de / dsl / da depend only on the band, the slope class and the aspect
+    # respectively, and the aspect distance was being recomputed for every
+    # tolerance as well -- all of it over the full national grid, 1008 times.
+    # Hoisting them to the loop that actually varies them is the same
+    # arithmetic on the same values, so the selection is unchanged.
     for be in config.ELEV_BANDS:
         elev_ok = mask & (np.abs(dem - be) <= _ELEV_TOL) & ~np.isnan(dem)
+        de = np.abs(dem - be) / _ELEV_TOL
         for slabel, slo, shi in config.SLOPE_CLASSES:
             slope_ok = elev_ok & (slope >= slo) & (slope < shi)
+            dsl = np.abs(slope - (slo + shi) / 2) / max(shi - slo, 1)
             for ad in aspects:
                 chosen = None
+                asp_d = _asp_dist(aspect, ad)
+                penalty = -2.0 * (de + asp_d / 180.0 + dsl)
                 for tol in _ASP_TOLS:
-                    cand = slope_ok & (_asp_dist(aspect, ad) <= tol) & ~used
-                    if cand.sum() < _MIN_CANDS and tol != _ASP_TOLS[-1]:
+                    cand = slope_ok & (asp_d <= tol) & ~used
+                    n_cand = int(cand.sum())
+                    if n_cand < _MIN_CANDS and tol != _ASP_TOLS[-1]:
                         continue
-                    if cand.sum() == 0:
+                    if n_cand == 0:
                         continue
                     big = _win_count(cand, _WIN_BIG).astype(float)
-                    de = np.abs(dem - be) / _ELEV_TOL
-                    da = _asp_dist(aspect, ad) / 180.0
-                    dsl = np.abs(slope - (slo + shi) / 2) / max(shi - slo, 1)
-                    score = big - 2.0 * (de + da + dsl)
+                    score = big + penalty
                     score[~cand] = -1e9
                     r, c = np.unravel_index(int(np.argmax(score)), score.shape)
                     chosen = (r, c); break
@@ -101,7 +122,7 @@ def _cache_key(only_tile):
         h.update(lab.read_bytes())
     h.update(json.dumps([config.ELEV_BANDS, config.N_ASPECTS, config.SLOPE_CLASSES,
                          _ELEV_TOL, list(_ASP_TOLS), _WIN_BIG, _MIN_CANDS,
-                         only_tile], sort_keys=True).encode())
+                         _SELECT_VERSION, only_tile], sort_keys=True).encode())
     return h.hexdigest()[:16]
 
 
