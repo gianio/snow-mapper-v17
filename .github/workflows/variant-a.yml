@@ -157,6 +157,30 @@ jobs:
           echo "Projection assumes the same parallelism and a comparable mix of" >> "$GITHUB_STEP_SUMMARY"
           echo "elevations; --limit samples evenly, so it should not be far off." >> "$GITHUB_STEP_SUMMARY"
 
+      # Runs only on failure, and exists because the first two attempts both
+      # failed in ways the logs could not explain: the model reported success
+      # while producing nothing.
+      - name: Diagnose a failed run
+        if: failure()
+        run: |
+          echo "### working directories" >> "$GITHUB_STEP_SUMMARY"
+          for d in data/variant_a_cache/work/meteo data/variant_a_cache/work/sno \
+                   data/variant_a_cache/work/ini data/variant_a_cache/work/runs \
+                   outputs/variant_a; do
+            echo "--- $d"
+            ls -la "$d" 2>/dev/null | head -6 || echo "  (missing)"
+          done
+          echo "--- first .smet, head"
+          head -25 data/variant_a_cache/work/meteo/*.smet 2>/dev/null | head -30 || true
+          echo "--- first .ini"
+          cat data/variant_a_cache/work/ini/*.ini 2>/dev/null | head -30 || true
+          echo "--- snowpack run, verbatim (one point)"
+          INI=$(ls data/variant_a_cache/work/ini/*.ini 2>/dev/null | head -1)
+          if [ -n "$INI" ]; then
+            export LD_LIBRARY_PATH="$PREFIX/lib:$LD_LIBRARY_PATH"
+            "$PREFIX/bin/snowpack" -c "$INI" -e "${{ inputs.date }}T00:00" 2>&1 | tail -40 || true
+          fi
+
       - name: Package the export
         if: success()
         run: |

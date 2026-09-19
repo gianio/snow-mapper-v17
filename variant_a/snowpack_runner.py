@@ -126,7 +126,18 @@ def _run_one(args):
     env["LD_LIBRARY_PATH"] = config.SNOWPACK_LIBS + ":" + env.get("LD_LIBRARY_PATH", "")
     p = subprocess.run([config.SNOWPACK_BIN, "-c", ini, "-e", end],
                        capture_output=True, text=True, env=env, cwd=os.path.dirname(ini))
-    return os.path.basename(ini), p.returncode, (p.stderr[-200:] if p.returncode else "")
+    # "Exited 0 having done nothing" is a real failure mode and it used to be
+    # invisible: stderr was discarded whenever the return code was 0. In CI
+    # that showed up as "SNOWPACK 8/8 (8 ok) in 0.1s" followed by "0 points
+    # classified from .pro" -- success reported, no output produced. So treat
+    # a missing .pro as a failure in its own right and keep the diagnostics.
+    pid = os.path.splitext(os.path.basename(ini))[0]
+    run_out = os.path.join(os.path.dirname(os.path.dirname(ini)), "runs", pid)
+    pro = glob.glob(os.path.join(run_out, "*.pro"))
+    if p.returncode == 0 and not pro:
+        tail = ((p.stderr or "").strip() or (p.stdout or "").strip())[-400:]
+        return os.path.basename(ini), -1, f"exited 0 but wrote no .pro — {tail}"
+    return os.path.basename(ini), p.returncode, (p.stderr[-400:] if p.returncode else "")
 
 
 def run_points(points, target_date, spinup_days=None, workers=None):

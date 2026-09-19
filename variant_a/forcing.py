@@ -95,4 +95,16 @@ def build_forcing(points, target_date, spinup_days=None, model="best_match",
             print(f"  [forcing] {p['id']} failed: {e}")
         if k % 20 == 0:
             print(f"  forcing {k}/{len(points)}")
+    # Summarise unconditionally. The progress line above only fires every 20
+    # points, so a short run (a CI smoke test with --limit 8) printed NOTHING
+    # -- including when every fetch failed. An empty .smet is also the likeliest
+    # reason SNOWPACK exits immediately having written no .pro, so the sizes
+    # matter as much as the count.
+    smets = sorted(meteo_dir.glob("*.smet"))
+    sizes = [f.stat().st_size for f in smets]
+    tiny = [f.name for f, z in zip(smets, sizes) if z < 2000]
+    print(f"  forcing: {len(smets)} .smet in {meteo_dir}, "
+          f"median {int(sorted(sizes)[len(sizes)//2]) if sizes else 0} B")
+    if tiny:
+        print(f"  [forcing] WARNING {len(tiny)} suspiciously small: {tiny[:5]}")
     return meteo_dir
