@@ -34,9 +34,15 @@ on:
         description: Output timestep in hours
         default: "12"
         required: false
+      publish:
+        description: "Commit the export to variant_a_export/ so the deploy publishes it"
+        type: boolean
+        default: false
 
 permissions:
-  contents: read
+  # write only so an opt-in publish run can commit variant_a_export/.
+  # Every other run leaves the repository untouched.
+  contents: write
 
 env:
   SNOWPACK_REF: master
@@ -57,9 +63,14 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
+      # restore/save split rather than actions/cache, which only writes its
+      # cache when the JOB succeeds. Every failed pipeline run therefore threw
+      # the build away and paid the ~3 min rebuild again on the next attempt --
+      # exactly the iterations where the cache was worth most. The build has
+      # nothing to do with why the model run failed, so save it either way.
       - name: Restore SNOWPACK build
         id: spcache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: snowpack-build/install
           key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
@@ -82,6 +93,13 @@ jobs:
           done
           rm -rf snowpack-build/src snowpack-build/b-*
 
+      - name: Save SNOWPACK build
+        if: steps.spcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: snowpack-build/install
+          key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
+
       - name: Verify the binary
         run: |
           export LD_LIBRARY_PATH="$PREFIX/lib:$LD_LIBRARY_PATH"
@@ -93,7 +111,7 @@ jobs:
       # so it is cacheable indefinitely.
       - name: Restore national DEM
         id: demcache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: variant_a/data/dem
           key: variant-a-dem-lv03-250m-v1
@@ -102,11 +120,31 @@ jobs:
         if: steps.demcache.outputs.cache-hit != 'true'
         run: python tools/make_variant_a_dem.py
 
+      - name: Save national DEM
+        if: steps.demcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: variant_a/data/dem
+          key: variant-a-dem-lv03-250m-v1
+
+      # Point selection scans the whole 920x1440 national grid and takes ~7 min
+      # no matter how few points are then modelled -- by far the dominant cost
+      # of a smoke run. It is a pure function of the DEM, the subregion labels
+      # and the target grid, and select_national() keys its own cache on a
+      # content hash of exactly those, so a stale entry cannot be reused.
+      - name: Restore point selection
+        id: selcache
+        uses: actions/cache/restore@v4
+        with:
+          path: data/variant_a_cache/points
+          key: variant-a-points-${{ inputs.only_tile }}-v1
+
       # Forcing is the part most likely to bite: one Open-Meteo archive request
       # per point, and the demo build has already been rate-limited once at a
       # comparable volume. Cached per date so a re-run does not re-fetch.
       - name: Restore forcing cache
-        uses: actions/cache@v4
+        id: fcache
+        uses: actions/cache/restore@v4
         with:
           path: data/variant_a_cache/work/meteo
           key: variant-a-forcing-${{ inputs.date }}-${{ inputs.limit }}-${{ inputs.only_tile }}-v1
@@ -125,6 +163,22 @@ jobs:
           python -u run_variant_a.py $ARGS 2>&1 | tee run.log
           echo "ELAPSED=$(( $(date +%s) - START ))" >> "$GITHUB_ENV"
 
+      - name: Save point selection
+        if: always() && steps.selcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: data/variant_a_cache/points
+          key: variant-a-points-${{ inputs.only_tile }}-v1
+
+      # Saved even on failure: the Open-Meteo requests are the expensive,
+      # rate-limited part and have nothing to do with why the model failed.
+      - name: Save forcing cache
+        if: always() && steps.fcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: data/variant_a_cache/work/meteo
+          key: variant-a-forcing-${{ inputs.date }}-${{ inputs.limit }}-${{ inputs.only_tile }}-v1
+
       # The point of the smoke run: turn "unknown per-point cost" into a number,
       # and project it, so the national run is a decision rather than a gamble.
       - name: Report timing
@@ -137,15 +191,49 @@ jobs:
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Points run | $N |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Wall clock | ${ELAPSED:-?} s |" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${N:-0}" -gt 0 ] && [ -n "${ELAPSED:-}" ]; then
-            PER=$(python -c "print(f'{${ELAPSED}/${N}:.1f}')")
-            FULL=$(python -c "print(f'{${ELAPSED}/${N}*978/60:.0f}')")
-            echo "| Per point | ${PER} s |" >> "$GITHUB_STEP_SUMMARY"
+          # Point selection scans the whole 920x1440 national grid and took
+          # ~7 min in the first run -- entirely independent of --limit and of
+          # the model. Separating it keeps the per-point projection honest.
+          # run_variant_a.py prints one machine-readable "[timing] ..." line.
+          TIMING=$(grep -oP '(?<=^\[timing\] ).*' run.log | tail -1 || true)
+          [ -n "$TIMING" ] && echo "| Phases | \`$TIMING\` |" >> "$GITHUB_STEP_SUMMARY"
+          # Project from the SNOWPACK phase alone. Point selection is a fixed
+          # national cost that does not scale with the point count, so folding
+          # it in would inflate the estimate several-fold.
+          PER=$(grep -oP '(?<=snowpack_per_point=)[0-9.]+' run.log | tail -1 || true)
+          if [ -n "$PER" ] && [ "${N:-0}" -gt 0 ]; then
+            SEL=$(grep -oP '(?<=select=)[0-9.]+' run.log | tail -1 || echo 0)
+            FULL=$(python -c "print(f'{($PER*978+$SEL)/60:.0f}')")
+            echo "| SNOWPACK per point | ${PER} s |" >> "$GITHUB_STEP_SUMMARY"
             echo "| **Projected national (978 pts)** | **~${FULL} min** |" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Projection assumes the same parallelism and a comparable mix of" >> "$GITHUB_STEP_SUMMARY"
           echo "elevations; --limit samples evenly, so it should not be far off." >> "$GITHUB_STEP_SUMMARY"
+
+      # Runs only on failure, and exists because the first two attempts both
+      # failed in ways the logs could not explain: the model reported success
+      # while producing nothing.
+      - name: Diagnose a failed run
+        if: failure()
+        run: |
+          echo "### working directories" >> "$GITHUB_STEP_SUMMARY"
+          for d in data/variant_a_cache/work/meteo data/variant_a_cache/work/sno \
+                   data/variant_a_cache/work/ini data/variant_a_cache/work/runs \
+                   outputs/variant_a; do
+            echo "--- $d"
+            ls -la "$d" 2>/dev/null | head -6 || echo "  (missing)"
+          done
+          echo "--- first .smet, head"
+          head -25 data/variant_a_cache/work/meteo/*.smet 2>/dev/null | head -30 || true
+          echo "--- first .ini"
+          cat data/variant_a_cache/work/ini/*.ini 2>/dev/null | head -30 || true
+          echo "--- snowpack run, verbatim (one point)"
+          INI=$(ls data/variant_a_cache/work/ini/*.ini 2>/dev/null | head -1)
+          if [ -n "$INI" ]; then
+            export LD_LIBRARY_PATH="$PREFIX/lib:$LD_LIBRARY_PATH"
+            "$PREFIX/bin/snowpack" -c "$INI" -e "${{ inputs.date }}T00:00" 2>&1 | tail -40 || true
+          fi
 
       - name: Package the export
         if: success()
@@ -164,9 +252,32 @@ jobs:
             exit 1
           fi
 
-      # Uploaded rather than committed: an artifact is reviewable before it
-      # goes anywhere near the published site, and keeps binaries out of git
-      # history until someone decides to promote them.
+      # Promotion is opt-in, and ticking `publish` IS the decision this
+      # workflow previously left to a manual download. The artifact below is
+      # still produced on every run and is still what you review; this step
+      # only saves the download/unzip/commit round trip. deploy.yml copies
+      # variant_a_export/ into dist/data/variant_a/ when it exists, so this
+      # is what makes the layer appear in the app.
+      - name: Commit the export
+        if: success() && inputs.publish
+        run: |
+          set -e
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A variant_a_export
+          if git diff --cached --quiet; then
+            echo "variant_a_export/ is unchanged — nothing to commit."
+            exit 0
+          fi
+          du -sh variant_a_export
+          git commit -m "variant_a: export for ${{ inputs.date }} (run ${{ github.run_id }})"
+          # The branch may have moved while the model ran; rebase rather than
+          # force, so a concurrent push is never discarded.
+          git pull --rebase origin "${{ github.ref_name }}"
+          git push origin "HEAD:${{ github.ref_name }}"
+
+      # Uploaded whether or not it was committed: the artifact is what you
+      # review, and it keeps a copy outside git history.
       - uses: actions/upload-artifact@v4
         if: always()
         with:

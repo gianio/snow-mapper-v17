@@ -52,3 +52,12 @@ INIT_RHO = [300, 300, 310, 320, 330, 340, 350]           # kg/m3
 
 # Full-season spin-up: SNOWPACK needs months of forcing before the target window.
 SPINUP_DAYS = 120
+
+# The forcing has to START EARLIER than the .sno ProfileDate. SNOWPACK begins
+# one CALCULATION_STEP_LENGTH *before* the profile date, and MeteoIO resamples
+# PSUM by accumulation over that step -- which needs a sample at or before the
+# start of the accumulation window. With the .smet beginning exactly on the
+# profile date there is nothing before it, and the very first timestep dies
+# with "missing { precipitation }". A couple of lead-in days costs nothing
+# (same single Open-Meteo request) and removes the edge case entirely.
+FORCING_LEAD_DAYS = 2

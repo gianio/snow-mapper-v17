@@ -19,10 +19,10 @@ Examples
 """
 from __future__ import annotations
 import argparse, csv
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from variant_a import config, subregions, select_points, forcing, snowpack_runner
-from variant_a import gridding, profiles, export
+from variant_a import gridding, profiles, export, publish as publish_mod
 
 
 def _points_from_csv(grid, path):
@@ -50,11 +50,28 @@ def _points_from_csv(grid, path):
     return pts
 
 
-def _select_timestamps(series, step_h):
+def _select_timestamps(series, step_h, target_date=None, window_h=None):
+    """Output timestamps: every step_h hours inside the target window.
+
+    The window matters. SNOWPACK is driven for a whole spin-up season, so the
+    .pro of an externally supplied --runs-dir can span 120 days; exporting all
+    of it would mean hundreds of PNG frames of last December's snow. Our own
+    runs are already trimmed via PROF_START, but the filter has to hold either
+    way, so it is applied here too.
+    """
     allt = set()
     for s in series.values():
         allt.update(s.keys())
     ts = sorted(allt)
+    if ts and target_date and window_h:
+        end = datetime.strptime(target_date, "%Y-%m-%d")
+        start = end - timedelta(hours=window_h)
+        inside = [t for t in ts if start <= t.replace(tzinfo=None) <= end]
+        # Never filter down to nothing: a .pro whose clock disagrees with the
+        # target date is a reason to show everything and let the count speak,
+        # not to fail with "no timestamps".
+        if inside:
+            ts = inside
     if not ts:
         return []
     t0 = ts[0]
@@ -64,7 +81,8 @@ def _select_timestamps(series, step_h):
 def main():
     ap = argparse.ArgumentParser(description="Variant A national ski-quality pipeline")
     ap.add_argument("--date", required=True, help="target date YYYY-MM-DD")
-    ap.add_argument("--window", type=int, default=72)
+    ap.add_argument("--window", type=int, default=72,
+                help="hours of output ending on --date")
     ap.add_argument("--only-tile", type=int, default=None)
     ap.add_argument("--points-csv", default=None, help="reuse an external point set")
     ap.add_argument("--runs-dir", default=None, help="reuse existing SNOWPACK .pro runs")
@@ -75,10 +93,21 @@ def main():
                          "Spread evenly over the selection so the sample still "
                          "spans elevations, aspects and subregions.")
     ap.add_argument("--model", default="best_match")
+    ap.add_argument("--publish", action="store_true",
+                    help="publish export to VARIANT_A_PUBLISH_DIR + Supabase (if configured)")
     args = ap.parse_args()
     datetime.strptime(args.date, "%Y-%m-%d")
 
+    # Phase timings, printed in one machine-readable line at the end. The CI
+    # job needs them separated: point selection scans the whole 920x1440
+    # national grid and is independent of --limit and of the model, so folding
+    # it into a per-point cost would make the national projection nonsense.
+    import time as _time
+    _t = {}
+    _t0 = _time.time()
+
     grid = subregions.load_national_grid()
+    _t["grid"] = _time.time() - _t0
     print(f"national grid {grid.nr}x{grid.nc}, tiles {subregions.tile_ids(grid)}")
 
     # 1) points
@@ -87,7 +116,9 @@ def main():
         print(f"{len(points)} points loaded from {args.points_csv}")
         runs_dir = args.runs_dir
     else:
+        _ts = _time.time()
         _, points = select_points.select_national(grid, only_tile=args.only_tile)
+        _t["select"] = _time.time() - _ts
         if args.limit and args.limit < len(points):
             # Stride rather than truncate: the selection is ordered by tile,
             # then elevation band, then aspect, so points[:N] would be one
@@ -96,16 +127,26 @@ def main():
             step = len(points) / float(args.limit)
             points = [points[int(i * step)] for i in range(args.limit)]
             print(f"--limit {args.limit}: sampled every {step:.1f}th point")
+        # export_all() creates OUTPUT_DIR, but that runs at the very END --
+        # and this write happens first. On a dev machine the directory already
+        # exists from an earlier run, so the gap never showed; in a fresh
+        # checkout (CI) it is a FileNotFoundError seven minutes into the job.
+        config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         select_points.write_csv(points, config.OUTPUT_DIR / "points.csv")
         print(f"{len(points)} representative points selected")
         # 2) forcing + 3) SNOWPACK
+        _ts = _time.time()
         forcing.build_forcing(points, args.date, model=args.model)
-        runs_dir = snowpack_runner.run_points(points, args.date, workers=args.workers)
+        _t["forcing"] = _time.time() - _ts
+        _ts = _time.time()
+        runs_dir = snowpack_runner.run_points(points, args.date, workers=args.workers,
+                                              window_h=args.window)
+        _t["snowpack"] = _time.time() - _ts
 
     # 4) classify points
     series = gridding.classify_points(points, runs_dir)
     print(f"{len(series)} points classified from .pro")
-    ts = _select_timestamps(series, args.step_h)
+    ts = _select_timestamps(series, args.step_h, args.date, args.window)
     print(f"{len(ts)} output timestamps (step {args.step_h}h)")
     if not ts:
         raise SystemExit("no timestamps — check SNOWPACK runs / --runs-dir")
@@ -121,6 +162,15 @@ def main():
     print(f"  manifest: {out_dir/'manifest.json'}  ({len(ts)} timestamps, "
           f"{len(payload['points'])} profile points)")
     print(f"  preview : {prev}")
+    _t["total"] = _time.time() - _t0
+    npts = len(points)
+    per = (_t.get("snowpack", 0.0) / npts) if npts else 0.0
+    print("[timing] " + " ".join(f"{k}={v:.1f}s" for k, v in _t.items())
+          + f" points={npts} snowpack_per_point={per:.2f}s")
+
+    # 8) publish to the app (static dir + Supabase, both optional/env-gated)
+    if args.publish:
+        publish_mod.publish(out_dir)
 
 
 if __name__ == "__main__":
