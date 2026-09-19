@@ -44,6 +44,14 @@ jobs:
       - name: Tour powder score unit test
         run: python tools/test_tour_score.py
 
+      # The Variant A SNOWPACK run cannot be exercised here (external C++
+      # binary), but its two silent killers can: a forcing window that starts
+      # on the ProfileDate instead of before it, and a PSUM accumulation
+      # period that disagrees with CALCULATION_STEP_LENGTH. Both made SNOWPACK
+      # exit 0 having written nothing.
+      - name: Variant A forcing window + SNOWPACK .ini
+        run: python tools/test_variant_a_forcing.py
+
       # Upstream shape check. The agent build environment cannot reach
       # aws.slf.ch or data.geo.admin.ch (egress policy, 403 at the proxy), so
       # the bulletin and route parsers are fixture-tested only. A runner can

@@ -76,17 +76,42 @@ def hourly_to_smet(pid, lat, lon, elev, hourly, dst: Path):
     return dst
 
 
+def _covers(path: Path, start: str) -> bool:
+    """True if an existing .smet already begins at or before `start`.
+
+    A plain `dst.exists()` cache check is not enough once the required window
+    moves: a file fetched under the old (lead-in-free) window starts a day too
+    late, gets reused, and SNOWPACK dies on its first timestep exactly as it
+    did before. So look at the first data row instead of the filename.
+    """
+    try:
+        txt = path.read_text()
+    except OSError:
+        return False
+    body = txt.split("[DATA]", 1)
+    if len(body) != 2:
+        return False
+    for line in body[1].splitlines():
+        line = line.strip()
+        if line:
+            return line.split()[0][:10] <= start
+    return False
+
+
 def build_forcing(points, target_date, spinup_days=None, model="best_match",
-                  meteo_dir: Path | None = None):
+                  meteo_dir: Path | None = None, lead_days=None):
     """Fetch + write .smet for every point. Returns dir with <id>.smet files."""
     spinup_days = spinup_days or config.SPINUP_DAYS
+    lead_days = config.FORCING_LEAD_DAYS if lead_days is None else lead_days
     meteo_dir = meteo_dir or (config.WORK_DIR / "meteo")
     meteo_dir.mkdir(parents=True, exist_ok=True)
     end = datetime.strptime(target_date, "%Y-%m-%d").date()
-    start = (end - timedelta(days=spinup_days)).isoformat()
+    # spin-up window + lead-in, so the .smet starts strictly before the
+    # .sno ProfileDate (= end - spinup_days). See config.FORCING_LEAD_DAYS.
+    start = (end - timedelta(days=spinup_days + lead_days)).isoformat()
     for k, p in enumerate(points, 1):
         dst = meteo_dir / f"{p['id']}.smet"
-        if dst.exists():
+        if _covers(dst, start):
             continue
         try:
             h = fetch_point(p["lat"], p["lon"], start, end.isoformat(), model)

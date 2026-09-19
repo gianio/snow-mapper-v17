@@ -80,8 +80,8 @@ def export_all(grid: NationalGrid, grids_by_ts, profile_payload, out_dir: Path |
 
 
 def preview_html(out_dir: Path, manifest, grid: NationalGrid):
-    """Small self-contained Leaflet preview of the exported layers (for verification)."""
-    import glob, os
+    """Self-contained interactive viewer = the app-facing map: layer toggle + time
+    slider + click-anywhere snow-profile (client-side KNN over the profile points)."""
     la = manifest["bounds"]
     tags = manifest["tags"]
     def b64(path):
@@ -92,22 +92,40 @@ def preview_html(out_dir: Path, manifest, grid: NationalGrid):
                     for v in manifest["layers"]["ski18"]["legend"].values())
     legS = "".join(f'<div><span style="background:rgb({",".join(map(str,v[1]))})"></span>{v[0]}</div>'
                    for v in manifest["layers"]["simple"]["legend"].values())
-    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>Variant A preview</title>
+    prof = json.load(open(out_dir / "profiles" / "profiles.json"))
+    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>Variant A — Ski-Qualität</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>html,body,#map{{height:100%;margin:0}}.lg{{position:absolute;bottom:40px;left:6px;z-index:1000;background:rgba(255,255,255,.92);padding:6px 8px;border-radius:5px;font:10px sans-serif;max-height:60%;overflow:auto}}.lg span{{display:inline-block;width:12px;height:9px;margin-right:4px;border:1px solid #999}}
+<style>html,body,#map{{height:100%;margin:0}}.lg{{position:absolute;bottom:40px;left:6px;z-index:1000;background:rgba(255,255,255,.92);padding:6px 8px;border-radius:5px;font:10px sans-serif;max-height:55%;overflow:auto}}.lg span{{display:inline-block;width:12px;height:9px;margin-right:4px;border:1px solid #999}}
 #c{{position:absolute;bottom:0;left:0;right:0;height:34px;background:#1c1c1c;color:#eee;z-index:1000;display:flex;gap:10px;align-items:center;padding:0 10px;font:12px sans-serif}}#sl{{flex:1}}</style></head><body>
 <div id="map"></div><div class="lg" id="lg"></div>
 <div id="c"><select id="ly"><option value="ski18">Ski (18)</option><option value="simple">Vereinfacht</option><option value="density">Dichte</option></select>
-<span id="ts"></span><input type="range" id="sl" min="0" max="{max(len(tags)-1,0)}" value="0"></div>
+<span id="ts"></span><input type="range" id="sl" min="0" max="{max(len(tags)-1,0)}" value="0"><span style="font-size:10px">Klick = Schneeprofil</span></div>
 <script>
-var F={json.dumps(frames)},TAGS={json.dumps(tags)},B={json.dumps(la)};
+var F={json.dumps(frames)},TAGS={json.dumps(tags)},B={json.dumps(la)},PROF={json.dumps(prof)};
+var GR=PROF.grain,PTS=PROF.points,NB=PROF.nb;
 var LEG={{"ski18":`{leg18}`,"simple":`{legS}`,"density":"Dichte 100–450 kg/m³ (blau→rot)"}};
 var map=L.map('map').setView([46.8,8.3],8);
 L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe-winter/default/current/3857/{{z}}/{{x}}/{{y}}.jpeg',{{maxZoom:17}}).addTo(map);
 var ov=L.imageOverlay('data:image/png;base64,'+F['ski18'][0],B,{{opacity:.8}}).addTo(map);
-function draw(){{var ly=document.getElementById('ly').value,i=+document.getElementById('sl').value;
- ov.setUrl('data:image/png;base64,'+F[ly][i]);document.getElementById('ts').textContent=TAGS[i];document.getElementById('lg').innerHTML=LEG[ly];}}
+var CUR=0,POP=null,CLL=null;
+function knn(lat,lon,k){{var d=PTS.map(function(p,i){{var dy=(p.lat-lat)*111,dx=(p.lon-lon)*78;return [dx*dx+dy*dy,i];}});
+ d.sort(function(a,b){{return a[0]-b[0];}});return d.slice(0,k);}}
+function interp(lat,lon){{var nn=knn(lat,lon,4),ws=0,hs=0,db=new Array(NB).fill(0),step=PROF.profiles[Math.min(CUR,PROF.profiles.length-1)];
+ nn.forEach(function(x){{var w=1/(x[0]+0.5);ws+=w;var pr=step[x[1]];hs+=w*pr.hs;for(var b=0;b<NB;b++)db[b]+=w*pr.db[b];}});
+ for(var b=0;b<NB;b++)db[b]/=ws; hs/=ws; var gb=step[nn[0][1]].gb; return {{hs:Math.round(hs),db:db,gb:gb}};}}
+function svg(pf){{if(!pf||pf.hs<1)return '<i>kein/kaum Schnee</i>';var H=150,W=130,s='<svg width="'+(W+90)+'" height="'+(H+30)+'">';
+ for(var i=0;i<NB;i++){{var y0=i/NB*H,y1=(i+1)/NB*H,gc=GR[pf.gb[i]]||GR[0];s+='<rect x="0" y="'+y0.toFixed(1)+'" width="20" height="'+(y1-y0+0.5).toFixed(1)+'" fill="rgb('+gc[1].join(',')+')"/>';}}
+ var pts='';for(var i=0;i<NB;i++){{var x=26+Math.max(0,Math.min(1,(pf.db[i]-100)/350))*W,y=(i+0.5)/NB*H;pts+=x.toFixed(1)+','+y.toFixed(1)+' ';}}
+ s+='<polyline points="'+pts+'" fill="none" stroke="#036" stroke-width="2"/><line x1="26" y1="0" x2="26" y2="'+H+'" stroke="#999"/>';
+ s+='<text x="26" y="'+(H+14)+'" font-size="9">100</text><text x="'+(26+W-20)+'" y="'+(H+14)+'" font-size="9">450 kg/m³</text></svg>';
+ var g='<div style="margin-top:3px;font-size:9px">';for(var k=1;k<=9;k++){{if(!GR[k])continue;g+='<span style="display:inline-block;width:9px;height:8px;margin:0 2px;background:rgb('+GR[k][1].join(',')+')"></span>'+GR[k][0];}}
+ return '<b>HS '+pf.hs+' cm · interpoliert</b>'+s+g+'</div>';}}
+map.on('click',function(e){{CLL=e.latlng;if(!POP)POP=L.popup({{maxWidth:290,autoClose:false,closeOnClick:false}});
+ POP.setLatLng(e.latlng).setContent('<b>'+TAGS[CUR]+'</b>'+svg(interp(e.latlng.lat,e.latlng.lng))).openOn(map);}});
+function draw(){{var ly=document.getElementById('ly').value;CUR=+document.getElementById('sl').value;
+ ov.setUrl('data:image/png;base64,'+F[ly][CUR]);document.getElementById('ts').textContent=TAGS[CUR];document.getElementById('lg').innerHTML=LEG[ly];
+ if(CLL&&POP&&POP.isOpen())POP.setContent('<b>'+TAGS[CUR]+'</b>'+svg(interp(CLL.lat,CLL.lng)));}}
 document.getElementById('ly').onchange=draw;document.getElementById('sl').oninput=draw;draw();
 </script></body></html>"""
     (out_dir / "preview.html").write_text(html)

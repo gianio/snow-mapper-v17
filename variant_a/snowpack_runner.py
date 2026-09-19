@@ -12,6 +12,10 @@ from . import config
 
 _END = None  # set per run
 
+# SNOWPACK integration step [min]. Also drives the PSUM accumulation
+# period in the .ini -- see write_ini.
+CALC_STEP_MIN = 30
+
 
 def _init_snow(elev):
     hs = max(float(np.interp(elev, config.INIT_ELEV, config.INIT_HS)), 0.05)
@@ -45,8 +49,22 @@ def write_sno(p, sno_dir: Path, start_date):
     (sno_dir / f"{p['id']}.sno").write_text(c)
 
 
-def write_ini(p, ini_dir: Path, sno_dir: Path, meteo_dir: Path, runs_dir: Path):
+def write_ini(p, ini_dir: Path, sno_dir: Path, meteo_dir: Path, runs_dir: Path,
+              prof_start_days=0.0):
+    """prof_start_days = how long into the run to START writing profiles.
+
+    The spin-up is the point of the long run, but none of it needs to be
+    *written*: assess_ski_quality() reads one timestamp at a time and never
+    looks back, so the early season is dead weight. At PROF_START=0 a
+    120-day point costs an 11 MB .pro -- 10.7 GB for the national 978, more
+    than a CI runner has. Writing only the target window drops that to a
+    few hundred kB per point without changing a single simulated value.
+    """
     run_out = runs_dir / p["id"]; run_out.mkdir(parents=True, exist_ok=True)
+    # PSUM is re-accumulated over exactly one calculation step -- SNOWPACK
+    # warns when the two disagree ("should be re-accumulated over
+    # CALCULATION_STEP_LENGTH"), so derive one from the other.
+    psum_period = int(CALC_STEP_MIN * 60)
     c = f"""[GENERAL]
 BUFFER_SIZE = 370
 BUFF_BEFORE = 1.5
@@ -55,7 +73,7 @@ COORDSYS = CH1903
 TIME_ZONE = 0
 METEO = SMET
 METEOPATH = {meteo_dir}
-STATION1 = {p['id']}
+METEOFILE1 = {p['id']}.smet
 SNOW = SMET
 SNOWPATH = {sno_dir}
 SNOWFILE1 = {p['id']}
@@ -66,14 +84,14 @@ METEOPATH = {run_out}
 EXPERIMENT = va
 PROF_WRITE = TRUE
 PROF_FORMAT = PRO
-PROF_START = 0.0
+PROF_START = {prof_start_days:.4f}
 PROF_DAYS_BETWEEN = 0.25
 PROF_AGE_OR_DATE = AGE
 PROF_ID_OR_MK = ID
 TS_WRITE = FALSE
 SNOW_WRITE = FALSE
 [SNOWPACK]
-CALCULATION_STEP_LENGTH = 30
+CALCULATION_STEP_LENGTH = {CALC_STEP_MIN}
 ATMOSPHERIC_STABILITY = MO_MICHLMAYR
 SW_MODE = INCOMING
 HEIGHT_OF_WIND_VALUE = 10.0
@@ -105,7 +123,7 @@ ISWR::arg1::max = 1500
 [INTERPOLATIONS1D]
 MAX_GAP_SIZE = 86400
 PSUM::resample1 = accumulate
-PSUM::ARG1::period = 3600
+PSUM::ARG1::period = {psum_period}
 [GENERATORS]
 TSG::generator1 = CST
 TSG::arg1::value = 273.15
@@ -140,17 +158,23 @@ def _run_one(args):
     return os.path.basename(ini), p.returncode, (p.stderr[-400:] if p.returncode else "")
 
 
-def run_points(points, target_date, spinup_days=None, workers=None):
-    """Prepare + run SNOWPACK for all points. Returns runs_dir with <id>/*.pro."""
+def run_points(points, target_date, spinup_days=None, workers=None, window_h=None):
+    """Prepare + run SNOWPACK for all points. Returns runs_dir with <id>/*.pro.
+
+    window_h caps how much of the run gets written out (see write_ini); None
+    keeps the whole season, which is only sane for a handful of points.
+    """
     spinup_days = spinup_days or config.SPINUP_DAYS
     start = _profile_start_iso(target_date, spinup_days)
+    prof_start = 0.0 if not window_h else max(0.0, spinup_days - window_h / 24.0)
     base = config.WORK_DIR
     sno_dir = base / "sno"; ini_dir = base / "ini"; runs_dir = base / "runs"
     meteo_dir = base / "meteo"
     for d in (sno_dir, ini_dir, runs_dir):
         d.mkdir(parents=True, exist_ok=True)
     for p in points:
-        write_sno(p, sno_dir, start); write_ini(p, ini_dir, sno_dir, meteo_dir, runs_dir)
+        write_sno(p, sno_dir, start)
+        write_ini(p, ini_dir, sno_dir, meteo_dir, runs_dir, prof_start)
     inis = [str(ini_dir / f"{p['id']}.ini") for p in points]
     end = f"{target_date}T00:00"
     workers = workers or (os.cpu_count() or 6)
