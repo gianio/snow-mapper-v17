@@ -57,9 +57,14 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
+      # restore/save split rather than actions/cache, which only writes its
+      # cache when the JOB succeeds. Every failed pipeline run therefore threw
+      # the build away and paid the ~3 min rebuild again on the next attempt --
+      # exactly the iterations where the cache was worth most. The build has
+      # nothing to do with why the model run failed, so save it either way.
       - name: Restore SNOWPACK build
         id: spcache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: snowpack-build/install
           key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
@@ -82,6 +87,13 @@ jobs:
           done
           rm -rf snowpack-build/src snowpack-build/b-*
 
+      - name: Save SNOWPACK build
+        if: steps.spcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: snowpack-build/install
+          key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
+
       - name: Verify the binary
         run: |
           export LD_LIBRARY_PATH="$PREFIX/lib:$LD_LIBRARY_PATH"
@@ -93,7 +105,7 @@ jobs:
       # so it is cacheable indefinitely.
       - name: Restore national DEM
         id: demcache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: variant_a/data/dem
           key: variant-a-dem-lv03-250m-v1
@@ -102,11 +114,31 @@ jobs:
         if: steps.demcache.outputs.cache-hit != 'true'
         run: python tools/make_variant_a_dem.py
 
+      - name: Save national DEM
+        if: steps.demcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: variant_a/data/dem
+          key: variant-a-dem-lv03-250m-v1
+
+      # Point selection scans the whole 920x1440 national grid and takes ~7 min
+      # no matter how few points are then modelled -- by far the dominant cost
+      # of a smoke run. It is a pure function of the DEM, the subregion labels
+      # and the target grid, and select_national() keys its own cache on a
+      # content hash of exactly those, so a stale entry cannot be reused.
+      - name: Restore point selection
+        id: selcache
+        uses: actions/cache/restore@v4
+        with:
+          path: data/variant_a_cache/points
+          key: variant-a-points-${{ inputs.only_tile }}-v1
+
       # Forcing is the part most likely to bite: one Open-Meteo archive request
       # per point, and the demo build has already been rate-limited once at a
       # comparable volume. Cached per date so a re-run does not re-fetch.
       - name: Restore forcing cache
-        uses: actions/cache@v4
+        id: fcache
+        uses: actions/cache/restore@v4
         with:
           path: data/variant_a_cache/work/meteo
           key: variant-a-forcing-${{ inputs.date }}-${{ inputs.limit }}-${{ inputs.only_tile }}-v1
@@ -124,6 +156,22 @@ jobs:
           START=$(date +%s)
           python -u run_variant_a.py $ARGS 2>&1 | tee run.log
           echo "ELAPSED=$(( $(date +%s) - START ))" >> "$GITHUB_ENV"
+
+      - name: Save point selection
+        if: always() && steps.selcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: data/variant_a_cache/points
+          key: variant-a-points-${{ inputs.only_tile }}-v1
+
+      # Saved even on failure: the Open-Meteo requests are the expensive,
+      # rate-limited part and have nothing to do with why the model failed.
+      - name: Save forcing cache
+        if: always() && steps.fcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: data/variant_a_cache/work/meteo
+          key: variant-a-forcing-${{ inputs.date }}-${{ inputs.limit }}-${{ inputs.only_tile }}-v1
 
       # The point of the smoke run: turn "unknown per-point cost" into a number,
       # and project it, so the national run is a decision rather than a gamble.

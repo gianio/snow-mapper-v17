@@ -6,7 +6,8 @@ to the target, with progressive aspect tolerance. Points carry real elev/aspect/
 and location, so downstream SNOWPACK runs get real terrain (slope + horizon shading).
 """
 from __future__ import annotations
-import csv
+import csv, hashlib, json
+from pathlib import Path
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 
@@ -81,15 +82,72 @@ def select_for_mask(grid: NationalGrid, mask, tile_id):
     return pts
 
 
-def select_national(grid: NationalGrid | None = None, only_tile: int | None = None):
-    """Select representative points for every subregion (or a single one)."""
+_NUM = {"tile": int, "row": int, "col": int, "elev": float, "aspect": float,
+        "slope": float, "lat": float, "lon": float, "e_lv95": float, "n_lv95": float}
+
+
+def _cache_key(only_tile):
+    """Fingerprint every input the selection depends on.
+
+    The DEM is hashed by content rather than mtime: CI restores it from a cache,
+    which does not preserve timestamps, so an mtime key would miss every time.
+    """
+    h = hashlib.sha256()
+    dem = Path(config.NATIONAL_DEM)
+    if dem.exists():
+        h.update(dem.read_bytes())
+    lab = config.SUBREGION_DIR / "tile_labels.npy"
+    if lab.exists():
+        h.update(lab.read_bytes())
+    h.update(json.dumps([config.ELEV_BANDS, config.N_ASPECTS, config.SLOPE_CLASSES,
+                         _ELEV_TOL, list(_ASP_TOLS), _WIN_BIG, _MIN_CANDS,
+                         only_tile], sort_keys=True).encode())
+    return h.hexdigest()[:16]
+
+
+def read_csv(path):
+    """Inverse of write_csv, with the numeric columns restored."""
+    out = []
+    with open(path, newline="") as f:
+        for r in csv.DictReader(f):
+            out.append({k: (_NUM[k](v) if k in _NUM else v) for k, v in r.items()})
+    return out
+
+
+def select_national(grid: NationalGrid | None = None, only_tile: int | None = None,
+                    cache: bool = True):
+    """Select representative points for every subregion (or a single one).
+
+    Cached on disk because this is the dominant cost of a small run: it scans
+    the whole 920x1440 national grid and takes ~7 min, regardless of how many
+    points are actually modelled afterwards. The result is a pure function of
+    the DEM, the subregion labels and the target grid, so a content hash of
+    those is a safe key.
+    """
     if grid is None:
         grid = load_national_grid()
+    cpath = None
+    if cache:
+        cpath = Path(config.CACHE_DIR) / "points" / f"{_cache_key(only_tile)}.csv"
+        if cpath.exists():
+            try:
+                pts = read_csv(cpath)
+                if pts:
+                    print(f"  [select] reusing {len(pts)} cached points ({cpath.name})")
+                    return grid, pts
+            except Exception as e:
+                print(f"  [select] cache unreadable ({e}) — reselecting")
     out = []
     for t in tile_ids(grid):
         if only_tile is not None and t != only_tile:
             continue
         out.extend(select_for_mask(grid, grid.tile == t, t))
+    if cpath is not None and out:
+        try:
+            cpath.parent.mkdir(parents=True, exist_ok=True)
+            write_csv(out, cpath)
+        except Exception as e:
+            print(f"  [select] could not cache selection: {e}")
     return grid, out
 
 

@@ -49,7 +49,7 @@ jobs:
       # on the ProfileDate instead of before it, and a PSUM accumulation
       # period that disagrees with CALCULATION_STEP_LENGTH. Both made SNOWPACK
       # exit 0 having written nothing.
-      - name: Variant A forcing window + SNOWPACK .ini
+      - name: Variant A pipeline plumbing (forcing window, .ini, caches)
         run: python tools/test_variant_a_forcing.py
 
       # Upstream shape check. The agent build environment cannot reach

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for the Variant-A forcing window and the SNOWPACK .ini.
+"""Regression tests for the Variant-A pipeline plumbing around SNOWPACK.
 
 Every case here is a bug that actually happened in CI. The headline one:
 SNOWPACK begins one calculation step BEFORE the .sno ProfileDate, and MeteoIO
@@ -8,7 +8,7 @@ the ProfileDate has nothing to accumulate from and the run dies on its first
 timestep with "missing { precipitation }" -- after exiting 0.
 """
 from __future__ import annotations
-import re, sys, tempfile
+import re, sys, tempfile, types
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -120,9 +120,42 @@ def test_prof_start_derivation():
         check(f"spinup={spinup} window={window} -> PROF_START={want}", got == want, str(got))
 
 
+def test_selection_cache():
+    print("point selection cache")
+    from variant_a import select_points as sp
+    pts = [{"id": "t2_1600_N_20-30_0", "tile": 2, "row": 10, "col": 20, "elev": 1600.0,
+            "aspect": 5.0, "slope": 25.0, "lat": 46.5, "lon": 8.0, "e_lv95": 2670000.0,
+            "n_lv95": 1160000.0, "band": "1600", "asp_c": "N", "slope_cls": "20-30"}]
+    calls = []
+    real_sel, real_tiles, real_load = sp.select_for_mask, sp.tile_ids, sp.load_national_grid
+    real_cache, real_bands = config.CACHE_DIR, config.ELEV_BANDS
+    sp.select_for_mask = lambda g, m, t: (calls.append(t), pts)[1]
+    sp.tile_ids = lambda g: [2]
+    sp.load_national_grid = lambda: types.SimpleNamespace(tile=None)
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            config.CACHE_DIR = Path(td)
+            _, a = sp.select_national()
+            _, b = sp.select_national()
+            check("the second selection is served from cache", len(calls) == 1, f"{len(calls)} scans")
+            check("the cached points round-trip unchanged", a == b)
+            check("numeric columns keep their types",
+                  isinstance(b[0]["row"], int) and isinstance(b[0]["elev"], float)
+                  and isinstance(b[0]["band"], str))
+            config.ELEV_BANDS = [1600, 2000]
+            sp.select_national()
+            check("a changed target grid invalidates the cache", len(calls) == 2)
+            sp.select_national(cache=False)
+            check("cache=False always reselects", len(calls) == 3)
+    finally:
+        sp.select_for_mask, sp.tile_ids, sp.load_national_grid = real_sel, real_tiles, real_load
+        config.CACHE_DIR, config.ELEV_BANDS = real_cache, real_bands
+
+
 if __name__ == "__main__":
     for t in (test_forcing_starts_before_profile_date, test_covers_rejects_a_stale_smet,
-              test_ini, test_timestamp_window, test_prof_start_derivation):
+              test_ini, test_timestamp_window, test_prof_start_derivation,
+              test_selection_cache):
         t()
-    print("\nVARIANT A FORCING " + ("OK" if not FAILS else f"FAILED: {FAILS}"))
+    print("\nVARIANT A PIPELINE " + ("OK" if not FAILS else f"FAILED: {FAILS}"))
     sys.exit(1 if FAILS else 0)
