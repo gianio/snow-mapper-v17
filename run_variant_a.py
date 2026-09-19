@@ -70,6 +70,10 @@ def main():
     ap.add_argument("--runs-dir", default=None, help="reuse existing SNOWPACK .pro runs")
     ap.add_argument("--step-h", type=int, default=6, help="output timestep [h]")
     ap.add_argument("--workers", type=int, default=None)
+    ap.add_argument("--limit", type=int, default=None,
+                    help="cap the number of representative points (smoke tests). "
+                         "Spread evenly over the selection so the sample still "
+                         "spans elevations, aspects and subregions.")
     ap.add_argument("--model", default="best_match")
     args = ap.parse_args()
     datetime.strptime(args.date, "%Y-%m-%d")
@@ -84,6 +88,14 @@ def main():
         runs_dir = args.runs_dir
     else:
         _, points = select_points.select_national(grid, only_tile=args.only_tile)
+        if args.limit and args.limit < len(points):
+            # Stride rather than truncate: the selection is ordered by tile,
+            # then elevation band, then aspect, so points[:N] would be one
+            # subregion at one elevation -- useless as a sample and useless
+            # for timing, since low flat points are the cheapest to run.
+            step = len(points) / float(args.limit)
+            points = [points[int(i * step)] for i in range(args.limit)]
+            print(f"--limit {args.limit}: sampled every {step:.1f}th point")
         select_points.write_csv(points, config.OUTPUT_DIR / "points.csv")
         print(f"{len(points)} representative points selected")
         # 2) forcing + 3) SNOWPACK
