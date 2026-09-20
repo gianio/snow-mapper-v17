@@ -1171,7 +1171,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       law survives: one accent on screen at a time, and colour outside the
       chrome always means data.
       ================================================================== */
-   --fg:#12151A;--fg2:#4B5158;--mut:#8A9099;
+   --fg:#12151A;--fg2:#4B5158;--mut:#676E76;
    --acc:#1868C4;--acc2:#0F3E80;
    --bd:rgba(18,21,26,.10);
    --glass:rgba(247,248,247,.86);--glass2:rgba(255,255,255,.94);
@@ -1219,7 +1219,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     root, never by media query alone, so the switch in Einstellungen wins.
     ==================================================================== */
  :root[data-theme="dark"]{
-   --fg:#EDEFF2;--fg2:#A7AEB8;--mut:#6B727C;
+   --fg:#EDEFF2;--fg2:#A7AEB8;--mut:#8A929C;
    --acc:#4FA8F0;--acc2:#2E6FB0;
    --bd:rgba(255,255,255,.12);
    --glass:rgba(14,17,22,.86);--glass2:rgba(23,27,33,.94);
@@ -1262,7 +1262,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body{font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1,'cv05' 1}
  /* the micro-label: the only uppercase in the product, and the thing that
     turns a value into a reading */
- .lbl-micro{font-size:9px;font-weight:800;letter-spacing:.11em;
+ .lbl-micro{font-size:10.5px;font-weight:800;letter-spacing:.11em;
    text-transform:uppercase;color:var(--ink-500)}
  /* P5: numbers a user compares are tabular so columns line up */
  .num,.snow-val,#tlLenVal,#progConfVal,#drawDepthVVal,#drawBrushVVal,.insp-chip,.tl-range{font-variant-numeric:tabular-nums}
@@ -1492,7 +1492,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .set-rows button svg{width:18px;height:18px;color:var(--ink-500);flex-shrink:0}
  .set-av{width:22px;height:22px;border-radius:var(--r-full);flex-shrink:0;
    background-size:cover;background-position:center}
- .set-rows button .st{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-500)}
+ .set-rows button .st{margin-left:auto;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink-500)}
  .set-rows button.on{border-color:var(--accent)}
  .set-rows button.on svg,.set-rows button.on .st{color:var(--accent)}
  #lyScrim{position:absolute;inset:0;z-index:2400;background:rgba(18,21,26,.28);
@@ -1558,7 +1558,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ly-info .li-sub{margin-top:12px;padding-top:12px;border-top:1px solid var(--hair)}
  .ly-info .li-sub h4{color:var(--accent)}
  .ly-info .li-unit{display:inline-block;margin-top:8px;font-family:var(--mono);
-   font-size:11px;font-weight:700;color:var(--ink-500)}
+   font-size:12px;font-weight:700;color:var(--ink-500)}
  /* The colour key for whatever is picked above, right where you just picked
     it -- it used to live behind a separate button in Settings, one tap
     removed from the layer it was explaining. */
@@ -1566,19 +1566,19 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    border:1px solid var(--hair);background:var(--card);font-size:11.5px;
    line-height:1.6;color:var(--fg2)}
  .ly-legend:empty{display:none}
- .ly-legend b{display:block;font-size:10px;font-weight:800;letter-spacing:.06em;
+ .ly-legend b{display:block;font-size:11px;font-weight:800;letter-spacing:.06em;
    text-transform:uppercase;color:var(--ink-500);margin-bottom:6px}
  .ly-legend i{display:inline-block;width:12px;height:12px;margin-right:6px;
    vertical-align:-2px;border-radius:2px;flex-shrink:0}
- .ly-legend div>span:not(.stn){font-family:var(--mono);font-size:10px;color:var(--ink-500)}
+ .ly-legend div>span:not(.stn){font-family:var(--mono);font-size:11px;color:var(--ink-500)}
  /* Sits at the very bottom of the panel's scroll area, after the legend --
     a global fade applied on top of each layer's own tuned opacity, not a
     replacement for it (0% here = untouched baseline). */
  .ly-op{margin-top:10px;padding:12px 14px;border-radius:var(--r-md);
    border:1px solid var(--hair);background:var(--card)}
- .ly-op-lbl{display:flex;justify-content:space-between;align-items:center;font-size:10px;
+ .ly-op-lbl{display:flex;justify-content:space-between;align-items:center;font-size:11px;
    font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-500);margin-bottom:8px}
- .ly-op-lbl b{font-family:var(--mono);font-size:11px;color:var(--fg2);font-weight:700;
+ .ly-op-lbl b{font-family:var(--mono);font-size:12px;color:var(--fg2);font-weight:700;
    letter-spacing:0;text-transform:none}
  /* the way out, where the thumb already is */
  .ly-x{position:absolute;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);
@@ -1605,7 +1605,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #progBar{display:none;flex-direction:column;gap:var(--sp2);padding-top:var(--sp2);border-top:1px solid var(--ink-100)}
  #progBar.on{display:flex}
  .pb-row{display:flex;align-items:center;gap:var(--sp2)}
- .pb-lbl{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-500);flex-shrink:0;min-width:56px}
+ .pb-lbl{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-500);flex-shrink:0;min-width:56px}
  .pb-seg{display:flex;gap:4px;flex-wrap:wrap}
  .pb-seg button{border:1px solid var(--ink-100);background:var(--paper);border-radius:var(--r-1);padding:0 11px;
    min-height:var(--tap-sm);cursor:pointer;font-size:12px;font-weight:700;color:var(--ink-700);font-family:inherit;
@@ -1668,7 +1668,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .seg button:hover{background:rgba(255,255,255,.95)}
  .seg button.active{background:var(--ink-900);color:var(--paper);border-color:var(--ink-900);font-weight:700;box-shadow:none}
  .sec{margin-top:12px}
- .cap{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+ .cap{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
  .ck{display:flex;align-items:center;gap:9px;margin-top:12px;font-size:13px;cursor:pointer;color:var(--fg2)}
  .ck input{width:18px;height:18px;accent-color:var(--acc)}
  #three-wrap{position:absolute;inset:0;z-index:2000;display:none;background:#e8eef4}
@@ -1701,7 +1701,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .raster-smooth{image-rendering:auto}
  /* Variant A: sub-layer picker, manifest-driven legend, snow profile. */
  .va-subs{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 4px;grid-column:1/-1}
- .va-leg{grid-column:1/-1;font-size:10px;line-height:1.5;color:var(--fg2);
+ .va-leg{grid-column:1/-1;font-size:11px;line-height:1.5;color:var(--fg2);
    max-height:168px;overflow-y:auto;columns:2;column-gap:10px}
  .va-leg div{break-inside:avoid;display:flex;align-items:center;gap:5px}
  .va-leg span{flex:0 0 12px;height:9px;border:1px solid var(--hair);border-radius:2px}
@@ -1713,8 +1713,17 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .va-grain{flex:0 0 auto;border:1px solid var(--hair);border-radius:2px}
  .va-dens{flex:1 1 auto;color:var(--fg);min-width:0}
  .va-prof-ax{display:flex;flex-direction:column;justify-content:space-between;
-   font-size:9px;color:var(--fg2);height:118px}
- .va-grain-leg{display:flex;flex-wrap:wrap;gap:3px 7px;margin-top:5px;font-size:9.5px;color:var(--fg2)}
+   font-size:10.5px;color:var(--fg2);height:118px}
+ .va-grain-leg{display:flex;flex-wrap:wrap;gap:3px 7px;margin-top:5px;font-size:11px;color:var(--fg2)}
+ /* The model date. SNOWPACK runs as an offline batch over a fixed window, so
+    the layer can legitimately be older than the forecast the timeline shows.
+    That gets stated, not hidden -- and when it is more than a week out it is
+    stated in the warning colour, because a ski-quality map from another
+    season read as current is worse than no map. */
+ .va-date{grid-column:1/-1;font-size:11px;font-weight:600;color:var(--fg2);
+   margin:2px 0 5px;display:flex;flex-wrap:wrap;gap:0 5px;align-items:baseline}
+ .va-date b{font-weight:800;color:var(--warn)}
+ .va-date-stale{color:var(--fg)}
  .va-grain-leg span{display:inline-flex;align-items:center;gap:3px}
  .va-grain-leg i{width:8px;height:8px;border-radius:2px;display:inline-block}
  /* Aspect must NOT be smoothed -- it is eight discrete classes, and
@@ -1759,7 +1768,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     sits that much too low and overlaps the panel on any device with a
     bottom safe-area inset (iPhone home-indicator models). */
  .legend{position:absolute;z-index:950;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 24px);left:12px;right:auto;top:auto;cursor:pointer;background:var(--card);border:1px solid var(--hair);padding:9px 12px;border-radius:var(--r-1);box-shadow:none;font-size:12.5px;max-width:min(420px,calc(100vw - 24px));line-height:1.6;color:var(--fg2);display:none}
- .legend b{display:block;font-size:9px;font-weight:800;letter-spacing:.08em;
+ .legend b{display:block;font-size:10.5px;font-weight:800;letter-spacing:.08em;
    text-transform:uppercase;color:var(--ink-500);margin-bottom:5px}
  /* Each class/colour row reads as a chip flowing left-to-right and wrapping
     like text, rather than one row per line -- most legends list several
@@ -1804,7 +1813,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .stn-dot:hover{transform:scale(1.35)}
  .rpt-dot{width:14px;height:14px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;transition:transform .12s}
  .rpt-dot:hover{transform:scale(1.35)}
- .scl{position:relative;width:110px;height:56px;font-size:10px;font-weight:700;text-align:center;pointer-events:none}
+ .scl{position:relative;width:110px;height:56px;font-size:11px;font-weight:700;text-align:center;pointer-events:none}
  .scl>div{position:absolute;left:0;right:0;white-space:nowrap}
  .scl .s-pill{display:inline-block;background:rgba(255,255,255,.8);border-radius:6px;padding:1px 5px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
  .scl .s-t{top:-2px;color:var(--ink-700)}.scl .s-b{bottom:-2px;color:#d04040}
@@ -1815,7 +1824,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .scard b{font-size:16px}
  .scard .g{display:grid;grid-template-columns:auto auto;gap:3px 16px;margin-top:6px}
  .scard .k{color:var(--mut)}
- .wn{font-size:10px;color:#2a4a6a;font-weight:700;display:inline-block;background:rgba(0,90,160,.08);border-radius:5px;padding:0 4px;box-shadow:0 1px 2px var(--ink-100)}
+ .wn{font-size:11px;color:#2a4a6a;font-weight:700;display:inline-block;background:rgba(0,90,160,.08);border-radius:5px;padding:0 4px;box-shadow:0 1px 2px var(--ink-100)}
  .icard{font:15px system-ui;line-height:1.5;min-width:230px;max-width:320px;color:var(--fg)}
  .icard b{font-size:16px}
  .icard .ig{display:grid;grid-template-columns:auto auto;gap:2px 14px;margin-top:6px}
@@ -1867,7 +1876,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .insp-head .insp-t b{font-size:13px;color:var(--fg);font-weight:800;letter-spacing:-.01em}
  .insp-chips{display:flex;gap:6px;margin-top:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-right:12px;-webkit-mask-image:linear-gradient(90deg,#000 91%,transparent);mask-image:linear-gradient(90deg,#000 91%,transparent)}
  .insp-chips::-webkit-scrollbar{display:none}
- .insp-chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--fill);color:var(--fg2);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+ .insp-chip{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--fill);color:var(--fg2);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
  .insp-chip.accent{background:rgba(20,20,25,.12);color:var(--acc2)}
  .insp-head button{background:var(--fill);border:none;width:28px;height:28px;border-radius:9px;color:var(--fg2);font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:.15s}
  .insp-head button:hover{background:var(--fill2);color:var(--fg)}
@@ -1900,10 +1909,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .leaflet-popup-close-button{color:var(--mut)!important;font-size:18px!important;width:28px!important;height:28px!important;line-height:28px!important}
  .leaflet-popup-close-button:hover{color:var(--fg)!important}
  /* Attribution: tiny, faint, unobtrusive (expand on hover) */
- .leaflet-control-attribution{background:rgba(247,244,238,.45)!important;color:rgba(115,108,97,.6)!important;font-size:9px!important;padding:1px 6px!important;border-radius:6px 0 0 0!important;box-shadow:none!important;max-width:22px;overflow:hidden;white-space:nowrap;transition:max-width .3s,background .3s}
+ .leaflet-control-attribution{background:rgba(247,244,238,.45)!important;color:rgba(115,108,97,.6)!important;font-size:10.5px!important;padding:1px 6px!important;border-radius:6px 0 0 0!important;box-shadow:none!important;max-width:22px;overflow:hidden;white-space:nowrap;transition:max-width .3s,background .3s}
  .leaflet-control-attribution:hover{max-width:80vw;background:var(--paper)!important;color:var(--mut)!important}
  .leaflet-control-attribution a{color:inherit!important}
- .leaflet-control-scale-line{background:var(--glass2)!important;border-color:var(--hair)!important;color:var(--fg2)!important;font-family:var(--mono)!important;font-size:10px!important;font-weight:600!important;}
+ .leaflet-control-scale-line{background:var(--glass2)!important;border-color:var(--hair)!important;color:var(--fg2)!important;font-family:var(--mono)!important;font-size:11px!important;font-weight:600!important;}
  /* the right-hand corner belongs to the FABs, so the scale bar is pinned to
     the opposite one instead of stacking under them */
  .leaflet-control-scale{position:fixed!important;left:48px!important;right:auto!important;
@@ -1972,7 +1981,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #searchRes .sr{padding:10px 14px;cursor:pointer;font-size:15px;color:var(--fg2);border-bottom:1px solid rgba(0,0,0,.05);transition:.12s}
  #searchRes .sr:last-child{border-bottom:none}
  #searchRes .sr:hover,#searchRes .sr.sel{background:rgba(0,112,184,.08);color:var(--fg)}
- #searchRes .sr .sub{font-size:11px;color:var(--mut);margin-top:2px}
+ #searchRes .sr .sub{font-size:12px;color:var(--mut);margin-top:2px}
  /* The only thing the load shows: a 2 px rule along the top edge, filled by
     the actual number of bytes received. It removes itself when done. */
  #boot{position:fixed;top:0;left:0;right:0;height:2px;z-index:9999;background:transparent;pointer-events:none}
@@ -2054,7 +2063,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .login-btn{min-height:40px;padding:9px 18px;border-radius:999px;border:1.5px solid rgba(22,21,46,.12);background:var(--paper);color:var(--fg);font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 1px 4px var(--ink-100);letter-spacing:-.01em}
  .login-btn:hover{background:var(--card)}
  .user-pill{display:flex;align-items:center;gap:8px;min-height:40px;padding:5px 14px 5px 5px;border-radius:999px;border:1.5px solid var(--ink-100);background:var(--paper);cursor:pointer;box-shadow:0 1px 4px var(--ink-100)}
- .user-avatar{border-radius:28%!important;width:26px;height:26px;border-radius:50%;background:var(--fg);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;letter-spacing:.02em}
+ .user-avatar{border-radius:28%!important;width:26px;height:26px;border-radius:50%;background:var(--fg);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;letter-spacing:.02em}
  .user-name{font-size:13px;font-weight:600;color:var(--fg2);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
  .auth-overlay{position:fixed;inset:0;z-index:5000;background:rgba(14,17,22,.32);display:flex;align-items:center;justify-content:center;padding:16px}
  .auth-modal{position:relative;background:var(--glass2);border-radius:var(--r-xl);padding:36px 28px 28px;width:100%;max-width:360px;box-shadow:var(--elev3),0 1px 0 rgba(255,255,255,.5) inset}
@@ -2167,7 +2176,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .dt-sw.on{opacity:1;transform:translateY(-1px)}
  .dt-sw i{width:34px;height:34px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 2px 7px rgba(0,0,0,.22);display:block;background-size:6px 6px}
  .dt-sw.on i{box-shadow:0 0 0 2.5px var(--fg),0 2px 7px rgba(0,0,0,.22)}
- .dt-sw span{font-size:10px;font-weight:800;color:var(--fg2);white-space:nowrap;letter-spacing:-.01em}
+ .dt-sw span{font-size:11px;font-weight:800;color:var(--fg2);white-space:nowrap;letter-spacing:-.01em}
  #drawActions{display:flex;align-items:center;gap:9px}
  #drawActions .db{width:46px;height:46px;flex-shrink:0;border-radius:14px;border:1px solid var(--hair);background:var(--card);box-shadow:var(--elev1);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--fg2)}
  #drawActions .db:active{transform:scale(.94)}
@@ -2186,7 +2195,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .dfin-sheet h3{margin:2px 0 12px;font-size:17px;font-weight:800;text-align:center;color:var(--fg)}
  .dfin-snap{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--hair);margin-bottom:12px;box-shadow:var(--elev1)}
  .dfin-snap img{width:100%;display:block;max-height:260px;object-fit:cover}
- .dfin-tag{position:absolute;left:10px;bottom:10px;background:rgba(10,10,12,.72);color:#fff;font-size:11px;font-weight:800;padding:4px 9px;border-radius:9px}
+ .dfin-tag{position:absolute;left:10px;bottom:10px;background:rgba(10,10,12,.72);color:#fff;font-size:12px;font-weight:800;padding:4px 9px;border-radius:9px}
  .dfin-photo{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;height:46px;border-radius:13px;border:1.5px dashed var(--hair);background:var(--fill);color:var(--fg2);font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;margin-bottom:12px}
  .dfin-photo svg{width:19px;height:19px}
  #drawPhotoPrev{width:100%;max-height:220px;object-fit:cover;border-radius:13px;margin-bottom:12px;display:none}
@@ -2332,7 +2341,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .obs-media-tile .rm{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(14,17,22,.32);color:#fff;border:none;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center}
  .obs-media-add{aspect-ratio:1;border-radius:14px;border:2px dashed rgba(22,21,46,.16);background:var(--fill);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;color:var(--acc);font-family:inherit}
  .obs-media-add svg{width:26px;height:26px}
- .obs-media-add span{font-size:11px;font-weight:700}
+ .obs-media-add span{font-size:12px;font-weight:700}
  .obs-hint{font-size:12.5px;color:var(--mut);line-height:1.45;margin:2px 0 12px;padding:10px 12px;background:rgba(20,20,25,.06);border-radius:12px}
  .obs-enum{display:flex;flex-direction:column;gap:8px}
  .obs-enum button{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 16px;border-radius:14px;border:1.5px solid rgba(22,21,46,.1);background:var(--fill);cursor:pointer;font-size:15px;font-weight:600;color:var(--fg);font-family:inherit;text-align:left;transition:.14s}
@@ -2372,10 +2381,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .mm-tools button svg{width:17px;height:17px}
  .obs-pin-hint{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);z-index:600;pointer-events:none;font-size:10.5px;font-weight:700;color:#fff;background:rgba(11,17,32,.62);padding:4px 10px;border-radius:999px;white-space:nowrap}
  .obs-loc-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg2);font-weight:600;margin-bottom:10px;flex-wrap:wrap}
- .obs-loc-src{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(20,20,25,.12);color:var(--acc2)}
+ .obs-loc-src{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(20,20,25,.12);color:var(--acc2)}
  .obs-dt{width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid rgba(22,21,46,.1);border-radius:12px;font-size:14px;font-family:inherit;color:var(--fg);background:var(--fill);margin-bottom:10px}
  .obs-warn{font-size:12.5px;color:var(--warn);background:rgba(245,158,11,.12);border-radius:10px;padding:8px 11px;margin-bottom:10px;font-weight:600}
- .obs-cc{font-size:11px;color:var(--mut);text-align:right;margin-top:4px}
+ .obs-cc{font-size:12px;color:var(--mut);text-align:right;margin-top:4px}
  .obs-summary{margin-top:14px;display:flex;flex-wrap:wrap;gap:6px}
  .obs-summary .rp-tag{padding:5px 11px;border-radius:999px;background:var(--ink-050);color:var(--fg2);font-size:12.5px;font-weight:650}
  /* --- Snow-condition inputs --- */
@@ -2402,8 +2411,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .alt-band{position:relative;height:34px;margin:26px 4px 2px;border-radius:6px;background:var(--fill2)}
  .ab-fill{position:absolute;top:0;bottom:0;background:rgba(20,20,25,.28);border-radius:6px}
  .ab-h{position:absolute;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:var(--acc);border:3px solid #fff;box-shadow:var(--elev1);cursor:ew-resize;touch-action:none}
- .ab-h span{position:absolute;top:-24px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:800;color:var(--acc2);background:var(--paper);padding:1px 6px;border-radius:7px;white-space:nowrap}
- .ab-scale{display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--mut);margin-top:4px;padding:0 4px}
+ .ab-h span{position:absolute;top:-24px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:800;color:var(--acc2);background:var(--paper);padding:1px 6px;border-radius:7px;white-space:nowrap}
+ .ab-scale{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--mut);margin-top:4px;padding:0 4px}
  .cat-chip .cat-ico-w{width:30px;height:30px;display:flex;align-items:center;justify-content:center}
  .cat-chip .cat-ico-w svg{width:26px;height:26px;stroke:currentColor}
  /* --- Undo snackbar --- */
@@ -2542,7 +2551,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .uv-post.own .b{padding-right:44px}
  .feed-follow{margin-left:auto;flex-shrink:0;padding:5px 12px;border-radius:999px;border:1.5px solid var(--acc);background:none;color:var(--acc);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
  .feed-follow.following{background:var(--acc);color:#fff}
- .feed-card-group{font-size:11px;font-weight:700;color:var(--ink-700);background:rgba(156,39,176,.1);padding:2px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:4px}
+ .feed-card-group{font-size:12px;font-weight:700;color:var(--ink-700);background:rgba(156,39,176,.1);padding:2px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:4px}
  /* Groups modal */
  .groups-modal{position:fixed;inset:0;z-index:3600;background:rgba(14,17,22,.32);display:flex;flex-direction:column;justify-content:flex-end}
  .groups-sheet{border:none;background:var(--glass2);border-radius:var(--r-xl) var(--r-xl) 0 0;max-height:80vh;display:flex;flex-direction:column;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);box-shadow:var(--elev3)}
@@ -2580,14 +2589,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .cmt-mentions button.on,.cmt-mentions button:hover{background:var(--accent-soft)}
  .cmt-mentions .mn-av{width:28px;height:28px;border-radius:var(--r-full);flex-shrink:0;
    background:var(--fill) center/cover;color:var(--ink-700);
-   display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700}
+   display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:700}
  .cmt-mentions .mn-h{margin-left:auto;font-family:var(--mono);font-size:11.5px;font-weight:400;color:var(--ink-500)}
  .cmt-av.has-img{background-size:cover;background-position:center;color:transparent}
  .cmt-av{width:32px;height:32px;border-radius:50%;background:var(--fg);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
  .cmt-b{flex:1;min-width:0}
  .cmt-u{font-size:13px;font-weight:700;color:var(--fg)}
  .cmt-t{font-size:14px;color:var(--fg2);line-height:1.4}
- .cmt-time{font-size:11px;color:var(--mut);margin-top:2px;font-weight:500}
+ .cmt-time{font-size:12px;color:var(--mut);margin-top:2px;font-weight:500}
  .cmt-empty{text-align:center;color:var(--mut);padding:30px 20px;font-size:14px}
  .cmt-mn{color:var(--accent);font-weight:700}
  .cmt-input{position:relative;display:flex;gap:8px;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 12px);border-top:1px solid var(--hair);background:transparent}
@@ -2639,7 +2648,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .uv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;border-radius:0;overflow:hidden;margin-bottom:12px}
  .uv-cell{aspect-ratio:1;cursor:pointer;background:var(--fill)}
  .uv-cell img{width:100%;height:100%;object-fit:cover;display:block}
- .uv-posts h3{font-size:9px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px}
+ .uv-posts h3{font-size:10.5px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px}
  .uv-post{background:var(--card);border:1px solid var(--hair);border-radius:var(--r-md);margin-bottom:10px;overflow:hidden;cursor:pointer;box-shadow:none}
  .uv-post img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
  .uv-post .b{padding:10px 12px;font-size:13px;color:var(--fg2)}
@@ -2696,7 +2705,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .prof-seg{display:flex;background:var(--fill);border:1px solid var(--hair);border-radius:13px;padding:3px;gap:3px;margin-bottom:4px}
  .prof-seg button{flex:1;border:none;background:none;padding:10px 6px;border-radius:10px;font-size:13px;font-weight:700;color:var(--mut);font-family:inherit;cursor:pointer;transition:.15s}
  .prof-seg button.active{background:var(--card);color:var(--fg);box-shadow:var(--elev1)}
- .prof-sec-title{margin:22px 2px 10px;font-size:9px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+ .prof-sec-title{margin:22px 2px 10px;font-size:10.5px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
  .prof-item{min-height:var(--tap);width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:8px;border-radius:var(--r-md);border:1px solid var(--hair);background:none;color:var(--fg);font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;text-align:left;transition:.15s}
  .prof-item svg{width:17px;height:17px;flex-shrink:0;color:var(--accent)}
  .prof-item:hover{background:var(--card)}
@@ -2785,7 +2794,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rpt-mtn,.rpt-rose{flex:none;display:block}
  .rpt-viz-txt{display:flex;flex-direction:column;gap:1px;font-family:var(--mono);line-height:1.25;min-width:0}
  .rpt-viz-txt b{font-size:12.5px;font-weight:800;color:var(--fg2);white-space:nowrap}
- .rpt-viz-txt span{font-size:11px;font-weight:700;color:var(--mut)}
+ .rpt-viz-txt span{font-size:12px;font-weight:700;color:var(--mut)}
  .feed-card-actions .fc-sp{margin-left:auto}
  .feed-card-actions button:hover{color:var(--fg)}
  .feed-card-actions .flag-btn{color:var(--mut)}
@@ -2821,7 +2830,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .cond-save:disabled{opacity:.4;cursor:default}
  /* Quick-Check entry points */
  .qr-padwrap{display:flex;gap:6px;margin-top:12px;align-items:stretch}
- .qr-ylab{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:20px;font-size:11px;font-weight:800;color:var(--mut);letter-spacing:.05em;writing-mode:vertical-rl;transform:rotate(180deg);text-transform:uppercase;white-space:nowrap}
+ .qr-ylab{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:20px;font-size:12px;font-weight:800;color:var(--mut);letter-spacing:.05em;writing-mode:vertical-rl;transform:rotate(180deg);text-transform:uppercase;white-space:nowrap}
  .qr-pad{position:relative;flex:1;aspect-ratio:1.18;border-radius:16px;border:1px solid var(--hair);background:linear-gradient(to right,rgba(13,148,136,.24),rgba(13,148,136,.06) 19%,rgba(217,119,6,.24) 21%,rgba(217,119,6,.06) 39%,rgba(2,132,199,.24) 41%,rgba(2,132,199,.06) 59%,rgba(124,111,208,.24) 61%,rgba(124,111,208,.06) 79%,rgba(30,58,138,.26) 81%,rgba(30,58,138,.08) 100%);cursor:crosshair;overflow:hidden}
  .qr-qline{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed rgba(20,20,25,.30);pointer-events:none}
  .qr-xbands{display:flex;margin-top:8px;padding-left:24px}
@@ -2846,7 +2855,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .qr-step{animation:qrFade .35s var(--ease) both}
  @keyframes qrFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
  .qr-cmline{position:absolute;left:0;right:0;height:0;border-top:1.5px dashed rgba(20,20,25,.15);pointer-events:none}
- .qr-cmline i{position:absolute;top:-12px;right:5px;font-style:normal;font-size:9px;font-weight:800;color:var(--mut)}
+ .qr-cmline i{position:absolute;top:-12px;right:5px;font-style:normal;font-size:10.5px;font-weight:800;color:var(--mut)}
  .qr-axis-x{display:flex;align-items:center;justify-content:center;gap:8px;font-size:11.5px;font-weight:800;color:var(--fg2);margin:8px 0 2px;letter-spacing:.02em}
  .qr-axis-x svg{color:var(--mut)}
  .qr-photo-one{display:flex;align-items:center;justify-content:center;gap:10px;padding:20px 12px;border-radius:14px;border:1.5px dashed rgba(20,20,25,.4);background:rgba(20,20,25,.06);color:var(--acc2);font-size:14.5px;font-weight:750;cursor:pointer;margin-top:8px}
@@ -2904,7 +2913,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #mapFeedFab .feed-dot{position:absolute;top:-3px;right:-3px;min-width:17px;height:17px;
    padding:0 4px;border-radius:var(--r-full);background:var(--danger);border:2px solid var(--card);
    display:none;align-items:center;justify-content:center;font-family:var(--mono);
-   font-size:10px;font-weight:800;line-height:1;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+   font-size:11px;font-weight:800;line-height:1;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)}
  #mapFeedFab .feed-dot.on{display:flex}
  body.insp-open #mapFabs{opacity:0;pointer-events:none;transition:opacity .2s}
  body.draw-on #mapFabs,body.ly-open #mapFabs{display:none}
@@ -2914,7 +2923,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #mapQr:active{transform:scale(.9)}
  .feed-qr{position:absolute;bottom:calc(env(safe-area-inset-bottom, 0px) + 108px);left:auto;right:14px;transform:none;width:56px;height:56px;padding:0;border-radius:var(--r-full);border:1px solid var(--hair);background:var(--card);color:var(--ink-900);display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;box-shadow:var(--elev2);z-index:5;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
  .feed-qr svg{width:24px;height:24px}
- .feed-qr span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:.03em;color:var(--fg2);text-shadow:0 1px 2px var(--paper);white-space:nowrap}
+ .feed-qr span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:800;letter-spacing:.03em;color:var(--fg2);text-shadow:0 1px 2px var(--paper);white-space:nowrap}
  .feed-qr:active{transform:scale(.92)}
  .qr-loc{font-size:12.5px;font-weight:650;color:var(--fg2);background:var(--fill);border:1px solid var(--hair);border-radius:10px;padding:8px 11px;margin-top:12px}
  .rail-btn.qr-accent{background:linear-gradient(150deg,rgba(245,166,35,.24),rgba(245,166,35,.1));color:var(--warn);border-color:rgba(245,166,35,.4)}
@@ -2964,7 +2973,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .dm-row .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
  .dm-row .tx b{font-size:14.5px;font-weight:700;color:var(--ink-900)}
  .dm-row .tx span{font-size:12.5px;color:var(--ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
- .dm-row .when{font-family:var(--mono);font-size:11px;color:var(--ink-500);flex-shrink:0;align-self:flex-start;margin-top:3px}
+ .dm-row .when{font-family:var(--mono);font-size:12px;color:var(--ink-500);flex-shrink:0;align-self:flex-start;margin-top:3px}
  .dm-row .unread{width:8px;height:8px;border-radius:var(--r-full);background:var(--accent);flex-shrink:0}
  /* the conversation */
  .dm-msg{max-width:78%;margin:4px 18px;padding:9px 13px;border-radius:var(--r-lg);
@@ -2993,7 +3002,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     action the map already has a plus for. */
  .feed-fab{position:absolute;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);left:auto;right:14px;transform:none;width:var(--fab);height:var(--fab);padding:0;border-radius:var(--r-full);border:1px solid var(--hair);background:var(--card);color:var(--ink-900);display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;box-shadow:var(--elev2);z-index:5;transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s}
  .feed-fab svg{width:22px;height:22px}
- .feed-fab span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:.03em;color:var(--fg2);text-shadow:0 1px 2px rgba(255,255,255,.8)}
+ .feed-fab span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:800;letter-spacing:.03em;color:var(--fg2);text-shadow:0 1px 2px rgba(255,255,255,.8)}
  .feed-fab:active{transform:scale(.9)}
  /* Text-only posts: first-class "quote" cards with a category tint wash */
  .feed-tx{position:relative;margin:2px 16px 0;padding:16px 18px 15px 22px;border-radius:16px;font-size:17px;line-height:1.5;font-weight:550;color:var(--fg);letter-spacing:-.012em;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
@@ -3011,7 +3020,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rpt-cluster{position:relative;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 34%,color-mix(in srgb,var(--cc) 58%,#fff),var(--cc));border:2.5px solid #fff;box-shadow:0 5px 16px rgba(0,0,0,.30);cursor:pointer;transition:transform .16s cubic-bezier(.34,1.56,.64,1)}
  .rpt-cluster:hover{transform:scale(1.09)}
  .rpt-cluster span{color:#fff;font-weight:800;font-size:14px;letter-spacing:-.02em;text-shadow:0 1px 2px rgba(0,0,0,.35)}
- .rpt-flake .rc-ph,.rpt-cluster .rc-ph{position:absolute;top:-4px;right:-4px;background:var(--card);color:var(--ink-900);font-size:9px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:2px;padding:0 3px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+ .rpt-flake .rc-ph,.rpt-cluster .rc-ph{position:absolute;top:-4px;right:-4px;background:var(--card);color:var(--ink-900);font-size:10.5px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:2px;padding:0 3px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
  .rpt-flake .rc-ph svg,.rpt-cluster .rc-ph svg{width:8px;height:8px}
  /* Drawn-report marker: a real circle, crisp at any DPR, showing the snow
     type that dominates the drawing. */
@@ -3034,10 +3043,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    border:none;background:none;font-family:inherit;text-align:left;cursor:pointer;color:var(--ink-900)}
  .rmg-row:active{background:var(--ink-050)}
  .rmg-av{width:26px;height:26px;flex-shrink:0;border-radius:50%;background:var(--ink-900) center/cover;
-   color:var(--paper);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+   color:var(--paper);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
  .rmg-t{flex:1;min-width:0}
  .rmg-t b{display:block;font-size:13px;font-weight:700}
- .rmg-t span{display:block;font-size:11px;color:var(--ink-500);font-weight:600}
+ .rmg-t span{display:block;font-size:12px;color:var(--ink-500);font-weight:600}
  .rmg-cm{flex-shrink:0;font-size:12px;font-weight:800;color:var(--cc);
    background:var(--ink-050);border-radius:999px;padding:3px 9px}
  /* the snowflake that marks a drawn snow map */
@@ -4193,9 +4202,9 @@ const OVERLAYS={
             attr:'Wildruhezonen © BAFU'},
   avalanche:{label:'Lawinenbulletin',vector:true,
              attr:'Lawinenbulletin © SLF (CC BY 4.0)'},
-  // Demo only -- see vaLoad(). Its three views are picked inside the panel
-  // rather than as separate toggles: they are one product and only one can be
-  // on top at a time.
+  // Its three views are picked inside the panel rather than as separate
+  // toggles: they are one product and only one can be on top at a time.
+  // Offered in demo and live alike; vaDataNote() carries the model date.
   variantA:{label:'Skiqualität (SNOWPACK)',vector:true,
             attr:'Skiqualität: SNOWPACK / SLF-Modellkette'}
 };
@@ -4264,7 +4273,7 @@ function avBuildLayer(){
         '<b>Stufe '+p.danger+' – '+(AV_LABELS[p.danger]||'')+'</b>'
         +'<br>Kernzone: '+band+', '+asp
         +(p.problems&&p.problems.length?'<br>Problem: '+p.problems.join(', '):'')
-        +'<div style="margin-top:6px;font-size:11px;opacity:.75">Quelle: SLF ·'
+        +'<div style="margin-top:6px;font-size:12px;opacity:.75">Quelle: SLF ·'
         +' <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation/"'
         +' target="_blank" rel="noopener">Bulletin öffnen</a></div>');
     }});
@@ -4275,9 +4284,13 @@ function avBuildLayer(){
 // step needing an external binary, so the app only ever reads its artifacts
 // and shows nothing when they are absent.
 //
-// DEMO ONLY, deliberately. The exported timestamps belong to the demo window
-// (the 1 April 2026 dataset); on live data they would be stale by months, and
-// a ski-quality layer showing March snow in December is worse than no layer.
+// Available in BOTH modes. It used to be demo-only, on the reasoning that the
+// exported timestamps belong to the model window and would be stale against
+// live data. Hiding the layer outright was the wrong answer to that: it made
+// the toggle impossible to find and told the user nothing. The layer is now
+// always offered, and the staleness is SHOWN instead -- vaDataNote() puts the
+// model date on the legend and on the profile, and says plainly when it does
+// not line up with what the timeline is displaying.
 const VA_BASE='data/variant_a';
 let vaMan=null,vaProf=null,vaOv=null,vaKey='ski18',vaTried=false;
 const vaFrames={};                     // "<layer>|<tag>" -> object URL / path
@@ -4286,7 +4299,6 @@ function vaProfAvailable(){return !!(vaProf&&vaProf.points&&vaProf.points.length
 
 async function vaLoad(){
   if(vaTried)return;vaTried=true;
-  if(!demoActive())return;             // see above
   try{
     const r=await fetch(VA_BASE+'/manifest.json',{cache:'force-cache'});
     if(!r.ok)return;
@@ -4342,17 +4354,43 @@ function vaPickLayer(k){
   if(vaOv){const u=vaFrameUrl(k,vaTagIndex());if(u)try{vaOv.setUrl(u);}catch(e){}}
   ovRender();
 }
+// How far the exported model window sits from what the timeline is showing.
+// The SNOWPACK run is an offline batch over a fixed date range, so it will
+// not always match the live forecast window -- and when it does not, the user
+// has to be told rather than left to assume the colours are current.
+function vaDataNote(){
+  if(!vaAvailable())return null;
+  const tags=vaMan.timestamps||vaMan.tags||[];
+  const shown=tags[Math.min(vaTagIndex(),tags.length-1)]||'';
+  const dt=new Date(Date.parse(String(shown).replace(/T(\d{2})(\d{2})$/,'T$1:$2')));
+  if(!isFinite(+dt))return null;
+  const want=(M.times&&M.times[Math.max(0,Math.min(M.times.length-1,b-1))])||'';
+  const wt=Date.parse(want.length>16?want:(want+':00'));
+  const days=isFinite(wt)?Math.round(Math.abs(+dt-wt)/86400000):0;
+  const fmt=dt.toLocaleDateString('de-CH',{day:'numeric',month:'short',year:'numeric'})
+           +', '+String(dt.getHours()).padStart(2,'0')+':00';
+  // A day or two apart is the normal export cadence; months apart is a
+  // different season and must not be presented as if it were today.
+  return {label:fmt,days:days,stale:days>7};
+}
+function vaNoteHTML(){
+  const n=vaDataNote();if(!n)return '';
+  return '<div class="va-date'+(n.stale?' va-date-stale':'')+'">Modelllauf: '+escapeHtml(n.label)
+    +(n.stale?' <b>· '+n.days+' Tage neben der Zeitleiste</b>':'')+'</div>';
+}
+
 // The legend comes from the manifest, never from a copy in here: classify.py
 // owns the label list and the colours, and a second copy would drift.
 function vaLegendHTML(){
   if(!vaAvailable())return '';
   const L=vaMan.layers[vaKey];if(!L)return '';
+  const note=vaNoteHTML();
   if(vaKey==='density'){
     const r=L.range||[100,450];
-    return '<div class="va-leg va-leg-ramp"><i></i><span>'+r[0]+'–'+r[1]+' '+(L.unit||'kg/m3')+'</span></div>';
+    return note+'<div class="va-leg va-leg-ramp"><i></i><span>'+r[0]+'–'+r[1]+' '+(L.unit||'kg/m3')+'</span></div>';
   }
   const leg=L.legend||{};
-  return '<div class="va-leg">'+Object.keys(leg).map(k=>{
+  return note+'<div class="va-leg">'+Object.keys(leg).map(k=>{
     const e=leg[k];if(!e)return '';
     return '<div><span style="background:rgb('+(e[1]||[0,0,0]).join(',')+')"></span>'
       +escapeHtml(String(e[0]).replace(/_/g,' '))+'</div>';
@@ -4455,6 +4493,7 @@ function vaProfileHTML(pf){
   }).join('');
   return '<div class="insp-sec va-prof"><h4>Schneeprofil <em>HS '+pf.hs+' cm'
     +(pf.exact?'':' · interpoliert')+'</em></h4>'
+    +vaNoteHTML()
     +'<div class="va-prof-row">'
     +'<svg class="va-grain" viewBox="0 0 '+GW+' '+H+'" width="'+GW+'" height="'+H+'" aria-label="Kornform">'+bars+'</svg>'
     +'<svg class="va-dens" viewBox="0 0 '+Wp+' '+H+'" width="'+Wp+'" height="'+H+'" aria-label="Dichte">'
@@ -5573,7 +5612,7 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
   if(l=="snow"){let h="<b>Neuschnee [cm] (SLF-Skala)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (click for details)</div>";}
   if(l=="depth"){let h="<b>Schneehöhe [cm] (SLF-Skala)</b><br>";for(let i=0;i<DEPTH_BOUNDS.length-1;i++)h+=`<div><i style="background:${SC[Math.min(i,SC.length-1)]}"></i>${DEPTH_BOUNDS[i]}${i===DEPTH_BOUNDS.length-2?'+':'–'+DEPTH_BOUNDS[i+1]}</div>`;return h;}
   if(l=="temp"){let extra="blue=cold · red=warm";if(stat=="sub0")extra="only cells staying below 0°C for entire window";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>Temp 2 m [°C] (${sn})</b><br>${extra}`;}
-  if(l=="wind"){if(stat=="lt10")return "<b>Wind 10 m ("+sn+")</b><br>green = max wind stays below 10 km/h";return '<b>Wind 10 m (km/h, '+sn+')</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(30,120,255),rgb(30,240,135),rgb(255,240,0),rgb(255,40,0));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:10px"><span>0</span><span>25</span><span>50</span><span>70+</span></div><div style="margin-top:4px;font-size:11px">Arrows show flow direction</div>';}
+  if(l=="wind"){if(stat=="lt10")return "<b>Wind 10 m ("+sn+")</b><br>green = max wind stays below 10 km/h";return '<b>Wind 10 m (km/h, '+sn+')</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(30,120,255),rgb(30,240,135),rgb(255,240,0),rgb(255,40,0));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:11px"><span>0</span><span>25</span><span>50</span><span>70+</span></div><div style="margin-top:4px;font-size:12px">Arrows show flow direction</div>';}
   if(l=="sun")return "<b>Σ Sunshine Hours</b><br>Scale 0–48 h+ · light→orange = more sun";
   if(l=="rad")return "<b>Clear-sky Radiation [Wh/m²/d]</b><br>Day: "+dayLabel(bandDoy())+" (= window start)<br>dark=shade/low · yellow=high<br>incl. slope, aspect & terrain shadow";
   if(l=="radsun")return "<b>Effective Radiation [Wh/m²/d]</b><br>Clear-sky × cloud attenuation (20% diffuse + 80% × sunshine)<br>Day: "+dayLabel(bandDoy());
@@ -5585,30 +5624,30 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
   if(l=="powfind"){
     const sw=(cm)=>{const c=snowCol(cm)||[150,150,150];return '<div><i style="background:rgb('+c[0]+','+c[1]+','+c[2]+')"></i>'+cm+' cm</div>';};
     return '<b>Reported Powder</b><br>'+sw(10)+sw(30)+sw(60)+sw(100)+
-      '<div style="margin-top:4px;font-size:11px">Farbe = Schneehöhe (SLF-Skala), gemittelt über die nahen Zeichnen-Reports pro Exposition und Höhenband.</div>'+
-      '<div style="font-size:11px">Nur Zeichnen-Reports · Vertrauen ≥ '+progConfMin+'%</div>';}
+      '<div style="margin-top:4px;font-size:12px">Farbe = Schneehöhe (SLF-Skala), gemittelt über die nahen Zeichnen-Reports pro Exposition und Höhenband.</div>'+
+      '<div style="font-size:12px">Nur Zeichnen-Reports · Vertrauen ≥ '+progConfMin+'%</div>';}
   if(l=="progpat"){const ty=_progType||stat,pt=PROG_PATTERNS[ty]||{label:ty,hint:''};
-    return '<b>'+pt.label+'</b><br><div style="font-size:11px">Muster statt Farbe — Farbe bleibt der Schneehöhe vorbehalten ('+pt.hint+').</div>'+
-      '<div style="margin-top:3px;font-size:11px">Nur Zeichnen-Reports · Vertrauen ≥ '+progConfMin+'% · ab Zoom '+PROG_TYPE_ZOOM+'</div>';}
+    return '<b>'+pt.label+'</b><br><div style="font-size:12px">Muster statt Farbe — Farbe bleibt der Schneehöhe vorbehalten ('+pt.hint+').</div>'+
+      '<div style="margin-top:3px;font-size:12px">Nur Zeichnen-Reports · Vertrauen ≥ '+progConfMin+'% · ab Zoom '+PROG_TYPE_ZOOM+'</div>';}
   if(l=="progdiff")
     return '<b>Abweichung · Meldungen vs. Modell</b>'+
       '<div style="margin:3px 0 2px"><span style="display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,rgb(231,49,44),rgb(250,168,60),rgb(42,190,112),rgb(34,206,214),rgb(126,76,247))"></span>'+
-      '<span style="display:flex;justify-content:space-between;font-size:10px;margin-top:2px"><span>Modell +</span><span>einig</span><span>Meldungen +</span></span></div>'+
+      '<span style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px"><span>Modell +</span><span>einig</span><span>Meldungen +</span></span></div>'+
       '<div><i style="background:rgb(250,168,60)"></i>Modell sagt Powder, Meldungen nicht</div>'+
       '<div><i style="background:rgb(42,190,112)"></i>beide einig (±'+Math.round(PROGDIFF_TOL*100)+'%)</div>'+
       '<div><i style="background:rgb(34,206,214)"></i>Meldungen sagen Powder, Modell nicht</div>'+
       '<div><i style="background:rgb(132,146,168)"></i>nur Modell (keine Meldung ≥ '+progConfMin+'%)</div>'+
-      '<div style="margin-top:4px;font-size:11px">Vergleicht den Powder-Layer aus <b>Ski &rsaquo; Powder</b> mit der Prognose aus Meldungen. Quelle: '+(PROG_SRC_LABEL[progSrc]||progSrc)+'</div>';
+      '<div style="margin-top:4px;font-size:12px">Vergleicht den Powder-Layer aus <b>Ski &rsaquo; Powder</b> mit der Prognose aus Meldungen. Quelle: '+(PROG_SRC_LABEL[progSrc]||progSrc)+'</div>';
   if(l=="prog"){const ty=_progType||stat,cl=(PROG_LABEL[ty]||ty);
     const ramp=PROG_CONF_STOPS.map(st=>'rgb('+st[1]+','+st[2]+','+st[3]+') '+Math.round(st[0]*100)+'%').join(',');
     return '<b>Prognose · '+cl+'</b><br><div style="margin:3px 0 2px"><span style="display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,'+ramp+')"></span>'+
-      '<span style="display:flex;justify-content:space-between;font-size:10px;margin-top:2px"><span>0%</span><span>50%</span><span>100%</span></span></div>'+
-      '<div style="font-size:11px">Farbe = <b>Vertrauen</b>, Deckkraft = Wahrscheinlichkeit für '+cl+'.</div>'+
-      '<div style="margin-top:3px;font-size:11px">Hänge mit gleichem Aspekt &amp; gleicher Höhe nahe einer Meldung · Quelle: '+(PROG_SRC_LABEL[progSrc]||progSrc)+'</div>';}
-  if(l=="qprheat")return '<b>Powder-Reports (Heatmap)</b><br><div><i style="background:#cde4ff"></i>vereinzelt / wenig</div><div><i style="background:#5b83d9"></i>guter Powder</div><div><i style="background:#0f2a7d"></i>tief &amp; fluffy</div><div style="margin-top:4px;font-size:11px">aus Quick-Powder-Reports · inkl. Demo-Daten</div>';
+      '<span style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px"><span>0%</span><span>50%</span><span>100%</span></span></div>'+
+      '<div style="font-size:12px">Farbe = <b>Vertrauen</b>, Deckkraft = Wahrscheinlichkeit für '+cl+'.</div>'+
+      '<div style="margin-top:3px;font-size:12px">Hänge mit gleichem Aspekt &amp; gleicher Höhe nahe einer Meldung · Quelle: '+(PROG_SRC_LABEL[progSrc]||progSrc)+'</div>';}
+  if(l=="qprheat")return '<b>Powder-Reports (Heatmap)</b><br><div><i style="background:#cde4ff"></i>vereinzelt / wenig</div><div><i style="background:#5b83d9"></i>guter Powder</div><div><i style="background:#0f2a7d"></i>tief &amp; fluffy</div><div style="margin-top:4px;font-size:12px">aus Quick-Powder-Reports · inkl. Demo-Daten</div>';
   if(l=="powder")return '<b>Powder Conditions</b><br><div style="margin:3px 0 2px"><span style="display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,rgb(93,181,255),rgb(10,71,209))"></span>'+
-    '<span style="display:flex;justify-content:space-between;font-size:10px;margin-top:2px"><span>0 cm</span><span>'+(PD_STRONG_BLUE_CM/2)+' cm</span><span>'+PD_STRONG_BLUE_CM+'+ cm</span></span></div>'+
-    '<div style="font-size:11px">Farbe = Neuschnee, Deckkraft = <b>stable</b> vs. <b>reduced</b></div><div style="margin-top:3px;font-size:11px">Gust ≈ mean wind × 1.5</div>';
+    '<span style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px"><span>0 cm</span><span>'+(PD_STRONG_BLUE_CM/2)+' cm</span><span>'+PD_STRONG_BLUE_CM+'+ cm</span></span></div>'+
+    '<div style="font-size:12px">Farbe = Neuschnee, Deckkraft = <b>stable</b> vs. <b>reduced</b></div><div style="margin-top:3px;font-size:12px">Gust ≈ mean wind × 1.5</div>';
   return "<b>Hillshade / Relief (swisstopo)</b>";}
 function legend(l){document.getElementById('legend').innerHTML=legendFor(l||layer);try{miniLegendRender(l||layer);}catch(e){}}
 // A compact, always-on version of the full legend above: just the current
