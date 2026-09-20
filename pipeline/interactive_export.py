@@ -4232,6 +4232,11 @@ function ovToggle(k){
   if(ovOn[k])map.addLayer(l);else map.removeLayer(l);
   if(k==='skitourVec'){if(ovOn[k])tourRecolor();else tourClose();}
   if(k==='variantA'&&ovOn[k])vaRefresh();
+  // Variant A carries a sub-view picker and a legend INSIDE the overlay list,
+  // and those only exist while it is on -- ovSyncUI() just flips classes, so
+  // switching the layer on used to show the raster with no controls at all
+  // until the panel was closed and reopened. Re-render the list instead.
+  if(k==='variantA')ovRender();
   ovSyncUI();ovAttrSync();
 }
 function ovAttrSync(){
@@ -4311,7 +4316,11 @@ async function vaLoad(){
       const pr=await fetch(VA_BASE+'/'+(m.profiles||'profiles/profiles.json'),{cache:'force-cache'});
       if(pr.ok){const pj=await pr.json();if(pj&&pj.points&&pj.profiles)vaProf=pj;}
     }catch(e){}
-    ovSyncUI();
+    // The manifest usually lands after the layer list was first drawn, so the
+    // tile is sitting there greyed out. ovSyncUI() clears that; ovRender()
+    // additionally brings in the picker and legend if it is already on. Both
+    // no-op safely when the panel has not been built yet.
+    ovSyncUI();try{ovRender();}catch(e){}
   }catch(e){}
 }
 
