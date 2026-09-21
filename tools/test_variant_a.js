@@ -44,17 +44,31 @@ const vaProf = {
   ],
 };
 
-// stubs for the app state the functions read
+// stubs for the app state the functions read. appState is shared by
+// reference so a test can move the timeline and re-ask for the note.
 let tagIdx = 0;
+const appState = {times: ['2026-03-26T00:00', '2026-03-26T12:00']};
 const sandbox = {
   vaProf, vaTagIndex: () => tagIdx,
   vaProfAvailable: () => !!(vaProf && vaProf.points && vaProf.points.length),
+  // For the model-date stamp: a manifest whose window sits next to the
+  // timeline, and the timeline state (M.times / b) it is compared against.
+  vaMan: {timestamps: ['2026-03-26T00:00', '2026-03-26T12:00'],
+          tags: ['2026-03-26T0000', '2026-03-26T1200']},
+  vaAvailable: () => true,
+  M: appState, b: 1,
+  Date, JSON,
   escapeHtml: s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),
   Float64Array, Math, Object, String, Array, isFinite, console,
 };
+// vaProfileHTML stamps the model-run date on the profile via vaNoteHTML, so
+// both it and vaDataNote come along. They read vaMan/M/b, which the sandbox
+// supplies below.
 const fn = new Function(...Object.keys(sandbox),
-  grab('vaProfileAt') + '\n' + grab('vaProfileHTML') + '\nreturn {vaProfileAt, vaProfileHTML};');
-const { vaProfileAt, vaProfileHTML } = fn(...Object.values(sandbox));
+  grab('vaProfileAt') + '\n' + grab('vaProfileHTML') + '\n'
+  + grab('vaDataNote') + '\n' + grab('vaNoteHTML')
+  + '\nreturn {vaProfileAt, vaProfileHTML, vaDataNote, vaNoteHTML};');
+const { vaProfileAt, vaProfileHTML, vaDataNote, vaNoteHTML } = fn(...Object.values(sandbox));
 
 console.log('exact-point match');
 let r = vaProfileAt(46.80, 9.83, 2400, 0);
@@ -99,6 +113,28 @@ vaProf.profiles[0] = saved;
 console.log('\ndegenerate input');
 check('missing aspect is tolerated', !!vaProfileAt(46.8, 9.83, 2400, null));
 check('missing elevation is tolerated', !!vaProfileAt(46.8, 9.83, null, 0));
+
+console.log('\nmodel-run date stamp');
+// The layer is offered in live mode too, where the exported window can be an
+// entire season away from what the timeline shows. That has to be stated, not
+// implied -- so the note carries the date and flags the gap.
+{
+  const near = vaDataNote();
+  check('reports the exported model timestamp', !!near && /2026/.test(near.label), near && near.label);
+  check('a window next to the timeline is not stale', near && near.stale === false,
+        near && (near.days + 'd'));
+  check('the note names the model run', /Modelllauf/.test(vaNoteHTML()));
+  check('a fresh note carries no warning', !/Tage neben/.test(vaNoteHTML()));
+}
+{
+  // Same export, but the app is showing a date months later.
+  const saveT = appState.times;
+  appState.times = ['2026-09-20T00:00', '2026-09-20T12:00'];
+  const far = vaDataNote();
+  check('a season-old window is flagged stale', !!far && far.stale === true, far && (far.days + 'd'));
+  check('the gap is stated in days', /Tage neben der Zeitleiste/.test(vaNoteHTML()));
+  appState.times = saveT;
+}
 
 console.log('\nHTML output');
 const html = vaProfileHTML(vaProfileAt(46.80, 9.83, 2400, 0));

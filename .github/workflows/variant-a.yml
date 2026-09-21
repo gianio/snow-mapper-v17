@@ -23,8 +23,13 @@ on:
         default: "2026-04-01"
         required: true
       limit:
-        description: "Points to run (blank = all 978; start small to measure)"
-        default: "8"
+        # Defaults to the FULL national run. It used to default to "8", and an
+        # explicitly-empty dispatch input silently took that default back --
+        # so a run asked for nationally produced 8 points in 105 s and looked
+        # like a success. The safe default is the real thing; a smoke test is
+        # the case you have to ask for.
+        description: "Points to run (blank = all 978; set e.g. 8 for a smoke test)"
+        default: ""
         required: false
       only_tile:
         description: "Restrict to one subregion id (2-8), blank = national"
@@ -147,7 +152,13 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: data/variant_a_cache/work/meteo
-          key: variant-a-forcing-${{ inputs.date }}-${{ inputs.limit }}-${{ inputs.only_tile }}-v1
+          # Deliberately NOT keyed on `limit`. The .smet files are per point,
+          # so a smaller run's forcing is a strict subset of a larger one's and
+          # is worth reusing; keying on limit fragmented the cache into one
+          # bucket per sample size. build_forcing() checks each file's actual
+          # first timestamp anyway, so a stale or short file is refetched
+          # rather than trusted.
+          key: variant-a-forcing-${{ inputs.date }}-${{ inputs.only_tile }}-v2
 
       - name: Run the pipeline
         env:
@@ -158,6 +169,14 @@ jobs:
           ARGS="--date ${{ inputs.date }} --step-h ${{ inputs.step_h }}"
           [ -n "${{ inputs.limit }}" ]     && ARGS="$ARGS --limit ${{ inputs.limit }}"
           [ -n "${{ inputs.only_tile }}" ] && ARGS="$ARGS --only-tile ${{ inputs.only_tile }}"
+          # Echo what a limit actually resolved to. An empty dispatch input
+          # once silently took the workflow default and turned a national run
+          # into an 8-point one that still reported success.
+          if [ -n "${{ inputs.limit }}" ]; then
+            echo "::notice::SAMPLE RUN — ${{ inputs.limit }} points, not the national set"
+          else
+            echo "::notice::NATIONAL RUN — every representative point"
+          fi
           echo "run_variant_a.py $ARGS"
           START=$(date +%s)
           python -u run_variant_a.py $ARGS 2>&1 | tee run.log
@@ -177,7 +196,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: data/variant_a_cache/work/meteo
-          key: variant-a-forcing-${{ inputs.date }}-${{ inputs.limit }}-${{ inputs.only_tile }}-v1
+          key: variant-a-forcing-${{ inputs.date }}-${{ inputs.only_tile }}-v2
 
       # The point of the smoke run: turn "unknown per-point cost" into a number,
       # and project it, so the national run is a decision rather than a gamble.
