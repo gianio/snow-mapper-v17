@@ -1725,6 +1725,16 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .va-date b{font-weight:800;color:var(--warn)}
  .va-date-stale{color:var(--fg)}
  .va-grain-leg span{display:inline-flex;align-items:center;gap:3px}
+ .va-gi{flex:0 0 12px;color:var(--fg);opacity:.85}
+ /* One handle, because SNOWPACK output is a state at an instant and not a sum
+    over a window -- a two-ended slider here would claim the layer integrates
+    between the handles, which it does not. */
+ .va-time{grid-column:1/-1;margin:6px 0 2px;display:grid;gap:2px}
+ .va-time label{display:flex;align-items:center;gap:7px;font-size:11px;
+   font-weight:700;color:var(--fg2)}
+ .va-time input[type=range]{flex:1 1 auto;min-width:0;accent-color:var(--acc)}
+ .va-time b{font-size:12px;font-weight:800;color:var(--fg);font-variant-numeric:tabular-nums}
+ .va-time span{font-size:10.5px;color:var(--mut)}
  .va-grain-leg i{width:8px;height:8px;border-radius:2px;display:inline-block}
  /* Aspect must NOT be smoothed -- it is eight discrete classes, and
     interpolating between them would invent directions that are not in the
@@ -4324,10 +4334,44 @@ async function vaLoad(){
   }catch(e){}
 }
 
-// Which exported frame matches what the timeline is showing? The app's window
-// is hourly; variant_a exports every few hours, so snap to the nearest.
+// SNOWPACK is a momentary state of the snowpack, not an accumulation over a
+// window, so this layer gets its own SINGLE-instant time rather than being
+// driven by the app's from-to window. vaTime is the chosen frame; null means
+// "still following the timeline", which is how it starts so the first frame
+// shown is the one nearest whatever the user was already looking at.
+let vaTime=null;
+function vaSetTime(i){
+  if(!vaAvailable())return;
+  const n=(vaMan.tags||[]).length;
+  vaTime=Math.max(0,Math.min(n-1,+i||0));
+  vaRefresh();ovRender();
+}
+function vaTimeLabel(i){
+  const tags=vaMan.timestamps||vaMan.tags||[];
+  const dt=new Date(Date.parse(String(tags[i]||'').replace(/T(\d{2})(\d{2})$/,'T$1:$2')));
+  if(!isFinite(+dt))return String(tags[i]||'');
+  return dt.toLocaleDateString('de-CH',{weekday:'short',day:'numeric',month:'short'})
+    +' · '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
+}
+// A single handle over the exported frames, plus the instant it names. One
+// handle on purpose: a range would imply the layer sums over it, and it does
+// not -- each frame is one profile at one moment.
+function vaTimeHTML(){
+  if(!vaAvailable())return '';
+  const n=(vaMan.tags||[]).length;if(n<1)return '';
+  const i=vaTagIndex();
+  return '<div class="va-time"><label>Zeitpunkt'
+    +'<input type="range" min="0" max="'+(n-1)+'" step="1" value="'+i+'"'
+    +' oninput="vaSetTime(this.value)" aria-label="Zeitpunkt des Modelllaufs"></label>'
+    +'<b>'+escapeHtml(vaTimeLabel(i))+'</b>'
+    +'<span>Momentaufnahme – kein Zeitfenster</span></div>';
+}
+
+// Which exported frame to show. Once the user has picked one it stays put;
+// until then it snaps to whatever the timeline is displaying.
 function vaTagIndex(){
   if(!vaAvailable())return 0;
+  if(vaTime!==null)return Math.max(0,Math.min((vaMan.tags||[]).length-1,vaTime));
   const want=(M.times&&M.times[Math.max(0,Math.min(M.times.length-1,b-1))])||'';
   const wt=Date.parse(want.length>16?want:(want+':00'));
   if(!isFinite(wt))return 0;
@@ -4343,11 +4387,24 @@ function vaFrameUrl(key,idx){
   const tag=vaMan.tags[idx];
   return VA_BASE+'/'+String(L.file).replace('{tag}',tag);
 }
+// Opacity by zoom: solid when you are looking at the whole country, and
+// increasingly see-through as you close in. Zoomed out the layer IS the
+// subject; zoomed in you are placing it against terrain, tracks and the
+// route lines underneath, and an 82% raster buries all of them.
+const VA_OP_OUT=0.86, VA_OP_IN=0.34, VA_Z_OUT=8, VA_Z_IN=14;
+function vaOpacity(){
+  const z=(map&&map.getZoom&&map.getZoom())||VA_Z_OUT;
+  const t=Math.max(0,Math.min(1,(z-VA_Z_OUT)/(VA_Z_IN-VA_Z_OUT)));
+  return VA_OP_OUT+(VA_OP_IN-VA_OP_OUT)*t;
+}
+function vaSyncOpacity(){
+  if(vaOv&&ovOn.variantA){try{vaOv.setOpacity(vaOpacity());}catch(e){}}
+}
 function vaBuildLayer(){
   if(!vaAvailable())return null;
   const bnds=vaMan.bounds;
   vaOv=L.imageOverlay(vaFrameUrl(vaKey,vaTagIndex()),bnds,
-    {opacity:.82,className:'raster-smooth',pane:'overlayPane'});
+    {opacity:vaOpacity(),className:'raster-smooth',pane:'overlayPane'});
   return vaOv;
 }
 // Called from renderAll(), so the layer follows the timeline like every other
@@ -4356,6 +4413,7 @@ function vaRefresh(){
   if(!vaOv||!ovOn.variantA||!vaAvailable())return;
   const u=vaFrameUrl(vaKey,vaTagIndex());
   if(u&&u!==vaOv._url){try{vaOv.setUrl(u);}catch(e){}}
+  vaSyncOpacity();
 }
 function vaPickLayer(k){
   if(!vaAvailable()||!vaMan.layers[k])return;
@@ -4477,6 +4535,34 @@ function vaProfileAt(lat,lon,elev,aspectDeg){
   return {hs:Math.round(hs/wsum),dens:dens,grain:grain,
           exact:scored[0][0]<0.02,n:K};
 }
+// Grain-shape pictograms, after the ICSSG symbols (Fierz et al. 2009) that
+// every printed snow profile uses: a star for new snow, a filled circle for
+// rounded grains, an open square for facets, a cup for depth hoar and so on.
+// Simplified to read at 11 px -- the shape carries the meaning, the code next
+// to it stays for anyone who wants to be sure. Keyed by the F1 class that
+// variant_a/profiles.py writes.
+const VA_GRAIN_ICON={
+  1:'<path d="M6 1v10M1.7 3.5l8.6 5M10.3 3.5l-8.6 5"/>',                  // PP  new snow: six-armed star
+  // DF has to read as a DECAYING star next to PP's clean one, and at 12 px a
+  // six-armed star with a dot in it is just PP again. Stubby rays on a filled
+  // core carry "fragmented" at this size.
+  2:'<circle cx="6" cy="6" r="2" fill="currentColor" stroke="none"/>'
+   +'<path d="M6 1.4v1.5M6 9.1v1.5M1.4 6h1.5M9.1 6h1.5"/>',                 // DF  decomposing
+  3:'<circle cx="6" cy="6" r="3.1" fill="currentColor" stroke="none"/>',    // RG  rounded grains
+  4:'<rect x="2.9" y="2.9" width="6.2" height="6.2"/>',                     // FC  faceted crystals
+  5:'<path d="M2.4 2.6l1.7 6.8h3.8l1.7-6.8"/>',                             // DH  depth hoar: cup
+  6:'<path d="M1.8 9.2h8.4L10.2 3z"/>',                                     // SH  surface hoar: wedge
+  7:'<circle cx="4.3" cy="6.4" r="2.4" fill="currentColor" stroke="none"/><circle cx="7.9" cy="5.4" r="2" fill="currentColor" stroke="none"/>', // MF  melt forms: clustered
+  8:'<rect x="1.6" y="4.9" width="8.8" height="2.2" fill="currentColor" stroke="none"/>', // IF  ice layer: bar
+  9:'<rect x="2.9" y="2.9" width="6.2" height="6.2" rx="2.1"/>',            // FCxr rounding facets
+  0:'<path d="M2.5 6h7"/>'                                                  // unknown
+};
+function vaGrainIcon(code){
+  const d=VA_GRAIN_ICON[code]||VA_GRAIN_ICON[0];
+  return '<svg class="va-gi" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"'
+    +' fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round">'+d+'</svg>';
+}
+
 // Density curve + grain-type column, the same two things variant_a's preview
 // shows. Drawn as inline SVG so it costs no library and scales crisply.
 function vaProfileHTML(pf){
@@ -4496,9 +4582,13 @@ function vaProfileHTML(pf){
     const x=Math.max(0,Math.min(1,(pf.dens[j]-dmin)/(dmax-dmin)))*Wp;
     pathd+=(j?'L':'M')+x.toFixed(1)+' '+(j*H/nb+H/nb/2).toFixed(1);
   }
+  // Swatch + ICSSG pictogram + code. The colour matches the depth column
+  // beside it, the pictogram is what a printed profile would show, and the
+  // code stays so the symbol never has to be guessed at.
   const chips=Object.keys(seen).map(g=>{
     const e=gl[g]||gl[String(g)];
-    return '<span><i style="background:rgb('+e[1].join(',')+')"></i>'+escapeHtml(e[0])+'</span>';
+    return '<span><i style="background:rgb('+e[1].join(',')+')"></i>'
+      +vaGrainIcon(+g)+escapeHtml(e[0])+'</span>';
   }).join('');
   return '<div class="insp-sec va-prof"><h4>Schneeprofil <em>HS '+pf.hs+' cm'
     +(pf.exact?'':' · interpoliert')+'</em></h4>'
@@ -5995,7 +6085,7 @@ function ovRender(){
       extra='<div class="va-subs">'+Object.keys(vaMan.layers).map(lk=>
         '<button type="button" class="ly-sub'+(lk===vaKey?' on':'')+'"'
         +' onclick="vaPickLayer(\''+lk+'\')">'+escapeHtml(names[lk]||lk)+'</button>').join('')
-        +'</div>'+vaLegendHTML();
+        +'</div>'+vaTimeHTML()+vaLegendHTML();
     }
     return '<button type="button" id="ov_'+k+'" class="ly-tile ly-b'
       +(ovOn[k]?' on':'')+(na?' na':'')+'" aria-pressed="'+(ovOn[k]?'true':'false')+'"'
@@ -6391,6 +6481,7 @@ function inspClose(){document.getElementById('inspPanel').classList.remove('open
 // Tapping the sliver of map that stays visible beside an open feed is a
 // dismiss, not a probe -- the point inspector would fight the panel for
 // the same screen space, so it is skipped while the feed is open.
+map.on('zoomend',function(){vaSyncOpacity();});
 map.on('click',function(e){
   if(document.body.classList.contains('feed-side')){feedClose();return;}
   inspOpen(e.latlng.lat,e.latlng.lng);
