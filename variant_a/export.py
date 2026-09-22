@@ -14,10 +14,17 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from rasterio.transform import from_origin, array_bounds
+from rasterio.warp import calculate_default_transform, reproject, Resampling
+
 from . import config, classify
 from .subregions import NationalGrid, wgs84_bounds
 
 DENS_MIN, DENS_MAX = 100.0, 450.0
+
+# Width the reprojected PNG is capped at. The source grid is 1440 px across,
+# and EPSG:4326 comes out near that, so this does not downsample in practice.
+_PNG_W = 2000
 
 
 def _rgba_from_labels(lab, table):
@@ -35,6 +42,42 @@ def _rgba_density(field, valid):
     im[..., 2] = np.clip(120 * (1 - x), 0, 255)
     im[..., 3] = np.where(valid & (field > 0), 190, 0)
     return im
+
+
+def _to_wgs84(rgba, grid: NationalGrid, nearest: bool):
+    """Reproject an LV03 raster to EPSG:4326 and return it with its real bounds.
+
+    This has to happen before the PNG is written. The grid is regular in LV03
+    (EPSG:21781), and L.imageOverlay stretches an image LINEARLY between two
+    lat/lon corners -- but an LV03 rectangle is not a lat/lon rectangle. Taking
+    the bbox of two opposite corners and stretching to it displaced the layer
+    by up to 10 km: the true SE corner of this grid lands 10.0 km from where
+    that bbox puts it, the NW corner 5.8 km. The app's own rasters go through
+    exactly this step (_rgba_to_png_b64 in pipeline/interactive_export.py);
+    Variant A was the one product that skipped it.
+
+    `nearest` for the two CLASS layers -- ski18 and simple are category codes,
+    and interpolating them would invent classes that are not in the data.
+    """
+    h, w = rgba.shape[:2]
+    src_crs = f"EPSG:{config.DEM_EPSG}"
+    src_t = from_origin(grid.xll, grid.yll + h * grid.cs, grid.cs, grid.cs)
+    bounds = (grid.xll, grid.yll, grid.xll + w * grid.cs, grid.yll + h * grid.cs)
+    dst_t, dw, dh = calculate_default_transform(src_crs, "EPSG:4326", w, h, *bounds)
+    scale = max(1.0, dw / _PNG_W)
+    dw2, dh2 = int(dw / scale), int(dh / scale)
+    dst_t2 = from_origin(dst_t.c, dst_t.f, (dst_t.a * dw) / dw2, (-dst_t.e * dh) / dh2)
+    rs = Resampling.nearest if nearest else Resampling.bilinear
+    bands = []
+    for k in range(4):
+        out = np.zeros((dh2, dw2), "float32")
+        reproject(source=rgba[:, :, k].astype("float32"), destination=out,
+                  src_transform=src_t, src_crs=src_crs,
+                  dst_transform=dst_t2, dst_crs="EPSG:4326", resampling=rs)
+        bands.append(out)
+    left, bottom, right, top = array_bounds(dh2, dw2, dst_t2)
+    return (np.clip(np.dstack(bands), 0, 255).astype(np.uint8),
+            [[bottom, left], [top, right]])
 
 
 def _save_png(im, path):
@@ -61,16 +104,24 @@ def export_all(grid: NationalGrid, grids_by_ts, profile_payload, out_dir: Path |
     out_dir = out_dir or config.OUTPUT_DIR
     (out_dir / "layers").mkdir(parents=True, exist_ok=True)
     (out_dir / "profiles").mkdir(parents=True, exist_ok=True)
-    la0, lo0, la1, lo1 = wgs84_bounds(grid)
-    bounds = [[la0, lo0], [la1, lo1]]
     valid = ~np.isnan(grid.elevation)
     ts_list = sorted(grids_by_ts)
     tags = [dt.strftime("%Y-%m-%dT%H%M") for dt in ts_list]
+    # Every layer shares the grid, so the reprojected bounds are identical for
+    # all of them; the last one out is the one the manifest publishes.
+    bounds = None
     for dt, tag in zip(ts_list, tags):
         g = grids_by_ts[dt]
-        _save_png(_rgba_from_labels(g["ski18"], classify.SKI_RGBA), out_dir / "layers" / f"ski18_{tag}.png")
-        _save_png(_rgba_from_labels(g["simple"], classify.SIMPLE_RGBA), out_dir / "layers" / f"simple_{tag}.png")
-        _save_png(_rgba_density(g["density"], valid), out_dir / "layers" / f"density_{tag}.png")
+        for key, rgba, nearest in (
+            ("ski18", _rgba_from_labels(g["ski18"], classify.SKI_RGBA), True),
+            ("simple", _rgba_from_labels(g["simple"], classify.SIMPLE_RGBA), True),
+            ("density", _rgba_density(g["density"], valid), False),
+        ):
+            img, bounds = _to_wgs84(rgba, grid, nearest)
+            _save_png(img, out_dir / "layers" / f"{key}_{tag}.png")
+    if bounds is None:                      # no timestamps: fall back to the bbox
+        la0, lo0, la1, lo1 = wgs84_bounds(grid)
+        bounds = [[la0, lo0], [la1, lo1]]
     json.dump(profile_payload, open(out_dir / "profiles" / "profiles.json", "w"),
               default=_jsonable)
     manifest = {

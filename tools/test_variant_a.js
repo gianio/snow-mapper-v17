@@ -20,6 +20,20 @@ function grab(name) {
   throw new Error(name + ' unbalanced');
 }
 
+// The pictogram table is a const object, not a function, so it needs its own
+// extractor -- and pulling it from the real source is the point: a symbol
+// added in the app without a test update should not silently pass.
+function grabConst(name) {
+  const i = src.indexOf('const ' + name + '=');
+  if (i < 0) throw new Error(name + ' not found in app.js');
+  let d = 0;
+  for (let k = src.indexOf('{', i); k < src.length; k++) {
+    if (src[k] === '{') d++;
+    else if (src[k] === '}') { d--; if (!d) return src.slice(i, k + 1) + ';'; }
+  }
+  throw new Error(name + ' unbalanced');
+}
+
 let fails = [];
 const check = (n, c, d='') => { console.log((c?'  [PASS] ':'  [FAIL] ')+n+(d?'  '+d:'')); if(!c) fails.push(n); };
 
@@ -66,9 +80,12 @@ const sandbox = {
 // supplies below.
 const fn = new Function(...Object.keys(sandbox),
   grab('vaProfileAt') + '\n' + grab('vaProfileHTML') + '\n'
-  + grab('vaDataNote') + '\n' + grab('vaNoteHTML')
-  + '\nreturn {vaProfileAt, vaProfileHTML, vaDataNote, vaNoteHTML};');
-const { vaProfileAt, vaProfileHTML, vaDataNote, vaNoteHTML } = fn(...Object.values(sandbox));
+  + grab('vaDataNote') + '\n' + grab('vaNoteHTML') + '\n'
+  + grabConst('VA_GRAIN_ICON') + '\n' + grab('vaGrainIcon')
+  + '\nreturn {vaProfileAt, vaProfileHTML, vaDataNote, vaNoteHTML, vaGrainIcon,'
+  + ' VA_GRAIN_ICON};');
+const { vaProfileAt, vaProfileHTML, vaDataNote, vaNoteHTML, vaGrainIcon,
+        VA_GRAIN_ICON } = fn(...Object.values(sandbox));
 
 console.log('exact-point match');
 let r = vaProfileAt(46.80, 9.83, 2400, 0);
@@ -113,6 +130,31 @@ vaProf.profiles[0] = saved;
 console.log('\ndegenerate input');
 check('missing aspect is tolerated', !!vaProfileAt(46.8, 9.83, 2400, null));
 check('missing elevation is tolerated', !!vaProfileAt(46.8, 9.83, null, 0));
+
+console.log('\ngrain pictograms');
+// Every grain class profiles.py can emit needs its own symbol, and they have
+// to be distinguishable -- a shared glyph would be worse than none, because
+// it looks like information.
+{
+  const codes = Object.keys(GRAIN).map(Number);
+  const missing = codes.filter(c => !VA_GRAIN_ICON[c]);
+  check('every grain class in the payload has a pictogram', missing.length === 0,
+        missing.length ? 'missing ' + missing.join(',') : codes.length + ' classes');
+  const shapes = codes.map(c => VA_GRAIN_ICON[c]);
+  check('no two classes share a glyph', new Set(shapes).size === shapes.length,
+        new Set(shapes).size + ' distinct of ' + shapes.length);
+  const svg = vaGrainIcon(1);
+  check('renders an inline svg', /^<svg /.test(svg) && /<\/svg>$/.test(svg));
+  check('inherits colour so it works in both themes', /currentColor/.test(svg));
+  check('hidden from screen readers (the code beside it carries the name)',
+        /aria-hidden/.test(svg));
+  check('an unknown class falls back rather than breaking',
+        /^<svg /.test(vaGrainIcon(42)));
+  // And the legend actually uses them.
+  const html = vaProfileHTML(vaProfileAt(46.80, 9.83, 2400, 0));
+  check('the profile legend shows pictogram and code together',
+        /<svg class="va-gi"[\s\S]*?<\/svg>RG/.test(html));
+}
 
 console.log('\nmodel-run date stamp');
 // The layer is offered in live mode too, where the exported window can be an
