@@ -1730,10 +1730,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     over a window -- a two-ended slider here would claim the layer integrates
     between the handles, which it does not. */
  .va-time{grid-column:1/-1;margin:6px 0 2px;display:grid;gap:2px}
- .va-time label{display:flex;align-items:center;gap:7px;font-size:11px;
-   font-weight:700;color:var(--fg2)}
- .va-time input[type=range]{flex:1 1 auto;min-width:0;accent-color:var(--acc)}
- .va-time b{font-size:12px;font-weight:800;color:var(--fg);font-variant-numeric:tabular-nums}
+ .va-step{display:flex;align-items:center;gap:6px}
+ .va-step button{flex:0 0 auto;width:26px;height:26px;border-radius:7px;
+   border:1px solid var(--hair);background:var(--card);color:var(--fg);
+   font-size:11px;line-height:1;cursor:pointer}
+ .va-step button:disabled{opacity:.35;cursor:default}
+ .va-time b{flex:1 1 auto;text-align:center;font-size:12px;font-weight:800;
+   color:var(--fg);font-variant-numeric:tabular-nums}
  .va-time span{font-size:10.5px;color:var(--mut)}
  .va-grain-leg i{width:8px;height:8px;border-radius:2px;display:inline-block}
  /* Aspect must NOT be smoothed -- it is eight discrete classes, and
@@ -1808,10 +1811,17 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    width:var(--fab,48px);box-sizing:border-box;color:var(--fg2);display:none}
  #miniLegend.show{display:block}
  #miniLegendTitle{display:none}
- #miniLegendBody{display:flex;flex-direction:row;align-items:stretch;gap:4px;justify-content:center}
- #miniLegendBar{display:flex;flex-direction:column;width:8px;height:172px;border-radius:4px;overflow:hidden;flex:none}
+ /* The two end values sit ABOVE and BELOW the bar rather than beside it.
+    Alongside, they were squeezed into whatever width was left next to an
+    8 px strip inside a 48 px card -- which capped them at 8.5 px, the
+    smallest type in the product. Stacked, the full card width is theirs, so
+    they can be read at a glance from arm's length, and the bar gets wider
+    too now that it is not sharing the row. */
+ #miniLegendBody{display:flex;flex-direction:column;align-items:center;gap:3px}
+ #miniLegendBar{display:flex;flex-direction:column;width:14px;height:150px;border-radius:5px;overflow:hidden;flex:none}
  #miniLegendBar>span{flex:1;min-height:1px}
- #miniLegendNums{display:flex;flex-direction:column;justify-content:space-between;height:172px;font-size:8.5px;font-family:var(--mono);color:var(--ink-500);white-space:nowrap}
+ #miniLegend .ml-num{font-size:12px;font-weight:800;font-family:var(--mono);
+   font-variant-numeric:tabular-nums;color:var(--fg);white-space:nowrap;line-height:1.15}
  #legendBtn{display:none!important}
  #legendBtnOFF{position:absolute;z-index:960;bottom:var(--btm-h,80px);left:12px;width:40px;height:40px;border-radius:var(--r-1);border:1px solid var(--hair);background:var(--card);color:var(--ink-700);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background var(--dur-1) var(--ease)}
  #legendBtn svg{width:20px;height:20px}
@@ -3257,8 +3267,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="miniLegend" onclick="document.getElementById('legendBtn').click()">
   <b id="miniLegendTitle"></b>
   <div id="miniLegendBody">
+    <div class="ml-num" id="miniLegendHi"></div>
     <div id="miniLegendBar"></div>
-    <div id="miniLegendNums"></div>
+    <div class="ml-num" id="miniLegendLo"></div>
   </div>
 </div>
 </section>
@@ -3951,7 +3962,13 @@ function tvT(x,cw){return tv0+x/cw*tvSpan();}
 // fixed lookback) rather than "what happened between two times I pick" --
 // so it gets a single point to drag instead of a two-handle range. Every
 // other layer keeps the range untouched.
-function tlSingleMode(){return layer==='powder';}
+function tlSingleMode(){
+  // SNOWPACK is a state at an instant, not an accumulation, so while its
+  // layer is up the main slider has to stop offering a from-to window: two
+  // handles would claim the layer integrates between them, and it does not.
+  if(ovOn.variantA&&typeof vaAvailable==='function'&&vaAvailable())return true;
+  return layer==='powder';
+}
 function drawTimeline(){const tc=document.getElementById('timeline');const rect=tc.getBoundingClientRect();
   if(!tv1)tvInit();
   if(!rect.width)return;
@@ -4335,16 +4352,33 @@ async function vaLoad(){
 }
 
 // SNOWPACK is a momentary state of the snowpack, not an accumulation over a
-// window, so this layer gets its own SINGLE-instant time rather than being
-// driven by the app's from-to window. vaTime is the chosen frame; null means
-// "still following the timeline", which is how it starts so the first frame
-// shown is the one nearest whatever the user was already looking at.
+// window, so the main timeline collapses to a single handle while this layer
+// is up (see tlSingleMode) and THAT is the control -- the layer follows it.
+//
+// vaTime is an override, used in one situation only: when the exported window
+// does not overlap the timeline at all. Live data sits months from the model
+// run, so every timeline position snaps to the same nearest frame and the
+// other six become unreachable. Then, and only then, the panel offers a
+// stepper. null means "follow the timeline", which is the normal case.
 let vaTime=null;
 function vaSetTime(i){
   if(!vaAvailable())return;
   const n=(vaMan.tags||[]).length;
   vaTime=Math.max(0,Math.min(n-1,+i||0));
   vaRefresh();ovRender();
+}
+function vaStep(d){vaSetTime(vaTagIndex()+d);}
+// The timeline is back in charge whenever it can actually reach the frames.
+function vaFollowTimeline(){
+  if(vaTime===null)return;
+  vaTime=null;
+  try{vaRefresh();ovRender();}catch(e){}
+}
+// True when the timeline cannot address the exported frames, so snapping to
+// the nearest would pin every position to one of them.
+function vaOutOfRange(){
+  const n=vaDataNote();
+  return !!(n&&n.stale);
 }
 function vaTimeLabel(i){
   const tags=vaMan.timestamps||vaMan.tags||[];
@@ -4353,18 +4387,20 @@ function vaTimeLabel(i){
   return dt.toLocaleDateString('de-CH',{weekday:'short',day:'numeric',month:'short'})
     +' · '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
 }
-// A single handle over the exported frames, plus the instant it names. One
-// handle on purpose: a range would imply the layer sums over it, and it does
-// not -- each frame is one profile at one moment.
+// Normally nothing: the bottom timeline is the control. This appears only
+// when that timeline is nowhere near the exported window, so the frames would
+// otherwise be unreachable.
 function vaTimeHTML(){
-  if(!vaAvailable())return '';
-  const n=(vaMan.tags||[]).length;if(n<1)return '';
+  if(!vaAvailable()||!vaOutOfRange())return '';
+  const n=(vaMan.tags||[]).length;if(n<2)return '';
   const i=vaTagIndex();
-  return '<div class="va-time"><label>Zeitpunkt'
-    +'<input type="range" min="0" max="'+(n-1)+'" step="1" value="'+i+'"'
-    +' oninput="vaSetTime(this.value)" aria-label="Zeitpunkt des Modelllaufs"></label>'
+  return '<div class="va-time"><div class="va-step">'
+    +'<button type="button" onclick="vaStep(-1)"'+(i<=0?' disabled':'')
+    +' aria-label="Vorheriger Zeitpunkt">&#9664;</button>'
     +'<b>'+escapeHtml(vaTimeLabel(i))+'</b>'
-    +'<span>Momentaufnahme – kein Zeitfenster</span></div>';
+    +'<button type="button" onclick="vaStep(1)"'+(i>=n-1?' disabled':'')
+    +' aria-label="Naechster Zeitpunkt">&#9654;</button></div>'
+    +'<span>Zeitleiste liegt ausserhalb des Modelllaufs</span></div>';
 }
 
 // Which exported frame to show. Once the user has picked one it stays put;
@@ -5756,7 +5792,8 @@ function legend(l){document.getElementById('legend').innerHTML=legendFor(l||laye
 // second time, so it can never drift out of sync with the real legend.
 function miniLegendRender(l){
   const box=document.getElementById('miniLegend');if(!box)return;
-  const title=document.getElementById('miniLegendTitle'),bar=document.getElementById('miniLegendBar'),nums=document.getElementById('miniLegendNums');
+  const title=document.getElementById('miniLegendTitle'),bar=document.getElementById('miniLegendBar'),
+        hi=document.getElementById('miniLegendHi'),lo=document.getElementById('miniLegendLo');
   const it=(groupItems(curTopic)||[])[curItem],vlabel=(it&&it.vars&&it.vars[curVar]&&it.vars[curVar].label)||l||layer;
   const tmp=document.createElement('div');tmp.style.cssText='position:absolute;left:-9999px;top:-9999px';
   tmp.innerHTML=legendFor(l||layer);document.body.appendChild(tmp);
@@ -5771,22 +5808,24 @@ function miniLegendRender(l){
   // as the icon column it sits above. Takes just the first number a label
   // contains ("100–150 cm" -> "100", "70+" -> "70").
   const shortNum=s=>{const m=/-?\d+(\.\d+)?/.exec(s);return m?m[0]:s;};
-  let barHtml='',numHtml='';
+  let barHtml='',numHi='',numLo='';
   if(swatches.length){
     barHtml=swatches.slice().reverse().map(c=>'<span style="background:'+c+'"></span>').join('');
     const rows=[...tmp.querySelectorAll('div')].filter(r=>r.querySelector(':scope>i'));
     const texts=rows.map(r=>{const c=r.cloneNode(true);const ic=c.querySelector('i');if(ic)ic.remove();return c.textContent.trim();}).filter(Boolean);
-    if(texts.length)numHtml='<span>'+escapeHtml(shortNum(texts[texts.length-1]))+'</span><span>'+escapeHtml(shortNum(texts[0]))+'</span>';
+    if(texts.length){numHi=shortNum(texts[texts.length-1]);numLo=shortNum(texts[0]);}
   }else if(gradEl){
     const vertGrad=(gradEl.style.background||'').replace(/-?\d+(\.\d+)?deg/,'0deg');
     barHtml='<span style="flex:10;background:'+vertGrad+'"></span>';
     const numsEl=[...tmp.querySelectorAll('div,span')].find(d=>d.style.display==='flex'&&d.style.justifyContent==='space-between');
-    if(numsEl)numHtml=[...numsEl.children].map(s=>'<span>'+escapeHtml(shortNum(s.textContent))+'</span>').reverse().join('');
+    if(numsEl){const v=[...numsEl.children].map(s=>shortNum(s.textContent));
+      numHi=v[v.length-1]||'';numLo=v[0]||'';}
   }
   document.body.removeChild(tmp);
   if(title)title.textContent=vlabel;
   if(bar)bar.innerHTML=barHtml;
-  if(nums)nums.innerHTML=numHtml;
+  if(hi)hi.textContent=numHi;
+  if(lo)lo.textContent=numLo;
   box.classList.toggle('show',!!barHtml);
 }
 // It has no button of its own on the map any more, so it is its own dismiss.
@@ -6147,8 +6186,44 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
   let mode=null,dragStartX=0,dragStartA=0,dragStartB=0,ws=0;
   let pinch=0,pinchSpan=0,pinchMid=0;
   const EDGE=14;
-  const W=()=>tc.getBoundingClientRect().width;
-  function getZone(cx){const rect=tc.getBoundingClientRect();
+
+  // --- why the scrub used to feel heavy ---------------------------------
+  // Pointer and touch events fire faster than the screen refreshes -- a
+  // 120 Hz trackpad delivers two moves per frame, coalesced touchmove more
+  // than that. Redrawing the canvas inside the handler therefore did the
+  // work twice or more for every frame the user actually saw, and every
+  // handler called getBoundingClientRect() two or three times, each one
+  // forcing a synchronous layout mid-gesture.
+  //
+  // So: cache the rect for the length of the gesture, and coalesce all
+  // drawing into one requestAnimationFrame. At most one redraw per frame,
+  // no matter how many events arrive.
+  let rectC=null;
+  const RECT=()=>rectC||(rectC=tc.getBoundingClientRect());
+  const W=()=>RECT().width;
+  let raf=0,rafFull=false;
+  function paint(full){
+    rafFull=rafFull||!!full;
+    if(raf)return;
+    raf=requestAnimationFrame(function(){
+      const f=rafFull;raf=0;rafFull=false;
+      drawTimeline();
+      // The map follows the handle DURING the drag now. It used to sit
+      // still until release, which read as lag rather than as a choice.
+      // The heavy tail of renderAll (stations, legend, prognosis) is left
+      // for the end; the raster is the part that has to track the finger.
+      if(f){renderAll();return;}
+      try{renderRaster();}catch(e){}
+      if(ovOn.variantA){try{vaRefresh();}catch(e){}}
+      try{syncTl();}catch(e){}
+    });
+  }
+  function releaseRect(){rectC=null;}
+  window.addEventListener('resize',releaseRect);
+  window.addEventListener('orientationchange',releaseRect);
+  window.addEventListener('scroll',releaseRect,{passive:true});
+
+  function getZone(cx){const rect=RECT();
     const x1=tvX(a,rect.width)+rect.left,x2=tvX(b,rect.width)+rect.left;
     if(Math.abs(cx-x1)<EDGE)return'left';
     if(Math.abs(cx-x2)<EDGE)return'right';
@@ -6161,7 +6236,7 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
     const [t1,t2]=[e.touches[0],e.touches[1]];
     pinch=Math.abs(t1.clientX-t2.clientX)||1;
     pinchSpan=tvSpan();
-    const rect=tc.getBoundingClientRect();
+    const rect=RECT();
     pinchMid=Math.max(0,Math.min(1,((t1.clientX+t2.clientX)/2-rect.left)/rect.width));
     mode=null;return true;}
   function pinchMove(e){
@@ -6170,25 +6245,28 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
     const span=Math.max(TV_MIN,Math.min(T,pinchSpan*(pinch/d)));
     const mid=tv0+tvSpan()*pinchMid;
     tv0=mid-span*pinchMid;tv1=tv0+span;tvClamp();
-    drawTimeline();
+    paint();
     if(e.cancelable)e.preventDefault();
     return true;}
-  function pointDragTo(cx){const rect=tc.getBoundingClientRect();
+  function pointDragTo(cx){const rect=RECT();
     const t=Math.round(tvT(cx-rect.left,rect.width));
-    b=Math.max(1,Math.min(T,t+1));a=Math.max(0,b-windowSize);}
+    b=Math.max(1,Math.min(T,t+1));a=Math.max(0,b-windowSize);
+    // Moving the handle means the timeline is addressing the SNOWPACK
+    // frames again, so drop any stepper override.
+    if(typeof vaFollowTimeline==='function')vaFollowTimeline();}
   function startDrag(e){
     if(pinchStart(e)){if(e.cancelable)e.preventDefault();return;}
     const cx=e.touches?e.touches[0].clientX:e.clientX;
     if(tlSingleMode()){
       pointDragTo(cx);mode='point';dragStartX=cx;
-      tc.style.cursor='grabbing';tvFollow();renderAll();
+      tc.style.cursor='grabbing';tvFollow();paint();
       if(e.cancelable)e.preventDefault();return;}
     const zone=getZone(cx);
     if(zone==='outside'){
-      const rect=tc.getBoundingClientRect();
+      const rect=RECT();
       const clickT=Math.round(tvT(cx-rect.left,rect.width));
       const hw=Math.floor(windowSize/2);a=Math.max(0,Math.min(T-windowSize,clickT-hw));b=a+windowSize;
-      tvFollow();renderAll();return;}
+      tvFollow();paint(true);return;}
     mode=zone;dragStartX=cx;dragStartA=a;dragStartB=b;ws=b-a;
     tc.style.cursor=zone==='center'?'grabbing':'col-resize';
     if(e.cancelable)e.preventDefault();}
@@ -6198,16 +6276,16 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
     if(!mode)return;
     if(e.cancelable)e.preventDefault();
     const cx=e.touches?e.touches[0].clientX:e.clientX;
-    if(mode==='point'){pointDragTo(cx);tvFollow();drawTimeline();return;}
+    if(mode==='point'){pointDragTo(cx);tvFollow();paint();return;}
     const delta=Math.round((cx-dragStartX)/W()*tvSpan());
     if(mode==='center'){const na=Math.max(0,Math.min(T-ws,dragStartA+delta));a=na;b=na+ws;}
     else if(mode==='left'){a=Math.max(0,Math.min(dragStartB-4,dragStartA+delta));windowSize=b-a;}
     else if(mode==='right'){b=Math.min(T,Math.max(dragStartA+4,dragStartB+delta));windowSize=b-a;}
-    tvFollow();drawTimeline();}
+    tvFollow();paint();}
   document.addEventListener('mousemove',onDrag);document.addEventListener('touchmove',onDrag,{passive:false});
   function endDrag(e){
-    if(pinch&&(!e||!e.touches||e.touches.length<2)){pinch=0;renderAll();return;}
-    if(mode){mode=null;tc.style.cursor='default';renderAll();}}
+    if(pinch&&(!e||!e.touches||e.touches.length<2)){pinch=0;releaseRect();paint(true);return;}
+    if(mode){mode=null;tc.style.cursor='default';releaseRect();paint(true);}}
   document.addEventListener('mouseup',endDrag);
   document.addEventListener('touchend',endDrag);document.addEventListener('touchcancel',endDrag);
   // A trackpad or a wheel is the same intent as a pinch.
