@@ -81,11 +81,12 @@ const sandbox = {
 const fn = new Function(...Object.keys(sandbox),
   grab('vaProfileAt') + '\n' + grab('vaProfileHTML') + '\n'
   + grab('vaDataNote') + '\n' + grab('vaNoteHTML') + '\n'
-  + grabConst('VA_GRAIN_ICON') + '\n' + grab('vaGrainIcon')
+  + grabConst('VA_GRAIN_ICON') + '\n' + grab('vaGrainIcon') + '\n'
+  + grab('vaProfIndex')
   + '\nreturn {vaProfileAt, vaProfileHTML, vaDataNote, vaNoteHTML, vaGrainIcon,'
-  + ' VA_GRAIN_ICON};');
+  + ' VA_GRAIN_ICON, vaProfIndex};');
 const { vaProfileAt, vaProfileHTML, vaDataNote, vaNoteHTML, vaGrainIcon,
-        VA_GRAIN_ICON } = fn(...Object.values(sandbox));
+        VA_GRAIN_ICON, vaProfIndex } = fn(...Object.values(sandbox));
 
 console.log('exact-point match');
 let r = vaProfileAt(46.80, 9.83, 2400, 0);
@@ -130,6 +131,43 @@ vaProf.profiles[0] = saved;
 console.log('\ndegenerate input');
 check('missing aspect is tolerated', !!vaProfileAt(46.8, 9.83, 2400, null));
 check('missing elevation is tolerated', !!vaProfileAt(46.8, 9.83, null, 0));
+
+console.log('\nprofile axis is independent of the layer axis');
+// Layers run at a fine step so the slider has frames to move through;
+// profiles run coarser because each of those steps costs ~300 kB against
+// ~100 kB for a frame. Reusing the layer index would read the wrong profile,
+// or index past the end of the array.
+{
+  const saveMan = sandbox.vaMan;
+  // 5 layer frames, 2 profile steps -- exactly the mismatch that breaks.
+  sandbox.vaMan.timestamps = ['2026-03-26T00:00','2026-03-26T06:00','2026-03-26T12:00',
+                              '2026-03-26T18:00','2026-03-27T00:00'];
+  sandbox.vaMan.tags = ['2026-03-26T0000','2026-03-26T0600','2026-03-26T1200',
+                        '2026-03-26T1800','2026-03-27T0000'];
+  const n = vaProf.profiles.length;
+  check('profile payload has fewer steps than the layer axis',
+        vaProf.labels.length === n && n < sandbox.vaMan.tags.length,
+        n + ' profiles vs ' + sandbox.vaMan.tags.length + ' frames');
+  for (let i = 0; i < sandbox.vaMan.tags.length; i++) {
+    tagIdx = i;
+    const pi = vaProfIndex();
+    if (pi < 0 || pi >= n) { check('layer frame ' + i + ' maps inside the profile array', false, 'got ' + pi); break; }
+  }
+  tagIdx = 4;
+  check('every layer frame maps inside the profile array', vaProfIndex() < n,
+        'frame 4 -> profile ' + vaProfIndex());
+  tagIdx = 0;
+  check('the earliest frame picks the earliest profile', vaProfIndex() === 0,
+        String(vaProfIndex()));
+  tagIdx = 4;
+  check('a late frame picks the nearest later profile', vaProfIndex() === n - 1,
+        String(vaProfIndex()));
+  // And a profile read still works at a frame index the profile array lacks.
+  tagIdx = 3;
+  check('a profile is returned for an in-between frame', !!vaProfileAt(46.80, 9.83, 2400, 0));
+  sandbox.vaMan = saveMan;
+  tagIdx = 0;
+}
 
 console.log('\ngrain pictograms');
 // Every grain class profiles.py can emit needs its own symbol, and they have

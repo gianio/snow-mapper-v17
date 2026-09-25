@@ -4418,6 +4418,24 @@ function vaTagIndex(){
   });
   return best;
 }
+// The layers and the profiles are on DIFFERENT time axes now: frames every
+// few hours so the slider has something to move through, profiles coarser
+// because each step of those is ~300 kB against ~100 kB for a frame. So the
+// profile lookup snaps to its own list instead of reusing the layer index --
+// using one index for both would read the wrong profile, or run off the end.
+function vaProfIndex(){
+  if(!vaProfAvailable())return 0;
+  const lab=vaProf.labels||[];
+  const n=vaProf.profiles.length;
+  if(!lab.length||lab.length!==n)return Math.min(vaTagIndex(),n-1);
+  const tags=vaMan&&(vaMan.timestamps||vaMan.tags)||[];
+  const cur=tags[Math.min(vaTagIndex(),tags.length-1)]||'';
+  const ct=Date.parse(String(cur).replace(/T(\d{2})(\d{2})$/,'T$1:$2'));
+  if(!isFinite(ct))return 0;
+  let best=0,bd=Infinity;
+  lab.forEach((t,i)=>{const d=Math.abs(Date.parse(t)-ct);if(d<bd){bd=d;best=i;}});
+  return Math.min(best,n-1);
+}
 function vaFrameUrl(key,idx){
   const L=vaMan.layers[key];if(!L)return null;
   const tag=vaMan.tags[idx];
@@ -4507,7 +4525,7 @@ function vaLegendHTML(){
 // per-cell weight matrix is not.
 function vaProfileAt(lat,lon,elev,aspectDeg){
   if(!vaProfAvailable())return null;
-  const step=vaProf.profiles[Math.min(vaTagIndex(),vaProf.profiles.length-1)];
+  const step=vaProf.profiles[vaProfIndex()];
   if(!step)return null;
   const pts=vaProf.points;
 

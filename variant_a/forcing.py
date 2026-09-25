@@ -112,16 +112,31 @@ def _covers(path: Path, start: str) -> bool:
 
 
 def build_forcing(points, target_date, spinup_days=None, model="best_match",
-                  meteo_dir: Path | None = None, lead_days=None, workers=6):
-    """Fetch + write .smet for every point. Returns dir with <id>.smet files."""
+                  meteo_dir: Path | None = None, lead_days=None, workers=6,
+                  since=None, until=None):
+    """Fetch + write .smet for every point. Returns dir with <id>.smet files.
+
+    `since`/`until` (YYYY-MM-DD) are the OUTPUT WINDOW, and both ends matter.
+
+    until: the app's timeline runs days past the target date, and SNOWPACK
+    cannot be integrated into hours it has no meteo for.
+
+    since: the spin-up is measured back from the START of that window, which
+    is days BEFORE the target date. Anchoring it on the target date instead
+    left the .smet starting three days after the model's own ProfileDate, and
+    SNOWPACK died on its first timestep with `missing { TA sw_radiation
+    precipitation precip_splitting VW }` -- the same class of failure as the
+    original lead-in bug, one layer up.
+    """
     spinup_days = spinup_days or config.SPINUP_DAYS
     lead_days = config.FORCING_LEAD_DAYS if lead_days is None else lead_days
     meteo_dir = meteo_dir or (config.WORK_DIR / "meteo")
     meteo_dir.mkdir(parents=True, exist_ok=True)
-    end = datetime.strptime(target_date, "%Y-%m-%d").date()
+    end = datetime.strptime(until or target_date, "%Y-%m-%d").date()
+    spin_from = datetime.strptime(since or target_date, "%Y-%m-%d").date()
     # spin-up window + lead-in, so the .smet starts strictly before the
     # .sno ProfileDate (= end - spinup_days). See config.FORCING_LEAD_DAYS.
-    start = (end - timedelta(days=spinup_days + lead_days)).isoformat()
+    start = (spin_from - timedelta(days=spinup_days + lead_days)).isoformat()
     todo = [p for p in points if not _covers(meteo_dir / f"{p['id']}.smet", start)]
     print(f"  forcing: {len(points) - len(todo)}/{len(points)} already cached, "
           f"fetching {len(todo)} ({start} .. {end})")

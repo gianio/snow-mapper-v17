@@ -81,7 +81,34 @@ def _to_wgs84(rgba, grid: NationalGrid, nearest: bool):
 
 
 def _save_png(im, path):
-    Image.fromarray(im, "RGBA").save(path, "PNG", optimize=True)
+    """Write RGBA, but as an INDEXED PNG when it has few enough colours.
+
+    The class layers are nine colours plus transparency, yet as RGBA they cost
+    176 kB a frame -- the size is the speckle of a 250 m classification, not
+    the palette. Indexing drops that to ~102 kB, and with the export now
+    spanning the app's whole timeline instead of 27% of it there are 45 frames
+    per layer rather than 7, so 42% a frame is worth having.
+
+    8-bit, not 4: PNG's filters work on byte-aligned rows, and 4-bit actually
+    came out LARGER (121 kB) than 8-bit (102 kB) on real frames.
+    """
+    flat = im.reshape(-1, 4)
+    uniq, inv = np.unique(flat, axis=0, return_inverse=True)
+    if len(uniq) > 256:
+        Image.fromarray(im, "RGBA").save(path, "PNG", optimize=True)
+        return
+    idx = Image.fromarray(inv.reshape(im.shape[:2]).astype(np.uint8), "P")
+    pal, alpha = [], []
+    for c in uniq:
+        pal += [int(c[0]), int(c[1]), int(c[2])]
+        alpha.append(int(c[3]))
+    idx.putpalette(pal + [0] * (768 - len(pal)))
+    # tRNS as a PER-INDEX alpha array, not a single transparent index. The
+    # class palettes use partial alpha throughout -- SKI_RGBA alone spans 150
+    # to 240 -- so naming one index transparent would force every other class
+    # to fully opaque and change how the layer composites over the map. The
+    # round-trip test asserts this is byte-exact.
+    idx.save(path, "PNG", optimize=True, transparency=bytes(alpha))
 
 
 def _jsonable(o):
@@ -141,6 +168,11 @@ def export_all(grid: NationalGrid, grids_by_ts, profile_payload, out_dir: Path |
                         "range": [DENS_MIN, DENS_MAX], "unit": "kg/m3"},
         },
         "profiles": "profiles/profiles.json",
+        # The profiles ride a COARSER axis than the layers: the raster is what
+        # gets scrubbed, a profile is a point read, and profiles.json costs
+        # ~300 kB per step against ~100 kB for a frame. The client snaps to
+        # the nearest entry here rather than reusing the layer index.
+        "profile_timestamps": list(profile_payload.get("labels") or []),
         "subregions": grid.tile_names,
     }
     json.dump(manifest, open(out_dir / "manifest.json", "w"), indent=2,
