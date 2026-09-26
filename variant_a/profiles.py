@@ -49,25 +49,42 @@ def build_payload(points, runs_dir, timestamps):
     def find_pro(pid):
         g = glob.glob(os.path.join(runs_dir, pid, "*.pro"))
         return g[0] if g else None
-    kept = []
-    raw = {}
+    # POINT-major, then transposed -- not timestamp-major over a dict of every
+    # point's parsed .pro.
+    #
+    # The old shape held raw[id] for all points at once, because the output
+    # loop ran over timestamps on the outside. Each entry is a fully parsed
+    # profile series: layer heights, densities, grain codes and temperatures
+    # for every written timestep. At 978 points x 89 profiles that is hundreds
+    # of megabytes live at the same moment, and the national run died right
+    # after SNOWPACK with nothing written -- while the same code at --limit 8
+    # passed, because 8 points is 122 times less of it.
+    #
+    # Resampling each point as it is read drops the raw parse immediately and
+    # keeps only the compact result (hs + 28 densities + 28 grain codes), so
+    # peak memory no longer scales with the point count times the profile
+    # depth. The payload is identical; only the loop order changed.
+    kept, per_point = [], []
     for p in points:
         pro = p.get("pro") or find_pro(p["id"])
         if not pro or not os.path.exists(pro):
             continue
         ts = classify.parse_pro(pro)
-        if ts:
-            raw[p["id"]] = {t["dt"]: t for t in ts}; kept.append(p)
-    prof = []
-    for dt in timestamps:
-        step = []
-        for p in kept:
-            av = raw[p["id"]]
-            t = av.get(dt) or av[min(av, key=lambda x: abs((x - dt).total_seconds()))]
+        if not ts:
+            continue
+        av = {t["dt"]: t for t in ts}
+        keys = list(av)
+        row = []
+        for dt in timestamps:
+            t = av.get(dt) or av[min(keys, key=lambda x: abs((x - dt).total_seconds()))]
             r = resample(t)
-            step.append({"hs": 0, "db": [0] * NB, "gb": [0] * NB} if r is None
-                        else {"hs": r[2], "db": r[0], "gb": r[1]})
-        prof.append(step)
+            row.append({"hs": 0, "db": [0] * NB, "gb": [0] * NB} if r is None
+                       else {"hs": r[2], "db": r[0], "gb": r[1]})
+        per_point.append(row)
+        kept.append(p)
+        del av, ts, keys
+    prof = [[per_point[i][k] for i in range(len(kept))]
+            for k in range(len(timestamps))]
     return {
         "nb": NB,
         "grain": {k: [v[0], list(v[1])] for k, v in GRAIN.items()},

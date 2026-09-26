@@ -50,22 +50,30 @@ def _points_from_csv(grid, path):
     return pts
 
 
-def _select_timestamps(series, step_h, target_date=None, window_h=None):
-    """Output timestamps: every step_h hours inside the target window.
+def app_window(target_date, days):
+    """The window the APP's timeline shows, which the export has to cover.
 
-    The window matters. SNOWPACK is driven for a whole spin-up season, so the
-    .pro of an externally supplied --runs-dir can span 120 days; exporting all
-    of it would mean hundreds of PNG frames of last December's snow. Our own
-    runs are already trimmed via PROF_START, but the filter has to hold either
-    way, so it is applied here too.
+    pipeline/interactive_export.py fetches `date - days` .. `date + days` and
+    keeps the first (2*days+1)*24 hours, so its slider runs from midnight
+    `days` before the target date for 11 days at the default of 5.
+
+    Getting this wrong is why the slider appeared dead: the export used to be
+    72 h ENDING on the target date, which is 27% of that slider sitting in its
+    first third. Every position past the target date snapped to the same last
+    frame, so two thirds of the drag changed nothing.
     """
+    start = datetime.strptime(target_date, "%Y-%m-%d") - timedelta(days=days)
+    return start, start + timedelta(hours=(2 * days + 1) * 24 - 1)
+
+
+def _select_timestamps(series, step_h, win=None):
+    """Output timestamps: every step_h hours inside the app's window."""
     allt = set()
     for s in series.values():
         allt.update(s.keys())
     ts = sorted(allt)
-    if ts and target_date and window_h:
-        end = datetime.strptime(target_date, "%Y-%m-%d")
-        start = end - timedelta(hours=window_h)
+    if ts and win:
+        start, end = win
         inside = [t for t in ts if start <= t.replace(tzinfo=None) <= end]
         # Never filter down to nothing: a .pro whose clock disagrees with the
         # target date is a reason to show everything and let the count speak,
@@ -81,12 +89,20 @@ def _select_timestamps(series, step_h, target_date=None, window_h=None):
 def main():
     ap = argparse.ArgumentParser(description="Variant A national ski-quality pipeline")
     ap.add_argument("--date", required=True, help="target date YYYY-MM-DD")
-    ap.add_argument("--window", type=int, default=72,
-                help="hours of output ending on --date")
+    ap.add_argument("--days", type=int, default=5,
+                    help="half-width of the output window in days, matching "
+                         "run_interactive.py --days. The export then spans the "
+                         "same hours the app's timeline shows.")
+    ap.add_argument("--profile-step-h", type=int, default=12,
+                    help="timestep for the per-point snow profiles. Coarser "
+                         "than --step-h on purpose: the raster is what gets "
+                         "scrubbed, a profile is a point read, and profiles.json "
+                         "costs ~300 kB per step against ~100 kB for a frame.")
     ap.add_argument("--only-tile", type=int, default=None)
     ap.add_argument("--points-csv", default=None, help="reuse an external point set")
     ap.add_argument("--runs-dir", default=None, help="reuse existing SNOWPACK .pro runs")
-    ap.add_argument("--step-h", type=int, default=6, help="output timestep [h]")
+    ap.add_argument("--step-h", type=int, default=6,
+                    help="timestep for the layer PNGs [h]")
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--limit", type=int, default=None,
                     help="cap the number of representative points (smoke tests). "
@@ -97,6 +113,10 @@ def main():
                     help="publish export to VARIANT_A_PUBLISH_DIR + Supabase (if configured)")
     args = ap.parse_args()
     datetime.strptime(args.date, "%Y-%m-%d")
+    win = app_window(args.date, args.days)
+    print(f"output window {win[0]:%Y-%m-%d %H:%M} .. {win[1]:%Y-%m-%d %H:%M} "
+          f"({(win[1]-win[0]).total_seconds()/3600:.0f} h, matches the app's "
+          f"timeline at --days {args.days})")
 
     # Phase timings, printed in one machine-readable line at the end. The CI
     # job needs them separated: point selection scans the whole 920x1440
@@ -134,26 +154,34 @@ def main():
         config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         select_points.write_csv(points, config.OUTPUT_DIR / "points.csv")
         print(f"{len(points)} representative points selected")
-        # 2) forcing + 3) SNOWPACK
+        # 2) forcing + 3) SNOWPACK -- both have to reach the END of the
+        #    app's window, not just the target date.
         _ts = _time.time()
-        forcing.build_forcing(points, args.date, model=args.model)
+        forcing.build_forcing(points, args.date, model=args.model,
+                              since=win[0].date().isoformat(),
+                              until=win[1].date().isoformat())
         _t["forcing"] = _time.time() - _ts
         _ts = _time.time()
         runs_dir = snowpack_runner.run_points(points, args.date, workers=args.workers,
-                                              window_h=args.window)
+                                              out_start=win[0], out_end=win[1],
+                                              step_h=args.step_h)
         _t["snowpack"] = _time.time() - _ts
 
     # 4) classify points
     series = gridding.classify_points(points, runs_dir)
     print(f"{len(series)} points classified from .pro")
-    ts = _select_timestamps(series, args.step_h, args.date, args.window)
-    print(f"{len(ts)} output timestamps (step {args.step_h}h)")
+    ts = _select_timestamps(series, args.step_h, win)
+    print(f"{len(ts)} layer timestamps (step {args.step_h}h) "
+          f"covering {win[0]:%Y-%m-%d %H:%M} .. {win[1]:%Y-%m-%d %H:%M}")
     if not ts:
         raise SystemExit("no timestamps — check SNOWPACK runs / --runs-dir")
+    # The profiles ride a coarser axis of their own; see --profile-step-h.
+    pts_ts = _select_timestamps(series, max(args.step_h, args.profile_step_h), win)
+    print(f"{len(pts_ts)} profile timestamps (step {args.profile_step_h}h)")
 
     # 5) grid + 6) profiles
     grids_by_ts, idx, w, used = gridding.grid_timeseries(grid, points, series, ts)
-    payload = profiles.build_payload(used, runs_dir, ts)
+    payload = profiles.build_payload(used, runs_dir, pts_ts)
 
     # 7) export
     out_dir, manifest = export.export_all(grid, grids_by_ts, payload)

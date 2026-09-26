@@ -71,12 +71,12 @@ def test_covers_rejects_a_stale_smet():
         check("a header-only .smet is not coverage", not forcing._covers(empty, "2025-11-30"))
 
 
-def _ini_text(prof_start=0.0):
+def _ini_text(prof_start=0.0, step_h=None):
     with tempfile.TemporaryDirectory() as td:
         t = Path(td)
         p = {"id": "x1", "lat": 46.5, "lon": 8.0, "elev": 1600.0, "slope": 25.0,
              "aspect": 0.0, "e_lv95": 2670000, "n_lv95": 1160000}
-        snowpack_runner.write_ini(p, t, t, t, t, prof_start)
+        snowpack_runner.write_ini(p, t, t, t, t, prof_start, step_h)
         return (t / "x1.ini").read_text()
 
 
@@ -94,30 +94,192 @@ def test_ini():
     windowed = _ini_text(117.0)
     check("PROF_START trims the written profiles to the window",
           abs(float(re.search(r"PROF_START = ([\d.]+)", windowed).group(1)) - 117.0) < 1e-6)
+    # How often SNOWPACK WRITES a profile has to track the export step. It was
+    # pinned at 6 h, so asking the exporter for 3 h would have filtered
+    # 3-hourly over 6-hourly profiles and produced the same frame count -- an
+    # export that looked finer without being finer.
+    for step_h, want_h in ((3, 3), (6, 6), (12, 12)):
+        ini = _ini_text(0.0, step_h)
+        got = float(re.search(r"PROF_DAYS_BETWEEN = ([\d.]+)", ini).group(1)) * 24
+        check(f"--step-h {step_h} writes a profile every {want_h} h",
+              abs(got - want_h) < 1e-6, f"{got:.1f} h")
+    plain = float(re.search(r"PROF_DAYS_BETWEEN = ([\d.]+)", _ini_text()).group(1)) * 24
+    check("no step given falls back to 6 h", abs(plain - 6.0) < 1e-6, f"{plain:.1f} h")
 
 
 def test_timestamp_window():
     print("output timestamp window")
-    end = datetime(2026, 4, 1)
-    allts = [end - timedelta(hours=h) for h in range(0, 2880, 6)]   # 120 days back
+    # A .pro spans the whole spin-up season; only the app's window is exported.
+    win = (datetime(2026, 3, 29), datetime(2026, 4, 1))
+    allts = [datetime(2026, 4, 1) - timedelta(hours=h) for h in range(0, 2880, 6)]
     series = {"p0": {t: {} for t in allts}}
-    ts = run_variant_a._select_timestamps(series, 12, "2026-04-01", 72)
-    check("only the target window is exported", len(ts) == 7, f"{len(ts)} timestamps")
-    check("the window ends on the target date", ts[-1] == end, str(ts[-1]))
-    check("the window starts 72 h earlier", ts[0] == end - timedelta(hours=72), str(ts[0]))
+    ts = run_variant_a._select_timestamps(series, 12, win)
+    check("only the window is exported", len(ts) == 7, f"{len(ts)} timestamps")
+    check("it ends at the window end", ts[-1] == win[1], str(ts[-1]))
+    check("it starts at the window start", ts[0] == win[0], str(ts[0]))
     check("no window means no filtering",
-          len(run_variant_a._select_timestamps(series, 12, None, None)) == 240)
+          len(run_variant_a._select_timestamps(series, 12, None)) == 240)
     # A .pro whose clock sits outside the window must not silently export nothing.
     off = {"p0": {datetime(2025, 1, 1) + timedelta(hours=6 * i): {} for i in range(8)}}
     check("a window that matches nothing falls back to everything",
-          len(run_variant_a._select_timestamps(off, 12, "2026-04-01", 72)) == 4)
+          len(run_variant_a._select_timestamps(off, 12, win)) == 4)
 
 
 def test_prof_start_derivation():
     print("prof_start derivation")
-    for spinup, window, want in [(120, 72, 117.0), (120, None, 0.0), (2, 72, 0.0)]:
-        got = 0.0 if not window else max(0.0, spinup - window / 24.0)
-        check(f"spinup={spinup} window={window} -> PROF_START={want}", got == want, str(got))
+    # Profiles start exactly at the window start: PROF_START is the spin-up
+    # length in days, since the simulation begins spinup_days before it.
+    for spinup, out_start, want in [(120, True, 120.0), (120, False, 0.0), (7, True, 7.0)]:
+        got = float(spinup) if out_start else 0.0
+        check(f"spinup={spinup} windowed={out_start} -> PROF_START={want}",
+              got == want, str(got))
+
+
+def test_window_matches_the_app():
+    print("output window vs the app's timeline")
+    from datetime import datetime as D
+    from run_variant_a import app_window, _select_timestamps
+    # pipeline/interactive_export.py fetches date-days .. date+days and keeps
+    # the first (2*days+1)*24 hours. The export has to span the same hours or
+    # the slider has frames for only part of its travel -- it used to cover
+    # 72 h of 264, sitting in the first third, so two thirds of the drag
+    # changed nothing at all.
+    for days in (5, 3, 1):
+        ws, we = app_window("2026-04-01", days)
+        app_start = D(2026, 4, 1) - timedelta(days=days)
+        app_hours = (2 * days + 1) * 24
+        check(f"--days {days}: starts where the app's timeline starts",
+              ws == app_start, str(ws))
+        check(f"--days {days}: spans the app's {app_hours} h",
+              round((we - ws).total_seconds() / 3600) == app_hours - 1,
+              f"{(we-ws).total_seconds()/3600:.0f} h")
+    ws, we = app_window("2026-04-01", 5)
+    check("the window opens BEFORE the target date, not on it", ws < D(2026, 4, 1))
+    check("and closes after it", we > D(2026, 4, 1))
+    # Frame count at the shipping step.
+    series = {"p": {ws + timedelta(hours=h): {} for h in range(0, 264, 6)}}
+    ts = _select_timestamps(series, 6, (ws, we))
+    check("44 frames at a 6 h step", len(ts) == 44, f"{len(ts)} frames")
+    check("frames reach past the target date",
+          ts[-1] > D(2026, 4, 1), str(ts[-1]))
+    # Anything outside the window is still excluded.
+    series["p"][D(2025, 12, 1)] = {}
+    ts2 = _select_timestamps(series, 6, (ws, we))
+    check("a spin-up profile outside the window is dropped", len(ts2) == 44,
+          f"{len(ts2)} frames")
+
+
+def test_forcing_anchors_on_the_window_start():
+    print("forcing spans the whole window")
+    seen = {}
+
+    def fake_fetch(lat, lon, start, end, model="best_match"):
+        seen["start"], seen["end"] = start, end
+        return {"time": [], "temperature_2m": []}
+
+    real, forcing.fetch_point = forcing.fetch_point, fake_fetch
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            pts = [{"id": "p0", "lat": 46.5, "lon": 8.0, "elev": 1600.0}]
+            forcing.build_forcing(pts, "2026-04-01", meteo_dir=Path(td),
+                                  since="2026-03-27", until="2026-04-06")
+    finally:
+        forcing.fetch_point = real
+    # The spin-up is measured back from the WINDOW START. Anchoring it on the
+    # target date left the .smet beginning three days after the model's own
+    # ProfileDate, and SNOWPACK died on its first timestep.
+    want_start = (datetime(2026, 3, 27)
+                  - timedelta(days=config.SPINUP_DAYS + config.FORCING_LEAD_DAYS))
+    check("spin-up is measured back from the window start, not the target date",
+          seen.get("start") == want_start.date().isoformat(),
+          f"{seen.get('start')} (want {want_start.date()})")
+    check("forcing reaches the end of the window, days past the target date",
+          seen.get("end") == "2026-04-06", str(seen.get("end")))
+
+
+def test_indexed_png_is_lossless():
+    print("indexed PNG encoding")
+    import numpy as np
+    from PIL import Image
+    from variant_a import export
+    # The class layers are 9 colours but cost 176 kB a frame as RGBA; indexing
+    # drops that to ~102 kB. It must not change a single pixel -- these are
+    # category codes, and a shifted colour is a shifted class.
+    rng = np.random.default_rng(5)
+    table = {i: (i * 25 % 256, (i * 70) % 256, (i * 40) % 256, 190) for i in range(1, 10)}
+    lab = rng.integers(0, 10, size=(60, 90)).astype(np.int32)
+    rgba = export._rgba_from_labels(lab, table)
+    with tempfile.TemporaryDirectory() as td:
+        f = Path(td) / "x.png"
+        export._save_png(rgba, f)
+        back = np.array(Image.open(f).convert("RGBA"))
+        check("every pixel survives the round trip", np.array_equal(back, rgba),
+              f"{int((back != rgba).sum())} differing bytes")
+        check("it really is indexed, not RGBA", Image.open(f).mode == "P",
+              Image.open(f).mode)
+        # And a genuinely high-colour image still goes out as RGBA.
+        smooth = np.dstack([rng.integers(0, 256, (60, 90)).astype(np.uint8) for _ in range(4)])
+        g = Path(td) / "y.png"
+        export._save_png(smooth, g)
+        check("a >256-colour raster stays RGBA", Image.open(g).mode == "RGBA",
+              Image.open(g).mode)
+        check("and survives too", np.array_equal(np.array(Image.open(g).convert("RGBA")), smooth))
+
+
+def test_profile_payload():
+    print("profile payload")
+    from datetime import datetime as D
+    from variant_a import profiles
+    # build_payload used to hold every point's fully parsed .pro at once,
+    # because the output loop ran timestamp-major. At 978 points that is
+    # hundreds of MB live at the same moment; the national run died right
+    # after SNOWPACK while --limit 8 passed. It is point-major now, dropping
+    # each raw parse as soon as it is resampled. Same payload, bounded memory.
+    ts = [D(2026, 3, 27), D(2026, 3, 27, 12), D(2026, 3, 28)]
+    fake = [{"dt": t, "n": 2, "heights": [40.0, 90.0],
+             "density": [180.0, 260.0], "grain": [330, 440]} for t in ts]
+    real_parse = profiles.classify.parse_pro
+    profiles.classify.parse_pro = lambda path: fake
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            pts = []
+            for i in range(4):
+                d = Path(td) / f"p{i}"; d.mkdir()
+                (d / "x_va.pro").write_text("stub")
+                pts.append({"id": f"p{i}", "lat": 46.5, "lon": 8.0, "elev": 1600.0,
+                            "aspect": 0.0, "slope": 25.0, "tile": 2})
+            out = profiles.build_payload(pts, td, ts)
+    finally:
+        profiles.classify.parse_pro = real_parse
+    check("one entry per timestamp", len(out["profiles"]) == len(ts),
+          f"{len(out['profiles'])} steps")
+    check("every timestamp carries every point",
+          all(len(step) == 4 for step in out["profiles"]),
+          str([len(x) for x in out["profiles"]]))
+    check("points are listed once, not per step", len(out["points"]) == 4,
+          str(len(out["points"])))
+    check("labels line up with the profile steps",
+          len(out["labels"]) == len(out["profiles"]))
+    first = out["profiles"][0][0]
+    check("each entry has hs and both bin arrays",
+          "hs" in first and len(first["db"]) == profiles.NB
+          and len(first["gb"]) == profiles.NB)
+    check("the snow depth came through", first["hs"] == 90, str(first["hs"]))
+    # A timestamp the .pro does not contain falls back to the nearest one
+    # rather than dropping the point out of that step.
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td) / "p0"; d.mkdir(); (d / "x_va.pro").write_text("stub")
+        profiles.classify.parse_pro = lambda path: fake
+        try:
+            gap = profiles.build_payload(
+                [{"id": "p0", "lat": 46.5, "lon": 8.0, "elev": 1600.0,
+                  "aspect": 0.0, "slope": 25.0, "tile": 2}],
+                td, ts + [D(2026, 4, 5)])
+        finally:
+            profiles.classify.parse_pro = real_parse
+    check("a timestamp outside the .pro still yields a profile",
+          len(gap["profiles"]) == 4 and gap["profiles"][-1][0]["hs"] == 90,
+          str(gap["profiles"][-1][0]["hs"]))
 
 
 def test_selection_cache():
@@ -268,7 +430,9 @@ if __name__ == "__main__":
     for t in (test_forcing_starts_before_profile_date, test_covers_rejects_a_stale_smet,
               test_ini, test_timestamp_window, test_prof_start_derivation,
               test_selection_cache, test_win_count_matches_sliding_window,
-              test_export_survives_numpy_types,
+              test_export_survives_numpy_types, test_window_matches_the_app,
+              test_forcing_anchors_on_the_window_start,
+              test_indexed_png_is_lossless, test_profile_payload,
               test_selection_is_stable):
         t()
     print("\nVARIANT A PIPELINE " + ("OK" if not FAILS else f"FAILED: {FAILS}"))

@@ -15,6 +15,8 @@ _END = None  # set per run
 # SNOWPACK integration step [min]. Also drives the PSUM accumulation
 # period in the .ini -- see write_ini.
 CALC_STEP_MIN = 30
+# Fallback profile write cadence [days] when no export step is given.
+PROF_DAYS_BETWEEN = 0.25
 
 
 def _init_snow(elev):
@@ -50,7 +52,7 @@ def write_sno(p, sno_dir: Path, start_date):
 
 
 def write_ini(p, ini_dir: Path, sno_dir: Path, meteo_dir: Path, runs_dir: Path,
-              prof_start_days=0.0):
+              prof_start_days=0.0, step_h=None):
     """prof_start_days = how long into the run to START writing profiles.
 
     The spin-up is the point of the long run, but none of it needs to be
@@ -65,6 +67,12 @@ def write_ini(p, ini_dir: Path, sno_dir: Path, meteo_dir: Path, runs_dir: Path,
     # warns when the two disagree ("should be re-accumulated over
     # CALCULATION_STEP_LENGTH"), so derive one from the other.
     psum_period = int(CALC_STEP_MIN * 60)
+    # How often SNOWPACK WRITES a profile, derived from the export step rather
+    # than fixed. It was pinned at 6 h, so asking the exporter for a 3 h step
+    # would have filtered 3-hourly over profiles that only existed 6-hourly
+    # and quietly produced the same frame count -- the export would have
+    # looked finer without being finer.
+    prof_between = (step_h / 24.0) if step_h else PROF_DAYS_BETWEEN
     c = f"""[GENERAL]
 BUFFER_SIZE = 370
 BUFF_BEFORE = 1.5
@@ -85,7 +93,7 @@ EXPERIMENT = va
 PROF_WRITE = TRUE
 PROF_FORMAT = PRO
 PROF_START = {prof_start_days:.4f}
-PROF_DAYS_BETWEEN = 0.25
+PROF_DAYS_BETWEEN = {prof_between:.6f}
 PROF_AGE_OR_DATE = AGE
 PROF_ID_OR_MK = ID
 TS_WRITE = FALSE
@@ -158,15 +166,27 @@ def _run_one(args):
     return os.path.basename(ini), p.returncode, (p.stderr[-400:] if p.returncode else "")
 
 
-def run_points(points, target_date, spinup_days=None, workers=None, window_h=None):
+def run_points(points, target_date, spinup_days=None, workers=None,
+               out_start=None, out_end=None, step_h=None):
     """Prepare + run SNOWPACK for all points. Returns runs_dir with <id>/*.pro.
 
-    window_h caps how much of the run gets written out (see write_ini); None
-    keeps the whole season, which is only sane for a handful of points.
+    out_start/out_end bound the window that gets WRITTEN, and out_end is also
+    how far the model is integrated. Both come from the app's timeline (see
+    run_variant_a.app_window) so the exported frames span the same hours the
+    slider offers. Passing neither keeps the whole season, which is only sane
+    for a handful of points.
     """
+    from datetime import datetime as _dtm, timedelta as _td
     spinup_days = spinup_days or config.SPINUP_DAYS
-    start = _profile_start_iso(target_date, spinup_days)
-    prof_start = 0.0 if not window_h else max(0.0, spinup_days - window_h / 24.0)
+    # The spin-up runs up to the START of the output window, not to the target
+    # date -- the window now opens days before that date.
+    if out_start is not None:
+        sim_start = (out_start - _td(days=spinup_days)).date().isoformat()
+        prof_start = float(spinup_days)
+    else:
+        sim_start = _profile_start_iso(target_date, spinup_days)
+        prof_start = 0.0
+    start = sim_start
     base = config.WORK_DIR
     sno_dir = base / "sno"; ini_dir = base / "ini"; runs_dir = base / "runs"
     meteo_dir = base / "meteo"
@@ -174,9 +194,12 @@ def run_points(points, target_date, spinup_days=None, workers=None, window_h=Non
         d.mkdir(parents=True, exist_ok=True)
     for p in points:
         write_sno(p, sno_dir, start)
-        write_ini(p, ini_dir, sno_dir, meteo_dir, runs_dir, prof_start)
+        write_ini(p, ini_dir, sno_dir, meteo_dir, runs_dir, prof_start, step_h)
     inis = [str(ini_dir / f"{p['id']}.ini") for p in points]
-    end = f"{target_date}T00:00"
+    # Integrate to the end of the OUTPUT window. Stopping at the target date
+    # is what left the second half of the app's slider with no frames at all.
+    end = (out_end.strftime("%Y-%m-%dT%H:%M") if out_end is not None
+           else f"{target_date}T00:00")
     workers = workers or (os.cpu_count() or 6)
     ok = 0; fail = []
     t0 = time.time()
