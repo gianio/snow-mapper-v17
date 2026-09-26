@@ -163,7 +163,8 @@ def main():
         _t["forcing"] = _time.time() - _ts
         _ts = _time.time()
         runs_dir = snowpack_runner.run_points(points, args.date, workers=args.workers,
-                                              out_start=win[0], out_end=win[1])
+                                              out_start=win[0], out_end=win[1],
+                                              step_h=args.step_h)
         _t["snowpack"] = _time.time() - _ts
 
     # 4) classify points

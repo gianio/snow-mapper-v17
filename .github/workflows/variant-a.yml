@@ -36,8 +36,10 @@ on:
         default: ""
         required: false
       step_h:
-        description: Output timestep in hours
-        default: "12"
+        # Also sets how often SNOWPACK writes a profile, so this genuinely
+        # changes the frame count rather than just filtering a fixed one.
+        description: "Hours between layer frames (3 = 88 frames over the window)"
+        default: "3"
         required: false
       publish:
         description: "Commit the export to variant_a_export/ so the deploy publishes it"

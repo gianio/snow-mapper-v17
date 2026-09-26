@@ -71,12 +71,12 @@ def test_covers_rejects_a_stale_smet():
         check("a header-only .smet is not coverage", not forcing._covers(empty, "2025-11-30"))
 
 
-def _ini_text(prof_start=0.0):
+def _ini_text(prof_start=0.0, step_h=None):
     with tempfile.TemporaryDirectory() as td:
         t = Path(td)
         p = {"id": "x1", "lat": 46.5, "lon": 8.0, "elev": 1600.0, "slope": 25.0,
              "aspect": 0.0, "e_lv95": 2670000, "n_lv95": 1160000}
-        snowpack_runner.write_ini(p, t, t, t, t, prof_start)
+        snowpack_runner.write_ini(p, t, t, t, t, prof_start, step_h)
         return (t / "x1.ini").read_text()
 
 
@@ -94,6 +94,17 @@ def test_ini():
     windowed = _ini_text(117.0)
     check("PROF_START trims the written profiles to the window",
           abs(float(re.search(r"PROF_START = ([\d.]+)", windowed).group(1)) - 117.0) < 1e-6)
+    # How often SNOWPACK WRITES a profile has to track the export step. It was
+    # pinned at 6 h, so asking the exporter for 3 h would have filtered
+    # 3-hourly over 6-hourly profiles and produced the same frame count -- an
+    # export that looked finer without being finer.
+    for step_h, want_h in ((3, 3), (6, 6), (12, 12)):
+        ini = _ini_text(0.0, step_h)
+        got = float(re.search(r"PROF_DAYS_BETWEEN = ([\d.]+)", ini).group(1)) * 24
+        check(f"--step-h {step_h} writes a profile every {want_h} h",
+              abs(got - want_h) < 1e-6, f"{got:.1f} h")
+    plain = float(re.search(r"PROF_DAYS_BETWEEN = ([\d.]+)", _ini_text()).group(1)) * 24
+    check("no step given falls back to 6 h", abs(plain - 6.0) < 1e-6, f"{plain:.1f} h")
 
 
 def test_timestamp_window():
