@@ -238,6 +238,12 @@ jobs:
       - name: Diagnose a failed run
         if: failure()
         run: |
+          # The pipeline's OWN stdout, including any traceback. run.log has
+          # been sitting on disk unread this whole time -- three separate
+          # failures were diagnosed from directory listings and a re-run of
+          # one point, when the actual error was in a file right here.
+          echo "--- run.log, tail"
+          tail -60 run.log 2>/dev/null || echo "  (no run.log)"
           echo "### working directories" >> "$GITHUB_STEP_SUMMARY"
           for d in data/variant_a_cache/work/meteo data/variant_a_cache/work/sno \
                    data/variant_a_cache/work/ini data/variant_a_cache/work/runs \
