@@ -226,6 +226,62 @@ def test_indexed_png_is_lossless():
         check("and survives too", np.array_equal(np.array(Image.open(g).convert("RGBA")), smooth))
 
 
+def test_profile_payload():
+    print("profile payload")
+    from datetime import datetime as D
+    from variant_a import profiles
+    # build_payload used to hold every point's fully parsed .pro at once,
+    # because the output loop ran timestamp-major. At 978 points that is
+    # hundreds of MB live at the same moment; the national run died right
+    # after SNOWPACK while --limit 8 passed. It is point-major now, dropping
+    # each raw parse as soon as it is resampled. Same payload, bounded memory.
+    ts = [D(2026, 3, 27), D(2026, 3, 27, 12), D(2026, 3, 28)]
+    fake = [{"dt": t, "n": 2, "heights": [40.0, 90.0],
+             "density": [180.0, 260.0], "grain": [330, 440]} for t in ts]
+    real_parse = profiles.classify.parse_pro
+    profiles.classify.parse_pro = lambda path: fake
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            pts = []
+            for i in range(4):
+                d = Path(td) / f"p{i}"; d.mkdir()
+                (d / "x_va.pro").write_text("stub")
+                pts.append({"id": f"p{i}", "lat": 46.5, "lon": 8.0, "elev": 1600.0,
+                            "aspect": 0.0, "slope": 25.0, "tile": 2})
+            out = profiles.build_payload(pts, td, ts)
+    finally:
+        profiles.classify.parse_pro = real_parse
+    check("one entry per timestamp", len(out["profiles"]) == len(ts),
+          f"{len(out['profiles'])} steps")
+    check("every timestamp carries every point",
+          all(len(step) == 4 for step in out["profiles"]),
+          str([len(x) for x in out["profiles"]]))
+    check("points are listed once, not per step", len(out["points"]) == 4,
+          str(len(out["points"])))
+    check("labels line up with the profile steps",
+          len(out["labels"]) == len(out["profiles"]))
+    first = out["profiles"][0][0]
+    check("each entry has hs and both bin arrays",
+          "hs" in first and len(first["db"]) == profiles.NB
+          and len(first["gb"]) == profiles.NB)
+    check("the snow depth came through", first["hs"] == 90, str(first["hs"]))
+    # A timestamp the .pro does not contain falls back to the nearest one
+    # rather than dropping the point out of that step.
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td) / "p0"; d.mkdir(); (d / "x_va.pro").write_text("stub")
+        profiles.classify.parse_pro = lambda path: fake
+        try:
+            gap = profiles.build_payload(
+                [{"id": "p0", "lat": 46.5, "lon": 8.0, "elev": 1600.0,
+                  "aspect": 0.0, "slope": 25.0, "tile": 2}],
+                td, ts + [D(2026, 4, 5)])
+        finally:
+            profiles.classify.parse_pro = real_parse
+    check("a timestamp outside the .pro still yields a profile",
+          len(gap["profiles"]) == 4 and gap["profiles"][-1][0]["hs"] == 90,
+          str(gap["profiles"][-1][0]["hs"]))
+
+
 def test_selection_cache():
     print("point selection cache")
     from variant_a import select_points as sp
@@ -376,7 +432,7 @@ if __name__ == "__main__":
               test_selection_cache, test_win_count_matches_sliding_window,
               test_export_survives_numpy_types, test_window_matches_the_app,
               test_forcing_anchors_on_the_window_start,
-              test_indexed_png_is_lossless,
+              test_indexed_png_is_lossless, test_profile_payload,
               test_selection_is_stable):
         t()
     print("\nVARIANT A PIPELINE " + ("OK" if not FAILS else f"FAILED: {FAILS}"))
