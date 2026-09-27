@@ -184,3 +184,149 @@ def build_forcing(points, target_date, spinup_days=None, model="best_match",
     if tiny:
         print(f"  [forcing] WARNING {len(tiny)} suspiciously small: {tiny[:5]}")
     return meteo_dir
+
+
+# ── Weather-point forcing (matrix mode) ─────────────────────────────────────
+# One request per weather point, not per SNOWPACK run: every virtual slope of
+# a weather point shares its weather, which is the whole point of the design.
+# 135 requests instead of 978, and each can afford a better model.
+
+def _fetch_json(url, params, timeout=_TIMEOUT_S):
+    """(json, None) or (None, reason). A 400 is a verdict, not a hiccup --
+    unknown model, date out of range -- so it is returned immediately rather
+    than retried."""
+    import urllib.error
+    q = urllib.parse.urlencode(params, safe=",")
+    last = None
+    for i in range(3):
+        try:
+            with urllib.request.urlopen(f"{url}?{q}", timeout=timeout) as r:
+                return json.load(r), None
+        except urllib.error.HTTPError as e:
+            if e.code == 400:
+                try:
+                    return None, json.load(e).get("reason", "HTTP 400")
+                except Exception:
+                    return None, "HTTP 400"
+            last = f"HTTP {e.code}"
+        except Exception as e:
+            last = f"{type(e).__name__}: {e}"
+        time.sleep(2.0 * (i + 1))
+    return None, last
+
+
+def _coverage(hourly):
+    """Share of hours where every variable SNOWPACK needs is actually filled."""
+    t = hourly.get("time") or []
+    if not t:
+        return 0.0
+    need = ("temperature_2m", "precipitation", "shortwave_radiation", "wind_speed_10m")
+    ok = sum(all((hourly.get(v) or [None] * len(t))[i] is not None for v in need)
+             for i in range(len(t)))
+    return ok / len(t)
+
+
+def _recent(end_iso):
+    from datetime import date
+    return (date.today() - datetime.strptime(end_iso, "%Y-%m-%d").date()).days < 5
+
+
+def fetch_weather(lat, lon, elev, start, end, models=None):
+    """Hourly forcing for one weather point, best available model first.
+
+    Tries each high-resolution model in turn -- through the forecast API when
+    the window reaches the last few days (live), else the historical-forecast
+    API -- and accepts the first that fills >= FORCING_MIN_COVERAGE of the
+    hours. The ~9-25 km archive is the last resort. `elevation` makes the API
+    downscale temperature to the weather point's reference height; the
+    per-run lapse is applied on top of that.
+
+    Returns (hourly, model_name, notes).
+    """
+    models = config.FORCING_MODELS if models is None else models
+    base = {"latitude": f"{lat:.5f}", "longitude": f"{lon:.5f}",
+            "elevation": f"{elev:.0f}", "hourly": ",".join(_VARS),
+            "wind_speed_unit": "ms", "timezone": "UTC",
+            "start_date": start, "end_date": end}
+    url = OPEN_METEO_URL if _recent(end) else config.HISTORICAL_FORECAST_URL
+    notes = []
+    for m in models:
+        d, why = _fetch_json(url, {**base, "models": m})
+        h = (d or {}).get("hourly") or {}
+        cov = _coverage(h)
+        if cov >= config.FORCING_MIN_COVERAGE:
+            return h, m, notes
+        notes.append(f"{m}: {why or f'{cov*100:.0f}% of hours filled'}")
+    d, why = _fetch_json(OPEN_METEO_ARCHIVE_URL, base)
+    h = (d or {}).get("hourly") or {}
+    if _coverage(h) >= config.FORCING_MIN_COVERAGE:
+        return h, "archive", notes
+    notes.append(f"archive: {why or 'insufficient coverage'}")
+    return None, None, notes
+
+
+def _lapsed(hourly, dz):
+    """Same weather, temperature moved `dz` metres up or down."""
+    d = config.TA_LAPSE_K_PER_M * dz
+    out = dict(hourly)
+    out["temperature_2m"] = [None if v is None else v + d
+                             for v in hourly.get("temperature_2m", [])]
+    return out
+
+
+def build_forcing_matrix(wps, runs, target_date, win, meteo_dir: Path | None = None,
+                         spinup_days=None, lead_days=None, workers=6):
+    """One fetch per weather point, one lapse-rated .smet per run.
+
+    Returns {weather_point_id: model_used} so the export can say what drove it.
+    """
+    spinup_days = spinup_days or config.SPINUP_DAYS
+    lead_days = config.FORCING_LEAD_DAYS if lead_days is None else lead_days
+    meteo_dir = meteo_dir or (config.WORK_DIR / "meteo")
+    meteo_dir.mkdir(parents=True, exist_ok=True)
+    start = (win[0] - timedelta(days=spinup_days + lead_days)).date().isoformat()
+    # One day of margin past the window, so the final integration step never
+    # asks for an hour the forcing does not have.
+    end = (win[1] + timedelta(days=1)).date().isoformat()
+    print(f"  forcing: {len(wps)} weather points, {start} .. {end}, "
+          f"models {', '.join(config.FORCING_MODELS)} then archive")
+
+    def one(w):
+        cache = meteo_dir / f"{w['id']}.json"
+        if cache.exists():
+            try:
+                c = json.loads(cache.read_text())
+                if c.get("start") <= start and c.get("end") >= end and c.get("hourly"):
+                    return w["id"], c["hourly"], c["model"], []
+            except Exception:
+                pass
+        h, m, notes = fetch_weather(w["lat"], w["lon"], w["ref_elev"], start, end)
+        if h:
+            cache.write_text(json.dumps({"start": start, "end": end, "model": m,
+                                         "hourly": h}))
+        return w["id"], h, m, notes
+
+    used, failed = {}, []
+    t0 = time.time()
+    by_wp = {}
+    for r in runs:
+        by_wp.setdefault(r["wp"], []).append(r)
+    ref = {w["id"]: w["ref_elev"] for w in wps}
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        for k, (wid, h, m, notes) in enumerate(ex.map(one, wps), 1):
+            if not h:
+                failed.append((wid, notes))
+                continue
+            used[wid] = m
+            for r in by_wp.get(wid, []):
+                hourly_to_smet(r["id"], r["lat"], r["lon"], r["elev"],
+                               _lapsed(h, r["elev"] - ref[wid]),
+                               meteo_dir / f"{r['id']}.smet")
+            if k % 25 == 0 or k == len(wps):
+                print(f"  forcing {k}/{len(wps)}  {time.time()-t0:.0f}s  "
+                      f"{len(failed)} failed", flush=True)
+    from collections import Counter
+    print(f"  forcing models used: {dict(Counter(used.values()))}")
+    if failed:
+        print(f"  [forcing] {len(failed)} weather points without forcing; first: {failed[:2]}")
+    return used

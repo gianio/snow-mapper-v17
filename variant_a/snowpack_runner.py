@@ -31,11 +31,41 @@ def _profile_start_iso(target_date, spinup_days):
     return d.isoformat()
 
 
+# The starting base: settled, rounded, dry old snow. Only a base -- with a
+# short spin-up the top ~60 cm that decides skiing is built by the recent
+# snowfalls on top of it, not by this.
+#
+# It used to be written with marker mk=7, dendricity 0.5 and sphericity 0.5.
+# mk % 10 == 7 is SNOWPACK's ICE marker (DataClasses.cc counts it as ice, and
+# more than 2 m of it flags the column as a glacier -- the old 3000 m start was
+# 2.2 m). Dendricity 0.5 is half-fresh snow texture. So the "old snow" base
+# was glacier-marked fresh-looking snow, and came out of the model as melt
+# forms (grain code 770). The shipped SNOWPACK examples describe metamorphosed
+# snow as dd=0, sp=1 with a non-ice marker, which is what this is now.
+_BASE_RG, _BASE_RB = 0.35, 0.15      # grain / bond radius [mm]: rounded, sintered
+_BASE_DD, _BASE_SP = 0.0, 1.0        # no dendricity left, fully rounded
+_BASE_MK = 0                         # dry old snow; NOT 7 (ice) or 8 (ice layer)
+# bottom -> top: near 0 degC at the ground, colder towards the surface, and
+# denser at the bottom where it has been loaded longest.
+_BASE_LAYERS = ((271.65, +30.0), (269.65, 0.0), (267.65, -30.0))
+# Finite elements per metre of base. THIS was the reason no run ever had a
+# starting snowpack: `ne` was written as 0, and SnowStation::initialize builds
+# `ne` nodes per layer -- zero elements, zero snow. Every run, including the
+# national ones, started from bare ground and the INIT_HS table did nothing.
+# ~2 cm elements, like new-snow elements and the sea-ice example's 1.5 cm.
+_BASE_ELEM_M = 0.02
+
+
 def write_sno(p, sno_dir: Path, start_date):
-    hs, rho = _init_snow(p["elev"]); nl = 3; th = hs / nl; ti = rho / 917.0; tv = 1.0 - ti
+    hs, rho = _init_snow(p["elev"]); nl = len(_BASE_LAYERS); th = hs / nl
+    ne = max(1, int(round(th / _BASE_ELEM_M)))
     e95, n95 = p.get("e_lv95", 0.0), p.get("n_lv95", 0.0)
-    layer = (lambda T: f"1900-01-01T00:00 {th:.4f} {T:.2f} {ti:.4f} 0.0000 {tv:.4f} 0.0000 "
-             f"0.0000 0.0000 0.0000 0.1500 0.1000 0.5000 0.5000 7 0.000000 0 0.000000 0.000000")
+
+    def layer(T, drho):
+        ti = min(0.9, max(0.1, (rho + drho) / 917.0)); tv = 1.0 - ti
+        return (f"1900-01-01T00:00 {th:.4f} {T:.2f} {ti:.4f} 0.0000 {tv:.4f} 0.0000 "
+                f"0.0000 0.0000 0.0000 {_BASE_RG:.4f} {_BASE_RB:.4f} {_BASE_DD:.4f} "
+                f"{_BASE_SP:.4f} {_BASE_MK} 0.000000 {ne} 0.000000 0.000000")
     c = (f"SMET 1.1 ASCII\n[HEADER]\nstation_id   = {p['id']}\nstation_name = va_{p['id']}\n"
          f"latitude     = {p['lat']:.6f}\nlongitude    = {p['lon']:.6f}\naltitude     = {p['elev']:.1f}\n"
          f"easting      = {e95:.0f}\nnorthing     = {n95:.0f}\nnodata       = -999\n"
@@ -47,7 +77,7 @@ def write_sno(p, sno_dir: Path, start_date):
          f"TimeCountDeltaHS = 0.000000\n"
          f"fields = timestamp Layer_Thick T Vol_Frac_I Vol_Frac_W Vol_Frac_V Vol_Frac_S "
          f"Rho_S Conduc_S HeatCapac_S rg rb dd sp mk mass_hoar ne CDot metamo\n[DATA]\n"
-         f"{layer(266.15)}\n{layer(267.15)}\n{layer(268.15)}\n")
+         + "".join(layer(T, d) + "\n" for T, d in _BASE_LAYERS))
     (sno_dir / f"{p['id']}.sno").write_text(c)
 
 

@@ -28,7 +28,7 @@ on:
         # so a run asked for nationally produced 8 points in 105 s and looked
         # like a success. The safe default is the real thing; a smoke test is
         # the case you have to ask for.
-        description: "Points to run (blank = all 978; set e.g. 8 for a smoke test)"
+        description: "Weather points to run (blank = all ~135; set e.g. 4 for a smoke test)"
         default: ""
         required: false
       only_tile:
@@ -160,7 +160,7 @@ jobs:
           # bucket per sample size. build_forcing() checks each file's actual
           # first timestamp anyway, so a stale or short file is refetched
           # rather than trusted.
-          key: variant-a-forcing-${{ inputs.date }}-${{ inputs.only_tile }}-v2
+          key: variant-a-forcing-${{ inputs.date }}-${{ inputs.only_tile }}-v3
 
       - name: Run the pipeline
         env:
@@ -175,7 +175,7 @@ jobs:
           # once silently took the workflow default and turned a national run
           # into an 8-point one that still reported success.
           if [ -n "${{ inputs.limit }}" ]; then
-            echo "::notice::SAMPLE RUN — ${{ inputs.limit }} points, not the national set"
+            echo "::notice::SAMPLE RUN — ${{ inputs.limit }} weather points, not the national set"
           else
             echo "::notice::NATIONAL RUN — every representative point"
           fi
@@ -198,7 +198,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: data/variant_a_cache/work/meteo
-          key: variant-a-forcing-${{ inputs.date }}-${{ inputs.only_tile }}-v2
+          key: variant-a-forcing-${{ inputs.date }}-${{ inputs.only_tile }}-v3
 
       # The point of the smoke run: turn "unknown per-point cost" into a number,
       # and project it, so the national run is a decision rather than a gamble.
@@ -210,7 +210,7 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| | |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Points run | $N |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| SNOWPACK runs | $N |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Wall clock | ${ELAPSED:-?} s |" >> "$GITHUB_STEP_SUMMARY"
           # Point selection scans the whole 920x1440 national grid and took
           # ~7 min in the first run -- entirely independent of --limit and of
@@ -224,9 +224,12 @@ jobs:
           PER=$(grep -oP '(?<=snowpack_per_point=)[0-9.]+' run.log | tail -1 || true)
           if [ -n "$PER" ] && [ "${N:-0}" -gt 0 ]; then
             SEL=$(grep -oP '(?<=select=)[0-9.]+' run.log | tail -1 || echo 0)
-            FULL=$(python -c "print(f'{($PER*978+$SEL)/60:.0f}')")
-            echo "| SNOWPACK per point | ${PER} s |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| **Projected national (978 pts)** | **~${FULL} min** |" >> "$GITHUB_STEP_SUMMARY"
+            # matrix mode prints the unlimited run count; the old points mode had 978
+            NAT=$(grep -oP '(?<=national_runs=)[0-9]+' run.log | tail -1 || true)
+            NAT=${NAT:-978}
+            FULL=$(python -c "print(f'{($PER*$NAT+$SEL)/60:.0f}')")
+            echo "| SNOWPACK per run | ${PER} s |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| **Projected national ($NAT runs)** | **~${FULL} min** |" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Projection assumes the same parallelism and a comparable mix of" >> "$GITHUB_STEP_SUMMARY"

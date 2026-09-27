@@ -20,7 +20,14 @@ GRAIN = {1: ("PP", (168, 216, 240)), 2: ("DF", (150, 220, 150)), 3: ("RG", (116,
          0: ("-", (220, 220, 220))}
 
 
-def resample(ts):
+def resample(ts, top_cm=None):
+    """Density + grain in NB bins from the surface down, plus total HS.
+
+    top_cm restricts the bins to the top of the pack. For skiing that is what
+    matters -- the last few snowfalls and what happened to them -- and over a
+    ~150 cm base the whole-column bins gave the top 60 cm only ~10 of 28 bins.
+    With top_cm=60 the same 28 bins are ~2 cm each. HS is still the full depth.
+    """
     n = int(ts.get("n", 0))
     if n == 0:
         return None
@@ -36,7 +43,8 @@ def resample(ts):
         if b <= a:
             b = min(ncm, a + 1)
         dcm[a:b] = dens[i]; gcm[a:b] = grain[i]
-    edges = np.linspace(0, ncm, NB + 1).astype(int); db = []; gb = []
+    span = ncm if not top_cm else max(2, min(ncm, int(round(top_cm))))
+    edges = np.linspace(0, span, NB + 1).astype(int); db = []; gb = []
     for k in range(NB):
         lo, hi = edges[k], max(edges[k] + 1, edges[k + 1])
         db.append(round(float(dcm[lo:hi].mean()), 0))

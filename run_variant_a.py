@@ -109,6 +109,12 @@ def main():
                          "Spread evenly over the selection so the sample still "
                          "spans elevations, aspects and subregions.")
     ap.add_argument("--model", default="best_match")
+    ap.add_argument("--mode", choices=("matrix", "points"), default="matrix",
+                    help="matrix (default): weather points x height/aspect/slope "
+                         "runs sharing each point's weather, the Disentis design. "
+                         "points: the older one-DEM-cell-per-class selection.")
+    ap.add_argument("--spacing-km", type=float, default=None,
+                    help="matrix mode: weather point spacing (default config)")
     ap.add_argument("--publish", action="store_true",
                     help="publish export to VARIANT_A_PUBLISH_DIR + Supabase (if configured)")
     args = ap.parse_args()
@@ -129,6 +135,9 @@ def main():
     grid = subregions.load_national_grid()
     _t["grid"] = _time.time() - _t0
     print(f"national grid {grid.nr}x{grid.nc}, tiles {subregions.tile_ids(grid)}")
+
+    if args.mode == "matrix":
+        return _main_matrix(args, grid, win, _t, _t0, _time)
 
     # 1) points
     if args.points_csv:
@@ -197,6 +206,64 @@ def main():
           + f" points={npts} snowpack_per_point={per:.2f}s")
 
     # 8) publish to the app (static dir + Supabase, both optional/env-gated)
+    if args.publish:
+        publish_mod.publish(out_dir)
+
+
+def _main_matrix(args, grid, win, _t, _t0, _time):
+    """Weather points -> a height x aspect x slope matrix of SNOWPACK runs that
+    share each point's weather -> grid by similar exposure."""
+    from variant_a import matrix
+    _ts = _time.time()
+    wps = matrix.weather_points(grid, spacing_km=args.spacing_km)
+    if args.only_tile:
+        wps = [w for w in wps if w["tile"] == args.only_tile]
+    # the size of the unlimited run, so a smoke test can project the full cost
+    n_full = len(matrix.matrix_runs(wps))
+    if args.limit and args.limit < len(wps):
+        # --limit counts WEATHER POINTS here, strided so a smoke test still
+        # spans the country rather than one corner of it.
+        step = len(wps) / float(args.limit)
+        wps = [wps[int(i * step)] for i in range(args.limit)]
+        print(f"--limit {args.limit}: every {step:.1f}th weather point")
+    runs = matrix.matrix_runs(wps)
+    _t["select"] = _time.time() - _ts
+    print(f"{len(wps)} weather points, {len(runs)} SNOWPACK runs "
+          f"(up to {len(matrix.band_values())} bands x {config.MATRIX_ASPECTS} aspects x "
+          f"{len(config.MATRIX_SLOPES)} slopes + flat)")
+    print(f"{len(runs)} representative points selected")    # parsed by the CI timing step
+
+    _ts = _time.time()
+    used = forcing.build_forcing_matrix(wps, runs, args.date, win)
+    _t["forcing"] = _time.time() - _ts
+    wps = [w for w in wps if w["id"] in used]
+    keep = {w["id"] for w in wps}
+    runs = [r for r in runs if r["wp"] in keep]
+    if not runs:
+        raise SystemExit("no weather point got forcing -- nothing to run")
+
+    _ts = _time.time()
+    results, layer_ts, prof_ts = matrix.run_matrix(
+        runs, args.date, win, args.step_h, args.profile_step_h, workers=args.workers)
+    _t["snowpack"] = _time.time() - _ts
+    if not results:
+        raise SystemExit("no SNOWPACK run produced output")
+
+    _ts = _time.time()
+    W, cell_index = matrix.build_weights(grid, wps, runs)
+    frames = matrix.grid_frames(grid, runs, results, layer_ts, W, cell_index)
+    out_dir, manifest = export.export_matrix(grid, frames, wps, runs, results, prof_ts,
+                                             forcing_models=used)
+    _t["export"] = _time.time() - _ts
+    print(f"exported -> {out_dir}")
+    print(f"  manifest: {out_dir/'manifest.json'}  ({len(manifest['tags'])} frames, "
+          f"{manifest['weather_points']} weather points, {manifest['runs']} runs, "
+          f"models {manifest['forcing_models']})")
+    _t["total"] = _time.time() - _t0
+    n = len(runs)
+    per = (_t.get("snowpack", 0.0) / n) if n else 0.0
+    print("[timing] " + " ".join(f"{k}={v:.1f}s" for k, v in _t.items())
+          + f" points={n} snowpack_per_point={per:.2f}s national_runs={n_full}")
     if args.publish:
         publish_mod.publish(out_dir)
 
