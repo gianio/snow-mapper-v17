@@ -120,25 +120,44 @@ def extract(points, model, hours):
     print(f"  {model}: fetching {want}", flush=True)
     out = {p["id"]: {} for p in points}
     geo = None
+    hrs = list(range(0, hours + 1))
+    got, failed = {}, []
+    # Parallel downloads; ecCodes' first-use initialisation is not thread
+    # safe ("definitions does not exist" in one of four threads on CI), so
+    # whatever fails is fetched again one at a time.
     with ThreadPoolExecutor(max_workers=4) as ex:
-        futs = [ex.submit(_fetch_var, coll, v, list(range(0, hours + 1))) for v in want]
-        for fu in futs:
+        futs = {ex.submit(_fetch_var, coll, v, hrs): v for v in want}
+        for fu, v in futs.items():
             try:
-                var, da, sec = fu.result()
+                got[v] = fu.result()[1:]
             except Exception as e:
-                print(f"  {model}: a variable failed: {type(e).__name__}: {e}", flush=True)
-                continue
-            vals, lead, ref_dt = _series(da)
-            if geo is None:
-                lat, lon = _latlon(da)
-                idx = {}
-                for p in points:
-                    d = (lat - p["lat"]) ** 2 + ((lon - p["lon"]) * math.cos(math.radians(p["lat"]))) ** 2
-                    idx[p["id"]] = int(np.nanargmin(d))
-                geo = (lead, ref_dt, idx)
+                print(f"  {model} {v}: parallel fetch failed ({type(e).__name__}), retrying", flush=True)
+                failed.append(v)
+    for v in failed:
+        for attempt in range(2):
+            try:
+                got[v] = _fetch_var(coll, v, hrs)[1:]
+                break
+            except Exception as e:
+                print(f"  {model} {v}: retry {attempt + 1} failed: {type(e).__name__}: {e}", flush=True)
+    for var in want:
+        if var not in got:
+            continue
+        da, sec = got[var]
+        vals, lead, ref_dt = _series(da)
+        if geo is None:
+            lat, lon = _latlon(da)
+            idx = {}
             for p in points:
-                out[p["id"]][var] = vals[:, geo[2][p["id"]]]
-            print(f"  {model} {var}: {vals.shape[0]} lead times in {sec:.0f}s", flush=True)
+                d = (lat - p["lat"]) ** 2 + ((lon - p["lon"]) * math.cos(math.radians(p["lat"]))) ** 2
+                idx[p["id"]] = int(np.nanargmin(d))
+            geo = (lead, ref_dt, idx)
+        for p in points:
+            out[p["id"]][var] = vals[:, geo[2][p["id"]]]
+        print(f"  {model} {var}: {vals.shape[0]} lead times in {sec:.0f}s", flush=True)
+    missing = [v for v in want if v not in got]
+    if missing:
+        print(f"  {model}: WITHOUT {missing}", flush=True)
     if geo is None:
         raise RuntimeError("no variable could be fetched")
     return out, geo[0], geo[1], geo[2]
