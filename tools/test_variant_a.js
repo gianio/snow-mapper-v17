@@ -62,8 +62,14 @@ const vaProf = {
 // reference so a test can move the timeline and re-ask for the note.
 let tagIdx = 0;
 const appState = {times: ['2026-03-26T00:00', '2026-03-26T12:00']};
+// Matrix mode state. vaIdx is a plain identifier in the app, so the extracted
+// functions see it as a parameter here, reassigned through __setIdx.
+let fetched = [];
 const sandbox = {
   vaProf, vaTagIndex: () => tagIdx,
+  vaIdx: null, vaWp: {}, VA_BASE: 'va',
+  fetch: (u) => { fetched.push(u); return new Promise(() => {}); },
+  inspAutoRefresh: () => {},
   vaProfAvailable: () => !!(vaProf && vaProf.points && vaProf.points.length),
   // For the model-date stamp: a manifest whose window sits next to the
   // timeline, and the timeline state (M.times / b) it is compared against.
@@ -82,11 +88,13 @@ const fn = new Function(...Object.keys(sandbox),
   grab('vaProfileAt') + '\n' + grab('vaProfileHTML') + '\n'
   + grab('vaDataNote') + '\n' + grab('vaNoteHTML') + '\n'
   + grabConst('VA_GRAIN_ICON') + '\n' + grab('vaGrainIcon') + '\n'
-  + grab('vaProfIndex')
+  + grab('vaProfIndex') + '\n' + grab('vaWpNearest') + '\n'
+  + grab('vaWpLoad') + '\n' + grab('vaMatrixAt') + '\n'
+  + 'function __setIdx(x){vaIdx=x;}'
   + '\nreturn {vaProfileAt, vaProfileHTML, vaDataNote, vaNoteHTML, vaGrainIcon,'
-  + ' VA_GRAIN_ICON, vaProfIndex};');
+  + ' VA_GRAIN_ICON, vaProfIndex, __setIdx};');
 const { vaProfileAt, vaProfileHTML, vaDataNote, vaNoteHTML, vaGrainIcon,
-        VA_GRAIN_ICON, vaProfIndex } = fn(...Object.values(sandbox));
+        VA_GRAIN_ICON, vaProfIndex, __setIdx } = fn(...Object.values(sandbox));
 
 console.log('exact-point match');
 let r = vaProfileAt(46.80, 9.83, 2400, 0);
@@ -226,6 +234,68 @@ check('draws grain bars', (html.match(/<rect /g)||[]).length === NB,
 check('grain legend uses the payload labels', html.includes('RG'));
 check('density axis labels present', html.includes('450 kg/m'));
 check('null profile renders nothing', vaProfileHTML(null) === '');
+
+console.log('\nmatrix mode (weather point x virtual slopes)');
+// Shaped per export.export_matrix: profiles/index.json + profiles/<wp>.json.
+{
+  const idx = {nb: NB, grain: GRAIN, top_cm: 60,
+    labels: ['2026-03-26T00:00', '2026-03-26T12:00'],
+    weather_points: [
+      {id: 'w001', lat: 46.80, lon: 9.83, ref_elev: 2200, model: 'meteoswiss_icon_ch1'},
+      {id: 'w002', lat: 47.30, lon: 7.60, ref_elev: 1200, model: 'icon_d2'}]};
+  __setIdx(idx);
+    fetched = [];
+  const first = vaProfileAt(46.80, 9.83, 2400, 0, 38);
+  check('an unloaded weather point reports loading', !!first && first.loading === true);
+  check('...and fetches its own file only', fetched.length === 1 && fetched[0] === 'va/profiles/w001.json',
+        fetched.join(','));
+  vaProfileAt(46.80, 9.83, 2400, 0, 38);
+  check('a second ask while loading does not refetch', fetched.length === 1);
+  check('the loading state renders', /lädt/.test(vaProfileHTML(first)));
+}
+{
+  // Deliver the file and ask again. runs: [elev, slope, aspect]; slope 0 =
+  // the flat run of the band.
+  const idxRuns = [[1800,0,0],[2400,0,0],[2400,38,0],[2400,38,180],[2400,20,0],[1800,38,0]];
+  const mk = () => ({runs: idxRuns,
+    hs: idxRuns.map((r, k) => [50 + k, 60 + k]),
+    db: idxRuns.map((r, k) => [Array(NB).fill(100 + 10*k), Array(NB).fill(200 + 10*k)]),
+    gb: idxRuns.map((r, k) => [Array(NB).fill(k % 10), Array(NB).fill(k % 10)])});
+  sandbox.vaWp.w001 = mk();
+  tagIdx = 0;
+  const n38 = vaProfileAt(46.80, 9.83, 2400, 10, 36);
+  check('a steep north cell reads the 38 deg north run', n38 && n38.run &&
+        n38.run.slope === 38 && n38.run.aspect === 0 && n38.run.elev === 2400, JSON.stringify(n38 && n38.run));
+  check('it is one simulated profile, not a blend', n38 && n38.exact === true && n38.n === 1);
+  check('hs/density come from that run', n38 && n38.hs === 52 && n38.dens[0] === 120);
+  const s38 = vaProfileAt(46.80, 9.83, 2400, 170, 40);
+  check('a steep south cell reads the south run', s38 && s38.run.aspect === 180 && s38.hs === 53);
+  const f = vaProfileAt(46.80, 9.83, 2350, 90, 4);
+  check('a flat cell reads the flat run of its band', f && f.run.slope === 0 && f.run.elev === 2400);
+  const m = vaProfileAt(46.80, 9.83, 2400, 0, 22);
+  check('a moderate slope prefers the 20 deg run', m && m.run.slope === 20);
+  const low = vaProfileAt(46.80, 9.83, 1750, 0, 38);
+  check('elevation picks the band', low && low.run.elev === 1800);
+  const noSlope = vaProfileAt(46.80, 9.83, 2400, 0, null);
+  check('a missing slope falls back to the flat run', noSlope && noSlope.run.slope === 0);
+  check('the result carries top_cm, weather point and model',
+        n38.top_cm === 60 && n38.wp === 'w001' && n38.model === 'meteoswiss_icon_ch1');
+  tagIdx = sandbox.vaMan.tags.length - 1;       // nearest profile: 12:00
+  const later = vaProfileAt(46.80, 9.83, 2400, 10, 36);
+  check('the timeline picks the profile time step', later && later.hs === 62 && later.dens[0] === 220);
+  tagIdx = 0;
+  const html = vaProfileHTML(n38);
+  check('the profile names the model slope it came from', /Modellhang/.test(html) && /2400 m/.test(html));
+  check('...and the depth it covers', /60 cm/.test(html));
+  sandbox.vaWp.w002 = 'missing';
+  check('a missing weather-point file yields no profile', vaProfileAt(47.30, 7.60, 1200, 0, 30) === null);
+  const saveHs = sandbox.vaWp.w001.hs;
+  sandbox.vaWp.w001.hs = saveHs.map(() => [0, 0]);
+  check('a snow-free run yields null, not zeros', vaProfileAt(46.80, 9.83, 2400, 0, 38) === null);
+  sandbox.vaWp.w001.hs = saveHs;
+  __setIdx(null);
+  check('without an index the points mode still works', !!vaProfileAt(46.80, 9.83, 2400, 0));
+}
 
 console.log('\n' + (fails.length ? `FAILED: ${fails}` : 'VARIANT A OK'));
 process.exit(fails.length ? 1 : 0);

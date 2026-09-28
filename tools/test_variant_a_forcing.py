@@ -426,6 +426,169 @@ def test_export_survives_numpy_types():
             check("an unserialisable object still raises", True)
 
 
+def test_matrix_weights():
+    """The (cells x runs) weights must hand every cell back its own height,
+    slope and aspect -- otherwise the map shows a profile from the wrong hang."""
+    print("matrix weights")
+    import numpy as np
+    from variant_a import matrix
+    g = _synth_grid(80, 80, 7)
+    wps = matrix.weather_points(g, spacing_km=5.0, min_top_m=1800.0)
+    runs = matrix.matrix_runs(wps)
+    check("weather points found on synthetic terrain", len(wps) >= 4, f"{len(wps)} wps")
+    nper = sum(1 + len(config.MATRIX_SLOPES) * config.MATRIX_ASPECTS for w in wps for _ in w["bands"])
+    check("one flat + slopes x aspects per band", len(runs) == nper, f"{len(runs)} runs")
+    check("run ids are unique", len({r["id"] for r in runs}) == len(runs))
+    W, ci = matrix.build_weights(g, wps, runs)
+    rs = np.asarray(W.sum(axis=1)).ravel()
+    check("every row sums to 1", np.allclose(rs, 1.0, atol=1e-4), f"{rs.min():.5f}..{rs.max():.5f}")
+    check("weights are non-negative", W.data.min() >= 0)
+    r, c = np.divmod(ci, g.nc)
+    ce = g.elevation[r, c]
+    re = np.array([x["elev"] for x in runs], np.float32)
+    err = np.abs(W @ re - ce)
+    check("elevation is reproduced", np.median(err) < 30 and np.percentile(err, 90) < 150,
+          f"median {np.median(err):.0f} m, p90 {np.percentile(err, 90):.0f} m")
+    rsl = np.array([x["slope"] for x in runs], np.float32)
+    cs = np.clip(np.nan_to_num(g.slope[r, c]), 0, max(config.MATRIX_SLOPES))
+    check("slope is reproduced (clipped to the class range)",
+          np.abs(W @ rsl - cs).max() < 0.5, f"max {np.abs(W @ rsl - cs).max():.2f} deg")
+    # aspect only means something on the sloped runs of steep cells
+    steep = cs >= min(config.MATRIX_SLOPES)
+    ra = np.radians([x["aspect"] for x in runs])
+    sloped = np.array([x["slope"] > 0 for x in runs], np.float32)
+    sx = W @ (np.sin(ra) * sloped); cx = W @ (np.cos(ra) * sloped)
+    est = np.degrees(np.arctan2(sx, cx)) % 360
+    ca = g.aspect[r, c]
+    d = np.abs((est - ca + 540) % 360 - 180)[steep & np.isfinite(ca)]
+    check("aspect is reproduced on steep cells", d.size > 50 and np.percentile(d, 95) < 6,
+          f"{d.size} cells, p95 {np.percentile(d, 95):.1f} deg")
+    check("no cell reads a run of a band its weather point lacks",
+          all(x["elev"] in w["bands"] for w in wps for x in runs if x["wp"] == w["id"]))
+
+
+def test_forcing_fallback():
+    """Best model first; a 400 or a gappy model falls through, archive last."""
+    print("forcing model fallback")
+    T = [f"2026-03-01T{h:02d}:00" for h in range(24)]
+    full = {"time": T, **{v: [1.0] * 24 for v in
+            ("temperature_2m", "precipitation", "shortwave_radiation", "wind_speed_10m")}}
+    gappy = {**full, "precipitation": [None] * 12 + [0.0] * 12}
+    calls = []
+
+    def fake(answers):
+        def f(url, params):
+            calls.append((url, params.get("models")))
+            a = answers.pop(0)
+            return (None, a) if isinstance(a, str) else ({"hourly": a}, None)
+        return f
+    real = forcing._fetch_json
+    try:
+        forcing._fetch_json = fake(["No data is available for this location", gappy, full])
+        h, m, notes = forcing.fetch_weather(46.8, 9.8, 2000, "2026-03-01", "2026-03-02")
+        check("a refused and a gappy model are skipped", m == config.FORCING_MODELS[2], m)
+        check("the reasons are kept", len(notes) == 2 and "No data" in notes[0]
+              and "50%" in notes[1], str(notes))
+        check("an old window uses the historical-forecast API",
+              calls[0][0] == config.HISTORICAL_FORECAST_URL)
+        calls.clear()
+        forcing._fetch_json = fake(["x", "y", "z", full])
+        h, m, _ = forcing.fetch_weather(46.8, 9.8, 2000, "2026-03-01", "2026-03-02")
+        check("the archive is the last resort", m == "archive" and calls[-1][1] is None, m)
+        forcing._fetch_json = fake(["x", "y", "z", "w"])
+        h, m, notes = forcing.fetch_weather(46.8, 9.8, 2000, "2026-03-01", "2026-03-02")
+        check("nothing usable -> None, with every reason", h is None and len(notes) == 4)
+    finally:
+        forcing._fetch_json = real
+    lap = forcing._lapsed({"temperature_2m": [0.0, None, -5.0], "precipitation": [1, 2, 3]}, 300.0)
+    check("lapse: 300 m up is 1.95 K colder, gaps stay gaps",
+          abs(lap["temperature_2m"][0] + 1.95) < 1e-9 and lap["temperature_2m"][1] is None
+          and abs(lap["temperature_2m"][2] + 6.95) < 1e-9, str(lap["temperature_2m"]))
+    check("lapse leaves the other variables alone", lap["precipitation"] == [1, 2, 3])
+
+
+def test_forcing_matrix_shares_weather():
+    """One fetch per weather point, one lapse-rated .smet per virtual slope."""
+    print("forcing matrix")
+    from datetime import datetime
+    T = [f"2026-03-{d:02d}T{h:02d}:00" for d in range(1, 3) for h in range(24)]
+    hourly = {"time": T, "temperature_2m": [-2.0] * len(T), "precipitation": [0.5] * len(T),
+              "shortwave_radiation": [100.0] * len(T), "wind_speed_10m": [3.0] * len(T),
+              "relative_humidity_2m": [80.0] * len(T), "wind_direction_10m": [270.0] * len(T),
+              "longwave_radiation": [250.0] * len(T), "cloud_cover": [50.0] * len(T)}
+    fetched = []
+    real = forcing.fetch_weather
+    forcing.fetch_weather = lambda lat, lon, e, s, en, models=None: (
+        fetched.append(e), (hourly, "meteoswiss_icon_ch1", []))[1]
+    wps = [{"id": "w000", "lat": 46.8, "lon": 9.8, "ref_elev": 2000.0}]
+    runs = [{"id": f"w000_{e}_F", "wp": "w000", "lat": 46.8, "lon": 9.8, "elev": float(e)}
+            for e in (1700, 2000, 2600)]
+    win = (datetime(2026, 3, 25), datetime(2026, 3, 30))
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            used = forcing.build_forcing_matrix(wps, runs, "2026-03-30", win, Path(td), workers=1)
+            check("one fetch for three runs", len(fetched) == 1 and used == {"w000": "meteoswiss_icon_ch1"})
+            check("fetched at the weather point's reference height", fetched == [2000.0])
+            smets = sorted(Path(td).glob("*.smet"))
+            check("a .smet per run", len(smets) == 3, str([f.name for f in smets]))
+
+            def first_ta(name):
+                txt = (Path(td) / name).read_text().split("[DATA]")[1].split("\n")[1].split()
+                fields = [l for l in (Path(td) / name).read_text().splitlines()
+                          if l.startswith("fields")][0].split("=")[1].split()
+                return float(txt[fields.index("TA")])
+            ta = [first_ta(f"w000_{e}_F.smet") for e in (1700, 2000, 2600)]
+            check("temperature is lapse-rated per band",
+                  abs(ta[1] - 271.15) < 0.01 and abs((ta[0] - ta[2]) - 0.0065 * 900) < 0.01,
+                  str([round(t, 2) for t in ta]))
+            forcing.build_forcing_matrix(wps, runs, "2026-03-30", win, Path(td), workers=1)
+            check("a second build is served from the per-point cache", len(fetched) == 1)
+    finally:
+        forcing.fetch_weather = real
+
+
+def test_sno_base_is_real_snow():
+    """ne=0 meant no base at all; mk=7 meant ice. Neither may come back."""
+    print(".sno base")
+    with tempfile.TemporaryDirectory() as td:
+        p = {"id": "x", "lat": 46.8, "lon": 9.8, "elev": 2400.0, "slope": 38.0, "aspect": 180.0}
+        snowpack_runner.write_sno(p, Path(td), "2026-03-01")
+        txt = (Path(td) / "x.sno").read_text()
+        head, data = txt.split("[DATA]")
+        fields = [l for l in head.splitlines() if l.startswith("fields")][0].split("=")[1].split()
+        rows = [l.split() for l in data.strip().splitlines()]
+        ne = [int(r[fields.index("ne")]) for r in rows]
+        mk = [int(r[fields.index("mk")]) for r in rows]
+        check("every base layer has elements", all(n >= 1 for n in ne), str(ne))
+        check("no ice marker", all(m % 10 != 7 for m in mk), str(mk))
+        hs = float(re.search(r"HS_Last\s*=\s*([\d.]+)", head).group(1))
+        thick = sum(float(r[fields.index("Layer_Thick")]) for r in rows)
+        check("layers add up to HS_Last", abs(thick - hs) < 1e-3, f"{thick:.3f} vs {hs:.3f}")
+        check("slope and aspect reach SNOWPACK", "SlopeAngle   = 38.00" in head
+              and "SlopeAzi     = 180.00" in head)
+
+
+def test_wgs84_map_matches_rasterio():
+    """The precomputed mapping must land where rasterio's reproject does."""
+    print("_WGS84Map vs rasterio")
+    import numpy as np
+    from variant_a import export
+    g = _synth_grid(120, 160, 3)
+    rgba = np.zeros((g.nr, g.nc, 4), np.uint8)
+    rgba[..., 0] = (np.arange(g.nc)[None, :] % 256)
+    rgba[..., 1] = (np.arange(g.nr)[:, None] % 256)
+    rgba[..., 3] = 255
+    ref, rb = export._to_wgs84(rgba, g, nearest=True)
+    m = export._WGS84Map(g)
+    fast = m.nearest(rgba)
+    check("same shape", fast.shape == ref.shape, f"{fast.shape} vs {ref.shape}")
+    check("same bounds", np.allclose(np.array(m.bounds), np.array(rb), atol=1e-9))
+    both = (ref[..., 3] > 0) & (fast[..., 3] > 0)
+    off = np.abs(ref[..., :2].astype(int) - fast[..., :2].astype(int))[both]
+    check("pixels land within one source cell", both.mean() > 0.5 and (off <= 1).mean() > 0.995,
+          f"{(off <= 1).mean()*100:.2f}% within 1 cell")
+
+
 if __name__ == "__main__":
     for t in (test_forcing_starts_before_profile_date, test_covers_rejects_a_stale_smet,
               test_ini, test_timestamp_window, test_prof_start_derivation,
@@ -433,7 +596,9 @@ if __name__ == "__main__":
               test_export_survives_numpy_types, test_window_matches_the_app,
               test_forcing_anchors_on_the_window_start,
               test_indexed_png_is_lossless, test_profile_payload,
-              test_selection_is_stable):
+              test_selection_is_stable, test_matrix_weights,
+              test_forcing_fallback, test_forcing_matrix_shares_weather,
+              test_sno_base_is_real_snow, test_wgs84_map_matches_rasterio):
         t()
     print("\nVARIANT A PIPELINE " + ("OK" if not FAILS else f"FAILED: {FAILS}"))
     sys.exit(1 if FAILS else 0)

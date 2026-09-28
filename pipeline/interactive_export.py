@@ -1726,6 +1726,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .va-date-stale{color:var(--fg)}
  .va-grain-leg span{display:inline-flex;align-items:center;gap:3px}
  .va-gi{flex:0 0 12px;color:var(--fg);opacity:.85}
+ .va-run{font-size:11px;font-weight:700;color:var(--fg2);margin:0 0 3px}
  /* One handle, because SNOWPACK output is a state at an instant and not a sum
     over a window -- a two-ended slider here would claim the layer integrates
     between the handles, which it does not. */
@@ -4325,9 +4326,15 @@ function avBuildLayer(){
 // not line up with what the timeline is displaying.
 const VA_BASE='data/variant_a';
 let vaMan=null,vaProf=null,vaOv=null,vaKey='ski18',vaTried=false;
+// Matrix mode (weather points x height/aspect/slope): profiles/index.json lists
+// the weather points; each point's runs live in their own file, fetched on the
+// first tap near it. One file for all ~14k runs would be far too much for a tap.
+let vaIdx=null;const vaWp={};
 const vaFrames={};                     // "<layer>|<tag>" -> object URL / path
 function vaAvailable(){return !!(vaMan&&vaMan.layers&&vaMan.tags&&vaMan.tags.length);}
-function vaProfAvailable(){return !!(vaProf&&vaProf.points&&vaProf.points.length);}
+function vaProfAvailable(){
+  return !!((vaIdx&&vaIdx.weather_points&&vaIdx.weather_points.length)
+           ||(vaProf&&vaProf.points&&vaProf.points.length));}
 
 async function vaLoad(){
   if(vaTried)return;vaTried=true;
@@ -4341,7 +4348,9 @@ async function vaLoad(){
     // alongside but failure is non-fatal: the layer still works without them.
     try{
       const pr=await fetch(VA_BASE+'/'+(m.profiles||'profiles/profiles.json'),{cache:'force-cache'});
-      if(pr.ok){const pj=await pr.json();if(pj&&pj.points&&pj.profiles)vaProf=pj;}
+      if(pr.ok){const pj=await pr.json();
+        if(pj&&pj.weather_points)vaIdx=pj;
+        else if(pj&&pj.points&&pj.profiles)vaProf=pj;}
     }catch(e){}
     // The manifest usually lands after the layer list was first drawn, so the
     // tile is sitting there greyed out. ovSyncUI() clears that; ovRender()
@@ -4425,8 +4434,9 @@ function vaTagIndex(){
 // using one index for both would read the wrong profile, or run off the end.
 function vaProfIndex(){
   if(!vaProfAvailable())return 0;
-  const lab=vaProf.labels||[];
-  const n=vaProf.profiles.length;
+  const src=vaIdx||vaProf;
+  const lab=src.labels||[];
+  const n=vaIdx?lab.length:vaProf.profiles.length;
   if(!lab.length||lab.length!==n)return Math.min(vaTagIndex(),n-1);
   const tags=vaMan&&(vaMan.timestamps||vaMan.tags)||[];
   const cur=tags[Math.min(vaTagIndex(),tags.length-1)]||'';
@@ -4523,8 +4533,56 @@ function vaLegendHTML(){
 // interpolation variant_a's own preview does, and the reason profiles.json
 // ships points rather than a per-cell grid: 175 points is portable, a national
 // per-cell weight matrix is not.
-function vaProfileAt(lat,lon,elev,aspectDeg){
+// Matrix mode: the virtual slope at the nearest weather point whose height,
+// aspect and slope match the tapped cell -- an actual simulated profile, not a
+// blend of several, which is how the Disentis runs were read.
+function vaWpNearest(lat,lon){
+  let best=null,bd=Infinity;
+  for(const w of vaIdx.weather_points){
+    const dx=(w.lon-lon)*78.0,dy=(w.lat-lat)*111.0,d=dx*dx+dy*dy;
+    if(d<bd){bd=d;best=w;}
+  }
+  return best;
+}
+function vaWpLoad(w){
+  if(vaWp[w.id])return;
+  vaWp[w.id]='loading';
+  fetch(VA_BASE+'/profiles/'+w.id+'.json',{cache:'force-cache'})
+    .then(r=>r.ok?r.json():null)
+    .then(j=>{vaWp[w.id]=j||'missing';try{inspAutoRefresh();}catch(e){}})
+    .catch(()=>{vaWp[w.id]='missing';});
+}
+function vaMatrixAt(lat,lon,elev,aspectDeg,slopeDeg){
+  const w=vaWpNearest(lat,lon);if(!w)return null;
+  const f=vaWp[w.id];
+  if(!f){vaWpLoad(w);return {loading:true};}
+  if(f==='loading')return {loading:true};
+  if(f==='missing')return null;
+  const si=vaProfIndex();
+  const slope=(slopeDeg==null||!isFinite(slopeDeg))?0:slopeDeg;
+  const flat=slope<10;
+  let best=-1,bs=Infinity;
+  f.runs.forEach((r,i)=>{
+    const [re,rs,ra]=r;
+    if(flat!==(rs===0))return;         // flat cells read the flat run, sloped ones a slope
+    let sc=(elev!=null?Math.abs(re-elev)/300:0);
+    if(!flat){
+      sc+=Math.abs(rs-slope)/18;
+      if(aspectDeg!=null)sc+=Math.abs(((ra-aspectDeg)%360+540)%360-180)/45;
+    }
+    if(sc<bs){bs=sc;best=i;}
+  });
+  if(best<0)return null;
+  const hs=(f.hs[best]||[])[si]||0;
+  if(!hs)return null;
+  return {hs:hs,dens:f.db[best][si].slice(),grain:f.gb[best][si].slice(),
+          exact:true,n:1,top_cm:vaIdx.top_cm||null,
+          run:{elev:f.runs[best][0],slope:f.runs[best][1],aspect:f.runs[best][2]},
+          wp:w.id,model:w.model||null};
+}
+function vaProfileAt(lat,lon,elev,aspectDeg,slopeDeg){
   if(!vaProfAvailable())return null;
+  if(vaIdx)return vaMatrixAt(lat,lon,elev,aspectDeg,slopeDeg);
   const step=vaProf.profiles[vaProfIndex()];
   if(!step)return null;
   const pts=vaProf.points;
@@ -4621,6 +4679,7 @@ function vaGrainIcon(code){
 // shows. Drawn as inline SVG so it costs no library and scales crisply.
 function vaProfileHTML(pf){
   if(!pf)return '';
+  if(pf.loading)return '<div class="insp-sec va-prof"><h4>Schneeprofil <em>lädt…</em></h4></div>';
   const nb=pf.dens.length,H=118,Wp=96,GW=13;
   const gl=(vaProf&&vaProf.grain)||{};
   const dmin=100,dmax=450;
@@ -4644,8 +4703,13 @@ function vaProfileHTML(pf){
     return '<span><i style="background:rgb('+e[1].join(',')+')"></i>'
       +vaGrainIcon(+g)+escapeHtml(e[0])+'</span>';
   }).join('');
+  const AS=['N','NO','O','SO','S','SW','W','NW'];
+  const slopeTxt=pf.run?(pf.run.slope?(pf.run.slope+'° '+AS[Math.round(pf.run.aspect/45)%8]):'flach')
+    +' · '+pf.run.elev+' m':'';
   return '<div class="insp-sec va-prof"><h4>Schneeprofil <em>HS '+pf.hs+' cm'
     +(pf.exact?'':' · interpoliert')+'</em></h4>'
+    +(pf.run?'<div class="va-run">Modellhang '+escapeHtml(slopeTxt)
+      +(pf.top_cm?' · oberste '+pf.top_cm+' cm':'')+'</div>':'')
     +vaNoteHTML()
     +'<div class="va-prof-row">'
     +'<svg class="va-grain" viewBox="0 0 '+GW+' '+H+'" width="'+GW+'" height="'+H+'" aria-label="Kornform">'+bars+'</svg>'
@@ -6667,7 +6731,8 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   // goes in the SAME popup as the meteo numbers rather than a second window:
   // density and grain type are what you look at next after depth.
   let vaSec='';
-  try{vaSec=vaProfileHTML(vaProfileAt(lat,lon,fineElev(lat,lon),fineAspectDeg(lat,lon)));}catch(e){}
+  try{vaSec=vaProfileHTML(vaProfileAt(lat,lon,fineElev(lat,lon),fineAspectDeg(lat,lon),
+                                      (typeof fineSlope==='function')?fineSlope(lat,lon):null));}catch(e){}
   requestAnimationFrame(()=>{try{window._inspClamp();}catch(e){}});
   let progSec='';
   if(layer==='prog'){try{const pr=prognosisAt(lat,lon);if(pr){const cl=(PROG_LABEL[pr.type]||pr.type);const zc=progZones().filter(z=>z.type===pr.type).length;
