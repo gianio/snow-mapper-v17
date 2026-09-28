@@ -34,6 +34,34 @@ def _get(coll, var, hours):
     return ogd_api.get_from_ogd(req)
 
 
+def _latlon(da):
+    lat = np.asarray(da["lat"]).ravel(); lon = np.asarray(da["lon"]).ravel()
+    if np.nanmax(np.abs(lat)) < 3.2:                 # radians
+        lat, lon = np.degrees(lat), np.degrees(lon)
+    return lat, lon
+
+
+def _series(da):
+    """(lead_hours, cells) float array, lead hours, and the reference time."""
+    a = da.squeeze()
+    dims = list(a.dims)
+    lt = [d for d in dims if d in ("lead_time", "step")][0]
+    cell = [d for d in dims if d not in (lt, "ref_time", "eps", "z")][0]
+    a = a.transpose(lt, cell)
+    lead = []
+    for v in a[lt].values:
+        # np.timedelta64 subclasses np.integer, so it has to be tested first
+        if isinstance(v, np.timedelta64):
+            lead.append(int(round(v / np.timedelta64(1, "s") / 3600)))
+        elif isinstance(v, dt.timedelta):
+            lead.append(int(round(v.total_seconds() / 3600)))
+        else:
+            lead.append(int(v))
+    ref = np.atleast_1d(da["ref_time"].values)[0]
+    ref_dt = dt.datetime.utcfromtimestamp(int(np.datetime64(ref, "s").astype("int64")))
+    return np.asarray(a.values, float), lead, ref_dt
+
+
 def available(coll, pages=6):
     """{variable: set(lead hours)} of the newest reference time, from STAC."""
     import requests

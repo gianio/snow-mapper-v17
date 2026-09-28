@@ -183,9 +183,9 @@ jobs:
           python -u run_variant_a.py --live --date $Y $L --state-dir st1 --state-out st2 --step-h 3 2>&1 | tee live1.log || true
           echo "::endgroup::"
           echo "::group::OGD extraction"
-          python -m venv .ogd && .ogd/bin/pip install -q meteodata-lab \
+          python -m venv .ogd && .ogd/bin/pip install -q meteodata-lab && .ogd/bin/python tools/test_ogd_extract.py \
             && python run_variant_a.py --live $L --write-points points.json \
-            && .ogd/bin/python -u tools/ogd_extract.py points.json ogd 2>&1 \
+            && TQDM_DISABLE=1 .ogd/bin/python -u tools/ogd_extract.py points.json ogd 2>&1 \
                | grep --line-buffered -vE "definitions.edzw|ECCODES_DEFINITION_PATH|^-{20,}|^[[:space:]]*$" \
                | tee ogd.log || true
           echo "::endgroup::"

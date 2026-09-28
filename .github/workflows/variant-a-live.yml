@@ -128,11 +128,11 @@ jobs:
         if: ${{ inputs.use_ogd || vars.VA_USE_OGD == '1' }}
         continue-on-error: true
         run: |
-          python -m venv .ogd && .ogd/bin/pip install -q meteodata-lab
+          python -m venv .ogd && .ogd/bin/pip install -q meteodata-lab && .ogd/bin/python tools/test_ogd_extract.py
           ARGS="--live --write-points points.json"
           [ -n "${{ inputs.limit }}" ] && ARGS="$ARGS --limit ${{ inputs.limit }}"
           python run_variant_a.py $ARGS
-          .ogd/bin/python -u tools/ogd_extract.py points.json ogd
+          TQDM_DISABLE=1 .ogd/bin/python -u tools/ogd_extract.py points.json ogd
 
       - name: Run the cycle
         id: cycle

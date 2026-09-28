@@ -37,13 +37,13 @@ jobs:
       - name: OGD venv
         run: |
           python -m venv .ogd
-          .ogd/bin/pip install -q meteodata-lab
+          .ogd/bin/pip install -q meteodata-lab && .ogd/bin/python tools/test_ogd_extract.py
           .ogd/bin/python -c "import meteodatalab, eccodes; print('meteodata-lab', meteodatalab.__version__ if hasattr(meteodatalab,'__version__') else '?')"
       - name: Extract
         run: |
           python run_variant_a.py --live --limit ${{ inputs.points }} --write-points points.json
           cat points.json
-          .ogd/bin/python -u tools/ogd_extract.py points.json ogd 2>&1 | tee ogd.log
+          TQDM_DISABLE=1 .ogd/bin/python -u tools/ogd_extract.py points.json ogd 2>&1 | tee ogd.log
       - name: Compare with Open-Meteo
         run: python -u tools/probe_ogd_compare.py points.json ogd | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
