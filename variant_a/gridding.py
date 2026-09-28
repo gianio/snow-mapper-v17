@@ -15,7 +15,10 @@ from . import config, classify
 from .subregions import NationalGrid
 
 METS = ["powder_depth_cm", "crust_thick_cm", "powder_dd", "powder_lw",
-        "surface_density", "surface_hardness", "surface_lw", "total_hs_cm", "weak_below_cm"]
+        "surface_density", "surface_hardness", "surface_lw", "total_hs_cm", "weak_below_cm",
+        # matrix mode additions: surface hoar at the surface, burial depth of the
+        # top buried weak layer, and the wind drift/scour indices (wind.py).
+        "sh_surface", "weak_layer_depth_cm", "drift_load", "wind_scour"]
 
 
 def _point_en(grid: NationalGrid, p):
@@ -78,10 +81,10 @@ def grid_timeseries(grid: NationalGrid, points, series, timestamps):
         for pi, p in enumerate(pts):
             av = series[p["id"]]
             q = av.get(dt) or av[min(av, key=lambda x: abs((x - dt).total_seconds()))]
-            M[pi] = [q[k] for k in METS]
+            M[pi] = [q.get(k, 0.0) for k in METS]
         gm = (M[idx] * w[..., None]).sum(1)              # (ncell, nmet)
         g = gm.T.reshape(len(METS), nr, nc)
-        powd, crust, pdd, plw, sdens, shard, slw, hs, weak = g
+        powd, crust, pdd, plw, sdens, shard, slw, hs, weak = g[:9]
         crusted = (M[:, 1] > 0).astype(np.float32)
         cwt = (crusted[idx] * w).sum(1).reshape(nr, nc)
         crust = np.where(cwt >= classify.CRUST_GATE, crust, 0.0)

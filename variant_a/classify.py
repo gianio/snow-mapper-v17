@@ -48,6 +48,8 @@ SKI_LABELS = [
     "fine_crust_over_weak",       # 18  crust on facets / depth hoar (collapsy)
     "breaking_crust_over_weak",   # 19
     "carrying_crust_over_weak",   # 20  slab on a weak layer (avalanche-relevant)
+    "wind_packed",                # 21  scoured / wind-pressed windward surface
+    "wind_slab",                  # 22  fresh wind-deposited snow on a lee slope
 ]
 LABEL_INDEX = {l: i for i, l in enumerate(SKI_LABELS)}
 
@@ -101,6 +103,9 @@ POWDER_THIN        = 5.0     # cm
 POWDER_GOOD        = 15.0    # cm
 POWDER_DEEP        = 30.0    # cm
 WEAK_BELOW_MIN     = 3.0     # cm — min faceted/depth-hoar layer under a crust to flag "_over_weak"
+WEAK_MIN_THICK     = 1.0     # cm — a buried FC/DH/SH layer thinner than this is not reported
+WEAK_MIN_BURIAL    = 5.0     # cm — ... nor one that is still (almost) at the surface
+WIND_MIN           = 0.45    # 0..1 drift/scour index above which the surface is wind-affected
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -214,6 +219,26 @@ def _ensure(ts, key, n, default=0.0):
     return np.full(n, default, dtype=np.float32)
 
 
+def _buried_weak_depth(heights, thicks, grain, total_hs, top_cm=60.0):
+    """Burial depth [cm] of the uppermost buried weak layer in the top `top_cm`.
+
+    Weak = faceted (4), depth hoar (5) or buried surface hoar (6), at least
+    WEAK_MIN_THICK thick and covered by at least WEAK_MIN_BURIAL of snow. That
+    is the layer a skier's load reaches through the slab -- the one that
+    decides "collapsy" and, deeper, avalanche-relevant. 0 means none found.
+    """
+    n = len(grain)
+    for i in range(n - 1, -1, -1):
+        top = float(heights[i])
+        depth = total_hs - top
+        if depth > top_cm:
+            break
+        if int(grain[i]) // 100 in (4, 5, 6) and float(thicks[i]) >= WEAK_MIN_THICK \
+                and depth >= WEAK_MIN_BURIAL:
+            return max(depth, 0.1)
+    return 0.0
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  Ski quality classifier (per point, per timestep)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -248,6 +273,9 @@ def assess_ski_quality(ts):
         "surface_hardness":0.0,
         "surface_lw":      0.0,
         "surface_grain":   0,
+        "sh_surface":      0.0,   # 1 when surface hoar sits AT the surface
+        "weak_layer_depth_cm": 0.0,  # burial depth of the top buried weak layer
+                                     # (FC/DH/SH) within the profile's top; 0 = none
     }
 
     if n == 0:
@@ -266,6 +294,10 @@ def assess_ski_quality(ts):
     ice_frac = _ensure(ts, "ice_frac", n)
     hardness = _ensure(ts, "hardness", n)
     grain    = _ensure(ts, "grain",    n).astype(np.int32)
+    # Grain size [mm]. The weak-layer walk below reads it; it was never
+    # defined in this function, so any crust over FC over low-density snow
+    # raised NameError -- and _digest then dropped the whole run.
+    rg       = _ensure(ts, "rg",       n)
 
     # Layer thicknesses (bottom→top, i=0 is deepest)
     thicks = np.empty(n, dtype=np.float32)
@@ -284,6 +316,8 @@ def assess_ski_quality(ts):
     result["surface_hardness"] = surf_hard
     result["surface_lw"]       = surf_lw
     result["surface_grain"]    = surf_grain
+    result["sh_surface"]       = 1.0 if surf_grain == 6 else 0.0
+    result["weak_layer_depth_cm"] = _buried_weak_depth(heights, thicks, grain, total_hs)
 
     thin = total_hs < THIN_COVER_HS
 
@@ -565,7 +599,8 @@ def build_weight_matrix(dem, asp, slope):
 #  Grid-level classification from interpolated continuous metrics
 # ─────────────────────────────────────────────────────────────────────────────
 
-def classify_grid_metrics(hs, powder, crust, pdd, plw, sdens, shard, slw, weak=None):
+def classify_grid_metrics(hs, powder, crust, pdd, plw, sdens, shard, slw, weak=None,
+                          sh=None, drift=None, scour=None):
     """
     Element-wise classification from interpolated scalar fields.
     `weak` = interpolated faceted/depth-hoar thickness below a surface crust (cm);
@@ -583,14 +618,6 @@ def classify_grid_metrics(hs, powder, crust, pdd, plw, sdens, shard, slw, weak=N
 
     # has snow
     snow = hs >= 0.5
-
-    # ice (very high density at surface)
-    mask = snow & (sdens >= ICE_DENSITY_MIN)
-    out[mask] = np.where(thin[mask], LABEL_INDEX["thin_cover"], LABEL_INDEX["ice"])
-
-    # spring corn (wet + high density, not ice)
-    mask = snow & (sdens < ICE_DENSITY_MIN) & (slw > WET_LWC_MIN) & (sdens > 350)
-    out[mask] = np.where(thin[mask], LABEL_INDEX["thin_cover"], LABEL_INDEX["spring_corn"])
 
     has_pow = powder >= POWDER_THIN
 
@@ -637,6 +664,28 @@ def classify_grid_metrics(hs, powder, crust, pdd, plw, sdens, shard, slw, weak=N
     soft_s = settled_zone & ~hard_p & (hs >= 0.5)
     out[soft_s] = np.where(thin[soft_s], LABEL_INDEX["thin_cover"], LABEL_INDEX["settled"])
 
+    # Surface states that take priority, as in assess_ski_quality (which
+    # checks them before crusts and powder). They used to be assigned FIRST
+    # here and were then overwritten by the crust / powder / settled masks
+    # below them -- a wet 420 kg/m3 surface came out "settled", so spring
+    # corn and ice essentially never reached the map.
+    mask = snow & (sdens < ICE_DENSITY_MIN) & (slw > WET_LWC_MIN) & (sdens > 350)
+    out[mask] = np.where(thin[mask], LABEL_INDEX["thin_cover"], LABEL_INDEX["spring_corn"])
+    mask = snow & (sdens >= ICE_DENSITY_MIN)
+    out[mask] = np.where(thin[mask], LABEL_INDEX["thin_cover"], LABEL_INDEX["ice"])
+
+    # Surface-state overrides, in order of what a skier meets first. None of
+    # these apply on thin cover, wet snow or a real crust.
+    ok = snow & ~thin & (slw <= WET_LWC_MIN) & (crust < CRUST_BREAKING) & (sdens < ICE_DENSITY_MIN)
+    if sh is not None:
+        m = ok & (sh >= 0.5) & (powder < POWDER_THIN)
+        out[m] = LABEL_INDEX["surface_hoar"]
+    if scour is not None:
+        m = ok & (scour >= WIND_MIN) & (powder < POWDER_GOOD)
+        out[m] = LABEL_INDEX["wind_packed"]
+    if drift is not None:
+        m = ok & (drift >= WIND_MIN) & (powder >= POWDER_THIN)
+        out[m] = LABEL_INDEX["wind_slab"]
     return out
 
 
@@ -796,20 +845,35 @@ SKI_RGBA = {0:(0,0,0,0),1:(200,200,200,150),2:(80,100,180,220),3:(160,20,20,220)
  8:(120,80,40,200),9:(160,150,130,190),10:(240,100,120,200),11:(200,170,100,200),
  12:(200,190,240,200),13:(180,220,250,200),14:(80,160,240,220),15:(20,110,220,230),
  16:(0,50,180,240),17:(80,200,220,200),18:(210,130,210,215),19:(170,50,170,220),
- 20:(120,15,120,230)}
+ 20:(120,15,120,230),21:(120,130,150,215),22:(60,200,160,225)}
+
+# Display names for the app legend (German, like the rest of the UI). The
+# manifest carries them so the client never keeps its own copy of the list.
+SKI_DE = ["kein Schnee", "wenig Schnee", "Eis", "tragender Harsch", "Bruchharsch",
+          "dünner Harsch", "dünner Harsch auf Pulver", "Bruchharsch auf Pulver",
+          "hart gepresst", "gesetzt", "Sulz", "Schwimmschnee", "Oberflächenreif",
+          "wenig Pulver", "Pulver", "guter Pulver", "tiefer Pulver", "nasser Pulver",
+          "dünner Harsch auf Schwachschicht", "Bruchharsch auf Schwachschicht",
+          "Harsch auf Schwachschicht", "windgepresst / verblasen", "Triebschnee"]
 
 # Simplified, skier-oriented scheme (Powder depth tiers / crusts / compact / dust / wet)
 SIMPLE_LABELS = ["none","thin","powder_5_15","powder_15_30","powder_30_50","powder_gt_50",
- "dust_on_crust","dust_on_compact","thin_crust","breaking_crust","carrying_crust","compact","wet"]
+ "dust_on_crust","dust_on_compact","thin_crust","breaking_crust","carrying_crust","compact","wet",
+ "wind_packed","wind_slab","surface_hoar"]
+SIMPLE_DE = ["kein Schnee", "wenig Schnee", "Pulver 5–15 cm", "Pulver 15–30 cm",
+             "Pulver 30–50 cm", "Pulver > 50 cm", "Pulverauflage auf Harsch",
+             "Pulverauflage auf Altschnee", "dünner Harsch", "Bruchharsch",
+             "tragender Harsch", "kompakt", "nass / Sulz", "windgepresst",
+             "Triebschnee", "Oberflächenreif"]
 SIMPLE_RGBA = {0:(0,0,0,0),1:(205,205,205,140),2:(155,210,248,215),3:(90,165,235,225),
  4:(35,105,215,235),5:(10,45,150,245),6:(206,160,232,220),7:(140,205,195,215),
  8:(250,222,120,215),9:(236,130,40,220),10:(165,25,25,225),11:(150,150,120,205),
- 12:(150,90,210,215)}
+ 12:(150,90,210,215),13:(120,130,150,215),14:(60,200,160,225),15:(250,250,210,230)}
 # simplified thresholds
 S_THIN_HS=15.0; S_DUST=5.0; S_PT1=15.0; S_PT2=30.0; S_PT3=50.0
 S_CRUST_TRACE=0.3; S_THIN_CRUST=1.5; S_CARRY=4.0; S_WET_LWC=1.0
 
-def classify_simple(hs, powder, crust, sdens, slw):
+def classify_simple(hs, powder, crust, sdens, slw, sh=None, drift=None, scour=None):
     """Vectorised simplified skier classification from interpolated metric fields.
     Inputs are numpy arrays (same shape). Returns uint8 SIMPLE_LABELS indices."""
     hs=np.asarray(hs,float); powder=np.asarray(powder,float); crust=np.asarray(crust,float)
@@ -826,6 +890,13 @@ def classify_simple(hs, powder, crust, sdens, slw):
     pw=snow&(powder>=S_DUST)                                 # powder tiers
     lab[pw&(powder<S_PT1)]=2; lab[pw&(powder>=S_PT1)&(powder<S_PT2)]=3
     lab[pw&(powder>=S_PT2)&(powder<S_PT3)]=4; lab[pw&(powder>=S_PT3)]=5
+    dry=snow&~thin&(slw<=S_WET_LWC)&(crust<S_CARRY)
+    if sh is not None:
+        lab[dry&(np.asarray(sh,float)>=0.5)&(powder<S_DUST)]=15
+    if scour is not None:
+        lab[dry&(np.asarray(scour,float)>=WIND_MIN)&(powder<S_PT1)]=13
+    if drift is not None:
+        lab[dry&(np.asarray(drift,float)>=WIND_MIN)&(powder>=S_DUST)]=14
     lab[snow&(slw>S_WET_LWC)]=12                             # wet/spring overrides
     lab[snow&thin]=1; lab[~snow]=0
     return lab

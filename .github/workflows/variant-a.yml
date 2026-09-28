@@ -45,6 +45,14 @@ on:
         description: "Commit the export to variant_a_export/ so the deploy publishes it"
         type: boolean
         default: false
+      test_live:
+        # Exercises the live path end to end on a runner without touching the
+        # live artifacts: two cycles (yesterday cold, today continuing from
+        # yesterday's state), IMIS, gates, plus the MeteoSwiss OGD extractor
+        # compared against Open-Meteo. Uses `limit` weather points.
+        description: "Test the live cycle (2 cycles + IMIS + OGD) instead of a fixed-date run"
+        type: boolean
+        default: false
 
 permissions:
   # write only so an opt-in publish run can commit variant_a_export/.
@@ -162,7 +170,41 @@ jobs:
           # rather than trusted.
           key: variant-a-forcing-${{ inputs.date }}-${{ inputs.only_tile }}-v3
 
+      - name: Live test -- two cycles, OGD, IMIS
+        if: inputs.test_live
+        env:
+          SNOWPACK_BIN: ${{ github.workspace }}/snowpack-build/install/bin/snowpack
+          SNOWPACK_LIBS: ${{ github.workspace }}/snowpack-build/install/lib
+        run: |
+          set -o pipefail
+          L="--limit ${{ inputs.limit || '4' }}"
+          Y=$(date -u -d yesterday +%F); T=$(date -u +%F)
+          echo "::group::cycle 1 ($Y, cold start)"
+          python -u run_variant_a.py --live --date $Y $L --state-dir st1 --state-out st2 --step-h 3 2>&1 | tee live1.log || true
+          echo "::endgroup::"
+          echo "::group::OGD extraction"
+          python -m venv .ogd && .ogd/bin/pip install -q meteodata-lab && .ogd/bin/python tools/test_ogd_extract.py \
+            && python run_variant_a.py --live $L --write-points points.json \
+            && TQDM_DISABLE=1 .ogd/bin/python -u tools/ogd_extract.py points.json ogd 2>&1 \
+               | grep --line-buffered -vE "definitions.edzw|ECCODES_DEFINITION_PATH|^-{20,}|^[[:space:]]*$" \
+               | tee ogd.log || true
+          echo "::endgroup::"
+          OGD=""; [ -n "$(ls ogd/*.json 2>/dev/null)" ] && OGD="--ogd-dir ogd"
+          echo "::group::cycle 2 ($T, continuing, $OGD)"
+          python -u run_variant_a.py --live --date $T $L --state-dir st2 --state-out st3 --step-h 3 $OGD 2>&1 | tee run.log
+          echo "::endgroup::"
+          echo "=== live test recap ==="
+          grep -hE "^live:|state advance|carried state|IMIS|gates:|HARD|soft|forcing models|OGD" live1.log run.log || true
+          grep -E "ch1|ch2|OGD|failed|Error" ogd.log | tail -30 || true
+          [ -n "$(ls ogd/*.json 2>/dev/null)" ] && python tools/probe_ogd_compare.py points.json ogd || true
+          {
+            echo "### Live test"
+            grep -hE "^live:|state advance|carried state|IMIS|gates:|HARD|soft|state saved|forcing models" live1.log run.log | sed 's/^/    /'
+            [ -f ogd/$(ls ogd 2>/dev/null | head -1) ] && python tools/probe_ogd_compare.py points.json ogd || echo "OGD: no output (see ogd.log)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Run the pipeline
+        if: ${{ !inputs.test_live }}
         env:
           SNOWPACK_BIN: ${{ github.workspace }}/snowpack-build/install/bin/snowpack
           SNOWPACK_LIBS: ${{ github.workspace }}/snowpack-build/install/lib

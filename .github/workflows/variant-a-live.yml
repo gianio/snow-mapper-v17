@@ -1,0 +1,204 @@
+# Variant A live: one SNOWPACK cycle for today, carrying the snowpack from the
+# previous cycle.
+#
+# Storage is GitHub itself -- no server, no bucket:
+#   va-state  the snowpack of every virtual slope (state.tar.gz), valid at the
+#             start of the last window. Restored at the start of each cycle,
+#             uploaded again at the end, even when the gates fail (the state
+#             is still the best estimate of the snowpack).
+#   va-live   the export the app reads. Uploaded ONLY when the publish gates
+#             pass; the deploy picks the newest one, so a bad cycle simply
+#             leaves the previous good one online.
+name: Variant A live
+
+on:
+  schedule:
+    # ~40 min after the 00/06/12/18 UTC ICON-CH2 runs appear upstream.
+    - cron: "40 2,8,14,20 * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Weather points (blank = all ~135)"
+        default: ""
+        required: false
+      reset_state:
+        description: "Ignore the carried snowpack and cold-start"
+        type: boolean
+        default: false
+      use_ogd:
+        description: "Put MeteoSwiss OGD ICON-CH1/CH2 over the forecast hours (run 'Probe MeteoSwiss OGD forcing' first)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: variant-a-live
+  cancel-in-progress: false
+
+env:
+  SNOWPACK_REF: master
+  PREFIX: ${{ github.workspace }}/snowpack-build/install
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Restore SNOWPACK build
+        id: spcache
+        uses: actions/cache/restore@v4
+        with:
+          path: snowpack-build/install
+          key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
+
+      - name: Build MeteoIO + SNOWPACK
+        if: steps.spcache.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          git clone --depth 1 --branch "$SNOWPACK_REF" \
+            https://github.com/snowpack-model/snowpack.git snowpack-build/src
+          for m in meteoio snowpack; do
+            cmake -S "snowpack-build/src/Source/$m" -B "snowpack-build/b-$m" \
+              -DCMAKE_BUILD_TYPE=release -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+              -DCMAKE_PREFIX_PATH="$PREFIX" -DMETEOIO_ROOT="$PREFIX"
+            cmake --build "snowpack-build/b-$m" -j"$(nproc)"
+            cmake --install "snowpack-build/b-$m"
+          done
+          rm -rf snowpack-build/src snowpack-build/b-*
+
+      - name: Save SNOWPACK build
+        if: steps.spcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: snowpack-build/install
+          key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
+
+      - run: pip install -r requirements.txt
+
+      - name: Restore national DEM
+        id: demcache
+        uses: actions/cache/restore@v4
+        with:
+          path: variant_a/data/dem
+          key: variant-a-dem-lv03-250m-v1
+
+      - name: Build national DEM from Copernicus
+        if: steps.demcache.outputs.cache-hit != 'true'
+        run: python tools/make_variant_a_dem.py
+
+      - name: Save national DEM
+        if: steps.demcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: variant_a/data/dem
+          key: variant-a-dem-lv03-250m-v1
+
+      # The newest va-state artifact of this workflow, whichever run made it
+      # (a cycle whose gates failed still saves its state).
+      - name: Restore the carried snowpack
+        if: ${{ !inputs.reset_state }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p state
+          NAME=${{ inputs.limit == '' && 'va-state' || 'va-state-smoke' }}
+          RID=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=$NAME&per_page=20" \
+                --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .workflow_run.id // empty')
+          if [ -n "$RID" ]; then
+            gh run download "$RID" -n "$NAME" -D state && ls -la state
+            echo "::notice::continuing from the state of run $RID"
+          else
+            echo "::notice::no carried state -- cold start"
+          fi
+
+      # MeteoSwiss open data for the forecast hours, in its own venv
+      # (meteodata-lab pins numpy < 2.4). Best effort: without it the cycle
+      # runs on Open-Meteo alone, which serves the same ICON-CH models.
+      - name: MeteoSwiss OGD forecast at the weather points
+        if: ${{ inputs.use_ogd || vars.VA_USE_OGD == '1' }}
+        continue-on-error: true
+        run: |
+          python -m venv .ogd && .ogd/bin/pip install -q meteodata-lab && .ogd/bin/python tools/test_ogd_extract.py
+          ARGS="--live --write-points points.json"
+          [ -n "${{ inputs.limit }}" ] && ARGS="$ARGS --limit ${{ inputs.limit }}"
+          python run_variant_a.py $ARGS
+          TQDM_DISABLE=1 .ogd/bin/python -u tools/ogd_extract.py points.json ogd
+
+      - name: Run the cycle
+        id: cycle
+        env:
+          SNOWPACK_BIN: ${{ github.workspace }}/snowpack-build/install/bin/snowpack
+          SNOWPACK_LIBS: ${{ github.workspace }}/snowpack-build/install/lib
+        run: |
+          set -o pipefail
+          ARGS="--live --state-dir state --state-out state_new --step-h 3"
+          [ -d ogd ] && ARGS="$ARGS --ogd-dir ogd"
+          [ -n "${{ inputs.limit }}" ] && ARGS="$ARGS --limit ${{ inputs.limit }}"
+          echo "run_variant_a.py $ARGS"
+          set +e
+          python -u run_variant_a.py $ARGS 2>&1 | tee run.log
+          RC=${PIPESTATUS[0]}
+          set -e
+          echo "rc=$RC" >> "$GITHUB_OUTPUT"
+          # 3 = ran fine, gates failed: keep the state, do not publish
+          if [ "$RC" != "0" ] && [ "$RC" != "3" ]; then exit "$RC"; fi
+
+      - name: Upload the new state
+        if: always() && hashFiles('state_new/state.tar.gz') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          # smoke runs keep their own state line, so they never replace the
+          # national one the scheduled cycles carry
+          name: ${{ inputs.limit == '' && 'va-state' || 'va-state-smoke' }}
+          path: state_new/state.tar.gz
+          retention-days: 7
+          compression-level: 0
+
+      # Only a full cycle is publishable: a --limit smoke run must never end
+      # up in the app (the deploy takes the newest va-live).
+      - name: Upload the export (gates passed, full run only)
+        if: steps.cycle.outputs.rc == '0' && inputs.limit == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: va-live
+          path: outputs/variant_a/
+          retention-days: 5
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Variant A live cycle"
+            if [ -f outputs/variant_a/gates.json ]; then
+              python - <<'PY'
+          import json
+          g = json.load(open("outputs/variant_a/gates.json"))
+          m = json.load(open("outputs/variant_a/manifest.json"))
+          print(f"**Gates: {'passed' if g['passed'] else 'FAILED'}**  (run success {g['run_success']:.1%})\n")
+          for h in g["hard"]: print(f"- HARD: {h}")
+          for s in g["soft"]: print(f"- {s}")
+          st = m.get("state") or {}
+          print(f"\nState: from {st.get('from')} to {st.get('to')}, carried {st.get('carried')}/{st.get('runs')}")
+          print(f"Frames: {len(m.get('tags', []))}, models: {m.get('forcing_models')}")
+          v = (m.get("validation") or {}).get("imis") or {}
+          print(f"IMIS: {v}")
+          PY
+            fi
+            grep -oP '(?<=^\[timing\] ).*' run.log | tail -1 | sed 's/^/Timing: /'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail when the gates failed
+        if: steps.cycle.outputs.rc == '3'
+        run: |
+          echo "::error::publish gates failed -- the previous cycle stays online"
+          exit 1

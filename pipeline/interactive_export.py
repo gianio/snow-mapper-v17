@@ -1084,7 +1084,9 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
   const url=new URL(r.url);
   // swisstopo tiles are addressed by z/x/y and never change, so the second
   // look at a valley -- and an offline one -- costs nothing.
-  if(url.host==='wmts.geo.admin.ch'){
+  // Terrarium elevation tiles (device-side Variant A rendering) never change
+  // either, and go through the same capped tile cache.
+  if(url.host==='wmts.geo.admin.ch'||(url.host==='s3.amazonaws.com'&&url.pathname.indexOf('/elevation-tiles-prod/')===0)){
     e.respondWith(caches.open(T).then(c=>c.match(r).then(m=>m||fetch(r).then(resp=>{
       if(resp&&resp.status===200){const cp=resp.clone();
         c.put(r,cp).then(()=>tileTrim(c)).catch(()=>{});}
@@ -1727,6 +1729,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .va-grain-leg span{display:inline-flex;align-items:center;gap:3px}
  .va-gi{flex:0 0 12px;color:var(--fg);opacity:.85}
  .va-run{font-size:11px;font-weight:700;color:var(--fg2);margin:0 0 3px}
+ .va-pt-v{font-size:12px;font-weight:600;line-height:1.45}
  /* One handle, because SNOWPACK output is a state at an instant and not a sum
     over a window -- a two-ended slider here would claim the layer integrates
     between the handles, which it does not. */
@@ -4324,7 +4327,11 @@ function avBuildLayer(){
 // always offered, and the staleness is SHOWN instead -- vaDataNote() puts the
 // model date on the legend and on the profile, and says plainly when it does
 // not line up with what the timeline is displaying.
-const VA_BASE='data/variant_a';
+// Demo mode reads the fixed 1 April hindcast (committed, data/variant_a);
+// live mode reads the latest live cycle (data/variant_a_live, put there by
+// the deploy from the newest Variant A live artifact) and falls back to the
+// demo export when no cycle has passed its gates yet.
+let VA_BASE='data/variant_a';
 let vaMan=null,vaProf=null,vaOv=null,vaKey='ski18',vaTried=false;
 // Matrix mode (weather points x height/aspect/slope): profiles/index.json lists
 // the weather points; each point's runs live in their own file, fetched on the
@@ -4339,7 +4346,12 @@ function vaProfAvailable(){
 async function vaLoad(){
   if(vaTried)return;vaTried=true;
   try{
-    const r=await fetch(VA_BASE+'/manifest.json',{cache:'force-cache'});
+    let r=null;
+    if(typeof demoActive==='function'&&!demoActive()){
+      try{r=await fetch('data/variant_a_live/manifest.json',{cache:'no-cache'});
+        if(r.ok)VA_BASE='data/variant_a_live';else r=null;}catch(e){r=null;}
+    }
+    if(!r)r=await fetch(VA_BASE+'/manifest.json',{cache:'force-cache'});
     if(!r.ok)return;
     const m=await r.json();
     if(!m||!m.layers||!m.bounds||!(m.tags||[]).length)return;
@@ -4461,15 +4473,348 @@ function vaOpacity(){
   const t=Math.max(0,Math.min(1,(z-VA_Z_OUT)/(VA_Z_IN-VA_Z_OUT)));
   return VA_OP_OUT+(VA_OP_IN-VA_OP_OUT)*t;
 }
+// Device-side Variant A renderer. Self-contained on purpose: the same source
+// runs on the main thread (popup values) and, stringified, inside a Web
+// Worker (tile rendering), so it may not touch anything outside itself.
+function vaHiEngine(){
+  var E={pk:null,vals:null,ok:null,nm:0,mi:{},lut:null,lutOff:null,wps:[],
+         shade:null,forest:null,terr:new Map(),rgba:null};
+  function wgs2lv03(lat,lon){
+    var p=(lat*3600-169028.66)/10000,l=(lon*3600-26782.5)/10000;
+    return [600072.37+211455.93*l-10938.51*l*p-0.36*l*p*p-44.54*l*l*l,
+            200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p];
+  }
+  E.wgs2lv03=wgs2lv03;
+  E.init=function(pk,shade,forest){
+    E.pk=pk;E.nm=pk.mets.length;E.mi={};
+    pk.mets.forEach(function(m,i){E.mi[m]=i;});
+    E.wps=pk.wps.map(function(w){var en=(w.e&&w.n)?[w.e,w.n]:wgs2lv03(w.lat,w.lon);
+      return {e:en[0],n:en[1],b0:w.b0,nb:w.nb};});
+    var ns=pk.slopes.length,na=pk.aspects,off=new Int32Array(E.wps.length),tot=0;
+    E.wps.forEach(function(w,j){off[j]=tot;tot+=w.nb*ns*na;});
+    var lut=new Int32Array(tot).fill(-1);
+    pk.runs.forEach(function(r,ri){
+      var j=r[0],b=r[1],sc=r[2],ak=r[3],base=off[j]+(b*ns+sc)*na;
+      if(sc===0){for(var k=0;k<na;k++)lut[base+k]=ri;}else lut[base+ak]=ri;
+    });
+    E.lut=lut;E.lutOff=off;E.shade=shade||null;E.forest=forest||null;
+    E.gatedIdx=(pk.gated||[]).map(function(m){return E.mi[m];});
+  };
+  E.setFrame=function(vals,ok){E.vals=vals;E.ok=ok;};
+  // Nearest weather points to a point, from a candidate list.
+  function nearest(e,n,cand,k,outI,outD){
+    var c=0;
+    for(var q=0;q<cand.length;q++){
+      var w=E.wps[cand[q]],dx=w.e-e,dy=w.n-n,d=Math.sqrt(dx*dx+dy*dy);
+      if(c<k){outI[c]=cand[q];outD[c]=d;c++;
+        for(var s=c-1;s>0&&outD[s]<outD[s-1];s--){var ti=outI[s];outI[s]=outI[s-1];outI[s-1]=ti;var td=outD[s];outD[s]=outD[s-1];outD[s-1]=td;}}
+      else if(d<outD[k-1]){outI[k-1]=cand[q];outD[k-1]=d;
+        for(var s2=k-1;s2>0&&outD[s2]<outD[s2-1];s2--){var t1=outI[s2];outI[s2]=outI[s2-1];outI[s2-1]=t1;var t2=outD[s2];outD[s2]=outD[s2-1];outD[s2-1]=t2;}}
+    }
+    return c;
+  }
+  E.candidates=function(e,n,radius){
+    var out=[];
+    for(var j=0;j<E.wps.length;j++){var w=E.wps[j],dx=w.e-e,dy=w.n-n;if(dx*dx+dy*dy<=radius*radius)out.push(j);}
+    if(out.length<(E.pk.neighbours||3)){out=[];for(var j2=0;j2<E.wps.length;j2++)out.push(j2);}
+    return out;
+  };
+  var _ni=new Int32Array(8),_nd=new Float64Array(8),_acc,_gacc;
+  // One blend (own aspect, or north for the shaded share): add scale * the
+  // row-normalised trilinear/IDW mix into acc, gate fractions into gacc.
+  function blend(e,n,elev,slope,aspect,cand,scale,acc,gacc,mets){
+    var pk=E.pk,k=Math.min(pk.neighbours||3,E.wps.length),c=nearest(e,n,cand,k,_ni,_nd);
+    if(!c)return false;
+    var d0=pk.d0_m,wh=[],sw=0,i;
+    for(i=0;i<c;i++){var v=1/((_nd[i]+d0)*(_nd[i]+d0));wh.push(v);sw+=v;}
+    var nodes=pk.slopes,ns=nodes.length,na=pk.aspects,step=pk.elev_step;
+    var s=Math.max(nodes[0],Math.min(nodes[ns-1],slope||0));
+    var sc0=0;while(sc0<ns-2&&s>=nodes[sc0+1])sc0++;
+    var ts=(s-nodes[sc0])/(nodes[sc0+1]-nodes[sc0]);
+    var fa=((aspect||0)%360+360)%360/(360/na),ak0=Math.floor(fa)%na,ak1=(ak0+1)%na,ta=fa-Math.floor(fa);
+    var tmp=_acc,gt=_gacc,tw=0,nm=E.nm,vals=E.vals,ok=E.ok,g=E.gatedIdx;
+    for(i=0;i<mets.length;i++)tmp[mets[i]]=0;
+    for(i=0;i<g.length;i++)gt[i]=0;
+    for(i=0;i<c;i++){
+      var w=E.wps[_ni[i]],fe=Math.max(0,Math.min(w.nb-1,(elev-w.b0)/step));
+      var e0=Math.floor(fe),e1=Math.min(e0+1,w.nb-1),te=fe-e0,base=E.lutOff[_ni[i]];
+      var EW=[[e0,1-te],[e1,te]],SW=[[sc0,1-ts],[sc0+1,ts]],AW=[[ak0,1-ta],[ak1,ta]];
+      for(var a=0;a<2;a++)for(var b=0;b<2;b++)for(var q=0;q<2;q++){
+        var ww=wh[i]/sw*EW[a][1]*SW[b][1]*AW[q][1];
+        if(ww<=1e-9)continue;
+        var run=E.lut[base+(EW[a][0]*ns+SW[b][0])*na+AW[q][0]];
+        if(run<0||!ok[run])continue;
+        var o=run*nm;
+        for(var m=0;m<mets.length;m++)tmp[mets[m]]+=ww*vals[o+mets[m]];
+        for(var r=0;r<g.length;r++)if(vals[o+g[r]]>0)gt[r]+=ww;
+        tw+=ww;
+      }
+    }
+    if(tw<=0)return false;
+    for(i=0;i<mets.length;i++)acc[mets[i]]+=scale*tmp[mets[i]]/tw;
+    for(i=0;i<g.length;i++)gacc[i]+=scale*gt[i]/tw;
+    return true;
+  }
+  // Interpolated metrics at one place. `mets`: indices to compute (all if
+  // omitted). Returns false outside the model.
+  E.evalAt=function(e,n,elev,slope,aspect,shade,cand,out,mets){
+    var nm=E.nm;mets=mets||E.allMets||(E.allMets=Array.from({length:nm},function(_,i){return i;}));
+    if(!_acc||_acc.length<nm){_acc=new Float64Array(nm);_gacc=new Float64Array(8);}
+    var gacc=E._g||(E._g=new Float64Array(8)),i;
+    for(i=0;i<mets.length;i++)out[mets[i]]=0;
+    for(i=0;i<gacc.length;i++)gacc[i]=0;
+    var s=Math.max(0,Math.min(1,shade||0));
+    if(!blend(e,n,elev,slope,aspect,cand,1-s,out,gacc,mets))return false;
+    if(s>0.01)blend(e,n,elev,slope,0,cand,s,out,gacc,mets);
+    var g=E.gatedIdx,gate=E.pk.gate;
+    for(i=0;i<g.length;i++)if(gacc[i]<gate)out[g[i]]=0;
+    return true;
+  };
+  // ── classification: a line-by-line port of classify.py ─────────────────
+  E.clsSki=function(m){
+    var T=E.pk.thresholds,x=E.mi;
+    var hs=m[x.total_hs_cm],pw=m[x.powder_depth_cm],cr=m[x.crust_thick_cm],plw=m[x.powder_lw],
+        sd=m[x.surface_density],shd=m[x.surface_hardness],slw=m[x.surface_lw],wk=m[x.weak_below_cm],
+        sh=m[x.sh_surface],dr=m[x.drift_load],sc=m[x.wind_scour];
+    if(!(hs>=0.5))return 0;
+    var thin=hs<T.THIN_COVER_HS,hasW=wk>=T.WEAK_BELOW_MIN,hasP=pw>=T.POWDER_THIN,L=0;
+    if(cr>=T.CRUST_BREAKING&&sd<T.ICE_DENSITY_MIN)L=hasW?20:3;
+    else if(cr>=T.CRUST_FINE&&cr<T.CRUST_BREAKING)L=hasP?7:(hasW?19:4);
+    else if(cr>T.CRUST_TRACE&&cr<T.CRUST_FINE)L=hasP?6:(hasW?18:5);
+    else if(cr>=T.CRUST_BREAKING)L=0;
+    if(cr<=T.CRUST_TRACE){
+      if(pw>=0.5){
+        if(plw>T.WET_LWC_MIN)L=17;
+        else L=pw>=T.POWDER_DEEP?16:pw>=T.POWDER_GOOD?15:pw>=T.POWDER_THIN?14:13;
+      }else L=(shd>0&&shd>=T.CRUST_HARD_MIN)?8:9;
+    }
+    if(thin&&L)L=1;
+    if(sd<T.ICE_DENSITY_MIN&&slw>T.WET_LWC_MIN&&sd>350)L=thin?1:10;
+    if(sd>=T.ICE_DENSITY_MIN)L=thin?1:2;
+    var okk=!thin&&slw<=T.WET_LWC_MIN&&cr<T.CRUST_BREAKING&&sd<T.ICE_DENSITY_MIN;
+    if(okk&&sh>=0.5&&pw<T.POWDER_THIN)L=12;
+    if(okk&&sc>=T.WIND_MIN&&pw<T.POWDER_GOOD)L=21;
+    if(okk&&dr>=T.WIND_MIN&&pw>=T.POWDER_THIN)L=22;
+    return L;
+  };
+  E.clsSimple=function(m){
+    var T=E.pk.thresholds,x=E.mi;
+    var hs=m[x.total_hs_cm],pw=m[x.powder_depth_cm],cr=m[x.crust_thick_cm],slw=m[x.surface_lw],
+        sh=m[x.sh_surface],dr=m[x.drift_load],sc=m[x.wind_scour];
+    if(!(hs>=1))return 0;
+    var thin=hs<T.S_THIN_HS,L=11;
+    if(cr>=T.S_CRUST_TRACE&&pw<1){L=cr<T.S_THIN_CRUST?8:cr<T.S_CARRY?9:10;}
+    if(pw>=1&&pw<T.S_DUST)L=cr>=T.S_CRUST_TRACE?6:7;
+    if(pw>=T.S_DUST)L=pw<T.S_PT1?2:pw<T.S_PT2?3:pw<T.S_PT3?4:5;
+    var dry=!thin&&slw<=T.S_WET_LWC&&cr<T.S_CARRY;
+    if(dry&&sh>=0.5&&pw<T.S_DUST)L=15;
+    if(dry&&sc>=T.WIND_MIN&&pw<T.S_PT1)L=13;
+    if(dry&&dr>=T.WIND_MIN&&pw>=T.S_DUST)L=14;
+    if(slw>T.S_WET_LWC)L=12;
+    if(thin)L=1;
+    return L;
+  };
+  E.color=function(layer,m,out){
+    if(layer==='density'){
+      var d=m[E.mi.surface_density],r=E.pk.dens,x=Math.max(0,Math.min(1,(d-r[0])/(r[1]-r[0])));
+      out[0]=255*Math.min(1,2*x);out[1]=255*Math.min(1,2*(1-x));out[2]=120*(1-x);out[3]=d>0?190:0;return;
+    }
+    var L=layer==='simple'?E.clsSimple(m):E.clsSki(m),c=E.pk.rgba[layer==='simple'?'simple':'ski18'][L]||[0,0,0,0];
+    out[0]=c[0];out[1]=c[1];out[2]=c[2];out[3]=c[3];
+  };
+  E.metsFor=function(layer){
+    var x=E.mi,names=layer==='density'?['surface_density']:layer==='simple'
+      ?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_lw','sh_surface','drift_load','wind_scour']
+      :['total_hs_cm','powder_depth_cm','crust_thick_cm','powder_lw','surface_density','surface_hardness',
+        'surface_lw','weak_below_cm','sh_surface','drift_load','wind_scour'];
+    var set={};names.forEach(function(k){set[x[k]]=1;});
+    (E.pk.gated||[]).forEach(function(k){set[x[k]]=1;});
+    return Object.keys(set).map(Number);
+  };
+  // LV03 grid rasters (shade/mask, forest): nearest sample, or -1 outside.
+  E.gridAt=function(ras,e,n,cs){
+    if(!ras)return -1;var G=E.pk.grid;cs=cs||G.cs;
+    var c=Math.floor((e-G.xll)/cs),r=Math.floor((G.yll+G.nr*G.cs-n)/cs);
+    if(c<0||r<0||c>=ras.w||r>=ras.h)return -1;return ras.data[r*ras.w+c];
+  };
+  // Terrain tile (Terrarium PNG bytes) -> elevation, slope, aspect.
+  E.terrain=function(key,bytes,z,y){
+    var t=E.terr.get(key);if(t)return t;
+    var N=256,el=new Float32Array(N*N),sl=new Float32Array(N*N),as=new Float32Array(N*N),i;
+    for(i=0;i<N*N;i++)el[i]=bytes[i*4]*256+bytes[i*4+1]+bytes[i*4+2]/256-32768;
+    var lat=Math.atan(Math.sinh(Math.PI*(1-2*(y+0.5)/Math.pow(2,z))))*180/Math.PI;
+    var res=156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,z);
+    for(var r=0;r<N;r++)for(var c=0;c<N;c++){
+      var r0=Math.max(0,r-1),r1=Math.min(N-1,r+1),c0=Math.max(0,c-1),c1=Math.min(N-1,c+1);
+      var dR=(el[r1*N+c]-el[r0*N+c])/((r1-r0)*res),dC=(el[r*N+c1]-el[r*N+c0])/((c1-c0)*res);
+      sl[r*N+c]=Math.atan(Math.sqrt(dR*dR+dC*dC))*180/Math.PI;
+      as[r*N+c]=((Math.atan2(-dC,dR)*180/Math.PI)%360+360)%360;
+    }
+    t={el:el,sl:sl,as:as};E.terr.set(key,t);
+    if(E.terr.size>48)E.terr.delete(E.terr.keys().next().value);
+    return t;
+  };
+  // Render one map tile. q: {z,x,y,size,layer,tkey,tz,tx,ty,tbytes}
+  E.render=function(q){
+    var S=q.size,out=new Uint8ClampedArray(S*S*4);
+    if(!E.vals)return out;
+    var T=E.terrain(q.tkey,q.tbytes,q.tz,q.ty),n2=Math.pow(2,q.z),f=Math.pow(2,q.tz-q.z);
+    var mets=E.metsFor(q.layer),m=new Float64Array(E.nm),col=[0,0,0,0];
+    var fd=E.pk.forest_dim||0,fcs=E.pk.forest?E.pk.forest.cs:0,flev=E.pk.forest?E.pk.forest.levels:3;
+    // candidate weather points for this tile: centre +- half diagonal + 3 spacings
+    var cLon=(q.x+0.5)/n2*360-180,cLat=Math.atan(Math.sinh(Math.PI*(1-2*(q.y+0.5)/n2)))*180/Math.PI;
+    var ce=wgs2lv03(cLat,cLon),half=156543.03392*Math.cos(cLat*Math.PI/180)/n2*256*0.75;
+    var cand=E.candidates(ce[0],ce[1],half+3*E.pk.d0_m*2);
+    for(var py=0;py<S;py++){
+      var gy=(q.y*256+(py+0.5)*256/S)/(256*n2);
+      var lat=Math.atan(Math.sinh(Math.PI*(1-2*gy)))*180/Math.PI;
+      var ty=Math.min(255,Math.max(0,Math.floor(gy*256*n2*f-q.ty*256)));
+      for(var px=0;px<S;px++){
+        var gx=(q.x*256+(px+0.5)*256/S)/(256*n2),lon=gx*360-180;
+        var tx=Math.min(255,Math.max(0,Math.floor(gx*256*n2*f-q.tx*256))),ti=ty*256+tx;
+        var en=wgs2lv03(lat,lon),sb=E.gridAt(E.shade,en[0],en[1]);
+        if(sb<0||sb===255)continue;
+        if(!E.evalAt(en[0],en[1],T.el[ti],T.sl[ti],T.as[ti],sb/254,cand,m,mets))continue;
+        E.color(q.layer,m,col);
+        if(!col[3])continue;
+        var a=col[3];
+        if(fd&&E.forest){var fv=E.gridAt(E.forest,en[0],en[1],fcs);if(fv>0)a*=1-fd*(fv/255);}
+        var o=(py*S+px)*4;out[o]=col[0];out[o+1]=col[1];out[o+2]=col[2];out[o+3]=a;
+      }
+    }
+    return out;
+  };
+  return E;
+}
+
+// ── Device-side rendering of the matrix packs ──────────────────────────────
+// Zoomed out, the 250 m national PNGs are the layer. From VA_HI_Z on, the
+// app draws the classes itself: per pixel, the same interpolation the
+// pipeline does (nearest weather points x height band x steepness x aspect,
+// shade-blended), on Terrarium elevation tiles (~30 m in the Alps). The
+// pipeline only ships one small PNG of run metrics per frame, so the map is
+// as sharp as the terrain, and changing frame costs ~80 kB, not a raster.
+const VA_TERR='https://s3.amazonaws.com/elevation-tiles-prod/terrarium/';
+const VA_HI_Z=10, VA_TERR_Z=12;
+let vaPk=null,vaEng=null,vaHi=null,vaHiW=null,vaHiSeq=0,vaHiTag=null,vaGrp=null,vaPkTried=false;
+const vaHiCb={},vaPkFrames=new Map(),vaTerrC=new Map();
+async function vaImgBytes(url){
+  const r=await fetch(url,{cache:'force-cache'});if(!r.ok)throw new Error('HTTP '+r.status);
+  const bl=await r.blob();let bm;
+  // No colour management and no premultiplication: these PNGs are numbers.
+  try{bm=await createImageBitmap(bl,{colorSpaceConversion:'none',premultiplyAlpha:'none'});}
+  catch(e){bm=await createImageBitmap(bl);}
+  const cv=document.createElement('canvas');cv.width=bm.width;cv.height=bm.height;
+  const cx=cv.getContext('2d',{willReadFrequently:true});cx.drawImage(bm,0,0);
+  return {w:bm.width,h:bm.height,rgba:cx.getImageData(0,0,bm.width,bm.height).data};
+}
+function vaGray(img){const n=img.w*img.h,d=new Uint8Array(n);for(let i=0;i<n;i++)d[i]=img.rgba[i*4];return {w:img.w,h:img.h,data:d};}
+async function vaPkLoad(){
+  if(vaPk||vaPkTried||!vaMan||!vaMan.pack)return vaPk;
+  vaPkTried=true;
+  try{
+    const r=await fetch(VA_BASE+'/'+vaMan.pack,{cache:'force-cache'});if(!r.ok)return null;
+    const pk=await r.json();
+    const sh=vaGray(await vaImgBytes(VA_BASE+'/'+pk.shade));
+    let fo=null;if(pk.forest){try{fo=vaGray(await vaImgBytes(VA_BASE+'/'+pk.forest.file));}catch(e){}}
+    const eng=vaHiEngine();eng.init(pk,sh,fo);
+    vaEng=eng;vaPk=pk;vaHiWorkerInit(pk,sh,fo);
+  }catch(e){vaPk=null;}
+  return vaPk;
+}
+function vaHiWorkerInit(pk,sh,fo){
+  if(vaHiW||typeof Worker==='undefined'||typeof Blob==='undefined')return;
+  try{
+    const src='var E=('+vaHiEngine.toString()+')();onmessage=function(ev){var d=ev.data;'
+      +'if(d.t==="init")E.init(d.pk,d.sh,d.fo);else if(d.t==="frame")E.setFrame(d.vals,d.ok);'
+      +'else if(d.t==="render"){try{var o=E.render(d.q);postMessage({id:d.id,px:o},[o.buffer]);}'
+      +'catch(e){postMessage({id:d.id,px:null,err:String(e&&e.message||e)});}}};';
+    const w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
+    w.onmessage=ev=>{const cb=vaHiCb[ev.data.id];delete vaHiCb[ev.data.id];if(cb)cb(ev.data.px);};
+    // A dead worker must not leave tiles waiting forever: resolve what is
+    // pending (empty) and let the main thread take over.
+    w.onerror=()=>{vaHiW=null;for(const k in vaHiCb){const cb=vaHiCb[k];delete vaHiCb[k];cb(null);}};
+    w.postMessage({t:'init',pk,sh,fo});
+    vaHiW=w;
+  }catch(e){vaHiW=null;}
+}
+// One frame of run metrics, decoded from its PNG.
+async function vaPkFrame(tag){
+  if(vaPkFrames.has(tag))return vaPkFrames.get(tag);
+  const pk=vaPk,img=await vaImgBytes(VA_BASE+'/'+pk.file.replace('{tag}',tag));
+  const n=pk.runs.length,nm=pk.mets.length,per=pk.px_per_run,rp=pk.runs_per_row;
+  const vals=new Float32Array(n*nm),ok=new Uint8Array(n),b=new Uint8Array(per*3);
+  for(let r=0;r<n;r++){
+    const p0=(Math.floor(r/rp)*img.w+(r%rp)*per)*4;
+    for(let p=0;p<per;p++){const o=p0+p*4;b[p*3]=img.rgba[o];b[p*3+1]=img.rgba[o+1];b[p*3+2]=img.rgba[o+2];}
+    for(let m=0;m<nm;m++)vals[r*nm+m]=b[m]/pk.mul[m];
+    ok[r]=b[nm]?1:0;
+  }
+  const f={vals,ok};vaPkFrames.set(tag,f);
+  if(vaPkFrames.size>12)vaPkFrames.delete(vaPkFrames.keys().next().value);
+  return f;
+}
+async function vaTerrBytes(key){
+  if(vaTerrC.has(key))return vaTerrC.get(key);
+  const img=await vaImgBytes(VA_TERR+key+'.png');
+  vaTerrC.set(key,img.rgba);
+  if(vaTerrC.size>64)vaTerrC.delete(vaTerrC.keys().next().value);
+  return img.rgba;
+}
+async function vaHiTile(c,S){
+  if(!vaPk||!vaHiTag)return null;
+  const tz=Math.min(c.z,VA_TERR_Z),f=Math.pow(2,c.z-tz),tx=Math.floor(c.x/f),ty=Math.floor(c.y/f);
+  const key=tz+'/'+tx+'/'+ty,tb=await vaTerrBytes(key);
+  const q={z:c.z,x:c.x,y:c.y,size:S,layer:vaKey,tkey:key,tz,tx,ty,tbytes:tb};
+  if(vaHiW)return new Promise(res=>{const id=++vaHiSeq;vaHiCb[id]=res;vaHiW.postMessage({t:'render',id,q});});
+  return vaEng.render(q);
+}
+function vaHiMake(){
+  if(vaHi||typeof L==='undefined'||!L.GridLayer)return vaHi;
+  const Lyr=L.GridLayer.extend({createTile:function(c,done){
+    const t=document.createElement('canvas'),S=c.z>=13?128:256;t.width=S;t.height=S;
+    vaHiTile(c,S).then(px=>{
+      if(px&&px.length===S*S*4){try{t.getContext('2d').putImageData(new ImageData(px,S,S),0,0);}catch(e){}}
+      done(null,t);
+    }).catch(()=>done(null,t));
+    return t;
+  }});
+  vaHi=new Lyr({minZoom:VA_HI_Z,pane:'overlayPane',opacity:vaOpacity(),updateWhenIdle:true,
+                keepBuffer:1,className:'va-hi'});
+  return vaHi;
+}
+function vaHiActive(){
+  return !!(vaHi&&vaPk&&vaHiTag&&map&&map.getZoom&&map.getZoom()>=VA_HI_Z);
+}
+// Bring the device renderer to the frame the timeline wants.
+async function vaHiSync(){
+  if(!ovOn.variantA||!vaAvailable())return;
+  if(!(await vaPkLoad()))return;
+  const tag=vaMan.tags[vaTagIndex()];
+  if(tag===vaHiTag){vaSyncOpacity();return;}
+  try{
+    const f=await vaPkFrame(tag);
+    vaEng.setFrame(f.vals,f.ok);
+    if(vaHiW)vaHiW.postMessage({t:'frame',vals:f.vals,ok:f.ok});
+    vaHiTag=tag;
+    if(vaGrp&&!vaGrp.hasLayer(vaHiMake()))vaGrp.addLayer(vaHi);
+    vaHi.redraw();
+  }catch(e){}
+  vaSyncOpacity();
+}
 function vaSyncOpacity(){
-  if(vaOv&&ovOn.variantA){try{vaOv.setOpacity(vaOpacity());}catch(e){}}
+  if(!ovOn.variantA)return;
+  const hi=vaHiActive();
+  if(vaOv){try{vaOv.setOpacity(hi?0:vaOpacity());}catch(e){}}
+  if(vaHi){try{vaHi.setOpacity(vaOpacity());}catch(e){}}
 }
 function vaBuildLayer(){
   if(!vaAvailable())return null;
   const bnds=vaMan.bounds;
   vaOv=L.imageOverlay(vaFrameUrl(vaKey,vaTagIndex()),bnds,
     {opacity:vaOpacity(),className:'raster-smooth',pane:'overlayPane'});
-  return vaOv;
+  vaGrp=L.layerGroup([vaOv]);
+  return vaGrp;
 }
 // Called from renderAll(), so the layer follows the timeline like every other
 // time-dependent layer.
@@ -4478,13 +4823,40 @@ function vaRefresh(){
   const u=vaFrameUrl(vaKey,vaTagIndex());
   if(u&&u!==vaOv._url){try{vaOv.setUrl(u);}catch(e){}}
   vaSyncOpacity();
+  vaHiSync();
 }
 function vaPickLayer(k){
   if(!vaAvailable()||!vaMan.layers[k])return;
   vaKey=k;
   if(vaOv){const u=vaFrameUrl(k,vaTagIndex());if(u)try{vaOv.setUrl(u);}catch(e){}}
+  if(vaHi)vaHi.redraw();
   ovRender();
 }
+// The model's own reading of the tapped spot: same numbers the map is drawn
+// from, at the tapped height, steepness and aspect.
+function vaPointHTML(lat,lon,elev,slope,aspect){
+  if(!vaEng||!vaHiTag||elev==null)return '';
+  const en=vaEng.wgs2lv03(lat,lon),sb=vaEng.gridAt(vaEng.shade,en[0],en[1]);
+  if(sb<0||sb===255)return '';
+  const m=new Float64Array(vaEng.nm);
+  if(!vaEng.evalAt(en[0],en[1],elev,slope||0,aspect||0,sb/254,vaEng.candidates(en[0],en[1],60000),m))return '';
+  const x=vaEng.mi,Ls=vaMan.layers,ski=vaEng.clsSki(m),sim=vaEng.clsSimple(m);
+  const nm=(k,i)=>{const e=Ls[k]&&Ls[k].legend&&Ls[k].legend[i];return e?(e[2]||String(e[0]).replace(/_/g,' ')):'';};
+  const fo=vaEng.forest?vaEng.gridAt(vaEng.forest,en[0],en[1],vaPk.forest.cs):0;
+  const bits=[];
+  bits.push('HS '+Math.round(m[x.total_hs_cm])+' cm');
+  if(m[x.powder_depth_cm]>=1)bits.push('Pulver '+Math.round(m[x.powder_depth_cm])+' cm');
+  if(m[x.crust_thick_cm]>0.2)bits.push('Harsch '+m[x.crust_thick_cm].toFixed(1)+' cm');
+  if(m[x.weak_layer_depth_cm]>0)bits.push('Schwachschicht in '+Math.round(m[x.weak_layer_depth_cm])+' cm');
+  if(m[x.drift_load]>=0.2)bits.push('Triebschnee-Index '+m[x.drift_load].toFixed(2));
+  if(m[x.wind_scour]>=0.2)bits.push('Wind-Index '+m[x.wind_scour].toFixed(2));
+  if(sb>12)bits.push('Horizontschatten '+Math.round(sb/2.54)+'%');
+  if(fo>0)bits.push('Wald '+Math.round(fo/2.55)+'%');
+  return '<div class="insp-sec va-pt"><h4>Modell hier <em>'+escapeHtml(nm('ski18',ski))+'</em></h4>'
+    +'<div class="va-run">'+escapeHtml(nm('simple',sim))+'</div>'
+    +'<div class="va-pt-v">'+bits.map(escapeHtml).join(' · ')+'</div></div>';
+}
+
 // How far the exported model window sits from what the timeline is showing.
 // The SNOWPACK run is an offline batch over a fixed date range, so it will
 // not always match the live forecast window -- and when it does not, the user
@@ -4524,7 +4896,7 @@ function vaLegendHTML(){
   return note+'<div class="va-leg">'+Object.keys(leg).map(k=>{
     const e=leg[k];if(!e)return '';
     return '<div><span style="background:rgb('+(e[1]||[0,0,0]).join(',')+')"></span>'
-      +escapeHtml(String(e[0]).replace(/_/g,' '))+'</div>';
+      +escapeHtml(e[2]||String(e[0]).replace(/_/g,' '))+'</div>';
   }).join('')+'</div>';
 }
 
@@ -4681,7 +5053,7 @@ function vaProfileHTML(pf){
   if(!pf)return '';
   if(pf.loading)return '<div class="insp-sec va-prof"><h4>Schneeprofil <em>lädt…</em></h4></div>';
   const nb=pf.dens.length,H=118,Wp=96,GW=13;
-  const gl=(vaProf&&vaProf.grain)||{};
+  const gl=((vaIdx||vaProf||{}).grain)||{};
   const dmin=100,dmax=450;
   let bars='',seen={};
   for(let j=0;j<nb;j++){
@@ -6731,7 +7103,9 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   // goes in the SAME popup as the meteo numbers rather than a second window:
   // density and grain type are what you look at next after depth.
   let vaSec='';
-  try{vaSec=vaProfileHTML(vaProfileAt(lat,lon,fineElev(lat,lon),fineAspectDeg(lat,lon),
+  try{vaSec=vaPointHTML(lat,lon,fineElev(lat,lon),(typeof fineSlope==='function')?fineSlope(lat,lon):null,
+                        fineAspectDeg(lat,lon));}catch(e){}
+  try{vaSec+=vaProfileHTML(vaProfileAt(lat,lon,fineElev(lat,lon),fineAspectDeg(lat,lon),
                                       (typeof fineSlope==='function')?fineSlope(lat,lon):null));}catch(e){}
   requestAnimationFrame(()=>{try{window._inspClamp();}catch(e){}});
   let progSec='';

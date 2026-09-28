@@ -231,52 +231,163 @@ def _recent(end_iso):
     return (date.today() - datetime.strptime(end_iso, "%Y-%m-%d").date()).days < 5
 
 
+_NEED = ("temperature_2m", "precipitation", "shortwave_radiation", "wind_speed_10m")
+
+
+def _splice(base, extra):
+    """Fill the hours `base` lacks from `extra`, keyed by timestamp.
+
+    ICON-CH1 only reaches ~33 h ahead and ICON-CH2 5 days, so a live window
+    that ends 6 days out needs more than one model. Splicing hour by hour
+    keeps the finest model wherever it exists instead of throwing it away
+    for the one model that happens to cover everything.
+    Returns (spliced, hours_taken_from_extra).
+    """
+    if not base or not base.get("time"):
+        ta = extra.get("temperature_2m") or []
+        return ({k: list(v) for k, v in extra.items()},
+                sum(1 for x in ta if x is not None))
+    pos = {t: i for i, t in enumerate(base["time"])}
+    out = {k: list(v) for k, v in base.items()}
+    taken = 0
+    et = extra.get("time") or []
+    for j, t in enumerate(et):
+        i = pos.get(t)
+        if i is None:
+            continue
+        if all(out.get(v) is not None and i < len(out[v]) and out[v][i] is not None
+               for v in _NEED):
+            continue
+        filled = False
+        for v in _VARS:
+            ev = (extra.get(v) or [None] * len(et))
+            if j < len(ev) and ev[j] is not None:
+                if out.get(v) is None:
+                    out[v] = [None] * len(out["time"])
+                if out[v][i] is None:
+                    out[v][i] = ev[j]; filled = True
+        taken += filled
+    return out, taken
+
+
 def fetch_weather(lat, lon, elev, start, end, models=None):
-    """Hourly forcing for one weather point, best available model first.
+    """Hourly forcing for one weather point, finest model first, spliced.
 
-    Tries each high-resolution model in turn -- through the forecast API when
-    the window reaches the last few days (live), else the historical-forecast
-    API -- and accepts the first that fills >= FORCING_MIN_COVERAGE of the
-    hours. The ~9-25 km archive is the last resort. `elevation` makes the API
-    downscale temperature to the weather point's reference height; the
-    per-run lapse is applied on top of that.
+    Each high-resolution model in turn -- through the forecast API when the
+    window reaches the last few days (live), else the historical-forecast
+    API -- fills the hours the finer ones left empty. `icon_seamless` then
+    covers the far end of a live forecast, and the ~9-25 km archive is the
+    last resort for old dates. `elevation` makes the API downscale
+    temperature to the weather point's reference height; the per-run lapse is
+    applied on top of that.
 
-    Returns (hourly, model_name, notes).
+    Returns (hourly, model_label, notes). The label names the model that
+    supplied most hours, with a "+" when others filled gaps.
     """
     models = config.FORCING_MODELS if models is None else models
     base = {"latitude": f"{lat:.5f}", "longitude": f"{lon:.5f}",
             "elevation": f"{elev:.0f}", "hourly": ",".join(_VARS),
             "wind_speed_unit": "ms", "timezone": "UTC",
             "start_date": start, "end_date": end}
-    url = OPEN_METEO_URL if _recent(end) else config.HISTORICAL_FORECAST_URL
-    notes = []
-    for m in models:
+    live = _recent(end)
+    url = OPEN_METEO_URL if live else config.HISTORICAL_FORECAST_URL
+    chain = list(models) + ([config.FORCING_FAR_MODEL] if live else [])
+    notes, used = [], {}
+    h = {}
+    for m in chain:
+        if h and _coverage(h) >= 0.999:
+            break
         d, why = _fetch_json(url, {**base, "models": m})
-        h = (d or {}).get("hourly") or {}
-        cov = _coverage(h)
-        if cov >= config.FORCING_MIN_COVERAGE:
-            return h, m, notes
-        notes.append(f"{m}: {why or f'{cov*100:.0f}% of hours filled'}")
-    d, why = _fetch_json(OPEN_METEO_ARCHIVE_URL, base)
-    h = (d or {}).get("hourly") or {}
-    if _coverage(h) >= config.FORCING_MIN_COVERAGE:
-        return h, "archive", notes
-    notes.append(f"archive: {why or 'insufficient coverage'}")
-    return None, None, notes
+        hm = (d or {}).get("hourly") or {}
+        if not hm.get("time"):
+            notes.append(f"{m}: {why or 'no data'}")
+            continue
+        h, n = _splice(h, hm)
+        if n:
+            used[m] = n
+        else:
+            notes.append(f"{m}: nothing new")
+    if _coverage(h) < config.FORCING_MIN_COVERAGE:
+        d, why = _fetch_json(OPEN_METEO_ARCHIVE_URL, base)
+        ha = (d or {}).get("hourly") or {}
+        if ha.get("time"):
+            h, n = _splice(h, ha)
+            if n:
+                used["archive"] = n
+        else:
+            notes.append(f"archive: {why or 'no data'}")
+    if _coverage(h) < config.FORCING_MIN_COVERAGE:
+        notes.append(f"coverage {_coverage(h)*100:.0f}% after all sources")
+        return None, None, notes
+    main = max(used, key=used.get)
+    label = main + ("+" if len(used) > 1 else "")
+    if len(used) > 1:
+        notes.append("hours: " + ", ".join(f"{k} {v}" for k, v in used.items()))
+    return h, label, notes
 
 
-def _lapsed(hourly, dz):
-    """Same weather, temperature moved `dz` metres up or down."""
+def _overlay_ogd(base, ogd):
+    """Put MeteoSwiss OGD forecast hours over the Open-Meteo series.
+
+    OGD values are at the ICON cell's own height, not at the weather point's
+    reference height that Open-Meteo downscales to. So OGD temperature is
+    shifted by the mean difference over the hours both have -- the height
+    correction, measured instead of assumed. Returns (merged, hours, dT).
+    """
+    if not ogd or not ogd.get("time"):
+        return base, 0, 0.0
+    if not base or not base.get("time"):
+        return {k: list(v) for k, v in ogd.items()}, len(ogd["time"]), 0.0
+    pos = {t: i for i, t in enumerate(base["time"])}
+    diffs = []
+    for j, t in enumerate(ogd["time"]):
+        i = pos.get(t)
+        if i is None:
+            continue
+        a = (base.get("temperature_2m") or [None] * len(base["time"]))[i]
+        b = ogd["temperature_2m"][j]
+        if a is not None and b is not None:
+            diffs.append(a - b)
+    dT = sum(diffs) / len(diffs) if len(diffs) >= 6 else 0.0
+    out = {k: list(v) for k, v in base.items()}
+    n = 0
+    for j, t in enumerate(ogd["time"]):
+        i = pos.get(t)
+        col = lambda v: (ogd.get(v) or [None] * len(ogd["time"]))[j]
+        if i is None or any(col(v) is None for v in _NEED):
+            continue
+        for v in _VARS:
+            x = col(v)
+            if x is None:
+                continue
+            if v == "temperature_2m":
+                x = x + dT
+            out.setdefault(v, [None] * len(out["time"]))[i] = x
+        n += 1
+    return out, n, dT
+
+
+def _lapsed(hourly, dz, precip_factor=1.0):
+    """Same weather, temperature moved `dz` metres up or down, precipitation
+    scaled by `precip_factor` (the IMIS snow-height correction, imis.py)."""
     d = config.TA_LAPSE_K_PER_M * dz
     out = dict(hourly)
     out["temperature_2m"] = [None if v is None else v + d
                              for v in hourly.get("temperature_2m", [])]
+    if precip_factor != 1.0:
+        out["precipitation"] = [None if v is None else v * precip_factor
+                                for v in hourly.get("precipitation", [])]
     return out
 
 
 def build_forcing_matrix(wps, runs, target_date, win, meteo_dir: Path | None = None,
-                         spinup_days=None, lead_days=None, workers=6):
+                         spinup_days=None, lead_days=None, workers=6, since=None,
+                         precip_factor=None, ogd_dir=None):
     """One fetch per weather point, one lapse-rated .smet per run.
+
+    `since`: earliest instant any run starts integrating (live mode: the
+    carried state's time). Defaults to the spin-up start before the window.
+    `precip_factor`: {weather_point_id: factor} from the IMIS correction.
 
     Returns {weather_point_id: model_used} so the export can say what drove it.
     """
@@ -284,7 +395,9 @@ def build_forcing_matrix(wps, runs, target_date, win, meteo_dir: Path | None = N
     lead_days = config.FORCING_LEAD_DAYS if lead_days is None else lead_days
     meteo_dir = meteo_dir or (config.WORK_DIR / "meteo")
     meteo_dir.mkdir(parents=True, exist_ok=True)
-    start = (win[0] - timedelta(days=spinup_days + lead_days)).date().isoformat()
+    precip_factor = precip_factor or {}
+    first = since if since is not None else win[0] - timedelta(days=spinup_days)
+    start = (first - timedelta(days=lead_days)).date().isoformat()
     # One day of margin past the window, so the final integration step never
     # asks for an hour the forcing does not have.
     end = (win[1] + timedelta(days=1)).date().isoformat()
@@ -301,6 +414,18 @@ def build_forcing_matrix(wps, runs, target_date, win, meteo_dir: Path | None = N
             except Exception:
                 pass
         h, m, notes = fetch_weather(w["lat"], w["lon"], w["ref_elev"], start, end)
+        # MeteoSwiss OGD forecast hours on top (tools/ogd_extract.py), when
+        # the workflow produced them.
+        of = Path(ogd_dir) / f"{w['id']}.json" if ogd_dir else None
+        if h and of is not None and of.exists():
+            try:
+                od = json.loads(of.read_text())
+                h, n_ogd, dT = _overlay_ogd(h, od.get("hourly"))
+                if n_ogd:
+                    notes.append(f"OGD {od.get('model')} {n_ogd} h, dT {dT:+.1f} K")
+                    m = f"{od.get('model')}+{m}"
+            except Exception as e:
+                notes.append(f"OGD unreadable: {e}")
         if h:
             cache.write_text(json.dumps({"start": start, "end": end, "model": m,
                                          "hourly": h}))
@@ -320,7 +445,8 @@ def build_forcing_matrix(wps, runs, target_date, win, meteo_dir: Path | None = N
             used[wid] = m
             for r in by_wp.get(wid, []):
                 hourly_to_smet(r["id"], r["lat"], r["lon"], r["elev"],
-                               _lapsed(h, r["elev"] - ref[wid]),
+                               _lapsed(h, r["elev"] - ref[wid],
+                                       precip_factor.get(wid, 1.0)),
                                meteo_dir / f"{r['id']}.smet")
             if k % 25 == 0 or k == len(wps):
                 print(f"  forcing {k}/{len(wps)}  {time.time()-t0:.0f}s  "

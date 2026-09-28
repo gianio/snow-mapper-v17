@@ -97,6 +97,9 @@ TA_LAPSE_K_PER_M = -0.0065
 # runs, which kept resetting every surface to new snow.
 FORCING_MODELS = ("meteoswiss_icon_ch1", "meteoswiss_icon_ch2", "icon_d2")
 HISTORICAL_FORECAST_URL = "https://historical-forecast-api.open-meteo.com/v1/forecast"
+# Fills the far end of a live forecast once the MeteoSwiss models run out
+# (ICON-CH2 reaches 5 days; the app's window ends ~6 days ahead).
+FORCING_FAR_MODEL = "icon_seamless"
 FORCING_MIN_COVERAGE = 0.95        # share of hours a model must actually fill
 
 # The popup profile shows the top of the pack at fine resolution rather
