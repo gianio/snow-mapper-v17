@@ -90,3 +90,8 @@ jobs:
 
       - name: Variant A consumer contract
         run: node tools/test_variant_a.js dist/app.js
+
+      # The app draws Variant A itself from the metric packs; this pins its
+      # classes to the pipeline's on the same cells.
+      - name: Variant A device renderer = pipeline
+        run: python tools/test_va_engine_parity.py dist/app.js

@@ -1,0 +1,56 @@
+# MeteoSwiss open data (ICON-CH1/CH2 GRIB from data.geo.admin.ch) against the
+# Open-Meteo series the pipeline uses today, at a few weather points.
+#
+# The agent environment cannot reach data.geo.admin.ch, so the OGD extractor
+# (tools/ogd_extract.py) is verified here: it runs in its own venv
+# (meteodata-lab pins numpy < 2.4), and the summary compares temperature,
+# precipitation, wind and radiation hour by hour. The live workflow uses OGD
+# only when its input `use_ogd` is set.
+name: Probe MeteoSwiss OGD forcing
+
+on:
+  workflow_dispatch:
+    inputs:
+      points:
+        description: "Weather points to compare"
+        default: "4"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: pip install -r requirements.txt
+      - name: Restore national DEM
+        uses: actions/cache/restore@v4
+        with:
+          path: variant_a/data/dem
+          key: variant-a-dem-lv03-250m-v1
+      - name: OGD venv
+        run: |
+          python -m venv .ogd
+          .ogd/bin/pip install -q meteodata-lab
+          .ogd/bin/python -c "import meteodatalab, eccodes; print('meteodata-lab', meteodatalab.__version__ if hasattr(meteodatalab,'__version__') else '?')"
+      - name: Extract
+        run: |
+          python run_variant_a.py --live --limit ${{ inputs.points }} --write-points points.json
+          cat points.json
+          .ogd/bin/python -u tools/ogd_extract.py points.json ogd 2>&1 | tee ogd.log
+      - name: Compare with Open-Meteo
+        run: python -u tools/probe_ogd_compare.py points.json ogd | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ogd-probe
+          path: |
+            ogd/
+            ogd.log
+            points.json

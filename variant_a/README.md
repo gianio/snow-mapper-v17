@@ -49,3 +49,47 @@ point profiles in x/y/elev/aspect, client-side). No app model code is modified.
 - `data/dem/ch_lv03_250m.dem` — national DEM (git-ignored; provide locally or via `data_connectors/dem_loader`)
 - External: **SNOWPACK/MeteoIO** binaries (offline). Python: numpy, scipy, pyproj, pillow.
 - Reuses app connectors (`data_connectors/open_meteo_client`, `slf_stations`, `dem_loader`).
+
+## Production setup (matrix mode, live)
+
+```
+weather points (15 km)  x  virtual slopes (300 m bands x 8 aspects x 20/38 deg + flat)
+        |                              ~135 points, ~14 000 SNOWPACK runs
+forcing.py   Open-Meteo, spliced hour by hour: ICON-CH1 -> CH2 -> D2 -> icon_seamless;
+             MeteoSwiss OGD GRIB on top of the forecast hours when enabled
+             (tools/ogd_extract.py, own venv); IMIS precipitation factor per point
+state.py     live: the snowpack of every run carried between cycles (GitHub artifact
+             va-state), advanced only with past weather, lagging "now" by 5 days
+matrix.py    advance the state to the window start, run the window, digest each .pro
+wind.py      drift (lee) / scour (windward) index per run from the point's wind
+terrain.py   horizon shade per cell for the window's dates; forest fraction (WorldCover)
+imis.py      measured snow height: validation + slow precipitation correction
+gates.py     publish gates -- a failing cycle is not published, the last good one stays
+export.py    250 m PNG frames (zoomed out) + per-frame metric packs the app renders at
+             terrain resolution (Terrarium tiles, ~30 m), shade/mask + forest rasters
+```
+
+```bash
+python run_variant_a.py --date 2026-04-01 --step-h 3            # fixed date (demo)
+python run_variant_a.py --live --state-dir state --state-out state_new --step-h 3
+```
+
+Workflows: `variant-a-live.yml` (4x daily, carries the state, uploads `va-live` only when
+the gates pass), `deploy.yml` (publishes the newest `va-live` to `data/variant_a_live`),
+`probe-ogd.yml` (checks the MeteoSwiss OGD extractor against Open-Meteo).
+
+### Checking the model against reality
+
+* **IMIS stations (used):** the SLF measurement API gives the station snow heights behind
+  the SLF snow-height maps -- the same measurements, machine-readable, CC BY 4.0. Each
+  cycle compares the flat runs (interpolated to the station height) with them, writes
+  bias/MAE into the manifest and the Actions summary, blocks publishing when the error is
+  gross, and nudges the precipitation factor.
+* **The SLF snow-height map itself** is an interpolation of those stations (and
+  observers), published as an image for people; there is no documented data interface,
+  so it is better used as a visual cross-check than as a reference in code.
+* Further independent references, not yet wired in: SLF/OSHD gridded snow water
+  equivalent and snow height (1 km, daily; historic data on EnviDat, operational on
+  request), satellite snow cover (Sentinel-2 / MODIS) for where there is snow at all,
+  SwissMetNet snow depth at the stations that measure it, SLF observer profiles, and
+  the app's own user reports ("Pulver? Harsch? Sulz?") as ground truth on slopes.

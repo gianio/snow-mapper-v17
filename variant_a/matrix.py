@@ -132,23 +132,39 @@ def _lookup(wps, runs):
     return lut
 
 
-def build_weights(grid: NationalGrid, wps, runs, neighbours=None):
+def build_weights(grid: NationalGrid, wps, runs, neighbours=None, shade=None):
     """Sparse (cells x runs) weights: IDW across weather points, trilinear in
     elevation band, slope class and aspect sector within each one.
+
+    `shade` (nr, nc, 0..1) is the share of the direct beam the surrounding
+    terrain blocks (terrain.shade_fraction). A shaded cell is blended by that
+    share towards the NORTH-facing runs of its own height and steepness, i.e.
+    it is treated as a slope that the sun does not reach -- the virtual slopes
+    themselves have no horizon.
 
     Returns (W, cell_index) where cell_index are the flat grid indices of the
     rows. Cells outside the subregions, or without a DEM value, get no row.
     """
-    k_nb = min(neighbours or config.MATRIX_NEIGHBOURS, len(wps))
     valid = (grid.tile > 0) & np.isfinite(grid.elevation)
     rows, cols = np.nonzero(valid)
     cell_index = rows * grid.nc + cols
+    aspect = grid.aspect[rows, cols].astype(np.float64)
+    aspect = np.where(np.isfinite(aspect), aspect, 0.0) % 360.0
+    W = _weights(grid, wps, runs, rows, cols, aspect, neighbours)
+    if shade is not None:
+        s = np.clip(shade[rows, cols].astype(np.float64), 0.0, 1.0)
+        if (s > 0.01).any():
+            Wn = _weights(grid, wps, runs, rows, cols, np.zeros_like(aspect), neighbours)
+            W = (sparse.diags(1.0 - s).dot(W) + sparse.diags(s).dot(Wn)).tocsr().astype(np.float32)
+    return W, cell_index
+
+
+def _weights(grid, wps, runs, rows, cols, aspect, neighbours=None):
+    k_nb = min(neighbours or config.MATRIX_NEIGHBOURS, len(wps))
     ce = grid.xll + (cols + 0.5) * grid.cs
     cn = grid.yll + (grid.nr - 1 - rows + 0.5) * grid.cs
     elev = grid.elevation[rows, cols].astype(np.float64)
     slope = np.nan_to_num(grid.slope[rows, cols].astype(np.float64), nan=0.0)
-    aspect = grid.aspect[rows, cols].astype(np.float64)
-    aspect = np.where(np.isfinite(aspect), aspect, 0.0) % 360.0
 
     tree = cKDTree(np.array([[w["e"], w["n"]] for w in wps]))
     dist, widx = tree.query(np.column_stack([ce, cn]), k=k_nb)
@@ -177,7 +193,7 @@ def build_weights(grid: NationalGrid, wps, runs, neighbours=None):
     ta = fa - np.floor(fa)
 
     R, C, V = [], [], []
-    ridx = np.arange(len(cell_index))
+    ridx = np.arange(len(rows))
     for j in range(k_nb):
         wi = widx[:, j]
         # elevation: fractional band position within THIS weather point
@@ -193,13 +209,13 @@ def build_weights(grid: NationalGrid, wps, runs, neighbours=None):
                     ok = (w > 1e-9) & (run >= 0)
                     R.append(ridx[ok]); C.append(run[ok]); V.append(w[ok].astype(np.float32))
     W = sparse.coo_matrix((np.concatenate(V), (np.concatenate(R), np.concatenate(C))),
-                          shape=(len(cell_index), len(runs))).tocsr()
+                          shape=(len(rows), len(runs))).tocsr()
     # Renormalise: a missing corner (a band a neighbour lacks) must not dilute
     # the sum toward zero.
     rs = np.asarray(W.sum(axis=1)).ravel()
     rs[rs == 0] = 1.0
     W = sparse.diags(1.0 / rs).dot(W).tocsr().astype(np.float32)
-    return W, cell_index
+    return W
 
 
 def output_times(win, step_h):
@@ -233,7 +249,7 @@ def _digest(pro_path, layer_ts, prof_ts):
     met = np.zeros((len(layer_ts), len(METS)), np.float32)
     for i, dt in enumerate(layer_ts):
         q = classify.assess_ski_quality(near(dt))
-        met[i] = [q[k] for k in METS]
+        met[i] = [q.get(k, 0.0) for k in METS]
     nb = profiles.NB
     hs = np.zeros(len(prof_ts), np.int16)
     db = np.zeros((len(prof_ts), nb), np.int16)
@@ -264,8 +280,14 @@ def _run_and_digest(args):
     return pid, rc, err, out
 
 
-def run_matrix(runs, target_date, win, step_h, prof_step_h, workers=None, spinup_days=None):
-    """Write .sno/.ini for every run, execute, digest. Returns {run_id: digest}."""
+def run_matrix(runs, target_date, win, step_h, prof_step_h, workers=None, spinup_days=None,
+               sno_src: Path | None = None):
+    """Write .sno/.ini for every run, execute, digest. Returns {run_id: digest}.
+
+    `sno_src`: a directory of <run_id>.sno valid at the window start (live
+    mode, see state.py). Those runs start there and write profiles from the
+    first step; runs without one fall back to the synthetic base + spin-up.
+    """
     from . import snowpack_runner
     spinup_days = spinup_days or config.SPINUP_DAYS
     base = config.WORK_DIR
@@ -274,10 +296,21 @@ def run_matrix(runs, target_date, win, step_h, prof_step_h, workers=None, spinup
     for d in (sno_dir, ini_dir, runs_dir):
         d.mkdir(parents=True, exist_ok=True)
     sim_start = (win[0] - timedelta(days=spinup_days)).date().isoformat()
+    n_state = 0
     for r in runs:
-        snowpack_runner.write_sno(r, sno_dir, sim_start)
+        src = (Path(sno_src) / f"{r['id']}.sno") if sno_src else None
+        if src is not None and src.exists():
+            shutil.copy2(src, sno_dir / f"{r['id']}.sno")
+            prof_start = 0.0
+            n_state += 1
+        else:
+            snowpack_runner.write_sno(r, sno_dir, sim_start)
+            prof_start = float(spinup_days)
         snowpack_runner.write_ini(r, ini_dir, sno_dir, meteo_dir, runs_dir,
-                                  float(spinup_days), step_h)
+                                  prof_start, step_h)
+    if sno_src:
+        print(f"  {n_state}/{len(runs)} runs continue from the carried state, "
+              f"{len(runs) - n_state} cold-start")
     layer_ts = output_times(win, step_h)
     prof_ts = output_times(win, max(step_h, prof_step_h))
     end = win[1].strftime("%Y-%m-%dT%H:%M")
@@ -303,10 +336,67 @@ def run_matrix(runs, target_date, win, step_h, prof_step_h, workers=None, spinup
     return results, layer_ts, prof_ts
 
 
+def advance_state(runs, carried, st_sno, st_time, to_time, out_dir: Path,
+                  workers=None, spinup_days=None, bare=False):
+    """Integrate every run to `to_time` and write its snowpack there.
+
+    `carried` are the run ids that continue from `st_sno` (valid at
+    `st_time`); every other run cold-starts `spinup_days` before `to_time`
+    from the synthetic base (or from bare ground, `bare`). Nothing is written
+    but the final .sno: out_dir/<run_id>.sno. Returns the ids that made it.
+    """
+    from . import snowpack_runner
+    spinup_days = spinup_days or config.SPINUP_DAYS
+    base = config.WORK_DIR / "advance"
+    sno_dir, ini_dir, runs_dir = base / "sno", base / "ini", base / "runs"
+    raw = base / "out"
+    for d in (sno_dir, ini_dir, runs_dir, raw, Path(out_dir)):
+        d.mkdir(parents=True, exist_ok=True)
+    meteo_dir = config.WORK_DIR / "meteo"
+    cold_start = (to_time - timedelta(days=spinup_days)).date().isoformat()
+    jobs = []
+    n_cold = 0
+    for r in runs:
+        if r["id"] in carried and st_sno is not None and st_time < to_time:
+            shutil.copy2(Path(st_sno) / f"{r['id']}.sno", sno_dir / f"{r['id']}.sno")
+        elif r["id"] in carried:
+            # state already at to_time: nothing to integrate
+            shutil.copy2(Path(st_sno) / f"{r['id']}.sno", Path(out_dir) / f"{r['id']}.sno")
+            continue
+        else:
+            snowpack_runner.write_sno(r, sno_dir, cold_start, bare=bare)
+            n_cold += 1
+        snowpack_runner.write_ini(r, ini_dir, sno_dir, meteo_dir, runs_dir, 0.0, 24,
+                                  snow_out=raw, prof_write=False)
+        jobs.append((str(ini_dir / f"{r['id']}.ini"), to_time.strftime("%Y-%m-%dT%H:%M"),
+                     str(raw / f"{r['id']}_va.sno")))
+    print(f"  state advance to {to_time:%Y-%m-%d %H:%M}: {len(jobs) - n_cold} carried, "
+          f"{n_cold} cold-start{' (bare ground)' if bare and n_cold else ''}")
+    ok, fail = set(), []
+    t0 = time.time()
+    workers = workers or (os.cpu_count() or 4)
+    with ProcessPoolExecutor(max_workers=workers) as ex:
+        futs = {ex.submit(snowpack_runner._run_one, j): j for j in jobs}
+        for fu in as_completed(futs):
+            name, rc, err = fu.result()
+            rid = os.path.splitext(name)[0]
+            if rc == 0:
+                shutil.move(str(raw / f"{rid}_va.sno"), str(Path(out_dir) / f"{rid}.sno"))
+                ok.add(rid)
+            else:
+                fail.append((rid, err))
+            shutil.rmtree(runs_dir / rid, ignore_errors=True)
+    ok |= {p.stem for p in Path(out_dir).glob("*.sno")}
+    print(f"  state advance: {len(ok)}/{len(runs)} ok in {time.time() - t0:.0f}s")
+    for rid, e in fail[:3]:
+        print("  ADVANCE FAIL", rid, (e or "").strip()[:160])
+    return ok
+
+
 # ── gridding: one sparse product per frame ─────────────────────────────────
 
 def grid_frames(grid: NationalGrid, runs, results, layer_ts, W, cell_index):
-    """Yield (dt, {ski18, simple, density}) per layer frame.
+    """Yield (dt, {ski18, simple, density, drift, scour}) per layer frame.
 
     A generator, so frames are written as they are made -- 88 frames of three
     full national grids held at once would be over a gigabyte.
@@ -314,6 +404,7 @@ def grid_frames(grid: NationalGrid, runs, results, layer_ts, W, cell_index):
     from . import classify
     from .gridding import METS
     nm = len(METS)
+    ix = {k: i for i, k in enumerate(METS)}
     # Runs that failed get zero weight: drop their columns and renormalise.
     ok = np.array([r["id"] in results for r in runs])
     if not ok.all():
@@ -323,23 +414,36 @@ def grid_frames(grid: NationalGrid, runs, results, layer_ts, W, cell_index):
         W = sparse.diags(1.0 / rs).dot(W).tocsr()
     kept = [r for r, o in zip(runs, ok) if o]
     stack = np.stack([results[r["id"]][0] for r in kept])      # (runs, frames, METS)
-    i_crust, i_weak = METS.index("crust_thick_cm"), METS.index("weak_below_cm")
+    # Presence-gated quantities: a crust, a buried weak layer or surface hoar
+    # exists on a slope or it does not, so each is kept only where at least
+    # CRUST_GATE of the cell's weight comes from runs that actually have it --
+    # otherwise one crusted slope smears a trace of crust over every cell.
+    gated = ("crust_thick_cm", "weak_below_cm", "weak_layer_depth_cm", "sh_surface")
     valid = np.zeros(grid.nr * grid.nc, bool); valid[cell_index] = True
     valid = valid.reshape(grid.nr, grid.nc)
     for f, dt in enumerate(layer_ts):
         T = stack[:, f, :]
-        extra = np.column_stack([(T[:, i_crust] > 0), (T[:, i_weak] > 0)]).astype(np.float32)
-        G = W.dot(np.column_stack([T, extra]))                  # (cells, METS + 2)
-        full = np.zeros((nm + 2, grid.nr * grid.nc), np.float32)
+        extra = np.column_stack([(T[:, ix[k]] > 0) for k in gated]).astype(np.float32)
+        G = W.dot(np.column_stack([T, extra]))                  # (cells, METS + gates)
+        full = np.zeros((nm + len(gated), grid.nr * grid.nc), np.float32)
         full[:, cell_index] = G.T
-        g = full.reshape(nm + 2, grid.nr, grid.nc)
-        powd, crust, pdd, plw, sdens, shard, slw, hs, weak = g[:nm]
-        cwt, wwt = g[nm], g[nm + 1]
-        crust = np.where(cwt >= classify.CRUST_GATE, crust, 0.0)
-        weak = np.where(wwt >= classify.CRUST_GATE, weak, 0.0)
-        ski18 = classify.classify_grid_metrics(hs, powd, crust, pdd, plw, sdens, shard, slw, weak)
-        simple = classify.classify_simple(hs, powd, crust, sdens, slw)
+        g = full.reshape(nm + len(gated), grid.nr, grid.nc)
+        m = {k: g[i] for k, i in ix.items()}
+        for j, k in enumerate(gated):
+            m[k] = np.where(g[nm + j] >= classify.CRUST_GATE, m[k], 0.0)
+        ski18 = classify.classify_grid_metrics(
+            m["total_hs_cm"], m["powder_depth_cm"], m["crust_thick_cm"], m["powder_dd"],
+            m["powder_lw"], m["surface_density"], m["surface_hardness"], m["surface_lw"],
+            m["weak_below_cm"], sh=m["sh_surface"], drift=m["drift_load"],
+            scour=m["wind_scour"])
+        simple = classify.classify_simple(
+            m["total_hs_cm"], m["powder_depth_cm"], m["crust_thick_cm"],
+            m["surface_density"], m["surface_lw"], sh=m["sh_surface"],
+            drift=m["drift_load"], scour=m["wind_scour"])
         ski18[~valid] = 0
         simple[~valid] = 0
-        density = np.where(valid, sdens, np.nan)
-        yield dt, {"ski18": ski18, "simple": simple, "density": density}
+        density = np.where(valid, m["surface_density"], np.nan)
+        hsv = m["total_hs_cm"][valid]
+        yield dt, {"ski18": ski18, "simple": simple, "density": density,
+                   "hs_max": float(hsv.max()) if hsv.size else 0.0,
+                   "finite": bool(np.isfinite(G).all())}

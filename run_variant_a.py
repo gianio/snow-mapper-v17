@@ -88,7 +88,7 @@ def _select_timestamps(series, step_h, win=None):
 
 def main():
     ap = argparse.ArgumentParser(description="Variant A national ski-quality pipeline")
-    ap.add_argument("--date", required=True, help="target date YYYY-MM-DD")
+    ap.add_argument("--date", default=None, help="target date YYYY-MM-DD (live: today)")
     ap.add_argument("--days", type=int, default=5,
                     help="half-width of the output window in days, matching "
                          "run_interactive.py --days. The export then spans the "
@@ -115,10 +115,33 @@ def main():
                          "points: the older one-DEM-cell-per-class selection.")
     ap.add_argument("--spacing-km", type=float, default=None,
                     help="matrix mode: weather point spacing (default config)")
+    ap.add_argument("--live", action="store_true",
+                    help="live cycle: carry the snowpack state between runs, "
+                         "correct precipitation against IMIS, gate publishing. "
+                         "--date defaults to today (UTC).")
+    ap.add_argument("--state-dir", default=None,
+                    help="where the previous cycle's state is (live)")
+    ap.add_argument("--state-out", default=None,
+                    help="where to write the new state (live; default --state-dir)")
+    ap.add_argument("--imis", action="store_true",
+                    help="compare with IMIS snow heights also outside --live")
+    ap.add_argument("--ogd-dir", default=None,
+                    help="MeteoSwiss OGD point series (tools/ogd_extract.py) to put "
+                         "over the Open-Meteo forecast hours")
+    ap.add_argument("--write-points", default=None,
+                    help="write the weather points as JSON (for ogd_extract) and exit")
+    ap.add_argument("--no-shade", action="store_true",
+                    help="skip the horizon-shading correction")
     ap.add_argument("--publish", action="store_true",
                     help="publish export to VARIANT_A_PUBLISH_DIR + Supabase (if configured)")
     args = ap.parse_args()
+    if args.date is None:
+        if not args.live:
+            ap.error("--date is required unless --live")
+        args.date = datetime.utcnow().strftime("%Y-%m-%d")
     datetime.strptime(args.date, "%Y-%m-%d")
+    if args.live:
+        args.state_dir = args.state_dir or str(config.CACHE_DIR / "state")
     win = app_window(args.date, args.days)
     print(f"output window {win[0]:%Y-%m-%d %H:%M} .. {win[1]:%Y-%m-%d %H:%M} "
           f"({(win[1]-win[0]).total_seconds()/3600:.0f} h, matches the app's "
@@ -212,8 +235,15 @@ def main():
 
 def _main_matrix(args, grid, win, _t, _t0, _time):
     """Weather points -> a height x aspect x slope matrix of SNOWPACK runs that
-    share each point's weather -> grid by similar exposure."""
-    from variant_a import matrix
+    share each point's weather -> grid by similar exposure.
+
+    --live additionally carries the snowpack between runs (state.py), corrects
+    precipitation against IMIS snow heights (imis.py) and gates publishing
+    (gates.py)."""
+    import json as _json
+    from pathlib import Path as _P
+    from variant_a import matrix, terrain, wind, gates, imis, state as state_mod
+    from variant_a.gridding import METS
     _ts = _time.time()
     wps = matrix.weather_points(grid, spacing_km=args.spacing_km)
     if args.only_tile:
@@ -226,6 +256,12 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
         step = len(wps) / float(args.limit)
         wps = [wps[int(i * step)] for i in range(args.limit)]
         print(f"--limit {args.limit}: every {step:.1f}th weather point")
+    if args.write_points:
+        _json.dump([{"id": w["id"], "lat": w["lat"], "lon": w["lon"],
+                     "ref_elev": w["ref_elev"]} for w in wps],
+                   open(args.write_points, "w"))
+        print(f"{len(wps)} weather points -> {args.write_points}")
+        return
     runs = matrix.matrix_runs(wps)
     _t["select"] = _time.time() - _ts
     print(f"{len(wps)} weather points, {len(runs)} SNOWPACK runs "
@@ -233,8 +269,31 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
           f"{len(config.MATRIX_SLOPES)} slopes + flat)")
     print(f"{len(runs)} representative points selected")    # parsed by the CI timing step
 
+    # Terrain effects the 1-D runs cannot see: horizon shading for this
+    # window's dates, and the forest mask.
     _ts = _time.time()
-    used = forcing.build_forcing_matrix(wps, runs, args.date, win)
+    shade = None if args.no_shade else terrain.shade_for_window(grid, win)
+    forest = terrain.load_forest(grid)
+    _t["terrain"] = _time.time() - _ts
+
+    # Live: what can continue from the carried snowpack?
+    st, carried, factors = None, set(), {}
+    since = None
+    if args.live:
+        st = state_mod.load(args.state_dir)
+        carried = state_mod.available(st, {r["id"] for r in runs}, win[0])
+        factors = dict((st or {}).get("meta", {}).get("precip_factor") or {})
+        cold_needed = len(carried) < len(runs)
+        since = win[0] - timedelta(days=config.SPINUP_DAYS) if cold_needed else st["time"]
+        if st is not None and carried:
+            since = min(since, st["time"])
+        print(f"live: state {'valid at ' + st['time'].strftime('%Y-%m-%d %H:%M') if st else 'none'}"
+              f", {len(carried)}/{len(runs)} runs carried, "
+              f"{sum(1 for v in factors.values() if v != 1.0)} precip corrections")
+
+    _ts = _time.time()
+    used = forcing.build_forcing_matrix(wps, runs, args.date, win, since=since,
+                                        precip_factor=factors, ogd_dir=args.ogd_dir)
     _t["forcing"] = _time.time() - _ts
     wps = [w for w in wps if w["id"] in used]
     keep = {w["id"] for w in wps}
@@ -242,30 +301,103 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
     if not runs:
         raise SystemExit("no weather point got forcing -- nothing to run")
 
+    sno_src = None
+    if args.live:
+        _ts = _time.time()
+        sno_src = config.WORK_DIR / "state_new" / "sno"
+        # Autumn season start: no state yet and no snow to speak of, so the
+        # column starts on bare ground rather than on the synthetic base.
+        bare = win[0].month in (9, 10)
+        matrix.advance_state(runs, carried, st["sno"] if st else None,
+                             st["time"] if st else None, win[0], sno_src,
+                             workers=args.workers, bare=bare)
+        _t["advance"] = _time.time() - _ts
+
     _ts = _time.time()
     results, layer_ts, prof_ts = matrix.run_matrix(
-        runs, args.date, win, args.step_h, args.profile_step_h, workers=args.workers)
+        runs, args.date, win, args.step_h, args.profile_step_h, workers=args.workers,
+        sno_src=sno_src)
     _t["snowpack"] = _time.time() - _ts
     if not results:
         raise SystemExit("no SNOWPACK run produced output")
 
+    # Wind drift / scour from each weather point's own wind.
+    wp_hourly = {}
+    for w in wps:
+        f = config.WORK_DIR / "meteo" / f"{w['id']}.json"
+        try:
+            wp_hourly[w["id"]] = _json.loads(f.read_text())["hourly"]
+        except Exception:
+            pass
+    wind.apply(runs, results, layer_ts, wp_hourly, METS)
+
+    # IMIS: validation always when the window is recent enough for the API
+    # (7 days back), correction only in live mode.
+    rows, summary, new_factors = [], {"stations": 0}, factors
+    recent = (datetime.utcnow() - win[0]).days <= 7 and win[0] <= datetime.utcnow()
+    if (args.live or args.imis) and recent:
+        _ts = _time.time()
+        try:
+            stations = imis.fetch()
+            rows, summary = imis.compare(stations, wps, runs, results, layer_ts, METS)
+            if args.live:
+                new_factors = imis.update_factors(rows, factors)
+            print(f"IMIS: {summary}")
+        except Exception as e:
+            print(f"IMIS unavailable: {type(e).__name__}: {e}")
+        _t["imis"] = _time.time() - _ts
+
     _ts = _time.time()
-    W, cell_index = matrix.build_weights(grid, wps, runs)
+    W, cell_index = matrix.build_weights(grid, wps, runs, shade=shade)
     frames = matrix.grid_frames(grid, runs, results, layer_ts, W, cell_index)
+    extra = {
+        "live": bool(args.live),
+        "terrain": {"shade": shade is not None, "forest": bool(forest.any())},
+        "validation": {"imis": summary, "stations": rows[:300]},
+    }
+    if args.live:
+        extra["state"] = {"from": st["time"].strftime("%Y-%m-%dT%H:%M") if st else None,
+                          "carried": len(carried), "runs": len(runs),
+                          "to": win[0].strftime("%Y-%m-%dT%H:%M")}
+        extra["precip_factor"] = new_factors
     out_dir, manifest = export.export_matrix(grid, frames, wps, runs, results, prof_ts,
-                                             forcing_models=used)
+                                             forcing_models=used, forest=forest,
+                                             extra=extra)
+    export.export_pack(out_dir, runs, results, layer_ts, wps, grid, shade, METS)
+    manifest["pack"] = "pack/index.json"
+    gate = gates.check(len(runs), results, runs, wps, len(layer_ts), len(manifest["tags"]),
+                       manifest.get("_frame_stats", []), summary,
+                       n_cold=(len(runs) - len(carried)) if args.live else 0)
+    manifest["gates"] = gate
+    with open(out_dir / "manifest.json", "w") as f:
+        _json.dump({k: v for k, v in manifest.items() if not k.startswith("_")}, f,
+                   indent=2, default=export._jsonable)
+    (out_dir / "gates.json").write_text(_json.dumps(gate, indent=1))
     _t["export"] = _time.time() - _ts
     print(f"exported -> {out_dir}")
     print(f"  manifest: {out_dir/'manifest.json'}  ({len(manifest['tags'])} frames, "
           f"{manifest['weather_points']} weather points, {manifest['runs']} runs, "
           f"models {manifest['forcing_models']})")
+    print(f"  gates: {'PASSED' if gate['passed'] else 'FAILED'}"
+          + "".join(f"\n    HARD {h}" for h in gate["hard"])
+          + "".join(f"\n    soft {x}" for x in gate["soft"]))
+
+    if args.live:
+        meta = state_mod.save(args.state_out or args.state_dir, win[0], sno_src,
+                              {"precip_factor": new_factors,
+                               "cycle": int(((st or {}).get("meta") or {}).get("cycle", 0)) + 1,
+                               "imis": summary})
+        print(f"  state saved: {meta['runs']} runs valid at {meta['time']}, cycle {meta['cycle']}")
+
     _t["total"] = _time.time() - _t0
     n = len(runs)
     per = (_t.get("snowpack", 0.0) / n) if n else 0.0
     print("[timing] " + " ".join(f"{k}={v:.1f}s" for k, v in _t.items())
           + f" points={n} snowpack_per_point={per:.2f}s national_runs={n_full}")
-    if args.publish:
+    if args.publish and gate["passed"]:
         publish_mod.publish(out_dir)
+    if not gate["passed"]:
+        raise SystemExit(3)
 
 
 if __name__ == "__main__":

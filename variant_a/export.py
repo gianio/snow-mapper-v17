@@ -21,6 +21,7 @@ from . import config, classify
 from .subregions import NationalGrid, wgs84_bounds
 
 DENS_MIN, DENS_MAX = 100.0, 450.0
+FOREST_DIM = 0.65          # class layers keep 35 % of their alpha in full forest
 
 # Width the reprojected PNG is capped at. The source grid is 1440 px across,
 # and EPSG:4326 comes out near that, so this does not downsample in practice.
@@ -32,6 +33,113 @@ def _rgba_from_labels(lab, table):
     for k, c in table.items():
         im[lab == k] = c
     return im
+
+
+def _dim_forest(rgba, forest):
+    """Fade the class colours where the cell is forest: the virtual slopes
+    are open terrain, so under canopy the class is shown, but quietly."""
+    if forest is None:
+        return rgba
+    a = rgba[..., 3].astype(np.float32) * (1.0 - FOREST_DIM * np.clip(forest, 0, 1))
+    rgba[..., 3] = a.round().astype(np.uint8)
+    return rgba
+
+
+def _legend(labels, rgba, de):
+    return {i: [labels[i], list(rgba[i][:3]), de[i]] for i in range(1, len(labels))}
+
+
+# ── metric packs: what the app renders from at full terrain resolution ──────
+# One small PNG per frame holding every run's metrics, quantised to a byte
+# each. The app combines them with terrain tiles on the device (same
+# interpolation as build_weights), so the map is as sharp as the elevation
+# data it is drawn on instead of the 250 m grid.
+PACK_METS = [  # (metric, byte = clip(round(value * mul), 0, 255))
+    ("powder_depth_cm", 2.0), ("crust_thick_cm", 10.0), ("powder_dd", 255.0),
+    ("powder_lw", 50.0), ("surface_density", 0.25), ("surface_hardness", 40.0),
+    ("surface_lw", 50.0), ("total_hs_cm", 0.5), ("weak_below_cm", 5.0),
+    ("sh_surface", 255.0), ("weak_layer_depth_cm", 4.0), ("drift_load", 255.0),
+    ("wind_scour", 255.0),
+]
+PACK_RUNS_PER_ROW = 256
+
+
+def _pack_frame(stack_f, ok, mets):
+    """(runs, METS) float -> RGB image, 3 bytes per pixel, run-major."""
+    ix = [mets.index(m) for m, _ in PACK_METS]
+    mul = np.array([k for _, k in PACK_METS], np.float32)
+    q = np.clip(np.round(stack_f[:, ix] * mul), 0, 255).astype(np.uint8)
+    q = np.column_stack([q, ok.astype(np.uint8)])            # + ok flag
+    per = -(-q.shape[1] // 3)                                 # pixels per run
+    q = np.pad(q, ((0, 0), (0, per * 3 - q.shape[1])))
+    n = q.shape[0]
+    rows = -(-n // PACK_RUNS_PER_ROW)
+    full = np.zeros((rows * PACK_RUNS_PER_ROW, per * 3), np.uint8)
+    full[:n] = q
+    img = full.reshape(rows, PACK_RUNS_PER_ROW * per, 3)
+    return img, per
+
+
+def export_pack(out_dir: Path, runs, results, layer_ts, wps, grid, shade, mets):
+    """pack/index.json + pack/f_<tag>.png per frame + terrain/shade.png."""
+    (out_dir / "pack").mkdir(parents=True, exist_ok=True)
+    (out_dir / "terrain").mkdir(parents=True, exist_ok=True)
+    from . import matrix
+    wid = {w["id"]: i for i, w in enumerate(wps)}
+    ok = np.array([r["id"] in results for r in runs])
+    zero = np.zeros((len(layer_ts), len(mets)), np.float32)
+    stack = np.stack([results[r["id"]][0] if r["id"] in results else zero for r in runs])
+    per = 0
+    for f, dt in enumerate(layer_ts):
+        img, per = _pack_frame(stack[:, f, :], ok, mets)
+        Image.fromarray(img, "RGB").save(out_dir / "pack" / f"f_{dt:%Y-%m-%dT%H%M}.png",
+                                         optimize=True)
+    # terrain/shade.png: shade 0..254 on the LV03 grid; 255 = outside the
+    # modelled subregions (the app draws nothing there). Written even with
+    # shading off, because the app needs the mask.
+    sh = np.zeros((grid.nr, grid.nc), np.float32) if shade is None else shade
+    b = (np.clip(sh, 0, 1) * 254).round().astype(np.uint8)
+    b[~((grid.tile > 0) & np.isfinite(grid.elevation))] = 255
+    Image.fromarray(b, "L").save(out_dir / "terrain" / "shade.png", optimize=True)
+    fpng = config.DATA_DIR / "forest_100m.png"
+    if fpng.exists():
+        import shutil
+        shutil.copy2(fpng, out_dir / "terrain" / "forest.png")
+    index = {
+        "version": 1,
+        "mets": [m for m, _ in PACK_METS], "mul": [k for _, k in PACK_METS],
+        "px_per_run": per, "runs_per_row": PACK_RUNS_PER_ROW,
+        "file": "pack/f_{tag}.png",
+        "tags": [f"{dt:%Y-%m-%dT%H%M}" for dt in layer_ts],
+        # [weather point index, band index, slope class, aspect sector]
+        "runs": [[wid[r["wp"]], r["band_i"], r["slope_c"], r["aspect_k"]] for r in runs],
+        "wps": [{"id": w["id"], "lat": w["lat"], "lon": w["lon"],
+                 "e": round(w["e"], 1), "n": round(w["n"], 1),
+                 "b0": w["bands"][0], "nb": len(w["bands"])} for w in wps],
+        "slopes": list(matrix.slope_nodes()), "aspects": config.MATRIX_ASPECTS,
+        "elev_step": config.MATRIX_ELEV_STEP, "neighbours": config.MATRIX_NEIGHBOURS,
+        "d0_m": 0.5 * config.WEATHER_SPACING_KM * 1000.0,
+        "gate": classify.CRUST_GATE,
+        "gated": ["crust_thick_cm", "weak_below_cm", "weak_layer_depth_cm", "sh_surface"],
+        "thresholds": {k: getattr(classify, k) for k in (
+            "THIN_COVER_HS", "ICE_DENSITY_MIN", "WET_LWC_MIN", "POWDER_THIN", "POWDER_GOOD",
+            "POWDER_DEEP", "CRUST_TRACE", "CRUST_FINE", "CRUST_BREAKING", "CRUST_HARD_MIN",
+            "WEAK_BELOW_MIN", "WIND_MIN", "S_THIN_HS", "S_DUST", "S_PT1", "S_PT2", "S_PT3",
+            "S_CRUST_TRACE", "S_THIN_CRUST", "S_CARRY", "S_WET_LWC")},
+        "grid": {"crs": "EPSG:21781", "xll": grid.xll, "yll": grid.yll, "cs": grid.cs,
+                 "nr": grid.nr, "nc": grid.nc},
+        "shade": "terrain/shade.png",
+        "forest": {"file": "terrain/forest.png", "cs": 100.0,
+                   "levels": 3} if fpng.exists() else None,
+        "forest_dim": FOREST_DIM,
+        "rgba": {"ski18": [list(classify.SKI_RGBA[i]) for i in range(len(classify.SKI_LABELS))],
+                 "simple": [list(classify.SIMPLE_RGBA[i]) for i in range(len(classify.SIMPLE_LABELS))]},
+        "dens": [DENS_MIN, DENS_MAX],
+        "labels": {"ski18": classify.SKI_LABELS, "simple": classify.SIMPLE_LABELS},
+    }
+    with open(out_dir / "pack" / "index.json", "w") as f:
+        json.dump(index, f, separators=(",", ":"), default=_jsonable)
+    return index
 
 
 def _rgba_density(field, valid):
@@ -218,11 +326,10 @@ def export_all(grid: NationalGrid, grids_by_ts, profile_payload, out_dir: Path |
         "tags": tags,
         "layers": {
             "ski18": {"file": "layers/ski18_{tag}.png",
-                      "legend": {i: [classify.SKI_LABELS[i], list(classify.SKI_RGBA[i][:3])]
-                                 for i in range(1, len(classify.SKI_LABELS))}},
+                      "legend": _legend(classify.SKI_LABELS, classify.SKI_RGBA, classify.SKI_DE)},
             "simple": {"file": "layers/simple_{tag}.png",
-                       "legend": {i: [classify.SIMPLE_LABELS[i], list(classify.SIMPLE_RGBA[i][:3])]
-                                  for i in range(1, len(classify.SIMPLE_LABELS))}},
+                       "legend": _legend(classify.SIMPLE_LABELS, classify.SIMPLE_RGBA,
+                                         classify.SIMPLE_DE)},
             "density": {"file": "layers/density_{tag}.png",
                         "range": [DENS_MIN, DENS_MAX], "unit": "kg/m3"},
         },
@@ -293,7 +400,8 @@ document.getElementById('ly').onchange=draw;document.getElementById('sl').oninpu
 
 
 def export_matrix(grid: NationalGrid, frames, wps, runs, results, prof_ts,
-                  forcing_models=None, out_dir: Path | None = None):
+                  forcing_models=None, out_dir: Path | None = None, forest=None,
+                  extra=None):
     """Export the weather-point matrix: streamed layer frames + per-point profiles.
 
     `frames` is consumed lazily -- each frame is reprojected and written before
@@ -313,17 +421,20 @@ def export_matrix(grid: NationalGrid, frames, wps, runs, results, prof_ts,
     tags, stamps = [], []
     proj = _WGS84Map(grid)
     bounds = proj.bounds
+    frame_stats = []
     for dt, g in frames:
         tag = dt.strftime("%Y-%m-%dT%H%M")
         for key, rgba, nearest in (
-            ("ski18", _rgba_from_labels(g["ski18"], classify.SKI_RGBA), True),
-            ("simple", _rgba_from_labels(g["simple"], classify.SIMPLE_RGBA), True),
+            ("ski18", _dim_forest(_rgba_from_labels(g["ski18"], classify.SKI_RGBA), forest), True),
+            ("simple", _dim_forest(_rgba_from_labels(g["simple"], classify.SIMPLE_RGBA), forest), True),
             ("density", _rgba_density(g["density"], valid), False),
         ):
             img = proj.nearest(rgba) if nearest else proj.bilinear(rgba)
             _save_png(img, out_dir / "layers" / f"{key}_{tag}.png")
         tags.append(tag)
         stamps.append(dt.strftime("%Y-%m-%dT%H:%M"))
+        frame_stats.append({"tag": tag, "finite": bool(g.get("finite", True)),
+                            "hs_max": float(g.get("hs_max", 0.0))})
     if bounds is None:
         la0, lo0, la1, lo1 = wgs84_bounds(grid)
         bounds = [[la0, lo0], [la1, lo1]]
@@ -366,17 +477,17 @@ def export_matrix(grid: NationalGrid, frames, wps, runs, results, prof_ts,
     manifest = {
         "product": "variant_a_ski_quality",
         "mode": "matrix",
+        "generated": __import__("datetime").datetime.utcnow().strftime("%Y-%m-%dT%H:%MZ"),
         "crs": "EPSG:4326",
         "bounds": bounds,
         "timestamps": stamps,
         "tags": tags,
         "layers": {
             "ski18": {"file": "layers/ski18_{tag}.png",
-                      "legend": {i: [classify.SKI_LABELS[i], list(classify.SKI_RGBA[i][:3])]
-                                 for i in range(1, len(classify.SKI_LABELS))}},
+                      "legend": _legend(classify.SKI_LABELS, classify.SKI_RGBA, classify.SKI_DE)},
             "simple": {"file": "layers/simple_{tag}.png",
-                       "legend": {i: [classify.SIMPLE_LABELS[i], list(classify.SIMPLE_RGBA[i][:3])]
-                                  for i in range(1, len(classify.SIMPLE_LABELS))}},
+                       "legend": _legend(classify.SIMPLE_LABELS, classify.SIMPLE_RGBA,
+                                         classify.SIMPLE_DE)},
             "density": {"file": "layers/density_{tag}.png",
                         "range": [DENS_MIN, DENS_MAX], "unit": "kg/m3"},
         },
@@ -389,6 +500,9 @@ def export_matrix(grid: NationalGrid, frames, wps, runs, results, prof_ts,
         "forcing_models": dict(Counter(v for v in forcing_models.values() if v)),
         "subregions": grid.tile_names,
     }
+    manifest.update(extra or {})
+    manifest["_frame_stats"] = frame_stats
     with open(out_dir / "manifest.json", "w") as f:
-        json.dump(manifest, f, indent=2, default=_jsonable)
+        json.dump({k: v for k, v in manifest.items() if not k.startswith("_")}, f,
+                  indent=2, default=_jsonable)
     return out_dir, manifest

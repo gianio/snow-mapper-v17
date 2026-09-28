@@ -15,6 +15,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from variant_a import config, forcing, snowpack_runner
 import run_variant_a
+import numpy as np
+from PIL import Image
 
 FAILS = []
 
@@ -468,27 +470,34 @@ def test_matrix_weights():
 
 
 def test_forcing_fallback():
-    """Best model first; a 400 or a gappy model falls through, archive last."""
-    print("forcing model fallback")
+    """Finest model first, hour by hour: a 400 is skipped with its reason, a
+    gappy model is KEPT for the hours it has and the next one fills the
+    rest; the archive is the last resort."""
+    print("forcing model splicing")
     T = [f"2026-03-01T{h:02d}:00" for h in range(24)]
     full = {"time": T, **{v: [1.0] * 24 for v in
             ("temperature_2m", "precipitation", "shortwave_radiation", "wind_speed_10m")}}
-    gappy = {**full, "precipitation": [None] * 12 + [0.0] * 12}
+    gappy = {**full, "precipitation": [None] * 12 + [0.5] * 12,
+             "temperature_2m": [5.0] * 24}
     calls = []
 
     def fake(answers):
         def f(url, params):
             calls.append((url, params.get("models")))
-            a = answers.pop(0)
+            a = answers.pop(0) if answers else "exhausted"
             return (None, a) if isinstance(a, str) else ({"hourly": a}, None)
         return f
     real = forcing._fetch_json
     try:
         forcing._fetch_json = fake(["No data is available for this location", gappy, full])
         h, m, notes = forcing.fetch_weather(46.8, 9.8, 2000, "2026-03-01", "2026-03-02")
-        check("a refused and a gappy model are skipped", m == config.FORCING_MODELS[2], m)
-        check("the reasons are kept", len(notes) == 2 and "No data" in notes[0]
-              and "50%" in notes[1], str(notes))
+        check("the gappy model is kept where it has data", h["temperature_2m"][0] == 5.0
+              and h["precipitation"][20] == 0.5, str(h["precipitation"][18:22]))
+        check("the next model fills only its gaps", h["precipitation"][0] == 1.0
+              and h["temperature_2m"][0] == 5.0)
+        check("the label names the main model and marks the splice",
+              m == config.FORCING_MODELS[1] + "+", m)
+        check("the refusal reason is kept", any("No data" in n for n in notes), str(notes))
         check("an old window uses the historical-forecast API",
               calls[0][0] == config.HISTORICAL_FORECAST_URL)
         calls.clear()
@@ -497,7 +506,23 @@ def test_forcing_fallback():
         check("the archive is the last resort", m == "archive" and calls[-1][1] is None, m)
         forcing._fetch_json = fake(["x", "y", "z", "w"])
         h, m, notes = forcing.fetch_weather(46.8, 9.8, 2000, "2026-03-01", "2026-03-02")
-        check("nothing usable -> None, with every reason", h is None and len(notes) == 4)
+        check("nothing usable -> None, with every reason", h is None and len(notes) >= 4, str(notes))
+    finally:
+        forcing._fetch_json = real
+    # a live window: CH1 covers the first hours only, the far model the rest
+    from datetime import date, timedelta as td
+    d0 = date.today()
+    TL = [f"{(d0 + td(days=h // 24)).isoformat()}T{h % 24:02d}:00" for h in range(72)]
+    ch1 = {"time": TL, **{v: ([2.0] * 33 + [None] * 39) for v in forcing._VARS}}
+    far = {"time": TL, **{v: [9.0] * 72 for v in forcing._VARS}}
+    try:
+        forcing._fetch_json = fake([ch1, "no ch2", "no d2", far])
+        h, m, notes = forcing.fetch_weather(46.8, 9.8, 2000, d0.isoformat(),
+                                            (d0 + td(days=2)).isoformat())
+        check("live: CH1 hours kept, the far model extends the forecast",
+              h["temperature_2m"][0] == 2.0 and h["temperature_2m"][40] == 9.0
+              and "meteoswiss_icon_ch1 33" in str(notes)
+              and f"{config.FORCING_FAR_MODEL} 39" in str(notes), str(notes))
     finally:
         forcing._fetch_json = real
     lap = forcing._lapsed({"temperature_2m": [0.0, None, -5.0], "precipitation": [1, 2, 3]}, 300.0)
@@ -505,6 +530,20 @@ def test_forcing_fallback():
           abs(lap["temperature_2m"][0] + 1.95) < 1e-9 and lap["temperature_2m"][1] is None
           and abs(lap["temperature_2m"][2] + 6.95) < 1e-9, str(lap["temperature_2m"]))
     check("lapse leaves the other variables alone", lap["precipitation"] == [1, 2, 3])
+    lap = forcing._lapsed({"temperature_2m": [0.0], "precipitation": [2.0, None]}, 0.0, 1.5)
+    check("the IMIS precipitation factor scales precipitation", lap["precipitation"] == [3.0, None])
+    # OGD overlay: height offset measured on the overlap, OGD wins its hours
+    base = {"time": T, "temperature_2m": [-3.0] * 24, "precipitation": [0.0] * 24,
+            "shortwave_radiation": [0.0] * 24, "wind_speed_10m": [2.0] * 24,
+            "relative_humidity_2m": [80.0] * 24, "wind_direction_10m": [0.0] * 24}
+    ogd = {k: [v[0] + (2.0 if k == "temperature_2m" else 0.0)] * 12 for k, v in base.items() if k != "time"}
+    ogd["time"] = T[12:]
+    ogd["precipitation"] = [1.0] * 12
+    out, n, dT = forcing._overlay_ogd(base, ogd)
+    check("OGD overlay: hours replaced, temperature aligned by the measured offset",
+          n == 12 and abs(dT + 2.0) < 1e-9 and out["precipitation"][12] == 1.0
+          and abs(out["temperature_2m"][12] + 3.0) < 1e-9 and out["precipitation"][0] == 0.0,
+          f"n={n} dT={dT}")
 
 
 def test_forcing_matrix_shares_weather():
@@ -589,6 +628,225 @@ def test_wgs84_map_matches_rasterio():
           f"{(off <= 1).mean()*100:.2f}% within 1 cell")
 
 
+def test_state_roundtrip():
+    """The carried snowpack: save, pack, restore, and when not to use it."""
+    print("live state")
+    from datetime import datetime, timedelta
+    from variant_a import state
+    with tempfile.TemporaryDirectory() as td:
+        td = Path(td)
+        sno = td / "src"; sno.mkdir()
+        for rid in ("w000_1800_F", "w000_1800_N_20"):
+            (sno / f"{rid}.sno").write_text(f"SMET 1.1 ASCII\n# {rid}\n")
+        t = datetime(2026, 3, 25)
+        meta = state.save(td / "out", t, sno, {"precip_factor": {"w000": 1.2}, "cycle": 3})
+        check("state saves every run", meta["runs"] == 2 and (td / "out" / "state.tar.gz").exists())
+        # an artifact download only carries the tarball
+        dl = td / "dl"; dl.mkdir()
+        (dl / "state.tar.gz").write_bytes((td / "out" / "state.tar.gz").read_bytes())
+        st = state.load(dl)
+        check("a tarball-only download restores", st is not None and st["time"] == t
+              and st["meta"]["precip_factor"] == {"w000": 1.2}
+              and (st["sno"] / "w000_1800_F.sno").exists())
+        ids = {"w000_1800_F", "w000_1800_N_20", "w999_1800_F"}
+        check("runs with a state continue, new runs cold-start",
+              state.available(st, ids, t + timedelta(days=1)) == {"w000_1800_F", "w000_1800_N_20"})
+        check("a state from AFTER the window start is not used",
+              state.available(st, ids, t - timedelta(days=1)) == set())
+        check("a state older than the gap limit is not used",
+              state.available(st, ids, t + timedelta(days=state.MAX_GAP_DAYS + 2)) == set())
+        (dl / "meta.json").write_text(json.dumps({"version": 999, "time": "2026-03-25T00:00"}))
+        check("a state of another version is ignored", state.load(dl) is None)
+
+
+def test_wind_indices():
+    """Lee slopes load, windward slopes scour, calm air does nothing."""
+    print("wind drift / scour")
+    from datetime import datetime, timedelta
+    from variant_a import wind
+    from variant_a.gridding import METS
+    lee, wwd = wind.slope_factors(38, 180, 0)          # wind FROM north, S-facing slope
+    check("wind from N: a S-facing slope is lee", lee > 0.99 and wwd == 0.0)
+    lee, wwd = wind.slope_factors(38, 0, 0)
+    check("... and a N-facing slope is windward", lee == 0.0 and wwd > 0.99)
+    check("flat runs get no lee, some scour", wind.slope_factors(0, 0, 0) == (0.0, wind.FLAT_EXPOSURE))
+    t0 = datetime(2026, 3, 1)
+    hours = [t0 + timedelta(hours=h) for h in range(48)]
+    storm = {"time": [h.strftime("%Y-%m-%dT%H:%M") for h in hours],
+             "wind_speed_10m": [12.0] * 24 + [1.0] * 24, "wind_direction_10m": [0.0] * 48}
+    idx, dirn = wind.transport_series(storm, [hours[23], hours[47]])
+    check("a day of 12 m/s is strong transport", idx[0] > 0.8, f"{idx[0]:.2f}")
+    check("a calm day after it is not", idx[1] < 0.05, f"{idx[1]:.2f}")
+    check("the direction is the wind's FROM direction", abs(dirn[0]) < 1e-6 or abs(dirn[0] - 360) < 1e-6)
+    runs = [{"id": "a", "wp": "w", "slope": 38.0, "aspect": 180.0},
+            {"id": "b", "wp": "w", "slope": 38.0, "aspect": 0.0}]
+    met = np.zeros((1, len(METS)), np.float32)
+    met[0, METS.index("total_hs_cm")] = 100; met[0, METS.index("powder_depth_cm")] = 20
+    res = {"a": (met.copy(), None, None, None), "b": (met.copy(), None, None, None)}
+    wind.apply(runs, res, [hours[23]], {"w": storm}, METS)
+    d, sc = METS.index("drift_load"), METS.index("wind_scour")
+    check("apply(): lee run loaded, windward run scoured",
+          res["a"][0][0, d] > 0.8 and res["a"][0][0, sc] == 0
+          and res["b"][0][0, sc] > 0.8 and res["b"][0][0, d] == 0)
+
+
+def test_terrain_shading():
+    """A wall to the south shades the cell behind it in winter, not in summer."""
+    print("horizon shading")
+    from datetime import datetime
+    from variant_a import terrain
+    from variant_a.subregions import NationalGrid
+    nr, nc = 60, 60
+    dem = np.full((nr, nc), 1000.0)
+    dem[40:44, :] = 3000.0                                  # an E-W ridge
+    slope = np.zeros((nr, nc)); aspect = np.zeros((nr, nc))
+    g = NationalGrid(elevation=dem, slope=slope, aspect=aspect, tile=np.ones((nr, nc), np.int32),
+                     nr=nr, nc=nc, xll=600000.0, yll=150000.0, cs=250.0, tile_names={1: "t"})
+    h = terrain.horizon_tan(g)
+    win = terrain.shade_fraction(g, datetime(2026, 12, 21), h)
+    sm = terrain.shade_fraction(g, datetime(2026, 6, 21), h)
+    check("north of the ridge is shaded in December", win[36, 30] > 0.9, f"{win[36, 30]:.2f}")
+    check("... far less in June", sm[36, 30] < win[36, 30] - 0.4, f"{sm[36, 30]:.2f}")
+    check("south of the ridge is not shaded", win[55, 30] < 0.05, f"{win[55, 30]:.2f}")
+    sp = terrain.sun_path(datetime(2026, 6, 21))
+    check("the June sun path is ~15 h long and peaks near 66 deg",
+          14 <= len(sp) * 0.25 <= 17 and 63 < max(e for e, _ in sp) < 68)
+
+
+def test_imis_correction():
+    """Stations match their weather point; the factor moves slowly, bounded."""
+    print("IMIS snow-height correction")
+    from datetime import datetime, timedelta
+    from variant_a import imis
+    from variant_a.gridding import METS
+    S = types.SimpleNamespace
+    wps = [{"id": "w0", "lat": 46.8, "lon": 9.8, "bands": [1800.0, 2100.0, 2400.0]}]
+    st = [S(code="DAV2", label="Davos", lat=46.82, lon=9.83, elevation=2250.0, hs={}),
+          S(code="FAR", label="far", lat=47.5, lon=8.0, elevation=2200.0, hs={}),
+          S(code="LOW", label="low", lat=46.80, lon=9.80, elevation=900.0, hs={})]
+    m = imis.match_stations(st, wps)
+    check("only the near station inside the bands matches", [s.code for s, _ in m] == ["DAV2"])
+    frames = [datetime(2026, 3, 30) + timedelta(hours=3 * i) for i in range(8)]
+    runs = [{"id": f"w0_{int(e)}_F", "wp": "w0", "slope": 0.0, "elev": e} for e in (1800.0, 2100.0, 2400.0)]
+    res = {}
+    for r in runs:
+        met = np.zeros((len(frames), len(METS)), np.float32)
+        met[:, METS.index("total_hs_cm")] = {1800.0: 40, 2100.0: 60, 2400.0: 80}[r["elev"]]
+        res[r["id"]] = (met, None, None, None)
+    st[0].hs = {t.strftime("%Y-%m-%dT%H"): 140.0 for t in frames}   # measured: more snow
+    rows, summ = imis.compare(st, wps, runs, res, frames, METS, now=frames[-1])
+    check("model HS is interpolated to the station height", rows and abs(rows[0]["last_model"] - 70) < 0.1,
+          str(rows[:1]))
+    check("bias is model minus measured", summ["bias_cm"] == -70.0, str(summ))
+    f1 = imis.update_factors(rows, {})
+    check("too little snow -> more precipitation, but a bounded step",
+          1.0 < f1["w0"] <= imis.R_MAX ** imis.STEP_EXP + 1e-9, str(f1))
+    f = {"w0": 1.0}
+    for _ in range(20):
+        f = imis.update_factors(rows, f)
+    check("the factor never leaves its bounds", f["w0"] <= imis.F_MAX, str(f))
+
+
+def test_gates():
+    print("publish gates")
+    from variant_a import gates
+    runs = [{"id": f"r{i}", "wp": "w0" if i < 50 else "w1"} for i in range(100)]
+    wps = [{"id": "w0"}, {"id": "w1"}]
+    good = {f"r{i}": 1 for i in range(100)}
+    fs = [{"tag": "t", "finite": True, "hs_max": 300}]
+    g = gates.check(100, good, runs, wps, 10, 10, fs, {"stations": 20, "mae_cm": 30,
+                                                        "median_measured_cm": 120, "bias_cm": -5})
+    check("a healthy cycle passes", g["passed"], str(g["hard"]))
+    g = gates.check(100, {k: 1 for k in list(good)[:80]}, runs, wps, 10, 10, fs)
+    check("too many failed runs blocks", not g["passed"])
+    check("a missing frame or a lost weather point blocks",
+          not gates.check(100, good, runs, wps, 10, 9, fs)["passed"])
+    g = gates.check(100, good, runs, wps, 10, 10, fs, {"stations": 20, "mae_cm": 120,
+                                                        "median_measured_cm": 150})
+    check("a wildly wrong snow height blocks, once there is real snow", not g["passed"])
+    g = gates.check(100, good, runs, wps, 10, 10, fs, {"stations": 20, "mae_cm": 120,
+                                                        "median_measured_cm": 10})
+    check("... but not in early season noise", g["passed"])
+
+
+def test_classifier_fixes():
+    print("classifier: surface-state priority, new classes, rg")
+    from variant_a import classify as c
+    z = np.zeros(6); hs = np.full(6, 100.0)
+    lab = c.classify_grid_metrics(hs, np.array([0, 0, 0, 0, 20, 2.0]), np.array([0, 3, 0, 0, 0, 0.]),
+                                  z, z, np.array([420, 420, 750, 150, 90, 150.]), z,
+                                  np.array([3, 3, 0, 0, 0, 0.]),
+                                  sh=np.array([0, 0, 0, 1, 0, 0.]), drift=np.array([0, 0, 0, 0, 0.8, 0]),
+                                  scour=np.array([0, 0, 0, 0, 0, 0.8]))
+    names = [c.SKI_LABELS[k] for k in lab]
+    check("wet dense snow is spring corn (it used to come out 'settled')", names[0] == "spring_corn", names[0])
+    check("corn wins over a crust, as in the per-slope classifier", names[1] == "spring_corn", names[1])
+    check("ice", names[2] == "ice", names[2])
+    check("surface hoar", names[3] == "surface_hoar", names[3])
+    check("lee + powder -> wind slab", names[4] == "wind_slab", names[4])
+    check("windward, little powder -> wind packed", names[5] == "wind_packed", names[5])
+    sim = c.classify_simple(hs[:3], np.array([0, 20, 2.0]), z[:3], np.full(3, 150.), z[:3],
+                            sh=np.array([1, 0, 0.]), drift=np.array([0, 0.8, 0]), scour=np.array([0, 0, 0.8]))
+    check("simple layer: surface hoar / wind slab / wind packed",
+          [c.SIMPLE_LABELS[k] for k in sim] == ["surface_hoar", "wind_slab", "wind_packed"],
+          str([c.SIMPLE_LABELS[k] for k in sim]))
+    # crust over FC over low-density snow used to raise NameError (rg)
+    ts = {"n": 4, "heights": np.array([40., 60., 70., 72.]),
+          "density": np.array([150., 250., 240., 400.]), "lw": np.zeros(4),
+          "dd": np.zeros(4), "sp": np.zeros(4), "rg": np.array([0.5, 1.5, 1.2, 0.3]),
+          "grain": np.array([300, 400, 400, 700]), "ice_frac": np.zeros(4), "hardness": np.zeros(4)}
+    try:
+        q = c.assess_ski_quality(ts)
+        check("crust over facets over light snow classifies (was NameError)", q["crust_thick_cm"] > 0,
+              q["label"])
+    except NameError as e:
+        check("crust over facets over light snow classifies (was NameError)", False, str(e))
+    check("the buried facet layer is reported with its depth", q["weak_layer_depth_cm"] > 0,
+          str(q["weak_layer_depth_cm"]))
+
+
+def test_pack_roundtrip():
+    """The per-frame metric pack decodes back to the metrics, per run."""
+    print("metric pack")
+    from datetime import datetime
+    from variant_a import export, matrix
+    from variant_a.gridding import METS
+    g = _synth_grid(40, 40, 11)
+    wps = matrix.weather_points(g, spacing_km=5.0, min_top_m=1800.0)
+    runs = matrix.matrix_runs(wps)
+    rng = np.random.default_rng(1)
+    frames = [datetime(2026, 3, 30, 12)]
+    res = {}
+    for i, r in enumerate(runs):
+        if i == 5:
+            continue
+        m = np.zeros((1, len(METS)), np.float32)
+        m[0, METS.index("total_hs_cm")] = rng.uniform(0, 400)
+        m[0, METS.index("powder_depth_cm")] = rng.uniform(0, 60)
+        m[0, METS.index("crust_thick_cm")] = rng.uniform(0, 5)
+        m[0, METS.index("drift_load")] = rng.uniform(0, 1)
+        res[r["id"]] = (m, None, None, None)
+    with tempfile.TemporaryDirectory() as td:
+        pk = export.export_pack(Path(td), runs, res, frames, wps, g, None, METS)
+        img = np.asarray(Image.open(Path(td) / "pack" / "f_2026-03-30T1200.png"))
+        q = img.reshape(-1, pk["px_per_run"] * 3)[:len(runs)]
+        mul = np.array(pk["mul"])
+        vals = q[:, :len(pk["mets"])] / mul
+        ok = q[:, len(pk["mets"])]
+        worst = 0.0
+        for i, r in enumerate(runs):
+            if r["id"] not in res:
+                continue
+            for k, name in enumerate(pk["mets"]):
+                want = min(res[r["id"]][0][0, METS.index(name)], 255 / mul[k])
+                worst = max(worst, abs(vals[i, k] - want) * mul[k])
+        check("every metric survives to within half a quantisation step", worst <= 0.5 + 1e-6, f"{worst:.3f}")
+        check("failed runs are flagged, the rest are not", ok[5] == 0 and ok.sum() == len(runs) - 1)
+        sh = np.asarray(Image.open(Path(td) / "terrain" / "shade.png"))
+        check("the shade/mask raster marks outside cells 255", sh.shape == (g.nr, g.nc)
+              and (sh[~((g.tile > 0) & np.isfinite(g.elevation))] == 255).all())
+
+
 if __name__ == "__main__":
     for t in (test_forcing_starts_before_profile_date, test_covers_rejects_a_stale_smet,
               test_ini, test_timestamp_window, test_prof_start_derivation,
@@ -598,7 +856,9 @@ if __name__ == "__main__":
               test_indexed_png_is_lossless, test_profile_payload,
               test_selection_is_stable, test_matrix_weights,
               test_forcing_fallback, test_forcing_matrix_shares_weather,
-              test_sno_base_is_real_snow, test_wgs84_map_matches_rasterio):
+              test_sno_base_is_real_snow, test_wgs84_map_matches_rasterio,
+              test_state_roundtrip, test_wind_indices, test_terrain_shading,
+              test_imis_correction, test_gates, test_classifier_fixes, test_pack_roundtrip):
         t()
     print("\nVARIANT A PIPELINE " + ("OK" if not FAILS else f"FAILED: {FAILS}"))
     sys.exit(1 if FAILS else 0)

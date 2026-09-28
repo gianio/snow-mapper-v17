@@ -56,8 +56,12 @@ _BASE_LAYERS = ((271.65, +30.0), (269.65, 0.0), (267.65, -30.0))
 _BASE_ELEM_M = 0.02
 
 
-def write_sno(p, sno_dir: Path, start_date):
+def write_sno(p, sno_dir: Path, start_date, bare=False):
+    """Initial snow file. `bare`: no snow at all -- the autumn season start of
+    a live run, when the snowpack is built entirely from the forcing."""
     hs, rho = _init_snow(p["elev"]); nl = len(_BASE_LAYERS); th = hs / nl
+    if bare:
+        hs, nl = 0.0, 0
     ne = max(1, int(round(th / _BASE_ELEM_M)))
     e95, n95 = p.get("e_lv95", 0.0), p.get("n_lv95", 0.0)
 
@@ -77,12 +81,13 @@ def write_sno(p, sno_dir: Path, start_date):
          f"TimeCountDeltaHS = 0.000000\n"
          f"fields = timestamp Layer_Thick T Vol_Frac_I Vol_Frac_W Vol_Frac_V Vol_Frac_S "
          f"Rho_S Conduc_S HeatCapac_S rg rb dd sp mk mass_hoar ne CDot metamo\n[DATA]\n"
-         + "".join(layer(T, d) + "\n" for T, d in _BASE_LAYERS))
+         + ("" if bare else "".join(layer(T, d) + "\n" for T, d in _BASE_LAYERS)))
     (sno_dir / f"{p['id']}.sno").write_text(c)
 
 
 def write_ini(p, ini_dir: Path, sno_dir: Path, meteo_dir: Path, runs_dir: Path,
-              prof_start_days=0.0, step_h=None):
+              prof_start_days=0.0, step_h=None, snow_out: Path | None = None,
+              prof_write=True, name=None):
     """prof_start_days = how long into the run to START writing profiles.
 
     The spin-up is the point of the long run, but none of it needs to be
@@ -103,6 +108,12 @@ def write_ini(p, ini_dir: Path, sno_dir: Path, meteo_dir: Path, runs_dir: Path,
     # and quietly produced the same frame count -- the export would have
     # looked finer without being finer.
     prof_between = (step_h / 24.0) if step_h else PROF_DAYS_BETWEEN
+    # snow_out: write the final snowpack as <id>_va.sno there -- the state the
+    # next live cycle starts from (see variant_a/state.py). Profiles are then
+    # usually not wanted: the state advance only has to get the column to the
+    # new window start.
+    snow_write = (f"SNOW_WRITE = TRUE\nSNOWPATH = {snow_out}" if snow_out is not None
+                  else "SNOW_WRITE = FALSE")
     c = f"""[GENERAL]
 BUFFER_SIZE = 370
 BUFF_BEFORE = 1.5
@@ -120,14 +131,14 @@ COORDSYS = CH1903
 TIME_ZONE = 0
 METEOPATH = {run_out}
 EXPERIMENT = va
-PROF_WRITE = TRUE
+PROF_WRITE = {"TRUE" if prof_write else "FALSE"}
 PROF_FORMAT = PRO
 PROF_START = {prof_start_days:.4f}
 PROF_DAYS_BETWEEN = {prof_between:.6f}
 PROF_AGE_OR_DATE = AGE
 PROF_ID_OR_MK = ID
 TS_WRITE = FALSE
-SNOW_WRITE = FALSE
+{snow_write}
 [SNOWPACK]
 CALCULATION_STEP_LENGTH = {CALC_STEP_MIN}
 ATMOSPHERIC_STABILITY = MO_MICHLMAYR
@@ -172,11 +183,12 @@ ILWR::arg1::type = Unsworth
 ILWR::generator2 = CLEARSKY_LW
 ILWR::arg2::type = Dilley
 """
-    (ini_dir / f"{p['id']}.ini").write_text(c)
+    (ini_dir / f"{name or p['id']}.ini").write_text(c)
 
 
 def _run_one(args):
-    ini, end = args
+    ini, end = args[:2]
+    expect_sno = args[2] if len(args) > 2 else None   # state advance: a .sno, not a .pro
     env = dict(os.environ)
     env["DYLD_FALLBACK_LIBRARY_PATH"] = config.SNOWPACK_LIBS + ":" + env.get("DYLD_FALLBACK_LIBRARY_PATH", "")
     env["LD_LIBRARY_PATH"] = config.SNOWPACK_LIBS + ":" + env.get("LD_LIBRARY_PATH", "")
@@ -188,6 +200,11 @@ def _run_one(args):
     # classified from .pro" -- success reported, no output produced. So treat
     # a missing .pro as a failure in its own right and keep the diagnostics.
     pid = os.path.splitext(os.path.basename(ini))[0]
+    if expect_sno is not None:
+        if p.returncode == 0 and not os.path.exists(expect_sno):
+            tail = ((p.stderr or "").strip() or (p.stdout or "").strip())[-400:]
+            return os.path.basename(ini), -1, f"exited 0 but wrote no .sno — {tail}"
+        return os.path.basename(ini), p.returncode, (p.stderr[-400:] if p.returncode else "")
     run_out = os.path.join(os.path.dirname(os.path.dirname(ini)), "runs", pid)
     pro = glob.glob(os.path.join(run_out, "*.pro"))
     if p.returncode == 0 and not pro:
