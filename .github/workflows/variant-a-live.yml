@@ -26,9 +26,12 @@ on:
         type: boolean
         default: false
       use_ogd:
-        description: "Put MeteoSwiss OGD ICON-CH1/CH2 over the forecast hours (run 'Probe MeteoSwiss OGD forcing' first)"
+        # Verified against Open-Meteo on a runner (T r 0.95-0.98, wind bias
+        # ~0, radiation within 10-25 %). On by default; if the extraction
+        # fails the cycle simply runs on Open-Meteo.
+        description: "Put MeteoSwiss OGD ICON-CH1/CH2 over the forecast hours"
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -125,7 +128,7 @@ jobs:
       # (meteodata-lab pins numpy < 2.4). Best effort: without it the cycle
       # runs on Open-Meteo alone, which serves the same ICON-CH models.
       - name: MeteoSwiss OGD forecast at the weather points
-        if: ${{ inputs.use_ogd || vars.VA_USE_OGD == '1' }}
+        if: ${{ github.event_name == 'schedule' || inputs.use_ogd }}
         continue-on-error: true
         run: |
           python -m venv .ogd && .ogd/bin/pip install -q meteodata-lab && .ogd/bin/python tools/test_ogd_extract.py
