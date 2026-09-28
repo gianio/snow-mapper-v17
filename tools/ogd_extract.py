@@ -34,55 +34,94 @@ def _get(coll, var, hours):
     return ogd_api.get_from_ogd(req)
 
 
-def _latlon(da):
-    lat = np.asarray(da["lat"]).ravel(); lon = np.asarray(da["lon"]).ravel()
-    if np.nanmax(np.abs(lat)) < 3.2:                 # radians
-        lat, lon = np.degrees(lat), np.degrees(lon)
-    return lat, lon
+def available(coll, pages=6):
+    """{variable: set(lead hours)} of the newest reference time, from STAC."""
+    import requests
+    url = "https://data.geo.admin.ch/api/stac/v1/search"
+    body = {"collections": [f"ch.meteoschweiz.{coll}"], "limit": 500,
+            "forecast:perturbed": False}
+    seen, refs = {}, set()
+    for _ in range(pages):
+        r = requests.post(url, json=body, timeout=60)
+        r.raise_for_status()
+        j = r.json()
+        for it in j.get("features", []):
+            pr = it.get("properties", {})
+            v, ref, hz = pr.get("forecast:variable"), pr.get("forecast:reference_datetime"), \
+                pr.get("forecast:horizon")
+            if v and ref:
+                seen.setdefault(ref, {}).setdefault(v, set()).add(hz)
+                refs.add(ref)
+        nxt = [l for l in j.get("links", []) if l.get("rel") == "next"]
+        if not nxt:
+            break
+        body = {**body, **(nxt[0].get("body") or {})}
+    if not refs:
+        return {}, None
+    newest = max(refs)
+    return seen[newest], newest
 
 
-def _series(da):
-    """(lead_hours, cells) float array and the reference time."""
-    a = da.squeeze()
-    dims = list(a.dims)
-    lt = [d for d in dims if d in ("lead_time", "step")][0]
-    cell = [d for d in dims if d not in (lt, "ref_time", "eps", "z")][0]
-    a = a.transpose(lt, cell)
-    lead = [int(round(np.timedelta64(v, "s").astype(float) / 3600))
-            if not isinstance(v, (int, float)) else int(v) for v in a[lt].values]
-    ref = da["ref_time"].values
-    ref = np.atleast_1d(ref)[0]
-    ref_dt = dt.datetime.utcfromtimestamp(ref.astype("datetime64[s]").astype(int))
-    return np.asarray(a.values, float), lead, ref_dt
+# first name that exists wins; RH can be derived from the dew point
+ALTS = {"RELHUM_2M": ["RELHUM_2M", "TD_2M"], "ASWDIR_S": ["ASWDIR_S", "ASOB_S", "GLOB"],
+        "ASWDIFD_S": ["ASWDIFD_S", None]}
+
+
+def _fetch_var(coll, var, hours):
+    t0 = time.time()
+    da = _get(coll, var, hours)
+    return var, da, time.time() - t0
 
 
 def extract(points, model, hours):
+    from concurrent.futures import ThreadPoolExecutor
     coll = COLL[model]
-    first = None
+    try:
+        have, ref = available(coll)
+        print(f"  {model}: STAC newest run {ref}: " + ", ".join(sorted(have)), flush=True)
+    except Exception as e:
+        have, ref = {}, None
+        print(f"  {model}: STAC listing failed ({e}); trying the default names", flush=True)
+    want = []
+    for v in VARS:
+        for alt in ALTS.get(v, [v]):
+            if alt is None or not have or alt in have:
+                if alt is not None:
+                    want.append(alt)
+                break
+    print(f"  {model}: fetching {want}", flush=True)
     out = {p["id"]: {} for p in points}
-    for var in VARS:
-        t0 = time.time()
-        da = _get(coll, var, list(range(0, hours + 1)))
-        vals, lead, ref = _series(da)
-        if first is None:
-            lat, lon = _latlon(da)
-            idx = {}
+    geo = None
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        futs = [ex.submit(_fetch_var, coll, v, list(range(0, hours + 1))) for v in want]
+        for fu in futs:
+            try:
+                var, da, sec = fu.result()
+            except Exception as e:
+                print(f"  {model}: a variable failed: {type(e).__name__}: {e}", flush=True)
+                continue
+            vals, lead, ref_dt = _series(da)
+            if geo is None:
+                lat, lon = _latlon(da)
+                idx = {}
+                for p in points:
+                    d = (lat - p["lat"]) ** 2 + ((lon - p["lon"]) * math.cos(math.radians(p["lat"]))) ** 2
+                    idx[p["id"]] = int(np.nanargmin(d))
+                geo = (lead, ref_dt, idx)
             for p in points:
-                d = (lat - p["lat"]) ** 2 + ((lon - p["lon"]) * math.cos(math.radians(p["lat"]))) ** 2
-                idx[p["id"]] = int(np.nanargmin(d))
-            first = (lead, ref, idx)
-        lead, ref, idx = first[0], first[1], first[2]
-        for p in points:
-            out[p["id"]][var] = vals[:, idx[p["id"]]]
-        print(f"  {model} {var}: {vals.shape[0]} lead times in {time.time()-t0:.0f}s", flush=True)
-    return out, lead, ref, first[2]
+                out[p["id"]][var] = vals[:, geo[2][p["id"]]]
+            print(f"  {model} {var}: {vals.shape[0]} lead times in {sec:.0f}s", flush=True)
+    if geo is None:
+        raise RuntimeError("no variable could be fetched")
+    return out, geo[0], geo[1], geo[2]
 
 
 def to_hourly(v, lead, ref):
     """ICON conventions -> Open-Meteo style hourly block."""
     n = len(lead)
     times = [(ref + dt.timedelta(hours=h)).strftime("%Y-%m-%dT%H:%M") for h in lead]
-    tp = np.asarray(v["TOT_PREC"], float)
+    nanv = np.full(n, np.nan)
+    tp = np.asarray(v.get("TOT_PREC", nanv), float)
     prec = np.concatenate([[np.nan], np.maximum(np.diff(tp), 0.0)])
     def deavg(a):
         a = np.asarray(a, float); o = np.full(n, np.nan)
@@ -90,14 +129,29 @@ def to_hourly(v, lead, ref):
             h0, h1 = lead[i - 1], lead[i]
             o[i] = (a[i] * h1 - a[i - 1] * h0) / max(1, h1 - h0)
         return np.maximum(o, 0.0)
-    sw = deavg(v["ASWDIR_S"]) + deavg(v["ASWDIFD_S"])
-    u, w = np.asarray(v["U_10M"], float), np.asarray(v["V_10M"], float)
+    if "ASWDIR_S" in v:
+        sw = deavg(v["ASWDIR_S"]) + (deavg(v["ASWDIFD_S"]) if "ASWDIFD_S" in v else 0.0)
+    elif "GLOB" in v:
+        sw = deavg(v["GLOB"])
+    elif "ASOB_S" in v:                       # net shortwave: back to incoming, albedo ~0.8 on snow
+        sw = deavg(v["ASOB_S"]) / 0.2
+    else:
+        sw = nanv
+    u, w = np.asarray(v.get("U_10M", nanv), float), np.asarray(v.get("V_10M", nanv), float)
     spd = np.hypot(u, w)
     dirn = (np.degrees(np.arctan2(-u, -w)) + 360.0) % 360.0      # FROM direction
-    t = np.asarray(v["T_2M"], float)
+    t = np.asarray(v.get("T_2M", nanv), float)
     if np.nanmean(t) > 150:
         t = t - 273.15
-    rh = np.clip(np.asarray(v["RELHUM_2M"], float), 0, 100)
+    if "RELHUM_2M" in v:
+        rh = np.clip(np.asarray(v["RELHUM_2M"], float), 0, 100)
+    elif "TD_2M" in v:
+        td = np.asarray(v["TD_2M"], float)
+        td = td - 273.15 if np.nanmean(td) > 150 else td
+        es = lambda x: np.exp(17.625 * x / (x + 243.04))       # Magnus
+        rh = np.clip(100 * es(td) / es(t), 0, 100)
+    else:
+        rh = nanv
     def L(a):
         return [None if not np.isfinite(x) else round(float(x), 3) for x in a]
     # hour 0 has no accumulation / average interval: drop it
