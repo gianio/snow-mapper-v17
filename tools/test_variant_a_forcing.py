@@ -847,6 +847,66 @@ def test_pack_roundtrip():
               and (sh[~((g.tile > 0) & np.isfinite(g.elevation))] == 255).all())
 
 
+def test_rate_limit_backoff():
+    """429 is waited out (Retry-After honoured), and weather points that fail
+    in the parallel burst get a second, sequential pass."""
+    print("rate limits")
+    import io, urllib.error
+    sleeps, calls = [], []
+    real_sleep, real_open = forcing.time.sleep, forcing.urllib.request.urlopen
+    class R(io.BytesIO):
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+    def opener(answers):
+        def f(url, timeout=None):
+            calls.append(url)
+            a = answers.pop(0)
+            if isinstance(a, int):
+                hdr = {"Retry-After": "30"} if a == 429 else {}
+                raise urllib.error.HTTPError(url, a, "x", hdr, io.BytesIO(b"{}"))
+            return R(json.dumps(a).encode())
+        return f
+    try:
+        forcing.time.sleep = lambda s: sleeps.append(s)
+        forcing.urllib.request.urlopen = opener([429, 429, {"ok": 1}])
+        d, why = forcing._fetch_json("https://x", {})
+        check("429 twice, then data", d == {"ok": 1} and why is None)
+        check("the waits are real back-offs, Retry-After honoured",
+              sleeps[0] >= 30 and sleeps[1] >= 30, str(sleeps))
+        sleeps.clear()
+        forcing.urllib.request.urlopen = opener([500, 500, 500, 500])
+        d, why = forcing._fetch_json("https://x", {})
+        check("a persistent 5xx gives up with its reason", d is None and why == "HTTP 500"
+              and len(sleeps) == forcing._FETCH_TRIES - 1)
+    finally:
+        forcing.time.sleep, forcing.urllib.request.urlopen = real_sleep, real_open
+    # second pass in build_forcing_matrix
+    from datetime import datetime
+    T = [f"2026-03-{d:02d}T{h:02d}:00" for d in range(1, 3) for h in range(24)]
+    hourly = {"time": T, **{v: [1.0] * len(T) for v in forcing._VARS}}
+    seen = []
+    def fw(lat, lon, e, s, en, models=None):
+        seen.append(lat)
+        if lat == 46.9 and seen.count(46.9) == 1:
+            return None, None, ["HTTP 429"]
+        return hourly, "meteoswiss_icon_ch1", []
+    real_fw, real_pause = forcing.fetch_weather, forcing._RETRY_PAUSE_S
+    forcing.fetch_weather, forcing._RETRY_PAUSE_S = fw, 0.0
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            wps = [{"id": "a", "lat": 46.8, "lon": 9.8, "ref_elev": 2000.0},
+                   {"id": "b", "lat": 46.9, "lon": 9.9, "ref_elev": 2000.0}]
+            runs = [{"id": f"{w['id']}_2000_F", "wp": w["id"], "lat": w["lat"], "lon": w["lon"],
+                     "elev": 2000.0} for w in wps]
+            used = forcing.build_forcing_matrix(wps, runs, "2026-03-02",
+                                                (datetime(2026, 3, 1), datetime(2026, 3, 2)),
+                                                Path(td), workers=2)
+            check("a point that failed in the burst is recovered by the second pass",
+                  set(used) == {"a", "b"} and seen.count(46.9) == 2, str(used))
+    finally:
+        forcing.fetch_weather, forcing._RETRY_PAUSE_S = real_fw, real_pause
+
+
 if __name__ == "__main__":
     for t in (test_forcing_starts_before_profile_date, test_covers_rejects_a_stale_smet,
               test_ini, test_timestamp_window, test_prof_start_derivation,
@@ -858,7 +918,8 @@ if __name__ == "__main__":
               test_forcing_fallback, test_forcing_matrix_shares_weather,
               test_sno_base_is_real_snow, test_wgs84_map_matches_rasterio,
               test_state_roundtrip, test_wind_indices, test_terrain_shading,
-              test_imis_correction, test_gates, test_classifier_fixes, test_pack_roundtrip):
+              test_imis_correction, test_gates, test_classifier_fixes, test_pack_roundtrip,
+              test_rate_limit_backoff):
         t()
     print("\nVARIANT A PIPELINE " + ("OK" if not FAILS else f"FAILED: {FAILS}"))
     sys.exit(1 if FAILS else 0)

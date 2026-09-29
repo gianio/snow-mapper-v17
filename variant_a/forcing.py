@@ -191,6 +191,12 @@ def build_forcing(points, target_date, spinup_days=None, model="best_match",
 # a weather point shares its weather, which is the whole point of the design.
 # 135 requests instead of 978, and each can afford a better model.
 
+_FETCH_TRIES = 4
+_RETRY_PAUSE_S = 5.0
+_BACKOFF_429_S = 15.0
+FORCING_WORKERS = 3          # parallel weather points; 6 ran into Open-Meteo's rate limit
+
+
 def _fetch_json(url, params, timeout=_TIMEOUT_S):
     """(json, None) or (None, reason). A 400 is a verdict, not a hiccup --
     unknown model, date out of range -- so it is returned immediately rather
@@ -198,7 +204,8 @@ def _fetch_json(url, params, timeout=_TIMEOUT_S):
     import urllib.error
     q = urllib.parse.urlencode(params, safe=",")
     last = None
-    for i in range(3):
+    for i in range(_FETCH_TRIES):
+        wait = 2.0 * (i + 1)
         try:
             with urllib.request.urlopen(f"{url}?{q}", timeout=timeout) as r:
                 return json.load(r), None
@@ -209,9 +216,19 @@ def _fetch_json(url, params, timeout=_TIMEOUT_S):
                 except Exception:
                     return None, "HTTP 400"
             last = f"HTTP {e.code}"
+            if e.code == 429:
+                # Rate limited: the first national live cycle lost 9 weather
+                # points to 429s retried after 2-6 s. Back off for real, and
+                # take Retry-After when the server names it.
+                try:
+                    wait = float(e.headers.get("Retry-After") or 0) or 0
+                except Exception:
+                    wait = 0
+                wait = max(wait, _BACKOFF_429_S * (2 ** i))
         except Exception as e:
             last = f"{type(e).__name__}: {e}"
-        time.sleep(2.0 * (i + 1))
+        if i < _FETCH_TRIES - 1:
+            time.sleep(min(wait, 120.0))
     return None, last
 
 
@@ -381,7 +398,7 @@ def _lapsed(hourly, dz, precip_factor=1.0):
 
 
 def build_forcing_matrix(wps, runs, target_date, win, meteo_dir: Path | None = None,
-                         spinup_days=None, lead_days=None, workers=6, since=None,
+                         spinup_days=None, lead_days=None, workers=None, since=None,
                          precip_factor=None, ogd_dir=None):
     """One fetch per weather point, one lapse-rated .smet per run.
 
@@ -437,20 +454,38 @@ def build_forcing_matrix(wps, runs, target_date, win, meteo_dir: Path | None = N
     for r in runs:
         by_wp.setdefault(r["wp"], []).append(r)
     ref = {w["id"]: w["ref_elev"] for w in wps}
+    workers = workers or FORCING_WORKERS
+
+    def write(wid, h, m):
+        used[wid] = m
+        for r in by_wp.get(wid, []):
+            hourly_to_smet(r["id"], r["lat"], r["lon"], r["elev"],
+                           _lapsed(h, r["elev"] - ref[wid], precip_factor.get(wid, 1.0)),
+                           meteo_dir / f"{r['id']}.smet")
+
     with ThreadPoolExecutor(max_workers=workers) as ex:
         for k, (wid, h, m, notes) in enumerate(ex.map(one, wps), 1):
             if not h:
                 failed.append((wid, notes))
-                continue
-            used[wid] = m
-            for r in by_wp.get(wid, []):
-                hourly_to_smet(r["id"], r["lat"], r["lon"], r["elev"],
-                               _lapsed(h, r["elev"] - ref[wid],
-                                       precip_factor.get(wid, 1.0)),
-                               meteo_dir / f"{r['id']}.smet")
+            else:
+                write(wid, h, m)
             if k % 25 == 0 or k == len(wps):
                 print(f"  forcing {k}/{len(wps)}  {time.time()-t0:.0f}s  "
                       f"{len(failed)} failed", flush=True)
+    # A second, sequential pass for what failed -- rate limits and handshake
+    # timeouts are about the burst, not about the point.
+    if failed:
+        byid = {w["id"]: w for w in wps}
+        print(f"  forcing: retrying {len(failed)} weather points one at a time", flush=True)
+        again = []
+        for wid, _ in failed:
+            time.sleep(_RETRY_PAUSE_S)
+            _, h, m, notes = one(byid[wid])
+            if h:
+                write(wid, h, m)
+            else:
+                again.append((wid, notes))
+        failed = again
     from collections import Counter
     print(f"  forcing models used: {dict(Counter(used.values()))}")
     if failed:
