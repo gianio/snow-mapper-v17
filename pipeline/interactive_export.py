@@ -4025,7 +4025,9 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     const inSel=(t>=a&&t<b),fut=t>=nowIdx;
     const c=snowColLerp(v/mx*slfTop)||RGB[0];
     ctx2.fillStyle='rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')';
-    ctx2.globalAlpha=inSel?(fut?1:.7):.28;
+    // In single-point mode a..b is only the hidden lookback, not something
+    // the user picked: shading it made a phantom window trail the handle.
+    ctx2.globalAlpha=single?(fut?.8:.6):(inSel?(fut?1:.7):.28);
     rr(x+.5,baseY-h,Math.max(bw-1,1.8),h,Math.min(2.5,bw/2.2));ctx2.fill();ctx2.globalAlpha=1;}
   if(single){
     // "Powder zu diesem Zeitpunkt": one point, not a range -- a full-height
@@ -4331,6 +4333,8 @@ function avBuildLayer(){
 // live mode reads the latest live cycle (data/variant_a_live, put there by
 // the deploy from the newest Variant A live artifact) and falls back to the
 // demo export when no cycle has passed its gates yet.
+// Elevation span of the report mountain glyph (rptMountainSVG).
+const RPTVIZ_ELEV_LO=500,RPTVIZ_ELEV_HI=4000;
 let VA_BASE='data/variant_a';
 let vaMan=null,vaProf=null,vaOv=null,vaKey='ski18',vaTried=false;
 // Matrix mode (weather points x height/aspect/slope): profiles/index.json lists
@@ -4703,7 +4707,7 @@ function vaHiEngine(){
 // as sharp as the terrain, and changing frame costs ~80 kB, not a raster.
 const VA_TERR='https://s3.amazonaws.com/elevation-tiles-prod/terrarium/';
 const VA_HI_Z=10, VA_TERR_Z=12;
-let vaPk=null,vaEng=null,vaHi=null,vaHiW=null,vaHiSeq=0,vaHiTag=null,vaGrp=null,vaPkTried=false;
+let vaHiWant=null,vaHiBusy=false,vaPk=null,vaEng=null,vaHi=null,vaHiW=null,vaHiSeq=0,vaHiTag=null,vaGrp=null,vaPkTried=false;
 const vaHiCb={},vaPkFrames=new Map(),vaTerrC=new Map();
 async function vaImgBytes(url){
   const r=await fetch(vaV(url),{cache:'force-cache'});if(!r.ok)throw new Error('HTTP '+r.status);
@@ -4799,8 +4803,18 @@ async function vaHiSync(){
   if(!(await vaPkLoad()))return;
   const tag=vaMan.tags[vaTagIndex()];
   if(tag===vaHiTag){vaSyncOpacity();return;}
+  // Same rule as the PNG overlay: one pack download at a time, newest wish
+  // next. Out-of-order finishes used to leave the device renderer on a
+  // frame from the middle of a drag.
+  vaHiWant=tag;
+  if(vaHiBusy)return;
+  vaHiBusy=true;
+  let f=null;
+  try{f=await vaPkFrame(tag);}catch(e){}
+  vaHiBusy=false;
+  if(vaHiWant!==tag){vaHiSync();if(!f)return;}
+  if(!f)return;
   try{
-    const f=await vaPkFrame(tag);
     vaEng.setFrame(f.vals,f.ok);
     if(vaHiW)vaHiW.postMessage({t:'frame',vals:f.vals,ok:f.ok});
     vaHiTag=tag;
@@ -4818,24 +4832,43 @@ function vaSyncOpacity(){
 function vaBuildLayer(){
   if(!vaAvailable())return null;
   const bnds=vaMan.bounds;
-  vaOv=L.imageOverlay(vaFrameUrl(vaKey,vaTagIndex()),bnds,
+  vaOvWant=vaFrameUrl(vaKey,vaTagIndex());
+  vaOv=L.imageOverlay(vaOvWant,bnds,
     {opacity:vaOpacity(),className:'raster-smooth',pane:'overlayPane'});
   vaGrp=L.layerGroup([vaOv]);
   return vaGrp;
 }
 // Called from renderAll(), so the layer follows the timeline like every other
 // time-dependent layer.
+// The frame is decoded off-screen first and only then swapped in, one
+// download at a time: a drag asks for dozens of frames, and on a phone
+// queuing them all starved the last one -- the map sat on some frame from
+// the middle of the drag. vaOvWant is what the slider asks for now; when
+// the load in flight finishes it is shown (progress) and, if the slider
+// moved on meanwhile, the newest wish is fetched next. Intermediate ones
+// are simply skipped. A failed load is retried once.
+let vaOvWant=null,vaOvBusy=false;
+function vaOvLoad(u,retry){
+  if(vaOvBusy)return;
+  vaOvBusy=true;
+  const im=new Image();
+  const next=()=>{vaOvBusy=false;if(vaOvWant&&vaOv&&vaOvWant!==vaOv._url)vaOvLoad(vaOvWant,false);};
+  im.onload=function(){try{if(vaOv&&vaOv._url!==u)vaOv.setUrl(u);}catch(e){}next();};
+  im.onerror=function(){vaOvBusy=false;
+    if(vaOvWant===u&&!retry)setTimeout(()=>{if(vaOvWant===u)vaOvLoad(u,true);},800);else next();};
+  im.src=u;
+}
 function vaRefresh(){
   if(!vaOv||!ovOn.variantA||!vaAvailable())return;
   const u=vaFrameUrl(vaKey,vaTagIndex());
-  if(u&&u!==vaOv._url){try{vaOv.setUrl(u);}catch(e){}}
+  if(u&&u!==vaOvWant){vaOvWant=u;if(u!==vaOv._url)vaOvLoad(u,false);}
   vaSyncOpacity();
   vaHiSync();
 }
 function vaPickLayer(k){
   if(!vaAvailable()||!vaMan.layers[k])return;
   vaKey=k;
-  if(vaOv){const u=vaFrameUrl(k,vaTagIndex());if(u)try{vaOv.setUrl(u);}catch(e){}}
+  if(vaOv){const u=vaFrameUrl(k,vaTagIndex());if(u){vaOvWant=u;vaOvLoad(u,false);}}
   if(vaHi)vaHi.redraw();
   ovRender();
 }
@@ -10446,7 +10479,8 @@ const _SNAP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 // icon rather than picking one and discarding the rest. rptNormZone() reads
 // either shape zones come in: straight off a submission (elevMin/elevMax/
 // aspectDeg/aspectConc) or out of progZones() (e0/e1/asp/conc).
-const RPTVIZ_ELEV_LO=500,RPTVIZ_ELEV_HI=4000;
+// RPTVIZ_ELEV_LO/HI live near the top of the script: report markers are
+// drawn during startup, before this point is reached (TDZ error otherwise).
 function rptNormZone(z){
   return {elevMin:z.elevMin!=null?z.elevMin:z.e0,elevMax:z.elevMax!=null?z.elevMax:z.e1,
     aspectDeg:z.aspectDeg!=null?z.aspectDeg:z.asp,aspectConc:z.aspectConc!=null?z.aspectConc:z.conc,cm:z.cm};
