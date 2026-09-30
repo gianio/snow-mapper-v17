@@ -1814,6 +1814,21 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    cursor:pointer;background:color-mix(in srgb,var(--card) 40%,transparent);border:1px solid var(--hair);padding:6px;border-radius:var(--r-1);
    width:var(--fab,48px);box-sizing:border-box;color:var(--fg2);display:none}
  #miniLegend.show{display:block}
+ /* SNOWPACK: classes in view with their share, so the card needs words. */
+ #miniLegendVa{display:none}
+ #miniLegend.va{width:auto;min-width:var(--fab,48px);max-width:176px;padding:6px 8px;
+   background:color-mix(in srgb,var(--card) 88%,transparent)}
+ #miniLegend.va #miniLegendBody{display:none}
+ #miniLegend.va #miniLegendVa{display:block}
+ .ml-va-t{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--fg2);margin-bottom:3px}
+ .ml-va-r{display:flex;align-items:center;gap:6px;font-size:11.5px;line-height:1.45;color:var(--fg);white-space:nowrap}
+ .ml-va-r i{flex:none;width:11px;height:11px;border-radius:3px;border:1px solid var(--hair)}
+ .ml-va-r span{flex:1;overflow:hidden;text-overflow:ellipsis}
+ .ml-va-r b{font-family:var(--mono);font-size:10.5px;color:var(--fg2);font-weight:700}
+ .ml-va-u{font-size:10.5px;color:var(--fg2);margin-top:2px}
+ .ml-va-ramp{display:flex;gap:6px;align-items:stretch}
+ .ml-va-ramp i{width:12px;height:110px;border-radius:4px;background:linear-gradient(0deg,#2b56c8,#49b0c8,#cfd43a,#e07a2a,#c02020)}
+ .ml-va-ramp div{display:flex;flex-direction:column;justify-content:space-between;font:800 11px var(--mono);color:var(--fg)}
  #miniLegendTitle{display:none}
  /* The two end values sit ABOVE and BELOW the bar rather than beside it.
     Alongside, they were squeezed into whatever width was left next to an
@@ -3275,6 +3290,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <div id="miniLegendBar"></div>
     <div class="ml-num" id="miniLegendLo"></div>
   </div>
+  <div id="miniLegendVa">
+  </div>
 </div>
 </section>
 <!-- Melden: a sheet, not a screen. The two ways in live on the plus. -->
@@ -4265,6 +4282,7 @@ function ovToggle(k){
   if(ovOn[k])map.addLayer(l);else map.removeLayer(l);
   if(k==='skitourVec'){if(ovOn[k])tourRecolor();else tourClose();}
   if(k==='variantA'&&ovOn[k])vaRefresh();
+  if(k==='variantA'){try{showOverlay();legend();}catch(e){}}
   // Variant A carries a sub-view picker and a legend INSIDE the overlay list,
   // and those only exist while it is on -- ovSyncUI() just flips classes, so
   // switching the layer on used to show the raster with no controls at all
@@ -4345,7 +4363,8 @@ const vaFrames={};                     // "<layer>|<tag>" -> object URL / path
 // Export files keep their names from run to run; tag each URL with the
 // manifest's stamp so no browser or service-worker cache serves an old export.
 function vaV(u){const g=vaMan&&(vaMan.generated||vaMan.run_id||vaMan.date);
-  return g?u+(u.indexOf('?')<0?'?':'&')+'v='+encodeURIComponent(String(g)):u;}
+  if(!g||/^https?:/.test(u)||/[?&]v=/.test(u))return u;
+  return u+(u.indexOf('?')<0?'?':'&')+'v='+encodeURIComponent(String(g));}
 function vaAvailable(){return !!(vaMan&&vaMan.layers&&vaMan.tags&&vaMan.tags.length);}
 function vaProfAvailable(){
   return !!((vaIdx&&vaIdx.weather_points&&vaIdx.weather_points.length)
@@ -4478,11 +4497,16 @@ function vaFrameUrl(key,idx){
 // increasingly see-through as you close in. Zoomed out the layer IS the
 // subject; zoomed in you are placing it against terrain, tracks and the
 // route lines underneath, and an 82% raster buries all of them.
-const VA_OP_OUT=0.86, VA_OP_IN=0.34, VA_Z_OUT=8, VA_Z_IN=14;
+// 0.86 zoomed out hid lakes, borders and place names under the whole Alps;
+// 0.34 zoomed in washed the classes out to pastel. 0.72 -> 0.5 keeps both the
+// map and the classes readable, and the panel's "Transparenz" slider scales
+// it like every other layer.
+const VA_OP_OUT=0.72, VA_OP_IN=0.5, VA_Z_OUT=8, VA_Z_IN=14;
 function vaOpacity(){
   const z=(map&&map.getZoom&&map.getZoom())||VA_Z_OUT;
   const t=Math.max(0,Math.min(1,(z-VA_Z_OUT)/(VA_Z_IN-VA_Z_OUT)));
-  return VA_OP_OUT+(VA_OP_IN-VA_OP_OUT)*t;
+  const m=(typeof layerOpacityMul==='function')?layerOpacityMul():1;
+  return (VA_OP_OUT+(VA_OP_IN-VA_OP_OUT)*t)*m;
 }
 // Device-side Variant A renderer. Self-contained on purpose: the same source
 // runs on the main thread (popup values) and, stringified, inside a Web
@@ -4648,6 +4672,21 @@ function vaHiEngine(){
     var c=Math.floor((e-G.xll)/cs),r=Math.floor((G.yll+G.nr*G.cs-n)/cs);
     if(c<0||r<0||c>=ras.w||r>=ras.h)return -1;return ras.data[r*ras.w+c];
   };
+  // Bilinear version for the 0..254 shade weight. Nearest sampling turned
+  // every 250 m cell edge into a visible step on 30 m terrain wherever the
+  // class sits near a threshold. Cells outside the model (255) are left out
+  // of the average; -1 when none of the four is inside.
+  E.gridBil=function(ras,e,n,cs,keep255){
+    if(!ras)return -1;var G=E.pk.grid;cs=cs||G.cs;
+    var fc=(e-G.xll)/cs-0.5,fr=(G.yll+G.nr*cs-n)/cs-0.5,c0=Math.floor(fc),r0=Math.floor(fr),
+        dx=fc-c0,dy=fr-r0,sw=0,sv=0;
+    for(var j=0;j<2;j++)for(var i=0;i<2;i++){
+      var c=c0+i,r=r0+j;if(c<0||r<0||c>=ras.w||r>=ras.h)continue;
+      var v=ras.data[r*ras.w+c];if(v===255&&!keep255)continue;
+      var w=(i?dx:1-dx)*(j?dy:1-dy);sw+=w;sv+=w*v;
+    }
+    return sw>1e-6?sv/sw:-1;
+  };
   // Terrain tile (Terrarium PNG bytes) -> elevation, slope, aspect.
   E.terrain=function(key,bytes,z,y){
     var t=E.terr.get(key);if(t)return t;
@@ -4685,11 +4724,12 @@ function vaHiEngine(){
         var tx=Math.min(255,Math.max(0,Math.floor(gx*256*n2*f-q.tx*256))),ti=ty*256+tx;
         var en=wgs2lv03(lat,lon),sb=E.gridAt(E.shade,en[0],en[1]);
         if(sb<0||sb===255)continue;
+        sb=E.gridBil(E.shade,en[0],en[1]);if(sb<0)continue;
         if(!E.evalAt(en[0],en[1],T.el[ti],T.sl[ti],T.as[ti],sb/254,cand,m,mets))continue;
         E.color(q.layer,m,col);
         if(!col[3])continue;
         var a=col[3];
-        if(fd&&E.forest){var fv=E.gridAt(E.forest,en[0],en[1],fcs);if(fv>0)a*=1-fd*(fv/255);}
+        if(fd&&E.forest){var fv=E.gridBil(E.forest,en[0],en[1],fcs,true);if(fv>0)a*=1-fd*(fv/255);}
         var o=(py*S+px)*4;out[o]=col[0];out[o+1]=col[1];out[o+2]=col[2];out[o+3]=a;
       }
     }
@@ -4775,28 +4815,81 @@ async function vaTerrBytes(key){
 async function vaHiTile(c,S){
   if(!vaPk||!vaHiTag)return null;
   const tz=Math.min(c.z,VA_TERR_Z),f=Math.pow(2,c.z-tz),tx=Math.floor(c.x/f),ty=Math.floor(c.y/f);
-  const key=tz+'/'+tx+'/'+ty,tb=await vaTerrBytes(key);
+  const key=tz+'/'+tx+'/'+ty;
+  // Terrain tiles come from a third-party bucket; on a phone one of them
+  // failing now and then is normal, so give it a second go before the tile
+  // falls back to the coarse frame.
+  let tb=null;
+  try{tb=await vaTerrBytes(key);}
+  catch(e){await new Promise(r=>setTimeout(r,700));tb=await vaTerrBytes(key);}
   const q={z:c.z,x:c.x,y:c.y,size:S,layer:vaKey,tkey:key,tz,tx,ty,tbytes:tb};
   if(vaHiW)return new Promise(res=>{const id=++vaHiSeq;vaHiCb[id]=res;vaHiW.postMessage({t:'render',id,q});});
   return vaEng.render(q);
 }
+// A tile the device renderer could not draw (terrain or worker failure) is
+// cut from the coarse frame PNG instead of staying empty: a blocky patch is
+// far better than a hole in the layer.
+function vaHiFallback(t,c,S){
+  const im=vaOv&&vaOv._image,B=vaMan&&vaMan.bounds;
+  const cx=t.getContext('2d');cx.clearRect(0,0,S,S);
+  if(!im||!im.complete||!im.naturalWidth||!B)return;
+  const p0=map.project(L.latLng(B[1][0],B[0][1]),c.z),p1=map.project(L.latLng(B[0][0],B[1][1]),c.z);
+  const W=im.naturalWidth,H=im.naturalHeight,kx=W/(p1.x-p0.x),ky=H/(p1.y-p0.y);
+  const x0=c.x*256,y0=c.y*256;
+  // Clip the source rect to the image by hand: Safari draws nothing at all
+  // for a source rect that pokes outside the bitmap.
+  let sx=(x0-p0.x)*kx,sy=(y0-p0.y)*ky,sw=256*kx,sh=256*ky,dx=0,dy=0,dw=S,dh=S;
+  if(sx<0){const r=-sx/sw;dx+=r*dw;dw-=r*dw;sw+=sx;sx=0;}
+  if(sy<0){const r=-sy/sh;dy+=r*dh;dh-=r*dh;sh+=sy;sy=0;}
+  if(sx+sw>W){const r=(sx+sw-W)/sw;dw-=r*dw;sw=W-sx;}
+  if(sy+sh>H){const r=(sy+sh-H)/sh;dh-=r*dh;sh=H-sy;}
+  if(sw<=0||sh<=0||dw<=0||dh<=0)return;
+  try{cx.imageSmoothingEnabled=true;cx.drawImage(im,sx,sy,sw,sh,dx,dy,dw,dh);}catch(e){}
+}
+// Paint (or re-paint) one tile canvas. The old picture stays until the new
+// one is ready, and a stale render never overwrites a newer one.
+function vaHiPaint(t,done,tries){
+  const c=t._vaC,S=t.width,gen=t._vaGen=(t._vaGen||0)+1;
+  const fin=()=>{if(done){const d=done;done=null;d(null,t);}};
+  // A fallback tile tries again a little later, so a passing network hiccup
+  // does not leave a coarse patch in the sharp layer for good.
+  const fb=()=>{vaHiFallback(t,c,S);
+    if((tries||0)<3)setTimeout(()=>{if(t.isConnected&&t._vaGen===gen)vaHiPaint(t,null,(tries||0)+1);},2500*((tries||0)+1));};
+  vaHiTile(c,S).then(px=>{
+    if(t._vaGen!==gen)return fin();
+    if(px&&px.length===S*S*4){try{t.getContext('2d').putImageData(new ImageData(px,S,S),0,0);}catch(e){fb();}}
+    else fb();
+    fin();
+  }).catch(()=>{if(t._vaGen===gen)fb();fin();});
+}
+// New frame or sub-layer: repaint the tiles in place. redraw() threw every
+// tile away first, which is what made the layer blink out on each step.
+function vaHiRepaint(){
+  if(!vaHi||!vaHi._tiles)return;
+  for(const k in vaHi._tiles){const e=vaHi._tiles[k].el;if(e&&e._vaC)vaHiPaint(e);}
+}
+let vaHiReady=false;
 function vaHiMake(){
   if(vaHi||typeof L==='undefined'||!L.GridLayer)return vaHi;
   const Lyr=L.GridLayer.extend({createTile:function(c,done){
     const t=document.createElement('canvas'),S=c.z>=13?128:256;t.width=S;t.height=S;
-    vaHiTile(c,S).then(px=>{
-      if(px&&px.length===S*S*4){try{t.getContext('2d').putImageData(new ImageData(px,S,S),0,0);}catch(e){}}
-      done(null,t);
-    }).catch(()=>done(null,t));
+    t._vaC={x:c.x,y:c.y,z:c.z};vaHiPaint(t,done);
     return t;
   }});
   vaHi=new Lyr({minZoom:VA_HI_Z,pane:'overlayPane',opacity:vaOpacity(),updateWhenIdle:true,
-                keepBuffer:1,className:'va-hi'});
+                keepBuffer:2,className:'va-hi'});
+  // The coarse frame stays visible until the fine tiles for this view are
+  // actually there -- hiding it on zoomend is what made the layer vanish
+  // for seconds (or for good, on a failed terrain fetch) when zooming in.
+  vaHi.on('loading',()=>{vaHiReady=false;vaSyncOpacity();});
+  vaHi.on('load',()=>{vaHiReady=true;vaSyncOpacity();});
   return vaHi;
 }
 function vaHiActive(){
   return !!(vaHi&&vaPk&&vaHiTag&&map&&map.getZoom&&map.getZoom()>=VA_HI_Z);
 }
+// Fine tiles are showing and complete, so the coarse frame can step aside.
+function vaHiCovers(){return vaHiActive()&&vaHiReady&&!!(vaGrp&&vaGrp.hasLayer(vaHi));}
 // Bring the device renderer to the frame the timeline wants.
 async function vaHiSync(){
   if(!ovOn.variantA||!vaAvailable())return;
@@ -4817,15 +4910,16 @@ async function vaHiSync(){
   try{
     vaEng.setFrame(f.vals,f.ok);
     if(vaHiW)vaHiW.postMessage({t:'frame',vals:f.vals,ok:f.ok});
+    const first=vaHiTag===null;
     vaHiTag=tag;
     if(vaGrp&&!vaGrp.hasLayer(vaHiMake()))vaGrp.addLayer(vaHi);
-    vaHi.redraw();
+    if(first)vaHi.redraw();else vaHiRepaint();
   }catch(e){}
   vaSyncOpacity();
 }
 function vaSyncOpacity(){
   if(!ovOn.variantA)return;
-  const hi=vaHiActive();
+  const hi=vaHiCovers();
   if(vaOv){try{vaOv.setOpacity(hi?0:vaOpacity());}catch(e){}}
   if(vaHi){try{vaHi.setOpacity(vaOpacity());}catch(e){}}
 }
@@ -4836,6 +4930,7 @@ function vaBuildLayer(){
   vaOv=L.imageOverlay(vaOvWant,bnds,
     {opacity:vaOpacity(),className:'raster-smooth',pane:'overlayPane'});
   vaGrp=L.layerGroup([vaOv]);
+  vaHistLoad(vaOvWant);
   return vaGrp;
 }
 // Called from renderAll(), so the layer follows the timeline like every other
@@ -4853,7 +4948,7 @@ function vaOvLoad(u,retry){
   vaOvBusy=true;
   const im=new Image();
   const next=()=>{vaOvBusy=false;if(vaOvWant&&vaOv&&vaOvWant!==vaOv._url)vaOvLoad(vaOvWant,false);};
-  im.onload=function(){try{if(vaOv&&vaOv._url!==u)vaOv.setUrl(u);}catch(e){}next();};
+  im.onload=function(){try{if(vaOv&&vaOv._url!==u)vaOv.setUrl(u);}catch(e){}vaHistLoad(u);next();};
   im.onerror=function(){vaOvBusy=false;
     if(vaOvWant===u&&!retry)setTimeout(()=>{if(vaOvWant===u)vaOvLoad(u,true);},800);else next();};
   im.src=u;
@@ -4869,7 +4964,7 @@ function vaPickLayer(k){
   if(!vaAvailable()||!vaMan.layers[k])return;
   vaKey=k;
   if(vaOv){const u=vaFrameUrl(k,vaTagIndex());if(u){vaOvWant=u;vaOvLoad(u,false);}}
-  if(vaHi)vaHi.redraw();
+  vaHiRepaint();
   ovRender();
 }
 // The model's own reading of the tapped spot: same numbers the map is drawn
@@ -4939,6 +5034,63 @@ function vaLegendHTML(){
       +escapeHtml(e[2]||String(e[0]).replace(/_/g,' '))+'</div>';
   }).join('')+'</div>';
 }
+
+// The small legend on the map's right edge. A fixed list of all 20-odd
+// classes says nothing about the map in front of you, so it lists the
+// classes that are actually in view, largest first, read from the frame
+// that is on screen. vaHist holds that frame as one class id per pixel.
+let vaHist=null,vaHistBusy=null;
+async function vaHistLoad(u){
+  if(!u||!vaAvailable()||vaKey==='density'){vaHist=null;try{miniLegendRender();}catch(e){}return;}
+  if((vaHist&&vaHist.url===u)||vaHistBusy===u)return;
+  vaHistBusy=u;
+  try{
+    const img=await vaImgBytes(u),leg=(vaMan.layers[vaKey]||{}).legend||{},lut=new Map();
+    for(const k in leg){const c=leg[k]&&leg[k][1];if(c)lut.set((c[0]<<16)|(c[1]<<8)|c[2],+k);}
+    const n=img.w*img.h,cls=new Uint8Array(n),d=img.rgba;
+    for(let i=0,o=0;i<n;i++,o+=4){if(d[o+3]<8)continue;const v=lut.get((d[o]<<16)|(d[o+1]<<8)|d[o+2]);if(v)cls[i]=v;}
+    if(vaHistBusy===u)vaHist={url:u,key:vaKey,w:img.w,h:img.h,cls};
+  }catch(e){}
+  if(vaHistBusy===u)vaHistBusy=null;
+  try{miniLegendRender();}catch(e){}
+}
+// Share of each class inside the current map view (a sample of ~40k px).
+function vaViewShares(){
+  if(!vaHist||!vaMan||!map)return null;
+  const B=vaMan.bounds,s=B[0][0],w=B[0][1],n=B[1][0],e=B[1][1],vb=map.getBounds();
+  const r0=Math.max(0,Math.floor((n-vb.getNorth())/(n-s)*vaHist.h)),r1=Math.min(vaHist.h,Math.ceil((n-vb.getSouth())/(n-s)*vaHist.h));
+  const c0=Math.max(0,Math.floor((vb.getWest()-w)/(e-w)*vaHist.w)),c1=Math.min(vaHist.w,Math.ceil((vb.getEast()-w)/(e-w)*vaHist.w));
+  if(r1<=r0||c1<=c0)return {tot:0,cnt:{}};
+  const st=Math.max(1,Math.floor(Math.sqrt((r1-r0)*(c1-c0)/40000)));
+  const cnt={};let tot=0;
+  for(let r=r0;r<r1;r+=st){const row=r*vaHist.w;
+    for(let c=c0;c<c1;c+=st){const v=vaHist.cls[row+c];if(v){cnt[v]=(cnt[v]||0)+1;tot++;}}}
+  return {tot,cnt};
+}
+function vaMiniLegendHTML(){
+  const L=vaMan.layers[vaKey];if(!L)return '';
+  const names={ski18:'Skiqualität',simple:'Schneeart',density:'Dichte'};
+  let h='<div class="ml-va-t">'+escapeHtml(names[vaKey]||vaKey)+'</div>';
+  if(vaKey==='density'){
+    const r=L.range||[100,450];
+    return h+'<div class="ml-va-ramp"><i></i><div><span>'+r[1]+'</span><span>'+r[0]+'</span></div></div>'
+      +'<div class="ml-va-u">'+escapeHtml(L.unit||'kg/m3')+'</div>';
+  }
+  const leg=L.legend||{},sh=vaViewShares();
+  let ks;
+  if(sh&&sh.tot>0){
+    ks=Object.keys(sh.cnt).filter(k=>leg[k]&&sh.cnt[k]/sh.tot>=0.01).sort((a,b)=>sh.cnt[b]-sh.cnt[a]);
+    if(!ks.length)return h+'<div class="ml-va-u">kein Schnee im Ausschnitt</div>';
+  }else if(sh&&sh.tot===0){return h+'<div class="ml-va-u">kein Schnee im Ausschnitt</div>';}
+  else return h+'<div class="ml-va-u">lädt …</div>';
+  const more=ks.length-6;ks=ks.slice(0,6);
+  h+=ks.map(k=>{const e=leg[k];
+    return '<div class="ml-va-r"><i style="background:rgb('+e[1].join(',')+')"></i><span>'
+      +escapeHtml(e[2]||String(e[0]).replace(/_/g,' '))+'</span><b>'+Math.round(sh.cnt[k]/sh.tot*100)+'%</b></div>';}).join('');
+  if(more>0)h+='<div class="ml-va-u">+'+more+' weitere · tippen</div>';
+  return h;
+}
+function vaLegendUp(){return !!(typeof ovOn!=='undefined'&&ovOn.variantA&&vaAvailable());}
 
 // --- Snow profile at a clicked point --------------------------------------
 // KNN over the representative points in (x, y, elevation, aspect) -- the same
@@ -6278,7 +6430,12 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
     '<span style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px"><span>0 cm</span><span>'+(PD_STRONG_BLUE_CM/2)+' cm</span><span>'+PD_STRONG_BLUE_CM+'+ cm</span></span></div>'+
     '<div style="font-size:12px">Farbe = Neuschnee, Deckkraft = <b>stable</b> vs. <b>reduced</b></div><div style="margin-top:3px;font-size:12px">Gust ≈ mean wind × 1.5</div>';
   return "<b>Hillshade / Relief (swisstopo)</b>";}
-function legend(l){document.getElementById('legend').innerHTML=legendFor(l||layer);try{miniLegendRender(l||layer);}catch(e){}}
+function legend(l){
+  // The full legend follows whatever is actually drawn: with SNOWPACK up
+  // that is the SNOWPACK layer, not the (hidden) base layer under it.
+  document.getElementById('legend').innerHTML=vaLegendUp()
+    ?'<b>Skiqualität (SNOWPACK)</b>'+vaLegendHTML():legendFor(l||layer);
+  try{miniLegendRender(l||layer);}catch(e){}}
 // A compact, always-on version of the full legend above: just the current
 // layer's name, a horizontal strip of its colours, and a couple of numbers
 // -- built by reading the SAME markup legendFor() already produces (off-DOM,
@@ -6286,6 +6443,10 @@ function legend(l){document.getElementById('legend').innerHTML=legendFor(l||laye
 // second time, so it can never drift out of sync with the real legend.
 function miniLegendRender(l){
   const box=document.getElementById('miniLegend');if(!box)return;
+  const vbox=document.getElementById('miniLegendVa');
+  if(vaLegendUp()&&vbox){
+    vbox.innerHTML=vaMiniLegendHTML();box.classList.add('va','show');return;}
+  box.classList.remove('va');
   const title=document.getElementById('miniLegendTitle'),bar=document.getElementById('miniLegendBar'),
         hi=document.getElementById('miniLegendHi'),lo=document.getElementById('miniLegendLo');
   const it=(groupItems(curTopic)||[])[curItem],vlabel=(it&&it.vars&&it.vars[curVar]&&it.vars[curVar].label)||l||layer;
@@ -6342,12 +6503,16 @@ function layerOpacitySet(pct){
   const lbl=document.getElementById('lyOpacityVal');if(lbl)lbl.textContent=layerTranspPct+'%';
   const sl=document.getElementById('lyOpacitySlider');if(sl&&+sl.value!==layerTranspPct)sl.value=layerTranspPct;
   showOverlay();
+  try{vaSyncOpacity();}catch(e){}
 }
 function showOverlay(){
   [slopeWMTS,reliefWMTS,aspectGrid,roughImg,radOverlay,qprOverlay,prognosisOverlay].forEach(x=>map.removeLayer(x));
   const grid=(layer=="snow"||layer=="depth"||layer=="temp"||layer=="sun"||layer=="wind"||layer=="powder"||layer=="tsurf"||layer=="skiable");
   const radg=(layer=="rad"||layer=="radsun");
-  const om=layerOpacityMul();
+  // While SNOWPACK is up it IS the map layer: every base layer under it used
+  // the same blues and reds with a different meaning and a different legend.
+  const vaUp=!!(ovOn.variantA&&typeof vaAvailable==='function'&&vaAvailable());
+  const om=vaUp?0:layerOpacityMul();
   raster.setOpacity(grid?0.94*om:0);
   if(radg){radOverlay.setOpacity(0.9*om);map.addLayer(radOverlay);}
   if(layer=="slope"){slopeWMTS.setOpacity(0.7*om);map.addLayer(slopeWMTS);}
@@ -7054,6 +7219,8 @@ function inspClose(){document.getElementById('inspPanel').classList.remove('open
 // dismiss, not a probe -- the point inspector would fight the panel for
 // the same screen space, so it is skipped while the feed is open.
 map.on('zoomend',function(){vaSyncOpacity();});
+// The legend lists what is in view, so it follows the view.
+map.on('moveend',function(){if(vaLegendUp()){try{miniLegendRender();}catch(e){}}});
 map.on('click',function(e){
   if(document.body.classList.contains('feed-side')){feedClose();return;}
   inspOpen(e.latlng.lat,e.latlng.lng);
