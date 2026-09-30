@@ -4338,6 +4338,10 @@ let vaMan=null,vaProf=null,vaOv=null,vaKey='ski18',vaTried=false;
 // first tap near it. One file for all ~14k runs would be far too much for a tap.
 let vaIdx=null;const vaWp={};
 const vaFrames={};                     // "<layer>|<tag>" -> object URL / path
+// Export files keep their names from run to run; tag each URL with the
+// manifest's stamp so no browser or service-worker cache serves an old export.
+function vaV(u){const g=vaMan&&(vaMan.generated||vaMan.run_id||vaMan.date);
+  return g?u+(u.indexOf('?')<0?'?':'&')+'v='+encodeURIComponent(String(g)):u;}
 function vaAvailable(){return !!(vaMan&&vaMan.layers&&vaMan.tags&&vaMan.tags.length);}
 function vaProfAvailable(){
   return !!((vaIdx&&vaIdx.weather_points&&vaIdx.weather_points.length)
@@ -4351,7 +4355,10 @@ async function vaLoad(){
       try{r=await fetch('data/variant_a_live/manifest.json',{cache:'no-cache'});
         if(r.ok)VA_BASE='data/variant_a_live';else r=null;}catch(e){r=null;}
     }
-    if(!r)r=await fetch(VA_BASE+'/manifest.json',{cache:'force-cache'});
+    // The manifest is the only file that changes name-less between exports,
+    // so it is always revalidated; everything it points to is fetched with
+    // ?v=<generated> and may then be cached hard.
+    if(!r)r=await fetch(VA_BASE+'/manifest.json',{cache:'no-cache'});
     if(!r.ok)return;
     const m=await r.json();
     if(!m||!m.layers||!m.bounds||!(m.tags||[]).length)return;
@@ -4359,7 +4366,7 @@ async function vaLoad(){
     // Profiles are only needed once someone taps the map, so they are fetched
     // alongside but failure is non-fatal: the layer still works without them.
     try{
-      const pr=await fetch(VA_BASE+'/'+(m.profiles||'profiles/profiles.json'),{cache:'force-cache'});
+      const pr=await fetch(vaV(VA_BASE+'/'+(m.profiles||'profiles/profiles.json')),{cache:'force-cache'});
       if(pr.ok){const pj=await pr.json();
         if(pj&&pj.weather_points)vaIdx=pj;
         else if(pj&&pj.points&&pj.profiles)vaProf=pj;}
@@ -4461,7 +4468,7 @@ function vaProfIndex(){
 function vaFrameUrl(key,idx){
   const L=vaMan.layers[key];if(!L)return null;
   const tag=vaMan.tags[idx];
-  return VA_BASE+'/'+String(L.file).replace('{tag}',tag);
+  return vaV(VA_BASE+'/'+String(L.file).replace('{tag}',tag));
 }
 // Opacity by zoom: solid when you are looking at the whole country, and
 // increasingly see-through as you close in. Zoomed out the layer IS the
@@ -4699,7 +4706,7 @@ const VA_HI_Z=10, VA_TERR_Z=12;
 let vaPk=null,vaEng=null,vaHi=null,vaHiW=null,vaHiSeq=0,vaHiTag=null,vaGrp=null,vaPkTried=false;
 const vaHiCb={},vaPkFrames=new Map(),vaTerrC=new Map();
 async function vaImgBytes(url){
-  const r=await fetch(url,{cache:'force-cache'});if(!r.ok)throw new Error('HTTP '+r.status);
+  const r=await fetch(vaV(url),{cache:'force-cache'});if(!r.ok)throw new Error('HTTP '+r.status);
   const bl=await r.blob();let bm;
   // No colour management and no premultiplication: these PNGs are numbers.
   try{bm=await createImageBitmap(bl,{colorSpaceConversion:'none',premultiplyAlpha:'none'});}
@@ -4713,7 +4720,7 @@ async function vaPkLoad(){
   if(vaPk||vaPkTried||!vaMan||!vaMan.pack)return vaPk;
   vaPkTried=true;
   try{
-    const r=await fetch(VA_BASE+'/'+vaMan.pack,{cache:'force-cache'});if(!r.ok)return null;
+    const r=await fetch(vaV(VA_BASE+'/'+vaMan.pack),{cache:'force-cache'});if(!r.ok)return null;
     const pk=await r.json();
     const sh=vaGray(await vaImgBytes(VA_BASE+'/'+pk.shade));
     let fo=null;if(pk.forest){try{fo=vaGray(await vaImgBytes(VA_BASE+'/'+pk.forest.file));}catch(e){}}
@@ -4919,7 +4926,7 @@ function vaWpNearest(lat,lon){
 function vaWpLoad(w){
   if(vaWp[w.id])return;
   vaWp[w.id]='loading';
-  fetch(VA_BASE+'/profiles/'+w.id+'.json',{cache:'force-cache'})
+  fetch(vaV(VA_BASE+'/profiles/'+w.id+'.json'),{cache:'force-cache'})
     .then(r=>r.ok?r.json():null)
     .then(j=>{vaWp[w.id]=j||'missing';try{inspAutoRefresh();}catch(e){}})
     .catch(()=>{vaWp[w.id]='missing';});

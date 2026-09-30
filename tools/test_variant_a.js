@@ -70,6 +70,7 @@ const sandbox = {
   vaIdx: null, vaWp: {}, VA_BASE: 'va',
   fetch: (u) => { fetched.push(u); return new Promise(() => {}); },
   inspAutoRefresh: () => {},
+  vaV: u => u,
   vaProfAvailable: () => !!(vaProf && vaProf.points && vaProf.points.length),
   // For the model-date stamp: a manifest whose window sits next to the
   // timeline, and the timeline state (M.times / b) it is compared against.
