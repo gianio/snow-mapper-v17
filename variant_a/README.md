@@ -78,6 +78,25 @@ Workflows: `variant-a-live.yml` (4x daily, carries the state, uploads `va-live` 
 the gates pass), `deploy.yml` (publishes the newest `va-live` to `data/variant_a_live`),
 `probe-ogd.yml` (checks the MeteoSwiss OGD extractor against Open-Meteo).
 
+### Resolution: what is sharp and what is not
+
+The map follows the terrain at ~30 m (Terrarium tiles, device-rendered from
+zoom 10), but the snow information has coarser sources:
+
+| input | resolution |
+|---|---|
+| weather (SNOWPACK forcing) | 135 points, ~15 km, 3 nearest blended (IDW) |
+| per point | 300 m bands x 8 aspects x slopes 0/20/38/45 deg, all interpolated |
+| precipitation pattern | ICON-CH1 1 km field (`precip.py`), live runs only |
+| horizon shade / forest | 250 m / 100 m, sampled bilinearly in the app |
+
+The 45 deg node (`MATRIX_SLOPES`) keeps couloirs and steep faces from being
+read as 38 deg (+~47% runs). `precip.py` scales each cell's new snow by
+`P(cell) / P(blend of its weather points)` from ICON-CH1's TOT_PREC field,
+which `tools/ogd_extract.py` saves as `precip_ch1.npz`; past days come from
+the first 6 h of earlier cycles, kept in the live state as
+`precip_hist.npz`. Without a field (demo, archive dates) nothing is scaled.
+
 ### Checking the model against reality
 
 * **IMIS stations (used):** the SLF measurement API gives the station snow heights behind

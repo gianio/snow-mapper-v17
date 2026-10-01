@@ -80,7 +80,7 @@ def _pack_frame(stack_f, ok, mets):
     return img, per
 
 
-def export_pack(out_dir: Path, runs, results, layer_ts, wps, grid, shade, mets):
+def export_pack(out_dir: Path, runs, results, layer_ts, wps, grid, shade, mets, precip=None):
     """pack/index.json + pack/f_<tag>.png per frame + terrain/shade.png."""
     (out_dir / "pack").mkdir(parents=True, exist_ok=True)
     (out_dir / "terrain").mkdir(parents=True, exist_ok=True)
@@ -137,6 +137,14 @@ def export_pack(out_dir: Path, runs, results, layer_ts, wps, grid, shade, mets):
         "dens": [DENS_MIN, DENS_MAX],
         "labels": {"ski18": classify.SKI_LABELS, "simple": classify.SIMPLE_LABELS},
     }
+    # terrain/precip.png: the 1 km precipitation ratio (variant_a/precip.py)
+    # as round(R*100) on the LV03 grid, 255 = no correction. The app scales
+    # new snow with it exactly like grid_frames does for the coarse frames.
+    if precip is not None:
+        pb = np.clip(np.round(precip * 100.0), 1, 254).astype(np.uint8)
+        pb[np.isclose(precip, 1.0)] = 255
+        Image.fromarray(pb, "L").save(out_dir / "terrain" / "precip.png", optimize=True)
+        index["precip"] = {"file": "terrain/precip.png", "cs": grid.cs}
     with open(out_dir / "pack" / "index.json", "w") as f:
         json.dump(index, f, separators=(",", ":"), default=_jsonable)
     return index

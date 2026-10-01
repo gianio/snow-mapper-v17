@@ -64,5 +64,24 @@ check('simple class agrees with the pipeline', sim / N >= 0.985, (100 * sim / N)
   let p2 = 0; for (let i = 3; i < px2.length; i += 4) if (px2[i]) p2++;
   check('density layer renders too', p2 > 1000, p2 + ' px');
 }
+// precipitation pattern: same scaling as variant_a/precip.apply()
+{
+  const G = fx.pack.grid, x = E.mi;
+  const e = G.xll + 10.5 * G.cs, n = G.yll + (G.nr - 10.5) * G.cs;   // centre of cell (10, 10)
+  const m2 = new Float64Array(E.nm);
+  m2[x.powder_depth_cm] = 20; m2[x.total_hs_cm] = 100;
+  E.adjPrecip(m2, e, n);
+  check('no precip raster -> nothing changes', m2[x.powder_depth_cm] === 20 && m2[x.total_hs_cm] === 100);
+  const data = new Uint8Array(G.nr * G.nc).fill(255);
+  for (let r = 8; r <= 12; r++) for (let c = 8; c <= 12; c++) data[r * G.nc + c] = 150;
+  E.precip = { w: G.nc, h: G.nr, data }; E.pk.precip = { file: 'x', cs: G.cs };
+  E.adjPrecip(m2, e, n);
+  check('R = 1.5 scales powder x1.5 and moves HS by the same', Math.abs(m2[x.powder_depth_cm] - 30) < 1e-6
+        && Math.abs(m2[x.total_hs_cm] - 110) < 1e-6, m2[x.powder_depth_cm] + ' / ' + m2[x.total_hs_cm]);
+  const m3 = new Float64Array(E.nm); m3[x.powder_depth_cm] = 20; m3[x.total_hs_cm] = 100;
+  E.adjPrecip(m3, G.xll + 30.5 * G.cs, G.yll + (G.nr - 30.5) * G.cs);
+  check('255 (no correction) leaves the cell alone', m3[x.powder_depth_cm] === 20);
+  E.precip = null; E.pk.precip = undefined;
+}
 console.log('\n' + (fails.length ? 'FAILED: ' + fails : 'VA ENGINE OK'));
 process.exit(fails.length ? 1 : 0);

@@ -395,7 +395,7 @@ def advance_state(runs, carried, st_sno, st_time, to_time, out_dir: Path,
 
 # ── gridding: one sparse product per frame ─────────────────────────────────
 
-def grid_frames(grid: NationalGrid, runs, results, layer_ts, W, cell_index):
+def grid_frames(grid: NationalGrid, runs, results, layer_ts, W, cell_index, precip_ratio=None):
     """Yield (dt, {ski18, simple, density, drift, scour}) per layer frame.
 
     A generator, so frames are written as they are made -- 88 frames of three
@@ -431,6 +431,9 @@ def grid_frames(grid: NationalGrid, runs, results, layer_ts, W, cell_index):
         m = {k: g[i] for k, i in ix.items()}
         for j, k in enumerate(gated):
             m[k] = np.where(g[nm + j] >= classify.CRUST_GATE, m[k], 0.0)
+        if precip_ratio is not None:
+            from . import precip
+            m = precip.apply(m, precip_ratio, valid)
         ski18 = classify.classify_grid_metrics(
             m["total_hs_cm"], m["powder_depth_cm"], m["crust_thick_cm"], m["powder_dd"],
             m["powder_lw"], m["surface_density"], m["surface_hardness"], m["surface_lw"],

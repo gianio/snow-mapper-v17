@@ -90,6 +90,26 @@ def available(coll, pages=6):
     return seen[newest], newest
 
 
+# The whole TOT_PREC field over Switzerland, not just at the weather points:
+# variant_a/precip.py turns it into a 1 km correction of new snow per map cell.
+CH_BOX = (45.6, 5.7, 48.0, 10.7)          # lat0, lon0, lat1, lon1
+
+
+def save_precip_field(field_dir, model, vals, lead, ref_dt, lat, lon):
+    la0, lo0, la1, lo1 = CH_BOX
+    m = (lat >= la0) & (lat <= la1) & (lon >= lo0) & (lon <= lo1) & np.isfinite(lat)
+    lead = np.asarray(lead, float)
+    # every 3 h is plenty for sums over days, and keeps the file at ~2 MB
+    keep = [i for i, h in enumerate(lead) if h % 3 == 0 or i == len(lead) - 1]
+    acc = np.asarray(vals, float)[keep][:, m]
+    acc = np.maximum.accumulate(np.nan_to_num(acc, nan=0.0), axis=0)   # accumulated: never decreases
+    f = Path(field_dir) / f"precip_{model}.npz"
+    np.savez_compressed(f, lat=lat[m].astype(np.float32), lon=lon[m].astype(np.float32),
+                        lead=lead[keep].astype(np.float32), acc=acc.astype(np.float32),
+                        ref=np.array(ref_dt.strftime("%Y-%m-%dT%H:%M")))
+    print(f"  {model} TOT_PREC field: {int(m.sum())} cells x {len(keep)} leads -> {f.name}", flush=True)
+
+
 # first name that exists wins; RH can be derived from the dew point
 ALTS = {"RELHUM_2M": ["RELHUM_2M", "TD_2M"], "ASWDIR_S": ["ASWDIR_S", "ASOB_S", "GLOB"],
         "ASWDIFD_S": ["ASWDIFD_S", None]}
@@ -101,7 +121,7 @@ def _fetch_var(coll, var, hours):
     return var, da, time.time() - t0
 
 
-def extract(points, model, hours):
+def extract(points, model, hours, field_dir=None):
     from concurrent.futures import ThreadPoolExecutor
     coll = COLL[model]
     try:
@@ -154,6 +174,11 @@ def extract(points, model, hours):
             geo = (lead, ref_dt, idx)
         for p in points:
             out[p["id"]][var] = vals[:, geo[2][p["id"]]]
+        if var == "TOT_PREC" and field_dir is not None:
+            try:
+                save_precip_field(field_dir, model, vals, lead, ref_dt, *_latlon(da))
+            except Exception as e:
+                print(f"  {model} TOT_PREC field not saved: {type(e).__name__}: {e}", flush=True)
         print(f"  {model} {var}: {vals.shape[0]} lead times in {sec:.0f}s", flush=True)
     missing = [v for v in want if v not in got]
     if missing:
@@ -218,7 +243,8 @@ def main():
     merged = {p["id"]: None for p in pts}
     for model, hrs in zip(a.models.split(","), [int(x) for x in a.hours.split(",")]):
         try:
-            vals, lead, ref, idx = extract(pts, model, hrs)
+            vals, lead, ref, idx = extract(pts, model, hrs,
+                                           field_dir=out if model == "ch1" else None)
         except Exception as e:
             print(f"  {model}: FAILED {type(e).__name__}: {e}")
             continue
