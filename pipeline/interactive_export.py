@@ -1094,6 +1094,10 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
     return;
   }
   if(url.origin!==location.origin)return; // Supabase / CDNs -> network
+  // SNOWPACK exports are hundreds of MB of frames. Copying each one into
+  // Cache Storage on every slide filled the phone's storage and kept the
+  // disk busy; the browser's HTTP cache (versioned URLs) already holds them.
+  if(url.pathname.indexOf('/data/variant_a')>=0)return;
   // Content-stamped data blobs are immutable -> cache-first (repeat loads use 0 network),
   // and stale stamps are purged whenever a new one is stored.
   if(url.pathname.includes('/data/snowdata-')){
@@ -1814,12 +1818,19 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    cursor:pointer;background:color-mix(in srgb,var(--card) 40%,transparent);border:1px solid var(--hair);padding:6px;border-radius:var(--r-1);
    width:var(--fab,48px);box-sizing:border-box;color:var(--fg2);display:none}
  #miniLegend.show{display:block}
- /* SNOWPACK: classes in view with their share, so the card needs words. */
+ /* SNOWPACK: folded to a slim bar on the edge (segments = share of each
+    class in view); tap unfolds the named list, tap again folds it. */
  #miniLegendVa{display:none}
- #miniLegend.va{width:auto;min-width:var(--fab,48px);max-width:176px;padding:6px 8px;
-   background:color-mix(in srgb,var(--card) 88%,transparent)}
+ #miniLegend.va{width:auto;min-width:0;padding:4px;right:14px;
+   background:color-mix(in srgb,var(--card) 70%,transparent)}
+ #miniLegend.va.va-open{max-width:176px;padding:6px 8px;background:color-mix(in srgb,var(--card) 92%,transparent)}
  #miniLegend.va #miniLegendBody{display:none}
  #miniLegend.va #miniLegendVa{display:block}
+ .ml-va-bar{display:flex;flex-direction:column;width:12px;height:132px;border-radius:4px;overflow:hidden}
+ .ml-va-bar span{min-height:2px}
+ .ml-va-empty{background:repeating-linear-gradient(45deg,var(--hair) 0 3px,transparent 3px 6px)}
+ .ml-va-dens{background:linear-gradient(0deg,#2b56c8,#49b0c8,#cfd43a,#e07a2a,#c02020)}
+ .ml-va-t b{float:right;margin-left:8px;color:var(--fg2)}
  .ml-va-t{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--fg2);margin-bottom:3px}
  .ml-va-r{display:flex;align-items:center;gap:6px;font-size:11.5px;line-height:1.45;color:var(--fg);white-space:nowrap}
  .ml-va-r i{flex:none;width:11px;height:11px;border-radius:3px;border:1px solid var(--hair)}
@@ -3283,7 +3294,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button class="ly-x" onclick="lyPanelClose()" aria-label="Ebenen schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
 </div>
 <button id="legendBtn" title="Legende" aria-label="Legende"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg></button><div class="legend" id="legend"></div>
-<div id="miniLegend" onclick="document.getElementById('legendBtn').click()">
+<div id="miniLegend" onclick="if(this.classList.contains('va'))vaLegToggle();else document.getElementById('legendBtn').click()">
   <b id="miniLegendTitle"></b>
   <div id="miniLegendBody">
     <div class="ml-num" id="miniLegendHi"></div>
@@ -4701,7 +4712,7 @@ function vaHiEngine(){
       as[r*N+c]=((Math.atan2(-dC,dR)*180/Math.PI)%360+360)%360;
     }
     t={el:el,sl:sl,as:as};E.terr.set(key,t);
-    if(E.terr.size>48)E.terr.delete(E.terr.keys().next().value);
+    if(E.terr.size>32)E.terr.delete(E.terr.keys().next().value);
     return t;
   };
   // Render one map tile. q: {z,x,y,size,layer,tkey,tz,tx,ty,tbytes}
@@ -4749,15 +4760,27 @@ const VA_TERR='https://s3.amazonaws.com/elevation-tiles-prod/terrarium/';
 const VA_HI_Z=10, VA_TERR_Z=12;
 let vaHiWant=null,vaHiBusy=false,vaPk=null,vaEng=null,vaHi=null,vaHiW=null,vaHiSeq=0,vaHiTag=null,vaGrp=null,vaPkTried=false;
 const vaHiCb={},vaPkFrames=new Map(),vaTerrC=new Map();
-async function vaImgBytes(url){
+// ONE scratch canvas for every decode, emptied right after. A fresh canvas
+// per image (terrain tiles, pack frames, legend frames) piled up faster than
+// iOS Safari collects them, and past ~384 MB of canvas memory it kills the
+// page -- the "crashes after a while of sliding" on phones.
+let vaScr=null;
+async function vaImgBytes(url,maxW){
   const r=await fetch(vaV(url),{cache:'force-cache'});if(!r.ok)throw new Error('HTTP '+r.status);
   const bl=await r.blob();let bm;
   // No colour management and no premultiplication: these PNGs are numbers.
   try{bm=await createImageBitmap(bl,{colorSpaceConversion:'none',premultiplyAlpha:'none'});}
   catch(e){bm=await createImageBitmap(bl);}
-  const cv=document.createElement('canvas');cv.width=bm.width;cv.height=bm.height;
-  const cx=cv.getContext('2d',{willReadFrequently:true});cx.drawImage(bm,0,0);
-  return {w:bm.width,h:bm.height,rgba:cx.getImageData(0,0,bm.width,bm.height).data};
+  let w=bm.width,h=bm.height;
+  if(maxW&&w>maxW){h=Math.max(1,Math.round(h*maxW/w));w=maxW;}
+  if(!vaScr)vaScr=document.createElement('canvas');
+  const cv=vaScr;cv.width=w;cv.height=h;
+  const cx=cv.getContext('2d',{willReadFrequently:true});
+  cx.imageSmoothingEnabled=false;cx.clearRect(0,0,w,h);cx.drawImage(bm,0,0,w,h);
+  const rgba=cx.getImageData(0,0,w,h).data;
+  try{if(bm.close)bm.close();}catch(e){}
+  cv.width=1;cv.height=1;
+  return {w,h,rgba};
 }
 function vaGray(img){const n=img.w*img.h,d=new Uint8Array(n);for(let i=0;i<n;i++)d[i]=img.rgba[i*4];return {w:img.w,h:img.h,data:d};}
 async function vaPkLoad(){
@@ -4802,16 +4825,21 @@ async function vaPkFrame(tag){
     ok[r]=b[nm]?1:0;
   }
   const f={vals,ok};vaPkFrames.set(tag,f);
-  if(vaPkFrames.size>12)vaPkFrames.delete(vaPkFrames.keys().next().value);
+  if(vaPkFrames.size>6)vaPkFrames.delete(vaPkFrames.keys().next().value);
   return f;
 }
 async function vaTerrBytes(key){
   if(vaTerrC.has(key))return vaTerrC.get(key);
   const img=await vaImgBytes(VA_TERR+key+'.png');
   vaTerrC.set(key,img.rgba);
-  if(vaTerrC.size>64)vaTerrC.delete(vaTerrC.keys().next().value);
+  if(vaTerrC.size>12)vaTerrC.delete(vaTerrC.keys().next().value);
   return img.rgba;
 }
+// Terrain tiles the worker already holds (its own cache keeps 32): those
+// are not decoded or copied across again for every tile and every frame.
+const vaHiSent=new Set();
+function vaHiSentAdd(k){vaHiSent.delete(k);vaHiSent.add(k);
+  if(vaHiSent.size>20)vaHiSent.delete(vaHiSent.values().next().value);}
 async function vaHiTile(c,S){
   if(!vaPk||!vaHiTag)return null;
   const tz=Math.min(c.z,VA_TERR_Z),f=Math.pow(2,c.z-tz),tx=Math.floor(c.x/f),ty=Math.floor(c.y/f);
@@ -4819,11 +4847,19 @@ async function vaHiTile(c,S){
   // Terrain tiles come from a third-party bucket; on a phone one of them
   // failing now and then is normal, so give it a second go before the tile
   // falls back to the coarse frame.
+  const have=!!vaHiW&&vaHiSent.has(key);
   let tb=null;
-  try{tb=await vaTerrBytes(key);}
-  catch(e){await new Promise(r=>setTimeout(r,700));tb=await vaTerrBytes(key);}
+  if(!have){
+    try{tb=await vaTerrBytes(key);}
+    catch(e){await new Promise(r=>setTimeout(r,700));tb=await vaTerrBytes(key);}
+  }
   const q={z:c.z,x:c.x,y:c.y,size:S,layer:vaKey,tkey:key,tz,tx,ty,tbytes:tb};
-  if(vaHiW)return new Promise(res=>{const id=++vaHiSeq;vaHiCb[id]=res;vaHiW.postMessage({t:'render',id,q});});
+  if(vaHiW){
+    if(!have)vaHiSentAdd(key);
+    return new Promise(res=>{const id=++vaHiSeq;
+      vaHiCb[id]=px=>{if(!px)vaHiSent.delete(key);res(px);};vaHiW.postMessage({t:'render',id,q});});
+  }
+  if(!tb)tb=await vaTerrBytes(key),q.tbytes=tb;
   return vaEng.render(q);
 }
 // A tile the device renderer could not draw (terrain or worker failure) is
@@ -5040,19 +5076,31 @@ function vaLegendHTML(){
 // classes that are actually in view, largest first, read from the frame
 // that is on screen. vaHist holds that frame as one class id per pixel.
 let vaHist=null,vaHistBusy=null;
+let vaHistNext=null;
 async function vaHistLoad(u){
   if(!u||!vaAvailable()||vaKey==='density'){vaHist=null;try{miniLegendRender();}catch(e){}return;}
   if((vaHist&&vaHist.url===u)||vaHistBusy===u)return;
+  // One decode at a time; while sliding only the last frame asked for is
+  // counted, the ones in between are skipped.
+  if(vaHistBusy){vaHistNext=u;return;}
   vaHistBusy=u;
   try{
-    const img=await vaImgBytes(u),leg=(vaMan.layers[vaKey]||{}).legend||{},lut=new Map();
-    for(const k in leg){const c=leg[k]&&leg[k][1];if(c)lut.set((c[0]<<16)|(c[1]<<8)|c[2],+k);}
+    // A 480 px wide copy is plenty for shares and ~10x lighter than the frame.
+    const img=await vaImgBytes(u,480),leg=(vaMan.layers[vaKey]||{}).legend||{},lut=new Map(),pal=[];
+    for(const k in leg){const c=leg[k]&&leg[k][1];if(c){lut.set((c[0]<<16)|(c[1]<<8)|c[2],+k);pal.push([+k,c]);}}
     const n=img.w*img.h,cls=new Uint8Array(n),d=img.rgba;
-    for(let i=0,o=0;i<n;i++,o+=4){if(d[o+3]<8)continue;const v=lut.get((d[o]<<16)|(d[o+1]<<8)|d[o+2]);if(v)cls[i]=v;}
+    // Forest-faded pixels can come back a shade off after the alpha round
+    // trip, so a miss snaps to the nearest legend colour (memoised).
+    const near=k=>{const r=k>>16,g=(k>>8)&255,b=k&255;let best=0,bd=1e9;
+      for(const [id,c] of pal){const e=(c[0]-r)*(c[0]-r)+(c[1]-g)*(c[1]-g)+(c[2]-b)*(c[2]-b);if(e<bd){bd=e;best=id;}}
+      const v=bd<=900?best:0;lut.set(k,v);return v;};
+    for(let i=0,o=0;i<n;i++,o+=4){if(d[o+3]<8)continue;const k=(d[o]<<16)|(d[o+1]<<8)|d[o+2];
+      let v=lut.get(k);if(v===undefined)v=near(k);if(v)cls[i]=v;}
     if(vaHistBusy===u)vaHist={url:u,key:vaKey,w:img.w,h:img.h,cls};
   }catch(e){}
   if(vaHistBusy===u)vaHistBusy=null;
   try{miniLegendRender();}catch(e){}
+  if(vaHistNext){const nx=vaHistNext;vaHistNext=null;vaHistLoad(nx);}
 }
 // Share of each class inside the current map view (a sample of ~40k px).
 function vaViewShares(){
@@ -5067,28 +5115,36 @@ function vaViewShares(){
     for(let c=c0;c<c1;c+=st){const v=vaHist.cls[row+c];if(v){cnt[v]=(cnt[v]||0)+1;tot++;}}}
   return {tot,cnt};
 }
+// Folded (default): a slim vertical bar on the map edge, one segment per
+// class in view, height = its share -- the colours you see on the map, in
+// proportion, in 22 px of width. Unfolded: the same classes with names.
+let vaLegOpen=false;
+try{vaLegOpen=localStorage.getItem('ssm_va_leg')==='1';}catch(e){}
+function vaLegToggle(){vaLegOpen=!vaLegOpen;try{localStorage.setItem('ssm_va_leg',vaLegOpen?'1':'0');}catch(e){}
+  try{miniLegendRender();}catch(e){}}
 function vaMiniLegendHTML(){
   const L=vaMan.layers[vaKey];if(!L)return '';
   const names={ski18:'Skiqualität',simple:'Schneeart',density:'Dichte'};
-  let h='<div class="ml-va-t">'+escapeHtml(names[vaKey]||vaKey)+'</div>';
   if(vaKey==='density'){
     const r=L.range||[100,450];
-    return h+'<div class="ml-va-ramp"><i></i><div><span>'+r[1]+'</span><span>'+r[0]+'</span></div></div>'
+    if(!vaLegOpen)return '<div class="ml-va-bar ml-va-dens"></div>';
+    return '<div class="ml-va-t">'+names.density+'</div><div class="ml-va-ramp"><i></i><div><span>'+r[1]+'</span><span>'+r[0]+'</span></div></div>'
       +'<div class="ml-va-u">'+escapeHtml(L.unit||'kg/m3')+'</div>';
   }
   const leg=L.legend||{},sh=vaViewShares();
-  let ks;
-  if(sh&&sh.tot>0){
-    ks=Object.keys(sh.cnt).filter(k=>leg[k]&&sh.cnt[k]/sh.tot>=0.01).sort((a,b)=>sh.cnt[b]-sh.cnt[a]);
-    if(!ks.length)return h+'<div class="ml-va-u">kein Schnee im Ausschnitt</div>';
-  }else if(sh&&sh.tot===0){return h+'<div class="ml-va-u">kein Schnee im Ausschnitt</div>';}
-  else return h+'<div class="ml-va-u">lädt …</div>';
-  const more=ks.length-6;ks=ks.slice(0,6);
-  h+=ks.map(k=>{const e=leg[k];
-    return '<div class="ml-va-r"><i style="background:rgb('+e[1].join(',')+')"></i><span>'
+  const ks=(sh&&sh.tot>0)?Object.keys(sh.cnt).filter(k=>leg[k]&&sh.cnt[k]/sh.tot>=0.01).sort((a,b)=>sh.cnt[b]-sh.cnt[a]):[];
+  const col=k=>'rgb('+leg[k][1].join(',')+')';
+  if(!vaLegOpen){
+    if(!ks.length)return '<div class="ml-va-bar ml-va-empty"></div>';
+    const tot=ks.reduce((t,k)=>t+sh.cnt[k],0);
+    return '<div class="ml-va-bar">'+ks.map(k=>'<span style="background:'+col(k)+';flex:'+(sh.cnt[k]/tot).toFixed(4)+'"></span>').join('')+'</div>';
+  }
+  let h='<div class="ml-va-t">'+escapeHtml(names[vaKey]||vaKey)+'<b>›</b></div>';
+  if(!sh)return h+'<div class="ml-va-u">lädt …</div>';
+  if(!ks.length)return h+'<div class="ml-va-u">kein Schnee im Ausschnitt</div>';
+  return h+ks.slice(0,8).map(k=>{const e=leg[k];
+    return '<div class="ml-va-r"><i style="background:'+col(k)+'"></i><span>'
       +escapeHtml(e[2]||String(e[0]).replace(/_/g,' '))+'</span><b>'+Math.round(sh.cnt[k]/sh.tot*100)+'%</b></div>';}).join('');
-  if(more>0)h+='<div class="ml-va-u">+'+more+' weitere · tippen</div>';
-  return h;
 }
 function vaLegendUp(){return !!(typeof ovOn!=='undefined'&&ovOn.variantA&&vaAvailable());}
 
@@ -6445,8 +6501,9 @@ function miniLegendRender(l){
   const box=document.getElementById('miniLegend');if(!box)return;
   const vbox=document.getElementById('miniLegendVa');
   if(vaLegendUp()&&vbox){
-    vbox.innerHTML=vaMiniLegendHTML();box.classList.add('va','show');return;}
-  box.classList.remove('va');
+    vbox.innerHTML=vaMiniLegendHTML();box.classList.add('va','show');
+    box.classList.toggle('va-open',vaLegOpen);return;}
+  box.classList.remove('va','va-open');
   const title=document.getElementById('miniLegendTitle'),bar=document.getElementById('miniLegendBar'),
         hi=document.getElementById('miniLegendHi'),lo=document.getElementById('miniLegendLo');
   const it=(groupItems(curTopic)||[])[curItem],vlabel=(it&&it.vars&&it.vars[curVar]&&it.vars[curVar].label)||l||layer;
