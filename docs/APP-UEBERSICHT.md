@@ -129,6 +129,11 @@ Das Herzstück für die Schneequalität.
   - **IMIS-Abgleich** (live): Stationen ≤ 12 km vom Wetterpunkt; Niederschlagsfaktor
     × r^0.5 mit r = (Messung+20 cm)/(Modell+20 cm), r auf 0.7–1.4 und der Faktor
     auf 0.5–2.0 begrenzt.
+- **Ansichten in der App** (Ebene «Skiqualität»): *Skiqualität* (6 Klassen:
+  durchgehend hart, Kruste, Pulver 0–10 / 10–20 / > 20 cm, nass – wenig oder
+  kein Schnee wird nicht gezeichnet; «nass» = flüssiger Wassergehalt der
+  obersten Schicht > 1 Vol-%), *Triebschnee* (abgeblasen, leichte Ablagerung,
+  Triebschnee aus dem Wind-Index), *Dichte*, *Detail* (18 Klassen).
 - **Klassifizierung** (`classify.py`, im Browser identisch nachgebaut):
   Schwellen wie Pulver 5/15/30 cm, Harsch ≥ 0.25 cm bzw. Bruchharsch ≥ 2 cm,
   Eis ≥ 700 kg/m³, nass ab 1 % Wassergehalt, wenig Schnee < 20 cm, Wind ab
@@ -144,8 +149,10 @@ Das Herzstück für die Schneequalität.
 - **Ab Zoom 10:** Das Gerät rechnet die Klassen selbst pro Pixel (Web Worker)
   auf Gelände-Kacheln (~30 m) mit derselben Interpolation wie die Pipeline.
   Übereinstimmung mit der Pipeline: 99.7 % (in CI geprüft).
-- Scharfe Kacheln werden erst gerechnet, wenn Karte und Zeitschieber
-  stillstehen.
+- Zeitschieber in festen 2-h-Schritten (‹ › an den Enden); die scharfen Kacheln
+  werden pro Schritt neu gerechnet (2 Web Worker), die Nachbarschritte im
+  Voraus, bereits gerechnete Kacheln kommen aus einem Cache.
+- Ab Zoom 13 werden die Zoom-12-Kacheln vergrössert statt neu gerechnet.
 
 ### 3.6 Weitere Modelle
 - **Tour-Bewertung** (`model/tour_score.py`, JS-Gegenstück): Bewertung entlang

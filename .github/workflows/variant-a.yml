@@ -38,8 +38,8 @@ on:
       step_h:
         # Also sets how often SNOWPACK writes a profile, so this genuinely
         # changes the frame count rather than just filtering a fixed one.
-        description: "Hours between layer frames (3 = 88 frames over the window)"
-        default: "3"
+        description: "Hours between layer frames (2 = 132 frames; the app steps in 2 h)"
+        default: "2"
         required: false
       publish:
         description: "Commit the export to variant_a_export/ so the deploy publishes it"
@@ -180,7 +180,7 @@ jobs:
           L="--limit ${{ inputs.limit || '4' }}"
           Y=$(date -u -d yesterday +%F); T=$(date -u +%F)
           echo "::group::cycle 1 ($Y, cold start)"
-          python -u run_variant_a.py --live --date $Y $L --state-dir st1 --state-out st2 --step-h 3 2>&1 | tee live1.log || true
+          python -u run_variant_a.py --live --date $Y $L --state-dir st1 --state-out st2 --step-h 2 2>&1 | tee live1.log || true
           echo "::endgroup::"
           echo "::group::OGD extraction"
           python -m venv .ogd && .ogd/bin/pip install -q meteodata-lab && .ogd/bin/python tools/test_ogd_extract.py \
@@ -191,7 +191,7 @@ jobs:
           echo "::endgroup::"
           OGD=""; [ -n "$(ls ogd/*.json 2>/dev/null)" ] && OGD="--ogd-dir ogd"
           echo "::group::cycle 2 ($T, continuing, $OGD)"
-          python -u run_variant_a.py --live --date $T $L --state-dir st2 --state-out st3 --step-h 3 $OGD 2>&1 | tee run.log
+          python -u run_variant_a.py --live --date $T $L --state-dir st2 --state-out st3 --step-h 2 $OGD 2>&1 | tee run.log
           echo "::endgroup::"
           echo "=== live test recap ==="
           grep -hE "^live:|state advance|carried state|IMIS|gates:|HARD|soft|forcing models|OGD" live1.log run.log || true

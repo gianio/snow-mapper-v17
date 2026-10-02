@@ -443,10 +443,16 @@ def grid_frames(grid: NationalGrid, runs, results, layer_ts, W, cell_index, prec
             m["total_hs_cm"], m["powder_depth_cm"], m["crust_thick_cm"],
             m["surface_density"], m["surface_lw"], sh=m["sh_surface"],
             drift=m["drift_load"], scour=m["wind_scour"])
+        ski6 = classify.classify_ski6(m["total_hs_cm"], m["powder_depth_cm"], m["crust_thick_cm"],
+                                      m["surface_density"], m["surface_lw"])
+        windc = classify.classify_wind(m["total_hs_cm"], m["drift_load"], m["wind_scour"])
         ski18[~valid] = 0
         simple[~valid] = 0
+        ski6[~valid] = 0
+        windc[~valid] = 0
         density = np.where(valid, m["surface_density"], np.nan)
         hsv = m["total_hs_cm"][valid]
-        yield dt, {"ski18": ski18, "simple": simple, "density": density,
+        yield dt, {"ski18": ski18, "simple": simple, "ski6": ski6, "wind": windc,
+                   "density": density,
                    "hs_max": float(hsv.max()) if hsv.size else 0.0,
                    "finite": bool(np.isfinite(G).all())}

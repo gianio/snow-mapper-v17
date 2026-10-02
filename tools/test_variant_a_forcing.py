@@ -1005,6 +1005,29 @@ def test_precip_pattern():
           and np.allclose(m["total_hs_cm"], [[110, 90], [100, 100]]))
 
 
+def test_ski6_and_wind_classes():
+    """The simplified Skiqualität and the Triebschnee view, case by case."""
+    print("ski6 / wind classes")
+    from variant_a import classify as C
+    #            hs   powder crust dens  lw
+    cases = [((10, 30, 0, 100, 0), 0, "thin cover -> nothing"),
+             ((100, 0, 0, 300, 0), 1, "no powder, no crust -> hart"),
+             ((100, 0, 1.0, 300, 0), 2, "crust -> Kruste"),
+             ((100, 0, 0, 750, 0), 2, "ice -> Kruste"),
+             ((100, 1.0, 1.0, 300, 0), 2, "1 cm dust on crust is still Kruste"),
+             ((100, 6, 1.0, 120, 0), 3, "6 cm on a crust -> Pulver 0-10"),
+             ((100, 15, 0, 120, 0), 4, "15 cm -> Pulver 10-20"),
+             ((100, 35, 0, 120, 0), 5, "35 cm -> Pulver > 20"),
+             ((100, 35, 0, 120, 2.0), 6, "liquid water on top -> nass")]
+    for (hs, pw, cr, sd, lw), want, name in cases:
+        got = int(C.classify_ski6(np.array([hs]), np.array([pw]), np.array([cr]),
+                                  np.array([sd]), np.array([lw]))[0])
+        check(name, got == want, f"{got} (want {want})")
+    w = C.classify_wind(np.array([100, 100, 100, 100, 10]), np.array([0, 0.5, 0.8, 0, 0.9]),
+                        np.array([0, 0, 0, 0.6, 0]))
+    check("wind: none / light / drift / scoured / thin", w.tolist() == [0, 2, 3, 1, 0], str(w.tolist()))
+
+
 if __name__ == "__main__":
     for t in (test_forcing_starts_before_profile_date, test_covers_rejects_a_stale_smet,
               test_ini, test_timestamp_window, test_prof_start_derivation,
@@ -1017,7 +1040,7 @@ if __name__ == "__main__":
               test_sno_base_is_real_snow, test_wgs84_map_matches_rasterio,
               test_state_roundtrip, test_wind_indices, test_terrain_shading,
               test_imis_correction, test_gates, test_classifier_fixes, test_pack_roundtrip,
-              test_rate_limit_backoff, test_precip_pattern):
+              test_rate_limit_backoff, test_precip_pattern, test_ski6_and_wind_classes):
         t()
     print("\nVARIANT A PIPELINE " + ("OK" if not FAILS else f"FAILED: {FAILS}"))
     sys.exit(1 if FAILS else 0)

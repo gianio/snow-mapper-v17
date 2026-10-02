@@ -95,7 +95,8 @@ def main():
             samples.append([g.xll + (c_ + 0.5) * g.cs, g.yll + (g.nr - 1 - r_ + 0.5) * g.cs,
                             float(g.elevation[r_, c_]), float(g.slope[r_, c_]),
                             float(g.aspect[r_, c_]), float(shade_q[r_, c_]),
-                            int(fr["ski18"][r_, c_]), int(fr["simple"][r_, c_])])
+                            int(fr["ski18"][r_, c_]), int(fr["simple"][r_, c_]),
+                            int(fr["ski6"][r_, c_]), int(fr["wind"][r_, c_])])
         fx = {"pack": pk, "vals": vals.round(4).ravel().tolist(), "ok": ok.tolist(),
               "shade": {"w": int(sb.shape[1]), "h": int(sb.shape[0]), "data": sb.ravel().tolist()},
               "samples": samples}

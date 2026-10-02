@@ -22,22 +22,27 @@ const sh = { w: fx.shade.w, h: fx.shade.h, data: Uint8Array.from(fx.shade.data) 
 E.init(fx.pack, sh, null);
 E.setFrame(Float32Array.from(fx.vals), Uint8Array.from(fx.ok));
 const m = new Float64Array(E.nm);
-let nOk = 0, ski = 0, sim = 0, miss = [];
+let nOk = 0, ski = 0, sim = 0, s6 = 0, wd = 0, miss = [], miss6 = [];
 const t0 = Date.now();
 for (const s of fx.samples) {
-  const [e, n, elev, slope, aspect, shade, pySki, pySim] = s;
+  const [e, n, elev, slope, aspect, shade, pySki, pySim, pySk6, pyWind] = s;
   const cand = E.candidates(e, n, 60000);
   if (!E.evalAt(e, n, elev, slope, aspect, shade, cand, m)) continue;
   nOk++;
   const a = E.clsSki(m), b = E.clsSimple(m);
   if (a === pySki) ski++; else if (miss.length < 5) miss.push(`ski ${a} vs py ${pySki}`);
   if (b === pySim) sim++;
+  const c6 = E.clsSki6(m), cw = E.clsWind(m);
+  if (c6 === pySk6) s6++; else if (miss6.length < 5) miss6.push(`ski6 ${c6} vs py ${pySk6}`);
+  if (cw === pyWind) wd++;
 }
 const N = fx.samples.length;
 console.log('engine parity (' + N + ' cells, ' + (Date.now() - t0) + ' ms)');
 check('every modelled cell evaluates', nOk === N, nOk + '/' + N);
 check('ski18 class agrees with the pipeline', ski / N >= 0.985, (100 * ski / N).toFixed(1) + '% ' + miss.join('; '));
 check('simple class agrees with the pipeline', sim / N >= 0.985, (100 * sim / N).toFixed(1) + '%');
+check('ski6 (Skiqualität) agrees with the pipeline', s6 / N >= 0.985, (100 * s6 / N).toFixed(1) + '% ' + miss6.join('; '));
+check('wind (Triebschnee) agrees with the pipeline', wd / N >= 0.985, (100 * wd / N).toFixed(1) + '%');
 
 // render(): one tile over the fixture grid, flat 2000 m terrain
 {

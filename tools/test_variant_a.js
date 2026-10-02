@@ -88,7 +88,7 @@ const sandbox = {
 const fn = new Function(...Object.keys(sandbox),
   grab('vaProfileAt') + '\n' + grab('vaProfileHTML') + '\n'
   + grab('vaDataNote') + '\n' + grab('vaNoteHTML') + '\n'
-  + grabConst('VA_GRAIN_ICON') + '\n' + grab('vaGrainIcon') + '\n'
+  + grabConst('VA_GRAIN_ICON') + '\n' + grabConst('VA_GRAIN_DE') + '\n' + grab('vaGrainIcon') + '\n'
   + grab('vaProfIndex') + '\n' + grab('vaWpNearest') + '\n'
   + grab('vaWpLoad') + '\n' + grab('vaMatrixAt') + '\n'
   + 'function __setIdx(x){vaIdx=x;}'
@@ -230,10 +230,12 @@ const html = vaProfileHTML(vaProfileAt(46.80, 9.83, 2400, 0));
 check('renders a section', html.includes('insp-sec') && html.includes('va-prof'));
 check('shows HS', /HS \d+ cm/.test(html), (html.match(/HS \d+ cm/)||[''])[0]);
 check('draws a density path', html.includes('<path d="M'));
-check('draws grain bars', (html.match(/<rect /g)||[]).length === NB,
-      String((html.match(/<rect /g)||[]).length));
+// one rect per grain LAYER (consecutive bins of a class merged) + the frame
+const nRect = (html.match(/<rect /g)||[]).length;
+check('draws grain layers', nRect >= 2 && nRect <= NB + 1, String(nRect));
 check('grain legend uses the payload labels', html.includes('RG'));
-check('density axis labels present', html.includes('450 kg/m'));
+check('both axes are labelled', html.includes('Dichte [kg/m³]') && html.includes('Tiefe unter Oberfläche [cm]'));
+check('density ticks are numbered', />100</.test(html) && />400</.test(html));
 check('null profile renders nothing', vaProfileHTML(null) === '');
 
 console.log('\nmatrix mode (weather point x virtual slopes)');
@@ -287,7 +289,7 @@ console.log('\nmatrix mode (weather point x virtual slopes)');
   tagIdx = 0;
   const html = vaProfileHTML(n38);
   check('the profile names the model slope it came from', /Modellhang/.test(html) && /2400 m/.test(html));
-  check('...and the depth it covers', /60 cm/.test(html));
+  check('...and the depth it covers', /oberste \d+ cm/.test(html), (html.match(/oberste \d+ cm/)||[''])[0]);
   sandbox.vaWp.w002 = 'missing';
   check('a missing weather-point file yields no profile', vaProfileAt(47.30, 7.60, 1200, 0, 30) === null);
   const saveHs = sandbox.vaWp.w001.hs;
