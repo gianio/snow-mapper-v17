@@ -20,3 +20,6 @@ Pillow>=10.0
 # xarray>=2023.1        # NetCDF-Export / mehrdimensionale Stapel
 # geopandas>=0.13       # Vektor-Overlays, Stationsgeometrien
 # folium>=0.14          # interaktive Web-Karten
+
+# --- Tile service publishing (tools/publish_tiles.py) ---
+pmtiles>=3.5

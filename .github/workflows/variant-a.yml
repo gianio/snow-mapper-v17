@@ -324,6 +324,21 @@ jobs:
             exit 1
           fi
 
+      # Tile service (tiles/worker): only for a published demo, so the app's
+      # demo export and the bucket always belong together.
+      - name: Publish tiles to R2
+        if: success() && inputs.publish
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          TILES_BASE_URL: ${{ vars.TILES_BASE_URL }}
+          TILES_KEEP_RUNS: "2"
+        run: |
+          pip install -q "pmtiles>=3.5"
+          python tools/publish_tiles.py variant_a_export "demo-${{ github.run_id }}"
+
       # Promotion is opt-in, and ticking `publish` IS the decision this
       # workflow previously left to a manual download. The artifact below is
       # still produced on every run and is still what you review; this step

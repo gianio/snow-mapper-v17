@@ -1,0 +1,15 @@
+# Cloudflare Worker for the SNOWPACK tiles (see README.md next to this file).
+name = "snowmapper-tiles"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# The bucket the pipeline uploads the exports to (runs/<run>/...).
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "snowmapper-tiles"
+
+# Rendering a tile takes ~0.1-0.3 s of CPU. The Workers FREE plan allows
+# 10 ms per request, so tiles that are not cached yet need Workers Paid
+# (~5 USD/month), where the default limit is 30 s. On the free plan the
+# Worker still serves everything already in R2 / the edge cache, and the app
+# falls back to rendering on the device for the rest.

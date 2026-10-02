@@ -5055,6 +5055,7 @@ function vaHiStale(){return !!(vaMan&&vaHiTag!==vaMan.tags[vaTagIndex()]);}
 // Bring the device renderer to the frame the timeline wants.
 async function vaHiSync(){
   if(!ovOn.variantA||!vaAvailable())return;
+  if(vaTilesActive())return;     // the tile service draws it
   // Zoomed out the coarse frames are the whole layer: no pack decoding.
   if(!map||map.getZoom()<VA_HI_Z){vaSyncOpacity();vaPrefetchSoon();return;}
   if(!(await vaPkLoad()))return;
@@ -5082,8 +5083,131 @@ async function vaHiSync(){
   vaSyncOpacity();
   vaPrefetchSoon();
 }
+// ── Tile service (Cloudflare Worker + R2, tiles/worker) ─────────────────
+// When the export carries a "tiles" block (tools/publish_tiles.py), the map
+// comes from the server as ordinary tiles: zoom 10-12 rendered on demand
+// with this very engine and cached for everyone, zoom 5-9 from a PMTiles
+// archive per frame. The phone then only shows pictures. If the service
+// does not answer, everything below falls back to rendering on the device.
+let vaTilesDead=false;
+function vaTiles(){const t=vaMan&&vaMan.tiles;return (t&&t.base&&t.run&&!vaTilesDead)?t:null;}
+function vaTileView(){const t=vaTiles();return t&&(t.views||[]).indexOf(vaKey)>=0?vaKey:null;}
+// Two layers per kind: the one on screen and the next frame loading hidden
+// behind it; the swap happens when the new one is complete, so a time step
+// never shows an empty or half-drawn map.
+function vaSwap(make,onReady){
+  const S={cur:null,next:null,ready:false,key:null};
+  S.sync=function(key){
+    if(!vaGrp)return;
+    const want=S.next||S.cur;
+    if(want&&want._vaKeyS===key)return;
+    if(S.next){vaGrp.removeLayer(S.next);S.next=null;}
+    const l=make(key);if(!l)return;
+    l._vaKeyS=key;l.setOpacity(0);
+    l.on('load',()=>{
+      if(l===S.next){if(S.cur)vaGrp.removeLayer(S.cur);S.cur=l;S.next=null;}
+      if(l===S.cur){S.ready=true;l.setOpacity(vaOpacity());if(onReady)onReady();}
+    });
+    if(!S.cur){S.cur=l;S.ready=false;}else S.next=l;
+    vaGrp.addLayer(l);
+  };
+  S.clear=function(){[S.cur,S.next].forEach(l=>{if(l&&vaGrp)vaGrp.removeLayer(l);});S.cur=S.next=null;S.ready=false;};
+  return S;
+}
+let vaSrvErr=0,vaSrvOk=0;
+const vaSrv=vaSwap(key=>{
+  const t=vaTiles();if(!t)return null;
+  const [view,tag]=key.split('|');
+  const l=L.tileLayer(t.base+'/v1/'+encodeURIComponent(t.run)+'/'+view+'/'+tag+'/{z}/{x}/{y}.png',
+    {minZoom:VA_HI_Z,maxNativeZoom:t.zmax||12,maxZoom:19,tileSize:256,crossOrigin:'anonymous',
+     pane:'overlayPane',updateWhenZooming:false,keepBuffer:2,className:'va-srv'});
+  l.on('tileload',()=>{vaSrvOk++;});
+  // A service that is down, or a run that is gone: render on the device.
+  l.on('tileerror',()=>{vaSrvErr++;if(vaSrvErr>=4&&vaSrvOk===0)vaTilesFallback();});
+  return l;
+},()=>{vaSyncOpacity();vaSrvPrefetch();try{miniLegendRender();}catch(e){}});
+// zoom 5-9: PMTiles overview (library loaded on first use)
+let vaPmt=null,vaPmtP=null;
+function vaPmtLoad(){
+  if(vaPmt||vaPmtP)return vaPmtP;
+  vaPmtP=new Promise(res=>{
+    if(window.pmtiles){vaPmt=window.pmtiles;return res(vaPmt);}
+    const sc=document.createElement('script');sc.src='https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js';sc.async=true;
+    sc.onload=()=>{vaPmt=window.pmtiles||null;res(vaPmt);try{vaRefresh();}catch(e){}};
+    sc.onerror=()=>res(null);document.head.appendChild(sc);
+  });
+  return vaPmtP;
+}
+const vaOvT=vaSwap(key=>{
+  const t=vaTiles();if(!t||!vaPmt)return null;
+  const [view,tag]=key.split('|');
+  const src=new vaPmt.PMTiles(t.base+'/v1/'+encodeURIComponent(t.run)+'/overview/'+view+'/'+tag+'.pmtiles');
+  return vaPmt.leafletRasterLayer(src,{maxNativeZoom:(t.overview&&t.overview.zmax)||9,minNativeZoom:(t.overview&&t.overview.zmin)||5,
+    maxZoom:VA_HI_Z-0.01,pane:'overlayPane',className:'va-ovt'});
+},()=>{vaSyncOpacity();try{miniLegendRender();}catch(e){}});
+function vaTilesActive(){return !!(vaTiles()&&vaTileView());}
+function vaTilesSync(){
+  if(!vaTilesActive())return false;
+  const key=vaKey+'|'+vaMan.tags[vaTagIndex()];
+  vaSrv.sync(key);
+  if(!vaPmt)vaPmtLoad();else vaOvT.sync(key);
+  return true;
+}
+function vaTilesFallback(){
+  if(vaTilesDead)return;
+  vaTilesDead=true;vaSrv.clear();vaOvT.clear();
+  try{console.warn('tile service unavailable -- rendering on the device');}catch(e){}
+  vaOvWant=null;try{vaRefresh();}catch(e){}
+}
+// Warm the neighbouring 2 h frames for the tiles in view: the browser cache
+// has them, and on a first visit the Worker renders them now, not on the step.
+let vaSrvPreT=0;
+function vaSrvPrefetch(){
+  clearTimeout(vaSrvPreT);
+  vaSrvPreT=setTimeout(()=>{
+    const t=vaTiles(),cur=vaSrv.cur;if(!t||!cur||!cur._tiles)return;
+    const al=vaAllowedIdx(),c=b-1;if(!al)return;
+    const nx=al.find(i=>i>c),pv=[...al].reverse().find(i=>i<c);
+    [nx,pv].filter(i=>i!=null).forEach(i=>{
+      const sv=b;b=i+1;const tag=vaMan.tags[vaTagIndex()];b=sv;
+      for(const k in cur._tiles){const co=cur._tiles[k].coords;
+        const im=new Image();im.crossOrigin='anonymous';
+        im.src=t.base+'/v1/'+encodeURIComponent(t.run)+'/'+vaKey+'/'+tag+'/'+co.z+'/'+co.x+'/'+co.y+'.png';}
+    });
+  },500);
+}
+// Legend shares from the tiles actually on screen (no frame PNG needed).
+function vaTileShares(){
+  const zin=map.getZoom()>=VA_HI_Z,S=zin?vaSrv:vaOvT;
+  const l=S.cur;if(!S.ready||!l||!l._tiles)return null;
+  const leg=(vaMan.layers[vaKey]||{}).legend||{},lut=new Map();
+  for(const k in leg){const c=leg[k]&&leg[k][1];if(c)lut.set((c[0]<<16)|(c[1]<<8)|c[2],+k);}
+  if(!vaScr)vaScr=document.createElement('canvas');
+  const N=32,cv=vaScr;cv.width=N;cv.height=N;const cx=cv.getContext('2d',{willReadFrequently:true});
+  cx.imageSmoothingEnabled=false;
+  const vb=map.getBounds(),cnt={};let tot=0;
+  for(const k in l._tiles){const tl=l._tiles[k];if(!tl.loaded||!tl.el)continue;
+    let tb;try{tb=l._tileCoordsToBounds(tl.coords);}catch(e){continue;}
+    if(!vb.intersects(tb))continue;
+    try{cx.clearRect(0,0,N,N);cx.drawImage(tl.el,0,0,N,N);}catch(e){continue;}
+    let d;try{d=cx.getImageData(0,0,N,N).data;}catch(e){return null;}
+    for(let i=0;i<d.length;i+=4){if(d[i+3]<8)continue;const v=lut.get((d[i]<<16)|(d[i+1]<<8)|d[i+2]);if(v){cnt[v]=(cnt[v]||0)+1;tot++;}}
+  }
+  cv.width=1;cv.height=1;
+  return {tot,cnt};
+}
 function vaSyncOpacity(){
   if(!ovOn.variantA)return;
+  if(vaTilesActive()){
+    // server tiles: the sharp layer from zoom 10, the overview below; the
+    // frame PNG only until one of them is there
+    const zin=map.getZoom()>=VA_HI_Z,cov=zin?vaSrv.ready:vaOvT.ready,op=vaOpacity();
+    if(vaOv){try{vaOv.setOpacity(cov?0:op);}catch(e){}}
+    if(vaSrv.cur&&vaSrv.ready)try{vaSrv.cur.setOpacity(op);}catch(e){}
+    if(vaOvT.cur&&vaOvT.ready)try{vaOvT.cur.setOpacity(op);}catch(e){}
+    if(vaHi){try{vaHi.setOpacity(0);}catch(e){}}
+    return;
+  }
   const hi=vaHiCovers();
   if(vaOv){try{vaOv.setOpacity(hi?0:vaOpacity());}catch(e){}}
   if(vaHi){try{vaHi.setOpacity(vaOpacity());}catch(e){}}
@@ -5149,6 +5273,13 @@ function vaHiSyncSoon(){clearTimeout(vaHiTimer);vaHiTimer=setTimeout(vaHiSync,VA
 function vaRefresh(){
   if(!vaOv||!ovOn.variantA||!vaAvailable())return;
   vaPtsSync();       // the profile index (with the points) may arrive after the layer
+  if(vaTilesSync()){
+    // the frame PNG only as a stand-in until the overview tiles are up
+    if(!vaOvT.ready){const u=vaFrameUrl(vaKey,vaTagIndex());
+      if(u&&u!==vaOvWant){vaOvWant=u;if(u!==vaOv._url)vaOvLoad(u,false);}}
+    vaSyncOpacity();
+    return;
+  }
   const u=vaFrameUrl(vaKey,vaTagIndex());
   if(u&&u!==vaOvWant){vaOvWant=u;if(u!==vaOv._url)vaOvLoad(u,false);}
   vaSyncOpacity();
@@ -5232,6 +5363,7 @@ function vaStepTime(d){
 function vaPickLayer(k){
   if(!vaAvailable()||!vaMan.layers[k])return;
   vaKey=k;
+  if(vaTilesSync()){vaSyncOpacity();ovRender();return;}
   if(vaOv){const u=vaFrameUrl(k,vaTagIndex());if(u){vaOvWant=u;vaOvLoad(u,false);}}
   vaHiRepaint();
   ovRender();
@@ -5338,6 +5470,7 @@ async function vaHistLoad(u){
 }
 // Share of each class inside the current map view (a sample of ~40k px).
 function vaViewShares(){
+  if(vaTilesActive()){const t=vaTileShares();if(t)return t;}
   if(!vaHist||!vaMan||!map)return null;
   const B=vaMan.bounds,s=B[0][0],w=B[0][1],n=B[1][0],e=B[1][1],vb=map.getBounds();
   const r0=Math.max(0,Math.floor((n-vb.getNorth())/(n-s)*vaHist.h)),r1=Math.min(vaHist.h,Math.ceil((n-vb.getSouth())/(n-s)*vaHist.h));
