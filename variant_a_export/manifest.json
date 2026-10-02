@@ -958,5 +958,21 @@
       "IMIS: no station comparison"
     ],
     "run_success": 0.9998
+  },
+  "tiles": {
+    "base": "https://snowmapper-tiles.giani-morf.workers.dev",
+    "run": "demo-37061757056",
+    "views": [
+      "density",
+      "ski18"
+    ],
+    "zmin": 10,
+    "zmax": 12,
+    "overview": {
+      "zmin": 5,
+      "zmax": 9
+    },
+    "on_demand": false,
+    "sharp": {}
   }
 }
