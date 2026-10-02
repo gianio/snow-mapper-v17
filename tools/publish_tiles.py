@@ -41,10 +41,14 @@ def settings():
             "AWS": {"AWS_ACCESS_KEY_ID": key, "AWS_SECRET_ACCESS_KEY": sec, "AWS_DEFAULT_REGION": "auto"}}, missing
 
 
-def tiles_block(man, base, run):
+def tiles_block(man, base, run, sharp=None, on_demand=False):
+    """on_demand: the Worker may render missing tiles (Workers Paid). Without
+    it the app asks the service only for the frames in `sharp` (pre-rendered
+    in CI) and renders every other zoomed-in frame on the device."""
     views = [v for v in ("ski6", "wind", "density", "ski18") if v in man.get("layers", {})]
     return {"base": base, "run": str(run), "views": views, "zmin": 10, "zmax": 12,
-            "overview": {"zmin": 5, "zmax": 9}}
+            "overview": {"zmin": 5, "zmax": 9}, "on_demand": bool(on_demand),
+            "sharp": sharp or {}}
 
 
 def main():
@@ -62,7 +66,15 @@ def main():
     n = make_overview_pmtiles.build(exp, ov)
     print(f"tiles: {n} overview archives")
     dest = f"s3://{env['BUCKET']}/runs/{run}"
-    for sub, src in (("pack", exp / "pack"), ("terrain", exp / "terrain"), ("overview", ov)):
+    # pre-rendered sharp tiles (tiles/worker/prerender.mjs), if any
+    cache = Path(os.environ["TILES_CACHE_DIR"]) if os.environ.get("TILES_CACHE_DIR") else None
+    sharp = {}
+    if cache and (cache / "sharp.json").exists():
+        sharp = json.loads((cache / "sharp.json").read_text())
+    for sub, src in (("pack", exp / "pack"), ("terrain", exp / "terrain"), ("overview", ov),
+                     ("cache", cache if sharp else None)):
+        if src is None:
+            continue
         if src.is_dir():
             _aws(["sync", str(src), f"{dest}/{sub}"], env)
             print(f"tiles: uploaded {sub}/")
@@ -79,7 +91,8 @@ def main():
             print(f"tiles: removed old run {old}")
     except subprocess.CalledProcessError as e:
         print(f"tiles: cleanup skipped ({e.stderr.strip()[:200]})")
-    man["tiles"] = tiles_block(man, env["BASE"], run)
+    on_demand = os.environ.get("TILES_ON_DEMAND", "").strip().lower() in ("1", "true", "yes")
+    man["tiles"] = tiles_block(man, env["BASE"], run, sharp, on_demand)
     man_f.write_text(json.dumps(man, indent=2))
     print(f"tiles: manifest -> {env['BASE']}/v1/{run}/...")
     return 0

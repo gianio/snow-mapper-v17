@@ -5055,7 +5055,7 @@ function vaHiStale(){return !!(vaMan&&vaHiTag!==vaMan.tags[vaTagIndex()]);}
 // Bring the device renderer to the frame the timeline wants.
 async function vaHiSync(){
   if(!ovOn.variantA||!vaAvailable())return;
-  if(vaTilesActive())return;     // the tile service draws it
+  if(vaSrvActive())return;     // the tile service draws it
   // Zoomed out the coarse frames are the whole layer: no pack decoding.
   if(!map||map.getZoom()<VA_HI_Z){vaSyncOpacity();vaPrefetchSoon();return;}
   if(!(await vaPkLoad()))return;
@@ -5146,10 +5146,19 @@ const vaOvT=vaSwap(key=>{
     maxZoom:VA_HI_Z-0.01,pane:'overlayPane',className:'va-ovt'});
 },()=>{vaSyncOpacity();try{miniLegendRender();}catch(e){}});
 function vaTilesActive(){return !!(vaTiles()&&vaTileView());}
+// Sharp tiles from the service for THIS frame? With on-demand rendering
+// (Workers Paid) always; otherwise only for the frames pre-rendered in CI
+// (tiles.sharp) -- every other zoomed-in frame is rendered on the device, so
+// the free plan never gets asked to render.
+function vaSrvActive(){
+  if(!vaTilesActive())return false;
+  const t=vaTiles();if(t.on_demand)return true;
+  const tags=(t.sharp||{})[vaKey];return !!(tags&&tags.indexOf(vaMan.tags[vaTagIndex()])>=0);
+}
 function vaTilesSync(){
   if(!vaTilesActive())return false;
   const key=vaKey+'|'+vaMan.tags[vaTagIndex()];
-  vaSrv.sync(key);
+  if(vaSrvActive())vaSrv.sync(key);else vaSrv.clear();
   if(!vaPmt)vaPmtLoad();else vaOvT.sync(key);
   return true;
 }
@@ -5168,8 +5177,11 @@ function vaSrvPrefetch(){
     const t=vaTiles(),cur=vaSrv.cur;if(!t||!cur||!cur._tiles)return;
     const al=vaAllowedIdx(),c=b-1;if(!al)return;
     const nx=al.find(i=>i>c),pv=[...al].reverse().find(i=>i<c);
+    const pre=(t.sharp||{})[vaKey]||[];
     [nx,pv].filter(i=>i!=null).forEach(i=>{
       const sv=b;b=i+1;const tag=vaMan.tags[vaTagIndex()];b=sv;
+      // without on-demand rendering only frames the service actually has
+      if(!t.on_demand&&pre.indexOf(tag)<0)return;
       for(const k in cur._tiles){const co=cur._tiles[k].coords;
         const im=new Image();im.crossOrigin='anonymous';
         im.src=t.base+'/v1/'+encodeURIComponent(t.run)+'/'+vaKey+'/'+tag+'/'+co.z+'/'+co.x+'/'+co.y+'.png';}
@@ -5178,7 +5190,8 @@ function vaSrvPrefetch(){
 }
 // Legend shares from the tiles actually on screen (no frame PNG needed).
 function vaTileShares(){
-  const zin=map.getZoom()>=VA_HI_Z,S=zin?vaSrv:vaOvT;
+  const zin=map.getZoom()>=VA_HI_Z;if(zin&&!vaSrvActive())return null;
+  const S=zin?vaSrv:vaOvT;
   const l=S.cur;if(!S.ready||!l||!l._tiles)return null;
   const leg=(vaMan.layers[vaKey]||{}).legend||{},lut=new Map();
   for(const k in leg){const c=leg[k]&&leg[k][1];if(c)lut.set((c[0]<<16)|(c[1]<<8)|c[2],+k);}
@@ -5199,13 +5212,15 @@ function vaTileShares(){
 function vaSyncOpacity(){
   if(!ovOn.variantA)return;
   if(vaTilesActive()){
-    // server tiles: the sharp layer from zoom 10, the overview below; the
-    // frame PNG only until one of them is there
-    const zin=map.getZoom()>=VA_HI_Z,cov=zin?vaSrv.ready:vaOvT.ready,op=vaOpacity();
+    // server tiles: the sharp layer from zoom 10 (or the device renderer for
+    // frames the service does not have), the overview below; the frame PNG
+    // only until one of them is there
+    const zin=map.getZoom()>=VA_HI_Z,srv=vaSrvActive(),op=vaOpacity();
+    const cov=zin?(srv?vaSrv.ready:vaHiCovers()):vaOvT.ready;
     if(vaOv){try{vaOv.setOpacity(cov?0:op);}catch(e){}}
     if(vaSrv.cur&&vaSrv.ready)try{vaSrv.cur.setOpacity(op);}catch(e){}
     if(vaOvT.cur&&vaOvT.ready)try{vaOvT.cur.setOpacity(op);}catch(e){}
-    if(vaHi){try{vaHi.setOpacity(0);}catch(e){}}
+    if(vaHi){try{vaHi.setOpacity(zin&&!srv?op:0);}catch(e){}}
     return;
   }
   const hi=vaHiCovers();
@@ -5274,10 +5289,13 @@ function vaRefresh(){
   if(!vaOv||!ovOn.variantA||!vaAvailable())return;
   vaPtsSync();       // the profile index (with the points) may arrive after the layer
   if(vaTilesSync()){
-    // the frame PNG only as a stand-in until the overview tiles are up
-    if(!vaOvT.ready){const u=vaFrameUrl(vaKey,vaTagIndex());
+    // the frame PNG as a stand-in until the overview tiles are up, and for
+    // the device renderer (fallback tiles, legend) on non-service frames
+    const srv=vaSrvActive();
+    if(!vaOvT.ready||!srv){const u=vaFrameUrl(vaKey,vaTagIndex());
       if(u&&u!==vaOvWant){vaOvWant=u;if(u!==vaOv._url)vaOvLoad(u,false);}}
     vaSyncOpacity();
+    if(!srv)vaHiSync();
     return;
   }
   const u=vaFrameUrl(vaKey,vaTagIndex());
