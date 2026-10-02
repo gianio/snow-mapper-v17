@@ -62,9 +62,17 @@ def settings():
     base = _clean(os.environ.get("TILES_BASE_URL", "")).rstrip("/")
     if base and not base.startswith("http"):
         base = "https://" + base
+    # The app asks the WORKER for /v1/<run>/...; a bucket address (r2.dev or
+    # the S3 endpoint) has no such paths and the app would get no tile.
+    if base and (".r2.dev" in base or "r2.cloudflarestorage.com" in base):
+        print("tiles: TILES_BASE_URL is the R2 bucket's address. It must be the Worker's address "
+              "(https://snowmapper-tiles.<your-subdomain>.workers.dev, shown at the end of the "
+              "'Tiles worker' deploy, or your own domain on the Worker).")
+        base = ""
     missing = [n for n, v in (("R2_ACCOUNT_ID or S3_ENDPOINT", ep), ("R2_ACCESS_KEY_ID", key),
                               ("R2_SECRET_ACCESS_KEY", sec), ("TILES_BASE_URL", base)) if not v]
-    return {"S3_ENDPOINT": ep, "BASE": base, "BUCKET": os.environ.get("R2_BUCKET", "snowmapper-tiles").strip(),
+    # an unset GitHub variable arrives as "" -- that means "the default" too
+    return {"S3_ENDPOINT": ep, "BASE": base, "BUCKET": _clean(os.environ.get("R2_BUCKET", "")) or "snowmapper-tiles",
             "KEEP": int(os.environ.get("TILES_KEEP_RUNS", "3") or 3),
             "AWS": {"AWS_ACCESS_KEY_ID": key, "AWS_SECRET_ACCESS_KEY": sec, "AWS_DEFAULT_REGION": "auto"}}, missing
 
