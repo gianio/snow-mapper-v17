@@ -17,7 +17,7 @@ for another provider), R2_BUCKET (default snowmapper-tiles), TILES_BASE_URL
 (the Worker's public URL). Missing settings -> exit 0 with a note.
 """
 from __future__ import annotations
-import json, os, subprocess, sys
+import json, os, re, subprocess, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -29,11 +29,39 @@ def _aws(args, env):
                           capture_output=True, text=True)
 
 
+def _clean(v):
+    """Secrets pasted with quotes, spaces or line breaks."""
+    return "".join((v or "").split()).strip("'\"")
+
+
+def account_id(raw):
+    """(id, problem). Accepts the bare 32-hex Account ID, or a pasted R2
+    endpoint / dashboard URL containing it. `problem` describes the value
+    WITHOUT echoing it (it is a secret and would be masked anyway)."""
+    v = _clean(raw)
+    if not v:
+        return "", None
+    m = re.search(r"([0-9a-fA-F]{32})", v)
+    if m and (len(v) == 32 or "cloudflare" in v or "/" in v):
+        return m.group(1).lower(), (None if len(v) == 32 else
+                                    "R2_ACCOUNT_ID held a URL -- used the 32-character account id inside it")
+    kind = ("looks like an API token" if len(v) > 32 else
+            "is shorter than an account id" if len(v) < 32 else "is not hexadecimal")
+    return "", (f"R2_ACCOUNT_ID {kind} ({len(v)} characters). It must be the 32-character Account ID "
+                "(Cloudflare dashboard -> R2 -> right-hand side 'Account ID'), not a token or key.")
+
+
 def settings():
-    acc = os.environ.get("R2_ACCOUNT_ID", "").strip()
-    ep = os.environ.get("S3_ENDPOINT", "").strip() or (f"https://{acc}.r2.cloudflarestorage.com" if acc else "")
-    key, sec = os.environ.get("R2_ACCESS_KEY_ID", "").strip(), os.environ.get("R2_SECRET_ACCESS_KEY", "").strip()
-    base = os.environ.get("TILES_BASE_URL", "").strip().rstrip("/")
+    acc, problem = account_id(os.environ.get("R2_ACCOUNT_ID", ""))
+    if problem:
+        print("tiles: " + problem)
+    ep = _clean(os.environ.get("S3_ENDPOINT", "")) or (f"https://{acc}.r2.cloudflarestorage.com" if acc else "")
+    if ep and not ep.startswith("http"):
+        ep = "https://" + ep
+    key, sec = _clean(os.environ.get("R2_ACCESS_KEY_ID", "")), _clean(os.environ.get("R2_SECRET_ACCESS_KEY", ""))
+    base = _clean(os.environ.get("TILES_BASE_URL", "")).rstrip("/")
+    if base and not base.startswith("http"):
+        base = "https://" + base
     missing = [n for n, v in (("R2_ACCOUNT_ID or S3_ENDPOINT", ep), ("R2_ACCESS_KEY_ID", key),
                               ("R2_SECRET_ACCESS_KEY", sec), ("TILES_BASE_URL", base)) if not v]
     return {"S3_ENDPOINT": ep, "BASE": base, "BUCKET": os.environ.get("R2_BUCKET", "snowmapper-tiles").strip(),

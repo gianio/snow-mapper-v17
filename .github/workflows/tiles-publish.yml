@@ -94,7 +94,7 @@ jobs:
           TILES_KEEP_RUNS: ${{ inputs.source == 'demo' && '2' || '3' }}
         run: |
           python tools/publish_tiles.py "$EXPORT" "$RUN"
-          python -c "import json;t=json.load(open('$EXPORT/manifest.json')).get('tiles');print(json.dumps(t)[:400] if t else 'NO tiles block');exit(0 if t else 1)"
+          python -c "import json;t=json.load(open('$EXPORT/manifest.json')).get('tiles');print(json.dumps(t)[:400] if t else 'NO tiles block -- see the tiles: lines above (secrets / upload)');exit(0 if t else 1)"
 
       # The deploy takes the newest va-live artifact: this one, with tiles.
       - name: Republish the live export with tiles

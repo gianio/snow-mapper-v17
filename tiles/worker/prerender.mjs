@@ -27,8 +27,12 @@ function pickTags() {
   const now = Date.now(), lo = ts[0], hi = ts[ts.length - 1];
   const anchor = now >= lo && now <= hi ? now : (lo + hi) / 2;
   const half = HOURS / 2 * 3600e3;
+  // same rule as the app's slider (vaAllowedIdx): only an hourly export is
+  // thinned to even hours; a 2 h export keeps its frames whatever the hour
+  let gap = 24;
+  for (let i = 1; i < ts.length; i++) { const g = (ts[i] - ts[i - 1]) / 3600e3; if (g > 0) gap = Math.min(gap, g); }
   return man.tags.filter((tag, i) => Math.abs(ts[i] - anchor) <= half
-    && new Date(ts[i]).getUTCHours() % STEP_H === 0);
+    && (gap >= STEP_H || new Date(ts[i]).getUTCHours() % STEP_H === 0));
 }
 // zoom 10-12 tiles touching non-transparent pixels of the frame overview PNG
 function tilesFor(view, tag) {
@@ -88,6 +92,7 @@ if (process.env.PRERENDER_CHILD) {
     sharp[view] = tags;
     for (const tag of tags) for (const [z, x, y] of tilesFor(view, tag)) jobs.push([view, tag, z, x, y]);
   }
+  if (!tags.length) { console.error('prerender: no frame in the window -- nothing to do'); process.exit(1); }
   console.log(`prerender: ${tags.length} frames (${tags[0]} .. ${tags[tags.length - 1]}), views ${Object.keys(sharp)}, ${jobs.length} tiles, ${PROCS} processes`);
   const t0 = Date.now();
   // group by terrain tile so each process reuses its decoded terrain
