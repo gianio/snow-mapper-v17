@@ -347,13 +347,22 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
             print(f"IMIS unavailable: {type(e).__name__}: {e}")
         _t["imis"] = _time.time() - _ts
 
+    # 1 km precipitation pattern (ICON-CH1 via OGD): new snow per cell
+    # scaled by how much more/less fell there than at its weather points.
+    from variant_a import precip as precip_mod
+    p_ratio, p_hist, p_summ = precip_mod.build(grid, wps, args.ogd_dir,
+                                               args.state_dir if args.live else None,
+                                               win, args.live)
+
     _ts = _time.time()
     W, cell_index = matrix.build_weights(grid, wps, runs, shade=shade)
-    frames = matrix.grid_frames(grid, runs, results, layer_ts, W, cell_index)
+    frames = matrix.grid_frames(grid, runs, results, layer_ts, W, cell_index,
+                                precip_ratio=p_ratio)
     extra = {
         "live": bool(args.live),
         "terrain": {"shade": shade is not None, "forest": bool(forest.any())},
         "validation": {"imis": summary, "stations": rows[:300]},
+        "precip_pattern": p_summ,
     }
     if args.live:
         extra["state"] = {"from": st["time"].strftime("%Y-%m-%dT%H:%M") if st else None,
@@ -363,7 +372,8 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
     out_dir, manifest = export.export_matrix(grid, frames, wps, runs, results, prof_ts,
                                              forcing_models=used, forest=forest,
                                              extra=extra)
-    export.export_pack(out_dir, runs, results, layer_ts, wps, grid, shade, METS)
+    export.export_pack(out_dir, runs, results, layer_ts, wps, grid, shade, METS,
+                       precip=p_ratio)
     manifest["pack"] = "pack/index.json"
     gate = gates.check(len(runs), results, runs, wps, len(layer_ts), len(manifest["tags"]),
                        manifest.get("_frame_stats", []), summary,
@@ -383,10 +393,16 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
           + "".join(f"\n    soft {x}" for x in gate["soft"]))
 
     if args.live:
+        hist_files = []
+        if p_hist is not None:
+            hp = config.WORK_DIR / "precip_hist" / precip_mod.HIST_FILE
+            precip_mod.save_history(hp.parent, p_hist)
+            hist_files.append(hp)
         meta = state_mod.save(args.state_out or args.state_dir, win[0], sno_src,
                               {"precip_factor": new_factors,
                                "cycle": int(((st or {}).get("meta") or {}).get("cycle", 0)) + 1,
-                               "imis": summary})
+                               "imis": summary},
+                              files=hist_files)
         print(f"  state saved: {meta['runs']} runs valid at {meta['time']}, cycle {meta['cycle']}")
 
     _t["total"] = _time.time() - _t0

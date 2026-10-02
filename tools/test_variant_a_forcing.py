@@ -907,6 +907,104 @@ def test_rate_limit_backoff():
         forcing.fetch_weather, forcing._RETRY_PAUSE_S = real_fw, real_pause
 
 
+def test_precip_pattern():
+    """1 km precipitation ratio: neutral where uniform, follows local excess,
+    history rolls, and both renderers get the same scaling."""
+    print("precipitation pattern")
+    from variant_a import precip, matrix, export, state as state_mod, subregions
+    g = _synth_grid(60, 60, 5)
+    wps = matrix.weather_points(g, spacing_km=5.0, min_top_m=1800.0)
+    valid = (g.tile > 0) & np.isfinite(g.elevation)
+    # a 1 km "ICON" mesh over the grid
+    xs = g.xll + np.arange(0, g.nc * g.cs, 1000.0) + 500.0
+    ys = g.yll + np.arange(0, g.nr * g.cs, 1000.0) + 500.0
+    ce, cn = [a.ravel() for a in np.meshgrid(xs, ys)]
+    R = precip.ratio_grid(g, wps, ce, cn, np.full(ce.shape, 20.0))
+    check("uniform precipitation -> no correction", np.allclose(R[valid], 1.0), f"{R[valid].min():.3f}")
+    # 3 km wet/dry stripes: finer than the weather points can resolve, which
+    # is exactly what the correction is for
+    wet_c = ((ce - g.xll) // 3000) % 2 == 0
+    P = np.where(wet_c, 40.0, 20.0)
+    R = precip.ratio_grid(g, wps, ce, cn, P)
+    gx = g.xll + (np.arange(g.nc) + 0.5) * g.cs
+    wet = valid & ((((gx - g.xll) // 3000) % 2 == 0)[None, :])
+    core = valid & (np.abs(((gx - g.xll) % 3000) - 1500) < 600)[None, :]
+    rw, rd = R[wet & core].mean(), R[~wet & valid & core].mean()
+    check("wet stripes get clearly more new snow than dry ones (x2 in the field)",
+          rw / rd > 1.6, f"{rw:.2f} / {rd:.2f}")
+    check("R stays within its limits", R.min() >= precip.R_MIN and R.max() <= precip.R_MAX)
+    R0 = precip.ratio_grid(g, wps, ce, cn, np.full(ce.shape, 1.0))
+    check("too little precipitation to judge -> no correction", np.allclose(R0[valid], 1.0))
+    # accumulation, history
+    ref = datetime(2026, 3, 30, 6)
+    lead = np.array([0, 3, 6, 9, 12], float)
+    acc = np.outer(lead, np.ones(4)).astype(np.float32)           # 1 mm/h everywhere
+    fld = {"lat": np.zeros(4), "lon": np.zeros(4), "lead": lead, "acc": acc, "ref": ref}
+    check("forecast sum interpolates between leads",
+          np.allclose(precip.forecast_sum(fld, ref + timedelta(hours=1.5), ref + timedelta(hours=7.5)), 6.0))
+    check("... and stops at the last lead",
+          np.allclose(precip.forecast_sum(fld, ref, ref + timedelta(days=3)), 12.0))
+    h = None
+    for k in range(30):                                          # 7.5 days of 6-hourly cycles
+        f2 = dict(fld, ref=ref + timedelta(hours=6 * k))
+        h = precip.update_history(h, f2)
+    check("history keeps only the last HIST_DAYS", len(h["times"]) == precip.HIST_DAYS * 4 + 1,
+          str(len(h["times"])))
+    f_now = dict(fld, ref=ref + timedelta(hours=6 * 30))
+    past, n = precip.past_sum(h, f_now, f_now["ref"] - timedelta(days=2))
+    check("past sum adds the cycles since `since`", n == 8 and np.allclose(past, 48.0), f"{n} {past[0]}")
+    check("a different mesh resets the history",
+          precip.past_sum(h, dict(f_now, lat=np.zeros(5)), ref)[1] == 0)
+    with tempfile.TemporaryDirectory() as td:
+        precip.save_history(Path(td) / "h", h)
+        h2 = precip.load_history(Path(td) / "h")
+        check("history survives a save/load", h2["n"] == 4 and len(h2["times"]) == len(h["times"]))
+        # the history travels inside the state tarball
+        (Path(td) / "sno").mkdir()
+        (Path(td) / "sno" / "x.sno").write_text("x")
+        state_mod.save(Path(td) / "st", datetime(2026, 3, 30), Path(td) / "sno", {},
+                       files=[Path(td) / "h" / precip.HIST_FILE])
+        import tarfile
+        names = tarfile.open(Path(td) / "st" / "state.tar.gz").getnames()
+        check("precip history is packed with the state", precip.HIST_FILE in names, str(names))
+        # pack raster: R*100, 255 where there is no correction
+        Rx = np.ones((g.nr, g.nc), np.float32); Rx[10, 10] = 1.5; Rx[11, 11] = 0.5
+        runs = matrix.matrix_runs(wps)
+        from variant_a.gridding import METS
+        res = {r["id"]: (np.zeros((1, len(METS)), np.float32), None, None, None) for r in runs}
+        pk = export.export_pack(Path(td) / "out", runs, res, [datetime(2026, 3, 30)], wps, g, None,
+                                METS, precip=Rx)
+        pr = np.asarray(Image.open(Path(td) / "out" / pk["precip"]["file"]))
+        check("precip raster: 150 / 50 where corrected, 255 elsewhere",
+              pr[10, 10] == 150 and pr[11, 11] == 50 and pr[0, 0] == 255)
+    # extractor -> file -> pipeline: the OGD side writes what precip.build reads
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import ogd_extract
+    from variant_a.subregions import lv03_to_wgs84
+    la, lo = lv03_to_wgs84(ce, cn)
+    leads = list(range(0, 34))
+    vals = np.outer(np.arange(34), np.where(wet_c, 2.0, 1.0))        # mm accumulated
+    with tempfile.TemporaryDirectory() as td:
+        ogd_extract.save_precip_field(td, "ch1", vals, leads, datetime(2026, 3, 30, 6),
+                                      np.asarray(la), np.asarray(lo))
+        fld = precip.load_field(td)
+        check("the extractor's field loads (3-hourly leads, all cells)",
+              fld is not None and len(fld["lead"]) == 12 and len(fld["lat"]) == len(ce))
+        Rb, hb, sm = precip.build(g, wps, td, None, (datetime(2026, 3, 25, 6),
+                                                    datetime(2026, 4, 4, 6)), live=False)
+        check("build() gives a ratio grid from it", Rb is not None and sm["used"]
+              and Rb[wet & core].mean() > Rb[~wet & valid & core].mean() * 1.5, str(sm))
+        Rn, _, sn = precip.build(g, wps, Path(td) / "nothing", None, (datetime(2026, 3, 25),
+                                                                    datetime(2026, 4, 4)), live=False)
+        check("no field -> no correction, no error", Rn is None and not sn["used"])
+    m = {"powder_depth_cm": np.full((2, 2), 20.0), "total_hs_cm": np.full((2, 2), 100.0)}
+    Ra = np.array([[1.5, 0.5], [1.0, 2.0]], np.float32)
+    m = precip.apply(m, Ra, np.array([[True, True], [True, False]]))
+    check("apply scales new snow and moves HS by the same amount",
+          np.allclose(m["powder_depth_cm"], [[30, 10], [20, 20]])
+          and np.allclose(m["total_hs_cm"], [[110, 90], [100, 100]]))
+
+
 if __name__ == "__main__":
     for t in (test_forcing_starts_before_profile_date, test_covers_rejects_a_stale_smet,
               test_ini, test_timestamp_window, test_prof_start_derivation,
@@ -919,7 +1017,7 @@ if __name__ == "__main__":
               test_sno_base_is_real_snow, test_wgs84_map_matches_rasterio,
               test_state_roundtrip, test_wind_indices, test_terrain_shading,
               test_imis_correction, test_gates, test_classifier_fixes, test_pack_roundtrip,
-              test_rate_limit_backoff):
+              test_rate_limit_backoff, test_precip_pattern):
         t()
     print("\nVARIANT A PIPELINE " + ("OK" if not FAILS else f"FAILED: {FAILS}"))
     sys.exit(1 if FAILS else 0)

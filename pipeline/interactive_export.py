@@ -4531,7 +4531,7 @@ function vaHiEngine(){
             200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p];
   }
   E.wgs2lv03=wgs2lv03;
-  E.init=function(pk,shade,forest){
+  E.init=function(pk,shade,forest,precip){
     E.pk=pk;E.nm=pk.mets.length;E.mi={};
     pk.mets.forEach(function(m,i){E.mi[m]=i;});
     E.wps=pk.wps.map(function(w){var en=(w.e&&w.n)?[w.e,w.n]:wgs2lv03(w.lat,w.lon);
@@ -4543,7 +4543,7 @@ function vaHiEngine(){
       var j=r[0],b=r[1],sc=r[2],ak=r[3],base=off[j]+(b*ns+sc)*na;
       if(sc===0){for(var k=0;k<na;k++)lut[base+k]=ri;}else lut[base+ak]=ri;
     });
-    E.lut=lut;E.lutOff=off;E.shade=shade||null;E.forest=forest||null;
+    E.lut=lut;E.lutOff=off;E.shade=shade||null;E.forest=forest||null;E.precip=precip||null;
     E.gatedIdx=(pk.gated||[]).map(function(m){return E.mi[m];});
   };
   E.setFrame=function(vals,ok){E.vals=vals;E.ok=ok;};
@@ -4698,6 +4698,15 @@ function vaHiEngine(){
     }
     return sw>1e-6?sv/sw:-1;
   };
+  // 1 km precipitation pattern (variant_a/precip.py): new snow scaled by how
+  // much more or less fell here than at the weather points. Same rule as
+  // precip.apply() for the coarse frames; 255 in the raster = no correction.
+  E.adjPrecip=function(m,e,n){
+    if(!E.precip||!E.pk.precip)return;
+    var v=E.gridBil(E.precip,e,n,E.pk.precip.cs);if(!(v>0))return;
+    var R=v/100,x=E.mi,pd=m[x.powder_depth_cm];
+    m[x.total_hs_cm]=Math.max(0,m[x.total_hs_cm]+(R-1)*pd);m[x.powder_depth_cm]=pd*R;
+  };
   // Terrain tile (Terrarium PNG bytes) -> elevation, slope, aspect.
   E.terrain=function(key,bytes,z,y){
     var t=E.terr.get(key);if(t)return t;
@@ -4737,6 +4746,7 @@ function vaHiEngine(){
         if(sb<0||sb===255)continue;
         sb=E.gridBil(E.shade,en[0],en[1]);if(sb<0)continue;
         if(!E.evalAt(en[0],en[1],T.el[ti],T.sl[ti],T.as[ti],sb/254,cand,m,mets))continue;
+        E.adjPrecip(m,en[0],en[1]);
         E.color(q.layer,m,col);
         if(!col[3])continue;
         var a=col[3];
@@ -4791,16 +4801,17 @@ async function vaPkLoad(){
     const pk=await r.json();
     const sh=vaGray(await vaImgBytes(VA_BASE+'/'+pk.shade));
     let fo=null;if(pk.forest){try{fo=vaGray(await vaImgBytes(VA_BASE+'/'+pk.forest.file));}catch(e){}}
-    const eng=vaHiEngine();eng.init(pk,sh,fo);
-    vaEng=eng;vaPk=pk;vaHiWorkerInit(pk,sh,fo);
+    let pr=null;if(pk.precip){try{pr=vaGray(await vaImgBytes(VA_BASE+'/'+pk.precip.file));}catch(e){}}
+    const eng=vaHiEngine();eng.init(pk,sh,fo,pr);
+    vaEng=eng;vaPk=pk;vaHiWorkerInit(pk,sh,fo,pr);
   }catch(e){vaPk=null;}
   return vaPk;
 }
-function vaHiWorkerInit(pk,sh,fo){
+function vaHiWorkerInit(pk,sh,fo,pr){
   if(vaHiW||typeof Worker==='undefined'||typeof Blob==='undefined')return;
   try{
     const src='var E=('+vaHiEngine.toString()+')();onmessage=function(ev){var d=ev.data;'
-      +'if(d.t==="init")E.init(d.pk,d.sh,d.fo);else if(d.t==="frame")E.setFrame(d.vals,d.ok);'
+      +'if(d.t==="init")E.init(d.pk,d.sh,d.fo,d.pr);else if(d.t==="frame")E.setFrame(d.vals,d.ok);'
       +'else if(d.t==="render"){try{var o=E.render(d.q);postMessage({id:d.id,px:o},[o.buffer]);}'
       +'catch(e){postMessage({id:d.id,px:null,err:String(e&&e.message||e)});}}};';
     const w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
@@ -4808,7 +4819,7 @@ function vaHiWorkerInit(pk,sh,fo){
     // A dead worker must not leave tiles waiting forever: resolve what is
     // pending (empty) and let the main thread take over.
     w.onerror=()=>{vaHiW=null;for(const k in vaHiCb){const cb=vaHiCb[k];delete vaHiCb[k];cb(null);}};
-    w.postMessage({t:'init',pk,sh,fo});
+    w.postMessage({t:'init',pk,sh,fo,pr});
     vaHiW=w;
   }catch(e){vaHiW=null;}
 }
@@ -4884,9 +4895,13 @@ function vaHiFallback(t,c,S){
 }
 // Paint (or re-paint) one tile canvas. The old picture stays until the new
 // one is ready, and a stale render never overwrites a newer one.
+let vaHiPend=0;
 function vaHiPaint(t,done,tries){
   const c=t._vaC,S=t.width,gen=t._vaGen=(t._vaGen||0)+1;
-  const fin=()=>{if(done){const d=done;done=null;d(null,t);}};
+  vaHiPend++;
+  let ended=false;
+  const fin=()=>{if(!ended){ended=true;vaHiPend=Math.max(0,vaHiPend-1);if(!vaHiPend)vaSyncOpacity();}
+    if(done){const d=done;done=null;d(null,t);}};
   // A fallback tile tries again a little later, so a passing network hiccup
   // does not leave a coarse patch in the sharp layer for good.
   const fb=()=>{vaHiFallback(t,c,S);
@@ -4908,7 +4923,9 @@ let vaHiReady=false;
 function vaHiMake(){
   if(vaHi||typeof L==='undefined'||!L.GridLayer)return vaHi;
   const Lyr=L.GridLayer.extend({createTile:function(c,done){
-    const t=document.createElement('canvas'),S=c.z>=13?128:256;t.width=S;t.height=S;
+    // 128 px canvases shown at 256 px: ~4x less to compute per tile, and the
+    // terrain under them is ~30 m anyway, so the picture loses next to nothing.
+    const t=document.createElement('canvas'),S=128;t.width=S;t.height=S;
     t._vaC={x:c.x,y:c.y,z:c.z};vaHiPaint(t,done);
     return t;
   }});
@@ -4925,10 +4942,15 @@ function vaHiActive(){
   return !!(vaHi&&vaPk&&vaHiTag&&map&&map.getZoom&&map.getZoom()>=VA_HI_Z);
 }
 // Fine tiles are showing and complete, so the coarse frame can step aside.
-function vaHiCovers(){return vaHiActive()&&vaHiReady&&!!(vaGrp&&vaGrp.hasLayer(vaHi));}
+function vaHiCovers(){return vaHiActive()&&vaHiReady&&!vaHiPend&&!vaHiStale()&&!!(vaGrp&&vaGrp.hasLayer(vaHi));}
+// The sharp tiles show another time than the slider (mid-drag, before the
+// idle redraw): then they are hidden and the coarse frame stands in.
+function vaHiStale(){return !!(vaMan&&vaHiTag!==vaMan.tags[vaTagIndex()]);}
 // Bring the device renderer to the frame the timeline wants.
 async function vaHiSync(){
   if(!ovOn.variantA||!vaAvailable())return;
+  // Zoomed out the coarse frames are the whole layer: no pack decoding.
+  if(!map||map.getZoom()<VA_HI_Z){vaSyncOpacity();vaPrefetchSoon();return;}
   if(!(await vaPkLoad()))return;
   const tag=vaMan.tags[vaTagIndex()];
   if(tag===vaHiTag){vaSyncOpacity();return;}
@@ -4946,18 +4968,21 @@ async function vaHiSync(){
   try{
     vaEng.setFrame(f.vals,f.ok);
     if(vaHiW)vaHiW.postMessage({t:'frame',vals:f.vals,ok:f.ok});
-    const first=vaHiTag===null;
     vaHiTag=tag;
-    if(vaGrp&&!vaGrp.hasLayer(vaHiMake()))vaGrp.addLayer(vaHi);
-    if(first)vaHi.redraw();else vaHiRepaint();
+    // First time: adding the layer builds its tiles. Never redraw(): in
+    // Leaflet 1.9 it takes the UNROUNDED map zoom as tile zoom, so at zoom
+    // 11.5 it asked for terrain tile 11.5/x/y, which does not exist -- the
+    // sharp layer then stayed empty until the next zoom step.
+    if(vaGrp&&!vaGrp.hasLayer(vaHiMake()))vaGrp.addLayer(vaHi);else vaHiRepaint();
   }catch(e){}
   vaSyncOpacity();
+  vaPrefetchSoon();
 }
 function vaSyncOpacity(){
   if(!ovOn.variantA)return;
   const hi=vaHiCovers();
   if(vaOv){try{vaOv.setOpacity(hi?0:vaOpacity());}catch(e){}}
-  if(vaHi){try{vaHi.setOpacity(vaOpacity());}catch(e){}}
+  if(vaHi){try{vaHi.setOpacity(vaHiStale()?0:vaOpacity());}catch(e){}}
 }
 function vaBuildLayer(){
   if(!vaAvailable())return null;
@@ -4989,12 +5014,33 @@ function vaOvLoad(u,retry){
     if(vaOvWant===u&&!retry)setTimeout(()=>{if(vaOvWant===u)vaOvLoad(u,true);},800);else next();};
   im.src=u;
 }
+// While the slider or the map is moving, only the coarse frame follows (it
+// is one image, ready almost at once). The sharp device-rendered tiles cost
+// ~0.5 s each on a phone and are only redrawn once things stand still --
+// re-rendering 20 tiles on every step was the lag.
+let vaHiTimer=0;
+const VA_HI_IDLE_MS=300;
+function vaHiSyncSoon(){clearTimeout(vaHiTimer);vaHiTimer=setTimeout(vaHiSync,VA_HI_IDLE_MS);}
 function vaRefresh(){
   if(!vaOv||!ovOn.variantA||!vaAvailable())return;
   const u=vaFrameUrl(vaKey,vaTagIndex());
   if(u&&u!==vaOvWant){vaOvWant=u;if(u!==vaOv._url)vaOvLoad(u,false);}
   vaSyncOpacity();
-  vaHiSync();
+  vaHiSyncSoon();
+}
+// Once settled, quietly fetch the neighbouring frames so the next step of
+// the slider is already in the browser cache (and, zoomed in, decoded).
+let vaPreTimer=0;
+function vaPrefetchSoon(){
+  clearTimeout(vaPreTimer);
+  vaPreTimer=setTimeout(()=>{
+    if(!ovOn.variantA||!vaAvailable())return;
+    const i=vaTagIndex(),n=vaMan.tags.length;
+    [i+1,i-1].filter(j=>j>=0&&j<n).forEach(j=>{
+      const u=vaFrameUrl(vaKey,j);if(u){const im=new Image();im.src=u;}
+      if(vaPk&&map.getZoom()>=VA_HI_Z)vaPkFrame(vaMan.tags[j]).catch(()=>{});
+    });
+  },900);
 }
 function vaPickLayer(k){
   if(!vaAvailable()||!vaMan.layers[k])return;
@@ -5011,6 +5057,7 @@ function vaPointHTML(lat,lon,elev,slope,aspect){
   if(sb<0||sb===255)return '';
   const m=new Float64Array(vaEng.nm);
   if(!vaEng.evalAt(en[0],en[1],elev,slope||0,aspect||0,sb/254,vaEng.candidates(en[0],en[1],60000),m))return '';
+  vaEng.adjPrecip(m,en[0],en[1]);
   const x=vaEng.mi,Ls=vaMan.layers,ski=vaEng.clsSki(m),sim=vaEng.clsSimple(m);
   const nm=(k,i)=>{const e=Ls[k]&&Ls[k].legend&&Ls[k].legend[i];return e?(e[2]||String(e[0]).replace(/_/g,' ')):'';};
   const fo=vaEng.forest?vaEng.gridAt(vaEng.forest,en[0],en[1],vaPk.forest.cs):0;
@@ -7275,7 +7322,7 @@ function inspClose(){document.getElementById('inspPanel').classList.remove('open
 // Tapping the sliver of map that stays visible beside an open feed is a
 // dismiss, not a probe -- the point inspector would fight the panel for
 // the same screen space, so it is skipped while the feed is open.
-map.on('zoomend',function(){vaSyncOpacity();});
+map.on('zoomend',function(){vaSyncOpacity();if(ovOn.variantA)vaHiSyncSoon();});
 // The legend lists what is in view, so it follows the view.
 map.on('moveend',function(){if(vaLegendUp()){try{miniLegendRender();}catch(e){}}});
 map.on('click',function(e){

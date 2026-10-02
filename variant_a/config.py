@@ -85,7 +85,10 @@ MATRIX_ELEV_MIN = 1200.0
 MATRIX_ELEV_MAX = 3300.0
 MATRIX_ELEV_STEP = 300.0           # up to 8 bands ...
 MATRIX_ASPECTS = 8                 # ... x 8 aspects: the 8x8
-MATRIX_SLOPES = (20.0, 38.0)       # moderate and steep; plus one flat run per band
+# moderate, steep and very steep; plus one flat run per band. Without the
+# 45 deg node everything steeper than 38 deg was read as 38 deg, so couloirs
+# and steep north faces got too much snow and too little sun.
+MATRIX_SLOPES = (20.0, 38.0, 45.0)
 MATRIX_NEIGHBOURS = 3              # weather points blended per grid cell (IDW)
 
 # Temperature lapse from a weather point's reference elevation to each run.

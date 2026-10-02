@@ -66,7 +66,7 @@ def available(st, run_ids, window_start):
     return {r for r in run_ids if r in have}
 
 
-def save(state_dir: Path, time: datetime, sno_dir: Path, meta_extra=None, pack=True):
+def save(state_dir: Path, time: datetime, sno_dir: Path, meta_extra=None, pack=True, files=()):
     """Write the new state. `sno_dir` holds <run_id>.sno valid at `time`."""
     state_dir = Path(state_dir)
     if state_dir.exists():
@@ -80,8 +80,17 @@ def save(state_dir: Path, time: datetime, sno_dir: Path, meta_extra=None, pack=T
             "saved": datetime.utcnow().strftime(ISO)}
     meta.update(meta_extra or {})
     (state_dir / "meta.json").write_text(json.dumps(meta, indent=1))
+    # side files that travel with the state (e.g. precip_hist.npz)
+    extra = []
+    for f in files or ():
+        f = Path(f)
+        if f.exists():
+            shutil.copy2(f, state_dir / f.name)
+            extra.append(f.name)
     if pack:
         with tarfile.open(state_dir / "state.tar.gz", "w:gz") as tf:
             tf.add(state_dir / "meta.json", arcname="meta.json")
             tf.add(state_dir / "sno", arcname="sno")
+            for name in extra:
+                tf.add(state_dir / name, arcname=name)
     return meta
