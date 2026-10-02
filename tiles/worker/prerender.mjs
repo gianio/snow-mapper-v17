@@ -11,6 +11,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fork, execFileSync } from 'node:child_process';
+import net from 'node:net';
 import { decode } from 'fast-png';
 import { createRenderer, ZMIN, ZMAX } from './src/render.js';
 
@@ -19,6 +20,8 @@ const opt = (k, d) => { const i = args.indexOf('--' + k); return i >= 0 ? args[i
 const [EXP, OUT] = args;
 const VIEWS = opt('views', 'ski6').split(',').filter(Boolean);
 const HOURS = +opt('hours', '24'), PROCS = +opt('procs', '4'), STEP_H = 2;
+
+net.setDefaultAutoSelectFamilyAttemptTimeout?.(2000);
 
 const man = JSON.parse(readFileSync(join(EXP, 'manifest.json'), 'utf8'));
 
@@ -55,19 +58,36 @@ function tilesFor(view, tag) {
   return [...set].map(s => s.split('/').map(Number));
 }
 
+let fetchFailNoted = false;
 async function work(jobs) {
   const bucketGet = async (key) => {
     const rel = key.replace(/^runs\/[^/]+\//, '');
     const f = join(EXP, rel);
     return existsSync(f) ? readFileSync(f) : null;
   };
+  // Node's fetch fails now and then on a runner ("fetch failed": a reset or
+  // a connect timeout -- s3.amazonaws.com answers on many addresses and
+  // Node gives each only 250 ms). Retry, then fall back to curl, so a
+  // transient error does not leave a hole in the pre-rendered tiles.
+  const curl = (u) => execFileSync('curl', ['-sfL', '--retry', '3', '--retry-all-errors', '-m', '30', u]);
   const fetchTerrain = async (key) => {
     const u = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/' + key + '.png';
-    if (process.env.TERRAIN_CURL) return execFileSync('curl', ['-sf', '-m', '30', u]);
-    const r = await fetch(u); if (!r.ok) throw new Error('terrain ' + r.status); return r.arrayBuffer();
+    if (process.env.TERRAIN_CURL) return curl(u);
+    let err;
+    for (let a = 0; a < 3; a++) {
+      try {
+        const r = await fetch(u, { signal: AbortSignal.timeout(30000) });
+        if (r.ok) return r.arrayBuffer();
+        err = new Error('terrain HTTP ' + r.status);
+        if (r.status === 404) throw err;
+      } catch (e) { err = e; if (String(e.message).includes('HTTP 404')) throw e; }
+      await new Promise(ok => setTimeout(ok, 500 * 2 ** a));
+    }
+    if (!fetchFailNoted) { fetchFailNoted = true; console.error(`  terrain fetch: ${err.message}${err.cause ? ' (' + (err.cause.code || err.cause.message) + ')' : ''} -- using curl`); }
+    return curl(u);
   };
   const R = createRenderer({ getObject: bucketGet, fetchTerrain });
-  let n = 0, empty = 0;
+  let n = 0, empty = 0, failed = 0;
   for (const [view, tag, z, x, y] of jobs) {
     const dir = join(OUT, view, tag, String(z), String(x));
     const out = join(dir, y + '.png');
@@ -77,9 +97,9 @@ async function work(jobs) {
       mkdirSync(dir, { recursive: true });
       writeFileSync(out, png);
       n++; if (!painted) empty++;
-    } catch (e) { console.error(`  ${view} ${tag} ${z}/${x}/${y}: ${e.message}`); }
+    } catch (e) { failed++; if (failed <= 20) console.error(`  ${view} ${tag} ${z}/${x}/${y}: ${e.message}${e.cause ? ' (' + (e.cause.code || e.cause.message) + ')' : ''}`); }
   }
-  return { n, empty };
+  return { n, empty, failed };
 }
 
 if (process.env.PRERENDER_CHILD) {
@@ -100,12 +120,16 @@ if (process.env.PRERENDER_CHILD) {
   const parts = Array.from({ length: PROCS }, () => []);
   jobs.forEach((j, i) => parts[Math.floor(i * PROCS / jobs.length)].push(j));
   const res = await Promise.all(parts.map(p => new Promise((ok) => {
-    if (!p.length) return ok({ n: 0, empty: 0 });
+    if (!p.length) return ok({ n: 0, empty: 0, failed: 0 });
     const ch = fork(new URL(import.meta.url).pathname, args, { env: { ...process.env, PRERENDER_CHILD: '1' } });
     ch.on('message', ok); ch.send(p);
   })));
-  const n = res.reduce((s, r) => s + r.n, 0), empty = res.reduce((s, r) => s + r.empty, 0);
+  const n = res.reduce((s, r) => s + r.n, 0), empty = res.reduce((s, r) => s + r.empty, 0),
+        failed = res.reduce((s, r) => s + r.failed, 0);
   mkdirSync(OUT, { recursive: true });
   writeFileSync(join(OUT, 'sharp.json'), JSON.stringify(sharp));
-  console.log(`prerender: ${n} tiles written (${empty} empty) in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  console.log(`prerender: ${n} tiles written (${empty} empty, ${failed} failed) in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  // Frames with holes would show blank squares: the app asks the service
+  // for every tile of a "sharp" frame. Too many failures -> stop here.
+  if (failed > jobs.length * 0.01) { console.error(`prerender: ${failed} of ${jobs.length} tiles failed -- not publishing them`); process.exit(1); }
 }

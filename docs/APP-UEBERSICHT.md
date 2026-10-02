@@ -39,11 +39,12 @@ voraus.
 ```
             GitHub Actions (Server-Seite, kein eigener Server)
  ┌─────────────────────────────────────────────────────────────────────┐
- │ deploy.yml           Python-Pipeline → App-Shell + Datenblob        │
+ │ deploy.yml           nach Merge / von Hand: App-Shell + Datenblob   │
  │                      (Wetter, Gelände, Stationen, Bulletin, Routen) │
  │ variant-a-live.yml   alle 6 h: SNOWPACK-Matrix → Frames + Packs     │
  │                      Zustand (Schneedecke) als Artefakt weitergeben │
  │ variant-a.yml        Demo-/Testläufe (fixes Datum)                  │
+ │ cloudflare.yml       nur von Hand: Worker-Deploy + Kacheln nach R2  │
  │ validate.yml         Tests (Python + JS), Parität Engine↔Pipeline   │
  └───────────────┬─────────────────────────────────────────────────────┘
                  │ statische Dateien
@@ -221,7 +222,9 @@ das Archiv. Pro Stunde wird das feinste verfügbare Modell genommen.
 
 - **Hosting:** GitHub Pages (statisch, Limit ~1 GB Seite, ~100 GB/Monat Traffic).
 - **Rechnen:** GitHub Actions (öffentliches Repo: Minuten gratis). Ein
-  Live-Lauf dauert ~45 min, viermal täglich.
+  Live-Lauf dauert ~45 min, viermal täglich. Die Seite wird nur nach einem
+  Merge (oder von Hand / nach einem Cloudflare-Lauf) neu gebaut; ein neuer
+  Live-Lauf erscheint in der App also erst beim nächsten Deploy.
 - **Daten:** Supabase (EU-Region), Gratis- oder Pro-Plan.
 - **Kein eigener Server.** Zustand und Exporte liegen als Actions-Artefakte.
 

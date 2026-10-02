@@ -167,23 +167,6 @@ jobs:
           retention-days: 7
           compression-level: 0
 
-      # Tile service (Cloudflare R2 + Worker, tiles/worker): overview
-      # PMTiles + what the Worker renders sharp tiles from. Skipped without
-      # the secrets; then the app keeps rendering on the device.
-      - name: Publish tiles to R2 (gates passed, full run only)
-        # automatic only when you opt in (repository variable TILES_AUTO=true);
-        # otherwise run the "Tiles publish" workflow by hand
-        if: steps.cycle.outputs.rc == '0' && inputs.limit == '' && vars.TILES_AUTO == 'true'
-        env:
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET: ${{ vars.R2_BUCKET }}
-          TILES_BASE_URL: ${{ vars.TILES_BASE_URL }}
-        run: |
-          pip install -q "pmtiles>=3.5"
-          python tools/publish_tiles.py outputs/variant_a "live-${{ github.run_id }}"
-
       # Only a full cycle is publishable: a --limit smoke run must never end
       # up in the app (the deploy takes the newest va-live).
       - name: Upload the export (gates passed, full run only)
