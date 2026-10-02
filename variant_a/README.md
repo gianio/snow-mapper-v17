@@ -97,6 +97,24 @@ which `tools/ogd_extract.py` saves as `precip_ch1.npz`; past days come from
 the first 6 h of earlier cycles, kept in the live state as
 `precip_hist.npz`. Without a field (demo, archive dates) nothing is scaled.
 
+### Temperature at the height of each band
+
+Each virtual slope runs at its band's height, not at the weather point's.
+How its temperature gets there, best first:
+
+1. **ICON-CH1 cells at that height** (live, forecast hours; `elevtemp.py`):
+   within 10 km of the weather point, the up-to-3 cells whose model terrain
+   (HSURF, or our DEM smoothed to ~1 km) lies within 150 m of the band; their
+   2 m temperature, with the few metres left bridged by the profile below.
+   `tools/ogd_extract.py` saves the field (`t2m_ch1.npz`).
+2. **The model's vertical profile, hour by hour** (all runs; `forcing._profile_dT`):
+   850/700/500 hPa temperature and height from Open-Meteo (from ICON seamless
+   when the surface model has no pressure levels), piecewise linear in height,
+   lapse clipped to -9.8 .. +15 K/km. Catches inversions and warm air aloft.
+3. **Fixed -6.5 K/km** for hours with neither.
+
+The run log prints the share of run-hours from each source.
+
 ### Checking the model against reality
 
 * **IMIS stations (used):** the SLF measurement API gives the station snow heights behind

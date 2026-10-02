@@ -17,6 +17,12 @@ from . import config
 
 _VARS = ["temperature_2m", "relative_humidity_2m", "precipitation",
          "wind_speed_10m", "wind_direction_10m", "shortwave_radiation"]
+# The model's own vertical temperature profile (free atmosphere), hour by hour.
+# A fixed -6.5 K/km misses exactly the situations that matter for snow:
+# inversions (cold valleys, mild slopes), warm air aloft, a cold-air pool.
+_PL_LEVELS = (850, 700, 500)
+_PL = [f"temperature_{p}hPa" for p in _PL_LEVELS] + [f"geopotential_height_{p}hPa" for p in _PL_LEVELS]
+LAPSE_MIN, LAPSE_MAX = -0.0098, 0.015   # K/m: dry adiabatic .. strong inversion
 
 
 def _endpoint(start: str):
@@ -284,6 +290,18 @@ def _splice(base, extra):
                 if out[v][i] is None:
                     out[v][i] = ev[j]; filled = True
         taken += filled
+    # The vertical profile is filled wherever a model has it, independent of
+    # which model supplied the surface values for that hour.
+    for v in _PL:
+        ev = extra.get(v)
+        if not ev:
+            continue
+        if out.get(v) is None:
+            out[v] = [None] * len(out["time"])
+        for j, t in enumerate(et):
+            i = pos.get(t)
+            if i is not None and j < len(ev) and ev[j] is not None and out[v][i] is None:
+                out[v][i] = ev[j]
     return out, taken
 
 
@@ -303,7 +321,7 @@ def fetch_weather(lat, lon, elev, start, end, models=None):
     """
     models = config.FORCING_MODELS if models is None else models
     base = {"latitude": f"{lat:.5f}", "longitude": f"{lon:.5f}",
-            "elevation": f"{elev:.0f}", "hourly": ",".join(_VARS),
+            "elevation": f"{elev:.0f}", "hourly": ",".join(_VARS + _PL),
             "wind_speed_unit": "ms", "timezone": "UTC",
             "start_date": start, "end_date": end}
     live = _recent(end)
@@ -315,6 +333,9 @@ def fetch_weather(lat, lon, elev, start, end, models=None):
         if h and _coverage(h) >= 0.999:
             break
         d, why = _fetch_json(url, {**base, "models": m})
+        if d is None and why and "hPa" in why:
+            # a model without pressure levels: the surface values still count
+            d, why = _fetch_json(url, {**base, "models": m, "hourly": ",".join(_VARS)})
         hm = (d or {}).get("hourly") or {}
         if not hm.get("time"):
             notes.append(f"{m}: {why or 'no data'}")
@@ -336,6 +357,19 @@ def fetch_weather(lat, lon, elev, start, end, models=None):
     if _coverage(h) < config.FORCING_MIN_COVERAGE:
         notes.append(f"coverage {_coverage(h)*100:.0f}% after all sources")
         return None, None, notes
+    # The vertical profile: if the surface models did not bring it (not every
+    # model publishes pressure levels), one extra request for the profile
+    # alone from ICON seamless (ICON-D2/EU/global), which always has it.
+    n = len(h.get("time") or [])
+    have = sum(1 for v in (h.get("temperature_850hPa") or []) if v is not None)
+    if n and have < 0.9 * n:
+        d, why = _fetch_json(url, {**base, "models": config.FORCING_FAR_MODEL, "hourly": ",".join(_PL)})
+        hp = (d or {}).get("hourly") or {}
+        if hp.get("time"):
+            h, _ = _splice(h, hp)
+            notes.append(f"profile from {config.FORCING_FAR_MODEL}")
+        else:
+            notes.append(f"no vertical profile ({why or 'no data'}): fixed lapse rate")
     main = max(used, key=used.get)
     label = main + ("+" if len(used) > 1 else "")
     if len(used) > 1:
@@ -384,13 +418,60 @@ def _overlay_ogd(base, ogd):
     return out, n, dT
 
 
-def _lapsed(hourly, dz, precip_factor=1.0):
+def _profile_dT(hourly, i, z_ref, z):
+    """Temperature change from z_ref to z (m) in hour i, from the model's
+    free-atmosphere profile (850/700/500 hPa, piecewise linear in height,
+    extrapolated with the nearest segment), clipped to a physical lapse
+    range. None when the hour has fewer than two levels."""
+    nodes = []
+    for p in _PL_LEVELS:
+        t = (hourly.get(f"temperature_{p}hPa") or [None] * (i + 1))
+        g = (hourly.get(f"geopotential_height_{p}hPa") or [None] * (i + 1))
+        if i < len(t) and i < len(g) and t[i] is not None and g[i] is not None:
+            nodes.append((float(g[i]), float(t[i])))
+    if len(nodes) < 2 or z == z_ref:
+        return None if len(nodes) < 2 else 0.0
+    nodes.sort()
+    def at(zz):
+        k = 0
+        while k < len(nodes) - 2 and zz > nodes[k + 1][0]:
+            k += 1
+        (z0, t0), (z1, t1) = nodes[k], nodes[k + 1]
+        return t0 + (t1 - t0) * (zz - z0) / max(1.0, z1 - z0)
+    g = (at(z) - at(z_ref)) / (z - z_ref)
+    return min(LAPSE_MAX, max(LAPSE_MIN, g)) * (z - z_ref)
+
+
+def _lapsed(hourly, dz, precip_factor=1.0, z_ref=None, band_t=None):
     """Same weather, temperature moved `dz` metres up or down, precipitation
-    scaled by `precip_factor` (the IMIS snow-height correction, imis.py)."""
-    d = config.TA_LAPSE_K_PER_M * dz
+    scaled by `precip_factor` (the IMIS snow-height correction, imis.py).
+
+    With `z_ref` and a vertical profile in `hourly`, each hour uses the
+    model's own lapse rate; hours without one fall back to the fixed rate.
+    `band_t` (live, elevtemp.py): {time: (temperature, dz_cell)} measured in an
+    ICON-CH1 cell at about this height -- used as is for those hours, with the
+    profile only bridging the few metres between cell and band."""
+    t_in = hourly.get("temperature_2m", [])
+    times = hourly.get("time", [])
     out = dict(hourly)
-    out["temperature_2m"] = [None if v is None else v + d
-                             for v in hourly.get("temperature_2m", [])]
+    ta, n_prof = [], 0
+    for i, v in enumerate(t_in):
+        if v is None:
+            ta.append(None); continue
+        bt = band_t.get(times[i]) if band_t and i < len(times) else None
+        if bt is not None:
+            tc, dzc = bt
+            d = _profile_dT(hourly, i, 0.0, dzc) if z_ref is not None else None
+            ta.append(tc + (d if d is not None else config.TA_LAPSE_K_PER_M * dzc)); n_prof += 1
+            continue
+        d = _profile_dT(hourly, i, z_ref, z_ref + dz) if z_ref is not None else None
+        if d is None:
+            d = config.TA_LAPSE_K_PER_M * dz
+        else:
+            n_prof += 1
+        ta.append(v + d)
+    out["temperature_2m"] = ta
+    out["_profile_hours"] = n_prof
     if precip_factor != 1.0:
         out["precipitation"] = [None if v is None else v * precip_factor
                                 for v in hourly.get("precipitation", [])]
@@ -399,12 +480,14 @@ def _lapsed(hourly, dz, precip_factor=1.0):
 
 def build_forcing_matrix(wps, runs, target_date, win, meteo_dir: Path | None = None,
                          spinup_days=None, lead_days=None, workers=None, since=None,
-                         precip_factor=None, ogd_dir=None):
+                         precip_factor=None, ogd_dir=None, band_temps=None):
     """One fetch per weather point, one lapse-rated .smet per run.
 
     `since`: earliest instant any run starts integrating (live mode: the
     carried state's time). Defaults to the spin-up start before the window.
     `precip_factor`: {weather_point_id: factor} from the IMIS correction.
+    `band_temps`: {weather_point_id: {band_elev: {time: (T, dz)}}} -- ICON-CH1
+    2 m temperature from cells at the band's own height (elevtemp.py, live).
 
     Returns {weather_point_id: model_used} so the export can say what drove it.
     """
@@ -456,11 +539,20 @@ def build_forcing_matrix(wps, runs, target_date, win, meteo_dir: Path | None = N
     ref = {w["id"]: w["ref_elev"] for w in wps}
     workers = workers or FORCING_WORKERS
 
+    band_temps = band_temps or {}
+    stats = {"hours": 0, "profile": 0, "cell": 0}
+
     def write(wid, h, m):
         used[wid] = m
+        bt_wp = band_temps.get(wid) or {}
         for r in by_wp.get(wid, []):
-            hourly_to_smet(r["id"], r["lat"], r["lon"], r["elev"],
-                           _lapsed(h, r["elev"] - ref[wid], precip_factor.get(wid, 1.0)),
+            bt = bt_wp.get(int(r["elev"]))
+            hh = _lapsed(h, r["elev"] - ref[wid], precip_factor.get(wid, 1.0),
+                         z_ref=ref[wid], band_t=bt)
+            stats["hours"] += sum(1 for v in hh["temperature_2m"] if v is not None)
+            stats["profile"] += hh.get("_profile_hours", 0)
+            stats["cell"] += len(bt or {})
+            hourly_to_smet(r["id"], r["lat"], r["lon"], r["elev"], hh,
                            meteo_dir / f"{r['id']}.smet")
 
     with ThreadPoolExecutor(max_workers=workers) as ex:
@@ -488,6 +580,10 @@ def build_forcing_matrix(wps, runs, target_date, win, meteo_dir: Path | None = N
         failed = again
     from collections import Counter
     print(f"  forcing models used: {dict(Counter(used.values()))}")
+    if stats["hours"]:
+        print(f"  temperature by height: {stats['profile'] / stats['hours']:.0%} of run-hours from the "
+              f"model's own profile ({stats['cell'] / stats['hours']:.0%} from ICON-CH1 cells at the "
+              f"band's height), the rest at the fixed {config.TA_LAPSE_K_PER_M * 1000:+.1f} K/km")
     if failed:
         print(f"  [forcing] {len(failed)} weather points without forcing; first: {failed[:2]}")
     return used

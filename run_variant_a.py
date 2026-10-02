@@ -291,9 +291,15 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
               f", {len(carried)}/{len(runs)} runs carried, "
               f"{sum(1 for v in factors.values() if v != 1.0)} precip corrections")
 
+    # Live: ICON-CH1 2 m temperature from cells at each band's own height
+    # (forecast hours); the other hours use the model's vertical profile.
+    from variant_a import elevtemp
+    band_t, band_summ = elevtemp.build(grid, wps, args.ogd_dir) if args.ogd_dir else (None, {"used": False})
+
     _ts = _time.time()
     used = forcing.build_forcing_matrix(wps, runs, args.date, win, since=since,
-                                        precip_factor=factors, ogd_dir=args.ogd_dir)
+                                        precip_factor=factors, ogd_dir=args.ogd_dir,
+                                        band_temps=band_t)
     _t["forcing"] = _time.time() - _ts
     wps = [w for w in wps if w["id"] in used]
     keep = {w["id"] for w in wps}
@@ -363,6 +369,7 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
         "terrain": {"shade": shade is not None, "forest": bool(forest.any())},
         "validation": {"imis": summary, "stations": rows[:300]},
         "precip_pattern": p_summ,
+        "temperature_at_height": band_summ,
     }
     if args.live:
         extra["state"] = {"from": st["time"].strftime("%Y-%m-%dT%H:%M") if st else None,

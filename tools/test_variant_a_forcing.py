@@ -503,7 +503,9 @@ def test_forcing_fallback():
         calls.clear()
         forcing._fetch_json = fake(["x", "y", "z", full])
         h, m, _ = forcing.fetch_weather(46.8, 9.8, 2000, "2026-03-01", "2026-03-02")
-        check("the archive is the last resort", m == "archive" and calls[-1][1] is None, m)
+        # (after the surface sources only the separate vertical-profile request may follow)
+        surf = [c for c in calls if c[1] != config.FORCING_FAR_MODEL or c is calls[0]]
+        check("the archive is the last resort", m == "archive" and surf[-1][1] is None, m)
         forcing._fetch_json = fake(["x", "y", "z", "w"])
         h, m, notes = forcing.fetch_weather(46.8, 9.8, 2000, "2026-03-01", "2026-03-02")
         check("nothing usable -> None, with every reason", h is None and len(notes) >= 4, str(notes))
@@ -1028,6 +1030,103 @@ def test_ski6_and_wind_classes():
     check("wind: none / light / drift / scoured / thin", w.tolist() == [0, 2, 3, 1, 0], str(w.tolist()))
 
 
+def test_temperature_by_height():
+    """Hourly lapse from the model profile, ICON-CH1 cells at band height."""
+    print("temperature by height")
+    from variant_a import elevtemp, matrix
+    f = forcing
+    def prof(t850, t700, t500=-25.0):
+        return {"time": ["2026-03-30T12:00"], "temperature_2m": [0.0],
+                "temperature_850hPa": [t850], "temperature_700hPa": [t700], "temperature_500hPa": [t500],
+                "geopotential_height_850hPa": [1500.0], "geopotential_height_700hPa": [3000.0],
+                "geopotential_height_500hPa": [5600.0]}
+    d = f._profile_dT(prof(5.0, -5.0), 0, 1800.0, 2700.0)
+    check("normal profile: ~ -6.7 K/km between 850 and 700 hPa", abs(d - (-6.0)) < 0.05, f"{d:.2f} K over 900 m")
+    d = f._profile_dT(prof(-5.0, 2.0), 0, 1800.0, 2700.0)
+    check("inversion: warmer higher up", d > 3.5, f"{d:+.2f} K")
+    d = f._profile_dT(prof(-5.0, 40.0), 0, 1800.0, 2700.0)
+    check("implausible profile clipped to 15 K/km", abs(d - 0.015 * 900) < 1e-6, f"{d:.2f}")
+    h = prof(5.0, -5.0); h["temperature_700hPa"] = [None]; h["temperature_500hPa"] = [None]
+    check("one level only -> no profile", f._profile_dT(h, 0, 1800.0, 2700.0) is None)
+    out = f._lapsed(h, 900.0, z_ref=1800.0)
+    check("... and the fixed lapse rate is used", abs(out["temperature_2m"][0] - (-0.0065 * 900)) < 1e-9)
+    out = f._lapsed(prof(-5.0, 2.0), 900.0, z_ref=1800.0)
+    check("_lapsed follows the profile", out["temperature_2m"][0] > 3.5 and out["_profile_hours"] == 1,
+          f"{out['temperature_2m'][0]:+.2f}")
+    out = f._lapsed(prof(5.0, -5.0), 900.0, z_ref=1800.0, band_t={"2026-03-30T12:00": (-7.5, 50.0)})
+    check("an ICON cell at the band's height wins, bridged by the profile",
+          abs(out["temperature_2m"][0] - (-7.5 + 50.0 * -10.0 / 1500)) < 0.01, f"{out['temperature_2m'][0]:.2f}")
+    # splice: the profile comes from whichever model has it
+    base = {"time": ["a", "b"], "temperature_2m": [1, 2], "precipitation": [0, 0],
+            "shortwave_radiation": [0, 0], "wind_speed_10m": [1, 1]}
+    extra = {"time": ["a", "b"], "temperature_850hPa": [3, None], "geopotential_height_850hPa": [1500, 1510]}
+    sp, _ = f._splice(base, extra)
+    check("splice fills pressure levels hour by hour", sp["temperature_850hPa"] == [3, None]
+          and sp["geopotential_height_850hPa"] == [1500, 1510])
+    # a model that rejects pressure levels is retried without them
+    real = f._fetch_json; calls = []
+    T = [f"2026-03-30T{h:02d}:00" for h in range(24)]
+    full = {"hourly": {"time": T, **{v: [1.0] * 24 for v in f._VARS}}}
+    def fake(url, params):
+        calls.append(params["hourly"])
+        return (None, "Cannot find variable temperature_850hPa") if "hPa" in params["hourly"] else (full, None)
+    f._fetch_json = fake
+    try:
+        hh, label, notes = f.fetch_weather(46.8, 9.8, 2000, "2026-03-30", "2026-03-30", models=["m1"])
+    finally:
+        f._fetch_json = real
+    check("pressure levels refused -> same model again without them", hh is not None and label == "m1"
+          and "hPa" in calls[0] and "hPa" not in calls[1], str(calls)[:120])
+    check("... then one request for the profile alone", len(calls) == 3 and "temperature_2m" not in calls[2])
+    # elevtemp: cells at the band's height around a weather point
+    g = _synth_grid(60, 60, 7)
+    wps = matrix.weather_points(g, spacing_km=5.0, min_top_m=1800.0)
+    w = wps[0]
+    rng = np.random.default_rng(2)
+    ce = w["e"] + rng.uniform(-8000, 8000, 400); cn = w["n"] + rng.uniform(-8000, 8000, 400)
+    hs = rng.uniform(1000, 3500, 400)
+    fld = {"lead": np.arange(0, 4, dtype=float), "ref": datetime(2026, 3, 30, 6),
+           "t": np.tile((10.0 - 0.006 * hs)[None, :], (4, 1)).astype(np.float32)}
+    bt, cnt = elevtemp.band_temps(fld, [w], ce, cn, hs)
+    b0 = int(w["bands"][0]); s0 = bt[w["id"]][b0]
+    tt, dzc = s0["2026-03-30T06:00"]
+    check("a series per band, from cells near that height", abs(dzc) <= elevtemp.MAX_DZ
+          and abs(tt - (10.0 - 0.006 * (b0 - dzc))) < 0.05, f"band {b0}: T {tt}, dz {dzc}")
+    check("all four forecast hours", len(s0) == 4)
+    far = elevtemp.band_temps(fld, [dict(w, bands=[6000])], ce, cn, hs)[0]
+    check("no cell at that height -> no series", not far)
+    # end to end: extractor file -> build -> forcing .smet
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import ogd_extract
+    from variant_a.subregions import lv03_to_wgs84
+    la, lo = lv03_to_wgs84(ce, cn)
+    with tempfile.TemporaryDirectory() as td:
+        ogd_extract.save_t2m_field(td, "ch1", "x", fld["t"] + 273.15, [0, 1, 2, 3], datetime(2026, 3, 30, 6),
+                                   np.asarray(la), np.asarray(lo), hsurf=hs)
+        bt2, summ = elevtemp.build(g, [w], td)
+        check("field file -> band series (HSURF heights)", summ.get("heights") == "HSURF"
+              and bt2 and b0 in bt2[w["id"]], str(summ))
+        T = [f"2026-03-30T{h:02d}:00" for h in range(24)]
+        hourly = {"time": T, "temperature_2m": [5.0] * 24, "precipitation": [0.0] * 24,
+                  "shortwave_radiation": [100.0] * 24, "wind_speed_10m": [3.0] * 24,
+                  "relative_humidity_2m": [80.0] * 24, "wind_direction_10m": [270.0] * 24}
+        real_fw = f.fetch_weather
+        f.fetch_weather = lambda lat, lon, e, s_, en, models=None: (hourly, "m", [])
+        try:
+            runs = [{"id": f"{w['id']}_{b0}_F", "wp": w["id"], "lat": w["lat"], "lon": w["lon"], "elev": float(b0)}]
+            md = Path(td) / "meteo"
+            f.build_forcing_matrix([w], runs, "2026-03-30", (datetime(2026, 3, 30), datetime(2026, 3, 31)),
+                                   md, workers=1, band_temps=bt2)
+            rows = (md / f"{runs[0]['id']}.smet").read_text().split("[DATA]")[1].split()
+            line = [l for l in (md / f"{runs[0]['id']}.smet").read_text().splitlines() if l.startswith("2026-03-30T07:00")][0]
+            ta = float(line.split()[1]) - 273.15
+            want = bt2[w["id"]][b0]["2026-03-30T07:00"]
+            check("the .smet carries the cell temperature for forecast hours",
+                  abs(ta - (want[0] - 0.0065 * want[1])) < 0.02, f"{ta:.2f} vs cell {want}")
+        finally:
+            f.fetch_weather = real_fw
+
+
 if __name__ == "__main__":
     for t in (test_forcing_starts_before_profile_date, test_covers_rejects_a_stale_smet,
               test_ini, test_timestamp_window, test_prof_start_derivation,
@@ -1040,7 +1139,8 @@ if __name__ == "__main__":
               test_sno_base_is_real_snow, test_wgs84_map_matches_rasterio,
               test_state_roundtrip, test_wind_indices, test_terrain_shading,
               test_imis_correction, test_gates, test_classifier_fixes, test_pack_roundtrip,
-              test_rate_limit_backoff, test_precip_pattern, test_ski6_and_wind_classes):
+              test_rate_limit_backoff, test_precip_pattern, test_ski6_and_wind_classes,
+              test_temperature_by_height):
         t()
     print("\nVARIANT A PIPELINE " + ("OK" if not FAILS else f"FAILED: {FAILS}"))
     sys.exit(1 if FAILS else 0)
