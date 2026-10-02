@@ -1,0 +1,18 @@
+{
+  "name": "snowmapper-tiles",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker: SNOWPACK map tiles rendered on demand with the app's own engine.",
+  "scripts": {
+    "engine": "python3 ../../tools/make_va_engine.py ../../dist/app.js src/va_engine.js",
+    "test": "node test/test_worker.mjs",
+    "dev": "node test/dev_server.mjs",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "fast-png": "^8.0.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
+}

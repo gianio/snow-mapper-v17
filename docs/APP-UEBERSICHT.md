@@ -144,7 +144,12 @@ Das Herzstück für die Schneequalität.
 - **Qualitäts-Gates vor dem Veröffentlichen:** ≥ 90 % der Läufe erfolgreich,
   alle Frames vorhanden, keine unplausiblen Werte, IMIS-Fehler ≤ 80 cm.
 
-### 3.5 Darstellung auf dem Gerät
+### 3.5 Darstellung: Kachel-Dienst und Gerät
+- **Mit Kachel-Dienst** (`tiles/worker`, Cloudflare R2 + Worker): Zoom 5–9 aus
+  PMTiles-Archiven pro Zeitschritt, Zoom 10–12 vom Worker beim ersten Abruf
+  mit derselben Rechenlogik gerechnet und danach für alle zwischengespeichert.
+  Das Handy zeigt nur Bilder.
+- **Ohne Dienst (Rückfall):**
 - **Rausgezoomt:** fertige Frame-Bilder (~250–330 m pro Pixel).
 - **Ab Zoom 10:** Das Gerät rechnet die Klassen selbst pro Pixel (Web Worker)
   auf Gelände-Kacheln (~30 m) mit derselben Interpolation wie die Pipeline.

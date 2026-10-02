@@ -95,3 +95,15 @@ jobs:
       # classes to the pipeline's on the same cells.
       - name: Variant A device renderer = pipeline
         run: python tools/test_va_engine_parity.py dist/app.js
+
+      # Tile service: overview archives, the publish step (fake S3) and the
+      # Worker itself against the committed demo export (real terrain tiles).
+      - name: Tiles -- overview PMTiles + publish
+        run: |
+          pip install -q "pmtiles>=3.5"
+          python tools/test_overview_pmtiles.py
+          python tools/test_publish_tiles.py
+      - name: Tiles -- worker renders like the app
+        run: |
+          python tools/make_va_engine.py dist/app.js tiles/worker/src/va_engine.js
+          cd tiles/worker && npm ci --no-audit --no-fund --omit=dev && node test/test_worker.mjs ../../variant_a_export
