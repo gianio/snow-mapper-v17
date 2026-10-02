@@ -110,6 +110,34 @@ def save_precip_field(field_dir, model, vals, lead, ref_dt, lat, lon):
     print(f"  {model} TOT_PREC field: {int(m.sum())} cells x {len(keep)} leads -> {f.name}", flush=True)
 
 
+def save_t2m_field(field_dir, model, coll, vals, lead, ref_dt, lat, lon, hsurf=None):
+    """2 m temperature on every ICON cell over Switzerland, hourly, plus the
+    model's terrain height (HSURF) when OGD offers it. variant_a/elevtemp.py
+    takes, per weather point and height band, the cells at that height: the
+    model's temperature ON the slope's height instead of a lapse-rate guess."""
+    la0, lo0, la1, lo1 = CH_BOX
+    m = (lat >= la0) & (lat <= la1) & (lon >= lo0) & (lon <= lo1) & np.isfinite(lat)
+    t = np.asarray(vals, float)[:, m]
+    if np.nanmean(t) > 150:
+        t = t - 273.15
+    if hsurf is None:
+        try:
+            hs = _get(coll, "HSURF", [0])
+            hv, _, _ = _series(hs)
+            hsurf = np.asarray(hv, float)[0]
+        except Exception as e:
+            print(f"  {model} HSURF not available ({type(e).__name__}) -- heights from the DEM", flush=True)
+    kw = {}
+    if hsurf is not None and np.asarray(hsurf).shape[-1] == len(lat):
+        kw["hsurf"] = np.asarray(hsurf, float)[m].astype(np.float32)
+    f = Path(field_dir) / f"t2m_{model}.npz"
+    np.savez_compressed(f, lat=lat[m].astype(np.float32), lon=lon[m].astype(np.float32),
+                        lead=np.asarray(lead, np.float32), t=t.astype(np.float16),
+                        ref=np.array(ref_dt.strftime("%Y-%m-%dT%H:%M")), **kw)
+    print(f"  {model} T_2M field: {int(m.sum())} cells x {len(lead)} leads"
+          f"{' + HSURF' if kw else ''} -> {f.name}", flush=True)
+
+
 # first name that exists wins; RH can be derived from the dew point
 ALTS = {"RELHUM_2M": ["RELHUM_2M", "TD_2M"], "ASWDIR_S": ["ASWDIR_S", "ASOB_S", "GLOB"],
         "ASWDIFD_S": ["ASWDIFD_S", None]}
@@ -174,6 +202,11 @@ def extract(points, model, hours, field_dir=None):
             geo = (lead, ref_dt, idx)
         for p in points:
             out[p["id"]][var] = vals[:, geo[2][p["id"]]]
+        if var == "T_2M" and field_dir is not None:
+            try:
+                save_t2m_field(field_dir, model, coll, vals, lead, ref_dt, *_latlon(da))
+            except Exception as e:
+                print(f"  {model} T_2M field not saved: {type(e).__name__}: {e}", flush=True)
         if var == "TOT_PREC" and field_dir is not None:
             try:
                 save_precip_field(field_dir, model, vals, lead, ref_dt, *_latlon(da))
