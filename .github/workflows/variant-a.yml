@@ -327,7 +327,8 @@ jobs:
       # Tile service (tiles/worker): only for a published demo, so the app's
       # demo export and the bucket always belong together.
       - name: Publish tiles to R2
-        if: success() && inputs.publish
+        # automatic only with TILES_AUTO=true; else "Tiles publish" by hand
+        if: success() && inputs.publish && vars.TILES_AUTO == 'true'
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}

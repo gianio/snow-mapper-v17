@@ -12,7 +12,7 @@ on:
   # A Variant A live cycle that passed its gates is published right away
   # instead of waiting for the next scheduled deploy.
   workflow_run:
-    workflows: ["Variant A live"]
+    workflows: ["Variant A live", "Tiles publish"]
     types: [completed]
 
 permissions:

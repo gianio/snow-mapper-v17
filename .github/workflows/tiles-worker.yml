@@ -16,6 +16,11 @@ on:
       - 'tools/make_va_engine.py'
       - '.github/workflows/tiles-worker.yml'
   workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Deploy the Worker to Cloudflare (otherwise test only)"
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -46,8 +51,9 @@ jobs:
       - name: Test against the committed demo export
         working-directory: tiles/worker
         run: node test/test_worker.mjs ../../variant_a_export
+      # Only by hand: a push to main tests, it never deploys.
       - name: Deploy to Cloudflare
-        if: github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch' && inputs.deploy
         working-directory: tiles/worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

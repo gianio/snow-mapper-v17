@@ -171,7 +171,9 @@ jobs:
       # PMTiles + what the Worker renders sharp tiles from. Skipped without
       # the secrets; then the app keeps rendering on the device.
       - name: Publish tiles to R2 (gates passed, full run only)
-        if: steps.cycle.outputs.rc == '0' && inputs.limit == ''
+        # automatic only when you opt in (repository variable TILES_AUTO=true);
+        # otherwise run the "Tiles publish" workflow by hand
+        if: steps.cycle.outputs.rc == '0' && inputs.limit == '' && vars.TILES_AUTO == 'true'
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}

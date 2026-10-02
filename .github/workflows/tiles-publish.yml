@@ -1,0 +1,125 @@
+name: Tiles publish
+
+# Started BY HAND only -- nothing here runs on a schedule, so Cloudflare is
+# only used when you decide to. It takes the newest live cycle (or the
+# committed demo), builds the overview tiles, optionally pre-renders the sharp
+# tiles for a time window here in GitHub Actions (then the Cloudflare free
+# plan is enough: the Worker only serves), uploads to R2 and republishes the
+# app with the "tiles" block. The next scheduled live cycle publishes without
+# tiles again (the app then renders on the device) -- unless the repository
+# variable TILES_AUTO is set to "true".
+#
+# Needs: secrets R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY;
+#        variable TILES_BASE_URL (optional R2_BUCKET).
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Which export: the newest live cycle, or the committed demo"
+        type: choice
+        options: [live, demo]
+        default: live
+      prerender_hours:
+        description: "Pre-render sharp tiles for this many hours around now (0 = none; ~2 min CPU per frame)"
+        default: "24"
+      views:
+        description: "Views to pre-render (comma separated: ski6,wind,density,ski18)"
+        default: "ski6"
+      on_demand:
+        description: "Let the Worker render missing tiles itself (only with Workers Paid)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write        # demo: commit the manifest with the tiles block
+  actions: read          # live: download the newest va-live artifact
+
+concurrency:
+  group: tiles-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          cd tiles/worker && npm ci --no-audit --no-fund --omit=dev
+
+      - name: Get the export
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ inputs.source }}" = "live" ]; then
+            RID=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=va-live&per_page=20" \
+                  --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .workflow_run.id // empty')
+            [ -n "$RID" ] || { echo "::error::no live cycle artifact (va-live) found"; exit 1; }
+            mkdir -p export && gh run download "$RID" -n va-live -D export
+            echo "EXPORT=export" >> "$GITHUB_ENV"; echo "RUN=live-${{ github.run_id }}" >> "$GITHUB_ENV"
+          else
+            echo "EXPORT=variant_a_export" >> "$GITHUB_ENV"; echo "RUN=demo-${{ github.run_id }}" >> "$GITHUB_ENV"
+          fi
+          python -c "import json;m=json.load(open('$( [ "${{ inputs.source }}" = live ] && echo export || echo variant_a_export )/manifest.json'));print(len(m['tags']),'frames, views',list(m['layers']))"
+
+      - name: Pre-render sharp tiles
+        if: inputs.prerender_hours != '0'
+        run: |
+          mkdir -p dist
+          python run_interactive.py --split --offline --date 2026-04-01 --res 4000 --out-dir dist
+          python tools/make_va_engine.py dist/app.js tiles/worker/src/va_engine.js
+          node tiles/worker/prerender.mjs "$EXPORT" tilecache --views "${{ inputs.views }}" \
+               --hours "${{ inputs.prerender_hours }}" --procs "$(nproc)"
+          du -sh tilecache
+          echo "TILES_CACHE_DIR=$PWD/tilecache" >> "$GITHUB_ENV"
+
+      - name: Upload to R2 and write the tiles block
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          TILES_BASE_URL: ${{ vars.TILES_BASE_URL }}
+          TILES_ON_DEMAND: ${{ inputs.on_demand }}
+          TILES_KEEP_RUNS: ${{ inputs.source == 'demo' && '2' || '3' }}
+        run: |
+          python tools/publish_tiles.py "$EXPORT" "$RUN"
+          python -c "import json;t=json.load(open('$EXPORT/manifest.json')).get('tiles');print(json.dumps(t)[:400] if t else 'NO tiles block');exit(0 if t else 1)"
+
+      # The deploy takes the newest va-live artifact: this one, with tiles.
+      - name: Republish the live export with tiles
+        if: inputs.source == 'live'
+        uses: actions/upload-artifact@v4
+        with:
+          name: va-live
+          path: export/
+          retention-days: 5
+
+      - name: Commit the demo manifest with tiles
+        if: inputs.source == 'demo'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add variant_a_export/manifest.json
+          git commit -m "variant_a: demo export served from the tile service ($RUN)" || exit 0
+          git push
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Tiles publish (${{ inputs.source }})"
+            echo "- run: \`$RUN\`, pre-render: ${{ inputs.prerender_hours }} h (${{ inputs.views }}), on demand: ${{ inputs.on_demand }}"
+            [ -f tilecache/sharp.json ] && echo "- frames pre-rendered: $(python -c "import json;print(sum(len(v) for v in json.load(open('tilecache/sharp.json')).values()))")"
+            echo "- the deploy picks this up automatically (workflow_run)"
+          } >> "$GITHUB_STEP_SUMMARY"
