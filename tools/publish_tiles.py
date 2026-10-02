@@ -67,7 +67,7 @@ def settings():
     if base and (".r2.dev" in base or "r2.cloudflarestorage.com" in base):
         print("tiles: TILES_BASE_URL is the R2 bucket's address. It must be the Worker's address "
               "(https://snowmapper-tiles.<your-subdomain>.workers.dev, shown at the end of the "
-              "'Tiles worker' deploy, or your own domain on the Worker).")
+              "'Cloudflare tiles' run with deploy_worker, or your own domain on the Worker).")
         base = ""
     missing = [n for n, v in (("R2_ACCOUNT_ID or S3_ENDPOINT", ep), ("R2_ACCESS_KEY_ID", key),
                               ("R2_SECRET_ACCESS_KEY", sec), ("TILES_BASE_URL", base)) if not v]

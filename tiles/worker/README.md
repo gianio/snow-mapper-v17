@@ -29,21 +29,25 @@ the app renders on the device as before.
      `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
    - Variables: `TILES_BASE_URL` (e.g. `https://tiles.snowmapper.ch` or the
      `workers.dev` URL), optional `R2_BUCKET` (default `snowmapper-tiles`)
-6. Run the workflow **Tiles worker** by hand once: it tests and deploys (a
-   push to `main` only tests).
-7. **Publishing is by hand** (so Cloudflare is only used when you want):
-   Actions -> **Tiles publish** -> Run workflow. Choose the newest *live*
-   cycle or the *demo*, how many hours around now to **pre-render** in
-   GitHub Actions (~2 min CPU per frame and view), and the views. The app is
-   republished with the tiles; pre-rendered frames come from Cloudflare,
-   every other zoomed-in frame is rendered on the device. Scheduled live
-   cycles publish *without* tiles again, unless you set the repository
-   variable `TILES_AUTO=true`.
+6. **Everything Cloudflare is one workflow, started by hand:** Actions ->
+   **Cloudflare tiles** -> Run workflow. Nothing else touches Cloudflare (no
+   schedule, no push trigger), so it only runs -- and only costs -- when you
+   start it.
+   - *deploy_worker*: tick it the first time, and again after a change to the
+     Worker or the app's SNOWPACK engine.
+   - *publish*: the newest *live* cycle or the *demo*, how many hours around
+     now to **pre-render** in GitHub Actions (~2 min CPU per frame and view),
+     and the views. The site is redeployed afterwards automatically;
+     pre-rendered frames come from Cloudflare, every other zoomed-in frame is
+     rendered on the device.
+7. Without a new Cloudflare run the app keeps the tiles of the last one while
+   that live export is the newest; a newer live cycle reaching the site has no
+   tiles block, and the app renders on the device again.
 8. **Plan:** rendering a tile takes ~0.1–0.3 s of CPU. The Workers *Free*
    plan allows 10 ms per request, so on Free only tiles already in R2 / the
    cache are served and the app renders the rest on the device. **Workers
-   Paid (~5 USD/month)** lifts this to 30 s -- tick *on_demand* in Tiles
-   publish only then. With pre-rendering (step 7) the **free plan is
+   Paid (~5 USD/month)** lifts this to 30 s -- tick *on_demand* in Cloudflare
+   tiles only then. With pre-rendering (step 6) the **free plan is
    enough**. R2's free tier (10 GB, egress free) covers the storage.
 
 ## What lives where (bucket)
