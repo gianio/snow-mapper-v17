@@ -144,7 +144,7 @@ jobs:
           SNOWPACK_LIBS: ${{ github.workspace }}/snowpack-build/install/lib
         run: |
           set -o pipefail
-          ARGS="--live --state-dir state --state-out state_new --step-h 3"
+          ARGS="--live --state-dir state --state-out state_new --step-h 2"
           [ -d ogd ] && ARGS="$ARGS --ogd-dir ogd"
           [ -n "${{ inputs.limit }}" ] && ARGS="$ARGS --limit ${{ inputs.limit }}"
           echo "run_variant_a.py $ARGS"

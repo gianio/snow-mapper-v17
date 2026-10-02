@@ -419,7 +419,7 @@ python main.py --dem /path/to/dem.tif --hours 24 --plot --overlay
 
 ### From the Snow Model
 
-- **Exposition at zoom:** True 20 m ridge resolution is not achievable with a single national PNG (~115 m/px at 3000 px across Switzerland). A tiled service or regional swissALTI3D (2 m) would be needed.
+- **Exposition at zoom:** From zoom 11 the exposition layer and the tap readout (elevation, slope, aspect) come from the Terrarium elevation tiles (zoom 13, ~19 m pixels over a ~25–30 m source DEM, Horn gradient), not the national ~115 m PNG. True 2 m (swissALTI3D) would still need a tile service of its own.
 - **Solar radiation** is a clear-sky approximation. Pattern is correct, absolute values are uncalibrated (no measured product).
 - **Sunshine / Radiation x Sunshine / live station data** require the Open-Meteo forecast or SLF live API. The archive endpoint does not provide sunshine duration, so historical dates lack sunshine-based layers.
 - **Wind redistribution** uses a simplified curvature-based heuristic, not a full saltation/suspension transport model (e.g. SnowTran-3D).

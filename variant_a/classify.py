@@ -902,5 +902,60 @@ def classify_simple(hs, powder, crust, sdens, slw, sh=None, drift=None, scour=No
     return lab
 
 
+# ── Skiqualität, simplified (the default SNOWPACK view in the app) ──────────
+# Six things a skier decides on, nothing else. Where there is no or only a
+# thin snow cover (< THIN_COVER_HS) nothing is drawn at all.
+#   nass   the top layer holds liquid water: SNOWPACK's volumetric liquid
+#          water content (theta_w) of the surface layer > SK_WET_LWC %. It is
+#          computed from the energy balance (melt) and rain; above ~1 % the
+#          snow is moist, above ~3 % wet (ICSSG "moist"/"wet" classes).
+#   Pulver dry powder on top, by depth: 2-10, 10-20, > 20 cm.
+#   Kruste any crust or ice on the surface (thin crust, Bruchharsch, tragend).
+#   hart   everything else: settled / wind-pressed / hard old snow.
+SKI6_LABELS = ["none", "hard", "crust", "powder_0_10", "powder_10_20", "powder_gt_20", "wet"]
+SKI6_DE = ["kein / wenig Schnee", "durchgehend hart", "Kruste", "Pulver 0–10 cm",
+           "Pulver 10–20 cm", "Pulver > 20 cm", "nass"]
+SKI6_RGBA = {0: (0, 0, 0, 0), 1: (135, 130, 120, 215), 2: (200, 45, 45, 225),
+             3: (150, 205, 245, 220), 4: (60, 140, 225, 230), 5: (20, 55, 160, 240),
+             6: (240, 175, 30, 230)}
+SK_POWDER_MIN = 2.0      # cm -- less loose snow than this is not "powder" to ski
+SK_P1, SK_P2 = 10.0, 20.0
+SK_WET_LWC = WET_LWC_MIN
+
+
+def classify_ski6(hs, powder, crust, sdens, slw):
+    """Vectorised SKI6 class (uint8) from interpolated metric fields."""
+    hs = np.asarray(hs, float); pw = np.asarray(powder, float)
+    cr = np.asarray(crust, float); sd = np.asarray(sdens, float); lw = np.asarray(slw, float)
+    lab = np.ones(hs.shape, np.uint8)                       # hart
+    lab[(cr >= CRUST_FINE) | (sd >= ICE_DENSITY_MIN)] = 2   # Kruste / Eis
+    p = pw >= SK_POWDER_MIN
+    lab[p & (pw < SK_P1)] = 3
+    lab[p & (pw >= SK_P1) & (pw < SK_P2)] = 4
+    lab[p & (pw >= SK_P2)] = 5
+    lab[lw > SK_WET_LWC] = 6                                # nass wins
+    lab[~(hs >= THIN_COVER_HS)] = 0
+    return lab
+
+
+# ── Triebschnee: wind effect on the surface, a view of its own ─────────────
+WIND_LABELS = ["none", "scoured", "drift_light", "drift"]
+WIND_DE = ["–", "abgeblasen / windgepresst", "leichte Triebschnee-Ablagerung", "Triebschnee"]
+WIND_RGBA = {0: (0, 0, 0, 0), 1: (150, 150, 160, 200), 2: (200, 155, 235, 215),
+             3: (120, 45, 185, 235)}
+WD_STRONG = 0.7          # drift index above which it is a real drift deposit
+
+
+def classify_wind(hs, drift, scour):
+    """Vectorised Triebschnee class (uint8): 0 nothing, 1 scoured,
+    2 light deposit, 3 drift deposit. Thin cover -> 0."""
+    hs = np.asarray(hs, float); dr = np.asarray(drift, float); sc = np.asarray(scour, float)
+    lab = np.zeros(hs.shape, np.uint8)
+    lab[sc >= WIND_MIN] = 1
+    lab[dr >= WIND_MIN] = 2
+    lab[dr >= WD_STRONG] = 3
+    lab[~(hs >= THIN_COVER_HS)] = 0
+    return lab
+
 if __name__ == "__main__":
     main()

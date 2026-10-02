@@ -1656,6 +1656,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    white-space:nowrap;transition:transform .15s var(--ease)}
  .tl-corner:active{transform:scale(.93)}
  .tl-corner-r{right:6px}
+ /* SNOWPACK: one time, stepped in 2 h with the arrows at the timeline's ends. */
+ .tl-vstep{display:none;position:absolute;top:50%;transform:translateY(-50%);z-index:4;width:30px;height:46px;
+   border-radius:10px;border:1px solid var(--hair);background:var(--card);color:var(--fg);font:800 24px/1 Inter,system-ui;
+   cursor:pointer;box-shadow:var(--elev1);align-items:center;justify-content:center;padding:0 0 3px}
+ .tl-vstep:active{transform:translateY(-50%) scale(.92)}
+ .tl-vstep-l{left:-4px}.tl-vstep-r{right:-4px}
+ body.tl-va .tl-vstep{display:inline-flex}
+ body.tl-va #tlTomorrowBtn{right:30px}
  /* Collapsed keeps the scrubber -- it is the thing the console is for -- and
     drops everything that only describes it. */
 
@@ -1716,11 +1724,20 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .va-leg-ramp i{display:block;height:9px;border-radius:2px;margin-bottom:3px;
    background:linear-gradient(90deg,#2b56c8,#49b0c8,#cfd43a,#e07a2a,#c02020)}
  .va-prof-row{display:flex;align-items:flex-start;gap:7px;margin-top:4px}
+ .va-prof-svg{display:block;max-width:340px;margin-top:4px;overflow:visible}
+ .va-prof-svg .vp-grid{stroke:var(--hair);stroke-width:1}
+ .va-prof-svg .vp-ax{stroke:var(--fg2);stroke-width:1.2}
+ .va-prof-svg .vp-lay{stroke:var(--fg2);stroke-width:.6;stroke-dasharray:2 2;opacity:.6}
+ .va-prof-svg .vp-box{fill:none;stroke:var(--fg2);stroke-width:1}
+ .va-prof-svg .vp-t{font:600 10px Inter,system-ui;fill:var(--fg2)}
+ .va-prof-svg .vp-at{font:700 10px Inter,system-ui;fill:var(--fg)}
+ .va-prof-svg .vp-line{fill:none;stroke:var(--accent-meteo,#1868C4);stroke-width:2}
+ .va-prof-svg .vp-fill{fill:var(--accent-meteo,#1868C4);opacity:.12}
  .va-grain{flex:0 0 auto;border:1px solid var(--hair);border-radius:2px}
  .va-dens{flex:1 1 auto;color:var(--fg);min-width:0}
  .va-prof-ax{display:flex;flex-direction:column;justify-content:space-between;
    font-size:10.5px;color:var(--fg2);height:118px}
- .va-grain-leg{display:flex;flex-wrap:wrap;gap:3px 7px;margin-top:5px;font-size:11px;color:var(--fg2)}
+ .va-grain-leg{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;font-size:11.5px;color:var(--fg)}
  /* The model date. SNOWPACK runs as an offline batch over a fixed window, so
     the layer can legitimately be older than the forecast the timeline shows.
     That gets stated, not hidden -- and when it is more than a week out it is
@@ -1731,7 +1748,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .va-date b{font-weight:800;color:var(--warn)}
  .va-date-stale{color:var(--fg)}
  .va-grain-leg span{display:inline-flex;align-items:center;gap:3px}
- .va-gi{flex:0 0 12px;color:var(--fg);opacity:.85}
+ .va-gi{flex:0 0 12px;color:var(--fg)}
  .va-run{font-size:11px;font-weight:700;color:var(--fg2);margin:0 0 3px}
  .va-pt-v{font-size:12px;font-weight:600;line-height:1.45}
  /* One handle, because SNOWPACK output is a state at an instant and not a sum
@@ -3236,6 +3253,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div id="btmMain">
     <div id="tlDetail">
       <button class="tl-corner tl-corner-r" id="tlTomorrowBtn" onclick="tlGotoTomorrow()" title="Fenster bis morgen Abend">Bis morgen</button>
+      <button class="tl-vstep tl-vstep-l" id="tlStepL" onclick="vaStepTime(-1)" aria-label="2 Stunden früher">&#8249;</button>
+      <button class="tl-vstep tl-vstep-r" id="tlStepR" onclick="vaStepTime(1)" aria-label="2 Stunden später">&#8250;</button>
       <canvas id="timeline" width="900" height="108" style="width:100%;height:108px;border-radius:10px;cursor:default;margin-top:0"></canvas>
       <div id="tlExtended">
         <div class="tl-steprow">
@@ -3998,6 +4017,7 @@ function tlSingleMode(){
   // SNOWPACK is a state at an instant, not an accumulation, so while its
   // layer is up the main slider has to stop offering a from-to window: two
   // handles would claim the layer integrates between them, and it does not.
+  if(layer==='snowpack')return true;
   if(ovOn.variantA&&typeof vaAvailable==='function'&&vaAvailable())return true;
   return layer==='powder';
 }
@@ -4016,6 +4036,7 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   const topPad=compact?3:20,botPad=compact?3:26;
   const nx=tvX(nowIdx,cw),x1=tvX(a,cw),x2=tvX(b,cw),baseY=ch-botPad;
   const single=tlSingleMode();
+  document.body.classList.toggle('tl-va',layer==='snowpack');
   // soft selection band (rounded) — tinted with the active layer colour.
   // In single-point mode there's no range to shade, just the point itself
   // (drawn further down, after the bars so it sits on top of them).
@@ -4410,6 +4431,8 @@ async function vaLoad(){
     // additionally brings in the picker and legend if it is already on. Both
     // no-op safely when the panel has not been built yet.
     ovSyncUI();try{ovRender();}catch(e){}
+    // the layer list gains its SNOWPACK entry now that there is data
+    try{renderLayerStrip();if(layer==='snowpack')renderAll();}catch(e){}
   }catch(e){}
 }
 
@@ -4660,16 +4683,41 @@ function vaHiEngine(){
     if(thin)L=1;
     return L;
   };
+  // Simplified ski quality and Triebschnee: line-by-line ports of
+  // classify_ski6 / classify_wind.
+  E.clsSki6=function(m){
+    var T=E.pk.thresholds,x=E.mi;
+    var hs=m[x.total_hs_cm],pw=m[x.powder_depth_cm],cr=m[x.crust_thick_cm],sd=m[x.surface_density],lw=m[x.surface_lw];
+    if(!(hs>=T.THIN_COVER_HS))return 0;
+    if(lw>T.SK_WET_LWC)return 6;
+    if(pw>=T.SK_POWDER_MIN)return pw<T.SK_P1?3:(pw<T.SK_P2?4:5);
+    if(cr>=T.CRUST_FINE||sd>=T.ICE_DENSITY_MIN)return 2;
+    return 1;
+  };
+  E.clsWind=function(m){
+    var T=E.pk.thresholds,x=E.mi;
+    if(!(m[x.total_hs_cm]>=T.THIN_COVER_HS))return 0;
+    var dr=m[x.drift_load],sc=m[x.wind_scour];
+    if(dr>=T.WD_STRONG)return 3;if(dr>=T.WIND_MIN)return 2;if(sc>=T.WIND_MIN)return 1;return 0;
+  };
   E.color=function(layer,m,out){
     if(layer==='density'){
       var d=m[E.mi.surface_density],r=E.pk.dens,x=Math.max(0,Math.min(1,(d-r[0])/(r[1]-r[0])));
       out[0]=255*Math.min(1,2*x);out[1]=255*Math.min(1,2*(1-x));out[2]=120*(1-x);out[3]=d>0?190:0;return;
     }
-    var L=layer==='simple'?E.clsSimple(m):E.clsSki(m),c=E.pk.rgba[layer==='simple'?'simple':'ski18'][L]||[0,0,0,0];
+    var L,key;
+    if(layer==='ski6'){L=E.clsSki6(m);key='ski6';}
+    else if(layer==='wind'){L=E.clsWind(m);key='wind';}
+    else if(layer==='simple'){L=E.clsSimple(m);key='simple';}
+    else{L=E.clsSki(m);key='ski18';}
+    var tab=E.pk.rgba[key]||E.pk.rgba.ski18,c=tab[L]||[0,0,0,0];
     out[0]=c[0];out[1]=c[1];out[2]=c[2];out[3]=c[3];
   };
   E.metsFor=function(layer){
-    var x=E.mi,names=layer==='density'?['surface_density']:layer==='simple'
+    var x=E.mi,names=layer==='density'?['surface_density']
+      :layer==='ski6'?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_density','surface_lw']
+      :layer==='wind'?['total_hs_cm','drift_load','wind_scour']
+      :layer==='simple'
       ?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_lw','sh_surface','drift_load','wind_scour']
       :['total_hs_cm','powder_depth_cm','crust_thick_cm','powder_lw','surface_density','surface_hardness',
         'surface_lw','weak_below_cm','sh_surface','drift_load','wind_scour'];
@@ -4807,21 +4855,32 @@ async function vaPkLoad(){
   }catch(e){vaPk=null;}
   return vaPk;
 }
+// A small pool of render workers (2 on most phones): two tiles at a time,
+// and a job for a frame the slider has already left is dropped before it
+// starts instead of holding up the current one.
+const vaHiWs=[];
 function vaHiWorkerInit(pk,sh,fo,pr){
-  if(vaHiW||typeof Worker==='undefined'||typeof Blob==='undefined')return;
-  try{
-    const src='var E=('+vaHiEngine.toString()+')();onmessage=function(ev){var d=ev.data;'
-      +'if(d.t==="init")E.init(d.pk,d.sh,d.fo,d.pr);else if(d.t==="frame")E.setFrame(d.vals,d.ok);'
-      +'else if(d.t==="render"){try{var o=E.render(d.q);postMessage({id:d.id,px:o},[o.buffer]);}'
-      +'catch(e){postMessage({id:d.id,px:null,err:String(e&&e.message||e)});}}};';
-    const w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
-    w.onmessage=ev=>{const cb=vaHiCb[ev.data.id];delete vaHiCb[ev.data.id];if(cb)cb(ev.data.px);};
-    // A dead worker must not leave tiles waiting forever: resolve what is
-    // pending (empty) and let the main thread take over.
-    w.onerror=()=>{vaHiW=null;for(const k in vaHiCb){const cb=vaHiCb[k];delete vaHiCb[k];cb(null);}};
-    w.postMessage({t:'init',pk,sh,fo,pr});
-    vaHiW=w;
-  }catch(e){vaHiW=null;}
+  if(vaHiWs.length||typeof Worker==='undefined'||typeof Blob==='undefined')return;
+  const n=Math.max(1,Math.min(2,(navigator.hardwareConcurrency||2)-1));
+  const src='var E=('+vaHiEngine.toString()+')(),F={},FK=[];onmessage=function(ev){var d=ev.data;'
+    +'if(d.t==="init")E.init(d.pk,d.sh,d.fo,d.pr);'
+    +'else if(d.t==="frame"){if(!F[d.tag])FK.push(d.tag);F[d.tag]={v:d.vals,o:d.ok};while(FK.length>4)delete F[FK.shift()];}'
+    +'else if(d.t==="render"){try{var f=F[d.tag];if(!f)throw new Error("noframe");E.setFrame(f.v,f.o);'
+    +'var o=E.render(d.q);postMessage({id:d.id,px:o},[o.buffer]);}'
+    +'catch(e){postMessage({id:d.id,px:null,err:String(e&&e.message||e)});}}};';
+  for(let i=0;i<n;i++){
+    try{
+      const w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
+      const W={w,busy:false,sent:new Set(),frames:[],dead:false};
+      w.onmessage=ev=>{const cb=vaHiCb[ev.data.id];delete vaHiCb[ev.data.id];W.busy=false;
+        if(cb)cb(ev.data.px,ev.data.err);vaHiPump();};
+      // A dead worker must not leave tiles waiting forever: resolve what is
+      // pending (empty) and let the others / the main thread take over.
+      w.onerror=()=>{W.dead=true;W.busy=false;for(const k in vaHiCb){if(vaHiCb[k]._w===W){const cb=vaHiCb[k];delete vaHiCb[k];cb(null);}}vaHiPump();};
+      w.postMessage({t:'init',pk,sh,fo,pr});
+      vaHiWs.push(W);
+    }catch(e){}
+  }
 }
 // One frame of run metrics, decoded from its PNG.
 async function vaPkFrame(tag){
@@ -4846,32 +4905,75 @@ async function vaTerrBytes(key){
   if(vaTerrC.size>12)vaTerrC.delete(vaTerrC.keys().next().value);
   return img.rgba;
 }
-// Terrain tiles the worker already holds (its own cache keeps 32): those
-// are not decoded or copied across again for every tile and every frame.
-const vaHiSent=new Set();
-function vaHiSentAdd(k){vaHiSent.delete(k);vaHiSent.add(k);
-  if(vaHiSent.size>20)vaHiSent.delete(vaHiSent.values().next().value);}
-async function vaHiTile(c,S){
-  if(!vaPk||!vaHiTag)return null;
+// ── render queue ──────────────────────────────────────────────────────────
+// prio 0: tiles of the frame on screen; prio 1: the neighbouring frames,
+// rendered ahead into the tile cache so ‹ › and the next drag step are
+// instant. A job whose frame is no longer wanted is skipped when its turn
+// comes.
+const vaHiQ=[];
+function vaHiAlive(){return vaHiWs.filter(W=>!W.dead);}
+function vaHiQueue(job){
+  return new Promise(res=>{job.res=res;vaHiQ.push(job);vaHiQ.sort((x,y)=>x.prio-y.prio);vaHiPump();});
+}
+async function vaHiRun(W,job){
+  const {c,S,tag,layer}=job;
   const tz=Math.min(c.z,VA_TERR_Z),f=Math.pow(2,c.z-tz),tx=Math.floor(c.x/f),ty=Math.floor(c.y/f);
   const key=tz+'/'+tx+'/'+ty;
-  // Terrain tiles come from a third-party bucket; on a phone one of them
-  // failing now and then is normal, so give it a second go before the tile
-  // falls back to the coarse frame.
-  const have=!!vaHiW&&vaHiSent.has(key);
-  let tb=null;
-  if(!have){
-    try{tb=await vaTerrBytes(key);}
-    catch(e){await new Promise(r=>setTimeout(r,700));tb=await vaTerrBytes(key);}
+  try{
+    let tb=null;
+    if(!W||!W.sent.has(key)){
+      try{tb=await vaTerrBytes(key);}
+      catch(e){await new Promise(r=>setTimeout(r,700));tb=await vaTerrBytes(key);}
+    }
+    const fr=await vaPkFrame(tag);
+    const q={z:c.z,x:c.x,y:c.y,size:S,layer,tkey:key,tz,tx,ty,tbytes:tb};
+    if(!W){vaEng.setFrame(fr.vals,fr.ok);if(!tb)q.tbytes=await vaTerrBytes(key);job.res(vaEng.render(q));return;}
+    if(W.frames.indexOf(tag)<0){
+      W.w.postMessage({t:'frame',tag,vals:fr.vals,ok:fr.ok});W.frames.push(tag);
+      while(W.frames.length>4)W.frames.shift();
+    }
+    if(tb){W.sent.delete(key);W.sent.add(key);if(W.sent.size>20)W.sent.delete(W.sent.values().next().value);}
+    const id=++vaHiSeq;
+    const cb=(px,err)=>{if(!px){W.sent.delete(key);if(err==='noframe')W.frames=W.frames.filter(t=>t!==tag);}job.res(px);};
+    cb._w=W;vaHiCb[id]=cb;
+    W.w.postMessage({t:'render',id,tag,q});
+  }catch(e){if(W)W.busy=false;job.res(null);vaHiPump();}
+}
+function vaHiPump(){
+  const ws=vaHiAlive();
+  if(!ws.length){                                      // no worker: main thread, one at a time
+    if(vaHiPump._main||!vaHiQ.length)return;
+    const job=vaHiQ.shift();
+    if(job.stale&&job.stale()){job.res(null,true);return vaHiPump();}
+    vaHiPump._main=true;
+    vaHiRun(null,job).finally(()=>{vaHiPump._main=false;setTimeout(vaHiPump,0);});
+    return;
   }
-  const q={z:c.z,x:c.x,y:c.y,size:S,layer:vaKey,tkey:key,tz,tx,ty,tbytes:tb};
-  if(vaHiW){
-    if(!have)vaHiSentAdd(key);
-    return new Promise(res=>{const id=++vaHiSeq;
-      vaHiCb[id]=px=>{if(!px)vaHiSent.delete(key);res(px);};vaHiW.postMessage({t:'render',id,q});});
+  for(const W of ws){
+    if(W.busy)continue;
+    let job=null;
+    while(vaHiQ.length){const j=vaHiQ.shift();if(j.stale&&j.stale()){j.res(null,true);continue;}job=j;break;}
+    if(!job)return;
+    W.busy=true;vaHiRun(W,job);
   }
-  if(!tb)tb=await vaTerrBytes(key),q.tbytes=tb;
-  return vaEng.render(q);
+}
+// Rendered tiles, by frame/layer/tile: stepping back and forth or panning
+// back is a copy, not a render. ~32 MB at most.
+const vaHiCache=new Map();let vaHiCacheB=0;
+function vaHiCKey(tag,layer,c,S){return tag+'|'+layer+'|'+c.z+'/'+c.x+'/'+c.y+'|'+S;}
+function vaHiCachePut(k,px){
+  if(vaHiCache.has(k)){vaHiCacheB-=vaHiCache.get(k).length;vaHiCache.delete(k);}
+  vaHiCache.set(k,px);vaHiCacheB+=px.length;
+  while(vaHiCacheB>32e6&&vaHiCache.size){const k0=vaHiCache.keys().next().value;vaHiCacheB-=vaHiCache.get(k0).length;vaHiCache.delete(k0);}
+}
+function vaHiTile(c,S,tag,layer,prio,stale){
+  if(!vaPk||!tag)return Promise.resolve(null);
+  const k=vaHiCKey(tag,layer,c,S);
+  if(vaHiCache.has(k)){const px=vaHiCache.get(k);vaHiCache.delete(k);vaHiCache.set(k,px);return Promise.resolve(px);}
+  return vaHiQueue({c,S,tag,layer,prio:prio||0,stale}).then(px=>{
+    if(px&&px.length===S*S*4)vaHiCachePut(k,px);
+    return px;
+  });
 }
 // A tile the device renderer could not draw (terrain or worker failure) is
 // cut from the coarse frame PNG instead of staying empty: a blocky patch is
@@ -4897,16 +4999,18 @@ function vaHiFallback(t,c,S){
 // one is ready, and a stale render never overwrites a newer one.
 let vaHiPend=0;
 function vaHiPaint(t,done,tries){
-  const c=t._vaC,S=t.width,gen=t._vaGen=(t._vaGen||0)+1;
+  const c=t._vaC,S=t.width,gen=t._vaGen=(t._vaGen||0)+1,tag=vaHiTag,layer=vaKey;
   vaHiPend++;
   let ended=false;
-  const fin=()=>{if(!ended){ended=true;vaHiPend=Math.max(0,vaHiPend-1);if(!vaHiPend)vaSyncOpacity();}
+  const fin=()=>{if(!ended){ended=true;vaHiPend=Math.max(0,vaHiPend-1);if(!vaHiPend){vaSyncOpacity();vaPrefetchSoon();}}
     if(done){const d=done;done=null;d(null,t);}};
   // A fallback tile tries again a little later, so a passing network hiccup
   // does not leave a coarse patch in the sharp layer for good.
   const fb=()=>{vaHiFallback(t,c,S);
     if((tries||0)<3)setTimeout(()=>{if(t.isConnected&&t._vaGen===gen)vaHiPaint(t,null,(tries||0)+1);},2500*((tries||0)+1));};
-  vaHiTile(c,S).then(px=>{
+  // until a newer paint of this tile (or the tile itself) is gone
+  const stale=()=>t._vaGen!==gen||!t.isConnected&&!done;
+  vaHiTile(c,S,tag,layer,0,stale).then(px=>{
     if(t._vaGen!==gen)return fin();
     if(px&&px.length===S*S*4){try{t.getContext('2d').putImageData(new ImageData(px,S,S),0,0);}catch(e){fb();}}
     else fb();
@@ -4923,14 +5027,15 @@ let vaHiReady=false;
 function vaHiMake(){
   if(vaHi||typeof L==='undefined'||!L.GridLayer)return vaHi;
   const Lyr=L.GridLayer.extend({createTile:function(c,done){
-    // 128 px canvases shown at 256 px: ~4x less to compute per tile, and the
-    // terrain under them is ~30 m anyway, so the picture loses next to nothing.
-    const t=document.createElement('canvas'),S=128;t.width=S;t.height=S;
+    // Zoom 10-11: 128 px canvases shown at 256 px (~4x less work). Zoom 12,
+    // the terrain's own level (~25 m), gets 192 px; deeper zooms reuse those
+    // tiles scaled up (maxNativeZoom) instead of rendering again.
+    const S=c.z>=VA_TERR_Z?192:128,t=document.createElement('canvas');t.width=S;t.height=S;
     t._vaC={x:c.x,y:c.y,z:c.z};vaHiPaint(t,done);
     return t;
   }});
-  vaHi=new Lyr({minZoom:VA_HI_Z,pane:'overlayPane',opacity:vaOpacity(),updateWhenIdle:true,
-                keepBuffer:2,className:'va-hi'});
+  vaHi=new Lyr({minZoom:VA_HI_Z,maxNativeZoom:VA_TERR_Z,pane:'overlayPane',opacity:vaOpacity(),
+                updateWhenIdle:true,updateWhenZooming:false,keepBuffer:2,className:'va-hi'});
   // The coarse frame stays visible until the fine tiles for this view are
   // actually there -- hiding it on zoomend is what made the layer vanish
   // for seconds (or for good, on a failed terrain fetch) when zooming in.
@@ -4941,10 +5046,11 @@ function vaHiMake(){
 function vaHiActive(){
   return !!(vaHi&&vaPk&&vaHiTag&&map&&map.getZoom&&map.getZoom()>=VA_HI_Z);
 }
-// Fine tiles are showing and complete, so the coarse frame can step aside.
-function vaHiCovers(){return vaHiActive()&&vaHiReady&&!vaHiPend&&!vaHiStale()&&!!(vaGrp&&vaGrp.hasLayer(vaHi));}
-// The sharp tiles show another time than the slider (mid-drag, before the
-// idle redraw): then they are hidden and the coarse frame stands in.
+// The sharp tiles of this view exist, so the coarse frame steps aside. While
+// the frame changes they stay up and are replaced tile by tile (old picture
+// until the new one is there) -- never swapped for the blurry 250 m frame,
+// which classifies slopes by 250 m cell averages and so shows other classes.
+function vaHiCovers(){return vaHiActive()&&vaHiReady&&!!(vaGrp&&vaGrp.hasLayer(vaHi));}
 function vaHiStale(){return !!(vaMan&&vaHiTag!==vaMan.tags[vaTagIndex()]);}
 // Bring the device renderer to the frame the timeline wants.
 async function vaHiSync(){
@@ -4966,8 +5072,6 @@ async function vaHiSync(){
   if(vaHiWant!==tag){vaHiSync();if(!f)return;}
   if(!f)return;
   try{
-    vaEng.setFrame(f.vals,f.ok);
-    if(vaHiW)vaHiW.postMessage({t:'frame',vals:f.vals,ok:f.ok});
     vaHiTag=tag;
     // First time: adding the layer builds its tiles. Never redraw(): in
     // Leaflet 1.9 it takes the UNROUNDED map zoom as tile zoom, so at zoom
@@ -4982,7 +5086,27 @@ function vaSyncOpacity(){
   if(!ovOn.variantA)return;
   const hi=vaHiCovers();
   if(vaOv){try{vaOv.setOpacity(hi?0:vaOpacity());}catch(e){}}
-  if(vaHi){try{vaHi.setOpacity(vaHiStale()?0:vaOpacity());}catch(e){}}
+  if(vaHi){try{vaHi.setOpacity(vaOpacity());}catch(e){}}
+}
+// The weather points SNOWPACK actually runs at: small rings on the map, so it
+// is visible where the model has its own data and where it interpolates.
+function vaPtsLayer(){
+  const wps=vaIdx&&vaIdx.weather_points;if(!wps||!wps.length)return null;
+  if(!map.getPane('vaPtsPane')){map.createPane('vaPtsPane');map.getPane('vaPtsPane').style.zIndex=455;}
+  const g=L.layerGroup();
+  wps.forEach(w=>{
+    const bands=(w.bands||[]),txt='SNOWPACK-Wetterpunkt '+w.id+'<br>Referenz '+Math.round(w.ref_elev||0)+' m'
+      +(bands.length?' · Höhenstufen '+bands[0]+'–'+bands[bands.length-1]+' m':'');
+    L.circleMarker([w.lat,w.lon],{pane:'vaPtsPane',radius:4,weight:1.6,color:'#1d1d1f',fillColor:'#ffffff',
+      fillOpacity:1,opacity:.9,interactive:true,bubblingMouseEvents:true})
+      .bindTooltip(txt,{direction:'top',offset:[0,-4]}).addTo(g);
+  });
+  return g;
+}
+let vaPts=null;
+function vaPtsSync(){
+  if(vaPts||!vaGrp)return;
+  try{vaPts=vaPtsLayer();if(vaPts)vaGrp.addLayer(vaPts);}catch(e){vaPts=null;}
 }
 function vaBuildLayer(){
   if(!vaAvailable())return null;
@@ -4991,6 +5115,7 @@ function vaBuildLayer(){
   vaOv=L.imageOverlay(vaOvWant,bnds,
     {opacity:vaOpacity(),className:'raster-smooth',pane:'overlayPane'});
   vaGrp=L.layerGroup([vaOv]);
+  vaPtsSync();
   vaHistLoad(vaOvWant);
   return vaGrp;
 }
@@ -5023,24 +5148,86 @@ const VA_HI_IDLE_MS=300;
 function vaHiSyncSoon(){clearTimeout(vaHiTimer);vaHiTimer=setTimeout(vaHiSync,VA_HI_IDLE_MS);}
 function vaRefresh(){
   if(!vaOv||!ovOn.variantA||!vaAvailable())return;
+  vaPtsSync();       // the profile index (with the points) may arrive after the layer
   const u=vaFrameUrl(vaKey,vaTagIndex());
   if(u&&u!==vaOvWant){vaOvWant=u;if(u!==vaOv._url)vaOvLoad(u,false);}
   vaSyncOpacity();
-  vaHiSyncSoon();
+  vaHiSync();
 }
 // Once settled, quietly fetch the neighbouring frames so the next step of
 // the slider is already in the browser cache (and, zoomed in, decoded).
-let vaPreTimer=0;
+let vaPreTimer=0,vaPreRound=0;
 function vaPrefetchSoon(){
   clearTimeout(vaPreTimer);
   vaPreTimer=setTimeout(()=>{
     if(!ovOn.variantA||!vaAvailable())return;
     const i=vaTagIndex(),n=vaMan.tags.length;
-    [i+1,i-1].filter(j=>j>=0&&j<n).forEach(j=>{
+    // the neighbouring FRAMES on the slider's 2 h grid, not the next tag
+    const al=(typeof vaAllowedIdx==='function')?vaAllowedIdx():null,cur=b-1;
+    let nb=[i+1,i-1];
+    if(al){const nx=al.find(t=>t>cur),pv=[...al].reverse().find(t=>t<cur);
+      nb=[nx,pv].filter(t=>t!=null).map(t=>{const sv=b;b=t+1;const k=vaTagIndex();b=sv;return k;});}
+    const round=++vaPreRound;
+    nb.filter(j=>j>=0&&j<n).forEach(j=>{
       const u=vaFrameUrl(vaKey,j);if(u){const im=new Image();im.src=u;}
-      if(vaPk&&map.getZoom()>=VA_HI_Z)vaPkFrame(vaMan.tags[j]).catch(()=>{});
+      if(vaPk&&vaHiCovers()&&!vaHiPend&&vaHi&&vaHi._tiles){
+        // render ahead into the tile cache (low priority, dropped once the
+        // slider has moved on)
+        const tag=vaMan.tags[j],layer=vaKey;
+        for(const k in vaHi._tiles){const e=vaHi._tiles[k].el;if(!e||!e._vaC)continue;
+          vaHiTile(e._vaC,e.width,tag,layer,1,()=>round!==vaPreRound).catch(()=>{});}
+      }
     });
   },900);
+}
+// The SNOWPACK layer is chosen in the layer list (layer==='snowpack', the
+// sub-layer in `stat`); the overlay machinery underneath follows that choice.
+function vaLayerSync(){
+  if(typeof vaAvailable!=='function')return;
+  const want=layer==='snowpack'&&vaAvailable();
+  if(want&&vaMan.layers[stat]&&stat!==vaKey){if(vaOv)vaPickLayer(stat);else vaKey=stat;}
+  if(!!ovOn.variantA!==want){
+    // entering the layer: put the time on a frame right away
+    if(want){const t=vaSnapT(b-1);b=Math.max(1,Math.min(T,t+1));a=Math.max(0,b-windowSize);}
+    try{ovToggle('variantA');}catch(e){}
+  }
+}
+// ── time: discrete 2 h steps ─────────────────────────────────────────────
+// The slider snaps to the exported frames, at most one every VA_STEP_H
+// hours, so dragging walks frame by frame instead of through in-between
+// positions that show nothing new. ‹ › step one frame.
+const VA_STEP_H=2;
+let vaAllowed=null,vaAllowedKey='';
+function vaAllowedIdx(){
+  if(!vaAvailable()||!M.times)return null;
+  const key=vaMan.generated+'|'+M.times.length+'|'+M.times[0];
+  if(vaAllowed&&vaAllowedKey===key)return vaAllowed;
+  const pos=new Map();M.times.forEach((t,i)=>pos.set(String(t).slice(0,16),i));
+  const ts=(vaMan.timestamps||[]).map(t=>String(t).slice(0,16));
+  // frame spacing in hours; denser exports are thinned to the step
+  let gap=24;for(let i=1;i<ts.length;i++){const g=(Date.parse(ts[i]+':00Z')-Date.parse(ts[i-1]+':00Z'))/3600000;if(g>0)gap=Math.min(gap,g);}
+  const out=[];
+  ts.forEach(t=>{const i=pos.get(t);if(i==null)return;
+    if(gap<VA_STEP_H&&new Date(t+':00Z').getUTCHours()%VA_STEP_H)return;out.push(i);});
+  vaAllowed=out.length?out:null;vaAllowedKey=key;return vaAllowed;
+}
+// timeline index -> the nearest one that has a frame (unchanged off-range)
+function vaSnapT(t){
+  const al=vaAllowedIdx();if(!al)return t;
+  let best=al[0],bd=Math.abs(al[0]-t);
+  for(const i of al){const d=Math.abs(i-t);if(d<bd){bd=d;best=i;}}
+  return best;
+}
+function vaStepTime(d){
+  const al=vaAllowedIdx(),cur=b-1;let nt=cur;
+  if(al){
+    if(d>0){nt=al.find(i=>i>cur);if(nt==null)nt=al[al.length-1];}
+    else{for(let k=al.length-1;k>=0;k--)if(al[k]<cur){nt=al[k];break;}if(nt===cur)nt=al[0];}
+  }else nt=Math.max(0,Math.min(T-1,cur+d*VA_STEP_H));
+  b=Math.max(1,Math.min(T,nt+1));a=Math.max(0,b-windowSize);
+  try{if(typeof vaFollowTimeline==='function')vaFollowTimeline();}catch(e){}
+  try{tvFollow();}catch(e){}
+  renderAll();try{haptic(3);}catch(e){}
 }
 function vaPickLayer(k){
   if(!vaAvailable()||!vaMan.layers[k])return;
@@ -5321,54 +5508,76 @@ function vaProfileAt(lat,lon,elev,aspectDeg,slopeDeg){
 // to it stays for anyone who wants to be sure. Keyed by the F1 class that
 // variant_a/profiles.py writes.
 const VA_GRAIN_ICON={
-  1:'<path d="M6 1v10M1.7 3.5l8.6 5M10.3 3.5l-8.6 5"/>',                  // PP  new snow: six-armed star
-  // DF has to read as a DECAYING star next to PP's clean one, and at 12 px a
-  // six-armed star with a dot in it is just PP again. Stubby rays on a filled
-  // core carry "fragmented" at this size.
-  2:'<circle cx="6" cy="6" r="2" fill="currentColor" stroke="none"/>'
-   +'<path d="M6 1.4v1.5M6 9.1v1.5M1.4 6h1.5M9.1 6h1.5"/>',                 // DF  decomposing
-  3:'<circle cx="6" cy="6" r="3.1" fill="currentColor" stroke="none"/>',    // RG  rounded grains
-  4:'<rect x="2.9" y="2.9" width="6.2" height="6.2"/>',                     // FC  faceted crystals
-  5:'<path d="M2.4 2.6l1.7 6.8h3.8l1.7-6.8"/>',                             // DH  depth hoar: cup
-  6:'<path d="M1.8 9.2h8.4L10.2 3z"/>',                                     // SH  surface hoar: wedge
-  7:'<circle cx="4.3" cy="6.4" r="2.4" fill="currentColor" stroke="none"/><circle cx="7.9" cy="5.4" r="2" fill="currentColor" stroke="none"/>', // MF  melt forms: clustered
-  8:'<rect x="1.6" y="4.9" width="8.8" height="2.2" fill="currentColor" stroke="none"/>', // IF  ice layer: bar
-  9:'<rect x="2.9" y="2.9" width="6.2" height="6.2" rx="2.1"/>',            // FCxr rounding facets
-  0:'<path d="M2.5 6h7"/>'                                                  // unknown
+  // The international symbols themselves (ICSSG, Fierz et al. 2009), drawn
+  // heavier so they read at 12 px on a coloured layer.
+  1:'<path d="M6 1.2v9.6M1.2 6h9.6"/>',                                     // PP  new snow: +
+  2:'<path d="M3 10.5L9 1.5"/>',                                           // DF  decomposing: /
+  3:'<circle cx="6" cy="6" r="3" fill="currentColor" stroke="none"/>',      // RG  rounded grains: ●
+  4:'<rect x="2.2" y="2.2" width="7.6" height="7.6"/>',                     // FC  faceted: □
+  5:'<path d="M1.5 10.2L6 1.8l4.5 8.4"/>',                                  // DH  depth hoar: ∧
+  6:'<path d="M1.5 1.8L6 10.2l4.5-8.4"/>',                                  // SH  surface hoar: ∨
+  7:'<circle cx="6" cy="6" r="3.6"/>',                                      // MF  melt forms: ○
+  8:'<path d="M1 6h10" stroke-width="3"/>',                                 // IF  ice: ▬
+  9:'<rect x="2.2" y="2.2" width="7.6" height="7.6"/><circle cx="6" cy="6" r="1.4" fill="currentColor" stroke="none"/>', // FCxr: ⊡
+  0:'<path d="M3 6h6" stroke-dasharray="1.5 1.5"/>'                         // unknown
 };
+const VA_GRAIN_DE={PP:'Neuschnee',DF:'Filz',RG:'Rundkörner',FC:'kantige Formen',DH:'Becherkristalle',
+  SH:'Oberflächenreif',MF:'Schmelzformen',IF:'Eislamelle',FCxr:'kantig, rundend'};
 function vaGrainIcon(code){
   const d=VA_GRAIN_ICON[code]||VA_GRAIN_ICON[0];
   return '<svg class="va-gi" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"'
-    +' fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round">'+d+'</svg>';
+    +' fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
 }
 
-// Density curve + grain-type column, the same two things variant_a's preview
-// shows. Drawn as inline SVG so it costs no library and scales crisply.
+// Snow profile: depth below the surface on the y axis (0 = surface, at the
+// top, as a printed profile), density on the x axis as a step curve, and a
+// grain column with the ICSSG symbol drawn into each layer. Inline SVG.
 function vaProfileHTML(pf){
   if(!pf)return '';
   if(pf.loading)return '<div class="insp-sec va-prof"><h4>Schneeprofil <em>lädt…</em></h4></div>';
-  const nb=pf.dens.length,H=118,Wp=96,GW=13;
-  const gl=((vaIdx||vaProf||{}).grain)||{};
-  const dmin=100,dmax=450;
-  let bars='',seen={};
-  for(let j=0;j<nb;j++){
-    const g=pf.grain[j],e=gl[g]||gl[String(g)];
-    const col=e?('rgb('+e[1].join(',')+')'):'#ddd';
-    if(e&&g)seen[g]=e[0];
-    bars+='<rect x="0" y="'+(j*H/nb).toFixed(1)+'" width="'+GW+'" height="'+(H/nb+0.6).toFixed(1)+'" fill="'+col+'"/>';
-  }
-  let pathd='';
-  for(let j=0;j<nb;j++){
-    const x=Math.max(0,Math.min(1,(pf.dens[j]-dmin)/(dmax-dmin)))*Wp;
-    pathd+=(j?'L':'M')+x.toFixed(1)+' '+(j*H/nb+H/nb/2).toFixed(1);
-  }
-  // Swatch + ICSSG pictogram + code. The colour matches the depth column
-  // beside it, the pictogram is what a printed profile would show, and the
-  // code stays so the symbol never has to be guessed at.
-  const chips=Object.keys(seen).map(g=>{
-    const e=gl[g]||gl[String(g)];
+  const nb=pf.dens.length,gl=((vaIdx||vaProf||{}).grain)||{};
+  const span=Math.max(2,pf.top_cm?Math.min(pf.hs,pf.top_cm):pf.hs);
+  const W=300,H=196,L=40,GW=24,X0=L+GW+6,X1=W-8,T=10,B=H-34,dmin=0,dmax=500;
+  const yOf=cm=>T+cm/span*(B-T),xOf=d=>X0+Math.max(0,Math.min(1,(d-dmin)/(dmax-dmin)))*(X1-X0);
+  const binCm=span/nb;
+  let g='';
+  // grid + axes
+  const ys=span<=30?5:span<=80?10:span<=200?25:50;
+  for(let cm=0;cm<=span+1e-6;cm+=ys){const y=yOf(cm).toFixed(1);
+    g+='<line x1="'+X0+'" y1="'+y+'" x2="'+X1+'" y2="'+y+'" class="vp-grid"/>'
+      +'<text x="'+(L-4)+'" y="'+(+y+3.5)+'" class="vp-t" text-anchor="end">'+Math.round(cm)+'</text>';}
+  for(let d=100;d<=dmax;d+=100){const x=xOf(d).toFixed(1);
+    g+='<line x1="'+x+'" y1="'+T+'" x2="'+x+'" y2="'+B+'" class="vp-grid"/>'
+      +'<text x="'+x+'" y="'+(B+12)+'" class="vp-t" text-anchor="middle">'+d+'</text>';}
+  g+='<line x1="'+X0+'" y1="'+T+'" x2="'+X0+'" y2="'+B+'" class="vp-ax"/>'
+    +'<line x1="'+X0+'" y1="'+B+'" x2="'+X1+'" y2="'+B+'" class="vp-ax"/>'
+    +'<text x="'+((X0+X1)/2)+'" y="'+(H-6)+'" class="vp-at" text-anchor="middle">Dichte [kg/m³]</text>'
+    +'<text transform="translate(11 '+((T+B)/2)+') rotate(-90)" class="vp-at" text-anchor="middle">Tiefe unter Oberfläche [cm]</text>';
+  // grain layers: consecutive bins of one class merged into one layer
+  const lay=[];for(let j=0;j<nb;j++){const c=pf.grain[j];
+    if(lay.length&&lay[lay.length-1].c===c)lay[lay.length-1].j1=j;else lay.push({c,j0:j,j1:j});}
+  const seen={};
+  lay.forEach(l=>{
+    const e=gl[l.c]||gl[String(l.c)],col=e?'rgb('+e[1].join(',')+')':'#ddd';
+    if(e&&l.c)seen[l.c]=e[0];
+    const y0=yOf(l.j0*binCm),y1=yOf((l.j1+1)*binCm);
+    g+='<rect x="'+L+'" y="'+y0.toFixed(1)+'" width="'+GW+'" height="'+(y1-y0+0.4).toFixed(1)+'" fill="'+col+'"/>';
+    if(l.j0>0)g+='<line x1="'+L+'" y1="'+y0.toFixed(1)+'" x2="'+X1+'" y2="'+y0.toFixed(1)+'" class="vp-lay"/>';
+    if(y1-y0>=11&&l.c){const d=VA_GRAIN_ICON[l.c]||VA_GRAIN_ICON[0],cy=(y0+y1)/2;
+      g+='<g transform="translate('+(L+GW/2-6)+' '+(cy-6).toFixed(1)+')" fill="none" stroke="#1d1d1f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" color="#1d1d1f">'+d+'</g>';}
+  });
+  g+='<rect x="'+L+'" y="'+T+'" width="'+GW+'" height="'+(B-T)+'" class="vp-box"/>';
+  // density as a step curve with a light fill (each bin is a layer)
+  let pathd='',area='M'+X0+' '+T;
+  for(let j=0;j<nb;j++){const x=xOf(pf.dens[j]).toFixed(1),y0=yOf(j*binCm).toFixed(1),y1=yOf((j+1)*binCm).toFixed(1);
+    pathd+=(j?'L':'M')+x+' '+y0+'L'+x+' '+y1;area+='L'+x+' '+y0+'L'+x+' '+y1;}
+  area+='L'+X0+' '+B+'Z';
+  g+='<path d="'+area+'" class="vp-fill"/><path d="'+pathd+'" class="vp-line"/>';
+  // Swatch + ICSSG pictogram + code + name.
+  const chips=Object.keys(seen).map(gc=>{
+    const e=gl[gc]||gl[String(gc)];
     return '<span><i style="background:rgb('+e[1].join(',')+')"></i>'
-      +vaGrainIcon(+g)+escapeHtml(e[0])+'</span>';
+      +vaGrainIcon(+gc)+escapeHtml(e[0])+' '+escapeHtml(VA_GRAIN_DE[e[0]]||'')+'</span>';
   }).join('');
   const AS=['N','NO','O','SO','S','SW','W','NW'];
   const slopeTxt=pf.run?(pf.run.slope?(pf.run.slope+'° '+AS[Math.round(pf.run.aspect/45)%8]):'flach')
@@ -5376,14 +5585,10 @@ function vaProfileHTML(pf){
   return '<div class="insp-sec va-prof"><h4>Schneeprofil <em>HS '+pf.hs+' cm'
     +(pf.exact?'':' · interpoliert')+'</em></h4>'
     +(pf.run?'<div class="va-run">Modellhang '+escapeHtml(slopeTxt)
-      +(pf.top_cm?' · oberste '+pf.top_cm+' cm':'')+'</div>':'')
+      +(pf.top_cm?' · oberste '+Math.round(span)+' cm':'')+'</div>':'')
     +vaNoteHTML()
-    +'<div class="va-prof-row">'
-    +'<svg class="va-grain" viewBox="0 0 '+GW+' '+H+'" width="'+GW+'" height="'+H+'" aria-label="Kornform">'+bars+'</svg>'
-    +'<svg class="va-dens" viewBox="0 0 '+Wp+' '+H+'" width="'+Wp+'" height="'+H+'" aria-label="Dichte">'
-    +'<path d="'+pathd+'" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>'
-    +'<div class="va-prof-ax"><b>'+dmin+'</b><b>'+dmax+' kg/m³</b></div>'
-    +'</div><div class="va-grain-leg">'+chips+'</div></div>';
+    +'<svg class="va-prof-svg" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Schneeprofil: Dichte und Kornform nach Tiefe">'+g+'</svg>'
+    +'<div class="va-grain-leg">'+chips+'</div></div>';
 }
 
 // --- Ski tours: clickable routes with a powder score ----------------------
@@ -5565,8 +5770,67 @@ function fineAspectDeg(lat,lng){const c=_pngSample(aspData,aspPW,aspPH,M.png_bou
   const gd=Math.abs(c[0]-0x9E)+Math.abs(c[1]-0x9E)+Math.abs(c[2]-0x9E);let best=null,bd=1e9;
   for(const a of ASP8DEG){const dd=Math.abs(c[0]-a[0])+Math.abs(c[1]-a[1])+Math.abs(c[2]-a[2]);if(dd<bd){bd=dd;best=a;}}
   if(gd<=bd)return null;return best?best[3]:null;}
-const AspectGrid=L.GridLayer.extend({createTile:function(coords){
+// ── Terrain at ~25 m from the Terrarium tiles ─────────────────────────────
+// The national aspect/elevation PNGs are ~115 m per pixel: a ridge and both
+// of its flanks fall into one pixel. The Terrarium tiles (zoom 13, ~19 m
+// pixels over a ~25-30 m source DEM) resolve them; they are used for the tap
+// readout and, from zoom 11, for the exposition layer. True 2 m (swissALTI3D)
+// would need a tile service of its own.
+const TERR_FZ=13,terrFine=new Map(),terrFineP=new Map();
+function terrXY(lat,lon,z){const n=Math.pow(2,z),lr=lat*Math.PI/180;
+  return [(lon+180)/360*n,(1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n];}
+function terrFineLoad(key){
+  if(terrFine.has(key))return Promise.resolve(terrFine.get(key));
+  if(terrFineP.has(key))return terrFineP.get(key);
+  const pr=vaImgBytes(VA_TERR+key+'.png').then(img=>{
+    const n=256*256,el=new Float32Array(n),d=img.rgba;
+    for(let i=0;i<n;i++)el[i]=d[i*4]*256+d[i*4+1]+d[i*4+2]/256-32768;
+    terrFine.set(key,el);if(terrFine.size>16)terrFine.delete(terrFine.keys().next().value);
+    terrFineP.delete(key);return el;
+  }).catch(e=>{terrFineP.delete(key);throw e;});
+  terrFineP.set(key,pr);return pr;
+}
+// {elev, slope, aspect} from a 256x256 elevation tile at pixel (px, py)
+function terrStats(el,px,py,lat,z){
+  const N=256,c=Math.max(1,Math.min(N-2,Math.floor(px))),r=Math.max(1,Math.min(N-2,Math.floor(py)));
+  const res=156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,z);
+  const x0=Math.max(0,Math.min(N-2,Math.floor(px-0.5))),y0=Math.max(0,Math.min(N-2,Math.floor(py-0.5)));
+  const fx=Math.max(0,Math.min(1,px-0.5-x0)),fy=Math.max(0,Math.min(1,py-0.5-y0));
+  const e=el[y0*N+x0]*(1-fx)*(1-fy)+el[y0*N+x0+1]*fx*(1-fy)+el[(y0+1)*N+x0]*(1-fx)*fy+el[(y0+1)*N+x0+1]*fx*fy;
+  // Horn's 3x3 gradient: steadier than plain central differences on a ridge
+  const z_=(dr,dc)=>el[(r+dr)*N+c+dc];
+  const dC=((z_(-1,1)+2*z_(0,1)+z_(1,1))-(z_(-1,-1)+2*z_(0,-1)+z_(1,-1)))/(8*res);
+  const dR=((z_(1,-1)+2*z_(1,0)+z_(1,1))-(z_(-1,-1)+2*z_(-1,0)+z_(-1,1)))/(8*res);
+  return {elev:e,slope:Math.atan(Math.hypot(dR,dC))*180/Math.PI,
+          aspect:((Math.atan2(-dC,dR)*180/Math.PI)%360+360)%360};
+}
+// Sync lookup for the tap readout; null (and the tile on its way) if not loaded.
+function fineTerrain(lat,lon,onLoad){
+  const [fx,fy]=terrXY(lat,lon,TERR_FZ),tx=Math.floor(fx),ty=Math.floor(fy),key=TERR_FZ+'/'+tx+'/'+ty;
+  const el=terrFine.get(key);
+  if(!el){terrFineLoad(key).then(()=>{if(onLoad)onLoad();}).catch(()=>{});return null;}
+  return terrStats(el,(fx-tx)*256,(fy-ty)*256,lat,TERR_FZ);
+}
+function aspColor(deg,slope,out,o){
+  if(slope<5){out[o]=0x9E;out[o+1]=0x9E;out[o+2]=0x9E;out[o+3]=170;return;}
+  const a=ASP8DEG[Math.round(deg/45)%8];out[o]=a[0];out[o+1]=a[1];out[o+2]=a[2];out[o+3]=210;
+}
+const AspectGrid=L.GridLayer.extend({createTile:function(coords,done){
   const tile=document.createElement('canvas'),ts=this.getTileSize();tile.width=ts.x;tile.height=ts.y;
+  // From zoom 11: exposition from the terrain tiles themselves (~25 m).
+  if(coords.z>=11){
+    const z=Math.min(coords.z,TERR_FZ),f=Math.pow(2,coords.z-z),tx=Math.floor(coords.x/f),ty=Math.floor(coords.y/f);
+    terrFineLoad(z+'/'+tx+'/'+ty).then(el=>{
+      const ctx=tile.getContext('2d'),img=ctx.createImageData(ts.x,ts.y),d=img.data;
+      const ox=(coords.x-tx*f)*256/f,oy=(coords.y-ty*f)*256/f,sc=256/f/ts.x;
+      const lat=Math.atan(Math.sinh(Math.PI*(1-2*(ty+0.5)/Math.pow(2,z))))*180/Math.PI;
+      for(let y=0;y<ts.y;y++)for(let x=0;x<ts.x;x++){
+        const st=terrStats(el,ox+(x+0.5)*sc,oy+(y+0.5)*sc,lat,z);aspColor(st.aspect,st.slope,d,(y*ts.x+x)*4);}
+      ctx.putImageData(img,0,0);done(null,tile);
+    }).catch(()=>done(null,tile));
+    return tile;
+  }
+  setTimeout(()=>done(null,tile),0);
   if(!aspData)return tile;const ctx=tile.getContext('2d'),img=ctx.createImageData(ts.x,ts.y),d=img.data;
   const nw=this._map.unproject([coords.x*ts.x,coords.y*ts.y],coords.z);
   const se=this._map.unproject([(coords.x+1)*ts.x,(coords.y+1)*ts.y],coords.z);
@@ -6634,7 +6898,7 @@ function showOverlay(){
 // second; the work is worth doing once per frame.
 let _raf=0;
 function renderSoon(){if(_raf)return;_raf=requestAnimationFrame(()=>{_raf=0;renderAll();});}
-function renderAll(){showOverlay();renderRaster();renderStations();inspAutoRefresh();
+function renderAll(){try{vaLayerSync();}catch(e){}showOverlay();renderRaster();renderStations();inspAutoRefresh();
   // The tour score is window-dependent, so it has to follow the timeline.
   // That is exactly why scoring runs client-side instead of being baked in
   // at build time.
@@ -6687,7 +6951,13 @@ const GROUPS={
     {id:'newsnow',label:'Neuschnee',vars:[{l:'snow',s:'avg',label:'Neuschnee'}]},
     {id:'depth',label:'Schneehöhe',vars:[{l:'depth',s:'avg',label:'Schneehöhe'}]},
     {id:'wind',label:'Wind',vars:[{l:'wind',s:'lt10',label:'<10 km/h'},{l:'wind',s:'avg',label:'Mittel'},{l:'wind',s:'max',label:'Max'},{l:'wind',s:'min',label:'Min'}]},
-    {id:'temp',label:'Temperatur',vars:[{l:'temp',s:'sub0',label:'<0 °C'},{l:'tsurf',s:'avg',label:'Oberfläche'},{l:'temp',s:'avg',label:'Mittel'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'temp',s:'max05',label:'0–5 °C'}]}
+    {id:'temp',label:'Temperatur',vars:[{l:'temp',s:'sub0',label:'<0 °C'},{l:'tsurf',s:'avg',label:'Oberfläche'},{l:'temp',s:'avg',label:'Mittel'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'temp',s:'max05',label:'0–5 °C'}]},
+    // SNOWPACK is a layer like the others, not an overlay: its sub-layers are
+    // the variants. Only listed once the export is there (groupItems), and
+    // only the views the export actually carries.
+    {id:'snowpack',label:'Skiqualität',va:true,vars:[{l:'snowpack',s:'ski6',label:'Skiqualität'},
+      {l:'snowpack',s:'wind',label:'Triebschnee'},{l:'snowpack',s:'density',label:'Dichte'},
+      {l:'snowpack',s:'ski18',label:'Detail'}]}
   ]},
   // The Report-Modell layers still exist and the drawings still feed the
   // prognosis -- they are just not in the picker. Drop `menu:false` to bring
@@ -6725,7 +6995,15 @@ const TOPIC_COLOR={
   aspect:['#4C7A78','rgba(76,122,120,.14)','rgba(76,122,120,.5)','rgba(76,122,120,.10)']};
 let tlSel='#1868C4',tlSelTint='rgba(24,104,196,.12)';
 function groupItems(g){const z=(function(){try{return map.getZoom();}catch(e){return 99;}})();
-  return (GROUPS[g]||GROUPS.meteo).items.filter(it=>it.minZoom==null||z>=it.minZoom);}
+  return (GROUPS[g]||GROUPS.meteo).items.filter(it=>it.minZoom==null||z>=it.minZoom).map(it=>{
+    if(!it.va)return it;
+    if(typeof vaAvailable!=='function'||!vaAvailable())return null;
+    let vars=it.vars.filter(v=>vaMan.layers[v.s]).map(v=>Object.assign({},v));
+    // An older export without the simplified view: its 18-class map leads.
+    if(!vaMan.layers.ski6&&vaMan.layers.ski18){const d=vars.find(v=>v.s==='ski18');
+      if(d){d.label='Skiqualität';vars=[d].concat(vars.filter(v=>v!==d));}}
+    return vars.length?Object.assign({},it,{vars}):null;
+  }).filter(Boolean);}
 // The groups the picker offers, in order. A group with `menu:false` is still a
 // working layer set -- it just is not something you can switch to by hand.
 function menuGroups(){return Object.keys(GROUPS).filter(g=>GROUPS[g].menu!==false);}
@@ -6876,7 +7154,7 @@ function lyRender(){
 }
 function ovRender(){
   const g=document.getElementById('lyOverlays');if(!g)return;
-  g.innerHTML=Object.keys(OVERLAYS).map(k=>{
+  g.innerHTML=Object.keys(OVERLAYS).filter(k=>k!=='variantA').map(k=>{
     const o=OVERLAYS[k],na=!ovAvailable(k);
     let extra='';
     // Three views (18-class, simplified, density) plus a legend that comes
@@ -7012,7 +7290,8 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
     if(e.cancelable)e.preventDefault();
     return true;}
   function pointDragTo(cx){const rect=RECT();
-    const t=Math.round(tvT(cx-rect.left,rect.width));
+    let t=Math.round(tvT(cx-rect.left,rect.width));
+    if(layer==='snowpack'&&typeof vaSnapT==='function')t=vaSnapT(t);
     b=Math.max(1,Math.min(T,t+1));a=Math.max(0,b-windowSize);
     // Moving the handle means the timeline is addressing the SNOWPACK
     // frames again, so drop any stepper override.
@@ -7397,6 +7676,16 @@ function inspApplyPos(){const e=document.getElementById('inspPanel');
   addEventListener('pointerup',end);addEventListener('pointercancel',end);
   addEventListener('resize',()=>{try{window._inspClamp();}catch(e){}});
 })();
+// The section that belongs to the layer on the map comes first: SNOWPACK ->
+// the profile, wind -> the wind rose, temperature -> the temperature curve...
+// The rest keep their usual order below it.
+const INSP_FIRST={snowpack:'va',wind:'wind',snow:'snow',depth:'depth',temp:'temp',tsurf:'temp',
+  sun:'rad',rad:'rad',radsun:'rad',powder:'prog',powfind:'prog',prog:'prog',progdiff:'prog',progpat:'prog'};
+function inspOrder(sec){
+  const base=['prog','va','snow','depth','temp','wind','rad'],first=INSP_FIRST[layer];
+  const order=first?[first].concat(base.filter(k=>k!==first)):base;
+  return order.map(k=>sec[k]||'').join('');
+}
 function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-open');
   const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
   if(cx2<0||cx2>=W||cy2<0||cy2>=H)return;
@@ -7405,7 +7694,11 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   inspMarker=L.marker([lat,lon],{icon:L.divIcon({className:'',html:'<div class="insp-xmark"><svg viewBox="0 0 24 24" fill="none" stroke="#e0245e" stroke-width="3.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>',iconSize:[30,30],iconAnchor:[15,15]}),interactive:false,zIndexOffset:2000}).addTo(map);
   const ca=a*NP,cb=b*NP;const newSnow=cum[cb+p]-cum[ca+p],depthNow=cum[cb+p];
   let wsum=0;for(let t=a;t<b;t++)wsum+=SPD[t*P+wk]/M.spd_mul*3.6;const wmean=wsum/Math.max(1,b-a);
-  const _fe=fineElev(lat,lon),_fa=fineAspectDeg(lat,lon),_fs=fineSlope(lat,lon);
+  // ~25 m terrain from the Terrarium tile when it is loaded (re-opens itself
+  // once it arrives), else the national ~115 m rasters.
+  const _ft=fineTerrain(lat,lon,()=>{try{if(inspLast&&inspLast.lat===lat&&inspLast.lon===lon
+      &&document.getElementById('inspPanel').classList.contains('open'))inspOpen(lat,lon);}catch(e){}});
+  const _fe=_ft?_ft.elev:fineElev(lat,lon),_fa=_ft?_ft.aspect:fineAspectDeg(lat,lon),_fs=_ft?_ft.slope:fineSlope(lat,lon);
   const elevD=(_fe!=null?_fe:elev),slp=(_fs!=null?_fs:mslpv(p));
   const QD8={N:'Nord',NO:'Nordost',O:'Ost',SO:'Südost',S:'Süd',SW:'Südwest',W:'West',NW:'Nordwest'},QD4={N:'Nord',E:'Ost',S:'Süd',W:'West'};
   const aspDeg=(_fa!=null?_fa:maspv(p)),aspLbl=(_fa!=null?QD8[asp8(_fa)]:(QD4[aspectQ(maspv(p))]||''));
@@ -7414,10 +7707,8 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   // goes in the SAME popup as the meteo numbers rather than a second window:
   // density and grain type are what you look at next after depth.
   let vaSec='';
-  try{vaSec=vaPointHTML(lat,lon,fineElev(lat,lon),(typeof fineSlope==='function')?fineSlope(lat,lon):null,
-                        fineAspectDeg(lat,lon));}catch(e){}
-  try{vaSec+=vaProfileHTML(vaProfileAt(lat,lon,fineElev(lat,lon),fineAspectDeg(lat,lon),
-                                      (typeof fineSlope==='function')?fineSlope(lat,lon):null));}catch(e){}
+  try{vaSec=vaPointHTML(lat,lon,_fe,_fs,_fa);}catch(e){}
+  try{vaSec+=vaProfileHTML(vaProfileAt(lat,lon,_fe,_fa,_fs));}catch(e){}
   requestAnimationFrame(()=>{try{window._inspClamp();}catch(e){}});
   let progSec='';
   if(layer==='prog'){try{const pr=prognosisAt(lat,lon);if(pr){const cl=(PROG_LABEL[pr.type]||pr.type);const zc=progZones().filter(z=>z.type===pr.type).length;
@@ -7471,12 +7762,12 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
    '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b>'+
      '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+
    '</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
-   '<div class="insp-body">'+vaSec+progSec+
-     '<div class="insp-sec"><h4>Neuschnee <em>+'+newSnow.toFixed(1)+' cm</em></h4><canvas id="icNew"></canvas></div>'+
-     '<div class="insp-sec"><h4>Schneehöhe <em>'+depthNow.toFixed(0)+' cm</em></h4><canvas id="icDepth"></canvas></div>'+
-     '<div class="insp-sec"><h4>Temperatur <em>Luft · Oberfläche</em></h4><canvas id="icTemp"></canvas></div>'+
-     '<div class="insp-sec"><h4>Windrose <em>Ø '+wmean.toFixed(0)+' km/h</em></h4><canvas id="icWind"></canvas></div>'+
-     '<div class="insp-sec"><h4>Strahlung <em>% vom Tagesmaximum</em></h4><canvas id="icRad"></canvas></div>'+
+   '<div class="insp-body">'+inspOrder({va:vaSec,prog:progSec,
+     snow:'<div class="insp-sec"><h4>Neuschnee <em>+'+newSnow.toFixed(1)+' cm</em></h4><canvas id="icNew"></canvas></div>',
+     depth:'<div class="insp-sec"><h4>Schneehöhe <em>'+depthNow.toFixed(0)+' cm</em></h4><canvas id="icDepth"></canvas></div>',
+     temp:'<div class="insp-sec"><h4>Temperatur <em>Luft · Oberfläche</em></h4><canvas id="icTemp"></canvas></div>',
+     wind:'<div class="insp-sec"><h4>Windrose <em>Ø '+wmean.toFixed(0)+' km/h</em></h4><canvas id="icWind"></canvas></div>',
+     rad:'<div class="insp-sec"><h4>Strahlung <em>% vom Tagesmaximum</em></h4><canvas id="icRad"></canvas></div>'})+
    '</div>';
   pan.classList.add('open');
   requestAnimationFrame(()=>{
