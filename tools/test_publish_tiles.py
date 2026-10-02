@@ -60,7 +60,15 @@ def main():
         check("not configured -> exit 0, manifest untouched",
               r.returncode == 0 and "tiles" not in json.loads((exp / "manifest.json").read_text()), r.stdout.strip())
 
-        env = {**base_env, "R2_ACCOUNT_ID": "acc", "R2_ACCESS_KEY_ID": "k", "R2_SECRET_ACCESS_KEY": "s",
+        acc = "0123456789abcdef0123456789abcdef"
+        r = subprocess.run([sys.executable, str(ROOT / "tools" / "publish_tiles.py"), str(exp), "live-9"],
+                           env={**base_env, "R2_ACCOUNT_ID": "x" * 40, "R2_ACCESS_KEY_ID": "k",
+                                "R2_SECRET_ACCESS_KEY": "s", "TILES_BASE_URL": "https://t"},
+                           capture_output=True, text=True)
+        check("a token in R2_ACCOUNT_ID is named as such, without printing it",
+              "looks like an API token" in r.stdout and "x" * 40 not in r.stdout, r.stdout.strip()[:160])
+        # a pasted endpoint URL (with a line break) still works
+        env = {**base_env, "R2_ACCOUNT_ID": f"https://{acc}.r2.cloudflarestorage.com\n", "R2_ACCESS_KEY_ID": "k", "R2_SECRET_ACCESS_KEY": "s",
                "R2_BUCKET": "bkt", "TILES_BASE_URL": "https://tiles.example/", "TILES_KEEP_RUNS": "2"}
         r = subprocess.run([sys.executable, str(ROOT / "tools" / "publish_tiles.py"), str(exp), "live-9"],
                            env=env, capture_output=True, text=True)
