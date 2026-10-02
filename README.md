@@ -1,5 +1,8 @@
 # Swiss Snow Model
 
+> **Kurzüberblick auf Deutsch** – Physik, Modelle, APIs, Bibliotheken, Lizenzen für den
+> kommerziellen Betrieb und App-Store-Aufnahme: [`docs/APP-UEBERSICHT.md`](docs/APP-UEBERSICHT.md)
+
 Physically-inspired new-snow raster forecast for Switzerland, output as a single
 interactive HTML dashboard. Combines Open-Meteo weather data, swisstopo terrain
 models, and SLF/IMIS station observations into a multi-layer map with a draggable
