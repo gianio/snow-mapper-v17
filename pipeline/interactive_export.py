@@ -1247,7 +1247,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     read against light terrain; invert the ground and none of them mean what
     they mean any more. Only the tile pane is touched, so the overlays sit on
     a darker version of exactly the map they were drawn for. */
- :root[data-theme="dark"] .leaflet-tile-pane{filter:brightness(.52) saturate(.8) contrast(1.06)}
+ :root[data-theme="dark"] .leaflet-tile-pane{filter:brightness(.6) saturate(.85) contrast(1.12)}
+ /* the winter map is pale by design; a little more contrast makes ridges,
+    rock and forest read at a glance */
+ .base-tiles{filter:contrast(1.16) saturate(1.12)}
  :root[data-theme="dark"] .feed-card-visual,
  :root[data-theme="dark"] .fc-wrap{background:var(--fill2)}
  /* The frosted surfaces the original build floated over the map. Only the
@@ -1386,7 +1389,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .pt-home.lg{font-size:16px;font-weight:800;letter-spacing:-.01em;color:var(--ink-900)}
  .pt-home.lg svg{width:22px;height:22px}
  .pt-home:active{transform:scale(.96)}
- .pt-acc.has-img{background-size:cover;background-position:center}
+ .pt-acc{position:relative;overflow:hidden}
+ .pt-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
  .pt-acc.has-img svg,.pt-acc.has-img .pt-ini{display:none}
  /* the account button is the user's initials, set in the mono face inside an
     accent ring -- the same badge the design uses on every screen */
@@ -1656,14 +1660,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    white-space:nowrap;transition:transform .15s var(--ease)}
  .tl-corner:active{transform:scale(.93)}
  .tl-corner-r{right:6px}
- /* SNOWPACK: one time, stepped in 2 h with the arrows at the timeline's ends. */
- .tl-vstep{display:none;position:absolute;top:50%;transform:translateY(-50%);z-index:4;width:30px;height:46px;
-   border-radius:10px;border:1px solid var(--hair);background:var(--card);color:var(--fg);font:800 24px/1 Inter,system-ui;
-   cursor:pointer;box-shadow:var(--elev1);align-items:center;justify-content:center;padding:0 0 3px}
- .tl-vstep:active{transform:translateY(-50%) scale(.92)}
- .tl-vstep-l{left:-4px}.tl-vstep-r{right:-4px}
- body.tl-va .tl-vstep{display:inline-flex}
- body.tl-va #tlTomorrowBtn{right:30px}
  /* Collapsed keeps the scrubber -- it is the thing the console is for -- and
     drops everything that only describes it. */
 
@@ -1799,6 +1795,38 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .tour-cav{margin-top:9px;font-size:10.5px;color:var(--fg2);line-height:1.35;
    border-top:1px solid var(--hair);padding-top:7px}
  @media (max-width:420px){.tour-sheet{max-height:52vh}}
+ .tour-hd{justify-content:flex-start}
+ .tour-hd .tour-x{margin-left:auto}
+ .tour-tt{display:flex;flex-direction:column;min-width:0}
+ .tour-tt span{font-size:11px;color:var(--fg2);margin-top:1px}
+ .tour-score{flex-shrink:0;width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+   font:800 17px/1 Inter,system-ui;color:#fff;background:var(--sc);box-shadow:0 4px 12px color-mix(in srgb,var(--sc) 40%,transparent)}
+ /* «Beste Touren in deiner Nähe»: opens from the location button */
+ .tn-sheet{position:absolute;z-index:1150;left:12px;right:12px;max-width:520px;margin:0 auto;
+   bottom:calc(env(safe-area-inset-bottom,0px) + 12px);max-height:72vh;overflow-y:auto;
+   background:var(--card);border:1px solid var(--hair);border-radius:22px;padding:16px 14px 12px;
+   box-shadow:0 18px 50px rgba(0,0,0,.24);transform:translateY(calc(100% + 30px));opacity:0;pointer-events:none;
+   transition:transform .34s cubic-bezier(.2,.9,.25,1),opacity .2s ease}
+ body.tn-open .tn-sheet{transform:none;opacity:1;pointer-events:auto}
+ .tn-hd{display:flex;align-items:flex-start;gap:8px;padding:0 4px 10px}
+ .tn-hd>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+ .tn-hd b{font-size:17px;font-weight:800;letter-spacing:-.01em}
+ .tn-hd span{font-size:11.5px;color:var(--fg2)}
+ .tn-hd .tour-x{margin-left:auto}
+ .tn-list{display:flex;flex-direction:column;gap:6px}
+ .tn-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid var(--hair);
+   background:var(--paper,#fff);border-radius:16px;padding:10px 12px;cursor:pointer;font-family:inherit;color:inherit;
+   transition:transform .15s ease,box-shadow .15s ease}
+ .tn-row:active{transform:scale(.985)}
+ .tn-rank{width:22px;flex-shrink:0;font:800 13px/1 Inter,system-ui;color:var(--fg2);text-align:center}
+ .tn-t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+ .tn-t b{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .tn-t span{font-size:11.5px;color:var(--fg2)}
+ .tn-sc{flex-shrink:0;min-width:40px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+   font:800 14px/1 Inter,system-ui;color:#fff;background:var(--sc)}
+ .tn-empty{padding:18px 6px 14px;color:var(--fg2);font-size:13.5px}
+ .tn-foot{font-size:10.5px;color:var(--fg2);padding:10px 4px 2px;line-height:1.35}
+ body.tn-open #bottomPanel,body.tn-open #mapFabs{opacity:0;pointer-events:none}
  /* Always the bottom-left corner regardless of which layer is active. */
  /* --btm-h is only the panel's own offsetHeight; the panel itself is ALSO
     lifted off the true viewport edge by env(safe-area-inset-bottom)+10px
@@ -2945,6 +2973,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     -- including the "+" report button at its foot -- sits that much too
     low and disappears behind the panel on any device with a bottom
     safe-area inset (iPhone home-indicator models). */
+ /* While the map is being moved, only the brand, the account and the demo
+    pill stay: everything else fades out and comes back when it settles. */
+ #mapFabs,#bottomPanel,#miniLegend,#searchWrap,#ctrlRail,#mapQr,#mapDraw,#vaChip,#tourNear{
+   transition:opacity .22s ease,transform .26s cubic-bezier(.2,.8,.2,1)}
+ body.map-moving #mapFabs,body.map-moving #miniLegend,body.map-moving #ctrlRail,
+ body.map-moving #mapQr,body.map-moving #mapDraw,body.map-moving #vaChip{opacity:0;pointer-events:none;transform:translateX(10px)}
+ body.map-moving #bottomPanel{opacity:0;pointer-events:none;transform:translateY(14px)}
+ body.map-moving #searchWrap:not(:focus-within){opacity:0;pointer-events:none}
  #mapFabs{position:absolute;z-index:900;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,120px) + 32px);
    display:flex;flex-direction:column;align-items:flex-end;gap:12px}
  .mfab{position:relative;width:var(--fab);height:var(--fab);border-radius:var(--r-full);
@@ -3153,6 +3189,46 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rpop-cta{width:100%;padding:10px;border-radius:12px;border:none;background:var(--fg);color:#fff;font-size:13.5px;font-weight:800;font-family:inherit;cursor:pointer}
  .rpop-cta:active{transform:scale(.97)}
  @media(prefers-reduced-motion:reduce){.cat-chip,.sub-chip,.bucket,.slide-knob,.radial-seg{transition:none!important}}
+
+ /* ── 2026-10 refresh: one frosted toolbar, an accent action button, softer
+    and deeper surfaces. Kept in one block so it reads as one decision. ── */
+ :root{--fab:44px;--r-sheet:24px;
+   --elev3:0 12px 32px rgba(18,21,26,.16),0 2px 6px rgba(18,21,26,.06)}
+ :root[data-theme="dark"]{--elev3:0 12px 32px rgba(0,0,0,.55),0 2px 6px rgba(0,0,0,.35)}
+ #mapFabs{gap:14px}
+ .mfab-grp{display:flex;flex-direction:column;gap:2px;padding:4px;border-radius:22px;
+   background:color-mix(in srgb,var(--card) 88%,transparent);
+   backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);
+   border:1px solid var(--hair);box-shadow:var(--elev3)}
+ .mfab-grp .mfab{background:transparent;border:0;box-shadow:none;border-radius:16px;color:var(--ink-900)}
+ .mfab-grp .mfab:active{background:var(--fill);transform:scale(.94)}
+ .mfab-grp .mfab+.mfab::before{content:'';position:absolute;top:-1px;left:10px;right:10px;height:1px;background:var(--hair)}
+ .mfab-grp .mfab svg{width:21px;height:21px}
+ #mapFab{width:54px;height:54px;border:0;background:var(--accent);color:#fff;
+   box-shadow:0 10px 24px color-mix(in srgb,var(--accent) 45%,transparent),0 2px 6px rgba(0,0,0,.12)}
+ #mapFab svg{width:24px;height:24px}
+ .mfab.act{width:48px;height:48px;right:3px;bottom:3px;background:var(--card);box-shadow:var(--elev3);border:0}
+ #miniLegend{bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 316px);
+   border-radius:16px;background:color-mix(in srgb,var(--card) 82%,transparent);
+   backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:var(--elev2)}
+ /* top bar: brand, account, demo pill -- the three things that stay */
+ #brandMark{height:40px;padding:0 14px 0 11px;background:color-mix(in srgb,var(--card) 86%,transparent);
+   backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);box-shadow:var(--elev3)}
+ #brandMark span{font-size:15.5px;letter-spacing:-.02em}
+ #mapAcc{width:40px;height:40px;border:2px solid var(--card);box-shadow:var(--elev3),0 0 0 1.5px var(--accent)}
+ #mapAcc.has-img{box-shadow:var(--elev3)}
+ /* the time console */
+ #bottomPanel{left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);border-radius:var(--r-sheet);
+   background:color-mix(in srgb,var(--card) 80%,transparent);
+   backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);
+   box-shadow:var(--elev3);padding:8px 0}
+ #timeline{border:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;border-radius:16px}
+ .tl-corner{border-radius:999px;border:0;background:var(--fill);box-shadow:none;font-size:11px;padding:0 11px}
+ /* sheets */
+ .tour-sheet{background:var(--card);border-radius:var(--r-sheet);box-shadow:var(--elev3);padding:14px 16px}
+ body.tour-open #mapFabs{opacity:0;pointer-events:none}
+ .tour-row{border-radius:10px;padding:5px 9px}
+ .tour-row i{background:color-mix(in srgb,var(--accent) 18%,transparent)}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -3234,10 +3310,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <button class="feed-qr" id="mapQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Report Powder" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Report Powder</span></button>
 <div id="mapFabs">
-  <button class="mfab" id="mapFeedFab" onclick="feedOpen()" title="Community" aria-label="Community"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
-  <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
-  <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
-  <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
+  <div class="mfab-grp" role="toolbar" aria-label="Karte">
+    <button class="mfab" id="mapFeedFab" onclick="feedOpen()" title="Community" aria-label="Community"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
+    <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
+    <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
+    <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
+  </div>
   <div class="mfab-row" id="reportRow">
     <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><i>Report Powder</i></button>
     <button class="mfab act" id="fabObs" onclick="fabMenu(false);obsOpen()" title="Beobachtung melden" aria-label="Beobachtung melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><i>Beobachtung</i></button>
@@ -3253,8 +3331,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div id="btmMain">
     <div id="tlDetail">
       <button class="tl-corner tl-corner-r" id="tlTomorrowBtn" onclick="tlGotoTomorrow()" title="Fenster bis morgen Abend">Bis morgen</button>
-      <button class="tl-vstep tl-vstep-l" id="tlStepL" onclick="vaStepTime(-1)" aria-label="2 Stunden früher">&#8249;</button>
-      <button class="tl-vstep tl-vstep-r" id="tlStepR" onclick="vaStepTime(1)" aria-label="2 Stunden später">&#8250;</button>
       <canvas id="timeline" width="900" height="108" style="width:100%;height:108px;border-radius:10px;cursor:default;margin-top:0"></canvas>
       <div id="tlExtended">
         <div class="tl-steprow">
@@ -3297,6 +3373,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 </div>
 <div id="lyScrim" onclick="lyPanelClose()"></div>
 <div id="tourSheet" class="tour-sheet" role="dialog" aria-label="Skitour"></div>
+<div id="tourNear" class="tn-sheet" role="dialog" aria-label="Beste Touren in deiner Nähe"></div>
 <div id="lyPanel" class="ly-panel" role="dialog" aria-modal="true" aria-label="Ebenen">
   <div class="ly-scroll">
     <span class="lbl-micro">Ebene</span>
@@ -3985,24 +4062,38 @@ function tlPalette(){
           hair:g('--ink-100','#DCE7F1'),fill:g('--ink-050','#EFF5FA'),
           paper:g('--paper','#fff'),accent:g('--accent','#0B6BCB')};
 }
-// The axis shows the whole run. The viewport survives as the single place
-// t<->x is computed, which is what kept the drag and the drawing in step.
+// The axis shows four days at a time; the rest of the run is a swipe away.
+// The viewport is the single place t<->x is computed, which is what keeps
+// the drag and the drawing in step.
 let tv0=0,tv1=0;                      // set once T is known
 function tvSpan(){return Math.max(TV_MIN,tv1-tv0);}
 const TV_MIN=8;                       // never closer than eight hours across
-function tvInit(){tv0=0;tv1=T;}
+const TV_MAX=96;                      // and never more than four days
+function tvInit(){const span=Math.min(T,TV_MAX);
+  tv0=nowIdx-span*0.25;tv1=tv0+span;tvClamp();}
 function tvClamp(){
-  let span=Math.max(TV_MIN,Math.min(T,tv1-tv0));
+  let span=Math.max(TV_MIN,Math.min(T,TV_MAX,tv1-tv0));
   if(tv0<0){tv0=0;}
   tv1=tv0+span;
   if(tv1>T){tv1=T;tv0=T-span;}
   if(tv0<0)tv0=0;
 }
-// Keep the selection in view: a window you cannot see is one you cannot judge.
-function tvFollow(){tvInit();}
+// Keep the selection in view: a window you cannot see is one you cannot
+// judge. Scrolls only as far as needed, so a swipe is not undone.
+function tvFollow(){
+  if(!tv1)tvInit();
+  const span=tvSpan(),pad=Math.min(4,span*0.06);
+  const lo=tlSingleMode()?b-1:a,hi=tlSingleMode()?b-1:b;
+  if(hi-lo>span-2*pad){tv0=lo-pad;}
+  else if(lo<tv0+pad){tv0=lo-pad;}
+  else if(hi>tv1-pad){tv0=hi+pad-span;}
+  else return;
+  tv1=tv0+span;tvClamp();
+}
+function tvPan(dt){const span=tvSpan();tv0+=dt;tv1=tv0+span;tvClamp();}
 function tvZoom(factor,anchorFrac){
   const span=tvSpan(),mid=tv0+span*(anchorFrac==null?0.5:anchorFrac);
-  let ns=Math.max(TV_MIN,Math.min(T,span/factor));
+  let ns=Math.max(TV_MIN,Math.min(T,TV_MAX,span/factor));
   tv0=mid-ns*(anchorFrac==null?0.5:anchorFrac);tv1=tv0+ns;tvClamp();
 }
 // t <-> x, in view coordinates
@@ -4105,6 +4196,20 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
      ctx2.fillStyle=tlSel;rr(cx-w/2,ly-8,w,16,8);ctx2.fill();
      ctx2.fillStyle=_P.paper;ctx2.textAlign='center';ctx2.fillText(lab,cx,ly+4.5);}
   }
+  // More run either side: a soft fade and a chevron at that edge, and a tick
+  // in the layer colour when the selected time is out of view, so it is
+  // clear where the swipe leads.
+  {const bg=cvTok('--card','#fff'),fw=26;
+   const edge=(left)=>{const g=ctx2.createLinearGradient(left?0:cw,0,left?fw:cw-fw,0);
+     g.addColorStop(0,bg);g.addColorStop(1,'rgba(255,255,255,0)');
+     ctx2.fillStyle=g;ctx2.fillRect(left?0:cw-fw,0,fw,ch);
+     const cx=left?7:cw-7,cy=compact?ch/2:(ch-botPad)/2+topPad/2;
+     ctx2.strokeStyle=_P.mut;ctx2.lineWidth=1.8;ctx2.lineCap='round';ctx2.beginPath();
+     ctx2.moveTo(cx+(left?3:-3),cy-5);ctx2.lineTo(cx+(left?-1:1),cy);ctx2.lineTo(cx+(left?3:-3),cy+5);ctx2.stroke();};
+   if(tv0>0.5)edge(true);if(tv1<T-0.5)edge(false);
+   const st=single?b-1:a;
+   if(st<tv0||st>tv1){const left=st<tv0;ctx2.fillStyle=tlSel;
+     rr(left?0:cw-4,4,4,ch-8,2);ctx2.fill();}}
   // NOW marker: a dashed line only. It used to carry a "JETZT" pill too, which
   // repeated what the line itself already says by being where it is; orange
   // is enough to keep the two selected-time labels either side of it.
@@ -4180,7 +4285,7 @@ function swissBaseLayer(opts){return L.tileLayer(swissTile(BASE_TILE),
 const base=swissBaseLayer().addTo(map);
 // The tiles are independent of the forecast blob, so there is no reason for
 // them to wait behind it.
-try{base.options.className='base-tiles';}catch(e){}
+try{base.options.className='base-tiles';const c=base.getContainer();if(c)c.classList.add('base-tiles');}catch(e){}
 // --- Abstract far-zoom base: white page + the Swiss border, nothing else -----
 // Simplified national outline (Natural Earth 10 m, Douglas-Peucker 0.006 deg),
 // delta-encoded in 1e-4 degree steps as lat,lon pairs. Baked in so the abstract
@@ -4214,7 +4319,7 @@ const resortGroup=L.layerGroup([],{pane:'resortPane'}).addTo(map);
 // Tiles are transparent at the initial (fully zoomed-out) view and only reach
 // full strength at the deepest zoom, so the map starts abstract and gains
 // detail as you come closer.
-const BASE_FLOOR=0.22;   // terrain never fully disappears, even zoomed right out
+const BASE_FLOOR=0.62;   // the terrain is readable from the first view on
 function baseFadeT(){
   const z0=map.getMinZoom(),z1=map.getMaxZoom();
   const t=(map.getZoom()-z0)/Math.max(.001,z1-z0);
@@ -4241,7 +4346,9 @@ function updateBaseFade(force){
   const t=baseFadeT();
   // The country view is abstract but no longer blank: the terrain starts at
   // BASE_FLOOR rather than 0, so you can already read where the mountains are.
-  const op=BASE_FLOOR+(1-BASE_FLOOR)*Math.pow(t,1.45);
+  // full strength from about a third of the way in (zoom ~10), not only at
+  // the deepest zoom: the map looked washed out exactly where people use it
+  const op=BASE_FLOOR+(1-BASE_FLOOR)*Math.min(1,t/0.33);
   base.setOpacity(op);
   if(!force&&Math.abs(op-_lastFadeOp)<_FADE_EPS)return;
   // Coalesce to one restyle per frame even if several zoom events land.
@@ -4249,7 +4356,7 @@ function updateBaseFade(force){
   _fadeRaf=requestAnimationFrame(function(){
     _fadeRaf=0;
     const t2=baseFadeT();
-    const op2=BASE_FLOOR+(1-BASE_FLOOR)*Math.pow(t2,1.45);
+    const op2=BASE_FLOOR+(1-BASE_FLOOR)*Math.min(1,t2/0.33);
     _lastFadeOp=op2;
     _applyVectorFade(op2,t2);
   });
@@ -4258,6 +4365,14 @@ map.on('zoom',updateBaseFade);
 // zoomend always restyles, so the final state is exact rather than within EPS.
 map.on('zoomend',function(){updateBaseFade(true);});
 updateBaseFade(true);
+// Moving the map hides the controls; they return once it has settled. A
+// short delay on the way back so a fling followed by another drag does not
+// make them blink.
+(function(){let tm=0;
+  const on=()=>{clearTimeout(tm);document.body.classList.add('map-moving');};
+  const off=()=>{clearTimeout(tm);tm=setTimeout(()=>document.body.classList.remove('map-moving'),420);};
+  map.on('dragstart zoomstart',on);map.on('moveend zoomend',off);
+})();
 // Keine weisse Maske mehr: die gedimmte OSM-Unterlage zeigt die Nachbarlaender,
 // die Winter-Pixelkarte liegt fuer die Schweiz darueber.
 const slopeWMTS=L.tileLayer(swissTile('ch.swisstopo.hangneigung-ueber_30','png'),{opacity:.7});
@@ -4273,7 +4388,7 @@ const OVERLAYS={
   // Two entries for the same routes on purpose: the vector one is tappable
   // and carries the powder score, the WMTS one is the fallback picture when
   // the build could not reach swisstopo for the geometry.
-  skitourVec:{label:'Skitouren',vector:true,attr:'Skitouren © swisstopo'},
+  skitourVec:{label:'Skitouren · Powder-Score',vector:true,attr:'Skitouren © swisstopo'},
   skitour:{label:'Skitouren (Karte)',wmts:'ch.swisstopo-karto.skitouren',op:.95,
            attr:'Skitouren © swisstopo'},
   snowshoe:{label:'Schneeschuh',wmts:'ch.swisstopo-karto.schneeschuhrouten',op:.95,
@@ -5799,6 +5914,7 @@ function _ptInGeom(x,y,g){
   return false;
 }
 function tourScoreRoute(t){
+  const v=tourVaScore(t);if(v)return v;
   const segs=tourResample(t.coords,TOUR_STEP_M);
   segs.forEach(tourSampleSeg);
   const r=tourAggregate(segs);
@@ -5809,6 +5925,7 @@ function tourScoreRoute(t){
 // consistent with tourVerdict refusing to praise it.
 function tourColor(r){
   if(r.clamped)return '#8A6A9E';
+  if(r.score!=null)return r.score>=75?'#1E9E5A':r.score>=55?'#7FB800':r.score>=35?'#E8A33D':'#8A8F98';
   if(r.powderShare>=0.6)return '#1E9E5A';
   if(r.powderShare>=0.3)return '#7FB800';
   if(r.powderShare>0)return '#E8A33D';
@@ -5825,10 +5942,12 @@ function tourBuildLayer(){
     // A wide transparent line under the visible one: a 3 px route is
     // impossible to hit with a thumb.
     const hit=L.polyline(latlngs,{color:'#000',opacity:0,weight:22,interactive:true});
-    const line=L.polyline(latlngs,{color:'#2A6BB5',weight:3,opacity:.9,interactive:false});
+    // a white casing under the coloured line keeps it readable on any terrain
+    const casing=L.polyline(latlngs,{color:'#fff',weight:6.5,opacity:.85,interactive:false,lineCap:'round',lineJoin:'round'});
+    const line=L.polyline(latlngs,{color:'#2A6BB5',weight:3.5,opacity:.95,interactive:false,lineCap:'round',lineJoin:'round'});
     const open=()=>{try{haptic(4);}catch(e){}tourOpen(t);};
     hit.on('click',open);
-    tourLayerGroup.addLayer(line);tourLayerGroup.addLayer(hit);
+    tourLayerGroup.addLayer(casing);tourLayerGroup.addLayer(line);tourLayerGroup.addLayer(hit);
     t._line=line;
   });
   return tourLayerGroup;
@@ -5838,6 +5957,15 @@ function tourBuildLayer(){
 // scoring happens client-side instead of being baked in at build time.
 function tourRecolor(){
   const ts=tourList();if(!ts.length||!ovOn.skitourVec)return;
+  // With SNOWPACK the score is tomorrow's, not the timeline's: worked out
+  // once per model run, in the background, and only coloured in here.
+  const st=tourVaReady();
+  if(st===null){
+    if(!tourVa.scoring){tourVa.scoring=true;
+      tourVaPrepare().then(ok=>{if(ok)tourVaScoreAll(()=>{tourVa.scoring=false;tourPaintScores();});
+        else{tourVa.scoring=false;tourVa.failed=tourVa.wantKey;tourRecolor();}});}
+    tourPaintScores();return;}
+  if(st){tourPaintScores();return;}
   ts.forEach(t=>{
     if(!t._line)return;
     try{const r=tourScoreRoute(t);t._score=r;t._line.setStyle({color:tourColor(r)});}
@@ -5851,7 +5979,10 @@ function tourOpen(t){
     '<div class="tour-row"><span>'+escapeHtml(k)+'</span><b>'+Math.round(r.distribution[k]*100)+' %</b>'
     +'<i style="width:'+Math.round(r.distribution[k]*100)+'%"></i></div>').join('');
   const el=document.getElementById('tourSheet');if(!el)return;
-  el.innerHTML='<div class="tour-hd"><b>'+escapeHtml(r.name)+'</b>'
+  el.innerHTML='<div class="tour-hd">'
+    +(r.score!=null?'<span class="tour-score" style="--sc:'+tourColor(r)+'">'+r.score+'</span>':'')
+    +'<div class="tour-tt"><b>'+escapeHtml(r.name)+'</b>'
+    +(r.when?'<span>'+escapeHtml(r.when)+'</span>':'')+'</div>'
     +'<button type="button" class="tour-x" onclick="tourClose()" aria-label="Schliessen">×</button></div>'
     +'<div class="tour-verdict" style="color:'+tourColor(r)+'">'+escapeHtml(r.verdict)+'</div>'
     +'<div class="tour-meta">'+(r.lengthM?Math.round(r.lengthM/100)/10+' km':'')
@@ -5862,6 +5993,190 @@ function tourOpen(t){
   document.body.classList.add('tour-open');
 }
 function tourClose(){document.body.classList.remove('tour-open');}
+
+// ── Ski tours scored from SNOWPACK: tomorrow morning ──────────────────────
+// Each route is sampled every TOUR_VA_STEP_M at its height, slope and
+// aspect (national ~115 m terrain) and read from the SNOWPACK frame for
+// tomorrow 10:00 -- the same numbers the Skiqualität layer is drawn from.
+// Score 0..100 per segment from the surface: powder depth leads, crust and
+// wet snow pull it down, wind-scoured snow too. The route's score is the
+// length-weighted mean over the descent-relevant segments (22-50°).
+const TOUR_VA_STEP_M=200;
+const tourVa={key:null,tag:null,eng:null,scores:new Map(),busy:null,when:''};
+function tourVaTargetTag(){
+  if(!vaAvailable()||!M.times||!M.times[nowIdx])return null;
+  const now=new Date(M.times[nowIdx]+'Z');
+  // 10:00 in Switzerland is 08:00 UTC in summer time, 09:00 in winter
+  const off=(()=>{try{const d=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1,12));
+    const h=+new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Zurich',hour:'2-digit',hourCycle:'h23'}).format(d);return h-12;}catch(e){return 1;}})();
+  const target=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1,10-off);
+  const ts=vaMan.timestamps||[];let best=-1,bd=1e18;
+  ts.forEach((t,i)=>{const d=Math.abs(Date.parse(String(t).slice(0,16)+':00Z')-target);if(d<bd){bd=d;best=i;}});
+  if(best<0)return null;
+  const tm=new Date(Date.parse(String(ts[best]).slice(0,16)+':00Z'));
+  const DAY=['So','Mo','Di','Mi','Do','Fr','Sa'];
+  let lab='';try{lab=new Intl.DateTimeFormat('de-CH',{timeZone:'Europe/Zurich',weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}).format(tm);}
+  catch(e){lab=DAY[tm.getUTCDay()]+' '+tm.getUTCDate()+'.'+(tm.getUTCMonth()+1)+'.';}
+  return {tag:vaMan.tags[best],when:'SNOWPACK-Prognose '+lab+' Uhr'};
+}
+// null = not tried yet, false = not possible (no SNOWPACK), true = scores ready
+function tourVaReady(){
+  if(!vaAvailable()||!tourList().length)return false;
+  const tt=tourVaTargetTag();if(!tt)return false;
+  const key=vaMan.generated+'|'+tt.tag;tourVa.wantKey=key;
+  if(tourVa.failed===key)return false;
+  if(tourVa.key===key&&tourVa.done)return true;
+  return null;
+}
+async function tourVaPrepare(){
+  if(!vaAvailable())return false;
+  const tt=tourVaTargetTag();if(!tt)return false;
+  const key=vaMan.generated+'|'+tt.tag;
+  if(tourVa.key===key&&tourVa.eng)return true;
+  if(tourVa.busy)return tourVa.busy;
+  tourVa.busy=(async()=>{
+    try{
+      await vaPkLoad();if(!vaPk||!vaEng)return false;
+      const f=await vaPkFrame(tt.tag);
+      const E=vaHiEngine();E.init(vaPk,vaEng.shade,vaEng.forest,vaEng.precip);E.setFrame(f.vals,f.ok);
+      tourVa.eng=E;tourVa.key=key;tourVa.tag=tt.tag;tourVa.when=tt.when;tourVa.scores=new Map();tourVa.done=false;
+      return true;
+    }catch(e){return false;}
+    finally{tourVa.busy=null;}
+  })();
+  return tourVa.busy;
+}
+function tourVaSeg(E,seg,cand,m){
+  const el=fineElev(seg.lat,seg.lon),sl=fineSlope(seg.lat,seg.lon),as=fineAspectDeg(seg.lat,seg.lon);
+  if(el==null)return null;
+  const en=E.wgs2lv03(seg.lat,seg.lon),sb=E.gridAt(E.shade,en[0],en[1]);
+  if(sb<0||sb===255)return null;
+  if(!E.evalAt(en[0],en[1],el,sl||0,as==null?0:as,sb/254,cand,m))return null;
+  E.adjPrecip(m,en[0],en[1]);
+  const T=E.pk.thresholds||{},x=E.mi;
+  const hs=m[x.total_hs_cm],pw=m[x.powder_depth_cm]||0,cr=m[x.crust_thick_cm]||0,
+        sd=m[x.surface_density]||0,lw=m[x.surface_lw]||0,
+        sc=x.wind_scour!=null?m[x.wind_scour]:0,dr=x.drift_load!=null?m[x.drift_load]:0;
+  const thin=T.THIN_COVER_HS!=null?T.THIN_COVER_HS:20,wet=T.SK_WET_LWC!=null?T.SK_WET_LWC:(T.WET_LWC_MIN!=null?T.WET_LWC_MIN:1),
+        pmin=T.SK_POWDER_MIN!=null?T.SK_POWDER_MIN:2,crf=T.CRUST_FINE!=null?T.CRUST_FINE:0.5,
+        ice=T.ICE_DENSITY_MIN!=null?T.ICE_DENSITY_MIN:600,wmin=T.WIND_MIN!=null?T.WIND_MIN:0.45;
+  let sc0,q;
+  if(!(hs>=thin)){sc0=0;q='kein / wenig Schnee';}
+  else if(lw>wet){sc0=15;q='nass';}
+  else if(pw>=pmin){sc0=Math.min(100,55+(pw-pmin)*2.5);q=pw<10?'Pulver 0–10 cm':pw<20?'Pulver 10–20 cm':'Pulver >20 cm';
+    if(dr>=wmin)q+=' · Triebschnee';}
+  else if(cr>=crf||sd>=ice){sc0=10;q='Kruste';}
+  else{sc0=30;q='hart';}
+  if(sc>=wmin&&pw<pmin){sc0=Math.max(0,sc0-15);q='windgepresst';}
+  seg.elev=el;seg.slope=sl;seg.aspect=as;seg.va=sc0;seg.quality=q;seg.pw=pw;
+  return sc0;
+}
+function tourVaScoreOne(t){
+  const E=tourVa.eng;if(!E||!t.coords||t.coords.length<2)return null;
+  const segs=tourResample(t.coords,TOUR_VA_STEP_M);if(!segs.length)return null;
+  const mid=segs[Math.floor(segs.length/2)],men=E.wgs2lv03(mid.lat,mid.lon);
+  const cand=E.candidates(men[0],men[1],60000),m=new Float64Array(E.nm);
+  const n=segs.length,w=i=>n<2?1:(i===0?(segs[1].dist-segs[0].dist):(segs[i].dist-segs[i-1].dist));
+  let lo=null,hi=null,sw=0,ss=0,dw=0,ds=0,known=0,coreW=0,allW=0,pwS=0;const dist={};
+  for(let i=0;i<n;i++){const sg=segs[i],ww=w(i);
+    const v=tourVaSeg(E,sg,cand,m);allW+=ww;
+    if(v==null)continue;known+=ww;
+    if(sg.elev!=null){lo=lo==null||sg.elev<lo?sg.elev:lo;hi=hi==null||sg.elev>hi?sg.elev:hi;}
+    try{const reg=tourRegionAt(sg.lat,sg.lon);if(reg&&avCoreZone(reg,sg.elev,sg.aspect))coreW+=ww;}catch(e){}
+    sw+=ww;ss+=ww*v;
+    if(sg.slope!=null&&sg.slope>=TOUR_MIN_SLOPE&&sg.slope<=TOUR_MAX_SLOPE){dw+=ww;ds+=ww*v;pwS+=ww*sg.pw;
+      dist[sg.quality]=(dist[sg.quality]||0)+ww;}}
+  if(!sw)return null;
+  // too little steep terrain on the line: rate the whole route instead
+  const useD=dw>=300;
+  if(!useD){for(const sg of segs)if(sg.quality)dist[sg.quality]=(dist[sg.quality]||0)+1;}
+  const tot=Object.values(dist).reduce((a,b)=>a+b,0)||1;
+  const distribution={};Object.keys(dist).sort((a,b)=>dist[b]-dist[a]).forEach(k=>{distribution[k]=dist[k]/tot;});
+  const score=Math.round(useD?ds/dw:ss/sw),clamped=allW>0&&coreW/allW>=TOUR_CLAMP_SHARE;
+  const caveats=[];
+  if(clamped)caveats.push(Math.round(coreW/allW*100)+' % der Route liegt in der Kernzone des Lawinenbulletins.');
+  if(known<allW*0.6)caveats.push('Nur '+Math.round(known/allW*100)+' % der Route liegen im SNOWPACK-Modellgebiet.');
+  if(!useD)caveats.push('Wenig Abfahrtsgelände ('+TOUR_MIN_SLOPE+'–'+TOUR_MAX_SLOPE+'°) – ganze Route bewertet.');
+  caveats.push('Modellierte Schneeoberfläche, keine Lawinenbeurteilung. Das Bulletin des SLF bleibt massgebend.');
+  const verdict=clamped?'Kernzone betroffen – Bulletin zuerst'
+    :score>=75?'sehr gutes Pulver erwartet':score>=55?'gutes Pulver erwartet':score>=35?'teilweise Pulver':'kein Pulver erwartet';
+  return {name:t.name||'Skitour',id:t.id,score,verdict,clamped,distribution,caveats,
+    lengthM:segs[n-1].dist||0,gain:(lo!=null&&hi!=null)?Math.round(hi-lo):null,
+    descentM:dw,powderCm:dw?Math.round(pwS/dw):null,when:tourVa.when,powderShare:score/100,coreShare:allW?coreW/allW:0};
+}
+function tourVaScore(t){
+  if(tourVaReady()===false||!tourVa.eng)return null;
+  if(tourVa.scores.has(t.id))return tourVa.scores.get(t.id);
+  let r=null;try{r=tourVaScoreOne(t);}catch(e){r=null;}
+  tourVa.scores.set(t.id,r);return r;
+}
+// All routes, a slice per frame so the map stays responsive.
+function tourVaScoreAll(done){
+  const ts=tourList();let i=0;const key=tourVa.key;
+  const run=()=>{const t0=performance.now();
+    while(i<ts.length&&performance.now()-t0<12){tourVaScore(ts[i]);i++;}
+    if(tourVa.key!==key)return;
+    if(i<ts.length){setTimeout(run,0);if(i%150<5)tourPaintScores();return;}
+    tourVa.done=true;if(done)done();};
+  run();
+}
+function tourPaintScores(){
+  tourList().forEach(t=>{if(!t._line)return;const r=tourVa.scores.get(t.id);
+    if(r){t._score=r;t._line.setStyle({color:tourColor(r)});}});
+}
+
+// ── «Beste Touren in deiner Nähe» ─────────────────────────────────────────
+const TOUR_NEAR_KM=25,TOUR_NEAR_N=10;
+function tourNearList(lat,lon){
+  const out=[];
+  tourList().forEach(t=>{if(!t.coords||!t.coords.length)return;
+    let dmin=1e9;for(let i=0;i<t.coords.length;i+=Math.max(1,Math.floor(t.coords.length/40))){
+      const c=t.coords[i],d=tourDistM(lon,lat,c[0],c[1]);if(d<dmin)dmin=d;}
+    if(dmin<=TOUR_NEAR_KM*1000)out.push({t,d:dmin});});
+  out.forEach(o=>{o.r=tourScoreRoute(o.t);
+    o.s=o.r?(o.r.score!=null?o.r.score:Math.round((o.r.powderShare||0)*100)):-1;
+    if(o.r&&o.r.clamped)o.s=Math.min(o.s,1);});
+  out.sort((x,y)=>(y.s-x.s)||(x.d-y.d));
+  return out.slice(0,TOUR_NEAR_N);
+}
+async function tourNearOpen(lat,lon){
+  const el=document.getElementById('tourNear');if(!el)return;
+  if(!tourList().length){el.innerHTML=tourNearHead('','')+'<div class="tn-empty">Keine Tourendaten geladen.</div>';
+    document.body.classList.add('tn-open');return;}
+  el.innerHTML=tourNearHead('','')+'<div class="tn-empty">Touren werden bewertet…</div>';
+  document.body.classList.add('tn-open');
+  try{await tourVaPrepare();}catch(e){}
+  if(!ovOn.skitourVec){try{ovToggle('skitourVec');}catch(e){}}
+  const L2=tourNearList(lat,lon);
+  const sub=(tourVa.eng&&tourVa.when)?tourVa.when:'Powder-Modell, aktuelles Zeitfenster';
+  if(!L2.length){el.innerHTML=tourNearHead(sub,'')+'<div class="tn-empty">Keine Skitour im Umkreis von '+TOUR_NEAR_KM+' km.</div>';return;}
+  window._tnList=L2;
+  el.innerHTML=tourNearHead(sub,L2.length)+'<div class="tn-list">'+L2.map((o,i)=>{
+    const r=o.r||{},col=tourColor(r),sc=o.s>=0?o.s:'–';
+    return '<button type="button" class="tn-row" onclick="tourNearPick('+i+')">'
+      +'<span class="tn-rank">'+(i+1)+'</span>'
+      +'<span class="tn-t"><b>'+escapeHtml(o.t.name||'Skitour')+'</b>'
+      +'<span>'+(o.d<500?'hier':(Math.round(o.d/100)/10)+' km')
+      +(r.gain?' · '+r.gain+' Hm':'')+(r.powderCm?' · ~'+r.powderCm+' cm Pulver':'')+'</span></span>'
+      +'<span class="tn-sc" style="--sc:'+col+'">'+sc+'</span></button>';}).join('')+'</div>'
+    +'<div class="tn-foot">Schneequalität aus dem Modell, keine Lawinenbeurteilung – Bulletin des SLF beachten.</div>';
+}
+function tourNearHead(sub,n){
+  return '<div class="tn-hd"><div><b>Beste Touren in deiner Nähe</b><span>'
+    +(n?'Top '+n+' · ':'')+'Umkreis '+TOUR_NEAR_KM+' km'+(sub?' · '+escapeHtml(sub):'')+'</span></div>'
+    +'<button type="button" class="tour-x" onclick="tourNearClose()" aria-label="Schliessen">×</button></div>';
+}
+function tourNearClose(){document.body.classList.remove('tn-open');}
+addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('tn-open'))tourNearClose();});
+// a tap on the map puts the list away again
+addEventListener('pointerdown',e=>{if(!document.body.classList.contains('tn-open'))return;
+  const t=e.target;if(t&&t.closest&&(t.closest('#tourNear')||t.closest('#locFab')))return;
+  if(t&&t.closest&&t.closest('#map'))tourNearClose();},true);
+function tourNearPick(i){const o=(window._tnList||[])[i];if(!o)return;
+  tourNearClose();
+  try{const ll=o.t.coords.map(c=>[c[1],c[0]]);map.flyToBounds(L.latLngBounds(ll),{padding:[60,60],duration:.9,maxZoom:14});}catch(e){}
+  setTimeout(()=>{try{tourOpen(o.t);}catch(e){}},400);
+}
 
 // Is a point inside the bulletin's core zone? Used by the tour score, and
 // deliberately conservative: unknown aspect or elevation counts as inside.
@@ -7434,14 +7749,47 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
   function pinchMove(e){
     if(!pinch||!e.touches||e.touches.length<2)return false;
     const d=Math.abs(e.touches[0].clientX-e.touches[1].clientX)||1;
-    const span=Math.max(TV_MIN,Math.min(T,pinchSpan*(pinch/d)));
+    const span=Math.max(TV_MIN,Math.min(T,TV_MAX,pinchSpan*(pinch/d)));
     const mid=tv0+tvSpan()*pinchMid;
     tv0=mid-span*pinchMid;tv1=tv0+span;tvClamp();
     paint();
     if(e.cancelable)e.preventDefault();
     return true;}
+  // A swipe on the axis scrolls it; a tap still sets the time there. Only a
+  // touch on the handle drags the handle.
+  const TAP_PX=7,HANDLE_PX=26;
+  let panX0=0,panTv0=0,panMoved=false,panV=0,panLastX=0,panLastT=0,fling=0;
+  function panStart(cx){cancelAnimationFrame(fling);mode='pan';panX0=cx;panTv0=tv0;panMoved=false;
+    panV=0;panLastX=cx;panLastT=performance.now();}
+  function panMove(cx){
+    if(!panMoved&&Math.abs(cx-panX0)<TAP_PX)return;
+    panMoved=true;const span=tvSpan();
+    tv0=panTv0-(cx-panX0)/W()*span;tv1=tv0+span;tvClamp();
+    const now=performance.now(),dt=Math.max(1,now-panLastT);
+    panV=0.8*((cx-panLastX)/dt)+0.2*panV;panLastX=cx;panLastT=now;
+    drawTimeline();}
+  function panEnd(cx){
+    if(!panMoved){return false;}
+    // a little momentum, like any scrolling list
+    let v=panV;const span=tvSpan();let last=performance.now();
+    const step=()=>{const now=performance.now(),dt=now-last;last=now;
+      v*=Math.pow(0.992,dt);if(Math.abs(v)<0.02)return;
+      tv0-=v*dt/W()*span;tv1=tv0+span;const b0=tv0;tvClamp();drawTimeline();
+      if(tv0!==b0)return;fling=requestAnimationFrame(step);};
+    if(Math.abs(v)>0.15)fling=requestAnimationFrame(step);
+    return true;}
+  // Holding the handle at either end keeps the axis scrolling under it.
+  let edgeTimer=0,edgeCx=0;
+  function edgeScroll(cx){edgeCx=cx;const r=RECT(),zone=22;
+    const dir=cx<r.left+zone?-1:(cx>r.right-zone?1:0);
+    if(!dir){clearInterval(edgeTimer);edgeTimer=0;return;}
+    if(edgeTimer)return;
+    edgeTimer=setInterval(()=>{if(mode!=='point'){clearInterval(edgeTimer);edgeTimer=0;return;}
+      const r2=RECT(),d=edgeCx<r2.left+zone?-1:(edgeCx>r2.right-zone?1:0);
+      if(!d){clearInterval(edgeTimer);edgeTimer=0;return;}
+      tvPan(d*1.5);pointDragTo(edgeCx);paint();},45);}
   function pointDragTo(cx){const rect=RECT();
-    let t=Math.round(tvT(cx-rect.left,rect.width));
+    let t=Math.round(tvT(Math.max(0,Math.min(rect.width,cx-rect.left)),rect.width));
     if(layer==='snowpack'&&typeof vaSnapT==='function')t=vaSnapT(t);
     b=Math.max(1,Math.min(T,t+1));a=Math.max(0,b-windowSize);
     // Moving the handle means the timeline is addressing the SNOWPACK
@@ -7451,15 +7799,12 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
     if(pinchStart(e)){if(e.cancelable)e.preventDefault();return;}
     const cx=e.touches?e.touches[0].clientX:e.clientX;
     if(tlSingleMode()){
-      pointDragTo(cx);mode='point';dragStartX=cx;
-      tc.style.cursor='grabbing';tvFollow();paint();
+      const rect=RECT(),hx=tvX(b-1,rect.width)+rect.left;
+      if(Math.abs(cx-hx)<=HANDLE_PX){mode='point';dragStartX=cx;tc.style.cursor='grabbing';}
+      else panStart(cx);
       if(e.cancelable)e.preventDefault();return;}
     const zone=getZone(cx);
-    if(zone==='outside'){
-      const rect=RECT();
-      const clickT=Math.round(tvT(cx-rect.left,rect.width));
-      const hw=Math.floor(windowSize/2);a=Math.max(0,Math.min(T-windowSize,clickT-hw));b=a+windowSize;
-      tvFollow();paint(true);return;}
+    if(zone==='outside'){panStart(cx);if(e.cancelable)e.preventDefault();return;}
     mode=zone;dragStartX=cx;dragStartA=a;dragStartB=b;ws=b-a;
     tc.style.cursor=zone==='center'?'grabbing':'col-resize';
     if(e.cancelable)e.preventDefault();}
@@ -7469,7 +7814,8 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
     if(!mode)return;
     if(e.cancelable)e.preventDefault();
     const cx=e.touches?e.touches[0].clientX:e.clientX;
-    if(mode==='point'){pointDragTo(cx);tvFollow();paint();return;}
+    if(mode==='pan'){panMove(cx);return;}
+    if(mode==='point'){pointDragTo(cx);edgeScroll(cx);paint();return;}
     const delta=Math.round((cx-dragStartX)/W()*tvSpan());
     if(mode==='center'){const na=Math.max(0,Math.min(T-ws,dragStartA+delta));a=na;b=na+ws;}
     else if(mode==='left'){a=Math.max(0,Math.min(dragStartB-4,dragStartA+delta));windowSize=b-a;}
@@ -7478,6 +7824,16 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
   document.addEventListener('mousemove',onDrag);document.addEventListener('touchmove',onDrag,{passive:false});
   function endDrag(e){
     if(pinch&&(!e||!e.touches||e.touches.length<2)){pinch=0;releaseRect();paint(true);return;}
+    if(mode==='pan'){
+      const cx=e&&e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:(e&&e.clientX!=null?e.clientX:panLastX);
+      mode=null;tc.style.cursor='default';
+      if(panEnd(cx)){releaseRect();return;}
+      // a tap: the time (or the window) goes where the finger was
+      if(tlSingleMode()){pointDragTo(cx);}
+      else{const rect=RECT(),clickT=Math.round(tvT(cx-rect.left,rect.width)),hw=Math.floor(windowSize/2);
+        a=Math.max(0,Math.min(T-windowSize,clickT-hw));b=a+windowSize;}
+      tvFollow();releaseRect();paint(true);return;}
+    clearInterval(edgeTimer);edgeTimer=0;
     if(mode){mode=null;tc.style.cursor='default';releaseRect();paint(true);}}
   document.addEventListener('mouseup',endDrag);
   document.addEventListener('touchend',endDrag);document.addEventListener('touchcancel',endDrag);
@@ -7485,7 +7841,9 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
   tc.addEventListener('wheel',e=>{
     if(e.cancelable)e.preventDefault();
     const rect=tc.getBoundingClientRect();
-    tvZoom((e.deltaY||e.deltaX)>0?1/1.18:1.18,(e.clientX-rect.left)/rect.width);
+    if(Math.abs(e.deltaX)>Math.abs(e.deltaY)||e.shiftKey){
+      tvPan((e.shiftKey?e.deltaY:e.deltaX)/rect.width*tvSpan());drawTimeline();return;}
+    tvZoom(e.deltaY>0?1/1.18:1.18,(e.clientX-rect.left)/rect.width);
     drawTimeline();},{passive:false});
   tc.addEventListener('dblclick',()=>{tvInit();drawTimeline();});
   tc.addEventListener('mousemove',function(e){if(mode)return;
@@ -7539,6 +7897,15 @@ addEventListener('keydown',e=>{
   const w=document.getElementById('searchWrap');
   if(w&&!w.classList.contains('hid'))searchFieldClose();
 });
+// A tap anywhere else (the map, a button) closes the field when no result
+// was picked -- it should not stay hanging over the map.
+addEventListener('pointerdown',e=>{
+  const w=document.getElementById('searchWrap');
+  if(!w||w.classList.contains('hid'))return;
+  const t=e.target;
+  if(t&&t.closest&&(t.closest('#searchWrap')||t.closest('#searchFab')))return;
+  searchFieldClose();
+},true);
 // --- Theme -------------------------------------------------------------
 // Three states, because "follow the phone" is the one most people want and
 // neither of the other two can express it.
@@ -7628,12 +7995,23 @@ function updateAccountBtn(avatarUrl){
     // background-image has no load event of its own, so this is loaded as a
     // real Image() first and only switched over once it is known to work;
     // until then, or if it fails, the initials stay up.
-    b.classList.remove('has-img');b.style.backgroundImage='';
-    if(avatarUrl){
-      const img=new Image();
-      img.onload=()=>{b.classList.add('has-img');b.style.backgroundImage='url('+encodeURI(avatarUrl)+')';};
-      img.src=avatarUrl;
-    }});
+    //
+    // A real <img> rather than a CSS background: url(encodeURI(...)) double-
+    // encoded storage URLs that already carry %-escapes, and the picture
+    // never showed even though the test load above it had succeeded.
+    const old=b.querySelector('.pt-img');
+    if(!avatarUrl){b.classList.remove('has-img');if(old)old.remove();return;}
+    if(old&&old.getAttribute('src')===avatarUrl)return;
+    const img=new Image();img.className='pt-img';img.alt='';img.decoding='async';
+    img.onload=()=>{const prev=b.querySelector('.pt-img');if(prev&&prev!==img)prev.remove();
+      b.appendChild(img);b.classList.add('has-img');};
+    img.onerror=()=>{if(!b.querySelector('.pt-img'))b.classList.remove('has-img');};
+    img.src=avatarUrl;
+    });
+  // remembered, so the picture is up at the next start before the profile
+  // query has answered
+  try{if(sbUser&&avatarUrl)localStorage.setItem('ssm_avatar',sbUser.id+'|'+avatarUrl);
+    else if(!sbUser)localStorage.removeItem('ssm_avatar');}catch(e){}
   const btn=document.getElementById('accountBtn');if(!btn)return;
   if(!sbUser){btn.classList.remove('signed');btn.title='Anmelden';
     // person + plus reads unambiguously as "sign in"; the old door-and-arrow
@@ -7649,8 +8027,9 @@ function flyToMe(){haptic(8);
     try{
       if(meMarker)map.removeLayer(meMarker);
       meMarker=L.marker(ll,{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1900}).addTo(map);
-      map.flyTo(ll,13,{duration:1.1});
-    }catch(e){}},
+      map.flyTo(ll,12,{duration:1.1});
+    }catch(e){}
+    try{tourNearOpen(ll[0],ll[1]);}catch(e){}},
     ()=>{toast('Standort konnte nicht ermittelt werden','err');},{enableHighAccuracy:true,timeout:9000});}
 // ===================== Screen router =====================================
 // Three screens on a wrap-around carousel: Search -> Report -> Feed -> Search.
@@ -8747,7 +9126,9 @@ function _rptCluster(g,zoom){
 function loadReportMarkers(){
   reportMarkers.clearLayers();
   if(!allReports||!allReports.length)return;
-  const z=map.getZoom(),cellPx=66,tiny=z<9.5,clusterOn=z<12.5,rich=z>=12.5;
+  // No count bubbles any more: every report is its own marker, a dot when
+  // zoomed far out, a pin in between, the photo or chip up close.
+  const z=map.getZoom(),cellPx=66,tiny=z<9.5,clusterOn=false,rich=z>=12.5;
   // Drawn snow-maps are model input for Reported Powder, not posts -- they
   // feed progZones() straight out of allReports but never get a marker, an
   // overlay snapshot, or a feed/profile entry of their own.
@@ -8776,7 +9157,11 @@ function authUpdateUI(user){
   const feedB=document.getElementById('mapFeedFab'),banner=document.getElementById('emailBanner');
   if(user){
     const name=user.user_metadata?.username||user.email?.split('@')[0]||'User';
-    btn.outerHTML=`<div class="user-pill" id="userPill" onclick="openProfile()">
+    try{const c=(localStorage.getItem('ssm_avatar')||'').split('|');
+      if(c[0]===user.id&&c[1])updateAccountBtn(c.slice(1).join('|'));else updateAccountBtn(null);}catch(e){}
+    // called again on every token refresh, when the pill has already
+    // replaced the button -- that used to throw before the avatar loaded
+    if(btn)btn.outerHTML=`<div class="user-pill" id="userPill" onclick="openProfile()">
       <div class="user-avatar" id="userPillAv"><span>${name[0].toUpperCase()}</span></div>
       <span class="user-name">${name}</span></div>`;
     loadMyProfileAvatar();
