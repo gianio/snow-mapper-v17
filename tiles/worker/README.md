@@ -42,8 +42,9 @@ the app renders on the device as before.
 8. **Plan:** rendering a tile takes ~0.1–0.3 s of CPU. The Workers *Free*
    plan allows 10 ms per request, so on Free only tiles already in R2 / the
    cache are served and the app renders the rest on the device. **Workers
-   Paid (~5 USD/month)** lifts this to 30 s. R2's free tier (10 GB, egress
-   free) covers the storage.
+   Paid (~5 USD/month)** lifts this to 30 s -- tick *on_demand* in Tiles
+   publish only then. With pre-rendering (step 7) the **free plan is
+   enough**. R2's free tier (10 GB, egress free) covers the storage.
 
 ## What lives where (bucket)
 
