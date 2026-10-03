@@ -162,7 +162,12 @@ Das Herzstück für die Schneequalität.
 
 ### 3.6 Weitere Modelle
 - **Tour-Bewertung** (`model/tour_score.py`, JS-Gegenstück): Bewertung entlang
-  der swisstopo-Skitourenrouten.
+  der swisstopo-Skitourenrouten. Mit SNOWPACK-Export: Powder-Score 0–100 aus
+  der Prognose für morgen 10 Uhr – jede Route alle 200 m mit Höhe, Neigung und
+  Exposition (~115 m Gelände) aus der Matrix gelesen, Pulvertiefe zählt am
+  meisten, Kruste, Nässe und Windpressung ziehen ab; gemittelt über die
+  Abfahrtsabschnitte (22–50°). Kernzone des Lawinenbulletins → kein Lob.
+  Der Standort-Knopf zeigt die 10 besten Touren im Umkreis von 25 km.
 - **Community-Prognose**: Meldungen werden auf Hänge mit ähnlicher Höhe und
   Exposition in der Nähe übertragen.
 

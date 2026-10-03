@@ -13,3 +13,10 @@ bucket_name = "snowmapper-tiles"
 # (~5 USD/month), where the default limit is 30 s. On the free plan the
 # Worker still serves everything already in R2 / the edge cache, and the app
 # falls back to rendering on the device for the rest.
+
+# Workers Logs (dashboard -> Worker -> Observability): every request with
+# its status and CPU time. Included in the free plan (200k log lines/day,
+# kept 3 days).
+[observability]
+enabled = true
+head_sampling_rate = 1
