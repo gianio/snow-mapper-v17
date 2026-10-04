@@ -28,7 +28,8 @@ voraus.
 | **Basis-Ebenen** | Neuschnee, Schneehöhe, Temperatur, Wind (animiert), Sonne/Strahlung, Oberflächentemperatur, «befahrbar», Hangneigung, Exposition, Relief |
 | **Powder finden / Prognose** | Pulver-Entscheid pro Zelle (Regelwerk) und eine Prognose aus Community-Meldungen (ähnliche Hänge in der Nähe) |
 | **Skiqualität (SNOWPACK)** | physikalisch simulierte Schneedecke: 20+ Klassen (Pulver, Harsch, Bruchharsch, Sulz, Triebschnee, Oberflächenreif …), Dichte, Schneeprofil beim Antippen |
-| **Overlays** | SLF-Lawinenbulletin, Skitourenrouten (swisstopo) mit Tour-Bewertung, IMIS-Messstationen |
+| **Bewölkung** | Gesamtbewölkung (Open-Meteo `cloud_cover`, %), gemittelt über das Zeitfenster |
+| **Overlays** | SLF-Lawinenbulletin, Skitourenrouten (swisstopo) mit Powder-Score aus SNOWPACK (standardmässig an), IMIS-Messstationen |
 | **Community** | Konto, Meldungen mit Foto/Zonen, Feed, Folgen, Nachrichten, Moderation (Melden), Konto löschen |
 | **Werkzeuge** | 3D-Ansicht, Ortssuche, Gipfelerkennung per Texterkennung (OCR), Zeichnen eigener Schnee-Karten, offline nutzbar (PWA) |
 

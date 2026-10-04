@@ -66,6 +66,8 @@ def synthetic_forecast(
                 wind_speed_10m=wind_speed.tolist(),
                 wind_direction_10m=wind_dir.tolist(),
                 sunshine_duration=sun.tolist(),
+                # Bewoelkung: dicht bei Niederschlag, sonst locker.
+                cloud_cover=np.clip(25 + precip * 120 + rng.normal(0, 8, hours), 0, 100).tolist(),
             )
         )
     return out
