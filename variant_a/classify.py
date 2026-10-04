@@ -915,9 +915,13 @@ def classify_simple(hs, powder, crust, sdens, slw, sh=None, drift=None, scour=No
 SKI6_LABELS = ["none", "hard", "crust", "powder_0_10", "powder_10_20", "powder_gt_20", "wet"]
 SKI6_DE = ["kein / wenig Schnee", "durchgehend hart", "Kruste", "Pulver 0–10 cm",
            "Pulver 10–20 cm", "Pulver > 20 cm", "nass"]
-SKI6_RGBA = {0: (0, 0, 0, 0), 1: (135, 130, 120, 215), 2: (200, 45, 45, 225),
-             3: (150, 205, 245, 220), 4: (60, 140, 225, 230), 5: (20, 55, 160, 240),
-             6: (240, 175, 30, 230)}
+# Powder runs light sky -> deep blue -> violet (more is darker, readable in
+# grey too), the surfaces you would rather avoid are the warm/neutral ones:
+# slate for hard, rose for crust, amber for wet. The app carries the same
+# table (VA_PALETTE) so older exports are shown in it as well.
+SKI6_RGBA = {0: (0, 0, 0, 0), 1: (148, 163, 184, 190), 2: (244, 63, 94, 215),
+             3: (125, 211, 252, 210), 4: (37, 99, 235, 225), 5: (88, 28, 135, 240),
+             6: (245, 158, 11, 220)}
 SK_POWDER_MIN = 2.0      # cm -- less loose snow than this is not "powder" to ski
 SK_P1, SK_P2 = 10.0, 20.0
 SK_WET_LWC = WET_LWC_MIN
@@ -941,8 +945,8 @@ def classify_ski6(hs, powder, crust, sdens, slw):
 # ── Triebschnee: wind effect on the surface, a view of its own ─────────────
 WIND_LABELS = ["none", "scoured", "drift_light", "drift"]
 WIND_DE = ["–", "abgeblasen / windgepresst", "leichte Triebschnee-Ablagerung", "Triebschnee"]
-WIND_RGBA = {0: (0, 0, 0, 0), 1: (150, 150, 160, 200), 2: (200, 155, 235, 215),
-             3: (120, 45, 185, 235)}
+WIND_RGBA = {0: (0, 0, 0, 0), 1: (148, 163, 184, 195), 2: (253, 186, 116, 205),
+             3: (194, 65, 12, 235)}
 WD_STRONG = 0.7          # drift index above which it is a real drift deposit
 
 

@@ -12,7 +12,7 @@ ist die Richtung, AUS der der Wind weht [Grad, met. Konvention].
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Sequence
 
 import time
@@ -26,6 +26,7 @@ HOURLY_VARIABLES: tuple[str, ...] = (
     "wind_speed_10m",
     "wind_direction_10m",
     "sunshine_duration",
+    "cloud_cover",
 )
 
 
@@ -43,6 +44,7 @@ class PointForecast:
     wind_speed_10m: List[float]      # [m/s]
     wind_direction_10m: List[float]  # [Grad, woher]
     sunshine_duration: List[float]   # [s] Sonnenscheindauer pro Stunde
+    cloud_cover: List[float] = field(default_factory=list)  # [%] Gesamtbewoelkung
 
 
 class OpenMeteoClient:
@@ -184,6 +186,7 @@ class OpenMeteoClient:
             wind_speed_10m=_clean(hourly["wind_speed_10m"]),
             wind_direction_10m=_clean(hourly["wind_direction_10m"]),
             sunshine_duration=_clean(hourly.get("sunshine_duration", [])),
+            cloud_cover=_clean(hourly.get("cloud_cover", [])),
         )
 
 
