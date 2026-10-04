@@ -31,6 +31,7 @@ voraus.
 | **Bewölkung** | Gesamtbewölkung (Open-Meteo `cloud_cover`, %), gemittelt über das Zeitfenster |
 | **Overlays** | SLF-Lawinenbulletin, Skitourenrouten (swisstopo) mit Powder-Score aus SNOWPACK (standardmässig an), IMIS-Messstationen |
 | **Community** | Konto, Meldungen mit Foto/Zonen, Feed, Folgen, Nachrichten, Moderation (Melden), Konto löschen |
+| **Touren & Community** | «x Leute schauen diese Tour gerade an» (Supabase Realtime Presence, nichts gespeichert; Name nur bei öffentlichem Profil), Meldungen pro Tour, «Powder melden» aus der Tour, Tour-Auswahl beim Melden (`condition_data.tour`), Feed-Ansicht «Touren» |
 | **Werkzeuge** | 3D-Ansicht, Ortssuche, Gipfelerkennung per Texterkennung (OCR), Zeichnen eigener Schnee-Karten, offline nutzbar (PWA) |
 
 ---
@@ -168,7 +169,12 @@ Das Herzstück für die Schneequalität.
   Exposition (~115 m Gelände) aus der Matrix gelesen, Pulvertiefe zählt am
   meisten, Kruste, Nässe und Windpressung ziehen ab; gemittelt über die
   Abfahrtsabschnitte (22–50°). Kernzone des Lawinenbulletins → kein Lob.
-  Der Standort-Knopf zeigt die 10 besten Touren im Umkreis von 25 km.
+  Score = Anteil der Abfahrt mit Pulver (bzw. Sulz) in der Skiqualität des
+  SNOWPACK-Frames, auf dem die Zeitleiste steht. Bis 4000 swisstopo-Routen,
+  benannt nach dem Gipfel am höchsten Punkt (GeoNames, CC BY 4.0). «Touren
+  finden»: Filter nach Umkreis (zum tiefsten Punkt), Höhenmetern, steilster
+  Stelle, Powder- oder Sulz-Fokus; eine Tour antippen zeigt sie allein mit
+  Höhenprofil und Schneeart entlang des Wegs.
 - **Community-Prognose**: Meldungen werden auf Hänge mit ähnlicher Höhe und
   Exposition in der Nähe übertragen.
 
