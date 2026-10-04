@@ -6330,7 +6330,7 @@ function _lerpC(stops,v){v=Math.max(0,Math.min(100,v));
   return stops[stops.length-1][1];}
 function tourRamp(v,focus){const P=VA_PALETTE.ski6;
   const st=(focus||tourFocus)==='sulz'?[[0,TOUR_GREY],[8,[238,214,166]],[50,P[6]],[100,[166,106,24]]]
-                                     :[[0,TOUR_GREY],[10,[221,214,254]],[40,[167,139,250]],[75,[124,58,237]],[100,[76,29,149]]];
+                                     :[[0,TOUR_GREY],[10,[232,200,255]],[40,[200,120,255]],[75,[160,60,255]],[100,[125,20,255]]];
   const c=_lerpC(st,v);return 'rgb('+c[0]+','+c[1]+','+c[2]+')';}
 function tourVal(r){return r?(tourFocus==='sulz'?r.sulz:r.powder):-1;}
 function tourColor(r){if(!r)return 'rgb('+TOUR_GREY.join(',')+')';return tourRamp(tourVal(r));}
@@ -6458,8 +6458,10 @@ function tourPaintScores(){
   tourList().forEach(t=>{if(!t._line)return;
     const r=tourVa.eng?tourVa.scores.get(t.id):t._old;
     const vis=tourVisible(t),iso=tourIso&&tourIso!==t;
-    t._line.setStyle({color:tourColor(r),opacity:!vis?0:(iso?.12:.95)});
-    if(t._casing)t._casing.setStyle({opacity:!vis||iso?0:.9});});
+    const col=tourColor(r),v=r?tourVal(r):0;
+    t._line.setStyle({color:col,opacity:!vis?0:(iso?.12:1)});
+    if(t._casing)t._casing.setStyle({opacity:!vis||iso?0:.95});
+    if(t._glow)t._glow.setStyle({color:col,opacity:!vis||iso?0:(v>=75?.5:v>=40?.32:v>=10?.16:0)});});
 }
 let tourLayerGroup=null,tourRenderer=null;
 // Thousands of routes as SVG would be thousands of DOM paths; one canvas
@@ -6475,18 +6477,21 @@ function tourBuildLayer(){
     const latlngs=t.coords.map(c=>[c[1],c[0]]);
     // a white casing under the coloured line keeps it readable on any terrain
     const w=tourW();
+    // a soft halo in the tour's own colour under everything: the good
+    // ones glow
+    const glow=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+10,opacity:0,interactive:false,lineCap:'round',lineJoin:'round'});
     const casing=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+3,opacity:.9,interactive:false,lineCap:'round',lineJoin:'round'});
     const line=L.polyline(latlngs,{renderer:tourRenderer,color:'rgb('+TOUR_GREY.join(',')+')',weight:w,opacity:.95,interactive:true,lineCap:'round',lineJoin:'round'});
     line.on('click',e=>{if(!tourVisible(t)||(tourIso&&tourIso!==t))return;
       try{if(e&&e.originalEvent)L.DomEvent.stopPropagation(e);}catch(_){}try{haptic(4);}catch(e2){}tourOpen(t,tsOpen());});
-    tourLayerGroup.addLayer(casing);tourLayerGroup.addLayer(line);
-    t._casing=casing;t._line=line;
+    tourLayerGroup.addLayer(glow);tourLayerGroup.addLayer(casing);tourLayerGroup.addLayer(line);
+    t._glow=glow;t._casing=casing;t._line=line;
   });
   setTimeout(tourPaintScores,0);
   return tourLayerGroup;
 }
 map.on('zoomend',()=>{if(!ovOn.skitourVec)return;const w=tourW();
-  tourList().forEach(t=>{if(t._line&&t._line.options.weight!==w){t._line.setStyle({weight:w});if(t._casing)t._casing.setStyle({weight:w+3});}});});
+  tourList().forEach(t=>{if(t._line&&t._line.options.weight!==w){t._line.setStyle({weight:w});if(t._casing)t._casing.setStyle({weight:w+3});if(t._glow)t._glow.setStyle({weight:w+10});}});});
 // ── one route on its own ───────────────────────────────────────────────────
 let tourIso=null,tourIsoLayer=null,tourFromSearch=false;
 function tourOpen(t,fromSearch){
