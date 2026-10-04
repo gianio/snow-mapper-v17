@@ -1307,7 +1307,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  :root[data-theme="dark"] .leaflet-tile-pane{filter:brightness(.6) saturate(.85) contrast(1.12)}
  /* the winter map is pale by design; a little more contrast makes ridges,
     rock and forest read at a glance */
- .base-tiles{filter:contrast(1.16) saturate(1.12)}
+ .base-tiles{filter:grayscale(var(--base-gray,0)) contrast(calc(1.16 + .12*var(--base-gray,0))) saturate(1.12)}
+ .relief-base{filter:grayscale(1) contrast(1.05) brightness(1.06)}
  :root[data-theme="dark"] .feed-card-visual,
  :root[data-theme="dark"] .fc-wrap{background:var(--fill2)}
  /* The frosted surfaces the original build floated over the map. Only the
@@ -3450,6 +3451,32 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .tp-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
  .tp-chip.on svg,.tp-chip.on em{color:#fff}
  .tp-q{width:100%;margin-top:8px;border:1px solid var(--hair);background:var(--fill);border-radius:12px;padding:9px 12px;font:500 13px Inter,system-ui;color:var(--fg);box-sizing:border-box}
+
+ /* ── tour sheet: compact, at the bottom, draggable ── */
+ .tour-sheet{left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);max-height:none;overflow:visible;
+   padding:6px 14px 12px;border-radius:24px;transition:transform .28s cubic-bezier(.2,.9,.25,1);touch-action:none}
+ .tsh-grab{width:38px;height:4px;border-radius:2px;background:var(--fill2);margin:2px auto 8px;cursor:grab}
+ .tour-hd[data-drag]{cursor:grab}
+ .tour-score{min-width:44px;height:38px;border-radius:12px;font-size:15px}
+ .tour-tt b{font-size:15.5px}
+ .tour-tt span{font-size:11.5px}
+ .tour-backi{border:0;background:var(--fill);width:30px;height:30px;border-radius:50%;font:700 18px/1 Inter,system-ui;color:var(--fg);cursor:pointer;flex:none}
+ .tour-watch{margin:8px 0 0;padding:6px 9px;font-size:12px}
+ .tour-prof{margin:8px 0 8px}
+ .tsh-acts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+ .tsh-acts button{display:flex;align-items:center;justify-content:center;gap:6px;height:38px;border-radius:12px;border:1px solid var(--hair);
+   background:var(--card);color:var(--fg);font:700 12.5px Inter,system-ui;cursor:pointer}
+ .tsh-acts button svg{width:15px;height:15px}
+ .tsh-acts button b{background:var(--accent);color:#fff;border-radius:999px;padding:1px 6px;font-size:10.5px}
+ .tsh-acts button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+ .ts-warn{margin-top:8px;font-size:11.5px;font-weight:700;color:#B4332A}
+ .tour-when{font-size:10.5px;margin-top:7px}
+ .tour-sheet.min .tsh-body{display:none}
+ .tour-sheet.min .tour-watch{display:none}
+ .fab-tour{display:inline-flex;align-items:center;gap:6px;font:800 13px Inter,system-ui;color:var(--accent)}
+ .fab-tour svg{width:15px;height:15px}
+ #feedAnchorBar{gap:10px;align-items:center;justify-content:space-between;padding:6px 20px 8px;background:var(--paper)}
+ #feedAnchorBar button{border:1px solid var(--hair);background:var(--card);border-radius:999px;padding:5px 10px;font:700 12px Inter,system-ui;color:var(--fg2);cursor:pointer}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -4620,21 +4647,29 @@ function _applyVectorFade(op,t){
   // Canton borders are legible from the very first view and only sharpen.
   chCantons.setStyle({opacity:.42+.34*t,weight:.9+.9*t});
 }
+// Three looks by zoom:
+//  - country (< 9.5): a calm grey relief, like a weather map -- the shaded
+//    terrain carries it, the national map only faintly on top;
+//  - middle (9.5-13): the winter map in black and white, so the coloured
+//    layers and routes stand out;
+//  - close (> 13.5): the winter map in its own colours.
+const reliefBase=L.tileLayer(swissTile('ch.swisstopo.swissalti3d-reliefschattierung_monodirektional','png'),
+  {maxZoom:17,crossOrigin:true,keepBuffer:2,updateWhenZooming:false,zIndex:0,className:'relief-base'}).addTo(map);
+try{base.setZIndex(1);}catch(e){}
+const _ramp=(z,z0,z1)=>Math.max(0,Math.min(1,(z-z0)/(z1-z0)));
 function updateBaseFade(force){
-  const t=baseFadeT();
-  // The country view is abstract but no longer blank: the terrain starts at
-  // BASE_FLOOR rather than 0, so you can already read where the mountains are.
-  // full strength from about a third of the way in (zoom ~10), not only at
-  // the deepest zoom: the map looked washed out exactly where people use it
-  const op=BASE_FLOOR+(1-BASE_FLOOR)*Math.min(1,t/0.33);
+  const t=baseFadeT(),z=map.getZoom();
+  const op=0.42+0.58*_ramp(z,8.6,10.2);
   base.setOpacity(op);
+  try{reliefBase.setOpacity(0.9-0.9*_ramp(z,9.2,13));}catch(e){}
+  document.documentElement.style.setProperty('--base-gray',(1-_ramp(z,13,14.6)).toFixed(3));
   if(!force&&Math.abs(op-_lastFadeOp)<_FADE_EPS)return;
   // Coalesce to one restyle per frame even if several zoom events land.
   if(_fadeRaf)return;
   _fadeRaf=requestAnimationFrame(function(){
     _fadeRaf=0;
     const t2=baseFadeT();
-    const op2=BASE_FLOOR+(1-BASE_FLOOR)*Math.min(1,t2/0.33);
+    const op2=0.42+0.58*_ramp(map.getZoom(),8.6,10.2);
     _lastFadeOp=op2;
     _applyVectorFade(op2,t2);
   });
@@ -6295,7 +6330,7 @@ function _lerpC(stops,v){v=Math.max(0,Math.min(100,v));
   return stops[stops.length-1][1];}
 function tourRamp(v,focus){const P=VA_PALETTE.ski6;
   const st=(focus||tourFocus)==='sulz'?[[0,TOUR_GREY],[8,[238,214,166]],[50,P[6]],[100,[166,106,24]]]
-                                     :[[0,TOUR_GREY],[8,P[3]],[50,P[4]],[100,P[5]]];
+                                     :[[0,TOUR_GREY],[10,[221,214,254]],[40,[167,139,250]],[75,[124,58,237]],[100,[76,29,149]]];
   const c=_lerpC(st,v);return 'rgb('+c[0]+','+c[1]+','+c[2]+')';}
 function tourVal(r){return r?(tourFocus==='sulz'?r.sulz:r.powder):-1;}
 function tourColor(r){if(!r)return 'rgb('+TOUR_GREY.join(',')+')';return tourRamp(tourVal(r));}
@@ -6459,6 +6494,7 @@ function tourOpen(t,fromSearch){
   try{tsCloseQuiet();}catch(e){}
   try{tpJoin();tpTrack();}catch(e){}
   document.body.classList.add('tour-open');
+  try{document.getElementById('tourSheet').classList.remove('min');}catch(e){}
   tourIsoRefresh();
   try{const ll=t.coords.map(c=>[c[1],c[0]]);map.flyToBounds(L.latLngBounds(ll),{padding:[50,50],paddingBottomRight:[50,330],duration:.8,maxZoom:14});}catch(e){}
   tourPaintScores();
@@ -6492,7 +6528,7 @@ function tourIsoDraw(t,r){
 }
 function tourProfileSVG(t,r){
   const g=tourGeo(t),segs=g.segs.filter(s=>s.el!=null);if(segs.length<2)return '';
-  const W=320,H=112,L0=34,R=6,T0=8,B=20,len=segs[segs.length-1].dist||1;
+  const W=340,H=92,L0=34,R=6,T0=8,B=18,len=segs[segs.length-1].dist||1;
   let lo=1e9,hi=-1e9;segs.forEach(s=>{lo=Math.min(lo,s.el);hi=Math.max(hi,s.el);});
   const pad=Math.max(40,(hi-lo)*.12);lo-=pad;hi+=pad;
   const X=d=>L0+d/len*(W-L0-R),Y=e=>T0+(1-(e-lo)/(hi-lo))*(H-T0-B);
@@ -6512,25 +6548,64 @@ function tourSheetRender(t,r){
   setTimeout(()=>{try{tpRender();}catch(e){}},0);
   const el=document.getElementById('tourSheet');if(!el)return;
   const g=tourGeo(t),va=!!(r&&r.cls);
-  const facts=[g.hi.el!=null?'Gipfel '+Math.round(g.hi.el)+' m':'',g.gain!=null?'↑ '+g.gain+' Hm':'',
-    g.len?(Math.round(g.len/100)/10)+' km':'',g.maxSlope?'bis '+g.maxSlope+'°':''].filter(Boolean).join(' · ');
-  const order=[5,4,3,1,2,6];
-  const chips=va?order.filter(k=>r.shares[k]).map(k=>'<span class="tc"><i style="background:'+tourClassColor(k)+'"></i>'
-    +escapeHtml(VA_SKI6_DE[k])+'<b>'+Math.round(r.shares[k]*100)+' %</b></span>').join(''):'';
-  el.innerHTML=(tourFromSearch?'<button type="button" class="tour-back" onclick="tourBackToSearch()">‹ Zurück zur Liste</button>':'')
-    +'<div class="tour-hd"><span class="tour-score" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r):'–')+'<small>%</small></span>'
+  const facts=[g.gain!=null?'↑ '+g.gain+' Hm':'',g.len?(Math.round(g.len/100)/10)+' km':'',
+    g.hi.el!=null?Math.round(g.hi.el)+' m':''].filter(Boolean).join(' · ');
+  const nRep=tourReports(t).length;
+  const warn=r&&r.clamped?'<div class="ts-warn">Kernzone des Lawinenbulletins – Bulletin zuerst lesen.</div>':'';
+  el.innerHTML='<div class="tsh-grab" data-drag></div>'
+    +'<div class="tour-hd" data-drag>'+(tourFromSearch?'<button type="button" class="tour-backi" onclick="tourBackToSearch()" aria-label="Zurück zur Liste">‹</button>':'')
+    +'<span class="tour-score" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r):'–')+'<small>%</small></span>'
     +'<div class="tour-tt"><b>'+escapeHtml(t.name||'Skitour')+'</b><span>'+escapeHtml(facts)+'</span></div>'
     +'<button type="button" class="tour-x" onclick="tourClose()" aria-label="Schliessen">×</button></div>'
-    +(va?'<div class="tour-kpi"><span'+(tourFocus==='powder'?' class="on"':'')+'>Pulver <b>'+r.powder+' %</b></span>'
-      +'<span'+(tourFocus==='sulz'?' class="on"':'')+'>Sulz <b>'+r.sulz+' %</b></span>'
-      +(r.powderCm?'<span>Ø <b>'+r.powderCm+' cm</b> Pulver</span>':'')+'</div>':
-      '<div class="tour-verdict" style="color:'+tourColor(r)+'">'+escapeHtml((r&&r.verdict)||'')+'</div>')
     +'<div class="tour-watch" id="tourWatch"></div>'
-    +tourProfileSVG(t,va?r:null)
-    +(chips?'<div class="tour-chips">'+chips+'</div>':'')
-    +'<div class="tour-when">'+(va?'SNOWPACK · '+escapeHtml(r.when||'')+' – folgt der Zeitleiste':'Powder-Modell im gewählten Zeitfenster')+'</div>'
-    +tourReportsHTML(t)
-    +'<div class="tour-cav">'+((r&&r.caveats)||[]).map(c=>'<div>'+escapeHtml(c)+'</div>').join('')+'</div>';
+    +'<div class="tsh-body">'+tourProfileSVG(t,va?r:null)
+    +'<div class="tsh-acts">'
+    +'<button type="button" onclick="tourShowReports()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>Meldungen'+(nRep?' <b>'+nRep+'</b>':'')+'</button>'
+    +'<button type="button" class="pri" onclick="tourReportPowder()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg>Melden</button>'
+    +'<button type="button" onclick="tourGpx()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>GPX</button>'
+    +'</div>'+warn
+    +'<div class="tour-when">'+(va?'Pulver-Anteil der Abfahrt · SNOWPACK '+escapeHtml(r.when||''):'Powder-Modell im Zeitfenster')+' · Modell, kein Lawinenbulletin</div>'
+    +'</div>';
+  tourSheetDragWire(el);
+}
+// The sheet moves with the thumb: pull down to fold it to its title row,
+// further to close it, up to open it again.
+function tourSheetDragWire(el){
+  if(el._dw)return;el._dw=true;
+  let y0=null,dy=0,id=null;
+  el.addEventListener('pointerdown',e=>{if(!e.target.closest('[data-drag]')||e.target.closest('button'))return;
+    y0=e.clientY;dy=0;id=e.pointerId;try{el.setPointerCapture(id);}catch(_){}el.style.transition='none';});
+  el.addEventListener('pointermove',e=>{if(y0==null||e.pointerId!==id)return;dy=e.clientY-y0;
+    const lim=el.classList.contains('min')?Math.max(-60,dy):dy;el.style.transform='translateY('+Math.max(-40,lim)+'px)';});
+  const end=e=>{if(y0==null)return;y0=null;el.style.transition='';el.style.transform='';
+    if(dy>150)tourClose();else if(dy>35)el.classList.add('min');else if(dy<-25)el.classList.remove('min');
+    else if(Math.abs(dy)<4&&el.classList.contains('min'))el.classList.remove('min');};
+  el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+}
+// GPX of the route, heights from the terrain model.
+function tourGpx(){
+  const t=tourIso;if(!t)return;
+  const esc=s=>String(s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+  const pts=t.coords.map(c=>{const e=fineElev(c[1],c[0]);
+    return '<trkpt lat="'+c[1].toFixed(6)+'" lon="'+c[0].toFixed(6)+'">'+(e!=null?'<ele>'+Math.round(e)+'</ele>':'')+'</trkpt>';}).join('');
+  const gpx='<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Snowmapper" xmlns="http://www.topografix.com/GPX/1/1">'
+    +'<metadata><name>'+esc(t.name||'Skitour')+'</name><desc>Route: swisstopo Skitourenkarte (kartografisch, keine GPS-Spur)</desc></metadata>'
+    +'<trk><name>'+esc(t.name||'Skitour')+'</name><trkseg>'+pts+'</trkseg></trk></gpx>';
+  const fn=(t.name||'skitour').replace(/[^\wäöüÄÖÜéèà -]+/g,'').trim().replace(/\s+/g,'-')+'.gpx';
+  try{const file=new File([gpx],fn,{type:'application/gpx+xml'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})&&/iPhone|iPad|Android/i.test(navigator.userAgent)){navigator.share({files:[file],title:fn}).catch(()=>{});return;}}catch(e){}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([gpx],{type:'application/gpx+xml'}));a.download=fn;
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},800);
+  try{haptic(6);}catch(e){}
+}
+// The current reports of this tour, in the community feed with the tour as
+// its filter.
+let feedTour=null;
+function tourShowReports(){
+  const t=tourIso;if(!t)return;
+  feedTour={id:String(t.id),name:t.name||'Skitour'};
+  feedScope='tours';
+  try{feedOpen();const fp=document.getElementById('feedPage');if(fp&&fp.classList.contains('side'))feedToggleWide();}catch(e){}
 }
 function tourClose(){
   const back=tourFromSearch;
@@ -12203,7 +12278,11 @@ async function addComment(){
 // sight, instead of behind the filter button.
 function feedChipsRender(){const el=document.getElementById('feedChips');if(!el)return;
   el.innerHTML=FEED_SCOPES.map(s=>`<button type="button" role="tab" data-s="${s.id}" aria-selected="${feedScope===s.id}" class="${feedScope===s.id?'on':''}" onclick="feedSetScope('${s.id}')">${s.icon}<span>${s.label}</span></button>`).join('');}
-function feedSetScope(s){feedScope=s;
+function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)return;
+  if(feedScope==='tours'&&feedTour){b.style.display='flex';
+    b.innerHTML='<span class="fab-tour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-10 4 6 2-3 4 7z"/></svg>'+escapeHtml(feedTour.name)+'</span><button type="button" onclick="feedTour=null;feedTourBar();feedRender()">✕ alle Touren</button>';}
+  else if(b.querySelector('.fab-tour')){b.style.display='none';b.innerHTML='';}}
+function feedSetScope(s){if(s!=='tours')feedTour=null;feedScope=s;feedTourBar();
   document.querySelectorAll('#feedScope button').forEach(b=>b.classList.toggle('active',b.dataset.s===s));
   document.querySelectorAll('#feedChips button').forEach(b=>{const on=b.dataset.s===s;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);
     if(on)try{b.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});}catch(e){}});
@@ -12342,7 +12421,11 @@ function feedRender(){
     const bnds=map.getBounds();base=base.filter(r=>bnds.contains([r.lat,r.lng]));
     if(!base.length){list.innerHTML='<div class="feed-empty">Keine Reports im aktuellen Kartenausschnitt. Zoome heraus oder verschiebe die Karte.</div>';return;}
   }else if(feedScope==='tours'){
-    base=base.filter(r=>r.condition_data&&r.condition_data.tour);
+    if(feedTour){const t=tourList().find(x=>String(x.id)===feedTour.id);
+      const ids=new Set(t?tourReports(t).map(r=>String(r.id)):[]);
+      base=base.filter(r=>ids.has(String(r.id))||(r.condition_data&&r.condition_data.tour&&String(r.condition_data.tour.id)===feedTour.id));}
+    else base=base.filter(r=>r.condition_data&&r.condition_data.tour);
+    feedTourBar();
     if(!base.length){list.innerHTML='<div class="feed-empty">Noch keine Meldung mit einer Tour. Beim Melden kannst du die Tour auswählen – oder in einer Tour auf „Powder melden" tippen.</div>';return;}
   }else if(feedScope==='saved'){
     base=base.filter(r=>savedPosts.has(String(r.id)));
