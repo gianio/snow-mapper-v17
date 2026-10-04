@@ -168,7 +168,12 @@ Das Herzstück für die Schneequalität.
   Exposition (~115 m Gelände) aus der Matrix gelesen, Pulvertiefe zählt am
   meisten, Kruste, Nässe und Windpressung ziehen ab; gemittelt über die
   Abfahrtsabschnitte (22–50°). Kernzone des Lawinenbulletins → kein Lob.
-  Der Standort-Knopf zeigt die 10 besten Touren im Umkreis von 25 km.
+  Score = Anteil der Abfahrt mit Pulver (bzw. Sulz) in der Skiqualität des
+  SNOWPACK-Frames, auf dem die Zeitleiste steht. Bis 4000 swisstopo-Routen,
+  benannt nach dem Gipfel am höchsten Punkt (GeoNames, CC BY 4.0). «Touren
+  finden»: Filter nach Umkreis (zum tiefsten Punkt), Höhenmetern, steilster
+  Stelle, Powder- oder Sulz-Fokus; eine Tour antippen zeigt sie allein mit
+  Höhenprofil und Schneeart entlang des Wegs.
 - **Community-Prognose**: Meldungen werden auf Hänge mit ähnlicher Höhe und
   Exposition in der Nähe übertragen.
 

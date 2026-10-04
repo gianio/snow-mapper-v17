@@ -461,6 +461,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     times, temp_m, prec_m, snow_m, wspd_m, wdir_m, sun_m, elev_pt = _hourly(fc, horizon)
     T = len(times)
     cloud_m = _cloud(fc, T)
+    print(f"[INT] Bewoelkung: {'ja' if cloud_m is not None else 'nein (Quelle liefert keine)'}.")
     idx, w = _idw_weights(pts, targets)
     ref_elev = _apply(elev_pt, idx, w).reshape(shape)
     sin_d, cos_d = np.sin(np.radians(wdir_m)), np.cos(np.radians(wdir_m))
@@ -611,7 +612,7 @@ def _sample(dem, pts, shape):
     return out
 
 
-def _tour_routes(max_routes=1500, tol_m=40.0, min_len_m=2500.0, min_gain_m=350.0,
+def _tour_routes(max_routes=4000, tol_m=60.0, min_len_m=1500.0, min_gain_m=250.0,
                  dem=None):
     """Skitouren-Geometrie (swisstopo, OGD) fuer die antippbaren Routen.
 
@@ -643,7 +644,7 @@ def _tour_routes(max_routes=1500, tol_m=40.0, min_len_m=2500.0, min_gain_m=350.0
                 out.append(c)
         if len(coords) > 1:
             out.append(coords[-1])
-        return [[round(x, 5), round(y, 5)] for x, y in out]
+        return [[round(x, 4), round(y, 4)] for x, y in out]
 
     # Die Live-Datei enthaelt das ganze Skiroutennetz -- 10'921 Linien,
     # darunter sehr viele kurze Verbindungsstuecke. Gefragt sind Touren
@@ -656,12 +657,12 @@ def _tour_routes(max_routes=1500, tol_m=40.0, min_len_m=2500.0, min_gain_m=350.0
             tot += math.hypot((x1 - x0) * 78000.0, (y1 - y0) * 111000.0)
         return tot
 
-    def gain_m(cs):
+    def heights(cs):
         if dem is None:
             return None
-        zs = [_elev_at_lonlat(dem, x, y) for x, y in cs]
-        zs = [z for z in zs if z is not None]
-        return (max(zs) - min(zs)) if len(zs) >= 2 else None
+        zs = [(_elev_at_lonlat(dem, x, y), x, y) for x, y in cs]
+        zs = [z for z in zs if z[0] is not None]
+        return zs if len(zs) >= 2 else None
 
     cand = []
     for r in routes:
@@ -671,16 +672,42 @@ def _tour_routes(max_routes=1500, tol_m=40.0, min_len_m=2500.0, min_gain_m=350.0
         ln = length_m(cs)
         if ln < min_len_m:
             continue
-        g = gain_m(cs)
+        zs = heights(cs)
+        g = (max(z[0] for z in zs) - min(z[0] for z in zs)) if zs else None
         if g is not None and g < min_gain_m:
             continue
+        lo = min(zs, key=lambda z: z[0]) if zs else None
+        hi = max(zs, key=lambda z: z[0]) if zs else None
         cand.append({"id": r["id"], "name": r.get("name"), "coords": cs,
-                     "_len": ln, "_gain": g})
+                     "_len": ln, "_gain": g,
+                     # the valley end (where the tour starts) and the top --
+                     # the search screen measures distance to the first and
+                     # names the tour after the summit at the second
+                     "lo": [lo[1], lo[2], round(lo[0])] if lo else None,
+                     "hi": [hi[1], hi[2], round(hi[0])] if hi else None,
+                     "gain": round(g) if g is not None else None, "len": round(ln)})
 
     # Die laengsten zuerst -- das sind die echten Touren, nicht die Zubringer.
     cand.sort(key=lambda r: -(r["_gain"] or 0) * 10 - r["_len"])
     out = [{k: v for k, v in r.items() if not k.startswith("_")}
            for r in cand[:max_routes]]
+    # Named after the summit at the top end, when GeoNames has one close by.
+    try:
+        from data_connectors.geonames_peaks import fetch_peaks, PeakIndex
+        idx = PeakIndex(fetch_peaks(cache_path=DATA_DIR / "topo_cache" / "geonames_ch_peaks.json"))
+        named = 0
+        for r in out:
+            if r.get("hi"):
+                pk = idx.nearest(r["hi"][0], r["hi"][1])
+                if pk:
+                    if r.get("name") and r["name"] != pk[0]:
+                        r["route"] = r["name"]
+                    r["name"] = pk[0]
+                    r["peak"] = [pk[2], pk[1], pk[3]]
+                    named += 1
+        print(f"[INT] {named} Touren nach ihrem Gipfel benannt.")
+    except Exception as e:                       # noqa: BLE001
+        print(f"[INT] Gipfelnamen nicht verfuegbar: {e!r}")
     pts = sum(len(r["coords"]) for r in out)
     kept_gain = sum(1 for r in cand[:max_routes] if r.get("_gain"))
     print(f"[INT] {len(out)} Skitouren behalten (von {len(routes)}), "
@@ -880,6 +907,10 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     ddir = out_dir / "data"; ddir.mkdir(exist_ok=True)
     meta, blobs = _build_meta_blobs(data)
+    # the routes live in data/tours.json only (written below): the app loads
+    # them from there in live and demo mode alike, and the blob stays smaller
+    tours = meta.pop("tours", None) or []
+    meta["tours"] = []
     stamp = datetime.now().strftime("%Y%m%d%H%M")
     dataname = "snowdata-%s.json" % stamp
     payload = json.dumps({"meta": meta, "b": blobs})
@@ -912,8 +943,9 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     # The ski-tour routes once more on their own: the demo blob comes from a
     # cache and may predate them, and the tour layer should not depend on
     # which data set is on screen. Only written when there are routes.
-    if meta.get("tours"):
-        (ddir / "tours.json").write_text(json.dumps({"tours": meta["tours"]}, separators=(",", ":")),
+    if tours:
+        (ddir / "tours.json").write_text(json.dumps({"tours": tours, "generated": pointer["generated"]},
+                                                    separators=(",", ":"), ensure_ascii=False),
                                          encoding="utf-8")
     # keep the last few snapshots for rollback, prune older ones
     for old in sorted(ddir.glob("snowdata-*.json.gz"))[:-4]:
@@ -3004,12 +3036,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     safe-area inset (iPhone home-indicator models). */
  /* While the map is being moved, only the brand, the account and the demo
     pill stay: everything else fades out and comes back when it settles. */
- #mapFabs,#bottomPanel,#miniLegend,#searchWrap,#ctrlRail,#mapQr,#mapDraw,#vaChip,#tourNear{
+ #mapFabs,#bottomPanel,#miniLegend,#searchWrap,#ctrlRail,#mapQr,#mapDraw,#vaChip{
    transition:opacity .22s ease,transform .26s cubic-bezier(.2,.8,.2,1)}
- body.map-moving #mapFabs,body.map-moving #miniLegend,body.map-moving #ctrlRail,
- body.map-moving #mapQr,body.map-moving #mapDraw,body.map-moving #vaChip{opacity:0;pointer-events:none;transform:translateX(10px)}
- body.map-moving #bottomPanel{opacity:0;pointer-events:none;transform:translateY(14px)}
- body.map-moving #searchWrap:not(:focus-within){opacity:0;pointer-events:none}
  #mapFabs{position:absolute;z-index:900;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,120px) + 32px);
    display:flex;flex-direction:column;align-items:flex-end;gap:12px}
  .mfab{position:relative;width:var(--fab);height:var(--fab);border-radius:var(--r-full);
@@ -3264,7 +3292,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #miniLegend{width:54px;padding:8px 6px 9px;border-radius:18px;right:14px;cursor:pointer;
    background:color-mix(in srgb,var(--card) 90%,transparent);border:1px solid var(--hair);
    backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);box-shadow:var(--elev3);
-   bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 312px)}
+   bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 358px)}
  #miniLegend:active{transform:scale(.97)}
  #mlUnit{font:800 8.5px/1.15 Inter,system-ui;text-transform:uppercase;letter-spacing:.03em;color:var(--fg2);
    text-align:center;margin-bottom:7px;overflow-wrap:anywhere}
@@ -3276,7 +3304,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ml-cls div{display:flex;align-items:center;gap:4px;height:15px}
  .ml-cls i{width:9px;height:15px;border-radius:3px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
  .ml-cls span{font:700 9px/1 Inter,system-ui;color:var(--fg);white-space:nowrap;overflow:hidden;letter-spacing:-.02em}
- .leg-info{position:absolute;z-index:1160;right:78px;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 250px);
+ .leg-info{position:absolute;z-index:1160;right:78px;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 290px);
    width:min(300px,calc(100vw - 104px));max-height:60vh;overflow-y:auto;background:var(--card);border:1px solid var(--hair);
    border-radius:20px;padding:14px 16px 14px;box-shadow:var(--elev3);opacity:0;transform:translateX(12px) scale(.98);
    transform-origin:right center;pointer-events:none;transition:opacity .18s ease,transform .24s cubic-bezier(.2,.9,.25,1)}
@@ -3297,6 +3325,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .li-ramp{height:12px;border-radius:6px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
  .li-ticks{display:flex;justify-content:space-between;font:700 11px var(--mono);color:var(--fg2);margin-top:4px}
  .li-note{font-size:11px;color:var(--fg2);margin:8px 0 0}
+ .li-tours{margin-top:12px;padding-top:10px;border-top:1px solid var(--hair)}
+ .li-tours b{display:block;font-size:13px;margin-bottom:6px}
  .leg-info .va-note,.leg-info .va-data-note{font-size:11px;margin-top:8px}
 
  /* layer panel: softer tiles, overlays with an icon each */
@@ -3310,6 +3340,56 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #lyOverlays .ly-b span{min-width:0;white-space:normal;line-height:1.2;overflow-wrap:anywhere;font-size:12.5px}
  #lyOverlays .ly-b.on{outline:none}
  body.feed-side #brandMark{opacity:0;pointer-events:none}
+
+ /* ── tours: one route on its own, and the search sheet ── */
+ .tour-sheet{max-height:62vh;padding:14px 16px 12px}
+ .tour-back{border:0;background:none;color:var(--accent);font:700 13px Inter,system-ui;padding:0 0 8px;cursor:pointer}
+ .tour-score{width:auto;min-width:50px;padding:0 8px;gap:1px}
+ .tour-score small{font-size:10px;opacity:.85;margin-left:1px}
+ .tour-kpi{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 8px}
+ .tour-kpi span{font-size:12px;color:var(--fg2);background:var(--fill);border-radius:999px;padding:5px 10px}
+ .tour-kpi span.on{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+ .tour-kpi b{color:var(--fg);font-weight:800}
+ .tour-kpi span.on b{color:var(--accent)}
+ .tour-prof{display:block;margin:2px 0 6px;border-radius:12px;background:var(--fill)}
+ .tour-prof .tp-t{font:600 9px Inter,system-ui;fill:var(--fg2)}
+ .tour-chips{display:flex;flex-wrap:wrap;gap:6px 10px;margin:4px 0 6px}
+ .tour-chips .tc{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--fg)}
+ .tour-chips .tc i{width:12px;height:12px;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+ .tour-chips .tc b{font:700 11px var(--mono);color:var(--fg2)}
+ .tour-when{font-size:11px;color:var(--fg2);margin-top:4px}
+ .tour-pin{position:relative;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;pointer-events:none}
+ .tour-pin span{white-space:nowrap;font:800 11.5px Inter,system-ui;color:var(--fg);background:var(--card);border-radius:999px;
+   padding:4px 9px;box-shadow:var(--elev3);margin-bottom:5px}
+ .tour-pin i{order:2;width:12px;height:12px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);background:var(--accent)}
+ .tour-pin.hi i{background:#18345F}
+ .tour-pin.lo i{background:#2E9E6A}
+ .ts-sheet{position:absolute;z-index:1150;left:0;right:0;bottom:0;max-width:560px;margin:0 auto;
+   max-height:64vh;overflow-y:auto;background:var(--card);border-radius:26px 26px 0 0;
+   padding:6px 16px calc(env(safe-area-inset-bottom,0px) + 14px);box-shadow:0 -12px 40px rgba(0,0,0,.18);
+   transform:translateY(105%);transition:transform .34s cubic-bezier(.2,.9,.25,1)}
+ body.ts-open .ts-sheet{transform:none}
+ body.ts-open #bottomPanel,body.ts-open #mapFabs,body.ts-open #miniLegend,body.tour-open #bottomPanel,body.tour-open #miniLegend{opacity:0;pointer-events:none}
+ .ts-grab{width:38px;height:4px;border-radius:2px;background:var(--fill2);margin:4px auto 10px}
+ .ts-seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--fill);border-radius:14px;padding:4px;margin:2px 0 12px}
+ .ts-seg button{border:0;border-radius:11px;padding:9px 0;font:700 13px Inter,system-ui;color:var(--fg2);background:transparent;cursor:pointer}
+ .ts-seg button.on{background:var(--card);color:var(--fg);box-shadow:var(--elev2)}
+ .ts-row{margin:0 2px 14px}
+ .ts-lbl{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--fg2);margin-bottom:6px}
+ .ts-lbl b{font:700 12.5px var(--mono);color:var(--fg)}
+ .ts-range{width:100%;accent-color:var(--accent)}
+ .ts-loc{margin-top:6px;border:1px solid var(--hair);background:var(--card);border-radius:999px;padding:6px 12px;font:700 12px Inter,system-ui;color:var(--accent);cursor:pointer}
+ .ts-dual{position:relative;height:26px}
+ .ts-dual::before{content:'';position:absolute;left:0;right:0;top:11px;height:4px;border-radius:2px;background:var(--fill2)}
+ .ts-dual i{position:absolute;top:11px;height:4px;border-radius:2px;background:var(--accent)}
+ .ts-dual input{position:absolute;left:0;top:0;width:100%;height:26px;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none}
+ .ts-dual input::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:auto;width:22px;height:22px;border-radius:50%;background:#fff;
+   border:2px solid var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:pointer}
+ .ts-dual input::-moz-range-thumb{pointer-events:auto;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--accent);cursor:pointer}
+ .ts-dual input::-webkit-slider-runnable-track{background:none}
+ .ts-res{display:flex;justify-content:space-between;font-size:11.5px;color:var(--fg2);margin:4px 2px 8px}
+ .ts-count{font-weight:800;color:var(--fg)}
+ .tn-sc{min-width:48px}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -3394,6 +3474,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div class="mfab-grp" role="toolbar" aria-label="Karte">
     <button class="mfab" id="mapFeedFab" onclick="feedOpen()" title="Community" aria-label="Community"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
+    <button class="mfab" id="tourFab" onclick="tsOpenUI()" title="Touren finden" aria-label="Touren finden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
   </div>
@@ -3454,7 +3535,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 </div>
 <div id="lyScrim" onclick="lyPanelClose()"></div>
 <div id="tourSheet" class="tour-sheet" role="dialog" aria-label="Skitour"></div>
-<div id="tourNear" class="tn-sheet" role="dialog" aria-label="Beste Touren in deiner Nähe"></div>
+<div id="tourSearch" class="ts-sheet" role="dialog" aria-label="Touren finden"></div>
 <div id="lyPanel" class="ly-panel" role="dialog" aria-modal="true" aria-label="Ebenen">
   <div class="ly-scroll">
     <span class="lbl-micro">Ebene</span>
@@ -3885,8 +3966,12 @@ for(let t=0;t<T;t++){const o0=t*NP,o1=(t+1)*NP,s=t*NP,sc=M.snow_scale;
   else {for(let p=0;p<NP;p++)cum[o1+p]=cum[o0+p]+SNOW[s+p]*sc;}}
 const tv=(t,p)=>TEMP[t*NP+p]/M.temp_mul-M.temp_off, sunv=(t,p)=>SUN[t*NP+p]/M.sun_mul;
 // Cloud cover [%]; older blobs have no CLOUD field and the layer stays out.
-const _hasCloud=!!M.cloud_mul&&CLOUD.length>=T*NP;
-const cloudv=(t,p)=>CLOUD[t*NP+p]/M.cloud_mul;
+const _cloudData=!!M.cloud_mul&&CLOUD.length>=T*NP;
+// A blob without the field still has hourly sunshine: by day, the share of
+// the hour without sun is a fair stand-in for cloud; nights are left out.
+const _hasCloud=_cloudData||SUN.length>=T*NP;
+function _sunUp(t){const d=new Date(M.times[t]+'Z'),h=d.getUTCHours()+1;return h>=8&&h<=16;}
+const cloudv=(t,p)=>_cloudData?CLOUD[t*NP+p]/M.cloud_mul:(_sunUp(t)?100*(1-Math.min(1,sunv(t,p))):NaN);
 // 0..1 -> rgba: thin cloud a pale veil, overcast a slate grey, so it reads
 // on the white winter map and does not look like snow.
 function cloudCol(x){x=Math.max(0,Math.min(1,x));
@@ -4170,8 +4255,9 @@ function tlPalette(){
 let tv0=0,tv1=0;                      // set once T is known
 function tvSpan(){return Math.max(TV_MIN,tv1-tv0);}
 const TV_MIN=8;                       // never closer than eight hours across
-const TV_MAX=96;                      // and never more than four days
-function tvInit(){const span=Math.min(T,TV_MAX);
+const TV_DEF=96;                      // four days at the start
+const TV_MAX=1e9;                     // two fingers open it to the whole run
+function tvInit(){const span=Math.min(T,TV_DEF);
   tv0=nowIdx-span*0.25;tv1=tv0+span;tvClamp();}
 function tvClamp(){
   let span=Math.max(TV_MIN,Math.min(T,TV_MAX,tv1-tv0));
@@ -4237,30 +4323,44 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   // nights shaded (sunset -> sunrise), sunrise and sunset marked in amber
   {const ms0=tMs(0),tf=ms=>(ms-ms0)/3600e3;
    const d0=Math.floor((ms0+tv0*3600e3)/864e5)-1,d1=Math.floor((ms0+tv1*3600e3)/864e5)+1;
-   const night='rgba(15,23,42,.045)';
+   const night='rgba(15,23,42,'+(cw/tvSpan()*24>=70?.045:.025)+')';
    for(let dd=d0;dd<=d1;dd++){const st=sunTimes(dd*864e5),nx2=sunTimes((dd+1)*864e5);if(!st||!nx2)continue;
      const xs=tvX(tf(st.set),cw),xr=tvX(tf(nx2.rise),cw);
      if(xr>0&&xs<cw){ctx2.fillStyle=document.documentElement.getAttribute('data-theme')==='dark'?'rgba(0,0,0,.22)':night;
        ctx2.fillRect(Math.max(0,xs),topPad-4,Math.min(cw,xr)-Math.max(0,xs),baseY-topPad+4);}
-     if(!compact)for(const [ms,up] of [[st.rise,1],[st.set,0]]){const x=tvX(tf(ms),cw);if(x<4||x>cw-4)continue;
-       ctx2.strokeStyle='rgba(245,158,11,.75)';ctx2.lineWidth=1.2;ctx2.beginPath();ctx2.moveTo(x,baseY);ctx2.lineTo(x,baseY-5);ctx2.stroke();
-       ctx2.fillStyle='#F59E0B';ctx2.beginPath();ctx2.arc(x,baseY-8,2.6,up?Math.PI:0,up?2*Math.PI:Math.PI,!up);ctx2.fill();}}}
+     // a small sun with an arrow: up at sunrise, down at sunset -- only
+     // while a day is wide enough to carry it
+     if(!compact&&cw/tvSpan()*24>=70)for(const [ms,up] of [[st.rise,1],[st.set,0]]){const x=tvX(tf(ms),cw);if(x<10||x>cw-14)continue;
+       const cy=baseY-9;ctx2.strokeStyle='#F59E0B';ctx2.fillStyle='#F59E0B';ctx2.lineWidth=1.3;ctx2.lineCap='round';
+       ctx2.beginPath();ctx2.arc(x,cy,2.7,0,2*Math.PI);ctx2.fill();
+       for(let k=0;k<8;k++){const an=k*Math.PI/4;ctx2.beginPath();
+         ctx2.moveTo(x+Math.cos(an)*4.3,cy+Math.sin(an)*4.3);ctx2.lineTo(x+Math.cos(an)*5.9,cy+Math.sin(an)*5.9);ctx2.stroke();}
+       const ax=x+9.5,y0=up?cy+4:cy-4,y1=up?cy-4:cy+4,hd=up?2.6:-2.6;
+       ctx2.beginPath();ctx2.moveTo(ax,y0);ctx2.lineTo(ax,y1);ctx2.moveTo(ax-2.4,y1+hd);ctx2.lineTo(ax,y1);ctx2.lineTo(ax+2.4,y1+hd);ctx2.stroke();}}}
   // day separators at Swiss midnight + readable date labels
   ctx2.textAlign='left';let _lastLabX=-1e9;
   // At a wide view the gridlines are days; zoomed in they become hours, which
   // is the whole point of being able to zoom.
-  const _hSpan=tvSpan(),_step=_hSpan<=36?(_hSpan<=14?1:3):0;
+  // The scale follows the zoom: hours when a day is wide, days when the
+  // whole run is in view.
+  const _hSpan=tvSpan(),pxH=cw/_hSpan;
+  const tickH=pxH>=26?1:pxH>=9?3:pxH>=4.5?6:pxH>=2.2?12:24;   // faint ticks
+  const labH=pxH>=26?3:pxH>=12?6:pxH>=6?12:0;                  // hour labels (0 = none)
+  const dayEvery=pxH*24>=40?1:2;                               // day labels
+  let _lastHrX=-1e9,_dayN=0;
   for(let t=Math.max(0,Math.floor(tv0));t<Math.min(T,Math.ceil(tv1)+1);t++){
     const d=zLocal(tMs(t)),hr=d.getUTCHours(),day=hr===0;
-    const isTick=_step?(hr%_step===0):day;
-    if(isTick){const x=tvX(t,cw);
+    if(!(day||hr%tickH===0))continue;
+    const x=tvX(t,cw);
     // a day boundary is a real separator, full height; hour ticks stay faint
     ctx2.strokeStyle=day?_P.hair:_P.fill;ctx2.lineWidth=day?1.4:1;ctx2.beginPath();
     ctx2.moveTo(x,day?2:topPad);ctx2.lineTo(x,day?ch-2:baseY);ctx2.stroke();
-    // only label a day if it clears the previous label → no overlap on narrow phones
-    if(!compact&&day&&x-_lastLabX>=46){ctx2.fillStyle=_P.mut;ctx2.font='700 11.5px Inter,system-ui';
-      const lab=['So','Mo','Di','Mi','Do','Fr','Sa'][d.getUTCDay()]+' '+d.getUTCDate()+'.';
-      ctx2.fillText(lab,x+5,ch-5);_lastLabX=x;}}}
+    if(compact)continue;
+    if(day){const lab=['So','Mo','Di','Mi','Do','Fr','Sa'][d.getUTCDay()]+' '+d.getUTCDate()+'.';
+      if((_dayN++%dayEvery)===0&&x-_lastLabX>=34){ctx2.fillStyle=_P.mut;ctx2.font='700 11.5px Inter,system-ui';
+        ctx2.fillText(pxH*24<52?String(d.getUTCDate())+'.':lab,x+4,ch-5);_lastLabX=x;_lastHrX=x+ctx2.measureText(lab).width;}}
+    else if(labH&&hr%labH===0&&x-_lastHrX>=22){ctx2.fillStyle=_P.mut;ctx2.globalAlpha=.75;ctx2.font='600 10px Inter,system-ui';
+      ctx2.textAlign='center';ctx2.fillText(String(hr).padStart(2,'0'),x,ch-5);ctx2.textAlign='left';ctx2.globalAlpha=1;_lastHrX=x+8;}}
   // baseline
   ctx2.strokeStyle=_P.hair;ctx2.lineWidth=1;ctx2.beginPath();ctx2.moveTo(0,baseY+.5);ctx2.lineTo(cw,baseY+.5);ctx2.stroke();
   // snowfall bars — each bar coloured on the SLF new-snow palette (the same
@@ -4480,14 +4580,6 @@ map.on('zoom',updateBaseFade);
 // zoomend always restyles, so the final state is exact rather than within EPS.
 map.on('zoomend',function(){updateBaseFade(true);});
 updateBaseFade(true);
-// Moving the map hides the controls; they return once it has settled. A
-// short delay on the way back so a fling followed by another drag does not
-// make them blink.
-(function(){let tm=0;
-  const on=()=>{clearTimeout(tm);document.body.classList.add('map-moving');};
-  const off=()=>{clearTimeout(tm);tm=setTimeout(()=>document.body.classList.remove('map-moving'),420);};
-  map.on('dragstart zoomstart',on);map.on('moveend zoomend',off);
-})();
 // Keine weisse Maske mehr: die gedimmte OSM-Unterlage zeigt die Nachbarlaender,
 // die Winter-Pixelkarte liegt fuer die Schweiz darueber.
 const slopeWMTS=L.tileLayer(swissTile('ch.swisstopo.hangneigung-ueber_30','png'),{opacity:.7});
@@ -4506,8 +4598,6 @@ const OVERLAYS={
   skitourVec:{label:'Skitouren · Powder-Score',vector:true,attr:'Skitouren © swisstopo'},
   skitour:{label:'Skitouren (Karte)',wmts:'ch.swisstopo-karto.skitouren',op:.95,
            attr:'Skitouren © swisstopo'},
-  snowshoe:{label:'Schneeschuh',wmts:'ch.swisstopo-karto.schneeschuhrouten',op:.95,
-            attr:'Schneeschuhrouten © swisstopo'},
   // Shown with the routes on purpose: entering a wildlife rest zone is an
   // offence in several cantons, and swisstopo publishes the two together.
   wildlife:{label:'Wildruhezonen',wmts:'ch.bafu.wrz-wildruhezonen_portal',op:.6,
@@ -4637,38 +4727,54 @@ function vaProfAvailable(){
 // variant_a/classify.py. Exports made before the palette changed are shown in
 // it too: the legend and the device-rendered tiles take it directly, the
 // overview frames are recoloured once per frame (vaRecolorUrl).
+// Tuned to the app: powder in the app's own blues (light -> accent -> navy),
+// hard a cool grey, crust a muted coral, wet/Sulz a honey tone; Triebschnee
+// in violets so it never reads as powder.
 const VA_PALETTE={
-  ski6:{1:[148,163,184,190],2:[244,63,94,215],3:[125,211,252,210],4:[37,99,235,225],5:[88,28,135,240],6:[245,158,11,220]},
-  wind:{1:[148,163,184,195],2:[253,186,116,205],3:[194,65,12,235]}};
+  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[147,197,240,205],4:[59,125,214,225],5:[24,52,128,235],6:[226,170,72,220]},
+  wind:{1:[156,168,184,190],2:[186,170,236,205],3:[112,72,200,230]}};
+const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver > 20 cm',6:'nass / Sulz'};
+// An export without the simple six classes still has "simple" (15 kinds of
+// surface): the six are folded from it, so Skiqualität always opens simple.
+const VA_SIMPLE_TO_SKI6={2:3,3:4,4:5,5:5,6:3,7:3,8:2,9:2,10:2,11:1,12:6,13:1,14:3,15:1};
 function vaPalApply(m){
-  for(const k in VA_PALETTE){const L=m&&m.layers&&m.layers[k];if(!L||!L.legend)continue;
+  if(!m||!m.layers)return;
+  if(!m.layers.ski6&&m.layers.simple&&m.layers.simple.legend){
+    const S=m.layers.simple,leg={},src=[];
+    for(const id in VA_SKI6_DE)leg[id]=[id,VA_PALETTE.ski6[id].slice(0,3),VA_SKI6_DE[id]];
+    for(const c in S.legend){const e=S.legend[c];if(e&&e[1])src.push([e[1].slice(0,3),VA_SIMPLE_TO_SKI6[c]||0]);}
+    m.layers.ski6={file:S.file,legend:leg,_virt:'simple',_src:src,_recolor:true};
+  }
+  for(const k in VA_PALETTE){const L=m.layers[k];if(!L||!L.legend||L._virt)continue;
+    const src=[];
     for(const id in VA_PALETTE[k]){const e=L.legend[id];if(!e||!e[1])continue;const nw=VA_PALETTE[k][id];
       if(!e._o)e._o=e[1].slice(0,3);
       if(e._o[0]!==nw[0]||e._o[1]!==nw[1]||e._o[2]!==nw[2])L._recolor=true;
-      e[1]=[nw[0],nw[1],nw[2]];}}
+      e[1]=[nw[0],nw[1],nw[2]];src.push([e._o,+id]);}
+    L._src=src;}
 }
 const vaRecolorC=new Map();let vaRcCv=null;
 async function vaRecolorUrl(u,key){
   const L=vaMan&&vaMan.layers[key];if(!L||!L._recolor)return u;
-  if(vaRecolorC.has(u))return vaRecolorC.get(u);
-  const img=await vaImgBytes(u),d=img.rgba,pal=[];
-  for(const id in L.legend){const e=L.legend[id];if(e&&e._o&&VA_PALETTE[key][id])pal.push([e._o,VA_PALETTE[key][id]]);}
+  const ck=key+'|'+u;if(vaRecolorC.has(ck))return vaRecolorC.get(ck);
+  const img=await vaImgBytes(u.split("#")[0]),d=img.rgba,pal=(L._src||[]).map(([o,id])=>[o,id?VA_PALETTE[key][id]:[0,0,0,0]]);
   const lut=new Map();
   // forest-faded pixels are a shade off the table: nearest original colour
   const near=(r,g,b)=>{let best=null,bd=1e9;for(const [o,n] of pal){const e=(o[0]-r)*(o[0]-r)+(o[1]-g)*(o[1]-g)+(o[2]-b)*(o[2]-b);if(e<bd){bd=e;best=n;}}return bd<=2500?best:null;};
   for(let o=0;o<d.length;o+=4){if(d[o+3]<4)continue;const k=(d[o]<<16)|(d[o+1]<<8)|d[o+2];
     let n=lut.get(k);if(n===undefined){n=near(d[o],d[o+1],d[o+2]);lut.set(k,n);}
-    if(n){d[o]=n[0];d[o+1]=n[1];d[o+2]=n[2];}}
+    if(n){d[o]=n[0];d[o+1]=n[1];d[o+2]=n[2];if(!n[3])d[o+3]=0;}}
   if(!vaRcCv)vaRcCv=document.createElement('canvas');
   const cv=vaRcCv;cv.width=img.w;cv.height=img.h;
   cv.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(d.buffer,d.byteOffset,d.length),img.w,img.h),0,0);
   const blob=await new Promise(r=>cv.toBlob(r,'image/png'));cv.width=1;cv.height=1;
   if(!blob)return u;
-  const bu=URL.createObjectURL(blob);vaRecolorC.set(u,bu);
+  const bu=URL.createObjectURL(blob);vaRecolorC.set(ck,bu);
   if(vaRecolorC.size>8){const it=vaRecolorC.entries().next().value;vaRecolorC.delete(it[0]);try{URL.revokeObjectURL(it[1]);}catch(e){}}
   return bu;
 }
 function vaKeyOfUrl(u){if(!vaMan)return vaKey;
+  const h=u.indexOf('#');if(h>=0&&vaMan.layers[u.slice(h+1)])return u.slice(h+1);
   return Object.keys(vaMan.layers).find(k=>{const f=vaMan.layers[k].file;return f&&u.indexOf(f.split('{tag}')[0])>=0;})||vaKey;}
 async function vaLoad(){
   if(vaTried)return;vaTried=true;
@@ -4794,7 +4900,7 @@ function vaProfIndex(){
 function vaFrameUrl(key,idx){
   const L=vaMan.layers[key];if(!L)return null;
   const tag=vaMan.tags[idx];
-  return vaV(VA_BASE+'/'+String(L.file).replace('{tag}',tag));
+  return vaV(VA_BASE+'/'+String(L.file).replace('{tag}',tag))+(L._virt?'#'+key:'');
 }
 // Opacity by zoom: solid when you are looking at the whole country, and
 // increasingly see-through as you close in. Zoomed out the layer IS the
@@ -5116,8 +5222,14 @@ async function vaPkLoad(){
   try{
     const r=await fetch(vaV(VA_BASE+'/'+vaMan.pack),{cache:'force-cache'});if(!r.ok)return null;
     const pk=await r.json();
-    if(pk.rgba)for(const k in VA_PALETTE){if(!pk.rgba[k])continue;
-      for(const id in VA_PALETTE[k])pk.rgba[k][id]=VA_PALETTE[k][id].slice();}
+    pk.rgba=pk.rgba||{};
+    for(const k in VA_PALETTE){const tab=pk.rgba[k]||(pk.rgba[k]=[[0,0,0,0]]);
+      for(const id in VA_PALETTE[k])tab[id]=VA_PALETTE[k][id].slice();
+      for(let i=0;i<tab.length;i++)if(!tab[i])tab[i]=[0,0,0,0];}
+    const TH=pk.thresholds=pk.thresholds||{};
+    if(TH.SK_POWDER_MIN==null)TH.SK_POWDER_MIN=2;if(TH.SK_P1==null)TH.SK_P1=10;if(TH.SK_P2==null)TH.SK_P2=20;
+    if(TH.SK_WET_LWC==null)TH.SK_WET_LWC=TH.WET_LWC_MIN!=null?TH.WET_LWC_MIN:1;
+    if(TH.WD_STRONG==null)TH.WD_STRONG=0.7;
     const sh=vaGray(await vaImgBytes(VA_BASE+'/'+pk.shade));
     let fo=null;if(pk.forest){try{fo=vaGray(await vaImgBytes(VA_BASE+'/'+pk.forest.file));}catch(e){}}
     let pr=null;if(pk.precip){try{pr=vaGray(await vaImgBytes(VA_BASE+'/'+pk.precip.file));}catch(e){}}
@@ -5747,8 +5859,9 @@ async function vaHistLoad(u){
   vaHistBusy=u;
   try{
     // A 480 px wide copy is plenty for shares and ~10x lighter than the frame.
-    const img=await vaImgBytes(u,480),leg=(vaMan.layers[vaKey]||{}).legend||{},lut=new Map(),pal=[];
-    for(const k in leg){const c=leg[k]&&(leg[k]._o||leg[k][1]);if(c){lut.set((c[0]<<16)|(c[1]<<8)|c[2],+k);pal.push([+k,c]);}}
+    const L0=vaMan.layers[vaKey]||{},img=await vaImgBytes(u.split('#')[0],480),leg=L0.legend||{},lut=new Map(),pal=[];
+    if(L0._src){for(const [c,id] of L0._src){if(!id)continue;lut.set((c[0]<<16)|(c[1]<<8)|c[2],id);pal.push([id,c]);}}
+    else for(const k in leg){const c=leg[k]&&(leg[k]._o||leg[k][1]);if(c){lut.set((c[0]<<16)|(c[1]<<8)|c[2],+k);pal.push([+k,c]);}}
     const n=img.w*img.h,cls=new Uint8Array(n),d=img.rgba;
     // Forest-faded pixels can come back a shade off after the alpha round
     // trip, so a miss snaps to the nearest legend colour (memoised).
@@ -6027,9 +6140,9 @@ function vaProfileHTML(pf){
 // The routes ship in the data blob, and once more as data/tours.json from
 // the live build: the demo blob comes from a cache and may predate them.
 let TOURS_EXT=null,toursExtTried=false;
-function tourList(){return (M.tours&&M.tours.length)?M.tours:(TOURS_EXT||[]);}
+function tourList(){return (TOURS_EXT&&TOURS_EXT.length)?TOURS_EXT:((M.tours&&M.tours.length)?M.tours:[]);}
 async function toursEnsure(){
-  if(tourList().length||toursExtTried)return tourList().length>0;
+  if(toursExtTried)return tourList().length>0;
   toursExtTried=true;
   try{const r=await fetch('data/tours.json',{cache:'no-cache'});
     if(r.ok){const j=await r.json();if(j&&Array.isArray(j.tours)&&j.tours.length)TOURS_EXT=j.tours;}}catch(e){}
@@ -6097,28 +6210,163 @@ function _ptInGeom(x,y,g){
   if(g.type==='MultiPolygon')return (g.coordinates||[]).some(poly=>poly.length&&_ptInRing(x,y,poly[0]));
   return false;
 }
-function tourScoreRoute(t){
-  const v=tourVaScore(t);if(v)return v;
+// Without SNOWPACK: the window-dependent powder model along the route.
+function tourScoreOld(t){
   const segs=tourResample(t.coords,TOUR_STEP_M);
   segs.forEach(tourSampleSeg);
   const r=tourAggregate(segs);
-  r.name=t.name||'Skitour';r.id=t.id;
+  r.name=t.name||'Skitour';r.id=t.id;r.powder=Math.round(r.powderShare*100);r.sulz=0;r.score=r.powder;
   return r;
 }
-// Colour the line by its verdict, but a clamped route is NEVER green --
-// consistent with tourVerdict refusing to praise it.
-function tourColor(r){
-  if(r.clamped)return '#8A6A9E';
-  if(r.score!=null)return r.score>=75?'#1E9E5A':r.score>=55?'#7FB800':r.score>=35?'#E8A33D':'#8A8F98';
-  if(r.powderShare>=0.6)return '#1E9E5A';
-  if(r.powderShare>=0.3)return '#7FB800';
-  if(r.powderShare>0)return '#E8A33D';
-  return '#8A8F98';
+// ── Ski tours scored from SNOWPACK ─────────────────────────────────────────
+// Each route is sampled every TOUR_VA_STEP_M at its height, slope and aspect
+// (national ~115 m terrain) and classified with the Skiqualität classes of
+// the SNOWPACK frame the timeline is on. The score is simply the share of
+// the descent (22-50°) that lies in powder -- or, with the Sulz focus, in
+// wet/Sulz snow. The colour on the map is that share.
+const TOUR_VA_STEP_M=200,TOUR_GREY=[156,168,184];
+let tourFocus='powder';
+function _lerpC(stops,v){v=Math.max(0,Math.min(100,v));
+  for(let i=1;i<stops.length;i++){const [v1,c1]=stops[i];if(v<=v1){const [v0,c0]=stops[i-1],f=(v-v0)/Math.max(1e-9,v1-v0);
+    return [0,1,2].map(k=>Math.round(c0[k]+(c1[k]-c0[k])*f));}}
+  return stops[stops.length-1][1];}
+function tourRamp(v,focus){const P=VA_PALETTE.ski6;
+  const st=(focus||tourFocus)==='sulz'?[[0,TOUR_GREY],[8,[238,214,166]],[50,P[6]],[100,[166,106,24]]]
+                                     :[[0,TOUR_GREY],[8,P[3]],[50,P[4]],[100,P[5]]];
+  const c=_lerpC(st,v);return 'rgb('+c[0]+','+c[1]+','+c[2]+')';}
+function tourVal(r){return r?(tourFocus==='sulz'?r.sulz:r.powder):-1;}
+function tourColor(r){if(!r)return 'rgb('+TOUR_GREY.join(',')+')';return tourRamp(tourVal(r));}
+const tourVa={key:null,tag:null,eng:null,scores:new Map(),busy:null,when:'',done:false,run:0};
+function _lv03(lat,lon){const p=(lat*3600-169028.66)/10000,l=(lon*3600-26782.5)/10000;
+  return [600072.37+211455.93*l-10938.51*l*p-0.36*l*p*p-44.54*l*l*l,
+          200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p];}
+// The frame the timeline is on (the Skiqualität layer shows the same one).
+function tourVaWant(){
+  if(typeof vaAvailable!=='function'||!vaAvailable())return null;
+  const i=vaTagIndex(),tag=vaMan.tags[i];if(!tag)return null;
+  let when='';try{const ms=Date.parse(String(vaMan.timestamps[i]).slice(0,16)+':00Z');
+    when=new Intl.DateTimeFormat('de-CH',{timeZone:'Europe/Zurich',weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms))+' Uhr';}catch(e){}
+  return {tag,key:vaMan.generated+'|'+tag,when};
 }
-let tourLayerGroup=null,tourScoresDirty=true,tourRenderer=null;
-// 1500 routes as SVG were 4500 DOM paths; one canvas draws them all, and its
-// tolerance gives the thumb the wide hit area the invisible lines used to.
-function tourW(){const z=map.getZoom();return z<9?1.6:z<11?2.6:3.6;}
+async function tourVaPrepare(){
+  const w=tourVaWant();if(!w)return false;
+  if(tourVa.key===w.key&&tourVa.eng)return true;
+  if(tourVa.busy)return tourVa.busy;
+  tourVa.busy=(async()=>{
+    try{
+      await vaPkLoad();if(!vaPk||!vaEng)return false;
+      const f=await vaPkFrame(w.tag);
+      if(!tourVa.eng){const E=vaHiEngine();E.init(vaPk,vaEng.shade,vaEng.forest,vaEng.precip);tourVa.eng=E;}
+      tourVa.eng.setFrame(f.vals,f.ok);
+      tourVa.key=w.key;tourVa.tag=w.tag;tourVa.when=w.when;tourVa.scores=new Map();tourVa.done=false;tourVa.run++;
+      return true;
+    }catch(e){return false;}
+    finally{tourVa.busy=null;}
+  })();
+  return tourVa.busy;
+}
+// Terrain along the route, once per route: it does not change with time.
+function tourGeo(t){
+  if(t._g)return t._g;
+  const segs=tourResample(t.coords,TOUR_VA_STEP_M);
+  let lo=null,hi=null,maxS=0;const n=segs.length;
+  for(const s of segs){
+    s.el=fineElev(s.lat,s.lon);s.sl=fineSlope(s.lat,s.lon);s.as=fineAspectDeg(s.lat,s.lon);
+    const en=_lv03(s.lat,s.lon);s.e=en[0];s.n=en[1];
+    if(s.el!=null){if(!lo||s.el<lo.el)lo=s;if(!hi||s.el>hi.el)hi=s;}
+    if(s.sl!=null&&s.sl>maxS&&s.sl<=60)maxS=s.sl;}
+  // the pipeline's numbers (30 m DEM) when it shipped them
+  const P=t.lo&&t.hi?{lo:{lat:t.lo[1],lon:t.lo[0],el:t.lo[2]},hi:{lat:t.hi[1],lon:t.hi[0],el:t.hi[2]}}:null;
+  const L0=P?P.lo:(lo?{lat:lo.lat,lon:lo.lon,el:lo.el}:{lat:segs[0].lat,lon:segs[0].lon,el:null});
+  const H0=P?P.hi:(hi?{lat:hi.lat,lon:hi.lon,el:hi.el}:{lat:segs[n-1].lat,lon:segs[n-1].lon,el:null});
+  let coreW=0,allW=0;
+  for(let i=0;i<n;i++){const ww=i?segs[i].dist-segs[i-1].dist:0;allW+=ww;
+    try{const reg=tourRegionAt(segs[i].lat,segs[i].lon);if(reg&&avCoreZone(reg,segs[i].el,segs[i].as))coreW+=ww;}catch(e){}}
+  t._g={segs,lo:L0,hi:H0,len:t.len||(n?segs[n-1].dist:0),
+        gain:t.gain!=null?t.gain:((H0.el!=null&&L0.el!=null)?Math.round(H0.el-L0.el):null),
+        maxSlope:Math.round(maxS),core:allW?coreW/allW:0};
+  return t._g;
+}
+function tourVaScoreOne(t){
+  const E=tourVa.eng;if(!E||!t.coords||t.coords.length<2)return null;
+  const g=tourGeo(t),segs=g.segs,n=segs.length;if(!n)return null;
+  if(!g.cand){const mid=segs[Math.floor(n/2)];g.cand=E.candidates(mid.e,mid.n,60000);}
+  const m=new Float64Array(E.nm),x=E.mi,cls=new Int8Array(n);let pwS=0,pwW=0;
+  for(let i=0;i<n;i++){const s=segs[i];cls[i]=-1;
+    if(s.el==null)continue;
+    const sb=E.gridAt(E.shade,s.e,s.n);if(sb<0||sb===255)continue;
+    if(!E.evalAt(s.e,s.n,s.el,s.sl||0,s.as==null?0:s.as,sb/254,g.cand,m))continue;
+    E.adjPrecip(m,s.e,s.n);cls[i]=E.clsSki6(m);
+    if(cls[i]>=3&&cls[i]<=5){pwS+=m[x.powder_depth_cm];pwW++;}}
+  const desc=i=>segs[i].sl!=null&&segs[i].sl>=TOUR_MIN_SLOPE&&segs[i].sl<=TOUR_MAX_SLOPE;
+  let dW=0;for(let i=1;i<n;i++)if(desc(i)&&cls[i]>=0)dW+=segs[i].dist-segs[i-1].dist;
+  const useD=dW>=300,sh={};let tot=0,known=0;
+  for(let i=0;i<n;i++){const ww=i?segs[i].dist-segs[i-1].dist:(n>1?segs[1].dist-segs[0].dist:1);
+    if(cls[i]>=0)known+=ww;
+    if(cls[i]<0||(useD&&!desc(i)))continue;sh[cls[i]]=(sh[cls[i]]||0)+ww;tot+=ww;}
+  const share=k=>tot?(sh[k]||0)/tot:0;
+  const powder=Math.round((share(3)+share(4)+share(5))*100),sulz=Math.round(share(6)*100);
+  const clamped=g.core>=TOUR_CLAMP_SHARE,caveats=[];
+  if(clamped)caveats.push(Math.round(g.core*100)+' % der Route liegt in der Kernzone des Lawinenbulletins.');
+  if(g.len&&known<g.len*0.6)caveats.push('Nur '+Math.round(known/Math.max(1,g.len)*100)+' % der Route liegen im SNOWPACK-Modellgebiet.');
+  if(!useD)caveats.push('Wenig Abfahrtsgelände ('+TOUR_MIN_SLOPE+'–'+TOUR_MAX_SLOPE+'°) – ganze Route bewertet.');
+  caveats.push('Modellierte Schneeoberfläche, keine Lawinenbeurteilung. Das Bulletin des SLF bleibt massgebend.');
+  const shares={};for(const k in sh)shares[k]=sh[k]/tot;
+  return {id:t.id,name:t.name||'Skitour',powder,sulz,score:powder,cls,shares,clamped,caveats,when:tourVa.when,
+          powderCm:pwW?Math.round(pwS/pwW):null,gain:g.gain,len:g.len,maxSlope:g.maxSlope};
+}
+// The score of a route right now: SNOWPACK when the frame is ready, the
+// powder model otherwise.
+function tourScore(t){
+  if(tourVa.eng&&tourVaWant()&&tourVa.key===tourVaWant().key){
+    if(tourVa.scores.has(t.id))return tourVa.scores.get(t.id);
+    let r=null;try{r=tourVaScoreOne(t);}catch(e){r=null;}
+    tourVa.scores.set(t.id,r);return r;}
+  if(typeof vaAvailable==='function'&&vaAvailable())return null;   // SNOWPACK on its way
+  if(!t._old){try{t._old=tourScoreOld(t);}catch(e){t._old=null;}}
+  return t._old;
+}
+function tourScoreRoute(t){return tourScore(t);}
+// All routes, a slice at a time so the map stays responsive.
+function tourVaScoreAll(done){
+  const ts=tourList(),run=tourVa.run;let i=0;
+  const step=()=>{const t0=performance.now();
+    while(i<ts.length&&performance.now()-t0<12){tourScore(ts[i]);i++;}
+    if(tourVa.run!==run){tourVa.scoring=false;return;}
+    if(i<ts.length){if(i%300<8)tourPaintScores();setTimeout(step,0);return;}
+    tourVa.done=true;if(done)done();};
+  step();
+}
+// Called whenever the timeline moves: once it rests, the routes are scored
+// again for the frame it is on.
+let tourRecolorT=0;
+function tourRecolor(){
+  if(!tourList().length||!ovOn.skitourVec)return;
+  clearTimeout(tourRecolorT);
+  tourRecolorT=setTimeout(async()=>{
+    const w=tourVaWant();
+    if(w&&(tourVa.key!==w.key||!tourVa.done)){
+      const ok=await tourVaPrepare();
+      if(ok&&!tourVa.done&&!tourVa.scoring){tourVa.scoring=true;
+        if(tourIso)tourIsoRefresh();
+        if(tsOpen())tsRender();
+        tourVaScoreAll(()=>{tourVa.scoring=false;tourPaintScores();if(tsOpen())tsRender(true);});}
+    }
+    tourPaintScores();
+  },w0());
+  function w0(){return tourVa.key?350:0;}
+}
+function tourPaintScores(){
+  tourList().forEach(t=>{if(!t._line)return;
+    const r=tourVa.eng?tourVa.scores.get(t.id):t._old;
+    const vis=tourVisible(t),iso=tourIso&&tourIso!==t;
+    t._line.setStyle({color:tourColor(r),opacity:!vis?0:(iso?.12:.95)});
+    if(t._casing)t._casing.setStyle({opacity:!vis||iso?0:.9});});
+}
+let tourLayerGroup=null,tourRenderer=null;
+// Thousands of routes as SVG would be thousands of DOM paths; one canvas
+// draws them all, and its tolerance gives the thumb a wide hit area.
+function tourW(){const z=map.getZoom();return z<9?1.5:z<11?2.5:3.6;}
 function tourBuildLayer(){
   const ts=tourList();
   if(!ts.length)return null;
@@ -6127,248 +6375,196 @@ function tourBuildLayer(){
   ts.forEach(t=>{
     if(!t.coords||t.coords.length<2)return;
     const latlngs=t.coords.map(c=>[c[1],c[0]]);
-    // A wide transparent line under the visible one: a 3 px route is
-    // impossible to hit with a thumb.
     // a white casing under the coloured line keeps it readable on any terrain
     const w=tourW();
     const casing=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+3,opacity:.9,interactive:false,lineCap:'round',lineJoin:'round'});
-    const line=L.polyline(latlngs,{renderer:tourRenderer,color:'#94A3B8',weight:w,opacity:.95,interactive:true,lineCap:'round',lineJoin:'round'});
-    const open=e=>{try{if(e&&e.originalEvent)L.DomEvent.stopPropagation(e);}catch(_){}try{haptic(4);}catch(e2){}tourOpen(t);};
-    line.on('click',open);
+    const line=L.polyline(latlngs,{renderer:tourRenderer,color:'rgb('+TOUR_GREY.join(',')+')',weight:w,opacity:.95,interactive:true,lineCap:'round',lineJoin:'round'});
+    line.on('click',e=>{if(!tourVisible(t)||(tourIso&&tourIso!==t))return;
+      try{if(e&&e.originalEvent)L.DomEvent.stopPropagation(e);}catch(_){}try{haptic(4);}catch(e2){}tourOpen(t,tsOpen());});
     tourLayerGroup.addLayer(casing);tourLayerGroup.addLayer(line);
-    t._casing=casing;
-    t._line=line;
+    t._casing=casing;t._line=line;
   });
+  setTimeout(tourPaintScores,0);
   return tourLayerGroup;
 }
 map.on('zoomend',()=>{if(!ovOn.skitourVec)return;const w=tourW();
   tourList().forEach(t=>{if(t._line&&t._line.options.weight!==w){t._line.setStyle({weight:w});if(t._casing)t._casing.setStyle({weight:w+3});}});});
-// Recolour every route for the current time window. Called when the window
-// moves, because the score is window-dependent -- that is the whole reason
-// scoring happens client-side instead of being baked in at build time.
-function tourRecolor(){
-  const ts=tourList();if(!ts.length||!ovOn.skitourVec)return;
-  // With SNOWPACK the score is tomorrow's, not the timeline's: worked out
-  // once per model run, in the background, and only coloured in here.
-  const st=tourVaReady();
-  if(st===null){
-    if(!tourVa.scoring){tourVa.scoring=true;
-      tourVaPrepare().then(ok=>{if(ok)tourVaScoreAll(()=>{tourVa.scoring=false;tourPaintScores();});
-        else{tourVa.scoring=false;tourVa.failed=tourVa.wantKey;tourRecolor();}});}
-    tourPaintScores();return;}
-  if(st){tourPaintScores();return;}
-  ts.forEach(t=>{
-    if(!t._line)return;
-    try{const r=tourScoreRoute(t);t._score=r;t._line.setStyle({color:tourColor(r)});}
-    catch(e){}
-  });
-  tourScoresDirty=false;
-}
-function tourOpen(t){
-  const r=t._score||tourScoreRoute(t);
-  const rows=Object.keys(r.distribution).map(k=>
-    '<div class="tour-row"><span>'+escapeHtml(k)+'</span><b>'+Math.round(r.distribution[k]*100)+' %</b>'
-    +'<i style="width:'+Math.round(r.distribution[k]*100)+'%"></i></div>').join('');
-  const el=document.getElementById('tourSheet');if(!el)return;
-  el.innerHTML='<div class="tour-hd">'
-    +(r.score!=null?'<span class="tour-score" style="--sc:'+tourColor(r)+'">'+r.score+'</span>':'')
-    +'<div class="tour-tt"><b>'+escapeHtml(r.name)+'</b>'
-    +(r.when?'<span>'+escapeHtml(r.when)+'</span>':'')+'</div>'
-    +'<button type="button" class="tour-x" onclick="tourClose()" aria-label="Schliessen">×</button></div>'
-    +'<div class="tour-verdict" style="color:'+tourColor(r)+'">'+escapeHtml(r.verdict)+'</div>'
-    +'<div class="tour-meta">'+(r.lengthM?Math.round(r.lengthM/100)/10+' km':'')
-    +(r.gain?' · '+r.gain+' Hm':'')
-    +(r.descentM?' · '+Math.round(r.descentM/100)/10+' km abfahrtsrelevant':'')+'</div>'
-    +(rows?'<div class="tour-dist">'+rows+'</div>':'')
-    +'<div class="tour-cav">'+r.caveats.map(c=>'<div>'+escapeHtml(c)+'</div>').join('')+'</div>';
+// ── one route on its own ───────────────────────────────────────────────────
+let tourIso=null,tourIsoLayer=null,tourFromSearch=false;
+function tourOpen(t,fromSearch){
+  tourIso=t;tourFromSearch=!!fromSearch;
+  try{tsCloseQuiet();}catch(e){}
   document.body.classList.add('tour-open');
+  tourIsoRefresh();
+  try{const ll=t.coords.map(c=>[c[1],c[0]]);map.flyToBounds(L.latLngBounds(ll),{padding:[50,50],paddingBottomRight:[50,330],duration:.8,maxZoom:14});}catch(e){}
+  tourPaintScores();
 }
-function tourClose(){document.body.classList.remove('tour-open');}
-
-// ── Ski tours scored from SNOWPACK: tomorrow morning ──────────────────────
-// Each route is sampled every TOUR_VA_STEP_M at its height, slope and
-// aspect (national ~115 m terrain) and read from the SNOWPACK frame for
-// tomorrow 10:00 -- the same numbers the Skiqualität layer is drawn from.
-// Score 0..100 per segment from the surface: powder depth leads, crust and
-// wet snow pull it down, wind-scoured snow too. The route's score is the
-// length-weighted mean over the descent-relevant segments (22-50°).
-const TOUR_VA_STEP_M=200;
-const tourVa={key:null,tag:null,eng:null,scores:new Map(),busy:null,when:''};
-function tourVaTargetTag(){
-  if(!vaAvailable()||!M.times||!M.times[nowIdx])return null;
-  const now=new Date(M.times[nowIdx]+'Z');
-  // 10:00 in Switzerland is 08:00 UTC in summer time, 09:00 in winter
-  const off=(()=>{try{const d=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1,12));
-    const h=+new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Zurich',hour:'2-digit',hourCycle:'h23'}).format(d);return h-12;}catch(e){return 1;}})();
-  const target=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1,10-off);
-  const ts=vaMan.timestamps||[];let best=-1,bd=1e18;
-  ts.forEach((t,i)=>{const d=Math.abs(Date.parse(String(t).slice(0,16)+':00Z')-target);if(d<bd){bd=d;best=i;}});
-  if(best<0)return null;
-  const tm=new Date(Date.parse(String(ts[best]).slice(0,16)+':00Z'));
-  const DAY=['So','Mo','Di','Mi','Do','Fr','Sa'];
-  let lab='';try{lab=new Intl.DateTimeFormat('de-CH',{timeZone:'Europe/Zurich',weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}).format(tm);}
-  catch(e){lab=DAY[tm.getUTCDay()]+' '+tm.getUTCDate()+'.'+(tm.getUTCMonth()+1)+'.';}
-  return {tag:vaMan.tags[best],when:'SNOWPACK-Prognose '+lab+' Uhr'};
-}
-// null = not tried yet, false = not possible (no SNOWPACK), true = scores ready
-function tourVaReady(){
-  if(!vaAvailable()||!tourList().length)return false;
-  const tt=tourVaTargetTag();if(!tt)return false;
-  const key=vaMan.generated+'|'+tt.tag;tourVa.wantKey=key;
-  if(tourVa.failed===key)return false;
-  if(tourVa.key===key&&tourVa.done)return true;
-  return null;
-}
-async function tourVaPrepare(){
-  if(!vaAvailable())return false;
-  const tt=tourVaTargetTag();if(!tt)return false;
-  const key=vaMan.generated+'|'+tt.tag;
-  if(tourVa.key===key&&tourVa.eng)return true;
-  if(tourVa.busy)return tourVa.busy;
-  tourVa.busy=(async()=>{
-    try{
-      await vaPkLoad();if(!vaPk||!vaEng)return false;
-      const f=await vaPkFrame(tt.tag);
-      const E=vaHiEngine();E.init(vaPk,vaEng.shade,vaEng.forest,vaEng.precip);E.setFrame(f.vals,f.ok);
-      tourVa.eng=E;tourVa.key=key;tourVa.tag=tt.tag;tourVa.when=tt.when;tourVa.scores=new Map();tourVa.done=false;
-      return true;
-    }catch(e){return false;}
-    finally{tourVa.busy=null;}
-  })();
-  return tourVa.busy;
-}
-function tourVaSeg(E,seg,cand,m){
-  const el=fineElev(seg.lat,seg.lon),sl=fineSlope(seg.lat,seg.lon),as=fineAspectDeg(seg.lat,seg.lon);
-  if(el==null)return null;
-  const en=E.wgs2lv03(seg.lat,seg.lon),sb=E.gridAt(E.shade,en[0],en[1]);
-  if(sb<0||sb===255)return null;
-  if(!E.evalAt(en[0],en[1],el,sl||0,as==null?0:as,sb/254,cand,m))return null;
-  E.adjPrecip(m,en[0],en[1]);
-  const T=E.pk.thresholds||{},x=E.mi;
-  const hs=m[x.total_hs_cm],pw=m[x.powder_depth_cm]||0,cr=m[x.crust_thick_cm]||0,
-        sd=m[x.surface_density]||0,lw=m[x.surface_lw]||0,
-        sc=x.wind_scour!=null?m[x.wind_scour]:0,dr=x.drift_load!=null?m[x.drift_load]:0;
-  const thin=T.THIN_COVER_HS!=null?T.THIN_COVER_HS:20,wet=T.SK_WET_LWC!=null?T.SK_WET_LWC:(T.WET_LWC_MIN!=null?T.WET_LWC_MIN:1),
-        pmin=T.SK_POWDER_MIN!=null?T.SK_POWDER_MIN:2,crf=T.CRUST_FINE!=null?T.CRUST_FINE:0.5,
-        ice=T.ICE_DENSITY_MIN!=null?T.ICE_DENSITY_MIN:600,wmin=T.WIND_MIN!=null?T.WIND_MIN:0.45;
-  let sc0,q;
-  if(!(hs>=thin)){sc0=0;q='kein / wenig Schnee';}
-  else if(lw>wet){sc0=15;q='nass';}
-  else if(pw>=pmin){sc0=Math.min(100,55+(pw-pmin)*2.5);q=pw<10?'Pulver 0–10 cm':pw<20?'Pulver 10–20 cm':'Pulver >20 cm';
-    if(dr>=wmin)q+=' · Triebschnee';}
-  else if(cr>=crf||sd>=ice){sc0=10;q='Kruste';}
-  else{sc0=30;q='hart';}
-  if(sc>=wmin&&pw<pmin){sc0=Math.max(0,sc0-15);q='windgepresst';}
-  seg.elev=el;seg.slope=sl;seg.aspect=as;seg.va=sc0;seg.quality=q;seg.pw=pw;
-  return sc0;
-}
-function tourVaScoreOne(t){
-  const E=tourVa.eng;if(!E||!t.coords||t.coords.length<2)return null;
-  const segs=tourResample(t.coords,TOUR_VA_STEP_M);if(!segs.length)return null;
-  const mid=segs[Math.floor(segs.length/2)],men=E.wgs2lv03(mid.lat,mid.lon);
-  const cand=E.candidates(men[0],men[1],60000),m=new Float64Array(E.nm);
-  const n=segs.length,w=i=>n<2?1:(i===0?(segs[1].dist-segs[0].dist):(segs[i].dist-segs[i-1].dist));
-  let lo=null,hi=null,sw=0,ss=0,dw=0,ds=0,known=0,coreW=0,allW=0,pwS=0;const dist={};
-  for(let i=0;i<n;i++){const sg=segs[i],ww=w(i);
-    const v=tourVaSeg(E,sg,cand,m);allW+=ww;
-    if(v==null)continue;known+=ww;
-    if(sg.elev!=null){lo=lo==null||sg.elev<lo?sg.elev:lo;hi=hi==null||sg.elev>hi?sg.elev:hi;}
-    try{const reg=tourRegionAt(sg.lat,sg.lon);if(reg&&avCoreZone(reg,sg.elev,sg.aspect))coreW+=ww;}catch(e){}
-    sw+=ww;ss+=ww*v;
-    if(sg.slope!=null&&sg.slope>=TOUR_MIN_SLOPE&&sg.slope<=TOUR_MAX_SLOPE){dw+=ww;ds+=ww*v;pwS+=ww*sg.pw;
-      dist[sg.quality]=(dist[sg.quality]||0)+ww;}}
-  if(!sw)return null;
-  // too little steep terrain on the line: rate the whole route instead
-  const useD=dw>=300;
-  if(!useD){for(const sg of segs)if(sg.quality)dist[sg.quality]=(dist[sg.quality]||0)+1;}
-  const tot=Object.values(dist).reduce((a,b)=>a+b,0)||1;
-  const distribution={};Object.keys(dist).sort((a,b)=>dist[b]-dist[a]).forEach(k=>{distribution[k]=dist[k]/tot;});
-  const score=Math.round(useD?ds/dw:ss/sw),clamped=allW>0&&coreW/allW>=TOUR_CLAMP_SHARE;
-  const caveats=[];
-  if(clamped)caveats.push(Math.round(coreW/allW*100)+' % der Route liegt in der Kernzone des Lawinenbulletins.');
-  if(known<allW*0.6)caveats.push('Nur '+Math.round(known/allW*100)+' % der Route liegen im SNOWPACK-Modellgebiet.');
-  if(!useD)caveats.push('Wenig Abfahrtsgelände ('+TOUR_MIN_SLOPE+'–'+TOUR_MAX_SLOPE+'°) – ganze Route bewertet.');
-  caveats.push('Modellierte Schneeoberfläche, keine Lawinenbeurteilung. Das Bulletin des SLF bleibt massgebend.');
-  const verdict=clamped?'Kernzone betroffen – Bulletin zuerst'
-    :score>=75?'sehr gutes Pulver erwartet':score>=55?'gutes Pulver erwartet':score>=35?'teilweise Pulver':'kein Pulver erwartet';
-  return {name:t.name||'Skitour',id:t.id,score,verdict,clamped,distribution,caveats,
-    lengthM:segs[n-1].dist||0,gain:(lo!=null&&hi!=null)?Math.round(hi-lo):null,
-    descentM:dw,powderCm:dw?Math.round(pwS/dw):null,when:tourVa.when,powderShare:score/100,coreShare:allW?coreW/allW:0};
-}
-function tourVaScore(t){
-  if(tourVaReady()===false||!tourVa.eng)return null;
-  if(tourVa.scores.has(t.id))return tourVa.scores.get(t.id);
-  let r=null;try{r=tourVaScoreOne(t);}catch(e){r=null;}
-  tourVa.scores.set(t.id,r);return r;
-}
-// All routes, a slice per frame so the map stays responsive.
-function tourVaScoreAll(done){
-  const ts=tourList();let i=0;const key=tourVa.key;
-  const run=()=>{const t0=performance.now();
-    while(i<ts.length&&performance.now()-t0<12){tourVaScore(ts[i]);i++;}
-    if(tourVa.key!==key)return;
-    if(i<ts.length){setTimeout(run,0);if(i%150<5)tourPaintScores();return;}
-    tourVa.done=true;if(done)done();};
-  run();
-}
-function tourPaintScores(){
-  tourList().forEach(t=>{if(!t._line)return;const r=tourVa.scores.get(t.id);
-    if(r){t._score=r;t._line.setStyle({color:tourColor(r)});}});
-}
-
-// ── «Beste Touren in deiner Nähe» ─────────────────────────────────────────
-const TOUR_NEAR_KM=25,TOUR_NEAR_N=10;
-function tourNearList(lat,lon){
-  const out=[];
-  tourList().forEach(t=>{if(!t.coords||!t.coords.length)return;
-    let dmin=1e9;for(let i=0;i<t.coords.length;i+=Math.max(1,Math.floor(t.coords.length/40))){
-      const c=t.coords[i],d=tourDistM(lon,lat,c[0],c[1]);if(d<dmin)dmin=d;}
-    if(dmin<=TOUR_NEAR_KM*1000)out.push({t,d:dmin});});
-  out.forEach(o=>{o.r=tourScoreRoute(o.t);
-    o.s=o.r?(o.r.score!=null?o.r.score:Math.round((o.r.powderShare||0)*100)):-1;
-    if(o.r&&o.r.clamped)o.s=Math.min(o.s,1);});
-  out.sort((x,y)=>(y.s-x.s)||(x.d-y.d));
-  return out.slice(0,TOUR_NEAR_N);
-}
-async function tourNearOpen(lat,lon){
-  const el=document.getElementById('tourNear');if(!el)return;
-  try{await toursEnsure();}catch(e){}
-  if(!tourList().length){el.innerHTML=tourNearHead('','')+'<div class="tn-empty">Keine Tourendaten geladen.</div>';
-    document.body.classList.add('tn-open');return;}
-  el.innerHTML=tourNearHead('','')+'<div class="tn-empty">Touren werden bewertet…</div>';
-  document.body.classList.add('tn-open');
+async function tourIsoRefresh(){
+  const t=tourIso;if(!t)return;
   try{await tourVaPrepare();}catch(e){}
+  if(tourIso!==t)return;
+  const r=tourScore(t)||tourScoreOld(t);
+  tourIsoDraw(t,r);tourSheetRender(t,r);
+}
+function tourClassColor(c){const p=VA_PALETTE.ski6[c];return p?'rgb('+p[0]+','+p[1]+','+p[2]+')':'rgb(203,210,220)';}
+function tourIsoDraw(t,r){
+  if(tourIsoLayer){map.removeLayer(tourIsoLayer);tourIsoLayer=null;}
+  const g=tourGeo(t),segs=g.segs,grp=L.layerGroup();
+  const ll=t.coords.map(c=>[c[1],c[0]]);
+  grp.addLayer(L.polyline(ll,{color:'#fff',weight:11,opacity:.95,interactive:false,lineCap:'round',lineJoin:'round'}));
+  if(r&&r.cls){let i0=0;
+    for(let i=1;i<=segs.length;i++){
+      if(i<segs.length&&r.cls[i]===r.cls[i0])continue;
+      const pts=segs.slice(i0,Math.min(segs.length,i+1)).map(s=>[s.lat,s.lon]);
+      if(pts.length>1)grp.addLayer(L.polyline(pts,{color:tourClassColor(r.cls[i0]),weight:6.5,opacity:1,interactive:false,lineCap:'round',lineJoin:'round',
+        dashArray:r.cls[i0]<0?'2 8':null}));
+      i0=i;}}
+  else grp.addLayer(L.polyline(ll,{color:tourColor(r),weight:6,interactive:false}));
+  const pin=(p,cls,txt)=>L.marker([p.lat,p.lon],{interactive:false,zIndexOffset:1500,
+    icon:L.divIcon({className:'',html:'<div class="tour-pin '+cls+'"><i></i><span>'+escapeHtml(txt)+'</span></div>',iconSize:[0,0],iconAnchor:[0,0]})});
+  grp.addLayer(pin(g.lo,'lo','Start'+(g.lo.el!=null?' · '+Math.round(g.lo.el)+' m':'')));
+  grp.addLayer(pin(g.hi,'hi',(t.name||'Gipfel')+(g.hi.el!=null?' · '+Math.round(g.hi.el)+' m':'')));
+  tourIsoLayer=grp.addTo(map);
+}
+function tourProfileSVG(t,r){
+  const g=tourGeo(t),segs=g.segs.filter(s=>s.el!=null);if(segs.length<2)return '';
+  const W=320,H=112,L0=34,R=6,T0=8,B=20,len=segs[segs.length-1].dist||1;
+  let lo=1e9,hi=-1e9;segs.forEach(s=>{lo=Math.min(lo,s.el);hi=Math.max(hi,s.el);});
+  const pad=Math.max(40,(hi-lo)*.12);lo-=pad;hi+=pad;
+  const X=d=>L0+d/len*(W-L0-R),Y=e=>T0+(1-(e-lo)/(hi-lo))*(H-T0-B);
+  let svg='';const idx=new Map(g.segs.map((s,i)=>[s,i]));
+  for(let i=1;i<segs.length;i++){const a0=segs[i-1],a1=segs[i],c=r&&r.cls?r.cls[idx.get(a1)]:-1;
+    svg+='<path d="M'+X(a0.dist).toFixed(1)+' '+Y(a0.el).toFixed(1)+'L'+X(a1.dist).toFixed(1)+' '+Y(a1.el).toFixed(1)
+      +'L'+X(a1.dist).toFixed(1)+' '+(H-B)+'L'+X(a0.dist).toFixed(1)+' '+(H-B)+'Z" fill="'+tourClassColor(c)+'"'+(c<0?' fill-opacity=".45"':'')+'/>';}
+  let line='';segs.forEach((s,i)=>{line+=(i?'L':'M')+X(s.dist).toFixed(1)+' '+Y(s.el).toFixed(1);});
+  svg+='<path d="'+line+'" fill="none" stroke="var(--fg)" stroke-width="1.4" stroke-linejoin="round"/>';
+  const ticks=[];const st=len>8000?2000:len>3000?1000:500;for(let d=0;d<=len;d+=st)ticks.push(d);
+  svg+=ticks.map(d=>'<text x="'+X(d).toFixed(1)+'" y="'+(H-6)+'" class="tp-t" text-anchor="middle">'+(d/1000).toFixed(d%1000?1:0)+'</text>').join('');
+  svg+='<text x="'+(W-R)+'" y="'+(H-6)+'" class="tp-t" text-anchor="end">km</text>';
+  [lo+pad,hi-pad].forEach(e=>{svg+='<text x="'+(L0-4)+'" y="'+(Y(e)+3).toFixed(1)+'" class="tp-t" text-anchor="end">'+Math.round(e)+'</text>';});
+  return '<svg class="tour-prof" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Höhenprofil mit Schneeart entlang der Route">'+svg+'</svg>';
+}
+function tourSheetRender(t,r){
+  const el=document.getElementById('tourSheet');if(!el)return;
+  const g=tourGeo(t),va=!!(r&&r.cls);
+  const facts=[g.hi.el!=null?'Gipfel '+Math.round(g.hi.el)+' m':'',g.gain!=null?'↑ '+g.gain+' Hm':'',
+    g.len?(Math.round(g.len/100)/10)+' km':'',g.maxSlope?'bis '+g.maxSlope+'°':''].filter(Boolean).join(' · ');
+  const order=[5,4,3,1,2,6];
+  const chips=va?order.filter(k=>r.shares[k]).map(k=>'<span class="tc"><i style="background:'+tourClassColor(k)+'"></i>'
+    +escapeHtml(VA_SKI6_DE[k])+'<b>'+Math.round(r.shares[k]*100)+' %</b></span>').join(''):'';
+  el.innerHTML=(tourFromSearch?'<button type="button" class="tour-back" onclick="tourBackToSearch()">‹ Zurück zur Liste</button>':'')
+    +'<div class="tour-hd"><span class="tour-score" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r):'–')+'<small>%</small></span>'
+    +'<div class="tour-tt"><b>'+escapeHtml(t.name||'Skitour')+'</b><span>'+escapeHtml(facts)+'</span></div>'
+    +'<button type="button" class="tour-x" onclick="tourClose()" aria-label="Schliessen">×</button></div>'
+    +(va?'<div class="tour-kpi"><span'+(tourFocus==='powder'?' class="on"':'')+'>Pulver <b>'+r.powder+' %</b></span>'
+      +'<span'+(tourFocus==='sulz'?' class="on"':'')+'>Sulz <b>'+r.sulz+' %</b></span>'
+      +(r.powderCm?'<span>Ø <b>'+r.powderCm+' cm</b> Pulver</span>':'')+'</div>':
+      '<div class="tour-verdict" style="color:'+tourColor(r)+'">'+escapeHtml((r&&r.verdict)||'')+'</div>')
+    +tourProfileSVG(t,va?r:null)
+    +(chips?'<div class="tour-chips">'+chips+'</div>':'')
+    +'<div class="tour-when">'+(va?'SNOWPACK · '+escapeHtml(r.when||'')+' – folgt der Zeitleiste':'Powder-Modell im gewählten Zeitfenster')+'</div>'
+    +'<div class="tour-cav">'+((r&&r.caveats)||[]).map(c=>'<div>'+escapeHtml(c)+'</div>').join('')+'</div>';
+}
+function tourClose(){
+  const back=tourFromSearch;
+  tourIso=null;tourFromSearch=false;
+  if(tourIsoLayer){map.removeLayer(tourIsoLayer);tourIsoLayer=null;}
+  document.body.classList.remove('tour-open');
+  tourPaintScores();
+  if(back)tsOpenUI();
+}
+function tourBackToSearch(){tourFromSearch=true;tourClose();}
+// ── «Touren finden» ────────────────────────────────────────────────────────
+// A sheet over the lower part of the screen, the map above it showing only
+// the routes that pass the filters. Distance is measured to the route's
+// lowest point -- where the tour starts.
+const tsF={focus:'powder',radius:25,gainMin:0,gainMax:2500,slopeMin:0,slopeMax:55};
+let tsCircle=null;
+function tsOpen(){return document.body.classList.contains('ts-open');}
+function tsCenter(){if(myLoc)return {lat:myLoc[0],lon:myLoc[1],me:true};const c=map.getCenter();return {lat:c.lat,lon:c.lng,me:false};}
+function tourVisible(t){
+  if(!tsOpen()&&!(tourFromSearch&&tourIso))return true;
+  return !!(t._ts&&t._ts.ok);
+}
+async function tsOpenUI(){
+  if(!(await toursEnsure())){toast('Keine Tourendaten geladen','err');return;}
   if(!ovOn.skitourVec){try{ovToggle('skitourVec',true);}catch(e){}}
-  const L2=tourNearList(lat,lon);
-  const sub=(tourVa.eng&&tourVa.when)?tourVa.when:'Powder-Modell, aktuelles Zeitfenster';
-  if(!L2.length){el.innerHTML=tourNearHead(sub,'')+'<div class="tn-empty">Keine Skitour im Umkreis von '+TOUR_NEAR_KM+' km.</div>';return;}
-  window._tnList=L2;
-  el.innerHTML=tourNearHead(sub,L2.length)+'<div class="tn-list">'+L2.map((o,i)=>{
-    const r=o.r||{},col=tourColor(r),sc=o.s>=0?o.s:'–';
-    return '<button type="button" class="tn-row" onclick="tourNearPick('+i+')">'
-      +'<span class="tn-rank">'+(i+1)+'</span>'
-      +'<span class="tn-t"><b>'+escapeHtml(o.t.name||'Skitour')+'</b>'
-      +'<span>'+(o.d<500?'hier':(Math.round(o.d/100)/10)+' km')
-      +(r.gain?' · '+r.gain+' Hm':'')+(r.powderCm?' · ~'+r.powderCm+' cm Pulver':'')+'</span></span>'
-      +'<span class="tn-sc" style="--sc:'+col+'">'+sc+'</span></button>';}).join('')+'</div>'
-    +'<div class="tn-foot">Schneequalität aus dem Modell, keine Lawinenbeurteilung – Bulletin des SLF beachten.</div>';
+  tourFocus=tsF.focus;
+  document.body.classList.add('ts-open');
+  tsRender(true);
+  try{await tourVaPrepare();}catch(e){}
+  tsRender();try{haptic(4);}catch(e){}
 }
-function tourNearHead(sub,n){
-  return '<div class="tn-hd"><div><b>Beste Touren in deiner Nähe</b><span>'
-    +(n?'Top '+n+' · ':'')+'Umkreis '+TOUR_NEAR_KM+' km'+(sub?' · '+escapeHtml(sub):'')+'</span></div>'
-    +'<button type="button" class="tour-x" onclick="tourNearClose()" aria-label="Schliessen">×</button></div>';
+function tsCloseQuiet(){document.body.classList.remove('ts-open');if(tsCircle){map.removeLayer(tsCircle);tsCircle=null;}}
+function tsClose(){tsCloseQuiet();tourList().forEach(t=>{t._ts=null;});tourPaintScores();}
+function tsSet(k,v){tsF[k]=v;
+  if(k==='gainMin'&&tsF.gainMin>tsF.gainMax)tsF.gainMax=tsF.gainMin;
+  if(k==='gainMax'&&tsF.gainMax<tsF.gainMin)tsF.gainMin=tsF.gainMax;
+  if(k==='slopeMin'&&tsF.slopeMin>tsF.slopeMax)tsF.slopeMax=tsF.slopeMin;
+  if(k==='slopeMax'&&tsF.slopeMax<tsF.slopeMin)tsF.slopeMin=tsF.slopeMax;
+  if(k==='focus'){tourFocus=v;}
+  clearTimeout(tsSet._t);tsSet._t=setTimeout(()=>tsRender(k!=='focus'),80);}
+function tsLocate(){
+  if(!navigator.geolocation){toast('Standort nicht verfügbar','err');return;}
+  navigator.geolocation.getCurrentPosition(p=>{myLoc=[p.coords.latitude,p.coords.longitude];
+    try{if(meMarker)map.removeLayer(meMarker);
+      meMarker=L.marker(myLoc,{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1900}).addTo(map);}catch(e){}
+    tsRender();},()=>toast('Standort konnte nicht ermittelt werden','err'),{enableHighAccuracy:true,timeout:9000});}
+function tsFilter(){
+  const c=tsCenter(),R=tsF.radius*1000,out=[];
+  tourList().forEach(t=>{if(!t.coords||t.coords.length<2){t._ts=null;return;}
+    const lo=t.lo?{lat:t.lo[1],lon:t.lo[0]}:{lat:t.coords[0][1],lon:t.coords[0][0]};
+    const d=tourDistM(c.lon,c.lat,lo.lon,lo.lat);
+    if(d>R){t._ts={ok:false};return;}
+    const g=tourGeo(t);
+    const ok=(g.gain==null||(g.gain>=tsF.gainMin&&g.gain<=tsF.gainMax))
+      &&g.maxSlope>=tsF.slopeMin&&g.maxSlope<=tsF.slopeMax;
+    t._ts={ok,d};if(ok)out.push({t,d});});
+  return {c,list:out};
 }
-function tourNearClose(){document.body.classList.remove('tn-open');}
-addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('tn-open'))tourNearClose();});
-// a tap on the map puts the list away again
-addEventListener('pointerdown',e=>{if(!document.body.classList.contains('tn-open'))return;
-  const t=e.target;if(t&&t.closest&&(t.closest('#tourNear')||t.closest('#locFab')))return;
-  if(t&&t.closest&&t.closest('#map'))tourNearClose();},true);
-function tourNearPick(i){const o=(window._tnList||[])[i];if(!o)return;
-  tourNearClose();
-  try{const ll=o.t.coords.map(c=>[c[1],c[0]]);map.flyToBounds(L.latLngBounds(ll),{padding:[60,60],duration:.9,maxZoom:14});}catch(e){}
-  setTimeout(()=>{try{tourOpen(o.t);}catch(e){}},400);
+function tsRender(onlyMap){
+  const el=document.getElementById('tourSearch');if(!el||!tsOpen())return;
+  const {c,list}=tsFilter();
+  if(tsCircle)map.removeLayer(tsCircle);
+  tsCircle=L.circle([c.lat,c.lon],{radius:tsF.radius*1000,color:'var(--accent)',weight:1.5,opacity:.6,fillOpacity:.04,interactive:false,dashArray:'4 6'}).addTo(map);
+  list.forEach(o=>{o.r=tourScore(o.t);o.v=o.r?tourVal(o.r):-1;});
+  list.sort((x,y)=>(y.v-x.v)||(x.d-y.d));
+  tourPaintScores();
+  window._tsList=list;
+  const va=!!tourVa.eng;
+  const dual=(lbl,kMin,kMax,min,max,step,unit)=>'<div class="ts-row"><div class="ts-lbl"><span>'+lbl+'</span><b>'+tsF[kMin]+'–'+tsF[kMax]+' '+unit+'</b></div>'
+    +'<div class="ts-dual"><i style="left:'+((tsF[kMin]-min)/(max-min)*100)+'%;right:'+(100-(tsF[kMax]-min)/(max-min)*100)+'%"></i>'
+    +'<input type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+tsF[kMin]+'" oninput="tsSet(\''+kMin+'\',+this.value)" aria-label="'+lbl+' min">'
+    +'<input type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+tsF[kMax]+'" oninput="tsSet(\''+kMax+'\',+this.value)" aria-label="'+lbl+' max"></div></div>';
+  const ctrls='<div class="ts-seg"><button type="button" class="'+(tsF.focus==='powder'?'on':'')+'" onclick="tsSet(\'focus\',\'powder\')">Powder-Fokus</button>'
+    +'<button type="button" class="'+(tsF.focus==='sulz'?'on':'')+'" onclick="tsSet(\'focus\',\'sulz\')">Sulz-Fokus</button></div>'
+    +'<div class="ts-row"><div class="ts-lbl"><span>Umkreis '+(c.me?'um meinen Standort':'um die Kartenmitte')+'</span><b>'+tsF.radius+' km</b></div>'
+    +'<input class="ts-range" type="range" min="5" max="100" step="5" value="'+tsF.radius+'" oninput="tsSet(\'radius\',+this.value)" aria-label="Umkreis">'
+    +(c.me?'':'<button type="button" class="ts-loc" onclick="tsLocate()">Meinen Standort verwenden</button>')+'</div>'
+    +dual('Höhenmeter','gainMin','gainMax',0,2500,50,'Hm')
+    +dual('Steilste Stelle','slopeMin','slopeMax',0,55,1,'°');
+  const rows=list.slice(0,40).map((o,i)=>{const r=o.r,g=tourGeo(o.t);
+    return '<button type="button" class="tn-row" onclick="tsPick('+i+')"><span class="tn-sc" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r)+'%':'…')+'</span>'
+      +'<span class="tn-t"><b>'+escapeHtml(o.t.name||'Skitour')+'</b><span>'+(Math.round(o.d/100)/10)+' km · '
+      +(g.gain!=null?g.gain+' Hm · ':'')+'bis '+g.maxSlope+'°'+(g.hi.el!=null?' · '+Math.round(g.hi.el)+' m':'')+'</span></span></button>';}).join('');
+  if(onlyMap&&el.querySelector('.ts-list')){el.querySelector('.ts-count').textContent=list.length+' Touren';
+    el.querySelector('.ts-list').innerHTML=rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>';
+    el.querySelectorAll('.ts-lbl b').forEach((b,i)=>{const v=[tsF.radius+' km',tsF.gainMin+'–'+tsF.gainMax+' Hm',tsF.slopeMin+'–'+tsF.slopeMax+' °'][i];if(v)b.textContent=v;});
+    const bars=el.querySelectorAll('.ts-dual i');
+    if(bars[0]){bars[0].style.left=(tsF.gainMin/2500*100)+'%';bars[0].style.right=(100-tsF.gainMax/2500*100)+'%';}
+    if(bars[1]){bars[1].style.left=(tsF.slopeMin/55*100)+'%';bars[1].style.right=(100-tsF.slopeMax/55*100)+'%';}
+    return;}
+  el.innerHTML='<div class="ts-grab"></div><div class="tn-hd"><div><b>Touren finden</b><span>'
+    +(va?'SNOWPACK · '+escapeHtml(tourVa.when):'Powder-Modell im Zeitfenster')+'</span></div>'
+    +'<button type="button" class="tour-x" onclick="tsClose()" aria-label="Schliessen">×</button></div>'
+    +ctrls+'<div class="ts-res"><span class="ts-count">'+list.length+' Touren</span><span>sortiert nach '+(tsF.focus==='sulz'?'Sulz':'Pulver')+'-Anteil</span></div>'
+    +'<div class="ts-list tn-list">'+(rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>')+'</div>'
+    +'<div class="tn-foot">Anteil der Abfahrt (22–50°) mit Pulver bzw. Sulz im SNOWPACK-Modell – keine Lawinenbeurteilung, Bulletin des SLF beachten.</div>';
 }
+function tsPick(i){const o=(window._tsList||[])[i];if(!o)return;tourOpen(o.t,true);}
+addEventListener('keydown',e=>{if(e.key!=='Escape')return;
+  if(document.body.classList.contains('tour-open')){tourClose();return;}
+  if(tsOpen())tsClose();});
 
 // Is a point inside the bulletin's core zone? Used by the tour score, and
 // deliberately conservative: unknown aspect or elevation counts as inside.
@@ -7321,8 +7517,8 @@ function renderRaster(){
       if(stat=="lt10"){if(mx>=10)return null;return[40,190,90,215];}
       const val=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(val<0.5)return null;
       const c2=rampBYR(val/70);return[c2[0],c2[1],c2[2],200];});}
-  else if(layer=="cloud"&&_hasCloud){setRaster(p=>{let su=0,c=0;for(let t=a;t<b;t++){su+=cloudv(t,p);c++;}
-      const v=su/Math.max(1,c);if(v<12)return null;return cloudCol((v-12)/88);});}
+  else if(layer=="cloud"&&_hasCloud){setRaster(p=>{let su=0,c=0;for(let t=a;t<b;t++){const v0=cloudv(t,p);if(v0===v0){su+=v0;c++;}}
+      if(!c)return null;const v=su/c;if(v<12)return null;return cloudCol((v-12)/88);});}
   else if(layer=="sun"){const vmax=48;setRaster(p=>{let s=0;for(let t=a;t<b;t++)s+=sunv(t,p);if(s<0.3)return null;const c=sunCol(s,vmax);return[c[0],c[1],c[2],205];});}
   else if(layer=="tsurf"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=tsurfEst(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[20,80,180,215];}
@@ -7509,7 +7705,7 @@ function legSpec(l){
         ticks:[r[1],Math.round((r[0]+r[1])/2),r[0]],long:'Dichte der obersten Schneeschicht'};}
     const leg=L.legend||{};
     const ORD={ski6:[5,4,3,1,2,6],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0);
-    const SH={ski6:{5:'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'nass'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{};
+    const SH={ski6:{5:'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{};
     const rows=ORD.filter(k=>leg[k]&&leg[k][1]).map(k=>{const e=leg[k],nm=e[2]||String(e[0]).replace(/_/g,' ');
       return {k,c:rgb(e[1]),s:SH[k]||nm.split(/[\s/(]/)[0].slice(0,7),n:nm};});
     return {t:name,u:vaKey==='ski6'?'Pulver cm':vaKey==='wind'?'Wind':'Klasse',va:true,rows};
@@ -7563,7 +7759,10 @@ function legInfoRender(){
   el.innerHTML='<div class="li-hd"><div><b>'+escapeHtml(sp.t)+'</b><span>Einheit: '+escapeHtml(sp.u||'–')+'</span></div>'
     +'<button type="button" class="tour-x" onclick="legInfoClose()" aria-label="Schliessen">×</button></div>'
     +(info?'<p class="li-desc">'+escapeHtml(info.d)+'</p>':(sp.va?'<p class="li-desc">'+escapeHtml(LY_TEXT.snowpack.d)+'</p>':''))
-    +body+(sp.va?vaNoteHTML():'');
+    +body+(sp.va?vaNoteHTML():'')
+    +((typeof ovOn!=='undefined'&&ovOn.skitourVec&&tourList().length)?'<div class="li-tours"><b>Skitouren</b><div class="li-ramp" style="background:linear-gradient(90deg,'
+      +[0,8,50,100].map(v=>tourRamp(v)).join(',')+')"></div><div class="li-ticks"><span>0</span><span>50</span><span>100 %</span></div>'
+      +'<p class="li-note">Farbe = Anteil der Abfahrt mit '+(tourFocus==='sulz'?'Sulz':'Pulver')+' im SNOWPACK-Modell zur gewählten Zeit. Tour antippen für den Verlauf.</p></div>':'');
 }
 addEventListener('pointerdown',e=>{if(!document.body.classList.contains('leg-open'))return;
   const t=e.target;if(t&&t.closest&&(t.closest('#legInfo')||t.closest('#miniLegend')))return;legInfoClose();},true);
@@ -7785,7 +7984,7 @@ function lySubNext(e){
 // A shape per layer. The pictogram is what you re-find the layer by after the
 // first time; the word underneath is what you learn it with.
 const LY_ICON={
-  reppow:'<circle cx="12" cy="12" r="7"/><path d="M8.5 12.5l2.5 2.5 5-5"/>',
+  reppow:'<path d="M12 2.5v19M3.8 7.25l16.4 9.5M3.8 16.75l16.4-9.5"/><path d="M9.6 4.2L12 6.4l2.4-2.2M9.6 19.8L12 17.6l2.4 2.2M4.2 10.5l3.2-.9-.9-3.2M19.8 13.5l-3.2.9.9 3.2M4.2 13.5l3.2.9-.9 3.2M19.8 10.5l-3.2-.9.9-3.2"/>',
   powder:'<circle cx="12" cy="12" r="7"/>',
   newsnow:'<polygon points="12,4 20,18 4,18"/>',
   depth:'<line x1="5" y1="20" x2="19" y2="20"/><line x1="12" y1="4" x2="12" y2="17"/><polyline points="8,8 12,4 16,8"/><polyline points="8,13 12,17 16,13"/>',
@@ -7820,7 +8019,7 @@ const LY_TEXT={
     d:'Gesamtbewölkung aus dem Wettermodell, gemittelt über das gewählte Zeitfenster. Hell = dünne Wolken, dunkelgrau = bedeckt. Wichtig für Sicht, Sonneneinstrahlung und ob die Oberfläche in der Nacht abkühlt.',
     u:'%'},
   snowpack:{t:'Skiqualität aus SNOWPACK',
-    d:'Simulierte Schneedecke (SNOWPACK, SLF) an 135 Wetterpunkten in jeder Höhe, Exposition und Neigung, auf das Gelände übertragen. Blau bis violett = Pulver nach Tiefe, grau = hart, rot = Kruste, gelb = nass. Ein Modell, keine Messung – kein Lawinenbulletin.',
+    d:'Simulierte Schneedecke (SNOWPACK, SLF) an 135 Wetterpunkten in jeder Höhe, Exposition und Neigung, auf das Gelände übertragen. Hell- bis dunkelblau = Pulver nach Tiefe, grau = hart, korall = Kruste, honiggelb = nass / Sulz. Ein Modell, keine Messung – kein Lawinenbulletin.',
     u:'Klasse'},
   temp:{t:'Temperatur auf 2 m',
     d:'Lufttemperatur im gewählten Fenster. Entscheidend dafür, ob Pulver Pulver bleibt oder verharscht.',
@@ -7873,7 +8072,7 @@ function lyRender(){
     const hi=item.id==='reppow';
     return '<button type="button" class="ly-tile'+(n===i?' on':'')+(hi?' ly-hi':'')+'" onclick="lyPick('+n+')"'+
     (n===i?' aria-current="true"':'')+' title="'+(hi?'Echte Meldungen, nicht modelliert':'')+'">'+lyIconFor(item.id)+
-    '<span>'+escapeHtml(item.label)+'</span>'+(hi?'<i class="ly-hi-dot"></i>':'')+'</button>'+
+    '<span>'+escapeHtml(item.label)+'</span></button>'+
     (n===afterIdx?subsHtml:'');}).join('');
   ovRender();
   lyInfoRender();
@@ -7881,7 +8080,6 @@ function lyRender(){
 const OV_ICON={
   skitourVec:'<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18c4 0 3-6 7-6 2.5 0 2-4 2-4"/>',
   skitour:'<path d="M3 20l6-12 4 7 3-4 5 9z"/>',
-  snowshoe:'<ellipse cx="12" cy="12" rx="5" ry="8"/><path d="M8 9h8M8 15h8"/>',
   wildlife:'<path d="M7 4c0 3 2 4 5 4s5-1 5-4"/><path d="M12 8v4"/><ellipse cx="12" cy="16" rx="5" ry="4"/>',
   avalanche:'<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>'};
 function ovRender(){
@@ -8287,7 +8485,7 @@ function updateAccountBtn(avatarUrl){
   btn.classList.add('signed');btn.title='Mein Profil';
   if(avatarUrl){btn.innerHTML='<span class="acct-img" style="background-image:url('+avatarUrl+')"></span>';}
   else{btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';}}
-let meMarker=null;
+let meMarker=null,myLoc=null;
 function flyToMe(){haptic(8);
   if(!navigator.geolocation){toast('Standort nicht verfügbar','err');return;}
   navigator.geolocation.getCurrentPosition(p=>{const ll=[p.coords.latitude,p.coords.longitude];
@@ -8296,7 +8494,7 @@ function flyToMe(){haptic(8);
       meMarker=L.marker(ll,{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1900}).addTo(map);
       map.flyTo(ll,12,{duration:1.1});
     }catch(e){}
-    try{tourNearOpen(ll[0],ll[1]);}catch(e){}},
+    myLoc=ll;},
     ()=>{toast('Standort konnte nicht ermittelt werden','err');},{enableHighAccuracy:true,timeout:9000});}
 // ===================== Screen router =====================================
 // Three screens on a wrap-around carousel: Search -> Report -> Feed -> Search.
