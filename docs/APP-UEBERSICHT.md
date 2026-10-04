@@ -31,6 +31,7 @@ voraus.
 | **Bewölkung** | Gesamtbewölkung (Open-Meteo `cloud_cover`, %), gemittelt über das Zeitfenster |
 | **Overlays** | SLF-Lawinenbulletin, Skitourenrouten (swisstopo) mit Powder-Score aus SNOWPACK (standardmässig an), IMIS-Messstationen |
 | **Community** | Konto, Meldungen mit Foto/Zonen, Feed, Folgen, Nachrichten, Moderation (Melden), Konto löschen |
+| **Touren & Community** | «x Leute schauen diese Tour gerade an» (Supabase Realtime Presence, nichts gespeichert; Name nur bei öffentlichem Profil), Meldungen pro Tour, «Powder melden» aus der Tour, Tour-Auswahl beim Melden (`condition_data.tour`), Feed-Ansicht «Touren» |
 | **Werkzeuge** | 3D-Ansicht, Ortssuche, Gipfelerkennung per Texterkennung (OCR), Zeichnen eigener Schnee-Karten, offline nutzbar (PWA) |
 
 ---

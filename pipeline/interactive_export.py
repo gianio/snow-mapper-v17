@@ -3390,6 +3390,66 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ts-res{display:flex;justify-content:space-between;font-size:11.5px;color:var(--fg2);margin:4px 2px 8px}
  .ts-count{font-weight:800;color:var(--fg)}
  .tn-sc{min-width:48px}
+
+ /* ── community: modern feed ── */
+ .feed-chips{display:flex;gap:8px;overflow-x:auto;padding:4px 20px 12px;background:var(--paper);scrollbar-width:none;position:sticky;top:0;z-index:2}
+ .feed-chips::-webkit-scrollbar{display:none}
+ .feed-chips button{flex:none;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:999px;
+   border:1px solid var(--hair);background:var(--card);color:var(--fg2);font:700 13px Inter,system-ui;cursor:pointer;transition:all .15s ease}
+ .feed-chips button svg{width:15px;height:15px}
+ .feed-chips button.on{background:var(--fg);border-color:var(--fg);color:var(--paper)}
+ .feed-scroll{background:var(--paper)}
+ .feed-grid{padding:4px 12px 120px;display:flex;flex-direction:column;gap:12px}
+ .feed-card{border-radius:22px;border:1px solid var(--hair);box-shadow:0 1px 2px rgba(18,21,26,.04),0 6px 20px rgba(18,21,26,.05)}
+ .feed-card-head{padding:14px 14px 0}
+ .feed-card-avatar{box-shadow:0 0 0 2px var(--card),0 0 0 3.5px color-mix(in srgb,var(--accent) 35%,transparent)}
+ .feed-card .feed-visual,.feed-card .fc-wrap{margin:12px 12px 0;border-radius:16px;overflow:hidden}
+ .feed-card-actions{padding:6px 10px 10px}
+ .fc-tour{display:inline-flex;align-items:center;gap:7px;margin:10px 0 0;padding:7px 12px;border-radius:999px;border:0;
+   background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);font:700 13px Inter,system-ui;cursor:pointer}
+ .fc-tour svg{width:15px;height:15px}
+ .fc-tour i{font-style:normal;opacity:.6}
+ /* tour card: who is watching, community block */
+ .tour-watch{display:none;align-items:center;gap:10px;margin:2px 0 10px;padding:8px 10px;border-radius:14px;
+   background:color-mix(in srgb,#2E9E6A 10%,transparent);font-size:12.5px;color:var(--fg)}
+ .tour-watch.on{display:flex;animation:twIn .3s ease}
+ @keyframes twIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+ .tour-watch b{font-weight:800}
+ .tw-av{display:flex}
+ .tw-av i{width:24px;height:24px;border-radius:50%;margin-left:-7px;border:2px solid var(--card);background:#2E9E6A center/cover;color:#fff;
+   font:800 10px Inter,system-ui;display:flex;align-items:center;justify-content:center;font-style:normal}
+ .tw-av i:first-child{margin-left:0}
+ .tour-sec{display:flex;align-items:center;justify-content:space-between;margin:12px 0 8px;padding-top:10px;border-top:1px solid var(--hair)}
+ .tour-sec b{font-size:14px}
+ .tour-rep{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:8px 13px;background:var(--accent);color:#fff;
+   font:800 12.5px Inter,system-ui;cursor:pointer;box-shadow:0 6px 16px color-mix(in srgb,var(--accent) 35%,transparent)}
+ .tour-rep svg{width:14px;height:14px}
+ .tour-norep{font-size:12.5px;color:var(--fg2);padding:2px 0 6px}
+ .tour-reps{display:flex;flex-direction:column;gap:6px}
+ .tour-r{display:flex;align-items:center;gap:10px;border:1px solid var(--hair);background:var(--paper);border-radius:14px;padding:8px 10px;text-align:left;cursor:pointer;font-family:inherit;color:inherit}
+ .tour-r i{width:30px;height:30px;border-radius:50%;background:var(--fill) center/cover;display:flex;align-items:center;justify-content:center;font:800 12px var(--mono);font-style:normal;flex:none}
+ .tour-r span{display:flex;flex-direction:column;flex:1;min-width:0}
+ .tour-r b{font-size:13px}
+ .tour-r em{font-style:normal;font-size:11px;color:var(--fg2)}
+ .tour-r .tr-v{flex:none;font:700 12px var(--mono);color:var(--accent);max-width:45%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .tour-more{font-size:11.5px;color:var(--fg2);padding:2px 4px}
+ .tn-w{flex:none;min-width:0;font:800 11px Inter,system-ui;color:#2E9E6A}
+ .tn-w.on::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:#2E9E6A;margin-right:4px;animation:twPulse 1.6s ease infinite}
+ @keyframes twPulse{0%,100%{opacity:1}50%{opacity:.35}}
+ /* tour picker while reporting */
+ .tpick{margin:10px 0}
+ .tp-hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+ .tp-hd b{font-size:13px}
+ .tp-hd span{font-size:11px;color:var(--fg2)}
+ .tp-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+ .tp-chips::-webkit-scrollbar{display:none}
+ .tp-chip{flex:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--hair);background:var(--card);border-radius:999px;
+   padding:7px 12px;font:700 12.5px Inter,system-ui;color:var(--fg);cursor:pointer}
+ .tp-chip svg{width:14px;height:14px;color:var(--accent)}
+ .tp-chip em{font-style:normal;font-weight:600;color:var(--fg2);font-size:11px}
+ .tp-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+ .tp-chip.on svg,.tp-chip.on em{color:#fff}
+ .tp-q{width:100%;margin-top:8px;border:1px solid var(--hair);background:var(--fill);border-radius:12px;padding:9px 12px;font:500 13px Inter,system-ui;color:var(--fg);box-sizing:border-box}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -3666,6 +3726,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <input type="file" id="drawFile" accept="image/*" hidden onchange="drawPhotoPick(this)"/>
       <button class="dfin-photo" id="drawPhotoBtn" onclick="document.getElementById('drawFile').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto hinzufügen (optional)</button>
       <img id="drawPhotoPrev" alt=""/>
+      <div class="tpick" id="drawTourPick"></div>
       <textarea id="drawCaption" maxlength="500" placeholder="Beschreibung (optional) — Verhältnisse, Ort, Hinweise…"></textarea>
       <div class="dfin-actions">
         <button class="dfin-back" onclick="drawFinishClose()">Zurück</button>
@@ -3697,6 +3758,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <button class="fn-btn" title="Schliessen" aria-label="Schliessen" onclick="feedClose()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
 </div>
 <h2 class="feed-title scr-title">Feed</h2>
+<div class="feed-chips" id="feedChips" role="tablist" aria-label="Ansicht"></div>
 <div class="feed-sheet" id="feedSheet" onclick="if(event.target===this)feedFilterClose()">
   <div class="feed-sheet-in">
     <span class="lbl-micro">Ansicht</span>
@@ -3793,6 +3855,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         <label class="qr-photo-one" for="qrLib"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Foto aufnehmen oder wählen</span></label>
         <input id="qrLib" type="file" accept="image/*" hidden onchange="qrPhotoPick(this)">
         <img id="qrPrev" class="qr-prev" style="display:none" alt=""/>
+        <div class="tpick" id="qrTourPick"></div>
         <button class="cond-save" id="qrSaveBtn" onclick="qrSubmit()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Posten</button>
         <button class="qr-skip" onclick="qrSkip()">Ohne Foto posten</button>
       </div>
@@ -6394,6 +6457,7 @@ let tourIso=null,tourIsoLayer=null,tourFromSearch=false;
 function tourOpen(t,fromSearch){
   tourIso=t;tourFromSearch=!!fromSearch;
   try{tsCloseQuiet();}catch(e){}
+  try{tpJoin();tpTrack();}catch(e){}
   document.body.classList.add('tour-open');
   tourIsoRefresh();
   try{const ll=t.coords.map(c=>[c[1],c[0]]);map.flyToBounds(L.latLngBounds(ll),{padding:[50,50],paddingBottomRight:[50,330],duration:.8,maxZoom:14});}catch(e){}
@@ -6445,6 +6509,7 @@ function tourProfileSVG(t,r){
   return '<svg class="tour-prof" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Höhenprofil mit Schneeart entlang der Route">'+svg+'</svg>';
 }
 function tourSheetRender(t,r){
+  setTimeout(()=>{try{tpRender();}catch(e){}},0);
   const el=document.getElementById('tourSheet');if(!el)return;
   const g=tourGeo(t),va=!!(r&&r.cls);
   const facts=[g.hi.el!=null?'Gipfel '+Math.round(g.hi.el)+' m':'',g.gain!=null?'↑ '+g.gain+' Hm':'',
@@ -6460,20 +6525,144 @@ function tourSheetRender(t,r){
       +'<span'+(tourFocus==='sulz'?' class="on"':'')+'>Sulz <b>'+r.sulz+' %</b></span>'
       +(r.powderCm?'<span>Ø <b>'+r.powderCm+' cm</b> Pulver</span>':'')+'</div>':
       '<div class="tour-verdict" style="color:'+tourColor(r)+'">'+escapeHtml((r&&r.verdict)||'')+'</div>')
+    +'<div class="tour-watch" id="tourWatch"></div>'
     +tourProfileSVG(t,va?r:null)
     +(chips?'<div class="tour-chips">'+chips+'</div>':'')
     +'<div class="tour-when">'+(va?'SNOWPACK · '+escapeHtml(r.when||'')+' – folgt der Zeitleiste':'Powder-Modell im gewählten Zeitfenster')+'</div>'
+    +tourReportsHTML(t)
     +'<div class="tour-cav">'+((r&&r.caveats)||[]).map(c=>'<div>'+escapeHtml(c)+'</div>').join('')+'</div>';
 }
 function tourClose(){
   const back=tourFromSearch;
   tourIso=null;tourFromSearch=false;
+  try{tpTrack();}catch(e){}
   if(tourIsoLayer){map.removeLayer(tourIsoLayer);tourIsoLayer=null;}
   document.body.classList.remove('tour-open');
   tourPaintScores();
   if(back)tsOpenUI();
 }
 function tourBackToSearch(){tourFromSearch=true;tourClose();}
+// ── who else is looking at a tour (Supabase Realtime presence) ─────────────
+// One channel for all tours: each open app tracks the tour it shows (or
+// nothing). Nothing is stored -- presence lives only as long as the app is
+// open. Signed-in people appear with name and picture unless their profile
+// is not public; everyone else counts as a guest.
+let tpCh=null,tpReady=false,tpState={},tpTimer=0;
+function tpKey(){if(sbUser)return sbUser.id;
+  try{let k=sessionStorage.getItem('ssm_guest');if(!k){k='g-'+Math.random().toString(36).slice(2,10);sessionStorage.setItem('ssm_guest',k);}return k;}catch(e){return 'g-anon';}}
+function tpJoin(){
+  if(tpCh||typeof sb==='undefined'||!sb||!sb.channel)return;
+  try{
+    tpCh=sb.channel('snowmapper-tours',{config:{presence:{key:tpKey()}}});
+    tpCh.on('presence',{event:'sync'},()=>{tpState=tpCh.presenceState()||{};
+      clearTimeout(tpTimer);tpTimer=setTimeout(tpRender,120);});
+    tpCh.subscribe(st=>{if(st==='SUBSCRIBED'){tpReady=true;tpTrack();}});
+  }catch(e){tpCh=null;}
+}
+function tpTrack(){
+  if(!tpCh||!tpReady)return;
+  let pub=true;try{pub=(localStorage.getItem('ssm_visibility')||'all')==='all';}catch(e){}
+  const me=sbUser&&pub?{name:(myProfile&&myProfile.username)||(sbUser.user_metadata&&sbUser.user_metadata.username)||'',
+    avatar:(AVATARS&&AVATARS[sbUser.id])||null}:{name:'',avatar:null};
+  try{if(tourIso)tpCh.track({tour:String(tourIso.id),name:me.name,avatar:me.avatar,at:Date.now()});else tpCh.untrack();}catch(e){}
+}
+// people on a tour, without me
+function tpPeople(id){const me=tpKey(),out=[];
+  for(const k in tpState){if(k===me)continue;const p=(tpState[k]||[])[0];if(p&&p.tour===String(id))out.push(p);}
+  return out;}
+function tpRender(){
+  const el=document.getElementById('tourWatch');
+  if(el&&tourIso){const ps=tpPeople(tourIso.id),n=ps.length;
+    if(!n){el.innerHTML='';el.classList.remove('on');}
+    else{const av=ps.slice(0,5).map(p=>'<i'+(p.avatar?' style="background-image:url(&quot;'+escapeHtml(p.avatar)+'&quot;)"':'')+'>'
+        +(p.avatar?'':escapeHtml(((p.name||'G')[0]||'G').toUpperCase()))+'</i>').join('');
+      const named=ps.filter(p=>p.name).slice(0,2).map(p=>p.name);
+      const who=n>10?'10+ Leute schauen':n===1?(named[0]?escapeHtml(named[0])+' schaut':'1 Person schaut'):n+' Leute schauen';
+      el.innerHTML='<span class="tw-av">'+av+'</span><span><b>'+who+'</b> sich diese Tour gerade an</span>';
+      el.classList.add('on');}}
+  if(tsOpen())document.querySelectorAll('.tn-row[data-tid]').forEach(b=>{const n=tpPeople(b.dataset.tid).length,w=b.querySelector('.tn-w');
+    if(w){w.textContent=n?(n>10?'10+':n):'';w.classList.toggle('on',!!n);}});
+}
+// ── reports that belong to a tour ──────────────────────────────────────────
+// Tagged with it when reported, or lying on the route (within 400 m) and no
+// older than a week.
+function tourReports(t){
+  const g=tourGeo(t),wk=Date.now()-7*864e5,out=[];
+  (allReports||[]).forEach(r=>{if(_rptIsDraw&&_rptIsDraw(r)&&!(r.condition_data&&r.condition_data.tour))return;
+    const tg=r.condition_data&&r.condition_data.tour;
+    if(tg&&String(tg.id)===String(t.id)){out.push(r);return;}
+    const ts=r.createdAt?Date.parse(r.createdAt):0;if(ts&&ts<wk)return;
+    let near=false;for(let i=0;i<g.segs.length;i+=2){if(tourDistM(r.lng,r.lat,g.segs[i].lon,g.segs[i].lat)<=400){near=true;break;}}
+    if(near)out.push(r);});
+  return out.sort((x,y)=>String(y.createdAt||'').localeCompare(String(x.createdAt||'')));
+}
+function tourReportsHTML(t){
+  const rs=tourReports(t);
+  const head='<div class="tour-sec"><b>Aus der Community</b><button type="button" class="tour-rep" onclick="tourReportPowder()">'
+    +'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg>Powder melden</button></div>';
+  if(!rs.length)return head+'<div class="tour-norep">Noch keine Meldung zu dieser Tour – sei die erste Person.</div>';
+  return head+'<div class="tour-reps">'+rs.slice(0,4).map(r=>'<button type="button" class="tour-r" onclick="feedOpenAt(\''+r.id+'\')">'
+    +'<i'+(r.avatar?' style="background-image:url(&quot;'+escapeHtml(r.avatar)+'&quot;)"':'')+'>'+(r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase()))+'</i>'
+    +'<span><b>'+escapeHtml(r.user||'')+'</b><em>'+escapeHtml(r.time||'')+'</em></span>'
+    +'<span class="tr-v">'+escapeHtml(r.measurement||(r.stars?r.stars+'/5':'')||r.sub||'')+'</span></button>').join('')
+    +(rs.length>4?'<div class="tour-more">+ '+(rs.length-4)+' weitere</div>':'')+'</div>';
+}
+function tourReportPowder(){
+  if(!tourIso)return;
+  rptTourSel={id:String(tourIso.id),name:tourIso.name||'Skitour'};rptTourLock=true;
+  try{qrOpen();}catch(e){}
+}
+// ── choose a tour while reporting ──────────────────────────────────────────
+let rptTourSel=null,rptTourLock=false,rptTourQ='';
+function tourNearPoint(lat,lon,maxM,n){
+  const out=[];
+  tourList().forEach(t=>{if(!t.coords)return;let d=1e12;
+    for(let i=0;i<t.coords.length;i++){const c=t.coords[i],dd=tourDistM(lon,lat,c[0],c[1]);if(dd<d)d=dd;}
+    if(d<=maxM)out.push({t,d});});
+  return out.sort((a,b)=>a.d-b.d).slice(0,n||6);
+}
+function tourPickRender(hostId,lat,lon){
+  const el=document.getElementById(hostId);if(!el)return;
+  el._ll=[lat,lon];
+  let opts;
+  const q=rptTourQ.trim().toLowerCase();
+  if(q.length>=2){opts=tourList().filter(t=>(t.name||'').toLowerCase().includes(q)).slice(0,8).map(t=>({t,d:null}));}
+  else opts=(lat!=null?tourNearPoint(lat,lon,6000,6):[]);
+  if(!rptTourSel&&!rptTourLock&&opts.length&&opts[0].d!=null&&opts[0].d<=600&&q.length<2)rptTourSel={id:String(opts[0].t.id),name:opts[0].t.name||'Skitour',auto:true};
+  const sel=rptTourSel;
+  const chip=(id,name,sub,on)=>'<button type="button" class="tp-chip'+(on?' on':'')+'" onclick="tourPickSet(\''+hostId+'\','+(id?'\''+escapeHtml(String(id))+'\'':'null')+')">'
+    +(id?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-10 4 6 2-3 4 7z"/></svg>':'')
+    +'<span>'+escapeHtml(name)+'</span>'+(sub?'<em>'+escapeHtml(sub)+'</em>':'')+'</button>';
+  let chips=chip(null,'Keine Tour','',!sel);
+  if(sel&&!opts.some(o=>String(o.t.id)===sel.id))chips+=chip(sel.id,sel.name,'',true);
+  chips+=opts.map(o=>chip(o.t.id,o.t.name||'Skitour',o.d!=null?(o.d<1000?Math.round(o.d/50)*50+' m':(Math.round(o.d/100)/10)+' km'):'',sel&&String(o.t.id)===sel.id)).join('');
+  el.innerHTML='<div class="tp-hd"><b>Tour</b><span>'+(sel?(sel.auto?'automatisch erkannt':'gewählt'):'optional')+'</span></div>'
+    +'<div class="tp-chips">'+chips+'</div>'
+    +'<input class="tp-q" type="search" placeholder="Andere Tour suchen…" value="'+escapeHtml(rptTourQ)+'" oninput="rptTourQ=this.value;tourPickRender(\''+hostId+'\','+(lat==null?'null':lat)+','+(lon==null?'null':lon)+');this.focus();this.setSelectionRange(this.value.length,this.value.length)">';
+}
+function tourPickSet(hostId,id){
+  if(id==null)rptTourSel=null;
+  else{const t=tourList().find(x=>String(x.id)===String(id));rptTourSel=t?{id:String(t.id),name:t.name||'Skitour'}:null;}
+  rptTourLock=true;rptTourQ='';
+  const el=document.getElementById(hostId);if(el&&el._ll)tourPickRender(hostId,el._ll[0],el._ll[1]);
+  try{haptic(4);}catch(e){}
+}
+function tourPickReset(){if(!rptTourLock)rptTourSel=null;rptTourQ='';}
+function tourPickTake(){const s=rptTourSel?{id:rptTourSel.id,name:rptTourSel.name}:null;rptTourSel=null;rptTourLock=false;rptTourQ='';return s;}
+function tourOpenById(id){toursEnsure().then(()=>{const t=tourList().find(x=>String(x.id)===String(id));
+  if(!t){toast('Tour nicht gefunden','err');return;}try{feedClose();}catch(e){}
+  if(!ovOn.skitourVec){try{ovToggle('skitourVec',true);}catch(e){}}tourOpen(t);});}
+// a short place name for a report: its tour, else the summit of the nearest
+// tour within 3 km, else coordinates
+function rptPlace(r){
+  if(r._place!==undefined)return r._place;
+  const tg=r.condition_data&&r.condition_data.tour;
+  if(tg&&tg.name)return (r._place=tg.name);
+  if(r.peak)return (r._place=r.peak);
+  let best=null;try{const n=tourNearPoint(r.lat,r.lng,3000,1);if(n.length)best='bei '+(n[0].t.name||'Skitour');}catch(e){}
+  return (r._place=best||(r.lat.toFixed(2)+'°N, '+r.lng.toFixed(2)+'°E'));
+}
+
 // ── «Touren finden» ────────────────────────────────────────────────────────
 // A sheet over the lower part of the screen, the map above it showing only
 // the routes that pass the filters. Distance is measured to the route's
@@ -6488,6 +6677,7 @@ function tourVisible(t){
 }
 async function tsOpenUI(){
   if(!(await toursEnsure())){toast('Keine Tourendaten geladen','err');return;}
+  try{tpJoin();}catch(e){}
   if(!ovOn.skitourVec){try{ovToggle('skitourVec',true);}catch(e){}}
   tourFocus=tsF.focus;
   document.body.classList.add('ts-open');
@@ -6544,9 +6734,11 @@ function tsRender(onlyMap){
     +dual('Höhenmeter','gainMin','gainMax',0,2500,50,'Hm')
     +dual('Steilste Stelle','slopeMin','slopeMax',0,55,1,'°');
   const rows=list.slice(0,40).map((o,i)=>{const r=o.r,g=tourGeo(o.t);
-    return '<button type="button" class="tn-row" onclick="tsPick('+i+')"><span class="tn-sc" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r)+'%':'…')+'</span>'
+    const nw=tpPeople(o.t.id).length;
+    return '<button type="button" class="tn-row" data-tid="'+escapeHtml(String(o.t.id))+'" onclick="tsPick('+i+')"><span class="tn-sc" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r)+'%':'…')+'</span>'
       +'<span class="tn-t"><b>'+escapeHtml(o.t.name||'Skitour')+'</b><span>'+(Math.round(o.d/100)/10)+' km · '
-      +(g.gain!=null?g.gain+' Hm · ':'')+'bis '+g.maxSlope+'°'+(g.hi.el!=null?' · '+Math.round(g.hi.el)+' m':'')+'</span></span></button>';}).join('');
+      +(g.gain!=null?g.gain+' Hm · ':'')+'bis '+g.maxSlope+'°'+(g.hi.el!=null?' · '+Math.round(g.hi.el)+' m':'')+'</span></span>'
+      +'<span class="tn-w'+(nw?' on':'')+'" title="schauen gerade">'+(nw?(nw>10?'10+':nw):'')+'</span></button>';}).join('');
   if(onlyMap&&el.querySelector('.ts-list')){el.querySelector('.ts-count').textContent=list.length+' Touren';
     el.querySelector('.ts-list').innerHTML=rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>';
     el.querySelectorAll('.ts-lbl b').forEach((b,i)=>{const v=[tsF.radius+' km',tsF.gainMin+'–'+tsF.gainMax+' Hm',tsF.slopeMin+'–'+tsF.slopeMax+' °'][i];if(v)b.textContent=v;});
@@ -11341,6 +11533,8 @@ async function drawOpenFinish(){
     const auto=ta.value;ta.setAttribute('placeholder','Berg wird von der Karte erkannt …');
     ocrPeakFromMap().then(nm=>{try{ta.setAttribute('placeholder',op||'');if(nm&&(ta.value===auto||ta.value==='')){ta.value=nm+' — ';drawFinPeak=nm;}}catch(e){}}).catch(()=>{try{ta.setAttribute('placeholder',op||'');}catch(e){}});}
   const pb=document.getElementById('drawPhotoBtn');if(pb)pb.style.display='';
+  tourPickReset();
+  toursEnsure().then(()=>tourPickRender('drawTourPick',drawFinCen.lat,drawFinCen.lng)).catch(()=>{});
   document.getElementById('drawFinish').style.display='flex';
   try{haptic(6);}catch(e){}
   try{drawSnapData=await drawMapSnapshot();if(img&&drawSnapData)img.src=drawSnapData;}catch(e){}
@@ -11354,6 +11548,7 @@ async function drawPublish(){
   const names=drawFinNames||drawSummary(),cen=drawFinCen||{lat:46.8,lng:8.2};
   const zns=drawComputeZones();const zlabel=drawZoneLabel(zns)||names.join(', ');
   const cd={draw:true,bounds:drawFinBnds,types:names,measurement:zlabel,snapshot:drawSnapData||null,drawImage:drawPaintData||null,zones:zns,peak:drawFinPeak||null};
+  const tsel=tourPickTake();if(tsel)cd.tour=tsel;
   // Demo mode only swaps which WEATHER dataset is shown (1 April 2026 vs
   // live) -- it says nothing about whether the backend is reachable, so a
   // drawn report must still go through the real save path below whenever sb
@@ -11646,6 +11841,7 @@ const FEED_SCOPES=[
   {id:'following',label:'Folge ich',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>'},
   {id:'near',label:'Nähe',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>'},
   {id:'map',label:'Karte',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21 1 6"/><line x1="8" y1="3" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="21"/></svg>'},
+  {id:'tours',label:'Touren',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-10 4 6 2-3 4 7z"/></svg>'},
   {id:'saved',label:'Gemerkt',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>'}
 ];
 let savedPosts=new Set();try{savedPosts=new Set(JSON.parse(localStorage.getItem('ssm_saved')||'[]'));}catch(e){}
@@ -11677,6 +11873,7 @@ function feedRefresh(){
   try{localStorage.setItem('ssm_feed_seen',String(Date.now()));feedNotifRender(0);}catch(e){}
   document.getElementById('feedScope').innerHTML=FEED_SCOPES.map(s=>
     `<button data-s="${s.id}" class="${feedScope===s.id?'active':''}" onclick="feedSetScope('${s.id}')">${s.icon}${s.label}</button>`).join('');
+  feedChipsRender();
   document.getElementById('feedFilter').innerHTML=['all','avalanche','whumpf','wind_slab','other'].map(f=>{
     const lbl=f==='all'?'Alle':(catSvg(f,14)+' '+catLabel(f));
     return`<button class="${feedFilter===f?'active':''}" onclick="feedSetFilter('${f}')">${lbl}</button>`;}).join('');
@@ -11807,7 +12004,7 @@ let qrStars=0,qrPowder=null,qrLL=null,qrAmount=null,qrQuality=null,qrPhoto=null,
 function qrOpen(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
   if(!sb||!sbUser){authShow();return;}
   qrStars=0;qrPowder=null;qrLL=null;qrAmount=null;qrQuality=null;
-  qrPhoto=null;
+  qrPhoto=null;tourPickReset();
   document.getElementById('qrModal').style.display='flex';
   document.getElementById('qrStep0').style.display='';
   document.getElementById('qrStep1').style.display='none';
@@ -11825,10 +12022,12 @@ function qrOpen(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
     lc.textContent='Dein Standort'+(d.elev?(' · '+d.elev+' m'+(d.aspect?(' · '+d.aspect):'')):'');
   },fallback,{enableHighAccuracy:true,timeout:8000,maximumAge:60000});}else fallback();
   haptic(8);}
-function qrClose(){document.getElementById('qrModal').style.display='none';
+function qrClose(){document.getElementById('qrModal').style.display='none';rptTourLock=false;
   if(qrMapObj){try{qrMapObj.remove();}catch(e){}qrMapObj=null;}}
 function qrToStep(n){
   if(n===2&&(qrAmount===null||qrQuality===null))return;
+  if(n===2){const ll=qrLL||(()=>{try{const c=map.getCenter();return [c.lat,c.lng];}catch(e){return null;}})();
+    toursEnsure().then(()=>tourPickRender('qrTourPick',ll?ll[0]:null,ll?ll[1]:null)).catch(()=>{});}
   ['qrStep0','qrStep1','qrStep2'].forEach((id,ix)=>{const el=document.getElementById(id);
     el.style.display=ix===n?'':'none';if(ix===n){el.style.animation='none';void el.offsetWidth;el.style.animation='';}});
   haptic(6);}
@@ -11886,7 +12085,7 @@ async function qrSubmit(){if(!sb||!sbUser||qrAmount===null||qrQuality===null)ret
       primary_categories:['snow'],subtype:'Quick Powder Report',
       condition_data:{quick:true,powderAmountCm:qrAmount,powderQuality:qrQuality,
         stars:Math.max(1,Math.round(qrQuality/20)),powder:(qrAmount>=30&&qrQuality>=50),
-        measurement:qrQuadLabel()+' · '+qrAmount+' cm'},
+        measurement:qrQuadLabel()+' · '+qrAmount+' cm',tour:tourPickTake()||undefined},
       caption:null,completion_score:40,captured_at:new Date().toISOString()};
     const{error}=await sb.from('reports').insert(row);if(error)throw error;
     toast('Powder-Report gepostet — danke!','ok');haptic(12);qrClose();loadDbReports();
@@ -12000,8 +12199,14 @@ async function addComment(){
     loadComments(cmtReportId);feedRender();
   }catch(e){alert('Fehler: '+(e.message||e));inp.value=body;}
 }
+// The views as a row of chips right under the title -- one tap, always in
+// sight, instead of behind the filter button.
+function feedChipsRender(){const el=document.getElementById('feedChips');if(!el)return;
+  el.innerHTML=FEED_SCOPES.map(s=>`<button type="button" role="tab" data-s="${s.id}" aria-selected="${feedScope===s.id}" class="${feedScope===s.id?'on':''}" onclick="feedSetScope('${s.id}')">${s.icon}<span>${s.label}</span></button>`).join('');}
 function feedSetScope(s){feedScope=s;
   document.querySelectorAll('#feedScope button').forEach(b=>b.classList.toggle('active',b.dataset.s===s));
+  document.querySelectorAll('#feedChips button').forEach(b=>{const on=b.dataset.s===s;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);
+    if(on)try{b.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});}catch(e){}});
   document.getElementById('feedLoc').style.display=s==='near'?'flex':'none';
   // Nähe: immediately use the current device location
   if(s==='near'&&(!feedAnchor||feedAnchor.src!=='me')){const nb=document.getElementById('feedNear');if(nb)nb.click();}
@@ -12136,6 +12341,9 @@ function feedRender(){
   }else if(feedScope==='map'){
     const bnds=map.getBounds();base=base.filter(r=>bnds.contains([r.lat,r.lng]));
     if(!base.length){list.innerHTML='<div class="feed-empty">Keine Reports im aktuellen Kartenausschnitt. Zoome heraus oder verschiebe die Karte.</div>';return;}
+  }else if(feedScope==='tours'){
+    base=base.filter(r=>r.condition_data&&r.condition_data.tour);
+    if(!base.length){list.innerHTML='<div class="feed-empty">Noch keine Meldung mit einer Tour. Beim Melden kannst du die Tour auswählen – oder in einer Tour auf „Powder melden" tippen.</div>';return;}
   }else if(feedScope==='saved'){
     base=base.filter(r=>savedPosts.has(String(r.id)));
     if(!base.length){list.innerHTML='<div class="feed-empty">Noch nichts gespeichert. Tippe bei einem Report auf das Lesezeichen.</div>';return;}
@@ -12159,13 +12367,14 @@ function feedRender(){
         <div class="feed-card-avatar" style="${r.avatar?`background-image:url(${encodeURI(r.avatar)})`:''}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['\"<>]/g,'')}')"`:''}>${r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase())}</div>
         <div class="feed-card-info">
           <span class="feed-card-user"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['"<>]/g,'')}')"`:''}>${escapeHtml(r.user)}</span>
-          <span class="feed-card-loc">${escapeHtml(r.time||'')} · ${r.peak?escapeHtml(r.peak):(r.lat.toFixed(2)+'°N, '+r.lng.toFixed(2)+'°E')}${distTag?' · ':''}${distTag}</span>
+          <span class="feed-card-loc">${escapeHtml(r.time||'')} · ${escapeHtml(rptPlace(r))}${distTag?' · ':''}${distTag}</span>
         </div>
         ${followBtn}
         <span class="feed-badge head cat-${r.cat}">${catSvg(r.cat,12)} ${escapeHtml(r.sub||catLabel(r.cat)||r.cat)}</span>
       </div>
       ${feedVisual(r,col)}
       <div class="feed-card-body">
+        ${(r.condition_data&&r.condition_data.tour)?`<button type="button" class="fc-tour" onclick="event.stopPropagation();tourOpenById('${escapeHtml(String(r.condition_data.tour.id))}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-10 4 6 2-3 4 7z"/></svg>${escapeHtml(r.condition_data.tour.name||'Tour')}<i>›</i></button>`:''}
         ${r.img&&r.caption?`<div class="feed-card-caption">${escapeHtml(r.caption)}</div>`:''}
       </div>
       <div class="feed-card-read">
