@@ -1314,7 +1314,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* the winter map is pale by design; a little more contrast makes ridges,
     rock and forest read at a glance */
  .base-tiles{filter:grayscale(var(--base-gray,0)) contrast(calc(1.16 + .12*var(--base-gray,0))) saturate(1.12)}
- .relief-base{filter:grayscale(1) contrast(1.05) brightness(1.06)}
+ .relief-base{filter:grayscale(1) sepia(.32) hue-rotate(178deg) saturate(1.5) contrast(1.08) brightness(1.04)}
  :root[data-theme="dark"] .feed-card-visual,
  :root[data-theme="dark"] .fc-wrap{background:var(--fill2)}
  /* The frosted surfaces the original build floated over the map. Only the
@@ -1557,6 +1557,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .set-head button{width:32px;height:32px;border-radius:var(--r-1);border:1px solid var(--hair);
    background:var(--card);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer}
  .set-head button svg{width:16px;height:16px}
+ .set-in{overscroll-behavior:none;touch-action:pan-y;position:relative}
+ .set-in::before{content:"";display:block;width:38px;height:5px;border-radius:3px;background:var(--hair);margin:-8px auto 12px}
+ @media(min-width:561px){.set-in::before{display:none}}
+ .set-in.dragging{animation:none;transition:none}
+ .set-in.snap{transition:transform .22s cubic-bezier(.32,.72,.42,1)}
  .set-in .lbl-micro{display:block;margin:0 0 10px}
  .set-in .prof-seg+.lbl-micro,.set-rows+.lbl-micro{margin-top:22px}
  .set-rows{display:flex;flex-direction:column;gap:8px}
@@ -1724,6 +1729,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    white-space:nowrap;transition:transform .15s var(--ease)}
  .tl-corner:active{transform:scale(.93)}
  .tl-corner-r{right:6px}
+ .tl-corner-l{left:6px}
+ .tl-play{width:26px;height:26px!important;padding:0!important;justify-content:center;border-radius:50%!important;
+   background:var(--ink-900)!important;color:var(--paper)!important;top:2px!important}
+ .tl-play svg{width:14px;height:14px;fill:currentColor}
+ .tl-play .pa{display:none}.tl-play.on .pa{display:inline}.tl-play.on .pl{display:none}
+ .tl-play[hidden],#tlTomorrowBtn[hidden]{display:none!important}
  /* Collapsed keeps the scrubber -- it is the thing the console is for -- and
     drops everything that only describes it. */
 
@@ -3347,6 +3358,35 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #lyOverlays .ly-b span{min-width:0;white-space:normal;line-height:1.2;overflow-wrap:anywhere;font-size:12.5px}
  #lyOverlays .ly-b.on{outline:none}
  body.feed-side #brandMark{opacity:0;pointer-events:none}
+ /* layer panel 2026: two shelves of compact tiles, overlays as switches */
+ .ly-top{display:flex;flex-direction:column;gap:2px;margin:0 2px 16px}
+ .ly-top b{font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--fg)}
+ .ly-top span{font-size:12.5px;color:var(--fg2)}
+ .ly-sec{margin-bottom:18px}
+ .ly-sec .lbl-micro{margin:0 2px 8px!important}
+ .ly-grid.ly-g3{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+ .ly-g3 .ly-tile{align-items:center;justify-content:center;text-align:center;gap:6px;padding:12px 4px 10px;min-height:76px;
+   border-radius:16px;border:1px solid var(--hair);font-size:11.5px;line-height:1.15}
+ .ly-g3 .ly-tile span{overflow-wrap:anywhere}
+ .ly-g3 .ly-tile svg{width:24px;height:24px}
+ .ly-g3 .ly-tile.on{border-bottom-left-radius:16px;border-bottom-right-radius:16px}
+ .ly-g3 .ly-subs{border:none;border-radius:14px;margin-top:0;background:var(--fill);padding:8px}
+ .ly-g3 .ly-subs::before{top:-6px;width:12px;height:12px;border-radius:2px;transform:translateX(-50%) rotate(45deg);background:var(--fill)}
+ .ly-g3 .ly-sub{min-height:32px;border-radius:10px;border:none;box-shadow:0 1px 2px rgba(15,23,42,.06)}
+ .ly-ovs{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--hair);border-radius:16px;overflow:hidden}
+ .ly-ov{display:flex;align-items:center;gap:12px;width:100%;padding:10px 14px;border:0;background:none;font:600 13.5px Inter,system-ui;letter-spacing:0;color:var(--fg);cursor:pointer;text-align:left}
+ .ly-ov+.ly-ov{border-top:1px solid var(--hair)}
+ .ly-ov-ic{width:32px;height:32px;border-radius:10px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--fg2);flex:none;transition:.15s}
+ .ly-ov-ic svg{width:18px;height:18px}
+ .ly-ov.on .ly-ov-ic{background:var(--accent);color:#fff}
+ .ly-ov-t{flex:1;min-width:0}
+ .ly-sw{width:42px;height:26px;border-radius:13px;background:var(--fill2);position:relative;flex:none;transition:background .2s}
+ .ly-sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s cubic-bezier(.34,1.4,.64,1)}
+ .ly-ov.on .ly-sw{background:var(--accent)}
+ .ly-ov.on .ly-sw::after{transform:translateX(16px)}
+ .ly-ov.na{opacity:.4;pointer-events:none}
+ .ly-ov:active{background:var(--fill)}
+ .ly-info{margin-top:4px}
 
  /* ── tours: one route on its own, and the search sheet ── */
  .tour-sheet{max-height:62vh;padding:14px 16px 12px}
@@ -3397,6 +3437,22 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ts-res{display:flex;justify-content:space-between;font-size:11.5px;color:var(--fg2);margin:4px 2px 8px}
  .ts-count{font-weight:800;color:var(--fg)}
  .tn-sc{min-width:48px}
+ /* tour finder 2026: chip filters */
+ .ts-filters{display:flex;flex-direction:column;gap:10px;background:var(--fill);border-radius:18px;padding:12px 12px 12px;margin:0 0 10px}
+ .ts-grp{display:flex;flex-direction:column;gap:7px}
+ .ts-gl{display:flex;align-items:center;gap:6px;font:700 11px Inter,system-ui;letter-spacing:.06em;text-transform:uppercase;color:var(--fg2)}
+ .ts-gl svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+ .ts-chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+ .ts-chips:has(.ts-me){grid-template-columns:repeat(4,1fr) 40px}
+ .ts-chip{height:36px;border-radius:12px;border:1px solid transparent;background:var(--card);color:var(--fg);font:700 12.5px Inter,system-ui;
+   font-variant-numeric:tabular-nums;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.06);transition:background .15s,color .15s,transform .12s;white-space:nowrap;padding:0 4px}
+ .ts-chip:active{transform:scale(.95)}
+ .ts-chip.on{background:var(--accent);color:#fff;box-shadow:0 4px 12px color-mix(in srgb,var(--accent) 35%,transparent)}
+ .ts-chip.ts-me{display:flex;align-items:center;justify-content:center;color:var(--accent)}
+ .ts-chip.ts-me svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+ .ts-reset{border:0;background:none;padding:0;font:700 11.5px Inter,system-ui;color:var(--accent);cursor:pointer}
+ .ts-seg{border-radius:16px}
+ .ts-seg button{padding:10px 0}
 
  /* ── community: modern feed ── */
  .feed-chips{display:flex;gap:8px;overflow-x:auto;padding:4px 20px 12px;background:var(--paper);scrollbar-width:none;position:sticky;top:0;z-index:2}
@@ -3677,6 +3733,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   </div>
   <div id="btmMain">
     <div id="tlDetail">
+      <button class="tl-corner tl-corner-l tl-play" id="tlPlayBtn" hidden onclick="tlPlayToggle()" aria-label="Animation abspielen"><svg viewBox="0 0 24 24"><path class="pl" d="M8 5.5v13l11-6.5z"/><path class="pa" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>
       <button class="tl-corner tl-corner-r" id="tlTomorrowBtn" onclick="tlGotoTomorrow()" title="Fenster bis morgen Abend">Bis morgen</button>
       <canvas id="timeline" width="900" height="81" style="width:100%;height:81px;border-radius:10px;cursor:default;margin-top:0"></canvas>
       <div id="tlExtended">
@@ -3723,10 +3780,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="tourSearch" class="ts-sheet" role="dialog" aria-label="Touren finden"></div>
 <div id="lyPanel" class="ly-panel" role="dialog" aria-modal="true" aria-label="Ebenen">
   <div class="ly-scroll">
-    <span class="lbl-micro">Ebene</span>
-    <div class="ly-grid" id="lyGrid"></div>
-    <span class="lbl-micro">Overlays</span>
-    <div class="ly-grid" id="lyOverlays"></div>
+    <div class="ly-top"><b>Ebenen</b><span>Eine Karte, beliebig viele Overlays</span></div>
+    <div id="lyGrid"></div>
+    <div class="ly-sec"><span class="lbl-micro">Auf der Karte</span>
+    <div class="ly-ovs" id="lyOverlays"></div></div>
     <div class="ly-info" id="lyInfo"></div>
     <div class="ly-legend" id="lyLegend"></div>
     <div class="ly-op">
@@ -4160,10 +4217,14 @@ const _cloudData=!!M.cloud_mul&&CLOUD.length>=T*NP;
 const _hasCloud=_cloudData||SUN.length>=T*NP;
 function _sunUp(t){const d=new Date(M.times[t]+'Z'),h=d.getUTCHours()+1;return h>=8&&h<=16;}
 const cloudv=(t,p)=>_cloudData?CLOUD[t*NP+p]/M.cloud_mul:(_sunUp(t)?100*(1-Math.min(1,sunv(t,p))):NaN);
-// 0..1 -> rgba: thin cloud a pale veil, overcast a slate grey, so it reads
-// on the white winter map and does not look like snow.
+// 0..1 -> rgba, in clear MeteoSwiss-style blues: a few clouds a pale wash,
+// overcast a deep, opaque blue -- grey would vanish into the relief and white
+// into the snow.
+const CLOUD_STOPS=[[0,[205,226,246,70]],[.35,[140,190,236,150]],[.7,[62,128,206,195]],[1,[22,70,160,225]]];
 function cloudCol(x){x=Math.max(0,Math.min(1,x));
-  return [Math.round(203-120*x),Math.round(213-115*x),Math.round(225-100*x),Math.round(40+170*x)];}
+  for(let i=1;i<CLOUD_STOPS.length;i++){const[p1,c1]=CLOUD_STOPS[i],[p0,c0]=CLOUD_STOPS[i-1];
+    if(x<=p1){const f=(x-p0)/(p1-p0);return c0.map((v,j)=>Math.round(v+(c1[j]-v)*f));}}
+  return CLOUD_STOPS[CLOUD_STOPS.length-1][1].slice();}
 const SB=M.slf_bounds,SC=M.slf_colors,RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
 function snowCol(v){if(v<SB[0])return null;for(let i=SB.length-1;i>=1;i--)if(v>=SB[i-1])return RGB[Math.min(i-1,RGB.length-1)];return RGB[0];}
 // The stepped legend above is right for the model layers (an official
@@ -4484,11 +4545,13 @@ function tlSingleMode(){
   // SNOWPACK is a state at an instant, not an accumulation, so while its
   // layer is up the main slider has to stop offering a from-to window: two
   // handles would claim the layer integrates between them, and it does not.
-  if(layer==='snowpack')return true;
+  if(layer==='snowpack'||layer==='cloud')return true;
   if(ovOn.variantA&&typeof vaAvailable==='function'&&vaAvailable())return true;
   return layer==='powder';
 }
 function drawTimeline(){const tc=document.getElementById('timeline');const rect=tc.getBoundingClientRect();
+  {const pb=document.getElementById('tlPlayBtn');if(pb){const sm=tlSingleMode();if(pb.hidden===sm)pb.hidden=!sm;if(!sm&&_tlPlay)tlPlayStop();
+    const tb=document.getElementById('tlTomorrowBtn');if(tb&&tb.hidden!==sm)tb.hidden=sm;}}
   if(!tv1)tvInit();
   if(!rect.width)return;
   const cw=rect.width,ch=rect.height||120,dpr=window.devicePixelRatio||1;
@@ -4852,7 +4915,7 @@ function ovSyncUI(){
     const b=document.getElementById('ov_'+k);if(!b)return;
     b.classList.toggle('on',!!ovOn[k]);
     b.classList.toggle('na',!ovAvailable(k));
-    b.setAttribute('aria-pressed',ovOn[k]?'true':'false');
+    b.setAttribute(b.getAttribute('role')==='switch'?'aria-checked':'aria-pressed',ovOn[k]?'true':'false');
   });
 }
 
@@ -6555,10 +6618,17 @@ function tourRecolor(){
   },w0());
   function w0(){return tourVa.key?350:0;}
 }
+// Zoomed out, 1500 routes are a pile of short blue sausages over each
+// other: the network only appears once the map is close enough to tell
+// one valley from the next. A search result set is small, so it may show
+// from further out.
+const TOUR_MIN_Z=11.5,TOUR_MIN_Z_SEARCH=9;
+function tourZoomOk(){const z=map.getZoom();return z>=(tsOpen()||(tourFromSearch&&tourIso)?TOUR_MIN_Z_SEARCH:TOUR_MIN_Z);}
 function tourPaintScores(){
+  const zok=tourZoomOk();
   tourList().forEach(t=>{if(!t._line)return;
     const r=tourVa.eng?tourVa.scores.get(t.id):t._old;
-    const vis=tourVisible(t),iso=tourIso&&tourIso!==t;
+    const vis=zok&&tourVisible(t),iso=tourIso&&tourIso!==t;
     const col=tourColor(r),v=r?tourVal(r):0;
     t._line.setStyle({color:col,opacity:!vis?0:(iso?.12:1)});
     if(t._casing)t._casing.setStyle({opacity:!vis||iso?0:.95});
@@ -6567,7 +6637,7 @@ function tourPaintScores(){
 let tourLayerGroup=null,tourRenderer=null;
 // Thousands of routes as SVG would be thousands of DOM paths; one canvas
 // draws them all, and its tolerance gives the thumb a wide hit area.
-function tourW(){const z=map.getZoom();return z<9?1.5:z<11?2.5:3.6;}
+function tourW(){const z=map.getZoom();return z<11?2.4:z<13?3.4:4.2;}
 function tourBuildLayer(){
   const ts=tourList();
   if(!ts.length)return null;
@@ -6583,7 +6653,7 @@ function tourBuildLayer(){
     const glow=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+6,opacity:0,interactive:false,lineCap:'round',lineJoin:'round'});
     const casing=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+3,opacity:.9,interactive:false,lineCap:'round',lineJoin:'round'});
     const line=L.polyline(latlngs,{renderer:tourRenderer,color:'rgb('+TOUR_GREY.join(',')+')',weight:w,opacity:.95,interactive:true,lineCap:'round',lineJoin:'round'});
-    line.on('click',e=>{if(!tourVisible(t)||(tourIso&&tourIso!==t))return;
+    line.on('click',e=>{if(!tourZoomOk()||!tourVisible(t)||(tourIso&&tourIso!==t))return;
       try{if(e&&e.originalEvent)L.DomEvent.stopPropagation(e);}catch(_){}try{haptic(4);}catch(e2){}tourOpen(t,tsOpen());});
     tourLayerGroup.addLayer(glow);tourLayerGroup.addLayer(casing);tourLayerGroup.addLayer(line);
     t._glow=glow;t._casing=casing;t._line=line;
@@ -6591,7 +6661,11 @@ function tourBuildLayer(){
   setTimeout(tourPaintScores,0);
   return tourLayerGroup;
 }
-map.on('zoomend',()=>{if(!ovOn.skitourVec)return;const w=tourW();
+let _tourZok=null;
+map.on('zoomend',()=>{if(!ovOn.skitourVec)return;const zok=tourZoomOk();
+  if(zok!==_tourZok){_tourZok=zok;tourPaintScores();}
+  if(!zok&&!tourIso)toastOnce('tourzoom','Näher heranzoomen, um die Skitouren zu sehen');
+  const w=tourW();
   tourList().forEach(t=>{if(t._line&&t._line.options.weight!==w){t._line.setStyle({weight:w});if(t._casing)t._casing.setStyle({weight:w+3});if(t._glow)t._glow.setStyle({weight:w+6});}});});
 // ── one route on its own ───────────────────────────────────────────────────
 let tourIso=null,tourIsoLayer=null,tourFromSearch=false;
@@ -6905,7 +6979,14 @@ function vt(fn){
 // A sheet over the lower part of the screen, the map above it showing only
 // the routes that pass the filters. Distance is measured to the route's
 // lowest point -- where the tour starts.
-const tsF={focus:'powder',radius:25,gainMin:0,gainMax:2500,slopeMin:0,slopeMax:55};
+const tsF={focus:'powder',radius:25,gain:new Set(),slope:new Set()};
+// Buckets instead of two-thumb sliders: a thumb is fiddly on a phone and
+// nobody plans a tour to the degree. An empty set means "any".
+const TS_SLOPE=[['lt30','< 30°',0,30],['30','30–35°',30,35],['35','35–40°',35,40],['40','40°+',40,99]];
+const TS_GAIN=[['lt800','< 800',0,800],['800','800–1200',800,1200],['1200','1200–1600',1200,1600],['1600','1600+',1600,1e5]];
+const TS_RAD=[10,25,50,100];
+function tsIn(set,B,v){if(!set.size)return true;if(v==null)return true;
+  return B.some(b=>set.has(b[0])&&v>=b[2]&&v<b[3]);}
 let tsCircle=null;
 function tsOpen(){return document.body.classList.contains('ts-open');}
 function tsCenter(){if(myLoc)return {lat:myLoc[0],lon:myLoc[1],me:true};const c=map.getCenter();return {lat:c.lat,lon:c.lng,me:false};}
@@ -6925,13 +7006,13 @@ async function tsOpenUI(){
 }
 function tsCloseQuiet(){document.body.classList.remove('ts-open');if(tsCircle){map.removeLayer(tsCircle);tsCircle=null;}}
 function tsClose(){tsCloseQuiet();tourList().forEach(t=>{t._ts=null;});tourPaintScores();}
-function tsSet(k,v){tsF[k]=v;
-  if(k==='gainMin'&&tsF.gainMin>tsF.gainMax)tsF.gainMax=tsF.gainMin;
-  if(k==='gainMax'&&tsF.gainMax<tsF.gainMin)tsF.gainMin=tsF.gainMax;
-  if(k==='slopeMin'&&tsF.slopeMin>tsF.slopeMax)tsF.slopeMax=tsF.slopeMin;
-  if(k==='slopeMax'&&tsF.slopeMax<tsF.slopeMin)tsF.slopeMin=tsF.slopeMax;
+function tsSet(k,v){
+  if(k==='gain'||k==='slope'){const S=tsF[k];S.has(v)?S.delete(v):S.add(v);}
+  else if(k==='reset'){tsF.gain.clear();tsF.slope.clear();tsF.radius=25;}
+  else tsF[k]=v;
   if(k==='focus'){tourFocus=v;}
-  clearTimeout(tsSet._t);tsSet._t=setTimeout(()=>tsRender(k!=='focus'),80);}
+  try{haptic(3);}catch(e){}
+  clearTimeout(tsSet._t);tsSet._t=setTimeout(()=>tsRender(),40);}
 function tsLocate(){
   if(!navigator.geolocation){toast('Standort nicht verfügbar','err');return;}
   navigator.geolocation.getCurrentPosition(p=>{myLoc=[p.coords.latitude,p.coords.longitude];
@@ -6945,8 +7026,7 @@ function tsFilter(){
     const d=tourDistM(c.lon,c.lat,lo.lon,lo.lat);
     if(d>R){t._ts={ok:false};return;}
     const g=tourGeo(t);
-    const ok=(g.gain==null||(g.gain>=tsF.gainMin&&g.gain<=tsF.gainMax))
-      &&g.maxSlope>=tsF.slopeMin&&g.maxSlope<=tsF.slopeMax;
+    const ok=tsIn(tsF.gain,TS_GAIN,g.gain)&&tsIn(tsF.slope,TS_SLOPE,g.maxSlope);
     t._ts={ok,d};if(ok)out.push({t,d});});
   return {c,list:out};
 }
@@ -6960,36 +7040,35 @@ function tsRender(onlyMap){
   tourPaintScores();
   window._tsList=list;
   const va=!!tourVa.eng;
-  const dual=(lbl,kMin,kMax,min,max,step,unit)=>'<div class="ts-row"><div class="ts-lbl"><span>'+lbl+'</span><b>'+tsF[kMin]+'–'+tsF[kMax]+' '+unit+'</b></div>'
-    +'<div class="ts-dual"><i style="left:'+((tsF[kMin]-min)/(max-min)*100)+'%;right:'+(100-(tsF[kMax]-min)/(max-min)*100)+'%"></i>'
-    +'<input type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+tsF[kMin]+'" oninput="tsSet(\''+kMin+'\',+this.value)" aria-label="'+lbl+' min">'
-    +'<input type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+tsF[kMax]+'" oninput="tsSet(\''+kMax+'\',+this.value)" aria-label="'+lbl+' max"></div></div>';
-  const ctrls='<div class="ts-seg"><button type="button" class="'+(tsF.focus==='powder'?'on':'')+'" onclick="tsSet(\'focus\',\'powder\')">Powder-Fokus</button>'
-    +'<button type="button" class="'+(tsF.focus==='sulz'?'on':'')+'" onclick="tsSet(\'focus\',\'sulz\')">Sulz-Fokus</button></div>'
-    +'<div class="ts-row"><div class="ts-lbl"><span>Umkreis '+(c.me?'um meinen Standort':'um die Kartenmitte')+'</span><b>'+tsF.radius+' km</b></div>'
-    +'<input class="ts-range" type="range" min="5" max="100" step="5" value="'+tsF.radius+'" oninput="tsSet(\'radius\',+this.value)" aria-label="Umkreis">'
-    +(c.me?'':'<button type="button" class="ts-loc" onclick="tsLocate()">Meinen Standort verwenden</button>')+'</div>'
-    +dual('Höhenmeter','gainMin','gainMax',0,2500,50,'Hm')
-    +dual('Steilste Stelle','slopeMin','slopeMax',0,55,1,'°');
+  const chips=(k,B)=>B.map(b=>'<button type="button" class="ts-chip'+(tsF[k].has(b[0])?' on':'')+'" aria-pressed="'+tsF[k].has(b[0])+'" onclick="tsSet(\''+k+'\',\''+b[0]+'\')">'+b[1]+'</button>').join('');
+  const grp=(ic,lbl,body)=>'<div class="ts-grp"><div class="ts-gl">'+ic+'<span>'+lbl+'</span></div><div class="ts-chips">'+body+'</div></div>';
+  const IC_R='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg>',
+        IC_G='<svg viewBox="0 0 24 24"><path d="M3 19l6-9 4 5 3-4 5 8z"/></svg>',
+        IC_S='<svg viewBox="0 0 24 24"><path d="M4 19h16L4 7z"/></svg>';
+  const nf=tsF.gain.size+tsF.slope.size+(tsF.radius!==25?1:0);
+  const ctrls='<div class="ts-seg"><button type="button" class="'+(tsF.focus==='powder'?'on':'')+'" onclick="tsSet(\'focus\',\'powder\')">❄︎ Pulver</button>'
+    +'<button type="button" class="'+(tsF.focus==='sulz'?'on':'')+'" onclick="tsSet(\'focus\',\'sulz\')">☀︎ Sulz</button></div>'
+    +'<div class="ts-filters">'
+    +grp(IC_R,'Umkreis '+(c.me?'ab Standort':'ab Kartenmitte'),TS_RAD.map(r=>'<button type="button" class="ts-chip'+(tsF.radius===r?' on':'')+'" onclick="tsSet(\'radius\','+r+')">'+r+' km</button>').join('')
+      +(c.me?'':'<button type="button" class="ts-chip ts-me" onclick="tsLocate()" aria-label="Meinen Standort verwenden"><svg viewBox="0 0 24 24"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="6"/></svg></button>'))
+    +grp(IC_G,'Höhenmeter',chips('gain',TS_GAIN))
+    +grp(IC_S,'Steilste Stelle',chips('slope',TS_SLOPE))
+    +'</div>';
   const rows=list.slice(0,40).map((o,i)=>{const r=o.r,g=tourGeo(o.t);
     const nw=tpPeople(o.t.id).length;
     return '<button type="button" class="tn-row" data-tid="'+escapeHtml(String(o.t.id))+'" onclick="tsPick('+i+')"><span class="tn-sc" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r)+'%':'…')+'</span>'
       +'<span class="tn-t"><b>'+escapeHtml(o.t.name||'Skitour')+'</b><span>'+(Math.round(o.d/100)/10)+' km · '
       +(g.gain!=null?g.gain+' Hm · ':'')+'bis '+g.maxSlope+'°'+(g.hi.el!=null?' · '+Math.round(g.hi.el)+' m':'')+'</span></span>'
       +'<span class="tn-w'+(nw?' on':'')+'" title="schauen gerade">'+(nw?(nw>10?'10+':nw):'')+'</span></button>';}).join('');
-  if(onlyMap&&el.querySelector('.ts-list')){el.querySelector('.ts-count').textContent=list.length+' Touren';
-    el.querySelector('.ts-list').innerHTML=rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>';
-    el.querySelectorAll('.ts-lbl b').forEach((b,i)=>{const v=[tsF.radius+' km',tsF.gainMin+'–'+tsF.gainMax+' Hm',tsF.slopeMin+'–'+tsF.slopeMax+' °'][i];if(v)b.textContent=v;});
-    const bars=el.querySelectorAll('.ts-dual i');
-    if(bars[0]){bars[0].style.left=(tsF.gainMin/2500*100)+'%';bars[0].style.right=(100-tsF.gainMax/2500*100)+'%';}
-    if(bars[1]){bars[1].style.left=(tsF.slopeMin/55*100)+'%';bars[1].style.right=(100-tsF.slopeMax/55*100)+'%';}
-    return;}
+  const keepS=el.scrollTop;
   el.innerHTML='<div class="ts-grab"></div><div class="tn-hd"><div><b>Touren finden</b><span>'
     +(va?'SNOWPACK · '+escapeHtml(tourVa.when):'Powder-Modell im Zeitfenster')+'</span></div>'
     +'<button type="button" class="tour-x" onclick="tsClose()" aria-label="Schliessen">×</button></div>'
-    +ctrls+'<div class="ts-res"><span class="ts-count">'+list.length+' Touren</span><span>sortiert nach '+(tsF.focus==='sulz'?'Sulz':'Pulver')+'-Anteil</span></div>'
+    +ctrls+'<div class="ts-res"><span class="ts-count">'+list.length+' Touren</span><span>nach '+(tsF.focus==='sulz'?'Sulz':'Pulver')+'-Anteil'
+    +(nf?' · <button type="button" class="ts-reset" onclick="tsSet(\'reset\')">Filter zurücksetzen</button>':'')+'</span></div>'
     +'<div class="ts-list tn-list">'+(rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>')+'</div>'
     +'<div class="tn-foot">Anteil der Abfahrt (22–50°) mit Pulver bzw. Sulz im SNOWPACK-Modell – keine Lawinenbeurteilung, Bulletin des SLF beachten.</div>';
+  el.scrollTop=keepS;
 }
 function tsPick(i){const o=(window._tsList||[])[i];if(!o)return;tourOpen(o.t,true);}
 addEventListener('keydown',e=>{if(e.key!=='Escape')return;
@@ -7947,8 +8026,12 @@ function renderRaster(){
       if(stat=="lt10"){if(mx>=10)return null;return[40,190,90,215];}
       const val=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(val<0.5)return null;
       const c2=rampBYR(val/70);return[c2[0],c2[1],c2[2],200];});}
-  else if(layer=="cloud"&&_hasCloud){setRaster(p=>{let su=0,c=0;for(let t=a;t<b;t++){const v0=cloudv(t,p);if(v0===v0){su+=v0;c++;}}
-      if(!c)return null;const v=su/c;if(v<12)return null;return cloudCol((v-12)/88);});}
+  // clouds are a state, like a satellite picture: one hour, not a window
+  else if(layer=="cloud"&&_hasCloud){const t1=Math.max(0,Math.min(T-1,b-1));
+    setRaster(p=>{let v=cloudv(t1,p);
+      // the sunshine fallback has no value at night: borrow the nearest daylight hour
+      if(v!==v){for(let d=1;d<12&&v!==v;d++){const x=cloudv(Math.max(0,t1-d),p);if(x===x)v=x;else{const y=cloudv(Math.min(T-1,t1+d),p);if(y===y)v=y;}}}
+      if(v!==v||v<10)return null;return cloudCol((v-10)/90);});}
   else if(layer=="sun"){const vmax=48;setRaster(p=>{let s=0;for(let t=a;t<b;t++)s+=sunv(t,p);if(s<0.3)return null;const c=sunCol(s,vmax);return[c[0],c[1],c[2],205];});}
   else if(layer=="tsurf"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=tsurfEst(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[20,80,180,215];}
@@ -8047,7 +8130,7 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
   if(l=="depth"){let h="<b>Schneehöhe [cm] (SLF-Skala)</b><br>";for(let i=0;i<DEPTH_BOUNDS.length-1;i++)h+=`<div><i style="background:${SC[Math.min(i,SC.length-1)]}"></i>${DEPTH_BOUNDS[i]}${i===DEPTH_BOUNDS.length-2?'+':'–'+DEPTH_BOUNDS[i+1]}</div>`;return h;}
   if(l=="temp"){let extra="blue=cold · red=warm";if(stat=="sub0")extra="only cells staying below 0°C for entire window";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>Temp 2 m [°C] (${sn})</b><br>${extra}`;}
   if(l=="wind"){if(stat=="lt10")return "<b>Wind 10 m ("+sn+")</b><br>green = max wind stays below 10 km/h";return '<b>Wind 10 m (km/h, '+sn+')</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(30,120,255),rgb(30,240,135),rgb(255,240,0),rgb(255,40,0));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:11px"><span>0</span><span>25</span><span>50</span><span>70+</span></div><div style="margin-top:4px;font-size:12px">Arrows show flow direction</div>';}
-  if(l=="cloud")return "<b>Bewölkung [%]</b><br>gemittelt über das Zeitfenster";
+  if(l=="cloud")return "<b>Bewölkung [%]</b><br>zur gewählten Stunde · hellblau = wenig, tiefblau = bedeckt";
   if(l=="sun")return "<b>Σ Sunshine Hours</b><br>Scale 0–48 h+ · light→orange = more sun";
   if(l=="rad")return "<b>Clear-sky Radiation [Wh/m²/d]</b><br>Day: "+dayLabel(bandDoy())+" (= window start)<br>dark=shade/low · yellow=high<br>incl. slope, aspect & terrain shadow";
   if(l=="radsun")return "<b>Effective Radiation [Wh/m²/d]</b><br>Clear-sky × cloud attenuation (20% diffuse + 80% × sunshine)<br>Day: "+dayLabel(bandDoy());
@@ -8158,7 +8241,7 @@ function legSpec(l){
     const g=[-20,-10,0,10,20].map(v=>rgb(tempCol(v)));
     return {t:nm,u:'°C',grad:'linear-gradient(0deg,'+g.join(',')+')',ticks:[20,10,0,-10,-20]};}
   if(l==='cloud'){const g=[0,.25,.5,.75,1].map(x=>{const c=cloudCol(x);return 'rgba('+c[0]+','+c[1]+','+c[2]+','+(c[3]/255).toFixed(2)+')';});
-    return {t:'Bewölkung',u:'%',grad:'linear-gradient(0deg,'+g.join(',')+')',ticks:[100,50,0],long:'Gesamtbewölkung, gemittelt über das Zeitfenster'};}
+    return {t:'Bewölkung',u:'%',grad:'linear-gradient(0deg,'+g.join(',')+')',ticks:[100,50,10],long:'Gesamtbewölkung zur gewählten Stunde (wie ein Satellitenbild)'};}
   if(l==='powfind')return {t:'Gemeldetes Powder',u:'cm',rows:[100,60,30,10].map(cm=>{const c=snowCol(cm)||[150,150,150];return {c:rgb(c),s:String(cm),n:cm+' cm'};})};
   return null;
 }
@@ -8277,6 +8360,24 @@ document.querySelectorAll('#tlModeToggle button').forEach(x=>x.onclick=()=>setTl
 // Sits on the timeline itself rather than in the step row: open the window
 // through the end of tomorrow, one of the two questions someone checking
 // snow conditions asks most, so it should not cost a drag.
+// Play, like a radar loop: the single time handle walks forward an hour
+// (or a SNOWPACK frame) at a time, and wraps back to now at the end.
+let _tlPlay=0;
+function tlPlayStop(){if(_tlPlay){clearInterval(_tlPlay);_tlPlay=0;}
+  const pb=document.getElementById('tlPlayBtn');if(pb)pb.classList.remove('on');}
+function tlPlayToggle(){
+  if(_tlPlay){tlPlayStop();return;}
+  const pb=document.getElementById('tlPlayBtn');if(pb)pb.classList.add('on');
+  try{haptic(3);}catch(e){}
+  const step=()=>{if(!tlSingleMode()){tlPlayStop();return;}
+    let t=b-1,n=t+1;
+    if(layer==='snowpack'&&typeof vaSnapT==='function'){let k=t+1;while(k<T&&vaSnapT(k)<=t)k++;n=k<T?vaSnapT(k):T;}
+    if(n>=T||n<=t)n=nowIdx;
+    b=Math.max(1,Math.min(T,n+1));a=Math.max(0,b-windowSize);
+    if(typeof vaFollowTimeline==='function')try{vaFollowTimeline();}catch(e){}
+    tvFollow();renderAll();};
+  step();_tlPlay=setInterval(step,layer==='snowpack'?1100:650);
+}
 function tlGotoTomorrow(){
   const now=new Date(M.times[nowIdx]+'Z');
   const dayStart=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate());
@@ -8446,7 +8547,7 @@ const LY_TEXT={
     d:'Windgeschwindigkeit im gewählten Fenster. Wind verfrachtet Schnee: viel Wind heisst gepresste Hänge auf der einen und Triebschnee auf der anderen Seite.',
     u:'km/h'},
   cloud:{t:'Bewölkung',
-    d:'Gesamtbewölkung aus dem Wettermodell, gemittelt über das gewählte Zeitfenster. Hell = dünne Wolken, dunkelgrau = bedeckt. Wichtig für Sicht, Sonneneinstrahlung und ob die Oberfläche in der Nacht abkühlt.',
+    d:'Gesamtbewölkung aus dem Wettermodell zur gewählten Stunde – wie ein Satellitenbild, kein Mittel. Hellblau = wenige Wolken, tiefblau = bedeckt. Wichtig für Sicht, Sonneneinstrahlung und ob die Oberfläche in der Nacht abkühlt.',
     u:'%'},
   snowpack:{t:'Skiqualität aus SNOWPACK',
     d:'Simulierte Schneedecke (SNOWPACK, SLF) an 135 Wetterpunkten in jeder Höhe, Exposition und Neigung, auf das Gelände übertragen. Hell- bis dunkelblau = Pulver nach Tiefe, grau = hart, korall = Kruste, honiggelb = nass / Sulz. Ein Modell, keine Messung – kein Lawinenbulletin.',
@@ -8486,24 +8587,34 @@ function lyInfoRender(){
     ((vars.length>1&&v)?('<div class="li-sub"><h4>'+escapeHtml(v.label)+'</h4><p>'+
       escapeHtml(vt||'Variante dieser Ebene.')+'</p></div>'):'');
 }
-const LY_COLS=2;
+const LY_COLS=3;
+// The picker in two short shelves -- what the snow does, what the weather
+// does -- instead of one long run of equal tiles.
+const LY_SECTIONS=[['Schnee',['snowpack','powder','reppow','newsnow','depth']],['Wetter',['temp','wind','cloud']]];
 function lyRender(){
   const grid=document.getElementById('lyGrid');if(!grid)return;
   const L=lyLayers(),i=lyIndex(),it=L[i]&&L[i][2],vars=(it&&it.vars)||[];
   const many=vars.length>1;
-  // the sub-layers go after the last tile of the row the chosen tile is on,
-  // so they read as belonging to it and nothing below has to move sideways
-  const afterIdx=Math.min(L.length-1,Math.floor(i/LY_COLS)*LY_COLS+LY_COLS-1);
-  const subsHtml=many?('<div class="ly-subs" id="lySubs" role="group" aria-label="Unterebene" '+
-    'style="--notch:'+(((i%LY_COLS)+0.5)/LY_COLS*100)+'%">'+
-    vars.map((v,n)=>'<button type="button" class="ly-sub'+(n===curVar?' on':'')+'" '+
-      'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join('')+'</div>'):'';
-  grid.innerHTML=L.map(([g,k,item],n)=>{
-    const hi=item.id==='reppow';
-    return '<button type="button" class="ly-tile'+(n===i?' on':'')+(hi?' ly-hi':'')+'" onclick="lyPick('+n+')"'+
-    (n===i?' aria-current="true"':'')+' title="'+(hi?'Echte Meldungen, nicht modelliert':'')+'">'+lyIconFor(item.id)+
-    '<span>'+escapeHtml(item.label)+'</span></button>'+
-    (n===afterIdx?subsHtml:'');}).join('');
+  const seen=new Set(),secs=LY_SECTIONS.map(([name,ids])=>{
+    const rows=L.map((x,n)=>[x,n]).filter(([x])=>ids.includes(x[2].id)&&!seen.has(x[2].id))
+      .sort((p,q)=>ids.indexOf(p[0][2].id)-ids.indexOf(q[0][2].id));
+    rows.forEach(([x])=>seen.add(x[2].id));return [name,rows];});
+  const rest=L.map((x,n)=>[x,n]).filter(([x])=>!seen.has(x[2].id));
+  if(rest.length)secs.push(['Weitere',rest]);
+  grid.innerHTML=secs.filter(s=>s[1].length).map(([name,rows])=>{
+    const pos=rows.findIndex(r=>r[1]===i);
+    // the sub-layers open under the row of the chosen tile, so they read as
+    // belonging to it
+    const after=pos<0?-1:Math.min(rows.length-1,Math.floor(pos/LY_COLS)*LY_COLS+LY_COLS-1);
+    const subsHtml=(many&&pos>=0)?('<div class="ly-subs" id="lySubs" role="group" aria-label="Unterebene" '+
+      'style="--notch:'+(((pos%LY_COLS)+0.5)/LY_COLS*100)+'%">'+
+      vars.map((v,n)=>'<button type="button" class="ly-sub'+(n===curVar?' on':'')+'" '+
+        'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join('')+'</div>'):'';
+    return '<div class="ly-sec"><span class="lbl-micro">'+name+'</span><div class="ly-grid ly-g3">'+
+      rows.map(([[g,k,item],n],p)=>{const hi=item.id==='reppow';
+        return '<button type="button" class="ly-tile'+(n===i?' on':'')+(hi?' ly-hi':'')+'" onclick="lyPick('+n+')"'+
+        (n===i?' aria-current="true"':'')+' title="'+(hi?'Echte Meldungen, nicht modelliert':escapeHtml(item.label))+'">'+lyIconFor(item.id)+
+        '<span>'+escapeHtml(item.label)+'</span></button>'+(p===after?subsHtml:'');}).join('')+'</div></div>';}).join('');
   ovRender();
   lyInfoRender();
 }
@@ -8529,11 +8640,11 @@ function ovRender(){
         +'</div>'+vaTimeHTML()+vaLegendHTML();
     }
     const ic=OV_ICON[k]?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+OV_ICON[k]+'</svg>':'';
-    return '<button type="button" id="ov_'+k+'" class="ly-tile ly-b'
-      +(ovOn[k]?' on':'')+(na?' na':'')+'" aria-pressed="'+(ovOn[k]?'true':'false')+'"'
+    return '<button type="button" id="ov_'+k+'" class="ly-ov'
+      +(ovOn[k]?' on':'')+(na?' na':'')+'" role="switch" aria-checked="'+(ovOn[k]?'true':'false')+'"'
       +' onclick="ovToggle(\''+k+'\')" title="'
       +escapeHtml(na?o.label+' – keine Daten':o.attr)+'">'
-      +ic+'<span>'+escapeHtml(o.label)+'</span></button>'+extra;
+      +'<span class="ly-ov-ic">'+ic+'</span><span class="ly-ov-t">'+escapeHtml(o.label)+'</span><span class="ly-sw" aria-hidden="true"></span></button>'+extra;
   }).join('');
 }
 function lyPick(n){const t=lyLayers()[n];if(!t)return;
@@ -8949,6 +9060,26 @@ function scrPrev(){}
 function rpOpen(){const sh=document.getElementById('rpSheet');if(!sh)return;
   try{renderMyReports();}catch(e){}sh.classList.add('open');try{haptic(4);}catch(e){}}
 function rpClose(){const sh=document.getElementById('rpSheet');if(sh)sh.classList.remove('open');}
+// Bottom sheets sit still: they never stretch upwards or bounce. The only
+// gesture is a pull down from the top of their content, which closes them.
+(function(){
+  let sh=null,inn=null,y0=0,dy=0,on=false;
+  document.addEventListener('touchstart',e=>{
+    const i=e.target&&e.target.closest&&e.target.closest('.set-sheet.open .set-in');
+    if(!i||i.scrollTop>0||e.touches.length>1){on=false;return;}
+    inn=i;sh=i.closest('.set-sheet');y0=e.touches[0].clientY;dy=0;on=true;},{passive:true});
+  document.addEventListener('touchmove',e=>{if(!on)return;
+    dy=Math.max(0,e.touches[0].clientY-y0);
+    if(dy>0&&inn.scrollTop<=0){inn.classList.add('dragging');inn.style.transform='translateY('+dy+'px)';
+      if(e.cancelable)e.preventDefault();}},{passive:false});
+  document.addEventListener('touchend',()=>{if(!on)return;on=false;
+    const i=inn,s0=sh;i.classList.remove('dragging');i.classList.add('snap');
+    if(dy>Math.min(120,i.offsetHeight*.25)){i.style.transform='translateY(100%)';
+      setTimeout(()=>{i.classList.remove('snap');i.style.transform='';
+        try{s0.dispatchEvent(new MouseEvent('click',{bubbles:true}));}catch(e){}
+        if(s0.classList.contains('open'))s0.classList.remove('open');},200);}
+    else{i.style.transform='';setTimeout(()=>i.classList.remove('snap'),230);}});
+})();
 // Everything here is already in allReports; this only reads it back.
 function renderMyReports(){
   const el=document.getElementById('rpMine');if(!el)return;
@@ -12199,7 +12330,7 @@ function feedClose(){
 (function(){const el=document.getElementById('feedPage');if(!el)return;
   el.addEventListener('click',e=>{
     if(!el.classList.contains('open')||!el.classList.contains('side'))return;
-    const t=e.target;if(t&&t.closest&&(t.closest('.feed-nav')||t.closest('.feed-sheet')))return;
+    const t=e.target;if(t&&t.closest&&(t.closest('.feed-nav')||t.closest('.feed-sheet')||t.closest('.feed-card-avatar')||t.closest('.feed-card-user')))return;
     e.preventDefault();e.stopPropagation();feedToggleWide();},true);
 })();
 function feedToggleWide(){
