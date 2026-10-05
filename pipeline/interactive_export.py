@@ -3723,6 +3723,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .prof-input,.prof-bio{border-radius:14px!important;background:var(--card)!important}
  .prof-seg{background:var(--fill);border-radius:14px;padding:4px}
  .prof-seg button{border-radius:11px}
+ .set-lang{display:grid;grid-template-columns:repeat(4,1fr)}
+ .set-lang button{font-size:12.5px;padding-left:2px;padding-right:2px}
  .prof-signout{border-radius:999px!important}
  /* public profile: a banner with the avatar overlapping it */
  .uv-hero{height:calc(env(safe-area-inset-top,0px) + 96px);border:0;
@@ -3914,6 +3916,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <button data-v="system" onclick="themeSet('system')">System</button>
       <button data-v="light" onclick="themeSet('light')">Hell</button>
       <button data-v="dark" onclick="themeSet('dark')">Dunkel</button>
+    </div>
+    <span class="lbl-micro">Sprache</span>
+    <div class="prof-seg set-lang" id="setLang" data-noi18n>
+      <button data-v="de" onclick="langSet('de')">Deutsch</button>
+      <button data-v="en" onclick="langSet('en')">English</button>
+      <button data-v="fr" onclick="langSet('fr')">Français</button>
+      <button data-v="it" onclick="langSet('it')">Italiano</button>
     </div>
     <span class="lbl-micro">Karte</span>
     <div class="set-rows">
@@ -4341,6 +4350,663 @@ const __D=window.__D||{};const M=__D.meta||{};function db(k){return (__D.b&&__D.
 // --- Native (Capacitor) bridge — real native on iOS, harmless no-op in a browser ---
 const _CAP=(typeof window!=='undefined'&&window.Capacitor)?window.Capacitor:null;
 const _isNative=!!(_CAP&&_CAP.isNativePlatform&&_CAP.isNativePlatform());
+const I18N_DICT={
+"+ Person hinzufügen":["+ Add person","+ Ajouter une personne","+ Aggiungi persona"],
+"-Symbol":["icon","icône","icona"],
+". Entscheidungen im Gelände triffst du auf":[". Decisions in the terrain are made at your","Les décisions sur le terrain se prennent à tes","Le decisioni sul terreno le prendi a tuo"],
+"# Finger zeichnet · # Finger bewegen · Scrollen zoomt":["# finger draws · # fingers move · scroll zooms","# doigt dessine · # doigts déplacent · défiler zoome","# dito disegna · # dita spostano · scorri per zoomare"],
+"# Sterne":["# stars","# étoiles","# stelle"],
+"# · Standort — Karte unter dem Pin verschieben":["# · Location — move the map under the pin","# · Lieu — déplace la carte sous l'épingle","# · Posizione — sposta la mappa sotto il segnaposto"],
+"# km · # Hm · bis #° · # m":["# km · # m gain · up to #° · # m","# km · # m D+ · jusqu'à #° · # m","# km · # m disl. · fino a #° · # m"],
+"# · Wie viel & wie gut?":["# · How much & how good?","# · Combien & quelle qualité ?","# · Quanta & quanto buona?"],
+"# · Foto (optional)":["# · Photo (optional)","# · Photo (facultatif)","# · Foto (facoltativa)"],
+"#D wird geladen …":["Loading #D …","Chargement #D …","Caricamento #D …"],
+"#D-Ansicht":["#D view","Vue #D","Vista #D"],
+"#D-Karte":["#D map","Carte #D","Mappa #D"],
+"# Touren":["# tours","# itinéraires","# gite"],
+"Abbrechen":["Cancel","Annuler","Annulla"],
+"Abfahrt":["Descent","Descente","Discesa"],
+"Abgeweht":["Wind-scoured","Soufflé","Erosa dal vento"],
+"Abmelden":["Sign out","Se déconnecter","Esci"],
+"Abstufung innerhalb jeder Kategorie":["Shading within each category","Nuances dans chaque catégorie","Sfumature all'interno di ogni categoria"],
+"Akku sparen":["Battery saver","Économie de batterie","Risparmio batteria"],
+"Aktivität aufzeichnen":["Record activity","Enregistrer une activité","Registra attività"],
+"Aktivität gelöscht":["Activity deleted","Activité supprimée","Attività eliminata"],
+"Aktivität gepostet":["Activity posted","Activité publiée","Attività pubblicata"],
+"Aktivität gespeichert":["Activity saved","Activité enregistrée","Attività salvata"],
+"Aktivität speichern":["Save activity","Enregistrer l'activité","Salva attività"],
+"Aktivität verwerfen? Die Aufzeichnung geht verloren.":["Discard activity? The recording will be lost.","Abandonner l'activité ? L'enregistrement sera perdu.","Scartare l'attività? La registrazione andrà persa."],
+"Aktivität wird gepostet…":["Posting activity…","Publication de l'activité…","Pubblicazione attività…"],
+"Aktivität und den Beitrag im Feed endgültig löschen?":["Permanently delete the activity and its feed post?","Supprimer définitivement l'activité et sa publication ?","Eliminare definitivamente l'attività e il post nel feed?"],
+"Aktivität endgültig löschen?":["Permanently delete the activity?","Supprimer définitivement l'activité ?","Eliminare definitivamente l'attività?"],
+"Aufzeichnung läuft weiter":["Recording continues","L'enregistrement continue","La registrazione continua"],
+"Alle":["All","Tous","Tutti"],
+"Alle Beiträge gelöscht":["All posts deleted","Toutes les publications supprimées","Tutti i post eliminati"],
+"Alle Oberflächentypen aus dem Modell im Detail.":["All surface types from the model in detail.","Tous les types de surface du modèle en détail.","Tutti i tipi di superficie del modello in dettaglio."],
+"Alle Schneearten":["All snow types","Tous les types de neige","Tutti i tipi di neve"],
+"Alle meine Beiträge löschen":["Delete all my posts","Supprimer toutes mes publications","Elimina tutti i miei post"],
+"Als App installiert läuft Snowmapper im Vollbild (randlos), startet offline mit den letzten Daten und ist einen Fingertipp entfernt.":["Installed as an app, Snowmapper runs full screen, starts offline with the latest data and is one tap away.","Installé comme app, Snowmapper s'ouvre en plein écran, démarre hors ligne avec les dernières données et est à portée de doigt.","Installata come app, Snowmapper funziona a schermo intero, si avvia offline con gli ultimi dati ed è a portata di tocco."],
+"Am hilfreichsten: Übersichtsfotos der ganzen Lawine + Detailaufnahmen der Anrisskante / des Anrissgebiets. Fotos liefern automatisch Standort & Zeit.":["Most helpful: overview photos of the whole avalanche + close-ups of the crown / release area. Photos provide location & time automatically.","Le plus utile : photos d'ensemble de l'avalanche + détails de la cassure / zone de départ. Les photos fournissent lieu et heure automatiquement.","Più utili: foto d'insieme della valanga + dettagli del distacco / zona di distacco. Le foto forniscono automaticamente luogo e ora."],
+"Andere":["Other","Autre","Altro"],
+"Andere Beobachtung":["Other observation","Autre observation","Altra osservazione"],
+"Animation abspielen":["Play animation","Lire l'animation","Riproduci animazione"],
+"Anmelden":["Sign in","Se connecter","Accedi"],
+"Anmelden für Community & Meldungen":["Sign in for community & reports","Se connecter pour la communauté & les observations","Accedi per community e segnalazioni"],
+"Ansicht":["View","Vue","Vista"],
+"Anteil":["Share","Part","Quota"],
+"Anteil der Abfahrt (#–#°) mit Pulver bzw. Sulz im SNOWPACK-Modell – keine Lawinenbeurteilung, Bulletin des SLF beachten.":["Share of the descent (#–#°) with powder or corn snow in the SNOWPACK model – not an avalanche assessment, check the SLF bulletin.","Part de la descente (#–#°) en poudreuse ou neige de printemps dans le modèle SNOWPACK – pas une évaluation d'avalanche, consulte le bulletin du SLF.","Quota della discesa (#–#°) con polvere o firn nel modello SNOWPACK – non è una valutazione valanghe, consulta il bollettino SLF."],
+"Anteil im aktuellen Kartenausschnitt":["Share in the current map view","Part dans la vue actuelle","Quota nella vista attuale"],
+"Anzeigename":["Display name","Nom affiché","Nome visualizzato"],
+"App & Rechtliches":["App & legal","App & mentions légales","App & note legali"],
+"App installieren":["Install app","Installer l'app","Installa l'app"],
+"App installiert!":["App installed!","App installée !","App installata!"],
+"Arrows show flow direction":["Arrows show flow direction","Les flèches indiquent la direction","Le frecce indicano la direzione"],
+"Auf der Karte":["On the map","Sur la carte","Sulla mappa"],
+"Auf der Karte zeigen":["Show on map","Afficher sur la carte","Mostra sulla mappa"],
+"Aufstieg":["Climb","Montée","Salita"],
+"Aufstieg m":["Climb m","Montée m","Salita m"],
+"Aufzeichnen":["Record","Enregistrer","Registra"],
+"Aufzeichnung öffnen":["Open recording","Ouvrir l'enregistrement","Apri registrazione"],
+"Auslösung":["Trigger","Déclenchement","Distacco"],
+"Bedingungen melden":["Report conditions","Signaler les conditions","Segnala condizioni"],
+"Beenden":["Finish","Terminer","Termina"],
+"Beitrag gelöscht":["Post deleted","Publication supprimée","Post eliminato"],
+"Benachrichtigungen":["Notifications","Notifications","Notifiche"],
+"Benachrichtigungen wurden nicht erlaubt. Bitte im Browser aktivieren.":["Notifications were not allowed. Please enable them in the browser.","Les notifications n'ont pas été autorisées. Active-les dans le navigateur.","Le notifiche non sono state consentite. Attivale nel browser."],
+"Benutzername suchen…":["Search username…","Rechercher un nom…","Cerca nome utente…"],
+"Beobachtung":["Observation","Observation","Osservazione"],
+"Beobachtung erfassen":["Record observation","Saisir une observation","Registra osservazione"],
+"Beobachtung melden":["Report observation","Signaler une observation","Segnala osservazione"],
+"Bereits gemeldet.":["Already reported.","Déjà signalé.","Già segnalato."],
+"Beschreibung":["Description","Description","Descrizione"],
+"Beschreibung (optional) — Verhältnisse, Ort, Hinweise…":["Description (optional) — conditions, place, notes…","Description (facultatif) — conditions, lieu, remarques…","Descrizione (facoltativa) — condizioni, luogo, note…"],
+"Bestätigen":["Confirm","Confirmer","Conferma"],
+"Bestätigungen":["Confirmations","Confirmations","Conferme"],
+"Bevor du startest":["Before you start","Avant de commencer","Prima di iniziare"],
+"Bewegungszeit":["Moving time","Temps en mouvement","Tempo in movimento"],
+"Bewegung":["Moving","Mouvement","Movimento"],
+"Bewölkung":["Cloud cover","Nébulosité","Nuvolosità"],
+"Bewölkung [%]":["Cloud cover [%]","Nébulosité [%]","Nuvolosità [%]"],
+"Bis morgen":["Until tomorrow","Jusqu'à demain","Fino a domani"],
+"Bisher gemeldet":["Reported so far","Déjà signalé","Segnalato finora"],
+"Bitte Standort auf der Karte setzen.":["Please set the location on the map.","Place le lieu sur la carte.","Imposta la posizione sulla mappa."],
+"Breiter":["Wider","Plus large","Più largo"],
+"Bruchharsch":["Breakable crust","Croûte cassante","Crosta fragile"],
+"Bruchharsch auf Pulver":["Breakable crust on powder","Croûte cassante sur poudreuse","Crosta fragile su polvere"],
+"Bruchharsch auf Schwachschicht":["Breakable crust on weak layer","Croûte cassante sur couche fragile","Crosta fragile su strato debole"],
+"Code aus E-Mail einfügen":["Paste code from email","Coller le code de l'e-mail","Incolla il codice dall'e-mail"],
+"Community":["Community","Communauté","Community"],
+"Community-Feed":["Community feed","Fil de la communauté","Feed della community"],
+"Dabei seit":["Member since","Membre depuis","Membro dal"],
+"Danke fürs Bewerten!":["Thanks for rating!","Merci pour ton avis !","Grazie per la valutazione!"],
+"Danke — wir prüfen das.":["Thanks — we'll check it.","Merci — nous allons vérifier.","Grazie — lo verificheremo."],
+"Danke, der Report wurde gemeldet.":["Thanks, the report has been flagged.","Merci, l'observation a été signalée.","Grazie, la segnalazione è stata inoltrata."],
+"Darstellung":["Appearance","Affichage","Aspetto"],
+"Darstellung & Karte":["Appearance & map","Affichage & carte","Aspetto & mappa"],
+"Datenexport erstellt.":["Data export created.","Export des données créé.","Esportazione dati creata."],
+"Datenschutz & Haftung anzeigen":["Show privacy & liability","Afficher confidentialité & responsabilité","Mostra privacy & responsabilità"],
+"Datenschutz: Für Konto, Meldungen und Fotos werden E-Mail, Standort und Bilddaten bei Supabase (EU) gespeichert. Du kannst Konto und Beiträge jederzeit löschen.":["Privacy: for your account, reports and photos, email, location and image data are stored with Supabase (EU). You can delete your account and posts at any time.","Confidentialité : pour le compte, les observations et les photos, l'e-mail, la position et les images sont stockés chez Supabase (UE). Tu peux supprimer compte et publications à tout moment.","Privacy: per account, segnalazioni e foto, e-mail, posizione e immagini sono salvati presso Supabase (UE). Puoi eliminare account e post in qualsiasi momento."],
+"Demo-Modus umschalten":["Toggle demo mode","Basculer le mode démo","Attiva/disattiva demo"],
+"Der Bildschirm bleibt während der Aufnahme an. Wird das Handy gesperrt oder die App gewechselt, kann der Browser das GPS anhalten – die Spur wird dann beim Zurückkehren fortgesetzt.":["The screen stays on while recording. If the phone is locked or you switch apps, the browser may pause GPS – the track continues when you come back.","L'écran reste allumé pendant l'enregistrement. Si le téléphone est verrouillé ou si tu changes d'app, le navigateur peut suspendre le GPS – la trace reprend à ton retour.","Lo schermo resta acceso durante la registrazione. Se il telefono viene bloccato o cambi app, il browser può sospendere il GPS – la traccia riprende al ritorno."],
+"Der Link öffnet die App wieder. Nichts erhalten? Schau im Spam-Ordner nach.":["The link reopens the app. Nothing received? Check your spam folder.","Le lien rouvre l'app. Rien reçu ? Vérifie tes spams.","Il link riapre l'app. Non hai ricevuto nulla? Controlla lo spam."],
+"Die kälteste Stunde.":["The coldest hour.","L'heure la plus froide.","L'ora più fredda."],
+"Die ruhigste Stunde im Fenster.":["The calmest hour in the window.","L'heure la plus calme de la fenêtre.","L'ora più calma nella finestra."],
+"Die stärkste Stunde im Fenster — massgebend für Verfrachtung.":["The strongest hour in the window — what drives snow transport.","L'heure la plus forte de la fenêtre — déterminante pour le transport de neige.","L'ora più forte nella finestra — determinante per il trasporto di neve."],
+"Die wärmste Stunde — wo es angefeuchtet haben könnte.":["The warmest hour — where the snow may have got damp.","L'heure la plus chaude — là où la neige a pu s'humidifier.","L'ora più calda — dove la neve può essersi inumidita."],
+"Diese App zeigt modellierte Schnee-, Pulver- und Skitauglichkeits-Schätzungen. Sie ist":["This app shows modelled estimates of snow, powder and skiability. It is","Cette app affiche des estimations modélisées de neige, poudreuse et skiabilité. Elle est","Questa app mostra stime modellate di neve, polvere e sciabilità. È"],
+"Diesen Beitrag endgültig löschen? Kommentare, Bestätigungen und Bewertungen dazu verschwinden mit.":["Permanently delete this post? Its comments, confirmations and ratings will be removed too.","Supprimer définitivement cette publication ? Commentaires, confirmations et avis seront aussi supprimés.","Eliminare definitivamente questo post? Commenti, conferme e valutazioni verranno rimossi."],
+"Diesen Report als unangemessen melden?":["Flag this report as inappropriate?","Signaler cette observation comme inappropriée ?","Segnalare questo report come inappropriato?"],
+"Distanz":["Distance","Distance","Distanza"],
+"Distanz km":["Distance km","Distance km","Distanza km"],
+"Du kannst deinen eigenen Report nicht melden.":["You can't flag your own report.","Tu ne peux pas signaler ta propre observation.","Non puoi segnalare il tuo report."],
+"Dunkel":["Dark","Sombre","Scuro"],
+"Durch-":["Soaked","Trempée","Fradicia"],
+"Durchschnitt über das Fenster.":["Average over the window.","Moyenne sur la fenêtre.","Media sulla finestra."],
+"E-Mail":["Email","E-mail","E-mail"],
+"Ebene beim Öffnen":["Layer on opening","Couche à l'ouverture","Livello all'apertura"],
+"Ebenen":["Layers","Couches","Livelli"],
+"Ebenen schliessen":["Close layers","Fermer les couches","Chiudi livelli"],
+"Ebenen.":["Layers.","Couches.","Livelli."],
+"Eine Karte, beliebig viele Overlays":["One map, any number of overlays","Une carte, autant de superpositions que tu veux","Una mappa, quante sovrapposizioni vuoi"],
+"Einfache Schneearten":["Simple snow types","Types de neige simples","Tipi di neve semplici"],
+"Einheit: %":["Unit: %","Unité : %","Unità: %"],
+"Einheit: Klasse":["Unit: class","Unité : classe","Unità: classe"],
+"Einheit: Pulver cm":["Unit: powder cm","Unité : poudreuse cm","Unità: polvere cm"],
+"Einheit: cm":["Unit: cm","Unité : cm","Unità: cm"],
+"Einheit: km/h":["Unit: km/h","Unité : km/h","Unità: km/h"],
+"Einheit: °C":["Unit: °C","Unité : °C","Unità: °C"],
+"Einstellungen":["Settings","Réglages","Impostazioni"],
+"Einstellungen & Darstellung":["Settings & appearance","Réglages & affichage","Impostazioni & aspetto"],
+"Eis":["Ice","Glace","Ghiaccio"],
+"Eisig":["Icy","Glacé","Ghiacciato"],
+"Entdecken":["Discover","Découvrir","Scopri"],
+"Erfasste Personen":["People involved","Personnes concernées","Persone coinvolte"],
+"Erneut senden":["Send again","Renvoyer","Invia di nuovo"],
+"Error:":["Error:","Erreur :","Errore:"],
+"Experimentelle Modelldaten.":["Experimental model data.","Données de modèle expérimentales.","Dati di modello sperimentali."],
+"Export fehlgeschlagen:":["Export failed:","Échec de l'export :","Esportazione non riuscita:"],
+"Export und Löschung entsprechen deinen Rechten nach DSG/DSGVO. Das Löschen des Kontos entfernt alle Inhalte unwiderruflich.":["Export and deletion reflect your rights under the Swiss FADP/GDPR. Deleting the account removes all content permanently.","L'export et la suppression correspondent à tes droits selon la LPD/RGPD. Supprimer le compte efface tout le contenu définitivement.","Esportazione e cancellazione corrispondono ai tuoi diritti secondo LPD/GDPR. Eliminare l'account rimuove tutti i contenuti in modo definitivo."],
+"Extrem gross":["Extremely large","Extrêmement grande","Estremamente grande"],
+"Farbe = Anteil der Abfahrt mit Pulver im SNOWPACK-Modell zur gewählten Zeit. Tour antippen für den Verlauf.":["Colour = share of the descent in powder in the SNOWPACK model at the selected time. Tap a tour for details along the route.","Couleur = part de la descente en poudreuse dans le modèle SNOWPACK à l'heure choisie. Touche un itinéraire pour le détail.","Colore = quota della discesa in polvere nel modello SNOWPACK all'ora scelta. Tocca una gita per il dettaglio."],
+"Farbe = Neuschnee, Deckkraft =":["Colour = new snow, opacity =","Couleur = neige fraîche, opacité =","Colore = neve fresca, opacità ="],
+"Farbe = Schneehöhe (SLF-Skala), gemittelt über die nahen Zeichnen-Reports pro Exposition und Höhenband.":["Colour = snow depth (SLF scale), averaged over nearby drawn reports per aspect and elevation band.","Couleur = hauteur de neige (échelle SLF), moyenne des cartes dessinées proches par exposition et tranche d'altitude.","Colore = altezza neve (scala SLF), media dei report disegnati vicini per esposizione e fascia altimetrica."],
+"Feed":["Feed","Fil","Feed"],
+"Feedback senden":["Send feedback","Envoyer un avis","Invia feedback"],
+"Fehler:":["Error:","Erreur :","Errore:"],
+"Fenster bis morgen Abend":["Window until tomorrow evening","Fenêtre jusqu'à demain soir","Finestra fino a domani sera"],
+"Fenster:":["Window:","Fenêtre :","Finestra:"],
+"Fernauslösung":["Remote trigger","Déclenchement à distance","Distacco a distanza"],
+"Fertig":["Done","Terminé","Fatto"],
+"Feuchtigkeit":["Moisture","Humidité","Umidità"],
+"Filter":["Filter","Filtre","Filtro"],
+"Filter zurücksetzen":["Reset filters","Réinitialiser les filtres","Azzera filtri"],
+"Firn":["Corn snow","Neige de printemps","Firn"],
+"Folge ich":["Following","Abonné","Segui già"],
+"Folgen":["Follow","Suivre","Segui"],
+"Follower":["Followers","Abonnés","Follower"],
+"Foto aufnehmen oder wählen":["Take or choose a photo","Prendre ou choisir une photo","Scatta o scegli una foto"],
+"Foto hinzufügen (optional)":["Add photo (optional)","Ajouter une photo (facultatif)","Aggiungi foto (facoltativa)"],
+"Foto konnte nicht hochgeladen werden:":["Photo could not be uploaded:","La photo n'a pas pu être envoyée :","Impossibile caricare la foto:"],
+"Foto entfernen":["Remove photo","Retirer la photo","Rimuovi foto"],
+"Fotos":["Photos","Photos","Foto"],
+"Fotos & Kommentar":["Photos & comment","Photos & commentaire","Foto & commento"],
+"Fotos & Videos":["Photos & videos","Photos & vidéos","Foto & video"],
+"Freeride":["Freeride","Freeride","Freeride"],
+"Freunde":["Friends","Amis","Amici"],
+"Für Webcams näher heranzoomen":["Zoom in for webcams","Zoome pour voir les webcams","Ingrandisci per le webcam"],
+"GPS ±# m":["GPS ±# m","GPS ±# m","GPS ±# m"],
+"GPS wird gesucht…":["Searching for GPS…","Recherche du GPS…","Ricerca GPS…"],
+"GPS-Genauigkeit":["GPS accuracy","Précision GPS","Precisione GPS"],
+"GPX exportieren":["Export GPX","Exporter le GPX","Esporta GPX"],
+"Ganze Zeichnung löschen?":["Delete the whole drawing?","Effacer tout le dessin ?","Cancellare tutto il disegno?"],
+"Gealterter":["Aged","Vieillie","Invecchiata"],
+"Gebiet":["Area","Région","Zona"],
+"Gemeldetes Powder":["Reported powder","Poudreuse signalée","Polvere segnalata"],
+"Gemerkt":["Saved","Enregistré","Salvato"],
+"Gepostet ✓":["Posted ✓","Publié ✓","Pubblicato ✓"],
+"Gesamtbewölkung aus dem Wettermodell zur gewählten Stunde – wie ein Satellitenbild, kein Mittel. Hellblau = wenige Wolken, tiefblau = bedeckt. Wichtig für Sicht, Sonneneinstrahlung und ob die Oberfläche in der Nacht abkühlt.":["Total cloud cover from the weather model at the selected hour – like a satellite picture, not an average. Light blue = few clouds, deep blue = overcast. Matters for visibility, sunshine and whether the surface cools at night.","Nébulosité totale du modèle météo à l'heure choisie – comme une image satellite, pas une moyenne. Bleu clair = peu de nuages, bleu foncé = couvert. Important pour la visibilité, l'ensoleillement et le refroidissement nocturne de la surface.","Nuvolosità totale del modello meteo all'ora scelta – come un'immagine satellitare, non una media. Azzurro = poche nuvole, blu scuro = coperto. Importante per visibilità, soleggiamento e raffreddamento notturno della superficie."],
+"Gesamtbewölkung zur gewählten Stunde (wie ein Satellitenbild)":["Total cloud cover at the selected hour (like a satellite picture)","Nébulosité totale à l'heure choisie (comme une image satellite)","Nuvolosità totale all'ora scelta (come un'immagine satellitare)"],
+"Gesamte Schneehöhe":["Total snow depth","Hauteur de neige totale","Altezza neve totale"],
+"Gesamteindruck":["Overall impression","Impression générale","Impressione generale"],
+"Geschätzte Schneeoberfläche statt Luft — inklusive Ein- und Abstrahlung.":["Estimated snow surface instead of air — including incoming and outgoing radiation.","Surface de neige estimée au lieu de l'air — rayonnement entrant et sortant compris.","Superficie della neve stimata invece dell'aria — incluso irraggiamento in entrata e in uscita."],
+"Gipfel":["Summit","Sommet","Vetta"],
+"Gleitschnee":["Glide snow","Neige glissante","Neve di slittamento"],
+"Gross":["Large","Grande","Grande"],
+"Grösse":["Size","Taille","Dimensione"],
+"Harsch auf Schwachschicht":["Crust on weak layer","Croûte sur couche fragile","Crosta su strato debole"],
+"Hart":["Hard","Dure","Dura"],
+"Heimatgebiet":["Home area","Région d'origine","Zona di casa"],
+"Hell":["Light","Clair","Chiaro"],
+"Hier & jetzt":["Here & now","Ici & maintenant","Qui & ora"],
+"Hinzufügen":["Add","Ajouter","Aggiungi"],
+"Hoch":["High","Élevée","Alta"],
+"Häufig":["Frequent","Fréquent","Frequente"],
+"Höhe m":["Altitude m","Altitude m","Quota m"],
+"Höhenmeter":["Height gain","Dénivelé","Dislivello"],
+"Höhenmeter max":["Height gain max","Dénivelé max","Dislivello max"],
+"Höhenmeter min":["Height gain min","Dénivelé min","Dislivello min"],
+"Höhenprofil mit Schneeart entlang der Route":["Elevation profile with snow type along the route","Profil altimétrique avec type de neige le long de l'itinéraire","Profilo altimetrico con tipo di neve lungo il percorso"],
+"Höchster Punkt":["Highest point","Point culminant","Punto più alto"],
+"Ich habe verstanden, dass dies experimentelle Daten sind und kein Lawinenbulletin ersetzt.":["I understand that this is experimental data and does not replace an avalanche bulletin.","J'ai compris qu'il s'agit de données expérimentales qui ne remplacent pas un bulletin d'avalanches.","Ho capito che si tratta di dati sperimentali che non sostituiscono un bollettino valanghe."],
+"In der Nähe":["Nearby","À proximité","Nelle vicinanze"],
+"Ja":["Yes","Oui","Sì"],
+"Jetzt":["Now","Maintenant","Adesso"],
+"Karte":["Map","Carte","Mappa"],
+"Karte & Ebenen":["Map & layers","Carte & couches","Mappa & livelli"],
+"Karte & Prognosen funktionieren ohne Konto — du brauchst es nur zum Melden, für den Feed und dein Profil.":["Map & forecasts work without an account — you only need one to report, for the feed and your profile.","La carte et les prévisions fonctionnent sans compte — il n'est nécessaire que pour signaler, le fil et ton profil.","Mappa e previsioni funzionano senza account — serve solo per segnalare, per il feed e il profilo."],
+"Karte + Zeichnung":["Map + drawing","Carte + dessin","Mappa + disegno"],
+"Karte unter dem Pin verschieben":["Move the map under the pin","Déplace la carte sous l'épingle","Sposta la mappa sotto il segnaposto"],
+"Kategorie":["Category","Catégorie","Categoria"],
+"Kein":["None","Aucun","Nessuno"],
+"Kein Account?":["No account?","Pas de compte ?","Nessun account?"],
+"Kein Code erhalten?":["No code received?","Pas reçu de code ?","Nessun codice ricevuto?"],
+"Kein GPS verfügbar":["No GPS available","Pas de GPS disponible","GPS non disponibile"],
+"Kein Schnee":["No snow","Pas de neige","Niente neve"],
+"Kein Standort":["No location","Pas de position","Nessuna posizione"],
+"Keine":["None","Aucune","Nessuna"],
+"Keine Tour passt zu diesen Filtern.":["No tour matches these filters.","Aucun itinéraire ne correspond à ces filtres.","Nessuna gita corrisponde a questi filtri."],
+"Keine Tourendaten geladen":["No tour data loaded","Aucune donnée d'itinéraire chargée","Nessun dato sulle gite caricato"],
+"Klasse":["Class","Classe","Classe"],
+"Klein":["Small","Petite","Piccola"],
+"Kommentar":["Comment","Commentaire","Commento"],
+"Kommentar (optional)…":["Comment (optional)…","Commentaire (facultatif)…","Commento (facoltativo)…"],
+"Kommentar schreiben… @ für Namen":["Write a comment… @ for names","Écrire un commentaire… @ pour les noms","Scrivi un commento… @ per i nomi"],
+"Kommentare":["Comments","Commentaires","Commenti"],
+"Kompakt":["Compact","Compact","Compatto"],
+"Konto":["Account","Compte","Account"],
+"Konto & Daten löschen":["Delete account & data","Supprimer compte & données","Elimina account & dati"],
+"Konto und ALLE Inhalte (Reports, Fotos-Verweise, Kommentare, Bewertungen) unwiderruflich löschen?":["Permanently delete your account and ALL content (reports, photo links, comments, ratings)?","Supprimer définitivement le compte et TOUT le contenu (observations, photos, commentaires, avis) ?","Eliminare definitivamente l'account e TUTTI i contenuti (report, foto, commenti, valutazioni)?"],
+"Kruste":["Crust","Croûte","Crosta"],
+"Kurze Beschreibung (max. # Wörter, keine Links)…":["Short description (max. # words, no links)…","Brève description (max. # mots, sans liens)…","Breve descrizione (max. # parole, niente link)…"],
+"Lade Beiträge…":["Loading posts…","Chargement des publications…","Caricamento post…"],
+"Lade …":["Loading …","Chargement …","Caricamento …"],
+"Lawine":["Avalanche","Avalanche","Valanga"],
+"Lawine, Wumm, Triebschnee, Qualität":["Avalanche, whumpf, wind slab, quality","Avalanche, woum, plaque à vent, qualité","Valanga, whumpf, neve ventata, qualità"],
+"Lawinenbulletin":["Avalanche bulletin","Bulletin d'avalanches","Bollettino valanghe"],
+"Lawinenbulletin – keine Daten":["Avalanche bulletin – no data","Bulletin d'avalanches – pas de données","Bollettino valanghe – nessun dato"],
+"Lawinendetails":["Avalanche details","Détails de l'avalanche","Dettagli valanga"],
+"Lawineneigenschaften":["Avalanche properties","Caractéristiques de l'avalanche","Caratteristiche della valanga"],
+"Lawinentyp":["Avalanche type","Type d'avalanche","Tipo di valanga"],
+"Legende":["Legend","Légende","Legenda"],
+"Legende der Ebene":["Layer legend","Légende de la couche","Legenda del livello"],
+"Legende – Details":["Legend – details","Légende – détails","Legenda – dettagli"],
+"Letzte Position":["Last position","Dernière position","Ultima posizione"],
+"Leute finden":["Find people","Trouver des personnes","Trova persone"],
+"Link kopiert!":["Link copied!","Lien copié !","Link copiato!"],
+"Live-Wetterdaten verwenden":["Use live weather data","Utiliser les données météo en direct","Usa dati meteo in tempo reale"],
+"Lockerschnee":["Loose snow","Neige meuble","Neve a debole coesione"],
+"Lufttemperatur im gewählten Fenster. Entscheidend dafür, ob Pulver Pulver bleibt oder verharscht.":["Air temperature in the selected window. Decides whether powder stays powder or crusts over.","Température de l'air dans la fenêtre choisie. Décide si la poudreuse reste poudreuse ou croûte.","Temperatura dell'aria nella finestra scelta. Decide se la polvere resta polvere o crosta."],
+"Löschen":["Delete","Supprimer","Elimina"],
+"Löschen fehlgeschlagen:":["Delete failed:","Échec de la suppression :","Eliminazione non riuscita:"],
+"Male die Zonen — mit zwei Fingern bewegst du die Karte":["Paint the zones — move the map with two fingers","Peins les zones — déplace la carte avec deux doigts","Dipingi le zone — sposta la mappa con due dita"],
+"Map":["Map","Carte","Mappa"],
+"Max":["Max","Max","Max"],
+"Maximum zwischen # und # °C (Firn)":["Maximum between # and # °C (corn snow)","Maximum entre # et # °C (neige de printemps)","Massimo tra # e # °C (firn)"],
+"Mein Standort":["My location","Ma position","La mia posizione"],
+"Meine Aktivitäten":["My activities","Mes activités","Le mie attività"],
+"Meine Beiträge":["My posts","Mes publications","I miei post"],
+"Meine Daten":["My data","Mes données","I miei dati"],
+"Meine Daten exportieren (JSON)":["Export my data (JSON)","Exporter mes données (JSON)","Esporta i miei dati (JSON)"],
+"Meine Meldungen":["My reports","Mes observations","Le mie segnalazioni"],
+"Meine Meldungen & melden":["My reports & report","Mes observations & signaler","Le mie segnalazioni & segnala"],
+"Meine Meldungen im Feed zeigen":["Show my reports in the feed","Afficher mes observations dans le fil","Mostra le mie segnalazioni nel feed"],
+"Meinen Standort verwenden":["Use my location","Utiliser ma position","Usa la mia posizione"],
+"Melde dich an, um deine Meldungen hier zu sehen.":["Sign in to see your reports here.","Connecte-toi pour voir tes observations ici.","Accedi per vedere qui le tue segnalazioni."],
+"Melden":["Report","Signaler","Segnala"],
+"Melden fehlgeschlagen:":["Reporting failed:","Échec du signalement :","Segnalazione non riuscita:"],
+"Meldung fehlgeschlagen":["Report failed","Échec du signalement","Segnalazione non riuscita"],
+"Meldung verwerfen?":["Discard report?","Abandonner l'observation ?","Scartare la segnalazione?"],
+"Meldungen":["Reports","Observations","Segnalazioni"],
+"Meldungen der Community":["Community reports","Observations de la communauté","Segnalazioni della community"],
+"Merken":["Save","Enregistrer","Salva"],
+"Messstationen":["Weather stations","Stations de mesure","Stazioni di misura"],
+"Messstationen ein/aus":["Weather stations on/off","Stations de mesure on/off","Stazioni di misura on/off"],
+"Min":["Min","Min","Min"],
+"Minimieren":["Minimise","Réduire","Riduci"],
+"Mittel":["Mean","Moyenne","Media"],
+"Modellierte Schneedecke am Boden, nicht nur der frische Anteil. Farbe ist immer Tiefe — dieselbe Skala wie auf den Zeichnungen der Community.":["Modelled snowpack on the ground, not just the fresh part. Colour is always depth — the same scale as on the community drawings.","Manteau neigeux modélisé au sol, pas seulement la neige fraîche. La couleur est toujours la hauteur — même échelle que sur les dessins de la communauté.","Manto nevoso modellato al suolo, non solo la neve fresca. Il colore è sempre l'altezza — la stessa scala dei disegni della community."],
+"Modellschätzung aus Neuschneemenge, Wind und Temperatur — wo lockerer, ungepresster Schnee zu erwarten ist. Keine Messung und kein Lawinenbulletin.":["Model estimate from new snow, wind and temperature — where loose, unpacked snow can be expected. Not a measurement and not an avalanche bulletin.","Estimation du modèle à partir de neige fraîche, vent et température — où l'on peut attendre de la neige meuble, non tassée. Ni mesure, ni bulletin d'avalanches.","Stima del modello da neve fresca, vento e temperatura — dove ci si può aspettare neve soffice e non pressata. Né misura né bollettino valanghe."],
+"Nachricht":["Message","Message","Messaggio"],
+"Nachrichten":["Messages","Messages","Messaggi"],
+"Nachricht…":["Message…","Message…","Messaggio…"],
+"Nass":["Wet","Mouillée","Bagnata"],
+"Nassschnee":["Wet snow","Neige mouillée","Neve bagnata"],
+"Nein":["No","Non","No"],
+"Neues Passwort":["New password","Nouveau mot de passe","Nuova password"],
+"Neues Passwort wiederholen":["Repeat new password","Répéter le nouveau mot de passe","Ripeti nuova password"],
+"Neuschnee":["New snow","Neige fraîche","Neve fresca"],
+"Neuschnee [cm] (SLF-Skala)":["New snow [cm] (SLF scale)","Neige fraîche [cm] (échelle SLF)","Neve fresca [cm] (scala SLF)"],
+"Neuschnee im Zeitfenster":["New snow in the time window","Neige fraîche dans la fenêtre","Neve fresca nella finestra"],
+"Neuschnee, der als Pulver liegen bleibt; Deckkraft = wie sicher":["New snow that stays as powder; opacity = how certain","Neige fraîche qui reste poudreuse ; opacité = degré de certitude","Neve fresca che resta polvere; opacità = quanto è certo"],
+"Nicht verfügbar.":["Not available.","Indisponible.","Non disponibile."],
+"No overlay":["No overlay","Aucune superposition","Nessuna sovrapposizione"],
+"Noch keine Aktivität. Starte deine erste Aufzeichnung.":["No activity yet. Start your first recording.","Pas encore d'activité. Lance ton premier enregistrement.","Nessuna attività. Avvia la tua prima registrazione."],
+"Normal":["Normal","Normale","Normale"],
+"Nur Flächen mit einem Maximum zwischen # und # °C — Firn-Bedingungen.":["Only areas with a maximum between # and # °C — corn snow conditions.","Seulement les zones avec un maximum entre # et # °C — conditions de neige de printemps.","Solo aree con un massimo tra # e # °C — condizioni da firn."],
+"Nur Flächen, die im ganzen Fenster unter # km/h bleiben — dort bleibt Pulver liegen.":["Only areas that stay below # km/h in the whole window — powder stays put there.","Seulement les zones qui restent sous # km/h toute la fenêtre — la poudreuse y reste.","Solo aree che restano sotto # km/h per tutta la finestra — lì la polvere resta."],
+"Nur Flächen, die im ganzen Fenster unter null bleiben.":["Only areas that stay below zero in the whole window.","Seulement les zones qui restent sous zéro toute la fenêtre.","Solo aree che restano sotto zero per tutta la finestra."],
+"Nur Hänge mit lockerem Pulver, nach Tiefe – alles andere bleibt frei.":["Only slopes with loose powder, by depth – everything else is left blank.","Seulement les pentes en poudreuse, par profondeur – le reste est laissé vide.","Solo pendii con polvere, per profondità – il resto resta vuoto."],
+"Nur Pulver":["Powder only","Poudreuse seulement","Solo polvere"],
+"Nur Zeichnen-Reports · Vertrauen ≥ #%":["Drawn reports only · confidence ≥ #%","Cartes dessinées seulement · confiance ≥ #%","Solo report disegnati · affidabilità ≥ #%"],
+"Nur ich":["Only me","Moi seulement","Solo io"],
+"Nutzer melden":["Report user","Signaler l'utilisateur","Segnala utente"],
+"Nähe":["Nearby","Proximité","Vicinanza"],
+"Näher heranzoomen, um die Skitouren zu sehen":["Zoom in to see the ski tours","Zoome pour voir les itinéraires de ski","Ingrandisci per vedere le gite"],
+"Oberfläche":["Surface","Surface","Superficie"],
+"Oberflächenreif":["Surface hoar","Givre de surface","Brina di superficie"],
+"Ohne Foto posten":["Post without photo","Publier sans photo","Pubblica senza foto"],
+"Optional – tippe zum Ausklappen":["Optional – tap to expand","Facultatif – touche pour déplier","Facoltativo – tocca per espandere"],
+"Optional, max. # Zeichen":["Optional, max. # characters","Facultatif, max. # caractères","Facoltativo, max. # caratteri"],
+"Ort suchen":["Search place","Chercher un lieu","Cerca luogo"],
+"Ort suchen…":["Search place…","Chercher un lieu…","Cerca luogo…"],
+"Passwort":["Password","Mot de passe","Password"],
+"Passwort geändert — du bist angemeldet.":["Password changed — you are signed in.","Mot de passe modifié — tu es connecté.","Password cambiata — hai effettuato l'accesso."],
+"Passwort speichern":["Save password","Enregistrer le mot de passe","Salva password"],
+"Passwort vergessen?":["Forgot password?","Mot de passe oublié ?","Password dimenticata?"],
+"Pause":["Pause","Pause","Pausa"],
+"Person":["Person","Personne","Persona"],
+"Personalisieren":["Personalise","Personnaliser","Personalizza"],
+"Pinsel":["Brush","Pinceau","Pennello"],
+"Pinselgrösse":["Brush size","Taille du pinceau","Dimensione pennello"],
+"Pistenfahrzeug":["Groomer","Dameuse","Gatto delle nevi"],
+"Please confirm your email to post reports.":["Please confirm your email to post reports.","Confirme ton e-mail pour publier des observations.","Conferma la tua e-mail per pubblicare segnalazioni."],
+"Posten":["Post","Publier","Pubblica"],
+"Posten fehlgeschlagen:":["Posting failed:","Échec de la publication :","Pubblicazione non riuscita:"],
+"Powder":["Powder","Poudreuse","Polvere"],
+"Powder Conditions":["Powder conditions","Conditions de poudreuse","Condizioni di polvere"],
+"Powder Map":["Powder map","Carte poudreuse","Mappa polvere"],
+"Powder-Report gepostet — danke!":["Powder report posted — thanks!","Rapport poudreuse publié — merci !","Report polvere pubblicato — grazie!"],
+"Powder?":["Powder?","Poudreuse ?","Polvere?"],
+"Privatsphäre & Daten":["Privacy & data","Confidentialité & données","Privacy & dati"],
+"Profil":["Profile","Profil","Profilo"],
+"Prüfe Ort und Zeit":["Check place and time","Vérifie le lieu et l'heure","Verifica luogo e ora"],
+"Pulver":["Powder","Poudreuse","Polvere"],
+"Pulver #–# cm":["Powder #–# cm","Poudreuse #–# cm","Polvere #–# cm"],
+"Pulver > # cm":["Powder > # cm","Poudreuse > # cm","Polvere > # cm"],
+"Pulver cm":["Powder cm","Poudreuse cm","Polvere cm"],
+"Pulvertiefe":["Powder depth","Profondeur de poudreuse","Profondità polvere"],
+"Push-Benachrichtigungen":["Push notifications","Notifications push","Notifiche push"],
+"Push-Benachrichtigungen werden mit einem der nächsten Updates aktiviert — deine Einstellung wird dann automatisch übernommen.":["Push notifications will be enabled with an upcoming update — your setting will then apply automatically.","Les notifications push seront activées dans une prochaine mise à jour — ton réglage sera repris automatiquement.","Le notifiche push saranno attivate con un prossimo aggiornamento — la tua impostazione verrà applicata automaticamente."],
+"Quick Powder Report":["Quick powder report","Rapport poudreuse rapide","Report polvere rapido"],
+"Radierer":["Eraser","Gomme","Gomma"],
+"Registrieren":["Sign up","S'inscrire","Registrati"],
+"Relevante Beobachtungen aus dem Gelände. Fotos liefern automatisch Standort & Zeit.":["Relevant observations from the field. Photos provide location & time automatically.","Observations pertinentes du terrain. Les photos fournissent lieu et heure automatiquement.","Osservazioni rilevanti dal terreno. Le foto forniscono luogo e ora automaticamente."],
+"Relief":["Relief","Relief","Rilievo"],
+"Report Powder":["Report powder","Signaler la poudreuse","Segnala polvere"],
+"Reported Powder":["Reported powder","Poudreuse signalée","Polvere segnalata"],
+"Reports":["Reports","Observations","Segnalazioni"],
+"Resend":["Resend","Renvoyer","Invia di nuovo"],
+"Route":["Route","Itinéraire","Percorso"],
+"Route auf der Karte – Ebenen ▸ Meldungen zum Ausblenden":["Route on the map – Layers ▸ Reports to hide it","Itinéraire sur la carte – Couches ▸ Observations pour le masquer","Percorso sulla mappa – Livelli ▸ Segnalazioni per nasconderlo"],
+"Rückgängig":["Undo","Annuler","Annulla"],
+"Schliessen":["Close","Fermer","Chiudi"],
+"Schmelzharsch":["Melt-freeze crust","Croûte de regel","Crosta da rigelo"],
+"Schnee":["Snow","Neige","Neve"],
+"Schnee:":["Snow:","Neige :","Neve:"],
+"Schnee, Pulver und Verhältnisse in der Schweiz.":["Snow, powder and conditions in Switzerland.","Neige, poudreuse et conditions en Suisse.","Neve, polvere e condizioni in Svizzera."],
+"Schnee-Karte":["Snow map","Carte de neige","Mappa neve"],
+"Schnee-Karte gepostet — danke!":["Snow map posted — thanks!","Carte de neige publiée — merci !","Mappa neve pubblicata — grazie!"],
+"Schnee-Karte gespeichert (nur lokal).":["Snow map saved (local only).","Carte de neige enregistrée (en local).","Mappa neve salvata (solo in locale)."],
+"Schnee-Karte melden":["Report snow map","Signaler une carte de neige","Segnala mappa neve"],
+"Schnee-Karte zeichnen":["Draw snow map","Dessiner une carte de neige","Disegna mappa neve"],
+"Schnee-Rapport":["Snow report","Rapport de neige","Report neve"],
+"Schneeart":["Snow type","Type de neige","Tipo di neve"],
+"Schneebrett":["Slab avalanche","Plaque","Lastrone"],
+"Schneehöhe":["Snow depth","Hauteur de neige","Altezza neve"],
+"Schneehöhe [cm] (SLF-Skala)":["Snow depth [cm] (SLF scale)","Hauteur de neige [cm] (échelle SLF)","Altezza neve [cm] (scala SLF)"],
+"Schneehöhe aus den Zeichnen-Reports in der Nähe, gemittelt pro Exposition und Höhenband — keine Modellschätzung, sondern was Leute tatsächlich vorgefunden haben.":["Snow depth from nearby drawn reports, averaged per aspect and elevation band — not a model estimate but what people actually found.","Hauteur de neige des cartes dessinées proches, moyenne par exposition et tranche d'altitude — pas une estimation, mais ce que les gens ont vraiment trouvé.","Altezza neve dai report disegnati vicini, media per esposizione e fascia altimetrica — non una stima ma ciò che le persone hanno davvero trovato."],
+"Schneehöhe in cm":["Snow depth in cm","Hauteur de neige en cm","Altezza neve in cm"],
+"Schneeoberfläche":["Snow surface","Surface de la neige","Superficie della neve"],
+"Schneequalität":["Snow quality","Qualité de neige","Qualità della neve"],
+"Schweiz":["Switzerland","Suisse","Svizzera"],
+"Schwimmschnee":["Depth hoar","Gobelets","Brina di profondità"],
+"Sechs Klassen: Pulver nach Tiefe, hart, Kruste, nass / Sulz.":["Six classes: powder by depth, hard, crust, wet / corn.","Six classes : poudreuse par profondeur, dure, croûte, mouillée / printemps.","Sei classi: polvere per profondità, dura, crosta, bagnata / firn."],
+"Sehr gross":["Very large","Très grande","Molto grande"],
+"Selten":["Rare","Rare","Raro"],
+"Senden":["Send","Envoyer","Invia"],
+"Setzungsgeräusche deuten auf Schwachschichten hin.":["Settling noises point to weak layers.","Les bruits de tassement indiquent des couches fragiles.","I rumori di assestamento indicano strati deboli."],
+"Sichtbarkeit:":["Visibility:","Visibilité :","Visibilità:"],
+"Simulierte Schneedecke (SNOWPACK, SLF) an # Wetterpunkten in jeder Höhe, Exposition und Neigung, auf das Gelände übertragen. Hell- bis dunkelblau = Pulver nach Tiefe, grau = hart, korall = Kruste, honiggelb = nass / Sulz. Ein Modell, keine Messung – kein Lawinenbulletin.":["Simulated snowpack (SNOWPACK, SLF) at # weather points for every elevation, aspect and slope, transferred to the terrain. Light to dark blue = powder by depth, grey = hard, coral = crust, honey = wet / corn. A model, not a measurement – not an avalanche bulletin.","Manteau neigeux simulé (SNOWPACK, SLF) à # points météo pour chaque altitude, exposition et pente, transposé au terrain. Bleu clair à foncé = poudreuse par profondeur, gris = dure, corail = croûte, miel = mouillée / printemps. Un modèle, pas une mesure – pas un bulletin d'avalanches.","Manto nevoso simulato (SNOWPACK, SLF) in # punti meteo per ogni quota, esposizione e pendenza, trasferito al terreno. Da azzurro a blu scuro = polvere per profondità, grigio = dura, corallo = crosta, miele = bagnata / firn. Un modello, non una misura – non un bollettino valanghe."],
+"Skala #–#":["Scale #–#","Échelle #–#","Scala #–#"],
+"Skiqualität":["Ski quality","Qualité de ski","Qualità sciistica"],
+"Skiqualität (SNOWPACK)":["Ski quality (SNOWPACK)","Qualité de ski (SNOWPACK)","Qualità sciistica (SNOWPACK)"],
+"Skiqualität aus SNOWPACK":["Ski quality from SNOWPACK","Qualité de ski selon SNOWPACK","Qualità sciistica da SNOWPACK"],
+"Skitour":["Ski tour","Randonnée à ski","Scialpinismo"],
+"Skitour · Pausiert":["Ski tour · Paused","Randonnée à ski · En pause","Scialpinismo · In pausa"],
+"Skitouren":["Ski tours","Randonnées à ski","Gite scialpinistiche"],
+"Skitouren (Karte)":["Ski tours (map)","Randonnées à ski (carte)","Gite scialpinistiche (mappa)"],
+"Skitouren · Powder-Score":["Ski tours · powder score","Randonnées · score poudreuse","Gite · punteggio polvere"],
+"Snow":["Snow","Neige","Neve"],
+"Snowmapper aufs Home-Screen":["Snowmapper on your home screen","Snowmapper sur l'écran d'accueil","Snowmapper nella schermata Home"],
+"Sonnen-":["Sun","Soleil","Sole"],
+"Sonnendeckel":["Sun crust","Croûte de soleil","Crosta da sole"],
+"Speichern":["Save","Enregistrer","Salva"],
+"Speichern fehlgeschlagen:":["Saving failed:","Échec de l'enregistrement :","Salvataggio non riuscito:"],
+"Splitboard":["Splitboard","Splitboard","Splitboard"],
+"Spontan":["Natural","Spontanée","Spontanea"],
+"Spontan oder ausgelöst":["Natural or triggered","Spontanée ou déclenchée","Spontanea o provocata"],
+"Sportart":["Sport","Sport","Sport"],
+"Sprengung":["Explosive","Minage","Esplosivo"],
+"Spuren":["Tracks","Traces","Tracce"],
+"Später":["Later","Plus tard","Più tardi"],
+"Später ▶":["Later ▶","Plus tard ▶","Più tardi ▶"],
+"Standard-Zeitfenster":["Default time window","Fenêtre par défaut","Finestra predefinita"],
+"Standardmässig blendet der Feed deine eigenen Meldungen aus, damit er die Community zeigt statt dich selbst. Aktiviere dies, um sie dort auch zu sehen.":["By default the feed hides your own reports so it shows the community rather than you. Turn this on to see them there too.","Par défaut, le fil masque tes propres observations pour montrer la communauté. Active ceci pour les y voir aussi.","Per impostazione predefinita il feed nasconde le tue segnalazioni per mostrare la community. Attivalo per vederle anche lì."],
+"Standardmässig zeigt die App die Demo-Daten vom #. April #. Hier auf aktuelle, echte Live-Wetterdaten umschalten.":["By default the app shows the demo data from # April #. Switch to current live weather data here.","Par défaut, l'app affiche les données démo du # avril #. Passe ici aux données météo actuelles.","Per impostazione predefinita l'app mostra i dati demo del # aprile #. Passa qui ai dati meteo attuali."],
+"Standort & Absenden":["Location & submit","Lieu & envoi","Posizione & invio"],
+"Standort wird ermittelt…":["Getting location…","Localisation…","Rilevamento posizione…"],
+"Standort nicht verfügbar":["Location not available","Position indisponible","Posizione non disponibile"],
+"Standort konnte nicht ermittelt werden":["Could not get your location","Impossible de déterminer la position","Impossibile determinare la posizione"],
+"Standortzugriff verweigert":["Location access denied","Accès à la position refusé","Accesso alla posizione negato"],
+"GPS nicht verfügbar":["GPS not available","GPS indisponible","GPS non disponibile"],
+"Keine Verbindung zum Server":["No connection to the server","Pas de connexion au serveur","Nessuna connessione al server"],
+"Zum Posten anmelden – die Aktivität ist gespeichert.":["Sign in to post – the activity is saved.","Connecte-toi pour publier – l'activité est enregistrée.","Accedi per pubblicare – l'attività è salvata."],
+"Aktivität verworfen":["Activity discarded","Activité abandonnée","Attività scartata"],
+"Start":["Start","Départ","Avvia"],
+"Start & Karte":["Start & map","Démarrage & carte","Avvio & mappa"],
+"Start · # m":["Start · # m","Départ · # m","Partenza · # m"],
+"Startansicht":["Start view","Vue de départ","Vista iniziale"],
+"Station (click for details)":["Station (click for details)","Station (clic pour les détails)","Stazione (clic per i dettagli)"],
+"Steilste Stelle":["Steepest pitch","Passage le plus raide","Tratto più ripido"],
+"Suchen…":["Search…","Rechercher…","Cerca…"],
+"Sulz":["Corn snow","Neige de printemps","Firn"],
+"Summe des Neuschnees über den unten gewählten Zeitraum, in der SLF-Skala eingefärbt. Verschiebe das Fenster, und die Karte rechnet neu.":["Total new snow over the period chosen below, coloured on the SLF scale. Move the window and the map recalculates.","Somme de neige fraîche sur la période choisie en bas, colorée selon l'échelle SLF. Déplace la fenêtre et la carte se recalcule.","Somma della neve fresca nel periodo scelto sotto, colorata sulla scala SLF. Sposta la finestra e la mappa si ricalcola."],
+"System":["System","Système","Sistema"],
+"Teilen":["Share","Partager","Condividi"],
+"Temperatur":["Temperature","Température","Temperatura"],
+"Temperatur # m":["Temperature # m","Température # m","Temperatura # m"],
+"Temperatur auf # m":["Temperature at # m","Température à # m","Temperatura a # m"],
+"Temperature":["Temperature","Température","Temperatura"],
+"Tempo km/h":["Speed km/h","Vitesse km/h","Velocità km/h"],
+"Tippe einen Namen, um Leute zu finden.":["Type a name to find people.","Tape un nom pour trouver des personnes.","Digita un nome per trovare persone."],
+"Tippe oben auf dein Profilbild, um es zu ändern. Anzeigename und Beschreibung erscheinen auf deinem öffentlichen Profil; alles unter „Darstellung“ und „Start & Karte“ bleibt auf diesem Gerät.":["Tap your profile picture above to change it. Display name and description appear on your public profile; everything under “Appearance” and “Start & map” stays on this device.","Touche ta photo de profil en haut pour la changer. Le nom et la description apparaissent sur ton profil public ; tout ce qui est sous « Affichage » et « Démarrage & carte » reste sur cet appareil.","Tocca in alto la tua foto profilo per cambiarla. Nome e descrizione appaiono sul profilo pubblico; tutto in «Aspetto» e «Avvio & mappa» resta su questo dispositivo."],
+"Tippe oder ziehe auf dem Feld":["Tap or drag in the field","Touche ou glisse dans le champ","Tocca o trascina nel campo"],
+"Tippe unten auf das":["Tap the","Touche en bas l'","Tocca in basso l'"],
+"Titel":["Title","Titre","Titolo"],
+"Touren":["Tours","Itinéraires","Gite"],
+"Touren finden":["Find tours","Trouver des itinéraires","Trova gite"],
+"Transparenz":["Transparency","Transparence","Trasparenza"],
+"Triebschnee":["Wind slab","Neige soufflée","Neve ventata"],
+"Triebschnee (letzte # h)":["Wind slab (last # h)","Neige soufflée (dernières # h)","Neve ventata (ultime # h)"],
+"Triebschnee-Pulver":["Wind-drifted powder","Poudreuse soufflée","Polvere ventata"],
+"Trocken":["Dry","Sèche","Asciutta"],
+"Umkreis":["Radius","Rayon","Raggio"],
+"Umkreis ab Kartenmitte":["Radius from map centre","Rayon depuis le centre","Raggio dal centro mappa"],
+"Umkreis ab Standort":["Radius from my location","Rayon depuis ma position","Raggio dalla mia posizione"],
+"Unbekannt":["Unknown","Inconnu","Sconosciuto"],
+"Unterebene":["Sub-layer","Sous-couche","Sottolivello"],
+"Username":["Username","Nom d'utilisateur","Nome utente"],
+"Verhältnisse direkt auf die Karte malen":["Paint the conditions straight onto the map","Peindre les conditions directement sur la carte","Dipingi le condizioni direttamente sulla mappa"],
+"Verhältnisse melden":["Report conditions","Signaler les conditions","Segnala condizioni"],
+"Verstanden – loslegen":["Got it – let's go","Compris – c'est parti","Capito – iniziamo"],
+"Verwerfen":["Discard","Abandonner","Scarta"],
+"Veröffentlichen":["Publish","Publier","Pubblica"],
+"Von der Community gemeldetes Powder":["Powder reported by the community","Poudreuse signalée par la communauté","Polvere segnalata dalla community"],
+"WASD/Arrows: rotate · +/-: zoom · R: reset":["WASD/Arrows: rotate · +/-: zoom · R: reset","WASD/Flèches : pivoter · +/- : zoom · R : réinitialiser","WASD/Frecce: ruota · +/-: zoom · R: reset"],
+"Wandern":["Hiking","Randonnée","Escursione"],
+"Was hast du gesehen?":["What did you see?","Qu'as-tu vu ?","Cosa hai visto?"],
+"Was liegt & wie fährt es sich?":["What's there & how does it ski?","Qu'y a-t-il & comment ça skie ?","Cosa c'è & come si scia?"],
+"Webcams":["Webcams","Webcams","Webcam"],
+"Webcams konnten nicht geladen werden":["Webcams could not be loaded","Impossible de charger les webcams","Impossibile caricare le webcam"],
+"Webcams – keine Daten":["Webcams – no data","Webcams – pas de données","Webcam – nessun dato"],
+"Weiter":["Continue","Continuer","Continua"],
+"Wer darf mein Profil & meine Beiträge sehen?":["Who can see my profile & posts?","Qui peut voir mon profil & mes publications ?","Chi può vedere il mio profilo e i miei post?"],
+"Wetter":["Weather","Météo","Meteo"],
+"Wie du im Feed erscheinst":["How you appear in the feed","Comment tu apparais dans le fil","Come appari nel feed"],
+"Wie gut die Abfahrt wäre":["How good the descent would be","Qualité de la descente","Quanto sarebbe buona la discesa"],
+"Wie sind die Bedingungen?":["How are the conditions?","Comment sont les conditions ?","Come sono le condizioni?"],
+"Wie viel frischer Triebschnee?":["How much fresh wind slab?","Combien de neige soufflée fraîche ?","Quanta neve ventata fresca?"],
+"Wie war's? Route, Verhältnisse, Gruppe …":["How was it? Route, conditions, group …","Comment c'était ? Itinéraire, conditions, groupe …","Com'è andata? Percorso, condizioni, gruppo …"],
+"Wildruhezonen":["Wildlife rest areas","Zones de tranquillité","Zone di tranquillità"],
+"Wind":["Wind","Vent","Vento"],
+"Wind Max":["Wind max","Vent max","Vento max"],
+"Wind Min":["Wind min","Vent min","Vento min"],
+"Wind Mittel":["Wind mean","Vent moyen","Vento medio"],
+"Wind auf # m":["Wind at # m","Vent à # m","Vento a # m"],
+"Wind-":["Wind","Vent","Vento"],
+"Windgepresst":["Wind-packed","Tassée par le vent","Pressata dal vento"],
+"Windgeschwindigkeit im gewählten Fenster. Wind verfrachtet Schnee: viel Wind heisst gepresste Hänge auf der einen und Triebschnee auf der anderen Seite.":["Wind speed in the selected window. Wind moves snow: lots of wind means packed slopes on one side and wind slab on the other.","Vitesse du vent dans la fenêtre choisie. Le vent transporte la neige : beaucoup de vent = pentes tassées d'un côté, plaques à vent de l'autre.","Velocità del vento nella finestra scelta. Il vento trasporta la neve: molto vento significa pendii pressati da un lato e neve ventata dall'altro."],
+"Windharsch":["Wind crust","Croûte de vent","Crosta da vento"],
+"Wir haben dir einen #-stelligen Code geschickt.":["We sent you a #-digit code.","Nous t'avons envoyé un code à # chiffres.","Ti abbiamo inviato un codice di # cifre."],
+"Wir haben dir einen Link an":["We sent a link to","Nous avons envoyé un lien à","Abbiamo inviato un link a"],
+"Wirklich ALLE deine Beiträge (inkl. Kommentare und Bewertungen dazu) löschen? Dein Konto bleibt bestehen.":["Really delete ALL your posts (including their comments and ratings)? Your account stays.","Vraiment supprimer TOUTES tes publications (commentaires et avis compris) ? Ton compte est conservé.","Eliminare davvero TUTTI i tuoi post (inclusi commenti e valutazioni)? Il tuo account resta."],
+"Wirklich sicher? Dieser Schritt kann nicht rückgängig gemacht werden.":["Are you sure? This cannot be undone.","Vraiment sûr ? Cette action est irréversible.","Sei sicuro? Questa azione non può essere annullata."],
+"Wumm":["Whumpf","Woum","Whumpf"],
+"Wumm-Geräusch":["Whumpf sound","Bruit de woum","Rumore whumpf"],
+"Wumm-Geräusche":["Whumpf sounds","Bruits de woum","Rumori whumpf"],
+"Wähle":["Choose","Choisis","Scegli"],
+"Wähle ein neues Passwort (mindestens # Zeichen).":["Choose a new password (at least # characters).","Choisis un nouveau mot de passe (au moins # caractères).","Scegli una nuova password (almeno # caratteri)."],
+"Zeichne zuerst mindestens eine Zone ein.":["Draw at least one zone first.","Dessine d'abord au moins une zone.","Disegna prima almeno una zona."],
+"Zeichnung verwerfen?":["Discard drawing?","Abandonner le dessin ?","Scartare il disegno?"],
+"Zeit":["Time","Temps","Tempo"],
+"Zeitpunkt liegt in der Zukunft.":["The time is in the future.","Le moment est dans le futur.","L'ora è nel futuro."],
+"Zu meinem Standort":["To my location","Vers ma position","Alla mia posizione"],
+"Zum Home-Bildschirm":["Add to home screen","Sur l'écran d'accueil","Alla schermata Home"],
+"Zur Karte":["To the map","Vers la carte","Alla mappa"],
+"Zurück":["Back","Retour","Indietro"],
+"Zurück zur Anmeldung":["Back to sign in","Retour à la connexion","Torna all'accesso"],
+"Zurück zur Liste":["Back to list","Retour à la liste","Torna all'elenco"],
+"alle # s · gröbere Spur":["every # s · coarser track","toutes les # s · trace plus grossière","ogni # s · traccia più grossolana"],
+"alle # s · empfohlen":["every # s · recommended","toutes les # s · recommandé","ogni # s · consigliato"],
+"aus":["off","off","off"],
+"an":["on","on","on"],
+"Mein Profil":["My profile","Mon profil","Il mio profilo"],
+"bleibt im ganzen Fenster unter # °C":["stays below # °C in the whole window","reste sous # °C toute la fenêtre","resta sotto # °C per tutta la finestra"],
+"bleibt im ganzen Fenster unter # km/h":["stays below # km/h in the whole window","reste sous # km/h toute la fenêtre","resta sotto # km/h per tutta la finestra"],
+"blue=cold · red=warm":["blue=cold · red=warm","bleu=froid · rouge=chaud","blu=freddo · rosso=caldo"],
+"bzw.":["or","ou","o"],
+"cm, aus Meldungen":["cm, from reports","cm, d'après les observations","cm, dalle segnalazioni"],
+"deckel":["crust","(croûte)","(crosta)"],
+"durchgehend hart":["hard throughout","dure partout","dura ovunque"],
+"dünner Harsch":["thin crust","croûte fine","crosta sottile"],
+"dünner Harsch auf Pulver":["thin crust on powder","croûte fine sur poudreuse","crosta sottile su polvere"],
+"dünner Harsch auf Schwachschicht":["thin crust on weak layer","croûte fine sur couche fragile","crosta sottile su strato debole"],
+"eigenes Risiko":["your own risk","tes propres risques","tuo rischio"],
+"estimated: air ± radiative cooling/warming":["estimated: air ± radiative cooling/warming","estimé : air ± refroidissement/réchauffement radiatif","stimato: aria ± raffreddamento/riscaldamento radiativo"],
+"geschickt. Öffne die E-Mail und tippe auf":["Open the email and tap","Ouvre l'e-mail et touche","Apri l'e-mail e tocca"],
+"gesetzt":["set","défini","impostato"],
+"green = max wind stays below # km/h":["green = max wind stays below # km/h","vert = vent max reste sous # km/h","verde = vento max resta sotto # km/h"],
+"gepostet":["posted","publié","pubblicato"],
+"guter Pulver":["good powder","bonne poudreuse","buona polvere"],
+"hart":["hard","dure","dura"],
+"hart gepresst":["hard-packed","très tassée","molto pressata"],
+"jede Sekunde · genaueste Spur, mehr Akku":["every second · most precise track, more battery","chaque seconde · trace la plus précise, plus de batterie","ogni secondo · traccia più precisa, più batteria"],
+"kein Lawinenbulletin":["not an avalanche bulletin","pas un bulletin d'avalanches","non è un bollettino valanghe"],
+"leicht ▶":["light ▶","faible ▶","debole ▶"],
+"nach Pulver-Anteil":["by powder share","par part de poudreuse","per quota di polvere"],
+"nach Sulz-Anteil":["by corn share","par part de neige de printemps","per quota di firn"],
+"nass / Sulz":["wet / corn","mouillée / printemps","bagnata / firn"],
+"nasser Pulver":["wet powder","poudreuse humide","polvere bagnata"],
+"nässt":["","",""],
+"only cells staying below #°C for entire window":["only cells staying below #°C for entire window","seulement les cellules restant sous #°C toute la fenêtre","solo celle sotto #°C per tutta la finestra"],
+"only cells with max #–#°C":["only cells with max #–#°C","seulement les cellules avec max #–#°C","solo celle con max #–#°C"],
+"schauen gerade":["watching now","regardent","stanno guardando"],
+"tiefer Pulver":["deep powder","poudreuse profonde","polvere profonda"],
+"tragender Harsch":["supportive crust","croûte portante","crosta portante"],
+"und ersetzt nicht die offizielle Beurteilung des":["and does not replace the official assessment of the","et ne remplace pas l'évaluation officielle du","e non sostituisce la valutazione ufficiale dello"],
+"vs.":["vs.","vs","vs."],
+"wenig Pulver":["little powder","peu de poudreuse","poca polvere"],
+"wenig Schnee":["little snow","peu de neige","poca neve"],
+"wenig ← Menge (cm) → viel":["little ← amount (cm) → lots","peu ← quantité (cm) → beaucoup","poca ← quantità (cm) → molta"],
+"windgepresst / verblasen":["wind-packed / scoured","tassée / soufflée","pressata / erosa dal vento"],
+"zur gewählten Stunde · hellblau = wenig, tiefblau = bedeckt":["at the selected hour · light blue = few, deep blue = overcast","à l'heure choisie · bleu clair = peu, bleu foncé = couvert","all'ora scelta · azzurro = poche, blu scuro = coperto"],
+"«Freunde» heisst: ihr folgt euch gegenseitig. Die Einstellung gilt für deine Beiträge auf der Karte und im Feed.":["“Friends” means you follow each other. The setting applies to your posts on the map and in the feed.","« Amis » signifie que vous vous suivez mutuellement. Le réglage s'applique à tes publications sur la carte et dans le fil.","«Amici» significa che vi seguite a vicenda. L'impostazione vale per i tuoi post sulla mappa e nel feed."],
+"· # Tage neben der Zeitleiste":["· # days beside the timeline","· # jours à côté de la frise","· # giorni accanto alla timeline"],
+"Öffne das Browser-Menü (⋮) und wähle":["Open the browser menu (⋮) and choose","Ouvre le menu du navigateur (⋮) et choisis","Apri il menu del browser (⋮) e scegli"],
+"Öffnet die Ebenen — zuerst die Ebene, darunter ihre Unterebenen.":["Opens the layers — first the layer, below it its sub-layers.","Ouvre les couches — d'abord la couche, puis ses sous-couches.","Apre i livelli — prima il livello, sotto i suoi sottolivelli."],
+"Über dich":["About you","À propos de toi","Su di te"],
+"Übersicht + Detail helfen am meisten":["Overview + detail help most","Vue d'ensemble + détail aident le plus","Panoramica + dettaglio aiutano di più"],
+"Überspringen":["Skip","Passer","Salta"],
+"– Endorsements":["– endorsements","– confirmations","– conferme"],
+"— danach kannst du hier direkt ein neues Passwort setzen.":["— then you can set a new password right here.","— ensuite tu peux définir un nouveau mot de passe ici.","— poi puoi impostare subito qui una nuova password."],
+"„Passwort zurücksetzen“":["“Reset password”","« Réinitialiser le mot de passe »","«Reimposta password»"],
+"‹ Zurück":["‹ Back","‹ Retour","‹ Indietro"],
+"◀ Früher":["◀ Earlier","◀ Plus tôt","◀ Prima"],
+"◀ stark":["◀ strong","◀ fort","◀ forte"],
+"☀︎ Sulz":["☀︎ Corn","☀︎ Printemps","☀︎ Firn"],
+"✕ Filter":["✕ Filter","✕ Filtre","✕ Filtro"],
+"❄︎ Pulver":["❄︎ Powder","❄︎ Poudreuse","❄︎ Polvere"],
+"Snowmapper":["Snowmapper","Snowmapper","Snowmapper"],
+"Sprache":["Language","Langue","Lingua"],
+"Schnee":["Snow","Neige","Neve"],
+"Weitere":["More","Autres","Altri"],
+"Ebene":["Layer","Couche","Livello"],
+"Overlays":["Overlays","Superpositions","Sovrapposizioni"],
+"Gefahr":["Danger","Danger","Pericolo"],
+"Menschen":["People","Personnes","Persone"],
+"Info":["Info","Info","Info"],
+"Tour":["Tour","Itinéraire","Gita"],
+"Pausiert":["Paused","En pause","In pausa"],
+"Heute":["Today","Aujourd'hui","Oggi"],
+"Morgen":["Tomorrow","Demain","Domani"],
+"gerade eben":["just now","à l'instant","proprio ora"],
+"Uhr":["","h",""],
+"Nacht":["Night","Nuit","Notte"],
+"Tag":["Day","Jour","Giorno"],
+"Winddeckel":["Wind crust","Croûte de vent","Crosta da vento"],
+"Durchnässter Pulver":["Soaked powder","Poudreuse trempée","Polvere fradicia"],
+"Gealterter Pulver":["Aged powder","Poudreuse vieillie","Polvere invecchiata"]
+};
+
+// ── Sprachen ──────────────────────────────────────────────────────────────
+// The app is written in German. Other languages are a layer on top: every
+// text node and title / aria-label / placeholder is looked up in I18N_DICT
+// (exact text, or with its numbers masked as '#') and swapped in place; a
+// MutationObserver does the same for whatever the app renders later. The
+// German original is remembered per node, so switching back is lossless.
+const LANGS={de:'Deutsch',en:'English',fr:'Français',it:'Italiano'};
+let LANG=(function(){try{const v=localStorage.getItem('ssm_lang');return LANGS[v]?v:'de';}catch(e){return 'de';}})();
+const _LI={en:0,fr:1,it:2};
+function LOCALE(){return {de:'de-CH',en:'en-GB',fr:'fr-CH',it:'it-CH'}[LANG]||'de-CH';}
+const _WD={de:['So','Mo','Di','Mi','Do','Fr','Sa'],en:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+  fr:['dim','lun','mar','mer','jeu','ven','sam'],it:['dom','lun','mar','mer','gio','ven','sab']};
+function WD(){return _WD[LANG]||_WD.de;}
+const _NUMRE=/\d+(?:[.,]\d+)?/g;
+function tr(s){
+  if(LANG==='de'||!s||typeof s!=='string')return s;
+  const i=_LI[LANG],core=s.replace(/\s+/g,' ').trim();if(!core)return s;
+  const lead=/^\s/.test(s)?' ':'',trail=/\s$/.test(s)?' ':'';
+  let e=I18N_DICT[core];
+  if(e&&e[i]!=null)return lead+e[i]+trail;
+  const nums=core.match(_NUMRE);
+  if(nums){e=I18N_DICT[core.replace(_NUMRE,'#')];
+    if(e&&e[i]!=null){let j=0;return lead+e[i].replace(/#/g,()=>nums[j]!=null?nums[j++]:'#')+trail;}}
+  return s;
+}
+// messages built as "Something failed: <detail>"
+function trMsg(m){if(LANG==='de'||typeof m!=='string')return m;const t=tr(m);if(t!==m)return t;
+  const k=m.indexOf(': ');if(k>0){const h=tr(m.slice(0,k+1));if(h!==m.slice(0,k+1))return h+' '+m.slice(k+2);}
+  const q=m.indexOf('? ');if(q>0){const h=tr(m.slice(0,q+1));if(h!==m.slice(0,q+1))return h+' '+tr(m.slice(q+2));}
+  return m;}
+const _i18nT=new WeakMap(),_i18nA=new WeakMap(),_I18N_ATTR=['title','aria-label','placeholder'];
+const _I18N_SKIP=/^(SCRIPT|STYLE|TEXTAREA|NOSCRIPT)$/;
+function _i18nNode(n){
+  const st=_i18nT.get(n),cur=n.data,src=(st&&cur===st.out)?st.src:cur,out=tr(src);
+  if(out!==cur){_i18nT.set(n,{src,out});n.data=out;}else if(!st||st.src!==src)_i18nT.set(n,{src,out});
+}
+function _i18nAttrs(el){
+  for(const a of _I18N_ATTR){if(!el.hasAttribute(a))continue;
+    let m=_i18nA.get(el);if(!m){m={};_i18nA.set(el,m);}
+    const cur=el.getAttribute(a),st=m[a],src=(st&&cur===st.out)?st.src:cur,out=tr(src);
+    m[a]={src,out};if(out!==cur)el.setAttribute(a,out);}
+}
+function _i18nSkip(el){return !el||_I18N_SKIP.test(el.tagName)||(el.closest&&el.closest('[data-noi18n],.leaflet-tile-pane,.feed-card-caption,.cmt-body,.dm-msg'));}
+function i18nApply(root){
+  root=root||document.body;if(!root)return;
+  if(root.nodeType===3){if(!_i18nSkip(root.parentElement))_i18nNode(root);return;}
+  if(root.nodeType!==1||_i18nSkip(root))return;
+  _i18nAttrs(root);
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT|NodeFilter.SHOW_ELEMENT,{acceptNode(n){
+    if(n.nodeType===1)return _i18nSkip(n)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT;
+    return /[A-Za-zÄÖÜäöü]/.test(n.data)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_SKIP;}});
+  let n;while((n=w.nextNode())){if(n.nodeType===3)_i18nNode(n);else _i18nAttrs(n);}
+}
+let _i18nObs=null,_i18nQ=new Set(),_i18nRaf=0;
+function _i18nFlush(){_i18nRaf=0;const q=_i18nQ;_i18nQ=new Set();q.forEach(n=>{if(n.isConnected)i18nApply(n);});}
+function i18nWatch(on){
+  if(on&&!_i18nObs&&window.MutationObserver){
+    _i18nObs=new MutationObserver(recs=>{for(const r of recs){
+      if(r.type==='childList')r.addedNodes.forEach(n=>_i18nQ.add(n));else _i18nQ.add(r.target);}
+      if(!_i18nRaf)_i18nRaf=requestAnimationFrame(_i18nFlush);});
+    _i18nObs.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:_I18N_ATTR});
+  }else if(!on&&_i18nObs){_i18nObs.disconnect();_i18nObs=null;}
+}
+function langSet(v){
+  if(!LANGS[v])return;LANG=v;
+  try{localStorage.setItem('ssm_lang',v);}catch(e){}
+  document.documentElement.lang=v;
+  i18nApply(document.body);i18nWatch(v!=='de');
+  try{langRender();}catch(e){}
+  // canvas text and anything formatted with dates is drawn, not in the DOM
+  try{drawTimeline();}catch(e){}try{renderAll();}catch(e){}try{lyRender();}catch(e){}
+  try{haptic(4);}catch(e){}
+}
+function langRender(){document.querySelectorAll('#setLang button').forEach(b=>b.classList.toggle('active',b.dataset.v===LANG));}
+(function(){const go=()=>{document.documentElement.lang=LANG;if(LANG!=='de'){i18nApply(document.body);i18nWatch(true);}};
+  if(document.body)go();else document.addEventListener('DOMContentLoaded',go);})();
+try{const _al=window.alert.bind(window),_cf=window.confirm.bind(window),_pr=window.prompt.bind(window);
+  window.alert=m=>_al(trMsg(m));window.confirm=m=>_cf(trMsg(m));window.prompt=(m,d)=>_pr(trMsg(m),d);}catch(e){}
+
 function _capPlugin(n){return (_CAP&&_CAP.Plugins&&_CAP.Plugins[n])?_CAP.Plugins[n]:null;}
 function nativeShare(text,url){const S=_capPlugin('Share');if(S){try{S.share({text:text||'',url:url||''});return true;}catch(e){}}return false;}
 if(_isNative){try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'DARK'});SB.setOverlaysWebView({overlay:true});}}catch(e){}
@@ -4766,7 +5432,7 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     ctx2.strokeStyle=day?_P.hair:_P.fill;ctx2.lineWidth=day?1.4:1;ctx2.beginPath();
     ctx2.moveTo(x,day?2:topPad);ctx2.lineTo(x,day?ch-2:baseY);ctx2.stroke();
     if(compact)continue;
-    if(day){const lab=['So','Mo','Di','Mi','Do','Fr','Sa'][d.getUTCDay()]+' '+d.getUTCDate()+'.';
+    if(day){const lab=WD()[d.getUTCDay()]+' '+d.getUTCDate()+'.';
       if((_dayN++%dayEvery)===0&&x-_lastLabX>=34){ctx2.fillStyle=_P.mut;ctx2.font='700 11.5px Inter,system-ui';
         ctx2.fillText(pxH*24<52?String(d.getUTCDate())+'.':lab,x+4,ch-5);_lastLabX=x;_lastHrX=x+ctx2.measureText(lab).width;}}
     else if(labH&&hr%labH===0&&x-_lastHrX>=22){ctx2.fillStyle=_P.mut;ctx2.globalAlpha=.75;ctx2.font='600 10px Inter,system-ui';
@@ -5290,7 +5956,7 @@ function vaTimeLabel(i){
   const tags=vaMan.timestamps||vaMan.tags||[];
   const dt=new Date(Date.parse(String(tags[i]||'').replace(/T(\d{2})(\d{2})$/,'T$1:$2')));
   if(!isFinite(+dt))return String(tags[i]||'');
-  return dt.toLocaleDateString('de-CH',{weekday:'short',day:'numeric',month:'short'})
+  return dt.toLocaleDateString(LOCALE(),{weekday:'short',day:'numeric',month:'short'})
     +' · '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
 }
 // Normally nothing: the bottom timeline is the control. This appears only
@@ -6263,7 +6929,7 @@ function vaDataNote(){
   const want=(M.times&&M.times[Math.max(0,Math.min(M.times.length-1,b-1))])||'';
   const wt=Date.parse(want.length>16?want:(want+':00'));
   const days=isFinite(wt)?Math.round(Math.abs(+dt-wt)/86400000):0;
-  const fmt=dt.toLocaleDateString('de-CH',{day:'numeric',month:'short',year:'numeric'})
+  const fmt=dt.toLocaleDateString(LOCALE(),{day:'numeric',month:'short',year:'numeric'})
            +', '+String(dt.getHours()).padStart(2,'0')+':00';
   // A day or two apart is the normal export cadence; months apart is a
   // different season and must not be presented as if it were today.
@@ -6694,7 +7360,7 @@ function tourVaWant(){
   if(typeof vaAvailable!=='function'||!vaAvailable())return null;
   const i=vaTagIndex(),tag=vaMan.tags[i];if(!tag)return null;
   let when='';try{const ms=Date.parse(String(vaMan.timestamps[i]).slice(0,16)+':00Z');
-    when=new Intl.DateTimeFormat('de-CH',{timeZone:'Europe/Zurich',weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms))+' Uhr';}catch(e){}
+    when=new Intl.DateTimeFormat(LOCALE(),{timeZone:'Europe/Zurich',weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms))+' Uhr';}catch(e){}
   return {tag,key:vaMan.generated+'|'+tag,when};
 }
 async function tourVaPrepare(){
@@ -7142,7 +7808,7 @@ async function wcPreview(id,mk){
   try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls',{headers:{'x-windy-api-key':WEBCAM_KEY}});
     const w=await r.json(),im=w.images&&(w.images.current||w.images.daylight)||{},src=im.preview||im.thumbnail;
     const loc=w.location||{},upd=w.lastUpdatedOn?new Date(w.lastUpdatedOn):null;
-    const when=upd?new Intl.DateTimeFormat('de-CH',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}).format(upd):'';
+    const when=upd?new Intl.DateTimeFormat(LOCALE(),{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}).format(upd):'';
     const link=(w.urls&&(w.urls.detail||w.urls.provider))||('https://www.windy.com/webcams/'+id);
     mk.setPopupContent('<div class="wc-pop">'+(src?'<img src="'+escapeHtml(src)+'" alt="">':'<div class="wc-img"></div>')
       +'<b>'+escapeHtml(w.title||'Webcam')+'</b><span>'+escapeHtml([loc.city,loc.region].filter(Boolean).join(', '))+(when?' · '+when:'')+'</span>'
@@ -7490,7 +8156,7 @@ async function trkRender(){
     el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkView=\'setup\';trkRender()" aria-label="Zurück">'+TRK_DOWN+'</button><b>Meine Aktivitäten</b><button class="trk-ic" onclick="trkClose()" aria-label="Schliessen">'+TRK_X+'</button></div>'
       +'<div class="trk-scroll">'+(list.length?list.map(a=>{const s=a.stats||{};
         return '<button class="trk-item" onclick="trkCur=\''+a.id+'\';trkView=\'detail\';trkRender()">'+trkThumb(trkLL(a.segs),96,72,'sm')
-          +'<span class="trk-it"><b>'+escapeHtml(a.name)+'</b><small>'+new Date(a.start).toLocaleDateString('de-CH',{weekday:'short',day:'numeric',month:'short'})+' · '+trkTypeLbl(a.type)+(a.postedId?' · gepostet':'')+'</small>'
+          +'<span class="trk-it"><b>'+escapeHtml(a.name)+'</b><small>'+new Date(a.start).toLocaleDateString(LOCALE(),{weekday:'short',day:'numeric',month:'short'})+' · '+trkTypeLbl(a.type)+(a.postedId?' · gepostet':'')+'</small>'
           +'<span>'+trkFmtD(s.dist||0)+' · ↑ '+(s.up||0)+' m · '+trkFmtT(s.moving||0)+'</span></span></button>';}).join('')
         :'<div class="trk-empty">Noch keine Aktivität. Starte deine erste Aufzeichnung.</div>')+'</div>';
     return;}
@@ -7499,7 +8165,7 @@ async function trkRender(){
     const s=a.stats||{},ll=trkLL(a.segs);
     trkShowOnMap(ll);
     el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkView=\'list\';trkRender()" aria-label="Zurück">'+TRK_DOWN+'</button><b>'+escapeHtml(a.name)+'</b><button class="trk-ic" onclick="trkClose()" aria-label="Schliessen">'+TRK_X+'</button></div>'
-      +'<div class="trk-scroll"><div class="trk-meta">'+new Date(a.start).toLocaleString('de-CH',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+' · '+trkTypeLbl(a.type)+'</div>'
+      +'<div class="trk-scroll"><div class="trk-meta">'+new Date(a.start).toLocaleString(LOCALE(),{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+' · '+trkTypeLbl(a.type)+'</div>'
       +(a.desc?'<p class="trk-desc">'+escapeHtml(a.desc)+'</p>':'')
       +'<div class="trk-sum four"><div><b>'+trkFmtD(s.dist||0)+'</b><small>Distanz</small></div><div><b>'+(s.up||0)+' m</b><small>Aufstieg</small></div><div><b>'+trkFmtT(s.moving||0)+'</b><small>Bewegung</small></div><div><b>'+(s.maxA!=null?s.maxA+' m':'–')+'</b><small>Höchster Punkt</small></div></div>'
       +'<div class="trk-profw">'+trkProfile(ll,340,80)+'</div>'
@@ -8711,8 +9377,8 @@ let _lastTier=-1;
 // the drawing canvas anyway; it settles once for real the next time the
 // map is used normally.
 map.on('zoomend',()=>{if(document.body.classList.contains('draw-on'))return;try{const t=detailTier();if(t!==_lastTier){_lastTier=t;renderStations();}loadReportMarkers();}catch(e){}});
-function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");const wd=['So','Mo','Di','Mi','Do','Fr','Sa'][d.getUTCDay()];return wd+' '+d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'., '+d.getUTCHours()+':00';}
-function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString('de-CH',{day:'2-digit',month:'short'});}
+function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");const wd=WD()[d.getUTCDay()];return wd+' '+d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'., '+d.getUTCHours()+':00';}
+function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString(LOCALE(),{day:'2-digit',month:'short'});}
 function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
   if(l=="snow"){let h="<b>Neuschnee [cm] (SLF-Skala)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (click for details)</div>";}
   if(l=="depth"){let h="<b>Schneehöhe [cm] (SLF-Skala)</b><br>";for(let i=0;i<DEPTH_BOUNDS.length-1;i++)h+=`<div><i style="background:${SC[Math.min(i,SC.length-1)]}"></i>${DEPTH_BOUNDS[i]}${i===DEPTH_BOUNDS.length-2?'+':'–'+DEPTH_BOUNDS[i+1]}</div>`;return h;}
@@ -9552,6 +10218,7 @@ function setClose(){
   if(_setCameFromProfile){_setCameFromProfile=false;
     const pm=document.getElementById('profModal');if(pm)pm.style.display='flex';}}
 function setRender(){
+  try{langRender();}catch(e){}
   const v=themePref();
   document.querySelectorAll('#setTheme button').forEach(b=>
     b.classList.toggle('active',b.dataset.v===v));
@@ -9937,7 +10604,7 @@ function icRR(ctx,x,y,w,h,r){r=Math.max(0,Math.min(r,w/2,h/2));ctx.beginPath();i
 function icDayGrid(ctx,x0,plotW,h,t0,t1,baseY){ctx.textAlign='center';ctx.font='600 11px Inter,system-ui';let _lx=-1e9;
   for(let t=t0;t<t1;t++){const d=new Date(M.times[t]+'Z');if(d.getUTCHours()===0){const x=x0+(t-t0)/(t1-t0)*plotW;
     ctx.strokeStyle=cvTok('--ink-050','#F0F1EF');ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,6);ctx.lineTo(x,baseY);ctx.stroke();
-    if(x-_lx>=52){ctx.fillStyle='rgba(115,108,97,.8)';ctx.fillText(d.toLocaleDateString('de-CH',{day:'2-digit',month:'short'}),x+22,h-3);_lx=x;}}}}
+    if(x-_lx>=52){ctx.fillStyle='rgba(115,108,97,.8)';ctx.fillText(d.toLocaleDateString(LOCALE(),{day:'2-digit',month:'short'}),x+22,h-3);_lx=x;}}}}
 function icPill(ctx,x,y,txt,col,w){ctx.font='800 11px Inter';const tw=ctx.measureText(txt).width+12,hh=17;
   let px=Math.max(2,Math.min(x-tw/2,w-tw-2)),py=Math.max(2,y);
   ctx.fillStyle=cvTok('--paper','#F7F8F7');icRR(ctx,px,py,tw,hh,8.5);ctx.fill();
@@ -10000,7 +10667,7 @@ function icRad(cv,p){const{ctx,w,h}=icSetup(cv,92);
   // actually reached at this location (sunshine fraction vs. clear sky).
   const days=[];let cur=null;
   for(let t=0;t<T;t++){const d=new Date(M.times[t]+'Z'),key=d.toISOString().slice(0,10);
-    if(!cur||cur.key!==key){cur={key,sum:0,n:0,inWin:false,lbl:d.toLocaleDateString('de-CH',{weekday:'short'})};days.push(cur);}
+    if(!cur||cur.key!==key){cur={key,sum:0,n:0,inWin:false,lbl:d.toLocaleDateString(LOCALE(),{weekday:'short'})};days.push(cur);}
     cur.sum+=sunv(t,p);cur.n++;if(t>=a&&t<b)cur.inWin=true;}
   const shown=days.filter(d2=>d2.inWin);
   const baseY=h-16,topY=20,n=shown.length,bw=(w-8)/Math.max(1,n);
@@ -10306,7 +10973,7 @@ window.addEventListener('appinstalled',()=>{try{localStorage.setItem('ssm_a2hs',
   const el=document.getElementById('a2hs');if(el)el.classList.remove('show');toast('App installiert!','ok');});
 window.addEventListener('DOMContentLoaded',()=>{if(isStandalone())document.body.classList.add('standalone');});
 // --- Toast notifications (surface errors + confirmations; no longer silent) ---
-function toast(msg,kind){const w=document.getElementById('toastWrap');
+function toast(msg,kind){msg=trMsg(msg);const w=document.getElementById('toastWrap');
   if(!w){try{console.log('toast:',kind||'',msg);}catch(e){}return;}
   const t=document.createElement('div');t.className='toast'+(kind?(' '+kind):'');
   const ic=kind==='err'?'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12.5"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>':kind==='ok'?'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>':'';
@@ -11310,7 +11977,7 @@ async function viewUser(uid,username){
   try{const{data}=await sb.from('profiles').select('username,bio,avatar_url,created_at').eq('id',uid).single();
     if(data){document.getElementById('uvName').textContent=data.username||username||'User';document.getElementById('uvInitial').textContent=(data.username||'U')[0].toUpperCase();
       document.getElementById('uvBio').textContent=data.bio||'';
-      if(data.created_at){const d=new Date(data.created_at);document.getElementById('uvSince').textContent=d.toLocaleDateString('de-CH',{month:'short',year:'2-digit'});}
+      if(data.created_at){const d=new Date(data.created_at);document.getElementById('uvSince').textContent=d.toLocaleDateString(LOCALE(),{month:'short',year:'2-digit'});}
       if(data.avatar_url){av.classList.add('has-img');av.style.backgroundImage='url('+data.avatar_url+')';avatarPut(uid,data.avatar_url);}}
   }catch(e){}
   try{const{count:fc}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',uid);
@@ -11481,8 +12148,8 @@ async function dmRender(){
     const{data}=await sb.from('dm_messages').select('*').eq('thread_id',dmThread)
       .order('created_at',{ascending:true}).limit(400);
     if(!data||!data.length){body.innerHTML='<div class="dm-empty">Noch nichts. Schreib die erste Nachricht.</div>';return;}
-    const dfmt=new Intl.DateTimeFormat('de-CH',{weekday:'short',day:'numeric',month:'long'}),
-          tfmt=new Intl.DateTimeFormat('de-CH',{hour:'2-digit',minute:'2-digit'});
+    const dfmt=new Intl.DateTimeFormat(LOCALE(),{weekday:'short',day:'numeric',month:'long'}),
+          tfmt=new Intl.DateTimeFormat(LOCALE(),{hour:'2-digit',minute:'2-digit'});
     let lastDay='',lastFrom=null,lastMs=0;
     body.innerHTML=data.map(m=>{const d=new Date(m.created_at),day=d.toDateString(),me=m.sender_id===sbUser.id;
       let h='';if(day!==lastDay){h+='<div class="dm-day">'+escapeHtml(dfmt.format(d))+'</div>';lastDay=day;lastFrom=null;}
@@ -11772,7 +12439,7 @@ function rpVoiceToggle(){
   if(rpRecording){if(rpRecognition)rpRecognition.stop();rpRecording=false;btn.classList.remove('recording');btn.textContent='🎤 Halten und sprechen';return;}
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){document.getElementById('rpCaption').focus();return;}
-  rpRecognition=new SR();rpRecognition.lang='de-CH';rpRecognition.continuous=false;rpRecognition.interimResults=true;
+  rpRecognition=new SR();rpRecognition.lang=LOCALE();rpRecognition.continuous=false;rpRecognition.interimResults=true;
   rpRecognition.onresult=e=>{
     let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
     document.getElementById('rpCaption').value=t;rpState.caption=t;
