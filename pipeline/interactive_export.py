@@ -940,6 +940,12 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
         (ddir / dataname).write_text(payload, encoding="utf-8")
         pointer["data"] = dataname
     (ddir / "latest.json").write_text(json.dumps(pointer), encoding="utf-8")
+    # Client settings that come from the build environment (no secrets of
+    # ours: the Windy key is a public client key, sent with every request).
+    cfg = {}
+    if os.environ.get("WINDY_WEBCAMS_KEY"):
+        cfg["windy_webcams_key"] = os.environ["WINDY_WEBCAMS_KEY"].strip()
+    (ddir / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
     # The ski-tour routes once more on their own: the demo blob comes from a
     # cache and may predate them, and the tour layer should not depend on
     # which data set is on screen. Only written when there are routes.
@@ -3477,6 +3483,98 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .fab-tour svg{width:15px;height:15px}
  #feedAnchorBar{gap:10px;align-items:center;justify-content:space-between;padding:6px 20px 8px;background:var(--paper)}
  #feedAnchorBar button{border:1px solid var(--hair);background:var(--card);border-radius:999px;padding:5px 10px;font:700 12px Inter,system-ui;color:var(--fg2);cursor:pointer}
+
+ /* ══ community 2026: one visual language for profile, people, messages ══ */
+ .prof-modal,.dm-wrap{background:rgba(10,14,22,.38);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+ .prof-sheet{background:var(--paper);border-radius:28px 28px 0 0;max-height:92vh;box-shadow:0 -18px 50px rgba(0,0,0,.22);
+   animation:sheetUp .34s cubic-bezier(.2,.9,.25,1)}
+ @keyframes sheetUp{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+ .prof-head{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;padding:18px 20px 10px;
+   background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+ .prof-head span{font:800 24px/1.1 Inter,system-ui;letter-spacing:-.02em;color:var(--fg)}
+ .prof-head button{width:34px;height:34px;border-radius:50%;border:0;background:var(--fill);color:var(--fg2);font-size:15px;cursor:pointer}
+ .prof-body{padding:6px 18px 28px}
+ .prof-top{display:flex;align-items:center;gap:16px;padding:16px;border-radius:24px;margin-bottom:12px;
+   background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 16%,var(--card)),var(--card));border:1px solid var(--hair)}
+ .prof-av,.uv-av{box-shadow:0 0 0 3px var(--card),0 0 0 5px color-mix(in srgb,var(--accent) 55%,transparent),0 10px 24px rgba(0,0,0,.14)}
+ .prof-name{font:800 20px/1.15 Inter,system-ui;letter-spacing:-.01em}
+ .uv-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px;margin:12px 0}
+ .uv-stat{background:var(--card);border:1px solid var(--hair);border-radius:18px;padding:12px 8px;text-align:center}
+ .uv-stat b{display:block;font:800 19px/1.1 Inter,system-ui;color:var(--fg)}
+ .uv-stat span{font-size:11px;color:var(--fg2)}
+ .prof-sec-title{font:800 12px Inter,system-ui;text-transform:uppercase;letter-spacing:.06em;color:var(--fg2);margin:18px 4px 8px}
+ .prof-item{border-radius:16px;margin-bottom:0;border:0;border-bottom:1px solid var(--hair);background:var(--card);min-height:52px}
+ .prof-view .prof-item:first-of-type{border-radius:16px 16px 4px 4px}
+ .prof-view .prof-item+.prof-item{border-radius:4px}
+ .prof-view .prof-item:last-of-type{border-radius:4px 4px 16px 16px;border-bottom:0}
+ .prof-save{border-radius:999px!important;height:48px;font-weight:800;box-shadow:0 8px 22px color-mix(in srgb,var(--accent) 30%,transparent)}
+ .prof-input,.prof-bio{border-radius:14px!important;background:var(--card)!important}
+ .prof-seg{background:var(--fill);border-radius:14px;padding:4px}
+ .prof-seg button{border-radius:11px}
+ .prof-signout{border-radius:999px!important}
+ /* public profile: a banner with the avatar overlapping it */
+ .uv-hero{height:calc(env(safe-area-inset-top,0px) + 96px);border:0;
+   background:linear-gradient(120deg,#0E2A5C,var(--accent) 60%,#5B9BFF)}
+ .uv-close,.uv-msg{background:rgba(255,255,255,.22)!important;color:#fff!important;backdrop-filter:blur(8px);border:0!important}
+ .uv-hero::after{display:none}
+ .uv-sheet{overflow-y:auto!important}
+ .uv-body{position:relative;z-index:2;overflow:visible!important;max-height:none!important}
+ .uv-top{margin-top:-58px;position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
+ .uv-idn{display:flex;flex-direction:column;align-items:center;gap:4px}
+ .uv-bio{text-align:center}
+ .uv-name{font:800 22px/1.1 Inter,system-ui;letter-spacing:-.01em}
+ #uvFollow{width:100%}
+ .uv-report{background:none;border:0;color:var(--fg2);font-size:12px;margin:8px auto;display:block}
+ /* people */
+ #usInput{border-radius:999px!important;padding-left:44px!important;
+   background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23889' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M21 21l-4.3-4.3'/%3E%3C/svg%3E") 16px 50%/18px no-repeat!important}
+ .us-sec{font:800 12px Inter,system-ui;text-transform:uppercase;letter-spacing:.06em;color:var(--fg2);margin:16px 4px 8px}
+ .us-row{border:1px solid var(--hair);border-radius:18px;background:var(--card);padding:10px 12px;margin-bottom:8px}
+ .us-row .av{width:44px;height:44px;border-radius:50%;box-shadow:0 0 0 2px var(--card),0 0 0 3.5px color-mix(in srgb,var(--accent) 40%,transparent)}
+ .us-t{display:flex;flex-direction:column;flex:1;min-width:0}
+ .us-t b{font-size:14.5px}
+ .us-t em{font-style:normal;font-size:11.5px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .feed-follow{border-radius:999px!important;font-weight:800!important}
+ .feed-follow:not(.following){background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important}
+ /* messages: full-height sheet, chat bubbles, pill composer */
+ .dm-sheet{height:92vh;border-radius:28px 28px 0 0;overflow:hidden;box-shadow:0 -18px 50px rgba(0,0,0,.22)}
+ .dm-head{padding:16px 18px 12px;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--hair)}
+ #dmTitle{display:flex;align-items:center;gap:10px;font:800 18px Inter,system-ui}
+ .dm-hav{width:32px;height:32px;border-radius:50%;background:var(--fill) center/cover;display:inline-flex;align-items:center;justify-content:center;font:800 13px var(--mono);font-style:normal}
+ .dm-row{border-radius:18px;margin:4px 10px;width:calc(100% - 20px);padding:12px 14px}
+ .dm-row:active{background:var(--fill)}
+ .dm-day{text-align:center;font:700 11px Inter,system-ui;color:var(--fg2);margin:14px 0 6px}
+ .dm-msg{border-radius:20px;padding:9px 14px;margin:6px 14px 0;box-shadow:0 1px 1px rgba(0,0,0,.04)}
+ .dm-msg.cont{margin-top:2px}
+ .dm-msg.me{background:linear-gradient(135deg,var(--accent),#3D86F0)!important;color:#fff!important;border-bottom-right-radius:6px}
+ .dm-msg:not(.me){background:var(--card);border:1px solid var(--hair);border-bottom-left-radius:6px}
+ .dm-msg.me .t{color:rgba(255,255,255,.75)}
+ .dm-input{padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 10px);gap:8px;background:var(--paper);border-top:1px solid var(--hair)}
+ .dm-input input{border-radius:999px!important;background:var(--card)!important;height:44px}
+ .dm-input button{width:44px;height:44px;border-radius:50%!important;background:var(--accent)!important;color:#fff!important;border:0!important}
+ /* feed: big title that shrinks as the list scrolls (scroll-driven animation) */
+ .feed-card{content-visibility:auto;contain-intrinsic-size:auto 520px}
+ @supports (animation-timeline: scroll()){
+   .feed-page{timeline-scope:--feedscroll}
+   .feed-scroll{scroll-timeline:--feedscroll y}
+   .feed-title{animation:feedTitle linear both;animation-timeline:--feedscroll;animation-range:0 90px;transform-origin:left center}
+   @keyframes feedTitle{to{font-size:20px;padding-top:2px;padding-bottom:2px;opacity:.9}}
+ }
+ /* view transitions: a quick cross-fade with a little lift */
+ ::view-transition-old(root),::view-transition-new(root){animation-duration:.22s;animation-timing-function:cubic-bezier(.2,.9,.25,1)}
+ /* webcams */
+ .wc-pin{width:30px;height:30px;border-radius:10px;background:#0E2A5C;color:#fff;display:flex;align-items:center;justify-content:center;
+   box-shadow:0 0 0 2px #fff,0 4px 10px rgba(0,0,0,.3)}
+ .wc-pin svg{width:16px;height:16px}
+ .wc-popup .leaflet-popup-content-wrapper{border-radius:18px;padding:0;overflow:hidden}
+ .wc-popup .leaflet-popup-content{margin:0;width:280px!important}
+ .wc-pop{display:flex;flex-direction:column;gap:3px;padding-bottom:10px}
+ .wc-pop img,.wc-pop .wc-img{width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--fill);display:block;margin-bottom:6px}
+ .wc-pop b,.wc-pop span,.wc-pop a,.wc-pop em{padding:0 12px}
+ .wc-pop b{font-size:14px}
+ .wc-pop span{font-size:11.5px;color:var(--fg2)}
+ .wc-pop>a{font:700 12.5px Inter,system-ui;color:var(--accent);margin-top:4px}
+ .wc-pop em{font-style:normal;font-size:10px;color:var(--fg2)}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -4698,6 +4796,7 @@ const OVERLAYS={
            attr:'Skitouren © swisstopo'},
   // Shown with the routes on purpose: entering a wildlife rest zone is an
   // offence in several cantons, and swisstopo publishes the two together.
+  webcams:{label:'Webcams',vector:true,attr:'Webcams © <a href="https://www.windy.com/" target="_blank" rel="noopener">windy.com</a>'},
   wildlife:{label:'Wildruhezonen',wmts:'ch.bafu.wrz-wildruhezonen_portal',op:.6,
             attr:'Wildruhezonen © BAFU'},
   avalanche:{label:'Lawinenbulletin',vector:true,
@@ -4713,6 +4812,7 @@ const ovLayer={};
 function ovAvailable(k){
   if(k==='avalanche'){const a=M.avalanche;return !!(a&&a.regions&&a.regions.some(r=>r.geometry));}
   if(k==='skitourVec')return tourList().length>0;
+  if(k==='webcams')return !!WEBCAM_KEY;
   if(k==='variantA')return vaAvailable();
   return true;
 }
@@ -4722,6 +4822,7 @@ function ovBuild(k){
   if(o.wmts){ovLayer[k]=L.tileLayer(swissTile(o.wmts,'png'),{opacity:o.op,pane:'overlayPane'});}
   else if(k==='avalanche'){ovLayer[k]=avBuildLayer();}
   else if(k==='skitourVec'){ovLayer[k]=tourBuildLayer();}
+  else if(k==='webcams'){ovLayer[k]=wcBuildLayer();}
   else if(k==='variantA'){ovLayer[k]=vaBuildLayer();}
   return ovLayer[k];
 }
@@ -6330,7 +6431,7 @@ function _lerpC(stops,v){v=Math.max(0,Math.min(100,v));
   return stops[stops.length-1][1];}
 function tourRamp(v,focus){const P=VA_PALETTE.ski6;
   const st=(focus||tourFocus)==='sulz'?[[0,TOUR_GREY],[8,[238,214,166]],[50,P[6]],[100,[166,106,24]]]
-                                     :[[0,TOUR_GREY],[10,[232,200,255]],[40,[200,120,255]],[75,[160,60,255]],[100,[125,20,255]]];
+                                     :[[0,TOUR_GREY],[10,[120,160,225]],[40,[40,90,200]],[75,[16,52,150]],[100,[8,28,96]]];
   const c=_lerpC(st,v);return 'rgb('+c[0]+','+c[1]+','+c[2]+')';}
 function tourVal(r){return r?(tourFocus==='sulz'?r.sulz:r.powder):-1;}
 function tourColor(r){if(!r)return 'rgb('+TOUR_GREY.join(',')+')';return tourRamp(tourVal(r));}
@@ -6461,7 +6562,7 @@ function tourPaintScores(){
     const col=tourColor(r),v=r?tourVal(r):0;
     t._line.setStyle({color:col,opacity:!vis?0:(iso?.12:1)});
     if(t._casing)t._casing.setStyle({opacity:!vis||iso?0:.95});
-    if(t._glow)t._glow.setStyle({color:col,opacity:!vis||iso?0:(v>=75?.5:v>=40?.32:v>=10?.16:0)});});
+    if(t._glow)t._glow.setStyle({color:'#5B9BFF',opacity:!vis||iso?0:(v>=40?.22:0)});});
 }
 let tourLayerGroup=null,tourRenderer=null;
 // Thousands of routes as SVG would be thousands of DOM paths; one canvas
@@ -6479,7 +6580,7 @@ function tourBuildLayer(){
     const w=tourW();
     // a soft halo in the tour's own colour under everything: the good
     // ones glow
-    const glow=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+10,opacity:0,interactive:false,lineCap:'round',lineJoin:'round'});
+    const glow=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+6,opacity:0,interactive:false,lineCap:'round',lineJoin:'round'});
     const casing=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+3,opacity:.9,interactive:false,lineCap:'round',lineJoin:'round'});
     const line=L.polyline(latlngs,{renderer:tourRenderer,color:'rgb('+TOUR_GREY.join(',')+')',weight:w,opacity:.95,interactive:true,lineCap:'round',lineJoin:'round'});
     line.on('click',e=>{if(!tourVisible(t)||(tourIso&&tourIso!==t))return;
@@ -6491,7 +6592,7 @@ function tourBuildLayer(){
   return tourLayerGroup;
 }
 map.on('zoomend',()=>{if(!ovOn.skitourVec)return;const w=tourW();
-  tourList().forEach(t=>{if(t._line&&t._line.options.weight!==w){t._line.setStyle({weight:w});if(t._casing)t._casing.setStyle({weight:w+3});if(t._glow)t._glow.setStyle({weight:w+10});}});});
+  tourList().forEach(t=>{if(t._line&&t._line.options.weight!==w){t._line.setStyle({weight:w});if(t._casing)t._casing.setStyle({weight:w+3});if(t._glow)t._glow.setStyle({weight:w+6});}});});
 // ── one route on its own ───────────────────────────────────────────────────
 let tourIso=null,tourIsoLayer=null,tourFromSearch=false;
 function tourOpen(t,fromSearch){
@@ -6743,6 +6844,63 @@ function rptPlace(r){
   return (r._place=best||(r.lat.toFixed(2)+'°N, '+r.lng.toFixed(2)+'°E'));
 }
 
+// ── Webcams (Windy Webcams API v3) ─────────────────────────────────────────
+// The cameras in view are fetched as the map moves; a tap shows a fresh
+// preview (Windy's image links expire after a few minutes, so they are asked
+// for again on every open). Needs a free Windy API key, written into
+// data/config.json at build time (repository secret WINDY_WEBCAMS_KEY);
+// without it the layer is simply not offered. Windy's terms ask for a
+// visible credit with a link, which the popup and the attribution carry.
+var WEBCAM_KEY=null,wcLayer=null,wcSeen=new Map(),wcT=0,wcBusy=false;   // var: the layer list asks before this line has run
+const WC_API='https://api.windy.com/webcams/api/v3/webcams';
+fetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
+  if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}}}).catch(()=>{});
+async function wcFetch(params){
+  const r=await fetch(WC_API+'?'+params,{headers:{'x-windy-api-key':WEBCAM_KEY}});
+  if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+function wcIcon(){return L.divIcon({className:'',iconSize:[30,30],iconAnchor:[15,15],
+  html:'<div class="wc-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>'});}
+function wcBuildLayer(){wcLayer=L.layerGroup();setTimeout(wcRefresh,0);return wcLayer;}
+async function wcRefresh(){
+  if(!WEBCAM_KEY||!ovOn.webcams||!wcLayer||wcBusy)return;
+  if(map.getZoom()<8.5){toastOnce('wc-zoom','Für Webcams näher heranzoomen');return;}
+  wcBusy=true;
+  try{const c=map.getCenter(),b=map.getBounds();
+    const rad=Math.min(250,Math.max(5,Math.round(tourDistM(c.lng,c.lat,b.getEast(),b.getNorth())/1000)));
+    const j=await wcFetch('nearby='+c.lat.toFixed(4)+','+c.lng.toFixed(4)+','+rad+'&limit=50&include=location');
+    (j.webcams||[]).forEach(w=>{const id=String(w.webcamId||w.id),loc=w.location||{};
+      if(wcSeen.has(id)||loc.latitude==null)return;
+      const mk=L.marker([loc.latitude,loc.longitude],{icon:wcIcon(),title:w.title||'Webcam',zIndexOffset:300});
+      mk.bindPopup('<div class="wc-pop"><div class="wc-img skel"></div><b>'+escapeHtml(w.title||'Webcam')+'</b></div>',{className:'wc-popup',maxWidth:300,minWidth:260});
+      mk.on('popupopen',()=>wcPreview(id,mk));
+      wcSeen.set(id,mk);wcLayer.addLayer(mk);});
+  }catch(e){toastOnce('wc-err','Webcams konnten nicht geladen werden');}
+  wcBusy=false;
+}
+async function wcPreview(id,mk){
+  try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls',{headers:{'x-windy-api-key':WEBCAM_KEY}});
+    const w=await r.json(),im=w.images&&(w.images.current||w.images.daylight)||{},src=im.preview||im.thumbnail;
+    const loc=w.location||{},upd=w.lastUpdatedOn?new Date(w.lastUpdatedOn):null;
+    const when=upd?new Intl.DateTimeFormat('de-CH',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}).format(upd):'';
+    const link=(w.urls&&(w.urls.detail||w.urls.provider))||('https://www.windy.com/webcams/'+id);
+    mk.setPopupContent('<div class="wc-pop">'+(src?'<img src="'+escapeHtml(src)+'" alt="">':'<div class="wc-img"></div>')
+      +'<b>'+escapeHtml(w.title||'Webcam')+'</b><span>'+escapeHtml([loc.city,loc.region].filter(Boolean).join(', '))+(when?' · '+when:'')+'</span>'
+      +'<a href="'+escapeHtml(link)+'" target="_blank" rel="noopener">Live auf windy.com ›</a>'
+      +'<em>Webcams bereitgestellt von <a href="https://www.windy.com/" target="_blank" rel="noopener">windy.com</a></em></div>');
+  }catch(e){mk.setPopupContent('<div class="wc-pop"><b>Vorschau nicht verfügbar</b></div>');}
+}
+const _toastSeen=new Set();
+function toastOnce(k,msg){if(_toastSeen.has(k))return;_toastSeen.add(k);try{toast(msg,'info');}catch(e){}}
+map.on('moveend',()=>{if(!ovOn.webcams)return;clearTimeout(wcT);wcT=setTimeout(wcRefresh,400);});
+// ── View Transitions: screens cross-fade and slide instead of popping ──
+// Progressive: browsers without the API (or with reduced motion) just switch.
+function vt(fn){
+  try{if(document.startViewTransition&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)){
+    let out;document.startViewTransition(()=>{out=fn();});return out;}}catch(e){}
+  return fn();
+}
+['feedOpen','feedClose','feedToggleWide','usOpen','usClose','dmOpen','dmClose','profClose','userViewClose','lyPanelOpen','lyPanelClose']
+  .forEach(n=>{const f=window[n];if(typeof f!=='function')return;window[n]=function(){const a=arguments,self=this;return vt(()=>f.apply(self,a));};});
 // ── «Touren finden» ────────────────────────────────────────────────────────
 // A sheet over the lower part of the screen, the map above it showing only
 // the routes that pass the filters. Distance is measured to the route's
@@ -8350,6 +8508,7 @@ function lyRender(){
   lyInfoRender();
 }
 const OV_ICON={
+  webcams:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
   skitourVec:'<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18c4 0 3-6 7-6 2.5 0 2-4 2-4"/>',
   skitour:'<path d="M3 20l6-12 4 7 3-4 5 9z"/>',
   wildlife:'<path d="M7 4c0 3 2 4 5 4s5-1 5-4"/><path d="M12 8v4"/><ellipse cx="12" cy="16" rx="5" ry="4"/>',
@@ -8764,7 +8923,7 @@ function flyToMe(){haptic(8);
     try{
       if(meMarker)map.removeLayer(meMarker);
       meMarker=L.marker(ll,{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1900}).addTo(map);
-      map.flyTo(ll,12,{duration:1.1});
+      map.flyTo(ll,14,{duration:1.2});
     }catch(e){}
     myLoc=ll;},
     ()=>{toast('Standort konnte nicht ermittelt werden','err');},{enableHighAccuracy:true,timeout:9000});}
@@ -9928,6 +10087,8 @@ async function loadSocial(){
 // feed. Written to whichever .feed-dot elements exist (only #mapFeedFab's
 // is visible today, but the rail carries a second one).
 function feedNotifRender(n){
+  // the count also on the installed app's icon (App Badging API)
+  try{if('setAppBadge' in navigator){if(n>0)navigator.setAppBadge(n);else navigator.clearAppBadge();}}catch(e){}
   document.querySelectorAll('.feed-dot').forEach(el=>{
     el.textContent=n>0?(n>99?'99+':String(n)):'';
     el.classList.toggle('on',n>0);
@@ -10576,7 +10737,8 @@ async function dmThreadOpen(tid,uid,name){
   dmUnsub();dmThread=tid;dmOther=uid;
   document.getElementById('dmBack').hidden=false;
   document.getElementById('dmInputRow').hidden=false;
-  document.getElementById('dmTitle').textContent=name||'Nachricht';
+  const tt=document.getElementById('dmTitle'),au=(typeof avatarOf==='function')?avatarOf(uid):null;
+  tt.innerHTML='<i class="dm-hav"'+(au?' style="background-image:url(&quot;'+escapeHtml(au)+'&quot;)"':'')+'>'+(au?'':escapeHtml(((name||'U')[0]||'U').toUpperCase()))+'</i>'+escapeHtml(name||'Nachricht');
   await dmRender();
   // live, so a reply lands without anyone pulling to refresh
   try{
@@ -10593,8 +10755,14 @@ async function dmRender(){
     const{data}=await sb.from('dm_messages').select('*').eq('thread_id',dmThread)
       .order('created_at',{ascending:true}).limit(400);
     if(!data||!data.length){body.innerHTML='<div class="dm-empty">Noch nichts. Schreib die erste Nachricht.</div>';return;}
-    body.innerHTML=data.map(m=>'<div class="dm-msg'+(m.sender_id===sbUser.id?' me':'')+'">'+
-      escapeHtml(m.body)+'<span class="t">'+timeAgo(m.created_at)+'</span></div>').join('');
+    const dfmt=new Intl.DateTimeFormat('de-CH',{weekday:'short',day:'numeric',month:'long'}),
+          tfmt=new Intl.DateTimeFormat('de-CH',{hour:'2-digit',minute:'2-digit'});
+    let lastDay='',lastFrom=null,lastMs=0;
+    body.innerHTML=data.map(m=>{const d=new Date(m.created_at),day=d.toDateString(),me=m.sender_id===sbUser.id;
+      let h='';if(day!==lastDay){h+='<div class="dm-day">'+escapeHtml(dfmt.format(d))+'</div>';lastDay=day;lastFrom=null;}
+      const cont=lastFrom===m.sender_id&&(d-lastMs)<5*60e3;lastFrom=m.sender_id;lastMs=+d;
+      return h+'<div class="dm-msg'+(me?' me':'')+(cont?' cont':'')+'">'+escapeHtml(m.body)
+        +'<span class="t">'+tfmt.format(d)+(me&&m.read_at?' · gelesen':'')+'</span></div>';}).join('');
     body.scrollTop=body.scrollHeight;
     // anything addressed to me that is on screen has been read
     const unread=data.filter(m=>m.sender_id!==sbUser.id&&!m.read_at).map(m=>m.id);
@@ -10611,13 +10779,27 @@ async function dmSend(){
     dmRender();
   }catch(e){toast('Senden fehlgeschlagen','err');inp.value=body;}
 }
-function usOpen(){document.getElementById('usModal').style.display='flex';setTimeout(()=>{try{document.getElementById('usInput').focus();}catch(e){}},80);}
+// An empty search shows who is active: the people behind the latest reports,
+// most reports first -- so the screen is never a blank box.
+function usSuggest(box){
+  const by=new Map();
+  (allReports||[]).forEach(r=>{if(!r.dbRow||!r.userId||(sbUser&&r.userId===sbUser.id))return;
+    const o=by.get(r.userId)||{id:r.userId,name:r.user,avatar:r.avatar,n:0,last:r.time};o.n++;by.set(r.userId,o);});
+  const list=[...by.values()].sort((a,b)=>b.n-a.n).slice(0,12);
+  if(!list.length){box.innerHTML='<div class="us-empty">Tippe einen Namen, um Leute zu finden.</div>';return;}
+  box.innerHTML='<div class="us-sec">Aktiv in der Community</div>'+list.map(u=>{const fol=myFollowing.has(u.id);
+    return '<div class="us-row" onclick="usClose();viewUser(\''+u.id+'\',\''+escapeHtml(u.name||'User').replace(/'/g,'')+'\')">'
+      +'<div class="av"'+(u.avatar?' style="background-image:url(&quot;'+escapeHtml(u.avatar)+'&quot;)"':'')+'>'+(u.avatar?'':escapeHtml((u.name||'U')[0].toUpperCase()))+'</div>'
+      +'<span class="us-t"><b>'+escapeHtml(u.name||'User')+'</b><em>'+u.n+' Meldung'+(u.n>1?'en':'')+' · zuletzt '+escapeHtml(u.last||'')+'</em></span>'
+      +'<button class="feed-follow '+(fol?'following':'')+'" onclick="toggleFollow(\''+u.id+'\',event);this.classList.toggle(\'following\');this.textContent=this.classList.contains(\'following\')?\'Folge ich\':\'Folgen\';">'+(fol?'Folge ich':'Folgen')+'</button></div>';}).join('');
+}
+function usOpen(){document.getElementById('usModal').style.display='flex';try{usSuggest(document.getElementById('usList'));}catch(e){}setTimeout(()=>{try{document.getElementById('usInput').focus();}catch(e){}},80);}
 function usClose(){document.getElementById('usModal').style.display='none';}
 function usInput(){clearTimeout(_usT);_usT=setTimeout(usSearch,280);}
 async function usSearch(){
   const q=(document.getElementById('usInput').value||'').trim();
   const box=document.getElementById('usList');
-  if(!q){box.innerHTML='<div class="us-empty">Tippe einen Namen, um Leute zu finden.</div>';return;}
+  if(!q){usSuggest(box);return;}
   if(!sb){box.innerHTML='<div class="us-empty">Offline-Demo — Suche nicht verfügbar.</div>';return;}
   try{
     const{data}=await sb.from('profiles').select('id,username,avatar_url').ilike('username','%'+q.replace(/[%_]/g,'')+'%').limit(15);

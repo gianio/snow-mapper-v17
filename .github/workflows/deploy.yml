@@ -67,6 +67,9 @@ jobs:
         # data/ blob behind latest.json, so daily data updates don't rebuild the
         # shell. Writes manifest/sw/icons into dist too. This is the CRITICAL
         # path — the deploy must always get here.
+        env:
+          # optional: Windy Webcams API key for the webcam layer (public client key)
+          WINDY_WEBCAMS_KEY: ${{ secrets.WINDY_WEBCAMS_KEY }}
         run: |
           mkdir -p dist
           python run_interactive.py --split --res 1000 --gz-only --out-dir dist
