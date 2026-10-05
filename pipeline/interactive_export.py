@@ -2839,6 +2839,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .prof-toggle.on span{left:23px}
  .prof-save{width:100%;margin-top:20px;padding:14px;border-radius:var(--r-md);border:none;background:var(--accent);color:var(--paper);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
  .prof-save:hover{background:var(--acc2)}
+ .prof-avbar{display:flex;align-items:center;gap:8px;margin:-4px 0 12px;padding:8px 8px 8px 14px;border-radius:999px;background:var(--fill);font:700 13px Inter,system-ui;color:var(--fg)}
+ .prof-avbar[hidden]{display:none}
+ .prof-avbar span{flex:1}
+ .prof-avbar button{height:34px;padding:0 14px;border-radius:999px;border:0;background:var(--card);color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer}
+ .prof-avbar button.pri{background:var(--accent);color:#fff}
  .prof-feedback{width:100%;margin-top:10px;padding:13px;border-radius:14px;border:1px solid var(--bd);background:none;color:var(--acc2);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
  .prof-signout{width:100%;margin-top:10px;padding:13px;border-radius:14px;border:none;background:none;color:var(--danger);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
  .prof-bioview{font-size:14px;color:var(--fg2);line-height:1.55;margin:-6px 0 18px;white-space:pre-wrap}
@@ -3875,7 +3880,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="tourFab" onclick="tsOpenUI()" title="Touren finden" aria-label="Touren finden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
-    <button class="mfab" id="fab3d" onclick="document.getElementById('btn3dFloat').click()" title="3D-Karte" aria-label="3D-Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 20.5 7v10L12 21.5 3.5 17V7z"/><path d="M3.5 7 12 11.5 20.5 7M12 11.5v10"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
   </div>
   <div class="mfab-row" id="reportRow">
@@ -4222,6 +4226,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         <input type="file" id="profAvFile" accept="image/*" hidden onchange="profSetAvatar(this)"/>
         <div class="prof-meta"><div class="prof-name" id="profName">User</div><div class="prof-endo" id="profEndo">– Endorsements</div></div>
       </div>
+      <div class="prof-avbar" id="profAvBar" hidden><span>Neues Profilbild</span><button type="button" onclick="profAvCancel()">Abbrechen</button><button type="button" class="pri" onclick="profAvSave()">Speichern</button></div>
       <div class="prof-bioview" id="profBioView"></div>
       <div class="prof-view" id="profViewMain">
         <div class="uv-stats">
@@ -4851,6 +4856,11 @@ const I18N_DICT={
 "aus":["off","off","off"],
 "an":["on","on","on"],
 "Mein Profil":["My profile","Mon profil","Il mio profilo"],
+"Neues Profilbild":["New profile picture","Nouvelle photo de profil","Nuova foto profilo"],
+"Profilbild gespeichert":["Profile picture saved","Photo de profil enregistrée","Foto profilo salvata"],
+"Profilbild konnte nicht gespeichert werden:":["Profile picture could not be saved:","Impossible d'enregistrer la photo de profil :","Impossibile salvare la foto profilo:"],
+"Profilbild konnte nicht hochgeladen werden:":["Profile picture could not be uploaded:","Impossible d'envoyer la photo de profil :","Impossibile caricare la foto profilo:"],
+"Speichert…":["Saving…","Enregistrement…","Salvataggio…"],
 "bleibt im ganzen Fenster unter # °C":["stays below # °C in the whole window","reste sous # °C toute la fenêtre","resta sotto # °C per tutta la finestra"],
 "bleibt im ganzen Fenster unter # km/h":["stays below # km/h in the whole window","reste sous # km/h toute la fenêtre","resta sotto # km/h per tutta la finestra"],
 "blue=cold · red=warm":["blue=cold · red=warm","bleu=froid · rouge=chaud","blu=freddo · rosso=caldo"],
@@ -11920,7 +11930,35 @@ function prefsApplyStartup(){
 try{map.on('moveend',()=>{try{const c=map.getCenter();
   localStorage.setItem('ssm_lastview',JSON.stringify({lat:c.lat,lng:c.lng,z:map.getZoom()}));}catch(e){}});}catch(e){}
 function profSetAvatar(inp){if(!inp.files||!inp.files[0])return;profAvatarFile=inp.files[0];
-  const url=URL.createObjectURL(profAvatarFile);const av=document.getElementById('profAv');av.classList.add('has-img');av.style.backgroundImage='url('+url+')';}
+  const url=URL.createObjectURL(profAvatarFile);const av=document.getElementById('profAv');av.classList.add('has-img');av.style.backgroundImage='url('+url+')';
+  inp.value='';
+  // a picked picture is saved right here -- it used to wait for the Save
+  // button at the very bottom of the profile, which nobody scrolled to
+  const bar=document.getElementById('profAvBar');if(bar)bar.hidden=false;profDirty();}
+function profAvCancel(){profAvatarFile=null;const bar=document.getElementById('profAvBar');if(bar)bar.hidden=true;
+  const av=document.getElementById('profAv');
+  if(profAvatarUrl){av.classList.add('has-img');av.style.backgroundImage='url('+profAvatarUrl+')';}
+  else{av.classList.remove('has-img');av.style.backgroundImage='';}}
+async function profAvSave(){
+  if(!profAvatarFile)return;if(!sb||!sbUser){authShow();return;}
+  const bar=document.getElementById('profAvBar'),btn=bar&&bar.querySelector('.pri');if(btn){btn.disabled=true;btn.textContent='Speichert…';}
+  try{const url=await profUploadAvatar(profAvatarFile);
+    const{error}=await sb.from('profiles').update({avatar_url:url}).eq('id',sbUser.id);if(error)throw error;
+    profAvatarUrl=url;profAvatarFile=null;avatarPut(sbUser.id,url);loadMyProfileAvatar();
+    if(bar)bar.hidden=true;toast('Profilbild gespeichert','ok');try{haptic(10);}catch(e){}}
+  catch(e){toast('Profilbild konnte nicht gespeichert werden: '+(e.message||e),'err');}
+  if(btn){btn.disabled=false;btn.textContent='Speichern';}
+}
+async function profUploadAvatar(file){
+  const up=await downscaleImage(file,512,0.85);
+  const ext=(up.type==='image/jpeg')?'jpg':(file.name.split('.').pop()||'jpg').toLowerCase();
+  const path='avatars/'+sbUser.id+'_'+Date.now()+'.'+ext;
+  const{error}=await sb.storage.from('report-images').upload(path,up,{contentType:up.type||'image/jpeg',upsert:true});
+  if(error)throw error;
+  const{data}=sb.storage.from('report-images').getPublicUrl(path);
+  if(!data||!data.publicUrl)throw new Error('keine URL');
+  return data.publicUrl;
+}
 async function profTogglePush(){
   const t=document.getElementById('profPush');const willOn=!t.classList.contains('on');
   if(willOn&&'Notification'in window){try{const perm=await Notification.requestPermission();if(perm!=='granted'){alert('Benachrichtigungen wurden nicht erlaubt. Bitte im Browser aktivieren.');return;}}catch(e){}}
@@ -11940,11 +11978,9 @@ async function profSave(){
   try{
     let avatarUrl=profAvatarUrl;
     if(profAvatarFile){
-      const up=await downscaleImage(profAvatarFile,512,0.85);
-      const ext=(up.type==='image/jpeg')?'jpg':(profAvatarFile.name.split('.').pop()||'jpg').toLowerCase();
-      const path='avatars/'+sbUser.id+'_'+Date.now()+'.'+ext;
-      const{error:upErr}=await sb.storage.from('report-images').upload(path,up,{contentType:up.type||'image/jpeg',upsert:true});
-      if(!upErr){const{data}=sb.storage.from('report-images').getPublicUrl(path);avatarUrl=data?.publicUrl||avatarUrl;}
+      try{avatarUrl=await profUploadAvatar(profAvatarFile);profAvatarFile=null;
+        const bar=document.getElementById('profAvBar');if(bar)bar.hidden=true;}
+      catch(e){toast('Profilbild konnte nicht hochgeladen werden: '+(e.message||e),'err');}
     }
     const bio=sanitizeBio(document.getElementById('profBio').value);
     const push=document.getElementById('profPush').classList.contains('on');
