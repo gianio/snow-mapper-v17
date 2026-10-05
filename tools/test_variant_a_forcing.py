@@ -1028,6 +1028,12 @@ def test_ski6_and_wind_classes():
     w = C.classify_wind(np.array([100, 100, 100, 100, 10]), np.array([0, 0.5, 0.8, 0, 0.9]),
                         np.array([0, 0, 0, 0.6, 0]))
     check("wind: none / light / drift / scoured / thin", w.tolist() == [0, 2, 3, 1, 0], str(w.tolist()))
+    p = C.classify_powder(np.array([100, 100, 100, 100, 100, 100, 10, 100]),
+                          np.array([1, 3, 7, 25, 60, 200, 30, 25]),
+                          np.array([0, 0, 0, 0, 0, 0, 0, 2.0]))
+    check("powder: SLF bands, blank under 2 cm / thin / wet",
+          p.tolist() == [0, 1, 2, 4, 6, 9, 0, 0], str(p.tolist()))
+    check("powder: one colour per SLF band", len(C.POWDER_RGBA) == len(C.POWDER_LABELS) == len(C.POWDER_DE) == 10)
 
 
 def test_temperature_by_height():

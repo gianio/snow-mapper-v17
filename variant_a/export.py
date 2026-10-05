@@ -136,10 +136,13 @@ def export_pack(out_dir: Path, runs, results, layer_ts, wps, grid, shade, mets, 
         "rgba": {"ski18": [list(classify.SKI_RGBA[i]) for i in range(len(classify.SKI_LABELS))],
                  "simple": [list(classify.SIMPLE_RGBA[i]) for i in range(len(classify.SIMPLE_LABELS))],
                  "ski6": [list(classify.SKI6_RGBA[i]) for i in range(len(classify.SKI6_LABELS))],
-                 "wind": [list(classify.WIND_RGBA[i]) for i in range(len(classify.WIND_LABELS))]},
+                 "wind": [list(classify.WIND_RGBA[i]) for i in range(len(classify.WIND_LABELS))],
+                 "powder": [list(classify.POWDER_RGBA[i]) for i in range(len(classify.POWDER_LABELS))]},
+        "powder_bounds": classify.POWDER_BOUNDS,
         "dens": [DENS_MIN, DENS_MAX],
         "labels": {"ski18": classify.SKI_LABELS, "simple": classify.SIMPLE_LABELS,
-                   "ski6": classify.SKI6_LABELS, "wind": classify.WIND_LABELS},
+                   "ski6": classify.SKI6_LABELS, "wind": classify.WIND_LABELS,
+                   "powder": classify.POWDER_LABELS},
     }
     # terrain/precip.png: the 1 km precipitation ratio (variant_a/precip.py)
     # as round(R*100) on the LV03 grid, 255 = no correction. The app scales
@@ -440,6 +443,8 @@ def export_matrix(grid: NationalGrid, frames, wps, runs, results, prof_ts,
             ("ski18", _dim_forest(_rgba_from_labels(g["ski18"], classify.SKI_RGBA), forest), True),
             ("ski6", _dim_forest(_rgba_from_labels(g["ski6"], classify.SKI6_RGBA), forest), True),
             ("wind", _dim_forest(_rgba_from_labels(g["wind"], classify.WIND_RGBA), forest), True),
+            *((("powder", _dim_forest(_rgba_from_labels(g["powder"], classify.POWDER_RGBA), forest), True),)
+              if "powder" in g else ()),
             ("density", _rgba_density(g["density"], valid), False),
         ):
             img = proj.nearest(rgba) if nearest else proj.bilinear(rgba)
@@ -503,6 +508,9 @@ def export_matrix(grid: NationalGrid, frames, wps, runs, results, prof_ts,
                      "legend": _legend(classify.SKI6_LABELS, classify.SKI6_RGBA, classify.SKI6_DE)},
             "wind": {"file": "layers/wind_{tag}.png",
                      "legend": _legend(classify.WIND_LABELS, classify.WIND_RGBA, classify.WIND_DE)},
+            # dry powder depth in the SLF snow-depth classes ("Nur Pulver")
+            "powder": {"file": "layers/powder_{tag}.png",
+                       "legend": _legend(classify.POWDER_LABELS, classify.POWDER_RGBA, classify.POWDER_DE)},
             "density": {"file": "layers/density_{tag}.png",
                         "range": [DENS_MIN, DENS_MAX], "unit": "kg/m3"},
         },

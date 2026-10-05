@@ -5846,7 +5846,9 @@ function vaProfAvailable(){
 const VA_PALETTE={
   ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[147,197,240,205],4:[59,125,214,225],5:[24,52,128,235],6:[226,170,72,220]},
   wind:{1:[156,168,184,190],2:[186,170,236,205],3:[112,72,200,230]}};
-VA_PALETTE.powder={3:VA_PALETTE.ski6[3],4:VA_PALETTE.ski6[4],5:VA_PALETTE.ski6[5]};
+// Nur Pulver on an export without its own powder layer: the three ski6 powder
+// classes, coloured like the nearest SLF snow-depth bands.
+const VA_VPAL={powder:{3:[165,214,167,225],4:[102,187,106,225],5:[66,165,245,225]}};
 const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver > 20 cm',6:'nass / Sulz'};
 // An export without the simple six classes still has "simple" (15 kinds of
 // surface): the six are folded from it, so Skiqualität always opens simple.
@@ -5871,7 +5873,7 @@ function vaPalApply(m){
   const S6=m.layers.ski6;
   if(S6&&S6.legend&&S6._src&&!m.layers.powder){
     const P=[3,4,5],leg={};
-    P.forEach(id=>{leg[id]=[id,VA_PALETTE.ski6[id].slice(0,3),VA_SKI6_DE[id]];});
+    P.forEach(id=>{leg[id]=[id,VA_VPAL.powder[id].slice(0,3),VA_SKI6_DE[id]];});
     m.layers.powder={file:S6.file,legend:leg,_virt:S6._virt||'ski6',_src:S6._src.map(([o,id])=>[o,P.includes(id)?id:0]),_recolor:true};
   }
 }
@@ -5879,7 +5881,7 @@ const vaRecolorC=new Map();let vaRcCv=null;
 async function vaRecolorUrl(u,key){
   const L=vaMan&&vaMan.layers[key];if(!L||!L._recolor)return u;
   const ck=key+'|'+u;if(vaRecolorC.has(ck))return vaRecolorC.get(ck);
-  const img=await vaImgBytes(u.split("#")[0]),d=img.rgba,pal=(L._src||[]).map(([o,id])=>[o,id?VA_PALETTE[key][id]:[0,0,0,0]]);
+  const img=await vaImgBytes(u.split("#")[0]),d=img.rgba,pal=(L._src||[]).map(([o,id])=>[o,id?(VA_PALETTE[key]||VA_VPAL[key])[id]:[0,0,0,0]]);
   const lut=new Map();
   // forest-faded pixels are a shade off the table: nearest original colour
   const near=(r,g,b)=>{let best=null,bd=1e9;for(const [o,n] of pal){const e=(o[0]-r)*(o[0]-r)+(o[1]-g)*(o[1]-g)+(o[2]-b)*(o[2]-b);if(e<bd){bd=e;best=n;}}return bd<=2500?best:null;};
@@ -6204,7 +6206,14 @@ function vaHiEngine(){
     }
     var L,key;
     if(layer==='ski6'){L=E.clsSki6(m);key='ski6';}
-    else if(layer==='powder'){L=E.clsSki6(m);if(L<3||L>5)L=0;key='ski6';}
+    else if(layer==='powder'){
+      // dry powder depth in the SLF snow-depth bands (classify_powder)
+      var T=E.pk.thresholds,x=E.mi,hs=m[x.total_hs_cm],pw=m[x.powder_depth_cm],lw=m[x.surface_lw];
+      if(!(hs>=T.THIN_COVER_HS)||!(pw>=T.SK_POWDER_MIN)||lw>T.SK_WET_LWC){out[0]=out[1]=out[2]=out[3]=0;return;}
+      var B=E.pk.powder_bounds||[1,5,10,20,30,50,75,100,150],i=0;while(i<B.length&&pw>=B[i])i++;
+      var PT=(E.pk.rgba&&E.pk.rgba.powder&&E.pk.rgba.powder.length>9)?E.pk.rgba.powder
+        :[[0,0,0,0],[232,245,233,225],[165,214,167,225],[102,187,106,225],[66,165,245,225],[30,136,229,225],[21,101,192,225],[123,31,162,225],[233,30,99,225],[183,28,28,225]];
+      var pc=PT[Math.max(1,Math.min(PT.length-1,i))];out[0]=pc[0];out[1]=pc[1];out[2]=pc[2];out[3]=pc[3];return;}
     else if(layer==='wind'){L=E.clsWind(m);key='wind';}
     else if(layer==='simple'){L=E.clsSimple(m);key='simple';}
     else{L=E.clsSki(m);key='ski18';}
@@ -9480,9 +9489,17 @@ function legSpec(l){
     if(vaKey==='density'){const r=L.range||[100,450];
       return {t:name,u:'kg/m³',va:true,grad:'linear-gradient(0deg,#2b56c8,#49b0c8,#cfd43a,#e07a2a,#c02020)',
         ticks:[r[1],Math.round((r[0]+r[1])/2),r[0]],long:'Dichte der obersten Schneeschicht'};}
+    // Nur Pulver: always the SLF snow-depth bands -- the sharp map is drawn
+    // in them even when the export is an older one without its own layer
+    if(vaKey==='powder'){const B=[1,5,10,20,30,50,75,100,150],C=['#e8f5e9','#a5d6a7','#66bb6a','#42a5f5','#1e88e5','#1565c0','#7b1fa2','#e91e63','#b71c1c'];
+      const rows=[];for(let i=B.length-1;i>=0;i--)rows.push({k:i+1,c:C[i],s:i===B.length-1?'>'+B[i]:B[i]+'–'+B[i+1],n:'Pulver '+(i===B.length-1?'> '+B[i]:B[i]+'–'+B[i+1])+' cm'});
+      return {t:name,u:'Pulver cm',va:true,rows,long:'Trockener Pulver in den Schneehöhen-Klassen des SLF'};}
     const leg=L.legend||{};
-    const ORD={ski6:[5,4,3,1,2,6],powder:[5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0);
-    const SH={ski6:{5:'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz'},powder:{5:'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{};
+    const realPow=vaKey==='powder'&&!L._virt;
+    const ORD=realPow?Object.keys(leg).map(Number).filter(k=>k>0).sort((a,b)=>b-a)
+      :({ski6:[5,4,3,1,2,6],powder:[5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0));
+    const SH=realPow?Object.fromEntries(ORD.map(k=>[k,String((leg[k]&&leg[k][2])||'').replace(/^Pulver\s*/,'').replace(/\s*cm$/,'').replace(/^>\s*/,'>')]))
+      :({ski6:{5:'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz'},powder:{5:'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
     const rows=ORD.filter(k=>leg[k]&&leg[k][1]).map(k=>{const e=leg[k],nm=e[2]||String(e[0]).replace(/_/g,' ');
       return {k,c:rgb(e[1]),s:SH[k]||nm.split(/[\s/(]/)[0].slice(0,7),n:nm};});
     return {t:name,u:(vaKey==='ski6'||vaKey==='powder')?'Pulver cm':vaKey==='wind'?'Wind':'Klasse',va:true,rows};
