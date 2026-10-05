@@ -70,6 +70,8 @@ def _quantisers():
         "wind_grid": lambda a: np.round(np.clip(a, 0, 51) * _SPD_MUL),
         "prec":      lambda a: np.round(a * _PREC_MUL),
         "cloud":     lambda a: np.round(np.clip(a, 0, 100) * _CLOUD_MUL),
+        "wind850":   lambda a: np.round(np.clip(a, 0, 51) * _SPD_MUL),
+        "wind700":   lambda a: np.round(np.clip(a, 0, 51) * _SPD_MUL),
     }
 _TEMP_OFF, _TEMP_MUL = 60.0, 2.0
 _SPD_MUL = 5.0
@@ -143,6 +145,15 @@ def _cloud(fc, T):
     sie nicht liefert (aeltere Caches, ein Endpoint ohne die Variable) --
     dann bleibt die Bewoelkungs-Ebene einfach aus."""
     rows = [getattr(f, "cloud_cover", None) or [] for f in fc]
+    if not rows or any(len(r) < T for r in rows):
+        return None
+    return np.array([r[:T] for r in rows], dtype="float64")
+
+
+def _level_wind(fc, T, key):
+    """Wind speed [m/s] on a pressure level per point and hour, or None when
+    the source does not deliver it."""
+    rows = [getattr(f, key, None) or [] for f in fc]
     if not rows or any(len(r) < T for r in rows):
         return None
     return np.array([r[:T] for r in rows], dtype="float64")
@@ -488,11 +499,14 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     times, temp_m, prec_m, snow_m, wspd_m, wdir_m, sun_m, elev_pt = _hourly(fc, horizon)
     T = len(times)
     cloud_m = _cloud(fc, T)
+    lvl_m = {k: _level_wind(fc, T, "wind_speed_" + h) for k, h in (("wind850", "850hPa"), ("wind700", "700hPa"))}
+    lvl_m = {k: v for k, v in lvl_m.items() if v is not None}
+    print(f"[INT] Hoehenwind: {', '.join(lvl_m) if lvl_m else 'nein'}.")
     print(f"[INT] Bewoelkung: {'ja' if cloud_m is not None else 'nein (Quelle liefert keine)'}.")
     idx, w = _idw_weights(pts, targets)
     ref_elev = _apply(elev_pt, idx, w).reshape(shape)
     cloud_at = None
-    if cloud_m is not None:
+    if cloud_m is not None or lvl_m:
         cloud_at = (_grid_spline(lats, lons, shape, aoi.crs, grid_x, grid_y)
                     or (lambda v: _apply(v, idx, w).reshape(shape)))
     sin_d, cos_d = np.sin(np.radians(wdir_m)), np.cos(np.radians(wdir_m))
@@ -509,7 +523,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     dst_t, dw, dh = calculate_default_transform(
         aoi.crs, "EPSG:4326", shape[1], shape[0], *bounds)
     QZ = _quantisers()
-    FIELDS = ("snow", "ablation", "temp", "sun", "wind_grid", "prec") + (("cloud",) if cloud_m is not None else ())
+    FIELDS = ("snow", "ablation", "temp", "sun", "wind_grid", "prec") + (("cloud",) if cloud_m is not None else ()) + tuple(lvl_m)
     cubes = {k: np.zeros((T, dh, dw), "uint8") for k in FIELDS}
 
     def _store(key, t, frame_lv95):
@@ -576,6 +590,9 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         _store("prec", t, prec_g)
         if cloud_m is not None:
             _store("cloud", t, cloud_at(cloud_m[:, t]))
+        for k, m_ in lvl_m.items():
+            # free-air wind: smooth over the region, no terrain modulation
+            _store(k, t, np.clip(cloud_at(m_[:, t]) if cloud_at else _apply(m_[:, t], idx, w).reshape(shape), 0, None))
         p_spd[t] = _apply(wspd_m[:, t], p_idx, p_w) * expo_mult  # topografisch moduliert
         p_dir[t] = np.degrees(np.arctan2(_apply(sin_d[:, t], p_idx, p_w),
                                          _apply(cos_d[:, t], p_idx, p_w))) % 360
@@ -609,6 +626,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         "temp": cubes["temp"], "sun": cubes["sun"],
         "wind_grid": cubes["wind_grid"], "prec": cubes["prec"],
         "cloud": cubes.get("cloud"),
+        "wind850": cubes.get("wind850"), "wind700": cubes.get("wind700"),
         "main_aspect": aspect_main, "main_slope": slope_main,
         "main_elev": elev_main,
         "wind": {"lat": wind["lat"], "lon": wind["lon"], "nx": wind["nx"], "ny": wind["ny"],
@@ -863,6 +881,8 @@ def _build_meta_blobs(data):
         "PREC": u8(data["prec"], lambda a: np.round(a * _PREC_MUL)),
         **({"CLOUD": u8(data["cloud"], lambda a: np.round(np.clip(a, 0, 100) * _CLOUD_MUL))}
            if data.get("cloud") is not None else {}),
+        **{b: u8(data[k], lambda a: np.round(np.clip(a, 0, 51) * _SPD_MUL))
+           for k, b in (("wind850", "W850"), ("wind700", "W700")) if data.get(k) is not None},
         "MASPECT": u8(data["main_aspect"], lambda a: np.round(a / _DIR_DIV)),
         "MSLOPE": u8(data["main_slope"], lambda a: np.round(np.clip(a, 0, 90))),
         "MELEV": u8(data["main_elev"], lambda a: np.round(np.clip(a / _ELEV_SCALE, 0, 255))),
@@ -880,6 +900,7 @@ def _build_meta_blobs(data):
         "snow_scale": _SNOW_SCALE, "abl_scale": _ABL_SCALE, "temp_off": _TEMP_OFF, "temp_mul": _TEMP_MUL,
         "spd_mul": _SPD_MUL, "dir_div": _DIR_DIV, "sun_mul": _SUN_MUL, "prec_mul": _PREC_MUL,
         "cloud_mul": _CLOUD_MUL if data.get("cloud") is not None else None,
+        "wind_levels": [k for k in ("wind850", "wind700") if data.get(k) is not None],
         "elev_scale": _ELEV_SCALE,
         "slf_bounds": SLF_BOUNDS, "slf_colors": SLF_COLORS,
         "avalanche": data.get("avalanche"), "tours": data.get("tours") or [],
@@ -3427,6 +3448,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ly-ov:active{background:var(--fill)}
  .ly-info{margin-top:-6px}
  .ly-sec-ov{margin-top:22px}
+ .li-lvl{display:flex;flex-direction:column;gap:6px;margin:-2px 0 12px}
+ .li-lvl>span{font:800 11px Inter,system-ui;letter-spacing:.07em;text-transform:uppercase;color:var(--fg2)}
+ .li-lvl-b{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;background:var(--fill);border-radius:12px;padding:3px}
+ .li-lvl-b button{border:0;border-radius:9px;padding:8px 4px;background:none;font:700 12.5px Inter,system-ui;color:var(--fg2);cursor:pointer}
+ .li-lvl-b button.on{background:var(--card);color:var(--fg);box-shadow:var(--elev1)}
 
  /* ── tours: one route on its own, and the search sheet ── */
  .tour-sheet{max-height:62vh;padding:14px 16px 12px}
@@ -4888,6 +4914,11 @@ const I18N_DICT={
 "an":["on","on","on"],
 "Mein Profil":["My profile","Mon profil","Il mio profilo"],
 "Meine Aufzeichnungen":["My recordings","Mes enregistrements","Le mie registrazioni"],
+"Höhe":["Height","Altitude","Quota"],
+"# m über Boden":["# m above ground","# m au-dessus du sol","# m dal suolo"],
+"Wind auf # m (freie Atmosphäre)":["Wind at # m (free atmosphere)","Vent à # m (atmosphère libre)","Vento a # m (atmosfera libera)"],
+"Windgeschwindigkeit im gewählten Fenster. Wind verfrachtet Schnee: viel Wind heisst gepresste Hänge auf der einen und Triebschnee auf der anderen Seite. # m = Wind über dem Boden mit Geländeeinfluss; # m und # m = Wind in der freien Atmosphäre (# / # hPa) – auf Gratniveau massgebend für Verfrachtung.":["Wind speed in the selected window. Wind moves snow: lots of wind means packed slopes on one side and wind slab on the other. # m = wind above the ground, shaped by terrain; # m and # m = free-atmosphere wind (# / # hPa) – what drives snow transport at ridge level.","Vitesse du vent dans la fenêtre choisie. Le vent transporte la neige : beaucoup de vent = pentes tassées d'un côté, plaques de l'autre. # m = vent au sol, influencé par le relief ; # m et # m = vent en atmosphère libre (# / # hPa) – déterminant pour le transport de neige sur les crêtes.","Velocità del vento nella finestra scelta. Il vento trasporta la neve: molto vento significa pendii pressati da un lato e neve ventata dall'altro. # m = vento al suolo, influenzato dal terreno; # m e # m = vento in atmosfera libera (# / # hPa) – determinante per il trasporto sulle creste."],
+"Wind # m (km/h, Max)":["Wind # m (km/h, max)","Vent # m (km/h, max)","Vento # m (km/h, max)"],
 "Sichtbar für":["Visible to","Visible pour","Visibile a"],
 "Follower":["Followers","Abonnés","Follower"],
 "erscheint im Feed deiner Follower":["appears in your followers' feed","apparaît dans le fil de tes abonnés","appare nel feed dei tuoi follower"],
@@ -5073,7 +5104,14 @@ const ASPECT_PNG="data:image/png;base64,"+db('ASPECTPNG'),ROUGH_PNG="data:image/
 const T=M.T,W=M.width,H=M.height,NP=W*H,P=M.wind.lat.length,NX=M.wind.nx;
 const RW=M.rad.width,RH=M.rad.height,RK=M.rad.K,RNP=RW*RH;
 const [RbS,RlW,RbN,RlE]=M.rad.bounds;
-const wg_=(t,p)=>WINDG[t*NP+p]/M.spd_mul;
+// Wind height: 10 m above ground, or free air at 850 hPa (~1500 m) and
+// 700 hPa (~3000 m) when the build fetched them.
+const W850=dec(db('W850')),W700=dec(db('W700'));
+const WIND_LVLS=[['10m','10 m',WINDG]].concat(W850.length>=T*NP?[['850','1500 m',W850]]:[]).concat(W700.length>=T*NP?[['700','3000 m',W700]]:[]);
+let windLvl=0;try{windLvl=Math.min(WIND_LVLS.length-1,+(localStorage.getItem('ssm_wlvl')||0)||0);}catch(e){}
+function windLvlSet(i){windLvl=Math.max(0,Math.min(WIND_LVLS.length-1,i));try{localStorage.setItem('ssm_wlvl',String(windLvl));}catch(e){}
+  try{haptic(3);}catch(e){}try{renderAll();}catch(e){}try{lyRender();}catch(e){}}
+const wg_=(t,p)=>WIND_LVLS[windLvl][2][t*NP+p]/M.spd_mul;
 const cum=new Float32Array((T+1)*NP);
 // Massenbilanz statt Kumulativsumme: ABL traegt Schmelze (Temperatur +
 // hangkorrigierte Einstrahlung) und Setzung, in der Pipeline auf die
@@ -9553,7 +9591,7 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
   if(l=="snow"){let h="<b>Neuschnee [cm] (SLF-Skala)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (click for details)</div>";}
   if(l=="depth"){let h="<b>Schneehöhe [cm] (SLF-Skala)</b><br>";for(let i=0;i<DEPTH_BOUNDS.length-1;i++)h+=`<div><i style="background:${SC[Math.min(i,SC.length-1)]}"></i>${DEPTH_BOUNDS[i]}${i===DEPTH_BOUNDS.length-2?'+':'–'+DEPTH_BOUNDS[i+1]}</div>`;return h;}
   if(l=="temp"){let extra="blue=cold · red=warm";if(stat=="sub0")extra="only cells staying below 0°C for entire window";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>Temp 2 m [°C] (${sn})</b><br>${extra}`;}
-  if(l=="wind"){if(stat=="lt10")return "<b>Wind 10 m ("+sn+")</b><br>green = max wind stays below 10 km/h";return '<b>Wind 10 m (km/h, '+sn+')</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(30,120,255),rgb(30,240,135),rgb(255,240,0),rgb(255,40,0));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:11px"><span>0</span><span>25</span><span>50</span><span>70+</span></div><div style="margin-top:4px;font-size:12px">Arrows show flow direction</div>';}
+  if(l=="wind"){const wl=WIND_LVLS[windLvl][1];if(stat=="lt10")return "<b>Wind "+wl+" ("+sn+")</b><br>green = max wind stays below 10 km/h";return '<b>Wind '+wl+' (km/h, '+sn+')</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(30,120,255),rgb(30,240,135),rgb(255,240,0),rgb(255,40,0));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:11px"><span>0</span><span>25</span><span>50</span><span>70+</span></div><div style="margin-top:4px;font-size:12px">Arrows show flow direction</div>';}
   if(l=="cloud")return "<b>Bewölkung [%]</b><br>zur gewählten Stunde · hellblau = wenig, tiefblau = bedeckt";
   if(l=="sun")return "<b>Σ Sunshine Hours</b><br>Scale 0–48 h+ · light→orange = more sun";
   if(l=="rad")return "<b>Clear-sky Radiation [Wh/m²/d]</b><br>Day: "+dayLabel(bandDoy())+" (= window start)<br>dark=shade/low · yellow=high<br>incl. slope, aspect & terrain shadow";
@@ -9663,9 +9701,10 @@ function legSpec(l){
   if(l==='powder')return {t:'Powder',u:'cm',grad:'linear-gradient(0deg,rgb(93,181,255),rgb(10,71,209))',
     ticks:[PD_STRONG_BLUE_CM+'+',PD_STRONG_BLUE_CM/2,0],long:'Neuschnee, der als Pulver liegen bleibt; Deckkraft = wie sicher'};
   if(l==='wind'){
-    if(stat==='lt10')return {t:'Wind',u:'km/h',rows:[{c:'rgb(40,190,90)',s:'<10',n:'bleibt im ganzen Fenster unter 10 km/h'}]};
+    const wl=WIND_LVLS[windLvl][1];
+    if(stat==='lt10')return {t:'Wind '+wl,u:'km/h',rows:[{c:'rgb(40,190,90)',s:'<10',n:'bleibt im ganzen Fenster unter 10 km/h'}]};
     const g=[0,.33,.66,1].map(x=>rgb(rampBYR(x)));
-    return {t:'Wind '+({avg:'Mittel',max:'Max',min:'Min'}[stat]||''),u:'km/h',grad:'linear-gradient(0deg,'+g.join(',')+')',ticks:['70+',50,25,0]};}
+    return {t:'Wind '+wl+' '+({avg:'Mittel',max:'Max',min:'Min'}[stat]||''),u:'km/h',grad:'linear-gradient(0deg,'+g.join(',')+')',ticks:['70+',50,25,0]};}
   if(l==='temp'||l==='tsurf'){
     const nm=l==='temp'?'Temperatur 2 m':'Schneeoberfläche';
     if(stat==='sub0')return {t:nm,u:'°C',rows:[{c:'rgb(40,90,255)',s:'<0',n:'bleibt im ganzen Fenster unter 0 °C'}]};
@@ -9976,7 +10015,7 @@ const LY_TEXT={
     d:'Modellierte Schneedecke am Boden, nicht nur der frische Anteil. Farbe ist immer Tiefe — dieselbe Skala wie auf den Zeichnungen der Community.',
     u:'cm'},
   wind:{t:'Wind auf 10 m',
-    d:'Windgeschwindigkeit im gewählten Fenster. Wind verfrachtet Schnee: viel Wind heisst gepresste Hänge auf der einen und Triebschnee auf der anderen Seite.',
+    d:'Windgeschwindigkeit im gewählten Fenster. Wind verfrachtet Schnee: viel Wind heisst gepresste Hänge auf der einen und Triebschnee auf der anderen Seite. 10 m = Wind über dem Boden mit Geländeeinfluss; 1500 m und 3000 m = Wind in der freien Atmosphäre (850 / 700 hPa) – auf Gratniveau massgebend für Verfrachtung.',
     u:'km/h'},
   cloud:{t:'Bewölkung',
     d:'Gesamtbewölkung aus dem Wettermodell zur gewählten Stunde – wie ein Satellitenbild, kein Mittel. Hellblau = wenige Wolken, tiefblau = bedeckt. Wichtig für Sicht, Sonneneinstrahlung und ob die Oberfläche in der Nacht abkühlt.',
@@ -10018,7 +10057,9 @@ function lyInfoRender(){
   if(!info){el.innerHTML='';return;}
   const vars=(it.vars)||[],v=vars[curVar];
   const vt=v&&LY_VAR_TEXT[it.id+'|'+v.label];
-  el.innerHTML='<h4>'+escapeHtml(info.t)+'</h4><p>'+escapeHtml(info.d)+'</p>'+
+  const lvl=(it.id==='wind'&&WIND_LVLS.length>1)?('<div class="li-lvl"><span>Höhe</span><div class="li-lvl-b">'+WIND_LVLS.map((x,i)=>
+      '<button type="button" class="'+(i===windLvl?'on':'')+'" onclick="windLvlSet('+i+')">'+(i?'≈ ':'')+x[1]+(i?'':' über Boden')+'</button>').join('')+'</div></div>'):'';
+  el.innerHTML=lvl+'<h4>'+escapeHtml(it.id==='wind'?'Wind auf '+WIND_LVLS[windLvl][1]+(windLvl?' (freie Atmosphäre)':''):info.t)+'</h4><p>'+escapeHtml(info.d)+'</p>'+
     (info.u?('<span class="li-unit">'+escapeHtml(info.u)+'</span>'):'')+
     ((vars.length>1&&v)?('<div class="li-sub"><h4>'+escapeHtml(v.label)+'</h4><p>'+
       escapeHtml(vt||'Variante dieser Ebene.')+'</p></div>'):'');
