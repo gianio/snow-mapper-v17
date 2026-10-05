@@ -3106,9 +3106,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.fab-open .mfab.act{opacity:1;pointer-events:auto}
  /* The arc swings left, not up: straight up is where the rest of the column
     is, and a fan that lands on its own siblings is not a fan. */
- body.fab-open #fabDraw{transform:translate(-88px,-2px)}
+ body.fab-open #fabDraw{transform:translate(-68px,0)}
  body.fab-open #fabObs{transform:translate(-68px,-58px)}
+ body.fab-open #fabTrack{transform:translate(-68px,-116px)}
  body.fab-open #fabObs{transition-delay:.04s}
+ body.fab-open #fabTrack{transition-delay:.08s}
+ #fabTrack{color:#FC5200}
  body.fab-open #mapFab svg{transform:rotate(45deg)}
  #mapFab svg{transition:transform .22s var(--ease)}
  .mfab.act i{position:absolute;right:calc(var(--fab) + 8px);top:50%;transform:translateY(-50%);
@@ -3469,6 +3472,110 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ts-res{display:flex;justify-content:space-between;font-size:11.5px;color:var(--fg2);margin:4px 2px 8px}
  .ts-count{font-weight:800;color:var(--fg)}
  .tn-sc{min-width:48px}
+
+ /* ── activity recorder ── */
+ .trk{position:fixed;inset:0;z-index:5100;pointer-events:none;display:flex;flex-direction:column;justify-content:flex-end}
+ .trk[hidden]{display:none}
+ .trk-sheet{pointer-events:auto;background:var(--card);border-radius:28px 28px 0 0;box-shadow:0 -14px 44px rgba(0,0,0,.2);
+   padding:10px 18px calc(env(safe-area-inset-bottom,0px) + 18px);max-width:560px;width:100%;margin:0 auto;display:flex;flex-direction:column;
+   animation:sheetUp .3s cubic-bezier(.2,.9,.25,1) both;max-height:92vh}
+ .trk[data-view=save] .trk-sheet,.trk[data-view=list] .trk-sheet{height:92vh}
+ .trk[data-view=detail] .trk-sheet{max-height:62vh}
+ body.trk-open #bottomPanel,body.trk-open #mapFabs,body.trk-open #miniLegend,body.trk-open #brandMark{opacity:0;pointer-events:none}
+ .trk-hd{display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:8px;min-height:44px;margin-bottom:6px}
+ .trk-hd b{font-size:17px;font-weight:800;text-align:center;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .trk-ic{width:38px;height:38px;border-radius:50%;border:0;background:var(--fill);color:var(--fg);display:flex;align-items:center;justify-content:center;cursor:pointer}
+ .trk-ic svg{width:18px;height:18px}
+ .trk-link{border:0;background:none;color:#FC5200;font:700 13px Inter,system-ui;cursor:pointer;padding:6px 0}
+ .trk-gps-row{display:flex;justify-content:center;margin:2px 0 12px}
+ .trk-gps{display:inline-flex;align-items:center;gap:6px;font:700 12px Inter,system-ui;color:var(--fg2);background:var(--fill);border-radius:999px;padding:5px 10px;white-space:nowrap}
+ .trk-gps i{width:8px;height:8px;border-radius:50%;background:#9CA3AF}
+ .trk-gps.good i{background:#22A06B}.trk-gps.ok i{background:#E2A23B}.trk-gps.bad i{background:#D9534F}
+ .trk-gps.wait i{animation:trkBlink 1s infinite}
+ @keyframes trkBlink{50%{opacity:.2}}
+ .trk-lbl{font:800 11px Inter,system-ui;letter-spacing:.07em;text-transform:uppercase;color:var(--fg2);margin:12px 2px 8px}
+ .trk-chips{display:flex;flex-wrap:wrap;gap:6px}
+ .trk-chip{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--hair);background:var(--card);color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer}
+ .trk-chip.on{background:var(--fg);border-color:var(--fg);color:var(--card)}
+ .trk-acc{display:flex;flex-direction:column;gap:6px}
+ .trk-acc button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:11px 14px;border-radius:16px;border:1.5px solid var(--hair);background:var(--card);cursor:pointer;text-align:left}
+ .trk-acc button b{font:800 14px Inter,system-ui;color:var(--fg)}
+ .trk-acc button span{font:500 12px Inter,system-ui;color:var(--fg2)}
+ .trk-acc button.on{border-color:#FC5200;background:rgba(252,82,0,.06)}
+ .trk-note{font-size:11.5px;line-height:1.45;color:var(--fg2);margin:12px 2px 4px}
+ .trk-go{align-self:center;width:96px;height:96px;border-radius:50%;border:0;margin:12px 0 4px;background:#FC5200;color:#fff;font:800 18px Inter,system-ui;
+   box-shadow:0 10px 28px rgba(252,82,0,.4),0 0 0 8px rgba(252,82,0,.12);cursor:pointer;transition:transform .15s}
+ .trk-go:active{transform:scale(.94)}
+ .trk-big{text-align:center;margin:6px 0 10px}
+ .trk-big span{display:block;font:800 56px/1 var(--mono);letter-spacing:-.03em;color:var(--fg);font-variant-numeric:tabular-nums}
+ .trk-big small,.trk-grid small,.trk-sum small{display:block;font:700 10.5px Inter,system-ui;letter-spacing:.06em;text-transform:uppercase;color:var(--fg2);margin-top:4px}
+ .trk-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--hair);border-radius:18px;overflow:hidden;margin-bottom:14px}
+ .trk-grid>div{background:var(--card);padding:12px 8px;text-align:center}
+ .trk-grid b{font:800 26px/1.05 var(--mono);color:var(--fg);font-variant-numeric:tabular-nums}
+ .trk-ctl{display:flex;justify-content:center;gap:18px;margin:4px 0 2px}
+ .trk-btn{width:78px;height:78px;border-radius:50%;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;font:800 11px Inter,system-ui;box-shadow:var(--elev2)}
+ .trk-btn svg{width:28px;height:28px}
+ .trk-btn.pau{background:#1d1d1f;color:#fff}
+ .trk-btn.res{background:#FC5200;color:#fff}
+ .trk-btn.fin{background:var(--card);color:var(--fg);border:2px solid var(--fg)}
+ .trk-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0 -18px;padding:0 18px 8px;overscroll-behavior:contain}
+ .trk-map,.act-map{border-radius:18px;overflow:hidden;background:linear-gradient(160deg,#eef3f8,#dfe7f0);margin-bottom:10px}
+ .trk-thumb{display:block;width:100%;height:auto}
+ .trk-thumb.sm{width:96px;height:72px;flex:none;border-radius:12px;background:linear-gradient(160deg,#eef3f8,#dfe7f0)}
+ .trk-thumb.empty{height:120px}
+ .trk-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 6px}
+ .trk-sum.four{grid-template-columns:repeat(2,1fr)}
+ .trk-sum>div{background:var(--fill);border-radius:14px;padding:10px;text-align:center}
+ .trk-sum b{font:800 17px var(--mono);color:var(--fg)}
+ .trk-f{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+ .trk-f span{font:800 11px Inter,system-ui;letter-spacing:.07em;text-transform:uppercase;color:var(--fg2)}
+ .trk-f input,.trk-f textarea{border:1.5px solid var(--hair);border-radius:14px;padding:11px 12px;font:500 16px Inter,system-ui;background:var(--card);color:var(--fg);resize:vertical}
+ .trk-f input:focus,.trk-f textarea:focus{outline:none;border-color:#FC5200}
+ .trk-depth{display:flex;align-items:center;gap:10px;margin-top:10px;font:600 13px Inter,system-ui;color:var(--fg2)}
+ .trk-depth input{flex:1;accent-color:#FC5200}.trk-depth b{font:800 13px var(--mono);color:var(--fg);min-width:48px;text-align:right}
+ .trk-stars{display:flex;align-items:center;gap:2px;margin-top:10px}
+ .trk-stars button{border:0;background:none;font-size:26px;line-height:1;color:var(--fill2);cursor:pointer;padding:2px}
+ .trk-stars button.on{color:#F5A524}
+ .trk-stars span{margin-left:8px;font:600 12.5px Inter,system-ui;color:var(--fg2)}
+ .trk-more{display:flex;gap:8px;margin-top:12px}
+ .trk-more button{flex:1;height:40px;border-radius:12px;border:1px dashed var(--hair);background:var(--card);font:700 12.5px Inter,system-ui;color:var(--accent);cursor:pointer}
+ .trk-photos{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
+ .trk-ph{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--fill)}
+ .trk-ph img{width:100%;height:100%;object-fit:cover}
+ .trk-ph button{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:14px;line-height:1;cursor:pointer}
+ .trk-ph.add{display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--hair);cursor:pointer;background:var(--card)}
+ .trk-ph.add span{font-size:28px;color:var(--fg2)}
+ .trk-actions{display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--hair);margin:0 -18px;padding:10px 18px 0}
+ .trk-a{flex:1;height:48px;border-radius:14px;border:0;font:800 14px Inter,system-ui;cursor:pointer}
+ .trk-a.pri{background:#FC5200;color:#fff}
+ .trk-a.sec{background:var(--fill);color:var(--fg)}
+ .trk-a.ghost{background:none;color:var(--fg2);flex:.8}
+ .trk-a.danger{color:#C0392B}
+ .trk-a:disabled{opacity:.6}
+ .trk-item{display:flex;gap:12px;align-items:center;width:100%;padding:10px 0;border:0;border-bottom:1px solid var(--hair);background:none;text-align:left;cursor:pointer}
+ .trk-it{display:flex;flex-direction:column;gap:2px;min-width:0}
+ .trk-it b{font:800 15px Inter,system-ui;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .trk-it small{font:500 12px Inter,system-ui;color:var(--fg2)}
+ .trk-it span{font:700 12.5px var(--mono);color:var(--fg)}
+ .trk-empty{padding:40px 10px;text-align:center;color:var(--fg2);font-size:14px}
+ .trk-meta{font:600 12.5px Inter,system-ui;color:var(--fg2);margin:2px 0 8px}
+ .trk-desc{font-size:14px;line-height:1.5;color:var(--fg);margin:0 0 10px;white-space:pre-wrap}
+ .trk-profw{position:relative;margin:8px 0}
+ .trk-prof{display:block;width:100%;height:80px}
+ .trk-prof-l{position:absolute;top:0;bottom:0;left:4px;display:flex;flex-direction:column;justify-content:space-between;font:700 10px var(--mono);color:var(--fg2);pointer-events:none}
+ .trk-pill{position:fixed;z-index:3100;top:calc(env(safe-area-inset-top,0px) + 64px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;
+   border:0;border-radius:999px;padding:8px 14px;background:#1d1d1f;color:#fff;font:700 13px Inter,system-ui;box-shadow:var(--elev3);cursor:pointer}
+ .trk-pill[hidden]{display:none}
+ .trk-pill i{width:9px;height:9px;border-radius:50%;background:#FC5200;animation:trkBlink 1.4s infinite}
+ .trk-pill i.pz{animation:none;background:#9CA3AF}
+ .trk-pill b{font:800 14px var(--mono)}
+ .trk-me{background:#FC5200!important}
+ .act-card{margin:0 16px 4px;cursor:pointer}
+ .act-st{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:2px 0 8px}
+ .act-st small{display:block;font:700 10.5px Inter,system-ui;letter-spacing:.05em;text-transform:uppercase;color:var(--fg2)}
+ .act-st b{font:800 18px var(--mono);color:var(--fg)}
+ .act-ph{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:6px}
+ .act-ph img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px}
  /* tour finder 2026: chip filters */
  .ts-filters{display:flex;flex-direction:column;gap:10px;background:var(--fill);border-radius:18px;padding:12px 12px 12px;margin:0 0 10px}
  .ts-grp{display:flex;flex-direction:column;gap:7px}
@@ -3771,6 +3878,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   </div>
   <div class="mfab-row" id="reportRow">
     <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><i>Report Powder</i></button>
+    <button class="mfab act" id="fabTrack" onclick="fabMenu(false);trkOpen()" title="Aktivität aufzeichnen" aria-label="Aktivität aufzeichnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg><i>Aufzeichnen</i></button>
     <button class="mfab act" id="fabObs" onclick="fabMenu(false);obsOpen()" title="Beobachtung melden" aria-label="Beobachtung melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><i>Beobachtung</i></button>
     <button class="mfab" id="mapFab" onclick="fabMenu()" title="Melden" aria-label="Melden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
   </div>
@@ -3828,6 +3936,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="lyScrim" onclick="lyPanelClose()"></div>
 <div id="tourSheet" class="tour-sheet" role="dialog" aria-label="Skitour"></div>
 <div id="tourSearch" class="ts-sheet" role="dialog" aria-label="Touren finden"></div>
+<div id="trk" class="trk" hidden role="dialog" aria-label="Aktivität aufzeichnen"><div id="trkSheet" class="trk-sheet"></div></div>
+<button id="trkPill" class="trk-pill" hidden onclick="trkExpand()" aria-label="Aufzeichnung öffnen"></button>
 <div id="lyPanel" class="ly-panel" role="dialog" aria-modal="true" aria-label="Ebenen">
   <div class="ly-scroll">
     <div class="ly-top"><b>Ebenen</b><span>Eine Karte, beliebig viele Overlays</span></div>
@@ -7052,6 +7162,391 @@ function vt(fn){
 }
 ['feedOpen','feedClose','feedToggleWide','usOpen','usClose','dmOpen','dmClose','profClose','userViewClose','lyPanelOpen','lyPanelClose']
   .forEach(n=>{const f=window[n];if(typeof f!=='function')return;window[n]=function(){const a=arguments,self=this;return vt(()=>f.apply(self,a));};});
+// ── Aktivität aufzeichnen ──────────────────────────────────────────────────
+// A Strava-style recorder: pick how fine the GPS track should be, start,
+// pause, finish; then name it, add a short snow report and photos, and post
+// it to the feed. Activities live on the device (IndexedDB) and can always
+// be exported as GPX or deleted -- a posted one takes its post with it.
+//
+// Background: a web page cannot keep GPS running once the phone is locked
+// or another app is in front (iOS stops it within seconds). The screen is
+// kept awake while recording (Wake Lock), the running track survives a
+// reload, and a gap is simply a straight line. In the native app shell a
+// BackgroundGeolocation plugin is used when it is installed.
+const TRK_ACC={
+  hi:{label:'Hoch',sub:'jede Sekunde · genaueste Spur, mehr Akku',minDt:1000,minD:3,maxAcc:30,hiAcc:true},
+  std:{label:'Normal',sub:'alle 5 s · empfohlen',minDt:5000,minD:8,maxAcc:40,hiAcc:true},
+  eco:{label:'Akku sparen',sub:'alle 15 s · gröbere Spur',minDt:15000,minD:20,maxAcc:80,hiAcc:false}};
+const TRK_TYPES=[['skitour','Skitour'],['freeride','Freeride'],['splitboard','Splitboard'],['hike','Wandern']];
+const TRK_SNOW=['Pulver','Windgepresst','Bruchharsch','Sulz','Nass','Hart'];
+let trkRec=null,trkWatch=null,trkNative=null,trkLock=null,trkTick=0,trkView='setup',trkFix=null,trkLine=null,trkMe=null,trkDraft=null,trkCur=null;
+const trkPrefs={acc:'std',type:'skitour'};
+try{Object.assign(trkPrefs,JSON.parse(localStorage.getItem('ssm_trk_prefs')||'{}'));}catch(e){}
+
+// -- storage ------------------------------------------------------------------
+let _trkDb=null;
+function trkDb(){if(_trkDb)return _trkDb;
+  _trkDb=new Promise((res,rej)=>{try{const q=indexedDB.open('ssm_acts',1);
+    q.onupgradeneeded=()=>{q.result.createObjectStore('acts',{keyPath:'id'});};
+    q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);}catch(e){rej(e);}});return _trkDb;}
+async function trkPut(a){const db=await trkDb();return new Promise((res,rej)=>{const tx=db.transaction('acts','readwrite');tx.objectStore('acts').put(a);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);});}
+async function trkAll(){const db=await trkDb();return new Promise((res,rej)=>{const q=db.transaction('acts').objectStore('acts').getAll();q.onsuccess=()=>res((q.result||[]).sort((x,y)=>y.start-x.start));q.onerror=()=>rej(q.error);});}
+async function trkGet(id){const db=await trkDb();return new Promise((res,rej)=>{const q=db.transaction('acts').objectStore('acts').get(id);q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej(q.error);});}
+async function trkDel(id){const db=await trkDb();return new Promise((res,rej)=>{const tx=db.transaction('acts','readwrite');tx.objectStore('acts').delete(id);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);});}
+function trkSaveRec(){try{if(trkRec)localStorage.setItem('ssm_rec',JSON.stringify(trkRec));else localStorage.removeItem('ssm_rec');}catch(e){}}
+
+// -- maths --------------------------------------------------------------------
+function trkHav(a,b){const R=6371000,r=Math.PI/180,dl=(b[1]-a[1])*r,dn=(b[2]-a[2])*r;
+  const x=Math.sin(dl/2)**2+Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
+// points: [t, lat, lon, ele|null, acc]
+function trkStats(segs,movingMs){
+  let dist=0,up=0,down=0,maxA=-1e9,minA=1e9,n=0;
+  segs.forEach(s=>{let ref=null;
+    for(let i=0;i<s.length;i++){const p=s[i];n++;
+      if(i)dist+=trkHav(s[i-1],p);
+      if(p[3]!=null){maxA=Math.max(maxA,p[3]);minA=Math.min(minA,p[3]);
+        // 4 m hysteresis: GPS height jitters, and summing every wobble
+        // doubles the climb
+        if(ref==null)ref=p[3];else if(p[3]-ref>=4){up+=p[3]-ref;ref=p[3];}else if(ref-p[3]>=4){down+=ref-p[3];ref=p[3];}}}});
+  return {dist,up:Math.round(up),down:Math.round(down),maxA:maxA>-1e9?Math.round(maxA):null,minA:minA<1e9?Math.round(minA):null,
+    moving:movingMs||0,n};
+}
+function trkMoving(r){return (r.movingMs||0)+(r.paused||!r.resumedAt?0:Date.now()-r.resumedAt);}
+function trkFmtT(ms){const s=Math.max(0,Math.floor(ms/1000)),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
+  return (h?h+':':'')+String(m).padStart(h?2:1,'0')+':'+String(x).padStart(2,'0');}
+function trkFmtD(m){return m>=1000?(m/1000).toFixed(m>=10000?1:2)+' km':Math.round(m)+' m';}
+function trkTypeLbl(t){const x=TRK_TYPES.find(y=>y[0]===t);return x?x[1]:'Aktivität';}
+function trkDefaultName(type,ms){const h=new Date(ms).getHours();
+  const tod=h<11?'Morgen':h<14?'Mittag':h<18?'Nachmittag':'Abend';
+  return trkTypeLbl(type)+' am '+tod;}
+// Douglas-Peucker on lat/lon (metres via a local equirectangular projection)
+function trkSimplify(pts,maxN){
+  if(pts.length<=maxN)return pts;
+  const lat0=pts[0][1]*Math.PI/180,kx=111320*Math.cos(lat0),ky=110540;
+  const X=p=>p[2]*kx,Y=p=>p[1]*ky;
+  function dp(tol){const keep=new Uint8Array(pts.length);keep[0]=keep[pts.length-1]=1;const st=[[0,pts.length-1]];
+    while(st.length){const [a,b]=st.pop();let md=0,mi=-1;const ax=X(pts[a]),ay=Y(pts[a]),bx=X(pts[b]),by=Y(pts[b]),L=Math.hypot(bx-ax,by-ay)||1;
+      for(let i=a+1;i<b;i++){const d=Math.abs((by-ay)*X(pts[i])-(bx-ax)*Y(pts[i])+bx*ay-by*ax)/L;if(d>md){md=d;mi=i;}}
+      if(md>tol&&mi>0){keep[mi]=1;st.push([a,mi],[mi,b]);}}
+    return pts.filter((p,i)=>keep[i]);}
+  let tol=2,out=dp(tol);while(out.length>maxN&&tol<500){tol*=1.6;out=dp(tol);}return out;
+}
+function trkFlat(segs){return segs.reduce((a,s)=>a.concat(s),[]);}
+
+// -- GPS ----------------------------------------------------------------------
+function trkOnPos(p){
+  const c=p.coords,pt=[p.timestamp||Date.now(),+c.latitude.toFixed(6),+c.longitude.toFixed(6),
+    c.altitude!=null&&isFinite(c.altitude)?Math.round(c.altitude*10)/10:null,Math.round(c.accuracy||999)];
+  trkFix=pt;
+  if(trkRec&&!trkRec.paused){const P=TRK_ACC[trkRec.acc]||TRK_ACC.std,seg=trkRec.segs[trkRec.segs.length-1],last=seg[seg.length-1];
+    if(pt[4]<=P.maxAcc&&(!last||(pt[0]-last[0]>=P.minDt&&trkHav(last,pt)>=P.minD))){
+      seg.push(pt);if(trkLine)trkLine.addLatLng([pt[1],pt[2]]);
+      if(seg.length%5===0)trkSaveRec();}}
+  if(trkMe)trkMe.setLatLng([pt[1],pt[2]]);
+  else if(typeof map!=='undefined'){try{trkMe=L.marker([pt[1],pt[2]],{icon:L.divIcon({className:'',html:'<div class="me-dot trk-me"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1950}).addTo(map);}catch(e){}}
+  if(trkRec&&!trkRec.paused&&trkRec.follow!==false&&trkView==='rec'){try{map.panTo([pt[1],pt[2]],{animate:true});}catch(e){}}
+  trkPaint();
+}
+function trkGpsStart(hi){
+  trkGpsStop();
+  const BG=typeof _capPlugin==='function'?_capPlugin('BackgroundGeolocation'):null;
+  if(BG&&trkRec){try{BG.addWatcher({backgroundMessage:'Aktivität wird aufgezeichnet',backgroundTitle:'Snowmapper',requestPermissions:true,stale:false,distanceFilter:3},
+      (loc,err)=>{if(loc)trkOnPos({timestamp:loc.time||Date.now(),coords:{latitude:loc.latitude,longitude:loc.longitude,altitude:loc.altitude,accuracy:loc.accuracy}});})
+      .then(id=>{trkNative=id;});return;}catch(e){}}
+  if(!navigator.geolocation){toast('GPS nicht verfügbar','err');return;}
+  trkWatch=navigator.geolocation.watchPosition(trkOnPos,e=>{if(e.code===1)toast('Standortzugriff verweigert','err');},
+    {enableHighAccuracy:hi!==false,maximumAge:0,timeout:30000});
+}
+function trkGpsStop(){
+  if(trkWatch!=null){try{navigator.geolocation.clearWatch(trkWatch);}catch(e){}trkWatch=null;}
+  if(trkNative!=null){try{_capPlugin('BackgroundGeolocation').removeWatcher({id:trkNative});}catch(e){}trkNative=null;}
+}
+async function trkWake(on){
+  try{if(on&&'wakeLock' in navigator&&!trkLock){trkLock=await navigator.wakeLock.request('screen');trkLock.addEventListener('release',()=>{trkLock=null;});}
+    else if(!on&&trkLock){await trkLock.release();trkLock=null;}}catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{
+  if(!trkRec)return;
+  if(document.visibilityState==='visible'){if(!trkRec.paused){trkWake(true);if(trkWatch==null&&trkNative==null)trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);}trkPaint();}
+  else trkSaveRec();
+});
+
+// -- recording control ----------------------------------------------------------
+function trkLayerEnsure(){
+  if(!map.getPane('trkPane')){map.createPane('trkPane');map.getPane('trkPane').style.zIndex=470;map.getPane('trkPane').style.pointerEvents='none';}
+  if(!trkLine)trkLine=L.polyline([],{pane:'trkPane',color:'#FC5200',weight:5,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false}).addTo(map);
+}
+function trkLineFromRec(){trkLayerEnsure();trkLine.setLatLngs(trkRec?trkRec.segs.map(s=>s.map(p=>[p[1],p[2]])):[]);}
+function trkStart(){
+  trkRec={id:'a'+Date.now().toString(36),type:trkPrefs.type,acc:trkPrefs.acc,start:Date.now(),segs:[[]],paused:false,movingMs:0,resumedAt:Date.now(),follow:true};
+  if(trkFix&&trkFix[4]<=TRK_ACC[trkRec.acc].maxAcc&&Date.now()-trkFix[0]<15000)trkRec.segs[0].push(trkFix);
+  trkSaveRec();trkLineFromRec();
+  trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);
+  try{haptic(20);}catch(e){}
+  trkView='rec';trkRender();
+  clearInterval(trkTick);trkTick=setInterval(trkPaint,1000);
+}
+function trkPause(){if(!trkRec||trkRec.paused)return;
+  trkRec.movingMs=trkMoving(trkRec);trkRec.paused=true;trkRec.resumedAt=null;
+  trkGpsStop();trkWake(false);trkSaveRec();try{haptic(12);}catch(e){}trkRender();}
+function trkResume(){if(!trkRec||!trkRec.paused)return;
+  trkRec.paused=false;trkRec.resumedAt=Date.now();trkRec.segs.push([]);
+  trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);trkSaveRec();try{haptic(12);}catch(e){}trkRender();}
+function trkFinish(){if(!trkRec)return;
+  if(!trkRec.paused)trkPause();
+  const segs=trkRec.segs.filter(s=>s.length);
+  clearInterval(trkTick);trkTick=0;
+  const st=trkStats(segs,trkRec.movingMs);
+  trkDraft={id:trkRec.id,type:trkRec.type,acc:trkRec.acc,start:trkRec.start,end:Date.now(),segs,stats:st,
+    name:trkDefaultName(trkRec.type,trkRec.start),desc:'',snow:null,depth:0,stars:0,photos:[],postedId:null};
+  trkView='save';trkRender();
+}
+async function trkKeep(post){
+  const d=trkDraft;if(!d)return;
+  const nm=document.getElementById('trkName'),ds=document.getElementById('trkDesc');
+  if(nm)d.name=nm.value.trim()||trkDefaultName(d.type,d.start);if(ds)d.desc=ds.value.trim();
+  try{await trkPut(d);}catch(e){toast('Speichern fehlgeschlagen: '+(e.message||e),'err');return;}
+  trkRec=null;trkSaveRec();trkGpsStop();trkWake(false);
+  if(trkLine){trkLine.setLatLngs([]);}
+  if(post){const ok=await trkPost(d);if(!ok){trkView='list';trkRender();return;}}
+  else toast('Aktivität gespeichert','ok');
+  trkDraft=null;trkCur=d.id;trkView='detail';trkRender();
+}
+function trkDiscard(){
+  if(!confirm('Aktivität verwerfen? Die Aufzeichnung geht verloren.'))return;
+  trkRec=null;trkDraft=null;trkSaveRec();trkGpsStop();trkWake(false);clearInterval(trkTick);trkTick=0;
+  if(trkLine)trkLine.setLatLngs([]);
+  trkClose(true);toast('Aktivität verworfen','info');
+}
+
+// -- posting -----------------------------------------------------------------
+async function trkPost(a){
+  if(!sb){toast('Keine Verbindung zum Server','err');return false;}
+  if(!sbUser){authShow();toast('Zum Posten anmelden – die Aktivität ist gespeichert.','info');return false;}
+  toast('Aktivität wird gepostet…','info');
+  try{
+    const urls=[];
+    for(let i=0;i<(a.photos||[]).length;i++){try{
+      const path=sbUser.id+'/act'+Date.now()+'_'+i+'.jpg';
+      const{error}=await sb.storage.from('report-images').upload(path,a.photos[i],{contentType:a.photos[i].type||'image/jpeg'});
+      if(!error){const{data}=sb.storage.from('report-images').getPublicUrl(path);if(data&&data.publicUrl)urls.push(data.publicUrl);}}catch(e){}}
+    const flat=trkFlat(a.segs);
+    const track=trkSimplify(flat,400).map(p=>[+p[1].toFixed(5),+p[2].toFixed(5),p[3]==null?null:Math.round(p[3])]);
+    let top=flat[0];flat.forEach(p=>{if(p[3]!=null&&(top[3]==null||p[3]>top[3]))top=p;});
+    const s=a.stats,cd={activity:{name:a.name,type:a.type,desc:a.desc,dist:Math.round(s.dist),up:s.up,down:s.down,
+      moving:s.moving,elapsed:a.end-a.start,maxA:s.maxA,minA:s.minA,start:a.start,end:a.end,track},images:urls};
+    if(a.snow){cd.details={snow:a.snow};cd.measurement=a.snow+(a.snow==='Pulver'&&a.depth?' '+a.depth+' cm':'');}
+    if(a.stars)cd.stars=a.stars;
+    const row={user_id:sbUser.id,location:'POINT('+top[2]+' '+top[1]+')',primary_categories:['tour'],subtype:trkTypeLbl(a.type),
+      condition_data:cd,image_url:urls[0]||null,caption:a.desc?(a.name+'\n'+a.desc):a.name,completion_score:a.snow?85:70,
+      captured_at:new Date(a.start).toISOString()};
+    const{data,error}=await sb.from('reports').insert(row).select('id').single();
+    if(error)throw error;
+    a.postedId=data&&data.id;await trkPut(a);
+    toast('Aktivität gepostet','ok');try{haptic(14);}catch(e){}
+    try{loadDbReports();}catch(e){}
+    return true;
+  }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e),'err');return false;}
+}
+async function trkPostId(id){const a=await trkGet(id);if(a&&!a.postedId){if(await trkPost(a))trkRender();}}
+async function trkDelete(id){
+  const a=await trkGet(id);if(!a)return;
+  if(!confirm(a.postedId?'Aktivität und den Beitrag im Feed endgültig löschen?':'Aktivität endgültig löschen?'))return;
+  if(a.postedId&&sb&&sbUser){try{
+    const r=(allReports||[]).find(x=>String(x.id)===String(a.postedId));
+    const{error}=await sb.from('reports').delete().eq('id',a.postedId).eq('user_id',sbUser.id);
+    if(!error){const cd=(r&&r.condition_data)||{};const paths=(cd.images||[]).map(storagePathFromUrl).filter(Boolean);
+      if(paths.length){try{await sb.storage.from('report-images').remove(paths);}catch(e){}}
+      allReports=(allReports||[]).filter(x=>String(x.id)!==String(a.postedId));try{loadReportMarkers();}catch(e){}}}catch(e){}}
+  await trkDel(id);toast('Aktivität gelöscht','ok');
+  if(trkShown){map.removeLayer(trkShown);trkShown=null;}
+  trkView='list';trkRender();
+}
+function trkGpx(a){
+  const esc=s=>String(s||'').replace(/[<&>"]/g,c=>({'<':'&lt;','&':'&amp;','>':'&gt;','"':'&quot;'}[c]));
+  let x='<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Snowmapper" xmlns="http://www.topografix.com/GPX/1/1">\n'
+    +'<metadata><name>'+esc(a.name)+'</name><time>'+new Date(a.start).toISOString()+'</time></metadata>\n<trk><name>'+esc(a.name)+'</name>'
+    +(a.desc?'<desc>'+esc(a.desc)+'</desc>':'')+'<type>'+esc(a.type)+'</type>\n';
+  a.segs.forEach(s=>{x+='<trkseg>\n';s.forEach(p=>{x+='<trkpt lat="'+p[1]+'" lon="'+p[2]+'">'+(p[3]!=null?'<ele>'+p[3]+'</ele>':'')+'<time>'+new Date(p[0]).toISOString()+'</time></trkpt>\n';});x+='</trkseg>\n';});
+  return x+'</trk>\n</gpx>\n';
+}
+async function trkExport(id){const a=await trkGet(id);if(!a)return;
+  const blob=new Blob([trkGpx(a)],{type:'application/gpx+xml'}),fn=(a.name||'aktivitaet').replace(/[^\wäöüÄÖÜ-]+/g,'_')+'.gpx';
+  try{const f=new File([blob],fn,{type:'application/gpx+xml'});
+    if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:a.name});return;}}catch(e){if(e&&e.name==='AbortError')return;}
+  const u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download=fn;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
+}
+
+// -- drawing helpers --------------------------------------------------------------
+// The route as a small SVG: same look in the save screen, the list and the feed.
+function trkThumb(pts,w,h,cls){
+  pts=(pts||[]).filter(p=>p&&p.length>1);if(pts.length<2)return '<div class="trk-thumb empty '+(cls||'')+'"></div>';
+  const la=pts.map(p=>p[0]),lo=pts.map(p=>p[1]);
+  let la0=Math.min(...la),la1=Math.max(...la),lo0=Math.min(...lo),lo1=Math.max(...lo);
+  const k=Math.cos((la0+la1)/2*Math.PI/180),sx=(lo1-lo0)*k||1e-6,sy=(la1-la0)||1e-6,pad=10;
+  const s=Math.min((w-2*pad)/sx,(h-2*pad)/sy),ox=(w-sx*s)/2,oy=(h-sy*s)/2;
+  const d=pts.map((p,i)=>(i?'L':'M')+((p[1]-lo0)*k*s+ox).toFixed(1)+' '+((la1-p[0])*s+oy).toFixed(1)).join('');
+  const a=pts[0],b=pts[pts.length-1],P=p=>[((p[1]-lo0)*k*s+ox).toFixed(1),((la1-p[0])*s+oy).toFixed(1)];
+  return '<svg class="trk-thumb '+(cls||'')+'" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'
+    +'<path d="'+d+'" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>'
+    +'<path d="'+d+'" fill="none" stroke="#FC5200" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>'
+    +'<circle cx="'+P(a)[0]+'" cy="'+P(a)[1]+'" r="4.5" fill="#2E9E6A" stroke="#fff" stroke-width="2"/>'
+    +'<circle cx="'+P(b)[0]+'" cy="'+P(b)[1]+'" r="4.5" fill="#1d1d1f" stroke="#fff" stroke-width="2"/></svg>';
+}
+function trkProfile(pts,w,h){
+  pts=(pts||[]).filter(p=>p[2]!=null);if(pts.length<2)return '';
+  let d=0;const xs=[0];for(let i=1;i<pts.length;i++){d+=trkHav([0,pts[i-1][0],pts[i-1][1]],[0,pts[i][0],pts[i][1]]);xs.push(d);}
+  const el=pts.map(p=>p[2]),lo=Math.min(...el),hi=Math.max(...el),r=Math.max(30,hi-lo);
+  const X=v=>(v/(d||1)*(w-4)+2).toFixed(1),Y=v=>(h-4-(v-lo)/r*(h-14)).toFixed(1);
+  const line=pts.map((p,i)=>(i?'L':'M')+X(xs[i])+' '+Y(p[2])).join('');
+  return '<svg class="trk-prof" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" aria-hidden="true"><path d="'+line+'L'+X(d)+' '+h+'L2 '+h+'Z" fill="rgba(252,82,0,.14)"/>'
+    +'<path d="'+line+'" fill="none" stroke="#FC5200" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>'
+    +'<div class="trk-prof-l"><span>'+Math.round(hi)+' m</span><span>'+Math.round(lo)+' m</span></div>';
+}
+function trkLL(segs){return trkFlat(segs).map(p=>[p[1],p[2],p[3]]);}
+
+// -- UI ---------------------------------------------------------------------------
+function trkOpen(){
+  try{fabMenu(false);}catch(e){}
+  if(trkRec){trkView='rec';}else if(trkView!=='list'&&trkView!=='detail')trkView='setup';
+  document.body.classList.add('trk-open');document.getElementById('trk').hidden=false;
+  if(!trkRec&&trkWatch==null)trkGpsStart(TRK_ACC[trkPrefs.acc].hiAcc);
+  trkRender();
+}
+function trkClose(force){
+  if(trkRec&&!force){trkMin();return;}
+  document.body.classList.remove('trk-open','trk-min');document.getElementById('trk').hidden=true;
+  if(!trkRec){trkGpsStop();if(trkMe){map.removeLayer(trkMe);trkMe=null;}}
+  if(trkShown&&!force){map.removeLayer(trkShown);trkShown=null;}
+  trkPill();
+}
+// recording continues; the app is usable, a pill at the top brings it back
+function trkMin(){document.body.classList.add('trk-min');document.body.classList.remove('trk-open');document.getElementById('trk').hidden=true;trkPill();}
+function trkExpand(){document.body.classList.remove('trk-min');trkOpen();}
+function trkPill(){const p=document.getElementById('trkPill');if(!p)return;
+  if(!trkRec||document.body.classList.contains('trk-open')){p.hidden=true;return;}
+  const st=trkStats(trkRec.segs,0);p.hidden=false;
+  p.innerHTML='<i class="'+(trkRec.paused?'pz':'')+'"></i><b>'+trkFmtT(trkMoving(trkRec))+'</b><span>'+trkFmtD(st.dist)+'</span>';}
+function trkPaint(){
+  trkPill();
+  if(document.getElementById('trk').hidden)return;
+  if(trkView==='setup'){const g=document.getElementById('trkGps');if(g)g.innerHTML=trkGpsHTML();return;}
+  if(trkView!=='rec'||!trkRec)return;
+  const st=trkStats(trkRec.segs,0),set=(id,v)=>{const e=document.getElementById(id);if(e&&e.textContent!==v)e.textContent=v;};
+  set('trkT',trkFmtT(trkMoving(trkRec)));set('trkD',(st.dist/1000).toFixed(2));set('trkUp',String(st.up));
+  set('trkAlt',trkFix&&trkFix[3]!=null?String(Math.round(trkFix[3])):'–');
+  const seg=trkRec.segs[trkRec.segs.length-1],n=seg.length;
+  let v=0;if(n>1&&!trkRec.paused&&Date.now()-seg[n-1][0]<20000){let k=n-1;while(k>0&&seg[n-1][0]-seg[k-1][0]<=30000)k--;const a=seg[k],b=seg[n-1];const dt=(b[0]-a[0])/1000;if(dt>0)v=trkHav(a,b)/dt*3.6;}
+  set('trkV',v.toFixed(1));
+  const g=document.getElementById('trkGps');if(g)g.innerHTML=trkGpsHTML();
+}
+function trkGpsHTML(){
+  if(!trkFix)return '<span class="trk-gps wait"><i></i>GPS wird gesucht…</span>';
+  const a=trkFix[4],q=a<=10?'good':a<=30?'ok':'bad';
+  return '<span class="trk-gps '+q+'"><i></i>GPS ±'+a+' m</span>';
+}
+const TRK_X='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+const TRK_DOWN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+async function trkRender(){
+  const el=document.getElementById('trkSheet');if(!el)return;
+  const root=document.getElementById('trk');root.dataset.view=trkView;
+  if(trkView==='setup'){
+    el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkClose()" aria-label="Schliessen">'+TRK_X+'</button><b>Aufzeichnen</b>'
+      +'<button class="trk-link" onclick="trkView=\'list\';trkRender()">Meine Aktivitäten</button></div>'
+      +'<div id="trkGps" class="trk-gps-row">'+trkGpsHTML()+'</div>'
+      +'<div class="trk-lbl">Sportart</div><div class="trk-chips">'+TRK_TYPES.map(([k,l])=>'<button type="button" class="trk-chip'+(trkPrefs.type===k?' on':'')+'" onclick="trkPref(\'type\',\''+k+'\')">'+l+'</button>').join('')+'</div>'
+      +'<div class="trk-lbl">GPS-Genauigkeit</div><div class="trk-acc">'+Object.keys(TRK_ACC).map(k=>{const A=TRK_ACC[k];
+        return '<button type="button" class="'+(trkPrefs.acc===k?'on':'')+'" onclick="trkPref(\'acc\',\''+k+'\')"><b>'+A.label+'</b><span>'+A.sub+'</span></button>';}).join('')+'</div>'
+      +'<p class="trk-note">Der Bildschirm bleibt während der Aufnahme an. Wird das Handy gesperrt oder die App gewechselt, kann der Browser das GPS anhalten – die Spur wird dann beim Zurückkehren fortgesetzt.</p>'
+      +'<button class="trk-go" onclick="trkStart()" aria-label="Start"><span>Start</span></button>';
+    return;}
+  if(trkView==='rec'&&trkRec){
+    const p=trkRec.paused;
+    el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkMin()" aria-label="Minimieren">'+TRK_DOWN+'</button><b>'+trkTypeLbl(trkRec.type)+(p?' · Pausiert':'')+'</b><span id="trkGps">'+trkGpsHTML()+'</span></div>'
+      +'<div class="trk-big"><span id="trkT">0:00</span><small>Zeit</small></div>'
+      +'<div class="trk-grid"><div><b id="trkD">0.00</b><small>Distanz km</small></div><div><b id="trkUp">0</b><small>Aufstieg m</small></div>'
+      +'<div><b id="trkAlt">–</b><small>Höhe m</small></div><div><b id="trkV">0.0</b><small>Tempo km/h</small></div></div>'
+      +(p?'<div class="trk-ctl"><button class="trk-btn res" onclick="trkResume()"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg><span>Weiter</span></button>'
+          +'<button class="trk-btn fin" onclick="trkFinish()"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg><span>Beenden</span></button></div>'
+        :'<div class="trk-ctl"><button class="trk-btn pau" onclick="trkPause()" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></svg></button></div>');
+    trkPaint();return;}
+  if(trkView==='save'&&trkDraft){
+    const d=trkDraft,s=d.stats,ll=trkLL(d.segs);
+    el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkBackToRec()" aria-label="Zurück">'+TRK_DOWN+'</button><b>Aktivität speichern</b><span></span></div>'
+      +'<div class="trk-scroll"><div class="trk-map">'+trkThumb(ll,340,170)+'</div>'
+      +'<div class="trk-sum"><div><b>'+trkFmtD(s.dist)+'</b><small>Distanz</small></div><div><b>'+s.up+' m</b><small>Aufstieg</small></div><div><b>'+trkFmtT(s.moving)+'</b><small>Bewegungszeit</small></div></div>'
+      +'<label class="trk-f"><span>Titel</span><input id="trkName" maxlength="80" value="'+escapeHtml(d.name)+'"></label>'
+      +'<label class="trk-f"><span>Beschreibung</span><textarea id="trkDesc" rows="3" maxlength="1000" placeholder="Wie war\'s? Route, Verhältnisse, Gruppe …">'+escapeHtml(d.desc||'')+'</textarea></label>'
+      +'<div class="trk-lbl">Schnee-Rapport</div><div class="trk-chips">'+TRK_SNOW.map(x=>'<button type="button" class="trk-chip'+(d.snow===x?' on':'')+'" onclick="trkSnow(\''+x+'\')">'+x+'</button>').join('')+'</div>'
+      +(d.snow==='Pulver'?'<div class="trk-depth"><span>Pulvertiefe</span><input type="range" min="0" max="80" step="5" value="'+(d.depth||0)+'" oninput="trkDraft.depth=+this.value;this.nextElementSibling.textContent=this.value+\' cm\'"><b>'+(d.depth||0)+' cm</b></div>':'')
+      +'<div class="trk-stars">'+[1,2,3,4,5].map(n=>'<button type="button" class="'+(d.stars>=n?'on':'')+'" onclick="trkDraft.stars='+n+';trkRender()" aria-label="'+n+' Sterne">★</button>').join('')+'<span>Abfahrt</span></div>'
+      +'<div class="trk-more"><button type="button" onclick="trkThen(\'draw\')">Schnee-Karte zeichnen</button><button type="button" onclick="trkThen(\'obs\')">Beobachtung melden</button></div>'
+      +'<div class="trk-lbl">Fotos</div><div class="trk-photos">'+(d.photos||[]).map((b,i)=>'<div class="trk-ph"><img src="'+URL.createObjectURL(b)+'" alt=""><button onclick="trkDraft.photos.splice('+i+',1);trkRender()" aria-label="Foto entfernen">×</button></div>').join('')
+      +'<label class="trk-ph add"><input type="file" accept="image/*" multiple hidden onchange="trkAddPhotos(this.files)"><span>+</span></label></div>'
+      +'</div><div class="trk-actions"><button class="trk-a ghost" onclick="trkDiscard()">Verwerfen</button><button class="trk-a sec" onclick="trkKeep(false)">Speichern</button><button class="trk-a pri" onclick="trkKeep(true)">Posten</button></div>';
+    return;}
+  if(trkView==='list'){
+    let list=[];try{list=await trkAll();}catch(e){}
+    el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkView=\'setup\';trkRender()" aria-label="Zurück">'+TRK_DOWN+'</button><b>Meine Aktivitäten</b><button class="trk-ic" onclick="trkClose()" aria-label="Schliessen">'+TRK_X+'</button></div>'
+      +'<div class="trk-scroll">'+(list.length?list.map(a=>{const s=a.stats||{};
+        return '<button class="trk-item" onclick="trkCur=\''+a.id+'\';trkView=\'detail\';trkRender()">'+trkThumb(trkLL(a.segs),96,72,'sm')
+          +'<span class="trk-it"><b>'+escapeHtml(a.name)+'</b><small>'+new Date(a.start).toLocaleDateString('de-CH',{weekday:'short',day:'numeric',month:'short'})+' · '+trkTypeLbl(a.type)+(a.postedId?' · gepostet':'')+'</small>'
+          +'<span>'+trkFmtD(s.dist||0)+' · ↑ '+(s.up||0)+' m · '+trkFmtT(s.moving||0)+'</span></span></button>';}).join('')
+        :'<div class="trk-empty">Noch keine Aktivität. Starte deine erste Aufzeichnung.</div>')+'</div>';
+    return;}
+  if(trkView==='detail'){
+    const a=trkCur?await trkGet(trkCur):null;if(!a){trkView='list';return trkRender();}
+    const s=a.stats||{},ll=trkLL(a.segs);
+    trkShowOnMap(ll);
+    el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkView=\'list\';trkRender()" aria-label="Zurück">'+TRK_DOWN+'</button><b>'+escapeHtml(a.name)+'</b><button class="trk-ic" onclick="trkClose()" aria-label="Schliessen">'+TRK_X+'</button></div>'
+      +'<div class="trk-scroll"><div class="trk-meta">'+new Date(a.start).toLocaleString('de-CH',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+' · '+trkTypeLbl(a.type)+'</div>'
+      +(a.desc?'<p class="trk-desc">'+escapeHtml(a.desc)+'</p>':'')
+      +'<div class="trk-sum four"><div><b>'+trkFmtD(s.dist||0)+'</b><small>Distanz</small></div><div><b>'+(s.up||0)+' m</b><small>Aufstieg</small></div><div><b>'+trkFmtT(s.moving||0)+'</b><small>Bewegung</small></div><div><b>'+(s.maxA!=null?s.maxA+' m':'–')+'</b><small>Höchster Punkt</small></div></div>'
+      +'<div class="trk-profw">'+trkProfile(ll,340,80)+'</div>'
+      +(a.snow?'<div class="trk-meta">Schnee: <b>'+escapeHtml(a.snow)+(a.snow==='Pulver'&&a.depth?' '+a.depth+' cm':'')+'</b>'+(a.stars?' · '+'★'.repeat(a.stars):'')+'</div>':'')
+      +((a.photos||[]).length?'<div class="trk-photos">'+a.photos.map(b=>'<div class="trk-ph"><img src="'+URL.createObjectURL(b)+'" alt=""></div>').join('')+'</div>':'')
+      +'</div><div class="trk-actions"><button class="trk-a ghost danger" onclick="trkDelete(\''+a.id+'\')">Löschen</button><button class="trk-a sec" onclick="trkExport(\''+a.id+'\')">GPX exportieren</button>'
+      +(a.postedId?'<button class="trk-a sec" disabled>Gepostet ✓</button>':'<button class="trk-a pri" onclick="trkPostId(\''+a.id+'\')">Posten</button>')+'</div>';
+    return;}
+}
+function trkPref(k,v){trkPrefs[k]=v;try{localStorage.setItem('ssm_trk_prefs',JSON.stringify(trkPrefs));}catch(e){}
+  if(k==='acc'&&!trkRec)trkGpsStart(TRK_ACC[v].hiAcc);try{haptic(3);}catch(e){}trkRender();}
+function trkSnow(x){const d=trkDraft;if(!d)return;const nm=document.getElementById('trkName'),ds=document.getElementById('trkDesc');
+  if(nm)d.name=nm.value;if(ds)d.desc=ds.value;d.snow=d.snow===x?null:x;trkRender();}
+async function trkAddPhotos(files){const d=trkDraft;if(!d||!files)return;const nm=document.getElementById('trkName'),ds=document.getElementById('trkDesc');
+  if(nm)d.name=nm.value;if(ds)d.desc=ds.value;
+  for(const f of Array.from(files).slice(0,10-d.photos.length)){try{d.photos.push(await downscaleImage(f,1600,.82));}catch(e){}}
+  trkRender();}
+function trkBackToRec(){if(!trkRec){trkView='setup';trkRender();return;}trkView='rec';trkDraft=null;trkRender();trkTick=setInterval(trkPaint,1000);}
+// save the activity first, then hand over to the existing drawing / observation flow
+async function trkThen(kind){await trkKeep(false);trkClose(true);if(kind==='draw')drawOpen();else obsOpen();}
+let trkShown=null;
+function trkShowOnMap(ll){
+  if(trkShown){map.removeLayer(trkShown);trkShown=null;}
+  if(!ll||ll.length<2)return;trkLayerEnsure();
+  trkShown=L.polyline(ll.map(p=>[p[0],p[1]]),{pane:'trkPane',color:'#FC5200',weight:5,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false}).addTo(map);
+  try{map.fitBounds(trkShown.getBounds(),{paddingTopLeft:[30,60],paddingBottomRight:[30,Math.round(innerHeight*.55)],maxZoom:15});}catch(e){}
+}
+// from the feed: show a posted activity's route
+function actShowFeed(id){const r=(allReports||[]).find(x=>String(x.id)===String(id));const A=r&&r.condition_data&&r.condition_data.activity;
+  if(!A||!A.track){if(r)feedFlyTo(r.lat,r.lng);return;}
+  try{feedClose();}catch(e){}
+  setTimeout(()=>{trkShowOnMap(A.track);toastOnce('actmap','Route auf der Karte – Ebenen ▸ Meldungen zum Ausblenden');},350);
+}
+function actFeedVisual(r){const A=r.condition_data.activity;
+  const fmt=n=>n>=1000?(n/1000).toFixed(1)+' km':n+' m';
+  const ims=(r.condition_data.images||[]).slice(0,4);
+  return '<div class="act-card" onclick="event.stopPropagation();actShowFeed(\''+r.id+'\')">'
+    +'<div class="act-map">'+trkThumb(A.track,340,150)+'</div>'
+    +'<div class="act-st"><div><small>Distanz</small><b>'+fmt(A.dist||0)+'</b></div><div><small>Aufstieg</small><b>'+(A.up||0)+' m</b></div><div><small>Zeit</small><b>'+trkFmtT(A.moving||0)+'</b></div></div>'
+    +(ims.length?'<div class="act-ph">'+ims.map(u=>'<img src="'+u+'" alt="" loading="lazy">').join('')+'</div>':'')+'</div>';
+}
+// a recording that was running when the page went away picks up again
+(function(){try{const s=JSON.parse(localStorage.getItem('ssm_rec')||'null');if(!s||!s.segs)return;
+  trkRec=s;if(!trkRec.paused){trkRec.segs.push([]);trkRec.resumedAt=Date.now();}
+  setTimeout(()=>{try{trkLineFromRec();if(!trkRec.paused){trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);}
+    clearInterval(trkTick);trkTick=setInterval(trkPaint,1000);trkPill();toast('Aufzeichnung läuft weiter','info');}catch(e){}},1500);}catch(e){}})();
+
 // ── «Touren finden» ────────────────────────────────────────────────────────
 // A sheet over the lower part of the screen, the map above it showing only
 // the routes that pass the filters. Distance is measured to the route's
@@ -12809,6 +13304,7 @@ function rptVizHTML(zones,size){
 // here; "Karte" puts it back where it means something, at the right zoom.
 function feedVisual(r,col){
   const cd=r.condition_data||{};
+  if(cd.activity&&cd.activity.track)return actFeedVisual(r);
   const drawn=!!cd.draw;
   const photo=(!drawn||(r.img&&r.img!==cd.drawImage&&r.img!==cd.snapshot))?r.img:null;
   if(photo)return '<div class="feed-card-visual" onclick="feedImgTap(\''+r.id+'\',event)"><img src="'+photo+'" alt="" loading="lazy" decoding="async"/></div>';
@@ -12885,7 +13381,7 @@ function feedRender(){
       </div>
       <div class="feed-card-actions">
         ${r.dbRow?`<button onclick="openComments('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg> ${r.comments||0}</button>`:''}
-        <button class="fc-sp" title="Auf der Karte zeigen" aria-label="Auf der Karte zeigen" onclick="event.stopPropagation();feedFlyTo(${r.lat},${r.lng})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
+        <button class="fc-sp" title="Auf der Karte zeigen" aria-label="Auf der Karte zeigen" onclick="event.stopPropagation();${(r.condition_data&&r.condition_data.activity)?`actShowFeed('${r.id}')`:`feedFlyTo(${r.lat},${r.lng})`}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
         <button title="Teilen" aria-label="Teilen" onclick="sharePost('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>
         <button class="save-btn${savedPosts.has(String(r.id))?' saved':''}" title="Merken" aria-label="Merken" onclick="toggleSave('${r.id}',event)"><svg viewBox="0 0 24 24" fill="${savedPosts.has(String(r.id))?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
         ${r.dbRow&&(!sbUser||r.userId!==sbUser.id)?`<button class="flag-btn ${r.flaggedByMe?'flagged':''}" title="Melden" aria-label="Report melden" onclick="reportFlag('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>`:''}
