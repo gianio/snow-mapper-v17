@@ -103,6 +103,33 @@ def _apply(v, idx, w):
     return (w * v[idx]).sum(axis=1)
 
 
+def _grid_spline(lats, lons, shape, crs, grid_x, grid_y):
+    """Bikubischer Spline ueber das regelmaessige Wetter-Abfragegitter.
+
+    IDW zieht jede Zelle zum naechsten Punkt hin und malt so runde Flecken um
+    jeden Abfragepunkt -- bei Wolken, die als Flaechen gelesen werden, sieht
+    das wie eine Pixelwolke aus. Ein Spline durch dasselbe Gitter gibt
+    weiche, zusammenhaengende Felder ohne neue Daten.
+    """
+    from scipy.ndimage import map_coordinates
+    ulat = np.unique(np.round(np.asarray(lats), 6))
+    ulon = np.unique(np.round(np.asarray(lons), 6))
+    nlat, nlon = len(ulat), len(ulon)
+    if nlat * nlon != len(lats) or nlat < 2 or nlon < 2:
+        return None
+    tf = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
+    tlon, tlat = tf.transform(np.asarray(grid_x).ravel(), np.asarray(grid_y).ravel())
+    fy = (np.asarray(tlat) - ulat[0]) / (ulat[-1] - ulat[0]) * (nlat - 1)
+    fx = (np.asarray(tlon) - ulon[0]) / (ulon[-1] - ulon[0]) * (nlon - 1)
+    coords = np.vstack([fy, fx])
+
+    def at(v):
+        g = np.asarray(v, dtype="float64").reshape(nlat, nlon)
+        out = map_coordinates(g, coords, order=3, mode="nearest", prefilter=True)
+        return np.clip(out, 0, 100).reshape(shape)
+    return at
+
+
 def _hourly(fc, hours):
     T = min(hours, min(len(f.time) for f in fc))
     g = lambda a: np.array([getattr(f, a)[:T] for f in fc], dtype="float64")
@@ -464,6 +491,10 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     print(f"[INT] Bewoelkung: {'ja' if cloud_m is not None else 'nein (Quelle liefert keine)'}.")
     idx, w = _idw_weights(pts, targets)
     ref_elev = _apply(elev_pt, idx, w).reshape(shape)
+    cloud_at = None
+    if cloud_m is not None:
+        cloud_at = (_grid_spline(lats, lons, shape, aoi.crs, grid_x, grid_y)
+                    or (lambda v: _apply(v, idx, w).reshape(shape)))
     sin_d, cos_d = np.sin(np.radians(wdir_m)), np.cos(np.radians(wdir_m))
 
     fine = _fine_terrain(bounds, aoi, use_synthetic)
@@ -544,7 +575,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         _store("wind_grid", t, ws_g)
         _store("prec", t, prec_g)
         if cloud_m is not None:
-            _store("cloud", t, _apply(cloud_m[:, t], idx, w).reshape(shape))
+            _store("cloud", t, cloud_at(cloud_m[:, t]))
         p_spd[t] = _apply(wspd_m[:, t], p_idx, p_w) * expo_mult  # topografisch moduliert
         p_dir[t] = np.degrees(np.arctan2(_apply(sin_d[:, t], p_idx, p_w),
                                          _apply(cos_d[:, t], p_idx, p_w))) % 360
@@ -3386,7 +3417,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ly-ov.on .ly-sw::after{transform:translateX(16px)}
  .ly-ov.na{opacity:.4;pointer-events:none}
  .ly-ov:active{background:var(--fill)}
- .ly-info{margin-top:4px}
+ .ly-info{margin-top:-6px}
+ .ly-sec-ov{margin-top:22px}
 
  /* ── tours: one route on its own, and the search sheet ── */
  .tour-sheet{max-height:62vh;padding:14px 16px 12px}
@@ -3450,6 +3482,23 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ts-chip.on{background:var(--accent);color:#fff;box-shadow:0 4px 12px color-mix(in srgb,var(--accent) 35%,transparent)}
  .ts-chip.ts-me{display:flex;align-items:center;justify-content:center;color:var(--accent)}
  .ts-chip.ts-me svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+ .ts-gv{margin-left:auto;display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0}
+ .ts-v{font:800 13px var(--mono);color:var(--fg)}
+ .ts-me2{width:28px;height:28px;border-radius:9px;border:0;background:var(--card);color:var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.08)}
+ .ts-me2 svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+ .ts-sl{-webkit-appearance:none;appearance:none;width:100%;height:28px;margin:0;background:transparent}
+ .ts-sl::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--accent) var(--p,20%),var(--fill2) var(--p,20%))}
+ .ts-sl::-moz-range-track{height:6px;border-radius:3px;background:var(--fill2)}
+ .ts-sl::-moz-range-progress{height:6px;border-radius:3px;background:var(--accent)}
+ .ts-sl::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-9px;border-radius:50%;background:#fff;border:0;box-shadow:0 1px 3px rgba(0,0,0,.25),0 0 0 1px rgba(0,0,0,.04);cursor:pointer}
+ .ts-sl::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#fff;border:0;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+ .ts-dual2{position:relative;height:28px}
+ .ts-dual2::before{content:'';position:absolute;left:0;right:0;top:11px;height:6px;border-radius:3px;background:var(--fill2)}
+ .ts-dual2 i{position:absolute;top:11px;height:6px;border-radius:3px;background:var(--accent)}
+ .ts-dual2 input{position:absolute;left:0;top:0;width:100%;height:28px;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none}
+ .ts-dual2 input::-webkit-slider-runnable-track{background:none}
+ .ts-dual2 input::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:auto;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25),0 0 0 1px rgba(0,0,0,.04);cursor:pointer}
+ .ts-dual2 input::-moz-range-thumb{pointer-events:auto;width:24px;height:24px;border-radius:50%;background:#fff;border:0;box-shadow:0 1px 3px rgba(0,0,0,.25);cursor:pointer}
  .ts-reset{border:0;background:none;padding:0;font:700 11.5px Inter,system-ui;color:var(--accent);cursor:pointer}
  .ts-seg{border-radius:16px}
  .ts-seg button{padding:10px 0}
@@ -3717,6 +3766,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="tourFab" onclick="tsOpenUI()" title="Touren finden" aria-label="Touren finden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
+    <button class="mfab" id="fab3d" onclick="document.getElementById('btn3dFloat').click()" title="3D-Karte" aria-label="3D-Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 20.5 7v10L12 21.5 3.5 17V7z"/><path d="M3.5 7 12 11.5 20.5 7M12 11.5v10"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
   </div>
   <div class="mfab-row" id="reportRow">
@@ -3782,10 +3832,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div class="ly-scroll">
     <div class="ly-top"><b>Ebenen</b><span>Eine Karte, beliebig viele Overlays</span></div>
     <div id="lyGrid"></div>
-    <div class="ly-sec"><span class="lbl-micro">Auf der Karte</span>
-    <div class="ly-ovs" id="lyOverlays"></div></div>
     <div class="ly-info" id="lyInfo"></div>
     <div class="ly-legend" id="lyLegend"></div>
+    <div class="ly-sec ly-sec-ov"><span class="lbl-micro">Auf der Karte</span>
+    <div class="ly-ovs" id="lyOverlays"></div></div>
     <div class="ly-op">
       <div class="ly-op-lbl"><span>Transparenz</span><b id="lyOpacityVal">0%</b></div>
       <input type="range" class="obs-range" id="lyOpacitySlider" min="0" max="80" step="5" value="0" oninput="layerOpacitySet(+this.value)">
@@ -4571,23 +4621,22 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   // In single-point mode there's no range to shade, just the point itself
   // (drawn further down, after the bars so it sits on top of them).
   if(!single){ctx2.fillStyle=tlSelTint;rr(x1,2,x2-x1,ch-4,10);ctx2.fill();}
-  // nights shaded (sunset -> sunrise), sunrise and sunset marked in amber
+  // nights shaded (sunset -> sunrise) in a clear slate, days left light; a
+  // small moon in each night band says which is which
   {const ms0=tMs(0),tf=ms=>(ms-ms0)/3600e3;
    const d0=Math.floor((ms0+tv0*3600e3)/864e5)-1,d1=Math.floor((ms0+tv1*3600e3)/864e5)+1;
-   const night='rgba(15,23,42,'+(cw/tvSpan()*24>=70?.045:.025)+')';
+   const dark=document.documentElement.getAttribute('data-theme')==='dark';
+   const night=dark?'rgba(0,0,0,.34)':'rgba(30,41,66,.11)';
    for(let dd=d0;dd<=d1;dd++){const st=sunTimes(dd*864e5),nx2=sunTimes((dd+1)*864e5);if(!st||!nx2)continue;
      const xs=tvX(tf(st.set),cw),xr=tvX(tf(nx2.rise),cw);
-     if(xr>0&&xs<cw){ctx2.fillStyle=document.documentElement.getAttribute('data-theme')==='dark'?'rgba(0,0,0,.22)':night;
-       ctx2.fillRect(Math.max(0,xs),topPad-4,Math.min(cw,xr)-Math.max(0,xs),baseY-topPad+4);}
-     // a small sun with an arrow: up at sunrise, down at sunset -- only
-     // while a day is wide enough to carry it
-     if(!compact&&cw/tvSpan()*24>=70)for(const [ms,up] of [[st.rise,1],[st.set,0]]){const x=tvX(tf(ms),cw);if(x<10||x>cw-14)continue;
-       const cy=baseY-9;ctx2.strokeStyle='#F59E0B';ctx2.fillStyle='#F59E0B';ctx2.lineWidth=1.3;ctx2.lineCap='round';
-       ctx2.beginPath();ctx2.arc(x,cy,2.7,0,2*Math.PI);ctx2.fill();
-       for(let k=0;k<8;k++){const an=k*Math.PI/4;ctx2.beginPath();
-         ctx2.moveTo(x+Math.cos(an)*4.3,cy+Math.sin(an)*4.3);ctx2.lineTo(x+Math.cos(an)*5.9,cy+Math.sin(an)*5.9);ctx2.stroke();}
-       const ax=x+9.5,y0=up?cy+4:cy-4,y1=up?cy-4:cy+4,hd=up?2.6:-2.6;
-       ctx2.beginPath();ctx2.moveTo(ax,y0);ctx2.lineTo(ax,y1);ctx2.moveTo(ax-2.4,y1+hd);ctx2.lineTo(ax,y1);ctx2.lineTo(ax+2.4,y1+hd);ctx2.stroke();}}}
+     if(xr>0&&xs<cw){const l=Math.max(0,xs),r=Math.min(cw,xr);ctx2.fillStyle=night;
+       ctx2.fillRect(l,topPad-4,r-l,baseY-topPad+4);
+       const mx=(Math.max(xs,0)+Math.min(xr,cw))/2;
+       if(!compact&&r-l>=22&&mx>8&&mx<cw-8){const my=topPad+5;
+         ctx2.fillStyle=dark?'rgba(226,232,240,.55)':'rgba(30,41,66,.38)';
+         // crescent: the outer disc minus an offset one, as one even-odd path
+         ctx2.save();ctx2.beginPath();ctx2.rect(mx-8,my-8,16,16);ctx2.arc(mx+2.6,my-1.7,3.7,0,2*Math.PI);ctx2.clip('evenodd');
+         ctx2.beginPath();ctx2.arc(mx,my,4.4,0,2*Math.PI);ctx2.fill();ctx2.restore();}}}}
   // day separators at Swiss midnight + readable date labels
   ctx2.textAlign='left';let _lastLabX=-1e9;
   // At a wide view the gridlines are days; zoomed in they become hours, which
@@ -4778,6 +4827,18 @@ const chCantons=L.polyline(CH_CANTONS,{pane:'abstractPane',interactive:false,smo
   color:'#9fb0c4',weight:1,opacity:.18,fill:false}).addTo(map);
 const chOutline=L.polygon(CH_BORDER,{pane:'abstractPane',interactive:false,smoothFactor:0.35,
   color:'#7c8ca3',weight:2.2,opacity:.95,fillColor:'#eef3f8',fillOpacity:1,lineJoin:'round'}).addTo(map);
+// Outside Switzerland there is no data: the neighbours fade softly into white
+// instead of ending at a hard edge. A wide white mask over the world minus
+// CH, feathered by a few broad, faint white strokes along the border.
+map.createPane('fadePane');
+map.getPane('fadePane').style.zIndex=440;              // over tiles and rasters, under routes' popups and markers
+map.getPane('fadePane').style.pointerEvents='none';
+const chFade=L.layerGroup([
+  L.polygon([[[89,-179],[89,179],[-89,179],[-89,-179]],CH_BORDER],{pane:'fadePane',interactive:false,stroke:false,
+    fillColor:'#fff',fillOpacity:.78,smoothFactor:.5}),
+  ...[[44,.12],[30,.14],[18,.16],[9,.18]].map(([w,o])=>L.polyline(CH_BORDER.concat([CH_BORDER[0]]),{pane:'fadePane',interactive:false,
+    color:'#fff',weight:w,opacity:o,lineJoin:'round',smoothFactor:.5}))
+]).addTo(map);
 // Resort names/dots used to be drawn straight onto the map as you zoomed in;
 // CH_RESORTS itself stays (the home-area picker in Settings still lists by
 // name), it just no longer gets a marker of its own.
@@ -4811,9 +4872,9 @@ function _applyVectorFade(op,t){
 // Three looks by zoom:
 //  - country (< 9.5): a calm grey relief, like a weather map -- the shaded
 //    terrain carries it, the national map only faintly on top;
-//  - middle (9.5-13): the winter map in black and white, so the coloured
+//  - middle (9.5-12): the winter map in black and white, so the coloured
 //    layers and routes stand out;
-//  - close (> 13.5): the winter map in its own colours.
+//  - close (> 12.5): the winter map in its own colours.
 const reliefBase=L.tileLayer(swissTile('ch.swisstopo.swissalti3d-reliefschattierung_monodirektional','png'),
   {maxZoom:17,crossOrigin:true,keepBuffer:2,updateWhenZooming:false,zIndex:0,className:'relief-base'}).addTo(map);
 try{base.setZIndex(1);}catch(e){}
@@ -4823,7 +4884,7 @@ function updateBaseFade(force){
   const op=0.42+0.58*_ramp(z,8.6,10.2);
   base.setOpacity(op);
   try{reliefBase.setOpacity(0.9-0.9*_ramp(z,9.2,13));}catch(e){}
-  document.documentElement.style.setProperty('--base-gray',(1-_ramp(z,13,14.6)).toFixed(3));
+  document.documentElement.style.setProperty('--base-gray',(1-_ramp(z,11.6,13)).toFixed(3));
   if(!force&&Math.abs(op-_lastFadeOp)<_FADE_EPS)return;
   // Coalesce to one restyle per frame even if several zoom events land.
   if(_fadeRaf)return;
@@ -4854,6 +4915,8 @@ const OVERLAYS={
   // Two entries for the same routes on purpose: the vector one is tappable
   // and carries the powder score, the WMTS one is the fallback picture when
   // the build could not reach swisstopo for the geometry.
+  // the community's pins (powder reports, observations) -- on by default
+  reports:{label:'Meldungen der Community',vector:true,attr:''},
   skitourVec:{label:'Skitouren · Powder-Score',vector:true,attr:'Skitouren © swisstopo'},
   skitour:{label:'Skitouren (Karte)',wmts:'ch.swisstopo-karto.skitouren',op:.95,
            attr:'Skitouren © swisstopo'},
@@ -4887,6 +4950,7 @@ function ovBuild(k){
   else if(k==='skitourVec'){ovLayer[k]=tourBuildLayer();}
   else if(k==='webcams'){ovLayer[k]=wcBuildLayer();}
   else if(k==='variantA'){ovLayer[k]=vaBuildLayer();}
+  else if(k==='reports'){ovLayer[k]=reportMarkers;}
   return ovLayer[k];
 }
 function ovToggle(k,auto){
@@ -4894,6 +4958,7 @@ function ovToggle(k,auto){
   const l=ovBuild(k);if(!l)return;
   ovOn[k]=!ovOn[k];
   if(k==='skitourVec'&&!auto){try{localStorage.setItem('ssm_tours',ovOn[k]?'1':'0');}catch(e){}}
+  if(k==='reports'){try{localStorage.setItem('ssm_reports',ovOn[k]?'1':'0');}catch(e){}}
   if(ovOn[k])map.addLayer(l);else map.removeLayer(l);
   if(k==='skitourVec'){if(ovOn[k])tourRecolor();else tourClose();}
   if(k==='variantA'&&ovOn[k])vaRefresh();
@@ -4906,7 +4971,7 @@ function ovToggle(k,auto){
   ovSyncUI();ovAttrSync();
 }
 function ovAttrSync(){
-  const extra=Object.keys(OVERLAYS).filter(k=>ovOn[k]).map(k=>OVERLAYS[k].attr);
+  const extra=Object.keys(OVERLAYS).filter(k=>ovOn[k]&&OVERLAYS[k].attr).map(k=>OVERLAYS[k].attr);
   const el=document.querySelector('.leaflet-control-attribution');
   if(el)el.innerHTML=BASE_ATTR+(extra.length?' · '+extra.join(' · '):'');
 }
@@ -4995,6 +5060,7 @@ function vaProfAvailable(){
 const VA_PALETTE={
   ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[147,197,240,205],4:[59,125,214,225],5:[24,52,128,235],6:[226,170,72,220]},
   wind:{1:[156,168,184,190],2:[186,170,236,205],3:[112,72,200,230]}};
+VA_PALETTE.powder={3:VA_PALETTE.ski6[3],4:VA_PALETTE.ski6[4],5:VA_PALETTE.ski6[5]};
 const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver > 20 cm',6:'nass / Sulz'};
 // An export without the simple six classes still has "simple" (15 kinds of
 // surface): the six are folded from it, so Skiqualität always opens simple.
@@ -5014,6 +5080,14 @@ function vaPalApply(m){
       if(e._o[0]!==nw[0]||e._o[1]!==nw[1]||e._o[2]!==nw[2])L._recolor=true;
       e[1]=[nw[0],nw[1],nw[2]];src.push([e._o,+id]);}
     L._src=src;}
+  // "Nur Pulver": the same six classes with everything but powder cleared,
+  // so the map answers one question at a glance.
+  const S6=m.layers.ski6;
+  if(S6&&S6.legend&&S6._src&&!m.layers.powder){
+    const P=[3,4,5],leg={};
+    P.forEach(id=>{leg[id]=[id,VA_PALETTE.ski6[id].slice(0,3),VA_SKI6_DE[id]];});
+    m.layers.powder={file:S6.file,legend:leg,_virt:S6._virt||'ski6',_src:S6._src.map(([o,id])=>[o,P.includes(id)?id:0]),_recolor:true};
+  }
 }
 const vaRecolorC=new Map();let vaRcCv=null;
 async function vaRecolorUrl(u,key){
@@ -5344,6 +5418,7 @@ function vaHiEngine(){
     }
     var L,key;
     if(layer==='ski6'){L=E.clsSki6(m);key='ski6';}
+    else if(layer==='powder'){L=E.clsSki6(m);if(L<3||L>5)L=0;key='ski6';}
     else if(layer==='wind'){L=E.clsWind(m);key='wind';}
     else if(layer==='simple'){L=E.clsSimple(m);key='simple';}
     else{L=E.clsSki(m);key='ski18';}
@@ -5352,7 +5427,7 @@ function vaHiEngine(){
   };
   E.metsFor=function(layer){
     var x=E.mi,names=layer==='density'?['surface_density']
-      :layer==='ski6'?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_density','surface_lw']
+      :(layer==='ski6'||layer==='powder')?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_density','surface_lw']
       :layer==='wind'?['total_hs_cm','drift_load','wind_scour']
       :layer==='simple'
       ?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_lw','sh_surface','drift_load','wind_scour']
@@ -5888,8 +5963,10 @@ function vaPtsLayer(){
   return g;
 }
 let vaPts=null;
+// Off: the rings read as map clutter rather than information.
+const VA_SHOW_PTS=false;
 function vaPtsSync(){
-  if(vaPts||!vaGrp)return;
+  if(!VA_SHOW_PTS||vaPts||!vaGrp)return;
   try{vaPts=vaPtsLayer();if(vaPts)vaGrp.addLayer(vaPts);}catch(e){vaPts=null;}
 }
 function vaBuildLayer(){
@@ -6979,12 +7056,10 @@ function vt(fn){
 // A sheet over the lower part of the screen, the map above it showing only
 // the routes that pass the filters. Distance is measured to the route's
 // lowest point -- where the tour starts.
-const tsF={focus:'powder',radius:25,gain:new Set(),slope:new Set()};
+const tsF={focus:'powder',radius:25,gainMin:0,gainMax:2500,slope:new Set()};
 // Buckets instead of two-thumb sliders: a thumb is fiddly on a phone and
 // nobody plans a tour to the degree. An empty set means "any".
 const TS_SLOPE=[['lt30','< 30°',0,30],['30','30–35°',30,35],['35','35–40°',35,40],['40','40°+',40,99]];
-const TS_GAIN=[['lt800','< 800',0,800],['800','800–1200',800,1200],['1200','1200–1600',1200,1600],['1600','1600+',1600,1e5]];
-const TS_RAD=[10,25,50,100];
 function tsIn(set,B,v){if(!set.size)return true;if(v==null)return true;
   return B.some(b=>set.has(b[0])&&v>=b[2]&&v<b[3]);}
 let tsCircle=null;
@@ -7007,12 +7082,24 @@ async function tsOpenUI(){
 function tsCloseQuiet(){document.body.classList.remove('ts-open');if(tsCircle){map.removeLayer(tsCircle);tsCircle=null;}}
 function tsClose(){tsCloseQuiet();tourList().forEach(t=>{t._ts=null;});tourPaintScores();}
 function tsSet(k,v){
-  if(k==='gain'||k==='slope'){const S=tsF[k];S.has(v)?S.delete(v):S.add(v);}
-  else if(k==='reset'){tsF.gain.clear();tsF.slope.clear();tsF.radius=25;}
+  if(k==='slope'){const S=tsF[k];S.has(v)?S.delete(v):S.add(v);}
+  else if(k==='reset'){tsF.slope.clear();tsF.radius=25;tsF.gainMin=0;tsF.gainMax=2500;}
   else tsF[k]=v;
+  if(k==='gainMin'&&tsF.gainMin>tsF.gainMax-100)tsF.gainMin=tsF.gainMax-100;
+  if(k==='gainMax'&&tsF.gainMax<tsF.gainMin+100)tsF.gainMax=tsF.gainMin+100;
+  // sliders only update labels and the list while dragging; rebuilding the
+  // whole sheet would drop the thumb out from under the finger
+  if(k==='radius'||k==='gainMin'||k==='gainMax'){clearTimeout(tsSet._t);tsSet._t=setTimeout(()=>tsRender(true),60);tsSliderSync();return;}
   if(k==='focus'){tourFocus=v;}
   try{haptic(3);}catch(e){}
   clearTimeout(tsSet._t);tsSet._t=setTimeout(()=>tsRender(),40);}
+function tsGainTxt(){return tsF.gainMin+'–'+(tsF.gainMax>=2500?'2500+':tsF.gainMax)+' Hm';}
+function tsSliderSync(){
+  const r=document.getElementById('tsVR');if(r)r.textContent=tsF.radius+' km';
+  const g=document.getElementById('tsVG');if(g)g.textContent=tsGainTxt();
+  const bar=document.getElementById('tsGB');if(bar){bar.style.left=(tsF.gainMin/25)+'%';bar.style.right=(100-tsF.gainMax/25)+'%';}
+  const sr=document.getElementById('tsSR');if(sr)sr.style.setProperty('--p',((tsF.radius-5)/95*100)+'%');
+}
 function tsLocate(){
   if(!navigator.geolocation){toast('Standort nicht verfügbar','err');return;}
   navigator.geolocation.getCurrentPosition(p=>{myLoc=[p.coords.latitude,p.coords.longitude];
@@ -7026,7 +7113,7 @@ function tsFilter(){
     const d=tourDistM(c.lon,c.lat,lo.lon,lo.lat);
     if(d>R){t._ts={ok:false};return;}
     const g=tourGeo(t);
-    const ok=tsIn(tsF.gain,TS_GAIN,g.gain)&&tsIn(tsF.slope,TS_SLOPE,g.maxSlope);
+    const ok=(g.gain==null||(g.gain>=tsF.gainMin&&(tsF.gainMax>=2500||g.gain<=tsF.gainMax)))&&tsIn(tsF.slope,TS_SLOPE,g.maxSlope);
     t._ts={ok,d};if(ok)out.push({t,d});});
   return {c,list:out};
 }
@@ -7041,17 +7128,21 @@ function tsRender(onlyMap){
   window._tsList=list;
   const va=!!tourVa.eng;
   const chips=(k,B)=>B.map(b=>'<button type="button" class="ts-chip'+(tsF[k].has(b[0])?' on':'')+'" aria-pressed="'+tsF[k].has(b[0])+'" onclick="tsSet(\''+k+'\',\''+b[0]+'\')">'+b[1]+'</button>').join('');
+  const sgrp=(ic,lbl,val,body)=>'<div class="ts-grp"><div class="ts-gl">'+ic+'<span>'+lbl+'</span><span class="ts-gv">'+val+'</span></div>'+body+'</div>';
   const grp=(ic,lbl,body)=>'<div class="ts-grp"><div class="ts-gl">'+ic+'<span>'+lbl+'</span></div><div class="ts-chips">'+body+'</div></div>';
   const IC_R='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg>',
         IC_G='<svg viewBox="0 0 24 24"><path d="M3 19l6-9 4 5 3-4 5 8z"/></svg>',
         IC_S='<svg viewBox="0 0 24 24"><path d="M4 19h16L4 7z"/></svg>';
-  const nf=tsF.gain.size+tsF.slope.size+(tsF.radius!==25?1:0);
+  const nf=tsF.slope.size+(tsF.radius!==25?1:0)+(tsF.gainMin>0||tsF.gainMax<2500?1:0);
   const ctrls='<div class="ts-seg"><button type="button" class="'+(tsF.focus==='powder'?'on':'')+'" onclick="tsSet(\'focus\',\'powder\')">❄︎ Pulver</button>'
     +'<button type="button" class="'+(tsF.focus==='sulz'?'on':'')+'" onclick="tsSet(\'focus\',\'sulz\')">☀︎ Sulz</button></div>'
     +'<div class="ts-filters">'
-    +grp(IC_R,'Umkreis '+(c.me?'ab Standort':'ab Kartenmitte'),TS_RAD.map(r=>'<button type="button" class="ts-chip'+(tsF.radius===r?' on':'')+'" onclick="tsSet(\'radius\','+r+')">'+r+' km</button>').join('')
-      +(c.me?'':'<button type="button" class="ts-chip ts-me" onclick="tsLocate()" aria-label="Meinen Standort verwenden"><svg viewBox="0 0 24 24"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="6"/></svg></button>'))
-    +grp(IC_G,'Höhenmeter',chips('gain',TS_GAIN))
+    +sgrp(IC_R,'Umkreis '+(c.me?'ab Standort':'ab Kartenmitte'),'<b class="ts-v" id="tsVR">'+tsF.radius+' km</b>'
+      +(c.me?'':'<button type="button" class="ts-me2" onclick="tsLocate()" aria-label="Meinen Standort verwenden"><svg viewBox="0 0 24 24"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="6"/></svg></button>'),
+      '<input class="ts-sl" id="tsSR" type="range" min="5" max="100" step="5" value="'+tsF.radius+'" oninput="tsSet(\'radius\',+this.value)" aria-label="Umkreis">')
+    +sgrp(IC_G,'Höhenmeter','<b class="ts-v" id="tsVG">'+tsGainTxt()+'</b>',
+      '<div class="ts-dual2"><i id="tsGB"></i><input type="range" min="0" max="2500" step="50" value="'+tsF.gainMin+'" oninput="tsSet(\'gainMin\',+this.value)" aria-label="Höhenmeter min">'
+      +'<input type="range" min="0" max="2500" step="50" value="'+tsF.gainMax+'" oninput="tsSet(\'gainMax\',+this.value)" aria-label="Höhenmeter max"></div>')
     +grp(IC_S,'Steilste Stelle',chips('slope',TS_SLOPE))
     +'</div>';
   const rows=list.slice(0,40).map((o,i)=>{const r=o.r,g=tourGeo(o.t);
@@ -7060,6 +7151,8 @@ function tsRender(onlyMap){
       +'<span class="tn-t"><b>'+escapeHtml(o.t.name||'Skitour')+'</b><span>'+(Math.round(o.d/100)/10)+' km · '
       +(g.gain!=null?g.gain+' Hm · ':'')+'bis '+g.maxSlope+'°'+(g.hi.el!=null?' · '+Math.round(g.hi.el)+' m':'')+'</span></span>'
       +'<span class="tn-w'+(nw?' on':'')+'" title="schauen gerade">'+(nw?(nw>10?'10+':nw):'')+'</span></button>';}).join('');
+  if(onlyMap&&el.querySelector('.ts-list')){el.querySelector('.ts-count').textContent=list.length+' Touren';
+    el.querySelector('.ts-list').innerHTML=rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>';tsSliderSync();return;}
   const keepS=el.scrollTop;
   el.innerHTML='<div class="ts-grab"></div><div class="tn-hd"><div><b>Touren finden</b><span>'
     +(va?'SNOWPACK · '+escapeHtml(tourVa.when):'Powder-Modell im Zeitfenster')+'</span></div>'
@@ -7068,7 +7161,7 @@ function tsRender(onlyMap){
     +(nf?' · <button type="button" class="ts-reset" onclick="tsSet(\'reset\')">Filter zurücksetzen</button>':'')+'</span></div>'
     +'<div class="ts-list tn-list">'+(rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>')+'</div>'
     +'<div class="tn-foot">Anteil der Abfahrt (22–50°) mit Pulver bzw. Sulz im SNOWPACK-Modell – keine Lawinenbeurteilung, Bulletin des SLF beachten.</div>';
-  el.scrollTop=keepS;
+  el.scrollTop=keepS;tsSliderSync();
 }
 function tsPick(i){const o=(window._tsList||[])[i];if(!o)return;tourOpen(o.t,true);}
 addEventListener('keydown',e=>{if(e.key!=='Escape')return;
@@ -8212,16 +8305,16 @@ function legSpec(l){
   if(vaLegendUp()||l==='snowpack'){
     if(!vaAvailable())return null;
     const L=vaMan.layers[vaKey];if(!L)return null;
-    const name={ski6:'Skiqualität',wind:'Triebschnee',density:'Dichte',ski18:'Skiqualität (Detail)',simple:'Schneeart'}[vaKey]||vaKey;
+    const name={powder:'Nur Pulver',ski6:'Skiqualität',wind:'Triebschnee',density:'Dichte',ski18:'Alle Schneearten',simple:'Schneeart'}[vaKey]||vaKey;
     if(vaKey==='density'){const r=L.range||[100,450];
       return {t:name,u:'kg/m³',va:true,grad:'linear-gradient(0deg,#2b56c8,#49b0c8,#cfd43a,#e07a2a,#c02020)',
         ticks:[r[1],Math.round((r[0]+r[1])/2),r[0]],long:'Dichte der obersten Schneeschicht'};}
     const leg=L.legend||{};
-    const ORD={ski6:[5,4,3,1,2,6],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0);
-    const SH={ski6:{5:'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{};
+    const ORD={ski6:[5,4,3,1,2,6],powder:[5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0);
+    const SH={ski6:{5:'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz'},powder:{5:'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{};
     const rows=ORD.filter(k=>leg[k]&&leg[k][1]).map(k=>{const e=leg[k],nm=e[2]||String(e[0]).replace(/_/g,' ');
       return {k,c:rgb(e[1]),s:SH[k]||nm.split(/[\s/(]/)[0].slice(0,7),n:nm};});
-    return {t:name,u:vaKey==='ski6'?'Pulver cm':vaKey==='wind'?'Wind':'Klasse',va:true,rows};
+    return {t:name,u:(vaKey==='ski6'||vaKey==='powder')?'Pulver cm':vaKey==='wind'?'Wind':'Klasse',va:true,rows};
   }
   if(l==='snow'){const rows=[];for(let i=SB.length-2;i>=0;i--)rows.push({c:SC[Math.min(i,SC.length-1)],s:String(SB[i]),n:SB[i]+'–'+SB[i+1]+' cm'});
     return {t:'Neuschnee',u:'cm',rows};}
@@ -8403,9 +8496,9 @@ const GROUPS={
     // SNOWPACK is a layer like the others, not an overlay: its sub-layers are
     // the variants. Only listed once the export is there (groupItems), and
     // only the views the export actually carries.
-    {id:'snowpack',label:'Skiqualität',va:true,vars:[{l:'snowpack',s:'ski6',label:'Skiqualität'},
-      {l:'snowpack',s:'wind',label:'Triebschnee'},{l:'snowpack',s:'density',label:'Dichte'},
-      {l:'snowpack',s:'ski18',label:'Detail'}]}
+    {id:'snowpack',label:'Skiqualität',va:true,vars:[{l:'snowpack',s:'powder',label:'Nur Pulver'},
+      {l:'snowpack',s:'ski6',label:'Einfache Schneearten'},{l:'snowpack',s:'ski18',label:'Alle Schneearten'},
+      {l:'snowpack',s:'wind',label:'Triebschnee'}]}
   ]},
   // The Report-Modell layers still exist and the drawings still feed the
   // prognosis -- they are just not in the picker. Drop `menu:false` to bring
@@ -8570,12 +8663,16 @@ const LY_VAR_TEXT={
   'temp|Mittel':'Durchschnitt über das Fenster.',
   'temp|Max':'Die wärmste Stunde — wo es angefeuchtet haben könnte.',
   'temp|Min':'Die kälteste Stunde.',
+  'snowpack|Nur Pulver':'Nur Hänge mit lockerem Pulver, nach Tiefe – alles andere bleibt frei.',
+  'snowpack|Einfache Schneearten':'Sechs Klassen: Pulver nach Tiefe, hart, Kruste, nass / Sulz.',
+  'snowpack|Alle Schneearten':'Alle Oberflächentypen aus dem Modell im Detail.',
+  'snowpack|Triebschnee':'Wo der Wind Schnee abgelagert (violett) oder weggeblasen hat (grau).',
   'temp|0–5 °C':'Nur Flächen mit einem Maximum zwischen 0 und 5 °C — Firn-Bedingungen.'
 };
 function lyInfoRender(){
   const el=document.getElementById('lyInfo');
   const lg=document.getElementById('lyLegend');
-  if(lg)lg.innerHTML=legendFor(layer);
+  if(lg)lg.innerHTML=layer==='snowpack'?'':legendFor(layer);
   if(!el)return;
   const L=lyLayers(),it=L[lyIndex()]&&L[lyIndex()][2];
   const info=it&&LY_TEXT[it.id];
@@ -8611,7 +8708,7 @@ function lyRender(){
       vars.map((v,n)=>'<button type="button" class="ly-sub'+(n===curVar?' on':'')+'" '+
         'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join('')+'</div>'):'';
     return '<div class="ly-sec"><span class="lbl-micro">'+name+'</span><div class="ly-grid ly-g3">'+
-      rows.map(([[g,k,item],n],p)=>{const hi=item.id==='reppow';
+      rows.map(([[g,k,item],n],p)=>{const hi=false;
         return '<button type="button" class="ly-tile'+(n===i?' on':'')+(hi?' ly-hi':'')+'" onclick="lyPick('+n+')"'+
         (n===i?' aria-current="true"':'')+' title="'+(hi?'Echte Meldungen, nicht modelliert':escapeHtml(item.label))+'">'+lyIconFor(item.id)+
         '<span>'+escapeHtml(item.label)+'</span></button>'+(p===after?subsHtml:'');}).join('')+'</div></div>';}).join('');
@@ -8619,6 +8716,7 @@ function lyRender(){
   lyInfoRender();
 }
 const OV_ICON={
+  reports:'<path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17"/>',
   webcams:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
   skitourVec:'<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18c4 0 3-6 7-6 2.5 0 2-4 2-4"/>',
   skitour:'<path d="M3 20l6-12 4 7 3-4 5 9z"/>',
@@ -9960,6 +10058,8 @@ const DEMO_REPORTS=(FEATURES.demoOther?DEMO_DEFS:[]).map((d,i2)=>({id:'d'+(i2+1)
     const el=document.getElementById(id);if(el)el.hidden=!on;});
 }catch(e){}})();
 let reportMarkers=L.layerGroup().addTo(map);
+ovOn.reports=true;
+try{if(localStorage.getItem('ssm_reports')==='0'){ovOn.reports=false;map.removeLayer(reportMarkers);}}catch(e){}
 // Default is the 1 April 2026 demo dataset; live/current weather is an
 // explicit opt-in, remembered in localStorage so it survives a fresh load
 // with no URL params (the ?demo/?live params still work as one-off overrides
@@ -12763,7 +12863,7 @@ function feedRender(){
     const canFollow=r.dbRow&&r.userId&&(!sbUser||r.userId!==sbUser.id);
     const followBtn=canFollow?`<button class="feed-follow ${myFollowing.has(r.userId)?'following':''}" onclick="toggleFollow('${r.userId}',event)">${myFollowing.has(r.userId)?'Folge ich':'Folgen'}</button>`:'';
     const endBtn=r.dbRow?`<button class="endorse-btn ${r.liked?'endorsed':''}" onclick="toggleEndorse('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> ${r.likes||0}<span class="endorse-lbl">${r.liked?'Bestätigt':'Bestätigen'}</span></button>`:'';
-    return`<div class="feed-card${r.img?' photo':' text'}" id="feedcard-${r.id}" onclick="feedFlyTo(${r.lat},${r.lng})">
+    return`<div class="feed-card${r.img?' photo':' text'}" id="feedcard-${r.id}">
       <div class="feed-card-head">
         <div class="feed-card-avatar" style="${r.avatar?`background-image:url(${encodeURI(r.avatar)})`:''}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['\"<>]/g,'')}')"`:''}>${r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase())}</div>
         <div class="feed-card-info">
