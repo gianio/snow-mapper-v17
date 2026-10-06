@@ -3482,6 +3482,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    padding:6px 16px calc(env(safe-area-inset-bottom,0px) + 14px);box-shadow:0 -12px 40px rgba(0,0,0,.18);
    transform:translateY(105%);transition:transform .34s cubic-bezier(.2,.9,.25,1)}
  body.ts-open .ts-sheet{transform:none}
+ body.ts-open .ts-sheet.min{transform:translateY(calc(100% - 86px));overflow:hidden}
+ .ts-sheet [data-drag]{cursor:grab;touch-action:none}
+ .ts-grab{height:5px!important;width:44px!important}
  body.ts-open #bottomPanel,body.ts-open #mapFabs,body.ts-open #miniLegend,body.tour-open #bottomPanel,body.tour-open #miniLegend{opacity:0;pointer-events:none}
  .ts-grab{width:38px;height:4px;border-radius:2px;background:var(--fill2);margin:4px auto 10px}
  .ts-seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--fill);border-radius:14px;padding:4px;margin:2px 0 12px}
@@ -3617,6 +3620,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .trk-map img+svg,.trk-map svg.bare{position:absolute;inset:0;width:100%;height:100%}
  .trk-map.pick{cursor:crosshair}
  .trk-map:not(:has(img)){aspect-ratio:2/1}
+ .trk-guide{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--accent-soft);margin:0 0 6px;font:600 12.5px Inter,system-ui;color:var(--fg2)}
+ .trk-guide svg{width:20px;height:20px;color:var(--accent);flex:none}
+ .trk-guide span{flex:1;min-width:0}
+ .trk-guide b{display:block;font:800 14px Inter,system-ui;color:var(--fg)}
+ .trk-guide button{border:0;background:none;font-size:20px;color:var(--fg2);cursor:pointer}
+ .trk-guide.on{margin:-4px 0 12px}
+ .trk-guide.warn{background:rgba(217,83,79,.12)}
+ .trk-guide.warn b{color:#C0392B}
  .trk-rep{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:14px;background:var(--accent-soft);color:var(--fg);font:500 12.5px/1.4 Inter,system-ui;margin-bottom:10px}
  .trk-rep svg{width:20px;height:20px;flex:none;color:var(--accent);margin-top:1px}
  .trk-rep b{display:block;font:800 12.5px var(--mono);color:var(--accent);margin-top:3px}
@@ -3741,7 +3752,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .tour-backi{border:0;background:var(--fill);width:30px;height:30px;border-radius:50%;font:700 18px/1 Inter,system-ui;color:var(--fg);cursor:pointer;flex:none}
  .tour-watch{margin:8px 0 0;padding:6px 9px;font-size:12px}
  .tour-prof{margin:8px 0 8px}
- .tsh-acts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+ .tsh-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .tsh-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:8px 0 2px}
+ .tsh-stats>div{background:var(--fill);border-radius:12px;padding:7px 2px;text-align:center;min-width:0}
+ .tsh-stats b{display:block;font:800 13.5px var(--mono);color:var(--fg);white-space:nowrap}
+ .tsh-stats small{display:block;font:700 9.5px Inter,system-ui;letter-spacing:.02em;color:var(--fg2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .tour-sheet.min .tsh-stats{display:none}
  .tsh-acts button{display:flex;align-items:center;justify-content:center;gap:6px;height:38px;border-radius:12px;border:1px solid var(--hair);
    background:var(--card);color:var(--fg);font:700 12.5px Inter,system-ui;cursor:pointer}
  .tsh-acts button svg{width:15px;height:15px}
@@ -4914,6 +4930,10 @@ const I18N_DICT={
 "an":["on","on","on"],
 "Mein Profil":["My profile","Mon profil","Il mio profilo"],
 "Meine Aufzeichnungen":["My recordings","Mes enregistrements","Le mie registrazioni"],
+"Freeride Ski":["Freeride ski","Freeride ski","Freeride sci"],"Freeride Snowboard":["Freeride snowboard","Freeride snowboard","Freeride snowboard"],"Skimo":["Skimo","Ski-alpinisme","Skialp"],
+"Ø Neigung":["Ø slope","Pente moy.","Pend. media"],"Max. Neigung":["Max. slope","Pente max.","Pend. max"],"Gipfel":["Summit","Sommet","Vetta"],
+"Spur folgen":["Follow route","Suivre la trace","Segui la traccia"],"auf der Spur":["on the route","sur la trace","sulla traccia"],
+"Start # m":["Start # m","Départ # m","Partenza # m"],
 "Höhe":["Height","Altitude","Quota"],
 "# m über Boden":["# m above ground","# m au-dessus du sol","# m dal suolo"],
 "Wind auf # m (freie Atmosphäre)":["Wind at # m (free atmosphere)","Vent à # m (atmosphère libre)","Vento a # m (atmosfera libera)"],
@@ -5641,7 +5661,42 @@ const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,
 // visible in the corner. The data sources still get credited -- just
 // without Leaflet's own link riding along.
 if(map.attributionControl)map.attributionControl.setPrefix(false);
-if(_desktop&&map.scrollWheelZoom&&map.scrollWheelZoom.setWheelPxPerZoomLevel)map.scrollWheelZoom.setWheelPxPerZoomLevel(38);
+// Smooth wheel / trackpad zoom. Leaflet's own handler turns every burst of
+// wheel deltas into a separate animated zoom step, which on a trackpad is a
+// queue of little jumps. Instead the zoom follows a goal value frame by frame
+// (continuous zoom around the cursor, like a native map), and the tiles are
+// only refreshed once the gesture ends.
+const SmoothWheel=L.Handler.extend({
+  addHooks(){L.DomEvent.on(this._map._container,'wheel',this._onWheel,this);},
+  removeHooks(){L.DomEvent.off(this._map._container,'wheel',this._onWheel,this);this._end();},
+  _onWheel(e){
+    const t=e.target;if(t&&t.closest&&t.closest('.leaflet-popup-content,.leaflet-control,.no-map-wheel'))return;
+    L.DomEvent.preventDefault(e);L.DomEvent.stopPropagation(e);
+    const m=this._map;
+    let d=e.deltaY*(e.deltaMode===1?33:e.deltaMode===2?400:1);
+    // pinch arrives as ctrl+wheel with small deltas; a mouse notch is ~100
+    const k=e.ctrlKey?0.012:(Math.abs(d)>=50&&Number.isInteger(d)?0.0045:0.0032);
+    if(!this._on){this._on=true;m._stop();this._goal=m.getZoom();this._moved=false;
+      this._raf=requestAnimationFrame(()=>this._step());}
+    this._goal=Math.max(m.getMinZoom(),Math.min(m.getMaxZoom(),this._goal-d*k));
+    this._pt=m.mouseEventToContainerPoint(e);this._ll=m.containerPointToLatLng(this._pt);
+    clearTimeout(this._to);this._to=setTimeout(()=>this._end(),180);
+  },
+  _step(){if(!this._on)return;const m=this._map,z0=m.getZoom();
+    let z=z0+(this._goal-z0)*0.28;if(Math.abs(this._goal-z)<0.004)z=this._goal;
+    if(z!==z0){const half=m.getSize().divideBy(2),off=this._pt.subtract(half);
+      const c=m.unproject(m.project(this._ll,z).subtract(off),z);
+      if(!this._moved){m._moveStart(true,false);this._moved=true;}
+      m._move(c,z);}
+    this._raf=requestAnimationFrame(()=>this._step());},
+  _end(){if(!this._on)return;cancelAnimationFrame(this._raf);clearTimeout(this._to);
+    const m=this._map;
+    // let the last frames land on the goal before the tiles refresh
+    if(Math.abs(this._goal-m.getZoom())>0.004){const z=this._goal,half=m.getSize().divideBy(2),off=this._pt.subtract(half);
+      m._move(m.unproject(m.project(this._ll,z).subtract(off),z),z);}
+    this._on=false;if(this._moved)m._moveEnd(true);this._moved=false;}
+});
+try{map.scrollWheelZoom.disable();map.scrollWheelZoom=new SmoothWheel(map);map.scrollWheelZoom.enable();}catch(e){}
 // Constrain panning + zoom to the meteo grid, with a thin white frame around the data
 const _fitZoom=map.getZoom();
 map.setZoom(_fitZoom,{animate:false});map.setMinZoom(_fitZoom);map.setMaxZoom(16);  // never zoom out past the initial view (sync — kein animierter Auto-Zoom)
@@ -5693,18 +5748,7 @@ const chCantons=L.polyline(CH_CANTONS,{pane:'abstractPane',interactive:false,smo
   color:'#9fb0c4',weight:1,opacity:.18,fill:false}).addTo(map);
 const chOutline=L.polygon(CH_BORDER,{pane:'abstractPane',interactive:false,smoothFactor:0.35,
   color:'#7c8ca3',weight:2.2,opacity:.95,fillColor:'#eef3f8',fillOpacity:1,lineJoin:'round'}).addTo(map);
-// Outside Switzerland there is no data: the neighbours fade softly into white
-// instead of ending at a hard edge. A wide white mask over the world minus
-// CH, feathered by a few broad, faint white strokes along the border.
-map.createPane('fadePane');
-map.getPane('fadePane').style.zIndex=440;              // over tiles and rasters, under routes' popups and markers
-map.getPane('fadePane').style.pointerEvents='none';
-const chFade=L.layerGroup([
-  L.polygon([[[89,-179],[89,179],[-89,179],[-89,-179]],CH_BORDER],{pane:'fadePane',interactive:false,stroke:false,
-    fillColor:'#fff',fillOpacity:.78,smoothFactor:.5}),
-  ...[[44,.12],[30,.14],[18,.16],[9,.18]].map(([w,o])=>L.polyline(CH_BORDER.concat([CH_BORDER[0]]),{pane:'fadePane',interactive:false,
-    color:'#fff',weight:w,opacity:o,lineJoin:'round',smoothFactor:.5}))
-]).addTo(map);
+
 // Resort names/dots used to be drawn straight onto the map as you zoomed in;
 // CH_RESORTS itself stays (the home-area picker in Settings still lists by
 // name), it just no longer gets a marker of its own.
@@ -5747,7 +5791,9 @@ try{base.setZIndex(1);}catch(e){}
 const _ramp=(z,z0,z1)=>Math.max(0,Math.min(1,(z-z0)/(z1-z0)));
 function updateBaseFade(force){
   const t=baseFadeT(),z=map.getZoom();
-  const op=0.42+0.58*_ramp(z,8.6,10.2);
+  // widest view: mostly the abstract country shape and relief; the map
+  // comes in as you zoom
+  const op=0.16+0.84*_ramp(z,8.4,10.8);
   base.setOpacity(op);
   try{reliefBase.setOpacity(0.9-0.9*_ramp(z,9.2,13));}catch(e){}
   document.documentElement.style.setProperty('--base-gray',(1-_ramp(z,11.6,13)).toFixed(3));
@@ -5757,7 +5803,7 @@ function updateBaseFade(force){
   _fadeRaf=requestAnimationFrame(function(){
     _fadeRaf=0;
     const t2=baseFadeT();
-    const op2=0.42+0.58*_ramp(map.getZoom(),8.6,10.2);
+    const op2=0.16+0.84*_ramp(map.getZoom(),8.4,10.8);
     _lastFadeOp=op2;
     _applyVectorFade(op2,t2);
   });
@@ -7492,17 +7538,27 @@ function tourGeo(t){
     const en=_lv03(s.lat,s.lon);s.e=en[0];s.n=en[1];
     if(s.el!=null){if(!lo||s.el<lo.el)lo=s;if(!hi||s.el>hi.el)hi=s;}
     if(s.sl!=null&&s.sl>maxS&&s.sl<=60)maxS=s.sl;}
-  // the pipeline's numbers (30 m DEM) when it shipped them
+  // Summit = the highest point actually on the route, start = the lower of
+  // the two ends (where you put the skins on), both from the terrain model
+  // along the line. The pipeline's own points were sometimes off the line or
+  // mid-route, so they are only a fallback when the terrain is not loaded.
   const P=t.lo&&t.hi?{lo:{lat:t.lo[1],lon:t.lo[0],el:t.lo[2]},hi:{lat:t.hi[1],lon:t.hi[0],el:t.hi[2]}}:null;
-  const L0=P?P.lo:(lo?{lat:lo.lat,lon:lo.lon,el:lo.el}:{lat:segs[0].lat,lon:segs[0].lon,el:null});
-  const H0=P?P.hi:(hi?{lat:hi.lat,lon:hi.lon,el:hi.el}:{lat:segs[n-1].lat,lon:segs[n-1].lon,el:null});
+  const known=segs.filter(s=>s.el!=null).length;
+  const e0=segs[0],e1=segs[n-1];
+  const endLo=(e0.el!=null&&e1.el!=null)?(e0.el<=e1.el?e0:e1):null;
+  const L0=endLo?{lat:endLo.lat,lon:endLo.lon,el:endLo.el}:(P?P.lo:(lo?{lat:lo.lat,lon:lo.lon,el:lo.el}:{lat:e0.lat,lon:e0.lon,el:null}));
+  const H0=hi?{lat:hi.lat,lon:hi.lon,el:hi.el}:(P?P.hi:{lat:e1.lat,lon:e1.lon,el:null});
+  // slope: mean over the route (where it is skied, >= 15 deg) and the steepest pitch
+  let slS=0,slW=0;for(let i=1;i<n;i++){const s1=segs[i];if(s1.sl!=null&&s1.sl>=15&&s1.sl<=60){const ww=s1.dist-segs[i-1].dist;slS+=s1.sl*ww;slW+=ww;}}
   let coreW=0,allW=0;
   for(let i=0;i<n;i++){const ww=i?segs[i].dist-segs[i-1].dist:0;allW+=ww;
     try{const reg=tourRegionAt(segs[i].lat,segs[i].lon);if(reg&&avCoreZone(reg,segs[i].el,segs[i].as))coreW+=ww;}catch(e){}}
-  t._g={segs,lo:L0,hi:H0,len:t.len||(n?segs[n-1].dist:0),
-        gain:t.gain!=null?t.gain:((H0.el!=null&&L0.el!=null)?Math.round(H0.el-L0.el):null),
-        maxSlope:Math.round(maxS),core:allW?coreW/allW:0};
-  return t._g;
+  const g={segs,lo:L0,hi:H0,len:t.len||(n?segs[n-1].dist:0),
+        gain:(H0.el!=null&&L0.el!=null)?Math.round(H0.el-L0.el):(t.gain!=null?t.gain:null),
+        maxSlope:Math.round(maxS),avgSlope:slW?Math.round(slS/slW):null,core:allW?coreW/allW:0};
+  // terrain not loaded yet: answer now, but measure again next time
+  if(known>=n*0.7)t._g=g;
+  return g;
 }
 function tourVaScoreOne(t){
   const E=tourVa.eng;if(!E||!t.coords||t.coords.length<2)return null;
@@ -7683,8 +7739,10 @@ function tourSheetRender(t,r){
   setTimeout(()=>{try{tpRender();}catch(e){}},0);
   const el=document.getElementById('tourSheet');if(!el)return;
   const g=tourGeo(t),va=!!(r&&r.cls);
-  const facts=[g.gain!=null?'↑ '+g.gain+' Hm':'',g.len?(Math.round(g.len/100)/10)+' km':'',
-    g.hi.el!=null?Math.round(g.hi.el)+' m':''].filter(Boolean).join(' · ');
+  const st=(v,l)=>'<div><b>'+v+'</b><small>'+l+'</small></div>';
+  const stats='<div class="tsh-stats">'+st(g.len?(Math.round(g.len/100)/10)+' km':'–','Distanz')+st(g.gain!=null?g.gain+' m':'–','Aufstieg')
+    +st(g.hi.el!=null?Math.round(g.hi.el)+' m':'–','Gipfel')+st(g.avgSlope!=null?g.avgSlope+'°':'–','Ø Neigung')+st(g.maxSlope?g.maxSlope+'°':'–','Max. Neigung')+'</div>';
+  const facts=(g.lo.el!=null?'Start '+Math.round(g.lo.el)+' m':'');
   const nRep=tourReports(t).length;
   const warn=r&&r.clamped?'<div class="ts-warn">Kernzone des Lawinenbulletins – Bulletin zuerst lesen.</div>':'';
   el.innerHTML='<div class="tsh-grab" data-drag></div>'
@@ -7692,12 +7750,14 @@ function tourSheetRender(t,r){
     +'<span class="tour-score" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r):'–')+'<small>%</small></span>'
     +'<div class="tour-tt"><b>'+escapeHtml(t.name||'Skitour')+'</b><span>'+escapeHtml(facts)+'</span></div>'
     +'<button type="button" class="tour-x" onclick="tourClose()" aria-label="Schliessen">×</button></div>'
+    +stats
     +'<div class="tour-watch" id="tourWatch"></div>'
     +'<div class="tsh-body">'+tourProfileSVG(t,va?r:null)
     +'<div class="tsh-acts">'
     +'<button type="button" onclick="tourShowReports()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>Meldungen'+(nRep?' <b>'+nRep+'</b>':'')+'</button>'
     +'<button type="button" class="pri" onclick="tourReportPowder()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg>Melden</button>'
     +'<button type="button" onclick="tourGpx()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>GPX</button>'
+    +'<button type="button" onclick="trkFromTour()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg>Aufzeichnen</button>'
     +'</div>'+warn
     +'<div class="tour-when">'+(va?'Pulver-Anteil der Abfahrt · SNOWPACK '+escapeHtml(r.when||''):'Powder-Modell im Zeitfenster')+' · Modell, kein Lawinenbulletin</div>'
     +'</div>';
@@ -7820,7 +7880,7 @@ function tourReportsHTML(t){
 function tourReportPowder(){
   if(!tourIso)return;
   rptTourSel={id:String(tourIso.id),name:tourIso.name||'Skitour'};rptTourLock=true;
-  try{qrOpen();}catch(e){}
+  try{rpOpen();}catch(e){}
 }
 // ── choose a tour while reporting ──────────────────────────────────────────
 let rptTourSel=null,rptTourLock=false,rptTourQ='';
@@ -7945,13 +8005,31 @@ const TRK_ACC={
   hi:{label:'Hoch',sub:'jede Sekunde · genaueste Spur, mehr Akku',minDt:1000,minD:3,maxAcc:30,hiAcc:true},
   std:{label:'Normal',sub:'alle 5 s · empfohlen',minDt:5000,minD:8,maxAcc:40,hiAcc:true},
   eco:{label:'Akku sparen',sub:'alle 15 s · gröbere Spur',minDt:15000,minD:20,maxAcc:80,hiAcc:false}};
-const TRK_TYPES=[['skitour','Skitour'],['freeride','Freeride'],['splitboard','Splitboard'],['hike','Wandern']];
+const TRK_TYPES=[['skitour','Skitour'],['splitboard','Splitboard'],['freeski','Freeride Ski'],['freesnowboard','Freeride Snowboard'],['skimo','Skimo']];
 const TRK_SNOW=['Pulver','Windgepresst','Bruchharsch','Sulz','Nass','Hart'];
 function trkCol(){try{return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#1868C4';}catch(e){return '#1868C4';}}
-let trkLinkAct=null;
+let trkLinkAct=null,trkGuide=null,trkGuideLine=null,_trkOff=false;
+// Start recording on a tour from the finder or the tour sheet: the route is
+// drawn as a dashed guide, and the recorder says how far off it you are and
+// how much of it is done.
+async function trkFromTour(){const t=tourIso;if(!t||!t.coords)return;
+  const g=tourGeo(t);
+  trkGuide={id:String(t.id),name:t.name||'Skitour',pts:g.segs.map(s=>[s.lat,s.lon,s.dist]),len:g.len||1};
+  try{tourClose();}catch(e){}try{tsCloseQuiet();}catch(e){}
+  trkView='setup';trkOpen();}
+function trkGuideDraw(){trkLayerEnsure();if(trkGuideLine){map.removeLayer(trkGuideLine);trkGuideLine=null;}
+  if(!trkGuide)return;const ll=trkGuide.pts.map(p=>[p[0],p[1]]);
+  trkGuideLine=L.layerGroup([L.polyline(ll,{pane:'trkPane',color:'#fff',weight:8,opacity:.85,interactive:false}),
+    L.polyline(ll,{pane:'trkPane',color:trkCol(),weight:4,opacity:.9,dashArray:'2 9',lineCap:'round',interactive:false})]).addTo(map);}
+function trkGuideState(){if(!trkGuide||!trkFix)return null;
+  const la=trkFix[1],lo=trkFix[2],k=Math.cos(la*Math.PI/180);let bi=0,bd=1e18;
+  trkGuide.pts.forEach((p,i)=>{const d=((p[0]-la)*111320)**2+((p[1]-lo)*111320*k)**2;if(d<bd){bd=d;bi=i;}});
+  return {off:Math.round(Math.sqrt(bd)),pct:Math.round(trkGuide.pts[bi][2]/trkGuide.len*100)};}
+function trkGuideClear(){trkGuide=null;if(trkGuideLine){map.removeLayer(trkGuideLine);trkGuideLine=null;}trkRender();}
 let trkRec=null,trkWatch=null,trkNative=null,trkLock=null,trkTick=0,trkView='setup',trkFix=null,trkLine=null,trkMe=null,trkDraft=null,trkCur=null;
 const trkPrefs={acc:'std',type:'skitour'};
 try{Object.assign(trkPrefs,JSON.parse(localStorage.getItem('ssm_trk_prefs')||'{}'));}catch(e){}
+if(!TRK_TYPES.some(x=>x[0]===trkPrefs.type))trkPrefs.type='skitour';
 
 // -- storage ------------------------------------------------------------------
 let _trkDb=null;
@@ -8024,8 +8102,12 @@ function trkGpsStart(hi){
       (loc,err)=>{if(loc)trkOnPos({timestamp:loc.time||Date.now(),coords:{latitude:loc.latitude,longitude:loc.longitude,altitude:loc.altitude,accuracy:loc.accuracy}});})
       .then(id=>{trkNative=id;});return;}catch(e){}}
   if(!navigator.geolocation){toast('GPS nicht verfügbar','err');return;}
-  trkWatch=navigator.geolocation.watchPosition(trkOnPos,e=>{if(e.code===1)toast('Standortzugriff verweigert','err');},
-    {enableHighAccuracy:hi!==false,maximumAge:0,timeout:30000});
+  let fails=0;
+  trkWatch=navigator.geolocation.watchPosition(trkOnPos,e=>{
+    if(e.code===1){toast('Standortzugriff verweigert','err');return;}
+    // desktop Safari: no GPS fix -> keep going with normal accuracy
+    if(++fails===2&&hi!==false){trkGpsStart(false);}},
+    {enableHighAccuracy:hi!==false,maximumAge:hi!==false?0:30000,timeout:30000});
 }
 function trkGpsStop(){
   if(trkWatch!=null){try{navigator.geolocation.clearWatch(trkWatch);}catch(e){}trkWatch=null;}
@@ -8050,7 +8132,8 @@ function trkLineFromRec(){trkLayerEnsure();trkLine.setLatLngs(trkRec?trkRec.segs
 function trkStart(){
   trkRec={id:'a'+Date.now().toString(36),type:trkPrefs.type,acc:trkPrefs.acc,start:Date.now(),segs:[[]],paused:false,movingMs:0,resumedAt:Date.now(),follow:true};
   if(trkFix&&trkFix[4]<=TRK_ACC[trkRec.acc].maxAcc&&Date.now()-trkFix[0]<15000)trkRec.segs[0].push(trkFix);
-  trkSaveRec();trkLineFromRec();
+  if(trkGuide)trkRec.guide={id:trkGuide.id,name:trkGuide.name};
+  trkSaveRec();trkLineFromRec();trkGuideDraw();
   trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);
   try{haptic(20);}catch(e){}
   trkView='rec';trkRender();
@@ -8068,7 +8151,7 @@ function trkFinish(){if(!trkRec)return;
   clearInterval(trkTick);trkTick=0;
   const st=trkStats(segs,trkRec.movingMs);
   trkDraft={id:trkRec.id,type:trkRec.type,acc:trkRec.acc,start:trkRec.start,end:Date.now(),segs,stats:st,
-    name:trkDefaultName(trkRec.type,trkRec.start),desc:'',snow:null,depth:0,stars:0,photos:[],postedId:null};
+    name:trkRec.guide?trkRec.guide.name:trkDefaultName(trkRec.type,trkRec.start),guide:trkRec.guide||null,desc:'',snow:null,depth:0,stars:0,photos:[],postedId:null};
   trkView='save';trkRender();
 }
 async function trkKeep(post){
@@ -8080,6 +8163,7 @@ async function trkKeep(post){
   try{trkActsRefresh();}catch(e){}
   trkRec=null;trkSaveRec();trkGpsStop();trkWake(false);
   if(trkLine){trkLine.setLatLngs([]);}
+  if(trkGuideLine){map.removeLayer(trkGuideLine);trkGuideLine=null;}trkGuide=null;
   if(post&&d.vis!=='private'){const ok=await trkPost(d);if(!ok){trkView='list';trkRender();return;}}
   else toast('Aktivität gespeichert','ok');
   trkDraft=null;trkCur=d.id;trkView='detail';trkRender();
@@ -8088,6 +8172,7 @@ function trkDiscard(){
   if(!confirm('Aktivität verwerfen? Die Aufzeichnung geht verloren.'))return;
   trkRec=null;trkDraft=null;trkSaveRec();trkGpsStop();trkWake(false);clearInterval(trkTick);trkTick=0;
   if(trkLine)trkLine.setLatLngs([]);
+  if(trkGuideLine){map.removeLayer(trkGuideLine);trkGuideLine=null;}trkGuide=null;
   trkClose(true);toast('Aktivität verworfen','info');
 }
 
@@ -8252,7 +8337,8 @@ function trkOpen(){
 function trkClose(force){
   if(trkRec&&!force){trkMin();return;}
   document.body.classList.remove('trk-open','trk-min');document.getElementById('trk').hidden=true;
-  if(!trkRec){trkGpsStop();if(trkMe){map.removeLayer(trkMe);trkMe=null;}}
+  if(!trkRec){trkGpsStop();if(trkMe){map.removeLayer(trkMe);trkMe=null;}
+    if(trkGuideLine){map.removeLayer(trkGuideLine);trkGuideLine=null;}if(!trkDraft)trkGuide=null;}
   if(trkShown&&!force){map.removeLayer(trkShown);trkShown=null;}
   trkPill();
 }
@@ -8274,6 +8360,11 @@ function trkPaint(){
   const seg=trkRec.segs[trkRec.segs.length-1],n=seg.length;
   let v=0;if(n>1&&!trkRec.paused&&Date.now()-seg[n-1][0]<20000){let k=n-1;while(k>0&&seg[n-1][0]-seg[k-1][0]<=30000)k--;const a=seg[k],b=seg[n-1];const dt=(b[0]-a[0])/1000;if(dt>0)v=trkHav(a,b)/dt*3.6;}
   set('trkV',v.toFixed(1));
+  const gs=trkGuideState();
+  if(gs){set('trkGuideTxt',(gs.off<=40?'auf der Spur':gs.off+' m daneben')+' · '+gs.pct+' % geschafft');
+    const row=document.getElementById('trkGuideRow');if(row)row.classList.toggle('warn',gs.off>80);
+    if(gs.off>80&&!_trkOff&&trkFlat(trkRec.segs).length>=3){_trkOff=true;try{haptic(30);}catch(e){}toast('Du bist '+gs.off+' m neben der Spur','info');}
+    if(gs.off<50)_trkOff=false;}
   const g=document.getElementById('trkGps');if(g)g.innerHTML=trkGpsHTML();
 }
 function trkGpsHTML(){
@@ -8290,6 +8381,7 @@ async function trkRender(){
     el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkClose()" aria-label="Schliessen">'+TRK_X+'</button><b>Aufzeichnen</b>'
       +'<button class="trk-link" onclick="trkView=\'list\';trkRender()">Meine Aktivitäten</button></div>'
       +'<div id="trkGps" class="trk-gps-row">'+trkGpsHTML()+'</div>'
+      +(trkGuide?'<div class="trk-guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg><span>Spur folgen<b>'+escapeHtml(trkGuide.name)+' · '+(trkGuide.len/1000).toFixed(1)+' km</b></span><button onclick="trkGuideClear()" aria-label="Spur entfernen">×</button></div>':'')
       +'<div class="trk-lbl">Sportart</div><div class="trk-chips">'+TRK_TYPES.map(([k,l])=>'<button type="button" class="trk-chip'+(trkPrefs.type===k?' on':'')+'" onclick="trkPref(\'type\',\''+k+'\')">'+l+'</button>').join('')+'</div>'
       +'<div class="trk-lbl">GPS-Genauigkeit</div><div class="trk-acc">'+Object.keys(TRK_ACC).map(k=>{const A=TRK_ACC[k];
         return '<button type="button" class="'+(trkPrefs.acc===k?'on':'')+'" onclick="trkPref(\'acc\',\''+k+'\')"><b>'+A.label+'</b><span>'+A.sub+'</span></button>';}).join('')+'</div>'
@@ -8302,6 +8394,7 @@ async function trkRender(){
       +'<div class="trk-big"><span id="trkT">0:00</span><small>Zeit</small></div>'
       +'<div class="trk-grid"><div><b id="trkD">0.00</b><small>Distanz km</small></div><div><b id="trkUp">0</b><small>Aufstieg m</small></div>'
       +'<div><b id="trkAlt">–</b><small>Höhe m</small></div><div><b id="trkV">0.0</b><small>Tempo km/h</small></div></div>'
+      +(trkGuide?'<div class="trk-guide on" id="trkGuideRow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg><span>'+escapeHtml(trkGuide.name)+'<b id="trkGuideTxt">–</b></span></div>':'')
       +(p?'<div class="trk-ctl"><button class="trk-btn res" onclick="trkResume()"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg><span>Weiter</span></button>'
           +'<button class="trk-btn fin" onclick="trkFinish()"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg><span>Beenden</span></button></div>'
         :'<div class="trk-ctl"><button class="trk-btn pau" onclick="trkPause()" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></svg></button></div>');
@@ -8470,11 +8563,10 @@ function tsSliderSync(){
   const sr=document.getElementById('tsSR');if(sr)sr.style.setProperty('--p',((tsF.radius-5)/95*100)+'%');
 }
 function tsLocate(){
-  if(!navigator.geolocation){toast('Standort nicht verfügbar','err');return;}
-  navigator.geolocation.getCurrentPosition(p=>{myLoc=[p.coords.latitude,p.coords.longitude];
+  geoLocate(p=>{myLoc=[p.coords.latitude,p.coords.longitude];
     try{if(meMarker)map.removeLayer(meMarker);
       meMarker=L.marker(myLoc,{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1900}).addTo(map);}catch(e){}
-    tsRender();},()=>toast('Standort konnte nicht ermittelt werden','err'),{enableHighAccuracy:true,timeout:9000});}
+    tsRender();});}
 function tsFilter(){
   const c=tsCenter(),R=tsF.radius*1000,out=[];
   tourList().forEach(t=>{if(!t.coords||t.coords.length<2){t._ts=null;return;}
@@ -8523,7 +8615,8 @@ function tsRender(onlyMap){
   if(onlyMap&&el.querySelector('.ts-list')){el.querySelector('.ts-count').textContent=list.length+' Touren';
     el.querySelector('.ts-list').innerHTML=rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>';tsSliderSync();return;}
   const keepS=el.scrollTop;
-  el.innerHTML='<div class="ts-grab"></div><div class="tn-hd"><div><b>Touren finden</b><span>'
+  tsDragWire(el);
+  el.innerHTML='<div class="ts-grab" data-drag></div><div class="tn-hd" data-drag><div><b>Touren finden</b><span>'
     +(va?'SNOWPACK · '+escapeHtml(tourVa.when):'Powder-Modell im Zeitfenster')+'</span></div>'
     +'<button type="button" class="tour-x" onclick="tsClose()" aria-label="Schliessen">×</button></div>'
     +ctrls+'<div class="ts-res"><span class="ts-count">'+list.length+' Touren</span><span>nach '+(tsF.focus==='sulz'?'Sulz':'Pulver')+'-Anteil'
@@ -8531,6 +8624,24 @@ function tsRender(onlyMap){
     +'<div class="ts-list tn-list">'+(rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>')+'</div>'
     +'<div class="tn-foot">Anteil der Abfahrt (22–50°) mit Pulver bzw. Sulz im SNOWPACK-Modell – keine Lawinenbeurteilung, Bulletin des SLF beachten.</div>';
   el.scrollTop=keepS;tsSliderSync();
+}
+// The finder moves like the tour sheet: pull down to fold it to its title
+// (the map and the filtered routes stay visible), further to close, up to open.
+function tsDragWire(el){
+  if(el._dw)return;el._dw=true;
+  let y0=null,dy=0,id=null;
+  el.addEventListener('pointerdown',e=>{if(!e.target.closest('[data-drag]')||e.target.closest('button'))return;
+    y0=e.clientY;dy=0;id=e.pointerId;try{el.setPointerCapture(id);}catch(_){}el.style.transition='none';});
+  el.addEventListener('pointermove',e=>{if(y0==null||e.pointerId!==id)return;dy=e.clientY-y0;
+    const min=el.classList.contains('min');
+    el.style.transform=min?'translateY(calc(100% - 86px + '+Math.max(-200,dy)+'px))':'translateY('+Math.max(-30,dy)+'px)';});
+  const end=()=>{if(y0==null)return;y0=null;el.style.transition='';el.style.transform='';
+    const min=el.classList.contains('min');
+    if(!min&&dy>200&&dy>el.offsetHeight*.6)tsClose();
+    else if(!min&&dy>40)el.classList.add('min');
+    else if(min&&dy>60)tsClose();
+    else if(min&&(dy<-25||Math.abs(dy)<4))el.classList.remove('min');};
+  el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
 }
 function tsPick(i){const o=(window._tsList||[])[i];if(!o)return;tourOpen(o.t,true);}
 addEventListener('keydown',e=>{if(e.key!=='Escape')return;
@@ -10508,16 +10619,29 @@ function updateAccountBtn(avatarUrl){
   if(avatarUrl){btn.innerHTML='<span class="acct-img" style="background-image:url('+avatarUrl+')"></span>';}
   else{btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';}}
 let meMarker=null,myLoc=null;
+// Desktop Safari often answers a high-accuracy request with "position
+// unavailable" (no GPS, Wi-Fi location takes longer): ask again with normal
+// accuracy and a longer timeout before giving up, and say how to fix a denial.
+function geoLocate(ok,fail){
+  if(!navigator.geolocation){toast('Standort nicht verfügbar','err');if(fail)fail();return;}
+  const bad=e=>{
+    const mac=/Mac/.test(navigator.platform||'')&&!('ontouchstart'in window),saf=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if(e&&e.code===1)toast(mac&&saf?'Standort blockiert – Safari › Einstellungen › Websites › Standort erlauben und in macOS › Ortungsdienste Safari aktivieren':'Standortzugriff verweigert – bitte im Browser erlauben','err');
+    else toast(mac?'Standort nicht gefunden – in macOS › Datenschutz › Ortungsdienste den Browser aktivieren und WLAN einschalten':'Standort konnte nicht ermittelt werden','err');
+    if(fail)fail(e);};
+  navigator.geolocation.getCurrentPosition(ok,e=>{
+    if(e&&e.code===1){bad(e);return;}
+    navigator.geolocation.getCurrentPosition(ok,bad,{enableHighAccuracy:false,timeout:25000,maximumAge:600000});
+  },{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+}
 function flyToMe(){haptic(8);
-  if(!navigator.geolocation){toast('Standort nicht verfügbar','err');return;}
-  navigator.geolocation.getCurrentPosition(p=>{const ll=[p.coords.latitude,p.coords.longitude];
+  geoLocate(p=>{const ll=[p.coords.latitude,p.coords.longitude];
     try{
       if(meMarker)map.removeLayer(meMarker);
       meMarker=L.marker(ll,{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1900}).addTo(map);
       map.flyTo(ll,14,{duration:1.2});
     }catch(e){}
-    myLoc=ll;},
-    ()=>{toast('Standort konnte nicht ermittelt werden','err');},{enableHighAccuracy:true,timeout:9000});}
+    myLoc=ll;});}
 // ===================== Screen router =====================================
 // Three screens on a wrap-around carousel: Search -> Report -> Feed -> Search.
 // The app is one screen. scrGo survives as the name everything already calls:
