@@ -3135,6 +3135,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.fab-open #fabDraw{transform:translate(-68px,0)}
  body.fab-open #fabObs{transform:translate(-68px,-58px)}
  body.fab-open #fabTrack{transform:translate(-68px,-116px)}
+ body.fab-open #fabSnowp{transform:translate(-68px,-174px);transition-delay:.12s}
+ #fabSnowp{color:#7C3AED}
  body.fab-open #fabObs{transition-delay:.04s}
  body.fab-open #fabTrack{transition-delay:.08s}
  #fabTrack{color:var(--accent)}
@@ -3506,6 +3508,38 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ts-res{display:flex;justify-content:space-between;font-size:11.5px;color:var(--fg2);margin:4px 2px 8px}
  .ts-count{font-weight:800;color:var(--fg)}
  .tn-sc{min-width:48px}
+
+ /* ── Snowp: two cameras, friends only ── */
+ .snp{position:fixed;inset:0;z-index:5200;background:#0b0d12;color:#fff;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px calc(env(safe-area-inset-bottom,0px) + 14px)}
+ .snp[hidden]{display:none}
+ .snp-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+ .snp-top button{width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer}
+ .snp-top b{font:800 18px Inter,system-ui}.snp-top span{margin-left:auto;font:600 12px Inter,system-ui;opacity:.7}
+ .snp-box{flex:1;display:flex;flex-direction:column;gap:10px;min-height:0;max-width:520px;width:100%;margin:0 auto}
+ .snp-cam,.snp-prev{position:relative;flex:1;min-height:0;border-radius:24px;overflow:hidden;background:#1a1d24}
+ .snp-cam video,.snp-main{width:100%;height:100%;object-fit:cover;display:block}
+ video.mirror{transform:scaleX(-1)}
+ .snp-inset{position:absolute;top:12px;left:12px;width:30%;aspect-ratio:3/4;object-fit:cover;border-radius:16px;border:3px solid #0b0d12;cursor:pointer}
+ .snp-hint{position:absolute;left:0;right:0;bottom:14px;text-align:center;font:700 14px Inter,system-ui;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+ .snp-nocam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;opacity:.8;font:600 14px Inter,system-ui}
+ .snp-shoot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
+ .snp-btn{width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:rgba(255,255,255,.18);cursor:pointer}
+ .snp-btn:active{transform:scale(.92)}
+ .snp-flip{justify-self:start;width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer}
+ .snp-meta{display:flex;justify-content:space-between;font:600 12px Inter,system-ui;opacity:.8}
+ .snp-cap{border:0;border-radius:14px;padding:12px 14px;background:rgba(255,255,255,.1);color:#fff;font:500 16px Inter,system-ui}
+ .snp-acts{display:flex;gap:8px}
+ .snp-acts>*{flex:1;height:50px;border-radius:16px;border:0;font:800 15px Inter,system-ui;cursor:pointer;display:flex;align-items:center;justify-content:center}
+ .snp-ghost{background:rgba(255,255,255,.12);color:#fff}
+ .snp-post{background:linear-gradient(135deg,#7C3AED,var(--accent));color:#fff}
+ .snp-card{position:relative;margin:12px 0 0;aspect-ratio:3/4;max-height:520px;overflow:hidden;background:#111}
+ .snp-card .snp-main{width:100%;height:100%;object-fit:cover}
+ .snp-card .snp-inset{width:28%}
+ .snp-tag{position:absolute;right:10px;bottom:10px;background:rgba(10,10,12,.7);color:#fff;font:800 11px Inter,system-ui;padding:5px 9px;border-radius:999px}
+ .snp-pin{position:relative;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center}
+ .snp-pin img{width:54px;height:72px;object-fit:cover;border-radius:14px;border:3px solid #fff;box-shadow:0 6px 16px rgba(0,0,0,.3)}
+ .snp-pin i{position:absolute;top:-8px;right:-10px;width:26px;height:26px;border-radius:50%;background:#7C3AED center/cover;border:2px solid #fff;color:#fff;font:800 12px/22px Inter,system-ui;text-align:center;font-style:normal}
+ .snp-pin b{margin-top:4px;background:rgba(10,10,12,.75);color:#fff;font:700 10.5px Inter,system-ui;padding:2px 7px;border-radius:999px;white-space:nowrap}
 
  /* ── activity recorder ── */
  .trk{position:fixed;inset:0;z-index:5100;pointer-events:none;display:flex;flex-direction:column;justify-content:flex-end}
@@ -3999,6 +4033,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   </div>
   <div class="mfab-row" id="reportRow">
     <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><i>Report Powder</i></button>
+    <button class="mfab act" id="fabSnowp" onclick="fabMenu(false);snpOpen()" title="Snowp – 2 Kameras, nur Freunde" aria-label="Snowp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="15" height="13" rx="3"/><circle cx="10" cy="12.5" r="3.4"/><rect x="14" y="2.5" width="7.5" height="9" rx="2" fill="var(--card)"/><circle cx="17.75" cy="7" r="1.6"/></svg><i>Snowp</i></button>
     <button class="mfab act" id="fabTrack" onclick="fabMenu(false);trkOpen()" title="Aktivität aufzeichnen" aria-label="Aktivität aufzeichnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg><i>Aufzeichnen</i></button>
     <button class="mfab act" id="fabObs" onclick="fabMenu(false);obsOpen()" title="Beobachtung melden" aria-label="Beobachtung melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><i>Beobachtung</i></button>
     <button class="mfab" id="mapFab" onclick="fabMenu()" title="Melden" aria-label="Melden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
@@ -4064,6 +4099,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="lyScrim" onclick="lyPanelClose()"></div>
 <div id="tourSheet" class="tour-sheet" role="dialog" aria-label="Skitour"></div>
 <div id="tourSearch" class="ts-sheet" role="dialog" aria-label="Touren finden"></div>
+<div id="snp" class="snp" hidden role="dialog" aria-label="Snowp"><div class="snp-top"><button onclick="snpClose()" aria-label="Schliessen">×</button><b>Snowp</b><span>2 Kameras · nur Freunde</span></div><div id="snpBox" class="snp-box"></div></div>
 <div id="trk" class="trk" hidden role="dialog" aria-label="Aktivität aufzeichnen"><div id="trkSheet" class="trk-sheet"></div></div>
 <button id="trkPill" class="trk-pill" hidden onclick="trkExpand()" aria-label="Aufzeichnung öffnen"></button>
 <div id="lyPanel" class="ly-panel" role="dialog" aria-modal="true" aria-label="Ebenen">
@@ -4965,6 +5001,13 @@ const I18N_DICT={
 "Freeride Ski":["Freeride ski","Freeride ski","Freeride sci"],"Freeride Snowboard":["Freeride snowboard","Freeride snowboard","Freeride snowboard"],"Skimo":["Skimo","Ski-alpinisme","Skialp"],
 "Ø Neigung":["Ø slope","Pente moy.","Pend. media"],"Max. Neigung":["Max. slope","Pente max.","Pend. max"],"Gipfel":["Summit","Sommet","Vetta"],
 "Spur folgen":["Follow route","Suivre la trace","Segui la traccia"],
+"Snowp senden":["Send Snowp","Envoyer le Snowp","Invia Snowp"],"Neu":["Retake","Reprendre","Rifai"],"🔒 nur Freunde":["🔒 friends only","🔒 amis seulement","🔒 solo amici"],
+"Zuerst der Hang – Rückkamera":["First the slope – back camera","D'abord la pente – caméra arrière","Prima il pendio – fotocamera posteriore"],
+"Und jetzt du – Frontkamera":["Now you – front camera","Maintenant toi – caméra avant","Ora tu – fotocamera frontale"],
+"Was geht ab? (optional)":["What's up? (optional)","Quoi de neuf ? (facultatif)","Che succede? (facoltativo)"],
+"📍 Standort wird mitgeschickt":["📍 Location will be sent","📍 La position sera envoyée","📍 La posizione verrà inviata"],
+"📍 Standort wird gesucht …":["📍 Finding location …","📍 Recherche de la position …","📍 Ricerca posizione …"],
+"2 Kameras · nur Freunde":["2 cameras · friends only","2 caméras · amis seulement","2 fotocamere · solo amici"],
 "Beiträge":["Posts","Publications","Post"],"Folge ich":["Following","Abonnements","Seguiti"],"Aktivitäten":["Activities","Activités","Attività"],
 "Profil bearbeiten":["Edit profile","Modifier le profil","Modifica profilo"],"Profil teilen":["Share profile","Partager le profil","Condividi profilo"],
 "Diese Woche":["This week","Cette semaine","Questa settimana"],"# Wochen":["# weeks","# semaines","# settimane"],"Höhenmeter":["Elevation gain","Dénivelé","Dislivello"],
@@ -8293,7 +8336,8 @@ async function trkPost(a){
     const row={user_id:sbUser.id,location:'POINT('+top[2]+' '+top[1]+')',primary_categories:['tour'],subtype:trkTypeLbl(a.type),
       condition_data:cd,image_url:urls[0]||null,caption:a.desc?(a.name+'\n'+a.desc):a.name,completion_score:a.snow?85:70,
       captured_at:new Date(a.start).toISOString()};
-    const{data,error}=await sb.from('reports').insert(row).select('id').single();
+    let{data,error}=await sb.from('reports').insert(Object.assign({visibility:'followers'},row)).select('id').single();
+    if(error&&/visibility/i.test(error.message||'')){({data,error}=await sb.from('reports').insert(row).select('id').single());}
     if(error)throw error;
     a.postedId=data&&data.id;await trkPut(a);
     toast('Aktivität gepostet','ok');try{haptic(14);}catch(e){}
@@ -8573,7 +8617,8 @@ function actFeedVisual(r){const cd=r.condition_data,A=cd.activity;
     +(cd.measurement?'<div class="act-rep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17"/></svg>'+escapeHtml(cd.measurement)+(cd.altitudeM?' · '+cd.altitudeM+' m':'')+(cd.stars?' · '+'★'.repeat(cd.stars):'')+'</div>':'')+'</div>';
 }
 // a posted activity is for the people who follow you (and yourself)
-function actVisible(r){const A=r&&r.condition_data&&r.condition_data.activity;if(!A)return true;
+function actVisible(r){if(r&&r.condition_data&&r.condition_data.snowp)return snpFriend(r.userId);
+  const A=r&&r.condition_data&&r.condition_data.activity;if(!A)return true;
   if(sbUser&&r.userId===sbUser.id)return true;return !!(r.userId&&myFollowing&&myFollowing.has(r.userId));}
 // «Meine Aufzeichnungen» on the map
 let trkActsGrp=null;
@@ -8650,6 +8695,7 @@ function pvShare(uid){const u=location.origin+location.pathname+'?u='+encodeURIC
   if(navigator.share)navigator.share({title:'Snowmapper',url:u}).catch(()=>{});else{try{navigator.clipboard.writeText(u);toast('Link kopiert!','ok');}catch(e){}}}
 function pvClose(){try{profClose();}catch(e){}try{userViewClose();}catch(e){}}
 function pvOpenPost(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;const cd=r.condition_data||{};pvClose();
+  if(cd.snowp&&cd.snowp.back)return snpFeedVisual(r);
   if(cd.activity&&cd.activity.track){setTimeout(()=>trkShowOnMap(cd.activity.track),250);return;}
   const ll=parseGeo(r.location);if(ll)feedFlyTo(ll[0],ll[1]);}
 function pvOpenAct(boxId,i){const S=pvState[boxId],a=S&&S.acts[i];if(!a)return;pvClose();
@@ -8666,6 +8712,118 @@ async function trkProfRender(){const el=document.getElementById('profActs');if(!
   setTimeout(()=>{try{trkLineFromRec();if(!trkRec.paused){trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);}
     clearInterval(trkTick);trkTick=setInterval(trkPaint,1000);trkPill();toast('Aufzeichnung läuft weiter','info');}catch(e){}},1500);}catch(e){}})();
 
+// ── Snowp ─────────────────────────────────────────────────────────────────
+// Two pictures at once, the way you see the moment: the back camera (the
+// slope) and the front camera (you), posted straight away, for friends only
+// (mutual follows), with the place. Friends' latest Snowps appear on the map,
+// so you see where your people are today.
+//
+// Privacy is enforced by the database (reports.visibility = 'friends', see
+// supabase/migrations/20261006000000_post_visibility.sql). Without that
+// column the app does NOT post -- a Snowp must never become public.
+let snp={stream:null,facing:'environment',back:null,front:null,fix:null,busy:false};
+function snpOpen(){try{fabMenu(false);}catch(e){}
+  if(!sb||!sbUser){authShow();return;}
+  snp.back=null;snp.front=null;snp.fix=null;snp.facing='environment';
+  const el=document.getElementById('snp');el.hidden=false;document.body.classList.add('snp-open');
+  snpRender();snpCam('environment');
+  geoLocate(p=>{snp.fix=[p.coords.latitude,p.coords.longitude];snpRender();},()=>{});
+}
+function snpClose(){snpStop();document.getElementById('snp').hidden=true;document.body.classList.remove('snp-open');}
+function snpStop(){if(snp.stream){snp.stream.getTracks().forEach(t=>{try{t.stop();}catch(e){}});snp.stream=null;}}
+async function snpCam(facing){snpStop();snp.facing=facing;
+  const v=document.getElementById('snpVideo');if(!v)return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){snpRender('nocam');return;}
+  try{snp.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1440},height:{ideal:1920}},audio:false});
+    v.srcObject=snp.stream;v.classList.toggle('mirror',facing==='user');await v.play().catch(()=>{});}
+  catch(e){snpRender('nocam');}
+}
+function _snpGrab(){const v=document.getElementById('snpVideo');if(!v||!v.videoWidth)return null;
+  const W=1080,H=1440,cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
+  const r=Math.max(W/v.videoWidth,H/v.videoHeight),w=v.videoWidth*r,h=v.videoHeight*r;
+  if(snp.facing==='user'){c.translate(W,0);c.scale(-1,1);}
+  c.drawImage(v,(W-w)/2,(H-h)/2,w,h);
+  return new Promise(res=>cv.toBlob(res,'image/jpeg',.86));}
+async function snpShoot(){
+  const b=await _snpGrab();if(!b){toast('Kamera nicht bereit','err');return;}
+  try{haptic(14);}catch(e){}
+  if(!snp.back){snp.back=b;snpRender();
+    // second picture: you, right after the slope
+    await snpCam('user');setTimeout(()=>{const t=document.getElementById('snpHint');if(t)t.textContent='Und jetzt du – Frontkamera';},50);
+    return;}
+  snp.front=b;snpStop();snpRender();
+}
+async function snpFile(inp,which){const f=inp.files&&inp.files[0];if(!f)return;
+  const b=await downscaleImage(f,1440,.86);if(which==='back')snp.back=b;else snp.front=b;
+  if(snp.back&&!snp.front){snpRender('nocam');return;}snpRender();}
+function snpRetake(){snp.back=null;snp.front=null;snpRender();snpCam('environment');}
+function snpRender(mode){const el=document.getElementById('snpBox');if(!el)return;
+  const done=snp.back&&snp.front,loc=snp.fix?'📍 Standort wird mitgeschickt':'📍 Standort wird gesucht …';
+  if(done){const bu=URL.createObjectURL(snp.back),fu=URL.createObjectURL(snp.front);
+    el.innerHTML='<div class="snp-prev"><img class="snp-main" src="'+bu+'" alt=""><img class="snp-inset" src="'+fu+'" alt="" onclick="snpSwap()"></div>'
+      +'<input id="snpCap" class="snp-cap" maxlength="140" placeholder="Was geht ab? (optional)">'
+      +'<div class="snp-meta"><span>'+loc+'</span><span>🔒 nur Freunde</span></div>'
+      +'<div class="snp-acts"><button class="snp-ghost" onclick="snpRetake()">Neu</button><button class="snp-post" onclick="snpPost()">Snowp senden</button></div>';
+    return;}
+  const nocam=mode==='nocam';
+  el.innerHTML='<div class="snp-cam">'+(nocam?'<div class="snp-nocam">Keine Kamera im Browser – Bilder auswählen</div>':'<video id="snpVideo" playsinline muted autoplay></video>')
+    +(snp.back?'<img class="snp-inset" src="'+URL.createObjectURL(snp.back)+'" alt="">':'')
+    +'<div class="snp-hint" id="snpHint">'+(snp.back?'Und jetzt du – Frontkamera':'Zuerst der Hang – Rückkamera')+'</div></div>'
+    +(nocam?'<div class="snp-acts"><label class="snp-ghost">'+(snp.back?'Selfie wählen':'Hang-Foto wählen')+'<input type="file" accept="image/*" capture="'+(snp.back?'user':'environment')+'" hidden onchange="snpFile(this,\''+(snp.back?'front':'back')+'\')"></label></div>'
+      :'<div class="snp-shoot"><button onclick="snpCam(snp.facing===\'user\'?\'environment\':\'user\')" aria-label="Kamera wechseln" class="snp-flip">⟲</button><button class="snp-btn" onclick="snpShoot()" aria-label="Auslösen"></button><span></span></div>')
+    +'<div class="snp-meta"><span>'+loc+'</span><span>🔒 nur Freunde</span></div>';
+  if(!nocam&&snp.stream){const v=document.getElementById('snpVideo');if(v){v.srcObject=snp.stream;v.classList.toggle('mirror',snp.facing==='user');v.play().catch(()=>{});}}
+}
+function snpSwap(){const t=snp.back;snp.back=snp.front;snp.front=t;snpRender();}
+async function snpPost(){if(snp.busy)return;if(!sb||!sbUser){authShow();return;}
+  if(!snp.back||!snp.front)return;
+  snp.busy=true;const btn=document.querySelector('.snp-post');if(btn){btn.disabled=true;btn.textContent='Sendet …';}
+  try{
+    const up=async(b,tag)=>{const p=sbUser.id+'/snowp'+Date.now()+'_'+tag+'.jpg';
+      const{error}=await sb.storage.from('report-images').upload(p,b,{contentType:'image/jpeg'});if(error)throw error;
+      const{data}=sb.storage.from('report-images').getPublicUrl(p);return data.publicUrl;};
+    const ll=snp.fix||(myLoc?myLoc:null);
+    if(!ll){toast('Ohne Standort kein Snowp – bitte Standort erlauben','err');throw new Error('no location');}
+    const [bu,fu]=await Promise.all([up(snp.back,'b'),up(snp.front,'f')]);
+    const cap=((document.getElementById('snpCap')||{}).value||'').trim();
+    const row={user_id:sbUser.id,location:'POINT('+ll[1]+' '+ll[0]+')',primary_categories:['other'],subtype:'Snowp',
+      image_url:bu,caption:cap||null,condition_data:{snowp:{back:bu,front:fu},images:[bu,fu]},
+      completion_score:30,captured_at:new Date().toISOString(),visibility:'friends'};
+    const{error}=await sb.from('reports').insert(row);
+    if(error){
+      // the visibility column is missing: the post would be public -- refuse
+      if(/visibility/i.test(error.message||'')){
+        try{await sb.storage.from('report-images').remove([storagePathFromUrl(bu),storagePathFromUrl(fu)].filter(Boolean));}catch(e){}
+        toast('Snowps sind noch nicht freigeschaltet (Datenbank-Update nötig) – nichts wurde gepostet','err');snp.busy=false;if(btn){btn.disabled=false;btn.textContent='Snowp senden';}return;}
+      throw error;}
+    toast('Snowp gesendet – nur deine Freunde sehen ihn','ok');try{haptic(16);}catch(e){}
+    snpClose();try{loadDbReports();}catch(e){}
+  }catch(e){if(e&&e.message!=='no location')toast('Snowp fehlgeschlagen: '+(e.message||e),'err');if(btn){btn.disabled=false;btn.textContent='Snowp senden';}}
+  snp.busy=false;
+}
+// who may see it in the app (the database decides for real)
+function snpFriend(uid){return !!(sbUser&&(uid===sbUser.id||(myFollowing.has(uid)&&myFollowers.has(uid))));}
+function snpFeedVisual(r){const S=r.condition_data.snowp,id=String(r.id).replace(/[^\w-]/g,'');
+  return '<div class="snp-card" id="snpc-'+id+'"><img class="snp-main" src="'+S.back+'" alt="" loading="lazy">'
+    +'<img class="snp-inset" src="'+S.front+'" alt="" loading="lazy" onclick="event.stopPropagation();snpCardSwap(\''+id+'\')">'
+    +'<span class="snp-tag">Snowp · 🔒 Freunde</span></div>';}
+function snpCardSwap(id){const c=document.getElementById('snpc-'+id);if(!c)return;const a=c.querySelector('.snp-main'),b=c.querySelector('.snp-inset');const t=a.src;a.src=b.src;b.src=t;}
+// friends on the map: their latest Snowp of the last 24 h
+let snpLayer=null;
+function snpMapRender(){
+  if(!snpLayer){snpLayer=L.layerGroup().addTo(map);}
+  snpLayer.clearLayers();if(ovOn.reports===false)return;
+  const now=Date.now(),latest={};
+  (allReports||[]).forEach(r=>{const S=r.condition_data&&r.condition_data.snowp;if(!S||!r.userId)return;
+    const t=Date.parse(r.createdAt||'')||0;if(t&&now-t>24*3600e3)return;
+    if(!latest[r.userId]||t>latest[r.userId].t)latest[r.userId]={r,t};});
+  Object.values(latest).forEach(({r,t})=>{const S=r.condition_data.snowp,av=r.avatar||avatarOf(r.userId);
+    const ago=t?Math.max(1,Math.round((now-t)/36e5)):null;
+    const html='<div class="snp-pin"><img src="'+S.front+'" alt=""><i style="'+(av?'background-image:url('+encodeURI(av)+')':'')+'">'+(av?'':escapeHtml((r.user||'?')[0].toUpperCase()))+'</i><b>'+escapeHtml(r.user||'')+(ago?' · '+ago+' h':'')+'</b></div>';
+    L.marker([r.lat,r.lng],{icon:L.divIcon({className:'',html,iconSize:[0,0],iconAnchor:[0,0]}),zIndexOffset:1800})
+      .on('click',()=>{try{feedOpen();setTimeout(()=>{const c=document.getElementById('feedcard-'+r.id);if(c)c.scrollIntoView({behavior:'smooth',block:'center'});},400);}catch(e){}})
+      .addTo(snpLayer);});
+}
 // ── «Touren finden» ────────────────────────────────────────────────────────
 // A sheet over the lower part of the screen, the map above it showing only
 // the routes that pass the filters. Distance is measured to the route's
@@ -11917,7 +12075,8 @@ function loadReportMarkers(){
   // Drawn snow-maps are model input for Reported Powder, not posts -- they
   // feed progZones() straight out of allReports but never get a marker, an
   // overlay snapshot, or a feed/profile entry of their own.
-  const rest=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r));
+  try{snpMapRender();}catch(e){}
+  const rest=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r)&&!(r.condition_data&&r.condition_data.snowp));
   if(tiny){rest.forEach(r=>_rptMarker(r,'dot'));return;}
   const cells={};
   rest.forEach(r=>{let key;
@@ -11961,14 +12120,17 @@ function authUpdateUI(user){
   loadSocial().then(()=>{loadReportMarkers();loadDbReports();});
 }
 // --- Social state ---
-let myFollowing=new Set();
+let myFollowing=new Set(),myFollowers=new Set();
 async function loadSocial(){
   if(!sb)return;
   try{
     if(sbUser){
       const{data:f}=await sb.from('follows').select('following_id').eq('follower_id',sbUser.id);
       myFollowing=new Set((f||[]).map(x=>x.following_id));
-    }else{myFollowing=new Set();}
+      // people who follow you back make "friends" (Snowps)
+      try{const{data:g}=await sb.from('follows').select('follower_id').eq('following_id',sbUser.id);
+        myFollowers=new Set((g||[]).map(x=>x.follower_id));}catch(e){}
+    }else{myFollowing=new Set();myFollowers=new Set();}
   }catch(e){console.warn('loadSocial',e);}
 }
 // The feed icon's badge: a count, not just a dot -- comments on your own
