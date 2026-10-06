@@ -3135,6 +3135,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.fab-open #fabDraw{transform:translate(-68px,0)}
  body.fab-open #fabObs{transform:translate(-68px,-58px)}
  body.fab-open #fabTrack{transform:translate(-68px,-116px)}
+ body.fab-open #fabSnowp{transform:translate(-68px,-174px);transition-delay:.12s}
+ #fabSnowp{color:#7C3AED}
  body.fab-open #fabObs{transition-delay:.04s}
  body.fab-open #fabTrack{transition-delay:.08s}
  #fabTrack{color:var(--accent)}
@@ -3482,6 +3484,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    padding:6px 16px calc(env(safe-area-inset-bottom,0px) + 14px);box-shadow:0 -12px 40px rgba(0,0,0,.18);
    transform:translateY(105%);transition:transform .34s cubic-bezier(.2,.9,.25,1)}
  body.ts-open .ts-sheet{transform:none}
+ body.ts-open .ts-sheet.min{transform:translateY(calc(100% - 86px));overflow:hidden}
+ .ts-sheet [data-drag]{cursor:grab;touch-action:none}
+ .ts-grab{height:5px!important;width:44px!important}
  body.ts-open #bottomPanel,body.ts-open #mapFabs,body.ts-open #miniLegend,body.tour-open #bottomPanel,body.tour-open #miniLegend{opacity:0;pointer-events:none}
  .ts-grab{width:38px;height:4px;border-radius:2px;background:var(--fill2);margin:4px auto 10px}
  .ts-seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--fill);border-radius:14px;padding:4px;margin:2px 0 12px}
@@ -3503,6 +3508,38 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ts-res{display:flex;justify-content:space-between;font-size:11.5px;color:var(--fg2);margin:4px 2px 8px}
  .ts-count{font-weight:800;color:var(--fg)}
  .tn-sc{min-width:48px}
+
+ /* ── Snowp: two cameras, friends only ── */
+ .snp{position:fixed;inset:0;z-index:5200;background:#0b0d12;color:#fff;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px calc(env(safe-area-inset-bottom,0px) + 14px)}
+ .snp[hidden]{display:none}
+ .snp-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+ .snp-top button{width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer}
+ .snp-top b{font:800 18px Inter,system-ui}.snp-top span{margin-left:auto;font:600 12px Inter,system-ui;opacity:.7}
+ .snp-box{flex:1;display:flex;flex-direction:column;gap:10px;min-height:0;max-width:520px;width:100%;margin:0 auto}
+ .snp-cam,.snp-prev{position:relative;flex:1;min-height:0;border-radius:24px;overflow:hidden;background:#1a1d24}
+ .snp-cam video,.snp-main{width:100%;height:100%;object-fit:cover;display:block}
+ video.mirror{transform:scaleX(-1)}
+ .snp-inset{position:absolute;top:12px;left:12px;width:30%;aspect-ratio:3/4;object-fit:cover;border-radius:16px;border:3px solid #0b0d12;cursor:pointer}
+ .snp-hint{position:absolute;left:0;right:0;bottom:14px;text-align:center;font:700 14px Inter,system-ui;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+ .snp-nocam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;opacity:.8;font:600 14px Inter,system-ui}
+ .snp-shoot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
+ .snp-btn{width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:rgba(255,255,255,.18);cursor:pointer}
+ .snp-btn:active{transform:scale(.92)}
+ .snp-flip{justify-self:start;width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer}
+ .snp-meta{display:flex;justify-content:space-between;font:600 12px Inter,system-ui;opacity:.8}
+ .snp-cap{border:0;border-radius:14px;padding:12px 14px;background:rgba(255,255,255,.1);color:#fff;font:500 16px Inter,system-ui}
+ .snp-acts{display:flex;gap:8px}
+ .snp-acts>*{flex:1;height:50px;border-radius:16px;border:0;font:800 15px Inter,system-ui;cursor:pointer;display:flex;align-items:center;justify-content:center}
+ .snp-ghost{background:rgba(255,255,255,.12);color:#fff}
+ .snp-post{background:linear-gradient(135deg,#7C3AED,var(--accent));color:#fff}
+ .snp-card{position:relative;margin:12px 0 0;aspect-ratio:3/4;max-height:520px;overflow:hidden;background:#111}
+ .snp-card .snp-main{width:100%;height:100%;object-fit:cover}
+ .snp-card .snp-inset{width:28%}
+ .snp-tag{position:absolute;right:10px;bottom:10px;background:rgba(10,10,12,.7);color:#fff;font:800 11px Inter,system-ui;padding:5px 9px;border-radius:999px}
+ .snp-pin{position:relative;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center}
+ .snp-pin img{width:54px;height:72px;object-fit:cover;border-radius:14px;border:3px solid #fff;box-shadow:0 6px 16px rgba(0,0,0,.3)}
+ .snp-pin i{position:absolute;top:-8px;right:-10px;width:26px;height:26px;border-radius:50%;background:#7C3AED center/cover;border:2px solid #fff;color:#fff;font:800 12px/22px Inter,system-ui;text-align:center;font-style:normal}
+ .snp-pin b{margin-top:4px;background:rgba(10,10,12,.75);color:#fff;font:700 10.5px Inter,system-ui;padding:2px 7px;border-radius:999px;white-space:nowrap}
 
  /* ── activity recorder ── */
  .trk{position:fixed;inset:0;z-index:5100;pointer-events:none;display:flex;flex-direction:column;justify-content:flex-end}
@@ -3617,6 +3654,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .trk-map img+svg,.trk-map svg.bare{position:absolute;inset:0;width:100%;height:100%}
  .trk-map.pick{cursor:crosshair}
  .trk-map:not(:has(img)){aspect-ratio:2/1}
+ .trk-guide{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--accent-soft);margin:0 0 6px;font:600 12.5px Inter,system-ui;color:var(--fg2)}
+ .trk-guide svg{width:20px;height:20px;color:var(--accent);flex:none}
+ .trk-guide span{flex:1;min-width:0}
+ .trk-guide b{display:block;font:800 14px Inter,system-ui;color:var(--fg)}
+ .trk-guide button{border:0;background:none;font-size:20px;color:var(--fg2);cursor:pointer}
+ .trk-guide.on{margin:-4px 0 12px}
+ .trk-guide.warn{background:rgba(217,83,79,.12)}
+ .trk-guide.warn b{color:#C0392B}
  .trk-rep{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:14px;background:var(--accent-soft);color:var(--fg);font:500 12.5px/1.4 Inter,system-ui;margin-bottom:10px}
  .trk-rep svg{width:20px;height:20px;flex:none;color:var(--accent);margin-top:1px}
  .trk-rep b{display:block;font:800 12.5px var(--mono);color:var(--accent);margin-top:3px}
@@ -3625,6 +3670,43 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .trk-vis button b{font:800 14px Inter,system-ui;color:var(--fg)}
  .trk-vis button span{font:500 11.5px Inter,system-ui;color:var(--fg2)}
  .trk-vis button.on{border-color:var(--accent);background:var(--accent-soft)}
+ .pv{margin:4px 0 6px}
+ .pv-stats{display:grid;grid-template-columns:repeat(4,1fr);text-align:center;margin:4px 0 12px}
+ .pv-stats b{display:block;font:800 18px Inter,system-ui;color:var(--fg);letter-spacing:-.02em}
+ .pv-stats span{font:600 11.5px Inter,system-ui;color:var(--fg2)}
+ .pv-btns{display:flex;gap:6px;margin-bottom:14px}
+ .pv-btns button{flex:1;height:36px;border-radius:10px;border:0;background:var(--fill);color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer}
+ .pv-btns button.pri{background:var(--accent);color:#fff}
+ .pv-btns .pv-more{flex:0 0 40px;font-size:18px}
+ .pv-hls{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 12px;scrollbar-width:none}
+ .pv-hls::-webkit-scrollbar{display:none}
+ .pv-hl{flex:0 0 68px;display:flex;flex-direction:column;align-items:center;gap:5px;border:0;background:none;cursor:pointer;padding:0}
+ .pv-hl img,.pv-hl svg{width:64px;height:64px;border-radius:50%;object-fit:cover;background:linear-gradient(160deg,#eef3f8,#dfe7f0);
+   box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--accent)}
+ .pv-hl span{font:600 11px Inter,system-ui;color:var(--fg);max-width:68px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .pv-week{background:var(--fill);border-radius:18px;padding:12px 14px;margin-bottom:12px}
+ .pv-wk-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+ .pv-wk-h b{font:800 14px Inter,system-ui;color:var(--fg)}.pv-wk-h span{font:600 11px Inter,system-ui;color:var(--fg2)}
+ .pv-wk{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+ .pv-wk small{display:block;font:700 10.5px Inter,system-ui;letter-spacing:.04em;text-transform:uppercase;color:var(--fg2)}
+ .pv-wk b{font:800 17px var(--mono);color:var(--fg)}
+ .pv-chart{display:flex;align-items:flex-end;gap:4px;height:56px}
+ .pv-chart i{flex:1;border-radius:4px 4px 0 0;background:color-mix(in srgb,var(--accent) 35%,transparent);min-height:3px}
+ .pv-chart i.cur{background:var(--accent)}
+ .pv-tabs{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--hair);margin:0 -2px 2px}
+ .pv-tabs button{height:42px;border:0;background:none;color:var(--fg2);cursor:pointer;border-top:2px solid transparent;margin-top:-1px}
+ .pv-tabs button.on{color:var(--fg);border-top-color:var(--fg)}
+ .pv-tabs svg{width:20px;height:20px}
+ .pv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;border-radius:6px;overflow:hidden}
+ .pv-cell{position:relative;aspect-ratio:1;border:0;padding:0;background:var(--fill);cursor:pointer;overflow:hidden}
+ .pv-cell img{width:100%;height:100%;object-fit:cover;display:block}
+ .pv-txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:8px;font:700 11.5px/1.3 Inter,system-ui;color:var(--fg);text-align:center;
+   background:linear-gradient(150deg,var(--accent-soft),var(--fill))}
+ .pv-badge{position:absolute;top:6px;right:6px;width:18px;height:18px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+ .pv-acts{display:flex;flex-direction:column}
+ .pv-act{display:flex;gap:12px;align-items:center;padding:10px 0;border:0;border-bottom:1px solid var(--hair);background:none;text-align:left;cursor:pointer}
+ .pv-act span{display:flex;flex-direction:column;gap:2px;min-width:0}
+ .pv-act b{font:800 14.5px Inter,system-ui;color:var(--fg)}.pv-act small{font:500 12px Inter,system-ui;color:var(--fg2)}.pv-act em{font:700 12.5px var(--mono);font-style:normal;color:var(--fg)}
  .prof-acts{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:none;margin-bottom:6px}
  .prof-acts::-webkit-scrollbar{display:none}
  .pa-card{flex:0 0 168px;display:flex;flex-direction:column;gap:3px;padding:6px 6px 10px;border-radius:18px;border:1px solid var(--hair);background:var(--card);text-align:left;cursor:pointer}
@@ -3741,7 +3823,19 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .tour-backi{border:0;background:var(--fill);width:30px;height:30px;border-radius:50%;font:700 18px/1 Inter,system-ui;color:var(--fg);cursor:pointer;flex:none}
  .tour-watch{margin:8px 0 0;padding:6px 9px;font-size:12px}
  .tour-prof{margin:8px 0 8px}
- .tsh-acts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+ .tsh-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .tour-sulz:empty{display:none}
+ .tour-sulz{margin-top:8px;padding:8px 10px;border-radius:12px;background:rgba(226,170,72,.14)}
+ .tsw-row{display:flex;align-items:center;gap:10px}
+ .tsw-l{flex:1;font:600 12px Inter,system-ui;color:var(--fg2)}
+ .tsw-l b{color:var(--fg)}
+ .tsw-bars{display:flex;align-items:flex-end;gap:2px;height:26px;width:96px}
+ .tsw-bars i{flex:1;background:rgb(226,170,72);border-radius:2px 2px 0 0;min-height:3px}
+ .tsh-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:8px 0 2px}
+ .tsh-stats>div{background:var(--fill);border-radius:12px;padding:7px 2px;text-align:center;min-width:0}
+ .tsh-stats b{display:block;font:800 13.5px var(--mono);color:var(--fg);white-space:nowrap}
+ .tsh-stats small{display:block;font:700 9.5px Inter,system-ui;letter-spacing:.02em;color:var(--fg2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .tour-sheet.min .tsh-stats{display:none}
  .tsh-acts button{display:flex;align-items:center;justify-content:center;gap:6px;height:38px;border-radius:12px;border:1px solid var(--hair);
    background:var(--card);color:var(--fg);font:700 12.5px Inter,system-ui;cursor:pointer}
  .tsh-acts button svg{width:15px;height:15px}
@@ -3939,6 +4033,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   </div>
   <div class="mfab-row" id="reportRow">
     <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><i>Report Powder</i></button>
+    <button class="mfab act" id="fabSnowp" onclick="fabMenu(false);snpOpen()" title="Snowp – 2 Kameras, nur Freunde" aria-label="Snowp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="15" height="13" rx="3"/><circle cx="10" cy="12.5" r="3.4"/><rect x="14" y="2.5" width="7.5" height="9" rx="2" fill="var(--card)"/><circle cx="17.75" cy="7" r="1.6"/></svg><i>Snowp</i></button>
     <button class="mfab act" id="fabTrack" onclick="fabMenu(false);trkOpen()" title="Aktivität aufzeichnen" aria-label="Aktivität aufzeichnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg><i>Aufzeichnen</i></button>
     <button class="mfab act" id="fabObs" onclick="fabMenu(false);obsOpen()" title="Beobachtung melden" aria-label="Beobachtung melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><i>Beobachtung</i></button>
     <button class="mfab" id="mapFab" onclick="fabMenu()" title="Melden" aria-label="Melden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
@@ -4004,6 +4099,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="lyScrim" onclick="lyPanelClose()"></div>
 <div id="tourSheet" class="tour-sheet" role="dialog" aria-label="Skitour"></div>
 <div id="tourSearch" class="ts-sheet" role="dialog" aria-label="Touren finden"></div>
+<div id="snp" class="snp" hidden role="dialog" aria-label="Snowp"><div class="snp-top"><button onclick="snpClose()" aria-label="Schliessen">×</button><b>Snowp</b><span>2 Kameras · nur Freunde</span></div><div id="snpBox" class="snp-box"></div></div>
 <div id="trk" class="trk" hidden role="dialog" aria-label="Aktivität aufzeichnen"><div id="trkSheet" class="trk-sheet"></div></div>
 <button id="trkPill" class="trk-pill" hidden onclick="trkExpand()" aria-label="Aufzeichnung öffnen"></button>
 <div id="lyPanel" class="ly-panel" role="dialog" aria-modal="true" aria-label="Ebenen">
@@ -4284,14 +4380,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <div class="prof-avbar" id="profAvBar" hidden><span>Neues Profilbild</span><button type="button" onclick="profAvCancel()">Abbrechen</button><button type="button" class="pri" onclick="profAvSave()">Speichern</button></div>
       <div class="prof-bioview" id="profBioView"></div>
       <div class="prof-view" id="profViewMain">
-        <div class="uv-stats">
-          <div class="uv-stat"><b id="profStatReports">–</b><span>Meldungen</span></div>
-          <div class="uv-stat"><b id="profStatFollowers">–</b><span>Follower</span></div>
-        </div>
-        <div class="prof-sec-title">Meine Aktivitäten</div>
-        <div class="prof-acts" id="profActs"><div class="prof-hint">Lade …</div></div>
-        <div class="prof-sec-title">Meine Beiträge</div>
-        <div class="uv-posts" id="profPosts"><div class="prof-hint">Lade …</div></div>
+        <div class="pv" id="profPV"></div>
+        <div hidden><b id="profStatReports"></b><b id="profStatFollowers"></b><div id="profActs"></div><div id="profPosts"></div></div>
         <div class="prof-sec-title">Einstellungen</div>
         <button class="prof-item nav" onclick="setOpen(true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>Darstellung &amp; Karte<span class="chev">›</span></button>
         <button class="prof-item nav" onclick="profNav('pers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Personalisieren<span class="chev">›</span></button>
@@ -4394,14 +4484,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         </div>
       </div>
       <div class="uv-bio" id="uvBio"></div>
-      <div class="uv-stats">
-        <div class="uv-stat"><b id="uvReports">–</b><span>Reports</span></div>
-        <div class="uv-stat"><b id="uvFollowers">–</b><span>Follower</span></div>
-        <div class="uv-stat"><b id="uvSince">–</b><span>Dabei seit</span></div>
-      </div>
-      <button class="prof-save" id="uvFollow" onclick="uvToggleFollow()">Folgen</button>
-      <button class="uv-report" onclick="uvReportUser()">Nutzer melden</button>
-      <div class="uv-posts" id="uvPosts"></div>
+      <div class="pv" id="uvPV"></div>
+      <div hidden><b id="uvReports"></b><b id="uvEndoN"></b><b id="uvFollowers"></b><b id="uvSince"></b><button id="uvFollow"></button><div id="uvPosts"></div></div>
     </div>
   </div>
 </div>
@@ -4788,7 +4872,7 @@ const I18N_DICT={
 "Senden":["Send","Envoyer","Invia"],
 "Setzungsgeräusche deuten auf Schwachschichten hin.":["Settling noises point to weak layers.","Les bruits de tassement indiquent des couches fragiles.","I rumori di assestamento indicano strati deboli."],
 "Sichtbarkeit:":["Visibility:","Visibilité :","Visibilità:"],
-"Simulierte Schneedecke (SNOWPACK, SLF) an # Wetterpunkten in jeder Höhe, Exposition und Neigung, auf das Gelände übertragen. Hell- bis dunkelblau = Pulver nach Tiefe, grau = hart, korall = Kruste, honiggelb = nass / Sulz. Ein Modell, keine Messung – kein Lawinenbulletin.":["Simulated snowpack (SNOWPACK, SLF) at # weather points for every elevation, aspect and slope, transferred to the terrain. Light to dark blue = powder by depth, grey = hard, coral = crust, honey = wet / corn. A model, not a measurement – not an avalanche bulletin.","Manteau neigeux simulé (SNOWPACK, SLF) à # points météo pour chaque altitude, exposition et pente, transposé au terrain. Bleu clair à foncé = poudreuse par profondeur, gris = dure, corail = croûte, miel = mouillée / printemps. Un modèle, pas une mesure – pas un bulletin d'avalanches.","Manto nevoso simulato (SNOWPACK, SLF) in # punti meteo per ogni quota, esposizione e pendenza, trasferito al terreno. Da azzurro a blu scuro = polvere per profondità, grigio = dura, corallo = crosta, miele = bagnata / firn. Un modello, non una misura – non un bollettino valanghe."],
+"Simulierte Schneedecke (SNOWPACK, SLF) an # Wetterpunkten in jeder Höhe, Exposition und Neigung, auf das Gelände übertragen. Hell- bis dunkelblau = Pulver nach Tiefe, grau = hart, korall = Kruste, honiggelb = Sulz (tragende, über Nacht gefrorene Basis, oben 1–5 cm aufgeweicht), braun = nass / faul. Ein Modell, keine Messung – kein Lawinenbulletin.":["Simulated snowpack (SNOWPACK, SLF) at # weather points for every elevation, aspect and slope, transferred to the terrain. Light to dark blue = powder by depth, grey = hard, coral = crust, honey = wet / corn. A model, not a measurement – not an avalanche bulletin.","Manteau neigeux simulé (SNOWPACK, SLF) à # points météo pour chaque altitude, exposition et pente, transposé au terrain. Bleu clair à foncé = poudreuse par profondeur, gris = dure, corail = croûte, miel = mouillée / printemps. Un modèle, pas une mesure – pas un bulletin d'avalanches.","Manto nevoso simulato (SNOWPACK, SLF) in # punti meteo per ogni quota, esposizione e pendenza, trasferito al terreno. Da azzurro a blu scuro = polvere per profondità, grigio = dura, corallo = crosta, miele = bagnata / firn. Un modello, non una misura – non un bollettino valanghe."],
 "Skala #–#":["Scale #–#","Échelle #–#","Scala #–#"],
 "Skiqualität":["Ski quality","Qualité de ski","Qualità sciistica"],
 "Skiqualität (SNOWPACK)":["Ski quality (SNOWPACK)","Qualité de ski (SNOWPACK)","Qualità sciistica (SNOWPACK)"],
@@ -4914,6 +4998,27 @@ const I18N_DICT={
 "an":["on","on","on"],
 "Mein Profil":["My profile","Mon profil","Il mio profilo"],
 "Meine Aufzeichnungen":["My recordings","Mes enregistrements","Le mie registrazioni"],
+"Freeride Ski":["Freeride ski","Freeride ski","Freeride sci"],"Freeride Snowboard":["Freeride snowboard","Freeride snowboard","Freeride snowboard"],"Skimo":["Skimo","Ski-alpinisme","Skialp"],
+"Ø Neigung":["Ø slope","Pente moy.","Pend. media"],"Max. Neigung":["Max. slope","Pente max.","Pend. max"],"Gipfel":["Summit","Sommet","Vetta"],
+"Spur folgen":["Follow route","Suivre la trace","Segui la traccia"],
+"Snowp senden":["Send Snowp","Envoyer le Snowp","Invia Snowp"],"Neu":["Retake","Reprendre","Rifai"],"🔒 nur Freunde":["🔒 friends only","🔒 amis seulement","🔒 solo amici"],
+"Zuerst der Hang – Rückkamera":["First the slope – back camera","D'abord la pente – caméra arrière","Prima il pendio – fotocamera posteriore"],
+"Und jetzt du – Frontkamera":["Now you – front camera","Maintenant toi – caméra avant","Ora tu – fotocamera frontale"],
+"Was geht ab? (optional)":["What's up? (optional)","Quoi de neuf ? (facultatif)","Che succede? (facoltativo)"],
+"📍 Standort wird mitgeschickt":["📍 Location will be sent","📍 La position sera envoyée","📍 La posizione verrà inviata"],
+"📍 Standort wird gesucht …":["📍 Finding location …","📍 Recherche de la position …","📍 Ricerca posizione …"],
+"2 Kameras · nur Freunde":["2 cameras · friends only","2 caméras · amis seulement","2 fotocamere · solo amici"],
+"Beiträge":["Posts","Publications","Post"],"Folge ich":["Following","Abonnements","Seguiti"],"Aktivitäten":["Activities","Activités","Attività"],
+"Profil bearbeiten":["Edit profile","Modifier le profil","Modifica profilo"],"Profil teilen":["Share profile","Partager le profil","Condividi profilo"],
+"Diese Woche":["This week","Cette semaine","Questa settimana"],"# Wochen":["# weeks","# semaines","# settimane"],"Höhenmeter":["Elevation gain","Dénivelé","Dislivello"],
+"Noch keine Aktivitäten.":["No activities yet.","Pas encore d'activités.","Nessuna attività."],"Noch keine Beiträge.":["No posts yet.","Pas encore de publications.","Nessun post."],
+"Sulz (aufgefirnt)":["Corn (softened)","Neige de printemps (ramollie)","Firn (ammorbidito)"],
+"nass / faul":["wet / rotten","mouillée / pourrie","bagnata / marcia"],
+"Sulz-Fenster wird berechnet …":["Working out the corn window …","Calcul de la fenêtre de neige de printemps …","Calcolo della finestra del firn …"],
+"Heute kaum Sulz auf dieser Route":["Hardly any corn on this route today","Peu de neige de printemps sur cet itinéraire aujourd'hui","Oggi poco firn su questo percorso"],
+"Sulz am besten ca.":["Corn best around","Neige de printemps idéale vers","Firn migliore verso"],
+"Pulver nach Tiefe, hart, Kruste, Sulz (aufgefirnt auf tragender Basis) und nass / faul.":["Powder by depth, hard, crust, corn (softened on a supportive base) and wet / rotten.","Poudreuse par profondeur, dure, croûte, neige de printemps (ramollie sur base portante) et mouillée / pourrie.","Polvere per profondità, dura, crosta, firn (ammorbidito su base portante) e bagnata / marcia."],"auf der Spur":["on the route","sur la trace","sulla traccia"],
+"Start # m":["Start # m","Départ # m","Partenza # m"],
 "Höhe":["Height","Altitude","Quota"],
 "# m über Boden":["# m above ground","# m au-dessus du sol","# m dal suolo"],
 "Wind auf # m (freie Atmosphäre)":["Wind at # m (free atmosphere)","Vent à # m (atmosphère libre)","Vento a # m (atmosfera libera)"],
@@ -5641,7 +5746,42 @@ const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,
 // visible in the corner. The data sources still get credited -- just
 // without Leaflet's own link riding along.
 if(map.attributionControl)map.attributionControl.setPrefix(false);
-if(_desktop&&map.scrollWheelZoom&&map.scrollWheelZoom.setWheelPxPerZoomLevel)map.scrollWheelZoom.setWheelPxPerZoomLevel(38);
+// Smooth wheel / trackpad zoom. Leaflet's own handler turns every burst of
+// wheel deltas into a separate animated zoom step, which on a trackpad is a
+// queue of little jumps. Instead the zoom follows a goal value frame by frame
+// (continuous zoom around the cursor, like a native map), and the tiles are
+// only refreshed once the gesture ends.
+const SmoothWheel=L.Handler.extend({
+  addHooks(){L.DomEvent.on(this._map._container,'wheel',this._onWheel,this);},
+  removeHooks(){L.DomEvent.off(this._map._container,'wheel',this._onWheel,this);this._end();},
+  _onWheel(e){
+    const t=e.target;if(t&&t.closest&&t.closest('.leaflet-popup-content,.leaflet-control,.no-map-wheel'))return;
+    L.DomEvent.preventDefault(e);L.DomEvent.stopPropagation(e);
+    const m=this._map;
+    let d=e.deltaY*(e.deltaMode===1?33:e.deltaMode===2?400:1);
+    // pinch arrives as ctrl+wheel with small deltas; a mouse notch is ~100
+    const k=e.ctrlKey?0.012:(Math.abs(d)>=50&&Number.isInteger(d)?0.0045:0.0032);
+    if(!this._on){this._on=true;m._stop();this._goal=m.getZoom();this._moved=false;
+      this._raf=requestAnimationFrame(()=>this._step());}
+    this._goal=Math.max(m.getMinZoom(),Math.min(m.getMaxZoom(),this._goal-d*k));
+    this._pt=m.mouseEventToContainerPoint(e);this._ll=m.containerPointToLatLng(this._pt);
+    clearTimeout(this._to);this._to=setTimeout(()=>this._end(),180);
+  },
+  _step(){if(!this._on)return;const m=this._map,z0=m.getZoom();
+    let z=z0+(this._goal-z0)*0.28;if(Math.abs(this._goal-z)<0.004)z=this._goal;
+    if(z!==z0){const half=m.getSize().divideBy(2),off=this._pt.subtract(half);
+      const c=m.unproject(m.project(this._ll,z).subtract(off),z);
+      if(!this._moved){m._moveStart(true,false);this._moved=true;}
+      m._move(c,z);}
+    this._raf=requestAnimationFrame(()=>this._step());},
+  _end(){if(!this._on)return;cancelAnimationFrame(this._raf);clearTimeout(this._to);
+    const m=this._map;
+    // let the last frames land on the goal before the tiles refresh
+    if(Math.abs(this._goal-m.getZoom())>0.004){const z=this._goal,half=m.getSize().divideBy(2),off=this._pt.subtract(half);
+      m._move(m.unproject(m.project(this._ll,z).subtract(off),z),z);}
+    this._on=false;if(this._moved)m._moveEnd(true);this._moved=false;}
+});
+try{map.scrollWheelZoom.disable();map.scrollWheelZoom=new SmoothWheel(map);map.scrollWheelZoom.enable();}catch(e){}
 // Constrain panning + zoom to the meteo grid, with a thin white frame around the data
 const _fitZoom=map.getZoom();
 map.setZoom(_fitZoom,{animate:false});map.setMinZoom(_fitZoom);map.setMaxZoom(16);  // never zoom out past the initial view (sync — kein animierter Auto-Zoom)
@@ -5693,18 +5833,7 @@ const chCantons=L.polyline(CH_CANTONS,{pane:'abstractPane',interactive:false,smo
   color:'#9fb0c4',weight:1,opacity:.18,fill:false}).addTo(map);
 const chOutline=L.polygon(CH_BORDER,{pane:'abstractPane',interactive:false,smoothFactor:0.35,
   color:'#7c8ca3',weight:2.2,opacity:.95,fillColor:'#eef3f8',fillOpacity:1,lineJoin:'round'}).addTo(map);
-// Outside Switzerland there is no data: the neighbours fade softly into white
-// instead of ending at a hard edge. A wide white mask over the world minus
-// CH, feathered by a few broad, faint white strokes along the border.
-map.createPane('fadePane');
-map.getPane('fadePane').style.zIndex=440;              // over tiles and rasters, under routes' popups and markers
-map.getPane('fadePane').style.pointerEvents='none';
-const chFade=L.layerGroup([
-  L.polygon([[[89,-179],[89,179],[-89,179],[-89,-179]],CH_BORDER],{pane:'fadePane',interactive:false,stroke:false,
-    fillColor:'#fff',fillOpacity:.78,smoothFactor:.5}),
-  ...[[44,.12],[30,.14],[18,.16],[9,.18]].map(([w,o])=>L.polyline(CH_BORDER.concat([CH_BORDER[0]]),{pane:'fadePane',interactive:false,
-    color:'#fff',weight:w,opacity:o,lineJoin:'round',smoothFactor:.5}))
-]).addTo(map);
+
 // Resort names/dots used to be drawn straight onto the map as you zoomed in;
 // CH_RESORTS itself stays (the home-area picker in Settings still lists by
 // name), it just no longer gets a marker of its own.
@@ -5747,7 +5876,9 @@ try{base.setZIndex(1);}catch(e){}
 const _ramp=(z,z0,z1)=>Math.max(0,Math.min(1,(z-z0)/(z1-z0)));
 function updateBaseFade(force){
   const t=baseFadeT(),z=map.getZoom();
-  const op=0.42+0.58*_ramp(z,8.6,10.2);
+  // widest view: mostly the abstract country shape and relief; the map
+  // comes in as you zoom
+  const op=0.16+0.84*_ramp(z,8.4,10.8);
   base.setOpacity(op);
   try{reliefBase.setOpacity(0.9-0.9*_ramp(z,9.2,13));}catch(e){}
   document.documentElement.style.setProperty('--base-gray',(1-_ramp(z,11.6,13)).toFixed(3));
@@ -5757,7 +5888,7 @@ function updateBaseFade(force){
   _fadeRaf=requestAnimationFrame(function(){
     _fadeRaf=0;
     const t2=baseFadeT();
-    const op2=0.42+0.58*_ramp(map.getZoom(),8.6,10.2);
+    const op2=0.16+0.84*_ramp(map.getZoom(),8.4,10.8);
     _lastFadeOp=op2;
     _applyVectorFade(op2,t2);
   });
@@ -5927,15 +6058,17 @@ function vaProfAvailable(){
 // hard a cool grey, crust a muted coral, wet/Sulz a honey tone; Triebschnee
 // in violets so it never reads as powder.
 const VA_PALETTE={
-  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[147,197,240,205],4:[59,125,214,225],5:[24,52,128,235],6:[226,170,72,220]},
+  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[147,197,240,205],4:[59,125,214,225],5:[24,52,128,235],6:[226,170,72,220],7:[150,104,74,225]},
   wind:{1:[156,168,184,190],2:[186,170,236,205],3:[112,72,200,230]}};
 // Nur Pulver on an export without its own powder layer: the three ski6 powder
 // classes, coloured like the nearest SLF snow-depth bands.
 const VA_VPAL={powder:{3:[165,214,167,225],4:[102,187,106,225],5:[66,165,245,225]}};
-const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver > 20 cm',6:'nass / Sulz'};
+const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver > 20 cm',6:'Sulz (aufgefirnt)',7:'nass / faul'};
 // An export without the simple six classes still has "simple" (15 kinds of
 // surface): the six are folded from it, so Skiqualität always opens simple.
-const VA_SIMPLE_TO_SKI6={2:3,3:4,4:5,5:5,6:3,7:3,8:2,9:2,10:2,11:1,12:6,13:1,14:3,15:1};
+// 12 (wet / spring) goes to "nass": the simple view cannot tell good corn
+// from rotten snow -- that needs the corn metrics of a newer export
+const VA_SIMPLE_TO_SKI6={2:3,3:4,4:5,5:5,6:3,7:3,8:2,9:2,10:2,11:1,12:7,13:1,14:3,15:1};
 function vaPalApply(m){
   if(!m||!m.layers)return;
   if(!m.layers.ski6&&m.layers.simple&&m.layers.simple.legend){
@@ -5944,6 +6077,9 @@ function vaPalApply(m){
     for(const c in S.legend){const e=S.legend[c];if(e&&e[1])src.push([e[1].slice(0,3),VA_SIMPLE_TO_SKI6[c]||0]);}
     m.layers.ski6={file:S.file,legend:leg,_virt:'simple',_src:src,_recolor:true};
   }
+  // exports before the corn split had one wet class, 6: it is "nass" now (7)
+  {const S6=m.layers.ski6;if(S6&&S6.legend&&!S6._virt&&S6.legend[6]&&!S6.legend[7]){
+    S6.legend[7]=S6.legend[6];delete S6.legend[6];S6.legend[7][2]='nass / faul';}}
   for(const k in VA_PALETTE){const L=m.layers[k];if(!L||!L.legend||L._virt)continue;
     const src=[];
     for(const id in VA_PALETTE[k]){const e=L.legend[id];if(!e||!e[1])continue;const nw=VA_PALETTE[k][id];
@@ -6271,7 +6407,14 @@ function vaHiEngine(){
     var T=E.pk.thresholds,x=E.mi;
     var hs=m[x.total_hs_cm],pw=m[x.powder_depth_cm],cr=m[x.crust_thick_cm],sd=m[x.surface_density],lw=m[x.surface_lw];
     if(!(hs>=T.THIN_COVER_HS))return 0;
-    if(lw>T.SK_WET_LWC)return 6;
+    // corn: thin softened top on a supportive base that froze overnight
+    if(x.soft_top_cm!=null&&x.mf_base_cm!=null&&x.refrozen!=null){
+      var so=m[x.soft_top_cm],ba=m[x.mf_base_cm],rf=m[x.refrozen],SL=T.SOFT_LWC!=null?T.SOFT_LWC:0.3;
+      var corn=(so>=(T.SULZ_SOFT_MIN!=null?T.SULZ_SOFT_MIN:0.5)||lw>SL)&&so<=(T.SULZ_SOFT_MAX!=null?T.SULZ_SOFT_MAX:5)
+        &&lw<(T.SULZ_LWC_MAX!=null?T.SULZ_LWC_MAX:3)&&ba>=(T.SULZ_BASE_MIN!=null?T.SULZ_BASE_MIN:10)&&rf>=0.5;
+      if(corn)return 6;
+      if(lw>T.SK_WET_LWC)return 7;
+    }else if(lw>T.SK_WET_LWC)return 7;
     if(pw>=T.SK_POWDER_MIN)return pw<T.SK_P1?3:(pw<T.SK_P2?4:5);
     if(cr>=T.CRUST_FINE||sd>=T.ICE_DENSITY_MIN)return 2;
     return 1;
@@ -6305,7 +6448,7 @@ function vaHiEngine(){
   };
   E.metsFor=function(layer){
     var x=E.mi,names=layer==='density'?['surface_density']
-      :(layer==='ski6'||layer==='powder')?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_density','surface_lw']
+      :(layer==='ski6'||layer==='powder')?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_density','surface_lw','soft_top_cm','mf_base_cm','refrozen']
       :layer==='wind'?['total_hs_cm','drift_load','wind_scour']
       :layer==='simple'
       ?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_lw','sh_surface','drift_load','wind_scour']
@@ -7492,20 +7635,30 @@ function tourGeo(t){
     const en=_lv03(s.lat,s.lon);s.e=en[0];s.n=en[1];
     if(s.el!=null){if(!lo||s.el<lo.el)lo=s;if(!hi||s.el>hi.el)hi=s;}
     if(s.sl!=null&&s.sl>maxS&&s.sl<=60)maxS=s.sl;}
-  // the pipeline's numbers (30 m DEM) when it shipped them
+  // Summit = the highest point actually on the route, start = the lower of
+  // the two ends (where you put the skins on), both from the terrain model
+  // along the line. The pipeline's own points were sometimes off the line or
+  // mid-route, so they are only a fallback when the terrain is not loaded.
   const P=t.lo&&t.hi?{lo:{lat:t.lo[1],lon:t.lo[0],el:t.lo[2]},hi:{lat:t.hi[1],lon:t.hi[0],el:t.hi[2]}}:null;
-  const L0=P?P.lo:(lo?{lat:lo.lat,lon:lo.lon,el:lo.el}:{lat:segs[0].lat,lon:segs[0].lon,el:null});
-  const H0=P?P.hi:(hi?{lat:hi.lat,lon:hi.lon,el:hi.el}:{lat:segs[n-1].lat,lon:segs[n-1].lon,el:null});
+  const known=segs.filter(s=>s.el!=null).length;
+  const e0=segs[0],e1=segs[n-1];
+  const endLo=(e0.el!=null&&e1.el!=null)?(e0.el<=e1.el?e0:e1):null;
+  const L0=endLo?{lat:endLo.lat,lon:endLo.lon,el:endLo.el}:(P?P.lo:(lo?{lat:lo.lat,lon:lo.lon,el:lo.el}:{lat:e0.lat,lon:e0.lon,el:null}));
+  const H0=hi?{lat:hi.lat,lon:hi.lon,el:hi.el}:(P?P.hi:{lat:e1.lat,lon:e1.lon,el:null});
+  // slope: mean over the route (where it is skied, >= 15 deg) and the steepest pitch
+  let slS=0,slW=0;for(let i=1;i<n;i++){const s1=segs[i];if(s1.sl!=null&&s1.sl>=15&&s1.sl<=60){const ww=s1.dist-segs[i-1].dist;slS+=s1.sl*ww;slW+=ww;}}
   let coreW=0,allW=0;
   for(let i=0;i<n;i++){const ww=i?segs[i].dist-segs[i-1].dist:0;allW+=ww;
     try{const reg=tourRegionAt(segs[i].lat,segs[i].lon);if(reg&&avCoreZone(reg,segs[i].el,segs[i].as))coreW+=ww;}catch(e){}}
-  t._g={segs,lo:L0,hi:H0,len:t.len||(n?segs[n-1].dist:0),
-        gain:t.gain!=null?t.gain:((H0.el!=null&&L0.el!=null)?Math.round(H0.el-L0.el):null),
-        maxSlope:Math.round(maxS),core:allW?coreW/allW:0};
-  return t._g;
+  const g={segs,lo:L0,hi:H0,len:t.len||(n?segs[n-1].dist:0),
+        gain:(H0.el!=null&&L0.el!=null)?Math.round(H0.el-L0.el):(t.gain!=null?t.gain:null),
+        maxSlope:Math.round(maxS),avgSlope:slW?Math.round(slS/slW):null,core:allW?coreW/allW:0};
+  // terrain not loaded yet: answer now, but measure again next time
+  if(known>=n*0.7)t._g=g;
+  return g;
 }
-function tourVaScoreOne(t){
-  const E=tourVa.eng;if(!E||!t.coords||t.coords.length<2)return null;
+function tourVaScoreOne(t,E0){
+  const E=E0||tourVa.eng;if(!E||!t.coords||t.coords.length<2)return null;
   const g=tourGeo(t),segs=g.segs,n=segs.length;if(!n)return null;
   if(!g.cand){const mid=segs[Math.floor(n/2)];g.cand=E.candidates(mid.e,mid.n,60000);}
   const m=new Float64Array(E.nm),x=E.mi,cls=new Int8Array(n);let pwS=0,pwW=0;
@@ -7641,6 +7794,35 @@ async function tourIsoRefresh(){
   const r=tourScore(t)||tourScoreOld(t);
   tourIsoDraw(t,r);tourSheetRender(t,r);
 }
+// When is the corn good on this route? Every SNOWPACK frame of the chosen
+// day between 7 and 17 h is scored for the share of the descent in Sulz;
+// the best frames make the window ("aufgefirnt" between frozen morning
+// crust and wet afternoon snow).
+async function tourSulzWindow(t){
+  if(!vaPk||!vaEng||!vaMan||!vaMan.timestamps)return null;
+  const cur=vaTagIndex(),day=String(vaMan.timestamps[cur]||'').slice(0,10);if(!day)return null;
+  const hz=ms=>+new Intl.DateTimeFormat('de-CH',{timeZone:'Europe/Zurich',hour:'numeric',hour12:false}).format(new Date(ms));
+  const idx=[];vaMan.timestamps.forEach((ts,i)=>{const ms=Date.parse(String(ts).slice(0,16)+':00Z');
+    const dz=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Zurich'}).format(new Date(ms));const h=hz(ms);
+    if(dz===new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Zurich'}).format(new Date(Date.parse(day+'T12:00:00Z')))&&h>=7&&h<=17)idx.push([i,h]);});
+  if(!idx.length)return null;
+  const E=vaHiEngine();E.init(vaPk,vaEng.shade,vaEng.forest,vaEng.precip);
+  const out=[];
+  for(const [i,h] of idx){try{const f=await vaPkFrame(vaMan.tags[i]);E.setFrame(f.vals,f.ok);
+    const r=tourVaScoreOne(t,E);if(r)out.push({h,sulz:r.sulz});}catch(e){}}
+  if(!out.length)return null;
+  const best=Math.max(...out.map(o=>o.sulz));
+  if(best<10)return {best,from:null,to:null,series:out};
+  const good=out.filter(o=>o.sulz>=Math.max(10,best*0.6));
+  return {best,from:good[0].h,to:good[good.length-1].h,series:out};
+}
+async function tourSulzFill(t){const el=document.getElementById('tourSulzWin');if(!el)return;
+  el.innerHTML='<span class="tsw-l">Sulz-Fenster wird berechnet …</span>';
+  const w=await tourSulzWindow(t);if(tourIso!==t)return;
+  if(!w){el.innerHTML='';return;}
+  const bars=w.series.map(o=>'<i style="height:'+Math.max(3,o.sulz)+'%" title="'+o.h+' Uhr · '+o.sulz+' %"></i>').join('');
+  el.innerHTML='<div class="tsw-row"><span class="tsw-l">☀︎ '+(w.from!=null?'Sulz am besten ca. <b>'+w.from+'–'+(w.to+(w.to===w.from?2:0))+' Uhr</b> ('+w.best+' %)':'Heute kaum Sulz auf dieser Route')+'</span>'
+    +'<span class="tsw-bars">'+bars+'</span></div>';}
 function tourClassColor(c){const p=VA_PALETTE.ski6[c];return p?'rgb('+p[0]+','+p[1]+','+p[2]+')':'rgb(203,210,220)';}
 function tourIsoDraw(t,r){
   if(tourIsoLayer){map.removeLayer(tourIsoLayer);tourIsoLayer=null;}
@@ -7683,8 +7865,10 @@ function tourSheetRender(t,r){
   setTimeout(()=>{try{tpRender();}catch(e){}},0);
   const el=document.getElementById('tourSheet');if(!el)return;
   const g=tourGeo(t),va=!!(r&&r.cls);
-  const facts=[g.gain!=null?'↑ '+g.gain+' Hm':'',g.len?(Math.round(g.len/100)/10)+' km':'',
-    g.hi.el!=null?Math.round(g.hi.el)+' m':''].filter(Boolean).join(' · ');
+  const st=(v,l)=>'<div><b>'+v+'</b><small>'+l+'</small></div>';
+  const stats='<div class="tsh-stats">'+st(g.len?(Math.round(g.len/100)/10)+' km':'–','Distanz')+st(g.gain!=null?g.gain+' m':'–','Aufstieg')
+    +st(g.hi.el!=null?Math.round(g.hi.el)+' m':'–','Gipfel')+st(g.avgSlope!=null?g.avgSlope+'°':'–','Ø Neigung')+st(g.maxSlope?g.maxSlope+'°':'–','Max. Neigung')+'</div>';
+  const facts=(g.lo.el!=null?'Start '+Math.round(g.lo.el)+' m':'');
   const nRep=tourReports(t).length;
   const warn=r&&r.clamped?'<div class="ts-warn">Kernzone des Lawinenbulletins – Bulletin zuerst lesen.</div>':'';
   el.innerHTML='<div class="tsh-grab" data-drag></div>'
@@ -7692,16 +7876,20 @@ function tourSheetRender(t,r){
     +'<span class="tour-score" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r):'–')+'<small>%</small></span>'
     +'<div class="tour-tt"><b>'+escapeHtml(t.name||'Skitour')+'</b><span>'+escapeHtml(facts)+'</span></div>'
     +'<button type="button" class="tour-x" onclick="tourClose()" aria-label="Schliessen">×</button></div>'
+    +stats
     +'<div class="tour-watch" id="tourWatch"></div>'
     +'<div class="tsh-body">'+tourProfileSVG(t,va?r:null)
     +'<div class="tsh-acts">'
     +'<button type="button" onclick="tourShowReports()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>Meldungen'+(nRep?' <b>'+nRep+'</b>':'')+'</button>'
     +'<button type="button" class="pri" onclick="tourReportPowder()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg>Melden</button>'
     +'<button type="button" onclick="tourGpx()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>GPX</button>'
+    +'<button type="button" onclick="trkFromTour()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg>Aufzeichnen</button>'
     +'</div>'+warn
+    +'<div class="tour-sulz" id="tourSulzWin"></div>'
     +'<div class="tour-when">'+(va?'Pulver-Anteil der Abfahrt · SNOWPACK '+escapeHtml(r.when||''):'Powder-Modell im Zeitfenster')+' · Modell, kein Lawinenbulletin</div>'
     +'</div>';
   tourSheetDragWire(el);
+  if(va)setTimeout(()=>{try{tourSulzFill(t);}catch(e){}},50);
 }
 // The sheet moves with the thumb: pull down to fold it to its title row,
 // further to close it, up to open it again.
@@ -7820,7 +8008,7 @@ function tourReportsHTML(t){
 function tourReportPowder(){
   if(!tourIso)return;
   rptTourSel={id:String(tourIso.id),name:tourIso.name||'Skitour'};rptTourLock=true;
-  try{qrOpen();}catch(e){}
+  try{rpOpen();}catch(e){}
 }
 // ── choose a tour while reporting ──────────────────────────────────────────
 let rptTourSel=null,rptTourLock=false,rptTourQ='';
@@ -7945,13 +8133,31 @@ const TRK_ACC={
   hi:{label:'Hoch',sub:'jede Sekunde · genaueste Spur, mehr Akku',minDt:1000,minD:3,maxAcc:30,hiAcc:true},
   std:{label:'Normal',sub:'alle 5 s · empfohlen',minDt:5000,minD:8,maxAcc:40,hiAcc:true},
   eco:{label:'Akku sparen',sub:'alle 15 s · gröbere Spur',minDt:15000,minD:20,maxAcc:80,hiAcc:false}};
-const TRK_TYPES=[['skitour','Skitour'],['freeride','Freeride'],['splitboard','Splitboard'],['hike','Wandern']];
+const TRK_TYPES=[['skitour','Skitour'],['splitboard','Splitboard'],['freeski','Freeride Ski'],['freesnowboard','Freeride Snowboard'],['skimo','Skimo']];
 const TRK_SNOW=['Pulver','Windgepresst','Bruchharsch','Sulz','Nass','Hart'];
 function trkCol(){try{return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#1868C4';}catch(e){return '#1868C4';}}
-let trkLinkAct=null;
+let trkLinkAct=null,trkGuide=null,trkGuideLine=null,_trkOff=false;
+// Start recording on a tour from the finder or the tour sheet: the route is
+// drawn as a dashed guide, and the recorder says how far off it you are and
+// how much of it is done.
+async function trkFromTour(){const t=tourIso;if(!t||!t.coords)return;
+  const g=tourGeo(t);
+  trkGuide={id:String(t.id),name:t.name||'Skitour',pts:g.segs.map(s=>[s.lat,s.lon,s.dist]),len:g.len||1};
+  try{tourClose();}catch(e){}try{tsCloseQuiet();}catch(e){}
+  trkView='setup';trkOpen();}
+function trkGuideDraw(){trkLayerEnsure();if(trkGuideLine){map.removeLayer(trkGuideLine);trkGuideLine=null;}
+  if(!trkGuide)return;const ll=trkGuide.pts.map(p=>[p[0],p[1]]);
+  trkGuideLine=L.layerGroup([L.polyline(ll,{pane:'trkPane',color:'#fff',weight:8,opacity:.85,interactive:false}),
+    L.polyline(ll,{pane:'trkPane',color:trkCol(),weight:4,opacity:.9,dashArray:'2 9',lineCap:'round',interactive:false})]).addTo(map);}
+function trkGuideState(){if(!trkGuide||!trkFix)return null;
+  const la=trkFix[1],lo=trkFix[2],k=Math.cos(la*Math.PI/180);let bi=0,bd=1e18;
+  trkGuide.pts.forEach((p,i)=>{const d=((p[0]-la)*111320)**2+((p[1]-lo)*111320*k)**2;if(d<bd){bd=d;bi=i;}});
+  return {off:Math.round(Math.sqrt(bd)),pct:Math.round(trkGuide.pts[bi][2]/trkGuide.len*100)};}
+function trkGuideClear(){trkGuide=null;if(trkGuideLine){map.removeLayer(trkGuideLine);trkGuideLine=null;}trkRender();}
 let trkRec=null,trkWatch=null,trkNative=null,trkLock=null,trkTick=0,trkView='setup',trkFix=null,trkLine=null,trkMe=null,trkDraft=null,trkCur=null;
 const trkPrefs={acc:'std',type:'skitour'};
 try{Object.assign(trkPrefs,JSON.parse(localStorage.getItem('ssm_trk_prefs')||'{}'));}catch(e){}
+if(!TRK_TYPES.some(x=>x[0]===trkPrefs.type))trkPrefs.type='skitour';
 
 // -- storage ------------------------------------------------------------------
 let _trkDb=null;
@@ -8024,8 +8230,12 @@ function trkGpsStart(hi){
       (loc,err)=>{if(loc)trkOnPos({timestamp:loc.time||Date.now(),coords:{latitude:loc.latitude,longitude:loc.longitude,altitude:loc.altitude,accuracy:loc.accuracy}});})
       .then(id=>{trkNative=id;});return;}catch(e){}}
   if(!navigator.geolocation){toast('GPS nicht verfügbar','err');return;}
-  trkWatch=navigator.geolocation.watchPosition(trkOnPos,e=>{if(e.code===1)toast('Standortzugriff verweigert','err');},
-    {enableHighAccuracy:hi!==false,maximumAge:0,timeout:30000});
+  let fails=0;
+  trkWatch=navigator.geolocation.watchPosition(trkOnPos,e=>{
+    if(e.code===1){toast('Standortzugriff verweigert','err');return;}
+    // desktop Safari: no GPS fix -> keep going with normal accuracy
+    if(++fails===2&&hi!==false){trkGpsStart(false);}},
+    {enableHighAccuracy:hi!==false,maximumAge:hi!==false?0:30000,timeout:30000});
 }
 function trkGpsStop(){
   if(trkWatch!=null){try{navigator.geolocation.clearWatch(trkWatch);}catch(e){}trkWatch=null;}
@@ -8050,7 +8260,8 @@ function trkLineFromRec(){trkLayerEnsure();trkLine.setLatLngs(trkRec?trkRec.segs
 function trkStart(){
   trkRec={id:'a'+Date.now().toString(36),type:trkPrefs.type,acc:trkPrefs.acc,start:Date.now(),segs:[[]],paused:false,movingMs:0,resumedAt:Date.now(),follow:true};
   if(trkFix&&trkFix[4]<=TRK_ACC[trkRec.acc].maxAcc&&Date.now()-trkFix[0]<15000)trkRec.segs[0].push(trkFix);
-  trkSaveRec();trkLineFromRec();
+  if(trkGuide)trkRec.guide={id:trkGuide.id,name:trkGuide.name};
+  trkSaveRec();trkLineFromRec();trkGuideDraw();
   trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);
   try{haptic(20);}catch(e){}
   trkView='rec';trkRender();
@@ -8068,7 +8279,7 @@ function trkFinish(){if(!trkRec)return;
   clearInterval(trkTick);trkTick=0;
   const st=trkStats(segs,trkRec.movingMs);
   trkDraft={id:trkRec.id,type:trkRec.type,acc:trkRec.acc,start:trkRec.start,end:Date.now(),segs,stats:st,
-    name:trkDefaultName(trkRec.type,trkRec.start),desc:'',snow:null,depth:0,stars:0,photos:[],postedId:null};
+    name:trkRec.guide?trkRec.guide.name:trkDefaultName(trkRec.type,trkRec.start),guide:trkRec.guide||null,desc:'',snow:null,depth:0,stars:0,photos:[],postedId:null};
   trkView='save';trkRender();
 }
 async function trkKeep(post){
@@ -8080,6 +8291,7 @@ async function trkKeep(post){
   try{trkActsRefresh();}catch(e){}
   trkRec=null;trkSaveRec();trkGpsStop();trkWake(false);
   if(trkLine){trkLine.setLatLngs([]);}
+  if(trkGuideLine){map.removeLayer(trkGuideLine);trkGuideLine=null;}trkGuide=null;
   if(post&&d.vis!=='private'){const ok=await trkPost(d);if(!ok){trkView='list';trkRender();return;}}
   else toast('Aktivität gespeichert','ok');
   trkDraft=null;trkCur=d.id;trkView='detail';trkRender();
@@ -8088,6 +8300,7 @@ function trkDiscard(){
   if(!confirm('Aktivität verwerfen? Die Aufzeichnung geht verloren.'))return;
   trkRec=null;trkDraft=null;trkSaveRec();trkGpsStop();trkWake(false);clearInterval(trkTick);trkTick=0;
   if(trkLine)trkLine.setLatLngs([]);
+  if(trkGuideLine){map.removeLayer(trkGuideLine);trkGuideLine=null;}trkGuide=null;
   trkClose(true);toast('Aktivität verworfen','info');
 }
 
@@ -8123,7 +8336,8 @@ async function trkPost(a){
     const row={user_id:sbUser.id,location:'POINT('+top[2]+' '+top[1]+')',primary_categories:['tour'],subtype:trkTypeLbl(a.type),
       condition_data:cd,image_url:urls[0]||null,caption:a.desc?(a.name+'\n'+a.desc):a.name,completion_score:a.snow?85:70,
       captured_at:new Date(a.start).toISOString()};
-    const{data,error}=await sb.from('reports').insert(row).select('id').single();
+    let{data,error}=await sb.from('reports').insert(Object.assign({visibility:'followers'},row)).select('id').single();
+    if(error&&/visibility/i.test(error.message||'')){({data,error}=await sb.from('reports').insert(row).select('id').single());}
     if(error)throw error;
     a.postedId=data&&data.id;await trkPut(a);
     toast('Aktivität gepostet','ok');try{haptic(14);}catch(e){}
@@ -8252,7 +8466,8 @@ function trkOpen(){
 function trkClose(force){
   if(trkRec&&!force){trkMin();return;}
   document.body.classList.remove('trk-open','trk-min');document.getElementById('trk').hidden=true;
-  if(!trkRec){trkGpsStop();if(trkMe){map.removeLayer(trkMe);trkMe=null;}}
+  if(!trkRec){trkGpsStop();if(trkMe){map.removeLayer(trkMe);trkMe=null;}
+    if(trkGuideLine){map.removeLayer(trkGuideLine);trkGuideLine=null;}if(!trkDraft)trkGuide=null;}
   if(trkShown&&!force){map.removeLayer(trkShown);trkShown=null;}
   trkPill();
 }
@@ -8274,6 +8489,11 @@ function trkPaint(){
   const seg=trkRec.segs[trkRec.segs.length-1],n=seg.length;
   let v=0;if(n>1&&!trkRec.paused&&Date.now()-seg[n-1][0]<20000){let k=n-1;while(k>0&&seg[n-1][0]-seg[k-1][0]<=30000)k--;const a=seg[k],b=seg[n-1];const dt=(b[0]-a[0])/1000;if(dt>0)v=trkHav(a,b)/dt*3.6;}
   set('trkV',v.toFixed(1));
+  const gs=trkGuideState();
+  if(gs){set('trkGuideTxt',(gs.off<=40?'auf der Spur':gs.off+' m daneben')+' · '+gs.pct+' % geschafft');
+    const row=document.getElementById('trkGuideRow');if(row)row.classList.toggle('warn',gs.off>80);
+    if(gs.off>80&&!_trkOff&&trkFlat(trkRec.segs).length>=3){_trkOff=true;try{haptic(30);}catch(e){}toast('Du bist '+gs.off+' m neben der Spur','info');}
+    if(gs.off<50)_trkOff=false;}
   const g=document.getElementById('trkGps');if(g)g.innerHTML=trkGpsHTML();
 }
 function trkGpsHTML(){
@@ -8290,6 +8510,7 @@ async function trkRender(){
     el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkClose()" aria-label="Schliessen">'+TRK_X+'</button><b>Aufzeichnen</b>'
       +'<button class="trk-link" onclick="trkView=\'list\';trkRender()">Meine Aktivitäten</button></div>'
       +'<div id="trkGps" class="trk-gps-row">'+trkGpsHTML()+'</div>'
+      +(trkGuide?'<div class="trk-guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg><span>Spur folgen<b>'+escapeHtml(trkGuide.name)+' · '+(trkGuide.len/1000).toFixed(1)+' km</b></span><button onclick="trkGuideClear()" aria-label="Spur entfernen">×</button></div>':'')
       +'<div class="trk-lbl">Sportart</div><div class="trk-chips">'+TRK_TYPES.map(([k,l])=>'<button type="button" class="trk-chip'+(trkPrefs.type===k?' on':'')+'" onclick="trkPref(\'type\',\''+k+'\')">'+l+'</button>').join('')+'</div>'
       +'<div class="trk-lbl">GPS-Genauigkeit</div><div class="trk-acc">'+Object.keys(TRK_ACC).map(k=>{const A=TRK_ACC[k];
         return '<button type="button" class="'+(trkPrefs.acc===k?'on':'')+'" onclick="trkPref(\'acc\',\''+k+'\')"><b>'+A.label+'</b><span>'+A.sub+'</span></button>';}).join('')+'</div>'
@@ -8302,6 +8523,7 @@ async function trkRender(){
       +'<div class="trk-big"><span id="trkT">0:00</span><small>Zeit</small></div>'
       +'<div class="trk-grid"><div><b id="trkD">0.00</b><small>Distanz km</small></div><div><b id="trkUp">0</b><small>Aufstieg m</small></div>'
       +'<div><b id="trkAlt">–</b><small>Höhe m</small></div><div><b id="trkV">0.0</b><small>Tempo km/h</small></div></div>'
+      +(trkGuide?'<div class="trk-guide on" id="trkGuideRow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg><span>'+escapeHtml(trkGuide.name)+'<b id="trkGuideTxt">–</b></span></div>':'')
       +(p?'<div class="trk-ctl"><button class="trk-btn res" onclick="trkResume()"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg><span>Weiter</span></button>'
           +'<button class="trk-btn fin" onclick="trkFinish()"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg><span>Beenden</span></button></div>'
         :'<div class="trk-ctl"><button class="trk-btn pau" onclick="trkPause()" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></svg></button></div>');
@@ -8395,7 +8617,8 @@ function actFeedVisual(r){const cd=r.condition_data,A=cd.activity;
     +(cd.measurement?'<div class="act-rep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17"/></svg>'+escapeHtml(cd.measurement)+(cd.altitudeM?' · '+cd.altitudeM+' m':'')+(cd.stars?' · '+'★'.repeat(cd.stars):'')+'</div>':'')+'</div>';
 }
 // a posted activity is for the people who follow you (and yourself)
-function actVisible(r){const A=r&&r.condition_data&&r.condition_data.activity;if(!A)return true;
+function actVisible(r){if(r&&r.condition_data&&r.condition_data.snowp)return snpFriend(r.userId);
+  const A=r&&r.condition_data&&r.condition_data.activity;if(!A)return true;
   if(sbUser&&r.userId===sbUser.id)return true;return !!(r.userId&&myFollowing&&myFollowing.has(r.userId));}
 // «Meine Aufzeichnungen» on the map
 let trkActsGrp=null;
@@ -8410,6 +8633,74 @@ async function trkActsRefresh(){if(!trkActsGrp)return;let list=[];try{list=await
   try{map.getPane('trkPane').style.pointerEvents='auto';}catch(e){}
 }
 // the profile lists your activities too
+// ── Profile: Instagram-style header and grid, Strava-style activity stats ──
+// Shared by your own profile and other people's. Posts come from the
+// reports table; activities are your local recordings plus everything
+// posted as an activity (for other people: only the posted ones).
+let pvState={};
+async function pvLoad(uid,boxId,own){
+  const box=document.getElementById(boxId);if(!box)return;
+  box.innerHTML='<div class="prof-hint">Lade …</div>';
+  let posts=[],fol=0,ing=0,acts=[];
+  if(sb){
+    try{const{data}=await sb.from('reports').select('id,caption,subtype,image_url,condition_data,location,created_at,primary_categories')
+      .eq('user_id',uid).order('created_at',{ascending:false}).limit(90);posts=data||[];}catch(e){}
+    try{const{count}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',uid);fol=count||0;}catch(e){}
+    try{const{count}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',uid);ing=count||0;}catch(e){}}
+  posts.forEach(r=>{const A=r.condition_data&&r.condition_data.activity;
+    if(A)acts.push({id:'p'+r.id,post:r.id,name:A.name,start:A.start||Date.parse(r.created_at),dist:A.dist||0,up:A.up||0,moving:A.moving||0,track:A.track,map:A.map,type:A.type});});
+  if(own){try{(await trkAll()).forEach(a=>{if(a.postedId&&acts.some(x=>String(x.post)===String(a.postedId)))return;const st=a.stats||{};
+    acts.push({id:a.id,local:true,name:a.name,start:a.start,dist:st.dist||0,up:st.up||0,moving:st.moving||0,track:trkLL(a.segs),type:a.type,priv:a.vis==='private'});});}catch(e){}}
+  acts.sort((x,y)=>y.start-x.start);
+  pvState[boxId]={uid,own,posts,acts,fol,ing,tab:(pvState[boxId]&&pvState[boxId].tab)||'grid'};
+  pvRender(boxId);
+}
+function pvImg(r){const cd=r.condition_data||{};if(cd.activity&&cd.activity.map)return cd.activity.map;return r.image_url||cd.snapshot||null;}
+function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxId);if(!S||!box)return;
+  const n=v=>v>=10000?(v/1000).toFixed(0)+'k':v>=1000?(v/1000).toFixed(1)+'k':String(v);
+  const me=sbUser&&S.uid===sbUser.id,foll=!me&&myFollowing&&myFollowing.has(S.uid);
+  // this week + 12 weeks of distance, Strava style
+  const wk=d=>{const x=new Date(d);const day=(x.getDay()+6)%7;x.setHours(0,0,0,0);x.setDate(x.getDate()-day);return x.getTime();};
+  const now=wk(Date.now()),W=[];for(let i=11;i>=0;i--)W.push({t:now-i*7*864e5,d:0,up:0,mv:0,n:0});
+  S.acts.forEach(a=>{const w=W.find(x=>x.t===wk(a.start));if(w){w.d+=a.dist;w.up+=a.up;w.mv+=a.moving;w.n++;}});
+  const cw=W[W.length-1],mx=Math.max(1,...W.map(w=>w.d));
+  const chart='<div class="pv-chart">'+W.map((w,i)=>'<i class="'+(i===W.length-1?'cur':'')+'" style="height:'+Math.max(3,w.d/mx*100)+'%" title="'+(w.d/1000).toFixed(1)+' km"></i>').join('')+'</div>';
+  const hi=S.acts.slice(0,10).map((a,i)=>'<button class="pv-hl" onclick="pvOpenAct(\''+boxId+'\','+i+')">'+(a.map?'<img src="'+a.map+'" alt="">':trkThumb(a.track,80,80,''))+'<span>'+escapeHtml(a.name)+'</span></button>').join('');
+  const grid=S.posts.length?'<div class="pv-grid">'+S.posts.map((r,i)=>{const im=pvImg(r),cd=r.condition_data||{};
+      const ic=cd.activity?'<svg class="pv-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg>':(cd.snowp?'<svg class="pv-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/></svg>':'');
+      return '<button class="pv-cell" onclick="pvOpenPost(\''+boxId+'\','+i+')">'+(im?'<img src="'+im+'" loading="lazy" alt="">':'<span class="pv-txt">'+escapeHtml((r.caption||r.subtype||catLabel((r.primary_categories||[])[0]||'info')||'').slice(0,60))+'</span>')+ic+'</button>';}).join('')+'</div>'
+    :'<div class="prof-hint">Noch keine Beiträge.</div>';
+  const list=S.acts.length?S.acts.map((a,i)=>'<button class="pv-act" onclick="pvOpenAct(\''+boxId+'\','+i+')">'+trkThumb(a.track,84,64,'sm')
+      +'<span><b>'+escapeHtml(a.name)+'</b><small>'+new Date(a.start).toLocaleDateString(LOCALE(),{weekday:'short',day:'numeric',month:'short'})+' · '+trkTypeLbl(a.type)+(a.priv?' · 🔒':'')+'</small>'
+      +'<em>'+trkFmtD(a.dist)+' · ↑ '+a.up+' m · '+trkFmtT(a.moving)+'</em></span></button>').join('')
+    :'<div class="prof-hint">'+(me?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aktivitäten.')+'</div>';
+  box.innerHTML='<div class="pv-stats"><div><b>'+n(S.posts.length)+'</b><span>Beiträge</span></div><div><b>'+n(S.fol)+'</b><span>Follower</span></div><div><b>'+n(S.ing)+'</b><span>Folge ich</span></div><div><b>'+n(S.acts.length)+'</b><span>Aktivitäten</span></div></div>'
+    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button data-dm onclick="profClose();dmOpen()">Nachrichten</button><button onclick="pvShare(\''+S.uid+'\')">Teilen</button>'
+      :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
+        +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
+        +'<button class="pv-more" onclick="uvReportUser()" aria-label="Nutzer melden">⋯</button>')+'</div>'
+    +(hi?'<div class="pv-hls">'+hi+'</div>':'')
+    +'<div class="pv-week"><div class="pv-wk-h"><b>Diese Woche</b><span>12 Wochen</span></div>'
+    +'<div class="pv-wk"><div><small>Distanz</small><b>'+(cw.d/1000).toFixed(1)+' km</b></div><div><small>Zeit</small><b>'+trkFmtT(cw.mv)+'</b></div><div><small>Höhenmeter</small><b>'+cw.up+' m</b></div></div>'+chart+'</div>'
+    +'<div class="pv-tabs"><button class="'+(S.tab==='grid'?'on':'')+'" onclick="pvTab(\''+boxId+'\',\'grid\')" aria-label="Beiträge"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="9.5" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16" y="9.5" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><rect x="9.5" y="16" width="5" height="5" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/></svg></button>'
+    +'<button class="'+(S.tab==='acts'?'on':'')+'" onclick="pvTab(\''+boxId+'\',\'acts\')" aria-label="Aktivitäten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg></button></div>'
+    +(S.tab==='grid'?grid:'<div class="pv-acts">'+list+'</div>');
+  box.querySelectorAll('[data-dm]').forEach(el=>{el.hidden=dmReady!==true;});
+  if(dmReady===null)dmAvailable();
+}
+function pvTab(boxId,t){if(pvState[boxId]){pvState[boxId].tab=t;pvRender(boxId);}}
+async function pvFollow(boxId){const S=pvState[boxId];if(!S)return;if(!sb||!sbUser){authShow();return;}
+  try{await toggleFollow(S.uid);}catch(e){}S.fol+=myFollowing.has(S.uid)?1:-1;pvRender(boxId);}
+function pvShare(uid){const u=location.origin+location.pathname+'?u='+encodeURIComponent(uid);
+  if(navigator.share)navigator.share({title:'Snowmapper',url:u}).catch(()=>{});else{try{navigator.clipboard.writeText(u);toast('Link kopiert!','ok');}catch(e){}}}
+function pvClose(){try{profClose();}catch(e){}try{userViewClose();}catch(e){}}
+function pvOpenPost(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;const cd=r.condition_data||{};pvClose();
+  if(cd.snowp&&cd.snowp.back)return snpFeedVisual(r);
+  if(cd.activity&&cd.activity.track){setTimeout(()=>trkShowOnMap(cd.activity.track),250);return;}
+  const ll=parseGeo(r.location);if(ll)feedFlyTo(ll[0],ll[1]);}
+function pvOpenAct(boxId,i){const S=pvState[boxId],a=S&&S.acts[i];if(!a)return;pvClose();
+  if(a.local){trkCur=a.id;trkView='detail';trkOpen();return;}
+  setTimeout(()=>trkShowOnMap(a.track),250);}
 async function trkProfRender(){const el=document.getElementById('profActs');if(!el)return;let list=[];try{list=await trkAll();}catch(e){}
   el.innerHTML=list.length?list.slice(0,30).map(a=>{const s=a.stats||{};
     return '<button class="pa-card" onclick="profClose();trkCur=\''+a.id+'\';trkView=\'detail\';trkOpen()">'+trkThumb(trkLL(a.segs),160,100,'',a.rep)
@@ -8421,6 +8712,118 @@ async function trkProfRender(){const el=document.getElementById('profActs');if(!
   setTimeout(()=>{try{trkLineFromRec();if(!trkRec.paused){trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);}
     clearInterval(trkTick);trkTick=setInterval(trkPaint,1000);trkPill();toast('Aufzeichnung läuft weiter','info');}catch(e){}},1500);}catch(e){}})();
 
+// ── Snowp ─────────────────────────────────────────────────────────────────
+// Two pictures at once, the way you see the moment: the back camera (the
+// slope) and the front camera (you), posted straight away, for friends only
+// (mutual follows), with the place. Friends' latest Snowps appear on the map,
+// so you see where your people are today.
+//
+// Privacy is enforced by the database (reports.visibility = 'friends', see
+// supabase/migrations/20261006000000_post_visibility.sql). Without that
+// column the app does NOT post -- a Snowp must never become public.
+let snp={stream:null,facing:'environment',back:null,front:null,fix:null,busy:false};
+function snpOpen(){try{fabMenu(false);}catch(e){}
+  if(!sb||!sbUser){authShow();return;}
+  snp.back=null;snp.front=null;snp.fix=null;snp.facing='environment';
+  const el=document.getElementById('snp');el.hidden=false;document.body.classList.add('snp-open');
+  snpRender();snpCam('environment');
+  geoLocate(p=>{snp.fix=[p.coords.latitude,p.coords.longitude];snpRender();},()=>{});
+}
+function snpClose(){snpStop();document.getElementById('snp').hidden=true;document.body.classList.remove('snp-open');}
+function snpStop(){if(snp.stream){snp.stream.getTracks().forEach(t=>{try{t.stop();}catch(e){}});snp.stream=null;}}
+async function snpCam(facing){snpStop();snp.facing=facing;
+  const v=document.getElementById('snpVideo');if(!v)return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){snpRender('nocam');return;}
+  try{snp.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1440},height:{ideal:1920}},audio:false});
+    v.srcObject=snp.stream;v.classList.toggle('mirror',facing==='user');await v.play().catch(()=>{});}
+  catch(e){snpRender('nocam');}
+}
+function _snpGrab(){const v=document.getElementById('snpVideo');if(!v||!v.videoWidth)return null;
+  const W=1080,H=1440,cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
+  const r=Math.max(W/v.videoWidth,H/v.videoHeight),w=v.videoWidth*r,h=v.videoHeight*r;
+  if(snp.facing==='user'){c.translate(W,0);c.scale(-1,1);}
+  c.drawImage(v,(W-w)/2,(H-h)/2,w,h);
+  return new Promise(res=>cv.toBlob(res,'image/jpeg',.86));}
+async function snpShoot(){
+  const b=await _snpGrab();if(!b){toast('Kamera nicht bereit','err');return;}
+  try{haptic(14);}catch(e){}
+  if(!snp.back){snp.back=b;snpRender();
+    // second picture: you, right after the slope
+    await snpCam('user');setTimeout(()=>{const t=document.getElementById('snpHint');if(t)t.textContent='Und jetzt du – Frontkamera';},50);
+    return;}
+  snp.front=b;snpStop();snpRender();
+}
+async function snpFile(inp,which){const f=inp.files&&inp.files[0];if(!f)return;
+  const b=await downscaleImage(f,1440,.86);if(which==='back')snp.back=b;else snp.front=b;
+  if(snp.back&&!snp.front){snpRender('nocam');return;}snpRender();}
+function snpRetake(){snp.back=null;snp.front=null;snpRender();snpCam('environment');}
+function snpRender(mode){const el=document.getElementById('snpBox');if(!el)return;
+  const done=snp.back&&snp.front,loc=snp.fix?'📍 Standort wird mitgeschickt':'📍 Standort wird gesucht …';
+  if(done){const bu=URL.createObjectURL(snp.back),fu=URL.createObjectURL(snp.front);
+    el.innerHTML='<div class="snp-prev"><img class="snp-main" src="'+bu+'" alt=""><img class="snp-inset" src="'+fu+'" alt="" onclick="snpSwap()"></div>'
+      +'<input id="snpCap" class="snp-cap" maxlength="140" placeholder="Was geht ab? (optional)">'
+      +'<div class="snp-meta"><span>'+loc+'</span><span>🔒 nur Freunde</span></div>'
+      +'<div class="snp-acts"><button class="snp-ghost" onclick="snpRetake()">Neu</button><button class="snp-post" onclick="snpPost()">Snowp senden</button></div>';
+    return;}
+  const nocam=mode==='nocam';
+  el.innerHTML='<div class="snp-cam">'+(nocam?'<div class="snp-nocam">Keine Kamera im Browser – Bilder auswählen</div>':'<video id="snpVideo" playsinline muted autoplay></video>')
+    +(snp.back?'<img class="snp-inset" src="'+URL.createObjectURL(snp.back)+'" alt="">':'')
+    +'<div class="snp-hint" id="snpHint">'+(snp.back?'Und jetzt du – Frontkamera':'Zuerst der Hang – Rückkamera')+'</div></div>'
+    +(nocam?'<div class="snp-acts"><label class="snp-ghost">'+(snp.back?'Selfie wählen':'Hang-Foto wählen')+'<input type="file" accept="image/*" capture="'+(snp.back?'user':'environment')+'" hidden onchange="snpFile(this,\''+(snp.back?'front':'back')+'\')"></label></div>'
+      :'<div class="snp-shoot"><button onclick="snpCam(snp.facing===\'user\'?\'environment\':\'user\')" aria-label="Kamera wechseln" class="snp-flip">⟲</button><button class="snp-btn" onclick="snpShoot()" aria-label="Auslösen"></button><span></span></div>')
+    +'<div class="snp-meta"><span>'+loc+'</span><span>🔒 nur Freunde</span></div>';
+  if(!nocam&&snp.stream){const v=document.getElementById('snpVideo');if(v){v.srcObject=snp.stream;v.classList.toggle('mirror',snp.facing==='user');v.play().catch(()=>{});}}
+}
+function snpSwap(){const t=snp.back;snp.back=snp.front;snp.front=t;snpRender();}
+async function snpPost(){if(snp.busy)return;if(!sb||!sbUser){authShow();return;}
+  if(!snp.back||!snp.front)return;
+  snp.busy=true;const btn=document.querySelector('.snp-post');if(btn){btn.disabled=true;btn.textContent='Sendet …';}
+  try{
+    const up=async(b,tag)=>{const p=sbUser.id+'/snowp'+Date.now()+'_'+tag+'.jpg';
+      const{error}=await sb.storage.from('report-images').upload(p,b,{contentType:'image/jpeg'});if(error)throw error;
+      const{data}=sb.storage.from('report-images').getPublicUrl(p);return data.publicUrl;};
+    const ll=snp.fix||(myLoc?myLoc:null);
+    if(!ll){toast('Ohne Standort kein Snowp – bitte Standort erlauben','err');throw new Error('no location');}
+    const [bu,fu]=await Promise.all([up(snp.back,'b'),up(snp.front,'f')]);
+    const cap=((document.getElementById('snpCap')||{}).value||'').trim();
+    const row={user_id:sbUser.id,location:'POINT('+ll[1]+' '+ll[0]+')',primary_categories:['other'],subtype:'Snowp',
+      image_url:bu,caption:cap||null,condition_data:{snowp:{back:bu,front:fu},images:[bu,fu]},
+      completion_score:30,captured_at:new Date().toISOString(),visibility:'friends'};
+    const{error}=await sb.from('reports').insert(row);
+    if(error){
+      // the visibility column is missing: the post would be public -- refuse
+      if(/visibility/i.test(error.message||'')){
+        try{await sb.storage.from('report-images').remove([storagePathFromUrl(bu),storagePathFromUrl(fu)].filter(Boolean));}catch(e){}
+        toast('Snowps sind noch nicht freigeschaltet (Datenbank-Update nötig) – nichts wurde gepostet','err');snp.busy=false;if(btn){btn.disabled=false;btn.textContent='Snowp senden';}return;}
+      throw error;}
+    toast('Snowp gesendet – nur deine Freunde sehen ihn','ok');try{haptic(16);}catch(e){}
+    snpClose();try{loadDbReports();}catch(e){}
+  }catch(e){if(e&&e.message!=='no location')toast('Snowp fehlgeschlagen: '+(e.message||e),'err');if(btn){btn.disabled=false;btn.textContent='Snowp senden';}}
+  snp.busy=false;
+}
+// who may see it in the app (the database decides for real)
+function snpFriend(uid){return !!(sbUser&&(uid===sbUser.id||(myFollowing.has(uid)&&myFollowers.has(uid))));}
+function snpFeedVisual(r){const S=r.condition_data.snowp,id=String(r.id).replace(/[^\w-]/g,'');
+  return '<div class="snp-card" id="snpc-'+id+'"><img class="snp-main" src="'+S.back+'" alt="" loading="lazy">'
+    +'<img class="snp-inset" src="'+S.front+'" alt="" loading="lazy" onclick="event.stopPropagation();snpCardSwap(\''+id+'\')">'
+    +'<span class="snp-tag">Snowp · 🔒 Freunde</span></div>';}
+function snpCardSwap(id){const c=document.getElementById('snpc-'+id);if(!c)return;const a=c.querySelector('.snp-main'),b=c.querySelector('.snp-inset');const t=a.src;a.src=b.src;b.src=t;}
+// friends on the map: their latest Snowp of the last 24 h
+let snpLayer=null;
+function snpMapRender(){
+  if(!snpLayer){snpLayer=L.layerGroup().addTo(map);}
+  snpLayer.clearLayers();if(ovOn.reports===false)return;
+  const now=Date.now(),latest={};
+  (allReports||[]).forEach(r=>{const S=r.condition_data&&r.condition_data.snowp;if(!S||!r.userId)return;
+    const t=Date.parse(r.createdAt||'')||0;if(t&&now-t>24*3600e3)return;
+    if(!latest[r.userId]||t>latest[r.userId].t)latest[r.userId]={r,t};});
+  Object.values(latest).forEach(({r,t})=>{const S=r.condition_data.snowp,av=r.avatar||avatarOf(r.userId);
+    const ago=t?Math.max(1,Math.round((now-t)/36e5)):null;
+    const html='<div class="snp-pin"><img src="'+S.front+'" alt=""><i style="'+(av?'background-image:url('+encodeURI(av)+')':'')+'">'+(av?'':escapeHtml((r.user||'?')[0].toUpperCase()))+'</i><b>'+escapeHtml(r.user||'')+(ago?' · '+ago+' h':'')+'</b></div>';
+    L.marker([r.lat,r.lng],{icon:L.divIcon({className:'',html,iconSize:[0,0],iconAnchor:[0,0]}),zIndexOffset:1800})
+      .on('click',()=>{try{feedOpen();setTimeout(()=>{const c=document.getElementById('feedcard-'+r.id);if(c)c.scrollIntoView({behavior:'smooth',block:'center'});},400);}catch(e){}})
+      .addTo(snpLayer);});
+}
 // ── «Touren finden» ────────────────────────────────────────────────────────
 // A sheet over the lower part of the screen, the map above it showing only
 // the routes that pass the filters. Distance is measured to the route's
@@ -8470,11 +8873,10 @@ function tsSliderSync(){
   const sr=document.getElementById('tsSR');if(sr)sr.style.setProperty('--p',((tsF.radius-5)/95*100)+'%');
 }
 function tsLocate(){
-  if(!navigator.geolocation){toast('Standort nicht verfügbar','err');return;}
-  navigator.geolocation.getCurrentPosition(p=>{myLoc=[p.coords.latitude,p.coords.longitude];
+  geoLocate(p=>{myLoc=[p.coords.latitude,p.coords.longitude];
     try{if(meMarker)map.removeLayer(meMarker);
       meMarker=L.marker(myLoc,{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1900}).addTo(map);}catch(e){}
-    tsRender();},()=>toast('Standort konnte nicht ermittelt werden','err'),{enableHighAccuracy:true,timeout:9000});}
+    tsRender();});}
 function tsFilter(){
   const c=tsCenter(),R=tsF.radius*1000,out=[];
   tourList().forEach(t=>{if(!t.coords||t.coords.length<2){t._ts=null;return;}
@@ -8523,7 +8925,8 @@ function tsRender(onlyMap){
   if(onlyMap&&el.querySelector('.ts-list')){el.querySelector('.ts-count').textContent=list.length+' Touren';
     el.querySelector('.ts-list').innerHTML=rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>';tsSliderSync();return;}
   const keepS=el.scrollTop;
-  el.innerHTML='<div class="ts-grab"></div><div class="tn-hd"><div><b>Touren finden</b><span>'
+  tsDragWire(el);
+  el.innerHTML='<div class="ts-grab" data-drag></div><div class="tn-hd" data-drag><div><b>Touren finden</b><span>'
     +(va?'SNOWPACK · '+escapeHtml(tourVa.when):'Powder-Modell im Zeitfenster')+'</span></div>'
     +'<button type="button" class="tour-x" onclick="tsClose()" aria-label="Schliessen">×</button></div>'
     +ctrls+'<div class="ts-res"><span class="ts-count">'+list.length+' Touren</span><span>nach '+(tsF.focus==='sulz'?'Sulz':'Pulver')+'-Anteil'
@@ -8531,6 +8934,24 @@ function tsRender(onlyMap){
     +'<div class="ts-list tn-list">'+(rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>')+'</div>'
     +'<div class="tn-foot">Anteil der Abfahrt (22–50°) mit Pulver bzw. Sulz im SNOWPACK-Modell – keine Lawinenbeurteilung, Bulletin des SLF beachten.</div>';
   el.scrollTop=keepS;tsSliderSync();
+}
+// The finder moves like the tour sheet: pull down to fold it to its title
+// (the map and the filtered routes stay visible), further to close, up to open.
+function tsDragWire(el){
+  if(el._dw)return;el._dw=true;
+  let y0=null,dy=0,id=null;
+  el.addEventListener('pointerdown',e=>{if(!e.target.closest('[data-drag]')||e.target.closest('button'))return;
+    y0=e.clientY;dy=0;id=e.pointerId;try{el.setPointerCapture(id);}catch(_){}el.style.transition='none';});
+  el.addEventListener('pointermove',e=>{if(y0==null||e.pointerId!==id)return;dy=e.clientY-y0;
+    const min=el.classList.contains('min');
+    el.style.transform=min?'translateY(calc(100% - 86px + '+Math.max(-200,dy)+'px))':'translateY('+Math.max(-30,dy)+'px)';});
+  const end=()=>{if(y0==null)return;y0=null;el.style.transition='';el.style.transform='';
+    const min=el.classList.contains('min');
+    if(!min&&dy>200&&dy>el.offsetHeight*.6)tsClose();
+    else if(!min&&dy>40)el.classList.add('min');
+    else if(min&&dy>60)tsClose();
+    else if(min&&(dy<-25||Math.abs(dy)<4))el.classList.remove('min');};
+  el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
 }
 function tsPick(i){const o=(window._tsList||[])[i];if(!o)return;tourOpen(o.t,true);}
 addEventListener('keydown',e=>{if(e.key!=='Escape')return;
@@ -9686,9 +10107,9 @@ function legSpec(l){
     const leg=L.legend||{};
     const realPow=vaKey==='powder'&&!L._virt;
     const ORD=realPow?Object.keys(leg).map(Number).filter(k=>k>0).sort((a,b)=>b-a)
-      :({ski6:[5,4,3,1,2,6],powder:[5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0));
+      :({ski6:[5,4,3,6,7,2,1],powder:[5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0));
     const SH=realPow?Object.fromEntries(ORD.map(k=>[k,String((leg[k]&&leg[k][2])||'').replace(/^Pulver\s*/,'').replace(/\s*cm$/,'').replace(/^>\s*/,'>')]))
-      :({ski6:{5:'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz'},powder:{5:'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
+      :({ski6:{5:'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz',7:'faul'},powder:{5:'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
     const rows=ORD.filter(k=>leg[k]&&leg[k][1]).map(k=>{const e=leg[k],nm=e[2]||String(e[0]).replace(/_/g,' ');
       return {k,c:rgb(e[1]),s:SH[k]||nm.split(/[\s/(]/)[0].slice(0,7),n:nm};});
     return {t:name,u:(vaKey==='ski6'||vaKey==='powder')?'Pulver cm':vaKey==='wind'?'Wind':'Klasse',va:true,rows};
@@ -10042,7 +10463,7 @@ const LY_VAR_TEXT={
   'temp|Max':'Die wärmste Stunde — wo es angefeuchtet haben könnte.',
   'temp|Min':'Die kälteste Stunde.',
   'snowpack|Nur Pulver':'Nur Hänge mit lockerem Pulver, nach Tiefe – alles andere bleibt frei.',
-  'snowpack|Einfache Schneearten':'Sechs Klassen: Pulver nach Tiefe, hart, Kruste, nass / Sulz.',
+  'snowpack|Einfache Schneearten':'Pulver nach Tiefe, hart, Kruste, Sulz (aufgefirnt auf tragender Basis) und nass / faul.',
   'snowpack|Alle Schneearten':'Alle Oberflächentypen aus dem Modell im Detail.',
   'snowpack|Triebschnee':'Wo der Wind Schnee abgelagert (violett) oder weggeblasen hat (grau).',
   'temp|0–5 °C':'Nur Flächen mit einem Maximum zwischen 0 und 5 °C — Firn-Bedingungen.'
@@ -10508,16 +10929,29 @@ function updateAccountBtn(avatarUrl){
   if(avatarUrl){btn.innerHTML='<span class="acct-img" style="background-image:url('+avatarUrl+')"></span>';}
   else{btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';}}
 let meMarker=null,myLoc=null;
+// Desktop Safari often answers a high-accuracy request with "position
+// unavailable" (no GPS, Wi-Fi location takes longer): ask again with normal
+// accuracy and a longer timeout before giving up, and say how to fix a denial.
+function geoLocate(ok,fail){
+  if(!navigator.geolocation){toast('Standort nicht verfügbar','err');if(fail)fail();return;}
+  const bad=e=>{
+    const mac=/Mac/.test(navigator.platform||'')&&!('ontouchstart'in window),saf=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if(e&&e.code===1)toast(mac&&saf?'Standort blockiert – Safari › Einstellungen › Websites › Standort erlauben und in macOS › Ortungsdienste Safari aktivieren':'Standortzugriff verweigert – bitte im Browser erlauben','err');
+    else toast(mac?'Standort nicht gefunden – in macOS › Datenschutz › Ortungsdienste den Browser aktivieren und WLAN einschalten':'Standort konnte nicht ermittelt werden','err');
+    if(fail)fail(e);};
+  navigator.geolocation.getCurrentPosition(ok,e=>{
+    if(e&&e.code===1){bad(e);return;}
+    navigator.geolocation.getCurrentPosition(ok,bad,{enableHighAccuracy:false,timeout:25000,maximumAge:600000});
+  },{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+}
 function flyToMe(){haptic(8);
-  if(!navigator.geolocation){toast('Standort nicht verfügbar','err');return;}
-  navigator.geolocation.getCurrentPosition(p=>{const ll=[p.coords.latitude,p.coords.longitude];
+  geoLocate(p=>{const ll=[p.coords.latitude,p.coords.longitude];
     try{
       if(meMarker)map.removeLayer(meMarker);
       meMarker=L.marker(ll,{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1900}).addTo(map);
       map.flyTo(ll,14,{duration:1.2});
     }catch(e){}
-    myLoc=ll;},
-    ()=>{toast('Standort konnte nicht ermittelt werden','err');},{enableHighAccuracy:true,timeout:9000});}
+    myLoc=ll;});}
 // ===================== Screen router =====================================
 // Three screens on a wrap-around carousel: Search -> Report -> Feed -> Search.
 // The app is one screen. scrGo survives as the name everything already calls:
@@ -11641,7 +12075,8 @@ function loadReportMarkers(){
   // Drawn snow-maps are model input for Reported Powder, not posts -- they
   // feed progZones() straight out of allReports but never get a marker, an
   // overlay snapshot, or a feed/profile entry of their own.
-  const rest=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r));
+  try{snpMapRender();}catch(e){}
+  const rest=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r)&&!(r.condition_data&&r.condition_data.snowp));
   if(tiny){rest.forEach(r=>_rptMarker(r,'dot'));return;}
   const cells={};
   rest.forEach(r=>{let key;
@@ -11685,14 +12120,17 @@ function authUpdateUI(user){
   loadSocial().then(()=>{loadReportMarkers();loadDbReports();});
 }
 // --- Social state ---
-let myFollowing=new Set();
+let myFollowing=new Set(),myFollowers=new Set();
 async function loadSocial(){
   if(!sb)return;
   try{
     if(sbUser){
       const{data:f}=await sb.from('follows').select('following_id').eq('follower_id',sbUser.id);
       myFollowing=new Set((f||[]).map(x=>x.following_id));
-    }else{myFollowing=new Set();}
+      // people who follow you back make "friends" (Snowps)
+      try{const{data:g}=await sb.from('follows').select('follower_id').eq('following_id',sbUser.id);
+        myFollowers=new Set((g||[]).map(x=>x.follower_id));}catch(e){}
+    }else{myFollowing=new Set();myFollowers=new Set();}
   }catch(e){console.warn('loadSocial',e);}
 }
 // The feed icon's badge: a count, not just a dot -- comments on your own
@@ -11984,6 +12422,7 @@ function profSetVis(v){try{localStorage.setItem('ssm_visibility',v);}catch(e){}
 // "Meine Beiträge" in the profile: every post with its own delete button, so a
 // user can remove a single report instead of only the all-or-nothing wipe.
 async function profLoadPosts(){
+  if(sbUser)pvLoad(sbUser.id,'profPV',true);
   const box=document.getElementById('profPosts');if(!box)return;
   if(!sb||!sbUser){box.innerHTML='';return;}
   const del=id=>'<button class="uv-del" title="Löschen" aria-label="Beitrag löschen" onclick="uvDeletePost(\''+id+'\',event)">'+
@@ -12210,6 +12649,7 @@ function sendFeedback(){try{haptic(8);}catch(e){}
 let uvUid=null;
 async function viewUser(uid,username){
   if(!uid){return;} uvUid=uid;
+  setTimeout(()=>{if(!(sbUser&&uid===sbUser.id))pvLoad(uid,'uvPV',false);},0);
   try{dmAvailable().then(ok=>{const m=document.getElementById('uvMsg');
     if(m)m.hidden=!(ok&&sbUser&&uid!==sbUser.id);});}catch(e){}
   if(sbUser&&uid===sbUser.id){openProfile();return;}

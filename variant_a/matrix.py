@@ -250,6 +250,10 @@ def _digest(pro_path, layer_ts, prof_ts):
     for i, dt in enumerate(layer_ts):
         q = classify.assess_ski_quality(near(dt))
         met[i] = [q.get(k, 0.0) for k in METS]
+    # overnight refreeze, from the surface wetness of the frames before
+    if "refrozen" in METS and len(layer_ts):
+        met[:, METS.index("refrozen")] = classify.refrozen_series(
+            list(layer_ts), met[:, METS.index("surface_lw")])
     nb = profiles.NB
     hs = np.zeros(len(prof_ts), np.int16)
     db = np.zeros((len(prof_ts), nb), np.int16)
@@ -444,7 +448,8 @@ def grid_frames(grid: NationalGrid, runs, results, layer_ts, W, cell_index, prec
             m["surface_density"], m["surface_lw"], sh=m["sh_surface"],
             drift=m["drift_load"], scour=m["wind_scour"])
         ski6 = classify.classify_ski6(m["total_hs_cm"], m["powder_depth_cm"], m["crust_thick_cm"],
-                                      m["surface_density"], m["surface_lw"])
+                                      m["surface_density"], m["surface_lw"],
+                                      m.get("soft_top_cm"), m.get("mf_base_cm"), m.get("refrozen"))
         windc = classify.classify_wind(m["total_hs_cm"], m["drift_load"], m["wind_scour"])
         powderc = classify.classify_powder(m["total_hs_cm"], m["powder_depth_cm"], m["surface_lw"])
         powderc[~valid] = 0

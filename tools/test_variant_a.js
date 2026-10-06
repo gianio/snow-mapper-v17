@@ -77,6 +77,7 @@ const sandbox = {
   vaMan: {timestamps: ['2026-03-26T00:00', '2026-03-26T12:00'],
           tags: ['2026-03-26T0000', '2026-03-26T1200']},
   vaAvailable: () => true,
+  LOCALE: () => 'de-CH',   // the app's language setting (German by default)
   M: appState, b: 1,
   Date, JSON,
   escapeHtml: s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),
