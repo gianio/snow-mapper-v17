@@ -18,7 +18,9 @@ METS = ["powder_depth_cm", "crust_thick_cm", "powder_dd", "powder_lw",
         "surface_density", "surface_hardness", "surface_lw", "total_hs_cm", "weak_below_cm",
         # matrix mode additions: surface hoar at the surface, burial depth of the
         # top buried weak layer, and the wind drift/scour indices (wind.py).
-        "sh_surface", "weak_layer_depth_cm", "drift_load", "wind_scour"]
+        "sh_surface", "weak_layer_depth_cm", "drift_load", "wind_scour",
+        # corn snow: softened top, frozen melt-freeze base, refrozen last night
+        "soft_top_cm", "mf_base_cm", "refrozen"]
 
 
 def _point_en(grid: NationalGrid, p):

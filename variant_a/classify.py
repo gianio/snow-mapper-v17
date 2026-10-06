@@ -239,6 +239,45 @@ def _buried_weak_depth(heights, thicks, grain, total_hs, top_cm=60.0):
     return 0.0
 
 
+# ── Sulz / corn snow ─────────────────────────────────────────────────────────
+# Corn ("Sulz", firn snow for skiing) is a melt-freeze surface:
+#   * a supportive base of refrozen melt-freeze snow (ICSSG grain class MF /
+#     melt-freeze crust MFcr, Fierz et al. 2009) -- here at least
+#     SULZ_BASE_MIN cm of frozen (dry) MF or well-bonded snow, so you ride ON
+#     it and do not break through;
+#   * refrozen during the night (clear, cold night: radiative cooling below
+#     0 degC), so the whole surface was hard in the early morning;
+#   * during the day the top 1-2 cm (up to SULZ_SOFT_MAX) thaw: liquid water
+#     in the "moist" range of the ICSSG wetness index (0 < theta_w < 3 %).
+# More water (theta_w >= 3 %, "wet") or softening that has gone deeper than a
+# few cm means the base is losing strength: slush / rotten snow, and the
+# time when wet-snow avalanches become likely (Mitterer & Schweizer 2013;
+# Techel & Pielmeier 2011). Still frozen = too early (hard crust).
+SOFT_LWC = 0.3          # % -- a layer counts as softened above this
+SULZ_LWC_MAX = 3.0      # % -- ICSSG moist/wet boundary
+SULZ_SOFT_MIN = 0.5     # cm softened before it skis as corn
+SULZ_SOFT_MAX = 5.0     # cm -- deeper is past the corn window
+SULZ_BASE_MIN = 10.0    # cm of supportive frozen base
+
+
+def _corn_layers(thicks, lw, grain, density, hardness, look_cm=40.0):
+    """(softened top cm, frozen melt-freeze base cm right beneath it)."""
+    n = len(thicks)
+    i = n - 1
+    soft = 0.0
+    while i >= 0 and float(lw[i]) > SOFT_LWC and soft < look_cm:
+        soft += float(thicks[i]); i -= 1
+    base = 0.0
+    while i >= 0 and base < look_cm:
+        g = int(grain[i]) // 100
+        frozen = float(lw[i]) <= SOFT_LWC
+        supportive = g in (7, 8, 9) or float(density[i]) >= 300.0 or float(hardness[i]) >= 3.0
+        if not (frozen and supportive):
+            break
+        base += float(thicks[i]); i -= 1
+    return round(soft, 1), round(base, 1)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  Ski quality classifier (per point, per timestep)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -276,6 +315,8 @@ def assess_ski_quality(ts):
         "sh_surface":      0.0,   # 1 when surface hoar sits AT the surface
         "weak_layer_depth_cm": 0.0,  # burial depth of the top buried weak layer
                                      # (FC/DH/SH) within the profile's top; 0 = none
+        "soft_top_cm":     0.0,   # moist/wet layers from the surface down (corn: the softened top)
+        "mf_base_cm":      0.0,   # frozen, supportive melt-freeze base right under it
     }
 
     if n == 0:
@@ -318,6 +359,7 @@ def assess_ski_quality(ts):
     result["surface_grain"]    = surf_grain
     result["sh_surface"]       = 1.0 if surf_grain == 6 else 0.0
     result["weak_layer_depth_cm"] = _buried_weak_depth(heights, thicks, grain, total_hs)
+    result["soft_top_cm"], result["mf_base_cm"] = _corn_layers(thicks, lw, grain, density, hardness)
 
     thin = total_hs < THIN_COVER_HS
 
@@ -912,9 +954,9 @@ def classify_simple(hs, powder, crust, sdens, slw, sh=None, drift=None, scour=No
 #   Pulver dry powder on top, by depth: 2-10, 10-20, > 20 cm.
 #   Kruste any crust or ice on the surface (thin crust, Bruchharsch, tragend).
 #   hart   everything else: settled / wind-pressed / hard old snow.
-SKI6_LABELS = ["none", "hard", "crust", "powder_0_10", "powder_10_20", "powder_gt_20", "wet"]
+SKI6_LABELS = ["none", "hard", "crust", "powder_0_10", "powder_10_20", "powder_gt_20", "corn", "wet"]
 SKI6_DE = ["kein / wenig Schnee", "durchgehend hart", "Kruste", "Pulver 0–10 cm",
-           "Pulver 10–20 cm", "Pulver > 20 cm", "nass"]
+           "Pulver 10–20 cm", "Pulver > 20 cm", "Sulz (aufgefirnt)", "nass / faul"]
 # Powder in the app's blues, light -> accent -> navy (more is darker,
 # readable in grey too); the surfaces you would rather avoid are the
 # warm/neutral ones: cool grey for hard, muted coral for crust, honey for
@@ -922,14 +964,20 @@ SKI6_DE = ["kein / wenig Schnee", "durchgehend hart", "Kruste", "Pulver 0–10 c
 # are shown in it as well.
 SKI6_RGBA = {0: (0, 0, 0, 0), 1: (156, 168, 184, 185), 2: (214, 108, 98, 215),
              3: (147, 197, 240, 205), 4: (59, 125, 214, 225), 5: (24, 52, 128, 235),
-             6: (226, 170, 72, 220)}
+             6: (226, 170, 72, 220), 7: (150, 104, 74, 225)}
 SK_POWDER_MIN = 2.0      # cm -- less loose snow than this is not "powder" to ski
 SK_P1, SK_P2 = 10.0, 20.0
 SK_WET_LWC = WET_LWC_MIN
 
 
-def classify_ski6(hs, powder, crust, sdens, slw):
-    """Vectorised SKI6 class (uint8) from interpolated metric fields."""
+def classify_ski6(hs, powder, crust, sdens, slw, soft=None, base=None, refrozen=None):
+    """Vectorised SKI6 class (uint8) from interpolated metric fields.
+
+    With the corn metrics (soft top, frozen base, refrozen last night) a wet
+    surface is split into Sulz (6: thin softened top on a supportive base
+    that froze overnight) and nass / faul (7). Without them every wet surface
+    is 7, as before the split.
+    """
     hs = np.asarray(hs, float); pw = np.asarray(powder, float)
     cr = np.asarray(crust, float); sd = np.asarray(sdens, float); lw = np.asarray(slw, float)
     lab = np.ones(hs.shape, np.uint8)                       # hart
@@ -938,9 +986,30 @@ def classify_ski6(hs, powder, crust, sdens, slw):
     lab[p & (pw < SK_P1)] = 3
     lab[p & (pw >= SK_P1) & (pw < SK_P2)] = 4
     lab[p & (pw >= SK_P2)] = 5
-    lab[lw > SK_WET_LWC] = 6                                # nass wins
+    if soft is not None and base is not None and refrozen is not None:
+        so = np.asarray(soft, float); ba = np.asarray(base, float); rf = np.asarray(refrozen, float)
+        softened = (so >= SULZ_SOFT_MIN) | (lw > SOFT_LWC)
+        corn = softened & (so <= SULZ_SOFT_MAX) & (lw < SULZ_LWC_MAX) & (ba >= SULZ_BASE_MIN) & (rf >= 0.5)
+        wet = (lw > SK_WET_LWC) & ~corn
+        lab[wet] = 7
+        lab[corn] = 6
+    else:
+        lab[lw > SK_WET_LWC] = 7                            # nass wins
     lab[~(hs >= THIN_COVER_HS)] = 0
     return lab
+
+
+def refrozen_series(times, surface_lw, hours=15.0):
+    """1.0 where the surface was frozen (theta_w <= SOFT_LWC) at some point in
+    the `hours` before (and including) each time -- the overnight refreeze a
+    corn cycle needs. times: datetimes; surface_lw: (..., len(times))."""
+    lw = np.asarray(surface_lw, float)
+    out = np.zeros(lw.shape, np.float32)
+    secs = np.array([t.timestamp() for t in times])
+    for i in range(len(times)):
+        j = np.nonzero((secs <= secs[i]) & (secs >= secs[i] - hours * 3600.0))[0]
+        out[..., i] = (lw[..., j] <= SOFT_LWC).any(axis=-1)
+    return out
 
 
 # ── Nur Pulver: dry powder depth in the SLF snow-depth classes ─────────────

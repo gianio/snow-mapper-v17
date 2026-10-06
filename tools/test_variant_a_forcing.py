@@ -1020,7 +1020,7 @@ def test_ski6_and_wind_classes():
              ((100, 6, 1.0, 120, 0), 3, "6 cm on a crust -> Pulver 0-10"),
              ((100, 15, 0, 120, 0), 4, "15 cm -> Pulver 10-20"),
              ((100, 35, 0, 120, 0), 5, "35 cm -> Pulver > 20"),
-             ((100, 35, 0, 120, 2.0), 6, "liquid water on top -> nass")]
+             ((100, 35, 0, 120, 2.0), 7, "liquid water on top -> nass")]
     for (hs, pw, cr, sd, lw), want, name in cases:
         got = int(C.classify_ski6(np.array([hs]), np.array([pw]), np.array([cr]),
                                   np.array([sd]), np.array([lw]))[0])
@@ -1033,6 +1033,22 @@ def test_ski6_and_wind_classes():
                           np.array([0, 0, 0, 0, 0, 0, 0, 2.0]))
     check("powder: SLF bands, blank under 2 cm / thin / wet",
           p.tolist() == [0, 1, 2, 4, 6, 9, 0, 0], str(p.tolist()))
+    # corn: (soft top, frozen base, refrozen) -> Sulz only on a supportive base after a cold night
+    S = lambda lw, so, ba, rf: int(C.classify_ski6(np.array([100]), np.array([0]), np.array([0]), np.array([350]),
+                                                   np.array([lw]), np.array([so]), np.array([ba]), np.array([rf]))[0])
+    check("corn: 2 cm softened on 15 cm frozen base after a cold night -> Sulz", S(1.5, 2, 15, 1) == 6)
+    check("corn: still frozen in the morning -> not Sulz", S(0.0, 0, 15, 1) != 6)
+    check("corn: softened 10 cm deep -> nass / faul", S(4.0, 10, 15, 1) == 7)
+    check("corn: no supportive base -> not Sulz", S(1.5, 2, 4, 1) != 6)
+    check("corn: no refreeze overnight -> not Sulz", S(1.5, 2, 15, 0) != 6)
+    from datetime import datetime as _D, timedelta as _T
+    ts = [_D(2026, 4, 1, 0) + _T(hours=3 * i) for i in range(8)]
+    rf = C.refrozen_series(ts, np.array([[2, 2, 0, 0, 1, 2, 3, 3]]))[0]
+    check("refreeze: frozen frames within 15 h count", rf.tolist() == [0, 0, 1, 1, 1, 1, 1, 1], str(rf.tolist()))
+    import numpy as _np
+    th = _np.array([5, 5, 5, 2, 1], float); lwv = _np.array([0, 0, 0, 1.0, 1.2]); gr = _np.array([700, 700, 700, 700, 700])
+    so, ba = C._corn_layers(th, lwv, gr, _np.full(5, 350.0), _np.zeros(5))
+    check("corn layers: 3 cm softened top over 15 cm frozen MF", (so, ba) == (3.0, 15.0), str((so, ba)))
     check("powder: one colour per SLF band", len(C.POWDER_RGBA) == len(C.POWDER_LABELS) == len(C.POWDER_DE) == 10)
 
 

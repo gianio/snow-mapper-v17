@@ -3753,6 +3753,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .tour-watch{margin:8px 0 0;padding:6px 9px;font-size:12px}
  .tour-prof{margin:8px 0 8px}
  .tsh-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .tour-sulz:empty{display:none}
+ .tour-sulz{margin-top:8px;padding:8px 10px;border-radius:12px;background:rgba(226,170,72,.14)}
+ .tsw-row{display:flex;align-items:center;gap:10px}
+ .tsw-l{flex:1;font:600 12px Inter,system-ui;color:var(--fg2)}
+ .tsw-l b{color:var(--fg)}
+ .tsw-bars{display:flex;align-items:flex-end;gap:2px;height:26px;width:96px}
+ .tsw-bars i{flex:1;background:rgb(226,170,72);border-radius:2px 2px 0 0;min-height:3px}
  .tsh-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:8px 0 2px}
  .tsh-stats>div{background:var(--fill);border-radius:12px;padding:7px 2px;text-align:center;min-width:0}
  .tsh-stats b{display:block;font:800 13.5px var(--mono);color:var(--fg);white-space:nowrap}
@@ -4804,7 +4811,7 @@ const I18N_DICT={
 "Senden":["Send","Envoyer","Invia"],
 "Setzungsgeräusche deuten auf Schwachschichten hin.":["Settling noises point to weak layers.","Les bruits de tassement indiquent des couches fragiles.","I rumori di assestamento indicano strati deboli."],
 "Sichtbarkeit:":["Visibility:","Visibilité :","Visibilità:"],
-"Simulierte Schneedecke (SNOWPACK, SLF) an # Wetterpunkten in jeder Höhe, Exposition und Neigung, auf das Gelände übertragen. Hell- bis dunkelblau = Pulver nach Tiefe, grau = hart, korall = Kruste, honiggelb = nass / Sulz. Ein Modell, keine Messung – kein Lawinenbulletin.":["Simulated snowpack (SNOWPACK, SLF) at # weather points for every elevation, aspect and slope, transferred to the terrain. Light to dark blue = powder by depth, grey = hard, coral = crust, honey = wet / corn. A model, not a measurement – not an avalanche bulletin.","Manteau neigeux simulé (SNOWPACK, SLF) à # points météo pour chaque altitude, exposition et pente, transposé au terrain. Bleu clair à foncé = poudreuse par profondeur, gris = dure, corail = croûte, miel = mouillée / printemps. Un modèle, pas une mesure – pas un bulletin d'avalanches.","Manto nevoso simulato (SNOWPACK, SLF) in # punti meteo per ogni quota, esposizione e pendenza, trasferito al terreno. Da azzurro a blu scuro = polvere per profondità, grigio = dura, corallo = crosta, miele = bagnata / firn. Un modello, non una misura – non un bollettino valanghe."],
+"Simulierte Schneedecke (SNOWPACK, SLF) an # Wetterpunkten in jeder Höhe, Exposition und Neigung, auf das Gelände übertragen. Hell- bis dunkelblau = Pulver nach Tiefe, grau = hart, korall = Kruste, honiggelb = Sulz (tragende, über Nacht gefrorene Basis, oben 1–5 cm aufgeweicht), braun = nass / faul. Ein Modell, keine Messung – kein Lawinenbulletin.":["Simulated snowpack (SNOWPACK, SLF) at # weather points for every elevation, aspect and slope, transferred to the terrain. Light to dark blue = powder by depth, grey = hard, coral = crust, honey = wet / corn. A model, not a measurement – not an avalanche bulletin.","Manteau neigeux simulé (SNOWPACK, SLF) à # points météo pour chaque altitude, exposition et pente, transposé au terrain. Bleu clair à foncé = poudreuse par profondeur, gris = dure, corail = croûte, miel = mouillée / printemps. Un modèle, pas une mesure – pas un bulletin d'avalanches.","Manto nevoso simulato (SNOWPACK, SLF) in # punti meteo per ogni quota, esposizione e pendenza, trasferito al terreno. Da azzurro a blu scuro = polvere per profondità, grigio = dura, corallo = crosta, miele = bagnata / firn. Un modello, non una misura – non un bollettino valanghe."],
 "Skala #–#":["Scale #–#","Échelle #–#","Scala #–#"],
 "Skiqualität":["Ski quality","Qualité de ski","Qualità sciistica"],
 "Skiqualität (SNOWPACK)":["Ski quality (SNOWPACK)","Qualité de ski (SNOWPACK)","Qualità sciistica (SNOWPACK)"],
@@ -4932,7 +4939,13 @@ const I18N_DICT={
 "Meine Aufzeichnungen":["My recordings","Mes enregistrements","Le mie registrazioni"],
 "Freeride Ski":["Freeride ski","Freeride ski","Freeride sci"],"Freeride Snowboard":["Freeride snowboard","Freeride snowboard","Freeride snowboard"],"Skimo":["Skimo","Ski-alpinisme","Skialp"],
 "Ø Neigung":["Ø slope","Pente moy.","Pend. media"],"Max. Neigung":["Max. slope","Pente max.","Pend. max"],"Gipfel":["Summit","Sommet","Vetta"],
-"Spur folgen":["Follow route","Suivre la trace","Segui la traccia"],"auf der Spur":["on the route","sur la trace","sulla traccia"],
+"Spur folgen":["Follow route","Suivre la trace","Segui la traccia"],
+"Sulz (aufgefirnt)":["Corn (softened)","Neige de printemps (ramollie)","Firn (ammorbidito)"],
+"nass / faul":["wet / rotten","mouillée / pourrie","bagnata / marcia"],
+"Sulz-Fenster wird berechnet …":["Working out the corn window …","Calcul de la fenêtre de neige de printemps …","Calcolo della finestra del firn …"],
+"Heute kaum Sulz auf dieser Route":["Hardly any corn on this route today","Peu de neige de printemps sur cet itinéraire aujourd'hui","Oggi poco firn su questo percorso"],
+"Sulz am besten ca.":["Corn best around","Neige de printemps idéale vers","Firn migliore verso"],
+"Pulver nach Tiefe, hart, Kruste, Sulz (aufgefirnt auf tragender Basis) und nass / faul.":["Powder by depth, hard, crust, corn (softened on a supportive base) and wet / rotten.","Poudreuse par profondeur, dure, croûte, neige de printemps (ramollie sur base portante) et mouillée / pourrie.","Polvere per profondità, dura, crosta, firn (ammorbidito su base portante) e bagnata / marcia."],"auf der Spur":["on the route","sur la trace","sulla traccia"],
 "Start # m":["Start # m","Départ # m","Partenza # m"],
 "Höhe":["Height","Altitude","Quota"],
 "# m über Boden":["# m above ground","# m au-dessus du sol","# m dal suolo"],
@@ -5973,15 +5986,17 @@ function vaProfAvailable(){
 // hard a cool grey, crust a muted coral, wet/Sulz a honey tone; Triebschnee
 // in violets so it never reads as powder.
 const VA_PALETTE={
-  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[147,197,240,205],4:[59,125,214,225],5:[24,52,128,235],6:[226,170,72,220]},
+  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[147,197,240,205],4:[59,125,214,225],5:[24,52,128,235],6:[226,170,72,220],7:[150,104,74,225]},
   wind:{1:[156,168,184,190],2:[186,170,236,205],3:[112,72,200,230]}};
 // Nur Pulver on an export without its own powder layer: the three ski6 powder
 // classes, coloured like the nearest SLF snow-depth bands.
 const VA_VPAL={powder:{3:[165,214,167,225],4:[102,187,106,225],5:[66,165,245,225]}};
-const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver > 20 cm',6:'nass / Sulz'};
+const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver > 20 cm',6:'Sulz (aufgefirnt)',7:'nass / faul'};
 // An export without the simple six classes still has "simple" (15 kinds of
 // surface): the six are folded from it, so Skiqualität always opens simple.
-const VA_SIMPLE_TO_SKI6={2:3,3:4,4:5,5:5,6:3,7:3,8:2,9:2,10:2,11:1,12:6,13:1,14:3,15:1};
+// 12 (wet / spring) goes to "nass": the simple view cannot tell good corn
+// from rotten snow -- that needs the corn metrics of a newer export
+const VA_SIMPLE_TO_SKI6={2:3,3:4,4:5,5:5,6:3,7:3,8:2,9:2,10:2,11:1,12:7,13:1,14:3,15:1};
 function vaPalApply(m){
   if(!m||!m.layers)return;
   if(!m.layers.ski6&&m.layers.simple&&m.layers.simple.legend){
@@ -5990,6 +6005,9 @@ function vaPalApply(m){
     for(const c in S.legend){const e=S.legend[c];if(e&&e[1])src.push([e[1].slice(0,3),VA_SIMPLE_TO_SKI6[c]||0]);}
     m.layers.ski6={file:S.file,legend:leg,_virt:'simple',_src:src,_recolor:true};
   }
+  // exports before the corn split had one wet class, 6: it is "nass" now (7)
+  {const S6=m.layers.ski6;if(S6&&S6.legend&&!S6._virt&&S6.legend[6]&&!S6.legend[7]){
+    S6.legend[7]=S6.legend[6];delete S6.legend[6];S6.legend[7][2]='nass / faul';}}
   for(const k in VA_PALETTE){const L=m.layers[k];if(!L||!L.legend||L._virt)continue;
     const src=[];
     for(const id in VA_PALETTE[k]){const e=L.legend[id];if(!e||!e[1])continue;const nw=VA_PALETTE[k][id];
@@ -6317,7 +6335,14 @@ function vaHiEngine(){
     var T=E.pk.thresholds,x=E.mi;
     var hs=m[x.total_hs_cm],pw=m[x.powder_depth_cm],cr=m[x.crust_thick_cm],sd=m[x.surface_density],lw=m[x.surface_lw];
     if(!(hs>=T.THIN_COVER_HS))return 0;
-    if(lw>T.SK_WET_LWC)return 6;
+    // corn: thin softened top on a supportive base that froze overnight
+    if(x.soft_top_cm!=null&&x.mf_base_cm!=null&&x.refrozen!=null){
+      var so=m[x.soft_top_cm],ba=m[x.mf_base_cm],rf=m[x.refrozen],SL=T.SOFT_LWC!=null?T.SOFT_LWC:0.3;
+      var corn=(so>=(T.SULZ_SOFT_MIN!=null?T.SULZ_SOFT_MIN:0.5)||lw>SL)&&so<=(T.SULZ_SOFT_MAX!=null?T.SULZ_SOFT_MAX:5)
+        &&lw<(T.SULZ_LWC_MAX!=null?T.SULZ_LWC_MAX:3)&&ba>=(T.SULZ_BASE_MIN!=null?T.SULZ_BASE_MIN:10)&&rf>=0.5;
+      if(corn)return 6;
+      if(lw>T.SK_WET_LWC)return 7;
+    }else if(lw>T.SK_WET_LWC)return 7;
     if(pw>=T.SK_POWDER_MIN)return pw<T.SK_P1?3:(pw<T.SK_P2?4:5);
     if(cr>=T.CRUST_FINE||sd>=T.ICE_DENSITY_MIN)return 2;
     return 1;
@@ -6351,7 +6376,7 @@ function vaHiEngine(){
   };
   E.metsFor=function(layer){
     var x=E.mi,names=layer==='density'?['surface_density']
-      :(layer==='ski6'||layer==='powder')?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_density','surface_lw']
+      :(layer==='ski6'||layer==='powder')?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_density','surface_lw','soft_top_cm','mf_base_cm','refrozen']
       :layer==='wind'?['total_hs_cm','drift_load','wind_scour']
       :layer==='simple'
       ?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_lw','sh_surface','drift_load','wind_scour']
@@ -7560,8 +7585,8 @@ function tourGeo(t){
   if(known>=n*0.7)t._g=g;
   return g;
 }
-function tourVaScoreOne(t){
-  const E=tourVa.eng;if(!E||!t.coords||t.coords.length<2)return null;
+function tourVaScoreOne(t,E0){
+  const E=E0||tourVa.eng;if(!E||!t.coords||t.coords.length<2)return null;
   const g=tourGeo(t),segs=g.segs,n=segs.length;if(!n)return null;
   if(!g.cand){const mid=segs[Math.floor(n/2)];g.cand=E.candidates(mid.e,mid.n,60000);}
   const m=new Float64Array(E.nm),x=E.mi,cls=new Int8Array(n);let pwS=0,pwW=0;
@@ -7697,6 +7722,35 @@ async function tourIsoRefresh(){
   const r=tourScore(t)||tourScoreOld(t);
   tourIsoDraw(t,r);tourSheetRender(t,r);
 }
+// When is the corn good on this route? Every SNOWPACK frame of the chosen
+// day between 7 and 17 h is scored for the share of the descent in Sulz;
+// the best frames make the window ("aufgefirnt" between frozen morning
+// crust and wet afternoon snow).
+async function tourSulzWindow(t){
+  if(!vaPk||!vaEng||!vaMan||!vaMan.timestamps)return null;
+  const cur=vaTagIndex(),day=String(vaMan.timestamps[cur]||'').slice(0,10);if(!day)return null;
+  const hz=ms=>+new Intl.DateTimeFormat('de-CH',{timeZone:'Europe/Zurich',hour:'numeric',hour12:false}).format(new Date(ms));
+  const idx=[];vaMan.timestamps.forEach((ts,i)=>{const ms=Date.parse(String(ts).slice(0,16)+':00Z');
+    const dz=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Zurich'}).format(new Date(ms));const h=hz(ms);
+    if(dz===new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Zurich'}).format(new Date(Date.parse(day+'T12:00:00Z')))&&h>=7&&h<=17)idx.push([i,h]);});
+  if(!idx.length)return null;
+  const E=vaHiEngine();E.init(vaPk,vaEng.shade,vaEng.forest,vaEng.precip);
+  const out=[];
+  for(const [i,h] of idx){try{const f=await vaPkFrame(vaMan.tags[i]);E.setFrame(f.vals,f.ok);
+    const r=tourVaScoreOne(t,E);if(r)out.push({h,sulz:r.sulz});}catch(e){}}
+  if(!out.length)return null;
+  const best=Math.max(...out.map(o=>o.sulz));
+  if(best<10)return {best,from:null,to:null,series:out};
+  const good=out.filter(o=>o.sulz>=Math.max(10,best*0.6));
+  return {best,from:good[0].h,to:good[good.length-1].h,series:out};
+}
+async function tourSulzFill(t){const el=document.getElementById('tourSulzWin');if(!el)return;
+  el.innerHTML='<span class="tsw-l">Sulz-Fenster wird berechnet …</span>';
+  const w=await tourSulzWindow(t);if(tourIso!==t)return;
+  if(!w){el.innerHTML='';return;}
+  const bars=w.series.map(o=>'<i style="height:'+Math.max(3,o.sulz)+'%" title="'+o.h+' Uhr · '+o.sulz+' %"></i>').join('');
+  el.innerHTML='<div class="tsw-row"><span class="tsw-l">☀︎ '+(w.from!=null?'Sulz am besten ca. <b>'+w.from+'–'+(w.to+(w.to===w.from?2:0))+' Uhr</b> ('+w.best+' %)':'Heute kaum Sulz auf dieser Route')+'</span>'
+    +'<span class="tsw-bars">'+bars+'</span></div>';}
 function tourClassColor(c){const p=VA_PALETTE.ski6[c];return p?'rgb('+p[0]+','+p[1]+','+p[2]+')':'rgb(203,210,220)';}
 function tourIsoDraw(t,r){
   if(tourIsoLayer){map.removeLayer(tourIsoLayer);tourIsoLayer=null;}
@@ -7759,9 +7813,11 @@ function tourSheetRender(t,r){
     +'<button type="button" onclick="tourGpx()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>GPX</button>'
     +'<button type="button" onclick="trkFromTour()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg>Aufzeichnen</button>'
     +'</div>'+warn
+    +'<div class="tour-sulz" id="tourSulzWin"></div>'
     +'<div class="tour-when">'+(va?'Pulver-Anteil der Abfahrt · SNOWPACK '+escapeHtml(r.when||''):'Powder-Modell im Zeitfenster')+' · Modell, kein Lawinenbulletin</div>'
     +'</div>';
   tourSheetDragWire(el);
+  if(va)setTimeout(()=>{try{tourSulzFill(t);}catch(e){}},50);
 }
 // The sheet moves with the thumb: pull down to fold it to its title row,
 // further to close it, up to open it again.
@@ -9797,9 +9853,9 @@ function legSpec(l){
     const leg=L.legend||{};
     const realPow=vaKey==='powder'&&!L._virt;
     const ORD=realPow?Object.keys(leg).map(Number).filter(k=>k>0).sort((a,b)=>b-a)
-      :({ski6:[5,4,3,1,2,6],powder:[5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0));
+      :({ski6:[5,4,3,6,7,2,1],powder:[5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0));
     const SH=realPow?Object.fromEntries(ORD.map(k=>[k,String((leg[k]&&leg[k][2])||'').replace(/^Pulver\s*/,'').replace(/\s*cm$/,'').replace(/^>\s*/,'>')]))
-      :({ski6:{5:'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz'},powder:{5:'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
+      :({ski6:{5:'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz',7:'faul'},powder:{5:'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
     const rows=ORD.filter(k=>leg[k]&&leg[k][1]).map(k=>{const e=leg[k],nm=e[2]||String(e[0]).replace(/_/g,' ');
       return {k,c:rgb(e[1]),s:SH[k]||nm.split(/[\s/(]/)[0].slice(0,7),n:nm};});
     return {t:name,u:(vaKey==='ski6'||vaKey==='powder')?'Pulver cm':vaKey==='wind'?'Wind':'Klasse',va:true,rows};
@@ -10153,7 +10209,7 @@ const LY_VAR_TEXT={
   'temp|Max':'Die wärmste Stunde — wo es angefeuchtet haben könnte.',
   'temp|Min':'Die kälteste Stunde.',
   'snowpack|Nur Pulver':'Nur Hänge mit lockerem Pulver, nach Tiefe – alles andere bleibt frei.',
-  'snowpack|Einfache Schneearten':'Sechs Klassen: Pulver nach Tiefe, hart, Kruste, nass / Sulz.',
+  'snowpack|Einfache Schneearten':'Pulver nach Tiefe, hart, Kruste, Sulz (aufgefirnt auf tragender Basis) und nass / faul.',
   'snowpack|Alle Schneearten':'Alle Oberflächentypen aus dem Modell im Detail.',
   'snowpack|Triebschnee':'Wo der Wind Schnee abgelagert (violett) oder weggeblasen hat (grau).',
   'temp|0–5 °C':'Nur Flächen mit einem Maximum zwischen 0 und 5 °C — Firn-Bedingungen.'
