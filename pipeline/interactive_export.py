@@ -3636,6 +3636,43 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .trk-vis button b{font:800 14px Inter,system-ui;color:var(--fg)}
  .trk-vis button span{font:500 11.5px Inter,system-ui;color:var(--fg2)}
  .trk-vis button.on{border-color:var(--accent);background:var(--accent-soft)}
+ .pv{margin:4px 0 6px}
+ .pv-stats{display:grid;grid-template-columns:repeat(4,1fr);text-align:center;margin:4px 0 12px}
+ .pv-stats b{display:block;font:800 18px Inter,system-ui;color:var(--fg);letter-spacing:-.02em}
+ .pv-stats span{font:600 11.5px Inter,system-ui;color:var(--fg2)}
+ .pv-btns{display:flex;gap:6px;margin-bottom:14px}
+ .pv-btns button{flex:1;height:36px;border-radius:10px;border:0;background:var(--fill);color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer}
+ .pv-btns button.pri{background:var(--accent);color:#fff}
+ .pv-btns .pv-more{flex:0 0 40px;font-size:18px}
+ .pv-hls{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 12px;scrollbar-width:none}
+ .pv-hls::-webkit-scrollbar{display:none}
+ .pv-hl{flex:0 0 68px;display:flex;flex-direction:column;align-items:center;gap:5px;border:0;background:none;cursor:pointer;padding:0}
+ .pv-hl img,.pv-hl svg{width:64px;height:64px;border-radius:50%;object-fit:cover;background:linear-gradient(160deg,#eef3f8,#dfe7f0);
+   box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--accent)}
+ .pv-hl span{font:600 11px Inter,system-ui;color:var(--fg);max-width:68px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .pv-week{background:var(--fill);border-radius:18px;padding:12px 14px;margin-bottom:12px}
+ .pv-wk-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+ .pv-wk-h b{font:800 14px Inter,system-ui;color:var(--fg)}.pv-wk-h span{font:600 11px Inter,system-ui;color:var(--fg2)}
+ .pv-wk{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+ .pv-wk small{display:block;font:700 10.5px Inter,system-ui;letter-spacing:.04em;text-transform:uppercase;color:var(--fg2)}
+ .pv-wk b{font:800 17px var(--mono);color:var(--fg)}
+ .pv-chart{display:flex;align-items:flex-end;gap:4px;height:56px}
+ .pv-chart i{flex:1;border-radius:4px 4px 0 0;background:color-mix(in srgb,var(--accent) 35%,transparent);min-height:3px}
+ .pv-chart i.cur{background:var(--accent)}
+ .pv-tabs{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--hair);margin:0 -2px 2px}
+ .pv-tabs button{height:42px;border:0;background:none;color:var(--fg2);cursor:pointer;border-top:2px solid transparent;margin-top:-1px}
+ .pv-tabs button.on{color:var(--fg);border-top-color:var(--fg)}
+ .pv-tabs svg{width:20px;height:20px}
+ .pv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;border-radius:6px;overflow:hidden}
+ .pv-cell{position:relative;aspect-ratio:1;border:0;padding:0;background:var(--fill);cursor:pointer;overflow:hidden}
+ .pv-cell img{width:100%;height:100%;object-fit:cover;display:block}
+ .pv-txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:8px;font:700 11.5px/1.3 Inter,system-ui;color:var(--fg);text-align:center;
+   background:linear-gradient(150deg,var(--accent-soft),var(--fill))}
+ .pv-badge{position:absolute;top:6px;right:6px;width:18px;height:18px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+ .pv-acts{display:flex;flex-direction:column}
+ .pv-act{display:flex;gap:12px;align-items:center;padding:10px 0;border:0;border-bottom:1px solid var(--hair);background:none;text-align:left;cursor:pointer}
+ .pv-act span{display:flex;flex-direction:column;gap:2px;min-width:0}
+ .pv-act b{font:800 14.5px Inter,system-ui;color:var(--fg)}.pv-act small{font:500 12px Inter,system-ui;color:var(--fg2)}.pv-act em{font:700 12.5px var(--mono);font-style:normal;color:var(--fg)}
  .prof-acts{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:none;margin-bottom:6px}
  .prof-acts::-webkit-scrollbar{display:none}
  .pa-card{flex:0 0 168px;display:flex;flex-direction:column;gap:3px;padding:6px 6px 10px;border-radius:18px;border:1px solid var(--hair);background:var(--card);text-align:left;cursor:pointer}
@@ -4307,14 +4344,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <div class="prof-avbar" id="profAvBar" hidden><span>Neues Profilbild</span><button type="button" onclick="profAvCancel()">Abbrechen</button><button type="button" class="pri" onclick="profAvSave()">Speichern</button></div>
       <div class="prof-bioview" id="profBioView"></div>
       <div class="prof-view" id="profViewMain">
-        <div class="uv-stats">
-          <div class="uv-stat"><b id="profStatReports">–</b><span>Meldungen</span></div>
-          <div class="uv-stat"><b id="profStatFollowers">–</b><span>Follower</span></div>
-        </div>
-        <div class="prof-sec-title">Meine Aktivitäten</div>
-        <div class="prof-acts" id="profActs"><div class="prof-hint">Lade …</div></div>
-        <div class="prof-sec-title">Meine Beiträge</div>
-        <div class="uv-posts" id="profPosts"><div class="prof-hint">Lade …</div></div>
+        <div class="pv" id="profPV"></div>
+        <div hidden><b id="profStatReports"></b><b id="profStatFollowers"></b><div id="profActs"></div><div id="profPosts"></div></div>
         <div class="prof-sec-title">Einstellungen</div>
         <button class="prof-item nav" onclick="setOpen(true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>Darstellung &amp; Karte<span class="chev">›</span></button>
         <button class="prof-item nav" onclick="profNav('pers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Personalisieren<span class="chev">›</span></button>
@@ -4417,14 +4448,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
         </div>
       </div>
       <div class="uv-bio" id="uvBio"></div>
-      <div class="uv-stats">
-        <div class="uv-stat"><b id="uvReports">–</b><span>Reports</span></div>
-        <div class="uv-stat"><b id="uvFollowers">–</b><span>Follower</span></div>
-        <div class="uv-stat"><b id="uvSince">–</b><span>Dabei seit</span></div>
-      </div>
-      <button class="prof-save" id="uvFollow" onclick="uvToggleFollow()">Folgen</button>
-      <button class="uv-report" onclick="uvReportUser()">Nutzer melden</button>
-      <div class="uv-posts" id="uvPosts"></div>
+      <div class="pv" id="uvPV"></div>
+      <div hidden><b id="uvReports"></b><b id="uvEndoN"></b><b id="uvFollowers"></b><b id="uvSince"></b><button id="uvFollow"></button><div id="uvPosts"></div></div>
     </div>
   </div>
 </div>
@@ -4940,6 +4965,10 @@ const I18N_DICT={
 "Freeride Ski":["Freeride ski","Freeride ski","Freeride sci"],"Freeride Snowboard":["Freeride snowboard","Freeride snowboard","Freeride snowboard"],"Skimo":["Skimo","Ski-alpinisme","Skialp"],
 "Ø Neigung":["Ø slope","Pente moy.","Pend. media"],"Max. Neigung":["Max. slope","Pente max.","Pend. max"],"Gipfel":["Summit","Sommet","Vetta"],
 "Spur folgen":["Follow route","Suivre la trace","Segui la traccia"],
+"Beiträge":["Posts","Publications","Post"],"Folge ich":["Following","Abonnements","Seguiti"],"Aktivitäten":["Activities","Activités","Attività"],
+"Profil bearbeiten":["Edit profile","Modifier le profil","Modifica profilo"],"Profil teilen":["Share profile","Partager le profil","Condividi profilo"],
+"Diese Woche":["This week","Cette semaine","Questa settimana"],"# Wochen":["# weeks","# semaines","# settimane"],"Höhenmeter":["Elevation gain","Dénivelé","Dislivello"],
+"Noch keine Aktivitäten.":["No activities yet.","Pas encore d'activités.","Nessuna attività."],"Noch keine Beiträge.":["No posts yet.","Pas encore de publications.","Nessun post."],
 "Sulz (aufgefirnt)":["Corn (softened)","Neige de printemps (ramollie)","Firn (ammorbidito)"],
 "nass / faul":["wet / rotten","mouillée / pourrie","bagnata / marcia"],
 "Sulz-Fenster wird berechnet …":["Working out the corn window …","Calcul de la fenêtre de neige de printemps …","Calcolo della finestra del firn …"],
@@ -8559,6 +8588,73 @@ async function trkActsRefresh(){if(!trkActsGrp)return;let list=[];try{list=await
   try{map.getPane('trkPane').style.pointerEvents='auto';}catch(e){}
 }
 // the profile lists your activities too
+// ── Profile: Instagram-style header and grid, Strava-style activity stats ──
+// Shared by your own profile and other people's. Posts come from the
+// reports table; activities are your local recordings plus everything
+// posted as an activity (for other people: only the posted ones).
+let pvState={};
+async function pvLoad(uid,boxId,own){
+  const box=document.getElementById(boxId);if(!box)return;
+  box.innerHTML='<div class="prof-hint">Lade …</div>';
+  let posts=[],fol=0,ing=0,acts=[];
+  if(sb){
+    try{const{data}=await sb.from('reports').select('id,caption,subtype,image_url,condition_data,location,created_at,primary_categories')
+      .eq('user_id',uid).order('created_at',{ascending:false}).limit(90);posts=data||[];}catch(e){}
+    try{const{count}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',uid);fol=count||0;}catch(e){}
+    try{const{count}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',uid);ing=count||0;}catch(e){}}
+  posts.forEach(r=>{const A=r.condition_data&&r.condition_data.activity;
+    if(A)acts.push({id:'p'+r.id,post:r.id,name:A.name,start:A.start||Date.parse(r.created_at),dist:A.dist||0,up:A.up||0,moving:A.moving||0,track:A.track,map:A.map,type:A.type});});
+  if(own){try{(await trkAll()).forEach(a=>{if(a.postedId&&acts.some(x=>String(x.post)===String(a.postedId)))return;const st=a.stats||{};
+    acts.push({id:a.id,local:true,name:a.name,start:a.start,dist:st.dist||0,up:st.up||0,moving:st.moving||0,track:trkLL(a.segs),type:a.type,priv:a.vis==='private'});});}catch(e){}}
+  acts.sort((x,y)=>y.start-x.start);
+  pvState[boxId]={uid,own,posts,acts,fol,ing,tab:(pvState[boxId]&&pvState[boxId].tab)||'grid'};
+  pvRender(boxId);
+}
+function pvImg(r){const cd=r.condition_data||{};if(cd.activity&&cd.activity.map)return cd.activity.map;return r.image_url||cd.snapshot||null;}
+function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxId);if(!S||!box)return;
+  const n=v=>v>=10000?(v/1000).toFixed(0)+'k':v>=1000?(v/1000).toFixed(1)+'k':String(v);
+  const me=sbUser&&S.uid===sbUser.id,foll=!me&&myFollowing&&myFollowing.has(S.uid);
+  // this week + 12 weeks of distance, Strava style
+  const wk=d=>{const x=new Date(d);const day=(x.getDay()+6)%7;x.setHours(0,0,0,0);x.setDate(x.getDate()-day);return x.getTime();};
+  const now=wk(Date.now()),W=[];for(let i=11;i>=0;i--)W.push({t:now-i*7*864e5,d:0,up:0,mv:0,n:0});
+  S.acts.forEach(a=>{const w=W.find(x=>x.t===wk(a.start));if(w){w.d+=a.dist;w.up+=a.up;w.mv+=a.moving;w.n++;}});
+  const cw=W[W.length-1],mx=Math.max(1,...W.map(w=>w.d));
+  const chart='<div class="pv-chart">'+W.map((w,i)=>'<i class="'+(i===W.length-1?'cur':'')+'" style="height:'+Math.max(3,w.d/mx*100)+'%" title="'+(w.d/1000).toFixed(1)+' km"></i>').join('')+'</div>';
+  const hi=S.acts.slice(0,10).map((a,i)=>'<button class="pv-hl" onclick="pvOpenAct(\''+boxId+'\','+i+')">'+(a.map?'<img src="'+a.map+'" alt="">':trkThumb(a.track,80,80,''))+'<span>'+escapeHtml(a.name)+'</span></button>').join('');
+  const grid=S.posts.length?'<div class="pv-grid">'+S.posts.map((r,i)=>{const im=pvImg(r),cd=r.condition_data||{};
+      const ic=cd.activity?'<svg class="pv-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg>':(cd.snowp?'<svg class="pv-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/></svg>':'');
+      return '<button class="pv-cell" onclick="pvOpenPost(\''+boxId+'\','+i+')">'+(im?'<img src="'+im+'" loading="lazy" alt="">':'<span class="pv-txt">'+escapeHtml((r.caption||r.subtype||catLabel((r.primary_categories||[])[0]||'info')||'').slice(0,60))+'</span>')+ic+'</button>';}).join('')+'</div>'
+    :'<div class="prof-hint">Noch keine Beiträge.</div>';
+  const list=S.acts.length?S.acts.map((a,i)=>'<button class="pv-act" onclick="pvOpenAct(\''+boxId+'\','+i+')">'+trkThumb(a.track,84,64,'sm')
+      +'<span><b>'+escapeHtml(a.name)+'</b><small>'+new Date(a.start).toLocaleDateString(LOCALE(),{weekday:'short',day:'numeric',month:'short'})+' · '+trkTypeLbl(a.type)+(a.priv?' · 🔒':'')+'</small>'
+      +'<em>'+trkFmtD(a.dist)+' · ↑ '+a.up+' m · '+trkFmtT(a.moving)+'</em></span></button>').join('')
+    :'<div class="prof-hint">'+(me?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aktivitäten.')+'</div>';
+  box.innerHTML='<div class="pv-stats"><div><b>'+n(S.posts.length)+'</b><span>Beiträge</span></div><div><b>'+n(S.fol)+'</b><span>Follower</span></div><div><b>'+n(S.ing)+'</b><span>Folge ich</span></div><div><b>'+n(S.acts.length)+'</b><span>Aktivitäten</span></div></div>'
+    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button data-dm onclick="profClose();dmOpen()">Nachrichten</button><button onclick="pvShare(\''+S.uid+'\')">Teilen</button>'
+      :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
+        +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
+        +'<button class="pv-more" onclick="uvReportUser()" aria-label="Nutzer melden">⋯</button>')+'</div>'
+    +(hi?'<div class="pv-hls">'+hi+'</div>':'')
+    +'<div class="pv-week"><div class="pv-wk-h"><b>Diese Woche</b><span>12 Wochen</span></div>'
+    +'<div class="pv-wk"><div><small>Distanz</small><b>'+(cw.d/1000).toFixed(1)+' km</b></div><div><small>Zeit</small><b>'+trkFmtT(cw.mv)+'</b></div><div><small>Höhenmeter</small><b>'+cw.up+' m</b></div></div>'+chart+'</div>'
+    +'<div class="pv-tabs"><button class="'+(S.tab==='grid'?'on':'')+'" onclick="pvTab(\''+boxId+'\',\'grid\')" aria-label="Beiträge"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="9.5" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16" y="9.5" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><rect x="9.5" y="16" width="5" height="5" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/></svg></button>'
+    +'<button class="'+(S.tab==='acts'?'on':'')+'" onclick="pvTab(\''+boxId+'\',\'acts\')" aria-label="Aktivitäten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg></button></div>'
+    +(S.tab==='grid'?grid:'<div class="pv-acts">'+list+'</div>');
+  box.querySelectorAll('[data-dm]').forEach(el=>{el.hidden=dmReady!==true;});
+  if(dmReady===null)dmAvailable();
+}
+function pvTab(boxId,t){if(pvState[boxId]){pvState[boxId].tab=t;pvRender(boxId);}}
+async function pvFollow(boxId){const S=pvState[boxId];if(!S)return;if(!sb||!sbUser){authShow();return;}
+  try{await toggleFollow(S.uid);}catch(e){}S.fol+=myFollowing.has(S.uid)?1:-1;pvRender(boxId);}
+function pvShare(uid){const u=location.origin+location.pathname+'?u='+encodeURIComponent(uid);
+  if(navigator.share)navigator.share({title:'Snowmapper',url:u}).catch(()=>{});else{try{navigator.clipboard.writeText(u);toast('Link kopiert!','ok');}catch(e){}}}
+function pvClose(){try{profClose();}catch(e){}try{userViewClose();}catch(e){}}
+function pvOpenPost(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;const cd=r.condition_data||{};pvClose();
+  if(cd.activity&&cd.activity.track){setTimeout(()=>trkShowOnMap(cd.activity.track),250);return;}
+  const ll=parseGeo(r.location);if(ll)feedFlyTo(ll[0],ll[1]);}
+function pvOpenAct(boxId,i){const S=pvState[boxId],a=S&&S.acts[i];if(!a)return;pvClose();
+  if(a.local){trkCur=a.id;trkView='detail';trkOpen();return;}
+  setTimeout(()=>trkShowOnMap(a.track),250);}
 async function trkProfRender(){const el=document.getElementById('profActs');if(!el)return;let list=[];try{list=await trkAll();}catch(e){}
   el.innerHTML=list.length?list.slice(0,30).map(a=>{const s=a.stats||{};
     return '<button class="pa-card" onclick="profClose();trkCur=\''+a.id+'\';trkView=\'detail\';trkOpen()">'+trkThumb(trkLL(a.segs),160,100,'',a.rep)
@@ -12164,6 +12260,7 @@ function profSetVis(v){try{localStorage.setItem('ssm_visibility',v);}catch(e){}
 // "Meine Beiträge" in the profile: every post with its own delete button, so a
 // user can remove a single report instead of only the all-or-nothing wipe.
 async function profLoadPosts(){
+  if(sbUser)pvLoad(sbUser.id,'profPV',true);
   const box=document.getElementById('profPosts');if(!box)return;
   if(!sb||!sbUser){box.innerHTML='';return;}
   const del=id=>'<button class="uv-del" title="Löschen" aria-label="Beitrag löschen" onclick="uvDeletePost(\''+id+'\',event)">'+
@@ -12390,6 +12487,7 @@ function sendFeedback(){try{haptic(8);}catch(e){}
 let uvUid=null;
 async function viewUser(uid,username){
   if(!uid){return;} uvUid=uid;
+  setTimeout(()=>{if(!(sbUser&&uid===sbUser.id))pvLoad(uid,'uvPV',false);},0);
   try{dmAvailable().then(ok=>{const m=document.getElementById('uvMsg');
     if(m)m.hidden=!(ok&&sbUser&&uid!==sbUser.id);});}catch(e){}
   if(sbUser&&uid===sbUser.id){openProfile();return;}
