@@ -28,6 +28,14 @@ HOURLY_VARIABLES: tuple[str, ...] = (
     "sunshine_duration",
     "cloud_cover",
 )
+# Wind higher up, on pressure levels: 850 hPa is about 1500 m, 700 hPa about
+# 3000 m -- ridge height, where snow is moved. Asked for separately: an
+# endpoint that does not know them (some archive sources) answers 400, and
+# then the run simply goes on without.
+LEVEL_VARIABLES: tuple[str, ...] = (
+    "wind_speed_850hPa", "wind_direction_850hPa",
+    "wind_speed_700hPa", "wind_direction_700hPa",
+)
 
 
 @dataclass
@@ -45,6 +53,10 @@ class PointForecast:
     wind_direction_10m: List[float]  # [Grad, woher]
     sunshine_duration: List[float]   # [s] Sonnenscheindauer pro Stunde
     cloud_cover: List[float] = field(default_factory=list)  # [%] Gesamtbewoelkung
+    wind_speed_850hPa: List[float] = field(default_factory=list)      # [m/s] ~1500 m
+    wind_direction_850hPa: List[float] = field(default_factory=list)
+    wind_speed_700hPa: List[float] = field(default_factory=list)      # [m/s] ~3000 m
+    wind_direction_700hPa: List[float] = field(default_factory=list)
 
 
 class OpenMeteoClient:
@@ -69,6 +81,7 @@ class OpenMeteoClient:
         self.backoff_s = backoff_s
         self.pause_between_chunks_s = pause_between_chunks_s
         self.send_model = send_model  # Archiv-Endpoint vertraegt 'models' nicht immer
+        self.levels = True            # pressure-level wind; switched off on a 400
 
     def fetch(
         self,
@@ -121,7 +134,7 @@ class OpenMeteoClient:
         params = {
             "latitude": ",".join(f"{v:.5f}" for v in latitudes),
             "longitude": ",".join(f"{v:.5f}" for v in longitudes),
-            "hourly": ",".join(HOURLY_VARIABLES),
+            "hourly": ",".join(HOURLY_VARIABLES + (LEVEL_VARIABLES if self.levels else ())),
             "wind_speed_unit": self.wind_speed_unit,
             "timezone": "UTC",
         }
@@ -134,7 +147,15 @@ class OpenMeteoClient:
             params["forecast_days"] = forecast_days
             params["past_days"] = past_days
 
-        payload = self._request_with_retry(params)
+        try:
+            payload = self._request_with_retry(params)
+        except requests.HTTPError as exc:
+            if not self.levels or exc.response is None or exc.response.status_code != 400:
+                raise
+            print("[WX] Endpoint ohne Hoehenwind (400) - weiter ohne.")
+            self.levels = False
+            params["hourly"] = ",".join(HOURLY_VARIABLES)
+            payload = self._request_with_retry(params)
         if isinstance(payload, dict):
             payload = [payload]
         return [self._parse_point(p) for p in payload]
@@ -187,7 +208,15 @@ class OpenMeteoClient:
             wind_direction_10m=_clean(hourly["wind_direction_10m"]),
             sunshine_duration=_clean(hourly.get("sunshine_duration", [])),
             cloud_cover=_clean(hourly.get("cloud_cover", [])),
+            **{k: _clean_opt(hourly.get(k)) for k in LEVEL_VARIABLES},
         )
+
+
+def _clean_opt(values) -> List[float]:
+    """Optional series: empty when missing or entirely null (model without it)."""
+    if not values or all(v is None for v in values):
+        return []
+    return _clean(values)
 
 
 def _clean(values: Sequence[float | None]) -> List[float]:
