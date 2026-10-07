@@ -58,7 +58,7 @@ def build(export_dir: Path, out_dir: Path, zmax: int = 9, views=None, tags=None)
     from pmtiles.tile import zxy_to_tileid, TileType, Compression
     man = json.loads((export_dir / "manifest.json").read_text())
     bounds = man["bounds"]
-    views = views or [v for v in man["layers"] if v in ("ski6", "wind", "density", "ski18", "simple")]
+    views = views or [v for v in man["layers"] if v in ("ski6", "powder", "wind", "density", "ski18", "simple")]
     tags = tags or man["tags"]
     (s, w), (n, e) = bounds
     written = 0

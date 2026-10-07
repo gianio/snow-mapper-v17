@@ -81,7 +81,12 @@ def tiles_block(man, base, run, sharp=None, on_demand=False):
     """on_demand: the Worker may render missing tiles (Workers Paid). Without
     it the app asks the service only for the frames in `sharp` (pre-rendered
     in CI) and renders every other zoomed-in frame on the device."""
-    views = [v for v in ("ski6", "wind", "density", "ski18") if v in man.get("layers", {})]
+    lay = man.get("layers", {})
+    views = [v for v in ("ski6", "wind", "density", "ski18") if v in lay]
+    # "Nur Pulver" is rendered from the same metric pack as ski6, so the
+    # Worker can serve it even for an export without its own powder frames
+    if "ski6" in lay or "powder" in lay:
+        views.insert(1, "powder")
     return {"base": base, "run": str(run), "views": views, "zmin": 10, "zmax": 12,
             "overview": {"zmin": 5, "zmax": 9}, "on_demand": bool(on_demand),
             "sharp": sharp or {}}

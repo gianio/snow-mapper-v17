@@ -38,8 +38,8 @@ on:
         description: "Pre-render sharp tiles for this many hours around now (0 = none; ~2 min CPU per frame)"
         default: "24"
       views:
-        description: "Views to pre-render (comma separated: ski6,wind,density,ski18)"
-        default: "ski6"
+        description: "Views to pre-render (comma separated: ski6,powder,wind,density,ski18)"
+        default: "ski6,powder"
       on_demand:
         description: "Let the Worker render missing tiles itself (only with Workers Paid)"
         type: boolean

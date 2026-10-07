@@ -45,7 +45,7 @@ check('health', (await get('/health')).status === 200);
 check('unknown path -> 404', (await get('/nope')).status === 404);
 
 console.log('render on demand');
-const views = (man.layers.ski6 ? ['ski6', 'wind'] : []).concat(['ski18', 'density']);
+const views = (man.layers.ski6 ? ['ski6', 'wind'] : []).concat(['powder', 'ski18', 'density']);
 for (const view of views) {
   const t0 = Date.now();
   const r = await get(`/v1/r1/${view}/${tag}/${z}/${x}/${y}.png`);
