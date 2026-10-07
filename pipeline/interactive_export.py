@@ -2423,7 +2423,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .dfin-photo svg{width:19px;height:19px}
  #drawPhotoPrev{width:100%;max-height:220px;object-fit:cover;border-radius:13px;margin-bottom:12px;display:none}
  #drawCaption{width:100%;box-sizing:border-box;min-height:74px;resize:vertical;border-radius:13px;border:1px solid var(--hair);background:var(--fill);padding:11px 13px;font-family:inherit;font-size:14px;color:var(--fg);margin-bottom:14px}
- .insp-prog h4 em{color:#7c3aed}
+ .insp-prog h4 em{color:var(--c-violet)}
  .prog-conf{display:flex;align-items:center;gap:9px;margin-top:3px}
  .prog-bar{flex:1;height:8px;border-radius:5px;background:var(--fill2);overflow:hidden}
  .prog-bar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#ef4444,#f59e0b 45%,#22c55e)}
@@ -2478,7 +2478,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rp-stars button{background:none;border:none;cursor:pointer;padding:2px;color:rgba(22,21,46,.16);transition:transform .12s,color .12s}
  .rp-stars button svg{width:42px;height:42px}
  .rp-stars button.on{color:var(--warn)}
- .rp-stars button.on svg{fill:#C08A2E}
+ .rp-stars button.on svg{fill:var(--c-amber)}
  .rp-stars button:active{transform:scale(1.2)}
  .rp-stars-lbl{text-align:center;font-size:14px;font-weight:700;color:var(--fg2);margin-top:8px;min-height:20px}
  .rp-voice-btn{width:100%;padding:14px;border-radius:14px;border:1.5px solid rgba(22,21,46,.1);background:var(--fill);cursor:pointer;font-size:14px;font-weight:600;color:var(--fg2);display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;-webkit-tap-highlight-color:transparent}
@@ -3035,7 +3035,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-card-actions .cond-btn.rated{color:var(--acc2)}
  .feed-card-actions .cond-btn.rated svg{color:var(--acc)}
  .cond-chip{font-size:12px;font-weight:800;color:var(--acc2);background:rgba(20,20,25,.1);padding:3px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:4px}
- .cond-chip svg{width:13px;height:13px;fill:#C08A2E}
+ .cond-chip svg{width:13px;height:13px;fill:var(--c-amber)}
  /* condition rating modal */
  .cond-modal{position:fixed;inset:0;z-index:3950;background:rgba(14,17,22,.32);display:flex;flex-direction:column;justify-content:flex-end}
  @media(min-width:561px){.cond-modal{justify-content:center;align-items:center;padding:16px}}
@@ -3052,7 +3052,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .cond-stars{display:flex;gap:8px;justify-content:center}
  .cond-stars button{background:none;border:none;cursor:pointer;padding:2px}
  .cond-stars button svg{width:40px;height:40px;fill:var(--fill2);stroke:none;transition:transform .12s var(--ease-spring),fill .12s}
- .cond-stars button.on svg{fill:#C08A2E}
+ .cond-stars button.on svg{fill:var(--c-amber)}
  .cond-stars button:active svg{transform:scale(.88)}
  .cond-pow{display:flex;gap:10px}
  .cond-pow button{flex:1;padding:13px;border-radius:14px;border:1.5px solid var(--hair);background:var(--fill);font-family:inherit;font-size:15px;font-weight:700;color:var(--fg2);cursor:pointer;transition:.14s}
@@ -3136,7 +3136,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.fab-open #fabDraw{transform:translate(-68px,0)}
  body.fab-open #fabObs{transform:translate(-68px,-58px)}
  body.fab-open #fabSnowp{transform:translate(-68px,-116px);transition-delay:.08s}
- #fabSnowp{color:#7C3AED}
+ #fabSnowp{color:var(--c-violet)}
  body.fab-open #fabObs{transition-delay:.04s}
  body.fab-open #fabTrack{transition-delay:.08s}
  #fabTrack{color:var(--accent)}
@@ -3569,12 +3569,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .tr-b{display:inline-flex;align-items:center;gap:1px;margin-left:5px;vertical-align:-2px;color:var(--accent)}
  .tr-b svg{width:12px;height:12px}
  .tr-b em{font:800 10.5px Inter,system-ui;font-style:normal;margin-left:4px}
- .tr-b.tr-3,.tr-b.tr-4{color:#7C3AED}
+ .tr-b.tr-3,.tr-b.tr-4{color:var(--c-violet)}
  .pv-trust{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;margin:0 0 12px;border-radius:14px;border:0;cursor:pointer;text-align:left;
    background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 14%,transparent),color-mix(in srgb,var(--accent) 4%,transparent));box-shadow:var(--ice-edge)}
  .pv-tr-ic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none;color:#fff;
    background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 70%,#fff),var(--accent))}
- .pv-trust.tr-l3 .pv-tr-ic,.pv-trust.tr-l4 .pv-tr-ic{background:linear-gradient(145deg,#a78bfa,#7C3AED)}
+ .pv-trust.tr-l3 .pv-tr-ic,.pv-trust.tr-l4 .pv-tr-ic{background:linear-gradient(145deg,#a78bfa,var(--c-violet))}
  .pv-tr-ic svg{width:22px;height:22px}
  .pv-tr-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
  .pv-tr-t b{font:800 14px Inter,system-ui;color:var(--fg)}.pv-tr-t small{font:600 11.5px Inter,system-ui;color:var(--fg2)}
@@ -3636,14 +3636,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .snp-acts{display:flex;gap:8px}
  .snp-acts>*{flex:1;height:50px;border-radius:16px;border:0;font:800 15px Inter,system-ui;cursor:pointer;display:flex;align-items:center;justify-content:center}
  .snp-ghost{background:rgba(255,255,255,.12);color:#fff}
- .snp-post{background:linear-gradient(135deg,#7C3AED,var(--accent));color:#fff}
+ .snp-post{background:linear-gradient(135deg,var(--c-violet),var(--accent));color:#fff}
  .snp-card{position:relative;margin:12px 0 0;aspect-ratio:3/4;max-height:520px;overflow:hidden;background:#111}
  .snp-card .snp-main{width:100%;height:100%;object-fit:cover}
  .snp-card .snp-inset{width:28%}
  .snp-tag{position:absolute;right:10px;bottom:10px;background:rgba(10,10,12,.7);color:#fff;font:800 11px Inter,system-ui;padding:5px 9px;border-radius:999px}
  .snp-pin{position:relative;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center}
  .snp-pin img{width:54px;height:72px;object-fit:cover;border-radius:14px;border:3px solid #fff;box-shadow:0 6px 16px rgba(0,0,0,.3)}
- .snp-pin i{position:absolute;top:-8px;right:-10px;width:26px;height:26px;border-radius:50%;background:#7C3AED center/cover;border:2px solid #fff;color:#fff;font:800 12px/22px Inter,system-ui;text-align:center;font-style:normal}
+ .snp-pin i{position:absolute;top:-8px;right:-10px;width:26px;height:26px;border-radius:50%;background:var(--c-violet) center/cover;border:2px solid #fff;color:#fff;font:800 12px/22px Inter,system-ui;text-align:center;font-style:normal}
  .snp-pin b{margin-top:4px;background:rgba(10,10,12,.75);color:#fff;font:700 10.5px Inter,system-ui;padding:2px 7px;border-radius:999px;white-space:nowrap}
 
  /* ── activity recorder ── */
@@ -3727,7 +3727,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .trk-a.pri{background:var(--accent);color:#fff}
  .trk-a.sec{background:var(--fill);color:var(--fg)}
  .trk-a.ghost{background:none;color:var(--fg2);flex:.8}
- .trk-a.danger{color:#C0392B}
+ .trk-a.danger{color:var(--danger)}
  .trk-a:disabled{opacity:.6}
  .trk-item{display:flex;gap:12px;align-items:center;width:100%;padding:10px 0;border:0;border-bottom:1px solid var(--hair);background:none;text-align:left;cursor:pointer}
  .trk-it{display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -3766,7 +3766,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .trk-guide button{border:0;background:none;font-size:20px;color:var(--fg2);cursor:pointer}
  .trk-guide.on{margin:-4px 0 12px}
  .trk-guide.warn{background:rgba(217,83,79,.12)}
- .trk-guide.warn b{color:#C0392B}
+ .trk-guide.warn b{color:var(--danger)}
  .trk-rep{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:14px;background:var(--accent-soft);color:var(--fg);font:500 12.5px/1.4 Inter,system-ui;margin-bottom:10px}
  .trk-rep svg{width:20px;height:20px;flex:none;color:var(--accent);margin-top:1px}
  .trk-rep b{display:block;font:800 12.5px var(--mono);color:var(--accent);margin-top:3px}
@@ -4158,6 +4158,83 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    color:#111;font:700 22px/1 system-ui;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)}
  .fc-nav.prev{left:10px}.fc-nav.next{right:10px}
  @media (hover:hover){.fc-wrap:hover .fc-nav{display:flex}}
+
+ /* ── Desktop: tabs in the top bar, no bottom bar, no recording ── */
+ .ab-tabs{display:none}
+ body.desk{--nav-h:0px}
+ body.desk #tabBar{display:none!important}
+ body.desk .tb-rec,body.desk [onclick*="trkOpen"],body.desk #trkPill,body.desk .trk-pill{display:none!important}
+ body.desk #appBar{height:calc(var(--bar-h) + 6px);padding:0 18px 0 20px;gap:28px}
+ body.desk .ab-tabs{display:flex;align-items:stretch;gap:4px;height:100%;margin-left:12px}
+ .ab-tabs button{--tc:var(--c-blue);position:relative;border:0;background:none;padding:0 16px;cursor:pointer;color:var(--fg2);
+   font:700 14.5px/1 var(--font-d);letter-spacing:-.01em;display:flex;align-items:center;gap:6px;transition:color .15s}
+ .ab-tabs button[data-tab=tours]{--tc:var(--c-mint)}
+ .ab-tabs button[data-tab=feed]{--tc:var(--c-violet)}
+ .ab-tabs button[data-tab=you]{--tc:var(--c-rose)}
+ .ab-tabs button:hover{color:var(--fg)}
+ .ab-tabs button[aria-current=page]{color:var(--tc)}
+ .ab-tabs button[aria-current=page]::after{content:'';position:absolute;left:12px;right:12px;bottom:-1px;height:3px;border-radius:3px 3px 0 0;background:var(--tc)}
+ .ab-tabs .feed-dot{position:static;width:7px;height:7px;border:0}
+ body.desk .ab-ic:hover{background:var(--fill)}
+ body.desk #demoPill{top:calc(var(--bar-h) + 16px)!important}
+ body.desk .feed-page.side{top:calc(var(--bar-h) + 6px);border-top:0}
+ body.desk .ts-sheet{top:calc(var(--bar-h) + 18px)!important;bottom:14px!important}
+ body.desk #bottomPanel{max-width:1100px;left:20px!important;right:auto!important;width:calc(100% - 120px)}
+ body.desk.feed-side #bottomPanel{display:none}
+
+ /* ===================================================================
+    One colour theme. One brand colour (powder blue) carries every primary
+    action, selection and active tab; the other hues only ever name a
+    category (powder, observation, Snowp, tours) or a state (ok, warn,
+    danger). Neutral dark is kept for overlays only (camera, hints).
+    =================================================================== */
+ :root{--brand:#1F8BE0;--brand-deep:#0F4C9A;--brand-soft:rgba(31,139,224,.12);--brand-line:rgba(31,139,224,.35);
+   --brand-grad:linear-gradient(145deg,#4DB2F7,#1F8BE0 55%,#2F6FE6);--on-brand:#fff;
+   --acc:var(--brand);--acc2:var(--brand-deep);--glow:var(--brand-soft);
+   --accent:var(--brand);--accent-soft:var(--brand-soft);
+   --accent-meteo:var(--brand);--accent-meteo-soft:var(--brand-soft);
+   --accent-report:var(--brand-deep);--accent-report-soft:rgba(15,76,154,.12);
+   --c-blue:var(--brand);--ok:var(--c-mint);--warn:var(--c-amber);--danger:#E5484D;--danger-tint:rgba(229,72,77,.12)}
+ :root[data-theme="dark"]{--brand:#5AB0F5;--brand-deep:#2E6FB0;--brand-soft:rgba(90,176,245,.18);--brand-line:rgba(90,176,245,.45);
+   --brand-grad:linear-gradient(145deg,#7CC4F7,#4FA3EE 55%,#3C7EE8);--accent-report-soft:rgba(46,111,176,.24);--danger:#FF6369;--danger-tint:rgba(255,99,105,.16)}
+ @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--brand:#5AB0F5;--brand-deep:#2E6FB0;--brand-soft:rgba(90,176,245,.18);--brand-line:rgba(90,176,245,.45);
+   --brand-grad:linear-gradient(145deg,#7CC4F7,#4FA3EE 55%,#3C7EE8);--accent-report-soft:rgba(46,111,176,.24);--danger:#FF6369;--danger-tint:rgba(255,99,105,.16)}}
+
+ /* primary actions: always the brand */
+ .auth-btn.primary,.rp-next,.rp-next.post,#drawPostBtn,.dfin-post,#coachNext,.as-btn--primary,.rpop-cta,.groups-new button,
+ #bootErr button,#disc button.accept,#a2hs button.accept,.prof-save,.cond-save,.cmt-input button,.dm-input button,
+ .trk-a.pri,.trk-btn.res,.pv-btns button.pri,.tsh-acts button.pri,.prof-avbar button.pri,.dm-req-b button.pri,.snp-post,
+ #mapFab,.trk-go,.trk-start{background:var(--brand-grad)!important;color:var(--on-brand)!important;border-color:transparent!important;
+   box-shadow:0 6px 16px color-mix(in srgb,var(--brand) 32%,transparent)!important}
+ .rp-next:hover,.prof-save:hover,.cond-save:hover,.rp-next.post:hover{filter:brightness(1.05)}
+ .prof-save.following{background:var(--fill)!important;color:var(--fg)!important;box-shadow:none!important}
+
+ /* selections: chips, segments, tiles -- solid brand, white text */
+ .seg button.active,.trk-chip.on,.feed-chips button.on,.feed-loc-btn.active,.feed-filter button.active,.feed-scope button.active,
+ .feed-groups button.active,.sub-chip.active,.bucket.active,.rp-fu-opts button.active,.obs-chips button.active,.ts-chip.on,
+ .tp-chip.on,.prof-seg button.on,.pb-seg button.active,.cond-pow button.on,.ly-tile.on,.ly-sub.on,.dm-tabs button.on{
+   background:var(--brand)!important;color:var(--on-brand)!important;border-color:var(--brand)!important}
+ .dm-tabs button.on{box-shadow:none!important}
+ .ts-seg button.on{color:var(--brand)!important}
+
+ /* neutral controls: closes, play, sheet handles */
+ .ly-x,.feed-sheet-x{background:var(--card)!important;color:var(--fg)!important;border:1px solid var(--hair)!important;box-shadow:var(--elev3)!important}
+ .tl-play{background:var(--brand)!important;color:var(--on-brand)!important}
+
+ /* initials avatars in the brand, not black */
+ .user-avatar,.cmt-av,.us-row .av,.rmg-av,.rpop-av{background:linear-gradient(145deg,var(--brand),var(--brand-deep))!important;color:#fff!important}
+
+ /* links and small accents */
+ a,.link,.auth-link,.as-link{color:var(--brand)}
+ .stars .on,.rp-stars button.on svg{color:var(--c-amber);fill:var(--c-amber)}
+
+ /* tabs: one active colour, one record button */
+ #tabBar button,.ab-tabs button{--tc:var(--brand)!important}
+ #tabBar .tb-rec i{background:var(--brand-grad)!important;box-shadow:0 8px 18px color-mix(in srgb,var(--brand) 40%,transparent),0 0 0 4px var(--card)!important}
+ #tabBar .tb-rec.live i{background:linear-gradient(145deg,#FF6B70,var(--danger))!important}
+ #dmFab{color:var(--fg)}
+ #locFab,#layersFab{color:var(--brand)}
+ .trk-pill{background:var(--brand-deep)!important}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -4236,6 +4313,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 
 <header id="appBar">
   <button class="ab-brand" onclick="navGo('map')" aria-label="Snowmapper"><span class="ab-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg></span><span class="ab-name">Snowmapper</span></button>
+  <nav class="ab-tabs" aria-label="Navigation">
+    <button data-tab="map" onclick="navGo('map')">Karte</button>
+    <button data-tab="tours" onclick="navGo('tours')">Touren</button>
+    <button data-tab="feed" onclick="navGo('feed')">Community<span class="feed-dot"></span></button>
+    <button data-tab="you" onclick="navGo('you')">Profil</button>
+  </nav>
   <div class="ab-acts">
     <button class="ab-ic" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="ab-ic" id="dmFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5v3a1 1 0 0 0 1 1h2l6 4V5.5l-6 4H4a1 1 0 0 0-1 1z"/><path d="M6.5 14.5l1.2 4.2a1 1 0 0 0 1 .8h1.1"/><path d="M18.5 6.5v6M15.9 8l5.2 3M21.1 8l-5.2 3"/></svg><span class="dm-dot" id="dmDot" hidden></span></button>
@@ -5176,6 +5259,7 @@ const I18N_DICT={
 "Webcams – keine Daten":["Webcams – no data","Webcams – pas de données","Webcam – nessun dato"],
 "Weiter":["Continue","Continuer","Continua"],
 "Du":["You","Toi","Tu"],
+"Aufzeichnen gibt es auf dem Smartphone":["Recording is available on your phone","L'enregistrement est disponible sur smartphone","La registrazione è disponibile sullo smartphone"],
 "Wer darf mein Profil & meine Beiträge sehen?":["Who can see my profile & posts?","Qui peut voir mon profil & mes publications ?","Chi può vedere il mio profilo e i miei post?"],
 "Wetter":["Weather","Météo","Meteo"],
 "Wie du im Feed erscheinst":["How you appear in the feed","Comment tu apparais dans le fil","Come appari nel feed"],
@@ -8692,6 +8776,7 @@ function trkLL(segs){return trkFlat(segs).map(p=>[p[1],p[2],p[3]]);}
 
 // -- UI ---------------------------------------------------------------------------
 function trkOpen(){
+  if(document.body.classList.contains('desk')){toast('Aufzeichnen gibt es auf dem Smartphone','');return;}
   try{fabMenu(false);}catch(e){}
   if(trkRec){trkView='rec';}else if(trkView!=='list'&&trkView!=='detail')trkView='setup';
   document.body.classList.add('trk-open');document.getElementById('trk').hidden=false;
@@ -11231,6 +11316,12 @@ function navClose(keep){
   try{fabMenu(false);}catch(e){}
   try{const ao=document.getElementById('authOverlay');if(ao&&keep!=='you')ao.style.display='none';}catch(e){}
 }
+// A computer (fine pointer, wide window) gets a desktop layout: the tabs move
+// into the top bar and recording, which needs GPS in your pocket, disappears.
+function deskSync(){let d=false;try{d=matchMedia('(hover:hover) and (pointer:fine)').matches&&innerWidth>=900;}catch(e){}
+  document.body.classList.toggle('desk',d);try{navSync();}catch(e){}}
+addEventListener('resize',()=>{clearTimeout(deskSync._t);deskSync._t=setTimeout(deskSync,150);});
+setTimeout(deskSync,0);
 function navGo(t){try{haptic(4);}catch(e){}
   if(t==='map')navClose();
   else if(t==='tours'){navClose('tours');if(!document.body.classList.contains('ts-open'))tsOpenUI();}
@@ -11252,7 +11343,7 @@ function navSync(){if(_navRaf)return;_navRaf=requestAnimationFrame(()=>{_navRaf=
     ||vis('reportOverlay')||vis('dmModal')||vis('authOverlay');
   const tab=vis('profModal')?'you':feed?'feed':(B.contains('ts-open')||B.contains('tour-open'))?'tours':'map';
   B.toggle('nav-vis',!hide);B.toggle('nav-screen',tab!=='map');
-  document.querySelectorAll('#tabBar [data-tab]').forEach(b=>{if(b.dataset.tab===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+  document.querySelectorAll('#tabBar [data-tab],.ab-tabs [data-tab]').forEach(b=>{if(b.dataset.tab===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
   const r=document.querySelector('#tabBar .tb-rec');if(r)r.classList.toggle('live',typeof trkRec!=='undefined'&&!!trkRec);
   const a=document.getElementById('mapAcc'),av=document.getElementById('tbAv');
   if(a&&av){const im=a.querySelector('img');const src=im&&a.classList.contains('has-img')?im.src:'';

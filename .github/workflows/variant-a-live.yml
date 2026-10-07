@@ -142,6 +142,9 @@ jobs:
         env:
           SNOWPACK_BIN: ${{ github.workspace }}/snowpack-build/install/bin/snowpack
           SNOWPACK_LIBS: ${{ github.workspace }}/snowpack-build/install/lib
+          # community reports nudge precipitation only when this repository
+          # variable is "1" (and the held-out reports agree); else shadow mode
+          COMMUNITY_APPLY: ${{ vars.COMMUNITY_APPLY || '0' }}
         run: |
           set -o pipefail
           ARGS="--live --state-dir state --state-out state_new --step-h 2"
@@ -195,6 +198,10 @@ jobs:
           print(f"Frames: {len(m.get('tags', []))}, models: {m.get('forcing_models')}")
           v = (m.get("validation") or {}).get("imis") or {}
           print(f"IMIS: {v}")
+          c = (m.get("validation") or {}).get("community") or {}
+          print(f"\nCommunity: {c.get('observations', 0)} observations from {c.get('users', 0)} people, "
+                f"mode {c.get('mode', '-')}, applied {c.get('applied', False)}; "
+                f"powder depth {c.get('powder_depth')}; hit rates {c.get('hit_rate')}; holdout {c.get('holdout_check')}")
           PY
             fi
             grep -oP '(?<=^\[timing\] ).*' run.log | tail -1 | sed 's/^/Timing: /'

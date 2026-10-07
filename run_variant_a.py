@@ -123,6 +123,8 @@ def main():
                     help="where the previous cycle's state is (live)")
     ap.add_argument("--state-out", default=None,
                     help="where to write the new state (live; default --state-dir)")
+    ap.add_argument("--community", action="store_true",
+                    help="compare with community reports also outside --live")
     ap.add_argument("--imis", action="store_true",
                     help="compare with IMIS snow heights also outside --live")
     ap.add_argument("--ogd-dir", default=None,
@@ -353,6 +355,21 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
             print(f"IMIS unavailable: {type(e).__name__}: {e}")
         _t["imis"] = _time.time() - _ts
 
+    # Community reports: compared every live cycle; the precipitation step
+    # they suggest is only applied with COMMUNITY_APPLY=1 and when the
+    # held-out reports confirm it helps (community.py).
+    comm_rows, comm_summary = [], {"observations": 0}
+    if (args.live or args.community) and recent:
+        _ts = _time.time()
+        try:
+            from variant_a import community
+            new_factors, comm_rows, comm_summary = community.cycle(
+                wps, runs, results, layer_ts, METS, new_factors)
+            print(f"COMMUNITY: {comm_summary}")
+        except Exception as e:
+            print(f"community reports unavailable: {type(e).__name__}: {e}")
+        _t["community"] = _time.time() - _ts
+
     # 1 km precipitation pattern (ICON-CH1 via OGD): new snow per cell
     # scaled by how much more/less fell there than at its weather points.
     from variant_a import precip as precip_mod
@@ -367,7 +384,8 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
     extra = {
         "live": bool(args.live),
         "terrain": {"shade": shade is not None, "forest": bool(forest.any())},
-        "validation": {"imis": summary, "stations": rows[:300]},
+        "validation": {"imis": summary, "stations": rows[:300],
+                       "community": comm_summary, "community_rows": comm_rows[:500]},
         "precip_pattern": p_summ,
         "temperature_at_height": band_summ,
     }
@@ -408,7 +426,8 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
         meta = state_mod.save(args.state_out or args.state_dir, win[0], sno_src,
                               {"precip_factor": new_factors,
                                "cycle": int(((st or {}).get("meta") or {}).get("cycle", 0)) + 1,
-                               "imis": summary},
+                               "imis": summary,
+                               "community": {k: v for k, v in comm_summary.items() if k != "steps"}},
                               files=hist_files)
         print(f"  state saved: {meta['runs']} runs valid at {meta['time']}, cycle {meta['cycle']}")
 
