@@ -1293,10 +1293,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       chrome always means data.
       ================================================================== */
    --fg:#12151A;--fg2:#4B5158;--mut:#676E76;
-   --acc:#1868C4;--acc2:#0F3E80;
+   --acc:#2A8FD8;--acc2:#0F3E80;
    --bd:rgba(18,21,26,.10);
    --glass:rgba(247,248,247,.86);--glass2:rgba(255,255,255,.94);
-   --glow:rgba(24,104,196,.12);
+   --glow:rgba(42,143,216,.12);
    /* Geometry: 9 for anything you press, 11 for a tile, 13 for a row, and a
       full round for anything that reads as a pill. Structure is hairlines. */
    --panel-h:52px;--r:9px;--r-md:11px;--r-lg:13px;
@@ -1317,7 +1317,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    --ink-300:#A8AEB5;--ink-150:#C9CDD2;--ink-100:rgba(18,21,26,.09);--ink-050:#F0F1EF;
    --paper:#F7F8F7;
    --accent:var(--acc);--accent-soft:var(--glow);
-   --accent-meteo:#1868C4;--accent-meteo-soft:rgba(24,104,196,.12);
+   --accent-meteo:#2A8FD8;--accent-meteo-soft:rgba(42,143,216,.12);
    --accent-report:#0F3E80;--accent-report-soft:rgba(15,62,128,.12);
    --ok:#3D8B5F;--warn:#B8791E;--danger:#C23B2E;--danger-tint:rgba(194,59,46,.11);
    --sp1:4px;--sp2:8px;--sp3:12px;--sp4:16px;--sp5:24px;--sp6:32px;
@@ -1352,7 +1352,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    --rule-soft:1px solid rgba(255,255,255,.07);
    --ink-300:#575E68;--ink-150:#3A414B;--ink-100:rgba(255,255,255,.10);--ink-050:#20252C;
    --paper:#0E1116;
-   --accent-meteo:#4FA8F0;--accent-meteo-soft:rgba(79,168,240,.20);
+   --accent-meteo:#7CC4F2;--accent-meteo-soft:rgba(124,196,242,.20);
    --accent-report:#2E6FB0;--accent-report-soft:rgba(46,111,176,.24);
    --ok:#5AAE7C;--warn:#D9A94F;--danger:#D9564A;--danger-tint:rgba(217,86,74,.16);
    --card:#171B21;--fill:#20252C;--fill2:#2A3038;--page:#0B0E12;
@@ -1521,7 +1521,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     gradients read as a ridge without shipping an image. */
  .si-ridge{position:absolute;inset:0;z-index:-1;opacity:.5;
    background:
-     radial-gradient(120% 80% at 50% 118%,rgba(24,104,196,.16),transparent 62%),
+     radial-gradient(120% 80% at 50% 118%,rgba(42,143,216,.16),transparent 62%),
      repeating-linear-gradient(172deg,transparent 0 26px,rgba(18,21,26,.05) 26px 27px),
      repeating-linear-gradient(8deg,transparent 0 34px,rgba(15,62,128,.045) 34px 35px)}
  .si-mark{width:38px;height:38px;color:var(--accent-meteo);display:block}
@@ -1854,8 +1854,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .va-prof-svg .vp-box{fill:none;stroke:var(--fg2);stroke-width:1}
  .va-prof-svg .vp-t{font:600 10px Inter,system-ui;fill:var(--fg2)}
  .va-prof-svg .vp-at{font:700 10px Inter,system-ui;fill:var(--fg)}
- .va-prof-svg .vp-line{fill:none;stroke:var(--accent-meteo,#1868C4);stroke-width:2}
- .va-prof-svg .vp-fill{fill:var(--accent-meteo,#1868C4);opacity:.12}
+ .va-prof-svg .vp-line{fill:none;stroke:var(--accent-meteo,#2A8FD8);stroke-width:2}
+ .va-prof-svg .vp-fill{fill:var(--accent-meteo,#2A8FD8);opacity:.12}
  .va-grain{flex:0 0 auto;border:1px solid var(--hair);border-radius:2px}
  .va-dens{flex:1 1 auto;color:var(--fg);min-width:0}
  .va-prof-ax{display:flex;flex-direction:column;justify-content:space-between;
@@ -1918,7 +1918,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    background:color-mix(in srgb,var(--fg) 6%,transparent)}
  .tour-row span,.tour-row b{position:relative;z-index:1}
  .tour-row i{position:absolute;left:0;top:0;bottom:0;z-index:0;
-   background:color-mix(in srgb,var(--acc,#1868C4) 22%,transparent)}
+   background:color-mix(in srgb,var(--acc,#2A8FD8) 22%,transparent)}
  .tour-cav{margin-top:9px;font-size:10.5px;color:var(--fg2);line-height:1.35;
    border-top:1px solid var(--hair);padding-top:7px}
  @media (max-width:420px){.tour-sheet{max-height:52vh}}
@@ -2182,7 +2182,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #btn3dFloat{background:var(--glass);color:var(--ink-700);border-color:var(--bd)}
  .rail-btn.feed-accent{background:var(--accent-report-soft);color:var(--accent-report);border-color:var(--hair)}
  #accountBtn.signed{color:var(--accent-report)}
- #railToggles.active{color:var(--accent-meteo);background:var(--accent-meteo-soft);border-color:rgba(24,104,196,.26)}
+ #railToggles.active{color:var(--accent-meteo);background:var(--accent-meteo-soft);border-color:rgba(42,143,216,.26)}
  .rail-note{position:absolute;right:56px;padding:6px 11px;border-radius:10px;background:var(--fg);color:#fff;font-size:12px;font-weight:700;white-space:nowrap;opacity:0;transform:translateX(6px);transition:.25s var(--ease);pointer-events:none}
  .rail-note.show{opacity:1;transform:translateX(0)}
  .me-dot{position:relative;width:18px;height:18px;border-radius:50%;background:var(--fg);border:3px solid var(--paper);box-shadow:0 1px 6px rgba(0,0,0,.35)}
@@ -3509,6 +3509,72 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ts-count{font-weight:800;color:var(--fg)}
  .tn-sc{min-width:48px}
 
+ /* ══ design 2026.10 — powder blue, frosted glass, sharp ══
+    Ice-blue accent closer to powder, frosted panels with a bright top edge
+    (like light on a snow crystal) and tighter, crisper corners. */
+ :root{--r-sheet:16px;--ice-edge:inset 0 1px 0 rgba(255,255,255,.85),0 0 0 1px rgba(30,80,130,.08);
+   --frost:linear-gradient(180deg,rgba(255,255,255,.80),rgba(238,246,253,.72));--frost-blur:blur(20px) saturate(1.6)}
+ @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ice-edge:inset 0 1px 0 rgba(255,255,255,.10),0 0 0 1px rgba(160,200,240,.10);
+   --frost:linear-gradient(180deg,rgba(28,34,44,.82),rgba(20,26,34,.76))}}
+ :root[data-theme="dark"]{--ice-edge:inset 0 1px 0 rgba(255,255,255,.10),0 0 0 1px rgba(160,200,240,.10);--frost:linear-gradient(180deg,rgba(28,34,44,.82),rgba(20,26,34,.76))}
+ #bottomPanel,.mfab-grp,#miniLegend,.tour-sheet,.ts-sheet,.trk-sheet,.ly-panel,.set-in,.dm-sheet,.prof-sheet,#brandMark,.mfab.act{
+   background:var(--frost)!important;-webkit-backdrop-filter:var(--frost-blur);backdrop-filter:var(--frost-blur);box-shadow:var(--ice-edge),0 10px 30px rgba(20,50,90,.12)!important}
+ #bottomPanel,.tour-sheet,.mfab-grp,#miniLegend{border-radius:16px!important}
+ .ts-sheet,.trk-sheet,.set-in,.dm-sheet{border-radius:18px 18px 0 0!important}
+ .feed-card{border-radius:14px!important}
+ .ly-tile,.trk-acc button,.trk-vis button,.pv-week,.tsh-stats>div,.trk-grid>div,.trk-sum>div{border-radius:12px!important}
+ .ts-chip,.trk-a,.pv-btns button{border-radius:10px!important}
+ .mfab.act,#mapFab{border-radius:14px!important}
+ #mapFab{background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 80%,#fff),var(--accent))!important;box-shadow:var(--ice-edge),0 10px 24px color-mix(in srgb,var(--accent) 40%,transparent)!important;color:#fff}
+ /* trust */
+ .tr-b{display:inline-flex;align-items:center;gap:1px;margin-left:5px;vertical-align:-2px;color:var(--accent)}
+ .tr-b svg{width:12px;height:12px}
+ .tr-b em{font:800 10.5px Inter,system-ui;font-style:normal;margin-left:4px}
+ .tr-b.tr-3,.tr-b.tr-4{color:#7C3AED}
+ .pv-trust{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;margin:0 0 12px;border-radius:14px;border:0;cursor:pointer;text-align:left;
+   background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 14%,transparent),color-mix(in srgb,var(--accent) 4%,transparent));box-shadow:var(--ice-edge)}
+ .pv-tr-ic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none;color:#fff;
+   background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 70%,#fff),var(--accent))}
+ .pv-trust.tr-l3 .pv-tr-ic,.pv-trust.tr-l4 .pv-tr-ic{background:linear-gradient(145deg,#a78bfa,#7C3AED)}
+ .pv-tr-ic svg{width:22px;height:22px}
+ .pv-tr-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+ .pv-tr-t b{font:800 14px Inter,system-ui;color:var(--fg)}.pv-tr-t small{font:600 11.5px Inter,system-ui;color:var(--fg2)}
+ .pv-tr-bar{display:block;height:5px;border-radius:3px;background:var(--fill2);overflow:hidden;margin-top:4px}
+ .pv-tr-bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+ .pv-tr-q{width:24px;height:24px;border-radius:50%;background:var(--card);color:var(--fg2);font:800 12px/24px Inter,system-ui;text-align:center;flex:none}
+ /* messages */
+ .dm-tools{display:flex;gap:8px;padding:6px 14px 8px}
+ .dm-search{flex:1;height:38px;border-radius:12px;border:0;background:var(--fill);padding:0 12px 0 34px;font:500 15px Inter,system-ui;color:var(--fg);
+   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a96a8' stroke-width='2.2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='M20 20l-3.5-3.5'/></svg>");
+   background-repeat:no-repeat;background-size:16px;background-position:11px center}
+ .dm-new{width:38px;height:38px;border-radius:12px;border:0;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+ .dm-new svg{width:18px;height:18px}
+ .dm-row{border-radius:14px!important}
+ .dm-row .av{width:50px!important;height:50px!important;box-shadow:0 0 0 2px var(--card),0 0 0 3.5px color-mix(in srgb,var(--accent) 45%,transparent)}
+ .dm-row.new .tx b{color:var(--fg);font-weight:800}
+ .dm-row.new .tx span{color:var(--fg);font-weight:700}
+ .dm-row .unread{width:10px!important;height:10px!important;background:var(--accent)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+ .dm-msg{border-radius:18px!important;font-size:15px;line-height:1.4}
+ .dm-msg.me{background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 78%,#fff),var(--accent))!important;color:#fff!important;border-bottom-right-radius:6px!important}
+ .dm-msg:not(.me){background:var(--card)!important;box-shadow:var(--ice-edge)!important;border-bottom-left-radius:6px!important}
+ .dm-msg.cont.me{border-top-right-radius:6px!important}.dm-msg.cont:not(.me){border-top-left-radius:6px!important}
+ .dm-input{background:transparent!important;border-top:0!important}
+ .dm-input input{height:46px;border-radius:23px!important;border:0!important;background:var(--card)!important;box-shadow:var(--ice-edge);padding:0 18px!important;font-size:16px}
+ .dm-input button{width:46px;height:46px;border-radius:50%!important;background:var(--accent)!important;color:#fff!important;border:0!important;box-shadow:0 6px 16px color-mix(in srgb,var(--accent) 35%,transparent)}
+ .dm-body{background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--accent) 5%,transparent))}
+ /* wide screens: tour finder and messages as a right side panel */
+ @media (min-width:900px){
+   .ts-sheet{left:auto!important;right:14px!important;top:calc(env(safe-area-inset-top,0px) + 14px)!important;bottom:14px!important;width:400px;max-width:400px;margin:0!important;
+     max-height:none!important;border-radius:18px!important;transform:translateX(calc(100% + 30px))!important}
+   body.ts-open .ts-sheet,body.ts-open .ts-sheet.min{transform:none!important;overflow-y:auto!important}
+   .ts-grab{display:none}
+   body.ts-open #mapFabs{opacity:1!important;pointer-events:auto!important;right:430px!important}
+   .dm-wrap{justify-content:flex-end!important;align-items:stretch!important;padding:14px!important;background:transparent!important;backdrop-filter:none!important}
+   .dm-sheet{max-width:420px!important;height:auto!important;border-radius:18px!important}
+   #userViewModal,#profModal{justify-content:flex-end!important;align-items:stretch!important;padding:14px!important}
+   #userViewModal .prof-sheet,#profModal .prof-sheet{max-width:440px!important;width:440px!important;height:auto!important;max-height:none!important;border-radius:18px!important}
+ }
+
  /* ── Snowp: two cameras, friends only ── */
  .snp{position:fixed;inset:0;z-index:5200;background:#0b0d12;color:#fff;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px calc(env(safe-area-inset-bottom,0px) + 14px)}
  .snp[hidden]{display:none}
@@ -4457,7 +4523,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     </div>
     <div class="dm-body" id="dmBody"></div>
     <div class="dm-input" id="dmInputRow" hidden>
-      <input id="dmInput" type="text" placeholder="Nachricht…" maxlength="2000" autocomplete="off" onkeydown="if(event.key==='Enter')dmSend()"/>
+      <input id="dmInput" type="text" placeholder="Nachricht…" maxlength="2000" autocomplete="off" enterkeyhint="send" onkeydown="if(event.key==='Enter')dmSend()"/>
       <button onclick="dmSend()" aria-label="Senden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
     </div>
   </div>
@@ -4485,7 +4551,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       </div>
       <div class="uv-bio" id="uvBio"></div>
       <div class="pv" id="uvPV"></div>
-      <div hidden><b id="uvReports"></b><b id="uvEndoN"></b><b id="uvFollowers"></b><b id="uvSince"></b><button id="uvFollow"></button><div id="uvPosts"></div></div>
+      <div hidden><b id="uvReports"></b><b id="uvFollowers"></b><b id="uvSince"></b><button id="uvFollow"></button><div id="uvPosts"></div></div>
     </div>
   </div>
 </div>
@@ -5001,6 +5067,8 @@ const I18N_DICT={
 "Freeride Ski":["Freeride ski","Freeride ski","Freeride sci"],"Freeride Snowboard":["Freeride snowboard","Freeride snowboard","Freeride snowboard"],"Skimo":["Skimo","Ski-alpinisme","Skialp"],
 "Ø Neigung":["Ø slope","Pente moy.","Pend. media"],"Max. Neigung":["Max. slope","Pente max.","Pend. max"],"Gipfel":["Summit","Sommet","Vetta"],
 "Spur folgen":["Follow route","Suivre la trace","Segui la traccia"],
+"Suchen":["Search","Rechercher","Cerca"],"Neue Nachricht":["New message","Nouveau message","Nuovo messaggio"],
+"Neu":["New","Nouveau","Nuovo"],"Bestätigt":["Confirmed","Confirmé","Confermato"],"Vertrauenswürdig":["Trusted","Fiable","Affidabile"],"Lokalkenner":["Local expert","Expert local","Esperto locale"],"Schneeprofi":["Snow pro","Pro de la neige","Esperto di neve"],
 "Snowp senden":["Send Snowp","Envoyer le Snowp","Invia Snowp"],"Neu":["Retake","Reprendre","Rifai"],"🔒 nur Freunde":["🔒 friends only","🔒 amis seulement","🔒 solo amici"],
 "Zuerst der Hang – Rückkamera":["First the slope – back camera","D'abord la pente – caméra arrière","Prima il pendio – fotocamera posteriore"],
 "Und jetzt du – Frontkamera":["Now you – front camera","Maintenant toi – caméra avant","Ora tu – fotocamera frontale"],
@@ -6897,7 +6965,10 @@ function vaSrvActive(){
   const tags=(t.sharp||{})[vaKey];return !!(tags&&tags.indexOf(vaMan.tags[vaTagIndex()])>=0);
 }
 function vaTilesSync(){
-  if(!vaTilesActive())return false;
+  // A view the tile service does not have (e.g. "Nur Pulver"): drop the
+  // service's layers of the previous view, or its overview stays on screen
+  // under the zoomed-out map while the device renders the new view zoomed in.
+  if(!vaTilesActive()){vaSrv.clear();vaOvT.clear();return false;}
   const key=vaKey+'|'+vaMan.tags[vaTagIndex()];
   if(vaSrvActive())vaSrv.sync(key);else vaSrv.clear();
   if(!vaPmt)vaPmtLoad();else vaOvT.sync(key);
@@ -8135,7 +8206,7 @@ const TRK_ACC={
   eco:{label:'Akku sparen',sub:'alle 15 s · gröbere Spur',minDt:15000,minD:20,maxAcc:80,hiAcc:false}};
 const TRK_TYPES=[['skitour','Skitour'],['splitboard','Splitboard'],['freeski','Freeride Ski'],['freesnowboard','Freeride Snowboard'],['skimo','Skimo']];
 const TRK_SNOW=['Pulver','Windgepresst','Bruchharsch','Sulz','Nass','Hart'];
-function trkCol(){try{return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#1868C4';}catch(e){return '#1868C4';}}
+function trkCol(){try{return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#2A8FD8';}catch(e){return '#2A8FD8';}}
 let trkLinkAct=null,trkGuide=null,trkGuideLine=null,_trkOff=false;
 // Start recording on a tour from the finder or the tour sheet: the route is
 // drawn as a dashed guide, and the recorder says how far off it you are and
@@ -8647,12 +8718,14 @@ async function pvLoad(uid,boxId,own){
       .eq('user_id',uid).order('created_at',{ascending:false}).limit(90);posts=data||[];}catch(e){}
     try{const{count}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',uid);fol=count||0;}catch(e){}
     try{const{count}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',uid);ing=count||0;}catch(e){}}
+  let trust=0;
+  if(sb&&posts.length){try{const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',posts.map(p=>p.id));trust=count||0;}catch(e){}}
   posts.forEach(r=>{const A=r.condition_data&&r.condition_data.activity;
     if(A)acts.push({id:'p'+r.id,post:r.id,name:A.name,start:A.start||Date.parse(r.created_at),dist:A.dist||0,up:A.up||0,moving:A.moving||0,track:A.track,map:A.map,type:A.type});});
   if(own){try{(await trkAll()).forEach(a=>{if(a.postedId&&acts.some(x=>String(x.post)===String(a.postedId)))return;const st=a.stats||{};
     acts.push({id:a.id,local:true,name:a.name,start:a.start,dist:st.dist||0,up:st.up||0,moving:st.moving||0,track:trkLL(a.segs),type:a.type,priv:a.vis==='private'});});}catch(e){}}
   acts.sort((x,y)=>y.start-x.start);
-  pvState[boxId]={uid,own,posts,acts,fol,ing,tab:(pvState[boxId]&&pvState[boxId].tab)||'grid'};
+  pvState[boxId]={uid,own,posts,acts,fol,ing,trust,tab:(pvState[boxId]&&pvState[boxId].tab)||'grid'};
   pvRender(boxId);
 }
 function pvImg(r){const cd=r.condition_data||{};if(cd.activity&&cd.activity.map)return cd.activity.map;return r.image_url||cd.snapshot||null;}
@@ -8679,6 +8752,9 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
       :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
         +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
         +'<button class="pv-more" onclick="uvReportUser()" aria-label="Nutzer melden">⋯</button>')+'</div>'
+    +(()=>{const L=trustLevel(S.trust);return '<button class="pv-trust tr-l'+L.i+'" onclick="trustInfo()"><span class="pv-tr-ic">'+TRUST_FLAKE+'</span>'
+      +'<span class="pv-tr-t"><b>'+escapeHtml(L.name)+' · Trust '+L.n+'</b><small>'+(L.next!=null?(L.next-L.n)+' Bestätigungen bis «'+escapeHtml(TRUST_LV[L.i+1][1])+'»':escapeHtml(L.sub))+'</small>'
+      +'<i class="pv-tr-bar"><i style="width:'+L.pct+'%"></i></i></span><span class="pv-tr-q">?</span></button>';})()
     +(hi?'<div class="pv-hls">'+hi+'</div>':'')
     +'<div class="pv-week"><div class="pv-wk-h"><b>Diese Woche</b><span>12 Wochen</span></div>'
     +'<div class="pv-wk"><div><small>Distanz</small><b>'+(cw.d/1000).toFixed(1)+' km</b></div><div><small>Zeit</small><b>'+trkFmtT(cw.mv)+'</b></div><div><small>Höhenmeter</small><b>'+cw.up+' m</b></div></div>'+chart+'</div>'
@@ -9318,6 +9394,16 @@ function progTrustMap(){
     m.set(r.userId,(m.get(r.userId)||0)+(r.likes||0));});
   _progTrust=m;return m;
 }
+// Trust levels: every "Bestätigen" another user gives one of your reports is
+// a point. The levels make that visible -- and the same points already weight
+// your reports in the Gemeldetes Powder model (progReportWeight).
+const TRUST_LV=[[0,'Neu','neu dabei'],[3,'Bestätigt','erste bestätigte Meldungen'],[10,'Vertrauenswürdig','regelmässig bestätigt'],[30,'Lokalkenner','sehr oft bestätigt'],[75,'Schneeprofi','Top-Melder:in']];
+function trustLevel(n){n=n||0;let i=0;for(let k=0;k<TRUST_LV.length;k++)if(n>=TRUST_LV[k][0])i=k;
+  const nx=TRUST_LV[i+1];return {i,name:TRUST_LV[i][1],sub:TRUST_LV[i][2],n,next:nx?nx[0]:null,pct:nx?Math.round((n-TRUST_LV[i][0])/(nx[0]-TRUST_LV[i][0])*100):100};}
+const TRUST_FLAKE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17M12 2l-2.2 2.4M12 2l2.2 2.4M12 22l-2.2-2.4M12 22l2.2-2.4"/></svg>';
+function trustBadge(n,compact){const L=trustLevel(n);if(!L.i&&compact)return '';
+  return '<span class="tr-b tr-'+L.i+'" title="Trust Score '+L.n+' · '+escapeHtml(L.name)+'">'+TRUST_FLAKE.repeat(Math.max(1,Math.min(3,L.i)))+(compact?'':'<em>'+escapeHtml(L.name)+'</em>')+'</span>';}
+function trustInfo(){toast('Trust Score: Jede Bestätigung, die andere deinen Meldungen geben, zählt +1. Bestätigte Melder:innen wiegen im Modell «Gemeldetes Powder» mehr.','info');}
 function progTrustOf(uid){if(!uid)return 0;return progTrustMap().get(uid)||0;}
 function progInvalidateTrust(){_progTrust=null;}
 // Weight of one report, 1.0 = unconfirmed post by an unknown author.
@@ -10322,7 +10408,7 @@ let curTopic='meteo',curItem=0,curVar=0;
 
 // [accentHex, sublayerTint, frameBorder, vignetteGlow]
 const TOPIC_COLOR={
-  meteo:['#1868C4','rgba(24,104,196,.13)','rgba(24,104,196,.5)','rgba(24,104,196,.10)'],
+  meteo:['#2A8FD8','rgba(42,143,216,.13)','rgba(42,143,216,.5)','rgba(42,143,216,.10)'],
   report:['#0F3E80','rgba(15,62,128,.14)','rgba(15,62,128,.5)','rgba(15,62,128,.11)'],
   ski:['#4A7A3F','rgba(74,122,63,.14)','rgba(74,122,63,.5)','rgba(74,122,63,.10)'],
   snow:['#3E7C8C','rgba(62,124,140,.13)','rgba(62,124,140,.5)','rgba(62,124,140,.10)'],
@@ -10333,7 +10419,7 @@ const TOPIC_COLOR={
   qpr:['#2E5A4A','rgba(46,90,74,.14)','rgba(46,90,74,.5)','rgba(46,90,74,.10)'],
   prog:['#0F3E80','rgba(15,62,128,.14)','rgba(15,62,128,.5)','rgba(15,62,128,.11)'],
   aspect:['#4C7A78','rgba(76,122,120,.14)','rgba(76,122,120,.5)','rgba(76,122,120,.10)']};
-let tlSel='#1868C4',tlSelTint='rgba(24,104,196,.12)';
+let tlSel='#2A8FD8',tlSelTint='rgba(42,143,216,.12)';
 function groupItems(g){const z=(function(){try{return map.getZoom();}catch(e){return 99;}})();
   return (GROUPS[g]||GROUPS.meteo).items.filter(it=>(it.minZoom==null||z>=it.minZoom)&&(it.needs!=='cloud'||_hasCloud)).map(it=>{
     if(!it.va)return it;
@@ -11269,18 +11355,18 @@ function icNewSnow(cv,p){const{ctx,w,h}=icSetup(cv,86);const t0=a,t1=b,n=Math.ma
   const mxs=Math.max(0.05,mx);
   icDayGrid(ctx,LG,plotW,h,t0,t1,baseY);
   ctx.strokeStyle='rgba(18,21,26,.12)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(LG,baseY+.5);ctx.lineTo(w,baseY+.5);ctx.stroke();
-  const bw=plotW/n,g=ctx.createLinearGradient(0,8,0,baseY);g.addColorStop(0,'#4E9A9A');g.addColorStop(1,'#1868C4');ctx.fillStyle=g;
+  const bw=plotW/n,g=ctx.createLinearGradient(0,8,0,baseY);g.addColorStop(0,'#4E9A9A');g.addColorStop(1,'#2A8FD8');ctx.fillStyle=g;
   for(let i=0;i<n;i++){const v=vals[i];if(v<0.002)continue;const bh=Math.max(1.5,v/mxs*(baseY-26));icRR(ctx,LG+i*bw+.4,baseY-bh,Math.max(bw-1,1.2),bh,Math.min(2,bw/2.2));ctx.fill();}
   if(mx>0.002){const px=LG+mi*bw+bw/2,bh=Math.max(1.5,mx/mxs*(baseY-26));
-    icPill(ctx,px,baseY-bh-21,mx.toFixed(mx>=1?1:2)+' cm/h',cvTok('--accent-meteo','#1868C4'),w);}}
+    icPill(ctx,px,baseY-bh-21,mx.toFixed(mx>=1?1:2)+' cm/h',cvTok('--accent-meteo','#2A8FD8'),w);}}
 function icDepth(cv,p){const{ctx,w,h}=icSetup(cv,80);const t0=a,t1=b;const LG=4,baseY=h-16,plotW=w-LG-4;
   const vals=[];let mx=1,mi=0;for(let t=t0;t<=t1;t++){const v=cum[t*NP+p];vals.push(v);if(v>mx){mx=v;mi=t-t0;}}
   icDayGrid(ctx,LG,plotW,h,t0,t1,baseY);
   ctx.strokeStyle='rgba(18,21,26,.12)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(LG,baseY+.5);ctx.lineTo(w,baseY+.5);ctx.stroke();
   const Ln=vals.length,px=i=>LG+i/(Ln-1)*plotW,py=v=>baseY-v/mx*(baseY-26);
-  ctx.beginPath();for(let i=0;i<Ln;i++){const x=px(i),y=py(vals[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.lineTo(px(Ln-1),baseY);ctx.lineTo(LG,baseY);ctx.closePath();ctx.fillStyle='rgba(24,104,196,.13)';ctx.fill();
-  ctx.beginPath();for(let i=0;i<Ln;i++){const x=px(i),y=py(vals[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.strokeStyle=cvTok('--accent-meteo','#1868C4');ctx.lineWidth=2.2;ctx.stroke();
-  icPill(ctx,px(mi),py(vals[mi])-21,vals[mi].toFixed(0)+' cm',cvTok('--accent-meteo','#1868C4'),w);}
+  ctx.beginPath();for(let i=0;i<Ln;i++){const x=px(i),y=py(vals[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.lineTo(px(Ln-1),baseY);ctx.lineTo(LG,baseY);ctx.closePath();ctx.fillStyle='rgba(42,143,216,.13)';ctx.fill();
+  ctx.beginPath();for(let i=0;i<Ln;i++){const x=px(i),y=py(vals[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.strokeStyle=cvTok('--accent-meteo','#2A8FD8');ctx.lineWidth=2.2;ctx.stroke();
+  icPill(ctx,px(mi),py(vals[mi])-21,vals[mi].toFixed(0)+' cm',cvTok('--accent-meteo','#2A8FD8'),w);}
 function icTemp(cv,p){const{ctx,w,h}=icSetup(cv,110);const t0=a,t1=Math.max(a+1,b),n=t1-t0;
   const baseY=h-16,topY=18,plotW=w-8,xOf=i2=>4+i2/Math.max(1,n-1)*plotW;
   let mn=1e9,mx=-1e9;const air=[],srf=[];
@@ -11298,7 +11384,7 @@ function icTemp(cv,p){const{ctx,w,h}=icSetup(cv,110);const t0=a,t1=Math.max(a+1,
   let aMx=-1e9,aMxI=0,aMn=1e9,aMnI=0;
   for(let i2=0;i2<n;i2++){if(air[i2]>aMx){aMx=air[i2];aMxI=i2;}if(air[i2]<aMn){aMn=air[i2];aMnI=i2;}}
   icPill(ctx,xOf(aMxI),yOf(aMx)-22,'Hoch '+aMx.toFixed(0)+'°','#B4552A',w);
-  icPill(ctx,xOf(aMnI),Math.min(baseY-18,yOf(aMn)+6),'Tief '+aMn.toFixed(0)+'°',cvTok('--accent-meteo','#1868C4'),w);
+  icPill(ctx,xOf(aMnI),Math.min(baseY-18,yOf(aMn)+6),'Tief '+aMn.toFixed(0)+'°',cvTok('--accent-meteo','#2A8FD8'),w);
   // the legend hugs the right edge: the "Tief" pill is clamped to the left one
   ctx.textAlign='right';ctx.font='700 10.5px Inter';
   ctx.fillStyle='#C08A2E';ctx.fillText('● Oberfläche',w-6,12);
@@ -11665,7 +11751,7 @@ const CAT_SVG={
   tour:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l7-10 4 5 7-11"/><circle cx="17" cy="4" r="2"/><path d="M14 20l3-4 4 4"/></svg>',
   info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r=".5" fill="currentColor" stroke="none"/></svg>'
 };
-const CAT_COLORS={snow:'#3E7C8C',route:'#4A7A3F',danger:'#A83A2E',tour:'#7A4E86',info:'#C08A2E',avalanche:'#A83A2E',whumpf:'#B4552A',wind_slab:'#1868C4',other:'#0F3E80'};
+const CAT_COLORS={snow:'#3E7C8C',route:'#4A7A3F',danger:'#A83A2E',tour:'#7A4E86',info:'#C08A2E',avalanche:'#A83A2E',whumpf:'#B4552A',wind_slab:'#2A8FD8',other:'#0F3E80'};
 const CAT_BG={snow:'linear-gradient(135deg,#e3f2fd,#bbdefb)',route:'linear-gradient(135deg,#e8f5e9,#c8e6c9)',danger:'linear-gradient(135deg,#fce4ec,#f8bbd0)',tour:'linear-gradient(135deg,#f3e5f5,#e1bee7)',info:'linear-gradient(135deg,#fff3e0,#ffe0b2)',avalanche:'linear-gradient(135deg,#fce4ec,#f8bbd0)',whumpf:'linear-gradient(135deg,#fff3e0,#ffe0b2)',wind_slab:'linear-gradient(135deg,#e0f2f1,#b2dfdb)',other:'linear-gradient(135deg,#e3f2fd,#bbdefb)'};
 // new SLF report-type icons reuse existing glyphs
 CAT_SVG.avalanche=CAT_SVG.danger;CAT_SVG.whumpf=CAT_SVG.danger;CAT_SVG.wind_slab=CAT_SVG.snow;CAT_SVG.other=CAT_SVG.info;
@@ -12788,11 +12874,13 @@ async function dmList(){
     try{const{data:ms}=await sb.from('dm_messages').select('thread_id,body,created_at,sender_id,read_at')
       .in('thread_id',dmThreads.map(t=>t.id)).order('created_at',{ascending:false}).limit(300);
       (ms||[]).forEach(m=>{if(!last[m.thread_id])last[m.thread_id]=m;});}catch(e){}
-    body.innerHTML=dmThreads.map(t=>{
+    body.innerHTML='<div class="dm-tools"><input class="dm-search" placeholder="Suchen" oninput="dmFilter(this.value)"><button class="dm-new" onclick="dmClose();usOpen()" aria-label="Neue Nachricht">'
+      +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div>'
+      +dmThreads.map(t=>{
       const oid=t.user_a===sbUser.id?t.user_b:t.user_a;
       const nm=names[oid]||'User',url=avatarOf(oid),m=last[t.id];
       const unread=m&&m.sender_id!==sbUser.id&&!m.read_at;
-      return '<button class="dm-row" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+escapeHtml(nm).replace(/'/g,'')+'\')">'+
+      return '<button class="dm-row'+(unread?' new':'')+'" data-n="'+escapeHtml(nm.toLowerCase())+'" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+escapeHtml(nm).replace(/'/g,'')+'\')">'+
         '<span class="av"'+(url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'+
         '<span class="tx"><b>'+escapeHtml(nm)+'</b><span>'+(m?escapeHtml(m.body):'—')+'</span></span>'+
         (m?('<span class="when">'+timeAgo(m.created_at)+'</span>'):'')+
@@ -12800,6 +12888,7 @@ async function dmList(){
       '</button>';}).join('');
   }catch(e){body.innerHTML='<div class="dm-empty">Konnte nicht geladen werden.</div>';}
 }
+function dmFilter(q){q=(q||'').trim().toLowerCase();document.querySelectorAll('#dmBody .dm-row').forEach(r=>{r.hidden=!!q&&!(r.dataset.n||'').includes(q);});}
 // Open (or start) the conversation with someone.
 async function dmWith(uid,name){
   if(!sb||!sbUser){authShow();return;}
@@ -14718,7 +14807,7 @@ function feedRender(){
       <div class="feed-card-head">
         <div class="feed-card-avatar" style="${r.avatar?`background-image:url(${encodeURI(r.avatar)})`:''}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['\"<>]/g,'')}')"`:''}>${r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase())}</div>
         <div class="feed-card-info">
-          <span class="feed-card-user"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['"<>]/g,'')}')"`:''}>${escapeHtml(r.user)}</span>
+          <span class="feed-card-user"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['"<>]/g,'')}')"`:''}>${escapeHtml(r.user)}${r.userId?trustBadge(progTrustOf(r.userId),true):''}</span>
           <span class="feed-card-loc">${escapeHtml(r.time||'')} · ${escapeHtml(rptPlace(r))}${distTag?' · ':''}${distTag}</span>
         </div>
         ${followBtn}
