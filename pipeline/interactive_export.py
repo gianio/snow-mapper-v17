@@ -4158,6 +4158,29 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    color:#111;font:700 22px/1 system-ui;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)}
  .fc-nav.prev{left:10px}.fc-nav.next{right:10px}
  @media (hover:hover){.fc-wrap:hover .fc-nav{display:flex}}
+
+ /* ── Desktop: tabs in the top bar, no bottom bar, no recording ── */
+ .ab-tabs{display:none}
+ body.desk{--nav-h:0px}
+ body.desk #tabBar{display:none!important}
+ body.desk .tb-rec,body.desk [onclick*="trkOpen"],body.desk #trkPill,body.desk .trk-pill{display:none!important}
+ body.desk #appBar{height:calc(var(--bar-h) + 6px);padding:0 18px 0 20px;gap:28px}
+ body.desk .ab-tabs{display:flex;align-items:stretch;gap:4px;height:100%;margin-left:12px}
+ .ab-tabs button{--tc:var(--c-blue);position:relative;border:0;background:none;padding:0 16px;cursor:pointer;color:var(--fg2);
+   font:700 14.5px/1 var(--font-d);letter-spacing:-.01em;display:flex;align-items:center;gap:6px;transition:color .15s}
+ .ab-tabs button[data-tab=tours]{--tc:var(--c-mint)}
+ .ab-tabs button[data-tab=feed]{--tc:var(--c-violet)}
+ .ab-tabs button[data-tab=you]{--tc:var(--c-rose)}
+ .ab-tabs button:hover{color:var(--fg)}
+ .ab-tabs button[aria-current=page]{color:var(--tc)}
+ .ab-tabs button[aria-current=page]::after{content:'';position:absolute;left:12px;right:12px;bottom:-1px;height:3px;border-radius:3px 3px 0 0;background:var(--tc)}
+ .ab-tabs .feed-dot{position:static;width:7px;height:7px;border:0}
+ body.desk .ab-ic:hover{background:var(--fill)}
+ body.desk #demoPill{top:calc(var(--bar-h) + 16px)!important}
+ body.desk .feed-page.side{top:calc(var(--bar-h) + 6px);border-top:0}
+ body.desk .ts-sheet{top:calc(var(--bar-h) + 18px)!important;bottom:14px!important}
+ body.desk #bottomPanel{max-width:1100px;left:20px!important;right:auto!important;width:calc(100% - 120px)}
+ body.desk.feed-side #bottomPanel{display:none}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -4236,6 +4259,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 
 <header id="appBar">
   <button class="ab-brand" onclick="navGo('map')" aria-label="Snowmapper"><span class="ab-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg></span><span class="ab-name">Snowmapper</span></button>
+  <nav class="ab-tabs" aria-label="Navigation">
+    <button data-tab="map" onclick="navGo('map')">Karte</button>
+    <button data-tab="tours" onclick="navGo('tours')">Touren</button>
+    <button data-tab="feed" onclick="navGo('feed')">Community<span class="feed-dot"></span></button>
+    <button data-tab="you" onclick="navGo('you')">Profil</button>
+  </nav>
   <div class="ab-acts">
     <button class="ab-ic" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="ab-ic" id="dmFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5v3a1 1 0 0 0 1 1h2l6 4V5.5l-6 4H4a1 1 0 0 0-1 1z"/><path d="M6.5 14.5l1.2 4.2a1 1 0 0 0 1 .8h1.1"/><path d="M18.5 6.5v6M15.9 8l5.2 3M21.1 8l-5.2 3"/></svg><span class="dm-dot" id="dmDot" hidden></span></button>
@@ -5176,6 +5205,7 @@ const I18N_DICT={
 "Webcams – keine Daten":["Webcams – no data","Webcams – pas de données","Webcam – nessun dato"],
 "Weiter":["Continue","Continuer","Continua"],
 "Du":["You","Toi","Tu"],
+"Aufzeichnen gibt es auf dem Smartphone":["Recording is available on your phone","L'enregistrement est disponible sur smartphone","La registrazione è disponibile sullo smartphone"],
 "Wer darf mein Profil & meine Beiträge sehen?":["Who can see my profile & posts?","Qui peut voir mon profil & mes publications ?","Chi può vedere il mio profilo e i miei post?"],
 "Wetter":["Weather","Météo","Meteo"],
 "Wie du im Feed erscheinst":["How you appear in the feed","Comment tu apparais dans le fil","Come appari nel feed"],
@@ -8692,6 +8722,7 @@ function trkLL(segs){return trkFlat(segs).map(p=>[p[1],p[2],p[3]]);}
 
 // -- UI ---------------------------------------------------------------------------
 function trkOpen(){
+  if(document.body.classList.contains('desk')){toast('Aufzeichnen gibt es auf dem Smartphone','');return;}
   try{fabMenu(false);}catch(e){}
   if(trkRec){trkView='rec';}else if(trkView!=='list'&&trkView!=='detail')trkView='setup';
   document.body.classList.add('trk-open');document.getElementById('trk').hidden=false;
@@ -11231,6 +11262,12 @@ function navClose(keep){
   try{fabMenu(false);}catch(e){}
   try{const ao=document.getElementById('authOverlay');if(ao&&keep!=='you')ao.style.display='none';}catch(e){}
 }
+// A computer (fine pointer, wide window) gets a desktop layout: the tabs move
+// into the top bar and recording, which needs GPS in your pocket, disappears.
+function deskSync(){let d=false;try{d=matchMedia('(hover:hover) and (pointer:fine)').matches&&innerWidth>=900;}catch(e){}
+  document.body.classList.toggle('desk',d);try{navSync();}catch(e){}}
+addEventListener('resize',()=>{clearTimeout(deskSync._t);deskSync._t=setTimeout(deskSync,150);});
+setTimeout(deskSync,0);
 function navGo(t){try{haptic(4);}catch(e){}
   if(t==='map')navClose();
   else if(t==='tours'){navClose('tours');if(!document.body.classList.contains('ts-open'))tsOpenUI();}
@@ -11252,7 +11289,7 @@ function navSync(){if(_navRaf)return;_navRaf=requestAnimationFrame(()=>{_navRaf=
     ||vis('reportOverlay')||vis('dmModal')||vis('authOverlay');
   const tab=vis('profModal')?'you':feed?'feed':(B.contains('ts-open')||B.contains('tour-open'))?'tours':'map';
   B.toggle('nav-vis',!hide);B.toggle('nav-screen',tab!=='map');
-  document.querySelectorAll('#tabBar [data-tab]').forEach(b=>{if(b.dataset.tab===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+  document.querySelectorAll('#tabBar [data-tab],.ab-tabs [data-tab]').forEach(b=>{if(b.dataset.tab===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
   const r=document.querySelector('#tabBar .tb-rec');if(r)r.classList.toggle('live',typeof trkRec!=='undefined'&&!!trkRec);
   const a=document.getElementById('mapAcc'),av=document.getElementById('tbAv');
   if(a&&av){const im=a.querySelector('img');const src=im&&a.classList.contains('has-img')?im.src:'';
