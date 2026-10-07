@@ -54,6 +54,8 @@ jobs:
       # exit 0 having written nothing.
       - name: Variant A pipeline plumbing (forcing window, .ini, caches)
         run: python tools/test_variant_a_forcing.py
+      - name: Community reports vs SNOWPACK (offline)
+        run: python tools/test_community.py
 
       # Upstream shape check. The agent build environment cannot reach
       # aws.slf.ch or data.geo.admin.ch (egress policy, 403 at the proxy), so

@@ -130,3 +130,24 @@ The run log prints the share of run-hours from each source.
   request), satellite snow cover (Sentinel-2 / MODIS) for where there is snow at all,
   SwissMetNet snow depth at the stations that measure it, SLF observer profiles, and
   the app's own user reports ("Pulver? Harsch? Sulz?") as ground truth on slopes.
+
+## Community reports (`community.py`)
+
+Every live cycle compares the public community reports of the last 72 h with
+the matching virtual slope (nearest weather point ≤ 12 km, height band, slope
+class, aspect) at the report's time:
+
+* **Powder depth** (drawn powder zones, quick reports) vs `powder_depth_cm`
+  → bias / MAE, plus a suggested model powder threshold for the classes.
+* **Categories** (powder, no snow, wet/corn, crust, drift, scoured) vs the
+  model's own classes → hit rate per category.
+* **Correction**: like IMIS, a slow step on the weather point's precipitation
+  factor (half the IMIS step, ≥ 3 reports from ≥ 2 people, one author ≤ 50 %
+  of the weight, MAD outlier test, confirmations and author trust as weight).
+* **Holdout**: 20 % of reports (fixed by id) never feed the correction and
+  check whether it would have helped.
+
+The step is **only applied** when the repository variable `COMMUNITY_APPLY`
+is `1` *and* the holdout confirms it; otherwise it runs in shadow mode and is
+only reported (manifest `validation.community`, run summary). Only reports
+visible to everyone are read (anon key), never friends-only posts.
