@@ -8,7 +8,7 @@
 import { decode, encode } from 'fast-png';
 import { vaHiEngine } from './va_engine.js';
 
-export const VIEWS = ['ski6', 'wind', 'density', 'ski18'];
+export const VIEWS = ['ski6', 'powder', 'wind', 'density', 'ski18'];
 export const ZMIN = 10, ZMAX = 12, TERR_Z = 12, SIZE = 256;
 
 // PNG -> {w, h, ch, data} (channels as stored: 1 gray, 3 RGB, 4 RGBA)

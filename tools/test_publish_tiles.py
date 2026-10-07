@@ -88,7 +88,7 @@ def main():
         m = json.loads((exp / "manifest.json").read_text())
         t = m.get("tiles") or {}
         check("manifest tiles block", t.get("base") == "https://tiles.example" and t.get("run") == "live-9"
-              and t.get("views") == ["ski6", "density"] and t.get("zmax") == 12, str(t))
+              and t.get("views") == ["ski6", "powder", "density"] and t.get("zmax") == 12, str(t))
     print("\nPUBLISH TILES " + ("OK" if not FAILS else f"FAILED: {FAILS}"))
     sys.exit(1 if FAILS else 0)
 
