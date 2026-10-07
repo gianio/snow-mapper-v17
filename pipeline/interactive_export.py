@@ -1275,8 +1275,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <link rel="preconnect" href="https://wmts.geo.admin.ch" crossorigin>
 <link rel="dns-prefetch" href="https://wmts.geo.admin.ch">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
  /* ===================================================================
     ALPIN GRID design tokens  —  see docs/design-system.md
@@ -1309,7 +1309,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    --rule-soft:1px solid rgba(18,21,26,.06);
    /* Two faces. The grotesk carries language; the mono carries anything the
       eye compares -- times, depths, counts, initials. */
-   --font:-apple-system,BlinkMacSystemFont,'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;
+   --font:'Inter',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Helvetica,Arial,sans-serif;
+   --font-d:'Plus Jakarta Sans','Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
    --mono:'SF Mono','IBM Plex Mono',ui-monospace,'Roboto Mono',Menlo,monospace;
 
    /* --- the newer component names, derived so nothing drifts apart --- */
@@ -3134,8 +3135,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     is, and a fan that lands on its own siblings is not a fan. */
  body.fab-open #fabDraw{transform:translate(-68px,0)}
  body.fab-open #fabObs{transform:translate(-68px,-58px)}
- body.fab-open #fabTrack{transform:translate(-68px,-116px)}
- body.fab-open #fabSnowp{transform:translate(-68px,-174px);transition-delay:.12s}
+ body.fab-open #fabSnowp{transform:translate(-68px,-116px);transition-delay:.08s}
  #fabSnowp{color:#7C3AED}
  body.fab-open #fabObs{transition-delay:.04s}
  body.fab-open #fabTrack{transition-delay:.08s}
@@ -4048,6 +4048,116 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .wc-pop span{font-size:11.5px;color:var(--fg2)}
  .wc-pop>a{font:700 12.5px Inter,system-ui;color:var(--accent);margin-top:4px}
  .wc-pop em{font-style:normal;font-size:10px;color:var(--fg2)}
+
+ /* ===================================================================
+    App shell: a top bar and five tabs, like the apps people already know.
+    =================================================================== */
+ :root{--bar-h:calc(env(safe-area-inset-top,0px) + 56px);--nav-h:calc(env(safe-area-inset-bottom,0px) + 62px);
+   --c-blue:#1E88E5;--c-cyan:#1FB6D9;--c-sun:#FF6A2B;--c-violet:#7B5CFA;--c-mint:#10B27C;--c-amber:#F4A21E;--c-rose:#EF4C7E}
+ :root[data-theme="dark"]{--c-blue:#5AB0F5;--c-cyan:#4FD0EC;--c-sun:#FF8A52;--c-violet:#A08BFF;--c-mint:#3FD49C;--c-amber:#F8BC4F;--c-rose:#FF759C}
+ @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--c-blue:#5AB0F5;--c-cyan:#4FD0EC;--c-sun:#FF8A52;--c-violet:#A08BFF;--c-mint:#3FD49C;--c-amber:#F8BC4F;--c-rose:#FF759C}}
+ h1,h2,h3,.tn-hd b,.prof-name,#profName,.dm-hd b,#dmTitle,.feed-hd b,.ts-sheet .tn-hd b,.trk-sheet h2,.trk-sheet h3{font-family:var(--font-d);letter-spacing:-.02em}
+
+ #brandMark{display:none!important}
+ #appBar{position:absolute;z-index:1150;left:0;right:0;top:0;height:var(--bar-h);box-sizing:border-box;
+   padding:env(safe-area-inset-top,0px) 10px 0 14px;display:flex;align-items:center;gap:10px;
+   background:color-mix(in srgb,var(--card) 84%,transparent);border-bottom:1px solid var(--hair);
+   -webkit-backdrop-filter:blur(22px) saturate(1.6);backdrop-filter:blur(22px) saturate(1.6);
+   box-shadow:0 8px 24px rgba(18,21,26,.06);transition:opacity .2s var(--ease),transform .26s cubic-bezier(.2,.8,.2,1)}
+ .ab-brand{display:flex;align-items:center;gap:10px;border:0;background:none;padding:0;cursor:pointer;color:var(--fg);min-width:0}
+ .ab-logo{width:32px;height:32px;border-radius:10px;flex:none;display:grid;place-items:center;color:#fff;
+   background:linear-gradient(140deg,var(--c-cyan),var(--c-blue) 55%,var(--c-violet));
+   box-shadow:0 4px 12px color-mix(in srgb,var(--c-blue) 38%,transparent),inset 0 1px 0 rgba(255,255,255,.35)}
+ .ab-logo svg{width:19px;height:19px}
+ .ab-name{font:800 19px/1 var(--font-d);letter-spacing:-.035em;white-space:nowrap}
+ .ab-acts{margin-left:auto;display:flex;align-items:center;gap:2px}
+ .ab-ic{position:relative;width:42px;height:42px;border-radius:13px;border:0;background:transparent;color:var(--fg);
+   display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+ .ab-ic:active{background:var(--fill);transform:scale(.94)}
+ .ab-ic svg{width:23px;height:23px}
+ .ab-ic[hidden]{display:none}
+ #dmFab{color:var(--c-violet)}
+ #appBar #mapAcc{position:relative!important;top:auto!important;right:auto!important;left:auto!important;margin:0 0 0 6px;
+   width:36px!important;height:36px!important;flex:none;box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--c-blue)!important}
+ #appBar #mapAcc.has-img{box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--c-blue)!important}
+ body.draw-on #appBar,body.ly-open #appBar,body.insp-open #appBar,body.trk-open #appBar,body.snp-open #appBar{opacity:0;pointer-events:none;transform:translateY(-100%)}
+ #demoPill{top:calc(var(--bar-h) + 10px)!important}
+ #demoPill.on{background:#12161D!important;color:#fff!important;border-color:rgba(255,255,255,.14)!important}
+ .trk-pill{top:calc(var(--bar-h) + 10px)!important}
+ #searchWrap{z-index:1200}
+
+ #tabBar{position:fixed;z-index:5300;left:0;right:0;bottom:0;height:var(--nav-h);box-sizing:border-box;
+   padding:0 4px env(safe-area-inset-bottom,0px);display:grid;grid-template-columns:repeat(5,1fr);
+   background:color-mix(in srgb,var(--card) 92%,transparent);border-top:1px solid var(--hair);
+   -webkit-backdrop-filter:blur(24px) saturate(1.7);backdrop-filter:blur(24px) saturate(1.7);
+   box-shadow:0 -8px 28px rgba(18,21,26,.07);transform:translateY(110%);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+ body.nav-vis #tabBar{transform:none}
+ #tabBar button{--tc:var(--c-blue);position:relative;border:0;background:none;padding:7px 0 5px;margin:0;cursor:pointer;
+   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--fg2);
+   font:700 10.5px/1 var(--font-d);letter-spacing:.005em;-webkit-tap-highlight-color:transparent;transition:color .15s}
+ #tabBar button[data-tab=tours]{--tc:var(--c-mint)}
+ #tabBar button[data-tab=feed]{--tc:var(--c-violet)}
+ #tabBar button[data-tab=you]{--tc:var(--c-rose)}
+ #tabBar button svg{width:24px;height:24px;transition:transform .2s var(--ease-spring)}
+ #tabBar button:active svg{transform:scale(.88)}
+ #tabBar button[aria-current=page]{color:var(--tc)}
+ #tabBar button[aria-current=page]::before{content:'';position:absolute;top:-1px;left:28%;right:28%;height:3px;border-radius:0 0 4px 4px;background:var(--tc)}
+ #tabBar button[aria-current=page] svg{stroke-width:2.3}
+ #tabBar .tb-rec{color:var(--fg)}
+ #tabBar .tb-rec i{width:46px;height:46px;margin-top:-18px;border-radius:50%;display:grid;place-items:center;color:#fff;
+   background:linear-gradient(145deg,#FF9248,var(--c-sun) 60%,#F2412B);
+   box-shadow:0 8px 18px color-mix(in srgb,var(--c-sun) 45%,transparent),0 0 0 4px var(--card)}
+ #tabBar .tb-rec i svg{width:23px;height:23px;stroke-width:2.2}
+ #tabBar .tb-rec[aria-current=page]::before{display:none}
+ #tabBar .tb-rec.live i{background:linear-gradient(145deg,#FF5F6D,#E5233F);animation:tbPulse 1.6s ease-in-out infinite}
+ @keyframes tbPulse{0%,100%{box-shadow:0 0 0 4px var(--card),0 0 0 4px rgba(229,35,63,.45)}50%{box-shadow:0 0 0 4px var(--card),0 0 0 12px rgba(229,35,63,0)}}
+ .tb-av{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background-size:cover;background-position:center}
+ .tb-av.img{box-shadow:0 0 0 1.5px currentColor}
+ .tb-av.img svg{display:none}
+ #tabBar .feed-dot{position:absolute;top:5px;left:calc(50% + 7px);right:auto;min-width:8px;height:8px;border-radius:999px;background:var(--c-rose);
+   border:2px solid var(--card);font-size:0;padding:0}
+ #tabBar .feed-dot.on{display:block}
+
+ /* everything that sat on the bottom edge now sits on the tab bar */
+ body.nav-vis #bottomPanel{bottom:calc(var(--nav-h) + 8px)!important}
+ body.nav-vis #mapFabs{bottom:calc(var(--nav-h) + var(--btm-h,120px) + 20px)!important}
+ #mapFabs #miniLegend{position:relative!important;bottom:auto!important;right:auto!important;left:auto!important;top:auto!important;
+   flex:0 1 auto;min-height:0;overflow:hidden;margin:0}
+ #mapFabs #miniLegend .ml-grad{max-height:22vh}
+ body.nav-vis .leg-info{bottom:calc(var(--nav-h) + var(--btm-h,80px) + 150px)}
+ body.nav-vis .feed-page.open:not(.side){bottom:var(--nav-h)}
+ @media (max-width:899px){
+   body.nav-vis .feed-page.open{bottom:var(--nav-h)}
+   body.nav-vis.ts-open .ts-sheet{bottom:var(--nav-h)!important}
+   body:not(.ts-open) .ts-sheet{visibility:hidden;transition:transform .3s,visibility 0s .3s}
+   body.nav-vis .prof-modal{bottom:var(--nav-h);top:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;justify-content:stretch}
+   body.nav-vis .prof-modal .prof-sheet{flex:1;max-height:none!important;border-radius:0!important;box-shadow:none!important;padding-top:env(safe-area-inset-top,0px)}
+ }
+ @media (min-width:900px){
+   :root{--nav-h:84px}
+   #tabBar{left:14px;right:auto;bottom:14px;width:420px;height:62px;border-radius:20px;border:1px solid var(--hair);padding:0 4px;box-shadow:var(--elev3)}
+   #tabBar button[aria-current=page]::before{top:0}
+   .ts-sheet{top:calc(var(--bar-h) + 12px)!important}
+ }
+
+ /* colour: each way to report has its own */
+ .mfab.act{color:#fff!important;border:0!important}
+ #fabDraw{background:linear-gradient(145deg,#4FB3F6,var(--c-blue))!important}
+ #fabObs{background:linear-gradient(145deg,#FFC24D,var(--c-amber))!important}
+ #fabSnowp{background:linear-gradient(145deg,#A48BFF,var(--c-violet))!important}
+ .mfab.act i{font-family:var(--font-d)}
+ #locFab{color:var(--c-blue)}
+ #layersFab{color:var(--c-mint)}
+ #mapFab{background:linear-gradient(145deg,#4FB3F6,var(--c-blue) 55%,#3D6BF0)!important}
+
+ /* feed: swipe through the pictures of a post */
+ .fc-post{aspect-ratio:4/5;max-height:62vh}
+ .fc-count{position:absolute;top:10px;right:10px;padding:4px 9px;border-radius:999px;background:rgba(10,14,22,.55);color:#fff;
+   font:700 11.5px/1 var(--font-d);letter-spacing:.02em;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:none}
+ .fc-nav{position:absolute;top:50%;margin-top:-17px;width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.88);
+   color:#111;font:700 22px/1 system-ui;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+ .fc-nav.prev{left:10px}.fc-nav.next{right:10px}
+ @media (hover:hover){.fc-wrap:hover .fc-nav{display:flex}}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -4065,6 +4175,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
      streams in, a hairline at the top edge carries the real progress. -->
 <div id="boot"><i></i></div>
 <div id="toastWrap" aria-live="polite"></div>
+<nav id="tabBar" aria-label="Navigation">
+  <button data-tab="map" onclick="navGo('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg><span>Karte</span></button>
+  <button data-tab="tours" id="tourFab" onclick="navGo('tours')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/></svg><span>Touren</span></button>
+  <button data-tab="rec" class="tb-rec" onclick="navGo('rec')"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.4 2.4M9.5 2.8h5"/></svg></i><span>Aufzeichnen</span></button>
+  <button data-tab="feed" id="mapFeedFab" onclick="navGo('feed')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Community</span><span class="feed-dot"></span></button>
+  <button data-tab="you" onclick="navGo('you')"><span class="tb-av" id="tbAv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.8"/><path d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0"/></svg></span><span>Du</span></button>
+</nav>
 <div id="disc"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="discH"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><h2 id="discH">Bevor du startest</h2><p><b>Experimentelle Modelldaten.</b> Diese App zeigt modellierte Schnee-, Pulver- und Skitauglichkeits-Sch&auml;tzungen. Sie ist <b>kein Lawinenbulletin</b> und ersetzt nicht die offizielle Beurteilung des <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation.html" target="_blank" rel="noopener">SLF</a> bzw. <a href="https://whiterisk.ch" target="_blank" rel="noopener">White Risk</a>. Entscheidungen im Gel&auml;nde triffst du auf <b>eigenes Risiko</b>.</p><p class="fine">Datenschutz: F&uuml;r Konto, Meldungen und Fotos werden E-Mail, Standort und Bilddaten bei Supabase (EU) gespeichert. Du kannst Konto und Beitr&auml;ge jederzeit l&ouml;schen.</p><label class="chk"><input type="checkbox" id="discChk" onchange="var b=document.getElementById('discBtn');if(b)b.disabled=!this.checked"><span>Ich habe verstanden, dass dies experimentelle Daten sind und kein Lawinenbulletin ersetzt.</span></label><button class="accept" id="discBtn" disabled onclick="acceptDisc()">Verstanden &ndash; loslegen</button></div></div>
 <div id="a2hs" onclick="if(event.target===this)a2hsLater()"><div class="sheet" role="dialog" aria-modal="true">
   <div class="a2hs-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="4.2" y1="7.5" x2="19.8" y2="16.5"/><line x1="4.2" y1="16.5" x2="19.8" y2="7.5"/></svg></div>
@@ -4117,8 +4234,15 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
      the app uses when it talks about itself (title, share sheet, PWA
      install) -- not in new chrome competing with the map. -->
 
+<header id="appBar">
+  <button class="ab-brand" onclick="navGo('map')" aria-label="Snowmapper"><span class="ab-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg></span><span class="ab-name">Snowmapper</span></button>
+  <div class="ab-acts">
+    <button class="ab-ic" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
+    <button class="ab-ic" id="dmFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5v3a1 1 0 0 0 1 1h2l6 4V5.5l-6 4H4a1 1 0 0 0-1 1z"/><path d="M6.5 14.5l1.2 4.2a1 1 0 0 0 1 .8h1.1"/><path d="M18.5 6.5v6M15.9 8l5.2 3M21.1 8l-5.2 3"/></svg><span class="dm-dot" id="dmDot" hidden></span></button>
+    <button class="pt-acc" id="mapAcc" onclick="accountTap()" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="pt-ini"></span></button>
+  </div>
+</header>
 <button id="brandMark" class="pt-home lg float" onclick="scrGo('search')" aria-label="Snowmapper"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg><span>Snowmapper</span></button>
-<button class="pt-acc" id="mapAcc" onclick="accountTap()" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="pt-ini"></span></button>
 <div id="searchWrap" class="hid"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Ort suchen…" autocomplete="off"/><div id="searchRes"></div></div>
 <div id="ctrlRail" hidden>
   <button class="rail-btn feed-accent" id="feedBtn" onclick="feedOpen()" title="Community-Feed" aria-label="Community-Feed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
@@ -4129,18 +4253,17 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <button class="feed-qr" id="mapQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Report Powder" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Report Powder</span></button>
 <div id="mapFabs">
+<div id="miniLegend" role="button" tabindex="0" aria-label="Legende – Details" onclick="legInfoToggle(event)">
+  <div id="mlUnit"></div>
+  <div id="mlScale"></div>
+</div>
   <div class="mfab-grp" role="toolbar" aria-label="Karte">
-    <button class="mfab" id="dmFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5v3a1 1 0 0 0 1 1h2l6 4V5.5l-6 4H4a1 1 0 0 0-1 1z"/><path d="M6.5 14.5l1.2 4.2a1 1 0 0 0 1 .8h1.1"/><path d="M18.5 6.5v6M15.9 8l5.2 3M21.1 8l-5.2 3"/></svg><span class="dm-dot" id="dmDot" hidden></span></button>
-    <button class="mfab" id="mapFeedFab" onclick="feedOpen()" title="Community" aria-label="Community"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
-    <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
-    <button class="mfab" id="tourFab" onclick="tsOpenUI()" title="Touren finden" aria-label="Touren finden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
   </div>
   <div class="mfab-row" id="reportRow">
     <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><i>Report Powder</i></button>
     <button class="mfab act" id="fabSnowp" onclick="fabMenu(false);snpOpen()" title="Snowp – 2 Kameras, nur Freunde" aria-label="Snowp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="15" height="13" rx="3"/><circle cx="10" cy="12.5" r="3.4"/><rect x="14" y="2.5" width="7.5" height="9" rx="2" fill="var(--card)"/><circle cx="17.75" cy="7" r="1.6"/></svg><i>Snowp</i></button>
-    <button class="mfab act" id="fabTrack" onclick="fabMenu(false);trkOpen()" title="Aktivität aufzeichnen" aria-label="Aktivität aufzeichnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg><i>Aufzeichnen</i></button>
     <button class="mfab act" id="fabObs" onclick="fabMenu(false);obsOpen()" title="Beobachtung melden" aria-label="Beobachtung melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><i>Beobachtung</i></button>
     <button class="mfab" id="mapFab" onclick="fabMenu()" title="Melden" aria-label="Melden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
   </div>
@@ -4225,10 +4348,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button class="ly-x" onclick="lyPanelClose()" aria-label="Ebenen schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
 </div>
 <button id="legendBtn" title="Legende" aria-label="Legende"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg></button><div class="legend" id="legend"></div>
-<div id="miniLegend" role="button" tabindex="0" aria-label="Legende – Details" onclick="legInfoToggle(event)">
-  <div id="mlUnit"></div>
-  <div id="mlScale"></div>
-</div>
 <div id="legInfo" class="leg-info" role="dialog" aria-label="Legende"></div>
 </section>
 <!-- Melden: a sheet, not a screen. The two ways in live on the plus. -->
@@ -5056,6 +5175,7 @@ const I18N_DICT={
 "Webcams konnten nicht geladen werden":["Webcams could not be loaded","Impossible de charger les webcams","Impossibile caricare le webcam"],
 "Webcams – keine Daten":["Webcams – no data","Webcams – pas de données","Webcam – nessun dato"],
 "Weiter":["Continue","Continuer","Continua"],
+"Du":["You","Toi","Tu"],
 "Wer darf mein Profil & meine Beiträge sehen?":["Who can see my profile & posts?","Qui peut voir mon profil & mes publications ?","Chi può vedere il mio profilo e i miei post?"],
 "Wetter":["Weather","Météo","Meteo"],
 "Wie du im Feed erscheinst":["How you appear in the feed","Comment tu apparais dans le fil","Come appari nel feed"],
@@ -11096,6 +11216,54 @@ function flyToMe(){haptic(8);
 // The app is one screen. scrGo survives as the name everything already calls:
 // 'search' is the map, 'feed' opens the panel over it, 'report' opens the
 // Melden sheet. Nothing translates, nothing wraps, nothing has to be swiped.
+// ── Tabs ─────────────────────────────────────────────────────────────────
+// Five places, always one tap away: the map, the tour finder, recording,
+// the community and you. Every tab is one of the existing screens; the bar
+// only decides which one is in front and closes the others.
+function navClose(keep){
+  const vis=id=>{const e=document.getElementById(id);return !!e&&e.style.display&&e.style.display!=='none';};
+  if(keep!=='feed'){const f=document.getElementById('feedPage');if(f&&f.classList.contains('open'))try{feedClose();}catch(e){}}
+  if(keep!=='tours'){if(document.body.classList.contains('ts-open'))try{tsClose();}catch(e){}
+    if(document.body.classList.contains('tour-open'))try{tourClose();}catch(e){}}
+  if(keep!=='you'&&vis('profModal'))try{profClose();}catch(e){}
+  if(keep!=='rec'&&document.body.classList.contains('trk-open'))try{trkClose();}catch(e){}
+  if(document.body.classList.contains('ly-open'))try{lyPanelClose();}catch(e){}
+  try{fabMenu(false);}catch(e){}
+  try{const ao=document.getElementById('authOverlay');if(ao&&keep!=='you')ao.style.display='none';}catch(e){}
+}
+function navGo(t){try{haptic(4);}catch(e){}
+  if(t==='map')navClose();
+  else if(t==='tours'){navClose('tours');if(!document.body.classList.contains('ts-open'))tsOpenUI();}
+  else if(t==='rec'){navClose('rec');trkOpen();}
+  else if(t==='feed'){navClose('feed');const el=document.getElementById('feedPage');
+    // a screen of its own on a phone; a column beside the map on a desk
+    if(el&&innerWidth<900){el.classList.remove('side');el.classList.add('wide');}
+    if(!(el&&el.classList.contains('open')))feedOpen();}
+  else if(t==='you'){navClose('you');accountTap();}
+  navSync();
+}
+let _navRaf=0;
+function navSync(){if(_navRaf)return;_navRaf=requestAnimationFrame(()=>{_navRaf=0;
+  const B=document.body.classList,vis=id=>{const e=document.getElementById(id);return !!e&&e.style.display&&e.style.display!=='none';};
+  const f=document.getElementById('feedPage'),feed=!!f&&f.classList.contains('open');
+  // full-screen tasks (recording, drawing, a report, a conversation) get the
+  // whole screen, like any other app
+  const hide=['trk-open','snp-open','draw-on','ly-open','insp-open','tn-open','tour-open'].some(c=>B.contains(c))
+    ||vis('reportOverlay')||vis('dmModal')||vis('authOverlay');
+  const tab=vis('profModal')?'you':feed?'feed':(B.contains('ts-open')||B.contains('tour-open'))?'tours':'map';
+  B.toggle('nav-vis',!hide);B.toggle('nav-screen',tab!=='map');
+  document.querySelectorAll('#tabBar [data-tab]').forEach(b=>{if(b.dataset.tab===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+  const r=document.querySelector('#tabBar .tb-rec');if(r)r.classList.toggle('live',typeof trkRec!=='undefined'&&!!trkRec);
+  const a=document.getElementById('mapAcc'),av=document.getElementById('tbAv');
+  if(a&&av){const im=a.querySelector('img');const src=im&&a.classList.contains('has-img')?im.src:'';
+    if(av.dataset.src!==src){av.dataset.src=src;av.classList.toggle('img',!!src);av.style.backgroundImage=src?'url('+JSON.stringify(src)+')':'';}}
+});}
+(function(){const mo=new MutationObserver(navSync);
+  const go=()=>{mo.observe(document.body,{attributes:true,attributeFilter:['class','data-screen']});
+    ['feedPage','mapAcc'].forEach(id=>{const e=document.getElementById(id);if(e)mo.observe(e,{attributes:true,attributeFilter:['class']});});
+    ['profModal','dmModal','reportOverlay','authOverlay'].forEach(id=>{const e=document.getElementById(id);if(e)mo.observe(e,{attributes:true,attributeFilter:['style']});});
+    navSync();};
+  if(document.readyState==='loading')addEventListener('DOMContentLoaded',go);else go();})();
 function scrGo(name){
   if(name==='feed'){feedOpen();return;}
   if(name==='report'){rpOpen();return;}
@@ -11626,7 +11794,7 @@ const COACH_STEPS=[
   {sel:'#layersFab',html:'<b>Ebenen.</b><br>Öffnet die Ebenen — zuerst die Ebene, darunter ihre Unterebenen.'},
   {sel:'#btmMain',html:'<b>Zeitfenster.</b><br>Wähle den Zeitraum – die Karte rechnet sofort neu.'},
   {sel:'#searchFab',html:'<b>Spring zu einem Ort.</b><br>Suche einen Berg oder Ort und zoome direkt dorthin.'},
-  {sel:'#mapFeedFab',html:'<b>Community.</b><br>Meldungen aus dem sichtbaren Kartenausschnitt und dem gewählten Zeitfenster.'},
+  {sel:'#tabBar [data-tab=feed]',html:'<b>Community.</b><br>Meldungen aus dem sichtbaren Kartenausschnitt und dem gewählten Zeitfenster.'},
   {sel:'#mapFab',html:'<b>Melden.</b><br>Zeichne eine Schnee-Karte oder melde eine Beobachtung.'}
 ];
 let coachIdx=0;
@@ -14312,7 +14480,7 @@ async function obsSubmit(){if(!sb||!sbUser||!obsState)return;const L=obsState.lo
       const{error}=await sb.storage.from('report-images').upload(path,up,{contentType:up.type||'image/jpeg'});
       if(!error){const{data}=sb.storage.from('report-images').getPublicUrl(path);if(data&&data.publicUrl)urls.push(data.publicUrl);}
       else if(urls.length===0&&obsState.media.length){/* keep going */}}catch(e){}}
-    const cd=obsBuildCD();
+    const cd=obsBuildCD();if(urls.length>1)cd.images=urls;
     const row={user_id:sbUser.id,location:`POINT(${L.lon} ${L.lat})`,elevation_m:L.elevation||null,
       primary_categories:[obsState.type],subtype:obsSubLabel(),condition_data:cd,
       image_url:urls[0]||null,caption:(obsState.comment||'').trim()||null,
@@ -14826,6 +14994,14 @@ function feedVisual(r,col){
   if(cd.activity&&cd.activity.track){setTimeout(()=>{try{feedWireCarousels();}catch(e){}},0);return actFeedVisual(r);}
   const drawn=!!cd.draw;
   const photo=(!drawn||(r.img&&r.img!==cd.drawImage&&r.img!==cd.snapshot))?r.img:null;
+  const pics=[photo].concat(cd.images||[]).filter((u,i,a)=>u&&typeof u==='string'&&u!==cd.drawImage&&u!==cd.snapshot&&a.indexOf(u)===i);
+  if(pics.length>1){const id='p'+String(r.id).replace(/[^\w-]/g,'');setTimeout(()=>{try{feedWireCarousels();}catch(e){}},0);
+    return '<div class="fc-wrap fc-post"><div class="fc-carousel" id="fcar-'+id+'">'
+      +pics.map(u=>'<div class="fc-slide" onclick="feedImgTap(\''+r.id+'\',event)"><img src="'+u+'" alt="" loading="lazy" decoding="async"></div>').join('')
+      +'</div><span class="fc-count" id="fcn-'+id+'">1/'+pics.length+'</span>'
+      +'<div class="fc-dots" id="fcd-'+id+'">'+pics.map((x,i)=>'<i class="'+(i?'':'on')+'"></i>').join('')+'</div>'
+      +'<button class="fc-nav prev" aria-label="Zurück" onclick="event.stopPropagation();fcStep(\''+id+'\',-1)">‹</button>'
+      +'<button class="fc-nav next" aria-label="Weiter" onclick="event.stopPropagation();fcStep(\''+id+'\',1)">›</button></div>';}
   if(photo)return '<div class="feed-card-visual" onclick="feedImgTap(\''+r.id+'\',event)"><img src="'+photo+'" alt="" loading="lazy" decoding="async"/></div>';
   if(drawn)return '';
   if(r.caption)return '<div class="feed-tx" style="background:linear-gradient(150deg,'+col+'14,rgba(255,255,255,0) 75%)"><span class="feed-tx-bar" style="background:'+col+'"></span>'+escapeHtml(r.caption)+'</div>';
@@ -14833,8 +15009,13 @@ function feedVisual(r,col){
 }
 function feedWireCarousels(){document.querySelectorAll('.fc-carousel').forEach(c=>{if(c._w)return;c._w=1;
   const dots=document.getElementById('fcd-'+c.id.slice(5));
+  const cnt=document.getElementById('fcn-'+c.id.slice(5));
   c.addEventListener('scroll',()=>{const i=Math.round(c.scrollLeft/Math.max(1,c.clientWidth));
-    if(dots)dots.querySelectorAll('i').forEach((d,k)=>d.classList.toggle('on',k===i));},{passive:true});});}
+    if(dots)dots.querySelectorAll('i').forEach((d,k)=>d.classList.toggle('on',k===i));
+    if(cnt)cnt.textContent=(i+1)+'/'+c.children.length;},{passive:true});});}
+function fcStep(id,d){const c=document.getElementById('fcar-'+id);if(!c)return;
+  const i=Math.max(0,Math.min(c.children.length-1,Math.round(c.scrollLeft/Math.max(1,c.clientWidth))+d));
+  c.scrollTo({left:i*c.clientWidth,behavior:'smooth'});}
 function feedRender(){
   const list=document.getElementById('feedList');
   // Drawn snow-maps feed the Reported Powder model (progZones() reads
