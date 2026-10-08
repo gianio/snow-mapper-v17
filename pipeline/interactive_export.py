@@ -4517,6 +4517,39 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  :root[data-theme="dark"] .onb-pri{color:var(--on-brand)!important}
  :root[data-theme="dark"] .onb-prog i,:root[data-theme="dark"] .onb-dots i{background:rgba(255,255,255,.18)}
  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .onb-langs button,:root:not([data-theme="light"]) .onb-back,:root:not([data-theme="light"]) .lock-ic{background:rgba(255,255,255,.10)!important;color:var(--fg)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 0 0 1px rgba(255,255,255,.08)!important}  :root:not([data-theme="light"]) .onb-langs button.on{background:var(--brand)!important;color:var(--on-brand)!important}  :root:not([data-theme="light"]) .onb-pri{color:var(--on-brand)!important}  :root:not([data-theme="light"]) .onb-prog i,:root:not([data-theme="light"]) .onb-dots i{background:rgba(255,255,255,.18)}}
+
+ /* thinner, clearer tab bar: 20% glass, the map shows through */
+ #tabBar{height:52px!important;padding:4px!important;background:rgba(255,255,255,.20)!important;
+   -webkit-backdrop-filter:blur(18px) saturate(190%)!important;backdrop-filter:blur(18px) saturate(190%)!important}
+ :root[data-theme="dark"] #tabBar{background:rgba(20,30,48,.20)!important}
+ @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #tabBar{background:rgba(20,30,48,.20)!important}}
+ @media (max-width:899px){:root{--nav-h:calc(env(safe-area-inset-bottom,0px) + 70px)}}
+ #tabBar button svg{width:24px!important;height:24px!important;filter:drop-shadow(0 1px 1.5px rgba(255,255,255,.7))}
+ :root[data-theme="dark"] #tabBar button svg{filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.6))}
+ #tabBar button{color:var(--fg)!important}
+ #tabBar button[aria-current=page]{background:rgba(255,255,255,.55)!important}
+ :root[data-theme="dark"] #tabBar button[aria-current=page]{background:rgba(255,255,255,.18)!important}
+ #tabBar .tb-rec i{width:36px!important;height:36px!important}
+ /* the plus left the map: reporting is a tab now */
+ #reportRow{display:none!important}
+ #repSheet{position:fixed;z-index:5350;left:18px;right:18px;bottom:calc(var(--nav-h) + 6px);display:flex;justify-content:flex-end}
+ #repSheet[hidden]{display:none}
+ .rs-in{width:min(320px,100%);padding:8px;border-radius:24px;background:var(--lg-bg2);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);
+   box-shadow:var(--lg-edge),var(--lg-shadow);animation:rsIn .2s cubic-bezier(.2,.9,.25,1)}
+ @keyframes rsIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+ .rs-it{display:flex;align-items:center;gap:12px;width:100%;padding:10px;border:0;border-radius:16px;background:none;color:var(--fg);text-align:left;cursor:pointer}
+ .rs-it:active{background:rgba(255,255,255,.4)}
+ .rs-it i{width:42px;height:42px;border-radius:14px;flex:none;display:grid;place-items:center;color:#fff;background:var(--rc);
+   box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+ .rs-it i svg{width:22px;height:22px}
+ .rs-it span{display:flex;flex-direction:column;gap:2px}
+ .rs-it b{font:800 15px/1.2 var(--font-d,inherit)}.rs-it small{font:500 12.5px/1.2 var(--font,inherit);color:var(--fg2)}
+ body.desk #repSheet{right:auto;bottom:auto;justify-content:flex-start;width:320px}
+ /* search with the map buttons */
+ #mapFabs #searchFab{color:var(--fg)}
+ .feed-msg-fab{position:relative}
+ /* reporting is a tab now -- no second plus in the feed */
+ body.nav-vis .feed-page .feed-fab,body.desk .feed-page .feed-fab{display:none!important}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -4540,12 +4573,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <b>Snowmapper ist gesperrt</b><span>Mit Face ID entsperren</span>
   <button class="onb-pri" onclick="lockUnlock()">Entsperren</button>
   <button class="onb-link" onclick="lockReset()">Sperre aufheben und abmelden</button></div></div>
+<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:var(--c-blue)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg></i><span><b>Report Powder</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:var(--c-amber)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button><button class="rs-it" onclick="repSheetToggle(false);snpOpen()"><i style="--rc:var(--c-violet)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="15" height="13" rx="3"/><circle cx="10" cy="12.5" r="3.4"/><rect x="14" y="2.5" width="7.5" height="9" rx="2"/></svg></i><span><b>Snowp</b><small>2 Kameras · nur Freunde</small></span></button></div></div>
 <nav id="tabBar" aria-label="Navigation">
   <button data-tab="map" onclick="navGo('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg><span>Karte</span></button>
   <button data-tab="tours" id="tourFab" onclick="navGo('tours')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/></svg><span>Touren</span></button>
   <button data-tab="rec" class="tb-rec" onclick="navGo('rec')"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.4 2.4M9.5 2.8h5"/></svg></i><span>Aufzeichnen</span></button>
   <button data-tab="feed" id="mapFeedFab" onclick="navGo('feed')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Community</span><span class="feed-dot"></span></button>
-  <button data-tab="you" onclick="navGo('you')"><span class="tb-av" id="tbAv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.8"/><path d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0"/></svg></span><span>Du</span></button>
+  <button data-tab="report" id="tbReport" onclick="repSheetToggle()" aria-label="Melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><path d="M12 7.8v8.4M7.8 12h8.4"/></svg><span>Melden</span></button>
 </nav>
 <div id="disc"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="discH"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><h2 id="discH">Bevor du startest</h2><p><b>Experimentelle Modelldaten.</b> Diese App zeigt modellierte Schnee-, Pulver- und Skitauglichkeits-Sch&auml;tzungen. Sie ist <b>kein Lawinenbulletin</b> und ersetzt nicht die offizielle Beurteilung des <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation.html" target="_blank" rel="noopener">SLF</a> bzw. <a href="https://whiterisk.ch" target="_blank" rel="noopener">White Risk</a>. Entscheidungen im Gel&auml;nde triffst du auf <b>eigenes Risiko</b>.</p><p class="fine">Datenschutz: F&uuml;r Konto, Meldungen und Fotos werden E-Mail, Standort und Bilddaten bei Supabase (EU) gespeichert. Du kannst Konto und Beitr&auml;ge jederzeit l&ouml;schen.</p><label class="chk"><input type="checkbox" id="discChk" onchange="var b=document.getElementById('discBtn');if(b)b.disabled=!this.checked"><span>Ich habe verstanden, dass dies experimentelle Daten sind und kein Lawinenbulletin ersetzt.</span></label><button class="accept" id="discBtn" disabled onclick="acceptDisc()">Verstanden &ndash; loslegen</button></div></div>
 <div id="a2hs" onclick="if(event.target===this)a2hsLater()"><div class="sheet" role="dialog" aria-modal="true">
@@ -4605,11 +4639,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <button data-tab="map" onclick="navGo('map')">Karte</button>
     <button data-tab="tours" onclick="navGo('tours')">Touren</button>
     <button data-tab="feed" onclick="navGo('feed')">Community<span class="feed-dot"></span></button>
-    <button data-tab="you" onclick="navGo('you')">Profil</button>
+    <button data-tab="report" onclick="repSheetToggle()">Melden</button>
   </nav>
   <div class="ab-acts">
-    <button class="ab-ic" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
-    <button class="ab-ic" id="dmFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5v3a1 1 0 0 0 1 1h2l6 4V5.5l-6 4H4a1 1 0 0 0-1 1z"/><path d="M6.5 14.5l1.2 4.2a1 1 0 0 0 1 .8h1.1"/><path d="M18.5 6.5v6M15.9 8l5.2 3M21.1 8l-5.2 3"/></svg><span class="dm-dot" id="dmDot" hidden></span></button>
     <button class="pt-acc" id="mapAcc" onclick="accountTap()" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="pt-ini"></span></button>
   </div>
 </header>
@@ -4629,6 +4661,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div id="mlScale"></div>
 </div>
   <div class="mfab-grp" role="toolbar" aria-label="Karte">
+    <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
   </div>
@@ -4875,7 +4908,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="feed-anchor-bar" id="feedAnchorBar" style="display:none"></div>
 <div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Lade Beiträge…</div></div></div>
 <button class="feed-qr" id="feedQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
-<button class="feed-msg-fab" id="feedMsgFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 4l-1.4 4.1A8.5 8.5 0 0 1 21 11.5z"/></svg></button>
+<button class="feed-msg-fab" id="feedMsgFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 4l-1.4 4.1A8.5 8.5 0 0 1 21 11.5z"/></svg><span class="dm-dot" id="dmDot" hidden></span></button>
 <button class="feed-friends-fab" id="feedFriendsFab" onclick="usOpen()" title="Leute finden" aria-label="Leute finden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
 <button class="feed-filt-fab" id="feedFiltFab" onclick="feedFilterOpen()" title="Filter" aria-label="Filter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg><i class="ff-dot"></i></button>
 <button class="feed-fab" id="feedFab" onclick="feedCreatePost()" title="Bedingungen melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
@@ -11767,7 +11800,14 @@ function deskSync(){let d=false;try{d=matchMedia('(hover:hover) and (pointer:fin
   document.body.classList.toggle('desk',d);try{navSync();}catch(e){}}
 addEventListener('resize',()=>{clearTimeout(deskSync._t);deskSync._t=setTimeout(deskSync,150);});
 setTimeout(deskSync,0);
-function navGo(t){try{haptic(4);}catch(e){}
+function repSheetToggle(on){const el=document.getElementById('repSheet');if(!el)return;
+  on=on===undefined?el.hidden:!!on;el.hidden=!on;
+  if(on&&document.body.classList.contains('desk')){const t=document.querySelector('.ab-tabs [data-tab=report]');
+    if(t){const r=t.getBoundingClientRect();el.style.left=Math.max(12,r.left-8)+'px';el.style.top=(r.bottom+10)+'px';}}
+  else{el.style.left='';el.style.top='';}document.body.classList.toggle('rep-open',on);if(on){try{haptic(4);}catch(e){}}navSync();}
+addEventListener('pointerdown',e=>{if(!document.body.classList.contains('rep-open'))return;
+  if(e.target.closest&&(e.target.closest('#repSheet')||e.target.closest('[data-tab=report]')))return;repSheetToggle(false);},true);
+function navGo(t){try{haptic(4);}catch(e){}try{repSheetToggle(false);}catch(e){}
   if(t==='map')navClose();
   else if(t==='tours'){navClose('tours');if(!document.body.classList.contains('ts-open'))tsOpenUI();}
   else if(t==='rec'){navClose('rec');trkOpen();}
@@ -11786,7 +11826,7 @@ function navSync(){if(_navRaf)return;_navRaf=requestAnimationFrame(()=>{_navRaf=
   // whole screen, like any other app
   const hide=['trk-open','snp-open','draw-on','ly-open','insp-open','tn-open','tour-open'].some(c=>B.contains(c))
     ||vis('reportOverlay')||vis('dmModal')||vis('authOverlay');
-  const tab=vis('profModal')?'you':feed?'feed':(B.contains('ts-open')||B.contains('tour-open'))?'tours':'map';
+  const tab=B.contains('rep-open')?'report':vis('profModal')?'you':feed?'feed':(B.contains('ts-open')||B.contains('tour-open'))?'tours':'map';
   B.toggle('nav-vis',!hide);B.toggle('nav-screen',tab!=='map');
   document.querySelectorAll('#tabBar [data-tab],.ab-tabs [data-tab]').forEach(b=>{if(b.dataset.tab===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
   const r=document.querySelector('#tabBar .tb-rec');if(r)r.classList.toggle('live',typeof trkRec!=='undefined'&&!!trkRec);
@@ -13351,7 +13391,7 @@ function authMenu(){openProfile();}
 // --- Personal preferences ---------------------------------------------------
 // Device-local, so they work before sign-in and never need a round trip.
 const PREF_KEY='ssm_prefs_v1';
-const PREF_DEFAULTS={start:'country',home:'',layer:'meteo:0',window:'48',showMyReports:false};
+const PREF_DEFAULTS={start:'country',home:'',layer:'meteo:powder',window:'48',showMyReports:false};
 let prefs=Object.assign({},PREF_DEFAULTS);
 function prefsLoad(){try{const v=JSON.parse(localStorage.getItem(PREF_KEY)||'{}');
   prefs=Object.assign({},PREF_DEFAULTS,v||{});}catch(e){prefs=Object.assign({},PREF_DEFAULTS);}
@@ -13522,9 +13562,12 @@ function prefsApplyStartup(){
   try{
     const w=parseInt(prefs.window||'48');
     if(w&&w!==(b-a)){windowSize=w;a=Math.max(0,Math.min(T-w,nowIdx-Math.floor(w/2)));b=Math.min(T,a+w);}
-    const lv=(prefs.layer||'meteo:0').split(':');
+    // the old default ('meteo:0', reported powder) becomes the new one: Powder
+    const lv=(!prefs.layer||prefs.layer==='meteo:0'?'meteo:powder':prefs.layer).split(':');
     const grp=(GROUPS[lv[0]]&&GROUPS[lv[0]].menu!==false)?lv[0]:'meteo';
-    setTopic(grp,grp===lv[0]?(parseInt(lv[1])||0):0,0);
+    let li=parseInt(lv[1]);
+    if(isNaN(li)){li=Math.max(0,groupItems(grp).findIndex(it=>it.id===lv[1]));}
+    setTopic(grp,grp===lv[0]?li:0,0);
     if(prefs.start==='home'&&prefs.home){
       const r=CH_RESORTS.find(x=>x.name===prefs.home);
       if(r){map.setView([r.lat,r.lng],12.5,{animate:false});updateBaseFade();}
