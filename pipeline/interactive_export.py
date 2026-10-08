@@ -4335,6 +4335,59 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .pv-hl .pv-hl-m img,.pv-hl .pv-hl-m svg{width:100%!important;height:100%!important;border-radius:0!important;box-shadow:none!important;border:0!important;background:none!important}
  .pv-hl-m{display:block;width:96px;height:96px;border-radius:18px!important;overflow:hidden;background:var(--fill);border:2px solid var(--card);box-shadow:0 0 0 2px var(--brand)}
  .pv-hl-m img,.pv-hl-m svg{width:100%;height:100%;object-fit:cover;display:block}
+
+ /* ===================================================================
+    Design concept "Powder day" -- taken from the reference photos:
+    high-key snow white, cool blue-grey powder shadows, the deep navy of an
+    alpine sky as the one brand colour, and a single warm red (the jacket in
+    the snow) that only ever means "live": recording, alerts, danger.
+    =================================================================== */
+ :root{
+   --snow:#F4F6F9;--powder:#DFE5EC;--powder2:#C9D2DC;--shade:#7C92A7;--sky:#1D2D49;--sky2:#2D4A6E;--signal:#D7353F;
+   --fg:#15213A;--fg2:#4A5A70;--mut:#6B7C90;
+   --page:var(--snow);--paper:var(--snow);--card:#FFFFFF;--fill:#EAEEF3;--fill2:var(--powder);--map-bg:#EEF1F5;
+   --bd:rgba(29,45,73,.11);--hair:var(--bd);
+   --glass:rgba(244,246,249,.86);--glass2:rgba(255,255,255,.92);
+   --elev1:0 1px 2px rgba(29,45,73,.06);--elev2:0 4px 14px rgba(29,45,73,.09);--elev3:0 10px 30px rgba(29,45,73,.14);
+   --rule:1px solid rgba(29,45,73,.11);--rule-soft:1px solid rgba(29,45,73,.07);
+   --brand:#2D5A8C;--brand-deep:#1D2D49;--brand-soft:rgba(45,90,140,.11);--brand-line:rgba(45,90,140,.32);
+   --brand-grad:linear-gradient(150deg,#4A7BAE 0%,#2D5A8C 45%,#1D2D49 100%);
+   --c-blue:#3F7FC0;--c-violet:#6A5BD8;--c-mint:#2E9C7A;--c-amber:#E0A23A;--c-rose:#D7353F;
+   --danger:var(--signal);--danger-tint:rgba(215,53,63,.10);--ok:#2E9C7A;--warn:#C98A22}
+ :root[data-theme="dark"]{
+   --snow:#0D1525;--powder:#22314A;--powder2:#2C3D58;--shade:#8FA4BB;--sky:#C8D6E8;--sky2:#9DB6D3;--signal:#FF5D67;
+   --fg:#E8EEF6;--fg2:#A9B7C9;--mut:#8C9BAE;
+   --page:var(--snow);--paper:var(--snow);--card:#141F33;--fill:#1C2840;--fill2:var(--powder);--map-bg:#111A2B;
+   --bd:rgba(200,214,232,.12);--glass:rgba(13,21,37,.86);--glass2:rgba(20,31,51,.94);
+   --elev1:0 1px 2px rgba(0,0,0,.4);--elev2:0 4px 14px rgba(0,0,0,.45);--elev3:0 10px 30px rgba(0,0,0,.55);
+   --rule:1px solid rgba(200,214,232,.12);--rule-soft:1px solid rgba(200,214,232,.07);
+   --brand:#8FB6E0;--brand-deep:#5E86B4;--brand-soft:rgba(143,182,224,.16);--brand-line:rgba(143,182,224,.42);
+   --brand-grad:linear-gradient(150deg,#A9C8EA 0%,#7FA6D2 50%,#5E86B4 100%);--on-brand:#0D1525;
+   --c-blue:#7FB0E6;--c-violet:#A497F2;--c-mint:#5CC8A3;--c-amber:#F1BC5C;--c-rose:#FF5D67;--danger-tint:rgba(255,93,103,.14)}
+ @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+   --snow:#0D1525;--powder:#22314A;--powder2:#2C3D58;--shade:#8FA4BB;--sky:#C8D6E8;--sky2:#9DB6D3;--signal:#FF5D67;
+   --fg:#E8EEF6;--fg2:#A9B7C9;--mut:#8C9BAE;
+   --page:var(--snow);--paper:var(--snow);--card:#141F33;--fill:#1C2840;--fill2:var(--powder);--map-bg:#111A2B;
+   --bd:rgba(200,214,232,.12);--glass:rgba(13,21,37,.86);--glass2:rgba(20,31,51,.94);
+   --elev1:0 1px 2px rgba(0,0,0,.4);--elev2:0 4px 14px rgba(0,0,0,.45);--elev3:0 10px 30px rgba(0,0,0,.55);
+   --rule:1px solid rgba(200,214,232,.12);--rule-soft:1px solid rgba(200,214,232,.07);
+   --brand:#8FB6E0;--brand-deep:#5E86B4;--brand-soft:rgba(143,182,224,.16);--brand-line:rgba(143,182,224,.42);
+   --brand-grad:linear-gradient(150deg,#A9C8EA 0%,#7FA6D2 50%,#5E86B4 100%);--on-brand:#0D1525;
+   --c-blue:#7FB0E6;--c-violet:#A497F2;--c-mint:#5CC8A3;--c-amber:#F1BC5C;--c-rose:#FF5D67;--danger-tint:rgba(255,93,103,.14)}}
+ html{background:var(--snow)}
+ body{background:var(--page)}
+ /* the chrome reads as fresh snow: white glass with a cool powder shadow */
+ #appBar,#tabBar{background:color-mix(in srgb,var(--card) 86%,transparent)!important;border-color:var(--bd)!important}
+ #tabBar{box-shadow:0 12px 32px rgba(29,45,73,.18),0 2px 6px rgba(29,45,73,.06)!important}
+ .ab-logo{background:linear-gradient(150deg,#7FA6D2,#2D5A8C 55%,#1D2D49)!important;box-shadow:0 4px 12px rgba(29,45,73,.28),inset 0 1px 0 rgba(255,255,255,.35)!important}
+ /* red means live -- and only that */
+ #tabBar .tb-rec i{background:linear-gradient(150deg,#F0646B,var(--signal) 55%,#A9212B)!important;box-shadow:0 8px 18px rgba(215,53,63,.38),0 0 0 4px var(--card)!important}
+ .trk-go{background:linear-gradient(150deg,#F0646B,var(--signal) 55%,#A9212B)!important;box-shadow:0 0 0 10px rgba(215,53,63,.12),0 12px 28px rgba(215,53,63,.35)!important}
+ .trk-pill{background:var(--signal)!important;top:calc(var(--bar-h) + 50px)!important}
+ .trk-gps.good i{background:var(--c-mint)}
+ /* powder-shadow tints instead of flat greys */
+ .ts-seg,.dm-tabs,.feed-scope,.prof-seg{background:var(--fill)!important}
+ .trk-sp{background:linear-gradient(180deg,var(--card),var(--fill))}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -8864,7 +8917,7 @@ function _trkTile(u){return new Promise(res=>{const im=new Image();im.crossOrigi
 async function trkMapImage(ll,rep,w,h,withTrack){
   w=w||900;h=h||560;const pad=Math.round(Math.min(w,h)*.12);
   const cv=document.createElement('canvas');cv.width=w;cv.height=h;const c=cv.getContext('2d');
-  c.fillStyle='#eef3f8';c.fillRect(0,0,w,h);
+  c.fillStyle='#EEF1F5';c.fillRect(0,0,w,h);
   if(!ll||ll.length<2)return null;
   const F=trkFit(ll,w,h,pad),zi=Math.max(6,Math.min(17,Math.floor(F.z))),sc=Math.pow(2,F.z-zi),ts=256*sc;
   const t0x=Math.floor(F.ox/ts),t1x=Math.floor((F.ox+w)/ts),t0y=Math.floor(F.oy/ts),t1y=Math.floor((F.oy+h)/ts);
@@ -8878,7 +8931,7 @@ async function trkMapImage(ll,rep,w,h,withTrack){
     c.beginPath();Q.forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]));c.strokeStyle='#fff';c.lineWidth=11;c.stroke();
     c.beginPath();Q.forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]));c.strokeStyle=col;c.lineWidth=6;c.stroke();
     const dot=(q,f)=>{c.beginPath();c.arc(q[0],q[1],8,0,2*Math.PI);c.fillStyle=f;c.fill();c.lineWidth=3;c.strokeStyle='#fff';c.stroke();};
-    dot(Q[0],'#2E9E6A');dot(Q[Q.length-1],'#1d1d1f');
+    dot(Q[0],'#2E9C7A');dot(Q[Q.length-1],'#1D2D49');
     if(rep!=null&&Q[rep]){const q=Q[rep];c.beginPath();c.arc(q[0],q[1],17,0,2*Math.PI);c.fillStyle='#fff';c.fill();c.lineWidth=3.5;c.strokeStyle=col;c.stroke();
       c.save();c.translate(q[0],q[1]);c.strokeStyle=col;c.lineWidth=2.6;c.beginPath();
       [[0,-10,0,10],[-8.7,-5,8.7,5],[8.7,-5,-8.7,5]].forEach(l=>{c.moveTo(l[0],l[1]);c.lineTo(l[2],l[3]);});c.stroke();c.restore();}
