@@ -12,6 +12,19 @@
 <key>NSLocationWhenInUseUsageDescription</key>
 <string>Zeigt deinen Standort auf der Karte und ordnet deine Schnee-Meldungen dem richtigen Ort zu.</string>
 
+<!-- Recording an activity: the GPS keeps running when the screen is locked or
+     another app is in front. iOS then shows the blue location indicator at the
+     top of the screen (next to the camera / Dynamic Island), so you always see
+     that the recording is still on. Needs the background-geolocation plugin
+     (@capacitor-community/background-geolocation, in package.json). -->
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+<string>Zeichnet deine Aktivität weiter auf, wenn der Bildschirm gesperrt ist oder du kurz eine andere App öffnest. Oben im Display siehst du dann die blaue Standort-Anzeige.</string>
+
+<key>UIBackgroundModes</key>
+<array>
+  <string>location</string>
+</array>
+
 <key>NSCameraUsageDescription</key>
 <string>Erlaubt dir, ein Foto der Schneeverhältnisse für deine Meldung aufzunehmen.</string>
 
