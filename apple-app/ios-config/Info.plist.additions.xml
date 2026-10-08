@@ -25,6 +25,11 @@
   <string>location</string>
 </array>
 
+<!-- Face ID app lock (@aparajita/capacitor-biometric-auth). Without this
+     string iOS terminates the app the first time Face ID is requested. -->
+<key>NSFaceIDUsageDescription</key>
+<string>Entsperrt Snowmapper mit Face ID, damit deine Nachrichten, Aufzeichnungen und dein Konto nur für dich sichtbar sind.</string>
+
 <key>NSCameraUsageDescription</key>
 <string>Erlaubt dir, ein Foto der Schneeverhältnisse für deine Meldung aufzunehmen.</string>
 

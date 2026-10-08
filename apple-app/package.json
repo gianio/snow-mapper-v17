@@ -13,6 +13,7 @@
     "ios": "npm run build:web && cap sync ios && cap open ios"
   },
   "dependencies": {
+    "@aparajita/capacitor-biometric-auth": "^8.0.2",
     "@capacitor-community/background-geolocation": "^1.2.26",
     "@capacitor/app": "^6.0.0",
     "@capacitor/core": "^6.1.2",
