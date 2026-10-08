@@ -4388,6 +4388,135 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* powder-shadow tints instead of flat greys */
  .ts-seg,.dm-tabs,.feed-scope,.prof-seg{background:var(--fill)!important}
  .trk-sp{background:linear-gradient(180deg,var(--card),var(--fill))}
+
+ /* ===================================================================
+    Liquid glass. Chrome floats over the map as frosted glass: heavy blur,
+    a bright specular top edge, a faint inner rim. No slabs, no hard bars.
+    =================================================================== */
+ :root{--lg-bg:rgba(255,255,255,.42);--lg-bg2:rgba(255,255,255,.62);--lg-tint:rgba(244,246,249,.30);
+   --lg-edge:inset 0 1px 0 rgba(255,255,255,.85),inset 0 0 0 1px rgba(255,255,255,.45),inset 0 -1px 1px rgba(29,45,73,.06);
+   --lg-shadow:0 10px 30px rgba(29,45,73,.16),0 1px 3px rgba(29,45,73,.08);
+   --lg-blur:blur(26px) saturate(185%) brightness(1.04);--lg-pill:rgba(255,255,255,.75)}
+ :root[data-theme="dark"]{--lg-bg:rgba(30,40,60,.42);--lg-bg2:rgba(30,40,60,.62);--lg-tint:rgba(13,21,37,.30);
+   --lg-edge:inset 0 1px 0 rgba(255,255,255,.22),inset 0 0 0 1px rgba(255,255,255,.10),inset 0 -1px 1px rgba(0,0,0,.25);
+   --lg-shadow:0 10px 30px rgba(0,0,0,.45);--lg-blur:blur(26px) saturate(170%);--lg-pill:rgba(255,255,255,.16)}
+ @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lg-bg:rgba(30,40,60,.42);--lg-bg2:rgba(30,40,60,.62);--lg-tint:rgba(13,21,37,.30);
+   --lg-edge:inset 0 1px 0 rgba(255,255,255,.22),inset 0 0 0 1px rgba(255,255,255,.10),inset 0 -1px 1px rgba(0,0,0,.25);
+   --lg-shadow:0 10px 30px rgba(0,0,0,.45);--lg-blur:blur(26px) saturate(170%);--lg-pill:rgba(255,255,255,.16)}}
+
+ /* header: no bar -- floating glass pieces over a soft scrim */
+ #appBar{background:transparent!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+   height:calc(var(--bar-h) + 6px)!important;pointer-events:none}
+ #appBar>*{pointer-events:auto}
+ #appBar::before{content:'';position:absolute;inset:0 0 -26px;z-index:-1;pointer-events:none;
+   background:linear-gradient(180deg,color-mix(in srgb,var(--snow) 70%,transparent),transparent)}
+ .ab-brand,.ab-acts{height:40px;border-radius:999px;background:var(--lg-bg);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);
+   box-shadow:var(--lg-edge),var(--lg-shadow)}
+ .ab-brand{padding:0 14px 0 7px!important}
+ .ab-acts{padding:0 4px;gap:0!important}
+ #appBar #mapAcc{width:32px!important;height:32px!important;margin:0 0 0 2px!important}
+ .ab-ic{width:36px!important;height:36px!important;border-radius:999px!important}
+ body.desk .ab-tabs{height:40px!important;align-self:center;border-radius:999px;padding:0 4px;background:var(--lg-bg);
+   -webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);box-shadow:var(--lg-edge),var(--lg-shadow)}
+ body.desk .ab-tabs button{border-radius:999px;height:32px;align-self:center}
+ body.desk .ab-tabs button[aria-current=page]{background:var(--lg-pill);box-shadow:var(--lg-edge)}
+ body.desk .ab-tabs button[aria-current=page]::after{display:none}
+
+ /* tab bar: a glass capsule, icons only, the active tab a brighter pill */
+ #tabBar{border-radius:999px!important;background:var(--lg-bg)!important;border:0!important;
+   -webkit-backdrop-filter:var(--lg-blur)!important;backdrop-filter:var(--lg-blur)!important;box-shadow:var(--lg-edge),var(--lg-shadow)!important;
+   height:62px!important;padding:6px!important;left:18px!important;right:18px!important}
+ @media (max-width:899px){:root{--nav-h:calc(env(safe-area-inset-bottom,0px) + 82px)}}
+ #tabBar button{border-radius:999px;padding:0!important;margin:0 2px;gap:0!important;transition:background .2s,color .2s}
+ #tabBar button>span:not(.feed-dot):not(.tb-av){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+ #tabBar button svg{width:26px!important;height:26px!important}
+ #tabBar button[aria-current=page]{background:var(--lg-pill);box-shadow:var(--lg-edge);color:var(--fg)!important}
+ #tabBar button[aria-current=page]::before{display:none!important}
+ #tabBar .tb-rec i{width:40px!important;height:40px!important;margin:0!important;box-shadow:0 4px 12px rgba(215,53,63,.35),inset 0 1px 0 rgba(255,255,255,.45)!important}
+ #tabBar .tb-rec i svg{width:22px!important;height:22px!important}
+ #tabBar .tb-rec[aria-current=page]{background:transparent;box-shadow:none}
+ #tabBar .feed-dot{top:9px!important;left:calc(50% + 8px)!important}
+ .tb-av{width:28px!important;height:28px!important}
+
+ /* everything else that floats: glass */
+ .mfab-grp,#mapFab,#miniLegend,#bottomPanel,#demoPill,.ts-sheet,.trk-sheet,.ly-panel,.feed-sheet,.leg-info,.trk-pill,#searchWrap input{
+   -webkit-backdrop-filter:var(--lg-blur)!important;backdrop-filter:var(--lg-blur)!important}
+ .mfab-grp,#miniLegend{background:var(--lg-bg)!important;border:0!important;box-shadow:var(--lg-edge),var(--lg-shadow)!important;border-radius:999px!important}
+ #miniLegend{border-radius:22px!important}
+ #mapFab{border-radius:999px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 10px 24px rgba(29,45,73,.30)!important}
+ #bottomPanel{background:var(--lg-bg)!important;border:0!important;box-shadow:var(--lg-edge),var(--lg-shadow)!important;border-radius:26px!important}
+ #demoPill{background:var(--lg-bg2)!important;color:var(--fg)!important;border:0!important;box-shadow:var(--lg-edge),var(--lg-shadow)!important}
+ #demoPill.on{background:rgba(29,45,73,.55)!important;color:#fff!important}
+ .ts-sheet,.trk-sheet{background:var(--lg-bg2)!important;box-shadow:var(--lg-edge),0 -10px 40px rgba(29,45,73,.18)!important;border:0!important}
+ .mfab.act{box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 8px 20px rgba(29,45,73,.25)!important}
+ .ly-tile,.trk-type,.ts-chip,.trk-chip,.ts-seg,.trk-sum>div,.trk-grid>div{box-shadow:var(--lg-edge)!important}
+
+ /* ── welcome + lock ── */
+ #onb,#appLock{position:fixed;inset:0;z-index:9000;display:flex;align-items:flex-end;justify-content:center;padding:16px;
+   padding-bottom:calc(env(safe-area-inset-bottom,0px) + 16px)}
+ #onb[hidden],#appLock[hidden]{display:none}
+ #appLock{z-index:9500;align-items:center}
+ .onb-bg{position:absolute;inset:0;background:linear-gradient(170deg,#1D2D49 0%,#2D4A6E 34%,#8EA4BC 62%,#DFE5EC 82%,#F4F6F9 100%);overflow:hidden}
+ .onb-bg i{position:absolute;border-radius:50%;filter:blur(40px);opacity:.75;background:#fff}
+ .onb-bg i:nth-child(1){width:70vw;height:40vh;left:-15vw;bottom:8vh}
+ .onb-bg i:nth-child(2){width:60vw;height:30vh;right:-10vw;bottom:22vh;opacity:.55}
+ .onb-bg i:nth-child(3){width:40vw;height:20vh;left:30vw;top:18vh;opacity:.25}
+ .onb-card,.lock-card{position:relative;width:100%;max-width:440px;border-radius:32px;padding:18px 22px 22px;color:var(--fg);
+   background:rgba(255,255,255,.55);-webkit-backdrop-filter:blur(30px) saturate(190%);backdrop-filter:blur(30px) saturate(190%);
+   box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 0 0 1px rgba(255,255,255,.5),0 24px 60px rgba(13,21,37,.35)}
+ :root[data-theme="dark"] .onb-card,:root[data-theme="dark"] .lock-card{background:rgba(20,31,51,.55);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 0 0 1px rgba(255,255,255,.08),0 24px 60px rgba(0,0,0,.5)}
+ .onb-top{display:grid;grid-template-columns:36px 1fr 36px;align-items:center;gap:10px;margin-bottom:6px}
+ .onb-back{width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.5);color:var(--fg);display:grid;place-items:center;font:600 22px/1 inherit;cursor:pointer}
+ .onb-back svg{width:18px;height:18px}
+ .onb-prog{display:flex;gap:5px;justify-content:center}
+ .onb-prog i{height:4px;flex:1;max-width:40px;border-radius:2px;background:rgba(29,45,73,.15)}
+ .onb-prog i.on{background:var(--brand)}
+ .onb-body{text-align:center;padding:8px 2px 0}
+ .onb-body h1{font:800 26px/1.15 var(--font-d,inherit);letter-spacing:-.03em;margin:10px 0 8px}
+ .onb-body p{font:500 15px/1.5 var(--font,inherit);color:var(--fg2);margin:0 0 14px}
+ .onb-fine{font-size:12.5px!important}
+ .onb-logo,.onb-hero{width:76px;height:76px;margin:6px auto 4px;border-radius:24px;display:grid;place-items:center;color:#fff;
+   background:linear-gradient(150deg,#7FA6D2,#2D5A8C 55%,#1D2D49);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 12px 28px rgba(29,45,73,.35)}
+ .onb-logo svg,.onb-hero svg{width:40px;height:40px}
+ .onb-hero.warn{background:linear-gradient(150deg,#F7C66B,#E0A23A 55%,#B97A14)}
+ .onb-lbl{font:700 11px/1 var(--font,inherit);text-transform:uppercase;letter-spacing:.06em;color:var(--fg2);margin:4px 0 8px;text-align:left}
+ .onb-langs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+ .onb-langs button{height:48px;border-radius:16px;border:0;background:rgba(255,255,255,.55);color:var(--fg);font:700 15px/1 var(--font-d,inherit);
+   box-shadow:inset 0 1px 0 rgba(255,255,255,.8),inset 0 0 0 1px rgba(255,255,255,.4);cursor:pointer}
+ .onb-langs button.on{background:var(--brand);color:#fff}
+ .onb-pri{display:block;width:100%;height:54px;border:0;border-radius:999px;background:var(--brand-grad);color:#fff;font:800 16.5px/1 var(--font-d,inherit);
+   box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 10px 24px rgba(29,45,73,.35);cursor:pointer;margin-top:6px}
+ .onb-pri:disabled{opacity:.4;box-shadow:none}
+ .onb-link{display:block;margin:12px auto 0;border:0;background:none;color:var(--brand);font:700 14px/1 var(--font,inherit);cursor:pointer}
+ .onb-dots{display:flex;gap:6px;justify-content:center;margin:2px 0 16px}
+ .onb-dots i{width:7px;height:7px;border-radius:50%;background:rgba(29,45,73,.2);transition:width .2s}
+ .onb-dots i.on{width:20px;border-radius:4px;background:var(--brand)}
+ .onb-chk{display:flex;gap:10px;align-items:flex-start;text-align:left;font:600 13.5px/1.4 var(--font,inherit);margin:4px 0 12px;cursor:pointer}
+ .onb-chk input{width:22px;height:22px;flex:none;accent-color:var(--brand);margin:0}
+ .onb-ok{font:700 15px/1 var(--font-d,inherit);color:var(--c-mint);margin:6px 0 10px}
+ .lock-card{max-width:340px;text-align:center;padding:30px 24px 22px}
+ .lock-card>b{display:block;font:800 22px/1.2 var(--font-d,inherit);margin:14px 0 4px}
+ .lock-card>span{display:block;color:var(--fg2);margin-bottom:16px}
+ .lock-ic{width:84px;height:84px;margin:0 auto;border-radius:26px;display:grid;place-items:center;color:var(--brand);background:rgba(255,255,255,.6);
+   box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
+ .lock-ic svg{width:48px;height:48px}
+ body.onb-open #tabBar,body.locked #tabBar{display:none}
+ .set-val{margin-left:auto;color:var(--fg2);font-weight:600}
+
+ /* feed buttons: above the floating tab bar, and glass like the rest */
+ @media (max-width:899px){
+   body.nav-vis .feed-page .feed-fab,body.nav-vis .feed-page .feed-filt-fab,body.nav-vis .feed-page .feed-friends-fab,
+   body.nav-vis .feed-page .feed-msg-fab,body.nav-vis .feed-page .feed-qr{translate:0 calc(-1 * (var(--nav-h) - env(safe-area-inset-bottom,0px) - 6px))}}
+ .feed-page .feed-fab,.feed-page .feed-filt-fab,.feed-page .feed-friends-fab,.feed-page .feed-msg-fab{background:var(--lg-bg2)!important;border:0!important;
+   -webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);box-shadow:var(--lg-edge),var(--lg-shadow)!important;color:var(--fg)!important}
+ .feed-page .feed-fab span{display:none}
+
+ /* welcome in the dark */
+ :root[data-theme="dark"] .onb-langs button,:root[data-theme="dark"] .onb-back,:root[data-theme="dark"] .lock-ic{background:rgba(255,255,255,.10)!important;color:var(--fg)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 0 0 1px rgba(255,255,255,.08)!important}
+ :root[data-theme="dark"] .onb-langs button.on{background:var(--brand)!important;color:var(--on-brand)!important}
+ :root[data-theme="dark"] .onb-pri{color:var(--on-brand)!important}
+ :root[data-theme="dark"] .onb-prog i,:root[data-theme="dark"] .onb-dots i{background:rgba(255,255,255,.18)}
+ @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .onb-langs button,:root:not([data-theme="light"]) .onb-back,:root:not([data-theme="light"]) .lock-ic{background:rgba(255,255,255,.10)!important;color:var(--fg)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 0 0 1px rgba(255,255,255,.08)!important}  :root:not([data-theme="light"]) .onb-langs button.on{background:var(--brand)!important;color:var(--on-brand)!important}  :root:not([data-theme="light"]) .onb-pri{color:var(--on-brand)!important}  :root:not([data-theme="light"]) .onb-prog i,:root:not([data-theme="light"]) .onb-dots i{background:rgba(255,255,255,.18)}}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -4405,6 +4534,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
      streams in, a hairline at the top edge carries the real progress. -->
 <div id="boot"><i></i></div>
 <div id="toastWrap" aria-live="polite"></div>
+<div id="onb" hidden role="dialog" aria-modal="true" aria-label="Willkommen"><div class="onb-bg" aria-hidden="true"><i></i><i></i><i></i></div><div class="onb-card" id="onbCard"></div></div>
+<div id="appLock" hidden role="dialog" aria-modal="true" aria-label="Gesperrt"><div class="onb-bg" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="lock-card"><div class="lock-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9v1.5M15 9v1.5M12 9v4h-1M9.5 16a3.5 3.5 0 0 0 5 0"/></svg></div>
+  <b>Snowmapper ist gesperrt</b><span>Mit Face ID entsperren</span>
+  <button class="onb-pri" onclick="lockUnlock()">Entsperren</button>
+  <button class="onb-link" onclick="lockReset()">Sperre aufheben und abmelden</button></div></div>
 <nav id="tabBar" aria-label="Navigation">
   <button data-tab="map" onclick="navGo('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg><span>Karte</span></button>
   <button data-tab="tours" id="tourFab" onclick="navGo('tours')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/></svg><span>Touren</span></button>
@@ -4556,6 +4691,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     </div>
     <span class="lbl-micro">Konto</span>
     <div class="set-rows">
+      <button id="setLock" hidden onclick="lockToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9v1.5M15 9v1.5M12 9v4h-1M9.5 16a3.5 3.5 0 0 0 5 0"/></svg>Face ID-Sperre<span class="set-val" id="setLockSt">Aus</span></button>
+      <button onclick="_setCameFromProfile=false;setClose();onbOpen(true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z"/></svg>Einführung erneut zeigen</button>
       <button id="setAccount" onclick="_setCameFromProfile=false;setClose();accountTap()">Anmelden</button>
       <button data-dm hidden onclick="_setCameFromProfile=false;setClose();dmOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 4l-1.4 4.1A8.5 8.5 0 0 1 21 11.5z"/></svg>Nachrichten</button>
     </div>
@@ -5412,6 +5549,41 @@ const I18N_DICT={
 "Webcams – keine Daten":["Webcams – no data","Webcams – pas de données","Webcam – nessun dato"],
 "Weiter":["Continue","Continuer","Continua"],
 "Du":["You","Toi","Tu"],
+"Willkommen bei Snowmapper":["Welcome to Snowmapper", "Bienvenue sur Snowmapper", "Benvenuto su Snowmapper"],
+"Pulver, Schnee und Verhältnisse in der Schweiz – aus dem SNOWPACK-Modell und von der Community.":["Powder, snow and conditions in Switzerland – from the SNOWPACK model and the community.", "Poudreuse, neige et conditions en Suisse – du modèle SNOWPACK et de la communauté.", "Polvere, neve e condizioni in Svizzera – dal modello SNOWPACK e dalla community."],
+"Los geht's":["Let's go", "C'est parti", "Andiamo"],
+"Schnee auf der Karte":["Snow on the map", "La neige sur la carte", "Neve sulla mappa"],
+"Skiqualität, Pulver, Neuschnee, Wind und mehr – über das Ebenen-Symbol rechts. Die Legende zeigt, was die Farben bedeuten.":["Ski quality, powder, new snow, wind and more – via the layers icon on the right. The legend explains the colours.", "Qualité de ski, poudreuse, neige fraîche, vent et plus – via l'icône des calques à droite. La légende explique les couleurs.", "Qualità sciistica, polvere, neve fresca, vento e altro – tramite l'icona dei livelli a destra. La legenda spiega i colori."],
+"Zeit wählen":["Pick a time", "Choisir l'heure", "Scegli l'ora"],
+"Unten die Zeitleiste: die letzten Tage und die Prognose für die nächsten fünf. Die Karte rechnet sofort neu.":["The timeline at the bottom: the past days and the forecast for the next five. The map updates instantly.", "La frise en bas : les derniers jours et la prévision pour les cinq prochains. La carte se met à jour aussitôt.", "La timeline in basso: gli ultimi giorni e la previsione per i prossimi cinque. La mappa si aggiorna subito."],
+"Im Tab Touren: Umkreis, Höhenmeter und Steilheit wählen – sortiert nach Pulver- oder Sulz-Anteil aus dem Modell.":["In the Tours tab: choose radius, elevation gain and steepness – sorted by the model's powder or corn share.", "Dans l'onglet Itinéraires : rayon, dénivelé et raideur – triés selon la part de poudreuse ou de neige de printemps du modèle.", "Nella scheda Gite: raggio, dislivello e pendenza – ordinati per quota di polvere o firn del modello."],
+"Melden & zeichnen":["Report & draw", "Signaler & dessiner", "Segnala & disegna"],
+"Mit Plus malst du eine Schnee-Karte, meldest eine Beobachtung oder schickst einen Snowp an Freunde.":["With plus you paint a snow map, report an observation or send a Snowp to friends.", "Avec plus, tu peins une carte de neige, signales une observation ou envoies un Snowp à tes amis.", "Con più dipingi una mappa della neve, segnali un'osservazione o invii uno Snowp agli amici."],
+"Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil.":["Record your tour and report the snow right along the route in the elevation profile.", "Enregistre ta sortie et signale la neige le long de l'itinéraire dans le profil d'altitude.", "Registra la tua gita e segnala la neve lungo il percorso nel profilo altimetrico."],
+"Folge Leuten aus deinem Gebiet, bestätige gute Meldungen und baue Vertrauen auf. Deine Meldungen verbessern das Modell.":["Follow people from your area, confirm good reports and build trust. Your reports improve the model.", "Suis des gens de ta région, confirme les bons signalements et gagne en confiance. Tes signalements améliorent le modèle.", "Segui persone della tua zona, conferma le buone segnalazioni e costruisci fiducia. Le tue segnalazioni migliorano il modello."],
+"Tour überspringen":["Skip tour", "Passer la visite", "Salta il tour"],
+"Haftungsausschluss":["Disclaimer", "Clause de non-responsabilité", "Esclusione di responsabilità"],
+"Akzeptieren":["Accept", "Accepter", "Accetta"],
+"Face ID":["Face ID", "Face ID", "Face ID"],
+"Schütze Snowmapper mit Face ID: Deine Nachrichten, Aufzeichnungen und dein Konto öffnen sich nur für dich. Jederzeit in den Einstellungen änderbar.":["Protect Snowmapper with Face ID: your messages, recordings and account open only for you. Change it any time in settings.", "Protège Snowmapper avec Face ID : tes messages, enregistrements et ton compte ne s'ouvrent que pour toi. Modifiable à tout moment dans les réglages.", "Proteggi Snowmapper con Face ID: messaggi, registrazioni e account si aprono solo per te. Modificabile in qualsiasi momento nelle impostazioni."],
+"Face ID einrichten":["Set up Face ID", "Configurer Face ID", "Configura Face ID"],
+"Standort":["Location", "Position", "Posizione"],
+"Mit deinem Standort zeigt die Karte, wo du bist, und die Tourensuche beginnt in deiner Nähe. Er wird nur für Meldungen gespeichert, die du selbst postest.":["With your location the map shows where you are and the tour finder starts near you. It is only stored with reports you post yourself.", "Avec ta position, la carte montre où tu es et la recherche d'itinéraires commence près de toi. Elle n'est enregistrée qu'avec les signalements que tu publies.", "Con la tua posizione la mappa mostra dove sei e la ricerca gite parte vicino a te. Viene salvata solo con le segnalazioni che pubblichi tu."],
+"Standort erlauben":["Allow location", "Autoriser la position", "Consenti posizione"],
+"Snowmapper ist gesperrt":["Snowmapper is locked", "Snowmapper est verrouillé", "Snowmapper è bloccato"],
+"Mit Face ID entsperren":["Unlock with Face ID", "Déverrouiller avec Face ID", "Sblocca con Face ID"],
+"Entsperren":["Unlock", "Déverrouiller", "Sblocca"],
+"Sperre aufheben und abmelden":["Remove lock and sign out", "Retirer le verrou et se déconnecter", "Rimuovi il blocco ed esci"],
+"Face ID-Sperre":["Face ID lock", "Verrou Face ID", "Blocco Face ID"],
+"Einführung erneut zeigen":["Show the introduction again", "Revoir l'introduction", "Mostra di nuovo l'introduzione"],
+"Face ID ist eingerichtet":["Face ID is set up", "Face ID est configuré", "Face ID è configurato"],
+"Face ID ist auf diesem Gerät nicht verfügbar":["Face ID is not available on this device", "Face ID n'est pas disponible sur cet appareil", "Face ID non è disponibile su questo dispositivo"],
+"Face ID konnte nicht eingerichtet werden":["Face ID could not be set up", "Impossible de configurer Face ID", "Impossibile configurare Face ID"],
+"Face ID-Sperre aus":["Face ID lock off", "Verrou Face ID désactivé", "Blocco Face ID disattivato"],
+"Face ID-Sperre aufheben? Du wirst dabei abgemeldet.":["Remove the Face ID lock? You will be signed out.", "Retirer le verrou Face ID ? Tu seras déconnecté.", "Rimuovere il blocco Face ID? Verrai disconnesso."],
+"Sperre aufgehoben – bitte neu anmelden":["Lock removed – please sign in again", "Verrou retiré – reconnecte-toi", "Blocco rimosso – accedi di nuovo"],
+"An":["On", "Activé", "Attivo"],
+"Aus":["Off", "Désactivé", "Disattivo"],
 "Niedrig":["Low","Bas","Basso"],"Mittel":["Medium","Moyen","Medio"],"Schnee entlang der Route":["Snow along the route","Neige le long de l'itinéraire","Neve lungo il percorso"],
 "Verspurung":["Tracks","Traces","Tracce"],"Unverspurt":["Untracked","Vierge","Intatto"],"Wenig verspurt":["Few tracks","Peu tracé","Poco tracciato"],"Stark verspurt":["Heavily tracked","Très tracé","Molto tracciato"],
 "Punkt entfernen":["Remove point","Supprimer le point","Rimuovi punto"],"Kein Schnee":["No snow","Pas de neige","Niente neve"],"Mächtigkeit":["Thickness","Épaisseur","Spessore"],
@@ -12309,8 +12481,119 @@ function toast(msg,kind){msg=trMsg(msg);const w=document.getElementById('toastWr
   if(kind==='err'){try{haptic(18);}catch(e){}}
   setTimeout(()=>{t.classList.add('out');setTimeout(()=>{t.remove();},260);},kind==='err'?4200:2600);}
 // --- First-run legal / safety disclaimer gate (must accept before onboarding) ---
+// ── Welcome: the first launch ────────────────────────────────────────────
+// Language, a short tour of the five places, the disclaimer (must be
+// accepted), Face ID as an app lock, location. Re-runnable from settings.
+const ONB_SLIDES=[
+ ['<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>','Schnee auf der Karte','Skiqualität, Pulver, Neuschnee, Wind und mehr – über das Ebenen-Symbol rechts. Die Legende zeigt, was die Farben bedeuten.'],
+ ['<rect x="3" y="11" width="3" height="9" rx="1"/><rect x="8.5" y="6" width="3" height="14" rx="1"/><rect x="14" y="9" width="3" height="11" rx="1"/><path d="M19.5 4v16"/>','Zeit wählen','Unten die Zeitleiste: die letzten Tage und die Prognose für die nächsten fünf. Die Karte rechnet sofort neu.'],
+ ['<path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/>','Touren finden','Im Tab Touren: Umkreis, Höhenmeter und Steilheit wählen – sortiert nach Pulver- oder Sulz-Anteil aus dem Modell.'],
+ ['<path d="M12 5v14M5 12h14"/>','Melden & zeichnen','Mit Plus malst du eine Schnee-Karte, meldest eine Beobachtung oder schickst einen Snowp an Freunde.'],
+ ['<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.4 2.4M9.5 2.8h5"/>','Aufzeichnen','Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil.'],
+ ['<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>','Community','Folge Leuten aus deinem Gebiet, bestätige gute Meldungen und baue Vertrauen auf. Deine Meldungen verbessern das Modell.']];
+let onb={step:0,slide:0,again:false,lockOk:null};
+function onbSteps(){const st=['lang','tour','disc'];if(onb.lockOk)st.push('lock');st.push('loc');return st;}
+async function onbOpen(again){onb={step:0,slide:0,again:!!again,lockOk:null};
+  document.getElementById('onb').hidden=false;document.body.classList.add('onb-open');onbRender();
+  try{onb.lockOk=await lockAvailable();}catch(e){onb.lockOk=false;}onbRender();}
+function onbClose(){document.getElementById('onb').hidden=true;document.body.classList.remove('onb-open');}
+function onbNext(){const st=onbSteps();
+  if(st[onb.step]==='tour'){const n=ONB_SLIDES.filter(x=>!(x[1]==='Aufzeichnen'&&document.body.classList.contains('desk'))).length;
+    if(onb.slide<n-1){onb.slide++;onbRender();return;}}
+  if(onb.step>=st.length-1){onbFinish();return;}
+  onb.step++;onbRender();try{haptic(4);}catch(e){}}
+function onbBack(){const st=onbSteps();if(st[onb.step]==='tour'&&onb.slide>0){onb.slide--;onbRender();return;}if(onb.step>0){onb.step--;onbRender();}}
+function onbFinish(){try{localStorage.setItem('ssm_welcome_v1','1');localStorage.setItem('ssm_onboarded','1');}catch(e){}
+  onbClose();try{haptic(12);}catch(e){}if(!onb.again){try{maybeA2HS();}catch(e){}}}
+function onbDots(n,i){return '<div class="onb-dots">'+Array.from({length:n},(_,k)=>'<i class="'+(k===i?'on':'')+'"></i>').join('')+'</div>';}
+function onbRender(){const el=document.getElementById('onbCard');if(!el)return;const st=onbSteps(),k=st[onb.step];
+  const prog='<div class="onb-prog">'+st.map((x,i)=>'<i class="'+(i<=onb.step?'on':'')+'"></i>').join('')+'</div>';
+  const back=onb.step>0||onb.slide>0?'<button class="onb-back" onclick="onbBack()" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>':'<span></span>';
+  const top='<div class="onb-top">'+back+prog+(onb.again?'<button class="onb-back" onclick="onbClose()" aria-label="Schliessen">×</button>':'<span></span>')+'</div>';
+  let h='';
+  if(k==='lang'){
+    h='<div class="onb-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg></div>'
+      +'<h1>Willkommen bei Snowmapper</h1><p>Pulver, Schnee und Verhältnisse in der Schweiz – aus dem SNOWPACK-Modell und von der Community.</p>'
+      +'<div class="onb-lbl">Sprache</div><div class="onb-langs" data-noi18n>'+Object.keys(LANGS).map(v=>'<button class="'+(LANG===v?'on':'')+'" onclick="langSet(\''+v+'\');onbRender()">'+LANGS[v]+'</button>').join('')+'</div>'
+      +'<button class="onb-pri" onclick="onbNext()">Los geht\'s</button>';}
+  else if(k==='tour'){const sl=ONB_SLIDES.filter(x=>!(x[1]==='Aufzeichnen'&&document.body.classList.contains('desk'))),S=sl[onb.slide];
+    h='<div class="onb-hero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+S[0]+'</svg></div>'
+      +'<h1>'+S[1]+'</h1><p>'+S[2]+'</p>'+onbDots(sl.length,onb.slide)
+      +'<button class="onb-pri" onclick="onbNext()">Weiter</button>'
+      +'<button class="onb-link" onclick="onb.step++;onb.slide=0;onbRender()">Tour überspringen</button>';}
+  else if(k==='disc'){const ok=!!onb.disc;
+    h='<div class="onb-hero warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>'
+      +'<h1>Haftungsausschluss</h1><p><b>Experimentelle Modelldaten.</b> Snowmapper zeigt modellierte Schnee-, Pulver- und Skiqualitäts-Schätzungen sowie Meldungen anderer Nutzer. Die App ist <b>kein Lawinenbulletin</b> und ersetzt nicht die Beurteilung des SLF. Entscheidungen im Gelände triffst du auf <b>eigenes Risiko</b>.</p>'
+      +'<p class="onb-fine">Datenschutz: Für Konto, Meldungen und Fotos werden E-Mail, Standort und Bilddaten bei Supabase (EU) gespeichert. Du kannst Konto und Beiträge jederzeit löschen.</p>'
+      +'<label class="onb-chk"><input type="checkbox" '+(ok?'checked':'')+' onchange="onb.disc=this.checked;onbRender()"><span>Ich habe verstanden, dass dies experimentelle Daten sind und kein Lawinenbulletin ersetzt.</span></label>'
+      +'<button class="onb-pri" '+(ok?'':'disabled')+' onclick="try{localStorage.setItem(\'ssm_disclaimer_v\'+DISC_VER,\'1\')}catch(e){};onbNext()">Akzeptieren</button>';}
+  else if(k==='lock'){const on=!!(lockGet()&&lockGet().on);
+    h='<div class="onb-hero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9v1.5M15 9v1.5M12 9v4h-1M9.5 16a3.5 3.5 0 0 0 5 0"/></svg></div>'
+      +'<h1>Face ID</h1><p>Schütze Snowmapper mit Face ID: Deine Nachrichten, Aufzeichnungen und dein Konto öffnen sich nur für dich. Jederzeit in den Einstellungen änderbar.</p>'
+      +(on?'<div class="onb-ok">✓ Face ID ist eingerichtet</div><button class="onb-pri" onclick="onbNext()">Weiter</button>'
+        :'<button class="onb-pri" onclick="lockEnable().then(r=>{if(r)onbNext();})">Face ID einrichten</button><button class="onb-link" onclick="onbNext()">Später</button>');}
+  else if(k==='loc'){
+    h='<div class="onb-hero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></div>'
+      +'<h1>Standort</h1><p>Mit deinem Standort zeigt die Karte, wo du bist, und die Tourensuche beginnt in deiner Nähe. Er wird nur für Meldungen gespeichert, die du selbst postest.</p>'
+      +'<button class="onb-pri" onclick="try{geoLocate(()=>{},()=>{})}catch(e){};onbFinish()">Standort erlauben</button><button class="onb-link" onclick="onbFinish()">Später</button>';}
+  el.innerHTML=top+'<div class="onb-body">'+h+'</div>';
+  // swipe through the tour
+  if(k==='tour'&&!el._sw){el._sw=1;let x0=null;
+    el.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;},{passive:true});
+    el.addEventListener('touchend',e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;
+      if(onbSteps()[onb.step]!=='tour')return;if(dx<-50)onbNext();else if(dx>50)onbBack();},{passive:true});}
+}
+
+// ── Face ID: an app lock ─────────────────────────────────────────────────
+// Native app: the biometric plugin (Face ID / Touch ID, device passcode as
+// fallback). Browser: a platform passkey (WebAuthn) that is only ever used to
+// unlock this device -- nothing leaves the device. It locks the app, it does
+// not replace the account password.
+const LOCK_KEY='ssm_lock';let _lockHiddenAt=0;
+function lockGet(){try{return JSON.parse(localStorage.getItem(LOCK_KEY)||'null');}catch(e){return null;}}
+function _bioNative(){return _capPlugin('BiometricAuthNative')||_capPlugin('BiometricAuth');}
+async function lockAvailable(){const N=_bioNative();
+  if(N){try{const r=await N.checkBiometry();if(r&&r.isAvailable)return true;}catch(e){}}
+  try{return !!(window.PublicKeyCredential&&PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());}catch(e){return false;}}
+const _rnd=n=>crypto.getRandomValues(new Uint8Array(n));
+const _b64=b=>btoa(String.fromCharCode.apply(null,new Uint8Array(b))),_unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function lockEnable(){const N=_bioNative();
+  try{
+    if(N){await N.authenticate({reason:'Snowmapper mit Face ID schützen',cancelTitle:'Abbrechen',allowDeviceCredential:true});
+      localStorage.setItem(LOCK_KEY,JSON.stringify({on:true,native:true}));}
+    else{const c=await navigator.credentials.create({publicKey:{challenge:_rnd(32),rp:{name:'Snowmapper'},
+        user:{id:_rnd(16),name:'Snowmapper',displayName:'Snowmapper'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+        authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},timeout:60000,attestation:'none'}});
+      localStorage.setItem(LOCK_KEY,JSON.stringify({on:true,id:_b64(c.rawId)}));}
+    toast('Face ID ist eingerichtet','ok');lockRender();return true;
+  }catch(e){if(!e||e.name!=='NotAllowedError')toast('Face ID konnte nicht eingerichtet werden','err');return false;}}
+function lockShow(){const el=document.getElementById('appLock');if(!el)return;el.hidden=false;document.body.classList.add('locked');
+  const L=lockGet();if(L&&L.native)setTimeout(lockUnlock,250);}
+async function lockUnlock(){const L=lockGet();if(!L||!L.on){lockHide();return true;}const N=_bioNative();
+  try{
+    if(L.native&&N)await N.authenticate({reason:'Snowmapper entsperren',cancelTitle:'Abbrechen',allowDeviceCredential:true});
+    else await navigator.credentials.get({publicKey:{challenge:_rnd(32),allowCredentials:L.id?[{type:'public-key',id:_unb64(L.id),transports:['internal']}]:[],userVerification:'required',timeout:60000}});
+    lockHide();try{haptic(10);}catch(e){}return true;
+  }catch(e){return false;}}
+function lockHide(){const el=document.getElementById('appLock');if(el)el.hidden=true;document.body.classList.remove('locked');}
+async function lockReset(){if(!confirm('Face ID-Sperre aufheben? Du wirst dabei abgemeldet.'))return;
+  try{localStorage.removeItem(LOCK_KEY);}catch(e){}try{if(sb)await sb.auth.signOut();}catch(e){}lockHide();lockRender();toast('Sperre aufgehoben – bitte neu anmelden','info');}
+async function lockToggle(){const L=lockGet();
+  if(L&&L.on){if(!(await lockUnlock()))return;try{localStorage.removeItem(LOCK_KEY);}catch(e){}toast('Face ID-Sperre aus','info');lockRender();return;}
+  if(!(await lockAvailable())){toast('Face ID ist auf diesem Gerät nicht verfügbar','err');return;}
+  await lockEnable();}
+function lockRender(){const b=document.getElementById('setLock'),v=document.getElementById('setLockSt');const L=lockGet();
+  if(v)v.textContent=L&&L.on?'An':'Aus';
+  if(b)lockAvailable().then(ok=>{b.hidden=!ok&&!(L&&L.on);}).catch(()=>{});}
+document.addEventListener('visibilitychange',()=>{const L=lockGet();if(!L||!L.on)return;
+  if(document.visibilityState==='hidden')_lockHiddenAt=Date.now();
+  else if(_lockHiddenAt&&Date.now()-_lockHiddenAt>5*60e3)lockShow();});
+setTimeout(lockRender,800);
 function maybeDisclaimer(){
+  try{if(lockGet()&&lockGet().on)lockShow();}catch(e){}
   try{if(localStorage.getItem('ssm_disclaimer_v'+DISC_VER)){maybeOnboard();return;}}catch(e){}
+  // a new user: language, a short tour, the disclaimer, Face ID, location
+  try{if(!localStorage.getItem('ssm_welcome_v1')){onbOpen();return;}}catch(e){}
   const el=document.getElementById('disc');if(!el){maybeOnboard();return;}el.classList.add('show');}
 function acceptDisc(){
   try{localStorage.setItem('ssm_disclaimer_v'+DISC_VER,'1');}catch(e){}
