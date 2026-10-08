@@ -4550,6 +4550,81 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-msg-fab{position:relative}
  /* reporting is a tab now -- no second plus in the feed */
  body.nav-vis .feed-page .feed-fab,body.desk .feed-page .feed-fab{display:none!important}
+
+ /* feed: the whole screen is posts -- no title, no quick filters, no
+    expand/close; the view choice lives in the filter sheet */
+ .feed-page .feed-nav,.feed-page .feed-title,.feed-page #feedChips{display:none!important}
+ .feed-page .feed-scroll{padding-top:calc(env(safe-area-inset-top,0px) + 8px)}
+ body.desk .feed-page .feed-scroll{padding-top:10px}
+ .feed-anchor-bar{margin-top:calc(env(safe-area-inset-top,0px) + 6px)}
+ .fab-user{display:inline-flex;align-items:center;gap:6px;font-weight:800}
+ .fab-user svg{width:16px;height:16px}
+ .pv-skel{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding-top:6px}
+ .pv-skel i{aspect-ratio:1;border-radius:6px;background:linear-gradient(90deg,var(--fill),var(--powder),var(--fill));background-size:200% 100%;animation:pvSk 1.2s linear infinite}
+ @keyframes pvSk{to{background-position:-200% 0}}
+
+ /* logo */
+ .ab-logo{background:#fff!important;overflow:hidden;padding:0}
+ .ab-logo img{width:100%;height:100%;object-fit:contain;display:block;transform:scale(1.25)}
+ .onb-logo{background:#fff!important;overflow:hidden}
+ .onb-logo img{width:100%;height:100%;object-fit:contain;transform:scale(1.25)}
+ /* legend only on request */
+ #miniLegend{display:none!important}
+ body.leg-vis #miniLegend.show{display:block!important}
+ body:not(.leg-vis) .leg-info{display:none!important}
+ #legFab.on{color:var(--brand)!important}
+ /* search beside its button */
+ #searchWrap.side{position:fixed!important;z-index:1300;height:44px}
+ #searchWrap.side input{height:44px;border-radius:999px!important;background:var(--lg-bg2)!important;-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);
+   box-shadow:var(--lg-edge),var(--lg-shadow)!important;border:0!important}
+ #searchWrap.side #searchRes{top:auto!important;bottom:100%;margin:0 0 6px!important;border-radius:16px}
+ /* layer panel: the tiles speak; text only behind (i) */
+ #lyPanel .ly-info,#lyPanel .ly-legend{display:none!important}
+ #lyPanel.ly-showinfo .ly-info{display:block!important}
+ #lyPanel.ly-showinfo .ly-legend:not(:empty){display:block!important}
+ .ly-top{display:flex;align-items:center;justify-content:space-between}
+ .ly-top span{display:none}
+ .ly-ib{width:34px;height:34px;border-radius:50%;border:0;background:var(--fill);color:var(--fg2);display:grid;place-items:center;cursor:pointer}
+ .ly-ib svg{width:19px;height:19px}.ly-ib.on{background:var(--brand);color:#fff}
+ /* record: two blue circles; plus: blue */
+ #tabBar .tb-rec i{background:none!important;box-shadow:none!important;color:var(--brand)!important;width:30px!important;height:30px!important}
+ #tabBar .tb-rec i svg{width:28px!important;height:28px!important;stroke:none}
+ #tabBar .tb-rec.live i{color:var(--signal)!important;animation:none}
+ #tabBar .tb-rec.live i svg circle:last-child{animation:tbBlink 1.2s ease-in-out infinite}
+ @keyframes tbBlink{50%{opacity:.35}}
+ #tabBar [data-tab=report]{color:var(--brand)!important}
+ #tabBar [data-tab=report] svg{stroke-width:2.2}
+
+ /* profile: settings behind the gear, feedback in plain sight */
+ .prof-head-b{display:flex;align-items:center;gap:6px}
+ .prof-gear{width:36px;height:36px;border-radius:50%;border:0;background:var(--fill);color:var(--fg);display:grid;place-items:center;cursor:pointer}
+ .prof-gear svg{width:20px;height:20px}
+ .prof-feedback{display:flex;align-items:center;gap:12px;width:100%;margin:10px 0 14px;padding:14px;border:0;border-radius:18px;cursor:pointer;text-align:left;
+   color:#fff;background:var(--brand-grad);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 8px 20px rgba(29,45,73,.25)}
+ .prof-feedback svg{width:26px;height:26px;flex:none}
+ .prof-feedback span{display:flex;flex-direction:column;gap:2px;flex:1}
+ .prof-feedback b{font:800 15.5px/1.2 var(--font-d,inherit)}.prof-feedback small{font:500 12.5px/1.3 var(--font,inherit);opacity:.85}
+ .prof-feedback i{font-style:normal;font-size:22px;opacity:.8}
+ .prof-feedback.slim{margin:14px 0 4px}
+ /* layer panel head in one row */
+ .ly-top{flex-direction:row!important;text-align:left!important}
+ /* record and plus in a clear blue */
+ #tabBar .tb-rec i,#tabBar [data-tab=report]{color:var(--c-blue)!important}
+
+ /* recording and reporting: all blue tones */
+ .trk-go{background:linear-gradient(150deg,#6FB4F0,#3F8AD6 50%,#2D5A8C)!important;box-shadow:0 0 0 10px rgba(63,138,214,.14),0 12px 28px rgba(45,90,140,.35)!important}
+ .trk-pill{background:linear-gradient(150deg,#3F8AD6,#2D5A8C)!important}
+ #tabBar .tb-rec.live i{color:var(--c-blue)!important}
+ .mfab.act,#fabDraw,#fabObs,#fabSnowp{background:linear-gradient(150deg,#6FB4F0,#3F8AD6)!important}
+ .trk-btn.fin{border-color:var(--c-blue)!important;color:var(--c-blue)!important}
+
+ #postEditW{position:fixed;inset:0;z-index:6000;background:rgba(13,21,37,.35);display:flex;align-items:flex-end;justify-content:center;padding:16px}
+ .pe-in{width:100%;max-width:460px;padding:18px;border-radius:24px;background:var(--lg-bg2);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);box-shadow:var(--lg-edge),var(--lg-shadow)}
+ .pe-in b{display:block;font:800 17px/1.2 var(--font-d,inherit);margin-bottom:10px}
+ .pe-in textarea{width:100%;box-sizing:border-box;border:1px solid var(--hair);border-radius:14px;padding:12px;font:500 15px/1.4 var(--font,inherit);background:var(--card);color:var(--fg);resize:vertical}
+ .pe-b{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+ .pe-b button{height:46px;border-radius:14px;border:0;background:var(--fill);color:var(--fg);font:800 15px/1 var(--font-d,inherit);cursor:pointer}
+ .pe-b button.pri{background:var(--brand-grad);color:var(--on-brand,#fff)}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -4573,11 +4648,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <b>Snowmapper ist gesperrt</b><span>Mit Face ID entsperren</span>
   <button class="onb-pri" onclick="lockUnlock()">Entsperren</button>
   <button class="onb-link" onclick="lockReset()">Sperre aufheben und abmelden</button></div></div>
-<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:var(--c-blue)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg></i><span><b>Report Powder</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:var(--c-amber)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button><button class="rs-it" onclick="repSheetToggle(false);snpOpen()"><i style="--rc:var(--c-violet)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="15" height="13" rx="3"/><circle cx="10" cy="12.5" r="3.4"/><rect x="14" y="2.5" width="7.5" height="9" rx="2"/></svg></i><span><b>Snowp</b><small>2 Kameras · nur Freunde</small></span></button></div></div>
+<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:linear-gradient(150deg,#6FB4F0,#3F8AD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg></i><span><b>Report Powder</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:linear-gradient(150deg,#4A86C8,#2D5A8C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button><button class="rs-it" onclick="repSheetToggle(false);snpOpen()"><i style="--rc:linear-gradient(150deg,#3A5E8E,#1D2D49)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="15" height="13" rx="3"/><circle cx="10" cy="12.5" r="3.4"/><rect x="14" y="2.5" width="7.5" height="9" rx="2"/></svg></i><span><b>Snowp</b><small>2 Kameras · nur Freunde</small></span></button></div></div>
 <nav id="tabBar" aria-label="Navigation">
   <button data-tab="map" onclick="navGo('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg><span>Karte</span></button>
   <button data-tab="tours" id="tourFab" onclick="navGo('tours')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/></svg><span>Touren</span></button>
-  <button data-tab="rec" class="tb-rec" onclick="navGo('rec')"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.4 2.4M9.5 2.8h5"/></svg></i><span>Aufzeichnen</span></button>
+  <button data-tab="rec" class="tb-rec" onclick="navGo('rec')"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.6" fill="currentColor"/></svg></i><span>Aufzeichnen</span></button>
   <button data-tab="feed" id="mapFeedFab" onclick="navGo('feed')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Community</span><span class="feed-dot"></span></button>
   <button data-tab="report" id="tbReport" onclick="repSheetToggle()" aria-label="Melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><path d="M12 7.8v8.4M7.8 12h8.4"/></svg><span>Melden</span></button>
 </nav>
@@ -4634,7 +4709,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
      install) -- not in new chrome competing with the map. -->
 
 <header id="appBar">
-  <button class="ab-brand" onclick="navGo('map')" aria-label="Snowmapper"><span class="ab-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg></span><span class="ab-name">Snowmapper</span></button>
+  <button class="ab-brand" onclick="navGo('map')" aria-label="Snowmapper"><span class="ab-logo"><img src="icon-192.png?v=2" alt="" width="26" height="26"></span><span class="ab-name">Snowmapper</span></button>
   <nav class="ab-tabs" aria-label="Navigation">
     <button data-tab="map" onclick="navGo('map')">Karte</button>
     <button data-tab="tours" onclick="navGo('tours')">Touren</button>
@@ -4664,6 +4739,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
+    <button class="mfab" id="legFab" onclick="legVisToggle()" title="Legende" aria-label="Legende"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r=".9" fill="currentColor"/></svg></button>
   </div>
   <div class="mfab-row" id="reportRow">
     <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><i>Report Powder</i></button>
@@ -4704,19 +4780,15 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <button data-v="light" onclick="themeSet('light')">Hell</button>
       <button data-v="dark" onclick="themeSet('dark')">Dunkel</button>
     </div>
+    <div class="set-rows">
+      <button id="setDemo" onclick="demoToggle()" title="Standardmässig zeigt die App die Demo-Daten vom 1. April 2026. Hier auf aktuelle, echte Live-Wetterdaten umschalten."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Live-Wetterdaten verwenden<span class="st"></span></button>
+    </div>
     <span class="lbl-micro">Sprache</span>
     <div class="prof-seg set-lang" id="setLang" data-noi18n>
       <button data-v="de" onclick="langSet('de')">Deutsch</button>
       <button data-v="en" onclick="langSet('en')">English</button>
       <button data-v="fr" onclick="langSet('fr')">Français</button>
       <button data-v="it" onclick="langSet('it')">Italiano</button>
-    </div>
-    <span class="lbl-micro">Karte</span>
-    <div class="set-rows">
-      <button id="setStations" onclick="toggleStations();setRender()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0"/></svg>Messstationen<span class="st"></span></button>
-      <button onclick="_setCameFromProfile=false;setClose();document.getElementById('legendBtn').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>Legende der Ebene</button>
-      <button onclick="_setCameFromProfile=false;setClose();document.getElementById('btn3dFloat').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg>3D-Ansicht</button>
-      <button id="setDemo" onclick="demoToggle()" title="Standardmässig zeigt die App die Demo-Daten vom 1. April 2026. Hier auf aktuelle, echte Live-Wetterdaten umschalten."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Live-Wetterdaten verwenden<span class="st"></span></button>
     </div>
     <span class="lbl-micro">Melden</span>
     <div class="set-rows">
@@ -4740,7 +4812,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <button id="trkPill" class="trk-pill" hidden onclick="trkExpand()" aria-label="Aufzeichnung öffnen"></button>
 <div id="lyPanel" class="ly-panel" role="dialog" aria-modal="true" aria-label="Ebenen">
   <div class="ly-scroll">
-    <div class="ly-top"><b>Ebenen</b><span>Eine Karte, beliebig viele Overlays</span></div>
+    <div class="ly-top"><b>Ebenen</b><button type="button" class="ly-ib" onclick="document.getElementById('lyPanel').classList.toggle('ly-showinfo');this.classList.toggle('on')" aria-label="Info zur Ebene"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r=".9" fill="currentColor"/></svg></button></div>
     <div id="lyGrid"></div>
     <div class="ly-info" id="lyInfo"></div>
     <div class="ly-legend" id="lyLegend"></div>
@@ -4908,7 +4980,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="feed-anchor-bar" id="feedAnchorBar" style="display:none"></div>
 <div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Lade Beiträge…</div></div></div>
 <button class="feed-qr" id="feedQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
-<button class="feed-msg-fab" id="feedMsgFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 4l-1.4 4.1A8.5 8.5 0 0 1 21 11.5z"/></svg><span class="dm-dot" id="dmDot" hidden></span></button>
+<button class="feed-msg-fab" id="feedMsgFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 14.6 21.5l-4-8.1-8.1-4z"/></svg><span class="dm-dot" id="dmDot" hidden></span></button>
 <button class="feed-friends-fab" id="feedFriendsFab" onclick="usOpen()" title="Leute finden" aria-label="Leute finden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
 <button class="feed-filt-fab" id="feedFiltFab" onclick="feedFilterOpen()" title="Filter" aria-label="Filter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg><i class="ff-dot"></i></button>
 <button class="feed-fab" id="feedFab" onclick="feedCreatePost()" title="Bedingungen melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
@@ -4995,7 +5067,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 </div>
 <div class="prof-modal" id="profModal" style="display:none" onclick="if(event.target===this)profClose()">
   <div class="prof-sheet">
-    <div class="prof-head"><span>Profil</span><button onclick="profClose()">✕</button></div>
+    <div class="prof-head"><span>Profil</span><span class="prof-head-b"><button class="prof-gear" onclick="profNav('set')" aria-label="Einstellungen" title="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button onclick="profClose()">✕</button></span></div>
     <div class="prof-body">
       <div class="prof-top">
         <div class="prof-av" id="profAv" onclick="document.getElementById('profAvFile').click()"><span id="profAvInitial"></span><div class="prof-av-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div></div>
@@ -5006,7 +5078,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <div class="prof-bioview" id="profBioView"></div>
       <div class="prof-view" id="profViewMain">
         <div class="pv" id="profPV"></div>
+        <button class="prof-feedback slim" onclick="sendFeedback()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 1 1 21 11.5z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></svg><span><b>Feedback senden</b><small>Was fehlt, was stört? Wir lesen alles.</small></span><i>›</i></button>
+
         <div hidden><b id="profStatReports"></b><b id="profStatFollowers"></b><div id="profActs"></div><div id="profPosts"></div></div>
+      </div>
+      <div class="prof-view" id="profViewSet" style="display:none">
+        <button class="prof-back" onclick="profNav('main')">‹ Zurück</button>
+        <button class="prof-feedback" onclick="sendFeedback()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 1 1 21 11.5z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></svg><span><b>Feedback senden</b><small>Was fehlt, was stört? Wir lesen alles.</small></span><i>›</i></button>
         <div class="prof-sec-title">Einstellungen</div>
         <button class="prof-item nav" onclick="setOpen(true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>Darstellung &amp; Karte<span class="chev">›</span></button>
         <button class="prof-item nav" onclick="profNav('pers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Personalisieren<span class="chev">›</span></button>
@@ -5582,6 +5660,15 @@ const I18N_DICT={
 "Webcams – keine Daten":["Webcams – no data","Webcams – pas de données","Webcam – nessun dato"],
 "Weiter":["Continue","Continuer","Continua"],
 "Du":["You","Toi","Tu"],
+"Melden zu dieser Tour":["Report on this tour","Signaler sur cet itinéraire","Segnala su questa gita"],
+"Bearbeiten":["Edit", "Modifier", "Modifica"],
+"Aktivität bearbeiten":["Edit activity", "Modifier l'activité", "Modifica attività"],
+"Beitrag bearbeiten":["Edit post", "Modifier la publication", "Modifica post"],
+"Beitrag aktualisiert":["Post updated", "Publication mise à jour", "Post aggiornato"],
+"Aktivität aktualisiert":["Activity updated", "Activité mise à jour", "Attività aggiornata"],
+"Was fehlt, was stört? Wir lesen alles.":["What's missing, what bothers you? We read everything.", "Qu'est-ce qui manque, qu'est-ce qui gêne ? Nous lisons tout.", "Cosa manca, cosa disturba? Leggiamo tutto."],
+"Info zur Ebene":["Layer info", "Info sur le calque", "Info sul livello"],
+"3D-Ansicht":["3D view", "Vue 3D", "Vista 3D"],
 "Willkommen bei Snowmapper":["Welcome to Snowmapper", "Bienvenue sur Snowmapper", "Benvenuto su Snowmapper"],
 "Pulver, Schnee und Verhältnisse in der Schweiz – aus dem SNOWPACK-Modell und von der Community.":["Powder, snow and conditions in Switzerland – from the SNOWPACK model and the community.", "Poudreuse, neige et conditions en Suisse – du modèle SNOWPACK et de la communauté.", "Polvere, neve e condizioni in Svizzera – dal modello SNOWPACK e dalla community."],
 "Los geht's":["Let's go", "C'est parti", "Andiamo"],
@@ -8678,7 +8765,7 @@ function tourReports(t){
 function tourReportsHTML(t){
   const rs=tourReports(t);
   const head='<div class="tour-sec"><b>Aus der Community</b><button type="button" class="tour-rep" onclick="tourReportPowder()">'
-    +'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg>Powder melden</button></div>';
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Melden zu dieser Tour</button></div>';
   if(!rs.length)return head+'<div class="tour-norep">Noch keine Meldung zu dieser Tour – sei die erste Person.</div>';
   return head+'<div class="tour-reps">'+rs.slice(0,4).map(r=>'<button type="button" class="tour-r" onclick="feedOpenAt(\''+r.id+'\')">'
     +'<i'+(r.avatar?' style="background-image:url(&quot;'+escapeHtml(r.avatar)+'&quot;)"':'')+'>'+(r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase()))+'</i>'
@@ -8689,7 +8776,7 @@ function tourReportsHTML(t){
 function tourReportPowder(){
   if(!tourIso)return;
   rptTourSel={id:String(tourIso.id),name:tourIso.name||'Skitour'};rptTourLock=true;
-  try{rpOpen();}catch(e){}
+  try{repSheetToggle(true);}catch(e){try{rpOpen();}catch(_){}}
 }
 // ── choose a tour while reporting ──────────────────────────────────────────
 let rptTourSel=null,rptTourLock=false,rptTourQ='';
@@ -8987,6 +9074,7 @@ async function trkKeep(post){
   const d=trkDraft;if(!d)return;
   const nm=document.getElementById('trkName'),ds=document.getElementById('trkDesc');
   if(nm)d.name=nm.value.trim()||trkDefaultName(d.type,d.start);if(ds)d.desc=ds.value.trim();
+  if(document.getElementById('trkTourPick'))d.tour=rptTourSel?{id:rptTourSel.id,name:rptTourSel.name}:null;rptTourSel=null;rptTourLock=false;
   const _mu=d._mapUrl;delete d._mapUrl;delete d._mapBusy;
   try{await trkPut(d);}catch(e){d._mapUrl=_mu;toast('Speichern fehlgeschlagen: '+(e.message||e),'err');return;}
   try{trkActsRefresh();}catch(e){}
@@ -9033,20 +9121,9 @@ async function trkPost(a){
       const Q={Pulver:85,Windgepresst:15,Bruchharsch:30,Sulz:55,Nass:45,Hart:10}[a.snow];
       cd.quick=true;cd.powderAmountCm=a.snow==='Pulver'?(a.depth||0):0;cd.powderQuality=a.stars&&a.snow==='Pulver'?Math.max(Q-20,a.stars*20):Q;
       if(rp[2]!=null)cd.altitudeM=Math.round(rp[2]);}
-    const sp=(a.snowPts||[]).filter(p=>flat0[p.i]);
-    if(sp.length){
-      // each point is a small zone at its own height: the same shape a drawn
-      // snow map has, so the Reported Powder layer and the model check use it
-      cd.zones=sp.map(p=>{const q=flat0[p.i],T=TRK_PT[p.type]||TRK_PT.powder;
-        return {type:T.zone,cm:T.cm?(p.cm||0):null,centroid:[+q[0].toFixed(5),+q[1].toFixed(5)],
-          elevMin:q[2]!=null?Math.round(q[2]-40):null,elevMax:q[2]!=null?Math.round(q[2]+40):null,n:1,src:'route'};});
-      cd.snowPts=sp.map(p=>{const q=flat0[p.i],T=TRK_PT[p.type]||TRK_PT.powder;
-        return {lat:+q[0].toFixed(5),lon:+q[1].toFixed(5),alt:q[2]!=null?Math.round(q[2]):null,type:p.type,cm:T.cm?(p.cm||0):null};});
-      cd.measurement=sp.map(p=>{const q=flat0[p.i],T=TRK_PT[p.type]||TRK_PT.powder;
-        return T.l+(T.cm?' '+(p.cm||0)+' cm':'')+(q[2]!=null?' · '+Math.round(q[2])+' m':'');}).join(' / ');}
-    if(a.tracks){cd.tracks=a.tracks;const tl=(TRK_TRACKS.find(x=>x[0]===a.tracks)||[0,''])[1];
-      cd.measurement=(cd.measurement?cd.measurement+' · ':'')+tl;}
+    const sp=trkSnowCD(a,flat0,cd);
     if(a.stars)cd.stars=a.stars;
+    if(a.tour)cd.tour=a.tour;
     const row={user_id:sbUser.id,location:'POINT('+top[2]+' '+top[1]+')',primary_categories:['tour'],subtype:trkTypeLbl(a.type),
       condition_data:cd,image_url:urls[0]||null,caption:a.desc?(a.name+'\n'+a.desc):a.name,completion_score:(a.snow||sp.length)?85:70,
       captured_at:new Date(a.start).toISOString()};
@@ -9059,6 +9136,22 @@ async function trkPost(a){
     return true;
   }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e),'err');return false;}
 }
+function trkSnowCD(a,flat0,cd){
+  const sp=(a.snowPts||[]).filter(p=>flat0[p.i]);
+    if(sp.length){
+      // each point is a small zone at its own height: the same shape a drawn
+      // snow map has, so the Reported Powder layer and the model check use it
+      cd.zones=sp.map(p=>{const q=flat0[p.i],T=TRK_PT[p.type]||TRK_PT.powder;
+        return {type:T.zone,cm:T.cm?(p.cm||0):null,centroid:[+q[0].toFixed(5),+q[1].toFixed(5)],
+          elevMin:q[2]!=null?Math.round(q[2]-40):null,elevMax:q[2]!=null?Math.round(q[2]+40):null,n:1,src:'route'};});
+      cd.snowPts=sp.map(p=>{const q=flat0[p.i],T=TRK_PT[p.type]||TRK_PT.powder;
+        return {lat:+q[0].toFixed(5),lon:+q[1].toFixed(5),alt:q[2]!=null?Math.round(q[2]):null,type:p.type,cm:T.cm?(p.cm||0):null};});
+      cd.measurement=sp.map(p=>{const q=flat0[p.i],T=TRK_PT[p.type]||TRK_PT.powder;
+        return T.l+(T.cm?' '+(p.cm||0)+' cm':'')+(q[2]!=null?' · '+Math.round(q[2])+' m':'');}).join(' / ');}
+    if(a.tracks){cd.tracks=a.tracks;const tl=(TRK_TRACKS.find(x=>x[0]===a.tracks)||[0,''])[1];
+      cd.measurement=(cd.measurement?cd.measurement+' · ':'')+tl;}
+  if(a.stars)cd.stars=a.stars;else delete cd.stars;
+  return sp;}
 async function trkPostId(id){const a=await trkGet(id);if(a&&!a.postedId){if(await trkPost(a))trkRender();}}
 async function trkDelete(id){
   const a=await trkGet(id);if(!a)return;
@@ -9247,11 +9340,12 @@ async function trkRender(){
     if(!d.vis)d.vis='followers';
     const priv=d.vis==='private';
     if(d.snowPts&&d.snowPts.length)d.rep=d.snowPts[0].i;
-    el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkBackToRec()" aria-label="Zurück">'+TRK_DOWN+'</button><b>Aktivität speichern</b><button class="trk-gpx" onclick="trkExportDraft()">'+TRK_GPX+'<span>GPX</span></button></div>'
+    el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="'+(d._edit?'trkEditCancel()':'trkBackToRec()')+'" aria-label="Zurück">'+TRK_DOWN+'</button><b>'+(d._edit?'Aktivität bearbeiten':'Aktivität speichern')+'</b><button class="trk-gpx" onclick="trkExportDraft()">'+TRK_GPX+'<span>GPX</span></button></div>'
       +'<div class="trk-scroll"><div class="trk-map" id="trkMapBox">'+(d._mapUrl?'<img src="'+d._mapUrl+'" alt="">':'')+trkThumb(ll,680,340,'',d.rep,true)+'</div>'
       +'<div class="trk-sum"><div><b>'+trkFmtD(s.dist)+'</b><small>Distanz</small></div><div><b>'+s.up+' m</b><small>Aufstieg</small></div><div><b>'+trkFmtT(s.moving)+'</b><small>Bewegungszeit</small></div></div>'
       +'<label class="trk-f"><span>Titel</span><input id="trkName" maxlength="80" value="'+escapeHtml(d.name)+'"></label>'
       +'<label class="trk-f"><span>Beschreibung</span><textarea id="trkDesc" rows="3" maxlength="1000" placeholder="Wie war\'s? Route, Verhältnisse, Gruppe …">'+escapeHtml(d.desc||'')+'</textarea></label>'
+      +'<div class="tour-pick" id="trkTourPick"></div>'
       +'<div class="trk-lbl">Schnee entlang der Route</div>'
       +'<div id="trkSnowBox">'+trkSnowEditor(d,ll)+'</div>'
       +'<div class="trk-lbl">Verspurung</div><div class="trk-chips">'+TRK_TRACKS.map(([k,l])=>'<button type="button" class="trk-chip'+(d.tracks===k?' on':'')+'" onclick="trkKeepFields();trkDraft.tracks=trkDraft.tracks===\''+k+'\'?null:\''+k+'\';trkRender()">'+l+'</button>').join('')+'</div>'
@@ -9261,9 +9355,11 @@ async function trkRender(){
       +'<label class="trk-ph add"><input type="file" accept="image/*" multiple hidden onchange="trkAddPhotos(this.files)"><span>+</span></label></div>'
       +'<div class="trk-lbl">Sichtbar für</div><div class="trk-vis"><button type="button" class="'+(priv?'':'on')+'" onclick="trkKeepFields();trkDraft.vis=\'followers\';trkRender()"><b>Follower</b><span>erscheint im Feed deiner Follower</span></button>'
       +'<button type="button" class="'+(priv?'on':'')+'" onclick="trkKeepFields();trkDraft.vis=\'private\';trkRender()"><b>Nur ich</b><span>bleibt auf diesem Gerät</span></button></div>'
-      +'</div><div class="trk-actions"><button class="trk-a sec danger" onclick="trkDiscard()">Verwerfen</button>'
+      +'</div><div class="trk-actions">'+(d._edit?'<button class="trk-a sec" onclick="trkEditCancel()">Abbrechen</button><button class="trk-a pri" onclick="trkEditSave()">Speichern</button></div>':'<button class="trk-a sec danger" onclick="trkDiscard()">Verwerfen</button>'
       +(priv?'<button class="trk-a pri" onclick="trkKeep(false)">Speichern</button>'
-        :'<button class="trk-a sec" onclick="trkKeep(false)">Speichern</button><button class="trk-a pri" onclick="trkKeep(true)">Posten</button>')+'</div>';
+        :'<button class="trk-a sec" onclick="trkKeep(false)">Speichern</button><button class="trk-a pri" onclick="trkKeep(true)">Posten</button>')+'</div>');
+    {const q=ll[d.rep]||ll[0];if(d.tour){rptTourSel=d.tour;rptTourLock=true;}
+      toursEnsure().then(()=>{tourPickRender('trkTourPick',q?q[0]:null,q?q[1]:null);}).catch(()=>{});}
     if(!d._mapUrl&&!d._mapBusy){d._mapBusy=true;trkMapImage(ll,null,680,340,false).then(bl=>{d._mapBusy=false;if(!bl||trkDraft!==d)return;d._mapUrl=URL.createObjectURL(bl);
       const box=document.getElementById('trkMapBox');if(box&&!box.querySelector('img')){const im=new Image();im.src=d._mapUrl;im.alt='';box.prepend(im);}});}
     return;}
@@ -9289,7 +9385,7 @@ async function trkRender(){
       +(a.tracks?'<div class="trk-meta">Verspurung: <b>'+escapeHtml((TRK_TRACKS.find(x=>x[0]===a.tracks)||[0,''])[1])+'</b></div>':'')
       +(a.snow?'<div class="trk-meta">Schnee: <b>'+escapeHtml(a.snow)+(a.snow==='Pulver'&&a.depth?' '+a.depth+' cm':'')+'</b>'+(a.stars?' · '+'★'.repeat(a.stars):'')+'</div>':'')
       +((a.photos||[]).length?'<div class="trk-photos">'+a.photos.map(b=>'<div class="trk-ph"><img src="'+URL.createObjectURL(b)+'" alt=""></div>').join('')+'</div>':'')
-      +'</div><div class="trk-actions"><button class="trk-a sec danger" onclick="trkDelete(\''+a.id+'\')">Löschen</button>'
+      +'</div><div class="trk-actions"><button class="trk-a sec danger" onclick="trkDelete(\''+a.id+'\')">Löschen</button><button class="trk-a sec" onclick="trkEdit(\''+a.id+'\')">Bearbeiten</button>'
       +(a.postedId?'<button class="trk-a sec" disabled>Gepostet ✓</button>':'<button class="trk-a pri" onclick="trkPostId(\''+a.id+'\')">Posten</button>')+'</div>';
     return;}
 }
@@ -9347,9 +9443,26 @@ function trkSnowCm(v,inp){const d=trkDraft;if(!d||d.sel==null)return;d.snowPts[d
   if(inp&&inp.nextElementSibling)inp.nextElementSibling.textContent=v+' cm';
   const pt=document.querySelectorAll('#trkSnowBox .trk-sp-pt')[d.sel];if(pt){const em=pt.querySelector('em');if(em)em.textContent=v;}}
 function trkSnowDel(){const d=trkDraft;if(!d||d.sel==null)return;d.snowPts.splice(d.sel,1);d.sel=null;trkSnowRefresh();}
+async function trkEdit(id){const a=await trkGet(id);if(!a)return;
+  trkDraft=Object.assign({},a,{_edit:true,snowPts:(a.snowPts||[]).slice(),sel:null,photos:(a.photos||[]).slice()});
+  trkView='save';trkRender();}
+function trkEditCancel(){const id=trkDraft&&trkDraft.id;trkDraft=null;trkCur=id;trkView='detail';trkRender();}
+async function trkEditSave(){const d=trkDraft;if(!d)return;trkKeepFields();
+  const a=Object.assign({},d);delete a._edit;delete a.sel;delete a._mapUrl;delete a._mapBusy;
+  try{await trkPut(a);}catch(e){toast('Speichern fehlgeschlagen: '+(e.message||e),'err');return;}
+  if(a.postedId&&sb&&sbUser){try{
+    const{data:row}=await sb.from('reports').select('condition_data').eq('id',a.postedId).single();
+    const cd=Object.assign({},(row&&row.condition_data)||{});delete cd.zones;delete cd.snowPts;delete cd.measurement;delete cd.tracks;
+    if(cd.activity)cd.activity=Object.assign({},cd.activity,{name:a.name,desc:a.desc});
+    trkSnowCD(a,trkLL(a.segs),cd);if(a.tour)cd.tour=a.tour;else delete cd.tour;
+    const{error}=await sb.from('reports').update({condition_data:cd,caption:a.desc?(a.name+'\n'+a.desc):a.name}).eq('id',a.postedId).eq('user_id',sbUser.id);
+    if(error)throw error;try{loadDbReports();}catch(e){}
+  }catch(e){toast('Beitrag nicht aktualisiert: '+(e.message||e),'err');}}
+  toast('Aktivität aktualisiert','ok');try{trkActsRefresh();}catch(e){}
+  trkDraft=null;trkCur=a.id;trkView='detail';trkRender();}
 function trkPref(k,v){trkPrefs[k]=v;try{localStorage.setItem('ssm_trk_prefs',JSON.stringify(trkPrefs));}catch(e){}
   if(k==='acc'&&!trkRec)trkGpsStart(TRK_ACC[v].hiAcc);try{haptic(3);}catch(e){}trkRender();}
-function trkKeepFields(){const d=trkDraft;if(!d)return;const nm=document.getElementById('trkName'),ds=document.getElementById('trkDesc');
+function trkKeepFields(){const d=trkDraft;if(!d)return;if(document.getElementById('trkTourPick'))d.tour=rptTourSel?{id:rptTourSel.id,name:rptTourSel.name}:null;const nm=document.getElementById('trkName'),ds=document.getElementById('trkDesc');
   if(nm)d.name=nm.value;if(ds)d.desc=ds.value;}
 function trkSnow(x){const d=trkDraft;if(!d)return;trkKeepFields();d.snow=d.snow===x?null:x;trkRender();}
 async function trkAddPhotos(files){const d=trkDraft;if(!d||!files)return;const nm=document.getElementById('trkName'),ds=document.getElementById('trkDesc');
@@ -9409,15 +9522,19 @@ async function trkActsRefresh(){if(!trkActsGrp)return;let list=[];try{list=await
 let pvState={};
 async function pvLoad(uid,boxId,own){
   const box=document.getElementById(boxId);if(!box)return;
-  box.innerHTML='<div class="prof-hint">Lade …</div>';
-  let posts=[],fol=0,ing=0,acts=[];
+  // the last copy paints at once; the network only refreshes it
+  const ck='ssm_pv_'+uid;let cached=null;try{cached=JSON.parse(sessionStorage.getItem(ck)||'null');}catch(e){}
+  if(cached&&cached.v===1){pvState[boxId]=Object.assign(cached.S,{tab:(pvState[boxId]&&pvState[boxId].tab)||cached.S.tab||'grid'});pvRender(boxId);}
+  else box.innerHTML='<div class="pv-skel"><i></i><i></i><i></i><i></i><i></i><i></i></div>';
+  let posts=[],fol=0,ing=0,acts=[],trust=0;
   if(sb){
-    try{const{data}=await sb.from('reports').select('id,caption,subtype,image_url,condition_data,location,created_at,primary_categories')
-      .eq('user_id',uid).order('created_at',{ascending:false}).limit(90);posts=data||[];}catch(e){}
-    try{const{count}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',uid);fol=count||0;}catch(e){}
-    try{const{count}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',uid);ing=count||0;}catch(e){}}
-  let trust=0;
-  if(sb&&posts.length){try{const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',posts.map(p=>p.id));trust=count||0;}catch(e){}}
+    const cnt=(col)=>sb.from('follows').select('*',{count:'exact',head:true}).eq(col,uid).then(r=>r.count||0,()=>0);
+    // the post list only needs a light condition_data: no drawn snapshots
+    const [pr,f1,f2]=await Promise.all([
+      sb.from('reports').select('id,caption,subtype,image_url,condition_data,location,created_at,primary_categories')
+        .eq('user_id',uid).order('created_at',{ascending:false}).limit(60).then(r=>r.data||[],()=>[]),cnt('following_id'),cnt('follower_id')]);
+    posts=pr;fol=f1;ing=f2;
+    if(posts.length){try{const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',posts.map(p=>p.id));trust=count||0;}catch(e){}}}
   posts.forEach(r=>{const A=r.condition_data&&r.condition_data.activity;
     if(A)acts.push({id:'p'+r.id,post:r.id,name:A.name,start:A.start||Date.parse(r.created_at),dist:A.dist||0,up:A.up||0,moving:A.moving||0,track:A.track,map:A.map,type:A.type});});
   if(own){try{(await trkAll()).forEach(a=>{if(a.postedId&&acts.some(x=>String(x.post)===String(a.postedId)))return;const st=a.stats||{};
@@ -9425,6 +9542,7 @@ async function pvLoad(uid,boxId,own){
   acts.sort((x,y)=>y.start-x.start);
   pvState[boxId]={uid,own,posts,acts,fol,ing,trust,tab:(pvState[boxId]&&pvState[boxId].tab)||'grid'};
   pvRender(boxId);
+  try{sessionStorage.setItem(ck,JSON.stringify({v:1,S:Object.assign({},pvState[boxId],{acts:pvState[boxId].acts.filter(a=>!a.local)})}));}catch(e){}
 }
 function pvImg(r){const cd=r.condition_data||{};if(cd.activity&&cd.activity.map)return cd.activity.map;return r.image_url||cd.snapshot||null;}
 function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxId);if(!S||!box)return;
@@ -9481,12 +9599,16 @@ async function pvFollow(boxId){const S=pvState[boxId];if(!S)return;if(!sb||!sbUs
 function pvShare(uid){const u=location.origin+location.pathname+'?u='+encodeURIComponent(uid);
   if(navigator.share)navigator.share({title:'Snowmapper',url:u}).catch(()=>{});else{try{navigator.clipboard.writeText(u);toast('Link kopiert!','ok');}catch(e){}}}
 function pvClose(){try{profClose();}catch(e){}try{userViewClose();}catch(e){}}
-function pvOpenPost(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;const cd=r.condition_data||{};pvClose();
+function pvName(S){if(sbUser&&S.uid===sbUser.id)return (sbUser.user_metadata&&sbUser.user_metadata.username)||(sbUser.email||'').split('@')[0]||'Du';
+  const n=document.getElementById('uvName');return n?n.textContent:'';}
+function pvOpenPost(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;feedOpenUser(S.uid,pvName(S),r.id);}
+function pvOpenPostOld(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;const cd=r.condition_data||{};pvClose();
   if(cd.snowp&&cd.snowp.back)return snpFeedVisual(r);
   if(cd.activity&&cd.activity.track){setTimeout(()=>trkShowOnMap(cd.activity.track),250);return;}
   const ll=parseGeo(r.location);if(ll)feedFlyTo(ll[0],ll[1]);}
-function pvOpenAct(boxId,i){const S=pvState[boxId],a=S&&S.acts[i];if(!a)return;pvClose();
+function pvOpenAct(boxId,i){const S=pvState[boxId],a=S&&S.acts[i];if(!a)return;if(a.local||!a.post)pvClose();
   if(a.local){trkCur=a.id;trkView='detail';trkOpen();return;}
+  if(a.post){feedOpenUser(S.uid,pvName(S),a.post);return;}
   setTimeout(()=>trkShowOnMap(a.track),250);}
 async function trkProfRender(){const el=document.getElementById('profActs');if(!el)return;let list=[];try{list=await trkAll();}catch(e){}
   el.innerHTML=list.length?list.slice(0,30).map(a=>{const s=a.stats||{};
@@ -11367,8 +11489,15 @@ function ovRender(){
       +' onclick="ovToggle(\''+k+'\')" title="'
       +escapeHtml(na?o.label+' – keine Daten':o.attr)+'">'
       +'<span class="ly-ov-ic">'+ic+'</span><span class="ly-ov-t">'+escapeHtml(o.label)+'</span><span class="ly-sw" aria-hidden="true"></span></button>'+extra;
-  }).join('');
+  }).join('')
+  // map extras that used to live in the settings
+  +lyExtraRow('stn','Messstationen',typeof showStn!=='undefined'&&showStn,'<line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0"/>','toggleStations();ovRender()')
+  +lyExtraRow('3d','3D-Ansicht',typeof is3d!=='undefined'&&is3d,'<path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/>','lyPanelClose();document.getElementById(\'btn3dFloat\').click()');
 }
+function lyExtraRow(k,label,on,ic,act){
+  return '<button type="button" id="ov_x'+k+'" class="ly-ov'+(on?' on':'')+'" role="switch" aria-checked="'+(on?'true':'false')+'" onclick="'+act+'">'
+    +'<span class="ly-ov-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ic+'</svg></span>'
+    +'<span class="ly-ov-t">'+escapeHtml(label)+'</span><span class="ly-sw" aria-hidden="true"></span></button>';}
 function lyPick(n){const t=lyLayers()[n];if(!t)return;
   setTopic(t[0],t[1],0);try{haptic(3);}catch(e){}}
 function lyPickVar(n){if(n===curVar)return;
@@ -11605,10 +11734,19 @@ addEventListener('pointerdown',e=>{
   if(e.target&&e.target.closest&&e.target.closest('#reportRow'))return;
   fabMenu(false);
 },true);
+// The legend is there when you ask for it (the i button), not all the time.
+function legVisToggle(on){on=on===undefined?!document.body.classList.contains('leg-vis'):!!on;
+  document.body.classList.toggle('leg-vis',on);const b=document.getElementById('legFab');if(b)b.classList.toggle('on',on);
+  if(!on){try{document.body.classList.remove('leg-open');}catch(e){}}try{haptic(4);}catch(e){}}
+// The search field opens right beside its button on the map's side rail.
+function searchPlace(){const w=document.getElementById('searchWrap'),b=document.getElementById('searchFab');if(!w||!b)return;
+  const r=b.getBoundingClientRect();if(!r.width){w.classList.remove('side');w.style.cssText='';return;}
+  w.classList.add('side');const wd=Math.min(300,r.left-20);
+  w.style.cssText='left:'+Math.max(12,r.left-wd-8)+'px;right:auto;width:'+wd+'px;top:'+(r.top+r.height/2-22)+'px';}
 function searchFieldOpen(){
   const w=document.getElementById('searchWrap'),i=document.getElementById('searchIn');
   if(!w||!i)return;
-  w.classList.remove('hid');
+  searchPlace();w.classList.remove('hid');
   try{i.focus({preventScroll:true});i.select();}catch(e){i.focus();}
   try{haptic(4);}catch(e){}
 }
@@ -12552,7 +12690,7 @@ function onbRender(){const el=document.getElementById('onbCard');if(!el)return;c
   const top='<div class="onb-top">'+back+prog+(onb.again?'<button class="onb-back" onclick="onbClose()" aria-label="Schliessen">×</button>':'<span></span>')+'</div>';
   let h='';
   if(k==='lang'){
-    h='<div class="onb-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg></div>'
+    h='<div class="onb-logo"><img src="icon-192.png?v=2" alt=""></div>'
       +'<h1>Willkommen bei Snowmapper</h1><p>Pulver, Schnee und Verhältnisse in der Schweiz – aus dem SNOWPACK-Modell und von der Community.</p>'
       +'<div class="onb-lbl">Sprache</div><div class="onb-langs" data-noi18n>'+Object.keys(LANGS).map(v=>'<button class="'+(LANG===v?'on':'')+'" onclick="langSet(\''+v+'\');onbRender()">'+LANGS[v]+'</button>').join('')+'</div>'
       +'<button class="onb-pri" onclick="onbNext()">Los geht\'s</button>';}
@@ -13142,13 +13280,16 @@ function feedNotifRender(n){
     el.classList.toggle('on',n>0);
   });
 }
-async function loadDbReports(){
+async function loadDbReports(opts){
+  opts=opts||{};
   if(!sb)return;
   try{
-    const{data}=await sb.from('reports').select('*').order('created_at',{ascending:false}).limit(60);
+    let q=sb.from('reports').select('*').order('created_at',{ascending:false});
+    q=opts.uid?q.eq('user_id',opts.uid).limit(90):q.limit(60);
+    const{data}=await q;
     if(!data||!data.length){return;}
     const feedSeenAt=+(localStorage.getItem('ssm_feed_seen')||0);
-    try{dbQpr=data.filter(r=>r.condition_data&&r.condition_data.quick).map(r=>{const ll=parseGeo(r.location);const cd=r.condition_data;
+    if(!opts.uid)try{dbQpr=data.filter(r=>r.condition_data&&r.condition_data.quick).map(r=>{const ll=parseGeo(r.location);const cd=r.condition_data;
         return ll?[ll[0],ll[1],+cd.powderAmountCm||0,+cd.powderQuality||0]:null;}).filter(Boolean);
       if(layer==='qprheat')renderQprHeat();if(layer==='prog')renderPrognosis(stat);if(layer==='powfind')renderPowderFind();if(layer==='progdiff')renderProgDiff();if(layer==='progpat')renderProgPattern(stat);}catch(e){}
     const ids=data.map(r=>r.id),uids=[...new Set(data.map(r=>r.user_id).filter(Boolean))];
@@ -13172,6 +13313,8 @@ async function loadDbReports(){
       return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||ic('pin'),sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,condition_data:r.condition_data||null,createdAt:r.created_at,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,
         condN:condAgg[r.id]?condAgg[r.id].n:0,condAvg:condAgg[r.id]?condAgg[r.id].sum/condAgg[r.id].n:0,condPow:condAgg[r.id]?condAgg[r.id].pow:0,myCond:myCond[r.id]||null,dbRow:true};
     }).filter(Boolean);
+    if(opts.uid){const have=new Set(allReports.map(x=>String(x.id)));
+      allReports=allReports.map(x=>dbR.find(y=>String(y.id)===String(x.id))||x).concat(dbR.filter(x=>!have.has(String(x.id))));return;}
     allReports=demoActive()?[...dbR,...DEMO_REPORTS]:dbR;loadReportMarkers();
     // The line above is the first point allReports is actually complete --
     // the powfind/prog renders a few lines up ran on whatever was there
@@ -13201,6 +13344,18 @@ function storagePathFromUrl(u){
   try{const m=String(u||'').match(/\/report-images\/(.+)$/);
     return m?decodeURIComponent(m[1].split('?')[0]):null;}catch(e){return null;}
 }
+function postEdit(id,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
+  const r=allReports.find(x=>String(x.id)===String(id));if(!r)return;
+  let el=document.getElementById('postEditW');if(!el){el=document.createElement('div');el.id='postEditW';document.body.appendChild(el);}
+  el.innerHTML='<div class="pe-in" role="dialog" aria-modal="true" aria-label="Beitrag bearbeiten"><b>Beitrag bearbeiten</b>'
+    +'<textarea id="peText" rows="5" maxlength="1000" placeholder="Beschreibung">'+escapeHtml(r.caption||'')+'</textarea>'
+    +'<div class="pe-b"><button onclick="document.getElementById(\'postEditW\').remove()">Abbrechen</button><button class="pri" onclick="postEditSave(\''+id+'\')">Speichern</button></div></div>';
+  el.onclick=e=>{if(e.target===el)el.remove();};setTimeout(()=>{const t=document.getElementById('peText');if(t)t.focus();},60);}
+async function postEditSave(id){const t=document.getElementById('peText');if(!t||!sb||!sbUser)return;const cap=t.value.trim()||null;
+  const{error}=await sb.from('reports').update({caption:cap}).eq('id',id).eq('user_id',sbUser.id);
+  if(error){toast('Speichern fehlgeschlagen: '+error.message,'err');return;}
+  const r=allReports.find(x=>String(x.id)===String(id));if(r)r.caption=cap;
+  const w=document.getElementById('postEditW');if(w)w.remove();toast('Beitrag aktualisiert','ok');try{feedRender();}catch(e){}}
 async function deleteReport(id,ev){
   if(ev){ev.stopPropagation();ev.preventDefault();}
   if(!sb||!sbUser){authShow();return;}
@@ -13411,7 +13566,7 @@ function avatarHtml(id,name,cls){
   return '<div class="'+(cls||'cmt-av')+(url?' has-img':'')+'"'+
     (url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':ini)+'</div>';
 }
-function profNav(v){['Main','Pers','Priv','Notif','App'].forEach(k=>{const el=document.getElementById('profView'+k);if(el)el.style.display=(v===k.toLowerCase())?'':'none';});try{haptic(4);}catch(e){}}
+function profNav(v){['Main','Set','Pers','Priv','Notif','App'].forEach(k=>{const el=document.getElementById('profView'+k);if(el)el.style.display=(v===k.toLowerCase())?'':'none';});try{haptic(4);}catch(e){}}
 function profSetVis(v){try{localStorage.setItem('ssm_visibility',v);}catch(e){}
   document.querySelectorAll('#profVis button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
   (async()=>{try{if(sb&&sbUser)await sb.from('profiles').update({visibility:v}).eq('id',sbUser.id);}catch(e){}})();
@@ -14984,8 +15139,9 @@ function obsRender(){const steps=obsState.steps,i=obsState.step,st=steps[i];
   else if(st.k==='enum')body=obsEnumHTML(st.f);
   else if(st.k==='snowcond')body=obsSnowHTML();
   else if(st.k==='avdetails')body=obsAvDetailsHTML();
-  if(isFinal)body+=obsLocationHTML()+obsSummaryHTML();
+  if(isFinal)body+=obsLocationHTML()+'<div class="tour-pick" id="obsTourPick"></div>'+obsSummaryHTML();
   document.getElementById('obsBody').innerHTML=body;
+  if(isFinal){const L=obsState.location||{};toursEnsure().then(()=>tourPickRender('obsTourPick',L.lat,L.lon)).catch(()=>{});}
   if(st.k==='snowcond')setTimeout(obsAltBandAttach,0);
   if(isFinal)setTimeout(obsInitMap,30);
   const next=document.getElementById('obsNext');next.classList.toggle('post',isFinal);next.textContent=isFinal?'Melden':'Weiter';next.disabled=obsStepDisabled(st);}
@@ -15179,6 +15335,7 @@ async function obsSubmit(){if(!sb||!sbUser||!obsState)return;const L=obsState.lo
       if(!error){const{data}=sb.storage.from('report-images').getPublicUrl(path);if(data&&data.publicUrl)urls.push(data.publicUrl);}
       else if(urls.length===0&&obsState.media.length){/* keep going */}}catch(e){}}
     const cd=obsBuildCD();if(urls.length>1)cd.images=urls;
+    {const tsel=tourPickTake();if(tsel)cd.tour=tsel;}
     const row={user_id:sbUser.id,location:`POINT(${L.lon} ${L.lat})`,elevation_m:L.elevation||null,
       primary_categories:[obsState.type],subtype:obsSubLabel(),condition_data:cd,
       image_url:urls[0]||null,caption:(obsState.comment||'').trim()||null,
@@ -15296,6 +15453,7 @@ function feedOpen(){
 }
 function feedClose(){
   const el=document.getElementById('feedPage');if(!el)return;
+  if(feedScope==='user'){feedScope='all';feedUserId=null;try{feedTourBar();}catch(e){}}
   el.classList.remove('open');
   document.body.setAttribute('data-screen','search');
   // it opens as a column again next time
@@ -15576,11 +15734,23 @@ async function addComment(){
 // sight, instead of behind the filter button.
 function feedChipsRender(){const el=document.getElementById('feedChips');if(!el)return;
   el.innerHTML=FEED_SCOPES.map(s=>`<button type="button" role="tab" data-s="${s.id}" aria-selected="${feedScope===s.id}" class="${feedScope===s.id?'on':''}" onclick="feedSetScope('${s.id}')">${s.icon}<span>${s.label}</span></button>`).join('');}
+let feedUserId=null,feedUserName='';
+async function feedOpenUser(uid,name,postId){if(!uid)return;
+  try{pvClose();}catch(e){}
+  feedScope='user';feedUserId=uid;feedUserName=name||'';feedFilter='all';feedTour=null;
+  navGo('feed');feedTourBar();feedRender();
+  try{await loadDbReports({uid});}catch(e){}
+  feedRender();feedTourBar();
+  if(postId)setTimeout(()=>{const c=document.getElementById('feedcard-'+postId);if(c)c.scrollIntoView({block:'start',behavior:'smooth'});},120);}
 function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)return;
+  if(feedScope==='user'&&feedUserId){b.style.display='flex';
+    b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.8"/><path d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0"/></svg>'+escapeHtml(feedUserName||'Beiträge')+'</span>'
+      +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Alle Beiträge">×</button>';return;}
+  if(b.querySelector('.fab-user')){b.style.display='none';b.innerHTML='';}
   if(feedScope==='tours'&&feedTour){b.style.display='flex';
     b.innerHTML='<span class="fab-tour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-10 4 6 2-3 4 7z"/></svg>'+escapeHtml(feedTour.name)+'</span><button type="button" onclick="feedTour=null;feedTourBar();feedRender()">✕ alle Touren</button>';}
   else if(b.querySelector('.fab-tour')){b.style.display='none';b.innerHTML='';}}
-function feedSetScope(s){if(s!=='tours')feedTour=null;feedScope=s;feedTourBar();
+function feedSetScope(s){if(s!=='tours')feedTour=null;if(s!=='user')feedUserId=null;feedScope=s;feedTourBar();if(s==='all')try{feedRender();}catch(e){}
   document.querySelectorAll('#feedScope button').forEach(b=>b.classList.toggle('active',b.dataset.s===s));
   document.querySelectorAll('#feedChips button').forEach(b=>{const on=b.dataset.s===s;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);
     if(on)try{b.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});}catch(e){}});
@@ -15721,6 +15891,8 @@ function feedRender(){
   // read, so they never show up as feed cards.
   let base=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r));
   if(!prefs.showMyReports&&sbUser)base=base.filter(r=>r.userId!==sbUser.id);
+  // someone's profile, opened from a post: every post of theirs, drawn maps too
+  if(feedScope==='user')base=allReports.filter(r=>r.userId===feedUserId&&actVisible(r));
   if(feedScope==='here'){
     const bnds=map.getBounds();
     base=base.filter(r=>bnds.contains([r.lat,r.lng])&&feedInWindow(r));
@@ -15784,6 +15956,7 @@ function feedRender(){
         <button class="save-btn${savedPosts.has(String(r.id))?' saved':''}" title="Merken" aria-label="Merken" onclick="toggleSave('${r.id}',event)"><svg viewBox="0 0 24 24" fill="${savedPosts.has(String(r.id))?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
         ${r.dbRow&&(!sbUser||r.userId!==sbUser.id)?`<button class="flag-btn ${r.flaggedByMe?'flagged':''}" title="Melden" aria-label="Report melden" onclick="reportFlag('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>`:''}
         ${endBtn}
+        ${r.dbRow&&sbUser&&r.userId===sbUser.id?`<button class="edit-btn" title="Bearbeiten" aria-label="Beitrag bearbeiten" onclick="postEdit('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`:''}
         ${r.dbRow&&sbUser&&r.userId===sbUser.id?`<button class="del-btn" title="Löschen" aria-label="Beitrag löschen" onclick="deleteReport('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`:''}
       </div>
     </div>`;
