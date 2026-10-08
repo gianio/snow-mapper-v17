@@ -4235,6 +4235,106 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #dmFab{color:var(--fg)}
  #locFab,#layersFab{color:var(--brand)}
  .trk-pill{background:var(--brand-deep)!important}
+
+ /* ── recorder ── */
+ .trk-accp{margin-left:auto;display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px 0 10px;border-radius:999px;border:1px solid var(--hair);
+   background:var(--card);color:var(--fg);font:700 12.5px/1 var(--font-d,inherit);cursor:pointer}
+ .trk-bars{display:inline-flex;align-items:flex-end;gap:2px;height:13px}
+ .trk-bars b{width:4px;border-radius:1.5px;background:var(--fill2)}
+ .trk-bars b:nth-child(1){height:5px}.trk-bars b:nth-child(2){height:9px}.trk-bars b:nth-child(3){height:13px}
+ .trk-bars b.on{background:var(--brand)}
+ .trk-gps-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 6px}
+ .trk-types{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:6px}
+ .trk-type{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 2px 9px;border-radius:14px;border:1px solid var(--hair);
+   background:var(--card);color:var(--fg);font:700 11px/1.15 var(--font-d,inherit);text-align:center;cursor:pointer}
+ .trk-type i{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--fill);color:var(--fg)}
+ .trk-type i svg{width:22px;height:22px}
+ .trk-type.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
+ .trk-type.on i{background:var(--brand);color:#fff}
+ .trk-go{display:grid!important;place-items:center}
+ .trk-go span{font:800 22px/1 var(--font-d,inherit);letter-spacing:-.01em}
+ .trk-gpx{margin-left:auto;display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--hair);
+   background:var(--card);color:var(--brand);font:800 12.5px/1 var(--font-d,inherit);cursor:pointer}
+ .trk-gpx svg{width:16px;height:16px}
+ .trk-actions{display:grid!important;grid-auto-flow:column;grid-auto-columns:1fr;gap:10px}
+ .trk-a{height:48px!important;border-radius:14px!important;font:800 15px/1 var(--font-d,inherit)!important;display:flex;align-items:center;justify-content:center}
+ .trk-a.sec{background:var(--fill)!important;color:var(--fg)!important;border:0!important}
+ .trk-a.sec.danger{color:var(--danger)!important}
+ .trk-sp{position:relative;height:150px;margin:2px 0 4px;border-radius:14px;background:var(--fill);overflow:visible}
+ .trk-sp.edit{cursor:crosshair}
+ .trk-sp svg{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:14px}
+ .trk-sp-y,.trk-sp-x{position:absolute;font:700 10px/1 var(--mono);color:var(--fg2);pointer-events:none}
+ .trk-sp-y.hi{left:8px;top:6px}.trk-sp-y.lo{left:8px;bottom:6px}.trk-sp-x{right:8px;bottom:6px}
+ .trk-sp-pt{position:absolute;transform:translate(-50%,-50%);width:28px;height:28px;border:0;padding:0;background:none;cursor:pointer}
+ .trk-sp-pt i{position:absolute;left:7px;top:7px;width:14px;height:14px;border-radius:50%;background:var(--pc);box-shadow:0 0 0 3px var(--card),0 2px 6px rgba(0,0,0,.3)}
+ .trk-sp-pt.sel i{left:4px;top:4px;width:20px;height:20px;box-shadow:0 0 0 3px var(--card),0 0 0 5px var(--pc)}
+ .trk-sp-pt em{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);font:800 10.5px/1 var(--mono);font-style:normal;color:var(--fg);
+   background:var(--card);padding:2px 5px;border-radius:6px;box-shadow:var(--elev2);white-space:nowrap}
+ .trk-hint{margin:6px 2px 4px;font-size:12.5px;color:var(--fg2)}
+ .trk-sp-ed{margin-top:8px;padding:12px;border-radius:14px;background:var(--card);border:1px solid var(--hair)}
+ .trk-sp-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+ .trk-sp-hd b{font:800 14px/1 var(--font-d,inherit)}
+ .trk-sp-hd button{border:0;background:none;color:var(--danger);font:700 12.5px/1 inherit;cursor:pointer}
+ .trk-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+ .trk-sp-list{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+ .trk-sp-list span{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--fill);font-size:12.5px;font-weight:600}
+ .trk-sp-list i{width:9px;height:9px;border-radius:50%}
+
+ /* ── floating tab bar, slim header ── */
+ :root{--bar-h:calc(env(safe-area-inset-top,0px) + 44px)}
+ @media (max-width:899px){
+   :root{--nav-h:calc(env(safe-area-inset-bottom,0px) + 84px)}
+   #tabBar{left:12px!important;right:12px!important;bottom:calc(env(safe-area-inset-bottom,0px) + 10px)!important;height:64px!important;
+     padding:0 4px!important;border-radius:22px!important;border:1px solid var(--hair)!important;
+     box-shadow:0 10px 30px rgba(18,21,26,.16),0 2px 6px rgba(18,21,26,.06)!important}
+   #tabBar button[aria-current=page]::before{top:0!important}
+   body:not(.nav-vis) #tabBar{transform:translateY(calc(100% + 30px))!important}
+   body.nav-vis .feed-page.open{bottom:0!important}
+   body.nav-vis .feed-page.open #feedList{padding-bottom:calc(var(--nav-h) + 12px)}
+   body.nav-vis .prof-modal{bottom:0!important}
+   body.nav-vis .prof-modal .prof-sheet{padding-bottom:calc(var(--nav-h) + 12px)!important}
+ }
+ #appBar{padding-left:12px!important;padding-right:8px!important;gap:8px!important}
+ .ab-logo{width:26px!important;height:26px!important;border-radius:8px!important}
+ .ab-logo svg{width:16px!important;height:16px!important}
+ .ab-name{font-size:16px!important}
+ .ab-ic{width:36px!important;height:36px!important;border-radius:11px!important}
+ .ab-ic svg{width:20px!important;height:20px!important}
+ #appBar #mapAcc{width:30px!important;height:30px!important}
+ #appBar{box-shadow:0 4px 14px rgba(18,21,26,.05)!important}
+ body.desk #appBar{height:calc(var(--bar-h) + 8px)!important}
+
+ /* tour finder: an explicit fold, a bigger grab zone */
+ .ts-hd-b{display:flex;align-items:center;gap:6px}
+ .ts-min{width:34px;height:34px;border-radius:50%;border:0;background:var(--fill);color:var(--fg);display:grid;place-items:center;cursor:pointer}
+ .ts-min svg{width:18px;height:18px;transition:transform .25s}
+ .ts-sheet.min .ts-min svg{transform:rotate(180deg)}
+ .ts-sheet.min{cursor:pointer}
+ .ts-grab{margin:0 auto!important;padding:8px 0 12px;background-clip:content-box!important;height:4px!important;box-sizing:content-box}
+
+ /* profile: activities as cards with a real map */
+ .pv-acts{gap:12px!important;padding-top:6px}
+ .pv-ac{display:flex;flex-direction:column;gap:10px;width:100%;padding:14px;border-radius:18px;border:1px solid var(--hair);background:var(--card);
+   text-align:left;cursor:pointer;box-shadow:var(--elev1)}
+ .pv-ac-hd{display:flex;align-items:center;gap:10px}
+ .pv-ac-hd>i{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand);flex:none}
+ .pv-ac-hd>i svg{width:20px;height:20px}
+ .pv-ac-hd span{display:flex;flex-direction:column;gap:2px;min-width:0}
+ .pv-ac-hd b{font:800 15.5px/1.2 var(--font-d,inherit);color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .pv-ac-hd small{font:500 12px/1.2 var(--font,inherit);color:var(--fg2)}
+ .pv-ac-st{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+ .pv-ac-st span{display:flex;flex-direction:column;gap:3px}
+ .pv-ac-st small{font:700 10.5px/1 var(--font,inherit);text-transform:uppercase;letter-spacing:.04em;color:var(--fg2)}
+ .pv-ac-st b{font:800 17px/1 var(--font-d,inherit);color:var(--fg);letter-spacing:-.01em}
+ .pv-ac-map{display:block;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:var(--fill)}
+ .pv-ac-map img,.pv-ac-map svg{width:100%;height:100%;object-fit:cover;display:block}
+ .pv-ac-prof{display:block;position:relative;height:46px;margin-top:-2px}
+ .pv-ac-prof .trk-prof{width:100%;height:46px;display:block}
+ .pv-ac-prof .trk-prof-l{display:none}
+ .pv-hl{flex:0 0 100px!important;width:100px!important}
+ .pv-hl .pv-hl-m img,.pv-hl .pv-hl-m svg{width:100%!important;height:100%!important;border-radius:0!important;box-shadow:none!important;border:0!important;background:none!important}
+ .pv-hl-m{display:block;width:96px;height:96px;border-radius:18px!important;overflow:hidden;background:var(--fill);border:2px solid var(--card);box-shadow:0 0 0 2px var(--brand)}
+ .pv-hl-m img,.pv-hl-m svg{width:100%;height:100%;object-fit:cover;display:block}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -4517,7 +4617,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <div id="drawBar">
     <div id="drawBrush"></div>
     <div id="drawSlider"></div>
-    <div id="drawPanRow"><span id="drawPanHint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>1 Finger zeichnet · 2 Finger bewegen · Scrollen zoomt</span></div>
+    <div id="drawPanRow"><span id="drawPanHint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>1 Finger zeichnet · 2 Finger bewegen · Pinch/Mausrad zoomt</span></div>
     <div id="drawCats"></div>
     <div id="drawPens"></div>
     <div id="drawActions">
@@ -4802,7 +4902,7 @@ const I18N_DICT={
 "+ Person hinzufügen":["+ Add person","+ Ajouter une personne","+ Aggiungi persona"],
 "-Symbol":["icon","icône","icona"],
 ". Entscheidungen im Gelände triffst du auf":[". Decisions in the terrain are made at your","Les décisions sur le terrain se prennent à tes","Le decisioni sul terreno le prendi a tuo"],
-"# Finger zeichnet · # Finger bewegen · Scrollen zoomt":["# finger draws · # fingers move · scroll zooms","# doigt dessine · # doigts déplacent · défiler zoome","# dito disegna · # dita spostano · scorri per zoomare"],
+"# Finger zeichnet · # Finger bewegen · Pinch/Mausrad zoomt":["# finger draws · # fingers move · pinch/wheel zooms","# doigt dessine · # doigts déplacent · pincer/molette zoome","# dito disegna · # dita spostano · pizzica/rotella per zoomare"],
 "# Sterne":["# stars","# étoiles","# stelle"],
 "# · Standort — Karte unter dem Pin verschieben":["# · Location — move the map under the pin","# · Lieu — déplace la carte sous l'épingle","# · Posizione — sposta la mappa sotto il segnaposto"],
 "# km · # Hm · bis #° · # m":["# km · # m gain · up to #° · # m","# km · # m D+ · jusqu'à #° · # m","# km · # m disl. · fino a #° · # m"],
@@ -5259,6 +5359,10 @@ const I18N_DICT={
 "Webcams – keine Daten":["Webcams – no data","Webcams – pas de données","Webcam – nessun dato"],
 "Weiter":["Continue","Continuer","Continua"],
 "Du":["You","Toi","Tu"],
+"Niedrig":["Low","Bas","Basso"],"Mittel":["Medium","Moyen","Medio"],"Schnee entlang der Route":["Snow along the route","Neige le long de l'itinéraire","Neve lungo il percorso"],
+"Verspurung":["Tracks","Traces","Tracce"],"Unverspurt":["Untracked","Vierge","Intatto"],"Wenig verspurt":["Few tracks","Peu tracé","Poco tracciato"],"Stark verspurt":["Heavily tracked","Très tracé","Molto tracciato"],
+"Punkt entfernen":["Remove point","Supprimer le point","Rimuovi punto"],"Kein Schnee":["No snow","Pas de neige","Niente neve"],"Mächtigkeit":["Thickness","Épaisseur","Spessore"],
+"Tippe auf das Höhenprofil, um an dieser Stelle den Schnee zu melden. Mehrere Punkte möglich.":["Tap the elevation profile to report the snow at that spot. Several points are possible.","Touche le profil d'altitude pour signaler la neige à cet endroit. Plusieurs points possibles.","Tocca il profilo altimetrico per segnalare la neve in quel punto. Più punti possibili."],
 "Aufzeichnen gibt es auf dem Smartphone":["Recording is available on your phone","L'enregistrement est disponible sur smartphone","La registrazione è disponibile sullo smartphone"],
 "Wer darf mein Profil & meine Beiträge sehen?":["Who can see my profile & posts?","Qui peut voir mon profil & mes publications ?","Chi può vedere il mio profilo e i miei post?"],
 "Wetter":["Weather","Météo","Meteo"],
@@ -8454,6 +8558,26 @@ const TRK_ACC={
   eco:{label:'Akku sparen',sub:'alle 15 s · gröbere Spur',minDt:15000,minD:20,maxAcc:80,hiAcc:false}};
 const TRK_TYPES=[['skitour','Skitour'],['splitboard','Splitboard'],['freeski','Freeride Ski'],['freesnowboard','Freeride Snowboard'],['skimo','Skimo']];
 const TRK_SNOW=['Pulver','Windgepresst','Bruchharsch','Sulz','Nass','Hart'];
+// GPS accuracy as one pill in the header: tap cycles low -> medium -> high
+const TRK_ACC_ORDER=['eco','std','hi'],TRK_ACC_SHORT={eco:'Niedrig',std:'Mittel',hi:'Hoch'};
+const _TI=p=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
+const TRK_TYPE_IC={
+ skitour:_TI('<path d="M3 20l6-9 3 4 2-3 4 6"/><path d="M14 4l2.5 2.5L19 4"/><path d="M16.5 6.5V11"/>'),
+ splitboard:_TI('<rect x="6" y="3" width="5" height="18" rx="2.5"/><rect x="13" y="3" width="5" height="18" rx="2.5"/>'),
+ freeski:_TI('<path d="M5 3l14 18M19 3L5 21"/><path d="M4 5l2-1M18 4l2 1"/>'),
+ freesnowboard:_TI('<rect x="9" y="2" width="6" height="20" rx="3" transform="rotate(35 12 12)"/><path d="M10 10l4 1M9 13l4 1"/>'),
+ skimo:_TI('<circle cx="12" cy="13" r="7"/><path d="M12 10v3l2 2M10 3h4"/><path d="M5 7l-1.5-1.5M19 7l1.5-1.5"/>')};
+// what can be reported at a point of the route, and how it feeds the models
+const TRK_PT={
+ powder:{l:'Pulver',zone:'powder',cm:true,col:'#4aa3ff'},
+ drift:{l:'Triebschnee',zone:'drift',cm:true,col:'#e8590c'},
+ windpressed:{l:'Windgepresst',zone:'windpressed',cm:false,col:'#8aa0c8'},
+ crust:{l:'Bruchharsch',zone:'suncrust',cm:false,col:'#d4ac0d'},
+ firn:{l:'Sulz',zone:'firn',cm:false,col:'#3fb27f'},
+ wet:{l:'Nass',zone:'wet',cm:false,col:'#f59e0b'},
+ icy:{l:'Eisig',zone:'icy',cm:false,col:'#38bdf8'},
+ nosnow:{l:'Kein Schnee',zone:'nosnow',cm:false,col:'#e0483c'}};
+const TRK_TRACKS=[['none','Unverspurt'],['few','Wenig verspurt'],['some','Mittel'],['many','Stark verspurt']];
 function trkCol(){try{return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#2A8FD8';}catch(e){return '#2A8FD8';}}
 let trkLinkAct=null,trkGuide=null,trkGuideLine=null,_trkOff=false;
 // Start recording on a tour from the finder or the tour sheet: the route is
@@ -8598,7 +8722,7 @@ function trkFinish(){if(!trkRec)return;
   clearInterval(trkTick);trkTick=0;
   const st=trkStats(segs,trkRec.movingMs);
   trkDraft={id:trkRec.id,type:trkRec.type,acc:trkRec.acc,start:trkRec.start,end:Date.now(),segs,stats:st,
-    name:trkRec.guide?trkRec.guide.name:trkDefaultName(trkRec.type,trkRec.start),guide:trkRec.guide||null,desc:'',snow:null,depth:0,stars:0,photos:[],postedId:null};
+    name:trkRec.guide?trkRec.guide.name:trkDefaultName(trkRec.type,trkRec.start),guide:trkRec.guide||null,desc:'',snow:null,depth:0,stars:0,photos:[],postedId:null,snowPts:[],sel:null,tracks:null};
   trkView='save';trkRender();
 }
 async function trkKeep(post){
@@ -8651,9 +8775,22 @@ async function trkPost(a){
       const Q={Pulver:85,Windgepresst:15,Bruchharsch:30,Sulz:55,Nass:45,Hart:10}[a.snow];
       cd.quick=true;cd.powderAmountCm=a.snow==='Pulver'?(a.depth||0):0;cd.powderQuality=a.stars&&a.snow==='Pulver'?Math.max(Q-20,a.stars*20):Q;
       if(rp[2]!=null)cd.altitudeM=Math.round(rp[2]);}
+    const sp=(a.snowPts||[]).filter(p=>flat0[p.i]);
+    if(sp.length){
+      // each point is a small zone at its own height: the same shape a drawn
+      // snow map has, so the Reported Powder layer and the model check use it
+      cd.zones=sp.map(p=>{const q=flat0[p.i],T=TRK_PT[p.type]||TRK_PT.powder;
+        return {type:T.zone,cm:T.cm?(p.cm||0):null,centroid:[+q[0].toFixed(5),+q[1].toFixed(5)],
+          elevMin:q[2]!=null?Math.round(q[2]-40):null,elevMax:q[2]!=null?Math.round(q[2]+40):null,n:1,src:'route'};});
+      cd.snowPts=sp.map(p=>{const q=flat0[p.i],T=TRK_PT[p.type]||TRK_PT.powder;
+        return {lat:+q[0].toFixed(5),lon:+q[1].toFixed(5),alt:q[2]!=null?Math.round(q[2]):null,type:p.type,cm:T.cm?(p.cm||0):null};});
+      cd.measurement=sp.map(p=>{const q=flat0[p.i],T=TRK_PT[p.type]||TRK_PT.powder;
+        return T.l+(T.cm?' '+(p.cm||0)+' cm':'')+(q[2]!=null?' · '+Math.round(q[2])+' m':'');}).join(' / ');}
+    if(a.tracks){cd.tracks=a.tracks;const tl=(TRK_TRACKS.find(x=>x[0]===a.tracks)||[0,''])[1];
+      cd.measurement=(cd.measurement?cd.measurement+' · ':'')+tl;}
     if(a.stars)cd.stars=a.stars;
     const row={user_id:sbUser.id,location:'POINT('+top[2]+' '+top[1]+')',primary_categories:['tour'],subtype:trkTypeLbl(a.type),
-      condition_data:cd,image_url:urls[0]||null,caption:a.desc?(a.name+'\n'+a.desc):a.name,completion_score:a.snow?85:70,
+      condition_data:cd,image_url:urls[0]||null,caption:a.desc?(a.name+'\n'+a.desc):a.name,completion_score:(a.snow||sp.length)?85:70,
       captured_at:new Date(a.start).toISOString()};
     let{data,error}=await sb.from('reports').insert(Object.assign({visibility:'followers'},row)).select('id').single();
     if(error&&/visibility/i.test(error.message||'')){({data,error}=await sb.from('reports').insert(row).select('id').single());}
@@ -8828,14 +8965,12 @@ async function trkRender(){
   const root=document.getElementById('trk');root.dataset.view=trkView;
   if(trkView==='setup'){
     el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkClose()" aria-label="Schliessen">'+TRK_X+'</button><b>Aufzeichnen</b>'
-      +'<button class="trk-link" onclick="trkView=\'list\';trkRender()">Meine Aktivitäten</button></div>'
-      +'<div id="trkGps" class="trk-gps-row">'+trkGpsHTML()+'</div>'
+      +'<button class="trk-accp" onclick="trkAccCycle()" title="GPS-Genauigkeit – tippen zum Wechseln">'+trkAccPill()+'</button></div>'
+      +'<div class="trk-gps-row"><span id="trkGps">'+trkGpsHTML()+'</span><button class="trk-link" onclick="trkView=\'list\';trkRender()">Meine Aktivitäten</button></div>'
       +(trkGuide?'<div class="trk-guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg><span>Spur folgen<b>'+escapeHtml(trkGuide.name)+' · '+(trkGuide.len/1000).toFixed(1)+' km</b></span><button onclick="trkGuideClear()" aria-label="Spur entfernen">×</button></div>':'')
-      +'<div class="trk-lbl">Sportart</div><div class="trk-chips">'+TRK_TYPES.map(([k,l])=>'<button type="button" class="trk-chip'+(trkPrefs.type===k?' on':'')+'" onclick="trkPref(\'type\',\''+k+'\')">'+l+'</button>').join('')+'</div>'
-      +'<div class="trk-lbl">GPS-Genauigkeit</div><div class="trk-acc">'+Object.keys(TRK_ACC).map(k=>{const A=TRK_ACC[k];
-        return '<button type="button" class="'+(trkPrefs.acc===k?'on':'')+'" onclick="trkPref(\'acc\',\''+k+'\')"><b>'+A.label+'</b><span>'+A.sub+'</span></button>';}).join('')+'</div>'
+      +'<div class="trk-lbl">Sportart</div><div class="trk-types">'+TRK_TYPES.map(([k,l])=>'<button type="button" class="trk-type'+(trkPrefs.type===k?' on':'')+'" onclick="trkPref(\'type\',\''+k+'\')"><i>'+(TRK_TYPE_IC[k]||'')+'</i><span>'+l+'</span></button>').join('')+'</div>'
       +'<p class="trk-note">Der Bildschirm bleibt während der Aufnahme an. Wird das Handy gesperrt oder die App gewechselt, kann der Browser das GPS anhalten – die Spur wird dann beim Zurückkehren fortgesetzt.</p>'
-      +'<button class="trk-go" onclick="trkStart()" aria-label="Start"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17M12 2l-2 2.4M12 2l2 2.4M12 22l-2-2.4M12 22l2-2.4"/></svg><span>Start</span></button>';
+      +'<button class="trk-go" onclick="trkStart()" aria-label="Start"><span>Start</span></button>';
     return;}
   if(trkView==='rec'&&trkRec){
     const p=trkRec.paused;
@@ -8853,24 +8988,24 @@ async function trkRender(){
     if(d.rep==null)d.rep=trkRepDefault(ll);
     if(!d.vis)d.vis='followers';
     const priv=d.vis==='private';
-    el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkBackToRec()" aria-label="Zurück">'+TRK_DOWN+'</button><b>Aktivität speichern</b><span></span></div>'
-      +'<div class="trk-scroll"><div class="trk-map pick" id="trkMapBox" onclick="trkPickRep(event)">'+(d._mapUrl?'<img src="'+d._mapUrl+'" alt="">':'')+trkThumb(ll,680,340,'',d.rep,true)+'</div>'
+    if(d.snowPts&&d.snowPts.length)d.rep=d.snowPts[0].i;
+    el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkBackToRec()" aria-label="Zurück">'+TRK_DOWN+'</button><b>Aktivität speichern</b><button class="trk-gpx" onclick="trkExportDraft()">'+TRK_GPX+'<span>GPX</span></button></div>'
+      +'<div class="trk-scroll"><div class="trk-map" id="trkMapBox">'+(d._mapUrl?'<img src="'+d._mapUrl+'" alt="">':'')+trkThumb(ll,680,340,'',d.rep,true)+'</div>'
       +'<div class="trk-sum"><div><b>'+trkFmtD(s.dist)+'</b><small>Distanz</small></div><div><b>'+s.up+' m</b><small>Aufstieg</small></div><div><b>'+trkFmtT(s.moving)+'</b><small>Bewegungszeit</small></div></div>'
       +'<label class="trk-f"><span>Titel</span><input id="trkName" maxlength="80" value="'+escapeHtml(d.name)+'"></label>'
       +'<label class="trk-f"><span>Beschreibung</span><textarea id="trkDesc" rows="3" maxlength="1000" placeholder="Wie war\'s? Route, Verhältnisse, Gruppe …">'+escapeHtml(d.desc||'')+'</textarea></label>'
-      +'<div class="trk-lbl">Schnee-Rapport</div>'
-      +'<div class="trk-rep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17"/></svg><span>Gilt für den markierten Punkt der Spur – tippe auf die Karte, um ihn zu verschieben.<b id="trkRepInfo">'+escapeHtml(trkRepTxt(ll,d.rep))+'</b></span></div>'
-      +'<div class="trk-chips">'+TRK_SNOW.map(x=>'<button type="button" class="trk-chip'+(d.snow===x?' on':'')+'" onclick="trkSnow(\''+x+'\')">'+x+'</button>').join('')+'</div>'
-      +(d.snow==='Pulver'?'<div class="trk-depth"><span>Pulvertiefe</span><input type="range" min="0" max="80" step="5" value="'+(d.depth||0)+'" oninput="trkDraft.depth=+this.value;this.nextElementSibling.textContent=this.value+\' cm\'"><b>'+(d.depth||0)+' cm</b></div>':'')
+      +'<div class="trk-lbl">Schnee entlang der Route</div>'
+      +'<div id="trkSnowBox">'+trkSnowEditor(d,ll)+'</div>'
+      +'<div class="trk-lbl">Verspurung</div><div class="trk-chips">'+TRK_TRACKS.map(([k,l])=>'<button type="button" class="trk-chip'+(d.tracks===k?' on':'')+'" onclick="trkKeepFields();trkDraft.tracks=trkDraft.tracks===\''+k+'\'?null:\''+k+'\';trkRender()">'+l+'</button>').join('')+'</div>'
       +'<div class="trk-stars">'+[1,2,3,4,5].map(n=>'<button type="button" class="'+(d.stars>=n?'on':'')+'" onclick="trkKeepFields();trkDraft.stars='+n+';trkRender()" aria-label="'+n+' Sterne">★</button>').join('')+'<span>Abfahrt</span></div>'
       +'<div class="trk-more"><button type="button" onclick="trkThen(\'draw\')">Schnee-Karte zur Spur zeichnen</button><button type="button" onclick="trkThen(\'obs\')">Beobachtung melden</button></div>'
       +'<div class="trk-lbl">Fotos</div><div class="trk-photos">'+(d.photos||[]).map((b,i)=>'<div class="trk-ph"><img src="'+URL.createObjectURL(b)+'" alt=""><button onclick="trkKeepFields();trkDraft.photos.splice('+i+',1);trkRender()" aria-label="Foto entfernen">×</button></div>').join('')
       +'<label class="trk-ph add"><input type="file" accept="image/*" multiple hidden onchange="trkAddPhotos(this.files)"><span>+</span></label></div>'
       +'<div class="trk-lbl">Sichtbar für</div><div class="trk-vis"><button type="button" class="'+(priv?'':'on')+'" onclick="trkKeepFields();trkDraft.vis=\'followers\';trkRender()"><b>Follower</b><span>erscheint im Feed deiner Follower</span></button>'
       +'<button type="button" class="'+(priv?'on':'')+'" onclick="trkKeepFields();trkDraft.vis=\'private\';trkRender()"><b>Nur ich</b><span>bleibt auf diesem Gerät</span></button></div>'
-      +'</div><div class="trk-actions"><button class="trk-a ghost" onclick="trkDiscard()">Verwerfen</button>'
+      +'</div><div class="trk-actions"><button class="trk-a sec danger" onclick="trkDiscard()">Verwerfen</button>'
       +(priv?'<button class="trk-a pri" onclick="trkKeep(false)">Speichern</button>'
-        :'<button class="trk-a sec" onclick="trkKeep(false)">Nur speichern</button><button class="trk-a pri" onclick="trkKeep(true)">Posten</button>')+'</div>';
+        :'<button class="trk-a sec" onclick="trkKeep(false)">Speichern</button><button class="trk-a pri" onclick="trkKeep(true)">Posten</button>')+'</div>';
     if(!d._mapUrl&&!d._mapBusy){d._mapBusy=true;trkMapImage(ll,null,680,340,false).then(bl=>{d._mapBusy=false;if(!bl||trkDraft!==d)return;d._mapUrl=URL.createObjectURL(bl);
       const box=document.getElementById('trkMapBox');if(box&&!box.querySelector('img')){const im=new Image();im.src=d._mapUrl;im.alt='';box.prepend(im);}});}
     return;}
@@ -8887,17 +9022,73 @@ async function trkRender(){
     const a=trkCur?await trkGet(trkCur):null;if(!a){trkView='list';return trkRender();}
     const s=a.stats||{},ll=trkLL(a.segs);
     trkShowOnMap(ll);
-    el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkView=\'list\';trkRender()" aria-label="Zurück">'+TRK_DOWN+'</button><b>'+escapeHtml(a.name)+'</b><button class="trk-ic" onclick="trkClose()" aria-label="Schliessen">'+TRK_X+'</button></div>'
+    el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkView=\'list\';trkRender()" aria-label="Zurück">'+TRK_DOWN+'</button><b>'+escapeHtml(a.name)+'</b><button class="trk-gpx" onclick="trkExport(\''+a.id+'\')">'+TRK_GPX+'<span>GPX</span></button></div>'
       +'<div class="trk-scroll"><div class="trk-meta">'+new Date(a.start).toLocaleString(LOCALE(),{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+' · '+trkTypeLbl(a.type)+'</div>'
       +(a.desc?'<p class="trk-desc">'+escapeHtml(a.desc)+'</p>':'')
       +'<div class="trk-sum four"><div><b>'+trkFmtD(s.dist||0)+'</b><small>Distanz</small></div><div><b>'+(s.up||0)+' m</b><small>Aufstieg</small></div><div><b>'+trkFmtT(s.moving||0)+'</b><small>Bewegung</small></div><div><b>'+(s.maxA!=null?s.maxA+' m':'–')+'</b><small>Höchster Punkt</small></div></div>'
-      +'<div class="trk-profw">'+trkProfile(ll,340,80)+'</div>'
+      +((a.snowPts||[]).length?'':'<div class="trk-profw">'+trkProfile(ll,340,80)+'</div>')
+      +((a.snowPts||[]).length?'<div class="trk-profw">'+trkSnowProfileSVG(a,ll,false)+'</div><div class="trk-sp-list">'+a.snowPts.map(p=>trkPtTxt(p,ll)).map(t=>'<span>'+t+'</span>').join('')+'</div>':'')
+      +(a.tracks?'<div class="trk-meta">Verspurung: <b>'+escapeHtml((TRK_TRACKS.find(x=>x[0]===a.tracks)||[0,''])[1])+'</b></div>':'')
       +(a.snow?'<div class="trk-meta">Schnee: <b>'+escapeHtml(a.snow)+(a.snow==='Pulver'&&a.depth?' '+a.depth+' cm':'')+'</b>'+(a.stars?' · '+'★'.repeat(a.stars):'')+'</div>':'')
       +((a.photos||[]).length?'<div class="trk-photos">'+a.photos.map(b=>'<div class="trk-ph"><img src="'+URL.createObjectURL(b)+'" alt=""></div>').join('')+'</div>':'')
-      +'</div><div class="trk-actions"><button class="trk-a ghost danger" onclick="trkDelete(\''+a.id+'\')">Löschen</button><button class="trk-a sec" onclick="trkExport(\''+a.id+'\')">GPX exportieren</button>'
+      +'</div><div class="trk-actions"><button class="trk-a sec danger" onclick="trkDelete(\''+a.id+'\')">Löschen</button>'
       +(a.postedId?'<button class="trk-a sec" disabled>Gepostet ✓</button>':'<button class="trk-a pri" onclick="trkPostId(\''+a.id+'\')">Posten</button>')+'</div>';
     return;}
 }
+const TRK_GPX='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>';
+function trkAccPill(){const k=trkPrefs.acc||'std',n=TRK_ACC_ORDER.indexOf(k);
+  return '<i class="trk-bars">'+[0,1,2].map(j=>'<b class="'+(j<=n?'on':'')+'"></b>').join('')+'</i><span>'+TRK_ACC_SHORT[k]+'</span>';}
+function trkAccCycle(){const k=trkPrefs.acc||'std',n=TRK_ACC_ORDER[(TRK_ACC_ORDER.indexOf(k)+1)%TRK_ACC_ORDER.length];
+  trkPref('acc',n);toast('GPS '+TRK_ACC_SHORT[n]+': '+TRK_ACC[n].sub,'info');}
+async function trkExportDraft(){const d=trkDraft;if(!d)return;trkKeepFields();
+  const blob=new Blob([trkGpx(d)],{type:'application/gpx+xml'}),fn=(d.name||'aktivitaet').replace(/[^\wäöüÄÖÜ-]+/g,'_')+'.gpx';
+  try{const f=new File([blob],fn,{type:'application/gpx+xml'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:d.name});return;}}catch(e){if(e&&e.name==='AbortError')return;}
+  const u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download=fn;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);}
+// -- snow along the route: an elevation profile you tap to set points ------------
+function trkProfData(ll){let D=0;const xs=[0];
+  for(let i=1;i<ll.length;i++){D+=trkHav([0,ll[i-1][0],ll[i-1][1]],[0,ll[i][0],ll[i][1]]);xs.push(D);}
+  let last=null;const raw=ll.map(p=>p[2]!=null?(last=p[2]):last),first=raw.find(v=>v!=null);
+  const el=raw.map(v=>v==null?(first!=null?first:0):v),has=first!=null;
+  const lo=has?Math.min(...el):0,hi=has?Math.max(...el):1;return {xs,el,D:D||1,lo,hi:Math.max(hi,lo+30),has};}
+function trkSnowProfileSVG(d,ll,edit){const P=trkProfData(ll),W=340,H=130;
+  const X=i=>P.xs[i]/P.D*100,Y=i=>P.has?(8+(1-(P.el[i]-P.lo)/(P.hi-P.lo))*84):50;
+  const step=Math.max(1,Math.floor(ll.length/300));let line='';
+  for(let i=0;i<ll.length;i+=step)line+=(line?'L':'M')+(X(i)*W/100).toFixed(1)+' '+(Y(i)*H/100).toFixed(1);
+  line+='L'+(X(ll.length-1)*W/100).toFixed(1)+' '+(Y(ll.length-1)*H/100).toFixed(1);
+  const pts=(d.snowPts||[]).map((p,k)=>{const T=TRK_PT[p.type]||TRK_PT.powder;
+    return '<button type="button" class="trk-sp-pt'+(edit&&d.sel===k?' sel':'')+'" style="left:'+X(p.i).toFixed(2)+'%;top:'+Y(p.i).toFixed(2)+'%;--pc:'+T.col+'"'
+      +(edit?' onclick="event.stopPropagation();trkSnowSel('+k+')"':'')+' aria-label="'+T.l+'"><i></i>'+(T.cm&&p.cm!=null?'<em>'+p.cm+'</em>':'')+'</button>';}).join('');
+  return '<div class="trk-sp'+(edit?' edit':'')+'"'+(edit?' onclick="trkSnowTap(event)"':'')+'>'
+    +'<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true"><path d="'+line+'L'+W+' '+H+'L0 '+H+'Z" style="fill:var(--brand-soft,var(--accent-soft))"/>'
+    +'<path d="'+line+'" fill="none" style="stroke:var(--brand,var(--accent))" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>'
+    +(P.has?'<span class="trk-sp-y hi">'+Math.round(P.hi)+' m</span><span class="trk-sp-y lo">'+Math.round(P.lo)+' m</span>':'')
+    +'<span class="trk-sp-x">'+trkFmtD(P.D)+'</span>'+pts+'</div>';}
+function trkPtTxt(p,ll){const T=TRK_PT[p.type]||TRK_PT.powder,q=ll[p.i]||[];
+  return '<i style="background:'+T.col+'"></i>'+T.l+(T.cm&&p.cm!=null?' '+p.cm+' cm':'')+(q[2]!=null?' · '+Math.round(q[2])+' m':'');}
+function trkSnowEditor(d,ll){const sel=d.sel!=null?d.snowPts[d.sel]:null;
+  let h=trkSnowProfileSVG(d,ll,true);
+  if(!sel)return h+'<p class="trk-hint">Tippe auf das Höhenprofil, um an dieser Stelle den Schnee zu melden. Mehrere Punkte möglich.</p>';
+  const T=TRK_PT[sel.type]||TRK_PT.powder,P=trkProfData(ll);
+  h+='<div class="trk-sp-ed"><div class="trk-sp-hd"><b>'+(P.has?Math.round(P.el[sel.i])+' m · ':'')+trkFmtD(P.xs[sel.i])+'</b>'
+    +'<button type="button" onclick="trkSnowDel()">Punkt entfernen</button></div>'
+    +'<div class="trk-chips">'+Object.keys(TRK_PT).map(k=>'<button type="button" class="trk-chip'+(sel.type===k?' on':'')+'" onclick="trkSnowType(\''+k+'\')"><i class="trk-dot" style="background:'+TRK_PT[k].col+'"></i>'+TRK_PT[k].l+'</button>').join('')+'</div>'
+    +(T.cm?'<div class="trk-depth"><span>'+(sel.type==='drift'?'Mächtigkeit':'Pulvertiefe')+'</span><input type="range" min="0" max="120" step="5" value="'+(sel.cm||0)+'" oninput="trkSnowCm(+this.value,this)"><b>'+(sel.cm||0)+' cm</b></div>':'')
+    +'</div>';
+  return h;}
+function trkSnowRefresh(){const d=trkDraft,b=document.getElementById('trkSnowBox');if(!d||!b)return;b.innerHTML=trkSnowEditor(d,trkLL(d.segs));}
+function trkSnowTap(ev){const d=trkDraft;if(!d)return;const box=ev.currentTarget,r=box.getBoundingClientRect();
+  const ll=trkLL(d.segs),P=trkProfData(ll),x=Math.max(0,Math.min(1,(ev.clientX-r.left)/r.width))*P.D;
+  let bi=0,bd=1e18;P.xs.forEach((v,i)=>{const e=Math.abs(v-x);if(e<bd){bd=e;bi=i;}});
+  const prev=d.sel!=null?d.snowPts[d.sel]:d.snowPts[d.snowPts.length-1];
+  d.snowPts.push({i:bi,type:prev?prev.type:'powder',cm:prev?prev.cm:20});
+  d.snowPts.sort((a,b)=>a.i-b.i);d.sel=d.snowPts.findIndex(p=>p.i===bi);
+  try{haptic(6);}catch(e){}trkSnowRefresh();}
+function trkSnowSel(k){const d=trkDraft;if(!d)return;d.sel=d.sel===k?null:k;trkSnowRefresh();}
+function trkSnowType(t){const d=trkDraft;if(!d||d.sel==null)return;d.snowPts[d.sel].type=t;trkSnowRefresh();}
+function trkSnowCm(v,inp){const d=trkDraft;if(!d||d.sel==null)return;d.snowPts[d.sel].cm=v;
+  if(inp&&inp.nextElementSibling)inp.nextElementSibling.textContent=v+' cm';
+  const pt=document.querySelectorAll('#trkSnowBox .trk-sp-pt')[d.sel];if(pt){const em=pt.querySelector('em');if(em)em.textContent=v;}}
+function trkSnowDel(){const d=trkDraft;if(!d||d.sel==null)return;d.snowPts.splice(d.sel,1);d.sel=null;trkSnowRefresh();}
 function trkPref(k,v){trkPrefs[k]=v;try{localStorage.setItem('ssm_trk_prefs',JSON.stringify(trkPrefs));}catch(e){}
   if(k==='acc'&&!trkRec)trkGpsStart(TRK_ACC[v].hiAcc);try{haptic(3);}catch(e){}trkRender();}
 function trkKeepFields(){const d=trkDraft;if(!d)return;const nm=document.getElementById('trkName'),ds=document.getElementById('trkDesc');
@@ -8987,14 +9178,17 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
   S.acts.forEach(a=>{const w=W.find(x=>x.t===wk(a.start));if(w){w.d+=a.dist;w.up+=a.up;w.mv+=a.moving;w.n++;}});
   const cw=W[W.length-1],mx=Math.max(1,...W.map(w=>w.d));
   const chart='<div class="pv-chart">'+W.map((w,i)=>'<i class="'+(i===W.length-1?'cur':'')+'" style="height:'+Math.max(3,w.d/mx*100)+'%" title="'+(w.d/1000).toFixed(1)+' km"></i>').join('')+'</div>';
-  const hi=S.acts.slice(0,10).map((a,i)=>'<button class="pv-hl" onclick="pvOpenAct(\''+boxId+'\','+i+')">'+(a.map?'<img src="'+a.map+'" alt="">':trkThumb(a.track,80,80,''))+'<span>'+escapeHtml(a.name)+'</span></button>').join('');
+  const hi=S.acts.slice(0,10).map((a,i)=>'<button class="pv-hl" onclick="pvOpenAct(\''+boxId+'\','+i+')"><span class="pv-hl-m" data-pvmap="'+a.id+'">'+pvMapImg(a)+'</span><span>'+escapeHtml(a.name)+'</span></button>').join('');
   const grid=S.posts.length?'<div class="pv-grid">'+S.posts.map((r,i)=>{const im=pvImg(r),cd=r.condition_data||{};
       const ic=cd.activity?'<svg class="pv-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg>':(cd.snowp?'<svg class="pv-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/></svg>':'');
       return '<button class="pv-cell" onclick="pvOpenPost(\''+boxId+'\','+i+')">'+(im?'<img src="'+im+'" loading="lazy" alt="">':'<span class="pv-txt">'+escapeHtml((r.caption||r.subtype||catLabel((r.primary_categories||[])[0]||'info')||'').slice(0,60))+'</span>')+ic+'</button>';}).join('')+'</div>'
     :'<div class="prof-hint">Noch keine Beiträge.</div>';
-  const list=S.acts.length?S.acts.map((a,i)=>'<button class="pv-act" onclick="pvOpenAct(\''+boxId+'\','+i+')">'+trkThumb(a.track,84,64,'sm')
-      +'<span><b>'+escapeHtml(a.name)+'</b><small>'+new Date(a.start).toLocaleDateString(LOCALE(),{weekday:'short',day:'numeric',month:'short'})+' · '+trkTypeLbl(a.type)+(a.priv?' · 🔒':'')+'</small>'
-      +'<em>'+trkFmtD(a.dist)+' · ↑ '+a.up+' m · '+trkFmtT(a.moving)+'</em></span></button>').join('')
+  const list=S.acts.length?S.acts.map((a,i)=>'<button class="pv-ac" onclick="pvOpenAct(\''+boxId+'\','+i+')">'
+      +'<span class="pv-ac-hd"><i>'+(TRK_TYPE_IC[a.type]||TRK_TYPE_IC.skitour)+'</i><span><b>'+escapeHtml(a.name)+'</b><small>'
+      +new Date(a.start).toLocaleDateString(LOCALE(),{weekday:'short',day:'numeric',month:'short'})+' · '+trkTypeLbl(a.type)+(a.priv?' · 🔒 nur ich':'')+'</small></span></span>'
+      +'<span class="pv-ac-st"><span><small>Distanz</small><b>'+trkFmtD(a.dist)+'</b></span><span><small>Aufstieg</small><b>'+a.up+' m</b></span><span><small>Zeit</small><b>'+trkFmtT(a.moving)+'</b></span></span>'
+      +'<span class="pv-ac-map" data-pvmap="'+a.id+'">'+pvMapImg(a)+'</span>'
+      +'<span class="pv-ac-prof">'+trkProfile(a.track,340,46)+'</span></button>').join('')
     :'<div class="prof-hint">'+(me?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aktivitäten.')+'</div>';
   box.innerHTML='<div class="pv-stats"><div><b>'+n(S.posts.length)+'</b><span>Beiträge</span></div><div><b>'+n(S.fol)+'</b><span>Follower</span></div><div><b>'+n(S.ing)+'</b><span>Folge ich</span></div><div><b>'+n(S.acts.length)+'</b><span>Aktivitäten</span></div></div>'
     +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button data-dm onclick="profClose();dmOpen()">Nachrichten</button><button onclick="pvShare(\''+S.uid+'\')">Teilen</button>'
@@ -9012,7 +9206,17 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
     +(S.tab==='grid'?grid:'<div class="pv-acts">'+list+'</div>');
   box.querySelectorAll('[data-dm]').forEach(el=>{el.hidden=dmReady!==true;});
   if(dmReady===null)dmAvailable();
+  pvMapFill(boxId);
 }
+// Map pictures for the activities: posted ones bring their own, local ones are
+// drawn once from the base map and kept for the session.
+const pvMapCache={};
+function pvMapImg(a){const u=a.map||pvMapCache[a.id];
+  return u?'<img src="'+u+'" alt="" loading="lazy">':trkThumb(a.track,320,180,'',null);}
+async function pvMapFill(boxId){const S=pvState[boxId];if(!S)return;
+  for(const a of S.acts.slice(0,12)){if(a.map||pvMapCache[a.id]||!a.track||a.track.length<2)continue;
+    try{const b=await trkMapImage(a.track,null,640,360,true);if(!b)continue;pvMapCache[a.id]=URL.createObjectURL(b);}catch(e){continue;}
+    document.querySelectorAll('[data-pvmap="'+a.id+'"]').forEach(el=>{el.innerHTML='<img src="'+pvMapCache[a.id]+'" alt="">';});}}
 function pvTab(boxId,t){if(pvState[boxId]){pvState[boxId].tab=t;pvRender(boxId);}}
 async function pvFollow(boxId){const S=pvState[boxId];if(!S)return;if(!sb||!sbUser){authShow();return;}
   try{await toggleFollow(S.uid);}catch(e){}S.fol+=myFollowing.has(S.uid)?1:-1;pvRender(boxId);}
@@ -9180,11 +9384,13 @@ async function tsOpenUI(){
   try{tpJoin();}catch(e){}
   if(!ovOn.skitourVec){try{ovToggle('skitourVec',true);}catch(e){}}
   tourFocus=tsF.focus;
+  if(!map._tsDragHook){map._tsDragHook=1;map.on('dragstart',tsMapDragged);}
   document.body.classList.add('ts-open');
   tsRender(true);
   try{await tourVaPrepare();}catch(e){}
   tsRender();try{haptic(4);}catch(e){}
 }
+function tsMapDragged(){if(document.body.classList.contains('ts-open'))tsMinToggle(true);}
 function tsCloseQuiet(){document.body.classList.remove('ts-open');if(tsCircle){map.removeLayer(tsCircle);tsCircle=null;}}
 function tsClose(){tsCloseQuiet();tourList().forEach(t=>{t._ts=null;});tourPaintScores();}
 function tsSet(k,v){
@@ -9262,7 +9468,8 @@ function tsRender(onlyMap){
   tsDragWire(el);
   el.innerHTML='<div class="ts-grab" data-drag></div><div class="tn-hd" data-drag><div><b>Touren finden</b><span>'
     +(va?'SNOWPACK · '+escapeHtml(tourVa.when):'Powder-Modell im Zeitfenster')+'</span></div>'
-    +'<button type="button" class="tour-x" onclick="tsClose()" aria-label="Schliessen">×</button></div>'
+    +'<span class="ts-hd-b"><button type="button" class="ts-min" onclick="event.stopPropagation();tsMinToggle()" aria-label="Ein-/Ausklappen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>'
+    +'<button type="button" class="tour-x" onclick="tsClose()" aria-label="Schliessen">×</button></span></div>'
     +ctrls+'<div class="ts-res"><span class="ts-count">'+list.length+' Touren</span><span>nach '+(tsF.focus==='sulz'?'Sulz':'Pulver')+'-Anteil'
     +(nf?' · <button type="button" class="ts-reset" onclick="tsSet(\'reset\')">Filter zurücksetzen</button>':'')+'</span></div>'
     +'<div class="ts-list tn-list">'+(rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>')+'</div>'
@@ -9271,8 +9478,21 @@ function tsRender(onlyMap){
 }
 // The finder moves like the tour sheet: pull down to fold it to its title
 // (the map and the filtered routes stay visible), further to close, up to open.
+function tsMinToggle(force){const el=document.getElementById('tourSearch');if(!el)return;
+  const on=force===undefined?!el.classList.contains('min'):!!force;el.classList.toggle('min',on);if(on)el.scrollTop=0;try{haptic(4);}catch(e){}}
 function tsDragWire(el){
   if(el._dw)return;el._dw=true;
+  // collapsed: a tap anywhere opens it again
+  el.addEventListener('click',e=>{if(el.classList.contains('min')&&!e.target.closest('.tour-x'))tsMinToggle(false);});
+  // open and scrolled to the top: pulling the list down drags the sheet
+  let ty=null,tdy=0,tdrag=false;
+  el.addEventListener('touchstart',e=>{if(el.classList.contains('min')||e.target.closest('input,button,[data-drag]'))return;
+    ty=e.touches[0].clientY;tdy=0;tdrag=false;},{passive:true});
+  el.addEventListener('touchmove',e=>{if(ty==null)return;tdy=e.touches[0].clientY-ty;
+    if(!tdrag&&tdy>8&&el.scrollTop<=0){tdrag=true;el.style.transition='none';}
+    if(tdrag){e.preventDefault();el.style.transform='translateY('+Math.max(0,tdy)+'px)';}},{passive:false});
+  el.addEventListener('touchend',()=>{if(ty==null)return;ty=null;if(!tdrag)return;tdrag=false;
+    el.style.transition='';el.style.transform='';if(tdy>200&&tdy>el.offsetHeight*.6)tsClose();else if(tdy>50)tsMinToggle(true);});
   let y0=null,dy=0,id=null;
   el.addEventListener('pointerdown',e=>{if(!e.target.closest('[data-drag]')||e.target.closest('button'))return;
     y0=e.clientY;dy=0;id=e.pointerId;try{el.setPointerCapture(id);}catch(_){}el.style.transition='none';});
@@ -13824,7 +14044,7 @@ function _drawGestureApply(){
         const nz=map.getScaleZoom(g.d/_drawGestureD,map.getZoom());
         map.setZoomAround(anchor,nz,{animate:false});
       }
-      map.panBy([g.c.x-_drawGestureC.x,g.c.y-_drawGestureC.y],{animate:false,duration:0});
+      map.panBy([_drawGestureC.x-g.c.x,_drawGestureC.y-g.c.y],{animate:false,duration:0});
     }catch(_e){}
     _drawGestureC=g.c;_drawGestureD=g.d;
     drawRepaint();
@@ -13893,10 +14113,18 @@ function drawSetupCanvas(){
     cv.addEventListener('wheel',e=>{
       if(_drawGesturePan)return;
       e.preventDefault();
-      const latlng=map.mouseEventToLatLng(e);
-      const step=Math.max(.25,Math.min(1,Math.abs(e.deltaY||e.deltaX)/100));
-      const dir=(e.deltaY||e.deltaX)>0?-1:1;
-      try{map.setZoomAround(latlng,map.getZoom()+dir*step,{animate:false});}catch(_e){}
+      // Trackpad: two-finger swipe moves the map (like everywhere else), a
+      // pinch (ctrlKey) zooms. A mouse wheel (line mode or coarse notches
+      // without sideways movement) zooms.
+      const dy=e.deltaMode===1?e.deltaY*16:e.deltaY,dx=e.deltaMode===1?e.deltaX*16:e.deltaX;
+      const wheel=e.deltaMode===1||(!e.ctrlKey&&dx===0&&Math.abs(dy)>=50&&Number.isInteger(dy));
+      try{
+        if(e.ctrlKey||wheel){
+          const latlng=map.mouseEventToLatLng(e);
+          const z=e.ctrlKey?-dy/100:(dy>0?-1:1)*Math.max(.25,Math.min(1,Math.abs(dy)/100));
+          map.setZoomAround(latlng,map.getZoom()+z,{animate:false});
+        }else map.panBy([dx,dy],{animate:false,duration:0});
+      }catch(_e){}
       drawRepaint();
     },{passive:false});
   }
