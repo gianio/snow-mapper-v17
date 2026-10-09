@@ -12,6 +12,27 @@ versteckt. Alles Gestrichene ist ein späteres Update, kein Verlust.
 Legende: `[ ]` offen · `[~]` teilweise vorhanden · `[x]` erledigt
 Priorität: **P0** = Blocker · **P1** = muss vor Einreichung · **P2** = wenn Zeit
 
+### Inhalt
+0. Ausgangslage · 0.1 Branch & Arbeitsweise
+1. Abspecken — «Kill your darlings»
+2. Onboarding & Auth — fail-safe
+3. Notifications & Powder-Alarm
+4. Design — einwandfrei auf jedem Gerät
+5. Performance & Datenverbrauch
+6. Navigation — keine Sackgassen
+7. Layer — beste lesbare Auflösung
+8. Release-Blocker (Infrastruktur, Build, Launch-Plan)
+9. Rechtliches & App-Review-Richtlinien
+10. Aufräumen & Code-Struktur
+11. Übersetzungen (DE/EN/FR/IT)
+12. Barrierefreiheit
+13. Sicherheit & Datenschutz
+14. Qualitätssicherung & Tests
+15. Gerätetest auf echtem iPhone
+16. Nach dem Launch
+17. Reihenfolge / Zeitplan
+18. Definition of Done
+
 ---
 
 ## 0. Ausgangslage (aus dem Code geprüft)
@@ -29,6 +50,18 @@ Priorität: **P0** = Blocker · **P1** = muss vor Einreichung · **P2** = wenn Z
 | Navigation | Kein `history.pushState`/Zurück-Stack — Sheets haben keine einheitliche Zurück-Logik | **P0** |
 | Push / Powder-Alarm | Nicht vorhanden | **P1** (neu im Scope) |
 | Generator | `pipeline/interactive_export.py` = 16 000 Zeilen, eine Datei | Abspecken = auch Code löschen |
+| Moderation | Meldungen melden ✅, aber **kein Nutzer-Blockieren** | **P0** (App Store 1.2) |
+| Rechtliches | Kein Impressum, keine Nutzungsbedingungen als eigene Seite | **P0** |
+| Übersetzungen | ~670 Einträge DE→EN/FR/IT, neueste Texte teils ohne Übersetzung | **P1** |
+| Fehler-Tracking | Sentry-Stub vorhanden, **DSN leer** | **P0** |
+
+### 0.1 Branch & Arbeitsweise
+- [x] Branch `release/1.0` von `main` erstellt (Stand nach Merge von gianio/snow-mapper-v17#117) und gepusht; Arbeitsstand sauber
+- [x] Release-Arbeit läuft ab jetzt **nur** auf `release/1.0`; Abschluss per PR nach `main` (gianio/snow-mapper-v17#118)
+- [ ] Jedes Kapitel = eigener, kleiner Commit-Block; nach jedem Block `validate.yml` grün
+- [ ] Code-Freeze für neue Features ab **27. Oktober** — danach nur noch Fixes
+- [ ] Version festlegen: `1.0.0`, Build-Nummer pro TestFlight-Upload hochzählen
+- [ ] `CHANGELOG.md` für 1.0 führen (dient auch als «Was ist neu»-Text im App Store)
 
 ---
 
@@ -276,24 +309,138 @@ Ziel: **einfach, aber viel Detail**. Wenige Layer, dafür scharf.
 
 ---
 
-## 8. Release-Blocker aus dem bestehenden Launch-Plan (noch offen)
+## 8. Release-Blocker — Infrastruktur, Build, Launch-Plan
 
+### 8.1 Daten
 - [ ] **P0** Live-Daten als Standard (`isDemo=false`), Demo nur versteckt
+- [ ] **P0** Cloudflare-Tiles: Workflow `cloudflare.yml` mit `deploy_worker` **und** `publish` ausführen, damit die Ebene «Nur Pulver» live ist; danach prüfen, dass Kacheln auf dem Gerät laden
+- [ ] **P0** `variant-a-live.yml` läuft stabil alle 6 h (letzte 10 Läufe grün)
+- [ ] **P1** Monitoring: Alarm, wenn `data/latest.json` > 12 h alt
+- [ ] **P2** Secret `WINDY_WEBCAMS_KEY` setzen — **nur falls Webcams in 1.0 bleiben** (laut Kap. 1.2 gestrichen; ohne Schlüssel blendet sich das Overlay sauber aus)
+
+### 8.2 Supabase
 - [ ] **P0** Migrationen via Supabase CLI (`link`, `migration repair`, `db push`) — `harden_functions` + `harden_functions_2` prüfen
 - [ ] **P0** Edge Function `delete-account` deployt + getestet
-- [ ] **P0** Apple Developer Program aktiv
-- [ ] **P0** Datenschutzerklärung + Support-URL gehostet (inkl. Push + Face ID)
-- [ ] **P0** App-Privacy-Labels = tatsächliches Verhalten
-- [ ] **P0** Demo-Konto für App Review + Review-Notizen
-- [ ] **P0** Supabase-Backups aktiv, Plan-Limits (Storage/Egress) geprüft
-- [ ] **P1** Sentry-DSN gesetzt
-- [ ] **P1** Monitoring: Alarm, wenn `data/latest.json` > 12 h alt
-- [ ] **P1** Store-Metadaten + Screenshots (6.7", 6.5")
+- [ ] **P0** Backups (täglich) einschalten, Plan-Limits (DB 500 MB / Storage 1 GB / Egress 5 GB) prüfen, Upgrade-Schwelle festlegen
+- [ ] **P0** **Leaked-Password-Protection** aktivieren (Auth → Passwords → HaveIBeenPwned-Prüfung), Mindestlänge 8 serverseitig
+- [ ] **P0** Bestätigungs-E-Mail beim Registrieren enthält den **6-stelligen Code** (`{{ .Token }}`) — siehe Kap. 2.3
+- [ ] **P0** Eigener SMTP-Versand (Kap. 2.3)
+- [ ] **P1** Supabase **Security- und Performance-Advisors** ohne Warnungen
+
+### 8.3 Native App & TestFlight
+- [ ] **P0** Apple Developer Program aktiv, App-Record `ch.snowmapper.app` in App Store Connect
+- [ ] **P0** Build-Kette: `npm install` → `npm run build:web` (mit `SNOW_REMOTE_DATA_BASE`) → `npx cap sync ios` → `apply-ios-config.py` → Signatur → Upload (`ios-testflight.yml`)
+- [ ] **P0** Signatur-Secrets: `APPLE_CERTIFICATE_P12`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_PROVISIONING_PROFILE`, `APPSTORE_API_KEY_JSON`
+- [ ] **P0** Info.plist-Zweckangaben nur für Funktionen, die **noch drin** sind (Standort, Kamera/Fotos, Face ID, Push) — gestrichene (z. B. Hintergrund-GPS) entfernen, sonst Review-Rückfrage
+- [ ] **P0** App-Privacy-Labels + `PrivacyInfo.xcprivacy` = tatsächliches Verhalten
+- [ ] **P0** Demo-Konto für App Review + Review-Notizen (Melden-Flow erklären)
+- [ ] **P1** Store-Texte DE/EN/FR/IT, Keywords, Kategorie (Wetter), Altersfreigabe, Screenshots 6.9"/6.7" + 6.5"
 - [ ] **P1** Native Integrationen sichtbar (Guideline 4.2): Face ID, Push, Haptik, Teilen, Offline
+
+### 8.4 Fehler-Tracking
+- [ ] **P0** Sentry-Projekt anlegen, Browser-DSN in `SENTRY_DSN` eintragen → Abstürze bei Testern sichtbar
+- [ ] **P1** Release-Tag (`1.0.0+build`) an Sentry übergeben, Source-Maps hochladen
+- [ ] **P1** Alarm bei neuem Fehler im Core-Flow (Login, Melden, Karte laden) per Mail
 
 ---
 
-## 9. Reihenfolge / Zeitplan bis Einreichung
+## 9. Rechtliches & App-Review-Richtlinien
+
+- [ ] **P0** **Impressum** als eigene Seite (Name, Adresse, Kontakt — CH-Pflicht bei kommerziellem Angebot)
+- [ ] **P0** **Datenschutzerklärung** als eigene Seite: E-Mail, Standort, Fotos, Inhalte, Push-Token, Face ID (bleibt auf dem Gerät), Sentry, Supabase EU, Löschung/Export, revDSG + DSGVO
+- [ ] **P0** **Nutzungsbedingungen** als eigene Seite inkl. Null-Toleranz für anstössige Inhalte (Apple 1.2 verlangt das bei nutzergenerierten Inhalten)
+- [ ] **P0** Alle drei Seiten verlinkt aus: App (Einstellungen + Registrierung), App Store Connect (Datenschutz-URL, Support-URL), Website
+- [ ] **P0** Registrierung: Checkbox/Hinweis «Ich akzeptiere Nutzungsbedingungen und Datenschutz» mit Links
+- [ ] **P0** **Nutzer blockieren** (Apple 1.2): Tabelle `user_blocks` + RLS, Feed/Kommentare blendet blockierte Nutzer aus, Menü «Blockieren» auf Profil und Meldung
+- [ ] **P0** Moderation: gemeldete Inhalte innerhalb 24 h prüfen (Prozess + Admin-Ansicht oder SQL-View), Kontakt für Meldungen
+- [ ] **P1** Disclaimer als Jurist gegenlesen: Positionierung «Schneebedingungen», **keine** Lawinenrisiko-Bewertung
+- [ ] **P1** Datenlizenzen prüfen (Open-Meteo kommerziell?, swisstopo, SLF/IMIS) — siehe `docs/APP-UEBERSICHT.md` §7
+
+---
+
+## 10. Aufräumen & Code-Struktur
+
+- [ ] **P1** Ordner `web/` (nicht ausgeliefertes React-Experiment) entfernen
+- [ ] **P1** Altlasten in `interactive_export.py` entfernen: alte Startseite, alte Coach-Marks, ungenutzte Knöpfe, tote Funktionen
+- [ ] **P1** Root aufräumen: `index 2.html`, `Designer (4).png`, `image.png`, `changes needed.md` → `docs/archive/` oder löschen
+- [ ] **P1** Gestrichene Features (Kap. 1.2) hinter `FEATURES`-Flags, dann toten Code löschen
+- [ ] **P2** Die 15 000-Zeilen-Datei aufteilen: CSS, JS-Module (Karte, Auth, Feed, Touren, Engine) und Übersetzungen als eigene Quelldateien, die der Generator zusammensetzt — erleichtert Reviews und Tests
+- [ ] **P2** Linter (`node --check` ✅) um ESLint auf das erzeugte `app.js` erweitern
+
+---
+
+## 11. Übersetzungen (DE/EN/FR/IT)
+
+- [ ] **P1** Skript, das alle sichtbaren deutschen Texte im Generator findet und gegen die Übersetzungstabelle prüft → Liste fehlender Einträge, als CI-Check
+- [ ] **P1** Fehlende Texte nachziehen — vor allem die zuletzt neu hinzugekommenen (Onboarding, Face ID, Feed, Touren, Melden, Auth-Fehler)
+- [ ] **P1** Supabase-Fehlermeldungen (englisch) auf eigene, übersetzte Texte abbilden
+- [ ] **P1** E-Mail-Vorlagen (Code, Reset) mehrsprachig oder neutral zweisprachig
+- [ ] **P1** Datums-/Zahlenformate pro Sprache (`Intl`)
+- [ ] **P2** Muttersprachler-Review FR + IT (Skitouren-Fachbegriffe: Harsch, Sulz, Triebschnee)
+
+---
+
+## 12. Barrierefreiheit
+
+- [ ] **P1** Kontraste WCAG AA (4.5:1 Text, 3:1 Bedienelemente) — Glas-Elemente über heller Karte besonders prüfen
+- [ ] **P1** VoiceOver: jedes Symbol-Element mit `aria-label` (aktuell ~110 vorhanden — Lücken suchen), sinnvolle Lesereihenfolge, Sheets als `role="dialog"` mit Fokus-Falle
+- [ ] **P1** Tippflächen ≥ 44×44 pt
+- [ ] **P1** Farbe nie einziger Informationsträger (Legende mit Muster/Text)
+- [ ] **P1** `prefers-reduced-motion` respektieren, dynamische Schriftgrösse bis 130 %
+- [ ] **P2** Automatischer axe-core-Check in Playwright
+
+---
+
+## 13. Sicherheit & Datenschutz
+
+- [ ] **P0** RLS-Audit aller Tabellen: jede Tabelle hat RLS an, Policies schreiben nur eigene Zeilen
+- [ ] **P0** Keine Secrets im Client ausser dem Anon-Key; Service-Role nur in Edge Functions
+- [ ] **P0** Storage-Bucket `report-images`: EXIF/GPS-Metadaten aus Fotos entfernen vor Upload
+- [ ] **P1** `npm audit` / Abhängigkeiten aktualisieren (Capacitor, Supabase-SDK)
+- [ ] **P1** Content-Security-Policy für die WebView
+- [ ] **P1** Daten-Export (DSG-Auskunftsrecht) funktioniert
+
+---
+
+## 14. Qualitätssicherung & Tests
+
+- [ ] **P0** `validate.yml` grün (Python + JS, Engine↔Pipeline-Parität)
+- [ ] **P1** Playwright-Smoke-Test in CI: App lädt, Karte rendert, Layer wechseln, Login-Formular validiert, jeder Screen hat Zurück (Kap. 6)
+- [ ] **P1** Screenshot-Tests 4 Viewports × 4 Sprachen (Kap. 4)
+- [ ] **P1** Auth-Test-Matrix (Kap. 2.8) manuell auf Gerät, Ergebnis hier abhaken
+- [ ] **P1** TestFlight-Gruppe 5–10 echte Tourengänger, Feedback-Kanal (Formular oder Mail)
+- [ ] **P2** Powder-Regression mit Cache (`tools/eval_powder.py`) als echtes CI-Gate
+
+---
+
+## 15. Gerätetest auf echtem iPhone (Funktionstest)
+
+Mindestens 2 iPhones, 2 iOS-Versionen inkl. ältester unterstützter (iOS 16.2).
+
+- [ ] Registrieren → Code → Face ID → automatisch angemeldet
+- [ ] Login, Abmelden, Passwort zurücksetzen
+- [ ] Feed: laden, nachladen, Meldung öffnen, melden, blockieren
+- [ ] Profil: bearbeiten, eigene Meldungen, Konto löschen
+- [ ] Melden mit **Kamera** und aus der Fotomediathek, mit/ohne Standort
+- [ ] Karte: alle 5 Layer, Zeitregler, Touren, offline starten
+- [ ] Push: Erlaubnis, Alarm einrichten, Test-Push, Antippen öffnet richtige Stelle
+- [ ] Face ID: an/aus, abgebrochen, Gerät ohne Face ID
+- [ ] Nur falls nicht gestrichen: **Aufzeichnen mit Hintergrund-GPS** (Akku nach 2 h messen), **Nachrichten**
+- [ ] Schlechtes Netz (Berg, Edge), Flugmodus, App im Hintergrund > 1 h
+- [ ] Wärme/Akku: 30 min Kartennutzung
+
+---
+
+## 16. Nach dem Launch (vorbereiten, nicht bauen)
+
+- [ ] Support-Mail + Antwortvorlagen
+- [ ] Wöchentlich: Sentry, Supabase-Kosten, Moderationsqueue, App-Store-Bewertungen
+- [ ] Backlog 1.0.1 / 1.1: Powder-Alarm (falls verschoben), Nachrichten, Aufzeichnen, Folgen, Web-Push, Webcams, 3D
+- [ ] In-App-Hinweis «Neue Version verfügbar» für spätere Updates
+
+---
+
+## 17. Reihenfolge / Zeitplan bis Einreichung
 
 | Woche | Fokus |
 |---|---|
@@ -311,7 +458,7 @@ Web-Push → später, Querformat → sperren, iPad → «iPhone only».
 
 ---
 
-## 10. Definition of Done für 1.0
+## 18. Definition of Done für 1.0
 
 - [ ] Neuer Nutzer kommt ohne Hilfe von Installation bis erster Meldung, auf iPhone SE und Pro Max
 - [ ] Kein Auth-Fall aus 2.8 endet in einem Zustand ohne Ausweg
