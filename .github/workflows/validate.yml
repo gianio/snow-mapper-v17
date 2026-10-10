@@ -47,6 +47,9 @@ jobs:
       - name: GeoNames peak parser (tour names)
         run: python tools/test_geonames_peaks.py
 
+      - name: iOS signing setup (TestFlight workflow)
+        run: python tools/test_ci_signing.py
+
       # The Variant A SNOWPACK run cannot be exercised here (external C++
       # binary), but its two silent killers can: a forcing window that starts
       # on the ProfileDate instead of before it, and a PSUM accumulation

@@ -1253,6 +1253,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <link rel="shortcut icon" type="image/png" href="icon-192.png?v=2"/>
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://gdtxwowcqtbdkcoksivb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://wmts.geo.admin.ch" crossorigin>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -3646,6 +3647,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    .ts-sheet{left:auto!important;right:14px!important;top:calc(env(safe-area-inset-top,0px) + 14px)!important;bottom:14px!important;width:400px;max-width:400px;margin:0!important;
      max-height:none!important;border-radius:18px!important;transform:translateX(calc(100% + 30px))!important}
    body.ts-open .ts-sheet,body.ts-open .ts-sheet.min{transform:none!important;overflow-y:auto!important}
+   /* folded on a desk: the panel shrinks to its title row (the arrow did
+      nothing here before -- the fold is a slide-down on a phone) */
+   body.ts-open .ts-sheet.min{bottom:auto!important;max-height:86px!important;overflow:hidden!important}
    .ts-grab{display:none}
    body.ts-open #mapFabs{opacity:1!important;pointer-events:auto!important;right:430px!important}
    .dm-wrap{justify-content:flex-end!important;align-items:stretch!important;padding:14px!important;background:transparent!important;backdrop-filter:none!important}
@@ -4015,9 +4019,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .uv-stat span{font-size:11px;color:var(--fg2)}
  .prof-sec-title{font:800 12px Inter,system-ui;text-transform:uppercase;letter-spacing:.06em;color:var(--fg2);margin:18px 4px 8px}
  .prof-item{border-radius:16px;margin-bottom:0;border:0;border-bottom:1px solid var(--hair);background:var(--card);min-height:52px}
- .prof-view .prof-item:first-of-type{border-radius:16px 16px 4px 4px}
- .prof-view .prof-item+.prof-item{border-radius:4px}
- .prof-view .prof-item:last-of-type{border-radius:4px 4px 16px 16px;border-bottom:0}
+ /* every settings row the same card: the first/last-of-type rounding also
+    counted the back and sign-out buttons, so only the first row was round */
+ .prof-view .prof-item{border-radius:16px;border-bottom:0;margin-bottom:8px;box-shadow:0 1px 2px rgba(18,21,26,.05)}
  .prof-save{border-radius:999px!important;height:48px;font-weight:800;box-shadow:0 8px 22px color-mix(in srgb,var(--accent) 30%,transparent)}
  .prof-input,.prof-bio{border-radius:14px!important;background:var(--card)!important}
  .prof-seg{background:var(--fill);border-radius:14px;padding:4px}
@@ -4601,6 +4605,34 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    display:flex;flex-direction:column;align-items:center;gap:14px}
  .feed-fabs>button{position:static!important;translate:none!important}
  .feed-fabs>button[hidden]{display:none!important}
+ .ff-l{display:none}
+ .feed-top{position:sticky;top:0;z-index:4;display:flex;flex-direction:column;gap:8px;padding:6px 14px 10px;max-width:640px;margin:0 auto;
+   background:color-mix(in srgb,var(--paper) 88%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+ .ft-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:14px;background:var(--fill)}
+ .ft-tabs button{min-height:36px;border:0;border-radius:10px;background:none;color:var(--fg2);font:700 13.5px Inter,system-ui;cursor:pointer}
+ .ft-tabs button.on{background:var(--card);color:var(--fg);box-shadow:0 1px 3px rgba(18,21,26,.1)}
+ .ft-row{display:flex;align-items:center;gap:8px}
+ .ft-cat{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 14px 0 11px;border-radius:999px;border:1px solid var(--hair);background:var(--card);color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer;margin-right:auto}
+ .ft-cat.on{border-color:var(--accent,#2563eb);color:var(--accent,#2563eb)}
+ .ft-cat svg,.ft-ic svg{width:18px;height:18px}
+ .ft-ic{width:40px;height:40px;border-radius:50%;border:0;background:var(--fill);color:var(--fg);display:grid;place-items:center;cursor:pointer}
+ .ft-ic[hidden]{display:none}
+ .ft-desk{display:none}
+ body.desk .feed-top .ft-desk:not([hidden]){display:grid}
+ body.desk .feed-page .feed-fabs{display:none!important}
+ .leg-chip.fixed{cursor:default}
+ /* the profile scrolls clear of the floating tab bar */
+ body.nav-vis #profModal .prof-body{padding-bottom:calc(var(--nav-h,64px) + 24px)}
+ /* on a desk the feed's buttons are a toolbar at the top of the feed, with
+    words, not phone-style floating circles */
+ body.desk .feed-page .feed-fabs{top:10px;bottom:auto;left:50%;right:auto;transform:translateX(-50%);flex-direction:row;gap:6px;
+   padding:4px;border-radius:999px;background:var(--lg-bg);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);box-shadow:var(--lg-edge),var(--lg-shadow)}
+ body.desk .feed-page .feed-fabs>button{width:auto!important;height:36px!important;padding:0 14px 0 11px;gap:7px;border-radius:999px!important;
+   background:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;font:700 13.5px Inter,system-ui;color:var(--fg)}
+ body.desk .feed-page .feed-fabs>button:hover{background:var(--fill)!important}
+ body.desk .feed-page .feed-fabs>button svg{width:18px!important;height:18px!important}
+ body.desk .feed-page .feed-fabs .ff-l{display:inline;white-space:nowrap}
+ body.desk .feed-page .feed-fabs .ff-dot{top:6px;right:8px}
  .tour-vars{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:2px 16px 8px}
  .tour-vars span{font:800 11px/1 Inter,system-ui;text-transform:uppercase;letter-spacing:.04em;color:var(--fg2);margin-right:4px}
  .tour-vars button{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--hair);background:var(--card);color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer}
@@ -5055,8 +5087,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="feed-chips" id="feedChips" role="tablist" aria-label="Ansicht"></div>
 <div class="feed-sheet" id="feedSheet" onclick="if(event.target===this)feedFilterClose()">
   <div class="feed-sheet-in">
-    <span class="lbl-micro">Ansicht</span>
-    <div class="feed-scope" id="feedScope"></div>
+    <div class="feed-scope" id="feedScope" hidden></div>
     <span class="lbl-micro">Kategorie</span>
     <div class="feed-filter" id="feedFilter"></div>
     <button class="feed-sheet-x" onclick="feedFilterClose()">Fertig</button>
@@ -5069,14 +5100,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button class="feed-loc-clear" id="feedAnchorClear" style="display:none">✕ Filter</button>
 </div>
 <div class="feed-anchor-bar" id="feedAnchorBar" style="display:none"></div>
-<div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Lade Beiträge…</div></div></div>
+<div class="feed-scroll"><div class="feed-top" id="feedTop"></div><div class="feed-grid" id="feedList"><div class="feed-empty">Lade Beiträge…</div></div></div>
 <button class="feed-qr" id="feedQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <!-- one column, bottom right: messages last, so it sits in the corner -->
 <div class="feed-fabs">
-<button class="feed-friends-fab" id="feedFriendsFab" onclick="usOpen()" title="Leute finden" aria-label="Leute finden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
-<button class="feed-filt-fab" id="feedFiltFab" onclick="feedFilterOpen()" title="Filter" aria-label="Filter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg><i class="ff-dot"></i></button>
-<button class="feed-mine-fab" id="feedMineFab" onclick="accountTap()" title="Meine Beiträge" aria-label="Meine Beiträge – zum Profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></button>
-<button class="feed-msg-fab" id="feedMsgFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 14.6 21.5l-4-8.1-8.1-4z"/></svg><span class="dm-dot" id="dmDot" hidden></span></button>
+<button class="feed-msg-fab" id="feedMsgFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 14.6 21.5l-4-8.1-8.1-4z"/></svg><span class="dm-dot" id="dmDot" hidden></span><span class="ff-l">Nachrichten</span></button>
 </div>
 <button class="feed-fab" id="feedFab" onclick="feedCreatePost()" title="Bedingungen melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
 </div>
@@ -5333,6 +5361,9 @@ const I18N_DICT={
 "Am hilfreichsten: Übersichtsfotos der ganzen Lawine + Detailaufnahmen der Anrisskante / des Anrissgebiets. Fotos liefern automatisch Standort & Zeit.":["Most helpful: overview photos of the whole avalanche + close-ups of the crown / release area. Photos provide location & time automatically.","Le plus utile : photos d'ensemble de l'avalanche + détails de la cassure / zone de départ. Les photos fournissent lieu et heure automatiquement.","Più utili: foto d'insieme della valanga + dettagli del distacco / zona di distacco. Le foto forniscono automaticamente luogo e ora."],
 "Andere":["Other","Autre","Altro"],
 "Andere Beobachtung":["Other observation","Autre observation","Altra osservazione"],
+"Gemerkt — findest du in deinem Profil unter «Gemerkt».":["Saved — find it in your profile under “Saved”.", "Enregistré — retrouve-le dans ton profil sous « Enregistrés ».", "Salvato — lo trovi nel tuo profilo sotto «Salvati»."],
+"Alle Meldungen":["All reports", "Tous les signalements", "Tutte le segnalazioni"],
+"Zurück zum Feed":["Back to the feed", "Retour au fil", "Torna al feed"],
 "# Varianten":["# variants", "# variantes", "# varianti"],
 "# Varianten ·":["# variants ·", "# variantes ·", "# varianti ·"],
 "Variante":["Variant", "Variante", "Variante"],
@@ -9361,12 +9392,12 @@ async function trkPost(a){
     const urls=[],flat0=trkLL(a.segs),repI=a.rep!=null?a.rep:trkRepDefault(flat0);
     let mapUrl=null;
     try{const mb=await trkMapImage(flat0,repI,900,560,true);if(mb){const mp=sbUser.id+'/actmap'+Date.now()+'.jpg';
-      const{error}=await sb.storage.from('report-images').upload(mp,mb,{contentType:'image/jpeg'});
+      const{error}=await sb.storage.from('report-images').upload(mp,mb,{cacheControl:'31536000',contentType:'image/jpeg'});
       if(!error){const{data}=sb.storage.from('report-images').getPublicUrl(mp);mapUrl=data&&data.publicUrl||null;}}}catch(e){}
     if(mapUrl)urls.push(mapUrl);
     for(let i=0;i<(a.photos||[]).length;i++){try{
       const path=sbUser.id+'/act'+Date.now()+'_'+i+'.jpg';
-      const{error}=await sb.storage.from('report-images').upload(path,a.photos[i],{contentType:a.photos[i].type||'image/jpeg'});
+      const{error}=await sb.storage.from('report-images').upload(path,a.photos[i],{cacheControl:'31536000',contentType:a.photos[i].type||'image/jpeg'});
       if(!error){const{data}=sb.storage.from('report-images').getPublicUrl(path);if(data&&data.publicUrl)urls.push(data.publicUrl);}}catch(e){}}
     const flat=trkFlat(a.segs);
     const track=trkSimplify(flat,400).map(p=>[+p[1].toFixed(5),+p[2].toFixed(5),p[3]==null?null:Math.round(p[3])]);
@@ -9386,6 +9417,7 @@ async function trkPost(a){
     const row={user_id:sbUser.id,location:'POINT('+top[2]+' '+top[1]+')',primary_categories:['tour'],subtype:trkTypeLbl(a.type),
       condition_data:cd,image_url:urls[0]||null,caption:a.desc?(a.name+'\n'+a.desc):a.name,completion_score:(a.snow||sp.length)?85:70,
       captured_at:new Date(a.start).toISOString()};
+    await withThumb(row);
     let{data,error}=await sb.from('reports').insert(Object.assign({visibility:'followers'},row)).select('id').single();
     if(error&&/visibility/i.test(error.message||'')){({data,error}=await sb.from('reports').insert(row).select('id').single());}
     if(error)throw error;
@@ -9801,9 +9833,19 @@ async function pvLoad(uid,boxId,own){
   acts.sort((x,y)=>y.start-x.start);
   pvState[boxId]={uid,own,posts,acts,fol,ing,trust,tab:(pvState[boxId]&&pvState[boxId].tab)||'grid'};
   pvRender(boxId);
+  if(own)setTimeout(()=>{pvBackfillThumbs(posts).then(()=>{try{sessionStorage.setItem(ck,JSON.stringify({v:1,S:Object.assign({},pvState[boxId],{acts:pvState[boxId].acts.filter(a=>!a.local)})}));}catch(e){}});},1500);
   try{sessionStorage.setItem(ck,JSON.stringify({v:1,S:Object.assign({},pvState[boxId],{acts:pvState[boxId].acts.filter(a=>!a.local)})}));}catch(e){}
 }
-function pvImg(r){const cd=r.condition_data||{};if(cd.activity&&cd.activity.map)return cd.activity.map;return r.image_url||cd.snapshot||null;}
+function pvImg(r){const cd=r.condition_data||{};if(cd.thumb)return cd.thumb;if(cd.activity&&cd.activity.map)return cd.activity.map;return r.image_url||cd.snapshot||null;}
+// Own profile: posts from before thumbnails get one now, a few at a time in
+// the background, so the next visit (and everyone else's) loads small.
+let _thumbBusy=false;
+async function pvBackfillThumbs(posts){if(_thumbBusy||!sb||!sbUser)return;_thumbBusy=true;
+  try{const todo=posts.filter(r=>r.image_url&&!(r.condition_data&&r.condition_data.thumb)&&!(r.condition_data&&r.condition_data.activity&&r.condition_data.activity.map)).slice(0,9);
+    for(const r of todo){const t=await uploadThumb(r.image_url);if(!t)continue;
+      const cd=Object.assign({},r.condition_data||{},{thumb:t});
+      const{error}=await sb.from('reports').update({condition_data:cd}).eq('id',r.id).eq('user_id',sbUser.id);
+      if(!error)r.condition_data=cd;}}catch(e){}finally{_thumbBusy=false;}}
 function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxId);if(!S||!box)return;
   const n=v=>v>=10000?(v/1000).toFixed(0)+'k':v>=1000?(v/1000).toFixed(1)+'k':String(v);
   const me=sbUser&&S.uid===sbUser.id,foll=!me&&myFollowing&&myFollowing.has(S.uid);
@@ -9816,7 +9858,7 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
   const hi=S.acts.slice(0,10).map((a,i)=>'<button class="pv-hl" onclick="pvOpenAct(\''+boxId+'\','+i+')"><span class="pv-hl-m" data-pvmap="'+a.id+'">'+pvMapImg(a)+'</span><span>'+escapeHtml(a.name)+'</span></button>').join('');
   const grid=S.posts.length?'<div class="pv-grid">'+S.posts.map((r,i)=>{const im=pvImg(r),cd=r.condition_data||{};
       const ic=cd.activity?'<svg class="pv-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg>':(cd.snowp?'<svg class="pv-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/></svg>':'');
-      return '<button class="pv-cell" onclick="pvOpenPost(\''+boxId+'\','+i+')">'+(im?'<img src="'+im+'" loading="lazy" alt="">':'<span class="pv-txt">'+escapeHtml((r.caption||r.subtype||catLabel((r.primary_categories||[])[0]||'info')||'').slice(0,60))+'</span>')+ic+'</button>';}).join('')+'</div>'
+      return '<button class="pv-cell" onclick="pvOpenPost(\''+boxId+'\','+i+')">'+(im?'<img src="'+im+'" '+(i<9?'fetchpriority="high"':'loading="lazy"')+' decoding="async" alt="">':'<span class="pv-txt">'+escapeHtml((r.caption||r.subtype||catLabel((r.primary_categories||[])[0]||'info')||'').slice(0,60))+'</span>')+ic+'</button>';}).join('')+'</div>'
     :'<div class="prof-hint">Noch keine Beiträge.</div>';
   const list=S.acts.length?S.acts.map((a,i)=>'<button class="pv-ac" onclick="pvOpenAct(\''+boxId+'\','+i+')">'
       +'<span class="pv-ac-hd"><i>'+(TRK_TYPE_IC[a.type]||TRK_TYPE_IC.skitour)+'</i><span><b>'+escapeHtml(a.name)+'</b><small>'
@@ -9826,7 +9868,7 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
       +'<span class="pv-ac-prof">'+trkProfile(a.track,340,46)+'</span></button>').join('')
     :'<div class="prof-hint">'+(me?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aktivitäten.')+'</div>';
   box.innerHTML='<div class="pv-stats"><div><b>'+n(S.posts.length)+'</b><span>Beiträge</span></div><div><b>'+n(S.fol)+'</b><span>Follower</span></div><div><b>'+n(S.ing)+'</b><span>Folge ich</span></div><div><b>'+n(S.acts.length)+'</b><span>Aktivitäten</span></div></div>'
-    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button data-dm onclick="profClose();dmOpen()">Nachrichten</button><button onclick="pvShare(\''+S.uid+'\')">Teilen</button>'
+    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button onclick="profClose();navGo(\'feed\');feedSetScope(\'saved\')">Gemerkt</button><button data-dm onclick="profClose();dmOpen()">Nachrichten</button><button onclick="pvShare(\''+S.uid+'\')">Teilen</button>'
       :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
         +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
         +'<button class="pv-more" onclick="uvReportUser()" aria-label="Nutzer melden">⋯</button>')+'</div>'
@@ -9957,7 +9999,7 @@ async function snpPost(){if(snp.busy)return;if(!sb||!sbUser){authShow();return;}
   snp.busy=true;const btn=document.querySelector('.snp-post');if(btn){btn.disabled=true;btn.textContent='Sendet …';}
   try{
     const up=async(b,tag)=>{const p=sbUser.id+'/snowp'+Date.now()+'_'+tag+'.jpg';
-      const{error}=await sb.storage.from('report-images').upload(p,b,{contentType:'image/jpeg'});if(error)throw error;
+      const{error}=await sb.storage.from('report-images').upload(p,b,{cacheControl:'31536000',contentType:'image/jpeg'});if(error)throw error;
       const{data}=sb.storage.from('report-images').getPublicUrl(p);return data.publicUrl;};
     const ll=snp.fix||(myLoc?myLoc:null);
     if(!ll){toast('Ohne Standort kein Snowp – bitte Standort erlauben','err');throw new Error('no location');}
@@ -9966,6 +10008,7 @@ async function snpPost(){if(snp.busy)return;if(!sb||!sbUser){authShow();return;}
     const row={user_id:sbUser.id,location:'POINT('+ll[1]+' '+ll[0]+')',primary_categories:['other'],subtype:'Snowp',
       image_url:bu,caption:cap||null,condition_data:{snowp:{back:bu,front:fu},images:[bu,fu]},
       completion_score:30,captured_at:new Date().toISOString(),visibility:'friends'};
+    await withThumb(row,snp.back);
     const{error}=await sb.from('reports').insert(row);
     if(error){
       // the visibility column is missing: the post would be public -- refuse
@@ -11297,7 +11340,7 @@ function miniLegendRender(l){
         .map(r=>Object.assign({},r,{s:Math.round((sh.cnt[r.k]||0)/sh.tot*100)+'%'}));}
       else rows=rows.slice(0,7);
       document.getElementById('mlUnit').textContent='Anteil';}
-    const sw=rows.every(r=>r.k!=null),vis=sw?legVisSet(l||layer):null;
+    const sw=legSwitchable(l||layer)&&rows.every(r=>r.k!=null),vis=sw?legVisSet(l||layer):null;
     h='<div class="ml-cls">'+rows.map(r=>sw
       ?'<button type="button" class="'+(vis.has(r.k)?'on':'off')+'" aria-pressed="'+vis.has(r.k)+'" aria-label="'+escapeHtml(r.n||r.s)+'" onclick="legToggle('+r.k+',event)"><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.s)+'</span></button>'
       :'<div><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.s)+'</span></div>').join('')+'</div>'
@@ -11354,7 +11397,7 @@ function legSpec(l){
     return {t:'Wind '+wl,u:'km/h',rows,long:'Mittlerer Wind im gewählten Zeitfenster'};}
   if(l==='temp'||l==='tsurf'){
     const nm=l==='temp'?'Temperatur 2 m':'Schneeoberfläche';
-    const T5=[[-Infinity,-10,'<−10',-15],[-10,-5,'−10–−5',-7],[-5,0,'−5–0',-2],[0,5,'0–5',2],[5,Infinity,'5+',8]];
+    const T5=[[-Infinity,-10,'<−10',-15],[-10,-5,'−10–−5',-7],[-5,0,'−5–0',-2],[0,5,'0–5',2],[5,10,'5–10',7],[10,Infinity,'10+',14]];
     const rows=T5.map((x,k)=>({k,lo:x[0],hi:x[1],c:rgb(tempCol(x[3])),s:x[2],n:x[2]+' °C'})).reverse();
     return {t:nm,u:'°C',rows,long:'Mittlere Temperatur im gewählten Zeitfenster'};}
   if(l==='cloud'){const C3=[[10,40,'wenig'],[40,70,'teils'],[70,101,'bedeckt']];
@@ -11369,15 +11412,15 @@ function legSpec(l){
 // only); what you pick is remembered per layer.
 const LEG_DEFAULT={
   'va:ski6':r=>r.k===3||r.k===4||r.k===5,   // Pulver 0–10, 10–20, >20 cm
-  'va:wind':r=>r.k>=2,                       // leicht + stark verfrachtet
-  snow:r=>r.lo>=10,                          // lohnender Neuschnee
-  wind:r=>r.lo>=25,                          // ab hier wird Schnee verfrachtet
-  temp:r=>r.hi<=0                            // Pulver bleibt Pulver
+  temp:r=>r.hi<=10                           // unter 10 °C
 };
-const LEG_KEY='ssm_legsel_v1';
+const LEG_KEY='ssm_legsel_v2';
 let _legSel=(function(){try{return JSON.parse(localStorage.getItem(LEG_KEY)||'{}')||{};}catch(e){return {};}})();
 function legKey(l){l=l||layer;return l==='snowpack'?'va:'+vaKey:l;}
-function legRows(l){const sp=legSpec(l||layer);return sp&&sp.rows&&sp.rows.every(r=>r.k!=null)?sp.rows:null;}
+// These only explain their colours: every class always on the map.
+const LEG_FIXED=new Set(['wind','cloud','va:wind','snow','depth']);
+function legSwitchable(l){return !LEG_FIXED.has(legKey(l));}
+function legRows(l){if(!legSwitchable(l))return null;const sp=legSpec(l||layer);return sp&&sp.rows&&sp.rows.every(r=>r.k!=null)?sp.rows:null;}
 function legDefaultSet(l){const rows=legRows(l)||[],f=LEG_DEFAULT[legKey(l)];
   const ks=rows.filter(r=>!f||f(r)).map(r=>r.k);return new Set(ks.length?ks:rows.map(r=>r.k));}
 function legVisSet(l){const v=_legSel[legKey(l)];return Array.isArray(v)?new Set(v):legDefaultSet(l);}
@@ -11404,7 +11447,10 @@ function legApply(){
   try{if(document.getElementById('lySubs'))lyRender();}catch(e){}
   try{if(document.body.classList.contains('leg-open'))legInfoRender();}catch(e){}}
 // The same class chips in the layer sheet, under the chosen tile.
-function legChipsHTML(){const rows=legRows();if(!rows)return '';const vis=legVisSet();
+function legChipsHTML(){const rows=legRows();
+  if(!rows){const sp=legSpec(layer);if(!sp||!sp.rows)return '';
+    return sp.rows.map(r=>'<span class="leg-chip on fixed"><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.n||r.s)+'</span></span>').join('');}
+  const vis=legVisSet();
   return rows.map(r=>'<button type="button" class="leg-chip'+(vis.has(r.k)?' on':'')+'" aria-pressed="'+vis.has(r.k)+'" onclick="legToggle('+r.k+',event)">'
     +'<i style="background:'+r.c+'"></i><span>'+escapeHtml(r.n||r.s)+'</span></button>').join('')
     +'<div class="leg-acts"><span>Antippen blendet ein und aus</span>'
@@ -13285,6 +13331,29 @@ function acceptDisc(){
   const el=document.getElementById('disc');if(el)el.classList.remove('show');
   try{haptic(12);}catch(e){}maybeOnboard();}
 // --- Client-side image downscale before upload (protect the 1GB free tier) ---
+// ── Thumbnails ────────────────────────────────────────────────────────────
+// Grids and lists show ~120 px cells; loading the original for each (photos
+// up to 1600 px, drawings as PNG) is what made a profile slow to fill. Every
+// post with a picture gets a ~360 px JPEG next to it (condition_data.thumb);
+// older posts get one the next time their owner opens the profile.
+async function makeThumb(src,maxPx){maxPx=maxPx||360;
+  try{const blob=typeof src==='string'?await (await fetch(src,{cache:'force-cache'})).blob():src;
+    if(!blob||!/^image\//.test(blob.type||'image/'))return null;
+    const bmp=await createImageBitmap(blob);const k=Math.min(1,maxPx/Math.max(bmp.width,bmp.height));
+    const w=Math.max(1,Math.round(bmp.width*k)),h=Math.max(1,Math.round(bmp.height*k));
+    const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
+    g.fillStyle='#fff';g.fillRect(0,0,w,h);g.drawImage(bmp,0,0,w,h);try{bmp.close&&bmp.close();}catch(e){}
+    const out=await new Promise(r=>c.toBlob(r,'image/jpeg',0.78));c.width=1;c.height=1;return out;}catch(e){return null;}}
+async function uploadThumb(src){if(!sb||!sbUser||!src)return null;const t=await makeThumb(src);if(!t)return null;
+  const path=sbUser.id+'/t_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.jpg';
+  const{error}=await sb.storage.from('report-images').upload(path,t,{contentType:'image/jpeg',cacheControl:'31536000'});
+  if(error)return null;const{data}=sb.storage.from('report-images').getPublicUrl(path);return (data&&data.publicUrl)||null;}
+// before a report is inserted: add its thumbnail (from the local picture when
+// there is one, so nothing is downloaded again); never holds the post up >5 s
+async function withThumb(row,local){try{const cd=row.condition_data||{};
+    const src=local||(cd.activity&&cd.activity.map)||row.image_url;if(!src||cd.thumb)return row;
+    const t=await Promise.race([uploadThumb(src),new Promise(r=>setTimeout(()=>r(null),5000))]);
+    if(t)row.condition_data=Object.assign({},cd,{thumb:t});}catch(e){}return row;}
 async function downscaleImage(file,maxPx,q){
   maxPx=maxPx||1600;q=q||0.85;
   if(!file||!/^image\//.test(file.type||''))return file;
@@ -14393,10 +14462,10 @@ async function profAvSave(){
   if(btn){btn.disabled=false;btn.textContent='Speichern';}
 }
 async function profUploadAvatar(file){
-  const up=await downscaleImage(file,512,0.85);
+  const up=await downscaleImage(file,256,0.85);   // shown at 40–96 px
   const ext=(up.type==='image/jpeg')?'jpg':(file.name.split('.').pop()||'jpg').toLowerCase();
   const path='avatars/'+sbUser.id+'_'+Date.now()+'.'+ext;
-  const{error}=await sb.storage.from('report-images').upload(path,up,{contentType:up.type||'image/jpeg',upsert:true});
+  const{error}=await sb.storage.from('report-images').upload(path,up,{cacheControl:'31536000',contentType:up.type||'image/jpeg',upsert:true});
   if(error)throw error;
   const{data}=sb.storage.from('report-images').getPublicUrl(path);
   if(!data||!data.publicUrl)throw new Error('keine URL');
@@ -14958,7 +15027,7 @@ async function reportSubmit(){
       const up=await downscaleImage(rpState.photoFile);
       const ext=(up.type==='image/jpeg')?'jpg':(rpState.photoFile.name.split('.').pop()||'jpg').toLowerCase();
       const path=`${sbUser.id}/${Date.now()}.${ext}`;
-      const{error:upErr}=await sb.storage.from('report-images').upload(path,up,{contentType:up.type||'image/jpeg',upsert:false});
+      const{error:upErr}=await sb.storage.from('report-images').upload(path,up,{cacheControl:'31536000',contentType:up.type||'image/jpeg',upsert:false});
       if(upErr){console.error('Foto-Upload fehlgeschlagen',upErr);
         if(!confirm('Foto konnte nicht hochgeladen werden: '+(upErr.message||upErr)+' — Report trotzdem ohne Foto posten?')){next.disabled=false;next.textContent='Report posten';return;}}
       else{const{data:urlData}=sb.storage.from('report-images').getPublicUrl(path);imageUrl=urlData?.publicUrl||null;}
@@ -14981,6 +15050,7 @@ async function reportSubmit(){
       image_url:imageUrl,caption:caption||null,
       completion_score:rpScore()
     };
+    await withThumb(row);
     const{error}=await sb.from('reports').insert(row);
     if(error)throw error;
     reportClose();loadDbReports();
@@ -15731,7 +15801,7 @@ async function drawPublish(){
   try{
     async function up(src,ext,ct){try{const blob=typeof src==='string'?await (await fetch(src)).blob():src;
       const path=sbUser.id+'/draw'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.'+ext;
-      const{error}=await sb.storage.from('report-images').upload(path,blob,{contentType:ct});
+      const{error}=await sb.storage.from('report-images').upload(path,blob,{cacheControl:'31536000',contentType:ct});
       if(error)return null;const{data:ud}=sb.storage.from('report-images').getPublicUrl(path);return ud?.publicUrl||null;}catch(e){return null;}}
     let photoUrl=null;if(drawPhotoFile){const dw=await downscaleImage(drawPhotoFile);photoUrl=await up(dw,'jpg',(dw&&dw.type)||'image/jpeg');}
     const paintUrl=drawPaintData?await up(drawPaintData,'png','image/png'):null;
@@ -15742,6 +15812,7 @@ async function drawPublish(){
     const row={user_id:sbUser.id,location:'POINT('+cen.lng+' '+cen.lat+')',image_url:photoUrl||paintUrl||snapUrl,
       primary_categories:['snow'],subtype:'Schnee-Karte',condition_data:cd,
       caption:cap,completion_score:(cap||photoUrl)?70:50,captured_at:new Date().toISOString()};
+    await withThumb(row,drawPhotoFile||drawPaintData||drawSnapData||null);
     const{error}=await sb.from('reports').insert(row);if(error)throw error;
     toast('Schnee-Karte gepostet — danke!','ok');try{haptic(12);}catch(e){}drawFinishClose();drawClearSilent();drawClose();loadDbReports();
   }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e),'err');}
@@ -15995,7 +16066,7 @@ async function obsSubmit(){if(!sb||!sbUser||!obsState)return;const L=obsState.lo
   const next=document.getElementById('obsNext');next.disabled=true;next.textContent='Melden…';
   try{const urls=[];
     for(const m of obsState.media){try{const up=await downscaleImage(m.file);const ext=(up.type==='image/jpeg')?'jpg':(m.file.name.split('.').pop()||'jpg').toLowerCase();const path=sbUser.id+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.'+ext;
-      const{error}=await sb.storage.from('report-images').upload(path,up,{contentType:up.type||'image/jpeg'});
+      const{error}=await sb.storage.from('report-images').upload(path,up,{cacheControl:'31536000',contentType:up.type||'image/jpeg'});
       if(!error){const{data}=sb.storage.from('report-images').getPublicUrl(path);if(data&&data.publicUrl)urls.push(data.publicUrl);}
       else if(urls.length===0&&obsState.media.length){/* keep going */}}catch(e){}}
     const cd=obsBuildCD();if(urls.length>1)cd.images=urls;
@@ -16004,6 +16075,7 @@ async function obsSubmit(){if(!sb||!sbUser||!obsState)return;const L=obsState.lo
       primary_categories:[obsState.type],subtype:obsSubLabel(),condition_data:cd,
       image_url:urls[0]||null,caption:(obsState.comment||'').trim()||null,
       captured_at:obsState.observedAt?obsState.observedAt.toISOString():null,completion_score:80};
+    await withThumb(row,(obsState.media.find(m=>m.type!=='video')||{}).file||null);
     const{error}=await sb.from('reports').insert(row);if(error)throw error;
     if(obsMap){try{obsMap.remove();}catch(e){}obsMap=null;}obsState=null;
     document.getElementById('reportOverlay').style.display='none';loadDbReports();showUndo();
@@ -16017,7 +16089,7 @@ function obsBuildCD(){const s=obsState;const cd={obsType:s.type,source:s.locatio
   return cd;}
 function obsSubLabel(){const s=obsState;if(s.type==='avalanche')return s.avalanche.characteristics.size!=='unknown'?('Lawine '+obsSizeMeta(s.avalanche.characteristics.size).l):'Lawine';if(s.type==='whumpf')return 'Wumm';if(s.type==='wind_slab')return 'Triebschnee';if(s.type==='snow')return snowKindLabel(s.snow.kind)||'Schnee';return 'Beobachtung';}
 // --- Feed (Instagram-style full page) ---
-let feedFilter='all',feedAnchor=null,feedScope='all',feedGroup=null;
+let feedFilter='all',feedAnchor=null,feedScope='here',feedGroup=null;
 // The selected window, as real dates, so a report can be tested against it.
 function feedWindowMs(){
   try{const t0=new Date(M.times[Math.max(0,Math.min(T-1,a))]+'Z').getTime();
@@ -16041,7 +16113,7 @@ const FEED_SCOPES=[
 let savedPosts=new Set();try{savedPosts=new Set(JSON.parse(localStorage.getItem('ssm_saved')||'[]'));}catch(e){}
 function toggleSave(id,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
   id=String(id);
-  if(savedPosts.has(id)){savedPosts.delete(id);}else{savedPosts.add(id);try{haptic(6);}catch(e){}toast('Gespeichert — findest du unter „Gespeichert" im Feed.','ok');}
+  if(savedPosts.has(id)){savedPosts.delete(id);}else{savedPosts.add(id);try{haptic(6);}catch(e){}toast('Gemerkt — findest du in deinem Profil unter «Gemerkt».','ok');}
   try{localStorage.setItem('ssm_saved',JSON.stringify([...savedPosts]));}catch(e){}
   feedRender();}
 // ── Share a post ──────────────────────────────────────────────────────────
@@ -16124,7 +16196,7 @@ function feedRefresh(){
   document.getElementById('feedScope').innerHTML=FEED_SCOPES.map(s=>
     `<button data-s="${s.id}" class="${feedScope===s.id?'active':''}" onclick="feedSetScope('${s.id}')">${s.icon}${s.label}</button>`).join('');
   feedChipsRender();
-  document.getElementById('feedFilter').innerHTML=['all','avalanche','whumpf','wind_slab','other'].map(f=>{
+  document.getElementById('feedFilter').innerHTML=FEED_CATS.map(f=>{
     const lbl=f==='all'?'Alle':(catSvg(f,14)+' '+catLabel(f));
     return`<button class="${feedFilter===f?'active':''}" onclick="feedSetFilter('${f}')">${lbl}</button>`;}).join('');
   document.getElementById('feedLoc').style.display=feedScope==='near'?'flex':'none';
@@ -16136,7 +16208,7 @@ function feedRefresh(){
 // feed.
 function feedFiltMark(){
   const b=document.getElementById('feedFiltFab');if(!b)return;
-  b.classList.toggle('on',feedFilter!=='all'||feedScope!==FEED_SCOPES[0].id);
+  b.classList.toggle('on',feedFilter!=='all');
 }
 // "Hier & jetzt" is a live question: panning the map or moving the window
 // changes the answer, so the list follows them while it is open.
@@ -16174,7 +16246,7 @@ function feedOpen(){
 addEventListener('keydown',e=>{if(e.key==='Escape'){const f=document.getElementById('feedPage');if(f&&f.classList.contains('open')&&!document.querySelector('.feed-sheet.open'))try{navGo('map');}catch(x){}}});
 function feedClose(){
   const el=document.getElementById('feedPage');if(!el)return;
-  if(feedScope==='user'){feedScope='all';feedUserId=null;try{feedTourBar();}catch(e){}}
+  if(feedScope==='user'||feedScope==='saved'||feedScope==='tours'){feedScope='here';feedUserId=null;feedTour=null;try{feedTourBar();}catch(e){}}
   el.classList.remove('open');
   document.body.setAttribute('data-screen','search');
   // it opens as a column again next time
@@ -16331,7 +16403,7 @@ async function qrSubmit(){if(!sb||!sbUser||qrAmount===null||qrQuality===null)ret
     let imageUrl=null;
     if(qrPhoto){const up=await downscaleImage(qrPhoto);
       const path=sbUser.id+'/'+Date.now()+'.jpg';
-      const{error:upErr}=await sb.storage.from('report-images').upload(path,up,{contentType:up.type||'image/jpeg'});
+      const{error:upErr}=await sb.storage.from('report-images').upload(path,up,{cacheControl:'31536000',contentType:up.type||'image/jpeg'});
       if(!upErr){const{data:ud}=sb.storage.from('report-images').getPublicUrl(path);imageUrl=ud?.publicUrl||null;}}
     const row={user_id:sbUser.id,location:'POINT('+ll[1]+' '+ll[0]+')',elevation_m:d.elev||null,image_url:imageUrl,
       primary_categories:['snow'],subtype:'Quick Powder Report',
@@ -16339,6 +16411,7 @@ async function qrSubmit(){if(!sb||!sbUser||qrAmount===null||qrQuality===null)ret
         stars:Math.max(1,Math.round(qrQuality/20)),powder:(qrAmount>=30&&qrQuality>=50),
         measurement:qrQuadLabel()+' · '+qrAmount+' cm',tour:tourPickTake()||undefined},
       caption:null,completion_score:40,captured_at:new Date().toISOString()};
+    if(qrPhoto)await withThumb(row,qrPhoto);
     const{error}=await sb.from('reports').insert(row);if(error)throw error;
     toast('Powder-Report gepostet — danke!','ok');haptic(12);qrClose();loadDbReports();
   }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e),'err');}
@@ -16453,7 +16526,21 @@ async function addComment(){
 }
 // The views as a row of chips right under the title -- one tap, always in
 // sight, instead of behind the filter button.
-function feedChipsRender(){const el=document.getElementById('feedChips');if(!el)return;
+// The community screen in one row: three views (what is happening here and
+// now, the people you follow, everything), the category, people search --
+// and on a desk your posts and messages. "Gemerkt" lives in your profile,
+// tour reports on the tour, a person's posts behind their name.
+const FEED_TABS=[['here','Hier & jetzt'],['following','Folge ich'],['all','Alle']];
+function feedTopRender(){const el=document.getElementById('feedTop');if(!el)return;
+  const cat=feedFilter==='all'?'Alle Meldungen':catLabel(feedFilter);
+  const ic=d=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
+  el.innerHTML='<div class="ft-tabs" role="tablist" aria-label="Ansicht">'+FEED_TABS.map(t=>'<button type="button" role="tab" aria-selected="'+(feedScope===t[0])+'" class="'+(feedScope===t[0]?'on':'')+'" onclick="feedSetScope(\''+t[0]+'\')">'+t[1]+'</button>').join('')+'</div>'
+    +'<div class="ft-row"><button type="button" class="ft-cat'+(feedFilter!=='all'?' on':'')+'" onclick="feedFilterOpen()">'+ic('<path d="M4 6h16M7 12h10M10 18h4"/>')+'<span>'+escapeHtml(cat)+'</span></button>'
+    +'<button type="button" class="ft-ic" onclick="usOpen()" aria-label="Leute finden" title="Leute finden">'+ic('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')+'</button>'
+    +'<button type="button" class="ft-ic" onclick="accountTap()" aria-label="Meine Beiträge" title="Meine Beiträge">'+ic('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>')+'</button>'
+    +'<button type="button" class="ft-ic ft-desk" data-dm hidden onclick="dmOpen()" aria-label="Nachrichten" title="Nachrichten">'+ic('<path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 15 21l-4.4-7.6L3 9z"/>')+'</button></div>';
+  try{if(typeof dmReady!=='undefined'&&dmReady)el.querySelectorAll('[data-dm]').forEach(x=>x.hidden=false);}catch(e){}}
+function feedChipsRender(){feedTopRender();const el=document.getElementById('feedChips');if(!el)return;
   el.innerHTML=FEED_SCOPES.map(s=>`<button type="button" role="tab" data-s="${s.id}" aria-selected="${feedScope===s.id}" class="${feedScope===s.id?'on':''}" onclick="feedSetScope('${s.id}')">${s.icon}<span>${s.label}</span></button>`).join('');}
 let feedUserId=null,feedUserName='';
 async function feedOpenUser(uid,name,postId){if(!uid)return;
@@ -16466,7 +16553,10 @@ async function feedOpenUser(uid,name,postId){if(!uid)return;
 function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)return;
   if(feedScope==='user'&&feedUserId){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.8"/><path d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0"/></svg>'+escapeHtml(feedUserName||'Beiträge')+'</span>'
-      +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Alle Beiträge">×</button>';return;}
+      +'<button type="button" onclick="feedSetScope(\'here\')" aria-label="Alle Beiträge">×</button>';return;}
+  if(feedScope==='saved'){b.style.display='flex';
+    b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Gemerkt</span>'
+      +'<button type="button" onclick="feedSetScope(\'here\')" aria-label="Zurück zum Feed">×</button>';return;}
   if(b.querySelector('.fab-user')){b.style.display='none';b.innerHTML='';}
   if(feedScope==='tours'&&feedTour){b.style.display='flex';
     b.innerHTML='<span class="fab-tour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-10 4 6 2-3 4 7z"/></svg>'+escapeHtml(feedTour.name)+'</span><button type="button" onclick="feedTour=null;feedTourBar();feedRender()">✕ alle Touren</button>';}
@@ -16478,8 +16568,9 @@ function feedSetScope(s){if(s!=='tours')feedTour=null;if(s!=='user')feedUserId=n
   document.getElementById('feedLoc').style.display=s==='near'?'flex':'none';
   // Nähe: immediately use the current device location
   if(s==='near'&&(!feedAnchor||feedAnchor.src!=='me')){const nb=document.getElementById('feedNear');if(nb)nb.click();}
-  feedFiltMark();feedRender();haptic(5);}
-function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter button').forEach((b,i)=>{b.classList.toggle('active',['all','avalanche','whumpf','wind_slab','other'][i]===f);});feedFiltMark();feedRender();}
+  feedFiltMark();feedTopRender();feedRender();haptic(5);}
+const FEED_CATS=['all','snow','avalanche','whumpf','wind_slab','other'];
+function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter button').forEach((b,i)=>{b.classList.toggle('active',FEED_CATS[i]===f);});feedFiltMark();feedTopRender();feedRender();feedFilterClose();}
 function feedSetAnchor(a){feedAnchor=a;
   document.getElementById('feedNear').classList.toggle('active',!!a&&a.src==='me');
   document.getElementById('feedPeakBtn').classList.toggle('active',!!a&&a.src==='peak');
