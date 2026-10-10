@@ -80,19 +80,34 @@ def attach_latest(stations: List[ImisStation], timeout: float = 40.0) -> None:
         s.dw = _num(r.get("DW_30MIN_MEAN"))
 
 
-def fetch_hs_series(code: str, period_days: int, timeout: float = 40.0,
-                    cache_dir: Path | None = None) -> Dict[str, float]:
-    """Stuendliche Schneehoehe (cm) einer Station, key 'YYYY-MM-DDTHH' (UTC).
+# Hourly series exported per station: our key -> SLF measurement field.
+SERIES_FIELDS = {
+    "hs": "HS",                 # Schneehoehe [cm]
+    "ta": "TA_30MIN_MEAN",      # Lufttemperatur [degC]
+    "tss": "TSS_30MIN_MEAN",    # Schneeoberflaechentemperatur [degC]
+    "vw": "VW_30MIN_MEAN",      # Wind Mittel [m/s]
+    "vwmax": "VW_30MIN_MAX",    # Boe [m/s] (nicht jede Station)
+    "dw": "DW_30MIN_MEAN",      # Windrichtung [Grad]
+}
 
-    Aggregiert die 30-Minuten-Werte auf Stunden (letzter Wert je Stunde).
+
+def fetch_series(code: str, period_days: int, timeout: float = 40.0,
+                 cache_dir: Path | None = None) -> Dict[str, Dict[str, float]]:
+    """Stuendliche Messreihen einer Station: {feld: {'YYYY-MM-DDTHH': wert}} (UTC).
+
+    Felder siehe SERIES_FIELDS. Aggregiert die 30-Minuten-Werte auf Stunden
+    (letzter Wert je Stunde). Die API liefert hoechstens 7 Tage zurueck.
     """
     cache_dir = cache_dir or (DATA_DIR / "slf_cache")
     cache_dir.mkdir(parents=True, exist_ok=True)
     # API erlaubt nur period_in_days in {1,3,7}; auf naechstgroesseren Wert klemmen.
     period_days = 1 if period_days <= 1 else 3 if period_days <= 3 else 7
-    cache = cache_dir / f"{code}_{period_days}d.json"
+    # Stunde im Dateinamen: ein Cache von gestern wuerde sonst ewig die alte
+    # Reihe liefern (lokal; in CI ist das Verzeichnis ohnehin frisch).
+    stamp = datetime.utcnow().strftime("%Y%m%d%H")
+    cache = cache_dir / f"{code}_{period_days}d_{stamp}.json"
+    import json
     if cache.exists():
-        import json
         try:
             return json.loads(cache.read_text())
         except Exception:
@@ -104,19 +119,27 @@ def fetch_hs_series(code: str, period_days: int, timeout: float = 40.0,
         return {}
     if not isinstance(rows, list):
         return {}
-    series: Dict[str, float] = {}
-    for r in rows:
-        hs = _num(r.get("HS"))
+    out: Dict[str, Dict[str, float]] = {k: {} for k in SERIES_FIELDS}
+    for r in sorted(rows, key=lambda r: r.get("measure_date", "")):
         d = r.get("measure_date", "")
-        if hs is None or len(d) < 13:
+        if len(d) < 13:
             continue
-        series[d[:13]] = hs  # letzter 30-min-Wert der Stunde gewinnt
+        for key, field_name in SERIES_FIELDS.items():
+            v = _num(r.get(field_name))
+            if v is not None:
+                out[key][d[:13]] = v  # letzter 30-min-Wert der Stunde gewinnt
+    out = {k: v for k, v in out.items() if v}
     try:
-        import json
-        cache.write_text(json.dumps(series))
+        cache.write_text(json.dumps(out))
     except Exception:
         pass
-    return series
+    return out
+
+
+def fetch_hs_series(code: str, period_days: int, timeout: float = 40.0,
+                    cache_dir: Path | None = None) -> Dict[str, float]:
+    """Stuendliche Schneehoehe (cm) einer Station, key 'YYYY-MM-DDTHH' (UTC)."""
+    return fetch_series(code, period_days, timeout, cache_dir).get("hs", {})
 
 
 def _num(v):
