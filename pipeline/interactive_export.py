@@ -4596,7 +4596,42 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.desk #repSheet{right:auto;bottom:auto;justify-content:flex-start;width:320px}
  /* search with the map buttons */
  #mapFabs #searchFab{color:var(--fg)}
- .feed-msg-fab{position:relative}
+ /* the feed's buttons share one column in the bottom-right corner; a hidden
+    one (messages before they are set up) leaves no gap */
+ .feed-fabs{position:absolute;z-index:5;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);
+   display:flex;flex-direction:column;align-items:center;gap:14px}
+ .feed-fabs>button{position:static!important;translate:none!important}
+ .feed-fabs>button[hidden]{display:none!important}
+ .sh-sheet{max-height:86vh;height:auto!important;min-height:0!important}
+ .sh-body{display:flex;flex-direction:column;gap:10px;padding-top:6px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+ .sh-post{display:flex;gap:10px;align-items:center;padding:10px;border-radius:14px;background:var(--fill)}
+ .sh-post i{width:44px;height:44px;border-radius:10px;background:center/cover;flex:none}
+ .sh-post span{display:flex;flex-direction:column;min-width:0}
+ .sh-post em{font-style:normal;font-size:13px;color:var(--fg2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .sh-sec{display:flex;flex-direction:column;gap:8px}
+ .sh-q{height:40px;border-radius:12px;border:1px solid var(--hair);background:var(--card);padding:0 12px;font:500 15px Inter,system-ui;color:var(--fg)}
+ .sh-people{display:flex;flex-direction:column;max-height:34vh;overflow-y:auto}
+ .sh-p{display:flex;align-items:center;gap:10px;padding:7px 2px}
+ .sh-p i{width:36px;height:36px;border-radius:50%;background:var(--fill) center/cover;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:800;flex:none}
+ .sh-p b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .sh-p button{min-height:34px;padding:0 14px;border-radius:999px;border:0;background:var(--accent,#2563eb);color:#fff;font:800 13px Inter,system-ui;cursor:pointer}
+ .sh-p button.ok{background:var(--fill);color:var(--fg)}
+ .sh-acts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+ .sh-act{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 2px;border:0;background:none;color:var(--fg);font:700 12px/1.2 Inter,system-ui;text-decoration:none;cursor:pointer;text-align:center}
+ .sh-act span{width:50px;height:50px;border-radius:16px;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center}
+ .sh-act svg{width:24px;height:24px}
+ .dm-post{display:flex;align-items:center;gap:10px;margin-top:4px;padding:8px;border:0;border-radius:12px;background:rgba(255,255,255,.7);color:#14161c;text-align:left;cursor:pointer;font:inherit;max-width:240px}
+ .dm-post i{width:42px;height:42px;border-radius:9px;background:#dfe7f0 center/cover;flex:none}
+ .dm-post span{display:flex;flex-direction:column}
+ .dm-post em{font-style:normal;font-size:12px;opacity:.7}
+ .feed-mine-fab{width:48px;height:48px;border-radius:var(--r-full);border:0;display:flex;align-items:center;justify-content:center;cursor:pointer;
+   background:var(--lg-bg2);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);box-shadow:var(--lg-edge),var(--lg-shadow);color:var(--fg)}
+ .feed-mine-fab svg{width:22px;height:22px}
+ .feed-mine-fab:active{transform:scale(.92)}
+ @media (max-width:899px){body.nav-vis .feed-page .feed-fabs{translate:0 calc(-1 * (var(--nav-h) - env(safe-area-inset-bottom,0px) - 6px))}}
+ /* on a desk the feed starts under the app bar, so its tabs stay reachable
+    (the feed has no header of its own: that was a dead end) */
+ body.desk .feed-page{top:calc(var(--bar-h) + 8px)!important}
  /* reporting is a tab now -- no second plus in the feed */
  body.nav-vis .feed-page .feed-fab,body.desk .feed-page .feed-fab{display:none!important}
 
@@ -5026,9 +5061,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="feed-anchor-bar" id="feedAnchorBar" style="display:none"></div>
 <div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Lade Beiträge…</div></div></div>
 <button class="feed-qr" id="feedQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
-<button class="feed-msg-fab" id="feedMsgFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 14.6 21.5l-4-8.1-8.1-4z"/></svg><span class="dm-dot" id="dmDot" hidden></span></button>
+<!-- one column, bottom right: messages last, so it sits in the corner -->
+<div class="feed-fabs">
 <button class="feed-friends-fab" id="feedFriendsFab" onclick="usOpen()" title="Leute finden" aria-label="Leute finden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
 <button class="feed-filt-fab" id="feedFiltFab" onclick="feedFilterOpen()" title="Filter" aria-label="Filter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg><i class="ff-dot"></i></button>
+<button class="feed-mine-fab" id="feedMineFab" onclick="accountTap()" title="Meine Beiträge" aria-label="Meine Beiträge – zum Profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></button>
+<button class="feed-msg-fab" id="feedMsgFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 14.6 21.5l-4-8.1-8.1-4z"/></svg><span class="dm-dot" id="dmDot" hidden></span></button>
+</div>
 <button class="feed-fab" id="feedFab" onclick="feedCreatePost()" title="Bedingungen melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
 </div>
 <div class="loc-picker" id="locPicker" style="display:none" onclick="if(event.target===this)locPickerClose()">
@@ -5284,6 +5323,18 @@ const I18N_DICT={
 "Am hilfreichsten: Übersichtsfotos der ganzen Lawine + Detailaufnahmen der Anrisskante / des Anrissgebiets. Fotos liefern automatisch Standort & Zeit.":["Most helpful: overview photos of the whole avalanche + close-ups of the crown / release area. Photos provide location & time automatically.","Le plus utile : photos d'ensemble de l'avalanche + détails de la cassure / zone de départ. Les photos fournissent lieu et heure automatiquement.","Più utili: foto d'insieme della valanga + dettagli del distacco / zona di distacco. Le foto forniscono automaticamente luogo e ora."],
 "Andere":["Other","Autre","Altro"],
 "Andere Beobachtung":["Other observation","Autre observation","Altra osservazione"],
+"Beitrag teilen":["Share post", "Partager la publication", "Condividi post"],
+"An Leute in Snowmapper":["To people on Snowmapper", "À des personnes sur Snowmapper", "A persone su Snowmapper"],
+"Name suchen…":["Search name…", "Chercher un nom…", "Cerca nome…"],
+"Link teilen":["Share link", "Partager le lien", "Condividi link"],
+"Teilen …":["Share …", "Partager …", "Condividi …"],
+"Link kopieren":["Copy link", "Copier le lien", "Copia link"],
+"Gesendet ✓":["Sent ✓", "Envoyé ✓", "Inviato ✓"],
+"Noch niemand – folge Leuten, dann kannst du ihnen Beiträge schicken.":["Nobody yet – follow people to send them posts.", "Personne encore – suis des gens pour leur envoyer des publications.", "Ancora nessuno – segui persone per inviare loro post."],
+"Antippen zum Öffnen":["Tap to open", "Touche pour ouvrir", "Tocca per aprire"],
+"📍 Beitrag geteilt":["📍 Post shared", "📍 Publication partagée", "📍 Post condiviso"],
+"Beitrag":["Post", "Publication", "Post"],
+"Senden fehlgeschlagen":["Sending failed", "Échec de l'envoi", "Invio non riuscito"],
 "Antippen blendet ein und aus":["Tap to show or hide", "Touche pour afficher ou masquer", "Tocca per mostrare o nascondere"],
 "Antippen blendet eine Klasse auf der Karte ein und aus.":["Tap a class to show or hide it on the map.", "Touche une classe pour l'afficher ou la masquer sur la carte.", "Tocca una classe per mostrarla o nasconderla sulla mappa."],
 "Standard":["Default", "Par défaut", "Predefinito"],
@@ -10998,8 +11049,23 @@ const EDGE_ROWS=Math.min(Math.floor((H-1)/2),Math.ceil(EDGE_KM/Math.max(1e-6,_km
 const EDGE_COLS=Math.min(Math.floor((W-1)/2),Math.ceil(EDGE_KM/Math.max(1e-6,_kmPerCol)));
 function inDomainEdge(p){const y=(p/W)|0,x=p-y*W;
   return x<EDGE_COLS||x>=W-EDGE_COLS||y<EDGE_ROWS||y>=H-EDGE_ROWS;}
-function setRaster(get,border){const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;
-  for(let p=0;p<NP;p++){const r=inDomainEdge(p)?null:get(p);const o=p*4;if(r){d[o]=r[0];d[o+1]=r[1];d[o+2]=r[2];d[o+3]=r[3]==null?210:r[3];if(cls)cls[p]=r[4];}else{d[o+3]=0;if(cls)cls[p]=-999;}}
+// Only Switzerland: the model grid is a rectangle, and outside the border
+// (Italy, Austria, the domain's own edge) its values are not meant to be
+// read -- that is where the stray spots and the stripe on the east edge came
+// from. The border polygon is filled once into a mask the size of the grid,
+// widened by one cell so border valleys keep their edge.
+let _chMask=null;
+function chMask(){if(_chMask)return _chMask;
+  const m=new Uint8Array(NP);
+  try{const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+    g.beginPath();CH_BORDER.forEach((q,i)=>{const x=(q[1]-loMin)/(loMax-loMin)*(W-1),y=(laMax-q[0])/(laMax-laMin)*(H-1);if(i)g.lineTo(x,y);else g.moveTo(x,y);});
+    g.closePath();g.fillStyle='#000';g.fill();g.lineWidth=2;g.strokeStyle='#000';g.stroke();
+    const d=g.getImageData(0,0,W,H).data;for(let p=0;p<NP;p++)m[p]=d[p*4+3]>40?1:0;
+    c.width=1;c.height=1;
+  }catch(e){m.fill(1);}
+  return (_chMask=m);}
+function setRaster(get,border){const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;const chm=chMask();
+  for(let p=0;p<NP;p++){const r=(inDomainEdge(p)||!chm[p])?null:get(p);const o=p*4;if(r){d[o]=r[0];d[o+1]=r[1];d[o+2]=r[2];d[o+3]=r[3]==null?210:r[3];if(cls)cls[p]=r[4];}else{d[o+3]=0;if(cls)cls[p]=-999;}}
   if(border){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=y*W+x;if(cls[p]==-999)continue;const rt=x<W-1?cls[p+1]:cls[p],bt=y<H-1?cls[p+W]:cls[p];if(rt!=cls[p]||bt!=cls[p]){const o=p*4;d[o]=20;d[o+1]=20;d[o+2]=30;d[o+3]=230;}}}
   cx.putImageData(img,0,0);raster.setUrl(cv.toDataURL());}
 function aggT(p,m){let mn=1e9,mx=-1e9,su=0,c=0,cold=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;if(v<0)cold++;}return m=="max"?mx:m=="min"?mn:m=="sub0"?cold:m=="max05"?mx:su/Math.max(1,c);}
@@ -14467,7 +14533,7 @@ async function dmList(){
         +'<div class="dm-req-b"><button class="pri" onclick="dmAccept(\''+oid+'\')">Annehmen</button><button onclick="dmHide(\''+t.id+'\')">Ablehnen</button></div></div>';
       return '<button class="dm-row'+(unread?' new':'')+'" data-n="'+escapeHtml(nm.toLowerCase())+'" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+escapeHtml(nm).replace(/'/g,'')+'\')">'+
         '<span class="av"'+(url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'+
-        '<span class="tx"><b>'+escapeHtml(nm)+trustBadge(progTrustOf(oid),true)+'</b><span>'+(m?escapeHtml(m.body):'—')+'</span></span>'+
+        '<span class="tx"><b>'+escapeHtml(nm)+trustBadge(progTrustOf(oid),true)+'</b><span>'+(m?escapeHtml(/[?&]post=/.test(m.body)?'📍 Beitrag geteilt':m.body):'—')+'</span></span>'+
         (m?('<span class="when">'+timeAgo(m.created_at)+'</span>'):'')+
         (unread?'<span class="unread"></span>':'')+
       '</button>';}).join('');
@@ -14519,7 +14585,7 @@ async function dmRender(){
     body.innerHTML=data.map(m=>{const d=new Date(m.created_at),day=d.toDateString(),me=m.sender_id===sbUser.id;
       let h='';if(day!==lastDay){h+='<div class="dm-day">'+escapeHtml(dfmt.format(d))+'</div>';lastDay=day;lastFrom=null;}
       const cont=lastFrom===m.sender_id&&(d-lastMs)<5*60e3;lastFrom=m.sender_id;lastMs=+d;
-      return h+'<div class="dm-msg'+(me?' me':'')+(cont?' cont':'')+'">'+escapeHtml(m.body)
+      return h+'<div class="dm-msg'+(me?' me':'')+(cont?' cont':'')+'">'+dmBodyHTML(m.body)
         +'<span class="t">'+tfmt.format(d)+(me&&m.read_at?' · gelesen':'')+'</span></div>';}).join('');
     body.scrollTop=body.scrollHeight;
     // anything addressed to me that is on screen has been read
@@ -15907,14 +15973,70 @@ function toggleSave(id,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
   if(savedPosts.has(id)){savedPosts.delete(id);}else{savedPosts.add(id);try{haptic(6);}catch(e){}toast('Gespeichert — findest du unter „Gespeichert" im Feed.','ok');}
   try{localStorage.setItem('ssm_saved',JSON.stringify([...savedPosts]));}catch(e){}
   feedRender();}
+// ── Share a post ──────────────────────────────────────────────────────────
+// First to people in the app (it lands in your chat with them as a card),
+// then as a link anywhere else: WhatsApp, e-mail, the system sheet, copy.
+let _shId=null;
+// The public web address, also from inside the iOS app (whose own origin is
+// capacitor://localhost and opens nowhere else).
+function postUrl(id){const base=/^https?:/.test(location.protocol)&&!/localhost/.test(location.hostname)
+    ?location.origin+location.pathname:'https://gianio.github.io/snow-mapper-v17/';
+  return base+'?post='+encodeURIComponent(id);}
+function postShareText(r){return r?((r.caption||r.sub||'Schnee-Report')+(r.user?' – '+r.user:'')):'Schnee-Report';}
 function sharePost(id,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
-  const r=allReports.find(x=>String(x.id)===String(id));
-  const url=location.origin+location.pathname+'?post='+encodeURIComponent(id);
-  const text=r?((r.user||'')+': '+(r.caption||r.sub||'Schnee-Report')):'Schnee-Report';
-  try{haptic(6);}catch(e){}
-  if(typeof nativeShare==='function'&&nativeShare(text,url))return;
-  if(navigator.share){navigator.share({title:'Snowmapper',text,url}).catch(()=>{});return;}
-  try{navigator.clipboard.writeText(url).then(()=>toast('Link kopiert!','ok'));}catch(e){toast(url,'ok');}}
+  _shId=String(id);try{haptic(6);}catch(e){}
+  const r=allReports.find(x=>String(x.id)===_shId),url=postUrl(_shId),txt=postShareText(r);
+  const enc=encodeURIComponent;
+  const ic=d=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
+  let el=document.getElementById('shareModal');
+  if(!el){el=document.createElement('div');el.id='shareModal';el.className='prof-modal';el.onclick=e=>{if(e.target===el)shareClose();};document.body.appendChild(el);}
+  el.innerHTML='<div class="prof-sheet sh-sheet" role="dialog" aria-modal="true" aria-label="Beitrag teilen">'
+    +'<div class="prof-head"><span>Beitrag teilen</span><button onclick="shareClose()" aria-label="Schliessen">✕</button></div>'
+    +'<div class="prof-body sh-body">'
+    +(r?'<div class="sh-post">'+(r.img?'<i style="background-image:url(&quot;'+escapeHtml(r.img)+'&quot;)"></i>':'')+'<span><b>'+escapeHtml(r.user||'')+'</b><em>'+escapeHtml(r.caption||r.sub||'Schnee-Report')+'</em></span></div>':'')
+    +'<div class="sh-sec" data-dm hidden><span class="lbl-micro">An Leute in Snowmapper</span><input class="sh-q" type="search" placeholder="Name suchen…" oninput="shareFilter(this.value)"><div class="sh-people" id="shPeople"><div class="us-empty">Lade…</div></div></div>'
+    +'<span class="lbl-micro">Link teilen</span><div class="sh-acts">'
+    +'<a class="sh-act" href="https://wa.me/?text='+enc(txt+'\n'+url)+'" target="_blank" rel="noopener" onclick="setTimeout(shareClose,300)"><span style="--c:#25D366">'+ic('<path d="M3.5 20.5l1.3-4A8.5 8.5 0 1 1 8 19.3z"/><path d="M9 8.5c0 3.5 3 6.5 6.5 6.5l1-1.5-2-1-1 .8a5 5 0 0 1-2.8-2.8l.8-1-1-2z"/>')+'</span>WhatsApp</a>'
+    +'<a class="sh-act" href="mailto:?subject='+enc('Snowmapper: '+(r&&r.sub||'Schnee-Report'))+'&body='+enc(txt+'\n\n'+url)+'" onclick="setTimeout(shareClose,300)"><span style="--c:#2563eb">'+ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>')+'</span>E-Mail</a>'
+    +'<button class="sh-act" onclick="shareNative()"><span style="--c:#475569">'+ic('<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>')+'</span>Teilen …</button>'
+    +'<button class="sh-act" onclick="shareCopy()"><span style="--c:#0f766e">'+ic('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>')+'</span>Link kopieren</button>'
+    +'</div></div></div>';
+  el.style.display='flex';
+  if(sb&&sbUser)dmAvailable().then(ok=>{if(ok){el.querySelectorAll('[data-dm]').forEach(x=>x.hidden=false);sharePeople();}}).catch(()=>{});
+}
+function shareClose(){const el=document.getElementById('shareModal');if(el)el.style.display='none';}
+function shareNative(){const r=allReports.find(x=>String(x.id)===_shId),url=postUrl(_shId),txt=postShareText(r);
+  if(typeof nativeShare==='function'&&nativeShare(txt,url)){shareClose();return;}
+  if(navigator.share){navigator.share({title:'Snowmapper',text:txt,url}).then(shareClose,()=>{});return;}
+  shareCopy();}
+function shareCopy(){const url=postUrl(_shId);
+  try{navigator.clipboard.writeText(url).then(()=>{toast('Link kopiert!','ok');shareClose();},()=>toast(url,'ok'));}catch(e){toast(url,'ok');}}
+// People to send to: your conversations first, then everyone you follow.
+async function sharePeople(){const box=document.getElementById('shPeople');if(!box)return;
+  try{const ids=[],seen=new Set();
+    try{const{data:th}=await sb.from('dm_threads').select('user_a,user_b,last_at').order('last_at',{ascending:false}).limit(20);
+      (th||[]).forEach(t=>{const o=t.user_a===sbUser.id?t.user_b:t.user_a;if(!seen.has(o)){seen.add(o);ids.push(o);}});}catch(e){}
+    myFollowing.forEach(o=>{if(!seen.has(o)&&o!==sbUser.id){seen.add(o);ids.push(o);}});
+    if(!ids.length){box.innerHTML='<div class="us-empty">Noch niemand – folge Leuten, dann kannst du ihnen Beiträge schicken.</div>';return;}
+    const{data:pr}=await sb.from('profiles').select('id,username,avatar_url').in('id',ids.slice(0,60));
+    const by={};(pr||[]).forEach(u=>{by[u.id]=u;});
+    box.innerHTML=ids.filter(i=>by[i]).map(i=>{const u=by[i],nm=u.username||'User';
+      return '<div class="sh-p" data-n="'+escapeHtml(nm.toLowerCase())+'"><i'+(u.avatar_url?' style="background-image:url(&quot;'+escapeHtml(u.avatar_url)+'&quot;)"':'')+'>'+(u.avatar_url?'':escapeHtml(nm[0].toUpperCase()))+'</i>'
+        +'<b>'+escapeHtml(nm)+'</b><button onclick="shareSend(\''+i+'\',this)">Senden</button></div>';}).join('');
+  }catch(e){box.innerHTML='<div class="us-empty">Konnte nicht geladen werden.</div>';}}
+function shareFilter(q){q=(q||'').trim().toLowerCase();document.querySelectorAll('#shPeople .sh-p').forEach(r=>{r.hidden=!!q&&!(r.dataset.n||'').includes(q);});}
+async function shareSend(uid,btn){if(!sb||!sbUser||!_shId)return;btn.disabled=true;btn.textContent='…';
+  try{const{data:tid,error}=await sb.rpc('dm_open_thread',{other:uid});if(error)throw error;
+    const r=allReports.find(x=>String(x.id)===_shId);
+    const{error:e2}=await sb.from('dm_messages').insert({thread_id:tid,sender_id:sbUser.id,body:postShareText(r)+'\n'+postUrl(_shId)});
+    if(e2)throw e2;btn.textContent='Gesendet ✓';btn.classList.add('ok');try{haptic(8);}catch(e){}
+  }catch(e){btn.disabled=false;btn.textContent='Senden';toast('Senden fehlgeschlagen','err');}}
+// A shared post in a chat is a card you can open, not a bare link.
+function dmBodyHTML(b){const m=/(https?:\/\/\S*?[?&]post=([\w-]+)\S*)/.exec(b||'');if(!m)return escapeHtml(b);
+  const id=m[2],r=allReports.find(x=>String(x.id)===String(id)),pre=b.replace(m[1],'').trim();
+  return (pre?escapeHtml(pre)+'<br>':'')+'<button type="button" class="dm-post" onclick="dmClose();feedOpenAt(\''+escapeHtml(id)+'\')">'
+    +(r&&r.img?'<i style="background-image:url(&quot;'+escapeHtml(r.img)+'&quot;)"></i>':'<i class="ph"></i>')
+    +'<span><b>'+escapeHtml(r?(r.sub||'Beitrag'):'Beitrag')+'</b><em>Antippen zum Öffnen</em></span></button>';}
 function feedImgTap(id,ev){ev.stopPropagation();
   const now=Date.now(),el=ev.currentTarget;
   if(el._t&&now-el._t<350){el._t=0;
@@ -15978,6 +16100,7 @@ function feedOpen(){
   feedSideSync();
   try{haptic(4);}catch(e){}
 }
+addEventListener('keydown',e=>{if(e.key==='Escape'){const f=document.getElementById('feedPage');if(f&&f.classList.contains('open')&&!document.querySelector('.feed-sheet.open'))try{navGo('map');}catch(x){}}});
 function feedClose(){
   const el=document.getElementById('feedPage');if(!el)return;
   if(feedScope==='user'){feedScope='all';feedUserId=null;try{feedTourBar();}catch(e){}}
