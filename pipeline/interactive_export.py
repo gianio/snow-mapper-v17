@@ -742,19 +742,15 @@ def _tour_routes(max_routes=4000, tol_m=60.0, min_len_m=1500.0, min_gain_m=250.0
            for r in cand[:max_routes]]
     # Named after the summit at the top end, when GeoNames has one close by.
     try:
-        from data_connectors.geonames_peaks import fetch_peaks, PeakIndex
-        idx = PeakIndex(fetch_peaks(cache_path=DATA_DIR / "topo_cache" / "geonames_ch_peaks.json"))
-        named = 0
-        for r in out:
-            if r.get("hi"):
-                pk = idx.nearest(r["hi"][0], r["hi"][1])
-                if pk:
-                    if r.get("name") and r["name"] != pk[0]:
-                        r["route"] = r["name"]
-                    r["name"] = pk[0]
-                    r["peak"] = [pk[2], pk[1], pk[3]]
-                    named += 1
-        print(f"[INT] {named} Touren nach ihrem Gipfel benannt.")
+        from data_connectors.geonames_peaks import fetch_peaks, fetch_places, name_tours
+        peaks = fetch_peaks(cache_path=DATA_DIR / "topo_cache" / "geonames_ch_peaks.json")
+        places = fetch_places(cache_path=DATA_DIR / "topo_cache" / "geonames_ch_places.json")
+        n0 = len(out)
+        # only tours that lead to a summit; several to one summit = variants
+        out = name_tours(out, peaks, places)
+        nv = sum(1 for r in out if r.get("nvar", 1) > 1)
+        print(f"[INT] {len(out)} von {n0} Touren fuehren auf einen Gipfel "
+              f"({nv} davon Varianten eines Gipfels).")
     except Exception as e:                       # noqa: BLE001
         print(f"[INT] Gipfelnamen nicht verfuegbar: {e!r}")
     pts = sum(len(r["coords"]) for r in out)
@@ -4605,6 +4601,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    display:flex;flex-direction:column;align-items:center;gap:14px}
  .feed-fabs>button{position:static!important;translate:none!important}
  .feed-fabs>button[hidden]{display:none!important}
+ .tour-vars{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:2px 16px 8px}
+ .tour-vars span{font:800 11px/1 Inter,system-ui;text-transform:uppercase;letter-spacing:.04em;color:var(--fg2);margin-right:4px}
+ .tour-vars button{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--hair);background:var(--card);color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer}
+ .tour-vars button.on{background:var(--accent,#2563eb);border-color:transparent;color:#fff}
  .onb-gest{list-style:none;margin:4px 0 14px;padding:0;display:flex;flex-direction:column;gap:9px;text-align:left}
  .onb-gest li{display:flex;align-items:center;gap:11px;font-size:13.5px;line-height:1.3;color:var(--fg2)}
  .onb-gest b{color:var(--fg)}
@@ -5333,6 +5333,9 @@ const I18N_DICT={
 "Am hilfreichsten: Übersichtsfotos der ganzen Lawine + Detailaufnahmen der Anrisskante / des Anrissgebiets. Fotos liefern automatisch Standort & Zeit.":["Most helpful: overview photos of the whole avalanche + close-ups of the crown / release area. Photos provide location & time automatically.","Le plus utile : photos d'ensemble de l'avalanche + détails de la cassure / zone de départ. Les photos fournissent lieu et heure automatiquement.","Più utili: foto d'insieme della valanga + dettagli del distacco / zona di distacco. Le foto forniscono automaticamente luogo e ora."],
 "Andere":["Other","Autre","Altro"],
 "Andere Beobachtung":["Other observation","Autre observation","Altra osservazione"],
+"# Varianten":["# variants", "# variantes", "# varianti"],
+"# Varianten ·":["# variants ·", "# variantes ·", "# varianti ·"],
+"Variante":["Variant", "Variante", "Variante"],
 "Skiqualität, Neuschnee, Wind und mehr – über das Ebenen-Symbol rechts. Tippe in der Legende auf eine Farbe, um sie ein- oder auszublenden: Skiqualität startet mit «nur Pulver».":["Ski quality, new snow, wind and more – via the layers icon on the right. Tap a colour in the legend to show or hide it: ski quality starts with “powder only”.", "Qualité de ski, neige fraîche, vent et plus – via l'icône des couches à droite. Touche une couleur dans la légende pour l'afficher ou la masquer : la qualité de ski commence par « poudreuse seulement ».", "Qualità sciistica, neve fresca, vento e altro – dall'icona dei livelli a destra. Tocca un colore nella legenda per mostrarlo o nasconderlo: la qualità parte da «solo polvere»."],
 "Antippen":["Tap", "Toucher", "Tocca"],
 "setzt den Zeitpunkt":["sets the time", "choisit le moment", "imposta il momento"],
@@ -8498,7 +8501,28 @@ function vaProfileHTML(pf){
 // The routes ship in the data blob, and once more as data/tours.json from
 // the live build: the demo blob comes from a cache and may predate them.
 let TOURS_EXT=null,toursExtTried=false;
-function tourList(){return (TOURS_EXT&&TOURS_EXT.length)?TOURS_EXT:((M.tours&&M.tours.length)?M.tours:[]);}
+// Only tours that lead to a summit, and several tours to one summit as its
+// variants ("Flüela Schwarzhorn von Flüela Hospiz"). Newer exports carry the
+// names (group / pname / variant, see geonames_peaks.name_tours); for older
+// ones the app groups by the summit itself and names variants by their start
+// height. Prepared once per list.
+let _tourSrc=null,_tourOut=[];
+function tourList(){const src=(TOURS_EXT&&TOURS_EXT.length)?TOURS_EXT:((M.tours&&M.tours.length)?M.tours:[]);
+  if(src!==_tourSrc){_tourSrc=src;_tourOut=tourPrep(src);}return _tourOut;}
+function tourPrep(src){
+  const L=src.some(t=>t.peak)?src.filter(t=>t.peak):src.slice();
+  const G=new Map();
+  L.forEach(t=>{if(!t.group)t.group=t.peak?(t.peak[0].toFixed(4)+','+t.peak[1].toFixed(4)):'id'+t.id;
+    if(!t.pname)t.pname=t.name||'Skitour';(G.get(t.group)||G.set(t.group,[]).get(t.group)).push(t);});
+  G.forEach(rs=>{const seen={};
+    rs.sort((x,y)=>((x.lo&&x.lo[2])||0)-((y.lo&&y.lo[2])||0));
+    rs.forEach(t=>{t.nvar=rs.length;
+      if(!t.variant){let v=t.lo&&t.lo[2]!=null?'ab '+Math.round(t.lo[2])+' m':'Variante';seen[v]=(seen[v]||0)+1;if(seen[v]>1)v+=' ('+seen[v]+')';t.variant=v;}
+      t.name=rs.length>1?t.pname+' '+t.variant:t.pname;});});
+  return L;}
+// switch variant in place, keeping the way back to the search list
+function tourOpenVar(id){const t=tourList().find(x=>String(x.id)===String(id));if(t){try{haptic(3);}catch(e){}tourOpen(t,tourFromSearch);}}
+function tourVariants(t){return t&&t.group?tourList().filter(x=>x.group===t.group):[t];}
 async function toursEnsure(){
   if(toursExtTried)return tourList().length>0;
   toursExtTried=true;
@@ -8875,6 +8899,8 @@ function tourSheetRender(t,r){
     +'<div class="tour-tt"><b>'+escapeHtml(t.name||'Skitour')+'</b><span>'+escapeHtml(facts)+'</span></div>'
     +'<button type="button" class="tour-x" onclick="tourClose()" aria-label="Schliessen">×</button></div>'
     +stats
+    +(function(){const V=tourVariants(t);if(V.length<2)return '';
+      return '<div class="tour-vars"><span>'+V.length+' Varianten</span>'+V.map(x=>'<button type="button" class="'+(x===t?'on':'')+'" onclick="tourOpenVar(\''+escapeHtml(String(x.id))+'\')">'+escapeHtml(x.variant||'Variante')+'</button>').join('')+'</div>';})()
     +'<div class="tour-watch" id="tourWatch"></div>'
     +'<div class="tsh-body">'+tourProfileSVG(t,va?r:null)
     +'<div class="tsh-acts">'
@@ -10055,6 +10081,10 @@ function tsRender(onlyMap){
   tsCircle=L.circle([c.lat,c.lon],{radius:tsF.radius*1000,color:'var(--accent)',weight:1.5,opacity:.6,fillOpacity:.04,interactive:false,dashArray:'4 6'}).addTo(map);
   list.forEach(o=>{o.r=tourScore(o.t);o.v=o.r?tourVal(o.r):-1;});
   list.sort((x,y)=>(y.v-x.v)||(x.d-y.d));
+  // one row per summit: its best variant, with how many there are
+  {const seen=new Set();
+    const one=[];list.forEach(o=>{const g=o.t.group||o.t.id;if(seen.has(g))return;seen.add(g);
+      o.nv=list.filter(x=>(x.t.group||x.t.id)===g).length;one.push(o);});list.length=0;one.forEach(o=>list.push(o));}
   tourPaintScores();
   window._tsList=list;
   const va=!!tourVa.eng;
@@ -10079,7 +10109,7 @@ function tsRender(onlyMap){
   const rows=list.slice(0,40).map((o,i)=>{const r=o.r,g=tourGeo(o.t);
     const nw=tpPeople(o.t.id).length;
     return '<button type="button" class="tn-row" data-tid="'+escapeHtml(String(o.t.id))+'" onclick="tsPick('+i+')"><span class="tn-sc" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r)+'%':'…')+'</span>'
-      +'<span class="tn-t"><b>'+escapeHtml(o.t.name||'Skitour')+'</b><span>'+(Math.round(o.d/100)/10)+' km · '
+      +'<span class="tn-t"><b>'+escapeHtml(o.nv>1?(o.t.pname||o.t.name):(o.t.name||'Skitour'))+'</b><span>'+(o.nv>1?o.nv+' Varianten · ':'')+(Math.round(o.d/100)/10)+' km · '
       +(g.gain!=null?g.gain+' Hm · ':'')+'bis '+g.maxSlope+'°'+(g.hi.el!=null?' · '+Math.round(g.hi.el)+' m':'')+'</span></span>'
       +'<span class="tn-w'+(nw?' on':'')+'" title="schauen gerade">'+(nw?(nw>10?'10+':nw):'')+'</span></button>';}).join('');
   if(onlyMap&&el.querySelector('.ts-list')){el.querySelector('.ts-count').textContent=list.length+' Touren';
