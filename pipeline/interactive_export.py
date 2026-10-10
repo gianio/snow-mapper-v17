@@ -2561,7 +2561,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .obs-types.cluster .obs-type{flex-direction:column;align-items:flex-start;gap:10px;padding:15px 14px 13px;border-radius:20px;border:1px solid var(--hair);background:linear-gradient(155deg,var(--tt),var(--paper) 72%);transform:translate(var(--dx),var(--dy)) rotate(var(--rot));animation:obsPop .55s var(--ease-spring) both;animation-delay:calc(var(--i)*70ms);box-shadow:var(--elev1)}
  .obs-types.cluster .obs-type:hover{box-shadow:var(--elev2);background:linear-gradient(155deg,var(--tt),#fff 72%)}
  .obs-types.cluster .obs-type:active{transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(.95)}
- .obs-types.cluster .obs-type:last-child{grid-column:1/-1;flex-direction:row;align-items:center}
+ .obs-types.cluster .obs-type:last-child:nth-child(odd){grid-column:1/-1;flex-direction:row;align-items:center}
  .obs-types.cluster .obs-type-ic{width:52px;height:52px;border-radius:16px;background:var(--tc);color:#fff;box-shadow:0 6px 14px var(--tt)}
  .obs-types.cluster .obs-type-ic svg{width:28px;height:28px}
  /* Landing der normalen Meldung: monochrom (B/W) */
@@ -5256,6 +5256,17 @@ const I18N_DICT={
 "Am hilfreichsten: Übersichtsfotos der ganzen Lawine + Detailaufnahmen der Anrisskante / des Anrissgebiets. Fotos liefern automatisch Standort & Zeit.":["Most helpful: overview photos of the whole avalanche + close-ups of the crown / release area. Photos provide location & time automatically.","Le plus utile : photos d'ensemble de l'avalanche + détails de la cassure / zone de départ. Les photos fournissent lieu et heure automatiquement.","Più utili: foto d'insieme della valanga + dettagli del distacco / zona di distacco. Le foto forniscono automaticamente luogo e ora."],
 "Andere":["Other","Autre","Altro"],
 "Andere Beobachtung":["Other observation","Autre observation","Altra osservazione"],
+"Zeichnen":["Draw", "Dessiner", "Disegna"],
+"Schneezonen & Route auf die Karte malen":["Paint snow zones & route on the map", "Dessine zones de neige et itinéraire sur la carte", "Disegna zone di neve e percorso sulla mappa"],
+"Frischer Schnee":["Fresh snow", "Neige fraîche", "Neve fresca"],
+"Frischer Powder oder Triebschnee – und wie viel?":["Fresh powder or wind slab – and how much?", "Poudreuse fraîche ou neige soufflée – et combien ?", "Polvere fresca o neve ventata – e quanta?"],
+"Frischer Powder":["Fresh powder", "Poudreuse fraîche", "Polvere fresca"],
+"Nichts Frisches":["Nothing fresh", "Rien de frais", "Niente di fresco"],
+"Kein Neuschnee":["No new snow", "Pas de neige fraîche", "Nessuna neve fresca"],
+"Menge":["Amount", "Quantité", "Quantità"],
+"Frischer Powder # cm":["Fresh powder # cm", "Poudreuse fraîche # cm", "Polvere fresca # cm"],
+"Triebschnee # cm":["Wind slab # cm", "Neige soufflée # cm", "Neve ventata # cm"],
+"Menge in cm":["Amount in cm", "Quantité en cm", "Quantità in cm"],
 "Animation abspielen":["Play animation","Lire l'animation","Riproduci animazione"],
 "Anmelden":["Sign in","Se connecter","Accedi"],
 "Anmelden für Community & Meldungen":["Sign in for community & reports","Se connecter pour la communauté & les observations","Accedi per community e segnalazioni"],
@@ -8865,7 +8876,10 @@ function tourPickRender(hostId,lat,lon){
   let opts;
   const q=rptTourQ.trim().toLowerCase();
   if(q.length>=2){opts=tourList().filter(t=>(t.name||'').toLowerCase().includes(q)).slice(0,8).map(t=>({t,d:null}));}
-  else opts=(lat!=null?tourNearPoint(lat,lon,6000,6):[]);
+  else{// no fix yet: suggest around the map centre rather than nothing
+    let la=lat,lo=lon;if(la==null){try{const c=map.getCenter();la=c.lat;lo=c.lng;}catch(e){}}
+    opts=(la!=null?tourNearPoint(la,lo,6000,6):[]);
+    if(lat==null)opts.forEach(o=>{o.d=null;});}
   if(!rptTourSel&&!rptTourLock&&opts.length&&opts[0].d!=null&&opts[0].d<=600&&q.length<2)rptTourSel={id:String(opts[0].t.id),name:opts[0].t.name||'Skitour',auto:true};
   const sel=rptTourSel;
   const chip=(id,name,sub,on)=>'<button type="button" class="tp-chip'+(on?' on':'')+'" onclick="tourPickSet(\''+hostId+'\','+(id?'\''+escapeHtml(String(id))+'\'':'null')+')">'
@@ -9838,6 +9852,13 @@ async function tsOpenUI(){
   tourFocus=tsF.focus;
   if(!map._tsDragHook){map._tsDragHook=1;map.on('dragstart',tsMapDragged);}
   document.body.classList.add('ts-open');
+  // Nearby tours straight away: take the position quietly (no error toast;
+  // without it the finder simply stays on the map centre).
+  if(!myLoc&&navigator.geolocation){try{navigator.geolocation.getCurrentPosition(p=>{
+    myLoc=[p.coords.latitude,p.coords.longitude];
+    try{if(meMarker)map.removeLayer(meMarker);
+      meMarker=L.marker(myLoc,{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1900}).addTo(map);}catch(e){}
+    if(tsOpen()){tsRender();try{map.flyTo(myLoc,Math.max(map.getZoom(),10),{duration:.6});}catch(e){}}},()=>{},{maximumAge:300000,timeout:8000});}catch(e){}}
   tsRender(true);
   try{await tourVaPrepare();}catch(e){}
   tsRender();try{haptic(4);}catch(e){}
@@ -14689,15 +14710,15 @@ function showUndo(){
 // SLF-style observation reporting wizard
 // ============================================================
 const OBS_TYPE_LIST=[
+ {id:'snow',label:'Schneequalität',sub:'Pulver · Harsch · Firn · Nassschnee',color:'#7d6bd6',tint:'rgba(42,138,176,.14)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M4 6l16 12M20 6L4 18"/><path d="M12 2l-2.5 2.5M12 2l2.5 2.5M12 22l-2.5-2.5M12 22l2.5-2.5M4 6l.2 3.4M4 6l3.4-.2M20 18l-.2-3.4M20 18l-3.4.2M20 6l-3.4-.2M20 6l-.2 3.4M4 18l3.4.2M4 18l.2-3.4"/></svg>'},
+ {id:'draw',label:'Zeichnen',sub:'Schneezonen & Route auf die Karte malen',color:'#2563eb',tint:'rgba(37,99,235,.12)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>'},
  {id:'avalanche',label:'Lawine',sub:'Spontan oder ausgelöst',color:'#A83A2E',tint:'rgba(168,58,46,.12)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M4 20l6-13 4 7"/><path d="M14 20c1-3 3-5 6-6"/></svg>'},
  {id:'whumpf',label:'Wumm-Geräusch',sub:'Setzungsgeräusche im Schnee',color:'#e8590c',tint:'rgba(232,89,12,.12)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><circle cx="9" cy="15" r="2"/><path d="M14 9c2 1 3 3 3 5M17 5c3 2 4 6 4 10"/></svg>'},
  {id:'wind_slab',label:'Triebschnee',sub:'Windverfrachteter Schnee',color:'#0d9488',tint:'rgba(13,148,136,.12)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18M4 18l7-9 5 6"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/></svg>'},
- {id:'snow',label:'Schneequalität',sub:'Pulver · Harsch · Firn · Nassschnee',color:'#7d6bd6',tint:'rgba(42,138,176,.14)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M4 6l16 12M20 6L4 18"/><path d="M12 2l-2.5 2.5M12 2l2.5 2.5M12 22l-2.5-2.5M12 22l2.5-2.5M4 6l.2 3.4M4 6l3.4-.2M20 18l-.2-3.4M20 18l-3.4.2M20 6l-3.4-.2M20 6l-.2 3.4M4 18l3.4.2M4 18l.2-3.4"/></svg>'},
  {id:'other',label:'Andere Beobachtung',sub:'Freie Geländemeldung',color:'#0F3E80',tint:'rgba(15,62,128,.12)',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M5 20l5-9 4 6 5-9"/><path d="M15 5h6v5"/></svg>'}
 ];
 const SNOW_KINDS=[
  {k:'powder',l:'Pulver',c:'#3E7C8C'},
- {k:'wind_powder',l:'Triebschnee-Pulver',c:'#7d6bd6'},
  {k:'wind_pressed',l:'Windharsch',c:'#0d9488'},
  {k:'melt_crust',l:'Schmelzharsch',c:'#e8590c'},
  {k:'wet',l:'Nassschnee',c:'#7b5cff'},
@@ -14720,8 +14741,7 @@ const OBS_SIZE=[
 function obsSizeMeta(k){return OBS_SIZE.find(s=>s.k===k)||OBS_SIZE[5];}
 function compareSize(a,b){const ra=obsSizeMeta(a).r,rb=obsSizeMeta(b).r;if(!ra||!rb)return null;return ra===rb?0:(ra>rb?1:-1);}
 const OBS_ENUM={
- whumpfFrequency:{title:'Wumm-Geräusche',sub:'Setzungsgeräusche deuten auf Schwachschichten hin.',required:true,opts:[{k:'none',l:'Keine'},{k:'rare',l:'Selten',ct:'1–3'},{k:'frequent',l:'Häufig',ct:'>3'}]},
- windSlab24h:{title:'Triebschnee (letzte 24 h)',sub:'Wie viel frischer Triebschnee?',required:true,opts:[{k:'none',l:'Kein'},{k:'small',l:'Klein',ct:'5–20 cm'},{k:'medium',l:'Mittel',ct:'20–50 cm'},{k:'large',l:'Gross',ct:'>50 cm'}]}
+ whumpfFrequency:{title:'Wumm-Geräusche',sub:'Setzungsgeräusche deuten auf Schwachschichten hin.',required:true,opts:[{k:'none',l:'Keine'},{k:'rare',l:'Selten',ct:'1–3'},{k:'frequent',l:'Häufig',ct:'>3'}]}
 };
 const OBS_TRIGGER=[['spontaneous','Spontan'],['person','Person'],['explosive','Sprengung'],['snow_groomer','Pistenfahrzeug'],['other','Andere'],['unknown','Unbekannt']];
 const OBS_BURIAL=[['not_buried','Nicht verschüttet'],['partially_buried','Teilweise verschüttet'],['fully_buried','Vollständig verschüttet']];
@@ -14730,9 +14750,11 @@ const OBS_AVTYPE=[['glide_snow','Gleitschnee'],['loose_snow','Lockerschnee'],['s
 const OBS_WET=[['dry','Trocken'],['wet','Nass'],['unknown','Unbekannt']];
 const OBS_STEPS={
  avalanche:[{k:'media'},{k:'avdetails'},{k:'comment'},{k:'submit'}],
- whumpf:[{k:'enum',f:'whumpfFrequency'},{k:'enum',f:'windSlab24h'},{k:'media_comment',final:true}],
- wind_slab:[{k:'enum',f:'windSlab24h'},{k:'media_comment',final:true}],
- snow:[{k:'snowcond'},{k:'media_comment',final:true}],
+ whumpf:[{k:'enum',f:'whumpfFrequency'},{k:'fresh'},{k:'media_comment',final:true}],
+ wind_slab:[{k:'fresh'},{k:'media_comment',final:true}],
+ // Place first: the location then pre-fills altitude band and aspect on the
+ // snow-quality screen, and the nearby tours are suggested right away.
+ snow:[{k:'media_comment',loc:true},{k:'snowcond',final:true}],
  other:[{k:'media'},{k:'comment',final:true}]
 };
 function obsLbl(arr,k){const f=arr.find(x=>x[0]===k);return f?f[1]:k;}
@@ -14741,7 +14763,7 @@ let obsState=null,obsDeviceFix=null,obsMap=null,obsMarker=null,obsOpenCards=new 
 function obsNewState(type){return{type,step:0,steps:OBS_STEPS[type]||[],media:[],comment:'',
   location:{lat:null,lon:null,elevation:null,aspect:null,source:null},observedAt:null,
   avalanche:{triggerType:'unknown',remoteTrigger:false,caughtPersons:[],characteristics:{size:'unknown',sizeRank:0,avalancheType:'unknown',wetness:'unknown'}},
-  whumpfFrequency:null,windSlab24h:null,
+  whumpfFrequency:null,fresh:{kind:type==='wind_slab'?'drift':null,cm:20},
   snow:{kind:null,depth:30,lightness:null,powderline:2200,thickness:null,alt:2200,altLow:1800,altHigh:2600,aspects:[],wetness:null,firnState:null,firnTime:''}};}
 function obsDEM(lat,lon){const fe=fineElev(lat,lon),fa=fineAspectDeg(lat,lon);
   const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
@@ -14762,7 +14784,7 @@ function obsOpen(){if(!sb||!sbUser){authShow();return;}
   const SCATTER=[{dx:-4,dy:0,r:-2},{dx:5,dy:9,r:1.6},{dx:-6,dy:-5,r:1.2},{dx:4,dy:-8,r:-1.4},{dx:0,dy:2,r:.8}];
   document.getElementById('obsBody').innerHTML=
     '<div class="obs-types cluster">'+OBS_TYPE_LIST.map((t,i)=>{const s=SCATTER[i%SCATTER.length];
-    return `<button class="obs-type" style="--i:${i};--dx:${s.dx}px;--dy:${s.dy}px;--rot:${s.r}deg;--tc:${t.color};--tt:${t.tint}" onclick="obsStart('${t.id}')"><span class="obs-type-ic">${t.icon}</span><span class="obs-type-tx"><b>${t.label}</b><span>${t.sub}</span></span></button>`;}).join('')+'</div>'+
+    return `<button class="obs-type" style="--i:${i};--dx:${s.dx}px;--dy:${s.dy}px;--rot:${s.r}deg;--tc:${t.color};--tt:${t.tint}" onclick="${t.id==='draw'?'obsClose();drawOpen()':'obsStart(\''+t.id+'\')'}"><span class="obs-type-ic">${t.icon}</span><span class="obs-type-tx"><b>${t.label}</b><span>${t.sub}</span></span></button>`;}).join('')+'</div>'+
     (FEATURES.quickPowder?'<button class="obs-quick" style="--i:5" onclick="obsClose();qrOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span><b>Quick Powder Report</b><em>Ein Fingertipp — Menge &amp; Qualität</em></span></button>':'');
   obsWarmLocation();
 }
@@ -15448,13 +15470,15 @@ function obsClose(){if(obsState&&(obsState.media.length||obsState.comment)){if(!
 function obsBack(){if(!obsState){obsClose();return;}if(obsState.step>0){obsState.step--;obsRender();}else{obsOpen();}}
 function obsStepDisabled(st){if(st.k==='enum'){const e=OBS_ENUM[st.f];if(e.required&&!obsState[st.f])return true;}
   if(st.k==='snowcond'){if(!obsState.snow.kind)return true;}
+  if(st.k==='fresh'){if(!obsState.fresh.kind)return true;}
+  if(st.loc){if(obsState.location.lat==null)return true;}
   if(st.k==='submit'||st.final){if(obsState.location.lat==null)return true;if(obsState.observedAt&&obsState.observedAt.getTime()>Date.now())return true;}
   return false;}
 function obsNext(){const steps=obsState.steps,st=steps[obsState.step];
   if(obsStepDisabled(st))return;
   if(st.k==='submit'||st.final){obsSubmit();return;}
   if(obsState.step<steps.length-1){obsState.step++;obsRender();haptic(6);}}
-const OBS_TITLES={media:['Fotos & Videos','Übersicht + Detail helfen am meisten'],avdetails:['Lawinendetails','Optional – tippe zum Ausklappen'],comment:['Kommentar','Optional, max. 500 Zeichen'],media_comment:['Beobachtung erfassen','Fotos & Kommentar'],submit:['Standort & Absenden','Prüfe Ort und Zeit'],snowcond:['Schneequalität','Was liegt & wie fährt es sich?']};
+const OBS_TITLES={media:['Fotos & Videos','Übersicht + Detail helfen am meisten'],avdetails:['Lawinendetails','Optional – tippe zum Ausklappen'],comment:['Kommentar','Optional, max. 500 Zeichen'],media_comment:['Beobachtung erfassen','Fotos & Kommentar'],submit:['Standort & Absenden','Prüfe Ort und Zeit'],fresh:['Frischer Schnee','Frischer Powder oder Triebschnee – und wie viel?'],snowcond:['Schneequalität','Was liegt & wie fährt es sich?']};
 function obsRender(){const steps=obsState.steps,i=obsState.step,st=steps[i];
   document.getElementById('obsBack').style.visibility='visible';
   document.getElementById('obsProgress').innerHTML=steps.map((s,ix)=>`<i class="${ix<i?'done':ix===i?'cur':''}"></i>`).join('');
@@ -15468,13 +15492,17 @@ function obsRender(){const steps=obsState.steps,i=obsState.step,st=steps[i];
   else if(st.k==='comment')body=obsCommentHTML();
   else if(st.k==='media_comment')body=obsMediaBlock(false)+obsCommentHTML();
   else if(st.k==='enum')body=obsEnumHTML(st.f);
-  else if(st.k==='snowcond')body=obsSnowHTML();
+  else if(st.k==='snowcond'){obsSnowPrefill();body=obsSnowHTML();}
+  else if(st.k==='fresh')body=obsFreshHTML();
   else if(st.k==='avdetails')body=obsAvDetailsHTML();
-  if(isFinal)body+=obsLocationHTML()+'<div class="tour-pick" id="obsTourPick"></div>'+obsSummaryHTML();
+  // The place (map, time, tour) sits on the step marked loc, else on the last one.
+  const locStep=st.loc||(isFinal&&!steps.some(x=>x.loc));
+  if(locStep)body+=obsLocationHTML()+'<div class="tour-pick" id="obsTourPick"></div>';
+  if(isFinal)body+=obsSummaryHTML();
   document.getElementById('obsBody').innerHTML=body;
-  if(isFinal){const L=obsState.location||{};toursEnsure().then(()=>tourPickRender('obsTourPick',L.lat,L.lon)).catch(()=>{});}
+  if(locStep){const L=obsState.location||{};toursEnsure().then(()=>tourPickRender('obsTourPick',L.lat,L.lon)).catch(()=>{});}
   if(st.k==='snowcond')setTimeout(obsAltBandAttach,0);
-  if(isFinal)setTimeout(obsInitMap,30);
+  if(locStep)setTimeout(obsInitMap,30);
   const next=document.getElementById('obsNext');next.classList.toggle('post',isFinal);next.textContent=isFinal?'Melden':'Weiter';next.disabled=obsStepDisabled(st);}
 function obsMediaBlock(av){const hint=av?'<div class="obs-hint">Am hilfreichsten: Übersichtsfotos der ganzen Lawine + Detailaufnahmen der Anrisskante / des Anrissgebiets. Fotos liefern automatisch Standort & Zeit.</div>':'<div class="obs-hint">Relevante Beobachtungen aus dem Gelände. Fotos liefern automatisch Standort & Zeit.</div>';
   return hint+'<div id="obsMediaWrap">'+obsMediaGrid()+'</div>';}
@@ -15483,6 +15511,27 @@ function obsMediaGrid(){const tiles=obsState.media.map((m,ix)=>`<div class="obs-
   return '<div class="obs-media-grid">'+tiles+add+'</div>';}
 function obsRerenderMedia(){const w=document.getElementById('obsMediaWrap');if(w)w.innerHTML=obsMediaGrid();}
 function obsCommentHTML(){const v=obsState.comment||'';return '<textarea class="rp-caption" id="obsComment" maxlength="500" placeholder="Kommentar (optional)…" oninput="obsState.comment=this.value;var c=document.getElementById(\'obsCC\');if(c)c.textContent=this.value.length+\'/500\'" style="margin-top:0">'+v+'</textarea><div class="obs-cc" id="obsCC">'+v.length+'/500</div>';}
+// Fresh snow on whumpf / wind-slab reports: what kind, and how much.
+const OBS_FRESH=[['powder','Frischer Powder'],['drift','Triebschnee'],['none','Nichts Frisches']];
+function obsFreshLabel(f){if(!f||!f.kind)return null;if(f.kind==='none')return 'Kein Neuschnee';
+  return obsLbl(OBS_FRESH,f.kind)+' '+snowCmLabel(f.cm)+' cm';}
+function obsFreshHTML(){const f=obsState.fresh;
+  let h='<div class="obs-fld"><div class="obs-chips">'+OBS_FRESH.map(o=>`<button class="${f.kind===o[0]?'active':''}" onclick="obsFreshKind('${o[0]}')">${o[1]}</button>`).join('')+'</div></div>';
+  if(f.kind&&f.kind!=='none')h+='<div class="obs-fld"><div class="obs-fld-l">Menge <b class="snow-val" id="sv_fresh">'+snowCmLabel(f.cm)+' cm</b></div>'
+    +'<input type="range" class="obs-range" min="5" max="'+SNOW_CM_MAX+'" step="5" value="'+f.cm+'" aria-label="Menge in cm" oninput="obsState.fresh.cm=+this.value;var l=document.getElementById(\'sv_fresh\');if(l)l.textContent=snowCmLabel(this.value)+\' cm\'">'
+    +'<div class="ab-scale"><i>5</i><i>'+SNOW_CM_MAX+'+ cm</i></div></div>';
+  return h;}
+function obsFreshKind(k){obsState.fresh.kind=k;haptic(6);obsRender();}
+// Altitude band and aspect from the reported place, until the user changes
+// them; re-applied if the place moves.
+const _ASP_EN={N:'N',NO:'NE',O:'E',SO:'SE',S:'S',SW:'SW',W:'W',NW:'NW',E:'E'};
+function obsSnowPrefill(){const L=obsState.location||{},sn=obsState.snow;if(L.lat==null)return;
+  const key=L.lat.toFixed(4)+','+L.lon.toFixed(4);if(sn._pre===key)return;
+  if(sn._pre&&sn._edited)return;
+  sn._pre=key;
+  if(L.elevation!=null){const e=Math.round(L.elevation/50)*50;
+    sn.altLow=Math.max(500,e-200);sn.altHigh=Math.min(4000,e+200);sn.alt=e;sn.powderline=Math.max(500,e-200);}
+  const asp=_ASP_EN[L.aspect];if(asp)sn.aspects=[asp];}
 function obsEnumHTML(f){const e=OBS_ENUM[f];return '<div class="obs-enum">'+e.opts.map(o=>`<button class="${obsState[f]===o.k?'active':''}" onclick="obsPickEnum('${f}','${o.k}')"><span>${o.l}${o.ct?'<span class="ct">'+o.ct+'</span>':''}</span><span class="rd"></span></button>`).join('')+'</div>';}
 function obsPickEnum(f,k){obsState[f]=k;haptic(6);obsRender();}
 // --- Snow-condition step (kind selector + per-kind fields) ---
@@ -15495,7 +15544,6 @@ function obsSnowSet(f,v){obsState.snow[f]=(obsState.snow[f]===v?null:v);haptic(5
 function obsSnowFields(kind){
   let f='';
   if(kind==='powder')f=obsDepthSlider('depth','Pulvertiefe')+obsSeg('lightness','Konsistenz',SNOW_LIGHT);
-  if(kind==='wind_powder')f=obsDepthSlider('depth','Tiefe der Auflage');
   if(kind==='wind_pressed')f=obsSeg('thickness','Winddeckel',SNOW_THICK);
   if(kind==='melt_crust')f=obsSeg('thickness','Bruchharsch-Deckel',SNOW_THICK);
   if(kind==='wet')f=obsSeg('wetness','Nässegrad',SNOW_WET);
@@ -15526,7 +15574,7 @@ function obsAltBandAttach(){const band=document.getElementById('altBand');if(!ba
   let cur=null;
   function setV(which,clientX){const r=band.getBoundingClientRect();
     let v=mn+(mx-mn)*Math.max(0,Math.min(1,(clientX-r.left)/r.width));v=Math.round(v/50)*50;
-    const sn=obsState.snow;
+    const sn=obsState.snow;sn._edited=true;
     if(which==='lo')sn.altLow=Math.min(v,sn.altHigh);else sn.altHigh=Math.max(v,sn.altLow);
     const p=x=>((x-mn)/(mx-mn)*100)+'%';
     const lo=band.querySelector('[data-h="lo"]'),hi=band.querySelector('[data-h="hi"]'),fill=band.querySelector('.ab-fill');
@@ -15553,12 +15601,11 @@ function obsRose(label){const sel=obsState.snow.aspects||[];const cx=92,cy=92,rO
     paths+='<path d="'+d+'" class="rose-w'+(on?' on':'')+'" onclick="obsRoseTog(\''+ASPECT8[i]+'\')"/><text x="'+lx+'" y="'+ly+'" class="rose-t'+(on?' on':'')+'">'+ASPECT8[i]+'</text>';}
   const presets='<div class="obs-chips rose-presets"><button onclick="obsRosePreset([\'N\',\'NE\',\'E\',\'SE\',\'S\',\'SW\',\'W\',\'NW\'])">Alle</button><button onclick="obsRosePreset([\'N\',\'NE\',\'NW\'])">Nord</button><button onclick="obsRosePreset([\'S\',\'SE\',\'SW\'])">Süd</button><button onclick="obsRosePreset([])">Keine</button></div>';
   return '<div class="obs-fld"><div class="obs-fld-l">'+label+'</div><div class="rose-wrap"><svg viewBox="0 0 184 184" class="rose-svg" aria-label="Expositionsrose">'+paths+'</svg></div>'+presets+'</div>';}
-function obsRoseTog(a){const s=obsState.snow,i=s.aspects.indexOf(a);if(i>=0)s.aspects.splice(i,1);else s.aspects.push(a);haptic(5);obsRender();}
-function obsRosePreset(set){obsState.snow.aspects=set.slice();haptic(6);obsRender();}
+function obsRoseTog(a){const s=obsState.snow,i=s.aspects.indexOf(a);s._edited=true;if(i>=0)s.aspects.splice(i,1);else s.aspects.push(a);haptic(5);obsRender();}
+function obsRosePreset(set){obsState.snow._edited=true;obsState.snow.aspects=set.slice();haptic(6);obsRender();}
 function obsFirnTime(){const v=obsState.snow.firnTime||'';return '<div class="obs-fld"><div class="obs-fld-l">Fahrbereit ab (Uhrzeit)</div><input type="time" class="obs-dt" value="'+v+'" oninput="obsState.snow.firnTime=this.value"></div>';}
 function snowMeasure(sn){const l=snowKindLabel(sn.kind)||'Schnee';
   if(sn.kind==='powder'&&sn.depth)return sn.depth+' cm Pulver';
-  if(sn.kind==='wind_powder'&&sn.depth)return 'Triebschnee '+sn.depth+' cm';
   return l;}
 function obsCard(id,title,sum,inner){const open=obsOpenCards.has(id)?' open':'';return `<div class="obs-card${open}" id="obscard-${id}"><div class="obs-card-h" onclick="obsToggleCard('${id}')">${title}${sum?'<span class="obs-card-sum">'+sum+'</span>':''}<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="obs-card-b">${inner}</div></div>`;}
 function obsToggleCard(id){if(obsOpenCards.has(id))obsOpenCards.delete(id);else obsOpenCards.add(id);const el=document.getElementById('obscard-'+id);if(el)el.classList.toggle('open');}
@@ -15614,9 +15661,9 @@ function obsInitMap(){const el=document.getElementById('obsMap');if(!el)return;i
 function obsSummaryHTML(){const t=[];const ty=OBS_TYPE_LIST.find(x=>x.id===obsState.type);t.push('<span class="rp-tag">'+ty.label+'</span>');
   if(obsState.type==='avalanche'){const a=obsState.avalanche;if(a.characteristics.size!=='unknown')t.push('<span class="rp-tag">Grösse: '+obsSizeMeta(a.characteristics.size).l+'</span>');if(a.triggerType!=='unknown')t.push('<span class="rp-tag">'+obsLbl(OBS_TRIGGER,a.triggerType)+'</span>');if(a.caughtPersons.length)t.push('<span class="rp-tag">'+a.caughtPersons.length+' Pers.</span>');}
   if(obsState.whumpfFrequency)t.push('<span class="rp-tag">Wumm: '+obsEnumLabel('whumpfFrequency',obsState.whumpfFrequency)+'</span>');
-  if(obsState.windSlab24h)t.push('<span class="rp-tag">Triebschnee: '+obsEnumLabel('windSlab24h',obsState.windSlab24h)+'</span>');
+  {const fl=obsFreshLabel(obsState.fresh);if(fl&&obsState.type!=='snow')t.push('<span class="rp-tag">'+fl+'</span>');}
   if(obsState.type==='snow'){const sn=obsState.snow;if(sn.kind)t.push('<span class="rp-tag">'+snowKindLabel(sn.kind)+'</span>');
-    if((sn.kind==='powder'||sn.kind==='wind_powder')&&sn.depth)t.push('<span class="rp-tag">'+sn.depth+' cm</span>');
+    if(sn.kind==='powder'&&sn.depth)t.push('<span class="rp-tag">'+sn.depth+' cm</span>');
     if(sn.kind==='powder'&&sn.powderline)t.push('<span class="rp-tag">ab '+sn.powderline+' m</span>');
     if(sn.kind==='melt_crust')t.push('<span class="rp-tag">'+sn.altLow+'–'+sn.altHigh+' m</span>');
     if(sn.kind==='wind_pressed'&&sn.alt)t.push('<span class="rp-tag">ab '+sn.alt+' m</span>');
@@ -15679,7 +15726,7 @@ function obsBuildCD(){const s=obsState;const cd={obsType:s.type,source:s.locatio
   media:s.media.map(m=>({type:m.type,gps:(m.exif&&m.exif.gps)||null,takenAt:(m.exif&&m.exif.dt)?m.exif.dt.toISOString():null}))};
   if(s.type==='avalanche'){const a=s.avalanche;cd.avalanche={triggerType:a.triggerType,remoteTrigger:a.remoteTrigger,caughtPersons:a.caughtPersons,characteristics:{size:a.characteristics.size,sizeRank:a.characteristics.sizeRank,avalancheType:a.characteristics.avalancheType,wetness:a.characteristics.wetness}};if(a.characteristics.size!=='unknown')cd.measurement=obsSizeMeta(a.characteristics.size).l;}
   if(s.whumpfFrequency){cd.whumpfFrequency=s.whumpfFrequency;cd.measurement=obsEnumLabel('whumpfFrequency',s.whumpfFrequency);}
-  if(s.windSlab24h){cd.windSlab24h=s.windSlab24h;if(!cd.measurement)cd.measurement=obsEnumLabel('windSlab24h',s.windSlab24h);}
+  if(s.type!=='snow'&&s.fresh&&s.fresh.kind){cd.fresh={kind:s.fresh.kind,cm:s.fresh.kind==='none'?0:s.fresh.cm};if(!cd.measurement)cd.measurement=obsFreshLabel(s.fresh);}
   if(s.type==='snow'){cd.snow=s.snow;cd.measurement=snowMeasure(s.snow);}
   return cd;}
 function obsSubLabel(){const s=obsState;if(s.type==='avalanche')return s.avalanche.characteristics.size!=='unknown'?('Lawine '+obsSizeMeta(s.avalanche.characteristics.size).l):'Lawine';if(s.type==='whumpf')return 'Wumm';if(s.type==='wind_slab')return 'Triebschnee';if(s.type==='snow')return snowKindLabel(s.snow.kind)||'Schnee';return 'Beobachtung';}
