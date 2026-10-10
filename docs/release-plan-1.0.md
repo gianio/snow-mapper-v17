@@ -39,11 +39,11 @@ Priorität: **P0** = Blocker · **P1** = muss vor Einreichung · **P2** = wenn Z
 
 | Thema | Ist-Zustand | Handlungsbedarf |
 |---|---|---|
-| Live-Daten | Boot-Loader setzt `isDemo=true` (Z. ~1115) — App startet auf Demo-Datensatz | **P0** Default umdrehen |
-| Registrierung | Passwort nur **einmal** eingeben, kein Wiederholen-Feld | **P0** |
+| Live-Daten | ~~Boot-Loader setzt `isDemo=true`~~ → Live ist Standard, Demo nur über `?demo` / Einstellungen | ✅ |
+| Registrierung | Passwort zweimal, Validierung, bekannte E-Mail erkannt | ✅ |
 | Bestätigung | 6-stelliger Code via `verifyOtp` ✅, hängt aber am Supabase-Template | **P0** Template prüfen |
-| Passwort zurücksetzen | **Link**-basiert (`resetPasswordForEmail` + `redirectTo`) — in der iOS-WebView fragil | **P0** auf Code umbauen |
-| Rate-Limit Login | Kein clientseitiges Sperren nach Fehlversuchen | **P0** |
+| Passwort zurücksetzen | Mit 6-stelligem Code (E-Mail → Code → neues Passwort ×2 → angemeldet) | ✅ (Supabase-Template noch umstellen) |
+| Rate-Limit Login | 3 Fehler → 5 Min. Sperre mit Countdown (Login, Code, Reset, Erneut senden) | ✅ Client · offen: Server |
 | Face ID | Als **App-Sperre** vorhanden, aber kein Speichern des Passworts / Auto-Login per Face ID | **P0** |
 | Layer | 16 Layer/Ansichten (Basis + 9 Skiqualität-Unteransichten) | **P1** reduzieren |
 | Tabs | Karte · Touren · Aufzeichnen · Feed · Melden | **P1** reduzieren |
@@ -55,9 +55,16 @@ Priorität: **P0** = Blocker · **P1** = muss vor Einreichung · **P2** = wenn Z
 | Übersetzungen | ~670 Einträge DE→EN/FR/IT, neueste Texte teils ohne Übersetzung | **P1** |
 | Fehler-Tracking | Sentry-Stub vorhanden, **DSN leer** | **P0** |
 
+### Unterwegs gefundene und behobene Fehler
+- [x] **Neue Nutzer sahen weder Willkommens-Ablauf noch Disclaimer:** `dismissIntro()` lief beim Start, bevor `ONB_SLIDES`/`onb` deklariert waren (TDZ-Fehler `Cannot access 'onb' before initialization`). Jetzt nach dem Laden aufgerufen.
+- [x] «Zum Home-Bildschirm hinzufügen» legte sich über das offene Anmeldefenster → wartet jetzt, bis Dialoge geschlossen sind
+- [x] Anmeldefenster auf iPhone SE: scrollbar (Tastatur), Safe-Area-Abstände, leeres rotes Fehlerfeld ausgeblendet
+- [ ] Alte Coach-Marks (`#coach`, z-index 8000) liegen über allen Dialogen → mit Kap. 10 entfernen
+
 ### 0.1 Branch & Arbeitsweise
 - [x] Branch `release/1.0` von `main` erstellt (Stand nach Merge von gianio/snow-mapper-v17#117) und gepusht; Arbeitsstand sauber
-- [x] Release-Arbeit läuft ab jetzt **nur** auf `release/1.0`; Abschluss per PR nach `main` (gianio/snow-mapper-v17#118)
+- [x] Release-Arbeit läuft ab jetzt **nur** auf `release/1.0`; Plan per gianio/snow-mapper-v17#118 nach `main` gemergt, Umsetzung in Folge-PRs
+- [x] CI: `validate.yml` läuft auf jedem PR nach `main`; `deploy.yml` (GitHub Pages) erst nach dem Merge in `main` — der Branch selbst wird nicht ausgeliefert
 - [ ] Jedes Kapitel = eigener, kleiner Commit-Block; nach jedem Block `validate.yml` grün
 - [ ] Code-Freeze für neue Features ab **27. Oktober** — danach nur noch Fixes
 - [ ] Version festlegen: `1.0.0`, Build-Nummer pro TestFlight-Upload hochzählen
@@ -123,54 +130,54 @@ und eine verständliche Fehlermeldung.
 - [ ] Fortschritt pro Schritt speichern (App-Kill mitten im Onboarding → setzt dort fort)
 
 ### 2.2 Registrieren
-- [ ] Felder: E-Mail, Benutzername, **Passwort**, **Passwort wiederholen**
+- [x] Felder: E-Mail, Benutzername, **Passwort**, **Passwort wiederholen**
 - [ ] Live-Validierung: E-Mail-Format, Passwort ≥ 8 Zeichen, beide gleich, Benutzername frei (Check vor Absenden)
-- [ ] Passwort anzeigen/verbergen (Auge-Icon)
+- [x] Passwort anzeigen/verbergen (Auge-Icon)
 - [ ] `autocomplete="new-password"` / `username` korrekt → iOS-Schlüsselbund schlägt starkes Passwort vor und **speichert es**
-- [ ] Doppelklick-Schutz (Button deaktivieren während Request)
-- [ ] Bereits registrierte E-Mail → klare Meldung + direkt «Anmelden» / «Passwort vergessen» anbieten
+- [x] Doppelklick-Schutz (Button deaktivieren während Request)
+- [x] Bereits registrierte E-Mail → klare Meldung + direkt «Anmelden» / «Passwort vergessen» anbieten
 
 ### 2.3 E-Mail-Bestätigung per Code (kein Link!)
 - [ ] **Supabase → Auth → Email Templates → «Confirm signup»:** nur `{{ .Token }}` (6-stelliger Code), **keinen** `{{ .ConfirmationURL }}`
 - [ ] Template **«Reset password»** ebenfalls auf `{{ .Token }}` umstellen
 - [ ] Template **«Magic Link»** / «Change email» prüfen (gleich)
 - [ ] Eigener SMTP-Absender (z. B. Resend/Postmark) — Supabase-Standard-SMTP ist auf wenige Mails/h limitiert → **P0 für Launch**
-- [ ] Code-Eingabe: 6 Einzelfelder oder ein Feld mit `autocomplete="one-time-code"` + `inputmode="numeric"` (iOS füllt Code aus Mail-App vor)
-- [ ] Code einfügen aus Zwischenablage funktioniert
-- [ ] «Code erneut senden» mit **60-s-Countdown**
-- [ ] «Falsche E-Mail? Ändern» → zurück zum Formular, Eingaben bleiben erhalten
-- [ ] App geschlossen während Code-Schritt → beim nächsten Start direkt wieder im Code-Schritt
-- [ ] Code abgelaufen → klare Meldung + neuer Code
+- [x] Code-Eingabe: 6 Einzelfelder oder ein Feld mit `autocomplete="one-time-code"` + `inputmode="numeric"` (iOS füllt Code aus Mail-App vor)
+- [x] Code einfügen aus Zwischenablage funktioniert
+- [x] «Code erneut senden» mit **60-s-Countdown**
+- [x] «Falsche E-Mail? Ändern» → zurück zum Formular, Eingaben bleiben erhalten
+- [x] App geschlossen während Code-Schritt → beim nächsten Start direkt wieder im Code-Schritt
+- [x] Code abgelaufen → klare Meldung + neuer Code
 
 ### 2.4 Nach Bestätigung: Face ID + Passwort speichern
-- [ ] Direkt nach erfolgreicher Bestätigung automatisch angemeldet (Session aus `verifyOtp`)
-- [ ] Angebot: **«Mit Face ID anmelden?»** — falls `BiometricAuth.checkBiometry()` verfügbar; sonst Schritt still überspringen
+- [x] Direkt nach erfolgreicher Bestätigung automatisch angemeldet (Session aus `verifyOtp`)
+- [x] Angebot: **«Mit Face ID anmelden?»** — falls `BiometricAuth.checkBiometry()` verfügbar; sonst Schritt still überspringen
 - [ ] Credentials sicher speichern: **iOS Keychain** (Capacitor `@capacitor-community/secure-storage` o. ä.) — **niemals** `localStorage`
 - [ ] Speichern: Supabase **Refresh-Token** im Keychain, geschützt mit Biometrie (`kSecAccessControlBiometryCurrentSet`) — nicht das Klartext-Passwort
 - [ ] Zusätzlich iOS-Passwort-Autofill nutzen (Schlüsselbund speichert E-Mail/Passwort selbst) → Associated Domains `webcredentials:` einrichten
 - [ ] Web/PWA-Fallback: kein Face ID, Session bleibt via Supabase-Persistenz
 
 ### 2.5 Wiederkehrender Nutzer — automatisch erkannt
-- [ ] App-Start: gültige Session → direkt Karte, kein Login-Screen
+- [x] App-Start: gültige Session → direkt Karte, kein Login-Screen
 - [ ] Session abgelaufen + Face ID aktiv → Face ID-Prompt → Refresh-Token aus Keychain → angemeldet
 - [ ] Face ID abgebrochen/fehlgeschlagen → Fallback auf Passwort-Login (E-Mail vorausgefüllt)
 - [ ] Face ID auf Gerät geändert (neues Gesicht) → Keychain-Eintrag ungültig → sauber auf Passwort zurückfallen
 - [ ] Refresh-Token serverseitig widerrufen → sauber abmelden, kein Endlos-Loop
 
 ### 2.6 Passwort zurücksetzen — mit Code, alle Schritte
-- [ ] Schritt 1: E-Mail eingeben → `resetPasswordForEmail(email)` **ohne** `redirectTo`
-- [ ] Schritt 2: 6-stelligen Code eingeben → `verifyOtp({email, token, type:'recovery'})`
-- [ ] Schritt 3: neues Passwort **zweimal** → `updateUser({password})`
+- [x] Schritt 1: E-Mail eingeben → `resetPasswordForEmail(email)` **ohne** `redirectTo`
+- [x] Schritt 2: 6-stelligen Code eingeben → `verifyOtp({email, token, type:'recovery'})`
+- [x] Schritt 3: neues Passwort **zweimal** → `updateUser({password})`
 - [ ] Schritt 4: automatisch angemeldet; Face ID-Keychain mit neuem Token aktualisieren
-- [ ] Unbekannte E-Mail → **gleiche** Erfolgsmeldung zeigen (kein Konto-Enumerieren)
-- [ ] Jeder Schritt hat «Zurück» und «Abbrechen»
-- [ ] Alten Link-Pfad (`authOnRecovery`, `type=recovery` im Hash) als Fallback behalten, bis alle alten Mails abgelaufen sind
+- [x] Unbekannte E-Mail → **gleiche** Erfolgsmeldung zeigen (kein Konto-Enumerieren)
+- [x] Jeder Schritt hat «Zurück» und «Abbrechen»
+- [x] Alten Link-Pfad (`authOnRecovery`, `type=recovery` im Hash) als Fallback behalten, bis alle alten Mails abgelaufen sind
 
 ### 2.7 Brute-Force-Schutz: mehr als 3 Fehlversuche → 5 Min. Sperre
-- [ ] **Clientseitig:** Zähler pro E-Mail für Login, Code-Eingabe und Reset; nach 3 Fehlern Button gesperrt mit sichtbarem Countdown «Erneut versuchen in 4:59»; Zustand überlebt App-Neustart
+- [x] **Clientseitig:** Zähler pro E-Mail für Login, Code-Eingabe und Reset; nach 3 Fehlern Button gesperrt mit sichtbarem Countdown «Erneut versuchen in 4:59»; Zustand überlebt App-Neustart
 - [ ] **Serverseitig (wichtig — Client allein ist umgehbar):** Supabase → Auth → Rate Limits setzen (Sign-in/OTP-Verify, E-Mails/h); zusätzlich `auth_attempts`-Tabelle + Edge Function oder Auth-Hook, der nach 3 Fehlern/5 Min. pro E-Mail **und** IP blockt
 - [ ] CAPTCHA (hCaptcha/Turnstile, in Supabase integriert) bei Registrierung und Reset aktivieren
-- [ ] Gleiche Regel für «Code erneut senden» (max. 3 pro 5 Min.)
+- [x] Gleiche Regel für «Code erneut senden» (max. 3 pro 5 Min.)
 
 ### 2.8 Test-Matrix Auth (alle Fälle manuell auf Gerät durchspielen)
 - [ ] Neuer Nutzer, alles glatt
@@ -312,7 +319,7 @@ Ziel: **einfach, aber viel Detail**. Wenige Layer, dafür scharf.
 ## 8. Release-Blocker — Infrastruktur, Build, Launch-Plan
 
 ### 8.1 Daten
-- [ ] **P0** Live-Daten als Standard (`isDemo=false`), Demo nur versteckt
+- [x] **P0** Live-Daten als Standard (`isDemo=false`), Demo nur versteckt
 - [ ] **P0** Cloudflare-Tiles: Workflow `cloudflare.yml` mit `deploy_worker` **und** `publish` ausführen, damit die Ebene «Nur Pulver» live ist; danach prüfen, dass Kacheln auf dem Gerät laden
 - [ ] **P0** `variant-a-live.yml` läuft stabil alle 6 h (letzte 10 Läufe grün)
 - [ ] **P1** Monitoring: Alarm, wenn `data/latest.json` > 12 h alt

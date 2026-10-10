@@ -1109,14 +1109,14 @@ _BOOT_SPLIT = r"""<script>
   }
   (async function(){
     try{
-      // Default view is the 1 April 2026 demo dataset; live/current weather is
-      // an explicit opt-in (Settings, or ?live=1) persisted in localStorage,
+      // Live/current weather is the default; the 1 April 2026 demo dataset is
+      // an explicit opt-in (Settings, or ?demo=1) persisted in localStorage,
       // since app.js's own demoActive() (below) can't run yet at boot time.
-      var isDemo=true;
+      var isDemo=false;
       try{
-        if(location.search.indexOf('live')>=0)isDemo=false;
-        else if(location.search.indexOf('demo')>=0)isDemo=true;
-        else if(localStorage.getItem('ssm_live')==='1')isDemo=false;
+        if(location.search.indexOf('demo')>=0)isDemo=true;
+        else if(location.search.indexOf('live')>=0)isDemo=false;
+        else if(localStorage.getItem('ssm_demo')==='1')isDemo=true;
       }catch(e){}
       var bases=(NATIVE&&REMOTE&&REMOTE.indexOf('__')!==0)?[REMOTE,'']:[''];
       var D=null,lastErr=null;
@@ -2288,19 +2288,18 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .user-pill{display:flex;align-items:center;gap:8px;min-height:40px;padding:5px 14px 5px 5px;border-radius:999px;border:1.5px solid var(--ink-100);background:var(--paper);cursor:pointer;box-shadow:0 1px 4px var(--ink-100)}
  .user-avatar{border-radius:28%!important;width:26px;height:26px;border-radius:50%;background:var(--fg);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;letter-spacing:.02em}
  .user-name{font-size:13px;font-weight:600;color:var(--fg2);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
- .auth-overlay{position:fixed;inset:0;z-index:5000;background:rgba(14,17,22,.32);display:flex;align-items:center;justify-content:center;padding:16px}
- .auth-modal{position:relative;background:var(--glass2);border-radius:var(--r-xl);padding:36px 28px 28px;width:100%;max-width:360px;box-shadow:var(--elev3),0 1px 0 rgba(255,255,255,.5) inset}
+ .auth-overlay{position:fixed;inset:0;z-index:5000;background:rgba(14,17,22,.32);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom))}
+ .auth-modal{position:relative;background:var(--glass2);border-radius:var(--r-xl);padding:36px 28px 28px;width:100%;max-width:360px;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;box-shadow:var(--elev3),0 1px 0 rgba(255,255,255,.5) inset}
  .auth-modal h2{margin:0 0 4px;font-size:24px;font-weight:800;color:var(--fg);letter-spacing:-.03em}
  .auth-note{font-size:12px;color:var(--mut);margin:4px 0 10px;line-height:1.5}
  .auth-sub{font-size:13px;color:var(--mut);margin:0 0 24px}
  .auth-modal form{display:flex;flex-direction:column;gap:10px}
- .auth-sent-ic{width:52px;height:52px;margin:2px auto 12px;border-radius:16px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--fg2)}
- .auth-sent-ic svg{width:26px;height:26px}
  .auth-forgot{display:block;width:100%;margin-top:4px;border:none;background:none;color:var(--mut);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;padding:6px}
  .auth-forgot:hover{color:var(--fg2);text-decoration:underline}
  .auth-modal input[type="text"],.auth-modal input[type="email"],.auth-modal input[type="password"]{width:100%;padding:13px 16px;border:1.5px solid var(--ink-100);border-radius:var(--r);font-size:15px;font-family:inherit;color:var(--fg);background:var(--fill);outline:none;box-sizing:border-box;transition:border-color .15s,box-shadow .15s}
  .auth-modal input:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--glow);background:var(--card)}
  .auth-err{color:#d03030;font-size:13px;padding:8px 12px;background:rgba(220,60,60,.06);border-radius:10px;min-height:0}
+ .auth-err:empty{display:none}
  .auth-btn{padding:13px;border-radius:var(--r);border:none;font-size:15px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;letter-spacing:-.01em;transition:all .15s}
  .auth-btn.primary{background:var(--fg);color:#fff}.auth-btn.primary:hover{background:#000}
  .auth-btn.ghost{background:none;color:var(--mut);margin-top:8px}
@@ -2312,6 +2311,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .auth-paste:hover{background:rgba(20,20,25,.1)}
  .auth-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;color:var(--mut);cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center}
  .auth-close:hover{background:rgba(0,0,0,.05)}
+ .auth-show{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut);margin:2px 0 6px;cursor:pointer;user-select:none}
+ .auth-show input{width:18px;height:18px;margin:0;accent-color:var(--accent,#2563eb)}
+ .auth-inline{border:none;background:none;padding:0;font:inherit;font-weight:700;color:inherit;text-decoration:underline;cursor:pointer}
+ .auth-switch button:disabled{opacity:.5;cursor:default}
  .auth-switch{text-align:center;margin-top:20px;font-size:13px;color:var(--mut)}
  .auth-switch button{background:none;border:none;color:var(--acc);font-weight:600;cursor:pointer;font-size:13px}
  .email-banner{position:fixed;top:calc(env(safe-area-inset-top,0px) + 56px);left:12px;right:12px;z-index:1200;display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:rgba(255,240,220,.95);border:1px solid rgba(200,150,50,.2);border-radius:12px;font-size:13px;color:#6a4a10;box-shadow:0 2px 8px var(--ink-100)}
@@ -4781,7 +4784,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
       <button data-v="dark" onclick="themeSet('dark')">Dunkel</button>
     </div>
     <div class="set-rows">
-      <button id="setDemo" onclick="demoToggle()" title="Standardmässig zeigt die App die Demo-Daten vom 1. April 2026. Hier auf aktuelle, echte Live-Wetterdaten umschalten."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Live-Wetterdaten verwenden<span class="st"></span></button>
+      <button id="setDemo" onclick="demoToggle()" title="Standardmässig zeigt die App aktuelle Live-Wetterdaten. Ausschalten zeigt die Demo-Daten vom 1. April 2026."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Live-Wetterdaten verwenden<span class="st"></span></button>
     </div>
     <span class="lbl-micro">Sprache</span>
     <div class="prof-seg set-lang" id="setLang" data-noi18n>
@@ -4864,7 +4867,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <input type="text" id="authUser" placeholder="Username" autocomplete="username" style="display:none"/>
 <input type="email" id="authEmail" placeholder="E-Mail" autocomplete="email" required/>
 <input type="password" id="authPass" placeholder="Passwort" autocomplete="current-password" required minlength="8"/>
-<div class="auth-err" id="authErr"></div>
+<input type="password" id="authPass2" placeholder="Passwort wiederholen" autocomplete="new-password" minlength="8" style="display:none"/>
+<label class="auth-show" id="authShowWrap"><input type="checkbox" id="authShowPw" onchange="authShowPw(this.checked)"/> Passwort anzeigen</label>
+<div class="auth-err" id="authErr" role="alert" aria-live="polite"></div>
 <button class="auth-btn primary" type="submit" id="authSubmitBtn">Anmelden</button>
 <button class="auth-forgot" type="button" id="authForgotBtn" onclick="authForgot()">Passwort vergessen?</button>
 </form>
@@ -4872,21 +4877,16 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <p class="auth-sub" id="authCodeSub">Wir haben dir einen 6-stelligen Code geschickt.</p>
   <input type="text" id="authCode" class="auth-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="––––––" oninput="authCodeInput()"/>
   <button class="auth-paste" type="button" onclick="authPasteCode()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Code aus E-Mail einfügen</button>
-  <div class="auth-err" id="authCodeErr"></div>
+  <div class="auth-err" id="authCodeErr" role="alert" aria-live="polite"></div>
   <button class="auth-btn primary" id="authCodeBtn" onclick="authVerifyCode()">Bestätigen</button>
-  <div class="auth-switch">Kein Code erhalten? <button onclick="authResendCode()">Erneut senden</button> · <button onclick="authBackToForm()">Zurück</button></div>
-</div>
-<div id="authSentBox" style="display:none">
-  <div class="auth-sent-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg></div>
-  <p class="auth-sub" style="text-align:center">Wir haben dir einen Link an <b id="authSentMail"></b> geschickt. Öffne die E-Mail und tippe auf <b>„Passwort zurücksetzen“</b> — danach kannst du hier direkt ein neues Passwort setzen.</p>
-  <p class="auth-note" style="text-align:center">Der Link öffnet die App wieder. Nichts erhalten? Schau im Spam-Ordner nach.</p>
-  <div class="auth-switch"><button onclick="authBackToForm()">Zurück zur Anmeldung</button></div>
+  <p class="auth-note" style="text-align:center">Nichts erhalten? Schau im Spam-Ordner nach.</p>
+  <div class="auth-switch">Kein Code erhalten? <button id="authResendBtn" onclick="authResendCode()">Erneut senden</button> · <button onclick="authCodeBack()">E-Mail ändern</button></div>
 </div>
 <div id="authNewPassBox" style="display:none">
   <p class="auth-sub">Wähle ein neues Passwort (mindestens 8 Zeichen).</p>
   <input type="password" id="authNewPass" placeholder="Neues Passwort" autocomplete="new-password" minlength="8"/>
   <input type="password" id="authNewPass2" placeholder="Neues Passwort wiederholen" autocomplete="new-password" minlength="8"/>
-  <div class="auth-err" id="authNewPassErr"></div>
+  <div class="auth-err" id="authNewPassErr" role="alert" aria-live="polite"></div>
   <button class="auth-btn primary" id="authNewPassBtn" onclick="authSetNewPassword()">Passwort speichern</button>
   <div class="auth-switch"><button onclick="authBackToForm()">Abbrechen</button></div>
 </div>
@@ -5483,6 +5483,43 @@ const I18N_DICT={
 "Nein":["No","Non","No"],
 "Neues Passwort":["New password","Nouveau mot de passe","Nuova password"],
 "Neues Passwort wiederholen":["Repeat new password","Répéter le nouveau mot de passe","Ripeti nuova password"],
+"Passwort wiederholen":["Repeat password", "Répéter le mot de passe", "Ripeti password"],
+"Passwort anzeigen":["Show password", "Afficher le mot de passe", "Mostra password"],
+"E-Mail ändern":["Change e-mail", "Modifier l'e-mail", "Cambia e-mail"],
+"Nichts erhalten? Schau im Spam-Ordner nach.":["Nothing arrived? Check your spam folder.", "Rien reçu ? Vérifie tes spams.", "Non hai ricevuto nulla? Controlla lo spam."],
+"Zu viele Fehlversuche. Erneut versuchen in #:#":["Too many failed attempts. Try again in #:#", "Trop de tentatives. Réessaie dans #:#", "Troppi tentativi. Riprova tra #:#"],
+"Keine Verbindung. Bitte Internet prüfen und erneut versuchen.":["No connection. Check your internet and try again.", "Pas de connexion. Vérifie Internet et réessaie.", "Nessuna connessione. Controlla internet e riprova."],
+"E-Mail oder Passwort ist falsch.":["E-mail or password is incorrect.", "E-mail ou mot de passe incorrect.", "E-mail o password errati."],
+"Diese E-Mail ist schon registriert. Melde dich an oder setze dein Passwort zurück.":["This e-mail is already registered. Sign in or reset your password.", "Cet e-mail est déjà enregistré. Connecte-toi ou réinitialise ton mot de passe.", "Questa e-mail è già registrata. Accedi o reimposta la password."],
+"Diese E-Mail ist schon registriert.":["This e-mail is already registered.", "Cet e-mail est déjà enregistré.", "Questa e-mail è già registrata."],
+"Code ungültig oder abgelaufen.":["Code invalid or expired.", "Code invalide ou expiré.", "Codice non valido o scaduto."],
+"Dieses Passwort ist aus Datenlecks bekannt. Bitte wähle ein anderes.":["This password appears in known data leaks. Please choose another.", "Ce mot de passe figure dans des fuites de données. Choisis-en un autre.", "Questa password compare in fughe di dati note. Scegline un'altra."],
+"Passwort zu schwach — mindestens 8 Zeichen.":["Password too weak — at least 8 characters.", "Mot de passe trop faible — 8 caractères minimum.", "Password troppo debole — almeno 8 caratteri."],
+"Zu viele Anfragen. Bitte kurz warten und erneut versuchen.":["Too many requests. Please wait a moment and try again.", "Trop de requêtes. Attends un instant et réessaie.", "Troppe richieste. Attendi un momento e riprova."],
+"Bitte eine gültige E-Mail-Adresse eingeben.":["Please enter a valid e-mail address.", "Saisis une adresse e-mail valide.", "Inserisci un indirizzo e-mail valido."],
+"Das neue Passwort muss sich vom alten unterscheiden.":["The new password must differ from the old one.", "Le nouveau mot de passe doit être différent de l'ancien.", "La nuova password deve essere diversa da quella vecchia."],
+"Etwas ist schiefgelaufen. Bitte erneut versuchen.":["Something went wrong. Please try again.", "Une erreur s'est produite. Réessaie.", "Qualcosa è andato storto. Riprova."],
+"Konnte E-Mail nicht senden.":["Could not send e-mail.", "Impossible d'envoyer l'e-mail.", "Impossibile inviare l'e-mail."],
+"Konnte Code nicht senden.":["Could not send code.", "Impossible d'envoyer le code.", "Impossibile inviare il codice."],
+"Konnte Passwort nicht ändern.":["Could not change password.", "Impossible de changer le mot de passe.", "Impossibile cambiare la password."],
+"Wir senden dir einen 6-stelligen Code an deine E-Mail.":["We'll send a 6-digit code to your e-mail.", "Nous t'envoyons un code à 6 chiffres par e-mail.", "Ti inviamo un codice a 6 cifre via e-mail."],
+"Code senden":["Send code", "Envoyer le code", "Invia codice"],
+"Code eingeben":["Enter code", "Saisir le code", "Inserisci codice"],
+"Sende…":["Sending…", "Envoi…", "Invio…"],
+"Registriere…":["Signing up…", "Inscription…", "Registrazione…"],
+"Melde an…":["Signing in…", "Connexion…", "Accesso…"],
+"Prüfe…":["Checking…", "Vérification…", "Verifica…"],
+"Speichere…":["Saving…", "Enregistrement…", "Salvataggio…"],
+"Benutzername: mindestens 3 Zeichen.":["Username: at least 3 characters.", "Nom d'utilisateur : 3 caractères minimum.", "Nome utente: almeno 3 caratteri."],
+"Passwort: mindestens 8 Zeichen.":["Password: at least 8 characters.", "Mot de passe : 8 caractères minimum.", "Password: almeno 8 caratteri."],
+"Die Passwörter stimmen nicht überein.":["The passwords do not match.", "Les mots de passe ne correspondent pas.", "Le password non coincidono."],
+"Erneut senden (# s)":["Send again (# s)", "Renvoyer (# s)", "Invia di nuovo (# s)"],
+"Neuer Code gesendet.":["New code sent.", "Nouveau code envoyé.", "Nuovo codice inviato."],
+"Willkommen bei Snowmapper!":["Welcome to Snowmapper!", "Bienvenue sur Snowmapper !", "Benvenuto su Snowmapper!"],
+"Mit Face ID anmelden?":["Sign in with Face ID?", "Se connecter avec Face ID ?", "Accedere con Face ID?"],
+"Du bleibst angemeldet und öffnest Snowmapper mit einem Blick — ohne Passwort. Jederzeit in den Einstellungen änderbar.":["You stay signed in and open Snowmapper with a glance — no password. Change it any time in settings.", "Tu restes connecté et ouvres Snowmapper d'un regard — sans mot de passe. Modifiable à tout moment dans les réglages.", "Resti connesso e apri Snowmapper con uno sguardo — senza password. Modificabile in qualsiasi momento nelle impostazioni."],
+"Face ID verwenden":["Use Face ID", "Utiliser Face ID", "Usa Face ID"],
+"Falls ein Konto existiert, haben wir einen 6-stelligen Code an":["If an account exists, we sent a 6-digit code to", "Si un compte existe, nous avons envoyé un code à 6 chiffres à", "Se esiste un account, abbiamo inviato un codice a 6 cifre a"],
 "Neuschnee":["New snow","Neige fraîche","Neve fresca"],
 "Neuschnee [cm] (SLF-Skala)":["New snow [cm] (SLF scale)","Neige fraîche [cm] (échelle SLF)","Neve fresca [cm] (scala SLF)"],
 "Neuschnee im Zeitfenster":["New snow in the time window","Neige fraîche dans la fenêtre","Neve fresca nella finestra"],
@@ -5601,7 +5638,7 @@ const I18N_DICT={
 "Später ▶":["Later ▶","Plus tard ▶","Più tardi ▶"],
 "Standard-Zeitfenster":["Default time window","Fenêtre par défaut","Finestra predefinita"],
 "Standardmässig blendet der Feed deine eigenen Meldungen aus, damit er die Community zeigt statt dich selbst. Aktiviere dies, um sie dort auch zu sehen.":["By default the feed hides your own reports so it shows the community rather than you. Turn this on to see them there too.","Par défaut, le fil masque tes propres observations pour montrer la communauté. Active ceci pour les y voir aussi.","Per impostazione predefinita il feed nasconde le tue segnalazioni per mostrare la community. Attivalo per vederle anche lì."],
-"Standardmässig zeigt die App die Demo-Daten vom #. April #. Hier auf aktuelle, echte Live-Wetterdaten umschalten.":["By default the app shows the demo data from # April #. Switch to current live weather data here.","Par défaut, l'app affiche les données démo du # avril #. Passe ici aux données météo actuelles.","Per impostazione predefinita l'app mostra i dati demo del # aprile #. Passa qui ai dati meteo attuali."],
+"Standardmässig zeigt die App aktuelle Live-Wetterdaten. Ausschalten zeigt die Demo-Daten vom #. April #.":["By default the app shows current live weather data. Turn off to see the demo data from # April #.","Par défaut, l'app affiche les données météo actuelles. Désactive pour voir les données démo du # avril #.","Per impostazione predefinita l'app mostra i dati meteo attuali. Disattiva per vedere i dati demo del # aprile #."],
 "Standort & Absenden":["Location & submit","Lieu & envoi","Posizione & invio"],
 "Standort wird ermittelt…":["Getting location…","Localisation…","Rilevamento posizione…"],
 "Standort nicht verfügbar":["Location not available","Position indisponible","Posizione non disponibile"],
@@ -12521,8 +12558,13 @@ function maybeA2HS(){
     if(v==='done')return;
     if(v){const o=JSON.parse(v);if(o&&o.t&&(Date.now()-o.t)<7*864e5)return;}}catch(e){}
   setTimeout(a2hsShow,700);}
+// Never on top of something the user is in the middle of (login, the
+// welcome flow, the Face ID lock, a report): wait until it is closed.
+function _userBusyOverlay(){const open=id=>{const e=document.getElementById(id);return !!e&&!e.hidden&&getComputedStyle(e).display!=='none';};
+  return open('authOverlay')||open('faceIdOffer')||open('appLock')||open('onb')||open('repSheet')||document.body.classList.contains('locked');}
 function a2hsShow(){
   const el=document.getElementById('a2hs');if(!el)return;
+  if(_userBusyOverlay()){setTimeout(a2hsShow,15000);return;}
   const ios=isIOS();
   document.getElementById('a2hsIos').style.display=ios?'':'none';
   document.getElementById('a2hsAndroid').style.display=ios?'none':'';
@@ -12611,7 +12653,12 @@ function _gotoCountry(){try{map.stop();map.invalidateSize({animate:false});
 (function(){const davos=(function(){try{return location.search.indexOf('start=davos')>=0;}catch(e){return false;}})();
   const go=davos?_gotoDavos:_gotoCountry;go();setTimeout(go,400);})();
 window.__APP_OK=true;
-setTopic('meteo',0,0);dismissIntro();
+setTopic('meteo',0,0);
+// After the rest of app.js has run: the welcome flow (ONB_SLIDES, onb) is
+// declared further down, and calling it from here synchronously hit their
+// temporal dead zone -- a brand-new user then got no welcome flow and no
+// disclaimer at all.
+setTimeout(dismissIntro,0);
 // Personal preferences (opening layer, time window, where the map lands) are
 // applied once the map and the layer strip exist.
 requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}
@@ -13020,20 +13067,19 @@ try{if(localStorage.getItem('ssm_reports')==='0'){ovOn.reports=false;map.removeL
 // vaLoad() returns immediately without touching the network.
 _afterFirstPaint(function(){try{vaLoad();}catch(e){}});
 function demoActive(){try{
-  if(location.search.indexOf('live')>=0)return false;
   if(location.search.indexOf('demo')>=0)return true;
-  if(localStorage.getItem('ssm_live')==='1')return false;
-}catch(e){}return true;}
+  if(location.search.indexOf('live')>=0)return false;
+  if(localStorage.getItem('ssm_demo')==='1')return true;
+}catch(e){}return false;}
 function demoToggle(){try{
-  const live=localStorage.getItem('ssm_live')==='1';
-  if(live)localStorage.removeItem('ssm_live');else localStorage.setItem('ssm_live','1');
+  const demo=demoActive();
+  if(demo)localStorage.removeItem('ssm_demo');else localStorage.setItem('ssm_demo','1');
+  localStorage.removeItem('ssm_live');
   const u=new URL(location.href);u.searchParams.delete('demo');u.searchParams.delete('live');
   location.href=u.toString();}catch(e){}}
 (function(){try{const b=document.getElementById('demoPill');if(!b)return;
-  // Demo is the default view now, so this needs to actually show (it was
-  // permanently [hidden] in the markup before, with nothing ever clearing
-  // that attribute) -- it's the one on-map indicator that you're looking at
-  // 1 April 2026, not live data, and doubles as a quick way back to live.
+  // The one on-map indicator that you're looking at 1 April 2026, not live
+  // data, and doubles as a quick way back to live.
   if(demoActive()){b.hidden=false;b.classList.add('on');document.getElementById('demoPillTxt').textContent='DEMO · 1.4.2026';}
   else{b.hidden=true;}}catch(e){}})();
 allReports=demoActive()?[...DEMO_REPORTS]:[];
@@ -13422,32 +13468,100 @@ if(sb){sb.auth.onAuthStateChange((ev,session)=>{
   sb.auth.getSession().then(({data})=>{authUpdateUI(data.session?.user||null);});}
 else{const fb=document.getElementById('mapFeedFab');if(fb)fb.style.display='flex';loadReportMarkers();}
 let authPendingEmail=null;
-function authShow(){authMode='login';authRender();document.getElementById('authOverlay').style.display='flex';}
+function authShow(){const p=authPendingGet();
+  if(p){authPendingEmail=p.email;authCodeType=p.type==='recovery'?'recovery':'signup';authMode='code';}else authMode='login';
+  authRender();document.getElementById('authOverlay').style.display='flex';}
 function authHide(){document.getElementById('authOverlay').style.display='none';document.getElementById('authErr').textContent='';document.getElementById('authCodeErr').textContent='';}
 function authToggle(){authMode=authMode==='login'?'register':'login';authRender();}
-function authBackToForm(){authMode='login';authRender();}
+function authBackToForm(){authMode='login';authPendingSet(null);authRender();}
 function authForgot(){authMode='forgot';authRender();}
+function authShowPw(on){['authPass','authPass2'].forEach(id=>{const el=document.getElementById(id);if(el)el.type=on?'text':'password';});}
+// "Change e-mail" from the code step: back to the form the code came from,
+// with everything the user typed still in place.
+function authCodeBack(){authMode=authCodeType==='recovery'?'forgot':'register';authPendingSet(null);authRender();
+  setTimeout(()=>{const el=document.getElementById('authEmail');if(el)el.focus();},80);}
+
+// ── Pending code step, survives an app kill ──────────────────────────────
+// Confirming the account or resetting the password both wait on a 6-digit
+// code from the mail app. If iOS kills the app meanwhile, reopening the
+// login sheet goes straight back to that step instead of the empty form.
+const AUTH_PENDING_KEY='ssm_auth_pending';
+let authCodeType='signup';
+function authPendingSet(p){try{if(p)localStorage.setItem(AUTH_PENDING_KEY,JSON.stringify(Object.assign({ts:Date.now()},p)));else localStorage.removeItem(AUTH_PENDING_KEY);}catch(e){}}
+function authPendingGet(){try{const p=JSON.parse(localStorage.getItem(AUTH_PENDING_KEY)||'null');
+  return p&&p.email&&Date.now()-p.ts<60*60e3?p:null;}catch(e){return null;}}
+function authToCode(email,type){authPendingEmail=email;authCodeType=type;authPendingSet({email,type});
+  authMode='code';authRender();authResendCooldown();
+  setTimeout(()=>{const c=document.getElementById('authCode');if(c){c.value='';c.focus();}},100);}
+
+// ── Brute-force guard: 3 failures → 5 minutes locked ─────────────────────
+// Per action and e-mail, persisted so closing the app does not reset it.
+// This is the visible half; Supabase's own auth rate limits are the half a
+// script cannot get around.
+const AUTH_FAIL_KEY='ssm_auth_fail',AUTH_MAX_FAIL=3,AUTH_LOCK_MS=5*60e3;
+function _authFails(){try{return JSON.parse(localStorage.getItem(AUTH_FAIL_KEY)||'{}')||{};}catch(e){return {};}}
+function _authFailsSave(all){try{localStorage.setItem(AUTH_FAIL_KEY,JSON.stringify(all));}catch(e){}}
+function _authFailKey(kind,email){return kind+':'+(email||'').trim().toLowerCase();}
+function authLockedFor(kind,email){const f=_authFails()[_authFailKey(kind,email)];const ms=f&&f.until?f.until-Date.now():0;return ms>0?ms:0;}
+function authFail(kind,email){const all=_authFails(),k=_authFailKey(kind,email),f=all[k]||{n:0,until:0};
+  if(f.until&&f.until<=Date.now()){f.n=0;f.until=0;}
+  f.n++;if(f.n>=AUTH_MAX_FAIL){f.n=0;f.until=Date.now()+AUTH_LOCK_MS;}
+  all[k]=f;_authFailsSave(all);return f.until>Date.now();}
+function authFailClear(kind,email){const all=_authFails();delete all[_authFailKey(kind,email)];_authFailsSave(all);}
+let _authLockTick=null;
+// Shows "try again in m:ss" and keeps the button disabled until it runs out.
+function authLockShow(kind,email,errEl,btn){
+  clearInterval(_authLockTick);
+  const upd=()=>{const ms=authLockedFor(kind,email);
+    if(ms<=0){clearInterval(_authLockTick);_authLockTick=null;if(btn)btn.disabled=false;errEl.textContent='';return;}
+    const sec=Math.ceil(ms/1000);errEl.style.color='var(--danger)';
+    errEl.textContent='Zu viele Fehlversuche. Erneut versuchen in '+Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+    if(btn)btn.disabled=true;};
+  upd();_authLockTick=setInterval(upd,1000);}
+function authLockCheck(kind,email,errEl,btn){if(authLockedFor(kind,email)>0){authLockShow(kind,email,errEl,btn);return true;}return false;}
+
+// Supabase answers in English and sometimes cryptically; map the common
+// cases to something a user can act on.
+function authErrMsg(e,fallback){const m=(e&&(e.message||e.error_description))||'';
+  if(/Failed to fetch|NetworkError|Load failed|network/i.test(m))return 'Keine Verbindung. Bitte Internet prüfen und erneut versuchen.';
+  if(/Invalid login credentials/i.test(m))return 'E-Mail oder Passwort ist falsch.';
+  if(/already registered|already been registered|already exists/i.test(m))return 'Diese E-Mail ist schon registriert. Melde dich an oder setze dein Passwort zurück.';
+  if(/expired|invalid.*(otp|token)|(otp|token).*invalid/i.test(m))return 'Code ungültig oder abgelaufen.';
+  if(/pwned|leaked|compromised|breach/i.test(m))return 'Dieses Passwort ist aus Datenlecks bekannt. Bitte wähle ein anderes.';
+  if(/Password should|weak password|at least/i.test(m))return 'Passwort zu schwach — mindestens 8 Zeichen.';
+  if(/rate limit|security purposes|too many/i.test(m))return 'Zu viele Anfragen. Bitte kurz warten und erneut versuchen.';
+  if(/valid email|invalid email|Unable to validate email/i.test(m))return 'Bitte eine gültige E-Mail-Adresse eingeben.';
+  if(/same password|different from the old/i.test(m))return 'Das neue Passwort muss sich vom alten unterscheiden.';
+  return fallback||m||'Etwas ist schiefgelaufen. Bitte erneut versuchen.';}
+const _authEmailRe=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+// ── Password reset with a code (no link) ─────────────────────────────────
+// 1 e-mail → 2 six-digit code (verifyOtp type 'recovery' signs in) →
+// 3 new password twice → 4 signed in. A link does not reliably reopen the
+// iOS app, a code always works. Unknown addresses get the same answer as
+// known ones, so the form cannot be used to probe who has an account.
 async function authSendRecovery(email){
-  const errEl=document.getElementById('authErr');
-  if(!email){errEl.textContent='Bitte E-Mail eingeben.';return;}
-  const btn=document.getElementById('authSubmitBtn');btn.disabled=true;btn.textContent='Sende…';
+  const errEl=document.getElementById('authErr');errEl.style.color='var(--danger)';
+  if(!_authEmailRe.test(email)){errEl.textContent='Bitte eine gültige E-Mail-Adresse eingeben.';return;}
+  const btn=document.getElementById('authSubmitBtn');
+  if(authLockCheck('reset',email,errEl,btn))return;
+  btn.disabled=true;btn.textContent='Sende…';
   try{
-    // Link-based reset: Supabase mails a recovery link that reopens the app;
-    // detectSessionInUrl then fires PASSWORD_RECOVERY (see authOnRecovery).
-    const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-    if(error)throw error;
-    authPendingEmail=email;authMode='sent';authRender();
-  }catch(e){errEl.textContent=e.message||'Konnte E-Mail nicht senden.';}
-  btn.disabled=false;authRender();
+    const{error}=await sb.auth.resetPasswordForEmail(email);
+    if(error&&!/not found|no user/i.test(error.message||''))throw error;
+    authFail('reset',email);// counts sends too: max 3 codes per 5 min
+    authToCode(email,'recovery');
+  }catch(e){errEl.textContent=authErrMsg(e,'Konnte E-Mail nicht senden.');}
+  btn.disabled=false;if(authMode==='forgot')authRender();
 }
-// The recovery link puts us back here with a temporary session -> let the user
-// pick a new password straight away.
+// An old-style recovery link (mails sent before the switch to codes) still
+// lands here with a temporary session -> let the user pick a new password.
 let authRecoveryPending=false;
 function authOnRecovery(){
-  authRecoveryPending=true;
+  authRecoveryPending=true;authPendingSet(null);
   try{document.getElementById('authOverlay').style.display='flex';}catch(e){}
   authMode='newpass';authRender();
-  try{history.replaceState(null,'',location.origin+location.pathname+location.search);}catch(e){}
+  try{if(/type=recovery/.test(location.hash||''))history.replaceState(null,'',location.origin+location.pathname+location.search);}catch(e){}
   setTimeout(()=>{const np=document.getElementById('authNewPass');if(np)np.focus();},80);
 }
 (function(){try{const h=location.hash||'';
@@ -13461,62 +13575,84 @@ async function authSetNewPassword(){
   try{
     const{error}=await sb.auth.updateUser({password:a});
     if(error)throw error;
-    authRecoveryPending=false;toast('Passwort geändert — du bist angemeldet.','ok');authAfterLogin();
-  }catch(e){err.textContent=e.message||'Konnte Passwort nicht ändern.';}
+    authRecoveryPending=false;document.getElementById('authNewPass').value='';document.getElementById('authNewPass2').value='';
+    toast('Passwort geändert — du bist angemeldet.','ok');authAfterLogin();
+  }catch(e){err.textContent=authErrMsg(e,'Konnte Passwort nicht ändern.');}
   btn.disabled=false;btn.textContent='Passwort speichern';
 }
 function authRender(){
   const isReg=authMode==='register',isCode=authMode==='code';
-  const isForgot=authMode==='forgot',isNew=authMode==='newpass',isSent=authMode==='sent';
-  document.getElementById('authForm').style.display=(isCode||isNew||isSent)?'none':'flex';
-  document.getElementById('authCodeBox').style.display=isCode?'block':'none';
-  document.getElementById('authNewPassBox').style.display=isNew?'block':'none';
-  document.getElementById('authSentBox').style.display=isSent?'block':'none';
-  document.getElementById('authSwitch').style.display=(isCode||isNew||isSent)?'none':'block';
-  document.getElementById('authNote').style.display=(isCode||isNew||isSent||isForgot)?'none':'';
-  document.getElementById('authClose').style.display='flex';
-  document.getElementById('authPass').style.display=isForgot?'none':'';
-  document.getElementById('authPass').required=!isForgot;
-  document.getElementById('authForgotBtn').style.display=(isReg||isForgot||isSent)?'none':'block';
-  if(isSent){document.getElementById('authTitle').textContent='E-Mail unterwegs';document.getElementById('authSub').style.display='none';
-    document.getElementById('authSentMail').textContent=authPendingEmail||'deine E-Mail';return;}
-  if(isNew){document.getElementById('authTitle').textContent='Neues Passwort';document.getElementById('authSub').style.display='none';return;}
-  if(isForgot){document.getElementById('authTitle').textContent='Passwort zurücksetzen';
-    document.getElementById('authSub').style.display='';
-    document.getElementById('authSub').textContent='Wir senden dir einen Link zum Zurücksetzen an deine E-Mail.';
-    document.getElementById('authUser').style.display='none';
-    document.getElementById('authSubmitBtn').textContent='Link senden';
-    document.getElementById('authSwitch').innerHTML='<button onclick="authBackToForm()">Zurück zur Anmeldung</button>';return;}
-  if(isCode){document.getElementById('authTitle').textContent='E-Mail bestätigen';document.getElementById('authSub').style.display='none';
-    document.getElementById('authCodeSub').textContent='Wir haben einen 6-stelligen Code an '+(authPendingEmail||'deine E-Mail')+' geschickt.';return;}
-  document.getElementById('authSub').style.display='';
-  document.getElementById('authTitle').textContent=isReg?'Account erstellen':'Anmelden';
-  document.getElementById('authSub').textContent=isReg?'Erstelle ein Konto für die Community':'Anmelden für Community & Meldungen';
-  document.getElementById('authUser').style.display=isReg?'':'none';
-  document.getElementById('authSubmitBtn').textContent=isReg?'Registrieren':'Anmelden';
-  document.getElementById('authSwitch').innerHTML=isReg?'Schon registriert? <button onclick="authToggle()">Anmelden</button>':'Kein Account? <button onclick="authToggle()">Registrieren</button>';
+  const isForgot=authMode==='forgot',isNew=authMode==='newpass';
+  const $=id=>document.getElementById(id);
+  $('authForm').style.display=(isCode||isNew)?'none':'flex';
+  $('authCodeBox').style.display=isCode?'block':'none';
+  $('authNewPassBox').style.display=isNew?'block':'none';
+  $('authSwitch').style.display=(isCode||isNew)?'none':'block';
+  $('authNote').style.display=(isCode||isNew||isForgot)?'none':'';
+  $('authClose').style.display='flex';
+  $('authPass').style.display=isForgot?'none':'';
+  $('authPass').required=!isForgot;
+  $('authPass').autocomplete=isReg?'new-password':'current-password';
+  $('authPass2').style.display=isReg?'':'none';
+  $('authPass2').required=isReg;
+  $('authShowWrap').style.display=isForgot?'none':'';
+  $('authForgotBtn').style.display=(isReg||isForgot)?'none':'block';
+  if(isNew){$('authTitle').textContent='Neues Passwort';$('authSub').style.display='none';return;}
+  if(isForgot){$('authTitle').textContent='Passwort zurücksetzen';
+    $('authSub').style.display='';
+    $('authSub').textContent='Wir senden dir einen 6-stelligen Code an deine E-Mail.';
+    $('authUser').style.display='none';
+    $('authSubmitBtn').textContent='Code senden';
+    $('authSwitch').innerHTML='<button onclick="authBackToForm()">Zurück zur Anmeldung</button>';return;}
+  if(isCode){const rec=authCodeType==='recovery';
+    $('authTitle').textContent=rec?'Code eingeben':'E-Mail bestätigen';$('authSub').style.display='none';
+    $('authCodeSub').textContent=(rec?'Falls ein Konto existiert, haben wir einen 6-stelligen Code an ':'Wir haben einen 6-stelligen Code an ')+(authPendingEmail||'deine E-Mail')+' geschickt.';return;}
+  $('authSub').style.display='';
+  $('authTitle').textContent=isReg?'Account erstellen':'Anmelden';
+  $('authSub').textContent=isReg?'Erstelle ein Konto für die Community':'Anmelden für Community & Meldungen';
+  $('authUser').style.display=isReg?'':'none';
+  $('authSubmitBtn').textContent=isReg?'Registrieren':'Anmelden';
+  $('authSwitch').innerHTML=isReg?'Schon registriert? <button onclick="authToggle()">Anmelden</button>':'Kein Account? <button onclick="authToggle()">Registrieren</button>';
 }
+let _authBusy=false;
 async function authSubmit(e){
-  e.preventDefault();if(!sb)return;
+  e.preventDefault();if(!sb||_authBusy)return;
   const email=document.getElementById('authEmail').value.trim();
   const pass=document.getElementById('authPass').value;
   const errEl=document.getElementById('authErr');errEl.textContent='';errEl.style.color='var(--danger)';
   if(authMode==='forgot'){await authSendRecovery(email);return;}
+  if(!_authEmailRe.test(email)){errEl.textContent='Bitte eine gültige E-Mail-Adresse eingeben.';return;}
+  const btn=document.getElementById('authSubmitBtn'),label=btn.textContent;
   try{
     if(authMode==='register'){
       const username=document.getElementById('authUser').value.trim();
+      const pass2=document.getElementById('authPass2').value;
       if(!username){errEl.textContent='Benutzername erforderlich';return;}
-      const{error}=await sb.auth.signUp({email,password:pass,options:{data:{username}}});
+      if(username.length<3){errEl.textContent='Benutzername: mindestens 3 Zeichen.';return;}
+      if(pass.length<8){errEl.textContent='Passwort: mindestens 8 Zeichen.';return;}
+      if(pass!==pass2){errEl.textContent='Die Passwörter stimmen nicht überein.';return;}
+      _authBusy=true;btn.disabled=true;btn.textContent='Registriere…';
+      const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username}}});
       if(error)throw error;
-      authPendingEmail=email;authMode='code';authRender();setTimeout(()=>document.getElementById('authCode').focus(),100);return;
+      // With e-mail enumeration protection Supabase answers an existing,
+      // confirmed address with a user that has no identities instead of an error.
+      if(data&&data.user&&Array.isArray(data.user.identities)&&data.user.identities.length===0){
+        errEl.innerHTML='Diese E-Mail ist schon registriert. <button type="button" class="auth-inline" onclick="authToggle()">Anmelden</button> · <button type="button" class="auth-inline" onclick="authForgot()">Passwort vergessen?</button>';return;}
+      if(data&&data.session){authAfterLogin(true);return;}// confirmations switched off
+      authToCode(email,'signup');return;
     }
+    if(authLockCheck('login',email,errEl,btn))return;
+    _authBusy=true;btn.disabled=true;btn.textContent='Melde an…';
     const{error}=await sb.auth.signInWithPassword({email,password:pass});
     if(error){
-      if(/confirm|verif/i.test(error.message||'')){authPendingEmail=email;try{await sb.auth.resend({type:'signup',email});}catch(x){}authMode='code';authRender();return;}
+      if(/confirm|verif/i.test(error.message||'')){try{await sb.auth.resend({type:'signup',email});}catch(x){}authToCode(email,'signup');return;}
+      if(/Invalid login credentials/i.test(error.message||'')&&authFail('login',email)){authLockShow('login',email,errEl,btn);return;}
       throw error;
     }
+    authFailClear('login',email);
     authAfterLogin();
-  }catch(err){errEl.textContent=err.message||'Fehler';}
+  }catch(err){errEl.textContent=authErrMsg(err,'Fehler');}
+  finally{_authBusy=false;if(!_authLockTick)btn.disabled=false;if(btn.textContent.endsWith('…'))btn.textContent=label;}
 }
 function authCodeInput(){const v=document.getElementById('authCode').value.replace(/\D/g,'').slice(0,6);document.getElementById('authCode').value=v;if(v.length===6)authVerifyCode();}
 async function authPasteCode(){
@@ -13526,21 +13662,60 @@ async function authPasteCode(){
   }catch(e){document.getElementById('authCodeErr').style.color='var(--danger)';document.getElementById('authCodeErr').textContent='Zwischenablage nicht verfügbar – Code manuell eingeben.';}
 }
 async function authVerifyCode(){
-  if(!sb||!authPendingEmail)return;
+  if(!sb||!authPendingEmail||_authBusy)return;
   const token=document.getElementById('authCode').value.trim();const err=document.getElementById('authCodeErr');err.textContent='';
-  if(token.length<6){err.style.color='var(--danger)';err.textContent='Bitte 6 Ziffern eingeben.';return;}
-  const btn=document.getElementById('authCodeBtn');btn.disabled=true;btn.textContent='Prüfe…';
+  const btn=document.getElementById('authCodeBtn'),kind='code-'+authCodeType;
+  if(authLockCheck(kind,authPendingEmail,err,btn))return;
+  if(!/^\d{6}$/.test(token)){err.style.color='var(--danger)';err.textContent='Bitte 6 Ziffern eingeben.';return;}
+  _authBusy=true;btn.disabled=true;btn.textContent='Prüfe…';
   try{
-    let r=await sb.auth.verifyOtp({email:authPendingEmail,token,type:'signup'});
-    if(r.error){const r2=await sb.auth.verifyOtp({email:authPendingEmail,token,type:'email'});if(r2.error)throw r2.error;}
-    authAfterLogin();
-  }catch(e){err.style.color='var(--danger)';err.textContent=(e.message||'Code ungültig oder abgelaufen.');}
-  btn.disabled=false;btn.textContent='Bestätigen';
+    if(authCodeType==='recovery'){
+      const r=await sb.auth.verifyOtp({email:authPendingEmail,token,type:'recovery'});if(r.error)throw r.error;
+      authFailClear(kind,authPendingEmail);authFailClear('reset',authPendingEmail);authFailClear('login',authPendingEmail);
+      authPendingSet(null);authOnRecovery();
+    }else{
+      let r=await sb.auth.verifyOtp({email:authPendingEmail,token,type:'signup'});
+      if(r.error){const r2=await sb.auth.verifyOtp({email:authPendingEmail,token,type:'email'});if(r2.error)throw r2.error;}
+      authFailClear(kind,authPendingEmail);authPendingSet(null);authAfterLogin(true);
+    }
+  }catch(e){
+    document.getElementById('authCode').value='';
+    if(!/Failed to fetch|NetworkError|Load failed/i.test(e&&e.message||'')&&authFail(kind,authPendingEmail))authLockShow(kind,authPendingEmail,err,btn);
+    else{err.style.color='var(--danger)';err.textContent=authErrMsg(e,'Code ungültig oder abgelaufen.');}
+  }
+  _authBusy=false;if(!authLockedFor(kind,authPendingEmail))btn.disabled=false;btn.textContent='Bestätigen';
 }
-async function authResendCode(){if(!sb||!authPendingEmail)return;try{await sb.auth.resend({type:'signup',email:authPendingEmail});const err=document.getElementById('authCodeErr');err.style.color='#0a8f4f';err.textContent='Neuer Code gesendet.';}catch(e){}}
-async function authAfterLogin(){
+// "Send again" is held back 60 s after every send, so an impatient tap
+// does not burn through Supabase's mail quota.
+let _authResendTick=null;
+function authResendCooldown(){const b=document.getElementById('authResendBtn');if(!b)return;
+  clearInterval(_authResendTick);let left=60;b.disabled=true;
+  const upd=()=>{if(left<=0){clearInterval(_authResendTick);b.disabled=false;b.textContent='Erneut senden';return;}b.textContent='Erneut senden ('+left+' s)';left--;};
+  upd();_authResendTick=setInterval(upd,1000);}
+async function authResendCode(){if(!sb||!authPendingEmail)return;
+  const err=document.getElementById('authCodeErr'),kind='resend-'+authCodeType;
+  if(authLockCheck(kind,authPendingEmail,err,null))return;
+  try{
+    const{error}=authCodeType==='recovery'?await sb.auth.resetPasswordForEmail(authPendingEmail):await sb.auth.resend({type:'signup',email:authPendingEmail});
+    if(error)throw error;
+    authFail(kind,authPendingEmail);// max 3 resends per 5 min
+    err.style.color='#0a8f4f';err.textContent='Neuer Code gesendet.';authResendCooldown();
+  }catch(e){err.style.color='var(--danger)';err.textContent=authErrMsg(e,'Konnte Code nicht senden.');}}
+async function authAfterLogin(isNew){
   authHide();
+  // A brand-new account is the moment to offer Face ID: from then on the
+  // session stays on the device and opens with a glance.
+  if(isNew){toast('Willkommen bei Snowmapper!','ok');
+    try{const L=lockGet();if(!(L&&L.on)&&await lockAvailable())setTimeout(authOfferFaceId,600);}catch(e){}}
 }
+function authOfferFaceId(){
+  if(document.getElementById('faceIdOffer'))return;
+  const d=document.createElement('div');d.id='faceIdOffer';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='5001';
+  d.innerHTML='<div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="faceIdT"><h2 id="faceIdT">Mit Face ID anmelden?</h2>'
+    +'<p class="auth-sub">Du bleibst angemeldet und öffnest Snowmapper mit einem Blick — ohne Passwort. Jederzeit in den Einstellungen änderbar.</p>'
+    +'<button class="auth-btn primary" onclick="lockEnable().then(()=>document.getElementById(\'faceIdOffer\').remove())">Face ID verwenden</button>'
+    +'<div class="auth-switch"><button onclick="document.getElementById(\'faceIdOffer\').remove()">Später</button></div></div>';
+  document.body.appendChild(d);}
 async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email});const b=document.getElementById('emailBanner').querySelector('button');if(b)b.textContent='Gesendet!';}
 function authMenu(){openProfile();}
 // --- Personal preferences ---------------------------------------------------
