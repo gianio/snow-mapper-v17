@@ -4504,6 +4504,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #onb,#appLock{position:fixed;inset:0;z-index:9000;display:flex;align-items:flex-end;justify-content:center;padding:16px;
    padding-bottom:calc(env(safe-area-inset-bottom,0px) + 16px)}
  #onb[hidden],#appLock[hidden]{display:none}
+ /* a tall step (the timeline gestures) scrolls inside the card instead of
+    running off the top of a small phone */
+ #onb .onb-card{max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 32px);overflow-y:auto;overscroll-behavior:contain}
  #appLock{z-index:9500;align-items:center}
  .onb-bg{position:absolute;inset:0;background:linear-gradient(170deg,#1D2D49 0%,#2D4A6E 34%,#8EA4BC 62%,#DFE5EC 82%,#F4F6F9 100%);overflow:hidden}
  .onb-bg i{position:absolute;border-radius:50%;filter:blur(40px);opacity:.75;background:#fff}
@@ -4602,6 +4605,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    display:flex;flex-direction:column;align-items:center;gap:14px}
  .feed-fabs>button{position:static!important;translate:none!important}
  .feed-fabs>button[hidden]{display:none!important}
+ .onb-gest{list-style:none;margin:4px 0 14px;padding:0;display:flex;flex-direction:column;gap:9px;text-align:left}
+ .onb-gest li{display:flex;align-items:center;gap:11px;font-size:13.5px;line-height:1.3;color:var(--fg2)}
+ .onb-gest b{color:var(--fg)}
+ .onb-gest svg{width:30px;height:30px;flex:none;padding:5px;border-radius:9px;background:var(--fill);fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--fg)}
+ .ov-slope{display:flex;flex-wrap:wrap;gap:6px 14px;padding:4px 16px 12px 66px;font:700 12px/1 Inter,system-ui;color:var(--fg2)}
+ .ov-slope span{display:inline-flex;align-items:center;gap:6px}
+ .ov-slope i{width:14px;height:14px;border-radius:4px;opacity:.8}
  .sh-sheet{max-height:86vh;height:auto!important;min-height:0!important}
  .sh-body{display:flex;flex-direction:column;gap:10px;padding-top:6px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
  .sh-post{display:flex;gap:10px;align-items:center;padding:10px;border-radius:14px;background:var(--fill)}
@@ -5323,6 +5333,19 @@ const I18N_DICT={
 "Am hilfreichsten: Übersichtsfotos der ganzen Lawine + Detailaufnahmen der Anrisskante / des Anrissgebiets. Fotos liefern automatisch Standort & Zeit.":["Most helpful: overview photos of the whole avalanche + close-ups of the crown / release area. Photos provide location & time automatically.","Le plus utile : photos d'ensemble de l'avalanche + détails de la cassure / zone de départ. Les photos fournissent lieu et heure automatiquement.","Più utili: foto d'insieme della valanga + dettagli del distacco / zona di distacco. Le foto forniscono automaticamente luogo e ora."],
 "Andere":["Other","Autre","Altro"],
 "Andere Beobachtung":["Other observation","Autre observation","Altra osservazione"],
+"Skiqualität, Neuschnee, Wind und mehr – über das Ebenen-Symbol rechts. Tippe in der Legende auf eine Farbe, um sie ein- oder auszublenden: Skiqualität startet mit «nur Pulver».":["Ski quality, new snow, wind and more – via the layers icon on the right. Tap a colour in the legend to show or hide it: ski quality starts with “powder only”.", "Qualité de ski, neige fraîche, vent et plus – via l'icône des couches à droite. Touche une couleur dans la légende pour l'afficher ou la masquer : la qualité de ski commence par « poudreuse seulement ».", "Qualità sciistica, neve fresca, vento e altro – dall'icona dei livelli a destra. Tocca un colore nella legenda per mostrarlo o nasconderlo: la qualità parte da «solo polvere»."],
+"Antippen":["Tap", "Toucher", "Tocca"],
+"setzt den Zeitpunkt":["sets the time", "choisit le moment", "imposta il momento"],
+"Griff ziehen":["Drag the handle", "Glisser la poignée", "Trascina la maniglia"],
+"verschiebt die Zeit – am Rand läuft die Leiste weiter":["moves the time – at the edge the bar keeps scrolling", "déplace le temps – au bord la barre défile", "sposta il tempo – al bordo la barra scorre"],
+"Wischen":["Swipe", "Balayer", "Scorri"],
+"blättert durch die Tage":["flips through the days", "fait défiler les jours", "scorre i giorni"],
+"Zwei Finger":["Two fingers", "Deux doigts", "Due dita"],
+"auseinander: Stunden · zusammen: ganze Prognose":["apart: hours · together: whole forecast", "écartés : heures · rapprochés : toute la prévision", "aperte: ore · chiuse: tutta la previsione"],
+"Zeitfenster":["Time window", "Fenêtre temporelle", "Finestra temporale"],
+"in der Mitte ziehen verschiebt, an den Rändern ändert die Dauer":["drag the middle to move it, the edges to change its length", "glisser au milieu la déplace, aux bords change la durée", "trascina al centro per spostarla, ai bordi per cambiarne la durata"],
+"ein Schritt ·":["one step ·", "un pas ·", "un passo ·"],
+"abspielen":["play", "lecture", "riproduci"],
 "Beitrag teilen":["Share post", "Partager la publication", "Condividi post"],
 "An Leute in Snowmapper":["To people on Snowmapper", "À des personnes sur Snowmapper", "A persone su Snowmapper"],
 "Name suchen…":["Search name…", "Chercher un nom…", "Cerca nome…"],
@@ -5898,6 +5921,7 @@ const I18N_DICT={
 "Wie sind die Bedingungen?":["How are the conditions?","Comment sont les conditions ?","Come sono le condizioni?"],
 "Wie viel frischer Triebschnee?":["How much fresh wind slab?","Combien de neige soufflée fraîche ?","Quanta neve ventata fresca?"],
 "Wie war's? Route, Verhältnisse, Gruppe …":["How was it? Route, conditions, group …","Comment c'était ? Itinéraire, conditions, groupe …","Com'è andata? Percorso, condizioni, gruppo …"],
+"Hangneigung ab 30°":["Slope from 30°","Pente dès 30°","Pendenza da 30°"],
 "Wildruhezonen":["Wildlife rest areas","Zones de tranquillité","Zone di tranquillità"],
 "Wind":["Wind","Vent","Vento"],
 "Wind Max":["Wind max","Vent max","Vento max"],
@@ -6865,6 +6889,10 @@ const OVERLAYS={
   webcams:{label:'Webcams',vector:true,attr:'Webcams © <a href="https://www.windy.com/" target="_blank" rel="noopener">windy.com</a>'},
   wildlife:{label:'Wildruhezonen',wmts:'ch.bafu.wrz-wildruhezonen_portal',op:.6,
             attr:'Wildruhezonen © BAFU'},
+  // swisstopo's slope classes from 30° (30/35/40/45°+): on top of any layer,
+  // the one map a tourer reads with every other
+  slope:{label:'Hangneigung ab 30°',wmts:'ch.swisstopo.hangneigung-ueber_30',op:.55,
+         attr:'Hangneigung © swisstopo'},
   avalanche:{label:'Lawinenbulletin',vector:true,
              attr:'Lawinenbulletin © SLF (CC BY 4.0)'},
   // Its three views are picked inside the panel rather than as separate
@@ -11756,6 +11784,7 @@ const OV_ICON={
   skitourVec:'<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18c4 0 3-6 7-6 2.5 0 2-4 2-4"/>',
   skitour:'<path d="M3 20l6-12 4 7 3-4 5 9z"/>',
   wildlife:'<path d="M7 4c0 3 2 4 5 4s5-1 5-4"/><path d="M12 8v4"/><ellipse cx="12" cy="16" rx="5" ry="4"/>',
+  slope:'<path d="M3 20h18L3 6z"/><path d="M8 20a5 5 0 0 0-2-4"/>',
   avalanche:'<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>'};
 function ovRender(){
   const g=document.getElementById('lyOverlays');if(!g)return;
@@ -11772,6 +11801,9 @@ function ovRender(){
         +' onclick="vaPickLayer(\''+lk+'\')">'+escapeHtml(names[lk]||lk)+'</button>').join('')
         +'</div>'+vaTimeHTML()+vaLegendHTML();
     }
+    // what the slope colours mean, right under the switch while it is on
+    if(k==='slope'&&ovOn[k])extra='<div class="ov-slope">'+[['#f2e33a','30–35°'],['#f39b2b','35–40°'],['#e0362c','40–45°'],['#9b3fbf','> 45°']]
+      .map(c=>'<span><i style="background:'+c[0]+'"></i>'+c[1]+'</span>').join('')+'</div>';
     const ic=OV_ICON[k]?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+OV_ICON[k]+'</svg>':'';
     return '<button type="button" id="ov_'+k+'" class="ly-ov'
       +(ovOn[k]?' on':'')+(na?' na':'')+'" role="switch" aria-checked="'+(ovOn[k]?'true':'false')+'"'
@@ -13099,8 +13131,17 @@ function toast(msg,kind){msg=trMsg(msg);const w=document.getElementById('toastWr
 // Language, a short tour of the five places, the disclaimer (must be
 // accepted), Face ID as an app lock, location. Re-runnable from settings.
 const ONB_SLIDES=[
- ['<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>','Schnee auf der Karte','Skiqualität, Pulver, Neuschnee, Wind und mehr – über das Ebenen-Symbol rechts. Die Legende zeigt, was die Farben bedeuten.'],
- ['<rect x="3" y="11" width="3" height="9" rx="1"/><rect x="8.5" y="6" width="3" height="14" rx="1"/><rect x="14" y="9" width="3" height="11" rx="1"/><path d="M19.5 4v16"/>','Zeit wählen','Unten die Zeitleiste: die letzten Tage und die Prognose für die nächsten fünf. Die Karte rechnet sofort neu.'],
+ ['<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>','Schnee auf der Karte','Skiqualität, Neuschnee, Wind und mehr – über das Ebenen-Symbol rechts. Tippe in der Legende auf eine Farbe, um sie ein- oder auszublenden: Skiqualität startet mit «nur Pulver».'],
+ ['<rect x="3" y="11" width="3" height="9" rx="1"/><rect x="8.5" y="6" width="3" height="14" rx="1"/><rect x="14" y="9" width="3" height="11" rx="1"/><path d="M19.5 4v16"/>','Zeit wählen','Unten die Zeitleiste: die letzten Tage und die Prognose für die nächsten fünf. Die Karte rechnet sofort neu.',
+  // the timeline's gestures, the way the code handles them (Timeline Drag)
+  '<ul class="onb-gest">'
+  +'<li><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3"/><path d="M12 12v8"/><path d="M8 20h8"/></svg><span><b>Antippen</b> setzt den Zeitpunkt</span></li>'
+  +'<li><svg viewBox="0 0 24 24"><path d="M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4"/></svg><span><b>Griff ziehen</b> verschiebt die Zeit – am Rand läuft die Leiste weiter</span></li>'
+  +'<li><svg viewBox="0 0 24 24"><path d="M5 12c3-4 11-4 14 0"/><path d="M15 8l4 4-4 4"/></svg><span><b>Wischen</b> blättert durch die Tage</span></li>'
+  +'<li><svg viewBox="0 0 24 24"><path d="M7 7l-3 5 3 5M17 7l3 5-3 5M4 12h16"/></svg><span><b>Zwei Finger</b> auseinander: Stunden · zusammen: ganze Prognose</span></li>'
+  +'<li><svg viewBox="0 0 24 24"><rect x="8" y="5" width="8" height="14" rx="2"/><path d="M3 9v6M21 9v6"/></svg><span><b>Zeitfenster</b> in der Mitte ziehen verschiebt, an den Rändern ändert die Dauer</span></li>'
+  +'<li><svg viewBox="0 0 24 24"><path d="M9 6l-4 6 4 6M15 6l4 6-4 6"/></svg><span><b>‹ ›</b> ein Schritt · <b>▶</b> abspielen</span></li>'
+  +'</ul>'],
  ['<path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/>','Touren finden','Im Tab Touren: Umkreis, Höhenmeter und Steilheit wählen – sortiert nach Pulver- oder Sulz-Anteil aus dem Modell.'],
  ['<path d="M12 5v14M5 12h14"/>','Melden & zeichnen','Mit Plus malst du eine Schnee-Karte, meldest eine Beobachtung oder schickst einen Snowp an Freunde.'],
  ['<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.4 2.4M9.5 2.8h5"/>','Aufzeichnen','Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil.'],
@@ -13132,7 +13173,7 @@ function onbRender(){const el=document.getElementById('onbCard');if(!el)return;c
       +'<button class="onb-pri" onclick="onbNext()">Los geht\'s</button>';}
   else if(k==='tour'){const sl=ONB_SLIDES.filter(x=>!(x[1]==='Aufzeichnen'&&document.body.classList.contains('desk'))),S=sl[onb.slide];
     h='<div class="onb-hero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+S[0]+'</svg></div>'
-      +'<h1>'+S[1]+'</h1><p>'+S[2]+'</p>'+onbDots(sl.length,onb.slide)
+      +'<h1>'+S[1]+'</h1><p>'+S[2]+'</p>'+(S[3]||'')+onbDots(sl.length,onb.slide)
       +'<button class="onb-pri" onclick="onbNext()">Weiter</button>'
       +'<button class="onb-link" onclick="onb.step++;onb.slide=0;onbRender()">Tour überspringen</button>';}
   else if(k==='disc'){const ok=!!onb.disc;
