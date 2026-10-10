@@ -808,7 +808,7 @@ def _slf_avalanche():
 
 
 def _slf_stations(times, n_stations, period_days):
-    from data_connectors.slf_stations import get_stations, attach_latest, fetch_hs_series
+    from data_connectors.slf_stations import get_stations, attach_latest, fetch_series
     print("[INT] SLF/IMIS-Stationen ...")
     try:
         stns = get_stations()
@@ -826,18 +826,31 @@ def _slf_stations(times, n_stations, period_days):
     wind = wind[: n_stations - len(snow)]
     sel = snow + wind
     keys = [t[:13] for t in times]
+    # Rundung je Reihe: haelt den Datenblob klein (Messgenauigkeit reicht).
+    digits = {"hs": 0, "ta": 1, "tss": 1, "vw": 1, "vwmax": 1, "dw": 0}
     out = []
     for s in sel:
-        series = fetch_hs_series(s.code, max(2, period_days + 1)) if s.hs_now is not None else {}
-        hs = [series.get(k) for k in keys]
-        out.append({"code": s.code, "label": s.label, "lat": round(s.lat, 4),
-                    "lon": round(s.lon, 4), "elev": round(s.elevation),
-                    "ta": s.ta, "tss": s.tss, "hs_now": s.hs_now,
-                    "vw": s.vw, "dw": s.dw,
-                    "hs": hs if any(v is not None for v in hs) else None})
+        # Stuendliche Messreihen fuer das Klick-Panel, auf die Zeitachse der App
+        # gelegt (Index = Stunde in `times`). Nur Vergangenheit -> die Liste
+        # endet beim letzten Messwert, die Zukunft wird gar nicht erst mitgeschickt.
+        series = fetch_series(s.code, max(2, period_days + 1))
+        o = {"code": s.code, "label": s.label, "lat": round(s.lat, 4),
+             "lon": round(s.lon, 4), "elev": round(s.elevation),
+             "ta": s.ta, "tss": s.tss, "hs_now": s.hs_now,
+             "vw": s.vw, "dw": s.dw, "hs": None}
+        for key, nd in digits.items():
+            vals = [series.get(key, {}).get(k) for k in keys]
+            last = max((i for i, v in enumerate(vals) if v is not None), default=-1)
+            if last < 0:
+                continue
+            o[key if key == "hs" else key + "_s"] = [
+                None if v is None else (round(v) if nd == 0 else round(v, nd))
+                for v in vals[: last + 1]]
+        out.append(o)
     nhs = sum(1 for o in out if o["hs"] is not None)
-    nv = sum(1 for o in out if o["vw"] is not None)
-    print(f"[INT] {len(out)} SLF-Stationen (HS-Reihe: {nhs}, Wind: {nv}).")
+    nta = sum(1 for o in out if o.get("ta_s"))
+    nv = sum(1 for o in out if o.get("vw_s"))
+    print(f"[INT] {len(out)} SLF-Stationen (Reihen: HS {nhs}, Temp {nta}, Wind {nv}).")
     return out
 
 
@@ -2114,6 +2127,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .insp-sec:last-child{border-bottom:none}
  .insp-sec h4{margin:0 0 9px;font-size:13px;font-weight:800;color:var(--fg);letter-spacing:-.01em;display:flex;justify-content:space-between;align-items:baseline}
  .insp-sec h4 em{font-style:normal;font-weight:700;color:var(--acc2);font-size:12.5px}
+ .stn-now{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+ .stn-v{background:var(--fill);border-radius:12px;padding:8px 10px;min-width:0;display:flex;flex-direction:column;gap:2px}
+ .stn-v span{font-size:11.5px;font-weight:700;color:var(--mut)}
+ .stn-v b{font-size:17px;font-weight:800;color:var(--fg);letter-spacing:-.01em;white-space:nowrap}
+ .stn-v em{font-style:normal;font-size:11.5px;font-weight:600;color:var(--mut)}
  .insp-sec canvas{display:block;width:100%}
  .insp-hscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;flex:1;min-width:0}
  .insp-hint{font-size:10.5px;color:var(--mut);text-align:center;margin-top:5px}
@@ -5470,6 +5488,23 @@ const I18N_DICT={
 "Merken":["Save","Enregistrer","Salva"],
 "Messstationen":["Weather stations","Stations de mesure","Stazioni di misura"],
 "Messstationen ein/aus":["Weather stations on/off","Stations de mesure on/off","Stazioni di misura on/off"],
+"Jetzt gemessen":["Measured now", "Mesuré maintenant", "Misurato ora"],
+"aktuell":["current", "actuel", "attuale"],
+"vor # h":["# h ago", "il y a # h", "# h fa"],
+"Neuschnee 24 h":["New snow 24 h", "Neige fraîche 24 h", "Neve fresca 24 h"],
+"Luft":["Air", "Air", "Aria"],
+"Böe":["Gust", "Rafale", "Raffica"],
+"gemessen":["measured", "mesuré", "misurato"],
+"Zuwachs pro Stunde":["increase per hour", "hausse par heure", "aumento orario"],
+"Mittel · Böe":["mean · gust", "moyenne · rafale", "media · raffica"],
+"Messstation #":["Station #", "Station #", "Stazione #"],
+"# Tage Verlauf":["# days history", "# jours d'historique", "# giorni di storico"],
+"# Tag Verlauf":["# day history", "# jour d'historique", "# giorno di storico"],
+"Für diese Station liegt kein Verlauf vor — nur die aktuellen Werte.":["No history for this station — current values only.", "Pas d'historique pour cette station — valeurs actuelles uniquement.", "Nessuno storico per questa stazione — solo valori attuali."],
+"Messwerte: WSL-Institut für Schnee- und Lawinenforschung SLF (IMIS), CC BY 4.0.":["Measurements: WSL Institute for Snow and Avalanche Research SLF (IMIS), CC BY 4.0.", "Mesures : Institut WSL pour l'étude de la neige et des avalanches SLF (IMIS), CC BY 4.0.", "Misure: Istituto WSL per lo studio della neve e delle valanghe SLF (IMIS), CC BY 4.0."],
+"Kein Neuschnee gemessen":["No new snow measured", "Pas de neige fraîche mesurée", "Nessuna neve fresca misurata"],
+"● Mittel":["● Mean", "● Moyenne", "● Media"],
+"┄ Böe":["┄ Gust", "┄ Rafale", "┄ Raffica"],
 "Min":["Min","Min","Min"],
 "Minimieren":["Minimise","Réduire","Riduci"],
 "Mittel":["Mean","Moyenne","Media"],
@@ -10913,19 +10948,6 @@ function windStat(k){let mn=1e9,mx=-1e9,su=0,c=0,ss=0,sc=0;
   return{v:(stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c)),dir:(Math.atan2(ss,sc)*180/Math.PI+360)%360};}
 function renderWind(){windArr.clearLayers();}
 function newSnowInt(s){if(!s.hs)return null;let sum=0,have=false;for(let t=a+1;t<b;t++){const h0=s.hs[t-1],h1=s.hs[t];if(h0!=null&&h1!=null){if(h1-h0>0.5)sum+=h1-h0;have=true;}}return have?sum:null;}
-function stationCard(s){const ns=newSnowInt(s);
-  const row=(k,v)=>v==null?"":`<span class="k">${k}</span><span>${v}</span>`;
-  const dirTxt=s.dw!=null?["N","NE","E","SE","S","SW","W","NW"][Math.round(s.dw/45)%8]:null;
-  const windStr=s.vw!=null?(dirTxt?dirTxt+" ":"")+(s.vw*3.6).toFixed(0)+" km/h":null;
-  return `<div class="scard"><b>${s.label}</b><br><span class="sub">${s.code} · ${s.elev} m asl</span>
-    <div class="g">
-    ${row("Schneehöhe",s.hs_now!=null?s.hs_now.toFixed(0)+" cm":null)}
-    ${row("New Snow",ns!=null?"+"+ns.toFixed(0)+" cm":null)}
-    ${row("Air Temp",s.ta!=null?s.ta.toFixed(1)+" °C":null)}
-    ${row("Snow Surface",s.tss!=null?s.tss.toFixed(1)+" °C":null)}
-    ${row("Wind",windStr)}
-    ${row("Wind Dir.",s.dw!=null?s.dw.toFixed(0)+"°":null)}
-    </div></div>`;}
 // Detail tiers by zoom: 0 = tiny dot, 1 = simple value pill, 2 = full multi-value card
 function detailTier(){const z=map.getZoom();if(z<9.4)return 0;if(z<11.2||isMobile)return 1;return 2;}
 function renderStations(){stnGroup.clearLayers();if(!showStn)return;
@@ -10963,7 +10985,7 @@ function renderStations(){stnGroup.clearLayers();if(!showStn)return;
         '<div class="s-b">'+pill(bot,'#f07070')+'</div></div>';
       iSize=[104,52];iAnc=[52,26];}
     const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:html,iconSize:iSize,iconAnchor:iAnc}),zIndexOffset:500});
-    m.bindPopup(stationCard(s),{maxWidth:isMobile?240:260});m.addTo(stnGroup);}
+    m.on('click',ev=>{L.DomEvent.stopPropagation(ev);stnOpen(s.code);});m.addTo(stnGroup);}
 }
 // A viewport-scoped raster has to follow the viewport.
 let _progMoveT=null;
@@ -12156,7 +12178,7 @@ function inspAutoRefresh(){try{
   const p=document.getElementById('inspPanel');
   if(inspLast&&p&&p.classList.contains('open')){
     const st=p.scrollTop;
-    inspOpen(inspLast.lat,inspLast.lon);
+    if(inspLast.stn)stnOpen(inspLast.stn);else inspOpen(inspLast.lat,inspLast.lon);
     p.scrollTop=st;
   }
 }catch(e){}}
@@ -12397,6 +12419,140 @@ function icRad(cv,p){const{ctx,w,h}=icSetup(cv,92);
     ctx.fillText(pct+'%',x+bw/2,baseY-bh-4);
     ctx.fillStyle='rgba(115,108,97,.8)';ctx.font='600 9px Inter';
     ctx.fillText(d2.lbl,x+bw/2,h-4);});}
+// ── Messstation: Klick-Panel mit Messreihen ─────────────────────────────
+// A station opens the same panel as a tap on the map, filled with what the
+// station measured instead of the model: current values on top, then the
+// hourly series (as far back as the export carries them, the SLF API gives
+// at most 7 days) as the same kind of charts.
+function _stnRange(s){let t0=1e9,t1=-1;
+  for(const k of ['hs','ta_s','tss_s','vw_s']){const v=s[k];if(!v)continue;
+    for(let i=0;i<v.length;i++)if(v[i]!=null){if(i<t0)t0=i;if(i>t1)t1=i;}}
+  return t1<0?null:{t0,t1:t1+1};}
+function _stnCur(arr){if(!arr)return null;for(let i=arr.length-1;i>=0;i--)if(arr[i]!=null)return arr[i];return null;}
+function _stnAgo(s){const r=_stnRange(s);if(!r)return '';
+  const d=new Date(M.times[r.t1-1]+'Z'),h=Math.round((Date.now()-d.getTime())/36e5);
+  if(h<=1)return 'aktuell';if(h<=48)return 'vor '+h+' h';
+  return 'Stand '+d.toLocaleDateString(LOCALE(),{day:'numeric',month:'short'});}
+function stnOpen(code){const s=(M.stations||[]).find(x=>x.code===code);if(!s)return;
+  if(document.body.classList.contains('feed-side')){feedClose();return;}
+  inspLast={stn:code};document.body.classList.add('insp-open');
+  if(inspMarker){map.removeLayer(inspMarker);inspMarker=null;}
+  const r=_stnRange(s),days=r?Math.max(1,Math.round((r.t1-r.t0)/24)):0;
+  const ta=s.ta!=null?s.ta:_stnCur(s.ta_s),tss=s.tss!=null?s.tss:_stnCur(s.tss_s);
+  const vw=s.vw!=null?s.vw:_stnCur(s.vw_s),dw=s.dw!=null?s.dw:_stnCur(s.dw_s),gust=_stnCur(s.vwmax_s);
+  const hs=s.hs_now!=null?s.hs_now:_stnCur(s.hs);
+  let ns24=null;if(s.hs){const e=s.hs.length;let sum=0,have=false;
+    for(let t=Math.max(1,e-24);t<e;t++){const h0=s.hs[t-1],h1=s.hs[t];if(h0!=null&&h1!=null){have=true;if(h1-h0>0.5)sum+=h1-h0;}}
+    if(have)ns24=sum;}
+  const dirTxt=dw!=null?['N','NO','O','SO','S','SW','W','NW'][Math.round(dw/45)%8]:null;
+  const tile=(k,v,sub)=>v==null?'':'<div class="stn-v"><span>'+k+'</span><b>'+v+'</b>'+(sub?'<em>'+sub+'</em>':'')+'</div>';
+  const now='<div class="insp-sec"><h4>Jetzt gemessen <em>'+_stnAgo(s)+'</em></h4><div class="stn-now">'
+    +tile('Schneehöhe',hs!=null?hs.toFixed(0)+' cm':null)
+    +tile('Neuschnee 24 h',ns24!=null?'+'+ns24.toFixed(0)+' cm':null)
+    +tile('Luft',ta!=null?ta.toFixed(1)+' °C':null)
+    +tile('Oberfläche',tss!=null?tss.toFixed(1)+' °C':null)
+    +tile('Wind',vw!=null?(vw*3.6).toFixed(0)+' km/h':null,dirTxt?dirTxt+' · '+dw.toFixed(0)+'°':null)
+    +tile('Böe',gust!=null?(gust*3.6).toFixed(0)+' km/h':null)
+    +'</div></div>';
+  const has=k=>s[k]&&s[k].some(v=>v!=null);
+  const sec={
+    depth:has('hs')?'<div class="insp-sec"><h4>Schneehöhe <em>gemessen</em></h4><canvas id="scDepth"></canvas></div>':'',
+    snow:has('hs')?'<div class="insp-sec"><h4>Neuschnee <em>Zuwachs pro Stunde</em></h4><canvas id="scNew"></canvas></div>':'',
+    temp:(has('ta_s')||has('tss_s'))?'<div class="insp-sec"><h4>Temperatur <em>Luft · Oberfläche</em></h4><canvas id="scTemp"></canvas></div>':'',
+    wind:has('vw_s')?'<div class="insp-sec"><h4>Wind <em>Mittel · Böe</em></h4><canvas id="scWind"></canvas></div>'
+      +(has('dw_s')?'<div class="insp-sec"><h4>Windrose <em>gemessen</em></h4><canvas id="scRose"></canvas></div>':''):''};
+  const first=INSP_FIRST[layer],base=['depth','snow','temp','wind'];
+  const order=(first&&base.indexOf(first)>=0)?[first].concat(base.filter(k=>k!==first)):base;
+  const charts=order.map(k=>sec[k]).join('');
+  const pan=document.getElementById('inspPanel');
+  pan.innerHTML='<div class="insp-grab" aria-hidden="true"></div>'
+    +'<div class="insp-head"><div class="insp-t"><b>'+escapeHtml(s.label||s.code)+'</b>'
+    +'<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+s.elev+' m</span><span class="insp-chip accent">Messstation '+escapeHtml(s.code)+'</span>'
+    +(days?'<span class="insp-chip">'+days+' '+(days===1?'Tag':'Tage')+' Verlauf</span>':'')+'</div>'
+    +'</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'
+    +'<div class="insp-body">'+now+(charts||'<div class="insp-sec"><div class="prog-note">Für diese Station liegt kein Verlauf vor — nur die aktuellen Werte.</div></div>')
+    +'<div class="insp-sec"><div class="prog-note">Messwerte: WSL-Institut für Schnee- und Lawinenforschung SLF (IMIS), CC BY 4.0.</div></div></div>';
+  pan.classList.add('open');
+  requestAnimationFrame(()=>{try{window._inspClamp();}catch(e){}
+    if(!r)return;const t0=r.t0,t1=r.t1;
+    const el=id=>document.getElementById(id);
+    if(el('scDepth'))scLine(el('scDepth'),s.hs,t0,t1,{h:80,col:cvTok('--accent-meteo','#2A8FD8'),fill:'rgba(42,143,216,.13)',unit:' cm',dig:0,pill:'last',zero:true});
+    if(el('scNew'))scNewSnow(el('scNew'),s.hs,t0,t1);
+    if(el('scTemp'))scTemp(el('scTemp'),s.ta_s,s.tss_s,t0,t1);
+    if(el('scWind'))scWind(el('scWind'),s.vw_s,s.vwmax_s,t0,t1);
+    if(el('scRose'))scRose(el('scRose'),s.dw_s,s.vw_s,t0,t1);});
+}
+// Series charts: same look as the map-click charts (icDepth/icTemp...), but
+// fed an array indexed by hour in M.times. Gaps (null) break the line.
+function _scPath(ctx,arr,t0,t1,xOf,yOf){let pen=false;ctx.beginPath();
+  for(let t=t0;t<t1;t++){const v=arr?arr[t]:null;if(v==null){pen=false;continue;}
+    const x=xOf(t),y=yOf(v);if(pen)ctx.lineTo(x,y);else{ctx.moveTo(x,y);pen=true;}}}
+function _scNow(ctx,t0,t1,xOf,topY,baseY){if(nowIdx<t0||nowIdx>=t1)return;const x=xOf(nowIdx);
+  ctx.strokeStyle='rgba(18,21,26,.4)';ctx.setLineDash([2,2]);ctx.beginPath();ctx.moveTo(x,topY);ctx.lineTo(x,baseY);ctx.stroke();ctx.setLineDash([]);}
+function scLine(cv,arr,t0,t1,o){const{ctx,w,h}=icSetup(cv,o.h||80);const LG=4,baseY=h-16,topY=26,plotW=w-LG-4,n=Math.max(2,t1-t0);
+  let mn=1e9,mx=-1e9,last=null,lastT=t0,mxT=t0;
+  for(let t=t0;t<t1;t++){const v=arr[t];if(v==null)continue;if(v<mn)mn=v;if(v>mx){mx=v;mxT=t;}last=v;lastT=t;}
+  if(mx<mn)return;if(o.zero)mn=Math.min(0,mn);const rng=Math.max(1,mx-mn);
+  const xOf=t=>LG+(t-t0)/(n-1)*plotW,yOf=v=>baseY-(v-mn)/rng*(baseY-topY);
+  icDayGrid(ctx,LG,plotW,h,t0,t1,baseY);
+  ctx.strokeStyle='rgba(18,21,26,.12)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(LG,baseY+.5);ctx.lineTo(w,baseY+.5);ctx.stroke();
+  if(o.fill){let s0=-1;for(let t=t0;t<=t1;t++){const v=t<t1?arr[t]:null;
+      if(v!=null&&s0<0)s0=t;
+      if((v==null||t===t1)&&s0>=0){const e=t-1;ctx.beginPath();ctx.moveTo(xOf(s0),baseY);for(let k=s0;k<=e;k++)ctx.lineTo(xOf(k),yOf(arr[k]));ctx.lineTo(xOf(e),baseY);ctx.closePath();ctx.fillStyle=o.fill;ctx.fill();s0=-1;}}}
+  _scPath(ctx,arr,t0,t1,xOf,yOf);ctx.strokeStyle=o.col;ctx.lineWidth=2.2;ctx.lineJoin='round';ctx.stroke();
+  const pt=o.pill==='max'?mxT:lastT,pv=o.pill==='max'?mx:last;
+  icPill(ctx,xOf(pt),yOf(pv)-21,pv.toFixed(o.dig||0)+o.unit,o.col,w);}
+function scNewSnow(cv,hs,t0,t1){const{ctx,w,h}=icSetup(cv,86);const n=Math.max(1,t1-t0),LG=4,baseY=h-16,plotW=w-LG-4;
+  const vals=[];let mx=0,mi=0,tot=0;
+  for(let t=t0;t<t1;t++){const h0=t>0?hs[t-1]:null,h1=hs[t];const d=(h0!=null&&h1!=null&&h1-h0>0.5)?h1-h0:0;vals.push(d);tot+=d;if(d>mx){mx=d;mi=t-t0;}}
+  icDayGrid(ctx,LG,plotW,h,t0,t1,baseY);
+  ctx.strokeStyle='rgba(18,21,26,.12)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(LG,baseY+.5);ctx.lineTo(w,baseY+.5);ctx.stroke();
+  if(mx<=0){ctx.fillStyle='rgba(115,108,97,.85)';ctx.font='600 11px Inter';ctx.textAlign='center';ctx.fillText('Kein Neuschnee gemessen',w/2,baseY/2+6);return;}
+  const bw=plotW/n,g=ctx.createLinearGradient(0,8,0,baseY);g.addColorStop(0,'#4E9A9A');g.addColorStop(1,'#2A8FD8');ctx.fillStyle=g;
+  for(let i=0;i<n;i++){const v=vals[i];if(!v)continue;const bh=Math.max(1.5,v/mx*(baseY-26));icRR(ctx,LG+i*bw+.4,baseY-bh,Math.max(bw-1,1.2),bh,Math.min(2,bw/2.2));ctx.fill();}
+  icPill(ctx,LG+mi*bw+bw/2,baseY-(baseY-26)-21,'Σ +'+tot.toFixed(0)+' cm',cvTok('--accent-meteo','#2A8FD8'),w);}
+function scTemp(cv,air,srf,t0,t1){const{ctx,w,h}=icSetup(cv,110);const n=Math.max(2,t1-t0),baseY=h-16,topY=18,plotW=w-8,xOf=t=>4+(t-t0)/(n-1)*plotW;
+  let mn=1e9,mx=-1e9;for(const arr of [air,srf]){if(!arr)continue;for(let t=t0;t<t1;t++){const v=arr[t];if(v==null)continue;mn=Math.min(mn,v);mx=Math.max(mx,v);}}
+  if(mx<mn)return;mn=Math.floor(mn-1);mx=Math.ceil(mx+1);const rng=Math.max(1,mx-mn),yOf=v=>baseY-(v-mn)/rng*(baseY-topY);
+  icDayGrid(ctx,4,plotW,h,t0,t1,baseY);
+  if(mx>0){const y5=yOf(Math.min(5,mx)),y0=yOf(Math.max(0,mn));ctx.fillStyle='rgba(192,138,46,.10)';ctx.fillRect(4,y5,plotW,Math.max(0,y0-y5));}
+  if(0>=mn&&0<=mx){const y=yOf(0);ctx.strokeStyle='rgba(168,58,46,.55)';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(4,y);ctx.lineTo(4+plotW,y);ctx.stroke();ctx.setLineDash([]);
+    ctx.font='800 10px Inter';ctx.textAlign='left';ctx.fillStyle=cvTok('--paper','#F7F8F7');ctx.fillRect(6,y-11,20,12);ctx.fillStyle='rgba(168,58,46,.55)';ctx.fillText('0°',8,y-2);}
+  _scNow(ctx,t0,t1,xOf,topY,baseY);
+  if(srf){_scPath(ctx,srf,t0,t1,xOf,yOf);ctx.strokeStyle='#C08A2E';ctx.lineWidth=1.6;ctx.lineJoin='round';ctx.stroke();}
+  if(air){_scPath(ctx,air,t0,t1,xOf,yOf);ctx.strokeStyle='#3E7C8C';ctx.lineWidth=2.2;ctx.stroke();
+    let aMx=-1e9,aMxT=t0,aMn=1e9,aMnT=t0;for(let t=t0;t<t1;t++){const v=air[t];if(v==null)continue;if(v>aMx){aMx=v;aMxT=t;}if(v<aMn){aMn=v;aMnT=t;}}
+    if(aMx>-1e9){icPill(ctx,xOf(aMxT),yOf(aMx)-22,'Hoch '+aMx.toFixed(0)+'°','#B4552A',w);
+      icPill(ctx,xOf(aMnT),Math.min(baseY-18,yOf(aMn)+6),'Tief '+aMn.toFixed(0)+'°',cvTok('--accent-meteo','#2A8FD8'),w);}}
+  ctx.textAlign='right';ctx.font='700 10.5px Inter';
+  if(srf){ctx.fillStyle='#C08A2E';ctx.fillText('● Oberfläche',w-6,12);}
+  if(air){ctx.fillStyle='#3E7C8C';ctx.fillText('● Luft',srf?w-78:w-6,12);}ctx.textAlign='left';}
+function scWind(cv,vw,vmax,t0,t1){const k=a2=>a2?a2.map(v=>v==null?null:v*3.6):null;const sp=k(vw),gu=k(vmax);
+  const{ctx,w,h}=icSetup(cv,96);const n=Math.max(2,t1-t0),LG=4,baseY=h-16,topY=24,plotW=w-LG-4,xOf=t=>LG+(t-t0)/(n-1)*plotW;
+  let mx=10,mxT=t0,mxV=0;for(const arr of [sp,gu]){if(!arr)continue;for(let t=t0;t<t1;t++){const v=arr[t];if(v!=null&&v>mx)mx=v;}}
+  if(sp)for(let t=t0;t<t1;t++){const v=sp[t];if(v!=null&&v>mxV){mxV=v;mxT=t;}}
+  const yOf=v=>baseY-v/mx*(baseY-topY);
+  icDayGrid(ctx,LG,plotW,h,t0,t1,baseY);
+  ctx.strokeStyle='rgba(18,21,26,.12)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(LG,baseY+.5);ctx.lineTo(w,baseY+.5);ctx.stroke();
+  if(gu){_scPath(ctx,gu,t0,t1,xOf,yOf);ctx.strokeStyle='rgba(180,85,42,.55)';ctx.lineWidth=1.4;ctx.setLineDash([3,2]);ctx.stroke();ctx.setLineDash([]);}
+  if(sp){_scPath(ctx,sp,t0,t1,xOf,yOf);ctx.strokeStyle='#3E7C8C';ctx.lineWidth=2.2;ctx.lineJoin='round';ctx.stroke();
+    icPill(ctx,xOf(mxT),yOf(mxV)-21,mxV.toFixed(0)+' km/h','#3E7C8C',w);}
+  ctx.textAlign='right';ctx.font='700 10.5px Inter';
+  if(gu){ctx.fillStyle='#B4552A';ctx.fillText('┄ Böe',w-6,12);}
+  ctx.fillStyle='#3E7C8C';ctx.fillText('● Mittel',gu?w-56:w-6,12);ctx.textAlign='left';}
+function scRose(cv,dw,vw,t0,t1){const{ctx,w,h}=icSetup(cv,152);const cx=w/2,cy=h/2+2,R=Math.min(cx,cy)-18;
+  const NS=8,cnt=new Array(NS).fill(0),spd=new Array(NS).fill(0);let n=0,tot=0;
+  for(let t=t0;t<t1;t++){const d=dw[t];if(d==null)continue;const s=vw&&vw[t]!=null?vw[t]*3.6:0;const si=Math.round(((d%360)+360)%360/(360/NS))%NS;cnt[si]++;spd[si]+=s;n++;tot+=s;}
+  for(let i=0;i<NS;i++)if(cnt[i])spd[i]/=cnt[i];
+  const mxC=Math.max(1,...cnt);
+  ctx.strokeStyle=cvTok('--ink-100','rgba(18,21,26,.11)');ctx.lineWidth=1;for(let r=1;r<=3;r++){ctx.beginPath();ctx.arc(cx,cy,R*r/3,0,2*Math.PI);ctx.stroke();}
+  const labs=['N','NE','E','SE','S','SW','W','NW'];ctx.fillStyle='rgba(115,108,97,.85)';ctx.font='700 10.5px Inter';ctx.textAlign='center';ctx.textBaseline='middle';
+  for(let i=0;i<NS;i++){const ang=i*(2*Math.PI/NS)-Math.PI/2;ctx.fillText(labs[i],cx+Math.cos(ang)*(R+10),cy+Math.sin(ang)*(R+10));}
+  for(let i=0;i<NS;i++){if(!cnt[i])continue;const ang=i*(2*Math.PI/NS)-Math.PI/2,len=cnt[i]/mxC*R,half=(Math.PI/NS)*0.72,c=rampBYR(Math.min(1,spd[i]/50));
+    ctx.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+',.85)';ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,len,ang-half,ang+half);ctx.closePath();ctx.fill();}
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(cx,cy,16,0,2*Math.PI);ctx.fill();
+  ctx.fillStyle='#16152e';ctx.font='800 13px Inter';ctx.textBaseline='middle';ctx.fillText((tot/Math.max(1,n)).toFixed(0),cx,cy-2);
+  ctx.font='600 7.5px Inter';ctx.fillStyle='rgba(115,108,97,.85)';ctx.fillText('km/h Ø',cx,cy+9);ctx.textBaseline='alphabetic';}
 // --- Mini-map tools (post-location step): search a place + recenter on GPS ---
 function miniMapTools(mapObj,wrapEl){if(!wrapEl||wrapEl.querySelector('.mm-tools'))return;
   const d=document.createElement('div');d.className='mm-tools';
