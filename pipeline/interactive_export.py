@@ -3647,6 +3647,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    .ts-sheet{left:auto!important;right:14px!important;top:calc(env(safe-area-inset-top,0px) + 14px)!important;bottom:14px!important;width:400px;max-width:400px;margin:0!important;
      max-height:none!important;border-radius:18px!important;transform:translateX(calc(100% + 30px))!important}
    body.ts-open .ts-sheet,body.ts-open .ts-sheet.min{transform:none!important;overflow-y:auto!important}
+   /* folded on a desk: the panel shrinks to its title row (the arrow did
+      nothing here before -- the fold is a slide-down on a phone) */
+   body.ts-open .ts-sheet.min{bottom:auto!important;max-height:86px!important;overflow:hidden!important}
    .ts-grab{display:none}
    body.ts-open #mapFabs{opacity:1!important;pointer-events:auto!important;right:430px!important}
    .dm-wrap{justify-content:flex-end!important;align-items:stretch!important;padding:14px!important;background:transparent!important;backdrop-filter:none!important}
