@@ -4606,6 +4606,20 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-fabs>button{position:static!important;translate:none!important}
  .feed-fabs>button[hidden]{display:none!important}
  .ff-l{display:none}
+ .feed-top{position:sticky;top:0;z-index:4;display:flex;flex-direction:column;gap:8px;padding:6px 14px 10px;max-width:640px;margin:0 auto;
+   background:color-mix(in srgb,var(--paper) 88%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+ .ft-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:14px;background:var(--fill)}
+ .ft-tabs button{min-height:36px;border:0;border-radius:10px;background:none;color:var(--fg2);font:700 13.5px Inter,system-ui;cursor:pointer}
+ .ft-tabs button.on{background:var(--card);color:var(--fg);box-shadow:0 1px 3px rgba(18,21,26,.1)}
+ .ft-row{display:flex;align-items:center;gap:8px}
+ .ft-cat{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 14px 0 11px;border-radius:999px;border:1px solid var(--hair);background:var(--card);color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer;margin-right:auto}
+ .ft-cat.on{border-color:var(--accent,#2563eb);color:var(--accent,#2563eb)}
+ .ft-cat svg,.ft-ic svg{width:18px;height:18px}
+ .ft-ic{width:40px;height:40px;border-radius:50%;border:0;background:var(--fill);color:var(--fg);display:grid;place-items:center;cursor:pointer}
+ .ft-ic[hidden]{display:none}
+ .ft-desk{display:none}
+ body.desk .feed-top .ft-desk:not([hidden]){display:grid}
+ body.desk .feed-page .feed-fabs{display:none!important}
  .leg-chip.fixed{cursor:default}
  /* the profile scrolls clear of the floating tab bar */
  body.nav-vis #profModal .prof-body{padding-bottom:calc(var(--nav-h,64px) + 24px)}
@@ -4619,7 +4633,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.desk .feed-page .feed-fabs>button svg{width:18px!important;height:18px!important}
  body.desk .feed-page .feed-fabs .ff-l{display:inline;white-space:nowrap}
  body.desk .feed-page .feed-fabs .ff-dot{top:6px;right:8px}
- body.desk .feed-page .feed-scroll{padding-top:62px!important}
  .tour-vars{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:2px 16px 8px}
  .tour-vars span{font:800 11px/1 Inter,system-ui;text-transform:uppercase;letter-spacing:.04em;color:var(--fg2);margin-right:4px}
  .tour-vars button{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--hair);background:var(--card);color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer}
@@ -5074,8 +5087,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div class="feed-chips" id="feedChips" role="tablist" aria-label="Ansicht"></div>
 <div class="feed-sheet" id="feedSheet" onclick="if(event.target===this)feedFilterClose()">
   <div class="feed-sheet-in">
-    <span class="lbl-micro">Ansicht</span>
-    <div class="feed-scope" id="feedScope"></div>
+    <div class="feed-scope" id="feedScope" hidden></div>
     <span class="lbl-micro">Kategorie</span>
     <div class="feed-filter" id="feedFilter"></div>
     <button class="feed-sheet-x" onclick="feedFilterClose()">Fertig</button>
@@ -5088,13 +5100,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button class="feed-loc-clear" id="feedAnchorClear" style="display:none">✕ Filter</button>
 </div>
 <div class="feed-anchor-bar" id="feedAnchorBar" style="display:none"></div>
-<div class="feed-scroll"><div class="feed-grid" id="feedList"><div class="feed-empty">Lade Beiträge…</div></div></div>
+<div class="feed-scroll"><div class="feed-top" id="feedTop"></div><div class="feed-grid" id="feedList"><div class="feed-empty">Lade Beiträge…</div></div></div>
 <button class="feed-qr" id="feedQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <!-- one column, bottom right: messages last, so it sits in the corner -->
 <div class="feed-fabs">
-<button class="feed-friends-fab" id="feedFriendsFab" onclick="usOpen()" title="Leute finden" aria-label="Leute finden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg><span class="ff-l">Leute finden</span></button>
-<button class="feed-filt-fab" id="feedFiltFab" onclick="feedFilterOpen()" title="Filter" aria-label="Filter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg><i class="ff-dot"></i><span class="ff-l">Filter</span></button>
-<button class="feed-mine-fab" id="feedMineFab" onclick="accountTap()" title="Meine Beiträge" aria-label="Meine Beiträge – zum Profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span class="ff-l">Meine Beiträge</span></button>
 <button class="feed-msg-fab" id="feedMsgFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 14.6 21.5l-4-8.1-8.1-4z"/></svg><span class="dm-dot" id="dmDot" hidden></span><span class="ff-l">Nachrichten</span></button>
 </div>
 <button class="feed-fab" id="feedFab" onclick="feedCreatePost()" title="Bedingungen melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
@@ -5352,6 +5361,9 @@ const I18N_DICT={
 "Am hilfreichsten: Übersichtsfotos der ganzen Lawine + Detailaufnahmen der Anrisskante / des Anrissgebiets. Fotos liefern automatisch Standort & Zeit.":["Most helpful: overview photos of the whole avalanche + close-ups of the crown / release area. Photos provide location & time automatically.","Le plus utile : photos d'ensemble de l'avalanche + détails de la cassure / zone de départ. Les photos fournissent lieu et heure automatiquement.","Più utili: foto d'insieme della valanga + dettagli del distacco / zona di distacco. Le foto forniscono automaticamente luogo e ora."],
 "Andere":["Other","Autre","Altro"],
 "Andere Beobachtung":["Other observation","Autre observation","Altra osservazione"],
+"Gemerkt — findest du in deinem Profil unter «Gemerkt».":["Saved — find it in your profile under “Saved”.", "Enregistré — retrouve-le dans ton profil sous « Enregistrés ».", "Salvato — lo trovi nel tuo profilo sotto «Salvati»."],
+"Alle Meldungen":["All reports", "Tous les signalements", "Tutte le segnalazioni"],
+"Zurück zum Feed":["Back to the feed", "Retour au fil", "Torna al feed"],
 "# Varianten":["# variants", "# variantes", "# varianti"],
 "# Varianten ·":["# variants ·", "# variantes ·", "# varianti ·"],
 "Variante":["Variant", "Variante", "Variante"],
@@ -9856,7 +9868,7 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
       +'<span class="pv-ac-prof">'+trkProfile(a.track,340,46)+'</span></button>').join('')
     :'<div class="prof-hint">'+(me?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aktivitäten.')+'</div>';
   box.innerHTML='<div class="pv-stats"><div><b>'+n(S.posts.length)+'</b><span>Beiträge</span></div><div><b>'+n(S.fol)+'</b><span>Follower</span></div><div><b>'+n(S.ing)+'</b><span>Folge ich</span></div><div><b>'+n(S.acts.length)+'</b><span>Aktivitäten</span></div></div>'
-    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button data-dm onclick="profClose();dmOpen()">Nachrichten</button><button onclick="pvShare(\''+S.uid+'\')">Teilen</button>'
+    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button onclick="profClose();navGo(\'feed\');feedSetScope(\'saved\')">Gemerkt</button><button data-dm onclick="profClose();dmOpen()">Nachrichten</button><button onclick="pvShare(\''+S.uid+'\')">Teilen</button>'
       :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
         +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
         +'<button class="pv-more" onclick="uvReportUser()" aria-label="Nutzer melden">⋯</button>')+'</div>'
@@ -16077,7 +16089,7 @@ function obsBuildCD(){const s=obsState;const cd={obsType:s.type,source:s.locatio
   return cd;}
 function obsSubLabel(){const s=obsState;if(s.type==='avalanche')return s.avalanche.characteristics.size!=='unknown'?('Lawine '+obsSizeMeta(s.avalanche.characteristics.size).l):'Lawine';if(s.type==='whumpf')return 'Wumm';if(s.type==='wind_slab')return 'Triebschnee';if(s.type==='snow')return snowKindLabel(s.snow.kind)||'Schnee';return 'Beobachtung';}
 // --- Feed (Instagram-style full page) ---
-let feedFilter='all',feedAnchor=null,feedScope='all',feedGroup=null;
+let feedFilter='all',feedAnchor=null,feedScope='here',feedGroup=null;
 // The selected window, as real dates, so a report can be tested against it.
 function feedWindowMs(){
   try{const t0=new Date(M.times[Math.max(0,Math.min(T-1,a))]+'Z').getTime();
@@ -16101,7 +16113,7 @@ const FEED_SCOPES=[
 let savedPosts=new Set();try{savedPosts=new Set(JSON.parse(localStorage.getItem('ssm_saved')||'[]'));}catch(e){}
 function toggleSave(id,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
   id=String(id);
-  if(savedPosts.has(id)){savedPosts.delete(id);}else{savedPosts.add(id);try{haptic(6);}catch(e){}toast('Gespeichert — findest du unter „Gespeichert" im Feed.','ok');}
+  if(savedPosts.has(id)){savedPosts.delete(id);}else{savedPosts.add(id);try{haptic(6);}catch(e){}toast('Gemerkt — findest du in deinem Profil unter «Gemerkt».','ok');}
   try{localStorage.setItem('ssm_saved',JSON.stringify([...savedPosts]));}catch(e){}
   feedRender();}
 // ── Share a post ──────────────────────────────────────────────────────────
@@ -16184,7 +16196,7 @@ function feedRefresh(){
   document.getElementById('feedScope').innerHTML=FEED_SCOPES.map(s=>
     `<button data-s="${s.id}" class="${feedScope===s.id?'active':''}" onclick="feedSetScope('${s.id}')">${s.icon}${s.label}</button>`).join('');
   feedChipsRender();
-  document.getElementById('feedFilter').innerHTML=['all','avalanche','whumpf','wind_slab','other'].map(f=>{
+  document.getElementById('feedFilter').innerHTML=FEED_CATS.map(f=>{
     const lbl=f==='all'?'Alle':(catSvg(f,14)+' '+catLabel(f));
     return`<button class="${feedFilter===f?'active':''}" onclick="feedSetFilter('${f}')">${lbl}</button>`;}).join('');
   document.getElementById('feedLoc').style.display=feedScope==='near'?'flex':'none';
@@ -16196,7 +16208,7 @@ function feedRefresh(){
 // feed.
 function feedFiltMark(){
   const b=document.getElementById('feedFiltFab');if(!b)return;
-  b.classList.toggle('on',feedFilter!=='all'||feedScope!==FEED_SCOPES[0].id);
+  b.classList.toggle('on',feedFilter!=='all');
 }
 // "Hier & jetzt" is a live question: panning the map or moving the window
 // changes the answer, so the list follows them while it is open.
@@ -16234,7 +16246,7 @@ function feedOpen(){
 addEventListener('keydown',e=>{if(e.key==='Escape'){const f=document.getElementById('feedPage');if(f&&f.classList.contains('open')&&!document.querySelector('.feed-sheet.open'))try{navGo('map');}catch(x){}}});
 function feedClose(){
   const el=document.getElementById('feedPage');if(!el)return;
-  if(feedScope==='user'){feedScope='all';feedUserId=null;try{feedTourBar();}catch(e){}}
+  if(feedScope==='user'||feedScope==='saved'||feedScope==='tours'){feedScope='here';feedUserId=null;feedTour=null;try{feedTourBar();}catch(e){}}
   el.classList.remove('open');
   document.body.setAttribute('data-screen','search');
   // it opens as a column again next time
@@ -16514,7 +16526,21 @@ async function addComment(){
 }
 // The views as a row of chips right under the title -- one tap, always in
 // sight, instead of behind the filter button.
-function feedChipsRender(){const el=document.getElementById('feedChips');if(!el)return;
+// The community screen in one row: three views (what is happening here and
+// now, the people you follow, everything), the category, people search --
+// and on a desk your posts and messages. "Gemerkt" lives in your profile,
+// tour reports on the tour, a person's posts behind their name.
+const FEED_TABS=[['here','Hier & jetzt'],['following','Folge ich'],['all','Alle']];
+function feedTopRender(){const el=document.getElementById('feedTop');if(!el)return;
+  const cat=feedFilter==='all'?'Alle Meldungen':catLabel(feedFilter);
+  const ic=d=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
+  el.innerHTML='<div class="ft-tabs" role="tablist" aria-label="Ansicht">'+FEED_TABS.map(t=>'<button type="button" role="tab" aria-selected="'+(feedScope===t[0])+'" class="'+(feedScope===t[0]?'on':'')+'" onclick="feedSetScope(\''+t[0]+'\')">'+t[1]+'</button>').join('')+'</div>'
+    +'<div class="ft-row"><button type="button" class="ft-cat'+(feedFilter!=='all'?' on':'')+'" onclick="feedFilterOpen()">'+ic('<path d="M4 6h16M7 12h10M10 18h4"/>')+'<span>'+escapeHtml(cat)+'</span></button>'
+    +'<button type="button" class="ft-ic" onclick="usOpen()" aria-label="Leute finden" title="Leute finden">'+ic('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')+'</button>'
+    +'<button type="button" class="ft-ic" onclick="accountTap()" aria-label="Meine Beiträge" title="Meine Beiträge">'+ic('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>')+'</button>'
+    +'<button type="button" class="ft-ic ft-desk" data-dm hidden onclick="dmOpen()" aria-label="Nachrichten" title="Nachrichten">'+ic('<path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 15 21l-4.4-7.6L3 9z"/>')+'</button></div>';
+  try{if(typeof dmReady!=='undefined'&&dmReady)el.querySelectorAll('[data-dm]').forEach(x=>x.hidden=false);}catch(e){}}
+function feedChipsRender(){feedTopRender();const el=document.getElementById('feedChips');if(!el)return;
   el.innerHTML=FEED_SCOPES.map(s=>`<button type="button" role="tab" data-s="${s.id}" aria-selected="${feedScope===s.id}" class="${feedScope===s.id?'on':''}" onclick="feedSetScope('${s.id}')">${s.icon}<span>${s.label}</span></button>`).join('');}
 let feedUserId=null,feedUserName='';
 async function feedOpenUser(uid,name,postId){if(!uid)return;
@@ -16527,7 +16553,10 @@ async function feedOpenUser(uid,name,postId){if(!uid)return;
 function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)return;
   if(feedScope==='user'&&feedUserId){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.8"/><path d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0"/></svg>'+escapeHtml(feedUserName||'Beiträge')+'</span>'
-      +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Alle Beiträge">×</button>';return;}
+      +'<button type="button" onclick="feedSetScope(\'here\')" aria-label="Alle Beiträge">×</button>';return;}
+  if(feedScope==='saved'){b.style.display='flex';
+    b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Gemerkt</span>'
+      +'<button type="button" onclick="feedSetScope(\'here\')" aria-label="Zurück zum Feed">×</button>';return;}
   if(b.querySelector('.fab-user')){b.style.display='none';b.innerHTML='';}
   if(feedScope==='tours'&&feedTour){b.style.display='flex';
     b.innerHTML='<span class="fab-tour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-10 4 6 2-3 4 7z"/></svg>'+escapeHtml(feedTour.name)+'</span><button type="button" onclick="feedTour=null;feedTourBar();feedRender()">✕ alle Touren</button>';}
@@ -16539,8 +16568,9 @@ function feedSetScope(s){if(s!=='tours')feedTour=null;if(s!=='user')feedUserId=n
   document.getElementById('feedLoc').style.display=s==='near'?'flex':'none';
   // Nähe: immediately use the current device location
   if(s==='near'&&(!feedAnchor||feedAnchor.src!=='me')){const nb=document.getElementById('feedNear');if(nb)nb.click();}
-  feedFiltMark();feedRender();haptic(5);}
-function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter button').forEach((b,i)=>{b.classList.toggle('active',['all','avalanche','whumpf','wind_slab','other'][i]===f);});feedFiltMark();feedRender();}
+  feedFiltMark();feedTopRender();feedRender();haptic(5);}
+const FEED_CATS=['all','snow','avalanche','whumpf','wind_slab','other'];
+function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter button').forEach((b,i)=>{b.classList.toggle('active',FEED_CATS[i]===f);});feedFiltMark();feedTopRender();feedRender();feedFilterClose();}
 function feedSetAnchor(a){feedAnchor=a;
   document.getElementById('feedNear').classList.toggle('active',!!a&&a.src==='me');
   document.getElementById('feedPeakBtn').classList.toggle('active',!!a&&a.src==='peak');
