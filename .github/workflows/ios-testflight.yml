@@ -99,6 +99,23 @@ jobs:
         run: |
           python3 scripts/apply-ios-config.py
 
+      # The ready-made Xcode project (web app, Pods, icons, Info.plist all in
+      # place) as a download: open App.xcworkspace on any Mac with Xcode, pick
+      # your Apple ID as the team and run it on your own iPhone -- no paid
+      # developer account, nothing else to install. docs/iphone-ohne-lizenz.md
+      - name: Pack the Xcode project for a local install
+        if: ${{ !inputs.upload }}
+        working-directory: apple-app
+        run: |
+          tar -czf "$RUNNER_TEMP/snowmapper-xcode.tar.gz" ios
+          ls -lh "$RUNNER_TEMP/snowmapper-xcode.tar.gz"
+      - name: Keep the Xcode project
+        if: ${{ !inputs.upload }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: snowmapper-xcode-projekt
+          path: ${{ runner.temp }}/snowmapper-xcode.tar.gz
+          retention-days: 14
       - name: Build unsigned (smoke test)
         if: ${{ !inputs.upload }}
         working-directory: apple-app/ios/App
