@@ -4606,6 +4606,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .feed-fabs>button{position:static!important;translate:none!important}
  .feed-fabs>button[hidden]{display:none!important}
  .ff-l{display:none}
+ .leg-chip.fixed{cursor:default}
  /* the profile scrolls clear of the floating tab bar */
  body.nav-vis #profModal .prof-body{padding-bottom:calc(var(--nav-h,64px) + 24px)}
  /* on a desk the feed's buttons are a toolbar at the top of the feed, with
@@ -11327,7 +11328,7 @@ function miniLegendRender(l){
         .map(r=>Object.assign({},r,{s:Math.round((sh.cnt[r.k]||0)/sh.tot*100)+'%'}));}
       else rows=rows.slice(0,7);
       document.getElementById('mlUnit').textContent='Anteil';}
-    const sw=rows.every(r=>r.k!=null),vis=sw?legVisSet(l||layer):null;
+    const sw=legSwitchable(l||layer)&&rows.every(r=>r.k!=null),vis=sw?legVisSet(l||layer):null;
     h='<div class="ml-cls">'+rows.map(r=>sw
       ?'<button type="button" class="'+(vis.has(r.k)?'on':'off')+'" aria-pressed="'+vis.has(r.k)+'" aria-label="'+escapeHtml(r.n||r.s)+'" onclick="legToggle('+r.k+',event)"><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.s)+'</span></button>'
       :'<div><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.s)+'</span></div>').join('')+'</div>'
@@ -11399,15 +11400,15 @@ function legSpec(l){
 // only); what you pick is remembered per layer.
 const LEG_DEFAULT={
   'va:ski6':r=>r.k===3||r.k===4||r.k===5,   // Pulver 0–10, 10–20, >20 cm
-  'va:wind':r=>r.k>=2,                       // leicht + stark verfrachtet
-  snow:r=>r.lo>=10,                          // lohnender Neuschnee
-  wind:r=>r.hi<=10,                          // ruhig
   temp:r=>r.hi<=10                           // unter 10 °C
 };
 const LEG_KEY='ssm_legsel_v2';
 let _legSel=(function(){try{return JSON.parse(localStorage.getItem(LEG_KEY)||'{}')||{};}catch(e){return {};}})();
 function legKey(l){l=l||layer;return l==='snowpack'?'va:'+vaKey:l;}
-function legRows(l){const sp=legSpec(l||layer);return sp&&sp.rows&&sp.rows.every(r=>r.k!=null)?sp.rows:null;}
+// These only explain their colours: every class always on the map.
+const LEG_FIXED=new Set(['wind','cloud','va:wind','snow','depth']);
+function legSwitchable(l){return !LEG_FIXED.has(legKey(l));}
+function legRows(l){if(!legSwitchable(l))return null;const sp=legSpec(l||layer);return sp&&sp.rows&&sp.rows.every(r=>r.k!=null)?sp.rows:null;}
 function legDefaultSet(l){const rows=legRows(l)||[],f=LEG_DEFAULT[legKey(l)];
   const ks=rows.filter(r=>!f||f(r)).map(r=>r.k);return new Set(ks.length?ks:rows.map(r=>r.k));}
 function legVisSet(l){const v=_legSel[legKey(l)];return Array.isArray(v)?new Set(v):legDefaultSet(l);}
@@ -11434,7 +11435,10 @@ function legApply(){
   try{if(document.getElementById('lySubs'))lyRender();}catch(e){}
   try{if(document.body.classList.contains('leg-open'))legInfoRender();}catch(e){}}
 // The same class chips in the layer sheet, under the chosen tile.
-function legChipsHTML(){const rows=legRows();if(!rows)return '';const vis=legVisSet();
+function legChipsHTML(){const rows=legRows();
+  if(!rows){const sp=legSpec(layer);if(!sp||!sp.rows)return '';
+    return sp.rows.map(r=>'<span class="leg-chip on fixed"><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.n||r.s)+'</span></span>').join('');}
+  const vis=legVisSet();
   return rows.map(r=>'<button type="button" class="leg-chip'+(vis.has(r.k)?' on':'')+'" aria-pressed="'+vis.has(r.k)+'" onclick="legToggle('+r.k+',event)">'
     +'<i style="background:'+r.c+'"></i><span>'+escapeHtml(r.n||r.s)+'</span></button>').join('')
     +'<div class="leg-acts"><span>Antippen blendet ein und aus</span>'
