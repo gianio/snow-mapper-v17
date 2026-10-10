@@ -23,6 +23,14 @@ on:
         description: "Origin the shipped app fetches fresh forecast data from"
         type: string
         default: "https://gianio.github.io/snow-mapper-v17"
+      version:
+        description: "App version shown in the App Store (CFBundleShortVersionString)"
+        type: string
+        default: "1.0.0"
+      build_number:
+        description: "Build number (empty = this workflow's run number; must grow with every upload)"
+        type: string
+        default: ""
 
 # Secrets required for upload: true
 #   APPLE_CERTIFICATE_P12       base64 of your Apple Distribution .p12
@@ -30,6 +38,8 @@ on:
 #   APPLE_PROVISIONING_PROFILE  base64 of the App Store .mobileprovision
 #   APPSTORE_API_KEY_JSON       App Store Connect API key as JSON:
 #                               {"key_id":"…","issuer_id":"…","key":"-----BEGIN…"}
+# The team id and the profile name are read from the profile itself; the
+# build number is the run number. Step by step: docs/testflight-anleitung.md
 
 jobs:
   build:
@@ -104,9 +114,10 @@ jobs:
           P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
           P12_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+          API_KEY_JSON: ${{ secrets.APPSTORE_API_KEY_JSON }}
         run: |
-          if [ -z "$P12" ] || [ -z "$PROFILE" ]; then
-            echo "::error::upload=true but the signing secrets are not set."
+          if [ -z "$P12" ] || [ -z "$PROFILE" ] || [ -z "$API_KEY_JSON" ]; then
+            echo "::error::upload=true but a signing secret is missing (APPLE_CERTIFICATE_P12, APPLE_PROVISIONING_PROFILE, APPSTORE_API_KEY_JSON)."
             exit 1
           fi
           KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
@@ -120,30 +131,69 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: \
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
           security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          echo "$PROFILE" | base64 --decode \
-            > "$HOME/Library/MobileDevice/Provisioning Profiles/app.mobileprovision"
           rm -f "$RUNNER_TEMP/cert.p12"
+          # The profile tells us everything else: its UUID, name and team.
+          echo "$PROFILE" | base64 --decode > "$RUNNER_TEMP/app.mobileprovision"
+          security cms -D -i "$RUNNER_TEMP/app.mobileprovision" > "$RUNNER_TEMP/profile.plist"
+          UUID="$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/profile.plist")"
+          NAME="$(/usr/libexec/PlistBuddy -c 'Print Name' "$RUNNER_TEMP/profile.plist")"
+          TEAM="$(/usr/libexec/PlistBuddy -c 'Print TeamIdentifier:0' "$RUNNER_TEMP/profile.plist")"
+          APPID="$(/usr/libexec/PlistBuddy -c 'Print Entitlements:application-identifier' "$RUNNER_TEMP/profile.plist")"
+          case "$APPID" in
+            *ch.snowmapper.app) ;;
+            *) echo "::error::The provisioning profile is for '$APPID', not ch.snowmapper.app."; exit 1;;
+          esac
+          for d in "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
+            mkdir -p "$d"; cp "$RUNNER_TEMP/app.mobileprovision" "$d/$UUID.mobileprovision"
+          done
+          echo "PROFILE_NAME=$NAME" >> "$GITHUB_ENV"
+          echo "TEAM_ID=$TEAM" >> "$GITHUB_ENV"
+          echo "Signing with profile '$NAME' ($UUID), team $TEAM"
+
+      - name: Configure signing, version and build number
+        if: ${{ inputs.upload }}
+        working-directory: apple-app
+        run: |
+          BUILD="${{ inputs.build_number }}"
+          [ -n "$BUILD" ] || BUILD="${{ github.run_number }}"
+          python3 scripts/ci-signing.py --team "$TEAM_ID" --profile "$PROFILE_NAME" \
+            --version "${{ inputs.version }}" --build "$BUILD"
 
       - name: Archive and export
         if: ${{ inputs.upload }}
         working-directory: apple-app/ios/App
         run: |
           xcodebuild -workspace App.xcworkspace -scheme App \
-            -configuration Release -sdk iphoneos \
+            -configuration Release -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/App.xcarchive" archive
-          cat > "$RUNNER_TEMP/ExportOptions.plist" <<'PLIST'
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0"><dict>
             <key>method</key><string>app-store-connect</string>
             <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>provisioningProfiles</key><dict>
+              <key>ch.snowmapper.app</key><string>${PROFILE_NAME}</string>
+            </dict>
+            <key>uploadSymbols</key><true/>
           </dict></plist>
           PLIST
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
             -exportPath "$RUNNER_TEMP/export"
+          mkdir -p "$GITHUB_WORKSPACE/ipa" && cp "$RUNNER_TEMP"/export/*.ipa "$GITHUB_WORKSPACE/ipa/"
+
+      # The signed .ipa is kept as a download too: if the upload below ever
+      # fails, it can go up by hand with Apple's Transporter app.
+      - name: Keep the signed .ipa
+        if: ${{ inputs.upload }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: snowmapper-ipa
+          path: ipa/*.ipa
+          retention-days: 14
 
       - name: Upload to TestFlight
         if: ${{ inputs.upload }}
@@ -155,10 +205,12 @@ jobs:
           ISSUER_ID="$(echo "$API_KEY_JSON" | python3 -c 'import json,sys;print(json.load(sys.stdin)["issuer_id"])')"
           echo "$API_KEY_JSON" | python3 -c 'import json,sys;sys.stdout.write(json.load(sys.stdin)["key"])' \
             > "$HOME/private_keys/AuthKey_$KEY_ID.p8"
-          IPA="$(ls "$RUNNER_TEMP"/export/*.ipa | head -1)"
+          IPA="$(ls "$GITHUB_WORKSPACE"/ipa/*.ipa | head -1)"
           xcrun altool --upload-app -f "$IPA" -t ios \
             --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
           rm -rf "$HOME/private_keys"
+          echo "### Uploaded to App Store Connect" >> "$GITHUB_STEP_SUMMARY"
+          echo "Version ${{ inputs.version }} – the build appears under TestFlight after Apple's processing (usually 10–30 min)." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload build artifacts
         if: always()
