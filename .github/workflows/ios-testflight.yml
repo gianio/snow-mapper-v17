@@ -113,6 +113,8 @@ jobs:
           STAGE="$RUNNER_TEMP/snowmapper"; mkdir -p "$STAGE"
           ditto ios "$STAGE/ios"
           for d in $(grep -oE "node_modules/[^'\"]+" ios/App/Podfile | sort -u); do
+            # only folders (pods_helpers is a file inside @capacitor/ios, copied with it)
+            [ -d "$d" ] || continue
             echo "  + $d"; ditto "$d" "$STAGE/$d"
           done
           tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/snowmapper-xcode.tar.gz" snowmapper
