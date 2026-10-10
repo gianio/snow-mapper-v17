@@ -3401,8 +3401,31 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .ml-grad i{width:9px;border-radius:5px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
  .ml-grad div{display:flex;flex-direction:column;justify-content:space-between;font:700 9.5px/1 var(--mono);color:var(--fg);
    margin:-2px 0}
- .ml-cls{display:flex;flex-direction:column;gap:3px}
+ .ml-cls{display:flex;flex-direction:column;gap:2px}
  .ml-cls div{display:flex;align-items:center;gap:4px;height:15px}
+ /* legend rows are switches: a tall enough target, off = hollow + faded */
+ .ml-cls button{display:flex;align-items:center;gap:4px;height:22px;margin:0 -4px;padding:0 4px;border:0;border-radius:7px;background:none;
+   font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:opacity .15s}
+ .ml-cls button:active{background:var(--fill)}
+ .ml-cls button.off{opacity:.38}
+ .ml-cls button.off i{background:transparent!important;box-shadow:inset 0 0 0 1.5px var(--fg2)}
+ .ml-reset{display:block;width:100%;margin-top:4px;height:24px;border:0;border-radius:8px;background:var(--fill);color:var(--fg);font:800 13px/1 Inter,system-ui;cursor:pointer}
+ .ly-legsw{display:grid!important;grid-template-columns:1fr 1fr;gap:6px}
+ .ly-legsw .leg-chip{min-width:0}
+ .ly-legsw .leg-chip span{overflow-wrap:anywhere;line-height:1.15;text-align:left}
+ .ly-legsw .leg-chip{font-size:12.5px;min-height:40px}
+ .leg-acts{grid-column:1/-1}
+ .leg-chip{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:6px 12px 6px 8px;border-radius:999px;border:1px solid var(--hair);
+   background:var(--card);color:var(--fg);font:700 13px/1.2 Inter,system-ui;cursor:pointer;transition:opacity .15s,background .15s}
+ .leg-chip i{width:16px;height:16px;border-radius:5px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+ .leg-chip:not(.on){opacity:.45}
+ .leg-chip:not(.on) i{background:transparent!important;box-shadow:inset 0 0 0 1.5px var(--fg2)}
+ .leg-acts{flex-basis:100%;display:flex;align-items:center;gap:12px;margin-top:2px;font-size:11.5px;color:var(--fg2)}
+ .leg-acts span{margin-right:auto}
+ .leg-acts button{border:0;background:none;padding:6px 0;font:800 12.5px/1 Inter,system-ui;color:var(--accent,#2563eb);cursor:pointer}
+ .li-rows>div.sw{cursor:pointer;border-radius:8px}
+ .li-rows>div.off{opacity:.4}
+ .li-rows>div.off i{background:transparent!important;box-shadow:inset 0 0 0 1.5px var(--fg2)}
  .ml-cls i{width:9px;height:15px;border-radius:3px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
  .ml-cls span{font:700 9px/1 Inter,system-ui;color:var(--fg);white-space:nowrap;overflow:hidden;letter-spacing:-.02em}
  .leg-info{position:absolute;z-index:1160;right:78px;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 290px);
@@ -4145,6 +4168,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #mapFabs #miniLegend{position:relative!important;bottom:auto!important;right:auto!important;left:auto!important;top:auto!important;
    flex:0 1 auto;min-height:0;overflow:hidden;margin:0}
  #mapFabs #miniLegend .ml-grad{max-height:22vh}
+ /* the legend is always up now: the column stops below the profile button
+    and a long legend scrolls instead of running under it */
+ body.nav-vis #mapFabs{top:calc(env(safe-area-inset-top,0px) + 66px);justify-content:flex-end}
+ #mapFabs #miniLegend{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+ #mapFabs #miniLegend::-webkit-scrollbar{display:none}
  body.nav-vis .leg-info{bottom:calc(var(--nav-h) + var(--btm-h,80px) + 150px)}
  body.nav-vis .feed-page.open:not(.side){bottom:var(--nav-h)}
  @media (max-width:899px){
@@ -5256,6 +5284,26 @@ const I18N_DICT={
 "Am hilfreichsten: Übersichtsfotos der ganzen Lawine + Detailaufnahmen der Anrisskante / des Anrissgebiets. Fotos liefern automatisch Standort & Zeit.":["Most helpful: overview photos of the whole avalanche + close-ups of the crown / release area. Photos provide location & time automatically.","Le plus utile : photos d'ensemble de l'avalanche + détails de la cassure / zone de départ. Les photos fournissent lieu et heure automatiquement.","Più utili: foto d'insieme della valanga + dettagli del distacco / zona di distacco. Le foto forniscono automaticamente luogo e ora."],
 "Andere":["Other","Autre","Altro"],
 "Andere Beobachtung":["Other observation","Autre observation","Altra osservazione"],
+"Antippen blendet ein und aus":["Tap to show or hide", "Touche pour afficher ou masquer", "Tocca per mostrare o nascondere"],
+"Antippen blendet eine Klasse auf der Karte ein und aus.":["Tap a class to show or hide it on the map.", "Touche une classe pour l'afficher ou la masquer sur la carte.", "Tocca una classe per mostrarla o nasconderla sulla mappa."],
+"Standard":["Default", "Par défaut", "Predefinito"],
+"Standard wiederherstellen":["Restore default", "Rétablir par défaut", "Ripristina predefinito"],
+"Klassen":["Classes", "Classes", "Classi"],
+"<# km/h · ruhig":["<# km/h · calm", "<# km/h · calme", "<# km/h · calmo"],
+"#–# km/h · mässig":["#–# km/h · moderate", "#–# km/h · modéré", "#–# km/h · moderato"],
+"#–# km/h · stark – Schnee wird verfrachtet":["#–# km/h · strong – snow is transported", "#–# km/h · fort – la neige est transportée", "#–# km/h · forte – la neve viene trasportata"],
+"#+ km/h · stürmisch":["#+ km/h · stormy", "#+ km/h · tempête", "#+ km/h · tempestoso"],
+"#–# % · wenig":["#–# % · few", "#–# % · peu", "#–# % · poche"],
+"#–# % · teils":["#–# % · partly", "#–# % · partiel", "#–# % · parziale"],
+"#–# % · bedeckt":["#–# % · overcast", "#–# % · couvert", "#–# % · coperto"],
+"wenig":["few", "peu", "poche"],
+"teils":["partly", "partiel", "parziale"],
+"bedeckt":["overcast", "couvert", "coperto"],
+"Mittlerer Wind im gewählten Zeitfenster":["Mean wind in the selected time window", "Vent moyen dans la fenêtre choisie", "Vento medio nella finestra scelta"],
+"Mittlere Temperatur im gewählten Zeitfenster":["Mean temperature in the selected time window", "Température moyenne dans la fenêtre choisie", "Temperatura media nella finestra scelta"],
+"Triebschnee aus SNOWPACK":["Wind slab from SNOWPACK", "Neige soufflée selon SNOWPACK", "Neve ventata da SNOWPACK"],
+"Wo der Wind Schnee abgelagert (violett) oder gepresst hat, aus der simulierten Schneedecke. Triebschnee fährt sich oft gut, ist aber das typische Lawinenproblem – Lawinenbulletin des SLF beachten.":["Where wind has deposited (violet) or packed snow, from the simulated snowpack. Wind slab often skis well but is the typical avalanche problem – check the SLF avalanche bulletin.", "Où le vent a déposé (violet) ou tassé la neige, selon le manteau simulé. La neige soufflée se skie souvent bien mais c'est le problème avalancheux typique – consulte le bulletin du SLF.", "Dove il vento ha depositato (viola) o compattato la neve, dal manto simulato. La neve ventata spesso si scia bene ma è il tipico problema valanghivo – consulta il bollettino SLF."],
+"#+ cm":["#+ cm", "#+ cm", "#+ cm"],
 "Zeichnen":["Draw", "Dessiner", "Disegna"],
 "Schneezonen & Route auf die Karte malen":["Paint snow zones & route on the map", "Dessine zones de neige et itinéraire sur la carte", "Disegna zone di neve e percorso sulla mappa"],
 "Frischer Schnee":["Fresh snow", "Neige fraîche", "Neve fresca"],
@@ -6941,9 +6989,9 @@ function vaPalApply(m){
 }
 const vaRecolorC=new Map();let vaRcCv=null;
 async function vaRecolorUrl(u,key){
-  const L=vaMan&&vaMan.layers[key];if(!L||!L._recolor)return u;
-  const ck=key+'|'+u;if(vaRecolorC.has(ck))return vaRecolorC.get(ck);
-  const img=await vaImgBytes(u.split("#")[0]),d=img.rgba,pal=(L._src||[]).map(([o,id])=>[o,id?(VA_PALETTE[key]||VA_VPAL[key])[id]:[0,0,0,0]]);
+  const L=vaMan&&vaMan.layers[key],hm=key===vaKey?vaHideMask():0;if(!L||(!L._recolor&&!hm))return u;
+  const ck=key+'|'+hm+'|'+u;if(vaRecolorC.has(ck))return vaRecolorC.get(ck);
+  const img=await vaImgBytes(u.split("#")[0]),d=img.rgba,pal=(L._src||[]).map(([o,id])=>[o,(id&&!((hm>>id)&1))?(VA_PALETTE[key]||VA_VPAL[key])[id]:[0,0,0,0]]);
   const lut=new Map();
   // forest-faded pixels are a shade off the table: nearest original colour
   const near=(r,g,b)=>{let best=null,bd=1e9;for(const [o,n] of pal){const e=(o[0]-r)*(o[0]-r)+(o[1]-g)*(o[1]-g)+(o[2]-b)*(o[2]-b);if(e<bd){bd=e;best=n;}}return bd<=2500?best:null;};
@@ -6978,7 +7026,12 @@ async function vaLoad(){
     const m=await r.json();
     if(!m||!m.layers||!m.bounds||!(m.tags||[]).length)return;
     vaPalApply(m);
+    // The layer list changes shape now (Powder gives way to Skiqualität and
+    // Triebschnee): keep the chosen layer by its id, not its position.
+    const _pid=(function(){try{const it=groupItems(curTopic)[curItem];return it&&it.id;}catch(e){return null;}})();
     vaMan=m;
+    try{const id=_pid==='powder'?'snowpack':_pid,ix=groupItems(curTopic).findIndex(it=>it.id===id);
+      if(ix>=0&&(ix!==curItem||id!==_pid))setTopic(curTopic,ix,0);}catch(e){}
     // Profiles are only needed once someone taps the map, so they are fetched
     // alongside but failure is non-fatal: the layer still works without them.
     try{
@@ -7274,6 +7327,7 @@ function vaHiEngine(){
     if(dr>=T.WD_STRONG)return 3;if(dr>=T.WIND_MIN)return 2;if(sc>=T.WIND_MIN)return 1;return 0;
   };
   E.color=function(layer,m,out){
+    E.cls=0;
     if(layer==='density'){
       var d=m[E.mi.surface_density],r=E.pk.dens,x=Math.max(0,Math.min(1,(d-r[0])/(r[1]-r[0])));
       out[0]=255*Math.min(1,2*x);out[1]=255*Math.min(1,2*(1-x));out[2]=120*(1-x);out[3]=d>0?190:0;return;
@@ -7287,11 +7341,11 @@ function vaHiEngine(){
       var B=E.pk.powder_bounds||[1,5,10,20,30,50,75,100,150],i=0;while(i<B.length&&pw>=B[i])i++;
       var PT=(E.pk.rgba&&E.pk.rgba.powder&&E.pk.rgba.powder.length>9)?E.pk.rgba.powder
         :[[0,0,0,0],[232,245,233,225],[165,214,167,225],[102,187,106,225],[66,165,245,225],[30,136,229,225],[21,101,192,225],[123,31,162,225],[233,30,99,225],[183,28,28,225]];
-      var pc=PT[Math.max(1,Math.min(PT.length-1,i))];out[0]=pc[0];out[1]=pc[1];out[2]=pc[2];out[3]=pc[3];return;}
+      E.cls=i;var pc=PT[Math.max(1,Math.min(PT.length-1,i))];out[0]=pc[0];out[1]=pc[1];out[2]=pc[2];out[3]=pc[3];return;}
     else if(layer==='wind'){L=E.clsWind(m);key='wind';}
     else if(layer==='simple'){L=E.clsSimple(m);key='simple';}
     else{L=E.clsSki(m);key='ski18';}
-    var tab=E.pk.rgba[key]||E.pk.rgba.ski18,c=tab[L]||[0,0,0,0];
+    E.cls=L;var tab=E.pk.rgba[key]||E.pk.rgba.ski18,c=tab[L]||[0,0,0,0];
     out[0]=c[0];out[1]=c[1];out[2]=c[2];out[3]=c[3];
   };
   E.metsFor=function(layer){
@@ -7357,6 +7411,8 @@ function vaHiEngine(){
   E.render=function(q){
     var S=q.size,out=new Uint8ClampedArray(S*S*4);
     if(!E.vals)return out;
+    // "ski6~56": the view plus a bit mask of classes switched off on the legend
+    var hide=0,lk=String(q.layer),ix=lk.indexOf('~');if(ix>0){hide=+lk.slice(ix+1)||0;q=Object.assign({},q,{layer:lk.slice(0,ix)});}
     var T=E.terrain(q.tkey,q.tbytes,q.tz,q.ty),n2=Math.pow(2,q.z),f=Math.pow(2,q.tz-q.z);
     var mets=E.metsFor(q.layer),m=new Float64Array(E.nm),col=[0,0,0,0];
     var fd=E.pk.forest_dim||0,fcs=E.pk.forest?E.pk.forest.cs:0,flev=E.pk.forest?E.pk.forest.levels:3;
@@ -7378,6 +7434,7 @@ function vaHiEngine(){
         E.adjPrecip(m,en[0],en[1]);
         E.color(q.layer,m,col);
         if(!col[3])continue;
+        if(hide&&(hide>>E.cls)&1)continue;
         var a=col[3];
         if(fd&&E.forest){var fv=E.gridBil(E.forest,en[0],en[1],fcs,true);if(fv>0)a*=1-fd*(fv/255);}
         var o=(py*S+px)*4;out[o]=col[0];out[o+1]=col[1];out[o+2]=col[2];out[o+3]=a;
@@ -7588,7 +7645,7 @@ function vaHiFallback(t,c,S){
 // one is ready, and a stale render never overwrites a newer one.
 let vaHiPend=0;
 function vaHiPaint(t,done,tries){
-  const c=t._vaC,S=t.width,gen=t._vaGen=(t._vaGen||0)+1,tag=vaHiTag,layer=vaKey;
+  const c=t._vaC,S=t.width,gen=t._vaGen=(t._vaGen||0)+1,tag=vaHiTag,layer=vaRenderLayer();
   vaHiPend++;
   let ended=false;
   const fin=()=>{if(!ended){ended=true;vaHiPend=Math.max(0,vaHiPend-1);if(!vaHiPend){vaSyncOpacity();vaPrefetchSoon();}}
@@ -7680,7 +7737,18 @@ async function vaHiSync(){
 // does not answer, everything below falls back to rendering on the device.
 let vaTilesDead=false;
 function vaTiles(){const t=vaMan&&vaMan.tiles;return (t&&t.base&&t.run&&!vaTilesDead)?t:null;}
-function vaTileView(){const t=vaTiles();return t&&(t.views||[]).indexOf(vaKey)>=0?vaKey:null;}
+// While classes are switched off the device draws (the tile service only
+// knows whole views).
+function vaTileView(){const t=vaTiles();return t&&!vaHideMask()&&(t.views||[]).indexOf(vaKey)>=0?vaKey:null;}
+// Classes switched off on the legend, as a bit mask over the class ids.
+function vaHideMask(){if(layer!=='snowpack'||!vaMan)return 0;const rows=legRows('snowpack');if(!rows)return 0;
+  const vis=legVisSet('snowpack');let m=0;rows.forEach(r=>{if(!vis.has(r.k)&&r.k>0&&r.k<31)m|=1<<r.k;});return m;}
+function vaRenderLayer(){const m=vaHideMask();return m?vaKey+'~'+m:vaKey;}
+function vaFilterChanged(){
+  if(!vaAvailable())return;
+  const srv=vaTilesSync();
+  if(vaOv&&!srv){const u=vaFrameUrl(vaKey,vaTagIndex());if(u){vaOv._src='stale';vaOvWant=u;vaOvLoad(u,false);}}
+  vaHiRepaint();try{vaSyncOpacity();}catch(e){}}
 // Two layers per kind: the one on screen and the next frame loading hidden
 // behind it; the swap happens when the new one is complete, so a time step
 // never shows an empty or half-drawn map.
@@ -7873,7 +7941,7 @@ function vaOvLoad(u,retry){
   const next=()=>{vaOvBusy=false;if(vaOvWant&&vaOv&&vaOvWant!==vaOvCur())vaOvLoad(vaOvWant,false);};
   const show=src=>{try{if(vaOv&&vaOvCur()!==u){vaOv.setUrl(src);vaOv._src=u;}}catch(e){}vaHistLoad(u);next();};
   im.onload=function(){const k=vaKeyOfUrl(u),L=vaMan&&vaMan.layers[k];
-    if(L&&L._recolor)vaRecolorUrl(u,k).then(show,()=>show(u));else show(u);};
+    if(L&&(L._recolor||(k===vaKey&&vaHideMask())))vaRecolorUrl(u,k).then(show,()=>show(u));else show(u);};
   im.onerror=function(){vaOvBusy=false;
     if(vaOvWant===u&&!retry)setTimeout(()=>{if(vaOvWant===u)vaOvLoad(u,true);},800);else next();};
   im.src=u;
@@ -7922,7 +7990,7 @@ function vaPrefetchSoon(){
       if(vaPk&&vaHiCovers()&&!vaHiPend&&vaHi&&vaHi._tiles){
         // render ahead into the tile cache (low priority, dropped once the
         // slider has moved on)
-        const tag=vaMan.tags[j],layer=vaKey;
+        const tag=vaMan.tags[j],layer=vaRenderLayer();
         for(const k in vaHi._tiles){const e=vaHi._tiles[k].el;if(!e||!e._vaC)continue;
           vaHiTile(e._vaC,e.width,tag,layer,1,()=>round!==vaPreRound).catch(()=>{});}
       }
@@ -10936,22 +11004,23 @@ function setRaster(get,border){const img=cx.createImageData(W,H),d=img.data;cons
   cx.putImageData(img,0,0);raster.setUrl(cv.toDataURL());}
 function aggT(p,m){let mn=1e9,mx=-1e9,su=0,c=0,cold=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;if(v<0)cold++;}return m=="max"?mx:m=="min"?mn:m=="sub0"?cold:m=="max05"?mx:su/Math.max(1,c);}
 function renderRaster(){
-  if(layer=="snow"){const ca=a*NP,cb=b*NP;setRaster(p=>{const v=cum[cb+p]-cum[ca+p];const c=snowCol(v);return c?[c[0],c[1],c[2],170]:null;});}
-  else if(layer=="depth"){const cb2=b*NP;setRaster(p=>{const v=cum[cb2+p];if(v<1)return null;const c=depthCol(v);return c?[c[0],c[1],c[2],215]:null;});}
+  const _hid=legHideFn(layer);
+  if(layer=="snow"){const ca=a*NP,cb=b*NP;setRaster(p=>{const v=cum[cb+p]-cum[ca+p];if(_hid&&_hid(v))return null;const c=snowCol(v);return c?[c[0],c[1],c[2],170]:null;});}
+  else if(layer=="depth"){const cb2=b*NP;setRaster(p=>{const v=cum[cb2+p];if(v<1||(_hid&&_hid(v)))return null;const c=depthCol(v);return c?[c[0],c[1],c[2],215]:null;});}
   else if(layer=="temp"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[40,120-(x*60|0),255,215];}
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[255,200-(x*110|0),60,235];}
-      const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);const col=tempCol(v);return[col[0],col[1],col[2],205];});}
+      const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(_hid&&_hid(v))return null;const col=tempCol(v);return[col[0],col[1],col[2],205];});}
   else if(layer=="wind"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=wg_(t,p)*3.6;mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="lt10"){if(mx>=10)return null;return[40,190,90,215];}
-      const val=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(val<0.5)return null;
+      const val=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(val<0.5||(_hid&&_hid(val)))return null;
       const c2=rampBYR(val/70);return[c2[0],c2[1],c2[2],200];});}
   // clouds are a state, like a satellite picture: one hour, not a window
   else if(layer=="cloud"&&_hasCloud){const t1=Math.max(0,Math.min(T-1,b-1));
     setRaster(p=>{let v=cloudv(t1,p);
       // the sunshine fallback has no value at night: borrow the nearest daylight hour
       if(v!==v){for(let d=1;d<12&&v!==v;d++){const x=cloudv(Math.max(0,t1-d),p);if(x===x)v=x;else{const y=cloudv(Math.min(T-1,t1+d),p);if(y===y)v=y;}}}
-      if(v!==v||v<10)return null;return cloudCol((v-10)/90);});}
+      if(v!==v||v<10||(_hid&&_hid(v)))return null;return cloudCol((v-10)/90);});}
   else if(layer=="sun"){const vmax=48;setRaster(p=>{let s=0;for(let t=a;t<b;t++)s+=sunv(t,p);if(s<0.3)return null;const c=sunCol(s,vmax);return[c[0],c[1],c[2],205];});}
   else if(layer=="tsurf"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=tsurfEst(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[20,80,180,215];}
@@ -11104,8 +11173,11 @@ function miniLegendRender(l){
         .map(r=>Object.assign({},r,{s:Math.round((sh.cnt[r.k]||0)/sh.tot*100)+'%'}));}
       else rows=rows.slice(0,7);
       document.getElementById('mlUnit').textContent='Anteil';}
-    h='<div class="ml-cls">'+rows.map(r=>'<div><i style="background:'+r.c+'"></i><span>'
-      +escapeHtml(r.s)+'</span></div>').join('')+'</div>';
+    const sw=rows.every(r=>r.k!=null),vis=sw?legVisSet(l||layer):null;
+    h='<div class="ml-cls">'+rows.map(r=>sw
+      ?'<button type="button" class="'+(vis.has(r.k)?'on':'off')+'" aria-pressed="'+vis.has(r.k)+'" aria-label="'+escapeHtml(r.n||r.s)+'" onclick="legToggle('+r.k+',event)"><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.s)+'</span></button>'
+      :'<div><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.s)+'</span></div>').join('')+'</div>'
+      +(sw&&!legIsDefault(l||layer)?'<button type="button" class="ml-reset" onclick="legReset(event)" aria-label="Standard wiederherstellen">↺</button>':'');
   }
   document.getElementById('mlScale').innerHTML=h;
   box.classList.add('show');
@@ -11116,7 +11188,9 @@ function miniLegendRender(l){
 // rows run top-down, high to low, like a printed colour key.
 function legSpec(l){
   const rgb=c=>'rgb('+c[0]+','+c[1]+','+c[2]+')';
-  if(vaLegendUp()||l==='snowpack'){
+  // by the layer asked about: right after a switch the SNOWPACK overlay can
+  // still be up for a moment while the new layer is already chosen
+  if((l||layer)==='snowpack'){
     if(!vaAvailable())return null;
     const L=vaMan.layers[vaKey];if(!L)return null;
     const name={powder:'Nur Pulver',ski6:'Skiqualität',wind:'Triebschnee',density:'Dichte',ski18:'Alle Schneearten',simple:'Schneeart'}[vaKey]||vaKey;
@@ -11138,29 +11212,80 @@ function legSpec(l){
       return {k,c:rgb(e[1]),s:SH[k]||nm.split(/[\s/(]/)[0].slice(0,7),n:nm};});
     return {t:name,u:(vaKey==='ski6'||vaKey==='powder')?'Pulver cm':vaKey==='wind'?'Wind':'Klasse',va:true,rows};
   }
-  if(l==='snow'){const rows=[];for(let i=SB.length-2;i>=0;i--)rows.push({c:SC[Math.min(i,SC.length-1)],s:String(SB[i]),n:SB[i]+'–'+SB[i+1]+' cm'});
+  // rows carry k (the class) and lo/hi (its value range): the legend is
+  // also the filter, see legHideFn()
+  if(l==='snow'){const rows=[];for(let i=SB.length-2;i>=0;i--){const top=i===SB.length-2;
+      rows.push({k:i,lo:SB[i],hi:top?Infinity:SB[i+1],c:SC[Math.min(i,SC.length-1)],s:String(SB[i])+(top?'+':''),n:SB[i]+(top?'+':'–'+SB[i+1])+' cm'});}
     return {t:'Neuschnee',u:'cm',rows};}
-  if(l==='depth'){const rows=[];for(let i=DEPTH_BOUNDS.length-2;i>=0;i--)rows.push({c:SC[Math.min(i,SC.length-1)],s:String(DEPTH_BOUNDS[i]),
-      n:DEPTH_BOUNDS[i]+(i===DEPTH_BOUNDS.length-2?'+':'–'+DEPTH_BOUNDS[i+1])+' cm'});
+  if(l==='depth'){const rows=[];for(let i=DEPTH_BOUNDS.length-2;i>=0;i--){const top=i===DEPTH_BOUNDS.length-2;
+      rows.push({k:i,lo:DEPTH_BOUNDS[i],hi:top?Infinity:DEPTH_BOUNDS[i+1],c:SC[Math.min(i,SC.length-1)],s:String(DEPTH_BOUNDS[i])+(top?'+':''),
+      n:DEPTH_BOUNDS[i]+(top?'+':'–'+DEPTH_BOUNDS[i+1])+' cm'});}
     return {t:'Schneehöhe',u:'cm',rows};}
   if(l==='powder')return {t:'Powder',u:'cm',grad:'linear-gradient(0deg,rgb(93,181,255),rgb(10,71,209))',
     ticks:[PD_STRONG_BLUE_CM+'+',PD_STRONG_BLUE_CM/2,0],long:'Neuschnee, der als Pulver liegen bleibt; Deckkraft = wie sicher'};
   if(l==='wind'){
     const wl=WIND_LVLS[windLvl][1];
-    if(stat==='lt10')return {t:'Wind '+wl,u:'km/h',rows:[{c:'rgb(40,190,90)',s:'<10',n:'bleibt im ganzen Fenster unter 10 km/h'}]};
-    const g=[0,.33,.66,1].map(x=>rgb(rampBYR(x)));
-    return {t:'Wind '+wl+' '+({avg:'Mittel',max:'Max',min:'Min'}[stat]||''),u:'km/h',grad:'linear-gradient(0deg,'+g.join(',')+')',ticks:['70+',50,25,0]};}
+    const W4=[[0,10,'<10','ruhig'],[10,25,'10–25','mässig'],[25,50,'25–50','stark – Schnee wird verfrachtet'],[50,Infinity,'50+','stürmisch']];
+    const rows=W4.map((w,k)=>({k,lo:w[0],hi:w[1],c:rgb(rampBYR(Math.min(1,((w[1]===Infinity?60:(w[0]+w[1])/2))/70))),s:w[2],n:w[2]+' km/h · '+w[3]})).reverse();
+    return {t:'Wind '+wl,u:'km/h',rows,long:'Mittlerer Wind im gewählten Zeitfenster'};}
   if(l==='temp'||l==='tsurf'){
     const nm=l==='temp'?'Temperatur 2 m':'Schneeoberfläche';
-    if(stat==='sub0')return {t:nm,u:'°C',rows:[{c:'rgb(40,90,255)',s:'<0',n:'bleibt im ganzen Fenster unter 0 °C'}]};
-    if(stat==='max05')return {t:nm,u:'°C',rows:[{c:'rgb(255,145,60)',s:'0–5',n:'Maximum zwischen 0 und 5 °C (Firn)'}]};
-    const g=[-20,-10,0,10,20].map(v=>rgb(tempCol(v)));
-    return {t:nm,u:'°C',grad:'linear-gradient(0deg,'+g.join(',')+')',ticks:[20,10,0,-10,-20]};}
-  if(l==='cloud'){const g=[0,.25,.5,.75,1].map(x=>{const c=cloudCol(x);return 'rgba('+c[0]+','+c[1]+','+c[2]+','+(c[3]/255).toFixed(2)+')';});
-    return {t:'Bewölkung',u:'%',grad:'linear-gradient(0deg,'+g.join(',')+')',ticks:[100,50,10],long:'Gesamtbewölkung zur gewählten Stunde (wie ein Satellitenbild)'};}
+    const T5=[[-Infinity,-10,'<−10',-15],[-10,-5,'−10–−5',-7],[-5,0,'−5–0',-2],[0,5,'0–5',2],[5,Infinity,'5+',8]];
+    const rows=T5.map((x,k)=>({k,lo:x[0],hi:x[1],c:rgb(tempCol(x[3])),s:x[2],n:x[2]+' °C'})).reverse();
+    return {t:nm,u:'°C',rows,long:'Mittlere Temperatur im gewählten Zeitfenster'};}
+  if(l==='cloud'){const C3=[[10,40,'wenig'],[40,70,'teils'],[70,101,'bedeckt']];
+    const rows=C3.map((x,k)=>{const c=cloudCol(((x[0]+x[1])/2-10)/90);return {k,lo:x[0],hi:x[1],c:'rgba('+c[0]+','+c[1]+','+c[2]+','+Math.max(.55,c[3]/255).toFixed(2)+')',s:x[2],n:x[0]+'–'+Math.min(100,x[1])+' % · '+x[2]};}).reverse();
+    return {t:'Bewölkung',u:'%',rows,long:'Gesamtbewölkung zur gewählten Stunde (wie ein Satellitenbild)'};}
   if(l==='powfind')return {t:'Gemeldetes Powder',u:'cm',rows:[100,60,30,10].map(cm=>{const c=snowCol(cm)||[150,150,150];return {c:rgb(c),s:String(cm),n:cm+' cm'};})};
   return null;
 }
+// ── The legend is the switch ─────────────────────────────────────────────
+// Tapping a class on the legend shows or hides it on the map. Each layer
+// opens on the classes that answer its usual question (Skiqualität: powder
+// only); what you pick is remembered per layer.
+const LEG_DEFAULT={
+  'va:ski6':r=>r.k===3||r.k===4||r.k===5,   // Pulver 0–10, 10–20, >20 cm
+  'va:wind':r=>r.k>=2,                       // leicht + stark verfrachtet
+  snow:r=>r.lo>=10,                          // lohnender Neuschnee
+  wind:r=>r.lo>=25,                          // ab hier wird Schnee verfrachtet
+  temp:r=>r.hi<=0                            // Pulver bleibt Pulver
+};
+const LEG_KEY='ssm_legsel_v1';
+let _legSel=(function(){try{return JSON.parse(localStorage.getItem(LEG_KEY)||'{}')||{};}catch(e){return {};}})();
+function legKey(l){l=l||layer;return l==='snowpack'?'va:'+vaKey:l;}
+function legRows(l){const sp=legSpec(l||layer);return sp&&sp.rows&&sp.rows.every(r=>r.k!=null)?sp.rows:null;}
+function legDefaultSet(l){const rows=legRows(l)||[],f=LEG_DEFAULT[legKey(l)];
+  const ks=rows.filter(r=>!f||f(r)).map(r=>r.k);return new Set(ks.length?ks:rows.map(r=>r.k));}
+function legVisSet(l){const v=_legSel[legKey(l)];return Array.isArray(v)?new Set(v):legDefaultSet(l);}
+function legIsDefault(l){const a=legVisSet(l),b=legDefaultSet(l);if(a.size!==b.size)return false;for(const k of a)if(!b.has(k))return false;return true;}
+function legHiddenK(l,k){return !legVisSet(l).has(k);}
+// value layers: a test "is this value's class switched off?", built once per
+// render (null when everything is shown) -- it runs for every grid cell
+function legHideFn(l){const rows=legRows(l);if(!rows)return null;const vis=legVisSet(l);
+  if(vis.size===rows.length)return null;
+  const off=rows.filter(r=>!vis.has(r.k)).map(r=>[r.lo,r.hi]);
+  return v=>{if(v!==v)return false;for(let i=0;i<off.length;i++)if(v>=off[i][0]&&v<off[i][1])return true;return false;};}
+function legSave(){try{localStorage.setItem(LEG_KEY,JSON.stringify(_legSel));}catch(e){}}
+function legToggle(k,ev){if(ev){ev.stopPropagation();ev.preventDefault();}
+  const rows=legRows();if(!rows)return;const vis=legVisSet();
+  if(vis.has(k))vis.delete(k);else vis.add(k);
+  // hiding the last class would leave an empty map: show everything instead
+  _legSel[legKey()]=vis.size?[...vis]:rows.map(r=>r.k);legSave();legApply();try{haptic(4);}catch(e){}}
+function legReset(ev){if(ev){ev.stopPropagation();ev.preventDefault();}delete _legSel[legKey()];legSave();legApply();try{haptic(4);}catch(e){}}
+function legAll(ev){if(ev){ev.stopPropagation();ev.preventDefault();}const rows=legRows();if(!rows)return;
+  _legSel[legKey()]=rows.map(r=>r.k);legSave();legApply();try{haptic(4);}catch(e){}}
+function legApply(){
+  if(layer==='snowpack'){try{vaFilterChanged();}catch(e){}}else{try{renderRaster();}catch(e){}}
+  try{miniLegendRender();}catch(e){}
+  try{if(document.getElementById('lySubs'))lyRender();}catch(e){}
+  try{if(document.body.classList.contains('leg-open'))legInfoRender();}catch(e){}}
+// The same class chips in the layer sheet, under the chosen tile.
+function legChipsHTML(){const rows=legRows();if(!rows)return '';const vis=legVisSet();
+  return rows.map(r=>'<button type="button" class="leg-chip'+(vis.has(r.k)?' on':'')+'" aria-pressed="'+vis.has(r.k)+'" onclick="legToggle('+r.k+',event)">'
+    +'<i style="background:'+r.c+'"></i><span>'+escapeHtml(r.n||r.s)+'</span></button>').join('')
+    +'<div class="leg-acts"><span>Antippen blendet ein und aus</span>'
+    +(vis.size<rows.length?'<button type="button" onclick="legAll(event)">Alle</button>':'')
+    +(legIsDefault()?'':'<button type="button" onclick="legReset(event)">Standard</button>')+'</div>';}
 // Tap the card: the full legend with names, units and what the layer is.
 function legInfoToggle(e){if(e)e.stopPropagation();
   if(document.body.classList.contains('leg-open')){legInfoClose();return;}
@@ -11181,8 +11306,10 @@ function legInfoRender(){
     const rows=(sh&&sh.tot>0&&sp.rows.length>7)?sp.rows.slice().sort((x,y)=>(sh.cnt[y.k]||0)-(sh.cnt[x.k]||0)):sp.rows;
     body='<div class="li-rows">'+rows.map(r=>{
       const pc=(sh&&sh.tot>0&&r.k!=null)?Math.round((sh.cnt[r.k]||0)/sh.tot*100):null;
-      return '<div'+(pc===0?' class="z"':'')+'><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.n||r.s)+'</span>'
+      const sw=r.k!=null&&legRows(),on=sw?!legHiddenK(layer,r.k):true;
+      return '<div class="'+(pc===0?'z ':'')+(sw?'sw ':'')+(on?'':'off')+'"'+(sw?' role="button" aria-pressed="'+on+'" onclick="legToggle('+r.k+',event)"':'')+'><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.n||r.s)+'</span>'
         +(pc!=null?'<b>'+pc+' %</b>':'')+'</div>';}).join('')+'</div>'
+      +(legRows()?'<p class="li-note">Antippen blendet eine Klasse auf der Karte ein und aus.</p>':'')
       +(sh&&sh.tot>0?'<p class="li-note">Anteil im aktuellen Kartenausschnitt</p>':'');
   }
   el.innerHTML='<div class="li-hd"><div><b>'+escapeHtml(sp.t)+'</b><span>Einheit: '+escapeHtml(sp.u||'–')+'</span></div>'
@@ -11310,18 +11437,23 @@ function tlGotoTomorrow(){
 const GROUPS={
   meteo:{tag:'A',label:'Meteo-Modell',items:[
     {id:'reppow',label:'Gemeldetes Powder',vars:[{l:'powfind',s:'powder',label:'Gemeldetes Powder'}]},
-    {id:'powder',label:'Powder',vars:[{l:'powder',s:'avg',label:'Powder'}]},
+    // The rule-based powder map only stands in while there is no SNOWPACK
+    // export: Skiqualität opens on "only powder" and answers the same question.
+    {id:'powder',label:'Powder',noVa:true,vars:[{l:'powder',s:'avg',label:'Powder'}]},
     {id:'newsnow',label:'Neuschnee',vars:[{l:'snow',s:'avg',label:'Neuschnee'}]},
     {id:'depth',label:'Schneehöhe',vars:[{l:'depth',s:'avg',label:'Schneehöhe'}]},
-    {id:'wind',label:'Wind',vars:[{l:'wind',s:'lt10',label:'<10 km/h'},{l:'wind',s:'avg',label:'Mittel'},{l:'wind',s:'max',label:'Max'},{l:'wind',s:'min',label:'Min'}]},
+    // No sub-layers any more: what to show is picked on the legend itself.
+    {id:'wind',label:'Wind',vars:[{l:'wind',s:'avg',label:'Wind'}]},
     {id:'cloud',label:'Bewölkung',needs:'cloud',vars:[{l:'cloud',s:'avg',label:'Bewölkung'}]},
-    {id:'temp',label:'Temperatur',vars:[{l:'temp',s:'sub0',label:'<0 °C'},{l:'tsurf',s:'avg',label:'Oberfläche'},{l:'temp',s:'avg',label:'Mittel'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'temp',s:'max05',label:'0–5 °C'}]},
+    {id:'temp',label:'Temperatur',vars:[{l:'temp',s:'avg',label:'Temperatur'}]},
     // SNOWPACK is a layer like the others, not an overlay: its sub-layers are
     // the variants. Only listed once the export is there (groupItems), and
     // only the views the export actually carries.
-    {id:'snowpack',label:'Skiqualität',va:true,vars:[{l:'snowpack',s:'powder',label:'Nur Pulver'},
-      {l:'snowpack',s:'ski6',label:'Einfache Schneearten'},{l:'snowpack',s:'ski18',label:'Alle Schneearten'},
-      {l:'snowpack',s:'wind',label:'Triebschnee'}]}
+    // One view each; the classes shown are picked on the legend (it opens on
+    // powder only). Triebschnee is its own tile: it is a different question.
+    {id:'snowpack',label:'Skiqualität',va:true,single:true,vars:[{l:'snowpack',s:'ski6',label:'Skiqualität'},
+      {l:'snowpack',s:'ski18',label:'Skiqualität'}]},
+    {id:'vadrift',label:'Triebschnee',va:true,vars:[{l:'snowpack',s:'wind',label:'Triebschnee'}]}
   ]},
   // The Report-Modell layers still exist and the drawings still feed the
   // prognosis -- they are just not in the picker. Drop `menu:false` to bring
@@ -11360,12 +11492,14 @@ const TOPIC_COLOR={
 let tlSel='#2A8FD8',tlSelTint='rgba(42,143,216,.12)';
 function groupItems(g){const z=(function(){try{return map.getZoom();}catch(e){return 99;}})();
   return (GROUPS[g]||GROUPS.meteo).items.filter(it=>(it.minZoom==null||z>=it.minZoom)&&(it.needs!=='cloud'||_hasCloud)).map(it=>{
+    if(it.noVa)return (typeof vaAvailable==='function'&&vaAvailable())?null:it;
     if(!it.va)return it;
     if(typeof vaAvailable!=='function'||!vaAvailable())return null;
     let vars=it.vars.filter(v=>vaMan.layers[v.s]).map(v=>Object.assign({},v));
     // An older export without the simplified view: its 18-class map leads.
     if(!vaMan.layers.ski6&&vaMan.layers.ski18){const d=vars.find(v=>v.s==='ski18');
       if(d){d.label='Skiqualität';vars=[d].concat(vars.filter(v=>v!==d));}}
+    if(it.single)vars=vars.slice(0,1);
     return vars.length?Object.assign({},it,{vars}):null;
   }).filter(Boolean);}
 // The groups the picker offers, in order. A group with `menu:false` is still a
@@ -11388,8 +11522,12 @@ function setTopic(t,itemIdx,varIdx){
   curVar=Math.max(0,Math.min(vars.length-1,varIdx||0));
   // after curVar, not before: the sub-layer column shows the live option, and
   // rendering it first left it a step behind on every change
+  // the layer before the strip: the strip shows the chosen layer's legend
+  const sel=vars[curVar];layer=sel.l;stat=sel.s;
   renderLayerStrip();
-  const sel=vars[curVar];layer=sel.l;stat=sel.s;renderAll();progRenderBar();legend();
+  renderAll();progRenderBar();legend();
+  // SNOWPACK picks its view (vaKey) inside renderAll: draw its classes again
+  if(layer==='snowpack')renderLayerStrip();
   if(typeof panelRestore==='function')requestAnimationFrame(()=>{try{panelRestore();}catch(e){}});
 }
 // ===================== One field, two axes ================================
@@ -11438,7 +11576,8 @@ const LY_ICON={
   wind:'<path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h15a3 3 0 1 1-3 3"/><path d="M3 16h8"/>',
   temp:'<line x1="12" y1="4" x2="12" y2="14"/><circle cx="12" cy="17" r="3"/>',
   cloud:'<path d="M7 18h10a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7.1 9.2 4.4 4.4 0 0 0 7 18z"/>',
-  snowpack:'<path d="M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9"/>'
+  snowpack:'<path d="M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9"/>',
+  vadrift:'<path d="M3 9h10a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3 13h14a2.5 2.5 0 1 1-2.5 2.5"/><path d="M4 20c3-2.5 6-3 9-1.5s5 .5 7-1"/>'
 };
 function lyIconFor(id){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '+
   'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+
@@ -11467,6 +11606,9 @@ const LY_TEXT={
     u:'%'},
   snowpack:{t:'Skiqualität aus SNOWPACK',
     d:'Simulierte Schneedecke (SNOWPACK, SLF) an 135 Wetterpunkten in jeder Höhe, Exposition und Neigung, auf das Gelände übertragen. Hell- bis dunkelblau = Pulver nach Tiefe, grau = hart, korall = Kruste, honiggelb = nass / Sulz. Ein Modell, keine Messung – kein Lawinenbulletin.',
+    u:'Klasse'},
+  vadrift:{t:'Triebschnee aus SNOWPACK',
+    d:'Wo der Wind Schnee abgelagert (violett) oder gepresst hat, aus der simulierten Schneedecke. Triebschnee fährt sich oft gut, ist aber das typische Lawinenproblem – Lawinenbulletin des SLF beachten.',
     u:'Klasse'},
   temp:{t:'Temperatur auf 2 m',
     d:'Lufttemperatur im gewählten Fenster. Entscheidend dafür, ob Pulver Pulver bleibt oder verharscht.',
@@ -11512,11 +11654,11 @@ function lyInfoRender(){
 const LY_COLS=3;
 // The picker in two short shelves -- what the snow does, what the weather
 // does -- instead of one long run of equal tiles.
-const LY_SECTIONS=[['Schnee',['snowpack','powder','reppow','newsnow','depth']],['Wetter',['temp','wind','cloud']]];
+const LY_SECTIONS=[['Schnee',['snowpack','vadrift','reppow','newsnow','depth','powder']],['Wetter',['temp','wind','cloud']]];
 function lyRender(){
   const grid=document.getElementById('lyGrid');if(!grid)return;
   const L=lyLayers(),i=lyIndex(),it=L[i]&&L[i][2],vars=(it&&it.vars)||[];
-  const many=vars.length>1;
+  const many=vars.length>1,chips=legChipsHTML();
   const seen=new Set(),secs=LY_SECTIONS.map(([name,ids])=>{
     const rows=L.map((x,n)=>[x,n]).filter(([x])=>ids.includes(x[2].id)&&!seen.has(x[2].id))
       .sort((p,q)=>ids.indexOf(p[0][2].id)-ids.indexOf(q[0][2].id));
@@ -11528,10 +11670,11 @@ function lyRender(){
     // the sub-layers open under the row of the chosen tile, so they read as
     // belonging to it
     const after=pos<0?-1:Math.min(rows.length-1,Math.floor(pos/LY_COLS)*LY_COLS+LY_COLS-1);
-    const subsHtml=(many&&pos>=0)?('<div class="ly-subs" id="lySubs" role="group" aria-label="Unterebene" '+
+    // under the chosen tile: its legend, and every class on it is a switch
+    const subsHtml=((chips||many)&&pos>=0)?('<div class="ly-subs'+(chips?' ly-legsw':'')+'" id="lySubs" role="group" aria-label="'+(chips?'Klassen':'Unterebene')+'" '+
       'style="--notch:'+(((pos%LY_COLS)+0.5)/LY_COLS*100)+'%">'+
-      vars.map((v,n)=>'<button type="button" class="ly-sub'+(n===curVar?' on':'')+'" '+
-        'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join('')+'</div>'):'';
+      (chips||vars.map((v,n)=>'<button type="button" class="ly-sub'+(n===curVar?' on':'')+'" '+
+        'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join(''))+'</div>'):'';
     return '<div class="ly-sec"><span class="lbl-micro">'+name+'</span><div class="ly-grid ly-g3">'+
       rows.map(([[g,k,item],n],p)=>{const hi=false;
         return '<button type="button" class="ly-tile'+(n===i?' on':'')+(hi?' ly-hi':'')+'" onclick="lyPick('+n+')"'+
@@ -11814,10 +11957,13 @@ addEventListener('pointerdown',e=>{
   if(e.target&&e.target.closest&&e.target.closest('#reportRow'))return;
   fabMenu(false);
 },true);
-// The legend is there when you ask for it (the i button), not all the time.
-function legVisToggle(on){on=on===undefined?!document.body.classList.contains('leg-vis'):!!on;
+// The legend is the switch for what the map shows, so it is on the map by
+// default; the i button folds it away (remembered).
+function legVisToggle(on,quiet){on=on===undefined?!document.body.classList.contains('leg-vis'):!!on;
   document.body.classList.toggle('leg-vis',on);const b=document.getElementById('legFab');if(b)b.classList.toggle('on',on);
-  if(!on){try{document.body.classList.remove('leg-open');}catch(e){}}try{haptic(4);}catch(e){}}
+  if(!quiet){try{localStorage.setItem('ssm_legvis',on?'1':'0');}catch(e){}}
+  if(!on){try{document.body.classList.remove('leg-open');}catch(e){}}if(!quiet)try{haptic(4);}catch(e){}}
+(function(){let v=null;try{v=localStorage.getItem('ssm_legvis');}catch(e){}legVisToggle(v!=='0',true);})();
 // The search field opens right beside its button on the map's side rail.
 function searchPlace(){const w=document.getElementById('searchWrap'),b=document.getElementById('searchFab');if(!w||!b)return;
   const r=b.getBoundingClientRect();if(!r.width){w.classList.remove('side');w.style.cssText='';return;}
@@ -14073,7 +14219,10 @@ function prefsApplyStartup(){
     const lv=(!prefs.layer||prefs.layer==='meteo:0'?'meteo:powder':prefs.layer).split(':');
     const grp=(GROUPS[lv[0]]&&GROUPS[lv[0]].menu!==false)?lv[0]:'meteo';
     let li=parseInt(lv[1]);
-    if(isNaN(li)){li=Math.max(0,groupItems(grp).findIndex(it=>it.id===lv[1]));}
+    if(isNaN(li)){let ix=groupItems(grp).findIndex(it=>it.id===lv[1]);
+      // with SNOWPACK there is no separate Powder tile: Skiqualität opens on powder
+      if(ix<0&&lv[1]==='powder')ix=groupItems(grp).findIndex(it=>it.id==='snowpack');
+      li=Math.max(0,ix);}
     setTopic(grp,grp===lv[0]?li:0,0);
     if(prefs.start==='home'&&prefs.home){
       const r=CH_RESORTS.find(x=>x.name===prefs.home);
