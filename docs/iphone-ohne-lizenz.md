@@ -12,8 +12,9 @@ Du brauchst: einen Mac (macOS 14.5 oder neuer), ein USB-Kabel, dein iPhone.
    Es erscheint ein Team «Dein Name (Personal Team)».
 3. **Projekt herunterladen:** GitHub → *Actions* → «iOS build (TestFlight)» → den neuesten
    grünen Lauf öffnen → unten bei *Artifacts* **snowmapper-xcode-projekt** laden.
-   Zip doppelklicken, dann `snowmapper-xcode.tar.gz` doppelklicken → Ordner `ios`.
-4. **Öffnen:** `ios/App/App.xcworkspace` doppelklicken (die *.xcworkspace*, nicht *.xcodeproj*).
+   Zip doppelklicken, dann `snowmapper-xcode.tar.gz` doppelklicken → Ordner `snowmapper`
+   (darin `ios` und `node_modules` – beide zusammen lassen).
+4. **Öffnen:** `snowmapper/ios/App/App.xcworkspace` doppelklicken (die *.xcworkspace*, nicht *.xcodeproj*).
 5. **Signieren:** links oben das blaue **App**-Symbol → *TARGETS: App* →
    Reiter **Signing & Capabilities** →
    - «Automatically manage signing» an
