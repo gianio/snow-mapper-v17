@@ -2220,6 +2220,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #searchRes .sr:last-child{border-bottom:none}
  #searchRes .sr:hover,#searchRes .sr.sel{background:rgba(0,112,184,.08);color:var(--fg)}
  #searchRes .sr .sub{font-size:12px;color:var(--mut);margin-top:2px}
+ #searchRes .sr.sr-note{cursor:default;color:var(--mut);background:none}
  /* The only thing the load shows: a 2 px rule along the top edge, filled by
     the actual number of bytes received. It removes itself when done. */
  #boot{position:fixed;top:0;left:0;right:0;height:2px;z-index:9999;background:transparent;pointer-events:none}
@@ -5514,6 +5515,10 @@ const I18N_DICT={
 "Eis":["Ice","Glace","Ghiaccio"],
 "Eisig":["Icy","Glacé","Ghiacciato"],
 "Entdecken":["Discover","Découvrir","Scopri"],
+"Im sichtbaren Kartenausschnitt gibt es keine Meldungen. Zoome heraus oder schau unter «Alle».":["No reports in the visible map area. Zoom out or look under “All”.","Aucune observation dans la zone visible. Dézoome ou regarde sous « Tous ».","Nessuna segnalazione nell'area visibile. Riduci lo zoom o guarda in «Tutti»."],
+"Keine Verbindung zum Server. Prüfe dein Internet und versuche es nochmals.":["No connection to the server. Check your internet and try again.","Pas de connexion au serveur. Vérifie ta connexion et réessaie.","Nessuna connessione al server. Controlla internet e riprova."],
+"Keine Treffer":["No results","Aucun résultat","Nessun risultato"],
+"Suche nicht erreichbar – Verbindung prüfen":["Search unavailable – check your connection","Recherche indisponible – vérifie ta connexion","Ricerca non disponibile – controlla la connessione"],
 "Erfasste Personen":["People involved","Personnes concernées","Persone coinvolte"],
 "Erneut senden":["Send again","Renvoyer","Invia di nuovo"],
 "Error:":["Error:","Erreur :","Errore:"],
@@ -12213,6 +12218,9 @@ function setOpen(fromProfile){
   const pm=document.getElementById('profModal');
   _setCameFromProfile=!!fromProfile&&!!pm&&pm.style.display!=='none';
   if(_setCameFromProfile)pm.style.display='none';
+  // The sheet sits inside #paneSearch, whose stacking context (z-index 1)
+  // kept the phone tab bar on top of its last rows. Lifted to <body> once.
+  if(sh.parentElement!==document.body)document.body.appendChild(sh);
   setRender();sh.classList.add('open');try{haptic(4);}catch(e){}}
 function setClose(){
   const sh=document.getElementById('setSheet');if(sh)sh.classList.remove('open');
@@ -12998,11 +13006,12 @@ document.getElementById('btn3dExag').onclick=()=>{
   let debT=null,selIdx=-1,items=[];
   inp.addEventListener('input',()=>{clearTimeout(debT);const q=inp.value.trim();if(q.length<2){res.style.display='none';items=[];return;}
     debT=setTimeout(()=>{fetch('https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText='+encodeURIComponent(q)+'&limit=6&sr=4326')
-      .then(r=>r.json()).then(d=>{items=d.results||[];selIdx=-1;if(!items.length){res.style.display='none';return;}
+      .then(r=>r.json()).then(d=>{items=d.results||[];selIdx=-1;if(!items.length){searchNote('Keine Treffer');return;}
         res.innerHTML=items.map((it,i)=>{const a=it.attrs;return`<div class="sr" data-i="${i}"><div>${a.label.replace(/<[^>]+>/g,'')}</div><div class="sub">${a.detail||''}</div></div>`;}).join('');
         res.style.display='block';
         res.querySelectorAll('.sr').forEach(el=>el.onclick=()=>pickResult(parseInt(el.dataset.i)));
-      }).catch(()=>{});},250);});
+      }).catch(()=>{items=[];searchNote('Suche nicht erreichbar – Verbindung prüfen');});},250);});
+  function searchNote(t){res.innerHTML='<div class="sr sr-note">'+tr(t)+'</div>';res.style.display='block';}
   inp.addEventListener('keydown',e=>{if(!items.length)return;
     if(e.key==='ArrowDown'){e.preventDefault();selIdx=Math.min(items.length-1,selIdx+1);hlSel();}
     else if(e.key==='ArrowUp'){e.preventDefault();selIdx=Math.max(0,selIdx-1);hlSel();}
@@ -14145,7 +14154,9 @@ function authRender(){
 }
 let _authBusy=false;
 async function authSubmit(e){
-  e.preventDefault();if(!sb||_authBusy)return;
+  e.preventDefault();if(_authBusy)return;
+  if(!sb){const er=document.getElementById('authErr');er.style.color='var(--danger)';
+    er.textContent='Keine Verbindung zum Server. Prüfe dein Internet und versuche es nochmals.';return;}
   const email=document.getElementById('authEmail').value.trim();
   const pass=document.getElementById('authPass').value;
   const errEl=document.getElementById('authErr');errEl.textContent='';errEl.style.color='var(--danger)';
@@ -16708,7 +16719,7 @@ function feedRender(){
   if(feedScope==='here'){
     const bnds=map.getBounds();
     base=base.filter(r=>bnds.contains([r.lat,r.lng])&&feedInWindow(r));
-    if(!base.length){list.innerHTML='<div class="feed-empty">Nichts im sichtbaren Ausschnitt und im gewählten Zeitfenster. Zoome heraus, verschiebe die Karte oder wähle ein grösseres Fenster — oder tippe auf Filter und wechsle zu „Entdecken".</div>';return;}
+    if(!base.length){list.innerHTML='<div class="feed-empty">Im sichtbaren Kartenausschnitt gibt es keine Meldungen. Zoome heraus oder schau unter «Alle».</div>';return;}
   }else if(feedScope==='following'){
     if(!sbUser){list.innerHTML='<div class="feed-empty">Melde dich an, um Leuten zu folgen und ihre Reports hier zu sehen.</div>';return;}
     base=base.filter(r=>r.dbRow&&r.userId&&myFollowing.has(r.userId));
