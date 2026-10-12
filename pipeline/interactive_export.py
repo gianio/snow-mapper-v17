@@ -72,6 +72,7 @@ def _quantisers():
         "cloud":     lambda a: np.round(np.clip(a, 0, 100) * _CLOUD_MUL),
         "wind850":   lambda a: np.round(np.clip(a, 0, 51) * _SPD_MUL),
         "wind700":   lambda a: np.round(np.clip(a, 0, 51) * _SPD_MUL),
+        "clv":       lambda a: a,   # already packed, see _pack_clv
     }
 _TEMP_OFF, _TEMP_MUL = 60.0, 2.0
 _SPD_MUL = 5.0
@@ -79,6 +80,17 @@ _DIR_DIV = 2.0
 _SUN_MUL = 100.0
 _PREC_MUL = 5.0
 _CLOUD_MUL = 2.5        # 0..100 % -> 0..250
+# Cloud by height in one byte: low (stratus/fog) in 7 steps, mid and high
+# (cirrus) in 6 each -- 7*6*6 = 252 codes. ~17-20 % steps are plenty for a
+# picture of the sky, and it costs one cube instead of three.
+_CLV_N = (7, 6, 6)
+
+
+def _pack_clv(low, mid, high):
+    """Three cloud fractions [%] -> one uint8 code per cell (see _CLV_N)."""
+    q = [np.clip(np.round(np.clip(a, 0, 100) / 100.0 * (n - 1)), 0, n - 1).astype("int32")
+         for a, n in zip((low, mid, high), _CLV_N)]
+    return (q[0] * (_CLV_N[1] * _CLV_N[2]) + q[1] * _CLV_N[2] + q[2]).astype("float32")
 _ELEV_Q = 4.0            # metres per step in the fine elevation raster
 _ELEV_SCALE = 20.0
 _WIND_STEP = 9000.0
@@ -499,14 +511,17 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     times, temp_m, prec_m, snow_m, wspd_m, wdir_m, sun_m, elev_pt = _hourly(fc, horizon)
     T = len(times)
     cloud_m = _cloud(fc, T)
+    clv_m = [_level_wind(fc, T, "cloud_cover_" + k) for k in ("low", "mid", "high")]
+    clv_m = clv_m if all(m is not None for m in clv_m) else None
     lvl_m = {k: _level_wind(fc, T, "wind_speed_" + h) for k, h in (("wind850", "850hPa"), ("wind700", "700hPa"))}
     lvl_m = {k: v for k, v in lvl_m.items() if v is not None}
     print(f"[INT] Hoehenwind: {', '.join(lvl_m) if lvl_m else 'nein'}.")
-    print(f"[INT] Bewoelkung: {'ja' if cloud_m is not None else 'nein (Quelle liefert keine)'}.")
+    print(f"[INT] Bewoelkung: {'ja' if cloud_m is not None else 'nein (Quelle liefert keine)'}"
+          f"{', nach Hoehe' if clv_m is not None else ''}.")
     idx, w = _idw_weights(pts, targets)
     ref_elev = _apply(elev_pt, idx, w).reshape(shape)
     cloud_at = None
-    if cloud_m is not None or lvl_m:
+    if cloud_m is not None or lvl_m or clv_m is not None:
         cloud_at = (_grid_spline(lats, lons, shape, aoi.crs, grid_x, grid_y)
                     or (lambda v: _apply(v, idx, w).reshape(shape)))
     sin_d, cos_d = np.sin(np.radians(wdir_m)), np.cos(np.radians(wdir_m))
@@ -523,7 +538,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     dst_t, dw, dh = calculate_default_transform(
         aoi.crs, "EPSG:4326", shape[1], shape[0], *bounds)
     QZ = _quantisers()
-    FIELDS = ("snow", "ablation", "temp", "sun", "wind_grid", "prec") + (("cloud",) if cloud_m is not None else ()) + tuple(lvl_m)
+    FIELDS = ("snow", "ablation", "temp", "sun", "wind_grid", "prec") + (("cloud",) if cloud_m is not None else ()) + (("clv",) if clv_m is not None else ()) + tuple(lvl_m)
     cubes = {k: np.zeros((T, dh, dw), "uint8") for k in FIELDS}
 
     def _store(key, t, frame_lv95):
@@ -590,6 +605,10 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         _store("prec", t, prec_g)
         if cloud_m is not None:
             _store("cloud", t, cloud_at(cloud_m[:, t]))
+        if clv_m is not None:
+            # each height reprojected on its own, packed only afterwards
+            lv = [_reproj_frame(np.clip(cloud_at(m_[:, t]), 0, 100), dem.transform, aoi.crs, dst_t, dh, dw) for m_ in clv_m]
+            cubes["clv"][t] = _pack_clv(*lv).astype("uint8")
         for k, m_ in lvl_m.items():
             # free-air wind: smooth over the region, no terrain modulation
             _store(k, t, np.clip(cloud_at(m_[:, t]) if cloud_at else _apply(m_[:, t], idx, w).reshape(shape), 0, None))
@@ -625,7 +644,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         "snow": cubes["snow"], "ablation": cubes["ablation"],
         "temp": cubes["temp"], "sun": cubes["sun"],
         "wind_grid": cubes["wind_grid"], "prec": cubes["prec"],
-        "cloud": cubes.get("cloud"),
+        "cloud": cubes.get("cloud"), "clv": cubes.get("clv"),
         "wind850": cubes.get("wind850"), "wind700": cubes.get("wind700"),
         "main_aspect": aspect_main, "main_slope": slope_main,
         "main_elev": elev_main,
@@ -890,6 +909,7 @@ def _build_meta_blobs(data):
         "PREC": u8(data["prec"], lambda a: np.round(a * _PREC_MUL)),
         **({"CLOUD": u8(data["cloud"], lambda a: np.round(np.clip(a, 0, 100) * _CLOUD_MUL))}
            if data.get("cloud") is not None else {}),
+        **({"CLV": u8(data["clv"], lambda a: a)} if data.get("clv") is not None else {}),
         **{b: u8(data[k], lambda a: np.round(np.clip(a, 0, 51) * _SPD_MUL))
            for k, b in (("wind850", "W850"), ("wind700", "W700")) if data.get(k) is not None},
         "MASPECT": u8(data["main_aspect"], lambda a: np.round(a / _DIR_DIV)),
@@ -909,6 +929,7 @@ def _build_meta_blobs(data):
         "snow_scale": _SNOW_SCALE, "abl_scale": _ABL_SCALE, "temp_off": _TEMP_OFF, "temp_mul": _TEMP_MUL,
         "spd_mul": _SPD_MUL, "dir_div": _DIR_DIV, "sun_mul": _SUN_MUL, "prec_mul": _PREC_MUL,
         "cloud_mul": _CLOUD_MUL if data.get("cloud") is not None else None,
+        "cloud_lv": list(_CLV_N) if data.get("clv") is not None else None,
         "wind_levels": [k for k in ("wind850", "wind700") if data.get(k) is not None],
         "elev_scale": _ELEV_SCALE,
         "slf_bounds": SLF_BOUNDS, "slf_colors": SLF_COLORS,
@@ -1691,6 +1712,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    border:1px solid var(--hair);background:var(--card);
    font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink-700);cursor:pointer}
  .ly-sub.on{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+ .ly-varrow{display:flex;flex-wrap:wrap;gap:6px;width:100%}
+ .ly-legsw .ly-varrow{grid-column:1/-1;padding-bottom:8px;margin-bottom:2px;border-bottom:1px solid var(--hair)}
+ /* a fixed legend reads as a legend, not as buttons */
+ .ly-legsw.ly-legfix{gap:2px 10px}
+ .ly-legfix .leg-chip.fixed{background:none!important;border:0!important;box-shadow:none!important;min-height:24px!important;padding:0 2px!important;font-weight:600;color:var(--fg2)}
+ .ly-legfix .leg-chip.fixed i{border-radius:3px}
  /* What the layer you just chose actually shows. */
  .ly-info{margin-top:22px;padding:14px;border-radius:var(--r-md);
    border:1px solid var(--hair);background:var(--card)}
@@ -2124,6 +2151,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .insp-sec:last-child{border-bottom:none}
  .insp-sec h4{margin:0 0 9px;font-size:13px;font-weight:800;color:var(--fg);letter-spacing:-.01em;display:flex;justify-content:space-between;align-items:baseline}
  .insp-sec h4 em{font-style:normal;font-weight:700;color:var(--acc2);font-size:12.5px}
+ .tc-leg{display:flex;flex-wrap:wrap;gap:4px 14px;margin:-3px 0 6px;font:700 12px/1.3 var(--font,inherit);color:var(--fg2)}
+ .tc-leg span{display:inline-flex;align-items:center;gap:6px}
+ .tc-leg i{display:inline-block;width:22px;height:0;border-top:3px solid #3E7C8C;border-radius:2px}
+ .tc-leg i.tc-srf{border-top:2.5px dashed #C9821F}
  .stn-now{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
  .stn-v{background:var(--fill);border-radius:12px;padding:8px 10px;min-width:0;display:flex;flex-direction:column;gap:2px}
  .stn-v span{font-size:11.5px;font-weight:700;color:var(--mut)}
@@ -3154,8 +3185,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     is, and a fan that lands on its own siblings is not a fan. */
  body.fab-open #fabDraw{transform:translate(-68px,0)}
  body.fab-open #fabObs{transform:translate(-68px,-58px)}
- body.fab-open #fabSnowp{transform:translate(-68px,-116px);transition-delay:.08s}
- #fabSnowp{color:var(--c-violet)}
  body.fab-open #fabObs{transition-delay:.04s}
  body.fab-open #fabTrack{transition-delay:.08s}
  #fabTrack{color:var(--accent)}
@@ -3659,37 +3688,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    #userViewModal .prof-sheet,#profModal .prof-sheet{max-width:440px!important;width:440px!important;height:auto!important;max-height:none!important;border-radius:18px!important}
  }
 
- /* ── Snowp: two cameras, friends only ── */
- .snp{position:fixed;inset:0;z-index:5200;background:#0b0d12;color:#fff;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px calc(env(safe-area-inset-bottom,0px) + 14px)}
- .snp[hidden]{display:none}
- .snp-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
- .snp-top button{width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer}
- .snp-top b{font:800 18px Inter,system-ui}.snp-top span{margin-left:auto;font:600 12px Inter,system-ui;opacity:.7}
- .snp-box{flex:1;display:flex;flex-direction:column;gap:10px;min-height:0;max-width:520px;width:100%;margin:0 auto}
- .snp-cam,.snp-prev{position:relative;flex:1;min-height:0;border-radius:24px;overflow:hidden;background:#1a1d24}
- .snp-cam video,.snp-main{width:100%;height:100%;object-fit:cover;display:block}
- video.mirror{transform:scaleX(-1)}
- .snp-inset{position:absolute;top:12px;left:12px;width:30%;aspect-ratio:3/4;object-fit:cover;border-radius:16px;border:3px solid #0b0d12;cursor:pointer}
- .snp-hint{position:absolute;left:0;right:0;bottom:14px;text-align:center;font:700 14px Inter,system-ui;text-shadow:0 1px 4px rgba(0,0,0,.6)}
- .snp-nocam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;opacity:.8;font:600 14px Inter,system-ui}
- .snp-shoot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
- .snp-btn{width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:rgba(255,255,255,.18);cursor:pointer}
- .snp-btn:active{transform:scale(.92)}
- .snp-flip{justify-self:start;width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer}
- .snp-meta{display:flex;justify-content:space-between;font:600 12px Inter,system-ui;opacity:.8}
- .snp-cap{border:0;border-radius:14px;padding:12px 14px;background:rgba(255,255,255,.1);color:#fff;font:500 16px Inter,system-ui}
- .snp-acts{display:flex;gap:8px}
- .snp-acts>*{flex:1;height:50px;border-radius:16px;border:0;font:800 15px Inter,system-ui;cursor:pointer;display:flex;align-items:center;justify-content:center}
- .snp-ghost{background:rgba(255,255,255,.12);color:#fff}
- .snp-post{background:linear-gradient(135deg,var(--c-violet),var(--accent));color:#fff}
- .snp-card{position:relative;margin:12px 0 0;aspect-ratio:3/4;max-height:520px;overflow:hidden;background:#111}
- .snp-card .snp-main{width:100%;height:100%;object-fit:cover}
- .snp-card .snp-inset{width:28%}
- .snp-tag{position:absolute;right:10px;bottom:10px;background:rgba(10,10,12,.7);color:#fff;font:800 11px Inter,system-ui;padding:5px 9px;border-radius:999px}
- .snp-pin{position:relative;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center}
- .snp-pin img{width:54px;height:72px;object-fit:cover;border-radius:14px;border:3px solid #fff;box-shadow:0 6px 16px rgba(0,0,0,.3)}
- .snp-pin i{position:absolute;top:-8px;right:-10px;width:26px;height:26px;border-radius:50%;background:var(--c-violet) center/cover;border:2px solid #fff;color:#fff;font:800 12px/22px Inter,system-ui;text-align:center;font-style:normal}
- .snp-pin b{margin-top:4px;background:rgba(10,10,12,.75);color:#fff;font:700 10.5px Inter,system-ui;padding:2px 7px;border-radius:999px;white-space:nowrap}
 
  /* ── activity recorder ── */
  .trk{position:fixed;inset:0;z-index:5100;pointer-events:none;display:flex;flex-direction:column;justify-content:flex-end}
@@ -3792,6 +3790,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .trk-pill i.pz{animation:none;background:#9CA3AF}
  .trk-pill b{font:800 14px var(--mono)}
  .trk-me{background:var(--accent)!important}
+ .trk-cone{position:absolute;left:-23px;top:-23px;width:64px;height:64px;display:none;pointer-events:none;transform-origin:50% 50%;transition:transform .15s linear}
  .act-card{margin:0 0 4px}
  .act-wrap{margin-top:12px}
  .act-svg{display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#eef3f8,#dfe7f0)}
@@ -4081,6 +4080,36 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* view transitions: a quick cross-fade with a little lift */
  ::view-transition-old(root),::view-transition-new(root){animation-duration:.22s;animation-timing-function:cubic-bezier(.2,.9,.25,1)}
  /* webcams */
+ #wcFab[hidden]{display:none!important}
+ .wcv{position:fixed;inset:0;z-index:6200;background:#0b0e14;color:#fff;display:flex;flex-direction:column;
+   padding:calc(env(safe-area-inset-top,0px) + 10px) 12px calc(env(safe-area-inset-bottom,0px) + 10px)}
+ .wcv[hidden]{display:none}
+ .wcv-top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:10px}
+ .wcv-top b{font:800 18px var(--font-d,Inter),system-ui;flex:1}
+ .wcv-x{width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer}
+ .wcv-seg{display:flex;gap:4px;background:rgba(255,255,255,.08);border-radius:999px;padding:3px;width:100%}
+ .wcv-seg button{flex:1;border:0;background:none;color:rgba(255,255,255,.75);font:700 13px Inter,system-ui;padding:8px 6px;border-radius:999px;cursor:pointer}
+ .wcv-seg button.on{background:#fff;color:#0b0e14}
+ @media(min-width:700px){.wcv-seg{width:auto}}
+ .wcv-body{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px}
+ .wcv-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font:600 13px Inter,system-ui;color:rgba(255,255,255,.8)}
+ .wcv-bar input[type=range]{flex:1;min-width:140px;accent-color:#6FB4F0}
+ .wcv-bar button,.wcv-btn{border:0;border-radius:999px;padding:8px 14px;background:rgba(255,255,255,.12);color:#fff;font:700 13px Inter,system-ui;cursor:pointer}
+ .wcv-bar button.on{background:#6FB4F0;color:#0b0e14}
+ .wcv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px}
+ .wcv-tile{position:relative;border-radius:16px;overflow:hidden;background:#1a1f2a;aspect-ratio:16/10}
+ .wcv-tile img,.wcv-tile iframe,.wcv-tv img,.wcv-tv iframe{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:0;display:block}
+ .wcv-cap{position:absolute;left:0;right:0;bottom:0;padding:18px 10px 8px;background:linear-gradient(transparent,rgba(0,0,0,.75));
+   font:700 13px Inter,system-ui;display:flex;align-items:flex-end;gap:6px;pointer-events:none}
+ .wcv-cap span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .wcv-cap em{font-style:normal;font-weight:600;opacity:.8}
+ .wcv-star{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:50%;border:0;background:rgba(0,0,0,.5);color:#FFD54A;font-size:18px;cursor:pointer;z-index:2}
+ .wcv-tv{position:relative;flex:1;min-height:240px;border-radius:18px;overflow:hidden;background:#1a1f2a}
+ .wcv-tv .wcv-cap{font-size:15px;padding:30px 14px 12px}
+ .wcv-prog{position:absolute;left:0;top:0;height:3px;background:#6FB4F0;z-index:2}
+ .wcv-empty{margin:auto;max-width:420px;text-align:center;font:500 15px/1.5 Inter,system-ui;color:rgba(255,255,255,.8);padding:20px}
+ .wc-pop .wc-fav{align-self:flex-start;margin:4px 12px 0;border:1px solid var(--hair);background:var(--card);color:var(--fg);border-radius:999px;padding:6px 12px;font:700 12.5px Inter,system-ui;cursor:pointer}
+ .wc-pop .wc-fav.on{background:#FFF4CC;border-color:#E9C44A}
  .wc-pin{width:30px;height:30px;border-radius:10px;background:#0E2A5C;color:#fff;display:flex;align-items:center;justify-content:center;
    box-shadow:0 0 0 2px #fff,0 4px 10px rgba(0,0,0,.3)}
  .wc-pin svg{width:16px;height:16px}
@@ -4194,7 +4223,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .mfab.act{color:#fff!important;border:0!important}
  #fabDraw{background:linear-gradient(145deg,#4FB3F6,var(--c-blue))!important}
  #fabObs{background:linear-gradient(145deg,#FFC24D,var(--c-amber))!important}
- #fabSnowp{background:linear-gradient(145deg,#A48BFF,var(--c-violet))!important}
  .mfab.act i{font-family:var(--font-d)}
  #locFab{color:var(--c-blue)}
  #layersFab{color:var(--c-mint)}
@@ -4747,7 +4775,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .trk-go{background:linear-gradient(150deg,#6FB4F0,#3F8AD6 50%,#2D5A8C)!important;box-shadow:0 0 0 10px rgba(63,138,214,.14),0 12px 28px rgba(45,90,140,.35)!important}
  .trk-pill{background:linear-gradient(150deg,#3F8AD6,#2D5A8C)!important}
  #tabBar .tb-rec.live i{color:var(--c-blue)!important}
- .mfab.act,#fabDraw,#fabObs,#fabSnowp{background:linear-gradient(150deg,#6FB4F0,#3F8AD6)!important}
+ .mfab.act,#fabDraw,#fabObs{background:linear-gradient(150deg,#6FB4F0,#3F8AD6)!important}
  .trk-btn.fin{border-color:var(--c-blue)!important;color:var(--c-blue)!important}
 
  #postEditW{position:fixed;inset:0;z-index:6000;background:rgba(13,21,37,.35);display:flex;align-items:flex-end;justify-content:center;padding:16px}
@@ -4780,7 +4808,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <b>Snowmapper ist gesperrt</b><span>Mit Face ID entsperren</span>
   <button class="onb-pri" onclick="lockUnlock()">Entsperren</button>
   <button class="onb-link" onclick="lockReset()">Sperre aufheben und abmelden</button></div></div>
-<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:linear-gradient(150deg,#6FB4F0,#3F8AD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg></i><span><b>Report Powder</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:linear-gradient(150deg,#4A86C8,#2D5A8C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button><button class="rs-it" onclick="repSheetToggle(false);snpOpen()"><i style="--rc:linear-gradient(150deg,#3A5E8E,#1D2D49)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="15" height="13" rx="3"/><circle cx="10" cy="12.5" r="3.4"/><rect x="14" y="2.5" width="7.5" height="9" rx="2"/></svg></i><span><b>Snowp</b><small>2 Kameras · nur Freunde</small></span></button></div></div>
+<div id="wcv" class="wcv" hidden role="dialog" aria-label="Webcams"><div class="wcv-top"><button class="wcv-x" onclick="wcvClose()" aria-label="Schliessen">×</button><b>Webcams</b>
+<div class="wcv-seg" role="tablist"><button data-m="fav" onclick="wcvMode('fav')">Favoriten</button><button data-m="tv" onclick="wcvMode('tv')">Webcam-TV</button><button data-m="near" onclick="wcvMode('near')">In der Nähe</button></div></div>
+<div class="wcv-body" id="wcvBody"></div></div>
+<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:linear-gradient(150deg,#6FB4F0,#3F8AD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg></i><span><b>Report Powder</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:linear-gradient(150deg,#4A86C8,#2D5A8C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button></div></div>
 <nav id="tabBar" aria-label="Navigation">
   <button data-tab="map" onclick="navGo('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg><span>Karte</span></button>
   <button data-tab="tours" id="tourFab" onclick="navGo('tours')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/></svg><span>Touren</span></button>
@@ -4871,11 +4902,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
+    <button class="mfab" id="wcFab" onclick="wcvOpen()" title="Webcams" aria-label="Webcams" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
     <button class="mfab" id="legFab" onclick="legVisToggle()" title="Legende ein/aus" aria-label="Legende ein/aus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="4" height="4" rx="1"/><rect x="3.5" y="10" width="4" height="4" rx="1"/><rect x="3.5" y="15.5" width="4" height="4" rx="1"/><line x1="11" y1="6.5" x2="20.5" y2="6.5"/><line x1="11" y1="12" x2="20.5" y2="12"/><line x1="11" y1="17.5" x2="20.5" y2="17.5"/></svg></button>
   </div>
   <div class="mfab-row" id="reportRow">
     <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><i>Report Powder</i></button>
-    <button class="mfab act" id="fabSnowp" onclick="fabMenu(false);snpOpen()" title="Snowp – 2 Kameras, nur Freunde" aria-label="Snowp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="15" height="13" rx="3"/><circle cx="10" cy="12.5" r="3.4"/><rect x="14" y="2.5" width="7.5" height="9" rx="2" fill="var(--card)"/><circle cx="17.75" cy="7" r="1.6"/></svg><i>Snowp</i></button>
     <button class="mfab act" id="fabObs" onclick="fabMenu(false);obsOpen()" title="Beobachtung melden" aria-label="Beobachtung melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><i>Beobachtung</i></button>
     <button class="mfab" id="mapFab" onclick="fabMenu()" title="Melden" aria-label="Melden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
   </div>
@@ -4939,7 +4970,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="lyScrim" onclick="lyPanelClose()"></div>
 <div id="tourSheet" class="tour-sheet" role="dialog" aria-label="Skitour"></div>
 <div id="tourSearch" class="ts-sheet" role="dialog" aria-label="Touren finden"></div>
-<div id="snp" class="snp" hidden role="dialog" aria-label="Snowp"><div class="snp-top"><button onclick="snpClose()" aria-label="Schliessen">×</button><b>Snowp</b><span>2 Kameras · nur Freunde</span></div><div id="snpBox" class="snp-box"></div></div>
 <div id="trk" class="trk" hidden role="dialog" aria-label="Aktivität aufzeichnen"><div id="trkSheet" class="trk-sheet"></div></div>
 <button id="trkPill" class="trk-pill" hidden onclick="trkExpand()" aria-label="Aufzeichnung öffnen"></button>
 <div id="lyPanel" class="ly-panel" role="dialog" aria-modal="true" aria-label="Ebenen">
@@ -5325,7 +5355,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <!--__BOOT__-->
 <script id="appjs">/*__APP_START__*/
 const __D=window.__D||{};const M=__D.meta||{};function db(k){return (__D.b&&__D.b[k])||"";}
-// --- Native (Capacitor) bridge — real native on iOS, harmless no-op in a browser ---
+// --- Native (Capacitor) bridge — real native on iOS/Android, harmless no-op in a browser ---
 const _CAP=(typeof window!=='undefined'&&window.Capacitor)?window.Capacitor:null;
 const _isNative=!!(_CAP&&_CAP.isNativePlatform&&_CAP.isNativePlatform());
 const I18N_DICT={
@@ -5523,6 +5553,26 @@ const I18N_DICT={
 "Im sichtbaren Kartenausschnitt gibt es keine Meldungen. Zoome heraus oder schau unter «Alle».":["No reports in the visible map area. Zoom out or look under “All”.","Aucune observation dans la zone visible. Dézoome ou regarde sous « Tous ».","Nessuna segnalazione nell'area visibile. Riduci lo zoom o guarda in «Tutti»."],
 "Keine Verbindung zum Server. Prüfe dein Internet und versuche es nochmals.":["No connection to the server. Check your internet and try again.","Pas de connexion au serveur. Vérifie ta connexion et réessaie.","Nessuna connessione al server. Controlla internet e riprova."],
 "Keine Treffer":["No results","Aucun résultat","Nessun risultato"],
+"Luft (2 m über Boden)":["Air (2 m above ground)","Air (2 m au-dessus du sol)","Aria (2 m dal suolo)"],
+"Luft max":["Air max","Air max","Aria max"],
+"Webcam-TV":["Webcam TV","Webcam TV","Webcam TV"],"Favoriten":["Favourites","Favoris","Preferiti"],"In der Nähe":["Nearby","À proximité","Nelle vicinanze"],
+"☆ Merken":["☆ Save","☆ Enregistrer","☆ Salva"],"★ Gemerkt":["★ Saved","★ Enregistrée","★ Salvata"],
+"Aus den Favoriten entfernt":["Removed from favourites","Retirée des favoris","Rimossa dai preferiti"],
+"Zu den Webcam-Favoriten hinzugefügt":["Added to webcam favourites","Ajoutée aux webcams favorites","Aggiunta alle webcam preferite"],
+"Webcams sind noch nicht freigeschaltet":["Webcams are not enabled yet","Les webcams ne sont pas encore activées","Le webcam non sono ancora attive"],
+"Lade Webcams …":["Loading webcams …","Chargement des webcams …","Caricamento webcam …"],
+"Suche Webcams in der Nähe …":["Looking for webcams nearby …","Recherche de webcams à proximité …","Ricerca webcam nelle vicinanze …"],
+"Keine Webcams gefunden.":["No webcams found.","Aucune webcam trouvée.","Nessuna webcam trovata."],
+"Aktuelles Bild":["Latest picture","Image actuelle","Immagine attuale"],"▶ Zeitraffer 24 h":["▶ 24 h timelapse","▶ Accéléré 24 h","▶ Timelapse 24 h"],
+"Tief":["Low","Bas","Basso"],
+"nach Höhe":["by height","par altitude","per quota"],
+"Tiefe Wolken, Nebel – dicht":["Low cloud, fog – dense","Nuages bas, brouillard – denses","Nubi basse, nebbia – dense"],
+"Mittelhohe Wolken":["Mid-level cloud","Nuages moyens","Nubi medie"],
+"Hohe Wolken, Cirren – dünn":["High cloud, cirrus – thin","Nuages hauts, cirrus – fins","Nubi alte, cirri – sottili"],
+"Wolken nach Höhe zur gewählten Stunde: tief (unter ~2000 m, Stratus und Nebel – dicht, keine Sicht), mittel (~2000–6000 m) und hoch (über ~6000 m, Cirren – dünn, die Sonne scheint oft durch). Je kräftiger die Farbe, desto mehr Bedeckung.":["Cloud by height at the selected hour: low (below ~2000 m, stratus and fog – dense, no visibility), mid (~2000–6000 m) and high (above ~6000 m, cirrus – thin, the sun often shines through). The stronger the colour, the more cover.","Nuages par altitude à l'heure choisie : bas (sous ~2000 m, stratus et brouillard – denses, pas de visibilité), moyens (~2000–6000 m) et hauts (au-dessus de ~6000 m, cirrus – fins, le soleil passe souvent). Plus la couleur est forte, plus la couverture est grande.","Nubi per quota all'ora scelta: basse (sotto ~2000 m, strati e nebbia – dense, nessuna visibilità), medie (~2000–6000 m) e alte (sopra ~6000 m, cirri – sottili, il sole spesso filtra). Più il colore è intenso, maggiore è la copertura."],
+"Luft min":["Air min","Air min","Aria min"],
+"Schneeoberfläche":["Snow surface","Surface de la neige","Superficie della neve"],
+"°C · gemessen":["°C · measured","°C · mesuré","°C · misurato"],
 "Bitte Passwort eingeben.":["Please enter your password.","Saisis ton mot de passe.","Inserisci la password."],
 "Legende ein/aus":["Legend on/off","Légende on/off","Legenda on/off"],
 "Suche nicht erreichbar – Verbindung prüfen":["Search unavailable – check your connection","Recherche indisponible – vérifie ta connexion","Ricerca non disponibile – controlla la connessione"],
@@ -5929,7 +5979,7 @@ const I18N_DICT={
 "Unten die Zeitleiste: die letzten Tage und die Prognose für die nächsten fünf. Die Karte rechnet sofort neu.":["The timeline at the bottom: the past days and the forecast for the next five. The map updates instantly.", "La frise en bas : les derniers jours et la prévision pour les cinq prochains. La carte se met à jour aussitôt.", "La timeline in basso: gli ultimi giorni e la previsione per i prossimi cinque. La mappa si aggiorna subito."],
 "Im Tab Touren: Umkreis, Höhenmeter und Steilheit wählen – sortiert nach Pulver- oder Sulz-Anteil aus dem Modell.":["In the Tours tab: choose radius, elevation gain and steepness – sorted by the model's powder or corn share.", "Dans l'onglet Itinéraires : rayon, dénivelé et raideur – triés selon la part de poudreuse ou de neige de printemps du modèle.", "Nella scheda Gite: raggio, dislivello e pendenza – ordinati per quota di polvere o firn del modello."],
 "Melden & zeichnen":["Report & draw", "Signaler & dessiner", "Segnala & disegna"],
-"Mit Plus malst du eine Schnee-Karte, meldest eine Beobachtung oder schickst einen Snowp an Freunde.":["With plus you paint a snow map, report an observation or send a Snowp to friends.", "Avec plus, tu peins une carte de neige, signales une observation ou envoies un Snowp à tes amis.", "Con più dipingi una mappa della neve, segnali un'osservazione o invii uno Snowp agli amici."],
+"Mit Plus malst du eine Schnee-Karte oder meldest eine Beobachtung.":["With plus you paint a snow map or report an observation.","Avec plus, tu peins une carte de neige ou signales une observation.","Con più dipingi una mappa della neve o segnali un'osservazione."],
 "Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil.":["Record your tour and report the snow right along the route in the elevation profile.", "Enregistre ta sortie et signale la neige le long de l'itinéraire dans le profil d'altitude.", "Registra la tua gita e segnala la neve lungo il percorso nel profilo altimetrico."],
 "Folge Leuten aus deinem Gebiet, bestätige gute Meldungen und baue Vertrauen auf. Deine Meldungen verbessern das Modell.":["Follow people from your area, confirm good reports and build trust. Your reports improve the model.", "Suis des gens de ta région, confirme les bons signalements et gagne en confiance. Tes signalements améliorent le modèle.", "Segui persone della tua zona, conferma le buone segnalazioni e costruisci fiducia. Le tue segnalazioni migliorano il modello."],
 "Tour überspringen":["Skip tour", "Passer la visite", "Salta il tour"],
@@ -6210,12 +6260,30 @@ try{const _al=window.alert.bind(window),_cf=window.confirm.bind(window),_pr=wind
 function _capPlugin(n){return (_CAP&&_CAP.Plugins&&_CAP.Plugins[n])?_CAP.Plugins[n]:null;}
 function nativeShare(text,url){const S=_capPlugin('Share');if(S){try{S.share({text:text||'',url:url||''});return true;}catch(e){}}return false;}
 if(_isNative){try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'DARK'});SB.setOverlaysWebView({overlay:true});}}catch(e){}
-  try{const SP=_capPlugin('SplashScreen');if(SP)setTimeout(()=>{try{SP.hide();}catch(e){}},450);}catch(e){}}
+  try{const SP=_capPlugin('SplashScreen');if(SP)setTimeout(()=>{try{SP.hide();}catch(e){}},450);}catch(e){}
+  // Android hardware/gesture back. Every sheet and modal already closes on
+  // Escape, so back replays Escape; if nothing on screen changed (no overlay
+  // was open) it sends the app to the background like any Android app.
+  // Never fires on iOS, which has no back button.
+  try{const A=_capPlugin('App');if(A&&_CAP.getPlatform&&_CAP.getPlatform()==='android')A.addListener('backButton',()=>{
+    // Several closers run inside a View Transition (vt()), i.e. a frame or two
+    // later, so watch briefly. Only attributes that END UP different count
+    // (some handlers re-assign body.className to the same value), and the
+    // map's own tile/transform updates are ignored.
+    const was=new Map();
+    const note=rs=>{for(const r of rs){const t=r.target;if(t.closest&&t.closest('#map,#map3d'))continue;
+      const a=was.get(t)||new Map();was.set(t,a);if(!a.has(r.attributeName))a.set(r.attributeName,r.oldValue||'');}};
+    const mo=new MutationObserver(note);
+    mo.observe(document.body,{subtree:true,attributes:true,attributeOldValue:true,attributeFilter:['class','style']});
+    document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+    setTimeout(()=>{note(mo.takeRecords());mo.disconnect();let changed=false;
+      was.forEach((a,t)=>a.forEach((v,n)=>{if(v!==(t.getAttribute(n)||''))changed=true;}));
+      if(!changed){try{A.minimizeApp();}catch(e){}}},300);});}catch(e){}}
 function dec(b){const s=atob(b),n=s.length,a=new Uint8Array(n);for(let i=0;i<n;i++)a[i]=s.charCodeAt(i);return a;}
 const SNOW=dec(db('SNOW')),TEMP=dec(db('TEMP')),SUN=dec(db('SUN')),SPD=dec(db('SPD')),WDIR=dec(db('DIR'));
 const ABL=dec(db('ABL'));
 const WINDG=dec(db('WINDG')),RSLOPE=dec(db('RSLOPE')),RASPECT=dec(db('RASPECT')),RHOR=dec(db('RHOR'));
-const CLOUD=dec(db('CLOUD'));
+const CLOUD=dec(db('CLOUD')),CLV=dec(db('CLV'));
 const PREC=dec(db('PREC')),MASPECT=dec(db('MASPECT')),MSLOPE=dec(db('MSLOPE')),MELEV=dec(db('MELEV')),ROUGHG=dec(db('ROUGHGRID'));
 const ASPECT_PNG="data:image/png;base64,"+db('ASPECTPNG'),ROUGH_PNG="data:image/png;base64,"+db('ROUGHPNG'),ELEV_PNG="data:image/png;base64,"+db('ELEVPNG');
 const T=M.T,W=M.width,H=M.height,NP=W*H,P=M.wind.lat.length,NX=M.wind.nx;
@@ -6258,6 +6326,17 @@ function cloudCol(x){x=Math.max(0,Math.min(1,x));
   for(let i=1;i<CLOUD_STOPS.length;i++){const[p1,c1]=CLOUD_STOPS[i],[p0,c0]=CLOUD_STOPS[i-1];
     if(x<=p1){const f=(x-p0)/(p1-p0);return c0.map((v,j)=>Math.round(v+(c1[j]-v)*f));}}
   return CLOUD_STOPS[CLOUD_STOPS.length-1][1].slice();}
+// Cloud by height (blob field CLV): low = stratus/fog, mid, high = cirrus.
+const _clvData=!!M.cloud_lv&&CLV.length>=T*NP;
+function cloudLv(t,p){const v=CLV[t*NP+p],N=M.cloud_lv,b=N[1]*N[2];
+  return [Math.floor(v/b)/(N[0]-1),Math.floor((v%b)/N[2])/(N[1]-1),(v%N[2])/(N[2]-1)];}
+// Like a meteogram: a thin, light cirrus veil, mid cloud grey-blue, low
+// cloud and fog a dense dark grey on top -- what you would not see through.
+const CLV_COL=[[74,82,98,.82],[112,134,170,.62],[178,196,236,.48]];
+function clvCol(l,m,h){let r=0,g=0,b=0,a=0;
+  for(const [f,c] of [[h,CLV_COL[2]],[m,CLV_COL[1]],[l,CLV_COL[0]]]){const al=f*c[3];if(al<=0)continue;
+    r=c[0]*al+r*(1-al);g=c[1]*al+g*(1-al);b=c[2]*al+b*(1-al);a=al+a*(1-al);}
+  if(a<0.06)return null;return [Math.round(r/a),Math.round(g/a),Math.round(b/a),Math.round(Math.min(.9,a)*255)];}
 const SB=M.slf_bounds,SC=M.slf_colors,RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
 function snowCol(v){if(v<SB[0])return null;for(let i=SB.length-1;i>=1;i--)if(v>=SB[i-1])return RGB[Math.min(i-1,RGB.length-1)];return RGB[0];}
 // The stepped legend above is right for the model layers (an official
@@ -9141,7 +9220,8 @@ function rptPlace(r){
 var WEBCAM_KEY=null,wcLayer=null,wcSeen=new Map(),wcT=0,wcBusy=false;   // var: the layer list asks before this line has run
 const WC_API='https://api.windy.com/webcams/api/v3/webcams';
 fetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
-  if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}}}).catch(()=>{});
+  if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}
+    const f=document.getElementById('wcFab');if(f)f.hidden=false;}}).catch(()=>{});
 async function wcFetch(params){
   const r=await fetch(WC_API+'?'+params,{headers:{'x-windy-api-key':WEBCAM_KEY}});
   if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
@@ -9172,6 +9252,7 @@ async function wcPreview(id,mk){
     const link=(w.urls&&(w.urls.detail||w.urls.provider))||('https://www.windy.com/webcams/'+id);
     mk.setPopupContent('<div class="wc-pop">'+(src?'<img src="'+escapeHtml(src)+'" alt="">':'<div class="wc-img"></div>')
       +'<b>'+escapeHtml(w.title||'Webcam')+'</b><span>'+escapeHtml([loc.city,loc.region].filter(Boolean).join(', '))+(when?' · '+when:'')+'</span>'
+      +'<button class="wc-fav'+(wcFavHas(id)?' on':'')+'" onclick="wcFavToggle(\''+escapeHtml(id)+'\',this)" data-t="'+escapeHtml(w.title||'Webcam')+'" data-lat="'+(loc.latitude||'')+'" data-lon="'+(loc.longitude||'')+'">'+(wcFavHas(id)?'★ Gemerkt':'☆ Merken')+'</button>'
       +'<a href="'+escapeHtml(link)+'" target="_blank" rel="noopener">Live auf windy.com ›</a>'
       +'<em>Webcams bereitgestellt von <a href="https://www.windy.com/" target="_blank" rel="noopener">windy.com</a></em></div>');
   }catch(e){mk.setPopupContent('<div class="wc-pop"><b>Vorschau nicht verfügbar</b></div>');}
@@ -9179,6 +9260,80 @@ async function wcPreview(id,mk){
 const _toastSeen=new Set();
 function toastOnce(k,msg){if(_toastSeen.has(k))return;_toastSeen.add(k);try{toast(msg,'info');}catch(e){}}
 map.on('moveend',()=>{if(!ovOn.webcams)return;clearTimeout(wcT);wcT=setTimeout(wcRefresh,400);});
+// ── Webcam screen: favourites as tiles, Webcam-TV, cameras near me ──
+// Favourites live on the device. Each tile plays Windy's 24-hour timelapse
+// (all at once), or shows the latest picture. TV runs through the
+// favourites one after another; "In der Nähe" runs through the cameras
+// around you above a chosen altitude (our terrain model gives the altitude).
+const WCV={mode:'fav',play:true,tv:0,tvT:0,tvList:[],minAlt:1500,near:null,busy:false};
+const WC_TV_MS=15000;
+function wcFavs(){try{const v=JSON.parse(localStorage.getItem('ssm_wcfav')||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}}
+function wcFavSave(v){try{localStorage.setItem('ssm_wcfav',JSON.stringify(v));}catch(e){}}
+function wcFavHas(id){return wcFavs().some(f=>f.id===String(id));}
+function wcFavToggle(id,btn){id=String(id);let v=wcFavs();
+  if(v.some(f=>f.id===id)){v=v.filter(f=>f.id!==id);toast('Aus den Favoriten entfernt','info');}
+  else{v.push({id,t:(btn&&btn.dataset.t)||'Webcam',lat:+((btn&&btn.dataset.lat)||0),lon:+((btn&&btn.dataset.lon)||0)});toast('Zu den Webcam-Favoriten hinzugefügt','ok');}
+  wcFavSave(v);if(btn&&btn.classList.contains('wc-fav')){const on=v.some(f=>f.id===id);btn.classList.toggle('on',on);btn.textContent=on?'★ Gemerkt':'☆ Merken';}
+  if(!document.getElementById('wcv').hidden&&WCV.mode==='fav')wcvRender();}
+// details with fresh image links and the timelapse player
+async function wcDetails(ids){if(!ids.length)return [];
+  const j=await wcFetch('webcamIds='+ids.map(encodeURIComponent).join(',')+'&limit=50&include=images,location,player');
+  return (j.webcams||[]).map(w=>{const loc=w.location||{},im=w.images&&(w.images.current||w.images.daylight)||{},pl=w.player||{};
+    const day=typeof pl.day==='string'?pl.day:(pl.day&&typeof pl.day==='object'?(pl.day.embed||pl.day.link):null),alt=loc.latitude!=null?fineElev(loc.latitude,loc.longitude):null;
+    return {id:String(w.webcamId||w.id),t:w.title||'Webcam',lat:loc.latitude,lon:loc.longitude,img:im.preview||im.thumbnail||null,
+      player:typeof day==='string'?day:null,alt:alt!=null?Math.round(alt):null};});}
+function wcMedia(c,live){
+  return (live&&c.player)?'<iframe src="'+escapeHtml(c.player)+'" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer-when-downgrade" title="'+escapeHtml(c.t)+'"></iframe>'
+    :(c.img?'<img src="'+escapeHtml(c.img)+'" alt="" loading="lazy">':'');}
+function wcCap(c){return '<div class="wcv-cap"><span>'+escapeHtml(c.t)+'</span>'+(c.alt!=null?'<em>'+c.alt+' m</em>':'')+'</div>';}
+function wcvOpen(){if(!WEBCAM_KEY){toast('Webcams sind noch nicht freigeschaltet','info');return;}
+  document.getElementById('wcv').hidden=false;document.body.classList.add('wcv-open');wcvMode(WCV.mode);}
+function wcvClose(){clearTimeout(WCV.tvT);document.getElementById('wcv').hidden=true;document.body.classList.remove('wcv-open');
+  document.getElementById('wcvBody').innerHTML='';}
+function wcvMode(m){WCV.mode=m;clearTimeout(WCV.tvT);
+  document.querySelectorAll('#wcv .wcv-seg button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));wcvRender();}
+async function wcvRender(){const el=document.getElementById('wcvBody');if(!el)return;clearTimeout(WCV.tvT);
+  const ap='<div class="wcv-empty" style="font-size:12px;margin:6px auto 0;padding:0">Webcams bereitgestellt von <a href="https://www.windy.com/" target="_blank" rel="noopener" style="color:#9cc9f5">windy.com</a></div>';
+  if(WCV.mode==='near')return wcvNear(el,ap);
+  const favs=wcFavs();
+  if(!favs.length){el.innerHTML='<div class="wcv-empty">Noch keine Favoriten.<br>Schalte auf der Karte unter <b>Ebenen → Webcams</b> die Kameras ein, tippe auf eine und dann auf <b>☆ Merken</b>.</div>';return;}
+  el.innerHTML='<div class="wcv-empty">Lade Webcams …</div>';
+  let cams;try{cams=await wcDetails(favs.map(f=>f.id));}catch(e){el.innerHTML='<div class="wcv-empty">Webcams konnten nicht geladen werden</div>';return;}
+  if(WCV.mode==='fav'){
+    el.innerHTML='<div class="wcv-bar"><button class="'+(WCV.play?'on':'')+'" onclick="WCV.play=!WCV.play;wcvRender()">'+(WCV.play?'▶ Zeitraffer 24 h':'Aktuelles Bild')+'</button><span>'+cams.length+' Favoriten</span></div>'
+      +'<div class="wcv-grid">'+cams.map(c=>'<div class="wcv-tile">'+wcMedia(c,WCV.play)+wcCap(c)
+        +'<button class="wcv-star" onclick="wcFavToggle(\''+escapeHtml(c.id)+'\')" aria-label="Aus Favoriten entfernen">★</button></div>').join('')+'</div>'+ap;}
+  else wcvTv(el,cams,ap,'Favoriten');}
+function wcvTv(el,cams,ap,what){WCV.tvList=cams;if(WCV.tv>=cams.length)WCV.tv=0;
+  if(!cams.length){el.innerHTML='<div class="wcv-empty">Keine Webcams gefunden.</div>';return;}
+  const c=cams[WCV.tv];
+  el.innerHTML='<div class="wcv-tv">'+wcMedia(c,true)+'<div class="wcv-prog" id="wcvProg"></div>'+wcCap(c)+'</div>'
+    +'<div class="wcv-bar"><button onclick="wcvStep(-1)">‹</button><span style="flex:1;text-align:center">'+(WCV.tv+1)+' / '+cams.length+' · '+what+'</span><button onclick="wcvStep(1)">›</button></div>'+ap;
+  const pr=document.getElementById('wcvProg');if(pr){pr.style.width='0';pr.animate([{width:'0%'},{width:'100%'}],{duration:WC_TV_MS,fill:'forwards'});}
+  WCV.tvT=setTimeout(()=>wcvStep(1),WC_TV_MS);}
+function wcvStep(d){clearTimeout(WCV.tvT);const n=WCV.tvList.length||1;WCV.tv=(WCV.tv+d+n)%n;
+  const el=document.getElementById('wcvBody');if(!el)return;
+  if(WCV.mode==='near')wcvNearShow(el);else wcvTv(el,WCV.tvList,'',WCV.mode==='tv'?'Favoriten':'');}
+async function wcvNear(el,ap){
+  const c=myLoc?{lat:myLoc[0],lon:myLoc[1]}:(()=>{const m=map.getCenter();return {lat:m.lat,lon:m.lng};})();
+  el.innerHTML='<div class="wcv-empty">Suche Webcams in der Nähe …</div>';
+  try{const j=await wcFetch('nearby='+c.lat.toFixed(4)+','+c.lon.toFixed(4)+',40&limit=50&include=location');
+    const ids=(j.webcams||[]).map(w=>String(w.webcamId||w.id));
+    WCV.near=(await wcDetails(ids)).filter(x=>x.lat!=null);}
+  catch(e){el.innerHTML='<div class="wcv-empty">Webcams konnten nicht geladen werden</div>';return;}
+  WCV.tv=0;wcvNearShow(el,ap);}
+function wcvNearShow(el,ap){const cams=(WCV.near||[]).filter(x=>x.alt==null||x.alt>=WCV.minAlt).sort((p,q)=>(q.alt||0)-(p.alt||0));
+  WCV.tvList=cams;if(WCV.tv>=cams.length)WCV.tv=0;
+  const bar='<div class="wcv-bar"><span>ab <b id="wcvAltV">'+WCV.minAlt+'</b> m</span><input type="range" min="0" max="3500" step="100" value="'+WCV.minAlt+'" '
+    +'oninput="document.getElementById(\'wcvAltV\').textContent=this.value" onchange="WCV.minAlt=+this.value;WCV.tv=0;wcvNearShow(document.getElementById(\'wcvBody\'))" aria-label="Mindesthöhe der Webcams"></div>';
+  if(!cams.length){el.innerHTML=bar+'<div class="wcv-empty">Keine Webcams über '+WCV.minAlt+' m im Umkreis von 40 km. Schieb den Regler nach links.</div>';return;}
+  const c=cams[WCV.tv];clearTimeout(WCV.tvT);
+  el.innerHTML=bar+'<div class="wcv-tv">'+wcMedia(c,true)+'<div class="wcv-prog" id="wcvProg"></div>'+wcCap(c)
+    +'<button class="wcv-star" onclick="wcFavToggle(\''+escapeHtml(c.id)+'\',this);this.textContent=wcFavHas(\''+escapeHtml(c.id)+'\')?\'★\':\'☆\'" data-t="'+escapeHtml(c.t)+'" data-lat="'+c.lat+'" data-lon="'+c.lon+'" aria-label="Merken">'+(wcFavHas(c.id)?'★':'☆')+'</button></div>'
+    +'<div class="wcv-bar"><button onclick="wcvStep(-1)">‹</button><span style="flex:1;text-align:center">'+(WCV.tv+1)+' / '+cams.length+' · in der Nähe</span><button onclick="wcvStep(1)">›</button></div>'+(ap||'');
+  const pr=document.getElementById('wcvProg');if(pr)pr.animate([{width:'0%'},{width:'100%'}],{duration:WC_TV_MS,fill:'forwards'});
+  WCV.tvT=setTimeout(()=>wcvStep(1),WC_TV_MS);}
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('wcv').hidden)wcvClose();});
 // ── View Transitions: screens cross-fade and slide instead of popping ──
 // Progressive: browsers without the API (or with reduced motion) just switch.
 function vt(fn){
@@ -9309,7 +9464,7 @@ function trkOnPos(p){
       seg.push(pt);if(trkLine)trkLine.addLatLng([pt[1],pt[2]]);
       if(seg.length%5===0)trkSaveRec();}}
   if(trkMe)trkMe.setLatLng([pt[1],pt[2]]);
-  else if(typeof map!=='undefined'){try{trkMe=L.marker([pt[1],pt[2]],{icon:L.divIcon({className:'',html:'<div class="me-dot trk-me"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1950}).addTo(map);}catch(e){}}
+  else if(typeof map!=='undefined'){try{trkMe=L.marker([pt[1],pt[2]],{icon:L.divIcon({className:'',html:TRK_CONE+'<div class="me-dot trk-me"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1950}).addTo(map);trkHeadPaint();}catch(e){}}
   if(trkRec&&!trkRec.paused&&trkRec.follow!==false&&trkView==='rec'){try{map.panTo([pt[1],pt[2]],{animate:true});}catch(e){}}
   trkPaint();
 }
@@ -9327,6 +9482,27 @@ function trkGpsStart(hi){
     if(++fails===2&&hi!==false){trkGpsStart(false);}},
     {enableHighAccuracy:hi!==false,maximumAge:hi!==false?0:30000,timeout:30000});
 }
+// ── Compass: the phone's heading as a cone on the position dot ──
+// iOS asks once (needs a tap, hence started from opening the recorder);
+// Android delivers an absolute heading without asking. No sensor, no cone.
+const TRK_CONE='<svg class="trk-cone" viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="trkConeG" cx="32" cy="32" r="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2A8FD8" stop-opacity=".55"/><stop offset="1" stop-color="#2A8FD8" stop-opacity="0"/></radialGradient></defs><path d="M32 32 L17 4 A32 32 0 0 1 47 4 Z" fill="url(#trkConeG)"/></svg>';
+let trkHead=null,trkHeadOn=false,_trkHeadRaf=0;
+function trkHeadEvt(e){let h=null;
+  if(e.webkitCompassHeading!=null&&e.webkitCompassHeading>=0)h=e.webkitCompassHeading;
+  else if(e.absolute&&e.alpha!=null)h=360-e.alpha;
+  if(h==null)return;
+  const so=(screen.orientation&&screen.orientation.angle)||window.orientation||0;
+  trkHead=((h+so)%360+360)%360;
+  if(!_trkHeadRaf)_trkHeadRaf=requestAnimationFrame(()=>{_trkHeadRaf=0;trkHeadPaint();});}
+async function trkCompass(on){if(on===trkHeadOn)return;trkHeadOn=on;
+  if(on){try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+        const r=await DeviceOrientationEvent.requestPermission();if(r!=='granted'){trkHeadOn=false;return;}}}
+    catch(e){trkHeadOn=false;return;}
+    addEventListener('deviceorientationabsolute',trkHeadEvt,true);addEventListener('deviceorientation',trkHeadEvt,true);}
+  else{removeEventListener('deviceorientationabsolute',trkHeadEvt,true);removeEventListener('deviceorientation',trkHeadEvt,true);trkHead=null;trkHeadPaint();}}
+function trkHeadPaint(){const el=trkMe&&trkMe.getElement&&trkMe.getElement(),c=el&&el.querySelector('.trk-cone');if(!c)return;
+  if(trkHead==null){c.style.display='none';return;}
+  c.style.display='';c.style.transform='rotate('+trkHead.toFixed(0)+'deg)';}
 function trkGpsStop(){
   if(trkWatch!=null){try{navigator.geolocation.clearWatch(trkWatch);}catch(e){}trkWatch=null;}
   if(trkNative!=null){try{_capPlugin('BackgroundGeolocation').removeWatcher({id:trkNative});}catch(e){}trkNative=null;}
@@ -9572,12 +9748,13 @@ function trkOpen(){
   if(trkRec){trkView='rec';}else if(trkView!=='list'&&trkView!=='detail')trkView='setup';
   document.body.classList.add('trk-open');document.getElementById('trk').hidden=false;
   if(!trkRec&&trkWatch==null)trkGpsStart(TRK_ACC[trkPrefs.acc].hiAcc);
+  trkCompass(true);
   trkRender();
 }
 function trkClose(force){
   if(trkRec&&!force){trkMin();return;}
   document.body.classList.remove('trk-open','trk-min');document.getElementById('trk').hidden=true;
-  if(!trkRec){trkGpsStop();if(trkMe){map.removeLayer(trkMe);trkMe=null;}
+  if(!trkRec){trkGpsStop();trkCompass(false);if(trkMe){map.removeLayer(trkMe);trkMe=null;}
     if(trkGuideLine){map.removeLayer(trkGuideLine);trkGuideLine=null;}if(!trkDraft)trkGuide=null;}
   if(trkShown&&!force){map.removeLayer(trkShown);trkShown=null;}
   trkPill();
@@ -9802,7 +9979,7 @@ function actFeedVisual(r){const cd=r.condition_data,A=cd.activity;
     +(cd.measurement?'<div class="act-rep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17"/></svg>'+escapeHtml(cd.measurement)+(cd.altitudeM?' · '+cd.altitudeM+' m':'')+(cd.stars?' · '+'★'.repeat(cd.stars):'')+'</div>':'')+'</div>';
 }
 // a posted activity is for the people who follow you (and yourself)
-function actVisible(r){if(r&&r.condition_data&&r.condition_data.snowp)return snpFriend(r.userId);
+function actVisible(r){if(r&&r.condition_data&&r.condition_data.snowp)return false;
   const A=r&&r.condition_data&&r.condition_data.activity;if(!A)return true;
   if(sbUser&&r.userId===sbUser.id)return true;return !!(r.userId&&myFollowing&&myFollowing.has(r.userId));}
 // «Meine Aufzeichnungen» on the map
@@ -9916,7 +10093,6 @@ function pvName(S){if(sbUser&&S.uid===sbUser.id)return (sbUser.user_metadata&&sb
   const n=document.getElementById('uvName');return n?n.textContent:'';}
 function pvOpenPost(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;feedOpenUser(S.uid,pvName(S),r.id);}
 function pvOpenPostOld(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;const cd=r.condition_data||{};pvClose();
-  if(cd.snowp&&cd.snowp.back)return snpFeedVisual(r);
   if(cd.activity&&cd.activity.track){setTimeout(()=>trkShowOnMap(cd.activity.track),250);return;}
   const ll=parseGeo(r.location);if(ll)feedFlyTo(ll[0],ll[1]);}
 function pvOpenAct(boxId,i){const S=pvState[boxId],a=S&&S.acts[i];if(!a)return;if(a.local||!a.post)pvClose();
@@ -9934,128 +10110,8 @@ async function trkProfRender(){const el=document.getElementById('profActs');if(!
   setTimeout(()=>{try{trkLineFromRec();if(!trkRec.paused){trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);}
     clearInterval(trkTick);trkTick=setInterval(trkPaint,1000);trkPill();toast('Aufzeichnung läuft weiter','info');}catch(e){}},1500);}catch(e){}})();
 
-// ── Snowp ─────────────────────────────────────────────────────────────────
-// Two pictures at once, the way you see the moment: the back camera (the
-// slope) and the front camera (you), posted straight away, for friends only
-// (mutual follows), with the place. Friends' latest Snowps appear on the map,
-// so you see where your people are today.
-//
-// Privacy is enforced by the database (reports.visibility = 'friends', see
-// supabase/migrations/20261006000000_post_visibility.sql). Without that
-// column the app does NOT post -- a Snowp must never become public.
-let snp={stream:null,facing:'environment',back:null,front:null,fix:null,busy:false};
-function snpOpen(){try{fabMenu(false);}catch(e){}
-  if(!sb||!sbUser){authShow();return;}
-  snp.back=null;snp.front=null;snp.fix=null;snp.facing='environment';
-  const el=document.getElementById('snp');el.hidden=false;document.body.classList.add('snp-open');
-  snpRender();snpCam('environment');
-  // only the location line changes -- re-rendering would swap the <video>
-  // out from under the camera stream
-  geoLocate(p=>{snp.fix=[p.coords.latitude,p.coords.longitude];document.querySelectorAll('.snp-loc').forEach(e=>{e.textContent=tr('📍 Standort wird mitgeschickt');});},()=>{});
-}
-function snpClose(){snpStop();document.getElementById('snp').hidden=true;document.body.classList.remove('snp-open');}
-function snpStop(){if(snp.stream){snp.stream.getTracks().forEach(t=>{try{t.stop();}catch(e){}});snp.stream=null;}}
-async function snpCam(facing){snpStop();snp.facing=facing;
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){snpRender('nocam');return;}
-  const tok=snp.tok=(snp.tok||0)+1;
-  try{const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:false});
-    if(tok!==snp.tok||document.getElementById('snp').hidden){st.getTracks().forEach(t=>t.stop());return;}
-    snp.stream=st;snpAttach();
-    // no picture after a few seconds (blocked, or never started): offer the file picker
-    setTimeout(()=>{const v=document.getElementById('snpVideo');if(tok===snp.tok&&v&&!v.videoWidth&&!(snp.back&&snp.front))snpRender('nocam');},4000);}
-  catch(e){snpRender('nocam');}
-}
-function snpAttach(){const v=document.getElementById('snpVideo');if(!v||!snp.stream)return;
-  v.setAttribute('playsinline','');v.muted=true;
-  if(v.srcObject!==snp.stream)v.srcObject=snp.stream;
-  v.classList.toggle('mirror',snp.facing==='user');v.play().catch(()=>{});}
-function _snpGrab(){const v=document.getElementById('snpVideo');if(!v||!v.videoWidth)return null;
-  const W=1080,H=1440,cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
-  const r=Math.max(W/v.videoWidth,H/v.videoHeight),w=v.videoWidth*r,h=v.videoHeight*r;
-  if(snp.facing==='user'){c.translate(W,0);c.scale(-1,1);}
-  c.drawImage(v,(W-w)/2,(H-h)/2,w,h);
-  return new Promise(res=>cv.toBlob(res,'image/jpeg',.86));}
-async function snpShoot(){
-  const b=await _snpGrab();if(!b){snpRender('nocam');return;}
-  try{haptic(14);}catch(e){}
-  if(!snp.back){snp.back=b;snpRender();
-    // second picture: you, right after the slope
-    await snpCam('user');setTimeout(()=>{const t=document.getElementById('snpHint');if(t)t.textContent='Und jetzt du – Frontkamera';},50);
-    return;}
-  snp.front=b;snpStop();snpRender();
-}
-async function snpFile(inp,which){const f=inp.files&&inp.files[0];if(!f)return;
-  const b=await downscaleImage(f,1440,.86);if(which==='back')snp.back=b;else snp.front=b;
-  if(snp.back&&!snp.front){snpRender('nocam');return;}snpRender();}
-function snpRetake(){snp.back=null;snp.front=null;snpRender();snpCam('environment');}
-function snpRender(mode){const el=document.getElementById('snpBox');if(!el)return;
-  const done=snp.back&&snp.front,loc=snp.fix?'📍 Standort wird mitgeschickt':'📍 Standort wird gesucht …';
-  if(done){const bu=URL.createObjectURL(snp.back),fu=URL.createObjectURL(snp.front);
-    el.innerHTML='<div class="snp-prev"><img class="snp-main" src="'+bu+'" alt=""><img class="snp-inset" src="'+fu+'" alt="" onclick="snpSwap()"></div>'
-      +'<input id="snpCap" class="snp-cap" maxlength="140" placeholder="Was geht ab? (optional)">'
-      +'<div class="snp-meta"><span class="snp-loc">'+loc+'</span><span>🔒 nur Freunde</span></div>'
-      +'<div class="snp-acts"><button class="snp-ghost" onclick="snpRetake()">Neu</button><button class="snp-post" onclick="snpPost()">Snowp senden</button></div>';
-    return;}
-  const nocam=mode==='nocam';
-  el.innerHTML='<div class="snp-cam">'+(nocam?'<div class="snp-nocam">Keine Kamera im Browser – Bilder auswählen</div>':'<video id="snpVideo" playsinline muted autoplay></video>')
-    +(snp.back?'<img class="snp-inset" src="'+URL.createObjectURL(snp.back)+'" alt="">':'')
-    +'<div class="snp-hint" id="snpHint">'+(snp.back?'Und jetzt du – Frontkamera':'Zuerst der Hang – Rückkamera')+'</div></div>'
-    +(nocam?'<div class="snp-acts"><label class="snp-ghost">'+(snp.back?'Selfie wählen':'Hang-Foto wählen')+'<input type="file" accept="image/*" capture="'+(snp.back?'user':'environment')+'" hidden onchange="snpFile(this,\''+(snp.back?'front':'back')+'\')"></label></div>'
-      :'<div class="snp-shoot"><button onclick="snpCam(snp.facing===\'user\'?\'environment\':\'user\')" aria-label="Kamera wechseln" class="snp-flip">⟲</button><button class="snp-btn" onclick="snpShoot()" aria-label="Auslösen"></button><span></span></div>')
-    +'<div class="snp-meta"><span class="snp-loc">'+loc+'</span><span>🔒 nur Freunde</span></div>';
-  if(!nocam)snpAttach();
-}
-function snpSwap(){const t=snp.back;snp.back=snp.front;snp.front=t;snpRender();}
-async function snpPost(){if(snp.busy)return;if(!sb||!sbUser){authShow();return;}
-  if(!snp.back||!snp.front)return;
-  snp.busy=true;const btn=document.querySelector('.snp-post');if(btn){btn.disabled=true;btn.textContent='Sendet …';}
-  try{
-    const up=async(b,tag)=>{const p=sbUser.id+'/snowp'+Date.now()+'_'+tag+'.jpg';
-      const{error}=await sb.storage.from('report-images').upload(p,b,{cacheControl:'31536000',contentType:'image/jpeg'});if(error)throw error;
-      const{data}=sb.storage.from('report-images').getPublicUrl(p);return data.publicUrl;};
-    const ll=snp.fix||(myLoc?myLoc:null);
-    if(!ll){toast('Ohne Standort kein Snowp – bitte Standort erlauben','err');throw new Error('no location');}
-    const [bu,fu]=await Promise.all([up(snp.back,'b'),up(snp.front,'f')]);
-    const cap=((document.getElementById('snpCap')||{}).value||'').trim();
-    const row={user_id:sbUser.id,location:'POINT('+ll[1]+' '+ll[0]+')',primary_categories:['other'],subtype:'Snowp',
-      image_url:bu,caption:cap||null,condition_data:{snowp:{back:bu,front:fu},images:[bu,fu]},
-      completion_score:30,captured_at:new Date().toISOString(),visibility:'friends'};
-    await withThumb(row,snp.back);
-    const{error}=await sb.from('reports').insert(row);
-    if(error){
-      // the visibility column is missing: the post would be public -- refuse
-      if(/visibility/i.test(error.message||'')){
-        try{await sb.storage.from('report-images').remove([storagePathFromUrl(bu),storagePathFromUrl(fu)].filter(Boolean));}catch(e){}
-        toast('Snowps sind noch nicht freigeschaltet (Datenbank-Update nötig) – nichts wurde gepostet','err');snp.busy=false;if(btn){btn.disabled=false;btn.textContent='Snowp senden';}return;}
-      throw error;}
-    toast('Snowp gesendet – nur deine Freunde sehen ihn','ok');try{haptic(16);}catch(e){}
-    snpClose();try{loadDbReports();}catch(e){}
-  }catch(e){if(e&&e.message!=='no location')toast('Snowp fehlgeschlagen: '+(e.message||e),'err');if(btn){btn.disabled=false;btn.textContent='Snowp senden';}}
-  snp.busy=false;
-}
-// who may see it in the app (the database decides for real)
-function snpFriend(uid){return !!(sbUser&&(uid===sbUser.id||(myFollowing.has(uid)&&myFollowers.has(uid))));}
-function snpFeedVisual(r){const S=r.condition_data.snowp,id=String(r.id).replace(/[^\w-]/g,'');
-  return '<div class="snp-card" id="snpc-'+id+'"><img class="snp-main" src="'+S.back+'" alt="" loading="lazy">'
-    +'<img class="snp-inset" src="'+S.front+'" alt="" loading="lazy" onclick="event.stopPropagation();snpCardSwap(\''+id+'\')">'
-    +'<span class="snp-tag">Snowp · 🔒 Freunde</span></div>';}
-function snpCardSwap(id){const c=document.getElementById('snpc-'+id);if(!c)return;const a=c.querySelector('.snp-main'),b=c.querySelector('.snp-inset');const t=a.src;a.src=b.src;b.src=t;}
-// friends on the map: their latest Snowp of the last 24 h
-let snpLayer=null;
-function snpMapRender(){
-  if(!snpLayer){snpLayer=L.layerGroup().addTo(map);}
-  snpLayer.clearLayers();if(ovOn.reports===false)return;
-  const now=Date.now(),latest={};
-  (allReports||[]).forEach(r=>{const S=r.condition_data&&r.condition_data.snowp;if(!S||!r.userId)return;
-    const t=Date.parse(r.createdAt||'')||0;if(t&&now-t>24*3600e3)return;
-    if(!latest[r.userId]||t>latest[r.userId].t)latest[r.userId]={r,t};});
-  Object.values(latest).forEach(({r,t})=>{const S=r.condition_data.snowp,av=r.avatar||avatarOf(r.userId);
-    const ago=t?Math.max(1,Math.round((now-t)/36e5)):null;
-    const html='<div class="snp-pin"><img src="'+S.front+'" alt=""><i style="'+(av?'background-image:url('+encodeURI(av)+')':'')+'">'+(av?'':escapeHtml((r.user||'?')[0].toUpperCase()))+'</i><b>'+escapeHtml(r.user||'')+(ago?' · '+ago+' h':'')+'</b></div>';
-    L.marker([r.lat,r.lng],{icon:L.divIcon({className:'',html,iconSize:[0,0],iconAnchor:[0,0]}),zIndexOffset:1800})
-      .on('click',()=>{try{feedOpen();setTimeout(()=>{const c=document.getElementById('feedcard-'+r.id);if(c)c.scrollIntoView({behavior:'smooth',block:'center'});},400);}catch(e){}})
-      .addTo(snpLayer);});
-}
+// Snowp (two-camera posts for friends) was retired. Old Snowp posts stay
+// private: they are no longer shown anywhere.
 // ── «Touren finden» ────────────────────────────────────────────────────────
 // A sheet over the lower part of the screen, the map above it showing only
 // the routes that pass the filters. Distance is measured to the route's
@@ -11196,6 +11252,8 @@ function renderRaster(){
       const val=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(val<0.5||(_hid&&_hid(val)))return null;
       const c2=rampBYR(val/70);return[c2[0],c2[1],c2[2],200];});}
   // clouds are a state, like a satellite picture: one hour, not a window
+  else if(layer=="cloud"&&_clvData){const t1=Math.max(0,Math.min(T-1,b-1));
+    setRaster(p=>{const q=cloudLv(t1,p);return clvCol(q[0],q[1],q[2]);});}
   else if(layer=="cloud"&&_hasCloud){const t1=Math.max(0,Math.min(T-1,b-1));
     setRaster(p=>{let v=cloudv(t1,p);
       // the sunshine fallback has no value at night: borrow the nearest daylight hour
@@ -11413,6 +11471,9 @@ function legSpec(l){
     const T5=[[-Infinity,-10,'<−10',-15],[-10,-5,'−10–−5',-7],[-5,0,'−5–0',-2],[0,5,'0–5',2],[5,10,'5–10',7],[10,Infinity,'10+',14]];
     const rows=T5.map((x,k)=>({k,lo:x[0],hi:x[1],c:rgb(tempCol(x[3])),s:x[2],n:x[2]+' °C'})).reverse();
     return {t:nm,u:'°C',rows,long:'Mittlere Temperatur im gewählten Zeitfenster'};}
+  if(l==='cloud'&&_clvData){const nm=['Tiefe Wolken, Nebel – dicht','Mittelhohe Wolken','Hohe Wolken, Cirren – dünn'];
+    const rows=[0,1,2].map(k=>{const c=CLV_COL[k];return {k,c:'rgba('+c[0]+','+c[1]+','+c[2]+','+Math.max(.6,c[3]).toFixed(2)+')',s:['Tief','Mittel','Hoch'][k],n:nm[k]};}).reverse();
+    return {t:'Bewölkung',u:'Höhe',rows,long:'Wolken nach Höhe zur gewählten Stunde: tief (unter ~2000 m, Stratus und Nebel – dicht, keine Sicht), mittel (~2000–6000 m) und hoch (über ~6000 m, Cirren – dünn, die Sonne scheint oft durch). Je kräftiger die Farbe, desto mehr Bedeckung.'};}
   if(l==='cloud'){const C3=[[10,40,'wenig'],[40,70,'teils'],[70,101,'bedeckt']];
     const rows=C3.map((x,k)=>{const c=cloudCol(((x[0]+x[1])/2-10)/90);return {k,lo:x[0],hi:x[1],c:'rgba('+c[0]+','+c[1]+','+c[2]+','+Math.max(.55,c[3]/255).toFixed(2)+')',s:x[2],n:x[0]+'–'+Math.min(100,x[1])+' % · '+x[2]};}).reverse();
     return {t:'Bewölkung',u:'%',rows,long:'Gesamtbewölkung zur gewählten Stunde (wie ein Satellitenbild)'};}
@@ -11625,10 +11686,11 @@ const GROUPS={
     {id:'powder',label:'Powder',noVa:true,vars:[{l:'powder',s:'avg',label:'Powder'}]},
     {id:'newsnow',label:'Neuschnee',vars:[{l:'snow',s:'avg',label:'Neuschnee'}]},
     {id:'depth',label:'Schneehöhe',vars:[{l:'depth',s:'avg',label:'Schneehöhe'}]},
-    // No sub-layers any more: what to show is picked on the legend itself.
-    {id:'wind',label:'Wind',vars:[{l:'wind',s:'avg',label:'Wind'}]},
+    // Wind and temperature keep their statistic (over the chosen window) as
+    // sub-layers; which classes show is picked on the legend.
+    {id:'wind',label:'Wind',vars:[{l:'wind',s:'lt10',label:'<10 km/h'},{l:'wind',s:'avg',label:'Mittel'},{l:'wind',s:'max',label:'Max'},{l:'wind',s:'min',label:'Min'}]},
     {id:'cloud',label:'Bewölkung',needs:'cloud',vars:[{l:'cloud',s:'avg',label:'Bewölkung'}]},
-    {id:'temp',label:'Temperatur',vars:[{l:'temp',s:'avg',label:'Temperatur'}]},
+    {id:'temp',label:'Temperatur',vars:[{l:'temp',s:'avg',label:'Mittel'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'tsurf',s:'avg',label:'Oberfläche'}]},
     // SNOWPACK is a layer like the others, not an overlay: its sub-layers are
     // the variants. Only listed once the export is there (groupItems), and
     // only the views the export actually carries.
@@ -11854,10 +11916,10 @@ function lyRender(){
     // belonging to it
     const after=pos<0?-1:Math.min(rows.length-1,Math.floor(pos/LY_COLS)*LY_COLS+LY_COLS-1);
     // under the chosen tile: its legend, and every class on it is a switch
-    const subsHtml=((chips||many)&&pos>=0)?('<div class="ly-subs'+(chips?' ly-legsw':'')+'" id="lySubs" role="group" aria-label="'+(chips?'Klassen':'Unterebene')+'" '+
+    const subsHtml=((chips||many)&&pos>=0)?('<div class="ly-subs'+(chips?' ly-legsw'+(legRows()?'':' ly-legfix'):'')+'" id="lySubs" role="group" aria-label="'+(chips?'Klassen':'Unterebene')+'" '+
       'style="--notch:'+(((pos%LY_COLS)+0.5)/LY_COLS*100)+'%">'+
-      (chips||vars.map((v,n)=>'<button type="button" class="ly-sub'+(n===curVar?' on':'')+'" '+
-        'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join(''))+'</div>'):'';
+      (many?'<div class="ly-varrow">'+vars.map((v,n)=>'<button type="button" class="ly-sub'+(n===curVar?' on':'')+'" '+
+        'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join('')+'</div>':'')+(chips||'')+'</div>'):'';
     return '<div class="ly-sec"><span class="lbl-micro">'+name+'</span><div class="ly-grid ly-g3">'+
       rows.map(([[g,k,item],n],p)=>{const hi=false;
         return '<button type="button" class="ly-tile'+(n===i?' on':'')+(hi?' ly-hi':'')+'" onclick="lyPick('+n+')"'+
@@ -12590,10 +12652,10 @@ function inspApplyPos(){const e=document.getElementById('inspPanel');
 // The section that belongs to the layer on the map comes first: SNOWPACK ->
 // the profile, wind -> the wind rose, temperature -> the temperature curve...
 // The rest keep their usual order below it.
-const INSP_FIRST={snowpack:'va',wind:'wind',snow:'snow',depth:'depth',temp:'temp',tsurf:'temp',
+const INSP_FIRST={snowpack:'va',cloud:'cloud',wind:'wind',snow:'snow',depth:'depth',temp:'temp',tsurf:'temp',
   sun:'rad',rad:'rad',radsun:'rad',powder:'prog',powfind:'prog',prog:'prog',progdiff:'prog',progpat:'prog'};
 function inspOrder(sec){
-  const base=['prog','va','snow','depth','temp','wind','rad'],first=INSP_FIRST[layer];
+  const base=['prog','va','snow','depth','temp','cloud','wind','rad'],first=INSP_FIRST[layer];
   const order=first?[first].concat(base.filter(k=>k!==first)):base;
   return order.map(k=>sec[k]||'').join('');
 }
@@ -12676,8 +12738,9 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
    '<div class="insp-body">'+inspOrder({va:vaSec,prog:progSec,
      snow:'<div class="insp-sec"><h4>Neuschnee <em>+'+newSnow.toFixed(1)+' cm</em></h4><canvas id="icNew"></canvas></div>',
      depth:'<div class="insp-sec"><h4>Schneehöhe <em>'+depthNow.toFixed(0)+' cm</em></h4><canvas id="icDepth"></canvas></div>',
-     temp:'<div class="insp-sec"><h4>Temperatur <em>Luft · Oberfläche</em></h4><canvas id="icTemp"></canvas></div>',
+     temp:'<div class="insp-sec"><h4>Temperatur <em>°C</em></h4><div class="tc-leg"><span><i class="tc-air"></i>Luft (2 m über Boden)</span><span><i class="tc-srf"></i>Schneeoberfläche</span></div><canvas id="icTemp"></canvas></div>',
      wind:'<div class="insp-sec"><h4>Windrose <em>Ø '+wmean.toFixed(0)+' km/h</em></h4><canvas id="icWind"></canvas></div>',
+     cloud:_clvData?'<div class="insp-sec"><h4>Bewölkung <em>nach Höhe</em></h4><canvas id="icCloud"></canvas></div>':'',
      rad:'<div class="insp-sec"><h4>Strahlung <em>% vom Tagesmaximum</em></h4><canvas id="icRad"></canvas></div>'})+
    '</div>';
   pan.classList.add('open');
@@ -12687,8 +12750,26 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
     icTemp(document.getElementById('icTemp'),p);
     icWind(document.getElementById('icWind'),p,wk);
     icRad(document.getElementById('icRad'),p);
+    if(_clvData)icCloud(document.getElementById('icCloud'),p);
   });
 }
+// Three bands like a meteogram: high (cirrus) on top, mid, low (stratus/fog)
+// at the bottom; the darker a cell, the more of that layer covers the sky.
+function icCloud(cv,p){if(!cv)return;const{ctx,w,h}=icSetup(cv,104);
+  const t0=a,t1=Math.min(T,Math.max(a+2,b)),n=t1-t0,L=58,R=6,top=4,bandH=20,gap=3,baseY=top+3*bandH+2*gap,plotW=w-L-R,cw=plotW/n;
+  const names=[tr('Hoch'),tr('Mittel'),tr('Tief')],cols=[CLV_COL[2],CLV_COL[1],CLV_COL[0]];
+  ctx.font='700 10.5px Inter,system-ui';ctx.textAlign='right';ctx.textBaseline='middle';
+  for(let k=0;k<3;k++){const y=top+k*(bandH+gap),c=cols[k];
+    ctx.fillStyle=cvTok('--fg2','#5B6472');ctx.fillText(names[k],L-6,y+bandH/2);
+    ctx.fillStyle=cvTok('--ink-050','#F0F2F4');ctx.fillRect(L,y,plotW,bandH);
+    for(let t=t0;t<t1;t++){const f=cloudLv(t,p)[2-k];if(f<=0.05)continue;
+      ctx.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+','+(0.15+0.85*f).toFixed(2)+')';ctx.fillRect(L+(t-t0)*cw,y,Math.ceil(cw),bandH);}}
+  ctx.textBaseline='alphabetic';ctx.textAlign='center';
+  for(let t=t0;t<t1;t++){const d=new Date(M.times[t]+'Z'),hr=d.getUTCHours(),x=L+(t-t0)*cw;
+    if(hr===0){ctx.strokeStyle='rgba(18,21,26,.25)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,baseY+4);ctx.stroke();
+      if(x+40<L+plotW){ctx.fillStyle=cvTok('--fg','#16152e');ctx.font='700 10.5px Inter,system-ui';ctx.fillText(WD()[d.getUTCDay()]+' '+d.getUTCDate()+'.',x+22,baseY+30);}}
+    else if(hr%6===0&&cw*6>=22){ctx.fillStyle=cvTok('--fg2','#5B6472');ctx.font='600 9.5px Inter,system-ui';ctx.fillText(String(hr).padStart(2,'0'),x,baseY+14);}}
+  if(nowIdx>=t0&&nowIdx<t1){const x=L+(nowIdx-t0+.5)*cw;ctx.strokeStyle='#e0245e';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x,top-2);ctx.lineTo(x,baseY+2);ctx.stroke();}}
 // The inspect panel is docked by CSS: no drag, no snap, no stored offset. It
 // always appears in the same place, which is what makes it feel built in.
 function icSetup(cv,hh,wOverride){const dpr=window.devicePixelRatio||1;const ww=wOverride||cv.getBoundingClientRect().width||320;
@@ -12721,28 +12802,48 @@ function icDepth(cv,p){const{ctx,w,h}=icSetup(cv,80);const t0=a,t1=b;const LG=4,
   ctx.beginPath();for(let i=0;i<Ln;i++){const x=px(i),y=py(vals[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.lineTo(px(Ln-1),baseY);ctx.lineTo(LG,baseY);ctx.closePath();ctx.fillStyle='rgba(42,143,216,.13)';ctx.fill();
   ctx.beginPath();for(let i=0;i<Ln;i++){const x=px(i),y=py(vals[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.strokeStyle=cvTok('--accent-meteo','#2A8FD8');ctx.lineWidth=2.2;ctx.stroke();
   icPill(ctx,px(mi),py(vals[mi])-21,vals[mi].toFixed(0)+' cm',cvTok('--accent-meteo','#2A8FD8'),w);}
-function icTemp(cv,p){const{ctx,w,h}=icSetup(cv,110);const t0=a,t1=Math.max(a+1,b),n=t1-t0;
-  const baseY=h-16,topY=18,plotW=w-8,xOf=i2=>4+i2/Math.max(1,n-1)*plotW;
-  let mn=1e9,mx=-1e9;const air=[],srf=[];
-  for(let t=t0;t<t1;t++){const va=tv(t,p),vs=tsurfEst(t,p);air.push(va);srf.push(vs);mn=Math.min(mn,va,vs);mx=Math.max(mx,va,vs);}
-  mn=Math.floor(mn-1);mx=Math.ceil(mx+1);const rng=Math.max(1,mx-mn),yOf=v=>baseY-(v-mn)/rng*(baseY-topY);
-  icDayGrid(ctx,4,plotW,h,t0,t1,baseY);
-  if(mx>0){const y5=yOf(Math.min(5,mx)),y0=yOf(Math.max(0,mn));ctx.fillStyle='rgba(192,138,46,.10)';ctx.fillRect(4,y5,plotW,Math.max(0,y0-y5));}
-  function refLine(v,col,lbl){if(v<mn||v>mx)return;const y=yOf(v);
-    ctx.strokeStyle=col;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(4,y);ctx.lineTo(4+plotW,y);ctx.stroke();ctx.setLineDash([]);
-    ctx.font='800 10px Inter';ctx.textAlign='left';ctx.fillStyle=cvTok('--paper','#F7F8F7');ctx.fillRect(6,y-11,20,12);ctx.fillStyle=col;ctx.fillText(lbl,8,y-2);}
-  refLine(0,'rgba(168,58,46,.55)','0°');refLine(5,'rgba(192,138,46,.65)','5°');
-  if(nowIdx>=t0&&nowIdx<t1){const x=xOf(nowIdx-t0);ctx.strokeStyle='rgba(18,21,26,.4)';ctx.setLineDash([2,2]);ctx.beginPath();ctx.moveTo(x,topY);ctx.lineTo(x,baseY);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#e0245e';ctx.font='700 9.5px Inter';ctx.textAlign='center';ctx.fillText('JETZT',x,topY-5);}
-  function line(arr,col,wd){ctx.beginPath();for(let i2=0;i2<n;i2++){const x=xOf(i2),y=yOf(arr[i2]);i2?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.strokeStyle=col;ctx.lineWidth=wd;ctx.lineJoin='round';ctx.stroke();}
-  line(srf,'#C08A2E',1.6);line(air,'#3E7C8C',2.2);
-  let aMx=-1e9,aMxI=0,aMn=1e9,aMnI=0;
-  for(let i2=0;i2<n;i2++){if(air[i2]>aMx){aMx=air[i2];aMxI=i2;}if(air[i2]<aMn){aMn=air[i2];aMnI=i2;}}
-  icPill(ctx,xOf(aMxI),yOf(aMx)-22,'Hoch '+aMx.toFixed(0)+'°','#B4552A',w);
-  icPill(ctx,xOf(aMnI),Math.min(baseY-18,yOf(aMn)+6),'Tief '+aMn.toFixed(0)+'°',cvTok('--accent-meteo','#2A8FD8'),w);
-  // the legend hugs the right edge: the "Tief" pill is clamped to the left one
-  ctx.textAlign='right';ctx.font='700 10.5px Inter';
-  ctx.fillStyle='#C08A2E';ctx.fillText('● Oberfläche',w-6,12);
-  ctx.fillStyle='#3E7C8C';ctx.fillText('● Luft',w-78,12);ctx.textAlign='left';}
+function icTemp(cv,p){const t0=a,t1=Math.max(a+2,b),air=[],srf=[];
+  for(let t=t0;t<t1&&t<T;t++){air[t]=tv(t,p);srf[t]=tsurfEst(t,p);}
+  tempChart(cv,air,srf,t0,Math.min(t1,T));}
+// Temperature over time with real axes: °C ticks on the left, hours and days
+// along the bottom. Air is a solid line, the snow surface a dashed one -- the
+// same marks as the legend above the canvas, so the two cannot be mixed up.
+function tempChart(cv,air,srf,t0,t1){const{ctx,w,h}=icSetup(cv,164);
+  const L=34,R=8,topY=12,baseY=h-36,plotW=w-L-R,n=Math.max(2,t1-t0),xOf=t=>L+(t-t0)/(n-1)*plotW;
+  let mn=1e9,mx=-1e9;for(const arr of [air,srf]){if(!arr)continue;for(let t=t0;t<t1;t++){const v=arr[t];if(v==null||v!==v)continue;if(v<mn)mn=v;if(v>mx)mx=v;}}
+  if(mx<mn)return;
+  const raw=Math.max(1,mx-mn),st=raw<=5?1:raw<=12?2:raw<=28?5:10;
+  mn=Math.floor(mn/st)*st;mx=Math.ceil(mx/st)*st;if(mx===mn)mx+=st;
+  const yOf=v=>baseY-(v-mn)/(mx-mn)*(baseY-topY);
+  const mut=cvTok('--fg2','#5B6472'),grid=cvTok('--ink-050','#ECEEF0');
+  // 0..+5 °C: where snow turns wet
+  if(mx>0&&mn<5){const y5=yOf(Math.min(5,mx)),y0=yOf(Math.max(0,mn));ctx.fillStyle='rgba(192,138,46,.10)';ctx.fillRect(L,y5,plotW,Math.max(0,y0-y5));}
+  // y axis: grid lines and labels
+  ctx.font='600 10.5px Inter,system-ui';ctx.textAlign='right';ctx.textBaseline='middle';
+  for(let v=mn;v<=mx+1e-9;v+=st){const y=yOf(v);
+    ctx.strokeStyle=v===0?'rgba(168,58,46,.55)':grid;ctx.lineWidth=v===0?1.3:1;if(v===0)ctx.setLineDash([4,3]);
+    ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(L+plotW,y);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=v===0?'rgba(168,58,46,.9)':mut;ctx.fillText(v+'°',L-5,y);}
+  ctx.textBaseline='alphabetic';
+  // x axis: hour ticks, day separators, day names centred under their day
+  const pxH=plotW/(n-1),hs=pxH*3>=26?3:pxH*6>=26?6:pxH*12>=26?12:24;
+  ctx.strokeStyle='rgba(18,21,26,.35)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(L,baseY+.5);ctx.lineTo(L+plotW,baseY+.5);ctx.moveTo(L+.5,topY-4);ctx.lineTo(L+.5,baseY);ctx.stroke();
+  ctx.textAlign='center';const days=[];
+  for(let t=t0;t<t1;t++){const d=new Date(M.times[t]+'Z'),hr=d.getUTCHours(),x=xOf(t);
+    if(hr===0){ctx.strokeStyle='rgba(18,21,26,.16)';ctx.beginPath();ctx.moveTo(x,topY-4);ctx.lineTo(x,baseY+4);ctx.stroke();}
+    if(hr===0||t===t0)days.push({t,d});
+    if(hr%hs===0&&hs<24){ctx.strokeStyle='rgba(18,21,26,.35)';ctx.beginPath();ctx.moveTo(x,baseY);ctx.lineTo(x,baseY+3);ctx.stroke();
+      ctx.fillStyle=mut;ctx.font='600 9.5px Inter,system-ui';ctx.fillText(String(hr).padStart(2,'0'),x,baseY+13);}}
+  ctx.font='700 10.5px Inter,system-ui';ctx.fillStyle=cvTok('--fg','#16152e');
+  for(let k=0;k<days.length;k++){const xa=xOf(days[k].t),xb=k+1<days.length?xOf(days[k+1].t):L+plotW;if(xb-xa<34)continue;
+    const d=days[k].d;ctx.fillText(WD()[d.getUTCDay()]+' '+d.getUTCDate()+'.',(xa+xb)/2,baseY+28);}
+  _scNow(ctx,t0,t1,xOf,topY,baseY);
+  if(srf){_scPath(ctx,srf,t0,t1,xOf,yOf);ctx.strokeStyle='#C9821F';ctx.lineWidth=2;ctx.setLineDash([5,3]);ctx.lineJoin='round';ctx.stroke();ctx.setLineDash([]);}
+  if(air){_scPath(ctx,air,t0,t1,xOf,yOf);ctx.strokeStyle='#3E7C8C';ctx.lineWidth=2.6;ctx.lineJoin='round';ctx.stroke();
+    let aMx=-1e9,aMxT=t0,aMn=1e9,aMnT=t0;for(let t=t0;t<t1;t++){const v=air[t];if(v==null||v!==v)continue;if(v>aMx){aMx=v;aMxT=t;}if(v<aMn){aMn=v;aMnT=t;}}
+    if(aMx>-1e9){icPill(ctx,xOf(aMxT),yOf(aMx)-21,tr('Luft max')+' '+aMx.toFixed(0)+'°','#B4552A',w);
+      icPill(ctx,xOf(aMnT),Math.min(baseY-18,yOf(aMn)+5),tr('Luft min')+' '+aMn.toFixed(0)+'°',cvTok('--accent-meteo','#2A8FD8'),w);}}
+  ctx.textAlign='left';}
 function icWind(cv,p,wk){const{ctx,w,h}=icSetup(cv,152);const cx=w/2,cy=h/2+2,R=Math.min(cx,cy)-18;
   const NS=8,cnt=new Array(NS).fill(0),spd=new Array(NS).fill(0);let n=0,tot=0;
   for(let t=a;t<b;t++){let dir=(WDIR[t*P+wk]*M.dir_div)%360;if(dir<0)dir+=360;const s=SPD[t*P+wk]/M.spd_mul*3.6;const si=Math.round(dir/(360/NS))%NS;cnt[si]++;spd[si]+=s;n++;tot+=s;}
@@ -12815,7 +12916,7 @@ function stnOpen(code){const s=(M.stations||[]).find(x=>x.code===code);if(!s)ret
   const sec={
     depth:has('hs')?'<div class="insp-sec"><h4>Schneehöhe <em>gemessen</em></h4><canvas id="scDepth"></canvas></div>':'',
     snow:has('hs')?'<div class="insp-sec"><h4>Neuschnee <em>Zuwachs pro Stunde</em></h4><canvas id="scNew"></canvas></div>':'',
-    temp:(has('ta_s')||has('tss_s'))?'<div class="insp-sec"><h4>Temperatur <em>Luft · Oberfläche</em></h4><canvas id="scTemp"></canvas></div>':'',
+    temp:(has('ta_s')||has('tss_s'))?'<div class="insp-sec"><h4>Temperatur <em>°C · gemessen</em></h4>'+(has('ta_s')&&has('tss_s')?'<div class="tc-leg"><span><i class="tc-air"></i>Luft (2 m über Boden)</span><span><i class="tc-srf"></i>Schneeoberfläche</span></div>':has('tss_s')?'<div class="tc-leg"><span><i class="tc-srf"></i>Schneeoberfläche</span></div>':'<div class="tc-leg"><span><i class="tc-air"></i>Luft (2 m über Boden)</span></div>')+'<canvas id="scTemp"></canvas></div>':'',
     wind:has('vw_s')?'<div class="insp-sec"><h4>Wind <em>Mittel · Böe</em></h4><canvas id="scWind"></canvas></div>'
       +(has('dw_s')?'<div class="insp-sec"><h4>Windrose <em>gemessen</em></h4><canvas id="scRose"></canvas></div>':''):''};
   const first=INSP_FIRST[layer],base=['depth','snow','temp','wind'];
@@ -12868,22 +12969,7 @@ function scNewSnow(cv,hs,t0,t1){const{ctx,w,h}=icSetup(cv,86);const n=Math.max(1
   const bw=plotW/n,g=ctx.createLinearGradient(0,8,0,baseY);g.addColorStop(0,'#4E9A9A');g.addColorStop(1,'#2A8FD8');ctx.fillStyle=g;
   for(let i=0;i<n;i++){const v=vals[i];if(!v)continue;const bh=Math.max(1.5,v/mx*(baseY-26));icRR(ctx,LG+i*bw+.4,baseY-bh,Math.max(bw-1,1.2),bh,Math.min(2,bw/2.2));ctx.fill();}
   icPill(ctx,LG+mi*bw+bw/2,baseY-(baseY-26)-21,'Σ +'+tot.toFixed(0)+' cm',cvTok('--accent-meteo','#2A8FD8'),w);}
-function scTemp(cv,air,srf,t0,t1){const{ctx,w,h}=icSetup(cv,110);const n=Math.max(2,t1-t0),baseY=h-16,topY=18,plotW=w-8,xOf=t=>4+(t-t0)/(n-1)*plotW;
-  let mn=1e9,mx=-1e9;for(const arr of [air,srf]){if(!arr)continue;for(let t=t0;t<t1;t++){const v=arr[t];if(v==null)continue;mn=Math.min(mn,v);mx=Math.max(mx,v);}}
-  if(mx<mn)return;mn=Math.floor(mn-1);mx=Math.ceil(mx+1);const rng=Math.max(1,mx-mn),yOf=v=>baseY-(v-mn)/rng*(baseY-topY);
-  icDayGrid(ctx,4,plotW,h,t0,t1,baseY);
-  if(mx>0){const y5=yOf(Math.min(5,mx)),y0=yOf(Math.max(0,mn));ctx.fillStyle='rgba(192,138,46,.10)';ctx.fillRect(4,y5,plotW,Math.max(0,y0-y5));}
-  if(0>=mn&&0<=mx){const y=yOf(0);ctx.strokeStyle='rgba(168,58,46,.55)';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(4,y);ctx.lineTo(4+plotW,y);ctx.stroke();ctx.setLineDash([]);
-    ctx.font='800 10px Inter';ctx.textAlign='left';ctx.fillStyle=cvTok('--paper','#F7F8F7');ctx.fillRect(6,y-11,20,12);ctx.fillStyle='rgba(168,58,46,.55)';ctx.fillText('0°',8,y-2);}
-  _scNow(ctx,t0,t1,xOf,topY,baseY);
-  if(srf){_scPath(ctx,srf,t0,t1,xOf,yOf);ctx.strokeStyle='#C08A2E';ctx.lineWidth=1.6;ctx.lineJoin='round';ctx.stroke();}
-  if(air){_scPath(ctx,air,t0,t1,xOf,yOf);ctx.strokeStyle='#3E7C8C';ctx.lineWidth=2.2;ctx.stroke();
-    let aMx=-1e9,aMxT=t0,aMn=1e9,aMnT=t0;for(let t=t0;t<t1;t++){const v=air[t];if(v==null)continue;if(v>aMx){aMx=v;aMxT=t;}if(v<aMn){aMn=v;aMnT=t;}}
-    if(aMx>-1e9){icPill(ctx,xOf(aMxT),yOf(aMx)-22,'Hoch '+aMx.toFixed(0)+'°','#B4552A',w);
-      icPill(ctx,xOf(aMnT),Math.min(baseY-18,yOf(aMn)+6),'Tief '+aMn.toFixed(0)+'°',cvTok('--accent-meteo','#2A8FD8'),w);}}
-  ctx.textAlign='right';ctx.font='700 10.5px Inter';
-  if(srf){ctx.fillStyle='#C08A2E';ctx.fillText('● Oberfläche',w-6,12);}
-  if(air){ctx.fillStyle='#3E7C8C';ctx.fillText('● Luft',srf?w-78:w-6,12);}ctx.textAlign='left';}
+function scTemp(cv,air,srf,t0,t1){tempChart(cv,air,srf,t0,t1);}
 function scWind(cv,vw,vmax,t0,t1){const k=a2=>a2?a2.map(v=>v==null?null:v*3.6):null;const sp=k(vw),gu=k(vmax);
   const{ctx,w,h}=icSetup(cv,96);const n=Math.max(2,t1-t0),LG=4,baseY=h-16,topY=24,plotW=w-LG-4,xOf=t=>LG+(t-t0)/(n-1)*plotW;
   let mx=10,mxT=t0,mxV=0;for(const arr of [sp,gu]){if(!arr)continue;for(let t=t0;t<t1;t++){const v=arr[t];if(v!=null&&v>mx)mx=v;}}
@@ -13208,7 +13294,8 @@ const IC={
 };
 function ic(n){return '<svg class="ic-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(IC[n]||'')+'</svg>';}
 // --- Add-to-Home-Screen: detection + native-install capture ---
-function isStandalone(){try{return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}catch(e){return false;}}
+function isStandalone(){if(_isNative)return true; // the store app IS installed -- never offer Add to Home Screen
+  try{return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}catch(e){return false;}}
 function isIOS(){const ua=navigator.userAgent;return /iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);}
 let bipEvt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();bipEvt=e;});
@@ -13240,7 +13327,7 @@ const ONB_SLIDES=[
   +'<li><svg viewBox="0 0 24 24"><path d="M9 6l-4 6 4 6M15 6l4 6-4 6"/></svg><span><b>‹ ›</b> ein Schritt · <b>▶</b> abspielen</span></li>'
   +'</ul>'],
  ['<path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/>','Touren finden','Im Tab Touren: Umkreis, Höhenmeter und Steilheit wählen – sortiert nach Pulver- oder Sulz-Anteil aus dem Modell.'],
- ['<path d="M12 5v14M5 12h14"/>','Melden & zeichnen','Mit Plus malst du eine Schnee-Karte, meldest eine Beobachtung oder schickst einen Snowp an Freunde.'],
+ ['<path d="M12 5v14M5 12h14"/>','Melden & zeichnen','Mit Plus malst du eine Schnee-Karte oder meldest eine Beobachtung.'],
  ['<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.4 2.4M9.5 2.8h5"/>','Aufzeichnen','Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil.'],
  ['<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>','Community','Folge Leuten aus deinem Gebiet, bestätige gute Meldungen und baue Vertrauen auf. Deine Meldungen verbessern das Modell.']];
 let onb={step:0,slide:0,again:false,lockOk:null};
@@ -13806,7 +13893,6 @@ function loadReportMarkers(){
   // Drawn snow-maps are model input for Reported Powder, not posts -- they
   // feed progZones() straight out of allReports but never get a marker, an
   // overlay snapshot, or a feed/profile entry of their own.
-  try{snpMapRender();}catch(e){}
   const rest=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r)&&!(r.condition_data&&r.condition_data.snowp));
   if(tiny){rest.forEach(r=>_rptMarker(r,'dot'));return;}
   const cells={};

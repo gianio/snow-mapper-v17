@@ -35,6 +35,9 @@ HOURLY_VARIABLES: tuple[str, ...] = (
 LEVEL_VARIABLES: tuple[str, ...] = (
     "wind_speed_850hPa", "wind_direction_850hPa",
     "wind_speed_700hPa", "wind_direction_700hPa",
+    # Cloud by height (low < 2 km: stratus/fog, mid 2-6 km, high > 6 km:
+    # cirrus) -- optional like the level wind, same fallback on a 400.
+    "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high",
 )
 
 
@@ -57,6 +60,9 @@ class PointForecast:
     wind_direction_850hPa: List[float] = field(default_factory=list)
     wind_speed_700hPa: List[float] = field(default_factory=list)      # [m/s] ~3000 m
     wind_direction_700hPa: List[float] = field(default_factory=list)
+    cloud_cover_low: List[float] = field(default_factory=list)   # [%] < ~2 km
+    cloud_cover_mid: List[float] = field(default_factory=list)   # [%] ~2-6 km
+    cloud_cover_high: List[float] = field(default_factory=list)  # [%] > ~6 km
 
 
 class OpenMeteoClient:

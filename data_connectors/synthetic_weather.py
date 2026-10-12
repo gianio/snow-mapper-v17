@@ -68,6 +68,11 @@ def synthetic_forecast(
                 sunshine_duration=sun.tolist(),
                 # Bewoelkung: dicht bei Niederschlag, sonst locker.
                 cloud_cover=np.clip(25 + precip * 120 + rng.normal(0, 8, hours), 0, 100).tolist(),
+                # by height: low cloud with the precipitation, a cirrus veil
+                # drifting in and out
+                cloud_cover_low=np.clip(precip * 140 + rng.normal(5, 10, hours), 0, 100).tolist(),
+                cloud_cover_mid=np.clip(15 + precip * 90 + rng.normal(0, 12, hours), 0, 100).tolist(),
+                cloud_cover_high=np.clip(40 + 40 * np.sin(np.arange(hours) / 9.0) + rng.normal(0, 10, hours), 0, 100).tolist(),
                 # higher up: stronger and steadier, same direction
                 wind_speed_850hPa=(wind_speed * 1.5 + 2).tolist(),
                 wind_direction_850hPa=wind_dir.tolist(),

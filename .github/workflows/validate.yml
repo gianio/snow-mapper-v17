@@ -50,6 +50,9 @@ jobs:
       - name: iOS signing setup (TestFlight workflow)
         run: python tools/test_ci_signing.py
 
+      - name: Android config (Google Play workflow)
+        run: python tools/test_android_config.py
+
       # The Variant A SNOWPACK run cannot be exercised here (external C++
       # binary), but its two silent killers can: a forcing window that starts
       # on the ProfileDate instead of before it, and a PSUM accumulation

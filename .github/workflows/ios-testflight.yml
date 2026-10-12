@@ -53,9 +53,10 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
+      # Capacitor 8 (shared with the Android build) needs Node 22.
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install system dependencies
         run: brew install gdal proj
@@ -87,7 +88,9 @@ jobs:
       - name: Generate the native iOS project
         working-directory: apple-app
         run: |
-          npx cap add ios
+          # Capacitor 8 defaults to Swift Package Manager; this project (Podfile,
+          # App.xcworkspace, the Xcode download above) is built on CocoaPods.
+          npx cap add ios --packagemanager CocoaPods
           npx capacitor-assets generate --ios
           npx cap sync ios
 

@@ -250,7 +250,7 @@ das Archiv. Pro Stunde wird das feinste verfügbare Modell genommen.
 |---|---|---|
 | **Open-Meteo** | Die freie API ist **nur nicht-kommerziell** erlaubt. | Kommerzielles Abo («API-Plan») abschliessen oder auf MeteoSwiss OGD umstellen, für den Prognoseteil schon teilweise eingebaut. Das Archiv (Vergangenheit) braucht dann eine eigene Lösung. |
 | **GitHub Pages** | Laut GitHub-Richtlinien nicht für kommerzielle Angebote (SaaS/Online-Business) gedacht; Grössen- und Traffic-Limits. | Hosting auf einen kommerziellen Anbieter verschieben (z. B. Cloudflare Pages/R2, Netlify, eigenes S3 + CDN). |
-| **Eigene Lizenz fehlt** | Das Repo hat keine `LICENSE`-Datei. | Festlegen (proprietär oder Open Source); Rechte an Beiträgen Dritter klären. |
+| **Eigene Lizenz** ✅ | `LICENSE` ist proprietär («All rights reserved»). Das Repo ist aber öffentlich: lesen kann es jeder. | Repo auf privat stellen; Rechte an Beiträgen Dritter klären. |
 | **Haftung (Lawinen)** | Die App beeinflusst Entscheide im Lawinengelände. | AGB/Nutzungsbedingungen mit Haftungsbeschränkung. Nach Schweizer Recht ist ein Ausschluss für grobe Fahrlässigkeit nicht möglich (OR 100). Den Hinweis «kein Lawinenbulletin» (heute beim ersten Start) überall sichtbar halten. Produkthaftung und Versicherung prüfen. |
 
 ### 7.2 Datenlizenzen – Quellenangaben in der App
