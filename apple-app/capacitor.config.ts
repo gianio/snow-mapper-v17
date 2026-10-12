@@ -37,11 +37,13 @@ const config: CapacitorConfig = {
   },
   plugins: {
     // Android edge-to-edge (mandatory from API 35). The web app already lays
-    // out with viewport-fit=cover + env(safe-area-inset-*); "css" makes those
-    // values correct on every Android WebView version, so the same CSS works
-    // on both platforms.
+    // out with viewport-fit=cover + env(safe-area-inset-*), as on iOS. "native"
+    // makes env() correct on Chromium >= 140 and pads the WebView on older
+    // ones, so the same CSS works everywhere. ("css" would additionally inject
+    // --safe-area-inset-* variables the app never reads, and it logs an error
+    // when it fires before the document exists.)
     SystemBars: {
-      insetsHandling: 'css',
+      insetsHandling: 'native',
       initialViewportFitValueHint: 'cover',
     },
     SplashScreen: {

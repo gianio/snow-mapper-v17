@@ -244,7 +244,7 @@ hand-edited.
 | Topic | Android |
 |---|---|
 | Back button / back gesture | Closes the open sheet/modal (replays the existing Escape handling); with nothing open it moves the app to the background |
-| Edge-to-edge (forced from API 35) | `SystemBars.insetsHandling: 'css'` makes the web app's `env(safe-area-inset-*)` correct on every WebView |
+| Edge-to-edge (forced from API 35) | `SystemBars.insetsHandling: 'native'` makes the web app's `env(safe-area-inset-*)` correct on new WebViews and pads the view on old ones |
 | Tour recording with screen off | Foreground service + notification ("Aktivität wird aufgezeichnet"), `android.useLegacyBridge: true` so updates do not stop after 5 min |
 | Camera / photos | System camera app + Android photo picker — no CAMERA or media permission needed |
 | Face ID | Fingerprint / face unlock via the same biometric plugin |

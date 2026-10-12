@@ -77,7 +77,7 @@ Console steps and the test plan are in `README.md` ("Android" and "Testing").
 | Capacitor 6 → **8** for both platforms (Play needs target API 36 from 31 Aug 2026) | `package.json` |
 | iOS stays on CocoaPods (Capacitor 8 would default to SPM) | `npm run add:ios`, `ios-testflight.yml` |
 | Android config: location permissions, portrait, version, release signing from env | `scripts/apply-android-config.py`, `tools/test_android_config.py` |
-| Edge-to-edge safe areas, background GPS keeps running | `capacitor.config.ts` (`SystemBars`, `android.useLegacyBridge`) |
+| Edge-to-edge safe areas, background GPS keeps running | `capacitor.config.ts` (`SystemBars` native insets, `android.useLegacyBridge`) |
 | Hardware back button closes sheets, then leaves the app | web app (`backButton` listener) |
 | No "Add to Home Screen" prompt inside the native apps (iOS too) | web app (`isStandalone()`) |
 | Debug APK + emulator smoke test on every PR; signed .aab → Play internal testing on demand | `.github/workflows/android-build.yml` |
