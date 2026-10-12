@@ -2220,6 +2220,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #searchRes .sr:last-child{border-bottom:none}
  #searchRes .sr:hover,#searchRes .sr.sel{background:rgba(0,112,184,.08);color:var(--fg)}
  #searchRes .sr .sub{font-size:12px;color:var(--mut);margin-top:2px}
+ #searchRes .sr.sr-note{cursor:default;color:var(--mut);background:none}
  /* The only thing the load shows: a 2 px rule along the top edge, filled by
     the actual number of bytes received. It removes itself when done. */
  #boot{position:fixed;top:0;left:0;right:0;height:2px;z-index:9999;background:transparent;pointer-events:none}
@@ -4507,6 +4508,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* a tall step (the timeline gestures) scrolls inside the card instead of
     running off the top of a small phone */
  #onb .onb-card{max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 32px);overflow-y:auto;overscroll-behavior:contain}
+ /* one height for every slide, so the card does not jump while paging;
+    the buttons sit at the bottom edge */
+ #onb .onb-card{display:flex;flex-direction:column;min-height:min(664px,calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 32px))}
+ #onb .onb-body{flex:1;display:flex;flex-direction:column}
+ #onb .onb-body>.onb-pri{margin-top:auto}
  #appLock{z-index:9500;align-items:center}
  .onb-bg{position:absolute;inset:0;background:linear-gradient(170deg,#1D2D49 0%,#2D4A6E 34%,#8EA4BC 62%,#DFE5EC 82%,#F4F6F9 100%);overflow:hidden}
  .onb-bg i{position:absolute;border-radius:50%;filter:blur(40px);opacity:.75;background:#fff}
@@ -4865,7 +4871,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
-    <button class="mfab" id="legFab" onclick="legVisToggle()" title="Legende" aria-label="Legende"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r=".9" fill="currentColor"/></svg></button>
+    <button class="mfab" id="legFab" onclick="legVisToggle()" title="Legende ein/aus" aria-label="Legende ein/aus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="4" height="4" rx="1"/><rect x="3.5" y="10" width="4" height="4" rx="1"/><rect x="3.5" y="15.5" width="4" height="4" rx="1"/><line x1="11" y1="6.5" x2="20.5" y2="6.5"/><line x1="11" y1="12" x2="20.5" y2="12"/><line x1="11" y1="17.5" x2="20.5" y2="17.5"/></svg></button>
   </div>
   <div class="mfab-row" id="reportRow">
     <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><i>Report Powder</i></button>
@@ -4986,7 +4992,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <h2 id="authTitle">Anmelden</h2>
 <p class="auth-sub" id="authSub">Anmelden für Community &amp; Meldungen</p>
 <p class="auth-note" id="authNote">Karte &amp; Prognosen funktionieren ohne Konto — du brauchst es nur zum Melden, für den Feed und dein Profil.</p>
-<form id="authForm" onsubmit="authSubmit(event)">
+<form id="authForm" onsubmit="authSubmit(event)" novalidate>
 <input type="text" id="authUser" placeholder="Username" autocomplete="username" style="display:none"/>
 <input type="email" id="authEmail" placeholder="E-Mail" autocomplete="email" required/>
 <input type="password" id="authPass" placeholder="Passwort" autocomplete="current-password" required minlength="8"/>
@@ -5514,6 +5520,12 @@ const I18N_DICT={
 "Eis":["Ice","Glace","Ghiaccio"],
 "Eisig":["Icy","Glacé","Ghiacciato"],
 "Entdecken":["Discover","Découvrir","Scopri"],
+"Im sichtbaren Kartenausschnitt gibt es keine Meldungen. Zoome heraus oder schau unter «Alle».":["No reports in the visible map area. Zoom out or look under “All”.","Aucune observation dans la zone visible. Dézoome ou regarde sous « Tous ».","Nessuna segnalazione nell'area visibile. Riduci lo zoom o guarda in «Tutti»."],
+"Keine Verbindung zum Server. Prüfe dein Internet und versuche es nochmals.":["No connection to the server. Check your internet and try again.","Pas de connexion au serveur. Vérifie ta connexion et réessaie.","Nessuna connessione al server. Controlla internet e riprova."],
+"Keine Treffer":["No results","Aucun résultat","Nessun risultato"],
+"Bitte Passwort eingeben.":["Please enter your password.","Saisis ton mot de passe.","Inserisci la password."],
+"Legende ein/aus":["Legend on/off","Légende on/off","Legenda on/off"],
+"Suche nicht erreichbar – Verbindung prüfen":["Search unavailable – check your connection","Recherche indisponible – vérifie ta connexion","Ricerca non disponibile – controlla la connessione"],
 "Erfasste Personen":["People involved","Personnes concernées","Persone coinvolte"],
 "Erneut senden":["Send again","Renvoyer","Invia di nuovo"],
 "Error:":["Error:","Erreur :","Errore:"],
@@ -10202,6 +10214,7 @@ function tsDragWire(el){
 }
 function tsPick(i){const o=(window._tsList||[])[i];if(!o)return;tourOpen(o.t,true);}
 addEventListener('keydown',e=>{if(e.key!=='Escape')return;
+  if(document.body.classList.contains('trk-open')){trkClose();return;}
   if(document.body.classList.contains('tour-open')){tourClose();return;}
   if(tsOpen())tsClose();});
 
@@ -12213,6 +12226,9 @@ function setOpen(fromProfile){
   const pm=document.getElementById('profModal');
   _setCameFromProfile=!!fromProfile&&!!pm&&pm.style.display!=='none';
   if(_setCameFromProfile)pm.style.display='none';
+  // The sheet sits inside #paneSearch, whose stacking context (z-index 1)
+  // kept the phone tab bar on top of its last rows. Lifted to <body> once.
+  if(sh.parentElement!==document.body)document.body.appendChild(sh);
   setRender();sh.classList.add('open');try{haptic(4);}catch(e){}}
 function setClose(){
   const sh=document.getElementById('setSheet');if(sh)sh.classList.remove('open');
@@ -12998,11 +13014,12 @@ document.getElementById('btn3dExag').onclick=()=>{
   let debT=null,selIdx=-1,items=[];
   inp.addEventListener('input',()=>{clearTimeout(debT);const q=inp.value.trim();if(q.length<2){res.style.display='none';items=[];return;}
     debT=setTimeout(()=>{fetch('https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText='+encodeURIComponent(q)+'&limit=6&sr=4326')
-      .then(r=>r.json()).then(d=>{items=d.results||[];selIdx=-1;if(!items.length){res.style.display='none';return;}
+      .then(r=>r.json()).then(d=>{items=d.results||[];selIdx=-1;if(!items.length){searchNote('Keine Treffer');return;}
         res.innerHTML=items.map((it,i)=>{const a=it.attrs;return`<div class="sr" data-i="${i}"><div>${a.label.replace(/<[^>]+>/g,'')}</div><div class="sub">${a.detail||''}</div></div>`;}).join('');
         res.style.display='block';
         res.querySelectorAll('.sr').forEach(el=>el.onclick=()=>pickResult(parseInt(el.dataset.i)));
-      }).catch(()=>{});},250);});
+      }).catch(()=>{items=[];searchNote('Suche nicht erreichbar – Verbindung prüfen');});},250);});
+  function searchNote(t){res.innerHTML='<div class="sr sr-note">'+tr(t)+'</div>';res.style.display='block';}
   inp.addEventListener('keydown',e=>{if(!items.length)return;
     if(e.key==='ArrowDown'){e.preventDefault();selIdx=Math.min(items.length-1,selIdx+1);hlSel();}
     else if(e.key==='ArrowUp'){e.preventDefault();selIdx=Math.max(0,selIdx-1);hlSel();}
@@ -13050,6 +13067,10 @@ function maybeOnboard(){try{if(localStorage.getItem('ssm_onboarded')){maybeA2HS(
 // --- Add-to-Home-Screen sheet ---
 function maybeA2HS(){
   if(isStandalone())return;
+  // Not in the very first session: right after the welcome flow and the
+  // location prompt it would be the third sheet in a row.
+  try{if(!localStorage.getItem('ssm_first_start')){localStorage.setItem('ssm_first_start',String(Date.now()));window.__a2hsSkip=true;}}catch(e){}
+  if(window.__a2hsSkip)return;
   if(!('ontouchstart'in window)&&window.innerWidth>900)return; // desktop
   try{const v=localStorage.getItem('ssm_a2hs');
     if(v==='done')return;
@@ -14145,12 +14166,15 @@ function authRender(){
 }
 let _authBusy=false;
 async function authSubmit(e){
-  e.preventDefault();if(!sb||_authBusy)return;
+  e.preventDefault();if(_authBusy)return;
+  if(!sb){const er=document.getElementById('authErr');er.style.color='var(--danger)';
+    er.textContent='Keine Verbindung zum Server. Prüfe dein Internet und versuche es nochmals.';return;}
   const email=document.getElementById('authEmail').value.trim();
   const pass=document.getElementById('authPass').value;
   const errEl=document.getElementById('authErr');errEl.textContent='';errEl.style.color='var(--danger)';
   if(authMode==='forgot'){await authSendRecovery(email);return;}
   if(!_authEmailRe.test(email)){errEl.textContent='Bitte eine gültige E-Mail-Adresse eingeben.';return;}
+  if(!pass){errEl.textContent='Bitte Passwort eingeben.';return;}
   const btn=document.getElementById('authSubmitBtn'),label=btn.textContent;
   try{
     if(authMode==='register'){
@@ -16708,7 +16732,7 @@ function feedRender(){
   if(feedScope==='here'){
     const bnds=map.getBounds();
     base=base.filter(r=>bnds.contains([r.lat,r.lng])&&feedInWindow(r));
-    if(!base.length){list.innerHTML='<div class="feed-empty">Nichts im sichtbaren Ausschnitt und im gewählten Zeitfenster. Zoome heraus, verschiebe die Karte oder wähle ein grösseres Fenster — oder tippe auf Filter und wechsle zu „Entdecken".</div>';return;}
+    if(!base.length){list.innerHTML='<div class="feed-empty">Im sichtbaren Kartenausschnitt gibt es keine Meldungen. Zoome heraus oder schau unter «Alle».</div>';return;}
   }else if(feedScope==='following'){
     if(!sbUser){list.innerHTML='<div class="feed-empty">Melde dich an, um Leuten zu folgen und ihre Reports hier zu sehen.</div>';return;}
     base=base.filter(r=>r.dbRow&&r.userId&&myFollowing.has(r.userId));
