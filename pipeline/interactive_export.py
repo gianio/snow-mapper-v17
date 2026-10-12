@@ -5355,7 +5355,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <!--__BOOT__-->
 <script id="appjs">/*__APP_START__*/
 const __D=window.__D||{};const M=__D.meta||{};function db(k){return (__D.b&&__D.b[k])||"";}
-// --- Native (Capacitor) bridge — real native on iOS, harmless no-op in a browser ---
+// --- Native (Capacitor) bridge — real native on iOS/Android, harmless no-op in a browser ---
 const _CAP=(typeof window!=='undefined'&&window.Capacitor)?window.Capacitor:null;
 const _isNative=!!(_CAP&&_CAP.isNativePlatform&&_CAP.isNativePlatform());
 const I18N_DICT={
@@ -6260,7 +6260,25 @@ try{const _al=window.alert.bind(window),_cf=window.confirm.bind(window),_pr=wind
 function _capPlugin(n){return (_CAP&&_CAP.Plugins&&_CAP.Plugins[n])?_CAP.Plugins[n]:null;}
 function nativeShare(text,url){const S=_capPlugin('Share');if(S){try{S.share({text:text||'',url:url||''});return true;}catch(e){}}return false;}
 if(_isNative){try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'DARK'});SB.setOverlaysWebView({overlay:true});}}catch(e){}
-  try{const SP=_capPlugin('SplashScreen');if(SP)setTimeout(()=>{try{SP.hide();}catch(e){}},450);}catch(e){}}
+  try{const SP=_capPlugin('SplashScreen');if(SP)setTimeout(()=>{try{SP.hide();}catch(e){}},450);}catch(e){}
+  // Android hardware/gesture back. Every sheet and modal already closes on
+  // Escape, so back replays Escape; if nothing on screen changed (no overlay
+  // was open) it sends the app to the background like any Android app.
+  // Never fires on iOS, which has no back button.
+  try{const A=_capPlugin('App');if(A&&_CAP.getPlatform&&_CAP.getPlatform()==='android')A.addListener('backButton',()=>{
+    // Several closers run inside a View Transition (vt()), i.e. a frame or two
+    // later, so watch briefly. Only attributes that END UP different count
+    // (some handlers re-assign body.className to the same value), and the
+    // map's own tile/transform updates are ignored.
+    const was=new Map();
+    const note=rs=>{for(const r of rs){const t=r.target;if(t.closest&&t.closest('#map,#map3d'))continue;
+      const a=was.get(t)||new Map();was.set(t,a);if(!a.has(r.attributeName))a.set(r.attributeName,r.oldValue||'');}};
+    const mo=new MutationObserver(note);
+    mo.observe(document.body,{subtree:true,attributes:true,attributeOldValue:true,attributeFilter:['class','style']});
+    document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+    setTimeout(()=>{note(mo.takeRecords());mo.disconnect();let changed=false;
+      was.forEach((a,t)=>a.forEach((v,n)=>{if(v!==(t.getAttribute(n)||''))changed=true;}));
+      if(!changed){try{A.minimizeApp();}catch(e){}}},300);});}catch(e){}}
 function dec(b){const s=atob(b),n=s.length,a=new Uint8Array(n);for(let i=0;i<n;i++)a[i]=s.charCodeAt(i);return a;}
 const SNOW=dec(db('SNOW')),TEMP=dec(db('TEMP')),SUN=dec(db('SUN')),SPD=dec(db('SPD')),WDIR=dec(db('DIR'));
 const ABL=dec(db('ABL'));
@@ -13276,7 +13294,8 @@ const IC={
 };
 function ic(n){return '<svg class="ic-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(IC[n]||'')+'</svg>';}
 // --- Add-to-Home-Screen: detection + native-install capture ---
-function isStandalone(){try{return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}catch(e){return false;}}
+function isStandalone(){if(_isNative)return true; // the store app IS installed -- never offer Add to Home Screen
+  try{return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}catch(e){return false;}}
 function isIOS(){const ua=navigator.userAgent;return /iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);}
 let bipEvt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();bipEvt=e;});

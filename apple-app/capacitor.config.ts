@@ -1,8 +1,13 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+// ONE config for BOTH platforms. iOS and Android are generated from this file
+// and bundle the same ./www, so the two apps cannot drift apart.
+//
 // ── App identity ────────────────────────────────────────────────────────────
 // Change these two lines to rebrand. `appId` must be a reverse-domain string you
-// control and must match the Bundle Identifier you register in App Store Connect.
+// control. It is the iOS Bundle Identifier (App Store Connect) AND the Android
+// applicationId (Google Play) -- the Play one can never change after the first
+// upload.
 const APP_ID = 'ch.snowmapper.app';
 const APP_NAME = 'Snowmapper';
 
@@ -21,7 +26,24 @@ const config: CapacitorConfig = {
     // Allow the WKWebView to load Supabase / tile CDNs over https.
     limitsNavigationsToAppBoundDomains: false,
   },
+  android: {
+    backgroundColor: '#ffffff',
+    // Required by @capacitor-community/background-geolocation: without it
+    // Android halts location updates ~5 min after the screen locks, which
+    // would silently cut a recorded tour short.
+    useLegacyBridge: true,
+    // Never allow plain-http content inside the app.
+    allowMixedContent: false,
+  },
   plugins: {
+    // Android edge-to-edge (mandatory from API 35). The web app already lays
+    // out with viewport-fit=cover + env(safe-area-inset-*); "css" makes those
+    // values correct on every Android WebView version, so the same CSS works
+    // on both platforms.
+    SystemBars: {
+      insetsHandling: 'css',
+      initialViewportFitValueHint: 'cover',
+    },
     SplashScreen: {
       // The web app shows its own lightweight loader (#intro), so keep the
       // native splash minimal and let JS hide it once boot completes.
