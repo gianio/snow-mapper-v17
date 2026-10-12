@@ -10,6 +10,19 @@ OUT="${2:-smoke}"
 PKG="ch.snowmapper.app"
 mkdir -p "$OUT"
 
+# CI emulators sometimes drop off adb for a few seconds ("device offline").
+# That is the harness, not the app: reconnect and retry before judging.
+device_back() {
+  adb reconnect offline >/dev/null 2>&1
+  timeout 90 adb wait-for-device >/dev/null 2>&1
+}
+a() {  # adb with one reconnect-and-retry
+  adb "$@" && return 0
+  adb get-state 2>/dev/null | grep -q device && return 1
+  echo "(adb lost the device -- reconnecting)"
+  device_back && adb "$@"
+}
+
 adb wait-for-device
 # Wait for the system to finish booting, or `am start` fails at random.
 for _ in $(seq 1 60); do
@@ -17,20 +30,25 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 
-adb install -r -g "$APK" || { echo "::error::adb install failed"; exit 1; }
-adb logcat -c
-adb shell am start -W -n "$PKG/.MainActivity" || { echo "::error::app did not start"; exit 1; }
+a install -r -g "$APK" || { echo "::error::adb install failed"; exit 1; }
+a logcat -c
+a shell am start -W -n "$PKG/.MainActivity" || { echo "::error::app did not start"; exit 1; }
 
 # The first launch unpacks the bundled forecast and builds the map; give it time.
 sleep 30
-adb shell screencap -p /sdcard/smoke.png && adb pull /sdcard/smoke.png "$OUT/launch.png" >/dev/null
-adb logcat -d > "$OUT/logcat.txt"
+a shell screencap -p /sdcard/smoke.png && a pull /sdcard/smoke.png "$OUT/launch.png" >/dev/null
+a logcat -d > "$OUT/logcat.txt"
 
 # The back button on the home screen must not crash (it replays Escape, then
 # moves the app to the background).
-adb shell input keyevent KEYCODE_BACK
+a shell input keyevent KEYCODE_BACK
 sleep 3
-adb logcat -d > "$OUT/logcat-after-back.txt"
+a logcat -d > "$OUT/logcat-after-back.txt"
+
+if ! adb get-state 2>/dev/null | grep -q device; then
+  echo "::error::the emulator is gone (adb: device offline) -- an infrastructure failure, not an app result"
+  exit 1
+fi
 
 fail=0
 if grep -q "FATAL EXCEPTION" "$OUT/logcat-after-back.txt"; then
@@ -38,7 +56,7 @@ if grep -q "FATAL EXCEPTION" "$OUT/logcat-after-back.txt"; then
   grep -A 25 "FATAL EXCEPTION" "$OUT/logcat-after-back.txt" | head -60
   fail=1
 fi
-if ! adb shell pidof "$PKG" >/dev/null; then
+if ! a shell pidof "$PKG" >/dev/null; then
   echo "::error::$PKG is not running after launch + back"
   fail=1
 fi
