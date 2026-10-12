@@ -1,0 +1,28 @@
+Copyright (c) 2026 Giani Morf. All rights reserved.
+
+This repository and everything in it -- source code, snow model, data
+pipeline, app code, designs, documentation and generated outputs -- is
+proprietary and confidential unless a file states otherwise.
+
+No licence is granted. Without prior written permission from the copyright
+holder you may not copy, modify, merge, publish, distribute, sublicense,
+sell, host as a service, or create derivative works of any part of it.
+Being able to view this repository (for example because it is or was
+public on GitHub) does not grant any of these rights.
+
+Testers invited by the copyright holder may use the app for personal,
+non-commercial testing only, for as long as the copyright holder allows.
+
+THE SOFTWARE AND ITS OUTPUTS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED. THEY ARE NOT AN AVALANCHE BULLETIN AND MUST NOT BE
+THE BASIS OF DECISIONS IN AVALANCHE TERRAIN. TO THE EXTENT PERMITTED BY LAW,
+THE COPYRIGHT HOLDER IS NOT LIABLE FOR ANY CLAIM, DAMAGE OR OTHER LIABILITY
+ARISING FROM THE SOFTWARE OR ITS USE.
+
+Third-party components keep their own licences:
+- Data (swisstopo, MeteoSwiss, SLF/WSL, Copernicus, ESA WorldCover,
+  Open-Meteo and others) is used under its providers' terms, with the
+  attributions listed in README.md section 6 and docs/APP-UEBERSICHT.md
+  section 7.
+- Open-source libraries and fonts remain under their respective licences
+  (MIT, BSD, Apache-2.0, LGPL-3.0, OFL, ...); see the same sections.
