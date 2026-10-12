@@ -19,7 +19,8 @@
     "open:android": "cap open android",
     "ios": "npm run build:web && cap sync ios && cap open ios",
     "android": "npm run build:web && cap sync android && cap open android",
-    "apk": "npm run build:web && cap sync android && npm run config:android && cd android && ./gradlew assembleDebug"
+    "apk": "npm run build:web && cap sync android && npm run config:android && cd android && ./gradlew assembleDebug",
+    "capacitor:copy:after": "node scripts/android-assets.mjs"
   },
   "dependencies": {
     "@aparajita/capacitor-biometric-auth": "^10.0.0",

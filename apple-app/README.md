@@ -249,6 +249,7 @@ hand-edited.
 | Camera / photos | System camera app + Android photo picker — no CAMERA or media permission needed |
 | Face ID | Fingerprint / face unlock via the same biometric plugin |
 | "Add to Home Screen" prompt | Hidden inside the native app (also fixed for iOS) |
+| Bundled forecast | `.gz` only (a `capacitor:copy:after` hook). Android's asset packer rejects `x.json` next to `x.json.gz`, and every Android WebView reads the `.gz` |
 
 ### Google Play: one-time steps (only you can do these)
 
@@ -333,6 +334,7 @@ apple-app/
 │   ├── apply-ios-config.py    # iOS: purpose strings, privacy manifest, scheme
 │   ├── ci-signing.py          # iOS: signing, version, build number (CI)
 │   ├── apply-android-config.py# Android: permissions, portrait, version, signing
+│   ├── android-assets.mjs     # Android: after every cap copy/sync, bundle the forecast as .gz only
 │   └── android-smoke.sh       # Android: install + launch + back on emulator/phone
 ├── resources/                 # 1024 icon + 2732 splash (source for cap-assets)
 ├── ios-config/
