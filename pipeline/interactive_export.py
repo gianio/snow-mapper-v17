@@ -72,6 +72,7 @@ def _quantisers():
         "cloud":     lambda a: np.round(np.clip(a, 0, 100) * _CLOUD_MUL),
         "wind850":   lambda a: np.round(np.clip(a, 0, 51) * _SPD_MUL),
         "wind700":   lambda a: np.round(np.clip(a, 0, 51) * _SPD_MUL),
+        "clv":       lambda a: a,   # already packed, see _pack_clv
     }
 _TEMP_OFF, _TEMP_MUL = 60.0, 2.0
 _SPD_MUL = 5.0
@@ -79,6 +80,17 @@ _DIR_DIV = 2.0
 _SUN_MUL = 100.0
 _PREC_MUL = 5.0
 _CLOUD_MUL = 2.5        # 0..100 % -> 0..250
+# Cloud by height in one byte: low (stratus/fog) in 7 steps, mid and high
+# (cirrus) in 6 each -- 7*6*6 = 252 codes. ~17-20 % steps are plenty for a
+# picture of the sky, and it costs one cube instead of three.
+_CLV_N = (7, 6, 6)
+
+
+def _pack_clv(low, mid, high):
+    """Three cloud fractions [%] -> one uint8 code per cell (see _CLV_N)."""
+    q = [np.clip(np.round(np.clip(a, 0, 100) / 100.0 * (n - 1)), 0, n - 1).astype("int32")
+         for a, n in zip((low, mid, high), _CLV_N)]
+    return (q[0] * (_CLV_N[1] * _CLV_N[2]) + q[1] * _CLV_N[2] + q[2]).astype("float32")
 _ELEV_Q = 4.0            # metres per step in the fine elevation raster
 _ELEV_SCALE = 20.0
 _WIND_STEP = 9000.0
@@ -499,14 +511,17 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     times, temp_m, prec_m, snow_m, wspd_m, wdir_m, sun_m, elev_pt = _hourly(fc, horizon)
     T = len(times)
     cloud_m = _cloud(fc, T)
+    clv_m = [_level_wind(fc, T, "cloud_cover_" + k) for k in ("low", "mid", "high")]
+    clv_m = clv_m if all(m is not None for m in clv_m) else None
     lvl_m = {k: _level_wind(fc, T, "wind_speed_" + h) for k, h in (("wind850", "850hPa"), ("wind700", "700hPa"))}
     lvl_m = {k: v for k, v in lvl_m.items() if v is not None}
     print(f"[INT] Hoehenwind: {', '.join(lvl_m) if lvl_m else 'nein'}.")
-    print(f"[INT] Bewoelkung: {'ja' if cloud_m is not None else 'nein (Quelle liefert keine)'}.")
+    print(f"[INT] Bewoelkung: {'ja' if cloud_m is not None else 'nein (Quelle liefert keine)'}"
+          f"{', nach Hoehe' if clv_m is not None else ''}.")
     idx, w = _idw_weights(pts, targets)
     ref_elev = _apply(elev_pt, idx, w).reshape(shape)
     cloud_at = None
-    if cloud_m is not None or lvl_m:
+    if cloud_m is not None or lvl_m or clv_m is not None:
         cloud_at = (_grid_spline(lats, lons, shape, aoi.crs, grid_x, grid_y)
                     or (lambda v: _apply(v, idx, w).reshape(shape)))
     sin_d, cos_d = np.sin(np.radians(wdir_m)), np.cos(np.radians(wdir_m))
@@ -523,7 +538,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     dst_t, dw, dh = calculate_default_transform(
         aoi.crs, "EPSG:4326", shape[1], shape[0], *bounds)
     QZ = _quantisers()
-    FIELDS = ("snow", "ablation", "temp", "sun", "wind_grid", "prec") + (("cloud",) if cloud_m is not None else ()) + tuple(lvl_m)
+    FIELDS = ("snow", "ablation", "temp", "sun", "wind_grid", "prec") + (("cloud",) if cloud_m is not None else ()) + (("clv",) if clv_m is not None else ()) + tuple(lvl_m)
     cubes = {k: np.zeros((T, dh, dw), "uint8") for k in FIELDS}
 
     def _store(key, t, frame_lv95):
@@ -590,6 +605,10 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         _store("prec", t, prec_g)
         if cloud_m is not None:
             _store("cloud", t, cloud_at(cloud_m[:, t]))
+        if clv_m is not None:
+            # each height reprojected on its own, packed only afterwards
+            lv = [_reproj_frame(np.clip(cloud_at(m_[:, t]), 0, 100), dem.transform, aoi.crs, dst_t, dh, dw) for m_ in clv_m]
+            cubes["clv"][t] = _pack_clv(*lv).astype("uint8")
         for k, m_ in lvl_m.items():
             # free-air wind: smooth over the region, no terrain modulation
             _store(k, t, np.clip(cloud_at(m_[:, t]) if cloud_at else _apply(m_[:, t], idx, w).reshape(shape), 0, None))
@@ -625,7 +644,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         "snow": cubes["snow"], "ablation": cubes["ablation"],
         "temp": cubes["temp"], "sun": cubes["sun"],
         "wind_grid": cubes["wind_grid"], "prec": cubes["prec"],
-        "cloud": cubes.get("cloud"),
+        "cloud": cubes.get("cloud"), "clv": cubes.get("clv"),
         "wind850": cubes.get("wind850"), "wind700": cubes.get("wind700"),
         "main_aspect": aspect_main, "main_slope": slope_main,
         "main_elev": elev_main,
@@ -890,6 +909,7 @@ def _build_meta_blobs(data):
         "PREC": u8(data["prec"], lambda a: np.round(a * _PREC_MUL)),
         **({"CLOUD": u8(data["cloud"], lambda a: np.round(np.clip(a, 0, 100) * _CLOUD_MUL))}
            if data.get("cloud") is not None else {}),
+        **({"CLV": u8(data["clv"], lambda a: a)} if data.get("clv") is not None else {}),
         **{b: u8(data[k], lambda a: np.round(np.clip(a, 0, 51) * _SPD_MUL))
            for k, b in (("wind850", "W850"), ("wind700", "W700")) if data.get(k) is not None},
         "MASPECT": u8(data["main_aspect"], lambda a: np.round(a / _DIR_DIV)),
@@ -909,6 +929,7 @@ def _build_meta_blobs(data):
         "snow_scale": _SNOW_SCALE, "abl_scale": _ABL_SCALE, "temp_off": _TEMP_OFF, "temp_mul": _TEMP_MUL,
         "spd_mul": _SPD_MUL, "dir_div": _DIR_DIV, "sun_mul": _SUN_MUL, "prec_mul": _PREC_MUL,
         "cloud_mul": _CLOUD_MUL if data.get("cloud") is not None else None,
+        "cloud_lv": list(_CLV_N) if data.get("clv") is not None else None,
         "wind_levels": [k for k in ("wind850", "wind700") if data.get(k) is not None],
         "elev_scale": _ELEV_SCALE,
         "slf_bounds": SLF_BOUNDS, "slf_colors": SLF_COLORS,
@@ -5500,6 +5521,12 @@ const I18N_DICT={
 "Keine Treffer":["No results","Aucun résultat","Nessun risultato"],
 "Luft (2 m über Boden)":["Air (2 m above ground)","Air (2 m au-dessus du sol)","Aria (2 m dal suolo)"],
 "Luft max":["Air max","Air max","Aria max"],
+"Tief":["Low","Bas","Basso"],
+"nach Höhe":["by height","par altitude","per quota"],
+"Tiefe Wolken, Nebel – dicht":["Low cloud, fog – dense","Nuages bas, brouillard – denses","Nubi basse, nebbia – dense"],
+"Mittelhohe Wolken":["Mid-level cloud","Nuages moyens","Nubi medie"],
+"Hohe Wolken, Cirren – dünn":["High cloud, cirrus – thin","Nuages hauts, cirrus – fins","Nubi alte, cirri – sottili"],
+"Wolken nach Höhe zur gewählten Stunde: tief (unter ~2000 m, Stratus und Nebel – dicht, keine Sicht), mittel (~2000–6000 m) und hoch (über ~6000 m, Cirren – dünn, die Sonne scheint oft durch). Je kräftiger die Farbe, desto mehr Bedeckung.":["Cloud by height at the selected hour: low (below ~2000 m, stratus and fog – dense, no visibility), mid (~2000–6000 m) and high (above ~6000 m, cirrus – thin, the sun often shines through). The stronger the colour, the more cover.","Nuages par altitude à l'heure choisie : bas (sous ~2000 m, stratus et brouillard – denses, pas de visibilité), moyens (~2000–6000 m) et hauts (au-dessus de ~6000 m, cirrus – fins, le soleil passe souvent). Plus la couleur est forte, plus la couverture est grande.","Nubi per quota all'ora scelta: basse (sotto ~2000 m, strati e nebbia – dense, nessuna visibilità), medie (~2000–6000 m) e alte (sopra ~6000 m, cirri – sottili, il sole spesso filtra). Più il colore è intenso, maggiore è la copertura."],
 "Luft min":["Air min","Air min","Aria min"],
 "Schneeoberfläche":["Snow surface","Surface de la neige","Superficie della neve"],
 "°C · gemessen":["°C · measured","°C · mesuré","°C · misurato"],
@@ -6195,7 +6222,7 @@ function dec(b){const s=atob(b),n=s.length,a=new Uint8Array(n);for(let i=0;i<n;i
 const SNOW=dec(db('SNOW')),TEMP=dec(db('TEMP')),SUN=dec(db('SUN')),SPD=dec(db('SPD')),WDIR=dec(db('DIR'));
 const ABL=dec(db('ABL'));
 const WINDG=dec(db('WINDG')),RSLOPE=dec(db('RSLOPE')),RASPECT=dec(db('RASPECT')),RHOR=dec(db('RHOR'));
-const CLOUD=dec(db('CLOUD'));
+const CLOUD=dec(db('CLOUD')),CLV=dec(db('CLV'));
 const PREC=dec(db('PREC')),MASPECT=dec(db('MASPECT')),MSLOPE=dec(db('MSLOPE')),MELEV=dec(db('MELEV')),ROUGHG=dec(db('ROUGHGRID'));
 const ASPECT_PNG="data:image/png;base64,"+db('ASPECTPNG'),ROUGH_PNG="data:image/png;base64,"+db('ROUGHPNG'),ELEV_PNG="data:image/png;base64,"+db('ELEVPNG');
 const T=M.T,W=M.width,H=M.height,NP=W*H,P=M.wind.lat.length,NX=M.wind.nx;
@@ -6238,6 +6265,17 @@ function cloudCol(x){x=Math.max(0,Math.min(1,x));
   for(let i=1;i<CLOUD_STOPS.length;i++){const[p1,c1]=CLOUD_STOPS[i],[p0,c0]=CLOUD_STOPS[i-1];
     if(x<=p1){const f=(x-p0)/(p1-p0);return c0.map((v,j)=>Math.round(v+(c1[j]-v)*f));}}
   return CLOUD_STOPS[CLOUD_STOPS.length-1][1].slice();}
+// Cloud by height (blob field CLV): low = stratus/fog, mid, high = cirrus.
+const _clvData=!!M.cloud_lv&&CLV.length>=T*NP;
+function cloudLv(t,p){const v=CLV[t*NP+p],N=M.cloud_lv,b=N[1]*N[2];
+  return [Math.floor(v/b)/(N[0]-1),Math.floor((v%b)/N[2])/(N[1]-1),(v%N[2])/(N[2]-1)];}
+// Like a meteogram: a thin, light cirrus veil, mid cloud grey-blue, low
+// cloud and fog a dense dark grey on top -- what you would not see through.
+const CLV_COL=[[74,82,98,.82],[112,134,170,.62],[178,196,236,.48]];
+function clvCol(l,m,h){let r=0,g=0,b=0,a=0;
+  for(const [f,c] of [[h,CLV_COL[2]],[m,CLV_COL[1]],[l,CLV_COL[0]]]){const al=f*c[3];if(al<=0)continue;
+    r=c[0]*al+r*(1-al);g=c[1]*al+g*(1-al);b=c[2]*al+b*(1-al);a=al+a*(1-al);}
+  if(a<0.06)return null;return [Math.round(r/a),Math.round(g/a),Math.round(b/a),Math.round(Math.min(.9,a)*255)];}
 const SB=M.slf_bounds,SC=M.slf_colors,RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
 function snowCol(v){if(v<SB[0])return null;for(let i=SB.length-1;i>=1;i--)if(v>=SB[i-1])return RGB[Math.min(i-1,RGB.length-1)];return RGB[0];}
 // The stepped legend above is right for the model layers (an official
@@ -11077,6 +11115,8 @@ function renderRaster(){
       const val=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(val<0.5||(_hid&&_hid(val)))return null;
       const c2=rampBYR(val/70);return[c2[0],c2[1],c2[2],200];});}
   // clouds are a state, like a satellite picture: one hour, not a window
+  else if(layer=="cloud"&&_clvData){const t1=Math.max(0,Math.min(T-1,b-1));
+    setRaster(p=>{const q=cloudLv(t1,p);return clvCol(q[0],q[1],q[2]);});}
   else if(layer=="cloud"&&_hasCloud){const t1=Math.max(0,Math.min(T-1,b-1));
     setRaster(p=>{let v=cloudv(t1,p);
       // the sunshine fallback has no value at night: borrow the nearest daylight hour
@@ -11294,6 +11334,9 @@ function legSpec(l){
     const T5=[[-Infinity,-10,'<−10',-15],[-10,-5,'−10–−5',-7],[-5,0,'−5–0',-2],[0,5,'0–5',2],[5,10,'5–10',7],[10,Infinity,'10+',14]];
     const rows=T5.map((x,k)=>({k,lo:x[0],hi:x[1],c:rgb(tempCol(x[3])),s:x[2],n:x[2]+' °C'})).reverse();
     return {t:nm,u:'°C',rows,long:'Mittlere Temperatur im gewählten Zeitfenster'};}
+  if(l==='cloud'&&_clvData){const nm=['Tiefe Wolken, Nebel – dicht','Mittelhohe Wolken','Hohe Wolken, Cirren – dünn'];
+    const rows=[0,1,2].map(k=>{const c=CLV_COL[k];return {k,c:'rgba('+c[0]+','+c[1]+','+c[2]+','+Math.max(.6,c[3]).toFixed(2)+')',s:['Tief','Mittel','Hoch'][k],n:nm[k]};}).reverse();
+    return {t:'Bewölkung',u:'Höhe',rows,long:'Wolken nach Höhe zur gewählten Stunde: tief (unter ~2000 m, Stratus und Nebel – dicht, keine Sicht), mittel (~2000–6000 m) und hoch (über ~6000 m, Cirren – dünn, die Sonne scheint oft durch). Je kräftiger die Farbe, desto mehr Bedeckung.'};}
   if(l==='cloud'){const C3=[[10,40,'wenig'],[40,70,'teils'],[70,101,'bedeckt']];
     const rows=C3.map((x,k)=>{const c=cloudCol(((x[0]+x[1])/2-10)/90);return {k,lo:x[0],hi:x[1],c:'rgba('+c[0]+','+c[1]+','+c[2]+','+Math.max(.55,c[3]/255).toFixed(2)+')',s:x[2],n:x[0]+'–'+Math.min(100,x[1])+' % · '+x[2]};}).reverse();
     return {t:'Bewölkung',u:'%',rows,long:'Gesamtbewölkung zur gewählten Stunde (wie ein Satellitenbild)'};}
@@ -12472,10 +12515,10 @@ function inspApplyPos(){const e=document.getElementById('inspPanel');
 // The section that belongs to the layer on the map comes first: SNOWPACK ->
 // the profile, wind -> the wind rose, temperature -> the temperature curve...
 // The rest keep their usual order below it.
-const INSP_FIRST={snowpack:'va',wind:'wind',snow:'snow',depth:'depth',temp:'temp',tsurf:'temp',
+const INSP_FIRST={snowpack:'va',cloud:'cloud',wind:'wind',snow:'snow',depth:'depth',temp:'temp',tsurf:'temp',
   sun:'rad',rad:'rad',radsun:'rad',powder:'prog',powfind:'prog',prog:'prog',progdiff:'prog',progpat:'prog'};
 function inspOrder(sec){
-  const base=['prog','va','snow','depth','temp','wind','rad'],first=INSP_FIRST[layer];
+  const base=['prog','va','snow','depth','temp','cloud','wind','rad'],first=INSP_FIRST[layer];
   const order=first?[first].concat(base.filter(k=>k!==first)):base;
   return order.map(k=>sec[k]||'').join('');
 }
@@ -12560,6 +12603,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
      depth:'<div class="insp-sec"><h4>Schneehöhe <em>'+depthNow.toFixed(0)+' cm</em></h4><canvas id="icDepth"></canvas></div>',
      temp:'<div class="insp-sec"><h4>Temperatur <em>°C</em></h4><div class="tc-leg"><span><i class="tc-air"></i>Luft (2 m über Boden)</span><span><i class="tc-srf"></i>Schneeoberfläche</span></div><canvas id="icTemp"></canvas></div>',
      wind:'<div class="insp-sec"><h4>Windrose <em>Ø '+wmean.toFixed(0)+' km/h</em></h4><canvas id="icWind"></canvas></div>',
+     cloud:_clvData?'<div class="insp-sec"><h4>Bewölkung <em>nach Höhe</em></h4><canvas id="icCloud"></canvas></div>':'',
      rad:'<div class="insp-sec"><h4>Strahlung <em>% vom Tagesmaximum</em></h4><canvas id="icRad"></canvas></div>'})+
    '</div>';
   pan.classList.add('open');
@@ -12569,8 +12613,26 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
     icTemp(document.getElementById('icTemp'),p);
     icWind(document.getElementById('icWind'),p,wk);
     icRad(document.getElementById('icRad'),p);
+    if(_clvData)icCloud(document.getElementById('icCloud'),p);
   });
 }
+// Three bands like a meteogram: high (cirrus) on top, mid, low (stratus/fog)
+// at the bottom; the darker a cell, the more of that layer covers the sky.
+function icCloud(cv,p){if(!cv)return;const{ctx,w,h}=icSetup(cv,104);
+  const t0=a,t1=Math.min(T,Math.max(a+2,b)),n=t1-t0,L=58,R=6,top=4,bandH=20,gap=3,baseY=top+3*bandH+2*gap,plotW=w-L-R,cw=plotW/n;
+  const names=[tr('Hoch'),tr('Mittel'),tr('Tief')],cols=[CLV_COL[2],CLV_COL[1],CLV_COL[0]];
+  ctx.font='700 10.5px Inter,system-ui';ctx.textAlign='right';ctx.textBaseline='middle';
+  for(let k=0;k<3;k++){const y=top+k*(bandH+gap),c=cols[k];
+    ctx.fillStyle=cvTok('--fg2','#5B6472');ctx.fillText(names[k],L-6,y+bandH/2);
+    ctx.fillStyle=cvTok('--ink-050','#F0F2F4');ctx.fillRect(L,y,plotW,bandH);
+    for(let t=t0;t<t1;t++){const f=cloudLv(t,p)[2-k];if(f<=0.05)continue;
+      ctx.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+','+(0.15+0.85*f).toFixed(2)+')';ctx.fillRect(L+(t-t0)*cw,y,Math.ceil(cw),bandH);}}
+  ctx.textBaseline='alphabetic';ctx.textAlign='center';
+  for(let t=t0;t<t1;t++){const d=new Date(M.times[t]+'Z'),hr=d.getUTCHours(),x=L+(t-t0)*cw;
+    if(hr===0){ctx.strokeStyle='rgba(18,21,26,.25)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,baseY+4);ctx.stroke();
+      if(x+40<L+plotW){ctx.fillStyle=cvTok('--fg','#16152e');ctx.font='700 10.5px Inter,system-ui';ctx.fillText(WD()[d.getUTCDay()]+' '+d.getUTCDate()+'.',x+22,baseY+30);}}
+    else if(hr%6===0&&cw*6>=22){ctx.fillStyle=cvTok('--fg2','#5B6472');ctx.font='600 9.5px Inter,system-ui';ctx.fillText(String(hr).padStart(2,'0'),x,baseY+14);}}
+  if(nowIdx>=t0&&nowIdx<t1){const x=L+(nowIdx-t0+.5)*cw;ctx.strokeStyle='#e0245e';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x,top-2);ctx.lineTo(x,baseY+2);ctx.stroke();}}
 // The inspect panel is docked by CSS: no drag, no snap, no stored offset. It
 // always appears in the same place, which is what makes it feel built in.
 function icSetup(cv,hh,wOverride){const dpr=window.devicePixelRatio||1;const ww=wOverride||cv.getBoundingClientRect().width||320;
