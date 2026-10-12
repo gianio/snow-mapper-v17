@@ -4080,6 +4080,36 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* view transitions: a quick cross-fade with a little lift */
  ::view-transition-old(root),::view-transition-new(root){animation-duration:.22s;animation-timing-function:cubic-bezier(.2,.9,.25,1)}
  /* webcams */
+ #wcFab[hidden]{display:none!important}
+ .wcv{position:fixed;inset:0;z-index:6200;background:#0b0e14;color:#fff;display:flex;flex-direction:column;
+   padding:calc(env(safe-area-inset-top,0px) + 10px) 12px calc(env(safe-area-inset-bottom,0px) + 10px)}
+ .wcv[hidden]{display:none}
+ .wcv-top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:10px}
+ .wcv-top b{font:800 18px var(--font-d,Inter),system-ui;flex:1}
+ .wcv-x{width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer}
+ .wcv-seg{display:flex;gap:4px;background:rgba(255,255,255,.08);border-radius:999px;padding:3px;width:100%}
+ .wcv-seg button{flex:1;border:0;background:none;color:rgba(255,255,255,.75);font:700 13px Inter,system-ui;padding:8px 6px;border-radius:999px;cursor:pointer}
+ .wcv-seg button.on{background:#fff;color:#0b0e14}
+ @media(min-width:700px){.wcv-seg{width:auto}}
+ .wcv-body{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px}
+ .wcv-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font:600 13px Inter,system-ui;color:rgba(255,255,255,.8)}
+ .wcv-bar input[type=range]{flex:1;min-width:140px;accent-color:#6FB4F0}
+ .wcv-bar button,.wcv-btn{border:0;border-radius:999px;padding:8px 14px;background:rgba(255,255,255,.12);color:#fff;font:700 13px Inter,system-ui;cursor:pointer}
+ .wcv-bar button.on{background:#6FB4F0;color:#0b0e14}
+ .wcv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px}
+ .wcv-tile{position:relative;border-radius:16px;overflow:hidden;background:#1a1f2a;aspect-ratio:16/10}
+ .wcv-tile img,.wcv-tile iframe,.wcv-tv img,.wcv-tv iframe{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:0;display:block}
+ .wcv-cap{position:absolute;left:0;right:0;bottom:0;padding:18px 10px 8px;background:linear-gradient(transparent,rgba(0,0,0,.75));
+   font:700 13px Inter,system-ui;display:flex;align-items:flex-end;gap:6px;pointer-events:none}
+ .wcv-cap span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .wcv-cap em{font-style:normal;font-weight:600;opacity:.8}
+ .wcv-star{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:50%;border:0;background:rgba(0,0,0,.5);color:#FFD54A;font-size:18px;cursor:pointer;z-index:2}
+ .wcv-tv{position:relative;flex:1;min-height:240px;border-radius:18px;overflow:hidden;background:#1a1f2a}
+ .wcv-tv .wcv-cap{font-size:15px;padding:30px 14px 12px}
+ .wcv-prog{position:absolute;left:0;top:0;height:3px;background:#6FB4F0;z-index:2}
+ .wcv-empty{margin:auto;max-width:420px;text-align:center;font:500 15px/1.5 Inter,system-ui;color:rgba(255,255,255,.8);padding:20px}
+ .wc-pop .wc-fav{align-self:flex-start;margin:4px 12px 0;border:1px solid var(--hair);background:var(--card);color:var(--fg);border-radius:999px;padding:6px 12px;font:700 12.5px Inter,system-ui;cursor:pointer}
+ .wc-pop .wc-fav.on{background:#FFF4CC;border-color:#E9C44A}
  .wc-pin{width:30px;height:30px;border-radius:10px;background:#0E2A5C;color:#fff;display:flex;align-items:center;justify-content:center;
    box-shadow:0 0 0 2px #fff,0 4px 10px rgba(0,0,0,.3)}
  .wc-pin svg{width:16px;height:16px}
@@ -4778,6 +4808,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <b>Snowmapper ist gesperrt</b><span>Mit Face ID entsperren</span>
   <button class="onb-pri" onclick="lockUnlock()">Entsperren</button>
   <button class="onb-link" onclick="lockReset()">Sperre aufheben und abmelden</button></div></div>
+<div id="wcv" class="wcv" hidden role="dialog" aria-label="Webcams"><div class="wcv-top"><button class="wcv-x" onclick="wcvClose()" aria-label="Schliessen">×</button><b>Webcams</b>
+<div class="wcv-seg" role="tablist"><button data-m="fav" onclick="wcvMode('fav')">Favoriten</button><button data-m="tv" onclick="wcvMode('tv')">Webcam-TV</button><button data-m="near" onclick="wcvMode('near')">In der Nähe</button></div></div>
+<div class="wcv-body" id="wcvBody"></div></div>
 <div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:linear-gradient(150deg,#6FB4F0,#3F8AD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg></i><span><b>Report Powder</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:linear-gradient(150deg,#4A86C8,#2D5A8C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button></div></div>
 <nav id="tabBar" aria-label="Navigation">
   <button data-tab="map" onclick="navGo('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg><span>Karte</span></button>
@@ -4869,6 +4902,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
+    <button class="mfab" id="wcFab" onclick="wcvOpen()" title="Webcams" aria-label="Webcams" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
     <button class="mfab" id="legFab" onclick="legVisToggle()" title="Legende ein/aus" aria-label="Legende ein/aus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="4" height="4" rx="1"/><rect x="3.5" y="10" width="4" height="4" rx="1"/><rect x="3.5" y="15.5" width="4" height="4" rx="1"/><line x1="11" y1="6.5" x2="20.5" y2="6.5"/><line x1="11" y1="12" x2="20.5" y2="12"/><line x1="11" y1="17.5" x2="20.5" y2="17.5"/></svg></button>
   </div>
   <div class="mfab-row" id="reportRow">
@@ -5521,6 +5555,15 @@ const I18N_DICT={
 "Keine Treffer":["No results","Aucun résultat","Nessun risultato"],
 "Luft (2 m über Boden)":["Air (2 m above ground)","Air (2 m au-dessus du sol)","Aria (2 m dal suolo)"],
 "Luft max":["Air max","Air max","Aria max"],
+"Webcam-TV":["Webcam TV","Webcam TV","Webcam TV"],"Favoriten":["Favourites","Favoris","Preferiti"],"In der Nähe":["Nearby","À proximité","Nelle vicinanze"],
+"☆ Merken":["☆ Save","☆ Enregistrer","☆ Salva"],"★ Gemerkt":["★ Saved","★ Enregistrée","★ Salvata"],
+"Aus den Favoriten entfernt":["Removed from favourites","Retirée des favoris","Rimossa dai preferiti"],
+"Zu den Webcam-Favoriten hinzugefügt":["Added to webcam favourites","Ajoutée aux webcams favorites","Aggiunta alle webcam preferite"],
+"Webcams sind noch nicht freigeschaltet":["Webcams are not enabled yet","Les webcams ne sont pas encore activées","Le webcam non sono ancora attive"],
+"Lade Webcams …":["Loading webcams …","Chargement des webcams …","Caricamento webcam …"],
+"Suche Webcams in der Nähe …":["Looking for webcams nearby …","Recherche de webcams à proximité …","Ricerca webcam nelle vicinanze …"],
+"Keine Webcams gefunden.":["No webcams found.","Aucune webcam trouvée.","Nessuna webcam trovata."],
+"Aktuelles Bild":["Latest picture","Image actuelle","Immagine attuale"],"▶ Zeitraffer 24 h":["▶ 24 h timelapse","▶ Accéléré 24 h","▶ Timelapse 24 h"],
 "Tief":["Low","Bas","Basso"],
 "nach Höhe":["by height","par altitude","per quota"],
 "Tiefe Wolken, Nebel – dicht":["Low cloud, fog – dense","Nuages bas, brouillard – denses","Nubi basse, nebbia – dense"],
@@ -9159,7 +9202,8 @@ function rptPlace(r){
 var WEBCAM_KEY=null,wcLayer=null,wcSeen=new Map(),wcT=0,wcBusy=false;   // var: the layer list asks before this line has run
 const WC_API='https://api.windy.com/webcams/api/v3/webcams';
 fetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
-  if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}}}).catch(()=>{});
+  if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}
+    const f=document.getElementById('wcFab');if(f)f.hidden=false;}}).catch(()=>{});
 async function wcFetch(params){
   const r=await fetch(WC_API+'?'+params,{headers:{'x-windy-api-key':WEBCAM_KEY}});
   if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
@@ -9190,6 +9234,7 @@ async function wcPreview(id,mk){
     const link=(w.urls&&(w.urls.detail||w.urls.provider))||('https://www.windy.com/webcams/'+id);
     mk.setPopupContent('<div class="wc-pop">'+(src?'<img src="'+escapeHtml(src)+'" alt="">':'<div class="wc-img"></div>')
       +'<b>'+escapeHtml(w.title||'Webcam')+'</b><span>'+escapeHtml([loc.city,loc.region].filter(Boolean).join(', '))+(when?' · '+when:'')+'</span>'
+      +'<button class="wc-fav'+(wcFavHas(id)?' on':'')+'" onclick="wcFavToggle(\''+escapeHtml(id)+'\',this)" data-t="'+escapeHtml(w.title||'Webcam')+'" data-lat="'+(loc.latitude||'')+'" data-lon="'+(loc.longitude||'')+'">'+(wcFavHas(id)?'★ Gemerkt':'☆ Merken')+'</button>'
       +'<a href="'+escapeHtml(link)+'" target="_blank" rel="noopener">Live auf windy.com ›</a>'
       +'<em>Webcams bereitgestellt von <a href="https://www.windy.com/" target="_blank" rel="noopener">windy.com</a></em></div>');
   }catch(e){mk.setPopupContent('<div class="wc-pop"><b>Vorschau nicht verfügbar</b></div>');}
@@ -9197,6 +9242,80 @@ async function wcPreview(id,mk){
 const _toastSeen=new Set();
 function toastOnce(k,msg){if(_toastSeen.has(k))return;_toastSeen.add(k);try{toast(msg,'info');}catch(e){}}
 map.on('moveend',()=>{if(!ovOn.webcams)return;clearTimeout(wcT);wcT=setTimeout(wcRefresh,400);});
+// ── Webcam screen: favourites as tiles, Webcam-TV, cameras near me ──
+// Favourites live on the device. Each tile plays Windy's 24-hour timelapse
+// (all at once), or shows the latest picture. TV runs through the
+// favourites one after another; "In der Nähe" runs through the cameras
+// around you above a chosen altitude (our terrain model gives the altitude).
+const WCV={mode:'fav',play:true,tv:0,tvT:0,tvList:[],minAlt:1500,near:null,busy:false};
+const WC_TV_MS=15000;
+function wcFavs(){try{const v=JSON.parse(localStorage.getItem('ssm_wcfav')||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}}
+function wcFavSave(v){try{localStorage.setItem('ssm_wcfav',JSON.stringify(v));}catch(e){}}
+function wcFavHas(id){return wcFavs().some(f=>f.id===String(id));}
+function wcFavToggle(id,btn){id=String(id);let v=wcFavs();
+  if(v.some(f=>f.id===id)){v=v.filter(f=>f.id!==id);toast('Aus den Favoriten entfernt','info');}
+  else{v.push({id,t:(btn&&btn.dataset.t)||'Webcam',lat:+((btn&&btn.dataset.lat)||0),lon:+((btn&&btn.dataset.lon)||0)});toast('Zu den Webcam-Favoriten hinzugefügt','ok');}
+  wcFavSave(v);if(btn&&btn.classList.contains('wc-fav')){const on=v.some(f=>f.id===id);btn.classList.toggle('on',on);btn.textContent=on?'★ Gemerkt':'☆ Merken';}
+  if(!document.getElementById('wcv').hidden&&WCV.mode==='fav')wcvRender();}
+// details with fresh image links and the timelapse player
+async function wcDetails(ids){if(!ids.length)return [];
+  const j=await wcFetch('webcamIds='+ids.map(encodeURIComponent).join(',')+'&limit=50&include=images,location,player');
+  return (j.webcams||[]).map(w=>{const loc=w.location||{},im=w.images&&(w.images.current||w.images.daylight)||{},pl=w.player||{};
+    const day=typeof pl.day==='string'?pl.day:(pl.day&&typeof pl.day==='object'?(pl.day.embed||pl.day.link):null),alt=loc.latitude!=null?fineElev(loc.latitude,loc.longitude):null;
+    return {id:String(w.webcamId||w.id),t:w.title||'Webcam',lat:loc.latitude,lon:loc.longitude,img:im.preview||im.thumbnail||null,
+      player:typeof day==='string'?day:null,alt:alt!=null?Math.round(alt):null};});}
+function wcMedia(c,live){
+  return (live&&c.player)?'<iframe src="'+escapeHtml(c.player)+'" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer-when-downgrade" title="'+escapeHtml(c.t)+'"></iframe>'
+    :(c.img?'<img src="'+escapeHtml(c.img)+'" alt="" loading="lazy">':'');}
+function wcCap(c){return '<div class="wcv-cap"><span>'+escapeHtml(c.t)+'</span>'+(c.alt!=null?'<em>'+c.alt+' m</em>':'')+'</div>';}
+function wcvOpen(){if(!WEBCAM_KEY){toast('Webcams sind noch nicht freigeschaltet','info');return;}
+  document.getElementById('wcv').hidden=false;document.body.classList.add('wcv-open');wcvMode(WCV.mode);}
+function wcvClose(){clearTimeout(WCV.tvT);document.getElementById('wcv').hidden=true;document.body.classList.remove('wcv-open');
+  document.getElementById('wcvBody').innerHTML='';}
+function wcvMode(m){WCV.mode=m;clearTimeout(WCV.tvT);
+  document.querySelectorAll('#wcv .wcv-seg button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));wcvRender();}
+async function wcvRender(){const el=document.getElementById('wcvBody');if(!el)return;clearTimeout(WCV.tvT);
+  const ap='<div class="wcv-empty" style="font-size:12px;margin:6px auto 0;padding:0">Webcams bereitgestellt von <a href="https://www.windy.com/" target="_blank" rel="noopener" style="color:#9cc9f5">windy.com</a></div>';
+  if(WCV.mode==='near')return wcvNear(el,ap);
+  const favs=wcFavs();
+  if(!favs.length){el.innerHTML='<div class="wcv-empty">Noch keine Favoriten.<br>Schalte auf der Karte unter <b>Ebenen → Webcams</b> die Kameras ein, tippe auf eine und dann auf <b>☆ Merken</b>.</div>';return;}
+  el.innerHTML='<div class="wcv-empty">Lade Webcams …</div>';
+  let cams;try{cams=await wcDetails(favs.map(f=>f.id));}catch(e){el.innerHTML='<div class="wcv-empty">Webcams konnten nicht geladen werden</div>';return;}
+  if(WCV.mode==='fav'){
+    el.innerHTML='<div class="wcv-bar"><button class="'+(WCV.play?'on':'')+'" onclick="WCV.play=!WCV.play;wcvRender()">'+(WCV.play?'▶ Zeitraffer 24 h':'Aktuelles Bild')+'</button><span>'+cams.length+' Favoriten</span></div>'
+      +'<div class="wcv-grid">'+cams.map(c=>'<div class="wcv-tile">'+wcMedia(c,WCV.play)+wcCap(c)
+        +'<button class="wcv-star" onclick="wcFavToggle(\''+escapeHtml(c.id)+'\')" aria-label="Aus Favoriten entfernen">★</button></div>').join('')+'</div>'+ap;}
+  else wcvTv(el,cams,ap,'Favoriten');}
+function wcvTv(el,cams,ap,what){WCV.tvList=cams;if(WCV.tv>=cams.length)WCV.tv=0;
+  if(!cams.length){el.innerHTML='<div class="wcv-empty">Keine Webcams gefunden.</div>';return;}
+  const c=cams[WCV.tv];
+  el.innerHTML='<div class="wcv-tv">'+wcMedia(c,true)+'<div class="wcv-prog" id="wcvProg"></div>'+wcCap(c)+'</div>'
+    +'<div class="wcv-bar"><button onclick="wcvStep(-1)">‹</button><span style="flex:1;text-align:center">'+(WCV.tv+1)+' / '+cams.length+' · '+what+'</span><button onclick="wcvStep(1)">›</button></div>'+ap;
+  const pr=document.getElementById('wcvProg');if(pr){pr.style.width='0';pr.animate([{width:'0%'},{width:'100%'}],{duration:WC_TV_MS,fill:'forwards'});}
+  WCV.tvT=setTimeout(()=>wcvStep(1),WC_TV_MS);}
+function wcvStep(d){clearTimeout(WCV.tvT);const n=WCV.tvList.length||1;WCV.tv=(WCV.tv+d+n)%n;
+  const el=document.getElementById('wcvBody');if(!el)return;
+  if(WCV.mode==='near')wcvNearShow(el);else wcvTv(el,WCV.tvList,'',WCV.mode==='tv'?'Favoriten':'');}
+async function wcvNear(el,ap){
+  const c=myLoc?{lat:myLoc[0],lon:myLoc[1]}:(()=>{const m=map.getCenter();return {lat:m.lat,lon:m.lng};})();
+  el.innerHTML='<div class="wcv-empty">Suche Webcams in der Nähe …</div>';
+  try{const j=await wcFetch('nearby='+c.lat.toFixed(4)+','+c.lon.toFixed(4)+',40&limit=50&include=location');
+    const ids=(j.webcams||[]).map(w=>String(w.webcamId||w.id));
+    WCV.near=(await wcDetails(ids)).filter(x=>x.lat!=null);}
+  catch(e){el.innerHTML='<div class="wcv-empty">Webcams konnten nicht geladen werden</div>';return;}
+  WCV.tv=0;wcvNearShow(el,ap);}
+function wcvNearShow(el,ap){const cams=(WCV.near||[]).filter(x=>x.alt==null||x.alt>=WCV.minAlt).sort((p,q)=>(q.alt||0)-(p.alt||0));
+  WCV.tvList=cams;if(WCV.tv>=cams.length)WCV.tv=0;
+  const bar='<div class="wcv-bar"><span>ab <b id="wcvAltV">'+WCV.minAlt+'</b> m</span><input type="range" min="0" max="3500" step="100" value="'+WCV.minAlt+'" '
+    +'oninput="document.getElementById(\'wcvAltV\').textContent=this.value" onchange="WCV.minAlt=+this.value;WCV.tv=0;wcvNearShow(document.getElementById(\'wcvBody\'))" aria-label="Mindesthöhe der Webcams"></div>';
+  if(!cams.length){el.innerHTML=bar+'<div class="wcv-empty">Keine Webcams über '+WCV.minAlt+' m im Umkreis von 40 km. Schieb den Regler nach links.</div>';return;}
+  const c=cams[WCV.tv];clearTimeout(WCV.tvT);
+  el.innerHTML=bar+'<div class="wcv-tv">'+wcMedia(c,true)+'<div class="wcv-prog" id="wcvProg"></div>'+wcCap(c)
+    +'<button class="wcv-star" onclick="wcFavToggle(\''+escapeHtml(c.id)+'\',this);this.textContent=wcFavHas(\''+escapeHtml(c.id)+'\')?\'★\':\'☆\'" data-t="'+escapeHtml(c.t)+'" data-lat="'+c.lat+'" data-lon="'+c.lon+'" aria-label="Merken">'+(wcFavHas(c.id)?'★':'☆')+'</button></div>'
+    +'<div class="wcv-bar"><button onclick="wcvStep(-1)">‹</button><span style="flex:1;text-align:center">'+(WCV.tv+1)+' / '+cams.length+' · in der Nähe</span><button onclick="wcvStep(1)">›</button></div>'+(ap||'');
+  const pr=document.getElementById('wcvProg');if(pr)pr.animate([{width:'0%'},{width:'100%'}],{duration:WC_TV_MS,fill:'forwards'});
+  WCV.tvT=setTimeout(()=>wcvStep(1),WC_TV_MS);}
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('wcv').hidden)wcvClose();});
 // ── View Transitions: screens cross-fade and slide instead of popping ──
 // Progressive: browsers without the API (or with reduced motion) just switch.
 function vt(fn){
