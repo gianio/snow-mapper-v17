@@ -1713,6 +1713,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink-700);cursor:pointer}
  .ly-sub.on{background:var(--accent);border-color:var(--accent);color:var(--paper)}
  .ly-varrow{display:flex;flex-wrap:wrap;gap:6px;width:100%}
+ .ly-thr{grid-column:1/-1;width:100%;padding:4px 2px 8px;margin-bottom:2px;border-bottom:1px solid var(--hair)}
+ .ly-thr div{display:flex;justify-content:space-between;align-items:baseline;font:600 13px/1.3 var(--font,inherit);color:var(--fg2)}
+ .ly-thr b{font:800 14px var(--font-d,inherit);color:var(--fg)}
+ .ly-thr input{width:100%;margin-top:6px;accent-color:var(--accent)}
  .ly-legsw .ly-varrow{grid-column:1/-1;padding-bottom:8px;margin-bottom:2px;border-bottom:1px solid var(--hair)}
  /* a fixed legend reads as a legend, not as buttons */
  .ly-legsw.ly-legfix{gap:2px 10px}
@@ -4081,6 +4085,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  ::view-transition-old(root),::view-transition-new(root){animation-duration:.22s;animation-timing-function:cubic-bezier(.2,.9,.25,1)}
  /* webcams */
  #wcFab[hidden]{display:none!important}
+ #layersFab{position:relative}
+ #layersFab .ly-fab-stack{position:absolute;right:4px;bottom:4px;width:15px;height:15px;border-radius:5px;background:var(--brand,#2D4A6E);color:#fff;display:grid;place-items:center}
+ #layersFab .ly-fab-stack svg{width:10px;height:10px}
  .wcv{position:fixed;inset:0;z-index:6200;background:#0b0e14;color:#fff;display:flex;flex-direction:column;
    padding:calc(env(safe-area-inset-top,0px) + 10px) 12px calc(env(safe-area-inset-bottom,0px) + 10px)}
  .wcv[hidden]{display:none}
@@ -4811,7 +4818,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <div id="wcv" class="wcv" hidden role="dialog" aria-label="Webcams"><div class="wcv-top"><button class="wcv-x" onclick="wcvClose()" aria-label="Schliessen">×</button><b>Webcams</b>
 <div class="wcv-seg" role="tablist"><button data-m="fav" onclick="wcvMode('fav')">Favoriten</button><button data-m="tv" onclick="wcvMode('tv')">Webcam-TV</button><button data-m="near" onclick="wcvMode('near')">In der Nähe</button></div></div>
 <div class="wcv-body" id="wcvBody"></div></div>
-<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:linear-gradient(150deg,#6FB4F0,#3F8AD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg></i><span><b>Report Powder</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:linear-gradient(150deg,#4A86C8,#2D5A8C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button></div></div>
+<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:linear-gradient(150deg,#6FB4F0,#3F8AD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg></i><span><b>Report Powder</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:linear-gradient(150deg,#4A86C8,#2D5A8C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button></div></div>
 <nav id="tabBar" aria-label="Navigation">
   <button data-tab="map" onclick="navGo('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg><span>Karte</span></button>
   <button data-tab="tours" id="tourFab" onclick="navGo('tours')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/></svg><span>Touren</span></button>
@@ -4902,11 +4909,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
-    <button class="mfab" id="wcFab" onclick="wcvOpen()" title="Webcams" aria-label="Webcams" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
-    <button class="mfab" id="legFab" onclick="legVisToggle()" title="Legende ein/aus" aria-label="Legende ein/aus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="4" height="4" rx="1"/><rect x="3.5" y="10" width="4" height="4" rx="1"/><rect x="3.5" y="15.5" width="4" height="4" rx="1"/><line x1="11" y1="6.5" x2="20.5" y2="6.5"/><line x1="11" y1="12" x2="20.5" y2="12"/><line x1="11" y1="17.5" x2="20.5" y2="17.5"/></svg></button>
+    <button class="mfab" id="wcFab" onclick="wcvOpen()" title="Webcams" aria-label="Webcams"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
   </div>
   <div class="mfab-row" id="reportRow">
-    <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><i>Report Powder</i></button>
+    <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg><i>Report Powder</i></button>
     <button class="mfab act" id="fabObs" onclick="fabMenu(false);obsOpen()" title="Beobachtung melden" aria-label="Beobachtung melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><i>Beobachtung</i></button>
     <button class="mfab" id="mapFab" onclick="fabMenu()" title="Melden" aria-label="Melden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
   </div>
@@ -5565,6 +5571,10 @@ const I18N_DICT={
 "Keine Webcams gefunden.":["No webcams found.","Aucune webcam trouvée.","Nessuna webcam trovata."],
 "Aktuelles Bild":["Latest picture","Image actuelle","Immagine attuale"],"▶ Zeitraffer 24 h":["▶ 24 h timelapse","▶ Accéléré 24 h","▶ Timelapse 24 h"],
 "Tief":["Low","Bas","Basso"],
+"Nur wo kälter als":["Only where colder than","Seulement où plus froid que","Solo dove più freddo di"],
+"Nur wo weniger Wind als":["Only where wind below","Seulement où le vent est inférieur à","Solo dove il vento è sotto"],
+"alle":["all","tout","tutti"],
+"Median":["Median","Médiane","Mediana"],"Min · Median · Max":["Min · median · max","Min · médiane · max","Min · mediana · max"],
 "nach Höhe":["by height","par altitude","per quota"],
 "Tiefe Wolken, Nebel – dicht":["Low cloud, fog – dense","Nuages bas, brouillard – denses","Nubi basse, nebbia – dense"],
 "Mittelhohe Wolken":["Mid-level cloud","Nuages moyens","Nubi medie"],
@@ -9286,13 +9296,13 @@ function wcMedia(c,live){
   return (live&&c.player)?'<iframe src="'+escapeHtml(c.player)+'" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer-when-downgrade" title="'+escapeHtml(c.t)+'"></iframe>'
     :(c.img?'<img src="'+escapeHtml(c.img)+'" alt="" loading="lazy">':'');}
 function wcCap(c){return '<div class="wcv-cap"><span>'+escapeHtml(c.t)+'</span>'+(c.alt!=null?'<em>'+c.alt+' m</em>':'')+'</div>';}
-function wcvOpen(){if(!WEBCAM_KEY){toast('Webcams sind noch nicht freigeschaltet','info');return;}
-  document.getElementById('wcv').hidden=false;document.body.classList.add('wcv-open');wcvMode(WCV.mode);}
+function wcvOpen(){document.getElementById('wcv').hidden=false;document.body.classList.add('wcv-open');wcvMode(WCV.mode);}
 function wcvClose(){clearTimeout(WCV.tvT);document.getElementById('wcv').hidden=true;document.body.classList.remove('wcv-open');
   document.getElementById('wcvBody').innerHTML='';}
 function wcvMode(m){WCV.mode=m;clearTimeout(WCV.tvT);
   document.querySelectorAll('#wcv .wcv-seg button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));wcvRender();}
 async function wcvRender(){const el=document.getElementById('wcvBody');if(!el)return;clearTimeout(WCV.tvT);
+  if(!WEBCAM_KEY){el.innerHTML='<div class="wcv-empty">Webcams sind noch nicht freigeschaltet.<br>Es fehlt der Windy-Schlüssel (GitHub-Secret <b>WINDY_WEBCAMS_KEY</b>). Sobald er hinterlegt ist, erscheinen hier deine Favoriten, das Webcam-TV und die Kameras in deiner Nähe.</div>';return;}
   const ap='<div class="wcv-empty" style="font-size:12px;margin:6px auto 0;padding:0">Webcams bereitgestellt von <a href="https://www.windy.com/" target="_blank" rel="noopener" style="color:#9cc9f5">windy.com</a></div>';
   if(WCV.mode==='near')return wcvNear(el,ap);
   const favs=wcFavs();
@@ -11246,10 +11256,10 @@ function renderRaster(){
   else if(layer=="temp"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[40,120-(x*60|0),255,215];}
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[255,200-(x*110|0),60,235];}
-      const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(_hid&&_hid(v))return null;const col=tempCol(v);return[col[0],col[1],col[2],205];});}
+      const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(thrHides('temp',v))return null;const col=tempCol(v);return[col[0],col[1],col[2],205];});}
   else if(layer=="wind"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=wg_(t,p)*3.6;mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="lt10"){if(mx>=10)return null;return[40,190,90,215];}
-      const val=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(val<0.5||(_hid&&_hid(val)))return null;
+      const val=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(val<0.5||thrHides('wind',val))return null;
       const c2=rampBYR(val/70);return[c2[0],c2[1],c2[2],200];});}
   // clouds are a state, like a satellite picture: one hour, not a window
   else if(layer=="cloud"&&_clvData){const t1=Math.max(0,Math.min(T-1,b-1));
@@ -11263,7 +11273,7 @@ function renderRaster(){
   else if(layer=="tsurf"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=tsurfEst(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[20,80,180,215];}
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[200,140-(x*80|0),255-(x*200|0),235];}
-      const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);const col=tempCol(v);return[col[0],col[1],col[2],205];});}
+      const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(thrHides('tsurf',v))return null;const col=tempCol(v);return[col[0],col[1],col[2],205];});}
   else if(layer=="skiable"){const ca2=a*NP,cb2=b*NP;setRaster(p=>{const slp=mslpv(p);if(slp>55)return[80,0,0,150];const snow=cum[cb2+p]-cum[ca2+p];if(snow<1)return null;const need=minSnowNeeded(p);const r=snow/Math.max(1,need);if(r>=1.5)return[100,220,100,190];if(r>=1.0)return[160,220,100,180];if(r>=.7)return[255,220,50,180];if(r>=.4)return[255,140,40,170];return[255,60,40,160];});}
   else if(layer=="powder"){setRaster(p=>{const r=computePowder(p,a,b);if(!r.powdered)return null;
     const c=powderColLerp(r.newSnow);const alpha=r.quality==='reduced'?128:172;
@@ -11492,7 +11502,24 @@ const LEG_KEY='ssm_legsel_v2';
 let _legSel=(function(){try{return JSON.parse(localStorage.getItem(LEG_KEY)||'{}')||{};}catch(e){return {};}})();
 function legKey(l){l=l||layer;return l==='snowpack'?'va:'+vaKey:l;}
 // These only explain their colours: every class always on the map.
-const LEG_FIXED=new Set(['wind','cloud','va:wind','snow','depth']);
+const LEG_FIXED=new Set(['wind','cloud','va:wind','snow','depth','temp','tsurf']);
+// Temperature and wind are filtered by a slider instead: "only where it stays
+// below X". The top of the scale means no filter.
+const THR={temp:{min:-20,max:20,step:1,all:20,def:10,u:'°C',lbl:'Nur wo kälter als'},
+           wind:{min:5,max:80,step:5,all:80,def:10,u:'km/h',lbl:'Nur wo weniger Wind als'}};
+const thrVal={};
+for(const k in THR){let v=null;try{v=localStorage.getItem('ssm_thr_'+k);}catch(e){}thrVal[k]=v!=null&&!isNaN(+v)?+v:THR[k].def;}
+function thrKey(l){l=l||layer;return l==='tsurf'?'temp':THR[l]?l:null;}
+function thrHides(l,v){const k=thrKey(l);if(!k)return false;const c=THR[k],x=thrVal[k];return x<c.all&&v>=x;}
+function thrTxt(k){const c=THR[k],x=thrVal[k];return x>=c.all?tr('alle'):'< '+x+' '+c.u;}
+function thrHTML(){const k=thrKey();if(!k)return '';const c=THR[k],x=thrVal[k];
+  return '<div class="ly-thr"><div><span>'+tr(c.lbl)+'</span><b id="thrV">'+thrTxt(k)+'</b></div>'
+    +'<input type="range" min="'+c.min+'" max="'+c.max+'" step="'+c.step+'" value="'+x+'" aria-label="'+escapeHtml(tr(c.lbl))+'" '
+    +'oninput="thrSet(\''+k+'\',+this.value,true)" onchange="thrSet(\''+k+'\',+this.value)"></div>';}
+let _thrRaf=0;
+function thrSet(k,v,live){thrVal[k]=v;const e=document.getElementById('thrV');if(e)e.textContent=thrTxt(k);
+  if(!live){try{localStorage.setItem('ssm_thr_'+k,String(v));}catch(x){}}
+  if(_thrRaf)return;_thrRaf=requestAnimationFrame(()=>{_thrRaf=0;try{renderRaster();}catch(x){}try{miniLegendRender();}catch(x){}});}
 function legSwitchable(l){return !LEG_FIXED.has(legKey(l));}
 function legRows(l){if(!legSwitchable(l))return null;const sp=legSpec(l||layer);return sp&&sp.rows&&sp.rows.every(r=>r.k!=null)?sp.rows:null;}
 function legDefaultSet(l){const rows=legRows(l)||[],f=LEG_DEFAULT[legKey(l)];
@@ -11688,7 +11715,7 @@ const GROUPS={
     {id:'depth',label:'Schneehöhe',vars:[{l:'depth',s:'avg',label:'Schneehöhe'}]},
     // Wind and temperature keep their statistic (over the chosen window) as
     // sub-layers; which classes show is picked on the legend.
-    {id:'wind',label:'Wind',vars:[{l:'wind',s:'lt10',label:'<10 km/h'},{l:'wind',s:'avg',label:'Mittel'},{l:'wind',s:'max',label:'Max'},{l:'wind',s:'min',label:'Min'}]},
+    {id:'wind',label:'Wind',vars:[{l:'wind',s:'avg',label:'Mittel'},{l:'wind',s:'max',label:'Max'},{l:'wind',s:'min',label:'Min'}]},
     {id:'cloud',label:'Bewölkung',needs:'cloud',vars:[{l:'cloud',s:'avg',label:'Bewölkung'}]},
     {id:'temp',label:'Temperatur',vars:[{l:'temp',s:'avg',label:'Mittel'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'tsurf',s:'avg',label:'Oberfläche'}]},
     // SNOWPACK is a layer like the others, not an overlay: its sub-layers are
@@ -11821,7 +11848,7 @@ const LY_ICON={
   wind:'<path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h15a3 3 0 1 1-3 3"/><path d="M3 16h8"/>',
   temp:'<line x1="12" y1="4" x2="12" y2="14"/><circle cx="12" cy="17" r="3"/>',
   cloud:'<path d="M7 18h10a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7.1 9.2 4.4 4.4 0 0 0 7 18z"/>',
-  snowpack:'<path d="M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9"/>',
+  snowpack:'<circle cx="10.5" cy="10.5" r="7.2"/><path d="M15.7 15.7L21 21"/><path d="M10.5 6.4v8.2M6.95 8.45l7.1 4.1M14.05 8.45l-7.1 4.1"/>',
   vadrift:'<path d="M3 9h10a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3 13h14a2.5 2.5 0 1 1-2.5 2.5"/><path d="M4 20c3-2.5 6-3 9-1.5s5 .5 7-1"/>'
 };
 function lyIconFor(id){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '+
@@ -11919,7 +11946,7 @@ function lyRender(){
     const subsHtml=((chips||many)&&pos>=0)?('<div class="ly-subs'+(chips?' ly-legsw'+(legRows()?'':' ly-legfix'):'')+'" id="lySubs" role="group" aria-label="'+(chips?'Klassen':'Unterebene')+'" '+
       'style="--notch:'+(((pos%LY_COLS)+0.5)/LY_COLS*100)+'%">'+
       (many?'<div class="ly-varrow">'+vars.map((v,n)=>'<button type="button" class="ly-sub'+(n===curVar?' on':'')+'" '+
-        'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join('')+'</div>':'')+(chips||'')+'</div>'):'';
+        'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join('')+'</div>':'')+thrHTML()+(chips||'')+'</div>'):'';
     return '<div class="ly-sec"><span class="lbl-micro">'+name+'</span><div class="ly-grid ly-g3">'+
       rows.map(([[g,k,item],n],p)=>{const hi=false;
         return '<button type="button" class="ly-tile'+(n===i?' on':'')+(hi?' ly-hi':'')+'" onclick="lyPick('+n+')"'+
@@ -11984,7 +12011,13 @@ addEventListener('keydown',e=>{
 });
 // Deep-zoom layers appear and disappear with the zoom, so the field is rebuilt
 // from the same entry point the rest of the app already calls.
-function renderLayerStrip(){try{lyRender();}catch(e){}}
+function renderLayerStrip(){try{lyRender();}catch(e){}try{lyFabSync();}catch(e){}}
+// The layers button wears the chosen layer's pictogram (a small stack in the
+// corner still says "layers").
+function lyFabSync(){const b=document.getElementById('layersFab');if(!b)return;
+  const it=groupItems(curTopic)[curItem];const id=it&&it.id;if(b.dataset.ly===id)return;b.dataset.ly=id||'';
+  b.innerHTML=lyIconFor(id)+'<i class="ly-fab-stack" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 14l9 5 9-5"/></svg></i>';
+  b.title=b.ariaLabel=tr('Ebenen')+(it?' · '+tr(it.label):'');}
 // Deep-zoom items appear/disappear as the user zooms, so keep the row in sync.
 map.on('zoomend',function(){if(document.body.classList.contains('draw-on'))return;try{
   const shown=lyLayers().length;
@@ -12212,7 +12245,8 @@ function legVisToggle(on,quiet){on=on===undefined?!document.body.classList.conta
   document.body.classList.toggle('leg-vis',on);const b=document.getElementById('legFab');if(b)b.classList.toggle('on',on);
   if(!quiet){try{localStorage.setItem('ssm_legvis',on?'1':'0');}catch(e){}}
   if(!on){try{document.body.classList.remove('leg-open');}catch(e){}}if(!quiet)try{haptic(4);}catch(e){}}
-(function(){let v=null;try{v=localStorage.getItem('ssm_legvis');}catch(e){}legVisToggle(v!=='0',true);})();
+// The legend is always on the map (its own button was dropped).
+legVisToggle(true,true);
 // The search field opens right beside its button on the map's side rail.
 function searchPlace(){const w=document.getElementById('searchWrap'),b=document.getElementById('searchFab');if(!w||!b)return;
   const r=b.getBoundingClientRect();if(!r.width){w.classList.remove('side');w.style.cssText='';return;}
@@ -12423,7 +12457,16 @@ function repSheetToggle(on){const el=document.getElementById('repSheet');if(!el)
   else{el.style.left='';el.style.top='';}document.body.classList.toggle('rep-open',on);if(on){try{haptic(4);}catch(e){}}navSync();}
 addEventListener('pointerdown',e=>{if(!document.body.classList.contains('rep-open'))return;
   if(e.target.closest&&(e.target.closest('#repSheet')||e.target.closest('[data-tab=report]')))return;repSheetToggle(false);},true);
+// Which tab is showing right now (the same reading navSync marks).
+function navCur(){const B=document.body.classList,f=document.getElementById('feedPage'),pm=document.getElementById('profModal');
+  if(B.contains('trk-open'))return 'rec';
+  if(f&&f.classList.contains('open'))return 'feed';
+  if(pm&&pm.style.display&&pm.style.display!=='none')return 'you';
+  if(B.contains('ts-open')||B.contains('tour-open'))return 'tours';
+  return 'map';}
 function navGo(t){try{haptic(4);}catch(e){}try{repSheetToggle(false);}catch(e){}
+  // tapping the tab that is already open goes back to the map
+  if(t!=='map'&&navCur()===t){if(t==='rec'){try{trkClose();}catch(e){}}t='map';}
   if(t==='map')navClose();
   else if(t==='tours'){navClose('tours');if(!document.body.classList.contains('ts-open'))tsOpenUI();}
   else if(t==='rec'){navClose('rec');trkOpen();}
@@ -12739,7 +12782,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
      snow:'<div class="insp-sec"><h4>Neuschnee <em>+'+newSnow.toFixed(1)+' cm</em></h4><canvas id="icNew"></canvas></div>',
      depth:'<div class="insp-sec"><h4>Schneehöhe <em>'+depthNow.toFixed(0)+' cm</em></h4><canvas id="icDepth"></canvas></div>',
      temp:'<div class="insp-sec"><h4>Temperatur <em>°C</em></h4><div class="tc-leg"><span><i class="tc-air"></i>Luft (2 m über Boden)</span><span><i class="tc-srf"></i>Schneeoberfläche</span></div><canvas id="icTemp"></canvas></div>',
-     wind:'<div class="insp-sec"><h4>Windrose <em>Ø '+wmean.toFixed(0)+' km/h</em></h4><canvas id="icWind"></canvas></div>',
+     wind:'<div class="insp-sec"><h4>Windrose <em>Min · Median · Max</em></h4><canvas id="icWind"></canvas></div>',
      cloud:_clvData?'<div class="insp-sec"><h4>Bewölkung <em>nach Höhe</em></h4><canvas id="icCloud"></canvas></div>':'',
      rad:'<div class="insp-sec"><h4>Strahlung <em>% vom Tagesmaximum</em></h4><canvas id="icRad"></canvas></div>'})+
    '</div>';
@@ -12844,19 +12887,33 @@ function tempChart(cv,air,srf,t0,t1){const{ctx,w,h}=icSetup(cv,164);
     if(aMx>-1e9){icPill(ctx,xOf(aMxT),yOf(aMx)-21,tr('Luft max')+' '+aMx.toFixed(0)+'°','#B4552A',w);
       icPill(ctx,xOf(aMnT),Math.min(baseY-18,yOf(aMn)+5),tr('Luft min')+' '+aMn.toFixed(0)+'°',cvTok('--accent-meteo','#2A8FD8'),w);}}
   ctx.textAlign='left';}
-function icWind(cv,p,wk){const{ctx,w,h}=icSetup(cv,152);const cx=w/2,cy=h/2+2,R=Math.min(cx,cy)-18;
-  const NS=8,cnt=new Array(NS).fill(0),spd=new Array(NS).fill(0);let n=0,tot=0;
-  for(let t=a;t<b;t++){let dir=(WDIR[t*P+wk]*M.dir_div)%360;if(dir<0)dir+=360;const s=SPD[t*P+wk]/M.spd_mul*3.6;const si=Math.round(dir/(360/NS))%NS;cnt[si]++;spd[si]+=s;n++;tot+=s;}
+function icWind(cv,p,wk){const sm=[];
+  for(let t=a;t<b;t++){let dir=(WDIR[t*P+wk]*M.dir_div)%360;if(dir<0)dir+=360;sm.push([dir,SPD[t*P+wk]/M.spd_mul*3.6]);}
+  roseDraw(cv,sm);}
+// Wind rose: the petals show where the wind came from (length = how often,
+// colour = how strong); the centre the median, and a row underneath the
+// minimum, median and maximum speed over the chosen time.
+function roseDraw(cv,sm){const{ctx,w,h}=icSetup(cv,196);const cx=w/2,cy=78,R=60;
+  const NS=8,cnt=new Array(NS).fill(0),spd=new Array(NS).fill(0);
+  for(const [d,s2] of sm){const si=Math.round(((d%360)+360)%360/(360/NS))%NS;cnt[si]++;spd[si]+=s2;}
   for(let i=0;i<NS;i++)if(cnt[i])spd[i]/=cnt[i];
-  const mxC=Math.max(1,...cnt);
+  const mxC=Math.max(1,...cnt),v=sm.map(x=>x[1]).sort((p1,p2)=>p1-p2),n=v.length;
+  const med=n?(n%2?v[(n-1)/2]:(v[n/2-1]+v[n/2])/2):0,vmin=n?v[0]:0,vmax=n?v[n-1]:0;
   ctx.strokeStyle=cvTok('--ink-100','rgba(18,21,26,.11)');ctx.lineWidth=1;for(let r=1;r<=3;r++){ctx.beginPath();ctx.arc(cx,cy,R*r/3,0,2*Math.PI);ctx.stroke();}
   const labs=['N','NE','E','SE','S','SW','W','NW'];ctx.fillStyle='rgba(115,108,97,.85)';ctx.font='700 10.5px Inter';ctx.textAlign='center';ctx.textBaseline='middle';
-  for(let i=0;i<NS;i++){const ang=i*(2*Math.PI/NS)-Math.PI/2;ctx.fillText(labs[i],cx+Math.cos(ang)*(R+10),cy+Math.sin(ang)*(R+10));}
+  for(let i=0;i<NS;i++){const ang=i*(2*Math.PI/NS)-Math.PI/2;ctx.fillText(labs[i],cx+Math.cos(ang)*(R+11),cy+Math.sin(ang)*(R+11));}
   for(let i=0;i<NS;i++){if(!cnt[i])continue;const ang=i*(2*Math.PI/NS)-Math.PI/2,len=cnt[i]/mxC*R,half=(Math.PI/NS)*0.72,c=rampBYR(Math.min(1,spd[i]/50));
     ctx.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+',.85)';ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,len,ang-half,ang+half);ctx.closePath();ctx.fill();}
-  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(cx,cy,16,0,2*Math.PI);ctx.fill();
-  ctx.fillStyle='#16152e';ctx.font='800 13px Inter';ctx.textBaseline='middle';ctx.fillText((tot/Math.max(1,n)).toFixed(0),cx,cy-2);
-  ctx.font='600 7.5px Inter';ctx.fillStyle='rgba(115,108,97,.85)';ctx.fillText('km/h Ø',cx,cy+9);ctx.textBaseline='alphabetic';}
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(cx,cy,17,0,2*Math.PI);ctx.fill();
+  ctx.fillStyle='#16152e';ctx.font='800 13px Inter';ctx.fillText(med.toFixed(0),cx,cy-2);
+  ctx.font='600 7.5px Inter';ctx.fillStyle='rgba(115,108,97,.85)';ctx.fillText(tr('Median'),cx,cy+9);
+  // min · median · max
+  const y0=h-38,bw=Math.min(96,(w-24)/3),x0=cx-bw*1.5;
+  [[tr('Min'),vmin,'#2A8FD8'],[tr('Median'),med,'#3E7C8C'],[tr('Max'),vmax,'#B4552A']].forEach(([lb,val,col],k)=>{const x=x0+k*bw;
+    ctx.fillStyle=cvTok('--ink-050','#F0F2F4');icRR(ctx,x+3,y0,bw-6,34,10);ctx.fill();
+    ctx.fillStyle=cvTok('--fg2','#5B6472');ctx.font='700 9.5px Inter';ctx.fillText(lb.toUpperCase(),x+bw/2,y0+10);
+    ctx.fillStyle=col;ctx.font='800 13px Inter';ctx.fillText(val.toFixed(0)+' km/h',x+bw/2,y0+24);});
+  ctx.textBaseline='alphabetic';}
 function icRad(cv,p){const{ctx,w,h}=icSetup(cv,92);
   // One bar per day: percentage of that day's theoretical max radiation
   // actually reached at this location (sunshine fraction vs. clear sky).
@@ -12983,19 +13040,9 @@ function scWind(cv,vw,vmax,t0,t1){const k=a2=>a2?a2.map(v=>v==null?null:v*3.6):n
   ctx.textAlign='right';ctx.font='700 10.5px Inter';
   if(gu){ctx.fillStyle='#B4552A';ctx.fillText('┄ Böe',w-6,12);}
   ctx.fillStyle='#3E7C8C';ctx.fillText('● Mittel',gu?w-56:w-6,12);ctx.textAlign='left';}
-function scRose(cv,dw,vw,t0,t1){const{ctx,w,h}=icSetup(cv,152);const cx=w/2,cy=h/2+2,R=Math.min(cx,cy)-18;
-  const NS=8,cnt=new Array(NS).fill(0),spd=new Array(NS).fill(0);let n=0,tot=0;
-  for(let t=t0;t<t1;t++){const d=dw[t];if(d==null)continue;const s=vw&&vw[t]!=null?vw[t]*3.6:0;const si=Math.round(((d%360)+360)%360/(360/NS))%NS;cnt[si]++;spd[si]+=s;n++;tot+=s;}
-  for(let i=0;i<NS;i++)if(cnt[i])spd[i]/=cnt[i];
-  const mxC=Math.max(1,...cnt);
-  ctx.strokeStyle=cvTok('--ink-100','rgba(18,21,26,.11)');ctx.lineWidth=1;for(let r=1;r<=3;r++){ctx.beginPath();ctx.arc(cx,cy,R*r/3,0,2*Math.PI);ctx.stroke();}
-  const labs=['N','NE','E','SE','S','SW','W','NW'];ctx.fillStyle='rgba(115,108,97,.85)';ctx.font='700 10.5px Inter';ctx.textAlign='center';ctx.textBaseline='middle';
-  for(let i=0;i<NS;i++){const ang=i*(2*Math.PI/NS)-Math.PI/2;ctx.fillText(labs[i],cx+Math.cos(ang)*(R+10),cy+Math.sin(ang)*(R+10));}
-  for(let i=0;i<NS;i++){if(!cnt[i])continue;const ang=i*(2*Math.PI/NS)-Math.PI/2,len=cnt[i]/mxC*R,half=(Math.PI/NS)*0.72,c=rampBYR(Math.min(1,spd[i]/50));
-    ctx.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+',.85)';ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,len,ang-half,ang+half);ctx.closePath();ctx.fill();}
-  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(cx,cy,16,0,2*Math.PI);ctx.fill();
-  ctx.fillStyle='#16152e';ctx.font='800 13px Inter';ctx.textBaseline='middle';ctx.fillText((tot/Math.max(1,n)).toFixed(0),cx,cy-2);
-  ctx.font='600 7.5px Inter';ctx.fillStyle='rgba(115,108,97,.85)';ctx.fillText('km/h Ø',cx,cy+9);ctx.textBaseline='alphabetic';}
+function scRose(cv,dw,vw,t0,t1){const sm=[];
+  for(let t=t0;t<t1;t++){const d=dw[t];if(d==null)continue;sm.push([d,vw&&vw[t]!=null?vw[t]*3.6:0]);}
+  roseDraw(cv,sm);}
 // --- Mini-map tools (post-location step): search a place + recenter on GPS ---
 function miniMapTools(mapObj,wrapEl){if(!wrapEl||wrapEl.querySelector('.mm-tools'))return;
   const d=document.createElement('div');d.className='mm-tools';
