@@ -53,6 +53,9 @@ jobs:
       - name: Android config (Google Play workflow)
         run: python tools/test_android_config.py
 
+      - name: Open-Meteo client retries a cut-off response
+        run: python tools/test_open_meteo_retry.py
+
       # The Variant A SNOWPACK run cannot be exercised here (external C++
       # binary), but its two silent killers can: a forcing window that starts
       # on the ProfileDate instead of before it, and a PSUM accumulation
