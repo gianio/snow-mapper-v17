@@ -2588,6 +2588,17 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  /* --- SLF-style observation wizard --- */
  .obs-body{padding:14px 20px 26px}
  .obs-body:empty{padding:0}
+ /* one rhythm for every step: each block 14 px apart, nothing touching,
+    nothing wider than the card (iOS gives date inputs an intrinsic width) */
+ #obsBody>*{margin-top:0!important;margin-bottom:0!important}
+ #obsBody>*+*{margin-top:14px!important}
+ #obsBody>.obs-loc-row{margin-top:8px!important}
+ #obsBody input,#obsBody textarea,#obsBody select{max-width:100%;min-width:0;box-sizing:border-box}
+ #obsBody .obs-dt{display:block;width:100%;-webkit-appearance:none;appearance:none;min-height:46px;text-align:left}
+ #obsBody .obs-dt::-webkit-date-and-time-value{text-align:left}
+ #obsBody .obs-media-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #obsBody .rp-caption{min-height:84px}
+ .obs-body{padding-bottom:34px}
  .obs-types{display:flex;flex-direction:column;gap:10px}
  /* Immersive type-selection cluster ("explosion" entrance, scattered cards) */
  .obs-types.cluster{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 2px 14px}
@@ -4090,6 +4101,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    border:0!important;border-radius:999px!important;background:#F4B400!important;color:#2b2100!important;font:800 11px/1 Inter,system-ui!important;
    box-shadow:0 2px 8px rgba(0,0,0,.25)!important;cursor:pointer;white-space:nowrap}
  .rv-btn.rv-btn svg{width:14px!important;height:14px!important}
+ .rv-dot{position:absolute;top:-5px;right:-5px;z-index:61;width:18px;height:18px;border-radius:50%;background:#F4B400;color:#2b2100;
+   display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;pointer-events:auto}
+ .rv-dot svg{width:12px;height:12px}
+ #mapFabs .mfab>.rv-dot{top:2px;right:2px}
+ [id^="ov_"]>.rv-dot{top:4px;right:auto;left:4px}
  .rv-btn.rv-mini{padding:0!important;width:22px!important;justify-content:center;top:-9px}
  .rv-btn.rv-mini span{display:none}
  #appBar>.rv-btn{top:auto;bottom:-14px}
@@ -4115,6 +4131,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rv-send{height:48px;border:0;border-radius:14px;background:var(--brand-grad,var(--accent));color:#fff;font:800 16px var(--font-d,inherit);cursor:pointer}
  .rv-send:disabled{opacity:.6}
  .act-st{cursor:pointer}
+ .trk-rough{margin:6px 0 10px}
+ .trk-rough-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font:600 12.5px var(--font,inherit);color:var(--fg2);margin-bottom:5px}
+ .trk-rough-hd b{font:800 13px var(--font,inherit);color:var(--fg)}
+ .trk-rough i{display:inline-block;width:9px;height:9px;border-radius:3px;margin:0 4px 0 2px;vertical-align:-1px}
+ .trk-rough svg{display:block;width:100%;height:12px;border-radius:6px;background:var(--fill);overflow:hidden}
+ .trk-rough-lg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:5px;font:600 11.5px var(--font,inherit);color:var(--fg2)}
+ .trk-rough-lg em{font-style:normal;margin-left:auto;opacity:.75}
  .act-link{opacity:.95}
  .act-sheet{position:fixed;inset:0;z-index:6100;background:rgba(10,14,22,.42);display:none;align-items:flex-end;justify-content:center}
  .act-sheet.open{display:flex}
@@ -4442,7 +4465,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.desk #appBar{height:calc(var(--bar-h) + 8px)!important}
 
  /* tour finder: an explicit fold, a bigger grab zone */
- .ts-hd-b{display:flex;align-items:center;gap:6px}
+ .ts-hd-b{display:flex;align-items:center;gap:6px;margin-left:auto;align-self:flex-start}
+ .ts-x{width:36px;height:36px;border-radius:50%;border:0;background:var(--fill);color:var(--fg);display:grid;place-items:center;cursor:pointer;flex:none;
+   box-shadow:inset 0 0 0 1px var(--hair)}
+ .ts-x svg{width:16px;height:16px}
+ .ts-x:active{transform:scale(.92)}
  .ts-min{width:34px;height:34px;border-radius:50%;border:0;background:var(--fill);color:var(--fg);display:grid;place-items:center;cursor:pointer}
  .ts-min svg{width:18px;height:18px;transition:transform .25s}
  .ts-sheet.min .ts-min svg{transform:rotate(180deg)}
@@ -5098,7 +5125,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
   <button class="auth-paste" type="button" onclick="authPasteCode()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Code aus E-Mail einfügen</button>
   <div class="auth-err" id="authCodeErr" role="alert" aria-live="polite"></div>
   <button class="auth-btn primary" id="authCodeBtn" onclick="authVerifyCode()">Bestätigen</button>
-  <p class="auth-note" style="text-align:center">Nichts erhalten? Schau im Spam-Ordner nach.</p>
+  <p class="auth-note" style="text-align:center">Steht in der Mail ein <b>Link</b> statt eines Codes? Tippe darauf – danach bist du hier automatisch angemeldet. Nichts erhalten? Schau im Spam-Ordner nach.</p>
   <div class="auth-switch">Kein Code erhalten? <button id="authResendBtn" onclick="authResendCode()">Erneut senden</button> · <button onclick="authCodeBack()">E-Mail ändern</button></div>
 </div>
 <div id="authNewPassBox" style="display:none">
@@ -5629,6 +5656,9 @@ const I18N_DICT={
 "Nur wo weniger Wind als":["Only where wind below","Seulement où le vent est inférieur à","Solo dove il vento è sotto"],
 "alle":["all","tout","tutti"],
 "Median":["Median","Médiane","Mediana"],
+"Ruppigkeit":["Roughness","Rugosité","Ruvidità"],"Abfahrt":["Descent","Descente","Discesa"],
+"glatt":["smooth","lisse","liscio"],"unruhig":["choppy","agitée","irregolare"],"ruppig":["rough","rugueuse","ruvido"],
+"Bewegungssensor, experimentell":["motion sensor, experimental","capteur de mouvement, expérimental","sensore di movimento, sperimentale"],
 "Review-Modus":["Review mode","Mode avis","Modalità feedback"],"Feedback senden":["Send feedback","Envoyer un avis","Invia feedback"],
 "Positiv":["Positive","Positif","Positivo"],"Negativ":["Negative","Négatif","Negativo"],
 "Wie gefällt dir diese Funktion?":["How do you like this feature?","Comment trouves-tu cette fonction ?","Ti piace questa funzione?"],
@@ -5831,6 +5861,9 @@ const I18N_DICT={
 "Passwort wiederholen":["Repeat password", "Répéter le mot de passe", "Ripeti password"],
 "Passwort anzeigen":["Show password", "Afficher le mot de passe", "Mostra password"],
 "E-Mail ändern":["Change e-mail", "Modifier l'e-mail", "Cambia e-mail"],
+"Steht in der Mail ein Link statt eines Codes? Tippe darauf – danach bist du hier automatisch angemeldet. Nichts erhalten? Schau im Spam-Ordner nach.":["Is there a link instead of a code in the mail? Tap it – you will be signed in here automatically. Nothing arrived? Check your spam folder.","Le mail contient un lien au lieu d'un code ? Touche-le – tu seras connecté ici automatiquement. Rien reçu ? Vérifie tes spams.","Nella mail c'è un link invece di un codice? Toccalo – verrai connesso qui automaticamente. Non hai ricevuto nulla? Controlla lo spam."],
+"E-Mail bestätigt – du bist angemeldet":["E-mail confirmed – you are signed in","E-mail confirmé – tu es connecté","E-mail confermata – sei connesso"],
+"Der Bestätigungslink ist abgelaufen oder wurde schon benutzt – gib den Code ein oder lass dir einen neuen schicken.":["The confirmation link has expired or was already used – enter the code or have a new one sent.","Le lien de confirmation a expiré ou a déjà été utilisé – saisis le code ou demande-en un nouveau.","Il link di conferma è scaduto o già usato – inserisci il codice o richiedine uno nuovo."],
 "Nichts erhalten? Schau im Spam-Ordner nach.":["Nothing arrived? Check your spam folder.", "Rien reçu ? Vérifie tes spams.", "Non hai ricevuto nulla? Controlla lo spam."],
 "Zu viele Fehlversuche. Erneut versuchen in #:#":["Too many failed attempts. Try again in #:#", "Trop de tentatives. Réessaie dans #:#", "Troppi tentativi. Riprova tra #:#"],
 "Keine Verbindung. Bitte Internet prüfen und erneut versuchen.":["No connection. Check your internet and try again.", "Pas de connexion. Vérifie Internet et réessaie.", "Nessuna connessione. Controlla internet e riprova."],
@@ -9604,12 +9637,49 @@ function trkLayerEnsure(){
   if(!trkLine)trkLine=L.polyline([],{pane:'trkPane',color:trkCol(),weight:5,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false}).addTo(map);
 }
 function trkLineFromRec(){trkLayerEnsure();trkLine.setLatLngs(trkRec?trkRec.segs.map(s=>s.map(p=>[p[1],p[2]])):[]);}
+// ── Ruppigkeit: how much the phone is shaken while recording ──
+// The motion sensor (accelerometer) is read while the recorder runs; every
+// two seconds the RMS of the acceleration without gravity is kept. On the
+// way down that reads as the snow: smooth powder vs. chattering crust or
+// moguls. Phones only deliver it while the screen is on (the web) -- iOS
+// asks once, on the tap that starts the recording.
+let trkMot=null;
+async function trkMotion(on){
+  if(!on){removeEventListener('devicemotion',trkMotEvt);trkMot=null;return;}
+  if(trkMot||typeof DeviceMotionEvent==='undefined')return;
+  try{if(typeof DeviceMotionEvent.requestPermission==='function'){const r=await DeviceMotionEvent.requestPermission();if(r!=='granted')return;}}catch(e){return;}
+  trkMot={sum:0,n:0,t0:Date.now(),g:null};addEventListener('devicemotion',trkMotEvt);}
+function trkMotEvt(e){if(!trkMot||!trkRec||trkRec.paused)return;let x,y,z;const a=e.acceleration;
+  if(a&&a.x!=null){x=a.x;y=a.y;z=a.z;}
+  else{const g=e.accelerationIncludingGravity;if(!g||g.x==null)return;const G=trkMot.g||(trkMot.g=[g.x,g.y,g.z]);
+    G[0]=.92*G[0]+.08*g.x;G[1]=.92*G[1]+.08*g.y;G[2]=.92*G[2]+.08*g.z;x=g.x-G[0];y=g.y-G[1];z=g.z-G[2];}
+  trkMot.sum+=x*x+y*y+z*z;trkMot.n++;const now=Date.now();
+  if(now-trkMot.t0>=2000&&trkMot.n>4){(trkRec.rough||(trkRec.rough=[])).push([now,+Math.sqrt(trkMot.sum/trkMot.n).toFixed(2)]);
+    trkMot.sum=0;trkMot.n=0;trkMot.t0=now;}}
+// classes in m/s² (RMS): a first calibration, to be tuned with real rides
+const TRK_ROUGH=[[2,'glatt','#3BAA63'],[4,'unruhig','#E9B949'],[99,'ruppig','#D9534F']];
+function trkRoughCls(v){return TRK_ROUGH.find(c=>v<c[0])||TRK_ROUGH[2];}
+// one value per route point (nearest sample in time), null where none
+function trkRoughAlong(flat,rough){if(!rough||!rough.length)return null;let j=0;
+  return flat.map(p=>{const t=p[0];while(j+1<rough.length&&Math.abs(rough[j+1][0]-t)<=Math.abs(rough[j][0]-t))j++;
+    return Math.abs(rough[j][0]-t)<15000?rough[j][1]:null;});}
+// a coloured band under the elevation profile, plus the descent's average
+function trkRoughHTML(ll,vals){if(!vals||!vals.some(v=>v!=null))return '';
+  let D=0;const xs=[0];for(let i=1;i<ll.length;i++){D+=trkHav([0,ll[i-1][0],ll[i-1][1]],[0,ll[i][0],ll[i][1]]);xs.push(D);}D=D||1;
+  let rects='',ds=0,dn=0;
+  for(let i=1;i<ll.length;i++){const v=vals[i];if(v==null)continue;const c=trkRoughCls(v);
+    rects+='<rect x="'+(xs[i-1]/D*340).toFixed(1)+'" y="0" width="'+Math.max(.6,(xs[i]-xs[i-1])/D*340).toFixed(1)+'" height="12" fill="'+c[2]+'"/>';
+    if(ll[i][2]!=null&&ll[i-1][2]!=null&&ll[i][2]<ll[i-1][2]-1){ds+=v;dn++;}}
+  const avg=dn?ds/dn:null,c=avg!=null?trkRoughCls(avg):null;
+  return '<div class="trk-rough"><div class="trk-rough-hd"><b>'+tr('Ruppigkeit')+'</b><span>'+(c?tr('Abfahrt')+': <i style="background:'+c[2]+'"></i>'+tr(c[1])+' ('+avg.toFixed(1)+' m/s²)':'')+'</span></div>'
+    +'<svg viewBox="0 0 340 12" preserveAspectRatio="none" aria-hidden="true">'+rects+'</svg>'
+    +'<div class="trk-rough-lg">'+TRK_ROUGH.map(x=>'<span><i style="background:'+x[2]+'"></i>'+tr(x[1])+'</span>').join('')+'<em>'+tr('Bewegungssensor, experimentell')+'</em></div></div>';}
 function trkStart(){
   trkRec={id:'a'+Date.now().toString(36),type:trkPrefs.type,acc:trkPrefs.acc,start:Date.now(),segs:[[]],paused:false,movingMs:0,resumedAt:Date.now(),follow:true};
   if(trkFix&&trkFix[4]<=TRK_ACC[trkRec.acc].maxAcc&&Date.now()-trkFix[0]<15000)trkRec.segs[0].push(trkFix);
   if(trkGuide)trkRec.guide={id:trkGuide.id,name:trkGuide.name};
   trkSaveRec();trkLineFromRec();trkGuideDraw();
-  trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);
+  trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);trkMotion(true);
   try{haptic(20);}catch(e){}
   trkView='rec';trkRender();
   clearInterval(trkTick);trkTick=setInterval(trkPaint,1000);
@@ -9619,14 +9689,14 @@ function trkPause(){if(!trkRec||trkRec.paused)return;
   trkGpsStop();trkWake(false);trkSaveRec();try{haptic(12);}catch(e){}trkRender();}
 function trkResume(){if(!trkRec||!trkRec.paused)return;
   trkRec.paused=false;trkRec.resumedAt=Date.now();trkRec.segs.push([]);
-  trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);trkSaveRec();try{haptic(12);}catch(e){}trkRender();}
+  trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);trkMotion(true);trkSaveRec();try{haptic(12);}catch(e){}trkRender();}
 function trkFinish(){if(!trkRec)return;
-  if(!trkRec.paused)trkPause();
+  if(!trkRec.paused)trkPause();trkMotion(false);
   const segs=trkRec.segs.filter(s=>s.length);
   clearInterval(trkTick);trkTick=0;
   const st=trkStats(segs,trkRec.movingMs);
   trkDraft={id:trkRec.id,type:trkRec.type,acc:trkRec.acc,start:trkRec.start,end:Date.now(),segs,stats:st,
-    name:trkRec.guide?trkRec.guide.name:trkDefaultName(trkRec.type,trkRec.start),guide:trkRec.guide||null,desc:'',snow:null,depth:0,stars:0,photos:[],postedId:null,snowPts:[],sel:null,tracks:null};
+    name:trkRec.guide?trkRec.guide.name:trkDefaultName(trkRec.type,trkRec.start),guide:trkRec.guide||null,desc:'',snow:null,depth:0,stars:0,photos:[],postedId:null,snowPts:[],sel:null,tracks:null,rough:trkRec.rough||null};
   trkView='save';trkRender();
 }
 async function trkKeep(post){
@@ -9669,12 +9739,14 @@ async function trkPost(a){
       const{error}=await sb.storage.from('report-images').upload(path,a.photos[i],{cacheControl:'31536000',contentType:a.photos[i].type||'image/jpeg'});
       if(!error){const{data}=sb.storage.from('report-images').getPublicUrl(path);if(data&&data.publicUrl)urls.push(data.publicUrl);}}catch(e){}}
     const flat=trkFlat(a.segs);
-    const track=trkSimplify(flat,400).map(p=>[+p[1].toFixed(5),+p[2].toFixed(5),p[3]==null?null:Math.round(p[3])]);
+    const simp=trkSimplify(flat,400),track=simp.map(p=>[+p[1].toFixed(5),+p[2].toFixed(5),p[3]==null?null:Math.round(p[3])]);
+    const roughA=trkRoughAlong(simp,a.rough);
     const rp=flat0[repI]||flat0[flat0.length-1];
     let ti=0,tb=1e18;track.forEach((p,i)=>{const e=(p[0]-rp[0])**2+(p[1]-rp[1])**2;if(e<tb){tb=e;ti=i;}});
     const top=[0,rp[0],rp[1],rp[2]];
     const s=a.stats,cd={activity:{name:a.name,type:a.type,desc:a.desc,dist:Math.round(s.dist),up:s.up,down:s.down,
       moving:s.moving,elapsed:a.end-a.start,maxA:s.maxA,minA:s.minA,start:a.start,end:a.end,track,rep:ti,map:mapUrl,vis:'followers'},images:urls};
+    if(roughA&&roughA.some(v=>v!=null))cd.activity.rough=roughA.map(v=>v==null?null:Math.round(v*10)/10);
     if(a.snow){cd.details={snow:a.snow};cd.measurement=a.snow+(a.snow==='Pulver'&&a.depth?' '+a.depth+' cm':'');
       // the report point also feeds the Reported Powder model, like a quick report
       const Q={Pulver:85,Windgepresst:15,Bruchharsch:30,Sulz:55,Nass:45,Hart:10}[a.snow];
@@ -9943,6 +10015,7 @@ async function trkRender(){
       +'<div class="trk-sum four"><div><b>'+trkFmtD(s.dist||0)+'</b><small>Distanz</small></div><div><b>'+(s.up||0)+' m</b><small>Aufstieg</small></div><div><b>'+trkFmtT(s.moving||0)+'</b><small>Bewegung</small></div><div><b>'+(s.maxA!=null?s.maxA+' m':'–')+'</b><small>Höchster Punkt</small></div></div>'
       +((a.snowPts||[]).length?'':'<div class="trk-profw">'+trkProfile(ll,340,80)+'</div>')
       +((a.snowPts||[]).length?'<div class="trk-profw">'+trkSnowProfileSVG(a,ll,false)+'</div><div class="trk-sp-list">'+a.snowPts.map(p=>trkPtTxt(p,ll)).map(t=>'<span>'+t+'</span>').join('')+'</div>':'')
+      +trkRoughHTML(ll,trkRoughAlong(trkFlat(a.segs),a.rough))
       +(a.tracks?'<div class="trk-meta">Verspurung: <b>'+escapeHtml((TRK_TRACKS.find(x=>x[0]===a.tracks)||[0,''])[1])+'</b></div>':'')
       +(a.snow?'<div class="trk-meta">Schnee: <b>'+escapeHtml(a.snow)+(a.snow==='Pulver'&&a.depth?' '+a.depth+' cm':'')+'</b>'+(a.stars?' · '+'★'.repeat(a.stars):'')+'</div>':'')
       +((a.photos||[]).length?'<div class="trk-photos">'+a.photos.map(b=>'<div class="trk-ph"><img src="'+URL.createObjectURL(b)+'" alt=""></div>').join('')+'</div>':'')
@@ -10093,6 +10166,7 @@ function actOpen(id){const r=(allReports||[]).find(x=>String(x.id)===String(id))
     +'<button onclick="actSheetClose()" aria-label="Schliessen">×</button></div>'
     +'<div class="act-sh-st">'+st.map(x=>'<div><small>'+tr(x[0])+'</small><b>'+x[1]+'</b></div>').join('')+'</div>'
     +'<div class="act-sh-prof">'+trkProfile(A.track,340,90)+'</div>'
+    +(A.rough?trkRoughHTML(A.track,A.rough):'')
     +((cd.measurement||lk.length)?'<h4>'+tr('Schnee auf der Tour')+'</h4>':'')
     +(cd.measurement?'<div class="act-rep">'+ACT_SNOW_IC+escapeHtml(cd.measurement)+(cd.stars?' · '+'★'.repeat(cd.stars):'')+'</div>':'')
     +lk.map(x=>'<div class="act-rep act-link" onclick="actSheetClose();feedFlyTo('+x.lat+','+x.lng+')">'+ACT_SNOW_IC+escapeHtml(actLinkTxt(x))
@@ -10353,8 +10427,7 @@ function tsRender(onlyMap){
   tsDragWire(el);
   el.innerHTML='<div class="ts-grab" data-drag></div><div class="tn-hd" data-drag><div><b>Touren finden</b><span>'
     +(va?'SNOWPACK · '+escapeHtml(tourVa.when):'Powder-Modell im Zeitfenster')+'</span></div>'
-    +'<span class="ts-hd-b"><button type="button" class="ts-min" onclick="event.stopPropagation();tsMinToggle()" aria-label="Ein-/Ausklappen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>'
-    +'<button type="button" class="tour-x" onclick="tsClose()" aria-label="Schliessen">×</button></span></div>'
+    +'<span class="ts-hd-b"><button type="button" class="ts-x" onclick="event.stopPropagation();tsClose()" aria-label="Schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>'
     +ctrls+'<div class="ts-res"><span class="ts-count">'+list.length+' Touren</span><span>nach '+(tsF.focus==='sulz'?'Sulz':'Pulver')+'-Anteil'
     +(nf?' · <button type="button" class="ts-reset" onclick="tsSet(\'reset\')">Filter zurücksetzen</button>':'')+'</span></div>'
     +'<div class="ts-list tn-list">'+(rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>')+'</div>'
@@ -11962,7 +12035,7 @@ const LY_ICON={
   wind:'<path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h15a3 3 0 1 1-3 3"/><path d="M3 16h8"/>',
   temp:'<line x1="12" y1="4" x2="12" y2="14"/><circle cx="12" cy="17" r="3"/>',
   cloud:'<path d="M7 18h10a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7.1 9.2 4.4 4.4 0 0 0 7 18z"/>',
-  snowpack:'<circle cx="10.5" cy="10.5" r="7.2"/><path d="M15.7 15.7L21 21"/><path d="M10.5 6.4v8.2M6.95 8.45l7.1 4.1M14.05 8.45l-7.1 4.1"/>',
+  snowpack:'<circle cx="13.5" cy="10.5" r="7.2"/><path d="M8.3 15.7L3 21"/><path d="M13.5 6.4v8.2M9.95 8.45l7.1 4.1M17.05 8.45l-7.1 4.1"/>',
   vadrift:'<path d="M3 9h10a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3 13h14a2.5 2.5 0 1 1-2.5 2.5"/><path d="M4 20c3-2.5 6-3 9-1.5s5 .5 7-1"/>'
 };
 function lyIconFor(id){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '+
@@ -12447,8 +12520,19 @@ let rvOn=(()=>{try{return localStorage.getItem('ssm_review')==='1';}catch(e){ret
 function rvToggle(){rvOn=!rvOn;try{localStorage.setItem('ssm_review',rvOn?'1':'0');}catch(e){}rvSync();try{setRender();}catch(e){}
   toast(rvOn?'Review-Modus an – tippe auf «Feedback» bei einer Funktion':'Review-Modus aus','info');}
 function rvSync(){document.body.classList.toggle('review-on',rvOn);clearInterval(rvT);
-  document.querySelectorAll('.rv-btn').forEach(b=>b.remove());if(!rvOn)return;rvPlace();rvT=setInterval(rvPlace,900);}
-function rvPlace(){RV_TARGETS.forEach(([sel,name,wide])=>{let el=null;try{el=document.querySelector(sel);}catch(e){}
+  document.querySelectorAll('.rv-btn,.rv-dot').forEach(b=>b.remove());if(!rvOn)return;rvPlace();rvT=setInterval(rvPlace,900);}
+// ...and every single layer tile, map toggle and side button gets its own
+// small badge, named after what it is.
+const RV_EACH=[['#lyGrid .ly-tile','Ebene'],['[id^="ov_"]','Auf der Karte'],['#mapFabs .mfab','Seitenknopf'],['#tabBar button','Navigation'],['#lySubs .ly-sub','Unterebene']];
+function rvPlaceEach(){RV_EACH.forEach(([sel,pre])=>{document.querySelectorAll(sel).forEach(el=>{
+    if(el.querySelector(':scope > .rv-dot'))return;const r=el.getBoundingClientRect();if(!r.width||!r.height)return;
+    const nm=(el.getAttribute('aria-label')||el.title||el.innerText||'').replace(/\s+/g,' ').trim().slice(0,50);if(!nm)return;
+    if(getComputedStyle(el).position==='static')el.style.position='relative';
+    const d=document.createElement('span');d.className='rv-dot';d.setAttribute('role','button');d.setAttribute('aria-label','Feedback zu '+nm);d.title='Feedback';
+    d.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.6l1.1 2.3 2.5.3-1.8 1.7.5 2.5-2.3-1.2-2.3 1.2.5-2.5-1.8-1.7 2.5-.3z"/></svg>';
+    d.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();rvOpen(pre+': '+nm);},true);
+    d.addEventListener('pointerdown',e=>e.stopPropagation(),true);el.appendChild(d);});});}
+function rvPlace(){try{rvPlaceEach();}catch(e){}RV_TARGETS.forEach(([sel,name,wide])=>{let el=null;try{el=document.querySelector(sel);}catch(e){}
   if(!el||el.querySelector(':scope > .rv-btn'))return;
   // only what is really on screen: panels that are slid away or faded out keep no tab
   const r=el.getBoundingClientRect(),cs=getComputedStyle(el);
@@ -14331,9 +14415,29 @@ async function toggleFollow(uid,ev){if(ev){ev.stopPropagation();}
   }catch(e){if(!following)myFollowing.delete(uid);else myFollowing.add(uid);feedRender();}
 }
 function timeAgo(ts){const d=Date.now()-new Date(ts).getTime(),h=d/36e5;if(h<1)return'gerade eben';if(h<24)return'vor '+Math.floor(h)+'h';return'vor '+Math.floor(h/24)+'d';}
+// Where the confirmation link in the mail leads back to: this page on the
+// web, the public site from the app (the link opens in the browser there).
+const AUTH_REDIRECT=(/^https?:$/.test(location.protocol)&&!/^(localhost|127\.|capacitor)/.test(location.hostname))
+  ?location.origin+location.pathname:'https://gianio.github.io/snow-mapper-v17/';
+// The mail may carry a link instead of (or besides) the 6-digit code. Opening
+// it signs the account in -- in this tab, or in another one (the session is
+// shared through storage) -- so a waiting code step finishes by itself.
+function authLinkConfirmed(user){const p=authPendingGet();if(!user||!p||p.type==='recovery')return false;
+  authPendingSet(null);authAfterLogin(true);toast('E-Mail bestätigt – du bist angemeldet','ok');return true;}
+async function authCheckLinked(){if(!sb||authMode!=='code')return;
+  try{const{data}=await sb.auth.getSession();const u=data&&data.session&&data.session.user;if(u&&u.email_confirmed_at)authLinkConfirmed(u);}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)authCheckLinked();});
+addEventListener('focus',authCheckLinked);
+// a link that was expired or already used comes back with an error in the URL
+(function(){const h=new URLSearchParams((location.hash||'').replace(/^#/,'')+'&'+(location.search||'').replace(/^\?/,''));
+  const er=h.get('error_description')||h.get('error');if(!er)return;
+  setTimeout(()=>{toast(/expired|invalid/i.test(er+h.get('error_code'))?'Der Bestätigungslink ist abgelaufen oder wurde schon benutzt – gib den Code ein oder lass dir einen neuen schicken.':'Bestätigung fehlgeschlagen: '+er,'err');
+    try{authShow();}catch(e){}},800);
+  try{history.replaceState(null,'',location.pathname);}catch(e){}})();
 if(sb){sb.auth.onAuthStateChange((ev,session)=>{
     if(ev==='PASSWORD_RECOVERY'){authUpdateUI(session?.user||null);authOnRecovery();return;}
-    authUpdateUI(session?.user||null);});
+    authUpdateUI(session?.user||null);
+    if(ev==='SIGNED_IN'&&session&&session.user)authLinkConfirmed(session.user);});
   sb.auth.getSession().then(({data})=>{authUpdateUI(data.session?.user||null);});}
 else{const fb=document.getElementById('mapFeedFab');if(fb)fb.style.display='flex';loadReportMarkers();}
 let authPendingEmail=null;
@@ -14416,7 +14520,7 @@ async function authSendRecovery(email){
   if(authLockCheck('reset',email,errEl,btn))return;
   btn.disabled=true;btn.textContent='Sende…';
   try{
-    const{error}=await sb.auth.resetPasswordForEmail(email);
+    const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:AUTH_REDIRECT});
     if(error&&!/not found|no user/i.test(error.message||''))throw error;
     authFail('reset',email);// counts sends too: max 3 codes per 5 min
     authToCode(email,'recovery');
@@ -14504,7 +14608,7 @@ async function authSubmit(e){
       if(pass.length<8){errEl.textContent='Passwort: mindestens 8 Zeichen.';return;}
       if(pass!==pass2){errEl.textContent='Die Passwörter stimmen nicht überein.';return;}
       _authBusy=true;btn.disabled=true;btn.textContent='Registriere…';
-      const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username}}});
+      const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username},emailRedirectTo:AUTH_REDIRECT}});
       if(error)throw error;
       // With e-mail enumeration protection Supabase answers an existing,
       // confirmed address with a user that has no identities instead of an error.
@@ -14517,7 +14621,7 @@ async function authSubmit(e){
     _authBusy=true;btn.disabled=true;btn.textContent='Melde an…';
     const{error}=await sb.auth.signInWithPassword({email,password:pass});
     if(error){
-      if(/confirm|verif/i.test(error.message||'')){try{await sb.auth.resend({type:'signup',email});}catch(x){}authToCode(email,'signup');return;}
+      if(/confirm|verif/i.test(error.message||'')){try{await sb.auth.resend({type:'signup',email,options:{emailRedirectTo:AUTH_REDIRECT}});}catch(x){}authToCode(email,'signup');return;}
       if(/Invalid login credentials/i.test(error.message||'')&&authFail('login',email)){authLockShow('login',email,errEl,btn);return;}
       throw error;
     }
@@ -14568,7 +14672,7 @@ async function authResendCode(){if(!sb||!authPendingEmail)return;
   const err=document.getElementById('authCodeErr'),kind='resend-'+authCodeType;
   if(authLockCheck(kind,authPendingEmail,err,null))return;
   try{
-    const{error}=authCodeType==='recovery'?await sb.auth.resetPasswordForEmail(authPendingEmail):await sb.auth.resend({type:'signup',email:authPendingEmail});
+    const{error}=authCodeType==='recovery'?await sb.auth.resetPasswordForEmail(authPendingEmail,{redirectTo:AUTH_REDIRECT}):await sb.auth.resend({type:'signup',email:authPendingEmail,options:{emailRedirectTo:AUTH_REDIRECT}});
     if(error)throw error;
     authFail(kind,authPendingEmail);// max 3 resends per 5 min
     err.style.color='#0a8f4f';err.textContent='Neuer Code gesendet.';authResendCooldown();
@@ -14588,7 +14692,7 @@ function authOfferFaceId(){
     +'<button class="auth-btn primary" onclick="lockEnable().then(()=>document.getElementById(\'faceIdOffer\').remove())">Face ID verwenden</button>'
     +'<div class="auth-switch"><button onclick="document.getElementById(\'faceIdOffer\').remove()">Später</button></div></div>';
   document.body.appendChild(d);}
-async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email});const b=document.getElementById('emailBanner').querySelector('button');if(b)b.textContent='Gesendet!';}
+async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email,options:{emailRedirectTo:AUTH_REDIRECT}});const b=document.getElementById('emailBanner').querySelector('button');if(b)b.textContent='Gesendet!';}
 function authMenu(){openProfile();}
 // --- Personal preferences ---------------------------------------------------
 // Device-local, so they work before sign-in and never need a round trip.
