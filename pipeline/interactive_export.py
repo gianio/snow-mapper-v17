@@ -4085,6 +4085,35 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  ::view-transition-old(root),::view-transition-new(root){animation-duration:.22s;animation-timing-function:cubic-bezier(.2,.9,.25,1)}
  /* webcams */
  #wcFab[hidden]{display:none!important}
+ .rv-btn.rv-btn{position:absolute!important;top:4px;left:50%;right:auto;transform:translateX(-50%);z-index:60;display:inline-flex!important;align-items:center;gap:4px;
+   width:auto!important;min-width:0!important;height:22px!important;padding:0 9px 0 6px!important;margin:0!important;
+   border:0!important;border-radius:999px!important;background:#F4B400!important;color:#2b2100!important;font:800 11px/1 Inter,system-ui!important;
+   box-shadow:0 2px 8px rgba(0,0,0,.25)!important;cursor:pointer;white-space:nowrap}
+ .rv-btn.rv-btn svg{width:14px!important;height:14px!important}
+ .rv-btn.rv-mini{padding:0!important;width:22px!important;justify-content:center;top:-9px}
+ .rv-btn.rv-mini span{display:none}
+ #appBar>.rv-btn{top:auto;bottom:-14px}
+ .rv-sheet{position:fixed;inset:0;z-index:9500;background:rgba(10,14,22,.45);display:none;align-items:flex-end;justify-content:center}
+ .rv-sheet.open{display:flex}
+ .rv-in{width:100%;max-width:480px;max-height:92dvh;overflow:auto;background:var(--card,#fff);color:var(--fg);border-radius:24px 24px 0 0;
+   padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-direction:column;gap:8px}
+ @media(min-width:700px){.rv-sheet{align-items:center}.rv-in{border-radius:24px}}
+ .rv-hd{display:flex;align-items:flex-start;gap:10px}.rv-hd>div{flex:1}
+ .rv-hd b{display:block;font:800 18px var(--font-d,inherit)}.rv-hd small{color:var(--fg2);font:700 13px var(--font,inherit)}
+ .rv-hd button{width:34px;height:34px;border-radius:50%;border:0;background:var(--fill);color:var(--fg);font-size:20px;cursor:pointer}
+ .rv-mood{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .rv-mood button{height:44px;border-radius:14px;border:1px solid var(--hair);background:var(--fill);color:var(--fg);font:800 14px var(--font,inherit);cursor:pointer}
+ .rv-mood button.on[data-m=positive]{background:#DFF5E6;border-color:#3BAA63}
+ .rv-mood button.on[data-m=negative]{background:#FDE4E1;border-color:#D9534F}
+ .rv-stars{display:flex;align-items:center;gap:4px}
+ .rv-stars button{border:0;background:none;font-size:30px;line-height:1;color:var(--hair,#d0d5dc);cursor:pointer;padding:0 2px}
+ .rv-stars button.on{color:#F4B400}.rv-stars em{font-style:normal;font:700 13px var(--font,inherit);color:var(--fg2);margin-left:8px}
+ .rv-in textarea{width:100%;box-sizing:border-box;border:1px solid var(--hair);border-radius:14px;padding:10px 12px;background:var(--fill);color:var(--fg);font:500 15px/1.4 var(--font,inherit);resize:vertical}
+ .rv-shot{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px dashed var(--hair);border-radius:14px;cursor:pointer;font:700 14px var(--font,inherit);color:var(--brand,var(--accent))}
+ .rv-shot img{max-height:160px;object-fit:contain;border-radius:10px}
+ .rv-fine{margin:0;font:500 12px/1.4 var(--font,inherit);color:var(--fg2)}
+ .rv-send{height:48px;border:0;border-radius:14px;background:var(--brand-grad,var(--accent));color:#fff;font:800 16px var(--font-d,inherit);cursor:pointer}
+ .rv-send:disabled{opacity:.6}
  .act-st{cursor:pointer}
  .act-link{opacity:.95}
  .act-sheet{position:fixed;inset:0;z-index:6100;background:rgba(10,14,22,.42);display:none;align-items:flex-end;justify-content:center}
@@ -4974,6 +5003,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     </div>
     <div class="set-rows">
       <button id="setDemo" onclick="demoToggle()" title="Standardmässig zeigt die App aktuelle Live-Wetterdaten. Ausschalten zeigt die Demo-Daten vom 1. April 2026."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Live-Wetterdaten verwenden<span class="st"></span></button>
+      <button id="setReview" onclick="rvToggle()" title="Zeigt an den wichtigsten Funktionen einen Feedback-Knopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 6.6l1.1 2.3 2.5.3-1.8 1.7.5 2.5-2.3-1.2-2.3 1.2.5-2.5-1.8-1.7 2.5-.3z"/></svg>Review-Modus<span class="st"></span></button>
+      <button id="setFeedback" onclick="setClose();rvOpen('Allgemein')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 6.6l1.1 2.3 2.5.3-1.8 1.7.5 2.5-2.3-1.2-2.3 1.2.5-2.5-1.8-1.7 2.5-.3z"/></svg>Feedback senden</button>
     </div>
     <span class="lbl-micro">Sprache</span>
     <div class="prof-seg set-lang" id="setLang" data-noi18n>
@@ -5598,6 +5629,17 @@ const I18N_DICT={
 "Nur wo weniger Wind als":["Only where wind below","Seulement où le vent est inférieur à","Solo dove il vento è sotto"],
 "alle":["all","tout","tutti"],
 "Median":["Median","Médiane","Mediana"],
+"Review-Modus":["Review mode","Mode avis","Modalità feedback"],"Feedback senden":["Send feedback","Envoyer un avis","Invia feedback"],
+"Positiv":["Positive","Positif","Positivo"],"Negativ":["Negative","Négatif","Negativo"],
+"Wie gefällt dir diese Funktion?":["How do you like this feature?","Comment trouves-tu cette fonction ?","Ti piace questa funzione?"],
+"Verbesserungsvorschlag":["Suggestion","Suggestion","Suggerimento"],
+"Was würdest du ändern? Was fehlt? Was ist toll?":["What would you change? What is missing? What is great?","Que changerais-tu ? Que manque-t-il ? Qu'est-ce qui est top ?","Cosa cambieresti? Cosa manca? Cosa è ottimo?"],
+"Screenshot anhängen":["Attach screenshot","Joindre une capture","Allega screenshot"],"Screenshot ändern":["Change screenshot","Changer la capture","Cambia screenshot"],
+"Alles freiwillig. Mitgeschickt werden die Funktion, die gewählte Ebene und der Kartenausschnitt.":["Everything is optional. The feature, the chosen layer and the map view are sent along.","Tout est facultatif. La fonction, la couche choisie et la vue de la carte sont envoyées.","Tutto è facoltativo. Vengono inviati la funzione, il livello scelto e la vista della mappa."],
+"Senden":["Send","Envoyer","Invia"],"Wird gesendet…":["Sending…","Envoi…","Invio…"],"Danke für dein Feedback!":["Thanks for your feedback!","Merci pour ton avis !","Grazie per il tuo feedback!"],
+"Gib etwas ein – oder wähle 👍/👎 oder Sterne":["Type something – or pick 👍/👎 or stars","Écris quelque chose – ou choisis 👍/👎 ou des étoiles","Scrivi qualcosa – o scegli 👍/👎 o le stelle"],
+"Review-Modus an – tippe auf «Feedback» bei einer Funktion":["Review mode on – tap «Feedback» on a feature","Mode avis activé – touche « Feedback » sur une fonction","Modalità feedback attiva – tocca «Feedback» su una funzione"],
+"Review-Modus aus":["Review mode off","Mode avis désactivé","Modalità feedback disattivata"],
 "Abstieg":["Descent","Descente","Discesa"],"Meldung":["Report","Observation","Segnalazione"],
 "Powder-Karte":["Powder map","Carte de poudreuse","Mappa powder"],"Schnee auf der Tour":["Snow on the tour","Neige sur la course","Neve sul giro"],
 "Route auf der Karte zeigen":["Show route on the map","Afficher l'itinéraire sur la carte","Mostra il percorso sulla mappa"],
@@ -12389,6 +12431,76 @@ try{if(window.matchMedia){const mq=window.matchMedia('(prefers-color-scheme: dar
 // Opened from the profile, it replaces the profile rather than covering it --
 // two stacked sheets is two things to dismiss and one scrim too many.
 let _setCameFromProfile=false;
+// ── Review mode ─────────────────────────────────────────────────────────
+// Switched on in the settings: the main parts of the app (timeline, map tap,
+// layers, legend, tours, feed, recorder, reports, webcams ...) get a small
+// "Feedback" tab. It opens a sheet -- thumbs up/down, 0-5 stars, text, a
+// screenshot, all optional -- that records which feature it came from and
+// goes to Supabase (table feedback, private bucket feedback); the edge
+// function feedback-mail mails it on.
+const RV_TARGETS=[['#appBar','Karte allgemein'],['#bottomPanel','Zeitleiste'],['#inspPanel.open .insp-grab','Karten-Tipp','wide'],
+  ['#lyPanel','Ebenen'],['#miniLegend','Legende'],['#searchWrap:not(.hid)','Ortssuche'],['#tourSearch','Tourensuche'],
+  ['#tourSheet','Skitour'],['#feedTop','Community'],['#trkSheet','Aufzeichnen'],['#repSheet .rs-in','Melden'],
+  ['#drawBar','Powder zeichnen'],['#reportOverlay .report-card, #reportOverlay > div','Beobachtung melden'],['#wcv .wcv-top','Webcams'],
+  ['#actSheet .act-sh-in','Aktivität'],['#setSheet .set-in','Einstellungen'],['#profModal .prof-card, #profModal > div','Profil'],['#dmModal > div','Nachrichten']];
+let rvOn=(()=>{try{return localStorage.getItem('ssm_review')==='1';}catch(e){return false;}})(),rvT=0;
+function rvToggle(){rvOn=!rvOn;try{localStorage.setItem('ssm_review',rvOn?'1':'0');}catch(e){}rvSync();try{setRender();}catch(e){}
+  toast(rvOn?'Review-Modus an – tippe auf «Feedback» bei einer Funktion':'Review-Modus aus','info');}
+function rvSync(){document.body.classList.toggle('review-on',rvOn);clearInterval(rvT);
+  document.querySelectorAll('.rv-btn').forEach(b=>b.remove());if(!rvOn)return;rvPlace();rvT=setInterval(rvPlace,900);}
+function rvPlace(){RV_TARGETS.forEach(([sel,name,wide])=>{let el=null;try{el=document.querySelector(sel);}catch(e){}
+  if(!el||el.querySelector(':scope > .rv-btn'))return;
+  // only what is really on screen: panels that are slid away or faded out keep no tab
+  const r=el.getBoundingClientRect(),cs=getComputedStyle(el);
+  if(!r.width||!r.height||r.bottom<=0||r.top>=innerHeight||r.right<=0||r.left>=innerWidth||cs.visibility==='hidden'||+cs.opacity<0.2)return;
+  if(getComputedStyle(el).position==='static')el.style.position='relative';
+  const b=document.createElement('button');b.type='button';b.className='rv-btn'+(r.width<140&&!wide?' rv-mini':'');b.dataset.f=name;
+  b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 6.6l1.1 2.3 2.5.3-1.8 1.7.5 2.5-2.3-1.2-2.3 1.2.5-2.5-1.8-1.7 2.5-.3z"/></svg><span>Feedback</span>';b.setAttribute('aria-label','Feedback zu '+name);
+  b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();rvOpen(name);});el.appendChild(b);});}
+const rv={f:'',mood:null,stars:null,file:null};
+function rvOpen(feature){rv.f=feature;rv.mood=null;rv.stars=null;rv.file=null;
+  let el=document.getElementById('rvSheet');
+  if(!el){el=document.createElement('div');el.id='rvSheet';el.className='rv-sheet';el.setAttribute('role','dialog');document.body.appendChild(el);
+    el.addEventListener('click',e=>{if(e.target===el)rvClose();});}
+  el.innerHTML='<div class="rv-in"><div class="rv-hd"><div><b>'+tr('Feedback')+'</b><small>'+escapeHtml(tr(feature))+'</small></div><button onclick="rvClose()" aria-label="Schliessen">×</button></div>'
+    +'<div class="rv-mood"><button data-m="positive" onclick="rvMood(this)">👍 '+tr('Positiv')+'</button><button data-m="negative" onclick="rvMood(this)">👎 '+tr('Negativ')+'</button></div>'
+    +'<span class="lbl-micro">'+tr('Wie gefällt dir diese Funktion?')+'</span>'
+    +'<div class="rv-stars" id="rvStars">'+[1,2,3,4,5].map(n=>'<button data-n="'+n+'" onclick="rvStar('+n+')" aria-label="'+n+' Sterne">★</button>').join('')+'<em id="rvStarsTxt"></em></div>'
+    +'<span class="lbl-micro">'+tr('Verbesserungsvorschlag')+'</span>'
+    +'<textarea id="rvText" maxlength="5000" rows="4" placeholder="'+escapeHtml(tr('Was würdest du ändern? Was fehlt? Was ist toll?'))+'"></textarea>'
+    +'<label class="rv-shot"><input type="file" accept="image/*" onchange="rvFile(this)" hidden><span id="rvShotTxt">📎 '+tr('Screenshot anhängen')+'</span><img id="rvShotImg" alt="" hidden></label>'
+    +'<p class="rv-fine">'+tr('Alles freiwillig. Mitgeschickt werden die Funktion, die gewählte Ebene und der Kartenausschnitt.')+'</p>'
+    +'<button class="rv-send" id="rvSend" onclick="rvSend()">'+tr('Senden')+'</button></div>';
+  el.classList.add('open');try{haptic(6);}catch(e){}}
+function rvClose(){const el=document.getElementById('rvSheet');if(el)el.classList.remove('open');}
+function rvMood(b){rv.mood=rv.mood===b.dataset.m?null:b.dataset.m;document.querySelectorAll('#rvSheet .rv-mood button').forEach(x=>x.classList.toggle('on',x.dataset.m===rv.mood));}
+function rvStar(n){rv.stars=rv.stars===n?0:n;document.querySelectorAll('#rvStars button').forEach(x=>x.classList.toggle('on',+x.dataset.n<=rv.stars));
+  const t=document.getElementById('rvStarsTxt');if(t)t.textContent=rv.stars+' / 5';}
+async function rvFile(inp){const f=inp.files&&inp.files[0];if(!f)return;
+  try{const bmp=await createImageBitmap(f),sc=Math.min(1,1600/Math.max(bmp.width,bmp.height)),c=document.createElement('canvas');
+    c.width=Math.round(bmp.width*sc);c.height=Math.round(bmp.height*sc);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+    rv.file=await new Promise(r=>c.toBlob(r,'image/jpeg',.82));}catch(e){rv.file=f.size<5e6?f:null;}
+  const im=document.getElementById('rvShotImg'),tx=document.getElementById('rvShotTxt');
+  if(rv.file&&im){im.src=URL.createObjectURL(rv.file);im.hidden=false;if(tx)tx.textContent='📎 '+tr('Screenshot ändern');}}
+function rvCtx(){const c={app:'web',lang:LANG,vw:innerWidth+'x'+innerHeight,ua:navigator.userAgent.slice(0,180),
+    native:!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())};
+  try{c.layer=layer;c.topic=curTopic;c.var=curVar;c.window=[M.times[a],M.times[Math.max(0,b-1)]];c.data=M.times[nowIdx];}catch(e){}
+  try{const m=map.getCenter();c.map=[+m.lat.toFixed(4),+m.lng.toFixed(4),map.getZoom()];}catch(e){}
+  return c;}
+async function rvSend(){const msg=(document.getElementById('rvText')||{}).value||'';
+  if(!rv.mood&&!rv.stars&&!msg.trim()&&!rv.file){toast('Gib etwas ein – oder wähle 👍/👎 oder Sterne','info');return;}
+  if(!sb){toast('Keine Verbindung zum Server','err');return;}
+  const btn=document.getElementById('rvSend');if(btn){btn.disabled=true;btn.textContent=tr('Wird gesendet…');}
+  const id=(crypto.randomUUID?crypto.randomUUID():'10000000-1000-4000-8000-100000000000'.replace(/[018]/g,ch=>(ch^crypto.getRandomValues(new Uint8Array(1))[0]&15>>ch/4).toString(16)));
+  try{let path=null;
+    if(rv.file){path=id+'.jpg';const{error}=await sb.storage.from('feedback').upload(path,rv.file,{contentType:rv.file.type||'image/jpeg'});if(error)path=null;}
+    const row={id,feature:rv.f.slice(0,80),sentiment:rv.mood,stars:rv.stars||null,message:msg.trim()||null,screenshot_path:path,context:rvCtx(),user_id:sbUser?sbUser.id:null};
+    const{error}=await sb.from('feedback').insert(row);if(error)throw error;
+    try{await sb.functions.invoke('feedback-mail',{body:{id}});}catch(e){}
+    rvClose();toast('Danke für dein Feedback!','ok');try{haptic(14);}catch(e){}
+  }catch(e){toast('Senden fehlgeschlagen: '+(e.message||e),'err');if(btn){btn.disabled=false;btn.textContent=tr('Senden');}}}
+addEventListener('keydown',e=>{if(e.key==='Escape')rvClose();});
+setTimeout(rvSync,0);
 function setOpen(fromProfile){
   const sh=document.getElementById('setSheet');if(!sh)return;
   const pm=document.getElementById('profModal');
@@ -12410,6 +12522,8 @@ function setRender(){
   const st=document.getElementById('setStations');
   if(st){st.classList.toggle('on',!!showStn);
     const q=st.querySelector('.st');if(q)q.textContent=showStn?'an':'aus';}
+  const rvb=document.getElementById('setReview');
+  if(rvb){rvb.classList.toggle('on',rvOn);const q=rvb.querySelector('.st');if(q)q.textContent=rvOn?'an':'aus';}
   const dm=document.getElementById('setDemo');
   if(dm){const liveOn=!demoActive();dm.classList.toggle('on',liveOn);
     const q=dm.querySelector('.st');if(q)q.textContent=liveOn?'an':'aus';}
