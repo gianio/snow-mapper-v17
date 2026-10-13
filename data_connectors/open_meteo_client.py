@@ -167,7 +167,7 @@ class OpenMeteoClient:
         return [self._parse_point(p) for p in payload]
 
     def _request_with_retry(self, params: dict):
-        """GET mit exponentiellem Backoff bei 429/5xx/Timeout (respektiert Retry-After)."""
+        """GET mit exponentiellem Backoff bei 429/5xx/Timeout/abgeschnittenem JSON (respektiert Retry-After)."""
         headers = {"User-Agent": "swiss-snow-model/1.0 (research)"}
         last_exc: Exception | None = None
         for attempt in range(self.max_retries):
@@ -183,7 +183,18 @@ class OpenMeteoClient:
                 last_exc = exc
                 continue
             if resp.status_code == 200:
-                return resp.json()
+                # A connection that drops mid-body still arrives as a 200 with
+                # truncated JSON ("Expecting ',' delimiter"); retry it like a
+                # timeout instead of failing the whole build.
+                try:
+                    return resp.json()
+                except ValueError as exc:
+                    wait = self.backoff_s * (2 ** attempt)
+                    print(f"[WX] unvollstaendige Antwort - warte {wait:.0f}s "
+                          f"(Versuch {attempt + 1}/{self.max_retries}) ...")
+                    time.sleep(wait)
+                    last_exc = exc
+                    continue
             if resp.status_code in (429, 500, 502, 503, 504):
                 retry_after = resp.headers.get("Retry-After")
                 wait = float(retry_after) if retry_after and retry_after.isdigit() \
