@@ -4085,6 +4085,29 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  ::view-transition-old(root),::view-transition-new(root){animation-duration:.22s;animation-timing-function:cubic-bezier(.2,.9,.25,1)}
  /* webcams */
  #wcFab[hidden]{display:none!important}
+ .act-st{cursor:pointer}
+ .act-link{opacity:.95}
+ .act-sheet{position:fixed;inset:0;z-index:6100;background:rgba(10,14,22,.42);display:none;align-items:flex-end;justify-content:center}
+ .act-sheet.open{display:flex}
+ .act-sh-in{width:100%;max-width:520px;max-height:88dvh;overflow:auto;background:var(--card,#fff);color:var(--fg);border-radius:24px 24px 0 0;
+   padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px);box-shadow:0 -10px 40px rgba(0,0,0,.25)}
+ @media(min-width:700px){.act-sheet{align-items:center}.act-sh-in{border-radius:24px}}
+ .act-sh-hd{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
+ .act-sh-hd>div{flex:1;min-width:0}.act-sh-hd b{display:block;font:800 18px/1.25 var(--font-d,inherit)}
+ .act-sh-hd small{display:block;margin-top:3px;color:var(--fg2);font:600 12.5px var(--font,inherit)}
+ .act-sh-hd button{width:34px;height:34px;border-radius:50%;border:0;background:var(--fill);color:var(--fg);font-size:20px;cursor:pointer}
+ .act-sh-st{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+ .act-sh-st div{background:var(--fill);border-radius:12px;padding:8px 6px;text-align:center}
+ .act-sh-st small{display:block;font:700 10px/1.2 var(--font,inherit);color:var(--fg2);text-transform:uppercase;letter-spacing:.02em}
+ .act-sh-st b{display:block;margin-top:3px;font:800 14px var(--font-d,inherit)}
+ @media(max-width:380px){.act-sh-st{grid-template-columns:repeat(2,1fr)}}
+ .act-sh-prof{position:relative;margin-bottom:10px}.act-sh-prof .trk-prof{width:100%;height:90px;display:block}
+ .act-sheet h4{margin:8px 0 6px;font:800 13px var(--font,inherit)}
+ .act-sheet .act-rep{margin:0 0 6px}.act-sheet .act-link{cursor:pointer}
+ .act-sheet .act-link{flex-wrap:wrap}
+ .act-sheet .act-link img{display:block;flex-basis:100%;width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:6px}
+ .act-sh-desc{font:500 14px/1.5 var(--font,inherit);color:var(--fg2);margin:8px 0}
+ .act-sh-map{width:100%;height:46px;border:0;border-radius:14px;background:var(--brand-grad,var(--accent));color:#fff;font:800 15px var(--font-d,inherit);margin-top:8px;cursor:pointer}
  #layersFab{position:relative}
  #layersFab .ly-fab-stack{position:absolute;right:4px;bottom:4px;width:15px;height:15px;border-radius:5px;background:var(--brand,#2D4A6E);color:#fff;display:grid;place-items:center}
  #layersFab .ly-fab-stack svg{width:10px;height:10px}
@@ -5574,7 +5597,13 @@ const I18N_DICT={
 "Nur wo kälter als":["Only where colder than","Seulement où plus froid que","Solo dove più freddo di"],
 "Nur wo weniger Wind als":["Only where wind below","Seulement où le vent est inférieur à","Solo dove il vento è sotto"],
 "alle":["all","tout","tutti"],
-"Median":["Median","Médiane","Mediana"],"Min · Median · Max":["Min · median · max","Min · médiane · max","Min · mediana · max"],
+"Median":["Median","Médiane","Mediana"],
+"Abstieg":["Descent","Descente","Discesa"],"Meldung":["Report","Observation","Segnalazione"],
+"Powder-Karte":["Powder map","Carte de poudreuse","Mappa powder"],"Schnee auf der Tour":["Snow on the tour","Neige sur la course","Neve sul giro"],
+"Route auf der Karte zeigen":["Show route on the map","Afficher l'itinéraire sur la carte","Mostra il percorso sulla mappa"],
+"In Bewegung":["Moving","En mouvement","In movimento"],"Gesamtzeit":["Total time","Durée totale","Tempo totale"],
+"Höchster Punkt":["Highest point","Point le plus haut","Punto più alto"],"Tiefster Punkt":["Lowest point","Point le plus bas","Punto più basso"],
+"Ø Aufstieg":["Avg. climb","Montée moy.","Salita media"],"Min · Median · Max":["Min · median · max","Min · médiane · max","Min · mediana · max"],
 "nach Höhe":["by height","par altitude","per quota"],
 "Tiefe Wolken, Nebel – dicht":["Low cloud, fog – dense","Nuages bas, brouillard – denses","Nubi basse, nebbia – dense"],
 "Mittelhohe Wolken":["Mid-level cloud","Nuages moyens","Nubi medie"],
@@ -9980,14 +10009,57 @@ function actShowFeed(id){const r=(allReports||[]).find(x=>String(x.id)===String(
 function actFeedVisual(r){const cd=r.condition_data,A=cd.activity;
   const fmt=n=>n>=1000?(n/1000).toFixed(1)+' km':n+' m';
   const ims=(cd.images||[]).filter(u=>u&&u!==A.map),id=String(r.id).replace(/[^\w-]/g,'');
-  const slides=[A.map?'<div class="fc-slide" onclick="event.stopPropagation();actShowFeed(\''+r.id+'\')"><img src="'+A.map+'" alt="" loading="lazy"></div>'
-      :'<div class="fc-slide act-svg" onclick="event.stopPropagation();actShowFeed(\''+r.id+'\')">'+trkThumb(A.track,400,300,'',A.rep)+'</div>']
+  const slides=[A.map?'<div class="fc-slide" onclick="event.stopPropagation();actOpen(\''+r.id+'\')"><img src="'+A.map+'" alt="" loading="lazy"></div>'
+      :'<div class="fc-slide act-svg" onclick="event.stopPropagation();actOpen(\''+r.id+'\')">'+trkThumb(A.track,400,300,'',A.rep)+'</div>']
     .concat(ims.map(u=>'<div class="fc-slide"><img src="'+u+'" alt="" loading="lazy"></div>'));
   return '<div class="act-card"><div class="fc-wrap act-wrap"><div class="fc-carousel" id="fcar-a'+id+'">'+slides.join('')+'</div>'
     +(slides.length>1?'<div class="fc-dots" id="fcd-a'+id+'">'+slides.map((x,i)=>'<i class="'+(i?'':'on')+'"></i>').join('')+'</div>':'')+'</div>'
-    +'<div class="act-st"><div><small>Distanz</small><b>'+fmt(A.dist||0)+'</b></div><div><small>Aufstieg</small><b>'+(A.up||0)+' m</b></div><div><small>Zeit</small><b>'+trkFmtT(A.moving||0)+'</b></div></div>'
-    +(cd.measurement?'<div class="act-rep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17"/></svg>'+escapeHtml(cd.measurement)+(cd.altitudeM?' · '+cd.altitudeM+' m':'')+(cd.stars?' · '+'★'.repeat(cd.stars):'')+'</div>':'')+'</div>';
+    +'<div class="act-st" onclick="event.stopPropagation();actOpen(\''+r.id+'\')"><div><small>Distanz</small><b>'+fmt(A.dist||0)+'</b></div><div><small>Aufstieg</small><b>'+(A.up||0)+' m</b></div><div><small>Zeit</small><b>'+trkFmtT(A.moving||0)+'</b></div></div>'
+    +(cd.measurement?'<div class="act-rep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17"/></svg>'+escapeHtml(cd.measurement)+(cd.altitudeM?' · '+cd.altitudeM+' m':'')+(cd.stars?' · '+'★'.repeat(cd.stars):'')+'</div>':'')
+    +actLinked(r).map(x=>'<div class="act-rep act-link">'+ACT_SNOW_IC+escapeHtml(actLinkTxt(x))+'</div>').join('')+'</div>';
 }
+// ── One post per tour: the activity and the powder reports made on it ──
+// A report by the same person, during the tour (from an hour before to six
+// hours after) and within 1.5 km of the route belongs to the activity: it is
+// shown inside the activity's card and its stats sheet, not as a card of its own.
+const ACT_SNOW_IC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17"/></svg>';
+const _actLinkCache=new Map();
+function actLinked(r){const A=r&&r.condition_data&&r.condition_data.activity;if(!A||!A.track||!A.track.length||!r.userId)return [];
+  const key=String(r.id)+':'+(allReports?allReports.length:0);if(_actLinkCache.has(key))return _actLinkCache.get(key);
+  const t0=(A.start||0)-36e5,t1=(A.end||A.start||0)+6*36e5;
+  let la0=90,la1=-90,lo0=180,lo1=-180;A.track.forEach(p=>{la0=Math.min(la0,p[0]);la1=Math.max(la1,p[0]);lo0=Math.min(lo0,p[1]);lo1=Math.max(lo1,p[1]);});
+  const out=(allReports||[]).filter(x=>{if(x===r||x.userId!==r.userId)return false;const cd=x.condition_data||{};if(cd.activity||cd.snowp)return false;
+    const t=Date.parse(x.createdAt||'')||0;if(!t||t<t0||t>t1)return false;
+    if(x.lat<la0-.02||x.lat>la1+.02||x.lng<lo0-.03||x.lng>lo1+.03)return false;
+    return A.track.some(p=>haversineKm(p[0],p[1],x.lat,x.lng)<1.5);});
+  _actLinkCache.set(key,out);return out;}
+function actLinkTxt(x){const cd=x.condition_data||{};
+  return (cd.draw?tr('Powder-Karte'):(x.sub||tr('Meldung')))+(x.measurement?' · '+x.measurement:'')+(cd.altitudeM?' · '+cd.altitudeM+' m':'');}
+function actMergedIds(){const s2=new Set();(allReports||[]).forEach(r=>{if(r.condition_data&&r.condition_data.activity)actLinked(r).forEach(x=>s2.add(String(x.id)));});return s2;}
+// Tapping an activity shows its numbers first; the route on the map is one tap further.
+function actOpen(id){const r=(allReports||[]).find(x=>String(x.id)===String(id));const A=r&&r.condition_data&&r.condition_data.activity;
+  if(!A){if(r)feedFlyTo(r.lat,r.lng);return;}
+  const cd=r.condition_data,fmtD=m=>trkFmtD(m||0),lk=actLinked(r);
+  const st=[['Distanz',fmtD(A.dist)],['Aufstieg',(A.up||0)+' m'],['Abstieg',(A.down||0)+' m'],['In Bewegung',trkFmtT(A.moving||0)],
+    ['Gesamtzeit',trkFmtT(A.elapsed||0)],['Höchster Punkt',A.maxA!=null?Math.round(A.maxA)+' m':'–'],['Tiefster Punkt',A.minA!=null?Math.round(A.minA)+' m':'–'],
+    ['Ø Aufstieg',A.moving&&A.up?Math.round(A.up/(A.moving/36e5))+' m/h':'–']];
+  let el=document.getElementById('actSheet');
+  if(!el){el=document.createElement('div');el.id='actSheet';el.className='act-sheet';el.setAttribute('role','dialog');document.body.appendChild(el);
+    el.addEventListener('click',e=>{if(e.target===el)actSheetClose();});}
+  const when=A.start?new Date(A.start).toLocaleDateString(LOCALE(),{weekday:'short',day:'numeric',month:'short',year:'numeric'}):'';
+  el.innerHTML='<div class="act-sh-in"><div class="act-sh-hd"><div><b>'+escapeHtml(A.name||trkTypeLbl(A.type))+'</b><small>'+escapeHtml(r.user||'')+(when?' · '+when:'')+' · '+escapeHtml(trkTypeLbl(A.type))+'</small></div>'
+    +'<button onclick="actSheetClose()" aria-label="Schliessen">×</button></div>'
+    +'<div class="act-sh-st">'+st.map(x=>'<div><small>'+tr(x[0])+'</small><b>'+x[1]+'</b></div>').join('')+'</div>'
+    +'<div class="act-sh-prof">'+trkProfile(A.track,340,90)+'</div>'
+    +((cd.measurement||lk.length)?'<h4>'+tr('Schnee auf der Tour')+'</h4>':'')
+    +(cd.measurement?'<div class="act-rep">'+ACT_SNOW_IC+escapeHtml(cd.measurement)+(cd.stars?' · '+'★'.repeat(cd.stars):'')+'</div>':'')
+    +lk.map(x=>'<div class="act-rep act-link" onclick="actSheetClose();feedFlyTo('+x.lat+','+x.lng+')">'+ACT_SNOW_IC+escapeHtml(actLinkTxt(x))
+      +(x.img&&!(x.condition_data||{}).draw?'<img src="'+escapeHtml(x.img)+'" alt="" loading="lazy">':'')+'</div>').join('')
+    +(A.desc?'<p class="act-sh-desc">'+escapeHtml(A.desc)+'</p>':'')
+    +'<button class="act-sh-map" onclick="actSheetClose();actShowFeed(\''+r.id+'\')">'+tr('Route auf der Karte zeigen')+'</button></div>';
+  el.classList.add('open');try{haptic(6);}catch(e){}}
+function actSheetClose(){const el=document.getElementById('actSheet');if(el)el.classList.remove('open');}
+addEventListener('keydown',e=>{if(e.key==='Escape')actSheetClose();});
 // a posted activity is for the people who follow you (and yourself)
 function actVisible(r){if(r&&r.condition_data&&r.condition_data.snowp)return false;
   const A=r&&r.condition_data&&r.condition_data.activity;if(!A)return true;
@@ -16858,10 +16930,11 @@ function feedRender(){
   // Drawn snow-maps feed the Reported Powder model (progZones() reads
   // allReports directly), but they are not posts -- nobody drew them to be
   // read, so they never show up as feed cards.
-  let base=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r));
+  const _merged=actMergedIds();
+  let base=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r)&&!_merged.has(String(r.id)));
   if(!prefs.showMyReports&&sbUser)base=base.filter(r=>r.userId!==sbUser.id);
   // someone's profile, opened from a post: every post of theirs, drawn maps too
-  if(feedScope==='user')base=allReports.filter(r=>r.userId===feedUserId&&actVisible(r));
+  if(feedScope==='user')base=allReports.filter(r=>r.userId===feedUserId&&actVisible(r)&&!_merged.has(String(r.id)));
   if(feedScope==='here'){
     const bnds=map.getBounds();
     base=base.filter(r=>bnds.contains([r.lat,r.lng])&&feedInWindow(r));
