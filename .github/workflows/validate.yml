@@ -76,6 +76,8 @@ jobs:
       # Deliberately light -- two small GETs, no bulk download.
       - name: Upstream shape check (non-blocking)
         continue-on-error: true
+        env:
+          WINDY_WEBCAMS_KEY: ${{ secrets.WINDY_WEBCAMS_KEY }}
         run: python tools/probe_upstreams.py
 
       - name: Build app (offline, synthetic data)
