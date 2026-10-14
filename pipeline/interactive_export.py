@@ -4096,19 +4096,31 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  ::view-transition-old(root),::view-transition-new(root){animation-duration:.22s;animation-timing-function:cubic-bezier(.2,.9,.25,1)}
  /* webcams */
  #wcFab[hidden]{display:none!important}
- .rv-btn.rv-btn{position:absolute!important;top:4px;left:50%;right:auto;transform:translateX(-50%);z-index:60;display:inline-flex!important;align-items:center;gap:4px;
-   width:auto!important;min-width:0!important;height:22px!important;padding:0 9px 0 6px!important;margin:0!important;
-   border:0!important;border-radius:999px!important;background:#F4B400!important;color:#2b2100!important;font:800 11px/1 Inter,system-ui!important;
-   box-shadow:0 2px 8px rgba(0,0,0,.25)!important;cursor:pointer;white-space:nowrap}
- .rv-btn.rv-btn svg{width:14px!important;height:14px!important}
- .rv-dot{position:absolute;top:-5px;right:-5px;z-index:61;width:18px;height:18px;border-radius:50%;background:#F4B400;color:#2b2100;
-   display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;pointer-events:auto}
- .rv-dot svg{width:12px;height:12px}
- #mapFabs .mfab>.rv-dot{top:2px;right:2px}
- [id^="ov_"]>.rv-dot{top:4px;right:auto;left:4px}
- .rv-btn.rv-mini{padding:0!important;width:22px!important;justify-content:center;top:-9px}
+ /* review mode: one family of marks -- white, an amber ring, the speech bubble with a star */
+ #rvFab{position:fixed;z-index:1160;left:14px;top:calc(var(--bar-h,64px) + 6px);display:inline-flex;align-items:center;gap:6px;
+   height:32px;padding:0 13px 0 9px;border-radius:999px;border:1.5px solid rgba(244,180,0,.9);background:color-mix(in srgb,var(--card,#fff) 92%,transparent);
+   -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:var(--fg);font:800 12.5px/1 var(--font,Inter),system-ui;
+   box-shadow:0 4px 14px rgba(15,23,42,.14);cursor:pointer;transition:background .2s,color .2s,transform .15s}
+ #rvFab svg{width:17px;height:17px;color:#E0A100}
+ #rvFab.on{background:#F4B400;border-color:#F4B400;color:#2b2100}
+ #rvFab.on svg{color:#2b2100}
+ #rvFab:active{transform:scale(.95)}
+ body.nav-screen #rvFab,body.ly-open #rvFab,body.insp-open #rvFab,body.trk-open #rvFab,body.draw-on #rvFab,body.ts-open #rvFab,body.wcv-open #rvFab{display:none}
+ .rv-btn.rv-btn{position:absolute!important;top:4px;left:50%;right:auto;transform:translateX(-50%);z-index:60;display:inline-flex!important;align-items:center;gap:5px;
+   width:auto!important;min-width:0!important;height:26px!important;padding:0 11px 0 7px!important;margin:0!important;
+   border:1.5px solid #F4B400!important;border-radius:999px!important;background:var(--card,#fff)!important;color:var(--fg,#16152e)!important;font:800 11.5px/1 Inter,system-ui!important;
+   box-shadow:0 3px 10px rgba(15,23,42,.18)!important;cursor:pointer;white-space:nowrap;animation:rvIn .22s ease-out both}
+ .rv-btn.rv-btn svg{width:15px!important;height:15px!important;color:#E0A100}
+ .rv-btn.rv-mini{padding:0!important;width:26px!important;justify-content:center;top:-10px}
  .rv-btn.rv-mini span{display:none}
- #appBar>.rv-btn{top:auto;bottom:-14px}
+ @keyframes rvIn{from{opacity:0;transform:translateX(-50%) scale(.6)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+ .rv-dot{position:absolute;top:-6px;right:-6px;z-index:61;width:22px;height:22px;border-radius:50%;background:var(--card,#fff);color:#E0A100;
+   border:1.5px solid #F4B400;box-sizing:border-box;display:grid;place-items:center;box-shadow:0 2px 6px rgba(15,23,42,.22);cursor:pointer;pointer-events:auto;
+   animation:rvDot .22s ease-out both}
+ .rv-dot svg{width:13px;height:13px}
+ @keyframes rvDot{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
+ #mapFabs .mfab>.rv-dot{top:1px;right:1px}
+ [id^="ov_"]>.rv-dot{top:4px;right:auto;left:4px}
  .rv-sheet{position:fixed;inset:0;z-index:9500;background:rgba(10,14,22,.45);display:none;align-items:flex-end;justify-content:center}
  .rv-sheet.open{display:flex}
  .rv-in{width:100%;max-width:480px;max-height:92dvh;overflow:auto;background:var(--card,#fff);color:var(--fg);border-radius:24px 24px 0 0;
@@ -4138,6 +4150,10 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .trk-rough svg{display:block;width:100%;height:12px;border-radius:6px;background:var(--fill);overflow:hidden}
  .trk-rough-lg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:5px;font:600 11.5px var(--font,inherit);color:var(--fg2)}
  .trk-rough-lg em{font-style:normal;margin-left:auto;opacity:.75}
+ .trk-rough-sub{margin:9px 0 4px;font:700 11.5px var(--font,inherit);color:var(--fg2)}
+ .trk-rough-sh{display:flex;height:22px;border-radius:8px;overflow:hidden}
+ .trk-rough-sh div{display:grid;place-items:center;min-width:0}
+ .trk-rough-sh span{font:800 11px var(--font,inherit);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3)}
  .act-link{opacity:.95}
  .act-sheet{position:fixed;inset:0;z-index:6100;background:rgba(10,14,22,.42);display:none;align-items:flex-end;justify-content:center}
  .act-sheet.open{display:flex}
@@ -4957,6 +4973,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
      the app uses when it talks about itself (title, share sheet, PWA
      install) -- not in new chrome competing with the map. -->
 
+<button id="rvFab" type="button" onclick="rvToggle()" aria-pressed="false" title="Feedback-Modus: Feedback-Knöpfe ein-/ausblenden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5a2 2 0 0 1-2 2H9l-4.5 3.5V6a2 2 0 0 1 2-2H18a2 2 0 0 1 2 2z"/><path d="M12.25 6.9l.95 1.95 2.15.3-1.55 1.5.37 2.13-1.92-1-1.92 1 .37-2.13-1.55-1.5 2.15-.3z" fill="currentColor" stroke="none"/></svg><span>Feedback</span></button>
 <header id="appBar">
   <button class="ab-brand" onclick="navGo('map')" aria-label="Snowmapper"><span class="ab-logo"><img src="icon-192.png?v=2" alt="" width="26" height="26"></span><span class="ab-name">Snowmapper</span></button>
   <nav class="ab-tabs" aria-label="Navigation">
@@ -5656,10 +5673,12 @@ const I18N_DICT={
 "Nur wo weniger Wind als":["Only where wind below","Seulement où le vent est inférieur à","Solo dove il vento è sotto"],
 "alle":["all","tout","tutti"],
 "Median":["Median","Médiane","Mediana"],
-"Ruppigkeit":["Roughness","Rugosité","Ruvidità"],"Abfahrt":["Descent","Descente","Discesa"],
+"Ruppigkeit":["Roughness","Rugosité","Ruvidità"],
+"Abfahrt nach Anteil":["Descent by share","Descente par part","Discesa per quota"],
+"Keine Erschütterungsdaten: Der Bildschirm war aus oder der Bewegungssensor nicht erlaubt.":["No vibration data: the screen was off or the motion sensor was not allowed.","Pas de données de vibration : l'écran était éteint ou le capteur de mouvement non autorisé.","Nessun dato di vibrazione: lo schermo era spento o il sensore di movimento non autorizzato."],"Abfahrt":["Descent","Descente","Discesa"],
 "glatt":["smooth","lisse","liscio"],"unruhig":["choppy","agitée","irregolare"],"ruppig":["rough","rugueuse","ruvido"],
 "Bewegungssensor, experimentell":["motion sensor, experimental","capteur de mouvement, expérimental","sensore di movimento, sperimentale"],
-"Review-Modus":["Review mode","Mode avis","Modalità feedback"],"Feedback senden":["Send feedback","Envoyer un avis","Invia feedback"],
+"Review-Modus":["Review mode","Mode avis","Modalità feedback"],"Feedback an":["Feedback on","Avis activé","Feedback attivo"],"Feedback senden":["Send feedback","Envoyer un avis","Invia feedback"],
 "Positiv":["Positive","Positif","Positivo"],"Negativ":["Negative","Négatif","Negativo"],
 "Wie gefällt dir diese Funktion?":["How do you like this feature?","Comment trouves-tu cette fonction ?","Ti piace questa funzione?"],
 "Verbesserungsvorschlag":["Suggestion","Suggestion","Suggerimento"],
@@ -6681,7 +6700,11 @@ function tsurfEst(t,p){
 const roughv=p=>ROUGHG[p]*5.0;
 function minSnowNeeded(p){const rough=roughv(p),slp=mslpv(p);if(slp>55)return 9999;const rn=Math.min(1,rough/250);const sf=1+Math.max(0,slp-10)*0.02;return(20+rn*100)*sf;}
 // --- Snowfall Timeline ---
-const hSnow=M.hourly_snow,nowIdx=M.now_index;
+// "Now" is the hour the page is looked at, not the hour the data was built:
+// a forecast from this morning still puts the marker on the current hour.
+// Outside the data's range (an old or demo dataset) the build's own index stays.
+const hSnow=M.hourly_snow,nowIdx=(function(){const t0=Date.parse((M.times||[])[0]+'Z'),i=Math.floor((Date.now()-t0)/36e5);
+  return isFinite(i)&&i>=0&&i<M.T?i:M.now_index;})();
 const SNOW_THRESH=0.005;
 const snowEvents=[];
 (function(){let s=-1;for(let t=0;t<T;t++){if(hSnow[t]>SNOW_THRESH){if(s<0)s=t;}else{if(s>=0){snowEvents.push([s,t]);s=-1;}}}if(s>=0)snowEvents.push([s,T]);})();
@@ -9671,9 +9694,16 @@ function trkRoughHTML(ll,vals){if(!vals||!vals.some(v=>v!=null))return '';
     rects+='<rect x="'+(xs[i-1]/D*340).toFixed(1)+'" y="0" width="'+Math.max(.6,(xs[i]-xs[i-1])/D*340).toFixed(1)+'" height="12" fill="'+c[2]+'"/>';
     if(ll[i][2]!=null&&ll[i-1][2]!=null&&ll[i][2]<ll[i-1][2]-1){ds+=v;dn++;}}
   const avg=dn?ds/dn:null,c=avg!=null?trkRoughCls(avg):null;
+  // share of the descent in each class, by distance
+  const sh=[0,0,0];let shT=0;for(let i=1;i<ll.length;i++){const v=vals[i];if(v==null||ll[i][2]==null||ll[i-1][2]==null||!(ll[i][2]<ll[i-1][2]-1))continue;
+    const dd=xs[i]-xs[i-1];sh[TRK_ROUGH.indexOf(trkRoughCls(v))]+=dd;shT+=dd;}
+  const shareHTML=shT?'<div class="trk-rough-sh">'+TRK_ROUGH.map((x,k)=>'<div style="flex:'+Math.max(.0001,sh[k])+';background:'+x[2]+'"><span>'+(sh[k]/shT>=.12?Math.round(sh[k]/shT*100)+' %':'')+'</span></div>').join('')+'</div>':'';
   return '<div class="trk-rough"><div class="trk-rough-hd"><b>'+tr('Ruppigkeit')+'</b><span>'+(c?tr('Abfahrt')+': <i style="background:'+c[2]+'"></i>'+tr(c[1])+' ('+avg.toFixed(1)+' m/s²)':'')+'</span></div>'
     +'<svg viewBox="0 0 340 12" preserveAspectRatio="none" aria-hidden="true">'+rects+'</svg>'
+    +(shareHTML?'<div class="trk-rough-sub">'+tr('Abfahrt nach Anteil')+'</div>'+shareHTML:'')
     +'<div class="trk-rough-lg">'+TRK_ROUGH.map(x=>'<span><i style="background:'+x[2]+'"></i>'+tr(x[1])+'</span>').join('')+'<em>'+tr('Bewegungssensor, experimentell')+'</em></div></div>';}
+function trkRoughNone(){return '<div class="trk-rough"><div class="trk-rough-hd"><b>'+tr('Ruppigkeit')+'</b></div><p class="trk-hint">'
+  +tr('Keine Erschütterungsdaten: Der Bildschirm war aus oder der Bewegungssensor nicht erlaubt.')+'</p></div>';}
 function trkStart(){
   trkRec={id:'a'+Date.now().toString(36),type:trkPrefs.type,acc:trkPrefs.acc,start:Date.now(),segs:[[]],paused:false,movingMs:0,resumedAt:Date.now(),follow:true};
   if(trkFix&&trkFix[4]<=TRK_ACC[trkRec.acc].maxAcc&&Date.now()-trkFix[0]<15000)trkRec.segs[0].push(trkFix);
@@ -9976,6 +10006,7 @@ async function trkRender(){
     el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="'+(d._edit?'trkEditCancel()':'trkBackToRec()')+'" aria-label="Zurück">'+TRK_DOWN+'</button><b>'+(d._edit?'Aktivität bearbeiten':'Aktivität speichern')+'</b><button class="trk-gpx" onclick="trkExportDraft()">'+TRK_GPX+'<span>GPX</span></button></div>'
       +'<div class="trk-scroll"><div class="trk-map" id="trkMapBox">'+(d._mapUrl?'<img src="'+d._mapUrl+'" alt="">':'')+trkThumb(ll,680,340,'',d.rep,true)+'</div>'
       +'<div class="trk-sum"><div><b>'+trkFmtD(s.dist)+'</b><small>Distanz</small></div><div><b>'+s.up+' m</b><small>Aufstieg</small></div><div><b>'+trkFmtT(s.moving)+'</b><small>Bewegungszeit</small></div></div>'
+      +(d._edit?'':(trkRoughHTML(ll,trkRoughAlong(trkFlat(d.segs),d.rough))||trkRoughNone()))
       +'<label class="trk-f"><span>Titel</span><input id="trkName" maxlength="80" value="'+escapeHtml(d.name)+'"></label>'
       +'<label class="trk-f"><span>Beschreibung</span><textarea id="trkDesc" rows="3" maxlength="1000" placeholder="Wie war\'s? Route, Verhältnisse, Gruppe …">'+escapeHtml(d.desc||'')+'</textarea></label>'
       +'<div class="tour-pick" id="trkTourPick"></div>'
@@ -10008,7 +10039,7 @@ async function trkRender(){
   if(trkView==='detail'){
     const a=trkCur?await trkGet(trkCur):null;if(!a){trkView='list';return trkRender();}
     const s=a.stats||{},ll=trkLL(a.segs);
-    trkShowOnMap(ll);
+    trkShowOnMap(ll,trkRoughAlong(trkFlat(a.segs),a.rough));
     el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkView=\'list\';trkRender()" aria-label="Zurück">'+TRK_DOWN+'</button><b>'+escapeHtml(a.name)+'</b><button class="trk-gpx" onclick="trkExport(\''+a.id+'\')">'+TRK_GPX+'<span>GPX</span></button></div>'
       +'<div class="trk-scroll"><div class="trk-meta">'+new Date(a.start).toLocaleString(LOCALE(),{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+' · '+trkTypeLbl(a.type)+'</div>'
       +(a.desc?'<p class="trk-desc">'+escapeHtml(a.desc)+'</p>':'')
@@ -10109,17 +10140,25 @@ async function trkThen(kind){const d=trkDraft;await trkKeep(false);trkClose(true
   if(d){trkLinkAct={local:d.id,name:d.name};try{trkShowOnMap(trkLL(d.segs));}catch(e){}}
   if(kind==='draw')drawOpen();else obsOpen();}
 let trkShown=null;
-function trkShowOnMap(ll){
+function trkShowOnMap(ll,rough){
   if(trkShown){map.removeLayer(trkShown);trkShown=null;}
   if(!ll||ll.length<2)return;trkLayerEnsure();
-  trkShown=L.polyline(ll.map(p=>[p[0],p[1]]),{pane:'trkPane',color:trkCol(),weight:5,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false}).addTo(map);
+  const o={pane:'trkPane',weight:5,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false};
+  if(rough&&rough.some(v=>v!=null)){
+    // the route coloured by how rough it was; parts without a reading in the track colour
+    trkShown=L.featureGroup();let run=[ll[0]],col=null;
+    const flush=()=>{if(run.length>1)L.polyline(run.map(p=>[p[0],p[1]]),Object.assign({},o,{color:col||trkCol()})).addTo(trkShown);};
+    for(let i=1;i<ll.length;i++){const v=rough[i],c=v==null?null:trkRoughCls(v)[2];
+      if(c!==col&&run.length>1){flush();run=[ll[i-1]];}col=c;run.push(ll[i]);}
+    flush();trkShown.addTo(map);}
+  else trkShown=L.polyline(ll.map(p=>[p[0],p[1]]),Object.assign({},o,{color:trkCol()})).addTo(map);
   try{map.fitBounds(trkShown.getBounds(),{paddingTopLeft:[30,60],paddingBottomRight:[30,Math.round(innerHeight*.55)],maxZoom:15});}catch(e){}
 }
 // from the feed: show a posted activity's route
 function actShowFeed(id){const r=(allReports||[]).find(x=>String(x.id)===String(id));const A=r&&r.condition_data&&r.condition_data.activity;
   if(!A||!A.track){if(r)feedFlyTo(r.lat,r.lng);return;}
   try{feedClose();}catch(e){}
-  setTimeout(()=>{trkShowOnMap(A.track);toastOnce('actmap','Route auf der Karte – Ebenen ▸ Meldungen zum Ausblenden');},350);
+  setTimeout(()=>{trkShowOnMap(A.track,A.rough);toastOnce('actmap','Route auf der Karte – Ebenen ▸ Meldungen zum Ausblenden');},350);
 }
 function actFeedVisual(r){const cd=r.condition_data,A=cd.activity;
   const fmt=n=>n>=1000?(n/1000).toFixed(1)+' km':n+' m';
@@ -10291,7 +10330,7 @@ function pvName(S){if(sbUser&&S.uid===sbUser.id)return (sbUser.user_metadata&&sb
   const n=document.getElementById('uvName');return n?n.textContent:'';}
 function pvOpenPost(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;feedOpenUser(S.uid,pvName(S),r.id);}
 function pvOpenPostOld(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;const cd=r.condition_data||{};pvClose();
-  if(cd.activity&&cd.activity.track){setTimeout(()=>trkShowOnMap(cd.activity.track),250);return;}
+  if(cd.activity&&cd.activity.track){setTimeout(()=>trkShowOnMap(cd.activity.track,cd.activity.rough),250);return;}
   const ll=parseGeo(r.location);if(ll)feedFlyTo(ll[0],ll[1]);}
 function pvOpenAct(boxId,i){const S=pvState[boxId],a=S&&S.acts[i];if(!a)return;if(a.local||!a.post)pvClose();
   if(a.local){trkCur=a.id;trkView='detail';trkOpen();return;}
@@ -12511,7 +12550,7 @@ let _setCameFromProfile=false;
 // screenshot, all optional -- that records which feature it came from and
 // goes to Supabase (table feedback, private bucket feedback); the edge
 // function feedback-mail mails it on.
-const RV_TARGETS=[['#appBar','Karte allgemein'],['#bottomPanel','Zeitleiste'],['#inspPanel.open .insp-grab','Karten-Tipp','wide'],
+const RV_TARGETS=[['#bottomPanel','Zeitleiste'],['#inspPanel.open .insp-grab','Karten-Tipp','wide'],
   ['#lyPanel','Ebenen'],['#miniLegend','Legende'],['#searchWrap:not(.hid)','Ortssuche'],['#tourSearch','Tourensuche'],
   ['#tourSheet','Skitour'],['#feedTop','Community'],['#trkSheet','Aufzeichnen'],['#repSheet .rs-in','Melden'],
   ['#drawBar','Powder zeichnen'],['#reportOverlay .report-card, #reportOverlay > div','Beobachtung melden'],['#wcv .wcv-top','Webcams'],
@@ -12520,6 +12559,8 @@ let rvOn=(()=>{try{return localStorage.getItem('ssm_review')==='1';}catch(e){ret
 function rvToggle(){rvOn=!rvOn;try{localStorage.setItem('ssm_review',rvOn?'1':'0');}catch(e){}rvSync();try{setRender();}catch(e){}
   toast(rvOn?'Review-Modus an – tippe auf «Feedback» bei einer Funktion':'Review-Modus aus','info');}
 function rvSync(){document.body.classList.toggle('review-on',rvOn);clearInterval(rvT);
+  const fb=document.getElementById('rvFab');if(fb){fb.classList.toggle('on',rvOn);fb.setAttribute('aria-pressed',rvOn?'true':'false');
+    const t=fb.querySelector('span');if(t)t.textContent=tr(rvOn?'Feedback an':'Feedback');}
   document.querySelectorAll('.rv-btn,.rv-dot').forEach(b=>b.remove());if(!rvOn)return;rvPlace();rvT=setInterval(rvPlace,900);}
 // ...and every single layer tile, map toggle and side button gets its own
 // small badge, named after what it is.
@@ -12529,7 +12570,7 @@ function rvPlaceEach(){RV_EACH.forEach(([sel,pre])=>{document.querySelectorAll(s
     const nm=(el.getAttribute('aria-label')||el.title||el.innerText||'').replace(/\s+/g,' ').trim().slice(0,50);if(!nm)return;
     if(getComputedStyle(el).position==='static')el.style.position='relative';
     const d=document.createElement('span');d.className='rv-dot';d.setAttribute('role','button');d.setAttribute('aria-label','Feedback zu '+nm);d.title='Feedback';
-    d.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.6l1.1 2.3 2.5.3-1.8 1.7.5 2.5-2.3-1.2-2.3 1.2.5-2.5-1.8-1.7 2.5-.3z"/></svg>';
+    d.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5a2 2 0 0 1-2 2H9l-4.5 3.5V6a2 2 0 0 1 2-2H18a2 2 0 0 1 2 2z"/><path d="M12.25 6.9l.95 1.95 2.15.3-1.55 1.5.37 2.13-1.92-1-1.92 1 .37-2.13-1.55-1.5 2.15-.3z" fill="currentColor" stroke="none"/></svg>';
     d.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();rvOpen(pre+': '+nm);},true);
     d.addEventListener('pointerdown',e=>e.stopPropagation(),true);el.appendChild(d);});});}
 function rvPlace(){try{rvPlaceEach();}catch(e){}RV_TARGETS.forEach(([sel,name,wide])=>{let el=null;try{el=document.querySelector(sel);}catch(e){}
@@ -12539,7 +12580,7 @@ function rvPlace(){try{rvPlaceEach();}catch(e){}RV_TARGETS.forEach(([sel,name,wi
   if(!r.width||!r.height||r.bottom<=0||r.top>=innerHeight||r.right<=0||r.left>=innerWidth||cs.visibility==='hidden'||+cs.opacity<0.2)return;
   if(getComputedStyle(el).position==='static')el.style.position='relative';
   const b=document.createElement('button');b.type='button';b.className='rv-btn'+(r.width<140&&!wide?' rv-mini':'');b.dataset.f=name;
-  b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 6.6l1.1 2.3 2.5.3-1.8 1.7.5 2.5-2.3-1.2-2.3 1.2.5-2.5-1.8-1.7 2.5-.3z"/></svg><span>Feedback</span>';b.setAttribute('aria-label','Feedback zu '+name);
+  b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5a2 2 0 0 1-2 2H9l-4.5 3.5V6a2 2 0 0 1 2-2H18a2 2 0 0 1 2 2z"/><path d="M12.25 6.9l.95 1.95 2.15.3-1.55 1.5.37 2.13-1.92-1-1.92 1 .37-2.13-1.55-1.5 2.15-.3z" fill="currentColor" stroke="none"/></svg><span>Feedback</span>';b.setAttribute('aria-label','Feedback zu '+name);
   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();rvOpen(name);});el.appendChild(b);});}
 const rv={f:'',mood:null,stars:null,file:null};
 function rvOpen(feature){rv.f=feature;rv.mood=null;rv.stars=null;rv.file=null;
