@@ -1547,6 +1547,11 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    color:var(--ink-900);display:flex;align-items:center;justify-content:center;
    cursor:pointer;flex-shrink:0;padding:0}
  .pt-acc svg{width:18px;height:18px}
+ /* dead centre: an empty initials slot must not push the glyph aside, and
+    the glyph sits optically centred (its head is lighter than its body) */
+ .pt-ini:empty{display:none}
+ #mapAcc{display:grid!important;place-items:center!important;padding:0!important;line-height:0}
+ #mapAcc>svg{display:block;margin:0;transform:translateY(-.5px)}
  .pt-ini{font-family:var(--mono);font-size:12px;font-weight:800;letter-spacing:.01em}
  body:not(.scr-home) #scrInitial{opacity:0;transform:scale(1.03);pointer-events:none}
  /* Contour lines, the way a map draws a mountain. Two stacked repeating
@@ -4355,7 +4360,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.desk #demoPill{top:calc(var(--bar-h) + 16px)!important}
  body.desk .feed-page.side{top:calc(var(--bar-h) + 6px);border-top:0}
  body.desk .ts-sheet{top:calc(var(--bar-h) + 18px)!important;bottom:14px!important}
- body.desk #bottomPanel{max-width:1100px;left:20px!important;right:auto!important;width:calc(100% - 120px)}
+ /* desk: the timeline runs the full width at the bottom; the map tools sit in
+    one column on the right between the app bar and the timeline -- legend at
+    the top, buttons at the bottom */
+ body.desk #bottomPanel{max-width:none!important;left:16px!important;right:16px!important;width:auto!important}
+ body.desk #mapFabs{top:calc(var(--bar-h) + 14px)!important;bottom:calc(var(--btm-h,120px) + 30px)!important;right:16px!important;
+   justify-content:space-between!important}
+ body.desk #mapFabs #miniLegend{transform:scale(1.12);transform-origin:top right;margin:0 0 auto}
  body.desk.feed-side #bottomPanel{display:none}
 
  /* ===================================================================
@@ -4773,6 +4784,22 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .tour-vars span{font:800 11px/1 Inter,system-ui;text-transform:uppercase;letter-spacing:.04em;color:var(--fg2);margin-right:4px}
  .tour-vars button{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--hair);background:var(--card);color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer}
  .tour-vars button.on{background:var(--accent,#2563eb);border-color:transparent;color:#fff}
+ .onb-tl{margin:6px 0 12px;padding:12px 12px 6px;border-radius:18px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),0 6px 18px rgba(15,23,42,.10)}
+ :root[data-theme="dark"] .onb-tl{background:rgba(255,255,255,.08)}
+ .onb-tl-track{position:relative;height:58px}
+ .onb-tl-bars{position:absolute;left:0;right:0;bottom:0;height:40px;display:flex;align-items:flex-end;gap:2px}
+ .onb-tl-bars i{flex:1;border-radius:2px 2px 0 0;background:linear-gradient(#6E8FD8,#B44A8C)}
+ .onb-tl-now{position:absolute;left:28%;top:6px;bottom:0;border-left:2px dashed #E89A3C}
+ .onb-tl-handle{position:absolute;top:0;bottom:-2px;left:40%;width:0;animation:onbTl 4.2s ease-in-out infinite}
+ .onb-tl-handle b{position:absolute;top:-4px;left:50%;transform:translateX(-50%);font:800 11px Inter,system-ui;color:#2A8FD8;white-space:nowrap}
+ .onb-tl-handle i{position:absolute;top:14px;bottom:0;left:-1px;border-left:2px solid #2A8FD8}
+ .onb-tl-handle i::after{content:'';position:absolute;left:-7px;top:16px;width:12px;height:22px;border-radius:6px;background:#2A8FD8;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+ .onb-tl-finger{position:absolute;top:30px;left:40%;width:26px;height:26px;margin-left:-13px;border-radius:50%;background:rgba(255,255,255,.75);
+   box-shadow:0 0 0 2px rgba(42,143,216,.5),0 4px 10px rgba(0,0,0,.2);animation:onbTlF 4.2s ease-in-out infinite}
+ @keyframes onbTl{0%,18%{left:40%}55%,70%{left:78%}92%,100%{left:40%}}
+ @keyframes onbTlF{0%{left:40%;opacity:0;transform:scale(1.3)}12%{opacity:1;transform:scale(1)}18%{left:40%}55%{left:78%;opacity:1}70%{left:78%;opacity:0}100%{left:40%;opacity:0}}
+ .onb-tl-days{display:flex;justify-content:space-around;font:700 11px Inter,system-ui;color:var(--fg2);margin-top:4px}
+ @media (prefers-reduced-motion:reduce){.onb-tl-handle,.onb-tl-finger{animation:none}}
  .onb-gest{list-style:none;margin:4px 0 14px;padding:0;display:flex;flex-direction:column;gap:9px;text-align:left}
  .onb-gest li{display:flex;align-items:center;gap:11px;font-size:13.5px;line-height:1.3;color:var(--fg2)}
  .onb-gest b{color:var(--fg)}
@@ -5131,14 +5158,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <input type="email" id="authEmail" placeholder="E-Mail" autocomplete="email" required/>
 <input type="password" id="authPass" placeholder="Passwort" autocomplete="current-password" required minlength="8"/>
 <input type="password" id="authPass2" placeholder="Passwort wiederholen" autocomplete="new-password" minlength="8" style="display:none"/>
-<label class="auth-show" id="authShowWrap"><input type="checkbox" id="authShowPw" onchange="authShowPw(this.checked)"/> Passwort anzeigen</label>
+<label class="auth-show" id="authShowWrap"><input type="checkbox" id="authShowPw" onchange="window.authPwShow(this.checked)"/> Passwort anzeigen</label>
 <div class="auth-err" id="authErr" role="alert" aria-live="polite"></div>
 <button class="auth-btn primary" type="submit" id="authSubmitBtn">Anmelden</button>
 <button class="auth-forgot" type="button" id="authForgotBtn" onclick="authForgot()">Passwort vergessen?</button>
 </form>
 <div id="authCodeBox" style="display:none">
   <p class="auth-sub" id="authCodeSub">Wir haben dir einen 6-stelligen Code geschickt.</p>
-  <input type="text" id="authCode" class="auth-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="––––––" oninput="authCodeInput()"/>
+  <input type="text" id="authCode" class="auth-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="––––––" oninput="authCodeInput()"/>
   <button class="auth-paste" type="button" onclick="authPasteCode()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Code aus E-Mail einfügen</button>
   <div class="auth-err" id="authCodeErr" role="alert" aria-live="polite"></div>
   <button class="auth-btn primary" id="authCodeBtn" onclick="authVerifyCode()">Bestätigen</button>
@@ -5881,6 +5908,8 @@ const I18N_DICT={
 "Passwort anzeigen":["Show password", "Afficher le mot de passe", "Mostra password"],
 "E-Mail ändern":["Change e-mail", "Modifier l'e-mail", "Cambia e-mail"],
 "Steht in der Mail ein Link statt eines Codes? Tippe darauf – danach bist du hier automatisch angemeldet. Nichts erhalten? Schau im Spam-Ordner nach.":["Is there a link instead of a code in the mail? Tap it – you will be signed in here automatically. Nothing arrived? Check your spam folder.","Le mail contient un lien au lieu d'un code ? Touche-le – tu seras connecté ici automatiquement. Rien reçu ? Vérifie tes spams.","Nella mail c'è un link invece di un codice? Toccalo – verrai connesso qui automaticamente. Non hai ricevuto nulla? Controlla lo spam."],
+"Bitte den Code aus der Mail eingeben (6 Ziffern).":["Please enter the code from the mail (6 digits).","Saisis le code du mail (6 chiffres).","Inserisci il codice della mail (6 cifre)."],
+"Code ungültig oder abgelaufen. Nimm den Code aus der neuesten Mail – jede neue Anfrage macht ältere Codes ungültig, und wer den Link in der Mail schon angetippt hat, hat den Code damit verbraucht.":["Code invalid or expired. Use the code from the newest mail – every new request invalidates older codes, and tapping the link in the mail uses the code up.","Code invalide ou expiré. Utilise le code du mail le plus récent – chaque nouvelle demande invalide les anciens codes, et toucher le lien du mail consomme le code.","Codice non valido o scaduto. Usa il codice della mail più recente – ogni nuova richiesta invalida i codici precedenti e toccare il link nella mail consuma il codice."],
 "E-Mail bestätigt – du bist angemeldet":["E-mail confirmed – you are signed in","E-mail confirmé – tu es connecté","E-mail confermata – sei connesso"],
 "Der Bestätigungslink ist abgelaufen oder wurde schon benutzt – gib den Code ein oder lass dir einen neuen schicken.":["The confirmation link has expired or was already used – enter the code or have a new one sent.","Le lien de confirmation a expiré ou a déjà été utilisé – saisis le code ou demande-en un nouveau.","Il link di conferma è scaduto o già usato – inserisci il codice o richiedine uno nuovo."],
 "Nichts erhalten? Schau im Spam-Ordner nach.":["Nothing arrived? Check your spam folder.", "Rien reçu ? Vérifie tes spams.", "Non hai ricevuto nulla? Controlla lo spam."],
@@ -9361,7 +9390,13 @@ fetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=
     const f=document.getElementById('wcFab');if(f)f.hidden=false;}}).catch(()=>{});
 async function wcFetch(params){
   const r=await fetch(WC_API+'?'+params,{headers:{'x-windy-api-key':WEBCAM_KEY}});
-  if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+  if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;throw e;}return r.json();}
+// a readable reason for the user (and the review feedback)
+function wcErrTxt(e){const st=e&&e.status;
+  if(st===401||st===403)return 'Webcams: Windy-Schlüssel abgelehnt – es braucht einen «Webcams API»-Schlüssel (nicht Map/Point Forecast).';
+  if(st===429)return 'Webcams: Tageslimit von Windy erreicht – später nochmals versuchen.';
+  if(st)return 'Webcams konnten nicht geladen werden (Windy antwortet '+st+').';
+  return 'Webcams konnten nicht geladen werden – keine Verbindung zu Windy.';}
 function wcIcon(){return L.divIcon({className:'',iconSize:[30,30],iconAnchor:[15,15],
   html:'<div class="wc-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>'});}
 function wcBuildLayer(){wcLayer=L.layerGroup();setTimeout(wcRefresh,0);return wcLayer;}
@@ -9378,7 +9413,7 @@ async function wcRefresh(){
       mk.bindPopup('<div class="wc-pop"><div class="wc-img skel"></div><b>'+escapeHtml(w.title||'Webcam')+'</b></div>',{className:'wc-popup',maxWidth:300,minWidth:260});
       mk.on('popupopen',()=>wcPreview(id,mk));
       wcSeen.set(id,mk);wcLayer.addLayer(mk);});
-  }catch(e){toastOnce('wc-err','Webcams konnten nicht geladen werden');}
+  }catch(e){console.warn('webcams',e);toastOnce('wc-err',wcErrTxt(e));}
   wcBusy=false;
 }
 async function wcPreview(id,mk){
@@ -9433,9 +9468,9 @@ async function wcvRender(){const el=document.getElementById('wcvBody');if(!el)re
   const ap='<div class="wcv-empty" style="font-size:12px;margin:6px auto 0;padding:0">Webcams bereitgestellt von <a href="https://www.windy.com/" target="_blank" rel="noopener" style="color:#9cc9f5">windy.com</a></div>';
   if(WCV.mode==='near')return wcvNear(el,ap);
   const favs=wcFavs();
-  if(!favs.length){el.innerHTML='<div class="wcv-empty">Noch keine Favoriten.<br>Schalte auf der Karte unter <b>Ebenen → Webcams</b> die Kameras ein, tippe auf eine und dann auf <b>☆ Merken</b>.</div>';return;}
+  if(!favs.length){el.innerHTML='<div class="wcv-empty">Noch keine Favoriten.<br>So findest du Webcams: <b>In der Nähe</b> (oben) zeigt die Kameras rund um dich. Oder auf der Karte unter <b>Ebenen → Auf der Karte → Webcams</b> einschalten, nah heranzoomen, eine Kamera antippen und <b>☆ Merken</b>.</div>';return;}
   el.innerHTML='<div class="wcv-empty">Lade Webcams …</div>';
-  let cams;try{cams=await wcDetails(favs.map(f=>f.id));}catch(e){el.innerHTML='<div class="wcv-empty">Webcams konnten nicht geladen werden</div>';return;}
+  let cams;try{cams=await wcDetails(favs.map(f=>f.id));}catch(e){el.innerHTML='<div class="wcv-empty">'+escapeHtml(tr(wcErrTxt(e)))+'</div>';return;}
   if(WCV.mode==='fav'){
     el.innerHTML='<div class="wcv-bar"><button class="'+(WCV.play?'on':'')+'" onclick="WCV.play=!WCV.play;wcvRender()">'+(WCV.play?'▶ Zeitraffer 24 h':'Aktuelles Bild')+'</button><span>'+cams.length+' Favoriten</span></div>'
       +'<div class="wcv-grid">'+cams.map(c=>'<div class="wcv-tile">'+wcMedia(c,WCV.play)+wcCap(c)
@@ -9457,7 +9492,7 @@ async function wcvNear(el,ap){
   try{const j=await wcFetch('nearby='+c.lat.toFixed(4)+','+c.lon.toFixed(4)+',40&limit=50&include=location');
     const ids=(j.webcams||[]).map(w=>String(w.webcamId||w.id));
     WCV.near=(await wcDetails(ids)).filter(x=>x.lat!=null);}
-  catch(e){el.innerHTML='<div class="wcv-empty">Webcams konnten nicht geladen werden</div>';return;}
+  catch(e){el.innerHTML='<div class="wcv-empty">'+escapeHtml(tr(wcErrTxt(e)))+'</div>';return;}
   WCV.tv=0;wcvNearShow(el,ap);}
 function wcvNearShow(el,ap){const cams=(WCV.near||[]).filter(x=>x.alt==null||x.alt>=WCV.minAlt).sort((p,q)=>(q.alt||0)-(p.alt||0));
   WCV.tvList=cams;if(WCV.tv>=cams.length)WCV.tv=0;
@@ -13674,9 +13709,11 @@ function toast(msg,kind){msg=trMsg(msg);const w=document.getElementById('toastWr
 // accepted), Face ID as an app lock, location. Re-runnable from settings.
 const ONB_SLIDES=[
  ['<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>','Schnee auf der Karte','Skiqualität, Neuschnee, Wind und mehr – über das Ebenen-Symbol rechts. Tippe in der Legende auf eine Farbe, um sie ein- oder auszublenden: Skiqualität startet mit «nur Pulver».'],
- ['<rect x="3" y="11" width="3" height="9" rx="1"/><rect x="8.5" y="6" width="3" height="14" rx="1"/><rect x="14" y="9" width="3" height="11" rx="1"/><path d="M19.5 4v16"/>','Zeit wählen','Unten die Zeitleiste: die letzten Tage und die Prognose für die nächsten fünf. Die Karte rechnet sofort neu.',
-  // the timeline's gestures, the way the code handles them (Timeline Drag)
-  '<ul class="onb-gest">'
+ ['','Zeit wählen','Unten die Zeitleiste: die letzten Tage und die Prognose für die nächsten fünf. Die Karte rechnet sofort neu.',
+  // a small timeline that shows the main gesture (the handle being dragged),
+  // then the gestures the way the code handles them (Timeline Drag)
+  '<div class="onb-tl" aria-hidden="true"><div class="onb-tl-track"><div class="onb-tl-bars"><i style="height:4%"></i><i style="height:11%"></i><i style="height:14%"></i><i style="height:25%"></i><i style="height:31%"></i><i style="height:29%"></i><i style="height:30%"></i><i style="height:30%"></i><i style="height:28%"></i><i style="height:31%"></i><i style="height:28%"></i><i style="height:18%"></i><i style="height:8%"></i><i style="height:4%"></i><i style="height:13%"></i><i style="height:20%"></i><i style="height:23%"></i><i style="height:27%"></i><i style="height:29%"></i><i style="height:30%"></i><i style="height:33%"></i><i style="height:31%"></i><i style="height:25%"></i><i style="height:25%"></i><i style="height:20%"></i><i style="height:12%"></i><i style="height:4%"></i><i style="height:8%"></i><i style="height:15%"></i><i style="height:22%"></i><i style="height:23%"></i><i style="height:31%"></i><i style="height:35%"></i><i style="height:37%"></i><i style="height:32%"></i><i style="height:28%"></i><i style="height:25%"></i><i style="height:24%"></i><i style="height:15%"></i><i style="height:5%"></i></div><div class="onb-tl-now"></div><div class="onb-tl-handle"><b>12:00</b><i></i></div><div class="onb-tl-finger"></div></div><div class="onb-tl-days"><span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span></div></div>'
+  +'<ul class="onb-gest">'
   +'<li><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3"/><path d="M12 12v8"/><path d="M8 20h8"/></svg><span><b>Antippen</b> setzt den Zeitpunkt</span></li>'
   +'<li><svg viewBox="0 0 24 24"><path d="M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4"/></svg><span><b>Griff ziehen</b> verschiebt die Zeit – am Rand läuft die Leiste weiter</span></li>'
   +'<li><svg viewBox="0 0 24 24"><path d="M5 12c3-4 11-4 14 0"/><path d="M15 8l4 4-4 4"/></svg><span><b>Wischen</b> blättert durch die Tage</span></li>'
@@ -13714,7 +13751,7 @@ function onbRender(){const el=document.getElementById('onbCard');if(!el)return;c
       +'<div class="onb-lbl">Sprache</div><div class="onb-langs" data-noi18n>'+Object.keys(LANGS).map(v=>'<button class="'+(LANG===v?'on':'')+'" onclick="langSet(\''+v+'\');onbRender()">'+LANGS[v]+'</button>').join('')+'</div>'
       +'<button class="onb-pri" onclick="onbNext()">Los geht\'s</button>';}
   else if(k==='tour'){const sl=ONB_SLIDES.filter(x=>!(x[1]==='Aufzeichnen'&&document.body.classList.contains('desk'))),S=sl[onb.slide];
-    h='<div class="onb-hero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+S[0]+'</svg></div>'
+    h=(S[0]?'<div class="onb-hero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+S[0]+'</svg></div>':'')
       +'<h1>'+S[1]+'</h1><p>'+S[2]+'</p>'+(S[3]||'')+onbDots(sl.length,onb.slide)
       +'<button class="onb-pri" onclick="onbNext()">Weiter</button>'
       +'<button class="onb-link" onclick="onb.step++;onb.slide=0;onbRender()">Tour überspringen</button>';}
@@ -14489,7 +14526,9 @@ function authHide(){document.getElementById('authOverlay').style.display='none';
 function authToggle(){authMode=authMode==='login'?'register':'login';authRender();}
 function authBackToForm(){authMode='login';authPendingSet(null);authRender();}
 function authForgot(){authMode='forgot';authRender();}
-function authShowPw(on){['authPass','authPass2'].forEach(id=>{const el=document.getElementById(id);if(el)el.type=on?'text':'password';});}
+// (not named after the checkbox: inside the form's inline handler the
+// checkbox itself would shadow a function of the same name)
+function authPwShow(on){['authPass','authPass2'].forEach(id=>{const el=document.getElementById(id);if(el)el.type=on?'text':'password';});}
 // "Change e-mail" from the code step: back to the form the code came from,
 // with everything the user typed still in place.
 function authCodeBack(){authMode=authCodeType==='recovery'?'forgot':'register';authPendingSet(null);authRender();
@@ -14540,7 +14579,7 @@ function authErrMsg(e,fallback){const m=(e&&(e.message||e.error_description))||'
   if(/Failed to fetch|NetworkError|Load failed|network/i.test(m))return 'Keine Verbindung. Bitte Internet prüfen und erneut versuchen.';
   if(/Invalid login credentials/i.test(m))return 'E-Mail oder Passwort ist falsch.';
   if(/already registered|already been registered|already exists/i.test(m))return 'Diese E-Mail ist schon registriert. Melde dich an oder setze dein Passwort zurück.';
-  if(/expired|invalid.*(otp|token)|(otp|token).*invalid/i.test(m))return 'Code ungültig oder abgelaufen.';
+  if(/expired|invalid.*(otp|token)|(otp|token).*invalid/i.test(m))return 'Code ungültig oder abgelaufen. Nimm den Code aus der neuesten Mail – jede neue Anfrage macht ältere Codes ungültig, und wer den Link in der Mail schon angetippt hat, hat den Code damit verbraucht.';
   if(/pwned|leaked|compromised|breach/i.test(m))return 'Dieses Passwort ist aus Datenlecks bekannt. Bitte wähle ein anderes.';
   if(/Password should|weak password|at least/i.test(m))return 'Passwort zu schwach — mindestens 8 Zeichen.';
   if(/rate limit|security purposes|too many/i.test(m))return 'Zu viele Anfragen. Bitte kurz warten und erneut versuchen.';
@@ -14671,9 +14710,13 @@ async function authSubmit(e){
   }catch(err){errEl.textContent=authErrMsg(err,'Fehler');}
   finally{_authBusy=false;if(!_authLockTick)btn.disabled=false;if(btn.textContent.endsWith('…'))btn.textContent=label;}
 }
-function authCodeInput(){const v=document.getElementById('authCode').value.replace(/\D/g,'').slice(0,6);document.getElementById('authCode').value=v;if(v.length===6)authVerifyCode();}
+// Supabase sends 6 digits by default, but the length is a project setting
+// (up to 10): check once the typing pauses, or at once at 10 digits.
+let _authCodeT=0;
+function authCodeInput(){const el=document.getElementById('authCode'),v=el.value.replace(/\D/g,'').slice(0,10);el.value=v;clearTimeout(_authCodeT);
+  if(v.length>=10)authVerifyCode();else if(v.length>=6)_authCodeT=setTimeout(authVerifyCode,1100);}
 async function authPasteCode(){
-  try{const t=await navigator.clipboard.readText();const m=(t||'').match(/\d{6}/);
+  try{const t=await navigator.clipboard.readText();const m=(t||'').match(/\b\d{6,10}\b/)||(t||'').match(/\d{6,10}/);
     if(m){document.getElementById('authCode').value=m[0];authVerifyCode();}
     else{document.getElementById('authCodeErr').style.color='var(--danger)';document.getElementById('authCodeErr').textContent='Kein 6-stelliger Code in der Zwischenablage.';}
   }catch(e){document.getElementById('authCodeErr').style.color='var(--danger)';document.getElementById('authCodeErr').textContent='Zwischenablage nicht verfügbar – Code manuell eingeben.';}
@@ -14683,7 +14726,7 @@ async function authVerifyCode(){
   const token=document.getElementById('authCode').value.trim();const err=document.getElementById('authCodeErr');err.textContent='';
   const btn=document.getElementById('authCodeBtn'),kind='code-'+authCodeType;
   if(authLockCheck(kind,authPendingEmail,err,btn))return;
-  if(!/^\d{6}$/.test(token)){err.style.color='var(--danger)';err.textContent='Bitte 6 Ziffern eingeben.';return;}
+  if(!/^\d{6,10}$/.test(token)){err.style.color='var(--danger)';err.textContent='Bitte den Code aus der Mail eingeben (6 Ziffern).';return;}
   _authBusy=true;btn.disabled=true;btn.textContent='Prüfe…';
   try{
     if(authCodeType==='recovery'){
