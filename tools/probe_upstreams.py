@@ -118,8 +118,53 @@ def probe_routes() -> bool:
     return False
 
 
+def probe_windy() -> bool:
+    """The webcam layer: is the key accepted, does the endpoint answer the
+    query the app sends, and does it allow the browser (CORS preflight for
+    the x-windy-api-key header from the app's origin)? The key is a public
+    client key, but it is still never printed."""
+    import os
+    import requests
+    key = os.environ.get("WINDY_WEBCAMS_KEY", "").strip()
+    print("=" * 72)
+    print("Windy webcams")
+    if not key:
+        print("    no WINDY_WEBCAMS_KEY in this run (secret not set, or a fork PR)")
+        return False
+    print(f"    key: {len(key)} chars")
+    url = "https://api.windy.com/webcams/api/v3/webcams"
+    origin = "https://gianio.github.io"
+    q = "nearby=46.80,9.83,30&limit=5&include=location"
+    r = requests.get(f"{url}?{q}", headers={"x-windy-api-key": key, "Origin": origin}, timeout=20)
+    print(f"    GET {q} -> {r.status_code}; Access-Control-Allow-Origin: {r.headers.get('access-control-allow-origin')!r}")
+    ok = r.ok
+    try:
+        j = r.json()
+        cams = j.get("webcams") or []
+        print(f"    total {j.get('total')} | first: {_short([(c.get('webcamId'), c.get('title')) for c in cams[:3]], 300)}")
+        if cams:
+            ids = ",".join(str(c.get("webcamId")) for c in cams[:2])
+            r2 = requests.get(f"{url}?webcamIds={ids}&limit=50&include=images,location,player",
+                              headers={"x-windy-api-key": key}, timeout=20)
+            j2 = r2.json() if r2.ok else {}
+            c0 = (j2.get("webcams") or [{}])[0]
+            print(f"    details -> {r2.status_code}; images keys {list((c0.get('images') or {}).keys())}; "
+                  f"player {_short(c0.get('player'), 300)}")
+    except ValueError:
+        print(f"    body: {r.text[:300]}")
+    pf = requests.options(url, headers={"Origin": origin, "Access-Control-Request-Method": "GET",
+                                        "Access-Control-Request-Headers": "x-windy-api-key"}, timeout=20)
+    print(f"    CORS preflight -> {pf.status_code}; allow-origin {pf.headers.get('access-control-allow-origin')!r}; "
+          f"allow-headers {pf.headers.get('access-control-allow-headers')!r}")
+    return ok
+
+
 if __name__ == "__main__":
     b = r = False
+    try:
+        probe_windy()
+    except Exception as e:                           # noqa: BLE001
+        print(f"windy probe crashed: {e!r}")
     try:
         b = probe_bulletin()
     except Exception as e:                           # noqa: BLE001

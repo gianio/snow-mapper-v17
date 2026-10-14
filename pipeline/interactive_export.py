@@ -1454,6 +1454,18 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  @keyframes shimmer{100%{transform:translateX(100%)}}
  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
  html{background:#EDEEEC}
+ /* Installed on the home screen (standalone), iOS reports 100%/100dvh short
+    by the status-bar height, which left a dead band at the bottom and cut
+    every bottom sheet. There the root takes the large viewport (the whole
+    screen) and becomes the containing block of the fixed layers, so
+    bottom:0 means the real bottom edge. A Safari tab is not affected. */
+ @media all and (display-mode: standalone){
+   html,body{height:100vh!important;height:100lvh!important;bottom:auto!important}
+   body{transform:translateZ(0)}
+   /* the status bar is see-through: full-screen views get a solid strip under it */
+   body.nav-screen::after,body.trk-open::after,body.wcv-open::after,body.rp-open::after{content:'';position:fixed;left:0;right:0;top:0;
+     height:env(safe-area-inset-top,0px);background:var(--page,#0f172a);z-index:99990;pointer-events:none}
+ }
  html,body{margin:0;padding:0;height:100%;height:100dvh;width:100%;overflow:hidden;font-family:var(--font);color:var(--fg);overscroll-behavior:none;background:var(--map-bg);position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
  #map{position:absolute;top:0;left:0;right:0;bottom:0;background:var(--map-bg)}
  .leaflet-control-scale{margin-right:92px!important;margin-bottom:10px!important}
@@ -3717,6 +3729,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    padding:10px 18px calc(env(safe-area-inset-bottom,0px) + 18px);max-width:560px;width:100%;margin:0 auto;display:flex;flex-direction:column;
    animation:sheetUp .3s cubic-bezier(.2,.9,.25,1) both;max-height:92vh}
  .trk[data-view=save] .trk-sheet,.trk[data-view=list] .trk-sheet{height:92vh}
+ /* never under the status bar: the tall views stop below it */
+ .trk-sheet{max-height:calc(100% - env(safe-area-inset-top,0px) - 10px)!important}
+ .trk[data-view=save] .trk-sheet,.trk[data-view=list] .trk-sheet{height:calc(100% - env(safe-area-inset-top,0px) - 10px)}
  .trk[data-view=detail] .trk-sheet{max-height:62vh}
  body.trk-open #bottomPanel,body.trk-open #mapFabs,body.trk-open #miniLegend,body.trk-open #brandMark{opacity:0;pointer-events:none}
  .trk-hd{display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:8px;min-height:44px;margin-bottom:6px}
@@ -4111,13 +4126,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #rvFab.on svg{color:#2b2100}
  #rvFab:active{transform:scale(.95)}
  body.nav-screen #rvFab,body.ly-open #rvFab,body.insp-open #rvFab,body.trk-open #rvFab,body.draw-on #rvFab,body.ts-open #rvFab,body.wcv-open #rvFab{display:none}
- .rv-btn.rv-btn{position:absolute!important;top:4px;left:50%;right:auto;transform:translateX(-50%);z-index:60;display:inline-flex!important;align-items:center;gap:5px;
-   width:auto!important;min-width:0!important;height:26px!important;padding:0 11px 0 7px!important;margin:0!important;
-   border:1.5px solid #F4B400!important;border-radius:999px!important;background:var(--card,#fff)!important;color:var(--fg,#16152e)!important;font:800 11.5px/1 Inter,system-ui!important;
-   box-shadow:0 3px 10px rgba(15,23,42,.18)!important;cursor:pointer;white-space:nowrap;animation:rvIn .22s ease-out both}
- .rv-btn.rv-btn svg{width:15px!important;height:15px!important;color:#E0A100}
- .rv-btn.rv-mini{padding:0!important;width:26px!important;justify-content:center;top:-10px}
- .rv-btn.rv-mini span{display:none}
+ .rv-btn.rv-btn{position:absolute!important;top:-14px;left:50%;right:auto;transform:translateX(-50%);z-index:60;display:grid!important;place-items:center;
+   width:30px!important;min-width:0!important;height:30px!important;padding:0!important;margin:0!important;
+   border:2px solid #F4B400!important;border-radius:50%!important;background:var(--card,#fff)!important;color:#E0A100!important;
+   box-shadow:0 3px 10px rgba(15,23,42,.22)!important;cursor:pointer;animation:rvIn .22s ease-out both}
+ .rv-btn.rv-btn svg{width:16px!important;height:16px!important}
+ .rv-btn span{display:none}
+ /* parts that start at the very top of the screen: the mark sits just inside */
+ #lyPanel>.rv-btn,#tourSearch>.rv-btn,#wcv .wcv-top>.rv-btn,#feedTop>.rv-btn{top:4px}
  @keyframes rvIn{from{opacity:0;transform:translateX(-50%) scale(.6)}to{opacity:1;transform:translateX(-50%) scale(1)}}
  .rv-dot{position:absolute;top:-6px;right:-6px;z-index:61;width:22px;height:22px;border-radius:50%;background:var(--card,#fff);color:#E0A100;
    border:1.5px solid #F4B400;box-sizing:border-box;display:grid;place-items:center;box-shadow:0 2px 6px rgba(15,23,42,.22);cursor:pointer;pointer-events:auto;
@@ -4149,12 +4165,26 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rv-send:disabled{opacity:.6}
  .act-st{cursor:pointer}
  .trk-rough{margin:6px 0 10px}
+ .trk-lr{margin:10px 0 4px;padding:10px 12px;border-radius:16px;background:var(--fill);border:1px solid var(--hair)}
+ .trk-lr-hd{display:flex;align-items:center;gap:8px;font:600 12.5px var(--font,inherit);color:var(--fg2);margin-bottom:6px}
+ .trk-lr-hd b{font:800 13px var(--font,inherit);color:var(--fg)}
+ .trk-lr-hd span{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-weight:700;color:var(--fg)}
+ .trk-lr-hd span i{width:9px;height:9px;border-radius:3px;display:inline-block}
+ #trkLRdot{width:9px;height:9px;border-radius:50%;background:var(--hair,#9aa3b2)}
+ .trk-lr.on #trkLRdot{background:#3BAA63}
+ #trkLRdot.beat{animation:trkBeat .5s ease-out}
+ @keyframes trkBeat{0%{box-shadow:0 0 0 0 rgba(59,170,99,.7);transform:scale(1.4)}100%{box-shadow:0 0 0 8px rgba(59,170,99,0);transform:scale(1)}}
+ .trk-lr svg{display:block;width:100%;height:36px;border-radius:6px;background:color-mix(in srgb,var(--card,#fff) 60%,transparent)}
+ .trk-lr small{display:block;margin-top:5px;font:600 11.5px var(--font,inherit);color:var(--fg2)}
+ .trk-lr small button{border:0;background:var(--brand,#2D4A6E);color:#fff;border-radius:999px;padding:5px 12px;font:700 12px var(--font,inherit);cursor:pointer}
  .trk-rough-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font:600 12.5px var(--font,inherit);color:var(--fg2);margin-bottom:5px}
  .trk-rough-hd b{font:800 13px var(--font,inherit);color:var(--fg)}
  .trk-rough i{display:inline-block;width:9px;height:9px;border-radius:3px;margin:0 4px 0 2px;vertical-align:-1px}
  .trk-rough svg{display:block;width:100%;height:12px;border-radius:6px;background:var(--fill);overflow:hidden}
  .trk-rough-lg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:5px;font:600 11.5px var(--font,inherit);color:var(--fg2)}
  .trk-rough-lg em{font-style:normal;margin-left:auto;opacity:.75}
+ .trk-rough-t{display:block;width:100%;height:50px;border-radius:8px;background:var(--fill)}
+ .trk-rough-ax{display:flex;justify-content:space-between;font:600 10.5px var(--font,inherit);color:var(--fg2);margin-top:3px}
  .trk-rough-sub{margin:9px 0 4px;font:700 11.5px var(--font,inherit);color:var(--fg2)}
  .trk-rough-sh{display:flex;height:22px;border-radius:8px;overflow:hidden}
  .trk-rough-sh div{display:grid;place-items:center;min-width:0}
@@ -4449,6 +4479,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .trk-a.sec.danger{color:var(--danger)!important}
  .trk-sp{position:relative;height:150px;margin:2px 0 4px;border-radius:14px;background:var(--fill);overflow:visible}
  .trk-sp.edit{cursor:crosshair}
+ .trk-sp.edit{touch-action:pan-y;-webkit-user-select:none;user-select:none}
+ .trk-sp-add{display:block;margin:8px 0 2px;border:1.5px dashed var(--brand,#2D4A6E);background:none;color:var(--brand,#2D4A6E);border-radius:12px;
+   padding:9px 14px;font:800 13px var(--font,inherit);cursor:pointer;width:100%}
  .trk-sp svg{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:14px}
  .trk-sp-y,.trk-sp-x{position:absolute;font:700 10px/1 var(--mono);color:var(--fg2);pointer-events:none}
  .trk-sp-y.hi{left:8px;top:6px}.trk-sp-y.lo{left:8px;bottom:6px}.trk-sp-x{right:8px;bottom:6px}
@@ -5701,6 +5734,11 @@ const I18N_DICT={
 "alle":["all","tout","tutti"],
 "Median":["Median","Médiane","Mediana"],
 "Ruppigkeit":["Roughness","Rugosité","Ruvidità"],
+"Bewegungssensor erlauben":["Allow motion sensor","Autoriser le capteur de mouvement","Consenti sensore di movimento"],
+"Dieses Gerät liefert keine Bewegungsdaten.":["This device delivers no motion data.","Cet appareil ne fournit pas de données de mouvement.","Questo dispositivo non fornisce dati di movimento."],
+"misst":["measuring","mesure","misura"],"Werte":["readings","valeurs","valori"],"pausiert":["paused","en pause","in pausa"],
+"wartet auf Sensordaten …":["waiting for sensor data …","en attente des données du capteur …","in attesa dei dati del sensore …"],
+"Punkt hinzufügen":["Add point","Ajouter un point","Aggiungi punto"],"Verlauf über die Zeit":["Over time","Au fil du temps","Nel tempo"],
 "Abfahrt nach Anteil":["Descent by share","Descente par part","Discesa per quota"],
 "Keine Erschütterungsdaten: Der Bildschirm war aus oder der Bewegungssensor nicht erlaubt.":["No vibration data: the screen was off or the motion sensor was not allowed.","Pas de données de vibration : l'écran était éteint ou le capteur de mouvement non autorisé.","Nessun dato di vibrazione: lo schermo era spento o il sensore di movimento non autorizzato."],"Abfahrt":["Descent","Descente","Discesa"],
 "glatt":["smooth","lisse","liscio"],"unruhig":["choppy","agitée","irregolare"],"ruppig":["rough","rugueuse","ruvido"],
@@ -9393,7 +9431,7 @@ async function wcFetch(params){
   if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;throw e;}return r.json();}
 // a readable reason for the user (and the review feedback)
 function wcErrTxt(e){const st=e&&e.status;
-  if(st===401||st===403)return 'Webcams: Windy-Schlüssel abgelehnt – es braucht einen «Webcams API»-Schlüssel (nicht Map/Point Forecast).';
+  if(st===401||st===403)return 'Webcams: Windy lehnt den Schlüssel ab (401). Es braucht einen Schlüssel für die «Webcams API» von api.windy.com/keys.';
   if(st===429)return 'Webcams: Tageslimit von Windy erreicht – später nochmals versuchen.';
   if(st)return 'Webcams konnten nicht geladen werden (Windy antwortet '+st+').';
   return 'Webcams konnten nicht geladen werden – keine Verbindung zu Windy.';}
@@ -9713,7 +9751,22 @@ function trkMotEvt(e){if(!trkMot||!trkRec||trkRec.paused)return;let x,y,z;const 
     G[0]=.92*G[0]+.08*g.x;G[1]=.92*G[1]+.08*g.y;G[2]=.92*G[2]+.08*g.z;x=g.x-G[0];y=g.y-G[1];z=g.z-G[2];}
   trkMot.sum+=x*x+y*y+z*z;trkMot.n++;const now=Date.now();
   if(now-trkMot.t0>=2000&&trkMot.n>4){(trkRec.rough||(trkRec.rough=[])).push([now,+Math.sqrt(trkMot.sum/trkMot.n).toFixed(2)]);
-    trkMot.sum=0;trkMot.n=0;trkMot.t0=now;}}
+    trkMot.sum=0;trkMot.n=0;trkMot.t0=now;
+    const d=document.getElementById('trkLRdot');if(d){d.classList.remove('beat');void d.offsetWidth;d.classList.add('beat');}
+    try{trkLRPaint();}catch(e){}}}
+// live while recording: the latest value, a pulse on every new reading and
+// the last five minutes as coloured bars
+function trkLRPaint(){const box=document.getElementById('trkLR');if(!box||!trkRec)return;
+  const R=trkRec.rough||[],last=R[R.length-1],fresh=last&&Date.now()-last[0]<6000;
+  const v=document.getElementById('trkLRv'),n=document.getElementById('trkLRn'),sv=document.getElementById('trkLRs');
+  if(v){if(fresh){const c=trkRoughCls(last[1]);v.innerHTML='<i style="background:'+c[2]+'"></i>'+tr(c[1])+' · '+last[1].toFixed(1)+' m/s²';}else v.textContent='–';}
+  if(n){n.innerHTML=!trkMot?(typeof DeviceMotionEvent==='undefined'?tr('Dieses Gerät liefert keine Bewegungsdaten.')
+      :'<button type="button" onclick="trkMotion(true).then(trkLRPaint)">'+tr('Bewegungssensor erlauben')+'</button>')
+    :trkRec.paused?tr('pausiert'):fresh?tr('misst')+' · '+R.length+' '+tr('Werte'):tr('wartet auf Sensordaten …');}
+  box.classList.toggle('on',!!fresh&&!trkRec.paused);
+  if(sv){const W=300,Hh=36,N=150,a=R.slice(-N),bw=W/N;let h='';
+    a.forEach((x,i)=>{const c=trkRoughCls(x[1]),hh=Math.max(2,Math.min(1,x[1]/7)*Hh);h+='<rect x="'+((N-a.length+i)*bw).toFixed(1)+'" y="'+(Hh-hh).toFixed(1)+'" width="'+Math.max(1,bw-.6).toFixed(1)+'" height="'+hh.toFixed(1)+'" rx="1" fill="'+c[2]+'"/>';});
+    sv.innerHTML=h;}}
 // classes in m/s² (RMS): a first calibration, to be tuned with real rides
 const TRK_ROUGH=[[2,'glatt','#3BAA63'],[4,'unruhig','#E9B949'],[99,'ruppig','#D9534F']];
 function trkRoughCls(v){return TRK_ROUGH.find(c=>v<c[0])||TRK_ROUGH[2];}
@@ -9737,6 +9790,15 @@ function trkRoughHTML(ll,vals){if(!vals||!vals.some(v=>v!=null))return '';
     +'<svg viewBox="0 0 340 12" preserveAspectRatio="none" aria-hidden="true">'+rects+'</svg>'
     +(shareHTML?'<div class="trk-rough-sub">'+tr('Abfahrt nach Anteil')+'</div>'+shareHTML:'')
     +'<div class="trk-rough-lg">'+TRK_ROUGH.map(x=>'<span><i style="background:'+x[2]+'"></i>'+tr(x[1])+'</span>').join('')+'<em>'+tr('Bewegungssensor, experimentell')+'</em></div></div>';}
+// the measurement over time (own activities keep every reading with its time)
+function trkRoughTimeHTML(rough){if(!rough||rough.length<3)return '';
+  const t0=rough[0][0],t1=rough[rough.length-1][0],span=Math.max(1,t1-t0),W=340,Hh=50;let h='';
+  const bw=Math.max(.8,W/rough.length);
+  rough.forEach(x=>{const c=trkRoughCls(x[1]),hh=Math.max(1.5,Math.min(1,x[1]/7)*Hh);
+    h+='<rect x="'+((x[0]-t0)/span*(W-bw)).toFixed(1)+'" y="'+(Hh-hh).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hh.toFixed(1)+'" fill="'+c[2]+'"/>';});
+  const fmt=t=>new Date(t).toLocaleTimeString(LOCALE(),{hour:'2-digit',minute:'2-digit'});
+  return '<div class="trk-rough-sub">'+tr('Verlauf über die Zeit')+'</div><svg class="trk-rough-t" viewBox="0 0 '+W+' '+Hh+'" preserveAspectRatio="none" aria-hidden="true">'+h+'</svg>'
+    +'<div class="trk-rough-ax"><span>'+fmt(t0)+'</span><span>'+fmt(t0+span/2)+'</span><span>'+fmt(t1)+'</span></div>';}
 function trkRoughNone(){return '<div class="trk-rough"><div class="trk-rough-hd"><b>'+tr('Ruppigkeit')+'</b></div><p class="trk-hint">'
   +tr('Keine Erschütterungsdaten: Der Bildschirm war aus oder der Bewegungssensor nicht erlaubt.')+'</p></div>';}
 function trkStart(){
@@ -9995,6 +10057,7 @@ function trkPaint(){
   const seg=trkRec.segs[trkRec.segs.length-1],n=seg.length;
   let v=0;if(n>1&&!trkRec.paused&&Date.now()-seg[n-1][0]<20000){let k=n-1;while(k>0&&seg[n-1][0]-seg[k-1][0]<=30000)k--;const a=seg[k],b=seg[n-1];const dt=(b[0]-a[0])/1000;if(dt>0)v=trkHav(a,b)/dt*3.6;}
   set('trkV',v.toFixed(1));
+  trkLRPaint();
   const gs=trkGuideState();
   if(gs){set('trkGuideTxt',(gs.off<=40?'auf der Spur':gs.off+' m daneben')+' · '+gs.pct+' % geschafft');
     const row=document.getElementById('trkGuideRow');if(row)row.classList.toggle('warn',gs.off>80);
@@ -10027,6 +10090,8 @@ async function trkRender(){
       +'<div class="trk-big"><span id="trkT">0:00</span><small>Zeit</small></div>'
       +'<div class="trk-grid"><div><b id="trkD">0.00</b><small>Distanz km</small></div><div><b id="trkUp">0</b><small>Aufstieg m</small></div>'
       +'<div><b id="trkAlt">–</b><small>Höhe m</small></div><div><b id="trkV">0.0</b><small>Tempo km/h</small></div></div>'
+      +'<div class="trk-lr" id="trkLR"><div class="trk-lr-hd"><i id="trkLRdot"></i><b>'+tr('Ruppigkeit')+'</b><span id="trkLRv">–</span></div>'
+        +'<svg id="trkLRs" viewBox="0 0 300 36" preserveAspectRatio="none" aria-hidden="true"></svg><small id="trkLRn"></small></div>'
       +(trkGuide?'<div class="trk-guide on" id="trkGuideRow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg><span>'+escapeHtml(trkGuide.name)+'<b id="trkGuideTxt">–</b></span></div>':'')
       +(p?'<div class="trk-ctl"><button class="trk-btn res" onclick="trkResume()"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg><span>Weiter</span></button>'
           +'<button class="trk-btn fin" onclick="trkFinish()"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg><span>Beenden</span></button></div>'
@@ -10041,7 +10106,7 @@ async function trkRender(){
     el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="'+(d._edit?'trkEditCancel()':'trkBackToRec()')+'" aria-label="Zurück">'+TRK_DOWN+'</button><b>'+(d._edit?'Aktivität bearbeiten':'Aktivität speichern')+'</b><button class="trk-gpx" onclick="trkExportDraft()">'+TRK_GPX+'<span>GPX</span></button></div>'
       +'<div class="trk-scroll"><div class="trk-map" id="trkMapBox">'+(d._mapUrl?'<img src="'+d._mapUrl+'" alt="">':'')+trkThumb(ll,680,340,'',d.rep,true)+'</div>'
       +'<div class="trk-sum"><div><b>'+trkFmtD(s.dist)+'</b><small>Distanz</small></div><div><b>'+s.up+' m</b><small>Aufstieg</small></div><div><b>'+trkFmtT(s.moving)+'</b><small>Bewegungszeit</small></div></div>'
-      +(d._edit?'':(trkRoughHTML(ll,trkRoughAlong(trkFlat(d.segs),d.rough))||trkRoughNone()))
+      +(d._edit?'':(trkRoughHTML(ll,trkRoughAlong(trkFlat(d.segs),d.rough))?trkRoughHTML(ll,trkRoughAlong(trkFlat(d.segs),d.rough))+trkRoughTimeHTML(d.rough):trkRoughNone()))
       +'<label class="trk-f"><span>Titel</span><input id="trkName" maxlength="80" value="'+escapeHtml(d.name)+'"></label>'
       +'<label class="trk-f"><span>Beschreibung</span><textarea id="trkDesc" rows="3" maxlength="1000" placeholder="Wie war\'s? Route, Verhältnisse, Gruppe …">'+escapeHtml(d.desc||'')+'</textarea></label>'
       +'<div class="tour-pick" id="trkTourPick"></div>'
@@ -10081,7 +10146,7 @@ async function trkRender(){
       +'<div class="trk-sum four"><div><b>'+trkFmtD(s.dist||0)+'</b><small>Distanz</small></div><div><b>'+(s.up||0)+' m</b><small>Aufstieg</small></div><div><b>'+trkFmtT(s.moving||0)+'</b><small>Bewegung</small></div><div><b>'+(s.maxA!=null?s.maxA+' m':'–')+'</b><small>Höchster Punkt</small></div></div>'
       +((a.snowPts||[]).length?'':'<div class="trk-profw">'+trkProfile(ll,340,80)+'</div>')
       +((a.snowPts||[]).length?'<div class="trk-profw">'+trkSnowProfileSVG(a,ll,false)+'</div><div class="trk-sp-list">'+a.snowPts.map(p=>trkPtTxt(p,ll)).map(t=>'<span>'+t+'</span>').join('')+'</div>':'')
-      +trkRoughHTML(ll,trkRoughAlong(trkFlat(a.segs),a.rough))
+      +trkRoughHTML(ll,trkRoughAlong(trkFlat(a.segs),a.rough))+trkRoughTimeHTML(a.rough)
       +(a.tracks?'<div class="trk-meta">Verspurung: <b>'+escapeHtml((TRK_TRACKS.find(x=>x[0]===a.tracks)||[0,''])[1])+'</b></div>':'')
       +(a.snow?'<div class="trk-meta">Schnee: <b>'+escapeHtml(a.snow)+(a.snow==='Pulver'&&a.depth?' '+a.depth+' cm':'')+'</b>'+(a.stars?' · '+'★'.repeat(a.stars):'')+'</div>':'')
       +((a.photos||[]).length?'<div class="trk-photos">'+a.photos.map(b=>'<div class="trk-ph"><img src="'+URL.createObjectURL(b)+'" alt=""></div>').join('')+'</div>':'')
@@ -10112,7 +10177,7 @@ function trkSnowProfileSVG(d,ll,edit){const P=trkProfData(ll),W=340,H=130;
   const pts=(d.snowPts||[]).map((p,k)=>{const T=TRK_PT[p.type]||TRK_PT.powder;
     return '<button type="button" class="trk-sp-pt'+(edit&&d.sel===k?' sel':'')+'" style="left:'+X(p.i).toFixed(2)+'%;top:'+Y(p.i).toFixed(2)+'%;--pc:'+T.col+'"'
       +(edit?' onclick="event.stopPropagation();trkSnowSel('+k+')"':'')+' aria-label="'+T.l+'"><i></i>'+(T.cm&&p.cm!=null?'<em>'+p.cm+'</em>':'')+'</button>';}).join('');
-  return '<div class="trk-sp'+(edit?' edit':'')+'"'+(edit?' onclick="trkSnowTap(event)"':'')+'>'
+  return '<div class="trk-sp'+(edit?' edit':'')+'">'
     +'<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true"><path d="'+line+'L'+W+' '+H+'L0 '+H+'Z" style="fill:var(--brand-soft,var(--accent-soft))"/>'
     +'<path d="'+line+'" fill="none" style="stroke:var(--brand,var(--accent))" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>'
     +(P.has?'<span class="trk-sp-y hi">'+Math.round(P.hi)+' m</span><span class="trk-sp-y lo">'+Math.round(P.lo)+' m</span>':'')
@@ -10121,21 +10186,46 @@ function trkPtTxt(p,ll){const T=TRK_PT[p.type]||TRK_PT.powder,q=ll[p.i]||[];
   return '<i style="background:'+T.col+'"></i>'+T.l+(T.cm&&p.cm!=null?' '+p.cm+' cm':'')+(q[2]!=null?' · '+Math.round(q[2])+' m':'');}
 function trkSnowEditor(d,ll){const sel=d.sel!=null?d.snowPts[d.sel]:null;
   let h=trkSnowProfileSVG(d,ll,true);
-  if(!sel)return h+'<p class="trk-hint">Tippe auf das Höhenprofil, um an dieser Stelle den Schnee zu melden. Mehrere Punkte möglich.</p>';
+  const addBtn='<button type="button" class="trk-sp-add" onclick="trkSnowAdd()">+ '+tr('Punkt hinzufügen')+'</button>';
+  if(!sel)return h+'<p class="trk-hint">Tippe auf das Höhenprofil, um an dieser Stelle den Schnee zu melden. Mehrere Punkte möglich.</p>'+addBtn;
   const T=TRK_PT[sel.type]||TRK_PT.powder,P=trkProfData(ll);
   h+='<div class="trk-sp-ed"><div class="trk-sp-hd"><b>'+(P.has?Math.round(P.el[sel.i])+' m · ':'')+trkFmtD(P.xs[sel.i])+'</b>'
     +'<button type="button" onclick="trkSnowDel()">Punkt entfernen</button></div>'
     +'<div class="trk-chips">'+Object.keys(TRK_PT).map(k=>'<button type="button" class="trk-chip'+(sel.type===k?' on':'')+'" onclick="trkSnowType(\''+k+'\')"><i class="trk-dot" style="background:'+TRK_PT[k].col+'"></i>'+TRK_PT[k].l+'</button>').join('')+'</div>'
     +(T.cm?'<div class="trk-depth"><span>'+(sel.type==='drift'?'Mächtigkeit':'Pulvertiefe')+'</span><input type="range" min="0" max="120" step="5" value="'+(sel.cm||0)+'" oninput="trkSnowCm(+this.value,this)"><b>'+(sel.cm||0)+' cm</b></div>':'')
     +'</div>';
-  return h;}
+  return h+addBtn;}
 function trkSnowRefresh(){const d=trkDraft,b=document.getElementById('trkSnowBox');if(!d||!b)return;b.innerHTML=trkSnowEditor(d,trkLL(d.segs));}
-function trkSnowTap(ev){const d=trkDraft;if(!d)return;const box=ev.currentTarget,r=box.getBoundingClientRect();
-  const ll=trkLL(d.segs),P=trkProfData(ll),x=Math.max(0,Math.min(1,(ev.clientX-r.left)/r.width))*P.D;
+// Taps on the profile are read from pointer events (a click inside the
+// scrolling sheet is unreliable on iOS), a drag to scroll is not a tap, and
+// a tap close to an existing point selects that point instead of stacking a
+// second one on top of it.
+let _trkSpDown=null;
+document.addEventListener('pointerdown',e=>{const box=e.target.closest&&e.target.closest('.trk-sp.edit');
+  _trkSpDown=box&&!e.target.closest('.trk-sp-pt')?{box,x:e.clientX,y:e.clientY,t:Date.now()}:null;},true);
+document.addEventListener('pointerup',e=>{const s0=_trkSpDown;_trkSpDown=null;if(!s0)return;
+  if(Math.hypot(e.clientX-s0.x,e.clientY-s0.y)>10||Date.now()-s0.t>900)return;
+  _trkSpUp=Date.now();trkSnowTap({clientX:e.clientX,currentTarget:s0.box});},true);
+// the click that follows a touch lands on the point just drawn there -- swallow it
+let _trkSpUp=0;
+document.addEventListener('click',e=>{if(Date.now()-_trkSpUp<450&&e.target.closest&&e.target.closest('.trk-sp')){e.stopPropagation();e.preventDefault();}},true);
+function trkSnowTap(ev){const d=trkDraft;if(!d)return;if(!d.snowPts)d.snowPts=[];const box=ev.currentTarget,r=box.getBoundingClientRect();
+  const ll=trkLL(d.segs);if(ll.length<2)return;const P=trkProfData(ll),fx=Math.max(0,Math.min(1,(ev.clientX-r.left)/r.width)),x=fx*P.D;
+  const near=d.snowPts.findIndex(p=>Math.abs(P.xs[p.i]/P.D-fx)*r.width<22);
+  if(near>=0){d.sel=near;try{haptic(4);}catch(e){}trkSnowRefresh();return;}
   let bi=0,bd=1e18;P.xs.forEach((v,i)=>{const e=Math.abs(v-x);if(e<bd){bd=e;bi=i;}});
   const prev=d.sel!=null?d.snowPts[d.sel]:d.snowPts[d.snowPts.length-1];
   d.snowPts.push({i:bi,type:prev?prev.type:'powder',cm:prev?prev.cm:20});
   d.snowPts.sort((a,b)=>a.i-b.i);d.sel=d.snowPts.findIndex(p=>p.i===bi);
+  try{haptic(6);}catch(e){}trkSnowRefresh();}
+// adds a point in the middle of the longest stretch without one
+function trkSnowAdd(){const d=trkDraft;if(!d)return;if(!d.snowPts)d.snowPts=[];const ll=trkLL(d.segs);if(ll.length<2)return;
+  const P=trkProfData(ll),cuts=[0].concat(d.snowPts.map(p=>P.xs[p.i]).sort((a,b)=>a-b),[P.D]);let g=0,gx=P.D/2;
+  for(let k=1;k<cuts.length;k++){if(cuts[k]-cuts[k-1]>g){g=cuts[k]-cuts[k-1];gx=(cuts[k]+cuts[k-1])/2;}}
+  let bi=0,bd=1e18;P.xs.forEach((v,i)=>{const e=Math.abs(v-gx);if(e<bd){bd=e;bi=i;}});
+  if(d.snowPts.some(p=>p.i===bi)){d.sel=d.snowPts.findIndex(p=>p.i===bi);trkSnowRefresh();return;}
+  const prev=d.sel!=null?d.snowPts[d.sel]:d.snowPts[d.snowPts.length-1];
+  d.snowPts.push({i:bi,type:prev?prev.type:'powder',cm:prev?prev.cm:20});d.snowPts.sort((a,b)=>a.i-b.i);d.sel=d.snowPts.findIndex(p=>p.i===bi);
   try{haptic(6);}catch(e){}trkSnowRefresh();}
 function trkSnowSel(k){const d=trkDraft;if(!d)return;d.sel=d.sel===k?null:k;trkSnowRefresh();}
 function trkSnowType(t){const d=trkDraft;if(!d||d.sel==null)return;d.snowPts[d.sel].type=t;trkSnowRefresh();}
@@ -12585,11 +12675,11 @@ let _setCameFromProfile=false;
 // screenshot, all optional -- that records which feature it came from and
 // goes to Supabase (table feedback, private bucket feedback); the edge
 // function feedback-mail mails it on.
-const RV_TARGETS=[['#bottomPanel','Zeitleiste'],['#inspPanel.open .insp-grab','Karten-Tipp','wide'],
-  ['#lyPanel','Ebenen'],['#miniLegend','Legende'],['#searchWrap:not(.hid)','Ortssuche'],['#tourSearch','Tourensuche'],
-  ['#tourSheet','Skitour'],['#feedTop','Community'],['#trkSheet','Aufzeichnen'],['#repSheet .rs-in','Melden'],
+// One mark per part of the app, sitting on its top edge -- not on every button.
+const RV_TARGETS=[['#bottomPanel','Zeitleiste'],['#inspPanel.open','Karten-Tipp'],['#lyPanel','Ebenen & Legende'],
+  ['#tourSearch','Tourensuche'],['#tourSheet','Skitour'],['#feedTop','Community'],['#trkSheet','Aufzeichnen'],['#repSheet .rs-in','Melden'],
   ['#drawBar','Powder zeichnen'],['#reportOverlay .report-card, #reportOverlay > div','Beobachtung melden'],['#wcv .wcv-top','Webcams'],
-  ['#actSheet .act-sh-in','Aktivität'],['#setSheet .set-in','Einstellungen'],['#profModal .prof-card, #profModal > div','Profil'],['#dmModal > div','Nachrichten']];
+  ['#actSheet .act-sh-in','Aktivität'],['#profModal .prof-sheet','Profil']];
 let rvOn=(()=>{try{return localStorage.getItem('ssm_review')==='1';}catch(e){return false;}})(),rvT=0;
 function rvToggle(){rvOn=!rvOn;try{localStorage.setItem('ssm_review',rvOn?'1':'0');}catch(e){}rvSync();try{setRender();}catch(e){}
   toast(rvOn?'Review-Modus an – tippe auf «Feedback» bei einer Funktion':'Review-Modus aus','info');}
@@ -12597,24 +12687,13 @@ function rvSync(){document.body.classList.toggle('review-on',rvOn);clearInterval
   const fb=document.getElementById('rvFab');if(fb){fb.classList.toggle('on',rvOn);fb.setAttribute('aria-pressed',rvOn?'true':'false');
     const t=fb.querySelector('span');if(t)t.textContent=tr(rvOn?'Feedback an':'Feedback');}
   document.querySelectorAll('.rv-btn,.rv-dot').forEach(b=>b.remove());if(!rvOn)return;rvPlace();rvT=setInterval(rvPlace,900);}
-// ...and every single layer tile, map toggle and side button gets its own
-// small badge, named after what it is.
-const RV_EACH=[['#lyGrid .ly-tile','Ebene'],['[id^="ov_"]','Auf der Karte'],['#mapFabs .mfab','Seitenknopf'],['#tabBar button','Navigation'],['#lySubs .ly-sub','Unterebene']];
-function rvPlaceEach(){RV_EACH.forEach(([sel,pre])=>{document.querySelectorAll(sel).forEach(el=>{
-    if(el.querySelector(':scope > .rv-dot'))return;const r=el.getBoundingClientRect();if(!r.width||!r.height)return;
-    const nm=(el.getAttribute('aria-label')||el.title||el.innerText||'').replace(/\s+/g,' ').trim().slice(0,50);if(!nm)return;
-    if(getComputedStyle(el).position==='static')el.style.position='relative';
-    const d=document.createElement('span');d.className='rv-dot';d.setAttribute('role','button');d.setAttribute('aria-label','Feedback zu '+nm);d.title='Feedback';
-    d.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5a2 2 0 0 1-2 2H9l-4.5 3.5V6a2 2 0 0 1 2-2H18a2 2 0 0 1 2 2z"/><path d="M12.25 6.9l.95 1.95 2.15.3-1.55 1.5.37 2.13-1.92-1-1.92 1 .37-2.13-1.55-1.5 2.15-.3z" fill="currentColor" stroke="none"/></svg>';
-    d.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();rvOpen(pre+': '+nm);},true);
-    d.addEventListener('pointerdown',e=>e.stopPropagation(),true);el.appendChild(d);});});}
-function rvPlace(){try{rvPlaceEach();}catch(e){}RV_TARGETS.forEach(([sel,name,wide])=>{let el=null;try{el=document.querySelector(sel);}catch(e){}
+function rvPlace(){RV_TARGETS.forEach(([sel,name,wide])=>{let el=null;try{el=document.querySelector(sel);}catch(e){}
   if(!el||el.querySelector(':scope > .rv-btn'))return;
   // only what is really on screen: panels that are slid away or faded out keep no tab
   const r=el.getBoundingClientRect(),cs=getComputedStyle(el);
   if(!r.width||!r.height||r.bottom<=0||r.top>=innerHeight||r.right<=0||r.left>=innerWidth||cs.visibility==='hidden'||+cs.opacity<0.2)return;
   if(getComputedStyle(el).position==='static')el.style.position='relative';
-  const b=document.createElement('button');b.type='button';b.className='rv-btn'+(r.width<140&&!wide?' rv-mini':'');b.dataset.f=name;
+  const b=document.createElement('button');b.type='button';b.className='rv-btn rv-mini';b.dataset.f=name;
   b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5a2 2 0 0 1-2 2H9l-4.5 3.5V6a2 2 0 0 1 2-2H18a2 2 0 0 1 2 2z"/><path d="M12.25 6.9l.95 1.95 2.15.3-1.55 1.5.37 2.13-1.92-1-1.92 1 .37-2.13-1.55-1.5 2.15-.3z" fill="currentColor" stroke="none"/></svg><span>Feedback</span>';b.setAttribute('aria-label','Feedback zu '+name);
   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();rvOpen(name);});el.appendChild(b);});}
 const rv={f:'',mood:null,stars:null,file:null};
