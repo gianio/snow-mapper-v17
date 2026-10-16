@@ -5,7 +5,12 @@
 #   va-state  the snowpack of every virtual slope (state.tar.gz), valid at the
 #             start of the last window. Restored at the start of each cycle,
 #             uploaded again at the end, even when the gates fail (the state
-#             is still the best estimate of the snowpack).
+#             is still the best estimate of the snowpack). It is one
+#             continuous run from bare ground on 1 September (config.py,
+#             season_start) and carries the season's drift history. Kept 35
+#             days, so even a month without cycles loses nothing: the next
+#             cycle integrates over the gap. The "Variant A season replay"
+#             workflow rebuilds it from the season start if it is ever lost.
 #   va-live   the export the app reads. Uploaded ONLY when the publish gates
 #             pass; the deploy picks the newest one, so a bad cycle simply
 #             leaves the previous good one online.
@@ -159,6 +164,13 @@ jobs:
           # 3 = ran fine, gates failed: keep the state, do not publish
           if [ "$RC" != "0" ] && [ "$RC" != "3" ]; then exit "$RC"; fi
 
+      # Model vs the SLF IMIS stations over the whole season (drift.py):
+      # verdict in the job summary, a warning/error annotation when the
+      # snowpack drifts, the chart on the site (data/variant_a_live/drift.html).
+      - name: Drift check
+        if: always() && steps.cycle.outputs.rc != ''
+        run: python tools/drift_check.py outputs/variant_a/drift.json
+
       - name: Upload the new state
         if: always() && hashFiles('state_new/state.tar.gz') != ''
         uses: actions/upload-artifact@v4
@@ -167,7 +179,7 @@ jobs:
           # national one the scheduled cycles carry
           name: ${{ inputs.limit == '' && 'va-state' || 'va-state-smoke' }}
           path: state_new/state.tar.gz
-          retention-days: 7
+          retention-days: 35
           compression-level: 0
 
       # Only a full cycle is publishable: a --limit smoke run must never end

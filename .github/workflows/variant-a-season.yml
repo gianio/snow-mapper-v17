@@ -1,0 +1,152 @@
+# Variant A season replay: rebuild the carried snowpack from bare ground at
+# the season start (1 September) up to the start of today's window, in
+# monthly steps, and hand it to the live cycles as the newest va-state.
+#
+# The live cycles carry the state on their own all season; this is for when
+# that chain is broken -- the va-state artifact expired, the matrix changed,
+# or the summary says "not a full season" (slopes that had to start
+# mid-winter on the short spin-up). Cost: roughly 50 s of SNOWPACK per
+# simulated day for the national matrix plus the forcing download, so a
+# full winter (~8 months) fits one job.
+name: Variant A season replay
+
+on:
+  workflow_dispatch:
+    inputs:
+      until:
+        description: "Advance to this date 00 UTC (blank = 5 days ago, where today's live window starts)"
+        default: ""
+        required: false
+      chunk_days:
+        description: "Days per step (each step saves the state)"
+        default: "30"
+        required: false
+      limit:
+        description: "Weather points (blank = all; a number = smoke test, kept apart from the live state)"
+        default: ""
+        required: false
+
+permissions:
+  contents: read
+  actions: read
+
+# never at the same time as a live cycle: both write va-state
+concurrency:
+  group: variant-a-live
+  cancel-in-progress: false
+
+env:
+  SNOWPACK_REF: master
+  PREFIX: ${{ github.workspace }}/snowpack-build/install
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Restore SNOWPACK build
+        id: spcache
+        uses: actions/cache/restore@v4
+        with:
+          path: snowpack-build/install
+          key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
+
+      - name: Build MeteoIO + SNOWPACK
+        if: steps.spcache.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          git clone --depth 1 --branch "$SNOWPACK_REF" \
+            https://github.com/snowpack-model/snowpack.git snowpack-build/src
+          for m in meteoio snowpack; do
+            cmake -S "snowpack-build/src/Source/$m" -B "snowpack-build/b-$m" \
+              -DCMAKE_BUILD_TYPE=release -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+              -DCMAKE_PREFIX_PATH="$PREFIX" -DMETEOIO_ROOT="$PREFIX"
+            cmake --build "snowpack-build/b-$m" -j"$(nproc)"
+            cmake --install "snowpack-build/b-$m"
+          done
+          rm -rf snowpack-build/src snowpack-build/b-*
+
+      - name: Save SNOWPACK build
+        if: steps.spcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: snowpack-build/install
+          key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
+
+      - run: pip install -r requirements.txt
+
+      - name: Restore national DEM
+        id: demcache
+        uses: actions/cache/restore@v4
+        with:
+          path: variant_a/data/dem
+          key: variant-a-dem-lv03-250m-v1
+
+      - name: Build national DEM from Copernicus
+        if: steps.demcache.outputs.cache-hit != 'true'
+        run: python tools/make_variant_a_dem.py
+
+      # Only the side files of the current state travel on (the season's
+      # drift history, the precipitation-pattern history); the snowpack
+      # itself is rebuilt from bare ground.
+      - name: Keep the drift history of the current state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p s0 old
+          NAME=${{ inputs.limit == '' && 'va-state' || 'va-state-smoke' }}
+          RID=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=$NAME&per_page=20" \
+                --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .workflow_run.id // empty')
+          if [ -n "$RID" ]; then
+            gh run download "$RID" -n "$NAME" -D old
+            tar -xzf old/state.tar.gz -C old
+            cp old/drift_hist.json old/precip_hist.npz s0/ 2>/dev/null || true
+            ls -la s0
+          fi
+
+      - name: Replay the season
+        id: replay
+        env:
+          SNOWPACK_BIN: ${{ github.workspace }}/snowpack-build/install/bin/snowpack
+          SNOWPACK_LIBS: ${{ github.workspace }}/snowpack-build/install/lib
+        run: |
+          set -eo pipefail
+          START=$(python -c "from datetime import datetime; from variant_a import config; print(config.season_start(datetime.utcnow()).date())")
+          UNTIL="${{ inputs.until }}"; [ -z "$UNTIL" ] && UNTIL=$(date -u -d '5 days ago' +%F)
+          STEP=${{ inputs.chunk_days || '30' }}
+          L=""; [ -n "${{ inputs.limit }}" ] && L="--limit ${{ inputs.limit }}"
+          echo "season start $START, replay until $UNTIL in $STEP-day steps"
+          CUR=s0; D=$START; i=0
+          while [ "$D" \< "$UNTIL" ]; do
+            D=$(date -u -d "$D + $STEP days" +%F); [ "$D" \> "$UNTIL" ] && D=$UNTIL
+            i=$((i+1)); NEXT=s$i
+            echo "::group::step $i -> $D"
+            python -u run_variant_a.py --live --advance-only --season-replay --date "$D" $L \
+              --state-dir "$CUR" --state-out "$NEXT" 2>&1 | tee -a replay.log
+            echo "::endgroup::"
+            rm -rf "$CUR"; CUR=$NEXT
+            echo "final=$CUR" >> "$GITHUB_OUTPUT"
+          done
+          {
+            echo "### Variant A season replay"
+            echo "From bare ground on $START to $UNTIL in $i steps."
+            grep -E "state saved|\[timing\]" replay.log | sed 's/^/    /'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Same name as the live cycles' state: being the newest, the next
+      # live cycle continues from it.
+      - name: Hand the state to the live cycles
+        if: always() && steps.replay.outputs.final != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.limit == '' && 'va-state' || 'va-state-smoke' }}
+          path: ${{ steps.replay.outputs.final }}/state.tar.gz
+          retention-days: 35
+          compression-level: 0

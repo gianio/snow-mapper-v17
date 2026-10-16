@@ -15,6 +15,13 @@ through all of it knows that. So each live cycle
 The state therefore always lags "now" by the window's past half (5 days). It
 is only ever advanced with weather from the past, never with a forecast.
 
+It lives for a whole season (config.season_start): from bare ground on
+1 September to the next 1 September, when it is dropped and the new season
+starts bare again. A gap between cycles (a paused schedule, a failed week)
+is integrated over with the archived weather instead of starting over; only
+a gap longer than MAX_GAP_DAYS -- more than a cycle can integrate -- needs
+the season replay workflow.
+
 Stored as a directory -- meta.json + sno/<run_id>.sno -- which the workflow
 tars and keeps as a GitHub Actions artifact between runs.
 """
@@ -24,7 +31,7 @@ from datetime import datetime
 from pathlib import Path
 
 VERSION = 1
-MAX_GAP_DAYS = 20          # older than this and a run is cold-started instead
+MAX_GAP_DAYS = 60          # a longer gap is too much for one cycle: season replay
 ISO = "%Y-%m-%dT%H:%M"
 
 
@@ -59,8 +66,14 @@ def available(st, run_ids, window_start):
         print(f"  [state] valid at {st['time']:%Y-%m-%d %H:%M}, after the window "
               f"start {window_start:%Y-%m-%d %H:%M}: not usable")
         return set()
+    from . import config
+    if config.season_start(st["time"]) != config.season_start(window_start):
+        print(f"  [state] from season {config.season_label(st['time'])}, the window is in "
+              f"{config.season_label(window_start)}: new season, starting on bare ground")
+        return set()
     if (window_start - st["time"]).days > MAX_GAP_DAYS:
-        print(f"  [state] {(window_start - st['time']).days} days old: cold start")
+        print(f"  [state] {(window_start - st['time']).days} days old: more than one cycle "
+              f"can integrate -- run the 'Variant A season replay' workflow")
         return set()
     have = {p.stem for p in st["sno"].glob("*.sno")}
     return {r for r in run_ids if r in have}
@@ -69,6 +82,12 @@ def available(st, run_ids, window_start):
 def save(state_dir: Path, time: datetime, sno_dir: Path, meta_extra=None, pack=True, files=()):
     """Write the new state. `sno_dir` holds <run_id>.sno valid at `time`."""
     state_dir = Path(state_dir)
+    # side files may sit in the directory about to be replaced: read first
+    side = []
+    for f in files or ():
+        f = Path(f)
+        if f.exists():
+            side.append((f.name, f.read_bytes()))
     if state_dir.exists():
         shutil.rmtree(state_dir)
     (state_dir / "sno").mkdir(parents=True)
@@ -82,11 +101,9 @@ def save(state_dir: Path, time: datetime, sno_dir: Path, meta_extra=None, pack=T
     (state_dir / "meta.json").write_text(json.dumps(meta, indent=1))
     # side files that travel with the state (e.g. precip_hist.npz)
     extra = []
-    for f in files or ():
-        f = Path(f)
-        if f.exists():
-            shutil.copy2(f, state_dir / f.name)
-            extra.append(f.name)
+    for name, data in side:
+        (state_dir / name).write_bytes(data)
+        extra.append(name)
     if pack:
         with tarfile.open(state_dir / "state.tar.gz", "w:gz") as tf:
             tf.add(state_dir / "meta.json", arcname="meta.json")

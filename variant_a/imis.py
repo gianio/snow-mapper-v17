@@ -22,6 +22,7 @@ Two uses, both per weather point:
 """
 from __future__ import annotations
 import math
+import zlib
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -33,6 +34,15 @@ DAMP_CM = 20.0             # added to both sides of the ratio: small HS is noisy
 STEP_EXP = 0.5             # per-cycle move: factor *= ratio ** STEP_EXP
 F_MIN, F_MAX = 0.5, 2.0    # hard bounds on the precipitation factor
 R_MIN, R_MAX = 0.7, 1.4    # bounds on one cycle's ratio
+HOLDOUT_MOD = 4            # every 4th station (by a hash of its code) is held
+                           # out of the correction, so the drift check
+                           # (drift.py) has stations the model was never
+                           # nudged towards
+
+
+def is_holdout(code):
+    """Stable across runs and machines (crc32, not Python's salted hash)."""
+    return zlib.crc32(str(code).encode()) % HOLDOUT_MOD == 0
 
 
 def _km(lat1, lon1, lat2, lon2):
@@ -78,17 +88,19 @@ def fetch(period_days=7, workers=8):
         return [s for s in ex.map(one, st) if s.hs]
 
 
-def compare(stations, wps, runs, results, layer_ts, mets, now=None):
+def compare(stations, wps, runs, results, layer_ts, mets, now=None, collect=None):
     """Per matched station: model vs measured HS over the past frames.
 
     Returns (rows, summary). Each row: station, wp, elev, n, bias, mae,
-    last_meas, last_model (cm)."""
+    last_meas, last_model (cm), holdout. `collect` (a dict), when given,
+    receives every station's hourly (time, measured, model) pairs for the
+    drift history."""
     i_hs = mets.index("total_hs_cm")
     now = now or datetime.utcnow()
     past = [(i, t) for i, t in enumerate(layer_ts) if t <= now]
     rows = []
     for s, w in match_stations(stations, wps):
-        pairs = []
+        pairs, pairs_t = [], []
         for i, t in past:
             meas = s.hs.get(t.strftime("%Y-%m-%dT%H"))
             if meas is None:
@@ -97,6 +109,11 @@ def compare(stations, wps, runs, results, layer_ts, mets, now=None):
             if mod is None:
                 continue
             pairs.append((meas, mod))
+            pairs_t.append((t, meas, mod))
+        if collect is not None and pairs:
+            collect[s.code] = {"label": s.label, "elev": round(s.elevation), "wp": w["id"],
+                               "tile": w.get("tile"), "holdout": is_holdout(s.code),
+                               "pairs": pairs_t}
         if len(pairs) < 3:
             continue
         m = np.array(pairs)
@@ -106,7 +123,8 @@ def compare(stations, wps, runs, results, layer_ts, mets, now=None):
                      "bias": round(float(err.mean()), 1),
                      "mae": round(float(np.abs(err).mean()), 1),
                      "last_meas": round(float(m[-1, 0]), 1),
-                     "last_model": round(float(m[-1, 1]), 1)})
+                     "last_model": round(float(m[-1, 1]), 1),
+                     "holdout": is_holdout(s.code)})
     if not rows:
         return rows, {"stations": 0}
     b = np.array([r["bias"] for r in rows]); a = np.array([r["mae"] for r in rows])
@@ -123,6 +141,8 @@ def update_factors(rows, old=None):
     old = dict(old or {})
     by = {}
     for r in rows:
+        if r.get("holdout"):
+            continue
         ratio = (r["last_meas"] + DAMP_CM) / (r["last_model"] + DAMP_CM)
         by.setdefault(r["wp"], []).append(min(R_MAX, max(R_MIN, ratio)))
     new = dict(old)

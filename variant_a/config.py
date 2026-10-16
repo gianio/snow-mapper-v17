@@ -67,6 +67,37 @@ INIT_RHO = [300, 300, 310, 320, 330, 340, 350]           # kg/m3
 # The price: deep weak layers from early winter are not modelled.
 SPINUP_DAYS = 21
 
+# ── The season: one continuous snowpack from bare ground ─────────────────────
+# Live mode does not spin up: it carries every virtual slope from the start
+# of the season, so the November crust and the December depth hoar are still
+# in the column in March. The season starts on 1 September (snow at the high
+# bands often arrives in September and belongs to the coming winter) on bare
+# ground, and the carried state is dropped at the next 1 September.
+#
+# A slope that has to start cold (no carried state, or a run added to the
+# matrix) starts at the season start too, as long as that is at most
+# SEASON_COLD_MAX_DAYS before the window: integrating that far costs roughly
+# 50 s per simulated day for the national matrix. Later in the winter an
+# inline cold start would not fit a cycle; it then falls back to the short
+# SPINUP_DAYS spin-up on the assumed base above, the manifest says so, and
+# the "Variant A season replay" workflow rebuilds the whole season.
+SEASON_START_MONTH = 9
+SEASON_START_DAY = 1
+SEASON_COLD_MAX_DAYS = 75
+
+
+def season_start(t):
+    """Start (naive datetime, 00 UTC) of the snow season containing `t`."""
+    from datetime import datetime
+    y = t.year if (t.month, t.day) >= (SEASON_START_MONTH, SEASON_START_DAY) else t.year - 1
+    return datetime(y, SEASON_START_MONTH, SEASON_START_DAY)
+
+
+def season_label(t):
+    """'2026/27' for the season containing `t`."""
+    y = season_start(t).year
+    return f"{y}/{(y + 1) % 100:02d}"
+
 # ── Weather-point matrix (the Disentis design, nationally) ──────────────────
 # Weather is sampled at a FEW points; around each one SNOWPACK runs a full
 # matrix of virtual slopes that SHARE that weather, so the only differences
