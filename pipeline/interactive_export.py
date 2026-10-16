@@ -1024,7 +1024,7 @@ def read_bin_blob(path: Path):
 
 def minify_shell(out_dir: Path) -> None:
     """Minify app.js and the inline CSS of index.html with esbuild (the deploy
-    sets SNOW_MINIFY=1 and installs it). Best effort: without esbuild, or if
+    runs it after its tests; SNOW_MINIFY=1 does it inside the export). Best effort: without esbuild, or if
     the result does not pass `node --check`, the readable files stay.
 
     Plain transform, no bundling and no --format: esbuild then keeps every
