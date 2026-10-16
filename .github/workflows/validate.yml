@@ -61,6 +61,8 @@ jobs:
       # on the ProfileDate instead of before it, and a PSUM accumulation
       # period that disagrees with CALCULATION_STEP_LENGTH. Both made SNOWPACK
       # exit 0 having written nothing.
+      - name: Binary data blob (SMB1) round trip
+        run: python tools/test_bin_blob.py
       - name: Variant A pipeline plumbing (forcing window, .ini, caches)
         run: python tools/test_variant_a_forcing.py
       - name: Community reports vs SNOWPACK (offline)
