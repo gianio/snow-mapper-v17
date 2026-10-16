@@ -341,12 +341,13 @@ def run_matrix(runs, target_date, win, step_h, prof_step_h, workers=None, spinup
 
 
 def advance_state(runs, carried, st_sno, st_time, to_time, out_dir: Path,
-                  workers=None, spinup_days=None, bare=False):
+                  workers=None, spinup_days=None, bare=False, cold_from=None):
     """Integrate every run to `to_time` and write its snowpack there.
 
     `carried` are the run ids that continue from `st_sno` (valid at
-    `st_time`); every other run cold-starts `spinup_days` before `to_time`
-    from the synthetic base (or from bare ground, `bare`). Nothing is written
+    `st_time`); every other run cold-starts at `cold_from` (live: the season
+    start), else `spinup_days` before `to_time`, from the synthetic base or
+    from bare ground (`bare`). Nothing is written
     but the final .sno: out_dir/<run_id>.sno. Returns the ids that made it.
     """
     from . import snowpack_runner
@@ -357,7 +358,7 @@ def advance_state(runs, carried, st_sno, st_time, to_time, out_dir: Path,
     for d in (sno_dir, ini_dir, runs_dir, raw, Path(out_dir)):
         d.mkdir(parents=True, exist_ok=True)
     meteo_dir = config.WORK_DIR / "meteo"
-    cold_start = (to_time - timedelta(days=spinup_days)).date().isoformat()
+    cold_start = (cold_from or (to_time - timedelta(days=spinup_days))).date().isoformat()
     jobs = []
     n_cold = 0
     for r in runs:
@@ -375,7 +376,8 @@ def advance_state(runs, carried, st_sno, st_time, to_time, out_dir: Path,
         jobs.append((str(ini_dir / f"{r['id']}.ini"), to_time.strftime("%Y-%m-%dT%H:%M"),
                      str(raw / f"{r['id']}_va.sno")))
     print(f"  state advance to {to_time:%Y-%m-%d %H:%M}: {len(jobs) - n_cold} carried, "
-          f"{n_cold} cold-start{' (bare ground)' if bare and n_cold else ''}")
+          f"{n_cold} cold-start{' (bare ground)' if bare and n_cold else ''}"
+          f"{' from ' + cold_start if n_cold else ''}")
     ok, fail = set(), []
     t0 = time.time()
     workers = workers or (os.cpu_count() or 4)

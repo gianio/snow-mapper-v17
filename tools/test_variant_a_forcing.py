@@ -747,6 +747,168 @@ def test_imis_correction():
     for _ in range(20):
         f = imis.update_factors(rows, f)
     check("the factor never leaves its bounds", f["w0"] <= imis.F_MAX, str(f))
+    held = [dict(r, holdout=True) for r in rows]
+    check("held-out stations never move the factor", imis.update_factors(held, {"w0": 1.0}) == {"w0": 1.0})
+    col = {}
+    imis.compare(st, wps, runs, res, frames, METS, now=frames[-1], collect=col)
+    check("the comparison hands its hourly pairs to the drift history",
+          len(col.get("DAV2", {}).get("pairs", [])) == len(frames), str(list(col)))
+
+
+def test_season_state():
+    """The carried snowpack lives for a whole season and starts it bare."""
+    print("season-long state")
+    from variant_a import state
+    check("season starts 1 September", config.season_start(datetime(2027, 2, 10)) == datetime(2026, 9, 1)
+          and config.season_start(datetime(2026, 9, 1)) == datetime(2026, 9, 1)
+          and config.season_start(datetime(2026, 8, 31, 23)) == datetime(2025, 9, 1),
+          config.season_label(datetime(2027, 2, 10)))
+    check("season label", config.season_label(datetime(2026, 10, 16)) == "2026/27")
+    plan = run_variant_a._cold_start_plan(datetime(2026, 10, 11))
+    check("an early-season cold start begins bare at the season start",
+          plan == (datetime(2026, 9, 1), True, "season"), str(plan))
+    plan = run_variant_a._cold_start_plan(datetime(2027, 2, 1))
+    check("mid-winter falls back to the short spin-up on the assumed base",
+          plan[2] == "spinup" and plan[1] is False
+          and plan[0] == datetime(2027, 2, 1) - timedelta(days=config.SPINUP_DAYS), str(plan))
+    check("a season replay always starts at the season start",
+          run_variant_a._cold_start_plan(datetime(2027, 2, 1), replay=True)[2] == "season")
+    with tempfile.TemporaryDirectory() as td:
+        td = Path(td)
+        sno = td / "src"; sno.mkdir()
+        (sno / "w000_1800_F.sno").write_text("SMET 1.1 ASCII\n")
+        (td / "hist.json").write_text("{}")
+        t = datetime(2027, 2, 1)
+        state.save(td / "st", t, sno, {"season": "2026/27"}, files=[td / "hist.json"])
+        st = state.load(td / "st")
+        ids = {"w000_1800_F"}
+        check("a 40-day gap in the same season is integrated over, not restarted",
+              state.available(st, ids, t + timedelta(days=40)) == ids)
+        check("the next season starts over", state.available(st, ids, datetime(2027, 9, 2)) == set())
+        # saving into the directory the side files come from must not lose them
+        (td / "st" / "drift_hist.json").write_text('{"x": 1}')
+        state.save(td / "st", t, sno, {}, files=[td / "st" / "drift_hist.json"])
+        check("side files survive a save onto their own directory",
+              (td / "st" / "drift_hist.json").read_text() == '{"x": 1}')
+    o = run_variant_a._origin(None, set(), 10, datetime(2026, 9, 1), True, "season")
+    check("origin of a bare season start", o["kind"] == "season" and run_variant_a.full_season(o), str(o))
+    st = {"meta": {"origin": o}}
+    o2 = run_variant_a._origin(st, {"a"}, 3, datetime(2027, 1, 10), False, "spinup")
+    check("a later spin-up start marks the season as not full",
+          not run_variant_a.full_season(o2) and o2["kind"] == "season", str(o2))
+    legacy = run_variant_a._origin({"meta": {}}, {"a"}, 0, None, False, "season")
+    check("a state from before season tracking counts as carried", run_variant_a.full_season(legacy))
+
+
+def test_advance_only():
+    """--advance-only: season replay steps chain state to state, side files ride along."""
+    print("season replay step (--advance-only)")
+    from variant_a import matrix, subregions, state as state_mod
+    wps = [{"id": "w000", "tile": 2, "lat": 46.8, "lon": 9.8, "ref_elev": 2000.0, "bands": [1800.0]}]
+    runs = [{"id": "w000_1800_F", "wp": "w000", "elev": 1800.0, "slope": 0.0, "lat": 46.8, "lon": 9.8}]
+    seen = []
+
+    def fake_adv(runs_, carried, st_sno, st_time, to_time, out_dir, workers=None, bare=False, cold_from=None):
+        seen.append({"carried": set(carried), "to": to_time, "bare": bare, "cold_from": cold_from})
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        for r in runs_:
+            (Path(out_dir) / f"{r['id']}.sno").write_text("x")
+        return {r["id"] for r in runs_}
+
+    saved = {}
+    patches = [(subregions, "load_national_grid", lambda: types.SimpleNamespace(nr=1, nc=1)),
+               (subregions, "tile_ids", lambda g: [2]),
+               (matrix, "weather_points", lambda g, spacing_km=None: wps),
+               (matrix, "matrix_runs", lambda w: runs),
+               (matrix, "band_values", lambda: [1800.0]),
+               (matrix, "advance_state", fake_adv),
+               (forcing, "build_forcing_matrix",
+                lambda *a, **k: saved.setdefault("since", []).append(k.get("since")) or {"w000": "m"})]
+    old = [(m, n, getattr(m, n)) for m, n, _ in patches]
+    old_argv = sys.argv
+    try:
+        for m, n, f in patches:
+            setattr(m, n, f)
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            (td / "s0").mkdir()
+            (td / "s0" / "drift_hist.json").write_text('{"keep": 1}')
+            work = config.WORK_DIR
+            config.WORK_DIR = td / "work"
+            try:
+                sys.argv = ["run_variant_a.py", "--live", "--advance-only", "--season-replay",
+                            "--date", "2026-10-01", "--state-dir", str(td / "s0"), "--state-out", str(td / "s1")]
+                run_variant_a.main()
+                sys.argv = ["run_variant_a.py", "--live", "--advance-only", "--season-replay",
+                            "--date", "2026-10-11", "--state-dir", str(td / "s1"), "--state-out", str(td / "s2")]
+                run_variant_a.main()
+            finally:
+                config.WORK_DIR = work
+            check("step 1 starts bare at the season start",
+                  seen[0]["carried"] == set() and seen[0]["bare"] and seen[0]["cold_from"] == datetime(2026, 9, 1)
+                  and seen[0]["to"] == datetime(2026, 10, 1), str(seen[0]))
+            check("step 2 continues the state of step 1", seen[1]["carried"] == {"w000_1800_F"}
+                  and seen[1]["to"] == datetime(2026, 10, 11), str(seen[1]))
+            check("forcing reaches back to where each step starts",
+                  saved["since"] == [datetime(2026, 9, 1), datetime(2026, 10, 1)], str(saved["since"]))
+            st = state_mod.load(td / "s2")
+            check("the state says season and origin", st["meta"]["season"] == "2026/27"
+                  and st["meta"]["origin"]["kind"] == "season" and st["meta"]["cycle"] == 2, str(st["meta"]))
+            check("the drift history rides along through the replay",
+                  (td / "s2" / "drift_hist.json").read_text() == '{"keep": 1}')
+    finally:
+        sys.argv = old_argv
+        for m, n, f in old:
+            setattr(m, n, f)
+
+
+def test_drift():
+    """Drift: held-out stations, daily history, the verdict and the page."""
+    print("drift check")
+    from variant_a import drift, imis
+    codes = [f"S{i:03d}" for i in range(400)]
+    share = sum(imis.is_holdout(c) for c in codes) / len(codes)
+    check("about a quarter of the stations are held out", 0.18 < share < 0.32, f"{share:.2f}")
+    check("the hold-out is stable", imis.is_holdout("WFJ2") == imis.is_holdout("WFJ2"))
+
+    def hist_with(err_of_day, n_st=24, days=30, meas=100.0):
+        h = {"version": drift.VERSION, "season": "2026/27", "stations": {}}
+        d0 = datetime(2027, 1, 1)
+        for k in range(n_st):
+            code = codes[k]
+            col = {}
+            for i in range(days):
+                d = d0 + timedelta(days=i)
+                pairs = [(d + timedelta(hours=2 * j), meas, meas + err_of_day(i, k)) for j in range(12)]
+                col[code] = {"label": code, "elev": 2200, "wp": "w0", "tile": 2 + k % 3,
+                             "holdout": imis.is_holdout(code), "pairs": pairs}
+                drift.update(h, col)
+        return h
+
+    ok = drift.evaluate(hist_with(lambda i, k: (-1) ** k * 6.0))
+    check("scatter without a common sign is OK", ok["status"] == "OK", str(ok["all"].get("reasons")))
+    bias = drift.evaluate(hist_with(lambda i, k: 35.0 + (k % 3)))
+    check("a shared large bias is DRIFT", bias["status"] == "DRIFT"
+          and bias["all"]["bias_cm"] > 30, str(bias["all"].get("reasons")))
+    grow = drift.evaluate(hist_with(lambda i, k: -0.9 * i))
+    check("a steadily growing error is caught by the trend",
+          grow["status"] in ("WATCH", "DRIFT") and grow["all"]["trend_cm_per_day"] < -0.8,
+          f"{grow['status']} {grow['all'].get('trend_cm_per_day')}")
+    bare = drift.evaluate(hist_with(lambda i, k: 0.0, meas=0.0))
+    check("no snow anywhere: no verdict", bare["status"] == "NODATA")
+    check("the job summary names the status", "DRIFT" in drift.markdown(bias))
+    page = drift.render_html(bias, hist_with(lambda i, k: 35.0, days=5))
+    check("the page renders a chart and the status", "<svg" in page and "Drift" in page
+          and "polyline" in page)
+    # a day already in the history is only replaced by a cycle that saw more of it
+    h = {"version": drift.VERSION, "season": "2026/27", "stations": {}}
+    d = datetime(2027, 1, 5)
+    drift.update(h, {"A": {"pairs": [(d + timedelta(hours=2 * j), 50.0, 60.0) for j in range(12)]}})
+    drift.update(h, {"A": {"pairs": [(d + timedelta(hours=2 * j), 50.0, 90.0) for j in range(5)]}})
+    check("a partial day does not overwrite a complete one",
+          h["stations"]["A"]["days"]["2027-01-05"][1] == 60.0, str(h["stations"]["A"]["days"]))
+    check("history of another season is not loaded",
+          drift.load(None, "2027/28")["stations"] == {})
 
 
 def test_gates():
@@ -1160,7 +1322,7 @@ if __name__ == "__main__":
               test_forcing_fallback, test_forcing_matrix_shares_weather,
               test_sno_base_is_real_snow, test_wgs84_map_matches_rasterio,
               test_state_roundtrip, test_wind_indices, test_terrain_shading,
-              test_imis_correction, test_gates, test_classifier_fixes, test_pack_roundtrip,
+              test_imis_correction, test_season_state, test_advance_only, test_drift, test_gates, test_classifier_fixes, test_pack_roundtrip,
               test_rate_limit_backoff, test_precip_pattern, test_ski6_and_wind_classes,
               test_temperature_by_height):
         t()

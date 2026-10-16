@@ -130,6 +130,13 @@ def main():
     ap.add_argument("--ogd-dir", default=None,
                     help="MeteoSwiss OGD point series (tools/ogd_extract.py) to put "
                          "over the Open-Meteo forecast hours")
+    ap.add_argument("--advance-only", action="store_true",
+                    help="live: only integrate the carried state to --date 00:00 "
+                         "and save it -- no window run, no export. The season "
+                         "replay workflow calls this in monthly steps.")
+    ap.add_argument("--season-replay", action="store_true",
+                    help="live: cold starts begin at the season start however "
+                         "long ago that is (see config.SEASON_COLD_MAX_DAYS)")
     ap.add_argument("--write-points", default=None,
                     help="write the weather points as JSON (for ogd_extract) and exit")
     ap.add_argument("--no-shade", action="store_true",
@@ -235,6 +242,61 @@ def main():
         publish_mod.publish(out_dir)
 
 
+def _cold_start_plan(t0, replay=False):
+    """(cold_from, bare, kind) for a run that cannot continue a carried state.
+
+    'season': from bare ground at the season start -- a full season, the
+    normal case. 'spinup': later in the winter that no longer fits a cycle,
+    so the old short spin-up on the assumed base; the season replay workflow
+    is what repairs it."""
+    ss = config.season_start(t0)
+    if replay or (t0 - ss).days <= config.SEASON_COLD_MAX_DAYS:
+        return ss, True, "season"
+    return t0 - timedelta(days=config.SPINUP_DAYS), False, "spinup"
+
+
+def _origin(st, carried, n_cold, cold_from, bare, kind):
+    """Where the snowpack in the state comes from, carried from cycle to cycle."""
+    prev = (((st or {}).get("meta") or {}).get("origin")) if carried else None
+    if carried and prev is None:
+        prev = {"kind": "carried", "note": "started before the season was tracked"}
+    if not n_cold:
+        return prev
+    new = {"kind": kind, "from": cold_from.strftime("%Y-%m-%d"), "bare": bool(bare),
+           "runs": int(n_cold)}
+    if prev is None:
+        return new
+    out = dict(prev)
+    out["later_cold_starts"] = (list(prev.get("later_cold_starts") or []) + [new])[-5:]
+    return out
+
+
+def full_season(origin):
+    """True when every slope integrates from the season start (or carried)."""
+    if not origin:
+        return False
+    parts = [origin] + list(origin.get("later_cold_starts") or [])
+    return all(p.get("kind") != "spinup" for p in parts)
+
+
+def _state_meta(st, factors, origin, t, extra=None):
+    m = ((st or {}).get("meta") or {})
+    out = {"precip_factor": factors, "cycle": int(m.get("cycle", 0)) + 1,
+           "season": config.season_label(t), "origin": origin}
+    out.update(extra or {})
+    return out
+
+
+def _carry_files(state_dir):
+    """Side files of the old state that travel on unchanged (advance-only)."""
+    from pathlib import Path as _P
+    from variant_a import precip as precip_mod, drift
+    if not state_dir:
+        return []
+    return [f for f in (_P(state_dir) / precip_mod.HIST_FILE, _P(state_dir) / drift.HIST_FILE)
+            if f.exists()]
+
+
 def _main_matrix(args, grid, win, _t, _t0, _time):
     """Weather points -> a height x aspect x slope matrix of SNOWPACK runs that
     share each point's weather -> grid by similar exposure.
@@ -274,24 +336,40 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
     # Terrain effects the 1-D runs cannot see: horizon shading for this
     # window's dates, and the forest mask.
     _ts = _time.time()
-    shade = None if args.no_shade else terrain.shade_for_window(grid, win)
-    forest = terrain.load_forest(grid)
+    if args.advance_only:
+        if not args.live:
+            raise SystemExit("--advance-only needs --live")
+        shade, forest = None, None
+    else:
+        shade = None if args.no_shade else terrain.shade_for_window(grid, win)
+        forest = terrain.load_forest(grid)
     _t["terrain"] = _time.time() - _ts
+    # Where this call integrates the carried state to: the start of the
+    # output window, or --date itself for a pure state advance.
+    adv_to = datetime.strptime(args.date, "%Y-%m-%d") if args.advance_only else win[0]
 
     # Live: what can continue from the carried snowpack?
     st, carried, factors = None, set(), {}
     since = None
+    cold_from, bare, origin, n_cold_plan = None, False, None, 0
     if args.live:
         st = state_mod.load(args.state_dir)
-        carried = state_mod.available(st, {r["id"] for r in runs}, win[0])
-        factors = dict((st or {}).get("meta", {}).get("precip_factor") or {})
-        cold_needed = len(carried) < len(runs)
-        since = win[0] - timedelta(days=config.SPINUP_DAYS) if cold_needed else st["time"]
+        carried = state_mod.available(st, {r["id"] for r in runs}, adv_to)
+        # precipitation factors belong to the season they were learnt in
+        same_season = st is not None and config.season_start(st["time"]) == config.season_start(adv_to)
+        factors = dict((st or {}).get("meta", {}).get("precip_factor") or {}) if same_season else {}
+        n_cold_plan = len(runs) - len(carried)
+        cold_from, bare, kind = _cold_start_plan(adv_to, args.season_replay)
+        since = cold_from if n_cold_plan else st["time"]
         if st is not None and carried:
             since = min(since, st["time"])
-        print(f"live: state {'valid at ' + st['time'].strftime('%Y-%m-%d %H:%M') if st else 'none'}"
+        origin = _origin(st, carried, n_cold_plan, cold_from, bare, kind)
+        print(f"live: season {config.season_label(adv_to)}, state "
+              f"{'valid at ' + st['time'].strftime('%Y-%m-%d %H:%M') if st else 'none'}"
               f", {len(carried)}/{len(runs)} runs carried, "
-              f"{sum(1 for v in factors.values() if v != 1.0)} precip corrections")
+              f"{sum(1 for v in factors.values() if v != 1.0)} precip corrections"
+              + (f"; {n_cold_plan} cold starts from {cold_from:%Y-%m-%d} ({kind}"
+                 f"{', bare ground' if bare else ', assumed base'})" if n_cold_plan else ""))
 
     # Live: ICON-CH1 2 m temperature from cells at each band's own height
     # (forecast hours); the other hours use the model's vertical profile.
@@ -299,7 +377,9 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
     band_t, band_summ = elevtemp.build(grid, wps, args.ogd_dir) if args.ogd_dir else (None, {"used": False})
 
     _ts = _time.time()
-    used = forcing.build_forcing_matrix(wps, runs, args.date, win, since=since,
+    used = forcing.build_forcing_matrix(wps, runs, args.date,
+                                        (adv_to, adv_to) if args.advance_only else win,
+                                        since=since,
                                         precip_factor=factors, ogd_dir=args.ogd_dir,
                                         band_temps=band_t)
     _t["forcing"] = _time.time() - _ts
@@ -313,13 +393,19 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
     if args.live:
         _ts = _time.time()
         sno_src = config.WORK_DIR / "state_new" / "sno"
-        # Autumn season start: no state yet and no snow to speak of, so the
-        # column starts on bare ground rather than on the synthetic base.
-        bare = win[0].month in (9, 10)
         matrix.advance_state(runs, carried, st["sno"] if st else None,
-                             st["time"] if st else None, win[0], sno_src,
-                             workers=args.workers, bare=bare)
+                             st["time"] if st else None, adv_to, sno_src,
+                             workers=args.workers, bare=bare, cold_from=cold_from)
         _t["advance"] = _time.time() - _ts
+        if args.advance_only:
+            meta = state_mod.save(args.state_out or args.state_dir, adv_to, sno_src,
+                                  _state_meta(st, factors, origin, adv_to),
+                                  files=_carry_files(args.state_dir))
+            _t["total"] = _time.time() - _t0
+            print(f"  state saved: {meta['runs']} runs valid at {meta['time']}, "
+                  f"season {meta['season']}, origin {meta['origin']}")
+            print("[timing] " + " ".join(f"{k}={v:.1f}s" for k, v in _t.items()))
+            return
 
     _ts = _time.time()
     results, layer_ts, prof_ts = matrix.run_matrix(
@@ -342,12 +428,14 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
     # IMIS: validation always when the window is recent enough for the API
     # (7 days back), correction only in live mode.
     rows, summary, new_factors = [], {"stations": 0}, factors
+    collected = {}
     recent = (datetime.utcnow() - win[0]).days <= 7 and win[0] <= datetime.utcnow()
     if (args.live or args.imis) and recent:
         _ts = _time.time()
         try:
             stations = imis.fetch()
-            rows, summary = imis.compare(stations, wps, runs, results, layer_ts, METS)
+            rows, summary = imis.compare(stations, wps, runs, results, layer_ts, METS,
+                                         collect=collected)
             if args.live:
                 new_factors = imis.update_factors(rows, factors)
             print(f"IMIS: {summary}")
@@ -370,6 +458,21 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
             print(f"community reports unavailable: {type(e).__name__}: {e}")
         _t["community"] = _time.time() - _ts
 
+    # Drift: this cycle's station comparison joins the season's history,
+    # and the history is judged (drift.py; drift.html is published with
+    # the export, the workflow puts the verdict into the job summary).
+    drift_res, drift_hist_path = None, None
+    if args.live:
+        from variant_a import drift
+        dh = drift.load(args.state_dir, config.season_label(win[0]))
+        n_new = drift.update(dh, collected)
+        drift_res = drift.evaluate(dh, full_season=full_season(origin), origin=origin)
+        drift_hist_path = drift.save(config.WORK_DIR / "drift" / drift.HIST_FILE, dh)
+        print(f"DRIFT: {drift_res['status']} ({n_new} station-days added); "
+              f"independent {drift_res['independent'].get('status')} "
+              f"{drift_res['independent'].get('bias_cm', '')}, all {drift_res['all'].get('status')} "
+              f"{drift_res['all'].get('bias_cm', '')}")
+
     # 1 km precipitation pattern (ICON-CH1 via OGD): new snow per cell
     # scaled by how much more/less fell there than at its weather points.
     from variant_a import precip as precip_mod
@@ -389,10 +492,17 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
         "precip_pattern": p_summ,
         "temperature_at_height": band_summ,
     }
+    if drift_res is not None:
+        extra["drift"] = {k: drift_res[k] for k in ("status", "season", "full_season")}
+        extra["drift"].update({k: {kk: vv for kk, vv in drift_res[k].items()
+                                   if kk not in ("worst", "by_subregion")}
+                               for k in ("independent", "all")})
     if args.live:
         extra["state"] = {"from": st["time"].strftime("%Y-%m-%dT%H:%M") if st else None,
                           "carried": len(carried), "runs": len(runs),
-                          "to": win[0].strftime("%Y-%m-%dT%H:%M")}
+                          "to": win[0].strftime("%Y-%m-%dT%H:%M"),
+                          "season": config.season_label(win[0]), "origin": origin,
+                          "full_season": full_season(origin)}
         extra["precip_factor"] = new_factors
     out_dir, manifest = export.export_matrix(grid, frames, wps, runs, results, prof_ts,
                                              forcing_models=used, forest=forest,
@@ -403,6 +513,16 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
     gate = gates.check(len(runs), results, runs, wps, len(layer_ts), len(manifest["tags"]),
                        manifest.get("_frame_stats", []), summary,
                        n_cold=(len(runs) - len(carried)) if args.live else 0)
+    if args.live:
+        if not full_season(origin):
+            gate["soft"].append("not a full season: some slopes started on the short spin-up "
+                                "-- run the 'Variant A season replay' workflow")
+        if drift_res is not None:
+            gate["soft"].append(f"drift: {drift_res['status']}")
+            from variant_a import drift as _drift
+            (out_dir / "drift.json").write_text(_json.dumps(drift_res, indent=1, default=str))
+            (out_dir / "drift.html").write_text(_drift.render_html(
+                drift_res, _json.loads(drift_hist_path.read_text())))
     manifest["gates"] = gate
     with open(out_dir / "manifest.json", "w") as f:
         _json.dump({k: v for k, v in manifest.items() if not k.startswith("_")}, f,
@@ -423,13 +543,16 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
             hp = config.WORK_DIR / "precip_hist" / precip_mod.HIST_FILE
             precip_mod.save_history(hp.parent, p_hist)
             hist_files.append(hp)
+        if drift_hist_path is not None:
+            hist_files.append(drift_hist_path)
         meta = state_mod.save(args.state_out or args.state_dir, win[0], sno_src,
-                              {"precip_factor": new_factors,
-                               "cycle": int(((st or {}).get("meta") or {}).get("cycle", 0)) + 1,
-                               "imis": summary,
-                               "community": {k: v for k, v in comm_summary.items() if k != "steps"}},
+                              _state_meta(st, new_factors, origin, win[0], {
+                                  "imis": summary,
+                                  "community": {k: v for k, v in comm_summary.items() if k != "steps"},
+                                  "drift": (drift_res or {}).get("status")}),
                               files=hist_files)
-        print(f"  state saved: {meta['runs']} runs valid at {meta['time']}, cycle {meta['cycle']}")
+        print(f"  state saved: {meta['runs']} runs valid at {meta['time']}, cycle {meta['cycle']}, "
+              f"season {meta['season']}, full season {full_season(origin)}")
 
     _t["total"] = _time.time() - _t0
     n = len(runs)

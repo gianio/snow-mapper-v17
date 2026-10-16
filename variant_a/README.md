@@ -131,6 +131,30 @@ The run log prints the share of run-hours from each source.
   SwissMetNet snow depth at the stations that measure it, SLF observer profiles, and
   the app's own user reports ("Pulver? Harsch? Sulz?") as ground truth on slopes.
 
+### One snowpack per season, and how drift is caught
+
+The live state is one continuous SNOWPACK run per virtual slope from bare
+ground on **1 September** (`config.season_start`) to the next 1 September;
+there is no spin-up and no reset in between. A gap between cycles is
+integrated over with the archived weather (up to `state.MAX_GAP_DAYS`).
+A slope that has to start cold starts at the season start while that is at
+most `SEASON_COLD_MAX_DAYS` back; later it falls back to the short spin-up,
+the manifest says "not a full season", and the **Variant A season replay**
+workflow rebuilds the whole season in monthly steps (`--advance-only`).
+
+Because nothing is reset, systematic errors accumulate: that is **drift**.
+`drift.py` keeps a daily history of model vs measured snow height at the
+SLF IMIS stations through the season (it travels with the state) and
+judges the last 7 days: shared bias (most stations, same sign), its size
+relative to the snow there, and the error's 21-day trend. Statuses OK /
+WATCH / DRIFT / NODATA; exact thresholds in the module docstring. Every 4th
+station (`imis.is_holdout`) is never used for the precipitation correction,
+so the held-out stations are an independent test. Each live cycle writes
+`drift.json` + `drift.html` (published at
+`data/variant_a_live/drift.html`) and the "Drift check" step puts the
+verdict into the job summary, with a warning/error annotation on
+WATCH/DRIFT.
+
 ## Community reports (`community.py`)
 
 Every live cycle compares the public community reports of the last 72 h with

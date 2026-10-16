@@ -3855,7 +3855,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .trk-vis button span{font:500 11.5px Inter,system-ui;color:var(--fg2)}
  .trk-vis button.on{border-color:var(--accent);background:var(--accent-soft)}
  .pv{margin:4px 0 6px}
- .pv-stats{display:grid;grid-template-columns:repeat(4,1fr);text-align:center;margin:4px 0 12px}
+ .pv-stats{display:grid;grid-template-columns:repeat(5,1fr);text-align:center;margin:4px 0 12px}
  .pv-stats b{display:block;font:800 18px Inter,system-ui;color:var(--fg);letter-spacing:-.02em}
  .pv-stats span{font:600 11.5px Inter,system-ui;color:var(--fg2)}
  .pv-btns{display:flex;gap:6px;margin-bottom:14px}
@@ -4122,7 +4122,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:var(--fg);font:800 12.5px/1 var(--font,Inter),system-ui;
    box-shadow:0 4px 14px rgba(15,23,42,.14);cursor:pointer;transition:background .2s,color .2s,transform .15s}
  #rvFab svg{width:17px;height:17px;color:#E0A100}
- #rvFab.on{background:#F4B400;border-color:#F4B400;color:#2b2100}
+ #rvFab:hover{background:#FFF4CC}
  #rvFab.on svg{color:#2b2100}
  #rvFab:active{transform:scale(.95)}
  body.nav-screen #rvFab,body.ly-open #rvFab,body.insp-open #rvFab,body.trk-open #rvFab,body.draw-on #rvFab,body.ts-open #rvFab,body.wcv-open #rvFab{display:none}
@@ -4150,6 +4150,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .rv-hd{display:flex;align-items:flex-start;gap:10px}.rv-hd>div{flex:1}
  .rv-hd b{display:block;font:800 18px var(--font-d,inherit)}.rv-hd small{color:var(--fg2);font:700 13px var(--font,inherit)}
  .rv-hd button{width:34px;height:34px;border-radius:50%;border:0;background:var(--fill);color:var(--fg);font-size:20px;cursor:pointer}
+ .rv-area{display:flex;align-items:center;gap:10px;font:700 13px var(--font,inherit);color:var(--fg2)}
+ .rv-area select{flex:1;height:40px;border-radius:12px;border:1px solid var(--hair);background:var(--fill);color:var(--fg);font:700 14px var(--font,inherit);padding:0 10px}
  .rv-mood{display:grid;grid-template-columns:1fr 1fr;gap:8px}
  .rv-mood button{height:44px;border-radius:14px;border:1px solid var(--hair);background:var(--fill);color:var(--fg);font:800 14px var(--font,inherit);cursor:pointer}
  .rv-mood button.on[data-m=positive]{background:#DFF5E6;border-color:#3BAA63}
@@ -5033,7 +5035,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
      the app uses when it talks about itself (title, share sheet, PWA
      install) -- not in new chrome competing with the map. -->
 
-<button id="rvFab" type="button" onclick="rvToggle()" aria-pressed="false" title="Feedback-Modus: Feedback-Knöpfe ein-/ausblenden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5a2 2 0 0 1-2 2H9l-4.5 3.5V6a2 2 0 0 1 2-2H18a2 2 0 0 1 2 2z"/><path d="M12.25 6.9l.95 1.95 2.15.3-1.55 1.5.37 2.13-1.92-1-1.92 1 .37-2.13-1.55-1.5 2.15-.3z" fill="currentColor" stroke="none"/></svg><span>Feedback</span></button>
+<button id="rvFab" type="button" onclick="rvOpen()" title="Feedback zur App senden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5a2 2 0 0 1-2 2H9l-4.5 3.5V6a2 2 0 0 1 2-2H18a2 2 0 0 1 2 2z"/><path d="M12.25 6.9l.95 1.95 2.15.3-1.55 1.5.37 2.13-1.92-1-1.92 1 .37-2.13-1.55-1.5 2.15-.3z" fill="currentColor" stroke="none"/></svg><span>Feedback</span></button>
 <header id="appBar">
   <button class="ab-brand" onclick="navGo('map')" aria-label="Snowmapper"><span class="ab-logo"><img src="icon-192.png?v=2" alt="" width="26" height="26"></span><span class="ab-name">Snowmapper</span></button>
   <nav class="ab-tabs" aria-label="Navigation">
@@ -5107,7 +5109,6 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     </div>
     <div class="set-rows">
       <button id="setDemo" onclick="demoToggle()" title="Standardmässig zeigt die App aktuelle Live-Wetterdaten. Ausschalten zeigt die Demo-Daten vom 1. April 2026."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Live-Wetterdaten verwenden<span class="st"></span></button>
-      <button id="setReview" onclick="rvToggle()" title="Zeigt an den wichtigsten Funktionen einen Feedback-Knopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 6.6l1.1 2.3 2.5.3-1.8 1.7.5 2.5-2.3-1.2-2.3 1.2.5-2.5-1.8-1.7 2.5-.3z"/></svg>Review-Modus<span class="st"></span></button>
       <button id="setFeedback" onclick="setClose();rvOpen('Allgemein')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 6.6l1.1 2.3 2.5.3-1.8 1.7.5 2.5-2.3-1.2-2.3 1.2.5-2.5-1.8-1.7 2.5-.3z"/></svg>Feedback senden</button>
     </div>
     <span class="lbl-micro">Sprache</span>
@@ -5733,6 +5734,11 @@ const I18N_DICT={
 "Nur wo weniger Wind als":["Only where wind below","Seulement où le vent est inférieur à","Solo dove il vento è sotto"],
 "alle":["all","tout","tutti"],
 "Median":["Median","Médiane","Mediana"],
+"Feedback zur App":["Feedback on the app","Avis sur l'app","Feedback sull'app"],"Wir lesen alles.":["We read everything.","Nous lisons tout.","Leggiamo tutto."],
+"Wie gefällt dir dieser Bereich?":["How do you like this part?","Comment trouves-tu cette partie ?","Ti piace questa parte?"],
+"Bereich":["Area","Domaine","Area"],"Allgemein":["General","Général","Generale"],"Karte & Ebenen":["Map & layers","Carte & couches","Mappa & livelli"],
+"Zeitleiste":["Timeline","Chronologie","Timeline"],"Karten-Tipp":["Map tap","Point sur la carte","Tocco sulla mappa"],"Anmeldung":["Sign-in","Connexion","Accesso"],
+"Sonstiges":["Other","Autre","Altro"],"Feedbacks":["Feedback","Avis","Feedback"],
 "Ruppigkeit":["Roughness","Rugosité","Ruvidità"],
 "Bewegungssensor erlauben":["Allow motion sensor","Autoriser le capteur de mouvement","Consenti sensore di movimento"],
 "Dieses Gerät liefert keine Bewegungsdaten.":["This device delivers no motion data.","Cet appareil ne fournit pas de données de mouvement.","Questo dispositivo non fornisce dati di movimento."],
@@ -5749,7 +5755,7 @@ const I18N_DICT={
 "Verbesserungsvorschlag":["Suggestion","Suggestion","Suggerimento"],
 "Was würdest du ändern? Was fehlt? Was ist toll?":["What would you change? What is missing? What is great?","Que changerais-tu ? Que manque-t-il ? Qu'est-ce qui est top ?","Cosa cambieresti? Cosa manca? Cosa è ottimo?"],
 "Screenshot anhängen":["Attach screenshot","Joindre une capture","Allega screenshot"],"Screenshot ändern":["Change screenshot","Changer la capture","Cambia screenshot"],
-"Alles freiwillig. Mitgeschickt werden die Funktion, die gewählte Ebene und der Kartenausschnitt.":["Everything is optional. The feature, the chosen layer and the map view are sent along.","Tout est facultatif. La fonction, la couche choisie et la vue de la carte sont envoyées.","Tutto è facoltativo. Vengono inviati la funzione, il livello scelto e la vista della mappa."],
+"Alles freiwillig. Mitgeschickt werden der Bereich, die gewählte Ebene und der Kartenausschnitt.":["Everything is optional. The feature, the chosen layer and the map view are sent along.","Tout est facultatif. La fonction, la couche choisie et la vue de la carte sont envoyées.","Tutto è facoltativo. Vengono inviati la funzione, il livello scelto e la vista della mappa."],
 "Senden":["Send","Envoyer","Invia"],"Wird gesendet…":["Sending…","Envoi…","Invio…"],"Danke für dein Feedback!":["Thanks for your feedback!","Merci pour ton avis !","Grazie per il tuo feedback!"],
 "Gib etwas ein – oder wähle 👍/👎 oder Sterne":["Type something – or pick 👍/👎 or stars","Écris quelque chose – ou choisis 👍/👎 ou des étoiles","Scrivi qualcosa – o scegli 👍/👎 o le stelle"],
 "Review-Modus an – tippe auf «Feedback» bei einer Funktion":["Review mode on – tap «Feedback» on a feature","Mode avis activé – touche « Feedback » sur une fonction","Modalità feedback attiva – tocca «Feedback» su una funzione"],
@@ -10368,7 +10374,7 @@ async function pvLoad(uid,boxId,own){
   const ck='ssm_pv_'+uid;let cached=null;try{cached=JSON.parse(sessionStorage.getItem(ck)||'null');}catch(e){}
   if(cached&&cached.v===1){pvState[boxId]=Object.assign(cached.S,{tab:(pvState[boxId]&&pvState[boxId].tab)||cached.S.tab||'grid'});pvRender(boxId);}
   else box.innerHTML='<div class="pv-skel"><i></i><i></i><i></i><i></i><i></i><i></i></div>';
-  let posts=[],fol=0,ing=0,acts=[],trust=0;
+  let posts=[],fol=0,ing=0,acts=[],trust=0,fb=0;
   if(sb){
     const cnt=(col)=>sb.from('follows').select('*',{count:'exact',head:true}).eq(col,uid).then(r=>r.count||0,()=>0);
     // the post list only needs a light condition_data: no drawn snapshots
@@ -10376,13 +10382,14 @@ async function pvLoad(uid,boxId,own){
       sb.from('reports').select('id,caption,subtype,image_url,condition_data,location,created_at,primary_categories')
         .eq('user_id',uid).order('created_at',{ascending:false}).limit(60).then(r=>r.data||[],()=>[]),cnt('following_id'),cnt('follower_id')]);
     posts=pr;fol=f1;ing=f2;
+    try{const{data}=await sb.rpc('feedback_count',{uid});fb=data||0;}catch(e){}
     if(posts.length){try{const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',posts.map(p=>p.id));trust=count||0;}catch(e){}}}
   posts.forEach(r=>{const A=r.condition_data&&r.condition_data.activity;
     if(A)acts.push({id:'p'+r.id,post:r.id,name:A.name,start:A.start||Date.parse(r.created_at),dist:A.dist||0,up:A.up||0,moving:A.moving||0,track:A.track,map:A.map,type:A.type});});
   if(own){try{(await trkAll()).forEach(a=>{if(a.postedId&&acts.some(x=>String(x.post)===String(a.postedId)))return;const st=a.stats||{};
     acts.push({id:a.id,local:true,name:a.name,start:a.start,dist:st.dist||0,up:st.up||0,moving:st.moving||0,track:trkLL(a.segs),type:a.type,priv:a.vis==='private'});});}catch(e){}}
   acts.sort((x,y)=>y.start-x.start);
-  pvState[boxId]={uid,own,posts,acts,fol,ing,trust,tab:(pvState[boxId]&&pvState[boxId].tab)||'grid'};
+  pvState[boxId]={uid,own,posts,acts,fol,ing,trust,fb,tab:(pvState[boxId]&&pvState[boxId].tab)||'grid'};
   pvRender(boxId);
   if(own)setTimeout(()=>{pvBackfillThumbs(posts).then(()=>{try{sessionStorage.setItem(ck,JSON.stringify({v:1,S:Object.assign({},pvState[boxId],{acts:pvState[boxId].acts.filter(a=>!a.local)})}));}catch(e){}});},1500);
   try{sessionStorage.setItem(ck,JSON.stringify({v:1,S:Object.assign({},pvState[boxId],{acts:pvState[boxId].acts.filter(a=>!a.local)})}));}catch(e){}
@@ -10418,7 +10425,7 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
       +'<span class="pv-ac-map" data-pvmap="'+a.id+'">'+pvMapImg(a)+'</span>'
       +'<span class="pv-ac-prof">'+trkProfile(a.track,340,46)+'</span></button>').join('')
     :'<div class="prof-hint">'+(me?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aktivitäten.')+'</div>';
-  box.innerHTML='<div class="pv-stats"><div><b>'+n(S.posts.length)+'</b><span>Beiträge</span></div><div><b>'+n(S.fol)+'</b><span>Follower</span></div><div><b>'+n(S.ing)+'</b><span>Folge ich</span></div><div><b>'+n(S.acts.length)+'</b><span>Aktivitäten</span></div></div>'
+  box.innerHTML='<div class="pv-stats"><div><b>'+n(S.posts.length)+'</b><span>Beiträge</span></div><div><b>'+n(S.fol)+'</b><span>Follower</span></div><div><b>'+n(S.ing)+'</b><span>Folge ich</span></div><div><b>'+n(S.acts.length)+'</b><span>Aktivitäten</span></div><div><b>'+n(S.fb||0)+'</b><span>Feedbacks</span></div></div>'
     +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button onclick="profClose();navGo(\'feed\');feedSetScope(\'saved\')">Gemerkt</button><button data-dm onclick="profClose();dmOpen()">Nachrichten</button><button onclick="pvShare(\''+S.uid+'\')">Teilen</button>'
       :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
         +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
@@ -12683,7 +12690,10 @@ const RV_TARGETS=[['#bottomPanel','Zeitleiste'],['#inspPanel.open','Karten-Tipp'
 let rvOn=(()=>{try{return localStorage.getItem('ssm_review')==='1';}catch(e){return false;}})(),rvT=0;
 function rvToggle(){rvOn=!rvOn;try{localStorage.setItem('ssm_review',rvOn?'1':'0');}catch(e){}rvSync();try{setRender();}catch(e){}
   toast(rvOn?'Review-Modus an – tippe auf «Feedback» bei einer Funktion':'Review-Modus aus','info');}
-function rvSync(){document.body.classList.toggle('review-on',rvOn);clearInterval(rvT);
+// One central feedback: the button under the logo opens the sheet, which
+// already knows the part of the app it came from (the user can change it).
+// The per-feature marks of the old review mode are gone.
+function rvSync(){rvOn=false;document.body.classList.remove('review-on');clearInterval(rvT);document.querySelectorAll('.rv-btn,.rv-dot').forEach(b=>b.remove());return;
   const fb=document.getElementById('rvFab');if(fb){fb.classList.toggle('on',rvOn);fb.setAttribute('aria-pressed',rvOn?'true':'false');
     const t=fb.querySelector('span');if(t)t.textContent=tr(rvOn?'Feedback an':'Feedback');}
   document.querySelectorAll('.rv-btn,.rv-dot').forEach(b=>b.remove());if(!rvOn)return;rvPlace();rvT=setInterval(rvPlace,900);}
@@ -12697,18 +12707,25 @@ function rvPlace(){RV_TARGETS.forEach(([sel,name,wide])=>{let el=null;try{el=doc
   b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5a2 2 0 0 1-2 2H9l-4.5 3.5V6a2 2 0 0 1 2-2H18a2 2 0 0 1 2 2z"/><path d="M12.25 6.9l.95 1.95 2.15.3-1.55 1.5.37 2.13-1.92-1-1.92 1 .37-2.13-1.55-1.5 2.15-.3z" fill="currentColor" stroke="none"/></svg><span>Feedback</span>';b.setAttribute('aria-label','Feedback zu '+name);
   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();rvOpen(name);});el.appendChild(b);});}
 const rv={f:'',mood:null,stars:null,file:null};
-function rvOpen(feature){rv.f=feature;rv.mood=null;rv.stars=null;rv.file=null;
+const RV_AREAS=['Allgemein','Karte & Ebenen','Zeitleiste','Karten-Tipp','Touren','Community','Aufzeichnen','Melden','Webcams','Profil','Anmeldung','Sonstiges'];
+function rvAuto(){const B=document.body.classList,c=(typeof navCur==='function')?navCur():'map';
+  if(B.contains('ly-open'))return 'Karte & Ebenen';if(B.contains('insp-open'))return 'Karten-Tipp';if(B.contains('wcv-open'))return 'Webcams';
+  if(B.contains('draw-on')||B.contains('rep-open'))return 'Melden';
+  return {tours:'Touren',feed:'Community',rec:'Aufzeichnen',you:'Profil'}[c]||'Allgemein';}
+function rvOpen(feature){feature=feature||rvAuto();rv.f=feature;rv.mood=null;rv.stars=null;rv.file=null;
   let el=document.getElementById('rvSheet');
   if(!el){el=document.createElement('div');el.id='rvSheet';el.className='rv-sheet';el.setAttribute('role','dialog');document.body.appendChild(el);
     el.addEventListener('click',e=>{if(e.target===el)rvClose();});}
-  el.innerHTML='<div class="rv-in"><div class="rv-hd"><div><b>'+tr('Feedback')+'</b><small>'+escapeHtml(tr(feature))+'</small></div><button onclick="rvClose()" aria-label="Schliessen">×</button></div>'
+  const areas=RV_AREAS.indexOf(feature)<0?[feature].concat(RV_AREAS):RV_AREAS;
+  el.innerHTML='<div class="rv-in"><div class="rv-hd"><div><b>'+tr('Feedback zur App')+'</b><small>'+tr('Wir lesen alles.')+'</small></div><button onclick="rvClose()" aria-label="Schliessen">×</button></div>'
+    +'<label class="rv-area"><span>'+tr('Bereich')+'</span><select onchange="rv.f=this.value">'+areas.map(a=>'<option value="'+escapeHtml(a)+'"'+(a===feature?' selected':'')+'>'+escapeHtml(tr(a))+'</option>').join('')+'</select></label>'
     +'<div class="rv-mood"><button data-m="positive" onclick="rvMood(this)">👍 '+tr('Positiv')+'</button><button data-m="negative" onclick="rvMood(this)">👎 '+tr('Negativ')+'</button></div>'
-    +'<span class="lbl-micro">'+tr('Wie gefällt dir diese Funktion?')+'</span>'
+    +'<span class="lbl-micro">'+tr('Wie gefällt dir dieser Bereich?')+'</span>'
     +'<div class="rv-stars" id="rvStars">'+[1,2,3,4,5].map(n=>'<button data-n="'+n+'" onclick="rvStar('+n+')" aria-label="'+n+' Sterne">★</button>').join('')+'<em id="rvStarsTxt"></em></div>'
     +'<span class="lbl-micro">'+tr('Verbesserungsvorschlag')+'</span>'
     +'<textarea id="rvText" maxlength="5000" rows="4" placeholder="'+escapeHtml(tr('Was würdest du ändern? Was fehlt? Was ist toll?'))+'"></textarea>'
     +'<label class="rv-shot"><input type="file" accept="image/*" onchange="rvFile(this)" hidden><span id="rvShotTxt">📎 '+tr('Screenshot anhängen')+'</span><img id="rvShotImg" alt="" hidden></label>'
-    +'<p class="rv-fine">'+tr('Alles freiwillig. Mitgeschickt werden die Funktion, die gewählte Ebene und der Kartenausschnitt.')+'</p>'
+    +'<p class="rv-fine">'+tr('Alles freiwillig. Mitgeschickt werden der Bereich, die gewählte Ebene und der Kartenausschnitt.')+'</p>'
     +'<button class="rv-send" id="rvSend" onclick="rvSend()">'+tr('Senden')+'</button></div>';
   el.classList.add('open');try{haptic(6);}catch(e){}}
 function rvClose(){const el=document.getElementById('rvSheet');if(el)el.classList.remove('open');}
@@ -12761,8 +12778,6 @@ function setRender(){
   const st=document.getElementById('setStations');
   if(st){st.classList.toggle('on',!!showStn);
     const q=st.querySelector('.st');if(q)q.textContent=showStn?'an':'aus';}
-  const rvb=document.getElementById('setReview');
-  if(rvb){rvb.classList.toggle('on',rvOn);const q=rvb.querySelector('.st');if(q)q.textContent=rvOn?'an':'aus';}
   const dm=document.getElementById('setDemo');
   if(dm){const liveOn=!demoActive();dm.classList.toggle('on',liveOn);
     const q=dm.querySelector('.st');if(q)q.textContent=liveOn?'an':'aus';}
