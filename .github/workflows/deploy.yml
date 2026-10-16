@@ -72,12 +72,8 @@ jobs:
         env:
           # optional: Windy Webcams API key for the webcam layer (public client key)
           WINDY_WEBCAMS_KEY: ${{ secrets.WINDY_WEBCAMS_KEY }}
-          # minify app.js + inline CSS (interactive_export.minify_shell); skipped
-          # with a note if esbuild is missing or the result fails node --check
-          SNOW_MINIFY: "1"
         run: |
           mkdir -p dist
-          npm install -g esbuild@0.24.0 >/dev/null 2>&1 || echo "esbuild not installed -- shipping readable app.js"
           python run_interactive.py --split --res 1000 --gz-only --out-dir dist
           touch dist/.nojekyll
 
@@ -215,6 +211,16 @@ jobs:
           node tools/test_model.js dist/app.js
           node tools/test_engine.js dist/engine.js
           node tools/test_tour_js.js dist/engine.js
+
+      # Only now, after the tests: they read the model block out of app.js by
+      # its marker comments, which minifying removes. Best effort -- without
+      # esbuild, or if the result fails node --check, the readable files stay.
+      - name: Minify app.js and the inline CSS
+        run: |
+          npm install -g esbuild@0.24.0 >/dev/null 2>&1 || echo "esbuild not installed -- shipping readable app.js"
+          python -c "from pathlib import Path; from pipeline.interactive_export import minify_shell; minify_shell(Path('dist'))"
+          node --check dist/app.js
+          python tools/check_inline_js.py dist/index.html
 
       - name: Report published site size
         # GitHub Pages refuses a site over 1 GB, and it counts the
