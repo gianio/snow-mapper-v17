@@ -982,6 +982,89 @@ def export_interactive_html(data, out_html: Path) -> Path:
     return out_html
 
 
+BIN_MAGIC = b"SMB1"
+
+
+def write_bin_blob(path: Path, meta, blobs):
+    """gzip( "SMB1" | uint32 LE header length | header JSON | pad to 8 | data ).
+
+    header = {"meta": meta, "blobs": {key: [offset, length]}} with offsets
+    from the start of the data section. Every blob starts on an 8-byte
+    boundary, so the client can view it in place (new Uint8Array(buf, off,
+    len)) without copying. Blobs are the same bytes the JSON build carries
+    as base64."""
+    import gzip as _gzip
+    parts, index, off = [], {}, 0
+    for k, v in blobs.items():
+        raw = base64.b64decode(v) if isinstance(v, str) else bytes(v)
+        index[k] = [off, len(raw)]
+        pad = (-len(raw)) % 8
+        parts.append(raw + b"\0" * pad)
+        off += len(raw) + pad
+    head = json.dumps({"meta": meta, "blobs": index}, separators=(",", ":")).encode("utf-8")
+    pre = BIN_MAGIC + len(head).to_bytes(4, "little") + head
+    pre += b"\0" * ((-len(pre)) % 8)
+    with _gzip.GzipFile(str(path), "wb", compresslevel=6, mtime=0) as gf:
+        gf.write(pre)
+        for part in parts:
+            gf.write(part)
+    return path
+
+
+def read_bin_blob(path: Path):
+    """Inverse of write_bin_blob (tests, tools): (meta, {key: bytes})."""
+    import gzip as _gzip
+    buf = _gzip.decompress(Path(path).read_bytes())
+    assert buf[:4] == BIN_MAGIC, "not an SMB1 blob"
+    n = int.from_bytes(buf[4:8], "little")
+    head = json.loads(buf[8:8 + n].decode("utf-8"))
+    base = 8 + n + ((-(8 + n)) % 8)
+    return head["meta"], {k: buf[base + o: base + o + ln] for k, (o, ln) in head["blobs"].items()}
+
+
+def minify_shell(out_dir: Path) -> None:
+    """Minify app.js and the inline CSS of index.html with esbuild (the deploy
+    sets SNOW_MINIFY=1 and installs it). Best effort: without esbuild, or if
+    the result does not pass `node --check`, the readable files stay.
+
+    Plain transform, no bundling and no --format: esbuild then keeps every
+    top-level name, which the inline onclick="..." handlers rely on."""
+    import shutil, subprocess, re as _re
+    esb = os.environ.get("ESBUILD") or shutil.which("esbuild")
+    if not esb:
+        print("[OUT] minify: esbuild not found -- shipping readable app.js")
+        return
+    app = out_dir / "app.js"
+    try:
+        out = subprocess.run([esb, "--minify", "--charset=utf8", "--legal-comments=none", "--loader=js"],
+                             input=app.read_bytes(), capture_output=True, check=True, timeout=120).stdout
+        tmp = out_dir / "app.min.tmp.js"
+        tmp.write_bytes(out)
+        node = shutil.which("node")
+        if node:
+            subprocess.run([node, "--check", str(tmp)], check=True, capture_output=True, timeout=60)
+        before = app.stat().st_size
+        tmp.replace(app)
+        print(f"[OUT] minify: app.js {before/1e3:.0f} -> {len(out)/1e3:.0f} kB")
+    except Exception as e:
+        print(f"[OUT] minify: app.js left as is ({type(e).__name__})")
+        (out_dir / "app.min.tmp.js").unlink(missing_ok=True)
+    idx = out_dir / "index.html"
+    html = idx.read_text(encoding="utf-8")
+
+    def css(m):
+        try:
+            r = subprocess.run([esb, "--minify", "--loader=css", "--charset=utf8"],
+                               input=m.group(2).encode("utf-8"), capture_output=True, check=True, timeout=60)
+            return m.group(1) + r.stdout.decode("utf-8").strip() + m.group(3)
+        except Exception:
+            return m.group(0)
+    small = _re.sub(r"(<style[^>]*>)(.*?)(</style>)", css, html, flags=_re.S)
+    if small != html:
+        idx.write_text(small, encoding="utf-8")
+        print(f"[OUT] minify: index.html {len(html)/1e3:.0f} -> {len(small)/1e3:.0f} kB")
+
+
 def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     """App-shell + external data blob + latest.json pointer. The shell/binary is
     stable and small; forecast data updates independently (for GitHub Pages and
@@ -1014,6 +1097,14 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     # becomes iOS 16.4 (March 2023). See docs/slf-parity-and-tiering.md.
     pointer = {"version": stamp, "gz": dataname + ".gz",
                "generated": datetime.now().replace(microsecond=0).isoformat() + "Z"}
+    # The same data once more as a binary container (see write_bin_blob):
+    # raw bytes instead of base64 inside JSON, so the client neither parses
+    # a few hundred MB of JSON nor atob()s it, and the download is smaller.
+    # Current clients read it in a Web Worker; the JSON .gz stays for shells
+    # that predate it (cached index.html, the native seed copy).
+    binname = "snowdata-%s.bin.gz" % stamp
+    write_bin_blob(ddir / binname, meta, blobs)
+    pointer["bin"] = binname
     if gz_only:
         plain_mb = len(payload) / 1e6
         print(f"[OUT] gz-only: uncompressed blob ({plain_mb:.0f} MB) not written "
@@ -1042,6 +1133,8 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
             (old.parent / old.name[:-3]).unlink(missing_ok=True)
         except OSError:
             pass
+    for old in sorted(ddir.glob("snowdata-*.bin.gz"))[:-4]:
+        old.unlink(missing_ok=True)
     for old in sorted(ddir.glob("snowdata-*.json"))[:-4]:
         try:
             old.unlink()
@@ -1061,6 +1154,8 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     shell = _HTML.split('<script id="appjs">', 1)[0].replace("<!--__BOOT__-->", boot) + "</body></html>"
     (out_dir / "index.html").write_text(shell, encoding="utf-8")
     _write_pwa_assets(out_dir)
+    if os.environ.get("SNOW_MINIFY") == "1":
+        minify_shell(out_dir)
     return out_dir / "index.html"
 
 
@@ -1068,10 +1163,18 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
 # progress bar on the intro), set window.__D, then inject the app script.
 _BOOT_SPLIT = r"""<script>
 (function(){
-  function prog(f){var b=document.querySelector('#boot i');
-    if(b)b.style.width=(Math.max(2,Math.min(1,f)*100))+'%';}
+  // Loading screen: a turning snow crystal, what is happening, and how far.
+  // Download is 0-80 %, unpacking and the snow layers 80-96 %, the app
+  // itself the rest. The crystal turns on the compositor, so it keeps
+  // turning while the app script blocks the main thread.
+  var shown=0;
+  function prog(f,label){f=Math.max(0,Math.min(1,f));if(f<shown)f=shown;shown=f;
+    var b=document.querySelector('#boot .bt-bar i');if(b)b.style.width=(Math.max(2,f*100))+'%';
+    var p=document.getElementById('bootPct');if(p)p.textContent=Math.round(f*100)+' %';
+    if(label){var l=document.getElementById('bootTxt');if(l)l.textContent=label;}}
   function bootDone(){var e=document.getElementById('boot');if(!e)return;
-    prog(1);e.classList.add('done');setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e);},300);}
+    prog(1,'Fertig');e.classList.add('done');setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e);},300);
+    setTimeout(swReg,3000);}
   window.__bootDone=bootDone;
   function fail(m){
     var e=document.getElementById('boot');if(e&&e.parentNode)e.parentNode.removeChild(e);
@@ -1085,10 +1188,72 @@ _BOOT_SPLIT = r"""<script>
   function fetchT(url,opts,ms){var c=('AbortController'in window)?new AbortController():null;
     if(c){opts=opts||{};opts.signal=c.signal;setTimeout(function(){c.abort();},ms||30000);}
     return fetch(url,opts);}
+  // The service worker (offline shell, data and tile cache) registers once
+  // the map is up -- app.js arrives only after the data, long after 'load',
+  // so its own load listener never ran; and registering at once would make
+  // the worker's precache compete with the data download.
+  function swReg(){try{if('serviceWorker'in navigator&&location.protocol!=='file:')
+    navigator.serviceWorker.register('sw.js').then(function(reg){try{reg.update();}catch(e){}}).catch(function(){});}catch(e){}}
   // app.js parallel zum Datenblob laden (vorher: sequenziell danach)
   var appJsP=fetchT('app.js',{cache:'no-cache'},30000).then(function(r){if(!r.ok)throw new Error('app.js HTTP '+r.status);return r.text();});
   function waitLeaflet(){return new Promise(function(res,rej){var t0=Date.now();
     (function poll(){if(window.L)return res();if(Date.now()-t0>20000)return rej(new Error('Leaflet timeout'));setTimeout(poll,150);})();});}
+  // Binary data (SMB1, pipeline/interactive_export.py write_bin_blob) is
+  // fetched, unpacked and turned into the snow-height running sum in a Web
+  // Worker; the page only receives finished ArrayBuffers. This function's
+  // SOURCE is the worker, and the fallback when Workers are unavailable.
+  function smbWork(url,post){
+    return (async function(){
+      var res=await fetch(url,{cache:'force-cache'});
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      var total=+(res.headers.get('Content-Length')||0),got=0,last=0;
+      var count=new TransformStream({transform:function(c,ctl){got+=c.length;
+        if(total&&got-last>total/100){last=got;post({p:got/total});}ctl.enqueue(c);}});
+      var buf=await new Response(res.body.pipeThrough(count).pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+      post({stage:'unpack'});
+      var u8=new Uint8Array(buf);
+      if(u8[0]!==83||u8[1]!==77||u8[2]!==66||u8[3]!==49)throw new Error('not SMB1');
+      var n=new DataView(buf).getUint32(4,true);
+      var head=JSON.parse(new TextDecoder().decode(u8.subarray(8,8+n)));
+      var base=8+n+((8-(8+n)%8)%8),M=head.meta,ix=head.blobs;
+      function view(k){var e=ix[k];return e?new Uint8Array(buf,base+e[0],e[1]):new Uint8Array(0);}
+      post({stage:'cum'});
+      // Snow height as a running mass balance -- exactly the loop app.js runs
+      // when it gets no `cum` (keep the two identical).
+      var cum=null;
+      try{var T=M.T,NP=M.width*M.height,SNOW=view('SNOW'),ABL=view('ABL'),sc=M.snow_scale,
+          as=+M.abl_scale||0,hasAbl=as>0&&ABL.length>=T*NP;
+        if(T&&NP&&SNOW.length>=T*NP){cum=new Float32Array((T+1)*NP);
+          for(var t=0;t<T;t++){var o0=t*NP,o1=(t+1)*NP,s=t*NP;
+            if(hasAbl){for(var p=0;p<NP;p++){var v=cum[o0+p]+SNOW[s+p]*sc-ABL[s+p]*as;cum[o1+p]=v>0?v:0;}}
+            else{for(var q=0;q<NP;q++)cum[o1+q]=cum[o0+q]+SNOW[s+q]*sc;}
+            if(t%24===0)post({c:t/T});}}}catch(e){cum=null;}
+      return {meta:M,buf:buf,ix:ix,base:base,cum:cum};
+    })();
+  }
+  function loadBin(url){
+    return new Promise(function(resolve,reject){
+      function onMsg(m){
+        if(m.p!=null)prog(0.02+0.78*m.p,'Wetterdaten werden geladen');
+        else if(m.stage==='unpack')prog(0.82,'Daten werden entpackt');
+        else if(m.stage==='cum')prog(0.86,'Schneelayer werden berechnet');
+        else if(m.c!=null)prog(0.86+0.10*m.c,'Schneelayer werden berechnet');}
+      function done(r){var b={};for(var k in r.ix)b[k]=new Uint8Array(r.buf,r.base+r.ix[k][0],r.ix[k][1]);
+        resolve({meta:r.meta,b:b,cum:r.cum});}
+      var w=null;
+      try{if(window.Worker&&window.Blob&&window.URL){
+        var src='var smbWork='+smbWork.toString()+';onmessage=function(e){smbWork(e.data,function(m){postMessage(m);})'
+          +'.then(function(r){postMessage({done:r},[r.buf].concat(r.cum?[r.cum.buffer]:[]));},function(err){postMessage({err:String(err&&err.message||err)});});};';
+        w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));}}catch(e){w=null;}
+      if(!w){smbWork(url,onMsg).then(done,reject);return;}
+      w.onmessage=function(e){var m=e.data;
+        if(m.done){w.terminate();done(m.done);}
+        else if(m.err){w.terminate();reject(new Error(m.err));}
+        else onMsg(m);};
+      w.onerror=function(e){w.terminate();reject(new Error('worker: '+(e&&e.message)));};
+      w.postMessage(new URL(url,location.href).href);
+    });
+  }
   // A native build (Capacitor/iOS) bundles a seed dataset inside the binary, so
   // the very first launch works with no signal at all -- but a forecast frozen
   // at build time is useless a day later, and refreshing it must not mean
@@ -1108,6 +1273,10 @@ _BOOT_SPLIT = r"""<script>
       if(!ljr.ok&&isDemo)ljr=await fetchT(pre+'data/latest.json',{cache:'no-cache'},15000);
       if(!ljr.ok)throw new Error('latest.json HTTP '+ljr.status);
       var lj=await ljr.json();
+      if(lj.bin&&window.DecompressionStream&&window.TransformStream){
+        try{return await loadBin(pre+'data/'+lj.bin);}
+        catch(e){try{if(window.Sentry)window.Sentry.captureException(e);}catch(_){}}
+      }
       var useGz=!!(lj.gz&&window.DecompressionStream);
       // A gz-only build (see export_split_app) omits lj.data entirely. Without
       // DecompressionStream there is then nothing to read, and fetching
@@ -1122,7 +1291,8 @@ _BOOT_SPLIT = r"""<script>
       var total=+(res.headers.get('Content-Length')||0),text;
       if(res.body&&total&&window.ReadableStream){
         var reader=res.body.getReader(),chunks=[],got=0,r;
-        while(!(r=await reader.read()).done){chunks.push(r.value);got+=r.value.length;prog(got/total);}
+        while(!(r=await reader.read()).done){chunks.push(r.value);got+=r.value.length;prog(0.02+0.78*got/total,'Wetterdaten werden geladen');}
+        prog(0.82,'Daten werden entpackt');
         if(useGz){
           var ds=new Blob(chunks).stream().pipeThrough(new DecompressionStream('gzip'));
           text=await new Response(ds).text();
@@ -1132,13 +1302,15 @@ _BOOT_SPLIT = r"""<script>
         }
       }else if(useGz){
         var ds2=(await res.blob()).stream().pipeThrough(new DecompressionStream('gzip'));
-        text=await new Response(ds2).text();prog(1);
-      }else{text=await res.text();prog(1);}
+        text=await new Response(ds2).text();prog(0.82,'Daten werden entpackt');
+      }else{text=await res.text();prog(0.82,'Daten werden entpackt');}
       return JSON.parse(text);
     })();
   }
+  function frame(){return new Promise(function(r){requestAnimationFrame(function(){setTimeout(r,0);});});}
   (async function(){
     try{
+      prog(0.02,'Wetterdaten werden geladen');
       // Live/current weather is the default; the 1 April 2026 demo dataset is
       // an explicit opt-in (Settings, or ?demo=1) persisted in localStorage,
       // since app.js's own demoActive() (below) can't run yet at boot time.
@@ -1152,13 +1324,15 @@ _BOOT_SPLIT = r"""<script>
       var D=null,lastErr=null;
       for(var bi=0;bi<bases.length;bi++){
         try{D=await loadFrom(bases[bi],isDemo);break;}
-        catch(e){lastErr=e;prog(0.02);}
+        catch(e){lastErr=e;shown=0;prog(0.02);}
       }
       if(!D)throw lastErr||new Error('no data source');
       window.__D=D;D=null;
       var code=await appJsP;
       try{await waitLeaflet();}catch(e){fail('Karten-Bibliothek nicht erreichbar — Verbindung prüfen.');return;}
       await new Promise(function(res){var t0=Date.now();(function poll(){if(window.supabase||Date.now()-t0>2500)return res();setTimeout(poll,120);})();});
+      prog(0.97,'Karte wird aufgebaut');
+      await frame();
       var sc=document.createElement('script');sc.textContent=code;document.body.appendChild(sc);
       setTimeout(function(){if(!window.__APP_OK&&window.__introStuck)window.__introStuck('App-Start fehlgeschlagen — bitte erneut versuchen.');},6000);
     }catch(e){fail('Daten konnten nicht geladen werden — Verbindung prüfen.');try{if(window.Sentry)window.Sentry.captureException(e);}catch(_){}}
@@ -1278,7 +1452,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <link rel="preconnect" href="https://wmts.geo.admin.ch" crossorigin>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
 <!-- maplibre-gl (3D, ~800 KB) wird erst beim ersten 3D-Klick geladen -->
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="icon-180.png?v=2"/>
@@ -2275,9 +2449,21 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #searchRes .sr.sr-note{cursor:default;color:var(--mut);background:none}
  /* The only thing the load shows: a 2 px rule along the top edge, filled by
     the actual number of bytes received. It removes itself when done. */
- #boot{position:fixed;top:0;left:0;right:0;height:2px;z-index:9999;background:transparent;pointer-events:none}
- #boot i{display:block;height:100%;width:0;background:var(--ink-900);transition:width .18s linear}
- #boot.done{opacity:0;transition:opacity .25s ease}
+ /* Loading screen (split build): a turning snow crystal, what is going on, and %. */
+ #boot{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+   background:var(--map-bg,#EEF1F5);color:var(--fg,#1b2230);pointer-events:none;
+   font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+ #boot .bt-in{display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 24px;text-align:center}
+ #boot .bt-flake{width:76px;height:76px;margin-bottom:6px;fill:none;stroke:var(--accent,#2563eb);stroke-width:2.6;
+   stroke-linecap:round;stroke-linejoin:round;animation:btSpin 3.2s linear infinite;will-change:transform}
+ #boot .bt-flake circle{fill:var(--accent,#2563eb);stroke:none}
+ @keyframes btSpin{to{transform:rotate(360deg)}}
+ #bootTxt{font-size:15px;font-weight:600}
+ #bootPct{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+ #boot .bt-bar{width:180px;height:4px;border-radius:99px;background:var(--hair,rgba(0,0,0,.08));overflow:hidden}
+ #boot .bt-bar i{display:block;height:100%;width:2%;border-radius:99px;background:var(--accent,#2563eb);transition:width .25s linear}
+ #boot.done{opacity:0;transition:opacity .3s ease}
+ @media (prefers-reduced-motion:reduce){#boot .bt-flake{animation-duration:12s}}
  /* A load that failed needs words, not a stalled bar. */
  #bootErr{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:9999;
    display:none;background:var(--paper);border:1px solid var(--ink-100);border-radius:var(--r-2);
@@ -4964,7 +5150,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 </head><body>
 <!-- No splash. The app is the first thing on screen; while the forecast data
      streams in, a hairline at the top edge carries the real progress. -->
-<div id="boot"><i></i></div>
+<div id="boot" role="status" aria-live="polite"><div class="bt-in"><svg class="bt-flake" viewBox="0 0 64 64" aria-hidden="true"><defs><g id="bkA"><path d="M32 32V6"/><path d="M32 12l-5-5M32 12l5-5M32 20l-7-6M32 20l7-6"/></g></defs><use href="#bkA" transform="rotate(0 32 32)"/><use href="#bkA" transform="rotate(60 32 32)"/><use href="#bkA" transform="rotate(120 32 32)"/><use href="#bkA" transform="rotate(180 32 32)"/><use href="#bkA" transform="rotate(240 32 32)"/><use href="#bkA" transform="rotate(300 32 32)"/><circle cx="32" cy="32" r="3.2"/></svg><div id="bootTxt">Wetterdaten werden geladen</div><div id="bootPct">0 %</div><div class="bt-bar"><i></i></div></div></div>
 <div id="toastWrap" aria-live="polite"></div>
 <div id="onb" hidden role="dialog" aria-modal="true" aria-label="Willkommen"><div class="onb-bg" aria-hidden="true"><i></i><i></i><i></i></div><div class="onb-card" id="onbCard"></div></div>
 <div id="appLock" hidden role="dialog" aria-modal="true" aria-label="Gesperrt"><div class="onb-bg" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -6485,13 +6671,16 @@ if(_isNative){try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'DA
     setTimeout(()=>{note(mo.takeRecords());mo.disconnect();let changed=false;
       was.forEach((a,t)=>a.forEach((v,n)=>{if(v!==(t.getAttribute(n)||''))changed=true;}));
       if(!changed){try{A.minimizeApp();}catch(e){}}},300);});}catch(e){}}
-function dec(b){const s=atob(b),n=s.length,a=new Uint8Array(n);for(let i=0;i<n;i++)a[i]=s.charCodeAt(i);return a;}
+// A binary data blob (boot loader, SMB1) hands over Uint8Array views that
+// are used as they are; the JSON blob carries base64 strings.
+function dec(b){if(b instanceof Uint8Array)return b;const s=atob(b),n=s.length,a=new Uint8Array(n);for(let i=0;i<n;i++)a[i]=s.charCodeAt(i);return a;}
+function _pngUrl(k){const b=db(k);if(b instanceof Uint8Array){try{return URL.createObjectURL(new Blob([b],{type:'image/png'}));}catch(e){return '';}}return "data:image/png;base64,"+b;}
 const SNOW=dec(db('SNOW')),TEMP=dec(db('TEMP')),SUN=dec(db('SUN')),SPD=dec(db('SPD')),WDIR=dec(db('DIR'));
 const ABL=dec(db('ABL'));
 const WINDG=dec(db('WINDG')),RSLOPE=dec(db('RSLOPE')),RASPECT=dec(db('RASPECT')),RHOR=dec(db('RHOR'));
 const CLOUD=dec(db('CLOUD')),CLV=dec(db('CLV'));
 const PREC=dec(db('PREC')),MASPECT=dec(db('MASPECT')),MSLOPE=dec(db('MSLOPE')),MELEV=dec(db('MELEV')),ROUGHG=dec(db('ROUGHGRID'));
-const ASPECT_PNG="data:image/png;base64,"+db('ASPECTPNG'),ROUGH_PNG="data:image/png;base64,"+db('ROUGHPNG'),ELEV_PNG="data:image/png;base64,"+db('ELEVPNG');
+const ASPECT_PNG=_pngUrl('ASPECTPNG'),ROUGH_PNG=_pngUrl('ROUGHPNG'),ELEV_PNG=_pngUrl('ELEVPNG');
 const T=M.T,W=M.width,H=M.height,NP=W*H,P=M.wind.lat.length,NX=M.wind.nx;
 const RW=M.rad.width,RH=M.rad.height,RK=M.rad.K,RNP=RW*RH;
 const [RbS,RlW,RbN,RlE]=M.rad.bounds;
@@ -6503,7 +6692,10 @@ let windLvl=0;try{windLvl=Math.min(WIND_LVLS.length-1,+(localStorage.getItem('ss
 function windLvlSet(i){windLvl=Math.max(0,Math.min(WIND_LVLS.length-1,i));try{localStorage.setItem('ssm_wlvl',String(windLvl));}catch(e){}
   try{haptic(3);}catch(e){}try{renderAll();}catch(e){}try{lyRender();}catch(e){}}
 const wg_=(t,p)=>WIND_LVLS[windLvl][2][t*NP+p]/M.spd_mul;
-const cum=new Float32Array((T+1)*NP);
+// The boot loader's worker already ran the loop below on the binary blob
+// (same arithmetic, see smbWork) -- use its result when it fits.
+const _cumW=(__D.cum instanceof Float32Array&&__D.cum.length===(T+1)*NP)?__D.cum:null;
+const cum=_cumW||new Float32Array((T+1)*NP);
 // Massenbilanz statt Kumulativsumme: ABL traegt Schmelze (Temperatur +
 // hangkorrigierte Einstrahlung) und Setzung, in der Pipeline auf die
 // vorhandene Hoehe begrenzt -- deshalb genuegt hier max(0, ...).
@@ -6513,7 +6705,7 @@ const cum=new Float32Array((T+1)*NP);
 // Also nur bilanzieren, wenn Skala UND vollstaendiger Wuerfel da sind.
 const _ascale=+M.abl_scale||0;
 const _hasAbl=_ascale>0&&ABL.length>=T*NP;
-for(let t=0;t<T;t++){const o0=t*NP,o1=(t+1)*NP,s=t*NP,sc=M.snow_scale;
+if(!_cumW)for(let t=0;t<T;t++){const o0=t*NP,o1=(t+1)*NP,s=t*NP,sc=M.snow_scale;
   if(_hasAbl){for(let p=0;p<NP;p++){const v=cum[o0+p]+SNOW[s+p]*sc-ABL[s+p]*_ascale;cum[o1+p]=v>0?v:0;}}
   else {for(let p=0;p<NP;p++)cum[o1+p]=cum[o0+p]+SNOW[s+p]*sc;}}
 const tv=(t,p)=>TEMP[t*NP+p]/M.temp_mul-M.temp_off, sunv=(t,p)=>SUN[t*NP+p]/M.sun_mul;
@@ -8247,6 +8439,7 @@ function vaTilesFallback(){
 let vaSrvPreT=0;
 function vaSrvPrefetch(){
   clearTimeout(vaSrvPreT);
+  if(!vaMovedYet())return;
   vaSrvPreT=setTimeout(()=>{
     const t=vaTiles(),cur=vaSrv.cur;if(!t||!cur||!cur._tiles)return;
     const al=vaAllowedIdx(),c=b-1;if(!al)return;
@@ -8387,9 +8580,14 @@ function vaRefresh(){
 }
 // Once settled, quietly fetch the neighbouring frames so the next step of
 // the slider is already in the browser cache (and, zoomed in, decoded).
-let vaPreTimer=0,vaPreRound=0;
+let vaPreTimer=0,vaPreRound=0,vaPreB0=null,vaTimeMoved=false;
+// Not before the time has been moved once: on a cold start the frame on
+// screen is all that is needed, and two more ~0.4 MB frames compete with it.
+function vaMovedYet(){if(vaTimeMoved)return true;if(vaPreB0===null){vaPreB0=b;return false;}
+  return (vaTimeMoved=(b!==vaPreB0));}
 function vaPrefetchSoon(){
   clearTimeout(vaPreTimer);
+  if(!vaMovedYet())return;
   vaPreTimer=setTimeout(()=>{
     if(!ovOn.variantA||!vaAvailable())return;
     const i=vaTagIndex(),n=vaMan.tags.length;
@@ -10378,12 +10576,14 @@ async function pvLoad(uid,boxId,own){
   if(sb){
     const cnt=(col)=>sb.from('follows').select('*',{count:'exact',head:true}).eq(col,uid).then(r=>r.count||0,()=>0);
     // the post list only needs a light condition_data: no drawn snapshots
-    const [pr,f1,f2]=await Promise.all([
+    const [pr,f1,f2,f3]=await Promise.all([
       sb.from('reports').select('id,caption,subtype,image_url,condition_data,location,created_at,primary_categories')
-        .eq('user_id',uid).order('created_at',{ascending:false}).limit(60).then(r=>r.data||[],()=>[]),cnt('following_id'),cnt('follower_id')]);
-    posts=pr;fol=f1;ing=f2;
-    try{const{data}=await sb.rpc('feedback_count',{uid});fb=data||0;}catch(e){}
-    if(posts.length){try{const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',posts.map(p=>p.id));trust=count||0;}catch(e){}}}
+        .eq('user_id',uid).order('created_at',{ascending:false}).limit(60).then(r=>r.data||[],()=>[]),cnt('following_id'),cnt('follower_id'),
+      Promise.resolve(sb.rpc('feedback_count',{uid})).then(r=>(r&&r.data)||0,()=>0)]);
+    posts=pr;fol=f1;ing=f2;fb=f3;
+    if(posts.length){try{const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',posts.map(p=>p.id));trust=count||0;}catch(e){}}
+    // the user sheet's confirmation count is the same number
+    if(boxId==='uvPV'){const el=document.getElementById('uvEndoN');if(el)el.textContent=trust;}}
   posts.forEach(r=>{const A=r.condition_data&&r.condition_data.activity;
     if(A)acts.push({id:'p'+r.id,post:r.id,name:A.name,start:A.start||Date.parse(r.created_at),dist:A.dist||0,up:A.up||0,moving:A.moving||0,track:A.track,map:A.map,type:A.type});});
   if(own){try{(await trkAll()).forEach(a=>{if(a.postedId&&acts.some(x=>String(x.post)===String(a.postedId)))return;const st=a.stats||{};
@@ -10666,7 +10866,22 @@ const [aspS,aspWest,aspN,aspEast]=M.png_bounds;
 let aspData=null,aspPW=0,aspPH=0;
 const aspI=new Image();
 // Decoding starts after the first frame: nothing on screen depends on it.
-_afterFirstPaint(function(){aspI.src=ASPECT_PNG;});
+// With the binary blob the PNG bytes are at hand, and a Worker decodes and
+// reads them back (a multi-second main-thread task on a phone otherwise).
+function _aspWorker(){const raw=db('ASPECTPNG');
+  if(!(raw instanceof Uint8Array)||!raw.length||!window.Worker||typeof OffscreenCanvas==='undefined')return false;
+  try{const src='onmessage=async function(e){try{const bmp=await createImageBitmap(new Blob([e.data],{type:"image/png"}));'
+      +'const c=new OffscreenCanvas(bmp.width,bmp.height),x=c.getContext("2d",{willReadFrequently:true});x.drawImage(bmp,0,0);'
+      +'const d=x.getImageData(0,0,bmp.width,bmp.height);postMessage({w:d.width,h:d.height,buf:d.data.buffer},[d.data.buffer]);}'
+      +'catch(err){postMessage({err:String(err)});}};';
+    const w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
+    w.onmessage=e=>{w.terminate();const m=e.data;
+      if(m.err||!m.buf){aspI.src=ASPECT_PNG;return;}
+      aspPW=m.w;aspPH=m.h;aspData=new Uint8ClampedArray(m.buf);
+      try{if(map.hasLayer(aspectGrid))aspectGrid.redraw();}catch(e2){}};
+    w.onerror=()=>{w.terminate();aspI.src=ASPECT_PNG;};
+    const copy=raw.slice();w.postMessage(copy.buffer,[copy.buffer]);return true;}catch(e){return false;}}
+_afterFirstPaint(function(){if(!_aspWorker())aspI.src=ASPECT_PNG;});
 aspI.onload=function(){aspPW=aspI.width;aspPH=aspI.height;const c=document.createElement('canvas');c.width=aspPW;c.height=aspPH;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(aspI,0,0);try{aspData=x.getImageData(0,0,aspPW,aspPH).data;}catch(e){}};
 // --- Fine terrain sampling: 60 m aspect (8-way) + fine elevation raster ---
 let elevData=null,elevPW=0,elevPH=0;
@@ -10773,7 +10988,9 @@ const AspectGrid=L.GridLayer.extend({createTile:function(coords,done){
   ctx.putImageData(img,0,0);return tile;}});
 const aspectGrid=new AspectGrid({opacity:.78,tileSize:256});
 const cv=document.createElement('canvas');cv.width=W;cv.height=H;const cx=cv.getContext('2d');
-let raster=L.imageOverlay(cv.toDataURL(),[[laMin,loMin],[laMax,loMax]],{opacity:.94,className:'raster-smooth'}).addTo(map);
+// The canvas itself is the overlay element (Leaflet's element overlay):
+// a redraw is putImageData, with no PNG encode + decode per timeline step.
+let raster=L.svgOverlay(cv,[[laMin,loMin],[laMax,loMax]],{opacity:.94,className:'raster-smooth',interactive:false}).addTo(map);
 const rcv=document.createElement('canvas');rcv.width=RW;rcv.height=RH;const rcx=rcv.getContext('2d');
 let radOverlay=L.imageOverlay(rcv.toDataURL(),[[RbS,RlW],[RbN,RlE]],{opacity:.9});
 const rad2cube=new Int32Array(RNP);
@@ -11605,17 +11822,43 @@ function chMask(){if(_chMask)return _chMask;
 function setRaster(get,border){const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;const chm=chMask();
   for(let p=0;p<NP;p++){const r=(inDomainEdge(p)||!chm[p])?null:get(p);const o=p*4;if(r){d[o]=r[0];d[o+1]=r[1];d[o+2]=r[2];d[o+3]=r[3]==null?210:r[3];if(cls)cls[p]=r[4];}else{d[o+3]=0;if(cls)cls[p]=-999;}}
   if(border){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=y*W+x;if(cls[p]==-999)continue;const rt=x<W-1?cls[p+1]:cls[p],bt=y<H-1?cls[p+W]:cls[p];if(rt!=cls[p]||bt!=cls[p]){const o=p*4;d[o]=20;d[o+1]=20;d[o+2]=30;d[o+3]=230;}}}
-  cx.putImageData(img,0,0);raster.setUrl(cv.toDataURL());}
+  cx.putImageData(img,0,0);}
+// Min / max / sum of an hourly uint8 cube over the window [a,b) for every
+// cell, in raw units, hour by hour (contiguous memory) instead of cell by
+// cell with a stride of NP. Cached per window, so a threshold or stat change
+// does not recompute it.
+// Whole 6 h blocks come pre-reduced (built once per cube, ~3 MB each), so
+// a 48 h window touches ~8 blocks plus the odd hours at its ends instead of
+// 48 hours.
+const _ws={key:'',mn:null,mx:null,su:null},_wb={},WB=6;
+function winBlocks(arr,key){if(_wb[key])return _wb[key];const nb=Math.floor(T/WB);
+  const mn=new Uint8Array(nb*NP).fill(255),mx=new Uint8Array(nb*NP),su=new Uint16Array(nb*NP);
+  for(let k=0;k<nb;k++){const bo=k*NP;for(let t=k*WB;t<k*WB+WB;t++){const o=t*NP;
+    for(let p=0;p<NP;p++){const v=arr[o+p],q=bo+p;if(v<mn[q])mn[q]=v;if(v>mx[q])mx[q]=v;su[q]+=v;}}}
+  return (_wb[key]={nb,mn,mx,su});}
+function winRaw(arr,key){const k=key+'|'+a+'|'+b;if(_ws.key===k)return _ws;
+  if(!_ws.mn){_ws.mn=new Uint8Array(NP);_ws.mx=new Uint8Array(NP);_ws.su=new Uint32Array(NP);}
+  const mn=_ws.mn,mx=_ws.mx,su=_ws.su;mn.fill(255);mx.fill(0);su.fill(0);
+  const hours=(t0,t1)=>{for(let t=t0;t<t1;t++){const o=t*NP;for(let p=0;p<NP;p++){const v=arr[o+p];if(v<mn[p])mn[p]=v;if(v>mx[p])mx[p]=v;su[p]+=v;}}};
+  const k0=Math.ceil(a/WB),k1=Math.min(Math.floor(b/WB),Math.floor(T/WB));
+  if(arr.length>=T*NP&&k1-k0>=2){const B=winBlocks(arr,key);hours(a,k0*WB);
+    for(let kb=k0;kb<k1;kb++){const bo=kb*NP,bmn=B.mn,bmx=B.mx,bsu=B.su;
+      for(let p=0;p<NP;p++){const q=bo+p;if(bmn[q]<mn[p])mn[p]=bmn[q];if(bmx[q]>mx[p])mx[p]=bmx[q];su[p]+=bsu[q];}}
+    hours(k1*WB,b);}
+  else hours(a,b);
+  _ws.key=k;return _ws;}
 function aggT(p,m){let mn=1e9,mx=-1e9,su=0,c=0,cold=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;if(v<0)cold++;}return m=="max"?mx:m=="min"?mn:m=="sub0"?cold:m=="max05"?mx:su/Math.max(1,c);}
 function renderRaster(){
   const _hid=legHideFn(layer);
   if(layer=="snow"){const ca=a*NP,cb=b*NP;setRaster(p=>{const v=cum[cb+p]-cum[ca+p];if(_hid&&_hid(v))return null;const c=snowCol(v);return c?[c[0],c[1],c[2],170]:null;});}
   else if(layer=="depth"){const cb2=b*NP;setRaster(p=>{const v=cum[cb2+p];if(v<1||(_hid&&_hid(v)))return null;const c=depthCol(v);return c?[c[0],c[1],c[2],215]:null;});}
-  else if(layer=="temp"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
+  else if(layer=="temp"){const R=winRaw(TEMP,'temp'),tm=M.temp_mul,to=M.temp_off,c=Math.max(0,b-a);
+    setRaster(p=>{if(!c)return null;const mn=R.mn[p]/tm-to,mx=R.mx[p]/tm-to,su=R.su[p]/tm-c*to;
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[40,120-(x*60|0),255,215];}
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[255,200-(x*110|0),60,235];}
       const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(thrHides('temp',v))return null;const col=tempCol(v);return[col[0],col[1],col[2],205];});}
-  else if(layer=="wind"){setRaster(p=>{let mn=1e9,mx=-1e9,su=0,c=0;for(let t=a;t<b;t++){const v=wg_(t,p)*3.6;mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;}
+  else if(layer=="wind"){const R=winRaw(WIND_LVLS[windLvl][2],'wind'+windLvl),k=3.6/M.spd_mul,c=Math.max(0,b-a);
+    setRaster(p=>{if(!c)return null;const mn=R.mn[p]*k,mx=R.mx[p]*k,su=R.su[p]*k;
       if(stat=="lt10"){if(mx>=10)return null;return[40,190,90,215];}
       const val=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(val<0.5||thrHides('wind',val))return null;
       const c2=rampBYR(val/70);return[c2[0],c2[1],c2[2],200];});}
@@ -13623,7 +13866,7 @@ map.on('moveend',sync2dTo3d);
 const DISC_VER='1';
 // There is no splash to dismiss: the app is already on screen. All that is
 // left is to retire the loading hairline and put the disclaimer up.
-function dismissIntro(){try{if(window.__bootDone)window.__bootDone();}catch(e){}
+function dismissIntro(){try{if(window.__bootDone)window.__bootDone();else{const b=document.getElementById('boot');if(b)b.remove();}}catch(e){}
   maybeDisclaimer();}
 // --- First-run onboarding coach marks ---
 // These pointed at the old floating layer card, which no longer exists — they
@@ -13757,7 +14000,10 @@ requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}
   try{lyRender();}catch(e){}});
 try{const _pid=new URLSearchParams(location.search).get('post');
   if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);}catch(e){}
-if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(reg=>{try{reg.update();}catch(e){}}).catch(()=>{});});}
+// The split build registers it from the boot loader (app.js only arrives
+// after 'load' has fired, so a load listener here never ran).
+if(!window.__bootDone&&'serviceWorker'in navigator&&location.protocol!=='file:'){const _swReg=()=>navigator.serviceWorker.register('sw.js').then(reg=>{try{reg.update();}catch(e){}}).catch(()=>{});
+  if(document.readyState==='complete')_swReg();else window.addEventListener('load',_swReg);}
 requestAnimationFrame(()=>{document.documentElement.style.setProperty('--btm-h',document.getElementById('bottomPanel').offsetHeight+'px');});
 // --- Supabase Auth & Reports ---
 const SB_URL='https://gdtxwowcqtbdkcoksivb.supabase.co';
@@ -13941,16 +14187,21 @@ async function makeThumb(src,maxPx){maxPx=maxPx||360;
     const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
     g.fillStyle='#fff';g.fillRect(0,0,w,h);g.drawImage(bmp,0,0,w,h);try{bmp.close&&bmp.close();}catch(e){}
     const out=await new Promise(r=>c.toBlob(r,'image/jpeg',0.78));c.width=1;c.height=1;return out;}catch(e){return null;}}
-async function uploadThumb(src){if(!sb||!sbUser||!src)return null;const t=await makeThumb(src);if(!t)return null;
-  const path=sbUser.id+'/t_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.jpg';
+async function uploadThumb(src,maxPx,pre){if(!sb||!sbUser||!src)return null;const t=await makeThumb(src,maxPx);if(!t)return null;
+  const path=sbUser.id+'/'+(pre||'t')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.jpg';
   const{error}=await sb.storage.from('report-images').upload(path,t,{contentType:'image/jpeg',cacheControl:'31536000'});
   if(error)return null;const{data}=sb.storage.from('report-images').getPublicUrl(path);return (data&&data.publicUrl)||null;}
 // before a report is inserted: add its thumbnail (from the local picture when
 // there is one, so nothing is downloaded again); never holds the post up >5 s
 async function withThumb(row,local){try{const cd=row.condition_data||{};
     const src=local||(cd.activity&&cd.activity.map)||row.image_url;if(!src||cd.thumb)return row;
-    const t=await Promise.race([uploadThumb(src),new Promise(r=>setTimeout(()=>r(null),5000))]);
-    if(t)row.condition_data=Object.assign({},cd,{thumb:t});}catch(e){}return row;}
+    // 360 px for grids and markers, 960 px for the feed card (a phone shows
+    // it ~360 CSS px wide at 2-3x): the 1600 px original only full screen.
+    const to=new Promise(r=>setTimeout(()=>r(null),5000));
+    const [t,m]=await Promise.all([Promise.race([uploadThumb(src),to]),
+      local?Promise.race([uploadThumb(src,960,'m'),to]):Promise.resolve(null)]);
+    const add={};if(t)add.thumb=t;if(m)add.mid=m;
+    if(t||m)row.condition_data=Object.assign({},cd,add);}catch(e){}return row;}
 async function downscaleImage(file,maxPx,q){
   maxPx=maxPx||1600;q=q||0.85;
   if(!file||!/^image\//.test(file.type||''))return file;
@@ -14245,7 +14496,7 @@ function reportPopupHTML(r){
   const vizHtml=zones?rptVizHTML(zones,34):'';
   const other=(!zones&&r.measurement&&!/\d+\s*cm/.test(r.measurement))?'<span class="rpop-chip">'+escapeHtml(r.measurement)+'</span>':'';
   return '<div class="rpop">'
-    +(r.img?('<div class="rpop-img" onclick="feedOpenAt(\''+r.id+'\')"><img src="'+r.img+'" loading="lazy" alt=""/>'+catBadge+'</div>'):'')
+    +(r.img?('<div class="rpop-img" onclick="feedOpenAt(\''+r.id+'\')"><img src="'+((r.condition_data&&(r.condition_data.mid||r.condition_data.thumb))||r.img)+'" loading="lazy" alt=""/>'+catBadge+'</div>'):'')
     +'<div class="rpop-body"><div class="rpop-head">'
       +'<div class="rpop-av"'+(r.avatar?(' style="background-image:url('+r.avatar+')"'):'')+'>'+(r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase()))+'</div>'
       +'<div class="rpop-meta"><b>'+escapeHtml(r.user||'User')+'</b><span>'+escapeHtml(r.time||'')+'</span></div>'
@@ -14281,7 +14532,7 @@ function _rptMarker(r,mode){
   const dom=_rptDominantType(r);
   if(mode==='photo'&&dom){
     html=_rptDrawMark(col,(DRAW_PENS[dom]&&DRAW_PENS[dom].label)||dom);w=h=44;}
-  else if(mode==='photo'&&r.img){html='<div class="rpt-photo" style="--cc:'+col+'"><img src="'+r.img+'" loading="lazy" alt=""/><i class="rp-cat" style="background:'+(CAT_COLORS[r.cat]||'#333')+'">'+(CAT_SVG[r.cat]||'')+'</i></div>';w=h=58;}
+  else if(mode==='photo'&&r.img){html='<div class="rpt-photo" style="--cc:'+col+'"><img src="'+((r.condition_data&&r.condition_data.thumb)||r.img)+'" loading="lazy" alt=""/><i class="rp-cat" style="background:'+(CAT_COLORS[r.cat]||'#333')+'">'+(CAT_SVG[r.cat]||'')+'</i></div>';w=h=58;}
   else if(mode==='chip'){const cm=_rptDepth(r);const lab=(cm!=null)?(cm+' cm'):_rptShort(r);html='<div class="rpt-chip" style="--cc:'+col+'">'+(CAT_SVG[r.cat]||'')+'<b>'+escapeHtml(lab)+'</b></div>';w=Math.round(30+lab.length*8.6);h=30;}
   else if(mode==='dot'){html='<div class="rpt-tiny" style="--cc:'+col+'"></div>';w=h=12;}
   else{html='<div class="rpt-pin" style="--cc:'+col+'">'+(CAT_SVG[r.cat]||'')+(r.img?'<i class="rp-dot"></i>':'')+'</div>';w=h=38;}
@@ -14423,8 +14674,12 @@ function authUpdateUI(user){
     banner.style.display='none';
   }
   feedB.style.display='flex';
-  loadSocial().then(()=>{loadReportMarkers();loadDbReports();});
+  // INITIAL_SESSION, getSession() and every token refresh all land here;
+  // the feed and markers only need reloading when the user changed.
+  const uid=user?user.id:'';
+  if(uid!==_authLoadedUid){_authLoadedUid=uid;loadSocial().then(()=>{loadReportMarkers();loadDbReports();});}
 }
+let _authLoadedUid;
 // --- Social state ---
 let myFollowing=new Set(),myFollowers=new Set();
 async function loadSocial(){
@@ -14464,19 +14719,26 @@ async function loadDbReports(opts){
         return ll?[ll[0],ll[1],+cd.powderAmountCm||0,+cd.powderQuality||0]:null;}).filter(Boolean);
       if(layer==='qprheat')renderQprHeat();if(layer==='prog')renderPrognosis(stat);if(layer==='powfind')renderPowderFind();if(layer==='progdiff')renderProgDiff();if(layer==='progpat')renderProgPattern(stat);}catch(e){}
     const ids=data.map(r=>r.id),uids=[...new Set(data.map(r=>r.user_id).filter(Boolean))];
+    // The four follow-up queries are independent: one round trip, not four.
+    const _q=pr=>Promise.resolve(pr).then(r=>(r&&r.data)||[],()=>[]);
+    const [pr,rx,cc,cnd]=await Promise.all([
+      _q(sb.from('profiles').select('id,username,avatar_url').in('id',uids)),
+      _q(sb.from('report_reactions').select('report_id,user_id').eq('type','like').in('report_id',ids)),
+      // created_at too, so the notification badge can tell a comment that
+      // arrived since the feed was last opened from an old one
+      _q(sb.from('report_comments').select('report_id,created_at').in('report_id',ids)),
+      // crowdsourced snow quality: stars 1–5 + powder
+      _q(sb.from('report_conditions').select('report_id,user_id,stars,powder').in('report_id',ids))]);
     // usernames
-    let nameMap={},avatarMap={};try{const{data:pr}=await sb.from('profiles').select('id,username,avatar_url').in('id',uids);(pr||[]).forEach(p=>{nameMap[p.id]=p.username;if(p.avatar_url){avatarMap[p.id]=p.avatar_url;avatarPut(p.id,p.avatar_url);}});}catch(e){}
+    let nameMap={},avatarMap={};try{pr.forEach(p=>{nameMap[p.id]=p.username;if(p.avatar_url){avatarMap[p.id]=p.avatar_url;avatarPut(p.id,p.avatar_url);}});}catch(e){}
     // likes (reuse report_reactions type=like)
-    let likeCount={},likedByMe={};try{const{data:rx}=await sb.from('report_reactions').select('report_id,user_id').eq('type','like').in('report_id',ids);
-      (rx||[]).forEach(x=>{likeCount[x.report_id]=(likeCount[x.report_id]||0)+1;if(sbUser&&x.user_id===sbUser.id)likedByMe[x.report_id]=true;});}catch(e){}
-    // comment counts (created_at too, so the notification badge can tell a
-    // comment that arrived since the feed was last opened from an old one)
-    let cmtCount={},cmtNew={};try{const{data:cc}=await sb.from('report_comments').select('report_id,created_at').in('report_id',ids);
-      (cc||[]).forEach(x=>{cmtCount[x.report_id]=(cmtCount[x.report_id]||0)+1;
+    let likeCount={},likedByMe={};try{
+      rx.forEach(x=>{likeCount[x.report_id]=(likeCount[x.report_id]||0)+1;if(sbUser&&x.user_id===sbUser.id)likedByMe[x.report_id]=true;});}catch(e){}
+    let cmtCount={},cmtNew={};try{
+      cc.forEach(x=>{cmtCount[x.report_id]=(cmtCount[x.report_id]||0)+1;
         if(new Date(x.created_at).getTime()>feedSeenAt)cmtNew[x.report_id]=(cmtNew[x.report_id]||0)+1;});}catch(e){}
-    // condition ratings (crowdsourced snow quality: stars 1–5 + powder)
-    let condAgg={},myCond={};try{const{data:cnd}=await sb.from('report_conditions').select('report_id,user_id,stars,powder').in('report_id',ids);
-      (cnd||[]).forEach(x=>{const g=condAgg[x.report_id]||(condAgg[x.report_id]={n:0,sum:0,pow:0});g.n++;g.sum+=x.stars||0;if(x.powder)g.pow++;if(sbUser&&x.user_id===sbUser.id)myCond[x.report_id]={stars:x.stars,powder:!!x.powder};});}catch(e){}
+    let condAgg={},myCond={};try{
+      cnd.forEach(x=>{const g=condAgg[x.report_id]||(condAgg[x.report_id]={n:0,sum:0,pow:0});g.n++;g.sum+=x.stars||0;if(x.powder)g.pow++;if(sbUser&&x.user_id===sbUser.id)myCond[x.report_id]={stars:x.stars,powder:!!x.powder};});}catch(e){}
     const dbR=data.map(r=>{
       if(r.flagged)return null; // hide community-flagged reports
       const ll=parseGeo(r.location);if(!ll||(ll[0]===0&&ll[1]===0))return null;const lat=ll[0],lng=ll[1];
@@ -15154,27 +15416,8 @@ async function viewUser(uid,username){
       if(data.created_at){const d=new Date(data.created_at);document.getElementById('uvSince').textContent=d.toLocaleDateString(LOCALE(),{month:'short',year:'2-digit'});}
       if(data.avatar_url){av.classList.add('has-img');av.style.backgroundImage='url('+data.avatar_url+')';avatarPut(uid,data.avatar_url);}}
   }catch(e){}
-  try{const{count:fc}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',uid);
-    const el=document.getElementById('uvFollowers');if(el)el.textContent=fc||0;}catch(e){}
-  try{const{data:rs}=await sb.from('reports').select('*').eq('user_id',uid).order('created_at',{ascending:false}).limit(30);
-    const ids=(rs||[]).map(r=>r.id);let total=0;
-    if(ids.length){const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',ids);total=count||0;}
-    document.getElementById('uvReports').textContent=ids.length;
-    document.getElementById('uvEndoN').textContent=total;
-    const posts=document.getElementById('uvPosts');
-    // Own profile: every post gets a delete button (RLS still enforces ownership).
-    const mine=!!(sbUser&&uid===sbUser.id);
-    const delBtn=id=>mine?('<button class="uv-del" title="Löschen" aria-label="Beitrag löschen" onclick="uvDeletePost(\''+id+'\',event)">'+
-      '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>'):'';
-    const withImg=(rs||[]).filter(r=>r.image_url),noImg=(rs||[]).filter(r=>!r.image_url);
-    const grid=withImg.length?('<div class="uv-grid">'+withImg.map(r=>{const ll=parseGeo(r.location);
-      return '<div class="uv-cell" onclick="userViewClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'"><img src="'+r.image_url+'" loading="lazy" alt=""/>'+delBtn(r.id)+'</div>';}).join('')+'</div>'):'';
-    const rows=noImg.map(r=>{const ll=parseGeo(r.location);const cap=escapeHtml(r.caption||r.subtype||'');
-      const meta=escapeHtml((r.condition_data&&r.condition_data.measurement)||r.subtype||'');
-      return '<div class="uv-post'+(mine?' own':'')+'" onclick="userViewClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'">'+
-        '<div class="b"><b>'+meta+'</b>'+(cap?(' — '+cap):'')+'<div class="t">'+timeAgo(r.created_at)+'</div></div>'+delBtn(r.id)+'</div>';}).join('');
-    posts.innerHTML='<h3>Beiträge · '+ids.length+'</h3>'+((grid+rows)||'<div style="color:var(--mut);font-size:13px;text-align:center;padding:14px 0">Noch keine Beiträge.</div>');
-  }catch(e){}
+  // Posts, follower and like counts come from pvLoad (uvPV) -- asking for
+  // them here as well doubled every query of the profile view.
 }
 // --- Swiss/DSG data rights: export + delete + legal re-show ---
 async function profExportData(btn){if(!sb||!sbUser)return;
@@ -15235,13 +15478,17 @@ let _usT=null;
 // the entry points stay hidden, because a button that always fails is worse
 // than no button.
 let dmReady=null,dmThread=null,dmOther=null,dmSub=null,dmThreads=[];
-async function dmAvailable(){
-  if(dmReady!==null)return dmReady;
-  if(!sb){dmReady=false;return false;}
-  try{const{error}=await sb.from('dm_threads').select('id').limit(1);
-    dmReady=!error;}catch(e){dmReady=false;}
-  try{document.querySelectorAll('[data-dm]').forEach(el=>{el.hidden=!dmReady;});}catch(e){}
-  return dmReady;
+// One probe, however many callers ask at the same time.
+let _dmProbe=null;
+function dmAvailable(){
+  if(dmReady!==null)return Promise.resolve(dmReady);
+  if(!sb){dmReady=false;return Promise.resolve(false);}
+  return _dmProbe||(_dmProbe=(async()=>{
+    try{const{error}=await sb.from('dm_threads').select('id').limit(1);
+      dmReady=!error;}catch(e){dmReady=false;}
+    _dmProbe=null;
+    try{document.querySelectorAll('[data-dm]').forEach(el=>{el.hidden=!dmReady;});}catch(e){}
+    return dmReady;})());
 }
 function dmClose(){
   document.getElementById('dmModal').style.display='none';
@@ -17299,15 +17546,17 @@ function feedVisual(r,col){
   if(cd.activity&&cd.activity.track){setTimeout(()=>{try{feedWireCarousels();}catch(e){}},0);return actFeedVisual(r);}
   const drawn=!!cd.draw;
   const photo=(!drawn||(r.img&&r.img!==cd.drawImage&&r.img!==cd.snapshot))?r.img:null;
+  // the card shows the 960 px copy when the post has one (feedImgTap opens the original)
+  const shown=u=>(u===r.img&&cd.mid)?cd.mid:u;
   const pics=[photo].concat(cd.images||[]).filter((u,i,a)=>u&&typeof u==='string'&&u!==cd.drawImage&&u!==cd.snapshot&&a.indexOf(u)===i);
   if(pics.length>1){const id='p'+String(r.id).replace(/[^\w-]/g,'');setTimeout(()=>{try{feedWireCarousels();}catch(e){}},0);
     return '<div class="fc-wrap fc-post"><div class="fc-carousel" id="fcar-'+id+'">'
-      +pics.map(u=>'<div class="fc-slide" onclick="feedImgTap(\''+r.id+'\',event)"><img src="'+u+'" alt="" loading="lazy" decoding="async"></div>').join('')
+      +pics.map(u=>'<div class="fc-slide" onclick="feedImgTap(\''+r.id+'\',event)"><img src="'+shown(u)+'" alt="" loading="lazy" decoding="async"></div>').join('')
       +'</div><span class="fc-count" id="fcn-'+id+'">1/'+pics.length+'</span>'
       +'<div class="fc-dots" id="fcd-'+id+'">'+pics.map((x,i)=>'<i class="'+(i?'':'on')+'"></i>').join('')+'</div>'
       +'<button class="fc-nav prev" aria-label="Zurück" onclick="event.stopPropagation();fcStep(\''+id+'\',-1)">‹</button>'
       +'<button class="fc-nav next" aria-label="Weiter" onclick="event.stopPropagation();fcStep(\''+id+'\',1)">›</button></div>';}
-  if(photo)return '<div class="feed-card-visual" onclick="feedImgTap(\''+r.id+'\',event)"><img src="'+photo+'" alt="" loading="lazy" decoding="async"/></div>';
+  if(photo)return '<div class="feed-card-visual" onclick="feedImgTap(\''+r.id+'\',event)"><img src="'+shown(photo)+'" alt="" loading="lazy" decoding="async"/></div>';
   if(drawn)return '';
   if(r.caption)return '<div class="feed-tx" style="background:linear-gradient(150deg,'+col+'14,rgba(255,255,255,0) 75%)"><span class="feed-tx-bar" style="background:'+col+'"></span>'+escapeHtml(r.caption)+'</div>';
   return '';

@@ -72,8 +72,12 @@ jobs:
         env:
           # optional: Windy Webcams API key for the webcam layer (public client key)
           WINDY_WEBCAMS_KEY: ${{ secrets.WINDY_WEBCAMS_KEY }}
+          # minify app.js + inline CSS (interactive_export.minify_shell); skipped
+          # with a note if esbuild is missing or the result fails node --check
+          SNOW_MINIFY: "1"
         run: |
           mkdir -p dist
+          npm install -g esbuild@0.24.0 >/dev/null 2>&1 || echo "esbuild not installed -- shipping readable app.js"
           python run_interactive.py --split --res 1000 --gz-only --out-dir dist
           touch dist/.nojekyll
 
@@ -155,6 +159,11 @@ jobs:
             else
               python -c "import json;json.dump({'version':'demo-20260401','gz':'demo.json.gz'},open('dist/data/demo-latest.json','w'))"
             fi
+            # the binary container the boot loader prefers (made from the
+            # cached JSON, so an older demo cache needs no rebuild)
+            python tools/blob_to_bin.py dist/data/demo.json.gz dist/data/demo.bin.gz \
+              && python -c "import json;p='dist/data/demo-latest.json';j=json.load(open(p));j['bin']='demo.bin.gz';json.dump(j,open(p,'w'))" \
+              || echo "demo: no binary copy, the JSON one is used"
             echo "demo dataset assembled into dist/data/."
           else
             echo "no demo dataset this run — demo mode falls back to live data."
