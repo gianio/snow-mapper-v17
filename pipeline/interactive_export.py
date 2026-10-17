@@ -2565,7 +2565,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #bootTxt.in{animation:btTxt .45s ease}
  @keyframes btTxt{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
  /* "sharper map ready" after a coarse start */
- #hiResChip{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 62px);z-index:3000;
+ #hiResChip{position:fixed;left:50%;top:calc(var(--bar-h,64px) + 48px);z-index:3000;
    transform:translate(-50%,-12px);opacity:0;transition:opacity .3s,transform .3s;
    display:flex;gap:10px;align-items:center;padding:9px 14px;border-radius:99px;border:1px solid var(--hair,rgba(0,0,0,.08));
    background:var(--card,#fff);color:var(--fg,#1b2230);box-shadow:0 8px 24px rgba(0,0,0,.18);
@@ -4425,6 +4425,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #rvFab.on svg{color:#2b2100}
  #rvFab:active{transform:scale(.95)}
  body.nav-screen #rvFab,body.ly-open #rvFab,body.insp-open #rvFab,body.trk-open #rvFab,body.draw-on #rvFab,body.ts-open #rvFab,body.wcv-open #rvFab{display:none}
+ /* the intro, any time: a small (i) beside the feedback button */
+ #infoFab{position:fixed;z-index:1160;top:calc(var(--bar-h,64px) + 6px);left:calc(14px + var(--rvw,118px) + 8px);
+   width:32px;height:32px;padding:0;border-radius:50%;display:grid;place-items:center;border:1px solid var(--hair);
+   background:color-mix(in srgb,var(--card,#fff) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+   color:var(--brand,#2D4A6E);box-shadow:0 4px 14px rgba(15,23,42,.14);cursor:pointer}
+ #infoFab svg{width:18px;height:18px}
+ #infoFab:active{transform:scale(.95)}
+ body.nav-screen #infoFab,body.ly-open #infoFab,body.insp-open #infoFab,body.trk-open #infoFab,body.draw-on #infoFab,body.ts-open #infoFab,body.wcv-open #infoFab{display:none}
  .rv-btn.rv-btn{position:absolute!important;top:-14px;left:50%;right:auto;transform:translateX(-50%);z-index:60;display:grid!important;place-items:center;
    width:30px!important;min-width:0!important;height:30px!important;padding:0!important;margin:0!important;
    border:2px solid #F4B400!important;border-radius:50%!important;background:var(--card,#fff)!important;color:#E0A100!important;
@@ -5394,7 +5402,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
      the app uses when it talks about itself (title, share sheet, PWA
      install) -- not in new chrome competing with the map. -->
 
-<button id="rvFab" type="button" onclick="rvOpen()" title="Feedback zur App senden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5a2 2 0 0 1-2 2H9l-4.5 3.5V6a2 2 0 0 1 2-2H18a2 2 0 0 1 2 2z"/><path d="M12.25 6.9l.95 1.95 2.15.3-1.55 1.5.37 2.13-1.92-1-1.92 1 .37-2.13-1.55-1.5 2.15-.3z" fill="currentColor" stroke="none"/></svg><span>Feedback</span></button>
+<button id="infoFab" type="button" onclick="onbIntro()" title="Einführung: was Snowmapper kann" aria-label="Einführung"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.01"/></svg></button><button id="rvFab" type="button" onclick="rvOpen()" title="Feedback zur App senden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5a2 2 0 0 1-2 2H9l-4.5 3.5V6a2 2 0 0 1 2-2H18a2 2 0 0 1 2 2z"/><path d="M12.25 6.9l.95 1.95 2.15.3-1.55 1.5.37 2.13-1.92-1-1.92 1 .37-2.13-1.55-1.5 2.15-.3z" fill="currentColor" stroke="none"/></svg><span>Feedback</span></button>
 <header id="appBar">
   <button class="ab-brand" onclick="navGo('map')" aria-label="Snowmapper"><span class="ab-logo"><img src="icon-192.png?v=2" alt="" width="26" height="26"></span><span class="ab-name">Snowmapper</span></button>
   <nav class="ab-tabs" aria-label="Navigation">
@@ -14295,6 +14303,11 @@ function onbSteps(){const st=['lang','tour','disc'];if(onb.lockOk)st.push('lock'
 async function onbOpen(again){onb={step:0,slide:0,again:!!again,lockOk:null};
   document.getElementById('onb').hidden=false;document.body.classList.add('onb-open');onbRender();
   try{onb.lockOk=await lockAvailable();}catch(e){onb.lockOk=false;}onbRender();}
+// straight to the tour (the "Warum Snowmapper?" slide), skipping language
+function onbIntro(){onbOpen(true);onb.step=1;onb.slide=0;onbRender();}
+// the (i) sits right of the feedback button, whatever its width
+(function(){const f=()=>{const r=document.getElementById('rvFab');if(r&&r.offsetWidth)document.documentElement.style.setProperty('--rvw',r.offsetWidth+'px');};
+  requestAnimationFrame(f);addEventListener('resize',f);setTimeout(f,1500);})();
 function onbClose(){document.getElementById('onb').hidden=true;document.body.classList.remove('onb-open');}
 function onbNext(){const st=onbSteps();
   if(st[onb.step]==='tour'){const n=ONB_SLIDES.filter(x=>!(x[1]==='Aufzeichnen'&&document.body.classList.contains('desk'))).length;
