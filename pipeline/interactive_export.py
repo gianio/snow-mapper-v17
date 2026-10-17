@@ -1011,6 +1011,71 @@ def write_bin_blob(path: Path, meta, blobs):
     return path
 
 
+LO_FACTOR = 4          # the quick first-start blob keeps every 4th cell
+
+
+def coarse_meta_blobs(meta, blobs, f=LO_FACTOR):
+    """A light copy of the data for the first seconds of a start: every f-th
+    cell of the forecast grid (and of the radiation grid), the three terrain
+    PNGs at half size, everything else as is. ~6x smaller at f=3.
+
+    The client maps cell centres linearly between the grid bounds, with
+    (H-1) intervals (lat(y) = laMax - (laMax-laMin) * y / (H-1)), so keeping
+    rows 0, f, 2f, ... and moving the south/east bound to the last kept
+    centre puts every kept cell exactly where it was."""
+    import io
+    from PIL import Image
+    raw = {k: (base64.b64decode(v) if isinstance(v, str) else bytes(v)) for k, v in blobs.items()}
+    m = json.loads(json.dumps(meta))
+    T, W, H = int(meta["T"]), int(meta["width"]), int(meta["height"])
+    rad = meta["rad"]
+    RW, RH, RK = int(rad["width"]), int(rad["height"]), int(rad["K"])
+
+    def keep(n):
+        return np.arange(0, n, f)
+
+    def sub(buf, layers, w, h):
+        a = np.frombuffer(buf, np.uint8)
+        if a.size != layers * w * h:
+            return None
+        a = a.reshape(layers, h, w)[:, keep(h)][:, :, keep(w)]
+        return np.ascontiguousarray(a).tobytes()
+
+    def bounds(bb, w, h):
+        la0, lo0, la1, lo1 = bb
+        ky, kx = keep(h)[-1], keep(w)[-1]
+        return [float(la1 - (la1 - la0) * ky / max(1, h - 1)), lo0, la1, float(lo0 + (lo1 - lo0) * kx / max(1, w - 1))]
+
+    out = {}
+    for k, v in raw.items():
+        if k.endswith("PNG"):
+            try:
+                im = Image.open(io.BytesIO(v))
+                im = im.resize((max(1, im.width // 2), max(1, im.height // 2)), Image.NEAREST)
+                bio = io.BytesIO()
+                im.save(bio, "PNG", optimize=True)
+                out[k] = bio.getvalue()
+            except Exception:
+                out[k] = v
+            continue
+        n = len(v)
+        if k in ("RSLOPE", "RASPECT") and n == RW * RH:
+            out[k] = sub(v, 1, RW, RH)
+        elif k == "RHOR" and n == RK * RW * RH:
+            out[k] = sub(v, RK, RW, RH)
+        elif n == T * W * H:
+            out[k] = sub(v, T, W, H)
+        elif n == W * H:
+            out[k] = sub(v, 1, W, H)
+        else:
+            out[k] = v           # wind points, anything not on a grid
+    m["width"], m["height"] = int(len(keep(W))), int(len(keep(H)))
+    m["bounds"] = bounds(meta["bounds"], W, H)
+    m["rad"] = dict(rad, width=len(keep(RW)), height=len(keep(RH)), bounds=bounds(rad["bounds"], RW, RH))
+    m["coarse"] = f
+    return m, out
+
+
 def read_bin_blob(path: Path):
     """Inverse of write_bin_blob (tests, tools): (meta, {key: bytes})."""
     import gzip as _gzip
@@ -1105,6 +1170,13 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     binname = "snowdata-%s.bin.gz" % stamp
     write_bin_blob(ddir / binname, meta, blobs)
     pointer["bin"] = binname
+    # ... and a coarse copy, shown first while the full one loads behind it
+    try:
+        loname = "snowdata-%s.lo.bin.gz" % stamp
+        write_bin_blob(ddir / loname, *coarse_meta_blobs(meta, blobs))
+        pointer["lo"] = loname
+    except Exception as e:
+        print(f"[OUT] coarse blob skipped: {type(e).__name__}: {e}")
     if gz_only:
         plain_mb = len(payload) / 1e6
         print(f"[OUT] gz-only: uncompressed blob ({plain_mb:.0f} MB) not written "
@@ -1133,7 +1205,7 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
             (old.parent / old.name[:-3]).unlink(missing_ok=True)
         except OSError:
             pass
-    for old in sorted(ddir.glob("snowdata-*.bin.gz"))[:-4]:
+    for old in sorted(ddir.glob("snowdata-*.bin.gz"))[:-8]:       # full + coarse
         old.unlink(missing_ok=True)
     for old in sorted(ddir.glob("snowdata-*.json"))[:-4]:
         try:
@@ -1171,10 +1243,32 @@ _BOOT_SPLIT = r"""<script>
   function prog(f,label){f=Math.max(0,Math.min(1,f));if(f<shown)f=shown;shown=f;
     var b=document.querySelector('#boot .bt-bar i');if(b)b.style.width=(Math.max(2,f*100))+'%';
     var p=document.getElementById('bootPct');if(p)p.textContent=Math.round(f*100)+' %';
-    if(label){var l=document.getElementById('bootTxt');if(l)l.textContent=label;}}
-  function bootDone(){var e=document.getElementById('boot');if(!e)return;
+    if(label){sentStop();var l=document.getElementById('bootTxt');if(l)l.textContent=label;}}
+  // While it loads: short snow lines in a new random order every start.
+  var SENT=['Die Schneedecke wird aufgebaut und analysiert','Neuschnee wird gezählt','Schneeschichten werden gestapelt',
+    'Der Wind verfrachtet den Schnee','Sonnenhänge werden aufgewärmt','Pulver wird gesucht','Triebschnee wird aufgespürt',
+    'Kristalle werden sortiert','Hänge werden nach Exposition sortiert','Die Nacht friert den Firn','Schneehöhen werden verglichen',
+    'Krusten werden abgeklopft','Die Temperatur wird nach Höhe verteilt','Die Zeitleiste wird gespurt','Stationen werden befragt'];
+  for(var si=SENT.length-1;si>0;si--){var sj=Math.floor(Math.random()*(si+1)),st=SENT[si];SENT[si]=SENT[sj];SENT[sj]=st;}
+  var sentI=0,sentT=null;
+  function sentNext(){var l=document.getElementById('bootTxt');if(!l)return;l.classList.remove('in');void l.offsetWidth;
+    l.textContent=SENT[sentI++%SENT.length];l.classList.add('in');}
+  function sentStart(){if(sentT)return;sentNext();sentT=setInterval(sentNext,2400);}
+  function sentStop(){if(sentT){clearInterval(sentT);sentT=null;}}
+  function bootDone(){sentStop();var e=document.getElementById('boot');if(!e)return;
     prog(1,'Fertig');e.classList.add('done');setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e);},300);
-    setTimeout(swReg,3000);}
+    setTimeout(swReg,3000);setTimeout(fullBehind,1500);}
+  // The full-resolution data, fetched quietly once the coarse map is up. It
+  // only lands in the cache here; the next start (or the chip) uses it.
+  function fullBehind(){var F=window.__fullPending;if(!F)return;window.__fullPending=null;
+    fetch(F.url,{cache:'force-cache'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer();})
+      .then(function(){try{localStorage.setItem('ssm_full',F.name);}catch(e){}
+        var c=document.createElement('button');c.id='hiResChip';c.type='button';
+        c.innerHTML='<b>Feinere Karte bereit</b><span>Aktualisieren</span>';
+        c.onclick=function(){location.reload();};document.body.appendChild(c);
+        setTimeout(function(){c.classList.add('on');},30);
+        setTimeout(function(){c.classList.remove('on');setTimeout(function(){if(c.parentNode)c.parentNode.removeChild(c);},400);},20000);})
+      .catch(function(){});}
   window.__bootDone=bootDone;
   function fail(m){
     var e=document.getElementById('boot');if(e&&e.parentNode)e.parentNode.removeChild(e);
@@ -1234,10 +1328,10 @@ _BOOT_SPLIT = r"""<script>
   function loadBin(url){
     return new Promise(function(resolve,reject){
       function onMsg(m){
-        if(m.p!=null)prog(0.02+0.78*m.p,'Wetterdaten werden geladen');
-        else if(m.stage==='unpack')prog(0.82,'Daten werden entpackt');
-        else if(m.stage==='cum')prog(0.86,'Schneelayer werden berechnet');
-        else if(m.c!=null)prog(0.86+0.10*m.c,'Schneelayer werden berechnet');}
+        if(m.p!=null)prog(0.02+0.78*m.p);
+        else if(m.stage==='unpack')prog(0.82);
+        else if(m.stage==='cum')prog(0.86);
+        else if(m.c!=null)prog(0.86+0.10*m.c);}
       function done(r){var b={};for(var k in r.ix)b[k]=new Uint8Array(r.buf,r.base+r.ix[k][0],r.ix[k][1]);
         resolve({meta:r.meta,b:b,cum:r.cum});}
       var w=null;
@@ -1274,7 +1368,16 @@ _BOOT_SPLIT = r"""<script>
       if(!ljr.ok)throw new Error('latest.json HTTP '+ljr.status);
       var lj=await ljr.json();
       if(lj.bin&&window.DecompressionStream&&window.TransformStream){
-        try{return await loadBin(pre+'data/'+lj.bin);}
+        // A coarse copy first (every 4th cell, a few MB) unless the full
+        // one of this very run is already on the phone; the full one then
+        // loads behind the map and is used from the next start on (or at
+        // once, from the 'sharper map' chip).
+        var haveFull=false;try{haveFull=localStorage.getItem('ssm_full')===lj.bin;}catch(e){}
+        if(lj.lo&&!haveFull){
+          try{var Dl=await loadBin(pre+'data/'+lj.lo);window.__fullPending={url:pre+'data/'+lj.bin,name:lj.bin};return Dl;}
+          catch(e){try{if(window.Sentry)window.Sentry.captureException(e);}catch(_){}}
+        }
+        try{var Df=await loadBin(pre+'data/'+lj.bin);try{localStorage.setItem('ssm_full',lj.bin);}catch(e){}return Df;}
         catch(e){try{if(window.Sentry)window.Sentry.captureException(e);}catch(_){}}
       }
       var useGz=!!(lj.gz&&window.DecompressionStream);
@@ -1291,8 +1394,8 @@ _BOOT_SPLIT = r"""<script>
       var total=+(res.headers.get('Content-Length')||0),text;
       if(res.body&&total&&window.ReadableStream){
         var reader=res.body.getReader(),chunks=[],got=0,r;
-        while(!(r=await reader.read()).done){chunks.push(r.value);got+=r.value.length;prog(0.02+0.78*got/total,'Wetterdaten werden geladen');}
-        prog(0.82,'Daten werden entpackt');
+        while(!(r=await reader.read()).done){chunks.push(r.value);got+=r.value.length;prog(0.02+0.78*got/total);}
+        prog(0.82);
         if(useGz){
           var ds=new Blob(chunks).stream().pipeThrough(new DecompressionStream('gzip'));
           text=await new Response(ds).text();
@@ -1302,15 +1405,15 @@ _BOOT_SPLIT = r"""<script>
         }
       }else if(useGz){
         var ds2=(await res.blob()).stream().pipeThrough(new DecompressionStream('gzip'));
-        text=await new Response(ds2).text();prog(0.82,'Daten werden entpackt');
-      }else{text=await res.text();prog(0.82,'Daten werden entpackt');}
+        text=await new Response(ds2).text();prog(0.82);
+      }else{text=await res.text();prog(0.82);}
       return JSON.parse(text);
     })();
   }
   function frame(){return new Promise(function(r){requestAnimationFrame(function(){setTimeout(r,0);});});}
   (async function(){
     try{
-      prog(0.02,'Wetterdaten werden geladen');
+      prog(0.02);sentStart();
       // Live/current weather is the default; the 1 April 2026 demo dataset is
       // an explicit opt-in (Settings, or ?demo=1) persisted in localStorage,
       // since app.js's own demoActive() (below) can't run yet at boot time.
@@ -2458,7 +2561,17 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    stroke-linecap:round;stroke-linejoin:round;animation:btSpin 3.2s linear infinite;will-change:transform}
  #boot .bt-flake circle{fill:var(--accent,#2563eb);stroke:none}
  @keyframes btSpin{to{transform:rotate(360deg)}}
- #bootTxt{font-size:15px;font-weight:600}
+ #bootTxt{font-size:15px;font-weight:600;min-height:1.3em}
+ #bootTxt.in{animation:btTxt .45s ease}
+ @keyframes btTxt{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+ /* "sharper map ready" after a coarse start */
+ #hiResChip{position:fixed;left:50%;top:calc(var(--bar-h,64px) + 48px);z-index:3000;
+   transform:translate(-50%,-12px);opacity:0;transition:opacity .3s,transform .3s;
+   display:flex;gap:10px;align-items:center;padding:9px 14px;border-radius:99px;border:1px solid var(--hair,rgba(0,0,0,.08));
+   background:var(--card,#fff);color:var(--fg,#1b2230);box-shadow:0 8px 24px rgba(0,0,0,.18);
+   font:600 13px/1.2 var(--font,system-ui);cursor:pointer;white-space:nowrap}
+ #hiResChip.on{opacity:1;transform:translate(-50%,0)}
+ #hiResChip span{color:var(--accent,#2563eb)}
  #bootPct{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
  #boot .bt-bar{width:180px;height:4px;border-radius:99px;background:var(--hair,rgba(0,0,0,.08));overflow:hidden}
  #boot .bt-bar i{display:block;height:100%;width:2%;border-radius:99px;background:var(--accent,#2563eb);transition:width .25s linear}
@@ -4312,6 +4425,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #rvFab.on svg{color:#2b2100}
  #rvFab:active{transform:scale(.95)}
  body.nav-screen #rvFab,body.ly-open #rvFab,body.insp-open #rvFab,body.trk-open #rvFab,body.draw-on #rvFab,body.ts-open #rvFab,body.wcv-open #rvFab{display:none}
+ /* the intro, any time: a small (i) beside the feedback button */
+ #infoFab{position:fixed;z-index:1160;top:calc(var(--bar-h,64px) + 6px);left:calc(14px + var(--rvw,118px) + 8px);
+   width:32px;height:32px;padding:0;border-radius:50%;display:grid;place-items:center;border:1px solid var(--hair);
+   background:color-mix(in srgb,var(--card,#fff) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+   color:var(--brand,#2D4A6E);box-shadow:0 4px 14px rgba(15,23,42,.14);cursor:pointer}
+ #infoFab svg{width:18px;height:18px}
+ #infoFab:active{transform:scale(.95)}
+ body.nav-screen #infoFab,body.ly-open #infoFab,body.insp-open #infoFab,body.trk-open #infoFab,body.draw-on #infoFab,body.ts-open #infoFab,body.wcv-open #infoFab{display:none}
  .rv-btn.rv-btn{position:absolute!important;top:-14px;left:50%;right:auto;transform:translateX(-50%);z-index:60;display:grid!important;place-items:center;
    width:30px!important;min-width:0!important;height:30px!important;padding:0!important;margin:0!important;
    border:2px solid #F4B400!important;border-radius:50%!important;background:var(--card,#fff)!important;color:#E0A100!important;
@@ -4371,8 +4492,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .trk-rough svg{display:block;width:100%;height:12px;border-radius:6px;background:var(--fill);overflow:hidden}
  .trk-rough-lg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:5px;font:600 11.5px var(--font,inherit);color:var(--fg2)}
  .trk-rough-lg em{font-style:normal;margin-left:auto;opacity:.75}
- .trk-rough-t{display:block;width:100%;height:50px;border-radius:8px;background:var(--fill)}
- .trk-rough-ax{display:flex;justify-content:space-between;font:600 10.5px var(--font,inherit);color:var(--fg2);margin-top:3px}
+ .trk-rough-tw{position:relative;padding-left:22px}
+ .trk-rough-y{position:absolute;left:0;top:0;bottom:0;width:20px}
+ .trk-rough-y span{position:absolute;right:3px;transform:translateY(-50%);font:600 9.5px var(--font,inherit);color:var(--fg2)}
+ .trk-rough svg.trk-rough-t{display:block;width:100%;height:96px;border-radius:8px;background:var(--fill)}
+ .trk-rough-ax{display:flex;justify-content:space-between;font:600 10.5px var(--font,inherit);color:var(--fg2);margin-top:3px;padding-left:22px}
+ .trk-rough-meta{font-weight:600;opacity:.8;margin-left:4px}
  .trk-rough-sub{margin:9px 0 4px;font:700 11.5px var(--font,inherit);color:var(--fg2)}
  .trk-rough-sh{display:flex;height:22px;border-radius:8px;overflow:hidden}
  .trk-rough-sh div{display:grid;place-items:center;min-width:0}
@@ -4400,6 +4525,14 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .act-sh-desc{font:500 14px/1.5 var(--font,inherit);color:var(--fg2);margin:8px 0}
  .act-sh-map{width:100%;height:46px;border:0;border-radius:14px;background:var(--brand-grad,var(--accent));color:#fff;font:800 15px var(--font-d,inherit);margin-top:8px;cursor:pointer}
  #layersFab{position:relative}
+ /* the active layer, named quietly at the top edge of the timeline card */
+ #lyNow{position:fixed;left:26px;top:auto;z-index:1001;display:inline-flex;align-items:center;gap:5px;
+   max-width:60%;padding:0;border:0;background:none;cursor:pointer;
+   font:600 11px/1.2 var(--font,inherit);letter-spacing:.02em;color:var(--ink-900,#1b2230);opacity:.78;
+   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+   text-shadow:0 0 3px var(--card,#fff),0 0 6px var(--card,#fff),0 0 10px var(--card,#fff)}
+ #lyNow i{width:6px;height:6px;border-radius:50%;background:var(--accent,#2563eb);flex:none}
+ #lyNow:empty{display:none}
  #layersFab .ly-fab-stack{position:absolute;right:4px;bottom:4px;width:15px;height:15px;border-radius:5px;background:var(--brand,#2D4A6E);color:#fff;display:grid;place-items:center}
  #layersFab .ly-fab-stack svg{width:10px;height:10px}
  .wcv{position:fixed;inset:0;z-index:6200;background:#0b0e14;color:#fff;display:flex;flex-direction:column;
@@ -4523,6 +4656,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     and a long legend scrolls instead of running under it */
  body.nav-vis #mapFabs{top:calc(env(safe-area-inset-top,0px) + 66px);justify-content:flex-end}
  #mapFabs #miniLegend{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+ /* legend and the button bar under it: one column, exactly the same width */
+ #mapFabs #miniLegend,#mapFabs .mfab-grp{align-self:stretch;box-sizing:border-box}
+ #mapFabs #miniLegend{width:auto!important;min-width:0}
  #mapFabs #miniLegend::-webkit-scrollbar{display:none}
  body.nav-vis .leg-info{bottom:calc(var(--nav-h) + var(--btm-h,80px) + 150px)}
  body.nav-vis .feed-page.open:not(.side){bottom:var(--nav-h)}
@@ -4869,12 +5005,57 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #onb[hidden],#appLock[hidden]{display:none}
  /* a tall step (the timeline gestures) scrolls inside the card instead of
     running off the top of a small phone */
- #onb .onb-card{max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 32px);overflow-y:auto;overscroll-behavior:contain}
+ #onb .onb-card{max-height:100%;overflow-y:auto;overscroll-behavior:contain}
  /* one height for every slide, so the card does not jump while paging;
     the buttons sit at the bottom edge */
- #onb .onb-card{display:flex;flex-direction:column;min-height:min(664px,calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 32px))}
+ #onb .onb-card{display:flex;flex-direction:column;min-height:min(664px,100%)}
  #onb .onb-body{flex:1;display:flex;flex-direction:column}
  #onb .onb-body>.onb-pri{margin-top:auto}
+ /* the content sits in the middle of the card, the buttons at its foot;
+    the card fills the screen (minus its edge) and is centred on it */
+ #onb .onb-body>:first-child{margin-top:auto}
+ #onb{align-items:center;padding-top:calc(env(safe-area-inset-top,0px) + 12px)}
+ #onb .onb-card{height:100%;max-height:760px}
+ .onb-bg{inset:-15vh 0 -20vh}
+ html:has(body.onb-open),body.onb-open{background:#E4E9EF}
+ /* slide illustrations */
+ .onb-ill{display:block;width:100%;max-width:330px;height:auto;margin:2px auto 12px;overflow:visible}
+ .onb-flow{fill:none;stroke:#6FB4F0;stroke-width:3;stroke-linecap:round;stroke-dasharray:6 10;animation:onbFlow 1.4s linear infinite}
+ @keyframes onbFlow{to{stroke-dashoffset:-32}}
+ .onb-core{fill:#2D5A8C}.onb-ring{fill:none;stroke:#6FB4F0;stroke-width:2;transform-box:fill-box;transform-origin:center;animation:onbRing 2.4s ease-out infinite}
+ @keyframes onbRing{from{transform:scale(1);opacity:.9}to{transform:scale(1.6);opacity:0}}
+ .onb-node circle{fill:#fff;stroke:#c9d8ea;stroke-width:1.5}.onb-node .w{fill:none;stroke:#2D5A8C;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+ .onb-node .l1{fill:#cfe3f8}.onb-node .l2{fill:#7fb0e8}.onb-node .l3{fill:#2D5A8C}
+ .onb-lb{font:700 11.5px Inter,system-ui;fill:currentColor;opacity:.75;text-anchor:middle}
+ .onb-mapbg{fill:rgba(255,255,255,.75);stroke:rgba(29,45,73,.12)}
+ .onb-cont{fill:none;stroke:rgba(29,45,73,.18);stroke-width:1.4}
+ .onb-blob,.onb-heart,.onb-ok,.onb-badge,.onb-pin,.onb-bar{transform-box:fill-box;transform-origin:center}
+ .onb-blob{opacity:0;animation:onbBlob 4s ease-in-out infinite}
+ @keyframes onbBlob{0%,10%{opacity:0;transform:scale(.6)}30%,80%{opacity:.85;transform:none}100%{opacity:0}}
+ .onb-chip.t{animation:onbChip 2.4s steps(1) infinite}
+ @keyframes onbChip{0%{opacity:1}50%{opacity:.25}}
+ .onb-mtn{fill:#cfdcea}
+ .onb-snowcap{fill:none;stroke:#fff;stroke-width:4;stroke-linejoin:round;stroke-linecap:round}
+ .onb-route{fill:none;stroke:#2D5A8C;stroke-width:3.5;stroke-linecap:round;stroke-dasharray:240;stroke-dashoffset:240;animation:onbDraw 4s ease-in-out infinite}
+ @keyframes onbDraw{0%{stroke-dashoffset:240}75%,100%{stroke-dashoffset:0}}
+ .onb-walker{fill:#E89A3C;stroke:#fff;stroke-width:2}
+ .onb-badge rect{fill:#2D5A8C}.onb-badge text{font:800 12px Inter,system-ui;fill:#fff;text-anchor:middle}
+ .onb-badge{animation:onbPop 4s ease-in-out infinite}
+ @keyframes onbPop{0%,70%{opacity:0;transform:scale(.7)}80%,96%{opacity:1;transform:none}100%{opacity:0}}
+ .onb-paint{fill:none;stroke:#3b7dd6;stroke-width:16;stroke-linecap:round;opacity:.75;stroke-dasharray:220;stroke-dashoffset:220;animation:onbPaint 3.6s ease-in-out infinite}
+ @keyframes onbPaint{0%{stroke-dashoffset:220}70%,100%{stroke-dashoffset:0}}
+ .onb-brush{fill:#E89A3C;stroke:#fff;stroke-width:1.5}
+ .onb-pin path{fill:#D9534F}.onb-pin{animation:onbPop 3.6s ease-in-out infinite}
+ .onb-track{fill:none;stroke:#2D5A8C;stroke-width:3;stroke-linecap:round;stroke-dasharray:4 5}
+ .onb-rec{fill:#D9534F;animation:onbRec 1.2s ease-in-out infinite}
+ @keyframes onbRec{50%{opacity:.25}}
+ .onb-bar{transform-origin:bottom;animation:onbBar 3.6s ease-in-out infinite}
+ @keyframes onbBar{0%{transform:scaleY(0)}25%,85%{transform:none}100%{transform:scaleY(0)}}
+ .onb-heart{fill:#E2557A;opacity:0;animation:onbHeart 2.7s ease-out infinite}
+ @keyframes onbHeart{0%{opacity:0;transform:translateY(8px) scale(.6)}20%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-34px) scale(1.1)}}
+ .onb-ok circle{fill:#3BAA63}.onb-ok path{fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+ .onb-ok{animation:onbPop 2.7s ease-in-out infinite}
+ @media (prefers-reduced-motion:reduce){.onb-ill *{animation:none!important}}
  #appLock{z-index:9500;align-items:center}
  .onb-bg{position:absolute;inset:0;background:linear-gradient(170deg,#1D2D49 0%,#2D4A6E 34%,#8EA4BC 62%,#DFE5EC 82%,#F4F6F9 100%);overflow:hidden}
  .onb-bg i{position:absolute;border-radius:50%;filter:blur(40px);opacity:.75;background:#fff}
@@ -5150,7 +5331,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 </head><body>
 <!-- No splash. The app is the first thing on screen; while the forecast data
      streams in, a hairline at the top edge carries the real progress. -->
-<div id="boot" role="status" aria-live="polite"><div class="bt-in"><svg class="bt-flake" viewBox="0 0 64 64" aria-hidden="true"><defs><g id="bkA"><path d="M32 32V6"/><path d="M32 12l-5-5M32 12l5-5M32 20l-7-6M32 20l7-6"/></g></defs><use href="#bkA" transform="rotate(0 32 32)"/><use href="#bkA" transform="rotate(60 32 32)"/><use href="#bkA" transform="rotate(120 32 32)"/><use href="#bkA" transform="rotate(180 32 32)"/><use href="#bkA" transform="rotate(240 32 32)"/><use href="#bkA" transform="rotate(300 32 32)"/><circle cx="32" cy="32" r="3.2"/></svg><div id="bootTxt">Wetterdaten werden geladen</div><div id="bootPct">0 %</div><div class="bt-bar"><i></i></div></div></div>
+<div id="boot" role="status" aria-live="polite"><div class="bt-in"><svg class="bt-flake" viewBox="0 0 64 64" aria-hidden="true"><defs><g id="bkA"><path d="M32 32V6"/><path d="M32 12l-5-5M32 12l5-5M32 20l-7-6M32 20l7-6"/></g></defs><use href="#bkA" transform="rotate(0 32 32)"/><use href="#bkA" transform="rotate(60 32 32)"/><use href="#bkA" transform="rotate(120 32 32)"/><use href="#bkA" transform="rotate(180 32 32)"/><use href="#bkA" transform="rotate(240 32 32)"/><use href="#bkA" transform="rotate(300 32 32)"/><circle cx="32" cy="32" r="3.2"/></svg><div id="bootTxt">Die Schneedecke wird aufgebaut und analysiert</div><div id="bootPct">0 %</div><div class="bt-bar"><i></i></div></div></div>
 <div id="toastWrap" aria-live="polite"></div>
 <div id="onb" hidden role="dialog" aria-modal="true" aria-label="Willkommen"><div class="onb-bg" aria-hidden="true"><i></i><i></i><i></i></div><div class="onb-card" id="onbCard"></div></div>
 <div id="appLock" hidden role="dialog" aria-modal="true" aria-label="Gesperrt"><div class="onb-bg" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -5221,7 +5402,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
      the app uses when it talks about itself (title, share sheet, PWA
      install) -- not in new chrome competing with the map. -->
 
-<button id="rvFab" type="button" onclick="rvOpen()" title="Feedback zur App senden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5a2 2 0 0 1-2 2H9l-4.5 3.5V6a2 2 0 0 1 2-2H18a2 2 0 0 1 2 2z"/><path d="M12.25 6.9l.95 1.95 2.15.3-1.55 1.5.37 2.13-1.92-1-1.92 1 .37-2.13-1.55-1.5 2.15-.3z" fill="currentColor" stroke="none"/></svg><span>Feedback</span></button>
+<button id="infoFab" type="button" onclick="onbIntro()" title="Einführung: was Snowmapper kann" aria-label="Einführung"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.01"/></svg></button><button id="rvFab" type="button" onclick="rvOpen()" title="Feedback zur App senden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5a2 2 0 0 1-2 2H9l-4.5 3.5V6a2 2 0 0 1 2-2H18a2 2 0 0 1 2 2z"/><path d="M12.25 6.9l.95 1.95 2.15.3-1.55 1.5.37 2.13-1.92-1-1.92 1 .37-2.13-1.55-1.5 2.15-.3z" fill="currentColor" stroke="none"/></svg><span>Feedback</span></button>
 <header id="appBar">
   <button class="ab-brand" onclick="navGo('map')" aria-label="Snowmapper"><span class="ab-logo"><img src="icon-192.png?v=2" alt="" width="26" height="26"></span><span class="ab-name">Snowmapper</span></button>
   <nav class="ab-tabs" aria-label="Navigation">
@@ -5930,7 +6111,7 @@ const I18N_DICT={
 "Dieses Gerät liefert keine Bewegungsdaten.":["This device delivers no motion data.","Cet appareil ne fournit pas de données de mouvement.","Questo dispositivo non fornisce dati di movimento."],
 "misst":["measuring","mesure","misura"],"Werte":["readings","valeurs","valori"],"pausiert":["paused","en pause","in pausa"],
 "wartet auf Sensordaten …":["waiting for sensor data …","en attente des données du capteur …","in attesa dei dati del sensore …"],
-"Punkt hinzufügen":["Add point","Ajouter un point","Aggiungi punto"],"Verlauf über die Zeit":["Over time","Au fil du temps","Nel tempo"],
+"Punkt hinzufügen":["Add point","Ajouter un point","Aggiungi punto"],"Verlauf über die Zeit":["Over time","Au fil du temps","Nel tempo"],"Messungen":["readings","mesures","misure"],"Spitze":["peak","pic","picco"],"geglättet":["smoothed","lissé","smussato"],
 "Abfahrt nach Anteil":["Descent by share","Descente par part","Discesa per quota"],
 "Keine Erschütterungsdaten: Der Bildschirm war aus oder der Bewegungssensor nicht erlaubt.":["No vibration data: the screen was off or the motion sensor was not allowed.","Pas de données de vibration : l'écran était éteint ou le capteur de mouvement non autorisé.","Nessun dato di vibrazione: lo schermo era spento o il sensore di movimento non autorizzato."],"Abfahrt":["Descent","Descente","Discesa"],
 "glatt":["smooth","lisse","liscio"],"unruhig":["choppy","agitée","irregolare"],"ruppig":["rough","rugueuse","ruvido"],
@@ -6365,14 +6546,14 @@ const I18N_DICT={
 "Willkommen bei Snowmapper":["Welcome to Snowmapper", "Bienvenue sur Snowmapper", "Benvenuto su Snowmapper"],
 "Pulver, Schnee und Verhältnisse in der Schweiz – aus dem SNOWPACK-Modell und von der Community.":["Powder, snow and conditions in Switzerland – from the SNOWPACK model and the community.", "Poudreuse, neige et conditions en Suisse – du modèle SNOWPACK et de la communauté.", "Polvere, neve e condizioni in Svizzera – dal modello SNOWPACK e dalla community."],
 "Los geht's":["Let's go", "C'est parti", "Andiamo"],
-"Schnee auf der Karte":["Snow on the map", "La neige sur la carte", "Neve sulla mappa"],
+"Schnee auf der Karte":["Snow on the map", "La neige sur la carte", "Neve sulla mappa"],"Warum Snowmapper?":["Why Snowmapper?","Pourquoi Snowmapper ?","Perché Snowmapper?"],"Wetter":["Weather","Météo","Meteo"],"Gelände":["Terrain","Terrain","Terreno"],"Schneedecke":["Snowpack","Manteau neigeux","Manto nevoso"],"Meldungen":["Reports","Signalements","Segnalazioni"],
 "Skiqualität, Pulver, Neuschnee, Wind und mehr – über das Ebenen-Symbol rechts. Die Legende zeigt, was die Farben bedeuten.":["Ski quality, powder, new snow, wind and more – via the layers icon on the right. The legend explains the colours.", "Qualité de ski, poudreuse, neige fraîche, vent et plus – via l'icône des calques à droite. La légende explique les couleurs.", "Qualità sciistica, polvere, neve fresca, vento e altro – tramite l'icona dei livelli a destra. La legenda spiega i colori."],
 "Zeit wählen":["Pick a time", "Choisir l'heure", "Scegli l'ora"],
 "Unten die Zeitleiste: die letzten Tage und die Prognose für die nächsten fünf. Die Karte rechnet sofort neu.":["The timeline at the bottom: the past days and the forecast for the next five. The map updates instantly.", "La frise en bas : les derniers jours et la prévision pour les cinq prochains. La carte se met à jour aussitôt.", "La timeline in basso: gli ultimi giorni e la previsione per i prossimi cinque. La mappa si aggiorna subito."],
 "Im Tab Touren: Umkreis, Höhenmeter und Steilheit wählen – sortiert nach Pulver- oder Sulz-Anteil aus dem Modell.":["In the Tours tab: choose radius, elevation gain and steepness – sorted by the model's powder or corn share.", "Dans l'onglet Itinéraires : rayon, dénivelé et raideur – triés selon la part de poudreuse ou de neige de printemps du modèle.", "Nella scheda Gite: raggio, dislivello e pendenza – ordinati per quota di polvere o firn del modello."],
 "Melden & zeichnen":["Report & draw", "Signaler & dessiner", "Segnala & disegna"],
 "Mit Plus malst du eine Schnee-Karte oder meldest eine Beobachtung.":["With plus you paint a snow map or report an observation.","Avec plus, tu peins une carte de neige ou signales une observation.","Con più dipingi una mappa della neve o segnali un'osservazione."],
-"Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil.":["Record your tour and report the snow right along the route in the elevation profile.", "Enregistre ta sortie et signale la neige le long de l'itinéraire dans le profil d'altitude.", "Registra la tua gita e segnala la neve lungo il percorso nel profilo altimetrico."],
+"Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil. Der Bewegungssensor misst dabei, wie ruppig die Abfahrt war.":["Record your tour and report the snow right along the route in the elevation profile. The motion sensor measures how rough the descent was.","Enregistre ta sortie et signale la neige le long de l'itinéraire dans le profil d'altitude. Le capteur de mouvement mesure à quel point la descente était cahoteuse.","Registra la tua gita e segnala la neve lungo il percorso nel profilo altimetrico. Il sensore di movimento misura quanto è stata irregolare la discesa."],"Für jeden Hang rechnet Snowmapper die ganze Schneedecke durch – mit SNOWPACK, dem Schneedeckenmodell des SLF. Angetrieben von hochaufgelösten Wetterdaten von MeteoSwiss, angepasst an Höhe, Exposition und Steilheit des Geländes und laufend abgeglichen mit Messstationen und euren Meldungen. So siehst du nicht nur, wie viel Schnee liegt, sondern wie er ist.":["For every slope Snowmapper runs the whole snowpack – with SNOWPACK, the SLF snowpack model. Driven by high-resolution MeteoSwiss weather, adjusted to the elevation, aspect and steepness of the terrain and continuously checked against measuring stations and your reports. So you see not just how much snow there is, but what it is like.","Pour chaque pente, Snowmapper calcule tout le manteau neigeux – avec SNOWPACK, le modèle du SLF. Alimenté par la météo haute résolution de MeteoSuisse, adapté à l'altitude, à l'exposition et à la pente du terrain, et comparé en continu aux stations de mesure et à vos signalements. Tu vois non seulement combien de neige il y a, mais aussi comment elle est.","Per ogni pendio Snowmapper calcola l'intero manto nevoso – con SNOWPACK, il modello dell'SLF. Alimentato dai dati meteo ad alta risoluzione di MeteoSvizzera, adattato a quota, esposizione e pendenza del terreno e confrontato di continuo con le stazioni di misura e le vostre segnalazioni. Così vedi non solo quanta neve c'è, ma com'è."],"Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil.":["Record your tour and report the snow right along the route in the elevation profile.", "Enregistre ta sortie et signale la neige le long de l'itinéraire dans le profil d'altitude.", "Registra la tua gita e segnala la neve lungo il percorso nel profilo altimetrico."],
 "Folge Leuten aus deinem Gebiet, bestätige gute Meldungen und baue Vertrauen auf. Deine Meldungen verbessern das Modell.":["Follow people from your area, confirm good reports and build trust. Your reports improve the model.", "Suis des gens de ta région, confirme les bons signalements et gagne en confiance. Tes signalements améliorent le modèle.", "Segui persone della tua zona, conferma le buone segnalazioni e costruisci fiducia. Le tue segnalazioni migliorano il modello."],
 "Tour überspringen":["Skip tour", "Passer la visite", "Salta il tour"],
 "Haftungsausschluss":["Disclaimer", "Clause de non-responsabilité", "Esclusione di responsabilità"],
@@ -7555,12 +7736,12 @@ function vaProfAvailable(){
 // hard a cool grey, crust a muted coral, wet/Sulz a honey tone; Triebschnee
 // in violets so it never reads as powder.
 const VA_PALETTE={
-  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[147,197,240,205],4:[59,125,214,225],5:[24,52,128,235],6:[226,170,72,220],7:[150,104,74,225]},
+  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[147,197,240,205],4:[59,125,214,225],5:[36,84,178,230],6:[226,170,72,220],7:[150,104,74,225],8:[24,46,120,238],9:[88,36,150,240]},
   wind:{1:[156,168,184,190],2:[186,170,236,205],3:[112,72,200,230]}};
 // Nur Pulver on an export without its own powder layer: the three ski6 powder
 // classes, coloured like the nearest SLF snow-depth bands.
-const VA_VPAL={powder:{3:[165,214,167,225],4:[102,187,106,225],5:[66,165,245,225]}};
-const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver > 20 cm',6:'Sulz (aufgefirnt)',7:'nass / faul'};
+const VA_VPAL={powder:{3:[165,214,167,225],4:[102,187,106,225],5:[66,165,245,225],8:[30,136,229,225],9:[21,101,192,225]}};
+const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver 20–30 cm',6:'Sulz (aufgefirnt)',7:'nass / faul',8:'Pulver 30–40 cm',9:'Pulver > 40 cm'};
 // An export without the simple six classes still has "simple" (15 kinds of
 // surface): the six are folded from it, so Skiqualität always opens simple.
 // 12 (wet / spring) goes to "nass": the simple view cannot tell good corn
@@ -7588,7 +7769,7 @@ function vaPalApply(m){
   // so the map answers one question at a glance.
   const S6=m.layers.ski6;
   if(S6&&S6.legend&&S6._src&&!m.layers.powder){
-    const P=[3,4,5],leg={};
+    const P=[3,4,5,8,9].filter(id=>S6.legend[id]||S6._virt),leg={};
     P.forEach(id=>{leg[id]=[id,VA_VPAL.powder[id].slice(0,3),VA_SKI6_DE[id]];});
     m.layers.powder={file:S6.file,legend:leg,_virt:S6._virt||'ski6',_src:S6._src.map(([o,id])=>[o,P.includes(id)?id:0]),_recolor:true};
   }
@@ -7778,7 +7959,7 @@ function vaHiEngine(){
     E.pk=pk;E.nm=pk.mets.length;E.mi={};
     // packs from before these classes carry no thresholds for them: the
     // same defaults as classify.py, here so the app and the tile Worker agree
-    var TH=pk.thresholds=pk.thresholds||{},D={SK_POWDER_MIN:2,SK_P1:10,SK_P2:20,WD_STRONG:0.7};
+    var TH=pk.thresholds=pk.thresholds||{},D={SK_POWDER_MIN:2,SK_P1:10,SK_P2:20,SK_P3:30,SK_P4:40,WD_STRONG:0.7};
     for(var dk in D)if(TH[dk]==null)TH[dk]=D[dk];
     if(TH.SK_WET_LWC==null)TH.SK_WET_LWC=TH.WET_LWC_MIN!=null?TH.WET_LWC_MIN:1;
     pk.mets.forEach(function(m,i){E.mi[m]=i;});
@@ -7922,7 +8103,8 @@ function vaHiEngine(){
       if(corn)return 6;
       if(lw>T.SK_WET_LWC)return 7;
     }else if(lw>T.SK_WET_LWC)return 7;
-    if(pw>=T.SK_POWDER_MIN)return pw<T.SK_P1?3:(pw<T.SK_P2?4:5);
+    // 20-30 / 30-40 / > 40 cm; a pack without SK_P3 keeps the old "> 20" (5)
+    if(pw>=T.SK_POWDER_MIN)return pw<T.SK_P1?3:pw<T.SK_P2?4:(T.SK_P3==null||pw<T.SK_P3)?5:(T.SK_P4==null||pw<T.SK_P4)?8:9;
     if(cr>=T.CRUST_FINE||sd>=T.ICE_DENSITY_MIN)return 2;
     return 1;
   };
@@ -9219,7 +9401,7 @@ function tourVaScoreOne(t,E0){
     const sb=E.gridAt(E.shade,s.e,s.n);if(sb<0||sb===255)continue;
     if(!E.evalAt(s.e,s.n,s.el,s.sl||0,s.as==null?0:s.as,sb/254,g.cand,m))continue;
     E.adjPrecip(m,s.e,s.n);cls[i]=E.clsSki6(m);
-    if(cls[i]>=3&&cls[i]<=5){pwS+=m[x.powder_depth_cm];pwW++;}}
+    if((cls[i]>=3&&cls[i]<=5)||cls[i]===8||cls[i]===9){pwS+=m[x.powder_depth_cm];pwW++;}}
   const desc=i=>segs[i].sl!=null&&segs[i].sl>=TOUR_MIN_SLOPE&&segs[i].sl<=TOUR_MAX_SLOPE;
   let dW=0;for(let i=1;i<n;i++)if(desc(i)&&cls[i]>=0)dW+=segs[i].dist-segs[i-1].dist;
   const useD=dW>=300,sh={};let tot=0,known=0;
@@ -9631,10 +9813,12 @@ fetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=
   if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}
     const f=document.getElementById('wcFab');if(f)f.hidden=false;}}).catch(()=>{});
 async function wcFetch(params){
-  const r=await fetch(WC_API+'?'+params,{headers:{'x-windy-api-key':WEBCAM_KEY}});
-  if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;throw e;}return r.json();}
+  // Windy checks a domain-limited key against the Referer: always send it
+  const r=await fetch(WC_API+'?'+params,{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
+  if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;try{e.msg=(await r.json()).message||'';}catch(_){}throw e;}return r.json();}
 // a readable reason for the user (and the review feedback)
 function wcErrTxt(e){const st=e&&e.status;
+  if((st===401||st===403)&&/domain/i.test(e.msg||''))return 'Webcams: Der Windy-Schlüssel ist für diese Adresse ('+(location.host||location.protocol)+') nicht freigegeben – in api.windy.com/keys beim Schlüssel die Domain ergänzen.';
   if(st===401||st===403)return 'Webcams: Windy lehnt den Schlüssel ab (401). Es braucht einen Schlüssel für die «Webcams API» von api.windy.com/keys.';
   if(st===429)return 'Webcams: Tageslimit von Windy erreicht – später nochmals versuchen.';
   if(st)return 'Webcams konnten nicht geladen werden (Windy antwortet '+st+').';
@@ -9659,7 +9843,7 @@ async function wcRefresh(){
   wcBusy=false;
 }
 async function wcPreview(id,mk){
-  try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls',{headers:{'x-windy-api-key':WEBCAM_KEY}});
+  try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
     const w=await r.json(),im=w.images&&(w.images.current||w.images.daylight)||{},src=im.preview||im.thumbnail;
     const loc=w.location||{},upd=w.lastUpdatedOn?new Date(w.lastUpdatedOn):null;
     const when=upd?new Intl.DateTimeFormat(LOCALE(),{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}).format(upd):'';
@@ -9948,14 +10132,16 @@ async function trkMotion(on){
   if(!on){removeEventListener('devicemotion',trkMotEvt);trkMot=null;return;}
   if(trkMot||typeof DeviceMotionEvent==='undefined')return;
   try{if(typeof DeviceMotionEvent.requestPermission==='function'){const r=await DeviceMotionEvent.requestPermission();if(r!=='granted')return;}}catch(e){return;}
-  trkMot={sum:0,n:0,t0:Date.now(),g:null};addEventListener('devicemotion',trkMotEvt);}
+  trkMot={sum:0,n:0,pk:0,t0:Date.now(),g:null};addEventListener('devicemotion',trkMotEvt);}
 function trkMotEvt(e){if(!trkMot||!trkRec||trkRec.paused)return;let x,y,z;const a=e.acceleration;
   if(a&&a.x!=null){x=a.x;y=a.y;z=a.z;}
   else{const g=e.accelerationIncludingGravity;if(!g||g.x==null)return;const G=trkMot.g||(trkMot.g=[g.x,g.y,g.z]);
     G[0]=.92*G[0]+.08*g.x;G[1]=.92*G[1]+.08*g.y;G[2]=.92*G[2]+.08*g.z;x=g.x-G[0];y=g.y-G[1];z=g.z-G[2];}
-  trkMot.sum+=x*x+y*y+z*z;trkMot.n++;const now=Date.now();
-  if(now-trkMot.t0>=2000&&trkMot.n>4){(trkRec.rough||(trkRec.rough=[])).push([now,+Math.sqrt(trkMot.sum/trkMot.n).toFixed(2)]);
-    trkMot.sum=0;trkMot.n=0;trkMot.t0=now;
+  const q=x*x+y*y+z*z;trkMot.sum+=q;trkMot.n++;if(q>trkMot.pk)trkMot.pk=q;const now=Date.now();
+  // one reading per second: [time, RMS, peak] in m/s² (older recordings
+  // have a 2 s RMS only)
+  if(now-trkMot.t0>=1000&&trkMot.n>3){(trkRec.rough||(trkRec.rough=[])).push([now,+Math.sqrt(trkMot.sum/trkMot.n).toFixed(2),+Math.sqrt(trkMot.pk).toFixed(1)]);
+    trkMot.sum=0;trkMot.n=0;trkMot.pk=0;trkMot.t0=now;
     const d=document.getElementById('trkLRdot');if(d){d.classList.remove('beat');void d.offsetWidth;d.classList.add('beat');}
     try{trkLRPaint();}catch(e){}}}
 // live while recording: the latest value, a pulse on every new reading and
@@ -9968,7 +10154,7 @@ function trkLRPaint(){const box=document.getElementById('trkLR');if(!box||!trkRe
       :'<button type="button" onclick="trkMotion(true).then(trkLRPaint)">'+tr('Bewegungssensor erlauben')+'</button>')
     :trkRec.paused?tr('pausiert'):fresh?tr('misst')+' · '+R.length+' '+tr('Werte'):tr('wartet auf Sensordaten …');}
   box.classList.toggle('on',!!fresh&&!trkRec.paused);
-  if(sv){const W=300,Hh=36,N=150,a=R.slice(-N),bw=W/N;let h='';
+  if(sv){const W=300,Hh=36,N=300,a=R.slice(-N),bw=W/N;let h='';
     a.forEach((x,i)=>{const c=trkRoughCls(x[1]),hh=Math.max(2,Math.min(1,x[1]/7)*Hh);h+='<rect x="'+((N-a.length+i)*bw).toFixed(1)+'" y="'+(Hh-hh).toFixed(1)+'" width="'+Math.max(1,bw-.6).toFixed(1)+'" height="'+hh.toFixed(1)+'" rx="1" fill="'+c[2]+'"/>';});
     sv.innerHTML=h;}}
 // classes in m/s² (RMS): a first calibration, to be tuned with real rides
@@ -9996,13 +10182,32 @@ function trkRoughHTML(ll,vals){if(!vals||!vals.some(v=>v!=null))return '';
     +'<div class="trk-rough-lg">'+TRK_ROUGH.map(x=>'<span><i style="background:'+x[2]+'"></i>'+tr(x[1])+'</span>').join('')+'<em>'+tr('Bewegungssensor, experimentell')+'</em></div></div>';}
 // the measurement over time (own activities keep every reading with its time)
 function trkRoughTimeHTML(rough){if(!rough||rough.length<3)return '';
-  const t0=rough[0][0],t1=rough[rough.length-1][0],span=Math.max(1,t1-t0),W=340,Hh=50;let h='';
-  const bw=Math.max(.8,W/rough.length);
-  rough.forEach(x=>{const c=trkRoughCls(x[1]),hh=Math.max(1.5,Math.min(1,x[1]/7)*Hh);
-    h+='<rect x="'+((x[0]-t0)/span*(W-bw)).toFixed(1)+'" y="'+(Hh-hh).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hh.toFixed(1)+'" fill="'+c[2]+'"/>';});
+  const t0=rough[0][0],t1=rough[rough.length-1][0],span=Math.max(1,t1-t0),W=340,Hh=96;
+  // y up to the 98th percentile (at least the "ruppig" line plus a margin), so
+  // one hard knock does not flatten the rest of the ride
+  const vs=rough.map(x=>x[1]).sort((a,b)=>a-b),p98=vs[Math.min(vs.length-1,Math.floor(vs.length*.98))];
+  const YM=Math.min(14,Math.max(6,Math.ceil(p98*1.15))),X=t=>(t-t0)/span*W,Y=v=>Hh-Math.min(v,YM)/YM*Hh;
+  let h='';
+  // the three classes as faint bands behind the data
+  let lo=0;TRK_ROUGH.forEach(c=>{const hi=Math.min(c[0],YM);if(hi>lo)h+='<rect x="0" y="'+Y(hi).toFixed(1)+'" width="'+W+'" height="'+(Y(lo)-Y(hi)).toFixed(1)+'" fill="'+c[2]+'" opacity=".10"/>';lo=hi;});
+  TRK_ROUGH.slice(0,2).forEach(c=>{if(c[0]<YM)h+='<line x1="0" x2="'+W+'" y1="'+Y(c[0]).toFixed(1)+'" y2="'+Y(c[0]).toFixed(1)+'" stroke="'+c[2]+'" stroke-dasharray="3 3" stroke-width="1" vector-effect="non-scaling-stroke"/>';});
+  // every reading as a thin bar, coloured by its class
+  const bw=Math.max(.5,Math.min(3,W/rough.length*.8));
+  rough.forEach(x=>{const c=trkRoughCls(x[1]);h+='<rect x="'+(X(x[0])-bw/2).toFixed(2)+'" y="'+Y(x[1]).toFixed(1)+'" width="'+bw.toFixed(2)+'" height="'+(Hh-Y(x[1])).toFixed(1)+'" fill="'+c[2]+'" opacity=".55"/>';});
+  // a gap of more than a minute (pause, screen off) breaks the line
+  const k=Math.max(2,Math.round(rough.length/120)),pts=[];let seg=[];
+  for(let i=0;i<rough.length;i++){if(i&&rough[i][0]-rough[i-1][0]>60000){if(seg.length)pts.push(seg);seg=[];}
+    const w=rough.slice(Math.max(0,i-k),i+k+1).map(x=>x[1]).sort((a,b)=>a-b);seg.push(X(rough[i][0]).toFixed(1)+','+Y(w[w.length>>1]).toFixed(1));}
+  if(seg.length)pts.push(seg);
+  pts.forEach(sg=>{if(sg.length>1)h+='<polyline points="'+sg.join(' ')+'" fill="none" stroke="var(--ink-900,#1b2230)" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';});
   const fmt=t=>new Date(t).toLocaleTimeString(LOCALE(),{hour:'2-digit',minute:'2-digit'});
-  return '<div class="trk-rough-sub">'+tr('Verlauf über die Zeit')+'</div><svg class="trk-rough-t" viewBox="0 0 '+W+' '+Hh+'" preserveAspectRatio="none" aria-hidden="true">'+h+'</svg>'
-    +'<div class="trk-rough-ax"><span>'+fmt(t0)+'</span><span>'+fmt(t0+span/2)+'</span><span>'+fmt(t1)+'</span></div>';}
+  const ys=[0,2,4].concat(YM>8?[8]:[]).concat([YM]).filter((v,i,a)=>v<=YM&&a.indexOf(v)===i);
+  const peak=rough.reduce((m,x)=>Math.max(m,x[2]!=null?x[2]:x[1]),0);
+  return '<div class="trk-rough-sub">'+tr('Verlauf über die Zeit')+' <span class="trk-rough-meta">'+rough.length+' '+tr('Messungen')+' · '+tr('Spitze')+' '+peak.toFixed(1)+' m/s²</span></div>'
+    +'<div class="trk-rough-tw"><div class="trk-rough-y">'+ys.map(v=>'<span style="top:'+(Y(v)/Hh*100).toFixed(1)+'%">'+v+'</span>').join('')+'</div>'
+    +'<svg class="trk-rough-t" viewBox="0 0 '+W+' '+Hh+'" preserveAspectRatio="none" aria-hidden="true">'+h+'</svg></div>'
+    +'<div class="trk-rough-ax"><span>'+fmt(t0)+'</span><span>'+fmt(t0+span/2)+'</span><span>'+fmt(t1)+'</span></div>'
+    +'<div class="trk-rough-lg"><span><i style="background:var(--ink-900,#1b2230);height:2px;border-radius:1px"></i>'+tr('geglättet')+'</span><span>m/s² (RMS je Sekunde)</span></div>';}
 function trkRoughNone(){return '<div class="trk-rough"><div class="trk-rough-hd"><b>'+tr('Ruppigkeit')+'</b></div><p class="trk-hint">'
   +tr('Keine Erschütterungsdaten: Der Bildschirm war aus oder der Bewegungssensor nicht erlaubt.')+'</p></div>';}
 function trkStart(){
@@ -12054,9 +12259,9 @@ function legSpec(l){
     const leg=L.legend||{};
     const realPow=vaKey==='powder'&&!L._virt;
     const ORD=realPow?Object.keys(leg).map(Number).filter(k=>k>0).sort((a,b)=>b-a)
-      :({ski6:[5,4,3,6,7,2,1],powder:[5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0));
+      :({ski6:[9,8,5,4,3,6,7,2,1],powder:[9,8,5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0));
     const SH=realPow?Object.fromEntries(ORD.map(k=>[k,String((leg[k]&&leg[k][2])||'').replace(/^Pulver\s*/,'').replace(/\s*cm$/,'').replace(/^>\s*/,'>')]))
-      :({ski6:{5:'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz',7:'faul'},powder:{5:'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
+      :({ski6:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz',7:'faul'},powder:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
     const rows=ORD.filter(k=>leg[k]&&leg[k][1]).map(k=>{const e=leg[k],nm=e[2]||String(e[0]).replace(/_/g,' ');
       return {k,c:rgb(e[1]),s:SH[k]||nm.split(/[\s/(]/)[0].slice(0,7),n:nm};});
     return {t:name,u:(vaKey==='ski6'||vaKey==='powder')?'Pulver cm':vaKey==='wind'?'Wind':'Klasse',va:true,rows};
@@ -12096,7 +12301,7 @@ function legSpec(l){
 // opens on the classes that answer its usual question (Skiqualität: powder
 // only); what you pick is remembered per layer.
 const LEG_DEFAULT={
-  'va:ski6':r=>r.k===3||r.k===4||r.k===5,   // Pulver 0–10, 10–20, >20 cm
+  'va:ski6':r=>r.k===3||r.k===4||r.k===5||r.k===8||r.k===9,   // Pulver 0–10 … > 40 cm
   temp:r=>r.hi<=10                           // unter 10 °C
 };
 const LEG_KEY='ssm_legsel_v2';
@@ -12615,10 +12820,29 @@ addEventListener('keydown',e=>{
 function renderLayerStrip(){try{lyRender();}catch(e){}try{lyFabSync();}catch(e){}}
 // The layers button wears the chosen layer's pictogram (a small stack in the
 // corner still says "layers").
+// The button is a plain menu (three lines); what is on the map is named
+// quietly just above the timeline instead.
+const LY_MENU_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg>';
 function lyFabSync(){const b=document.getElementById('layersFab');if(!b)return;
-  const it=groupItems(curTopic)[curItem];const id=it&&it.id;if(b.dataset.ly===id)return;b.dataset.ly=id||'';
-  b.innerHTML=lyIconFor(id)+'<i class="ly-fab-stack" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 14l9 5 9-5"/></svg></i>';
-  b.title=b.ariaLabel=tr('Ebenen')+(it?' · '+tr(it.label):'');}
+  const it=groupItems(curTopic)[curItem];const id=it&&it.id;
+  const name=it?tr(it.label):'';
+  let n=document.getElementById('lyNow');
+  if(!n){n=document.createElement('button');n.id='lyNow';n.type='button';n.onclick=()=>lyPanelOpen();document.body.appendChild(n);lyNowWatch();}
+  if(n.dataset.ly!==id){n.dataset.ly=id||'';n.innerHTML=name?'<i aria-hidden="true"></i>'+escapeHtml(name):'';n.title=tr('Ebenen');}
+  lyNowPlace();
+  if(b.dataset.ly===id)return;b.dataset.ly=id||'';
+  if(!b.dataset.menu){b.innerHTML=LY_MENU_SVG;b.dataset.menu='1';}
+  b.title=b.ariaLabel=tr('Ebenen')+(it?' · '+name:'');}
+// sits just above the timeline card's top edge, and goes wherever it goes
+// (hidden with it, moved with it)
+function lyNowPlace(){const n=document.getElementById('lyNow'),bp=document.getElementById('bottomPanel');if(!n||!bp)return;
+  const r=bp.getBoundingClientRect(),cs=getComputedStyle(bp);
+  const vis=r.height>0&&cs.display!=='none'&&cs.visibility!=='hidden'&&+cs.opacity>0.05;
+  n.style.display=vis&&n.innerHTML?'':'none';if(!vis)return;
+  n.style.left=(r.left+14)+'px';n.style.top=(r.top-19)+'px';}
+function lyNowWatch(){const bp=document.getElementById('bottomPanel');const f=()=>requestAnimationFrame(lyNowPlace);
+  try{new ResizeObserver(f).observe(bp);}catch(e){}addEventListener('resize',f);
+  try{new MutationObserver(()=>setTimeout(lyNowPlace,260)).observe(document.body,{attributes:true,attributeFilter:['class']});}catch(e){}}
 // Deep-zoom items appear/disappear as the user zooms, so keep the row in sync.
 map.on('zoomend',function(){if(document.body.classList.contains('draw-on'))return;try{
   const shown=lyLayers().length;
@@ -13303,8 +13527,16 @@ function inspClose(){document.getElementById('inspPanel').classList.remove('open
 map.on('zoomend',function(){vaSyncOpacity();if(ovOn.variantA)vaHiSyncSoon();});
 // The legend lists what is in view, so it follows the view.
 map.on('moveend',function(){if(vaLegendUp()){try{miniLegendRender();}catch(e){}}});
+// A tap beside an open card closes it -- the point card and report /
+// station popups alike -- instead of opening the next one at once. Leaflet
+// closes its own popup on 'preclick', just before this 'click', so that
+// close is remembered for a moment.
+let _popClosedAt=0;
+map.on('popupclose',function(){_popClosedAt=Date.now();});
 map.on('click',function(e){
   if(document.body.classList.contains('feed-side')){feedClose();return;}
+  if(document.body.classList.contains('insp-open')){inspClose();return;}
+  if(Date.now()-_popClosedAt<450)return;
   inspOpen(e.latlng.lat,e.latlng.lng);
 });
 // Marker popups (reports, stations) open through Leaflet's own click
@@ -13312,7 +13544,9 @@ map.on('click',function(e){
 // same guard: while the feed is open beside the map, a tap closes the
 // feed instead of popping a card open on top of it.
 map.on('popupopen',function(e){
-  if(document.body.classList.contains('feed-side')){map.closePopup(e.popup);feedClose();}
+  if(document.body.classList.contains('feed-side')){map.closePopup(e.popup);feedClose();return;}
+  // one card at a time: a report / station popup replaces the point card
+  if(document.body.classList.contains('insp-open'))inspClose();
 });
 let inspLast=null;
 // Dragging the timeslider re-renders the open popup in place (new depth/
@@ -14048,7 +14282,8 @@ function toast(msg,kind){msg=trMsg(msg);const w=document.getElementById('toastWr
 // Language, a short tour of the five places, the disclaimer (must be
 // accepted), Face ID as an app lock, location. Re-runnable from settings.
 const ONB_SLIDES=[
- ['<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>','Schnee auf der Karte','Skiqualität, Neuschnee, Wind und mehr – über das Ebenen-Symbol rechts. Tippe in der Legende auf eine Farbe, um sie ein- oder auszublenden: Skiqualität startet mit «nur Pulver».'],
+ ['','Warum Snowmapper?','Für jeden Hang rechnet Snowmapper die ganze Schneedecke durch – mit SNOWPACK, dem Schneedeckenmodell des SLF. Angetrieben von hochaufgelösten Wetterdaten von MeteoSwiss, angepasst an Höhe, Exposition und Steilheit des Geländes und laufend abgeglichen mit Messstationen und euren Meldungen. So siehst du nicht nur, wie viel Schnee liegt, sondern wie er ist.','<svg class="onb-ill" viewBox="0 0 300 172" aria-hidden="true"><path d="M62 36 C110 36 120 84 150 84" class="onb-flow" style="animation-delay:0s"/><path d="M62 132 C110 132 120 84 150 84" class="onb-flow" style="animation-delay:0.4s"/><path d="M238 36 C190 36 180 84 150 84" class="onb-flow" style="animation-delay:0.8s"/><path d="M238 132 C190 132 180 84 150 84" class="onb-flow" style="animation-delay:1.2s"/><circle cx="150" cy="84" r="30" class="onb-ring"/><circle cx="150" cy="84" r="30" class="onb-core"/><g transform="translate(150 84)"><path d="M-14 9-4-9 3 2 7-4 15 9Z" fill="#fff"/><circle cx="8" cy="-10" r="3.2" fill="#9fd0ff"/></g><g class="onb-node" transform="translate(40 36)"><circle r="22"/><path d="M-9 5h15a5 5 0 0 0 0-10 7 7 0 0 0-13-2 5 5 0 0 0-2 12z" class="w"/></g><g class="onb-node" transform="translate(40 132)"><circle r="22"/><path d="M-12 8-3-7 2 1 5-3 12 8Z" class="w"/></g><g class="onb-node" transform="translate(260 36)"><circle r="22"/><rect x="-11" y="-9" width="22" height="5" rx="2" class="l1"/><rect x="-11" y="-2" width="22" height="5" rx="2" class="l2"/><rect x="-11" y="5" width="22" height="5" rx="2" class="l3"/></g><g class="onb-node" transform="translate(260 132)"><circle r="22"/><circle cx="-5" cy="-4" r="4" class="w"/><circle cx="6" cy="-4" r="4" class="w"/><path d="M-12 9a7 7 0 0 1 14 0M-1 9a7 7 0 0 1 14 0" class="w"/></g><text x="40" y="71" class="onb-lb">Wetter</text><text x="40" y="168" class="onb-lb">Gelände</text><text x="260" y="71" class="onb-lb">Schneedecke</text><text x="260" y="168" class="onb-lb">Meldungen</text></svg>'],
+ ['','Schnee auf der Karte','Skiqualität, Neuschnee, Wind und mehr – über das Ebenen-Symbol rechts. Tippe in der Legende auf eine Farbe, um sie ein- oder auszublenden: Skiqualität startet mit «nur Pulver».','<svg class="onb-ill" viewBox="0 0 300 150" aria-hidden="true"><rect x="10" y="8" width="230" height="134" rx="16" class="onb-mapbg"/><path d="M20 110c40-20 60-60 100-55s60 40 110 20M20 80c50-25 70-50 110-45s60 30 100 10M20 130c40-10 80-30 120-25s60 15 90 5" class="onb-cont"/><ellipse cx="70" cy="70" rx="34" ry="18" fill="#93c5f0" class="onb-blob" style="animation-delay:0s"/><ellipse cx="140" cy="52" rx="26" ry="14" fill="#3b7dd6" class="onb-blob" style="animation-delay:0.4s"/><ellipse cx="170" cy="100" rx="32" ry="16" fill="#2454b2" class="onb-blob" style="animation-delay:0.8s"/><ellipse cx="95" cy="108" rx="22" ry="12" fill="#3b7dd6" class="onb-blob" style="animation-delay:1.2s"/><ellipse cx="200" cy="62" rx="18" ry="10" fill="#182e78" class="onb-blob" style="animation-delay:1.6s"/><g transform="translate(252 22)"><rect y="0" width="38" height="20" rx="6" fill="#182e78" class="onb-chip"/><rect y="26" width="38" height="20" rx="6" fill="#2454b2" class="onb-chip"/><rect y="52" width="38" height="20" rx="6" fill="#3b7dd6" class="onb-chip t"/><rect y="78" width="38" height="20" rx="6" fill="#93c5f0" class="onb-chip"/></g></svg>'],
  ['','Zeit wählen','Unten die Zeitleiste: die letzten Tage und die Prognose für die nächsten fünf. Die Karte rechnet sofort neu.',
   // a small timeline that shows the main gesture (the handle being dragged),
   // then the gestures the way the code handles them (Timeline Drag)
@@ -14061,15 +14296,20 @@ const ONB_SLIDES=[
   +'<li><svg viewBox="0 0 24 24"><rect x="8" y="5" width="8" height="14" rx="2"/><path d="M3 9v6M21 9v6"/></svg><span><b>Zeitfenster</b> in der Mitte ziehen verschiebt, an den Rändern ändert die Dauer</span></li>'
   +'<li><svg viewBox="0 0 24 24"><path d="M9 6l-4 6 4 6M15 6l4 6-4 6"/></svg><span><b>‹ ›</b> ein Schritt · <b>▶</b> abspielen</span></li>'
   +'</ul>'],
- ['<path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/>','Touren finden','Im Tab Touren: Umkreis, Höhenmeter und Steilheit wählen – sortiert nach Pulver- oder Sulz-Anteil aus dem Modell.'],
- ['<path d="M12 5v14M5 12h14"/>','Melden & zeichnen','Mit Plus malst du eine Schnee-Karte oder meldest eine Beobachtung.'],
- ['<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.4 2.4M9.5 2.8h5"/>','Aufzeichnen','Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil.'],
- ['<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>','Community','Folge Leuten aus deinem Gebiet, bestätige gute Meldungen und baue Vertrauen auf. Deine Meldungen verbessern das Modell.']];
+ ['','Touren finden','Im Tab Touren: Umkreis, Höhenmeter und Steilheit wählen – sortiert nach Pulver- oder Sulz-Anteil aus dem Modell.','<svg class="onb-ill" viewBox="0 0 300 150" aria-hidden="true"><path d="M0 140 70 50l40 45 50-75 60 70 30-30 50 80Z" class="onb-mtn"/><path d="M150 34l10-14 12 16" class="onb-snowcap"/><path id="onbRt" d="M30 132C60 120 80 98 104 92S140 70 160 24" class="onb-route"/><circle r="6" class="onb-walker"><animateMotion dur="4s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.75;1" calcMode="linear"><mpath href="#onbRt"/></animateMotion></circle><g transform="translate(196 30)"><g class="onb-badge"><rect x="-4" y="-16" width="92" height="30" rx="15"/><text x="42" y="4">Pulver 72 %</text></g></g></svg>'],
+ ['','Melden & zeichnen','Mit Plus malst du eine Schnee-Karte oder meldest eine Beobachtung.','<svg class="onb-ill" viewBox="0 0 300 150" aria-hidden="true"><path d="M10 140 120 30l170 110Z" class="onb-mtn"/><path id="onbBr" d="M70 120C100 96 110 80 140 70S190 92 220 118" class="onb-paint"/><g><animateMotion dur="3.6s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.7;1" calcMode="linear"><mpath href="#onbBr"/></animateMotion><path d="M0 0 14-20a4 4 0 0 1 6 4L6 4Z" class="onb-brush"/><circle r="5" fill="#3b7dd6"/></g><g transform="translate(238 46)"><g class="onb-pin"><path d="M0 18C-10 6-10-4 0-8S10 6 0 18Z"/><circle cy="-1" r="3.5" fill="#fff"/></g></g></svg>'],
+ ['','Aufzeichnen','Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil. Der Bewegungssensor misst dabei, wie ruppig die Abfahrt war.','<svg class="onb-ill" viewBox="0 0 300 150" aria-hidden="true"><rect x="10" y="10" width="280" height="88" rx="14" class="onb-mapbg"/><path id="onbTr" d="M30 80C70 70 80 30 120 34S170 70 210 52 250 30 270 26" class="onb-track"/><circle r="6" class="onb-walker"><animateMotion dur="5s" repeatCount="indefinite"><mpath href="#onbTr"/></animateMotion></circle><circle cx="272" cy="86" r="5" class="onb-rec"/><rect x="14.0" y="132" width="7" height="8" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:0.00s"/><rect x="23.2" y="130" width="7" height="10" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:0.08s"/><rect x="32.4" y="131" width="7" height="9" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:0.16s"/><rect x="41.6" y="128" width="7" height="12" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:0.24s"/><rect x="50.8" y="124" width="7" height="16" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:0.32s"/><rect x="60.0" y="120" width="7" height="20" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:0.40s"/><rect x="69.2" y="126" width="7" height="14" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:0.48s"/><rect x="78.4" y="129" width="7" height="11" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:0.56s"/><rect x="87.6" y="131" width="7" height="9" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:0.64s"/><rect x="96.8" y="118" width="7" height="22" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:0.72s"/><rect x="106.0" y="112" width="7" height="28" rx="2" fill="#D9534F" class="onb-bar" style="animation-delay:0.80s"/><rect x="115.2" y="116" width="7" height="24" rx="2" fill="#D9534F" class="onb-bar" style="animation-delay:0.88s"/><rect x="124.4" y="122" width="7" height="18" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:0.96s"/><rect x="133.6" y="128" width="7" height="12" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:1.04s"/><rect x="142.8" y="130" width="7" height="10" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:1.12s"/><rect x="152.0" y="131" width="7" height="9" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:1.20s"/><rect x="161.2" y="129" width="7" height="11" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:1.28s"/><rect x="170.4" y="125" width="7" height="15" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:1.36s"/><rect x="179.6" y="121" width="7" height="19" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:1.44s"/><rect x="188.8" y="114" width="7" height="26" rx="2" fill="#D9534F" class="onb-bar" style="animation-delay:1.52s"/><rect x="198.0" y="110" width="7" height="30" rx="2" fill="#D9534F" class="onb-bar" style="animation-delay:1.60s"/><rect x="207.2" y="118" width="7" height="22" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:1.68s"/><rect x="216.4" y="124" width="7" height="16" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:1.76s"/><rect x="225.6" y="128" width="7" height="12" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:1.84s"/><rect x="234.8" y="130" width="7" height="10" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:1.92s"/><rect x="244.0" y="131" width="7" height="9" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:2.00s"/><rect x="253.2" y="132" width="7" height="8" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:2.08s"/><rect x="262.4" y="130" width="7" height="10" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:2.16s"/><rect x="271.6" y="128" width="7" height="12" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:2.24s"/></svg>'],
+ ['','Community','Folge Leuten aus deinem Gebiet, bestätige gute Meldungen und baue Vertrauen auf. Deine Meldungen verbessern das Modell.','<svg class="onb-ill" viewBox="0 0 300 150" aria-hidden="true"><g transform="translate(80 92)"><circle r="26" fill="#4A86C8"/><circle cy="-7" r="9" fill="#fff" opacity=".9"/><path d="M-15 16a15 13 0 0 1 30 0" fill="#fff" opacity=".9"/></g><g transform="translate(150 92)"><circle r="26" fill="#2D5A8C"/><circle cy="-7" r="9" fill="#fff" opacity=".9"/><path d="M-15 16a15 13 0 0 1 30 0" fill="#fff" opacity=".9"/></g><g transform="translate(220 92)"><circle r="26" fill="#6FB4F0"/><circle cy="-7" r="9" fill="#fff" opacity=".9"/><path d="M-15 16a15 13 0 0 1 30 0" fill="#fff" opacity=".9"/></g><g transform="translate(86 60)"><path d="M0 -4C-4-12-14-8-10 0L0 10 10 0C14-8 4-12 0-4Z" class="onb-heart" style="animation-delay:0s"/></g><g transform="translate(156 60)"><path d="M0 -4C-4-12-14-8-10 0L0 10 10 0C14-8 4-12 0-4Z" class="onb-heart" style="animation-delay:0.9s"/></g><g transform="translate(214 60)"><path d="M0 -4C-4-12-14-8-10 0L0 10 10 0C14-8 4-12 0-4Z" class="onb-heart" style="animation-delay:1.8s"/></g><g transform="translate(176 68)"><g class="onb-ok"><circle r="11"/><path d="M-5 0l3.5 3.5L5-4"/></g></g></svg>']];
 let onb={step:0,slide:0,again:false,lockOk:null};
 function onbSteps(){const st=['lang','tour','disc'];if(onb.lockOk)st.push('lock');st.push('loc');return st;}
 async function onbOpen(again){onb={step:0,slide:0,again:!!again,lockOk:null};
   document.getElementById('onb').hidden=false;document.body.classList.add('onb-open');onbRender();
   try{onb.lockOk=await lockAvailable();}catch(e){onb.lockOk=false;}onbRender();}
+// straight to the tour (the "Warum Snowmapper?" slide), skipping language
+function onbIntro(){onbOpen(true);onb.step=1;onb.slide=0;onbRender();}
+// the (i) sits right of the feedback button, whatever its width
+(function(){const f=()=>{const r=document.getElementById('rvFab');if(r&&r.offsetWidth)document.documentElement.style.setProperty('--rvw',r.offsetWidth+'px');};
+  requestAnimationFrame(f);addEventListener('resize',f);setTimeout(f,1500);})();
 function onbClose(){document.getElementById('onb').hidden=true;document.body.classList.remove('onb-open');}
 function onbNext(){const st=onbSteps();
   if(st[onb.step]==='tour'){const n=ONB_SLIDES.filter(x=>!(x[1]==='Aufzeichnen'&&document.body.classList.contains('desk'))).length;

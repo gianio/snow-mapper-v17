@@ -44,6 +44,30 @@ def main():
         ix = json.loads(raw[8:8 + n])["blobs"]
         check("data section and every blob start on 8 bytes",
               base % 8 == 0 and all(o % 8 == 0 for o, _ in ix.values()), str(ix))
+    # the coarse first-start copy keeps every f-th cell exactly where it was
+    import numpy as np
+    T, W, H, f = 2, 9, 5, 4
+    cube = np.arange(T * H * W, dtype=np.uint8).reshape(T, H, W)
+    meta2 = {"T": T, "width": W, "height": H, "bounds": [46.0, 6.0, 47.0, 10.0],
+             "rad": {"width": W, "height": H, "K": 2, "bounds": [46.0, 6.0, 47.0, 10.0]}}
+    blobs2 = {"SNOW": base64.b64encode(cube.tobytes()).decode(),
+              "MELEV": base64.b64encode(cube[0].tobytes()).decode(),
+              "RHOR": base64.b64encode(np.zeros((2, H, W), np.uint8).tobytes()).decode(),
+              "SPD": base64.b64encode(bytes(7)).decode()}
+    lm, lb = ie.coarse_meta_blobs(meta2, blobs2, f)
+    sub = np.frombuffer(lb["SNOW"], np.uint8).reshape(T, lm["height"], lm["width"])
+    check("coarse grid is every f-th cell", (lm["width"], lm["height"]) == (3, 2)
+          and (sub == cube[:, ::f, ::f]).all(), str((lm["width"], lm["height"])))
+    la0, lo0, la1, lo1 = lm["bounds"]
+    # cell (y=1, x=2) of the coarse grid is cell (4, 8) of the full one
+    lat_c = la1 - (la1 - la0) * 1 / (lm["height"] - 1)
+    lon_c = lo0 + (lo1 - lo0) * 2 / (lm["width"] - 1)
+    lat_f = 47.0 - 1.0 * 4 / (H - 1)
+    lon_f = 6.0 + 4.0 * 8 / (W - 1)
+    check("... and at the same place", abs(lat_c - lat_f) < 1e-9 and abs(lon_c - lon_f) < 1e-9,
+          f"{lat_c},{lon_c} vs {lat_f},{lon_f}")
+    check("per-cell and radiation fields follow, wind points stay",
+          len(lb["MELEV"]) == 6 and len(lb["RHOR"]) == 12 and len(lb["SPD"]) == 7 and lm["coarse"] == f)
     js = ie._BOOT_SPLIT
     check("the boot loader checks the SMB1 magic", "u8[0]!==83||u8[1]!==77||u8[2]!==66||u8[3]!==49" in js)
     check("... and aligns the data section the same way", "base=8+n+((8-(8+n)%8)%8)" in js)

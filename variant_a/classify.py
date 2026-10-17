@@ -954,19 +954,25 @@ def classify_simple(hs, powder, crust, sdens, slw, sh=None, drift=None, scour=No
 #   Pulver dry powder on top, by depth: 2-10, 10-20, > 20 cm.
 #   Kruste any crust or ice on the surface (thin crust, Bruchharsch, tragend).
 #   hart   everything else: settled / wind-pressed / hard old snow.
-SKI6_LABELS = ["none", "hard", "crust", "powder_0_10", "powder_10_20", "powder_gt_20", "corn", "wet"]
+# Deep powder is split further (20-30, 30-40, > 40 cm). The two new classes
+# take the next free ids (8, 9) so 6 and 7 keep their meaning in older
+# exports; class 5 was "> 20 cm" there and is "20-30 cm" now.
+SKI6_LABELS = ["none", "hard", "crust", "powder_0_10", "powder_10_20", "powder_20_30", "corn", "wet",
+               "powder_30_40", "powder_gt_40"]
 SKI6_DE = ["kein / wenig Schnee", "durchgehend hart", "Kruste", "Pulver 0–10 cm",
-           "Pulver 10–20 cm", "Pulver > 20 cm", "Sulz (aufgefirnt)", "nass / faul"]
+           "Pulver 10–20 cm", "Pulver 20–30 cm", "Sulz (aufgefirnt)", "nass / faul",
+           "Pulver 30–40 cm", "Pulver > 40 cm"]
 # Powder in the app's blues, light -> accent -> navy (more is darker,
 # readable in grey too); the surfaces you would rather avoid are the
 # warm/neutral ones: cool grey for hard, muted coral for crust, honey for
 # wet / Sulz. The app carries the same table (VA_PALETTE) so older exports
 # are shown in it as well.
 SKI6_RGBA = {0: (0, 0, 0, 0), 1: (156, 168, 184, 185), 2: (214, 108, 98, 215),
-             3: (147, 197, 240, 205), 4: (59, 125, 214, 225), 5: (24, 52, 128, 235),
-             6: (226, 170, 72, 220), 7: (150, 104, 74, 225)}
+             3: (147, 197, 240, 205), 4: (59, 125, 214, 225), 5: (36, 84, 178, 230),
+             6: (226, 170, 72, 220), 7: (150, 104, 74, 225),
+             8: (24, 46, 120, 238), 9: (88, 36, 150, 240)}
 SK_POWDER_MIN = 2.0      # cm -- less loose snow than this is not "powder" to ski
-SK_P1, SK_P2 = 10.0, 20.0
+SK_P1, SK_P2, SK_P3, SK_P4 = 10.0, 20.0, 30.0, 40.0
 SK_WET_LWC = WET_LWC_MIN
 
 
@@ -985,7 +991,9 @@ def classify_ski6(hs, powder, crust, sdens, slw, soft=None, base=None, refrozen=
     p = pw >= SK_POWDER_MIN
     lab[p & (pw < SK_P1)] = 3
     lab[p & (pw >= SK_P1) & (pw < SK_P2)] = 4
-    lab[p & (pw >= SK_P2)] = 5
+    lab[p & (pw >= SK_P2) & (pw < SK_P3)] = 5
+    lab[p & (pw >= SK_P3) & (pw < SK_P4)] = 8
+    lab[p & (pw >= SK_P4)] = 9
     if soft is not None and base is not None and refrozen is not None:
         so = np.asarray(soft, float); ba = np.asarray(base, float); rf = np.asarray(refrozen, float)
         softened = (so >= SULZ_SOFT_MIN) | (lw > SOFT_LWC)
