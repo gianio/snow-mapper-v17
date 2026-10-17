@@ -9813,10 +9813,12 @@ fetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=
   if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}
     const f=document.getElementById('wcFab');if(f)f.hidden=false;}}).catch(()=>{});
 async function wcFetch(params){
-  const r=await fetch(WC_API+'?'+params,{headers:{'x-windy-api-key':WEBCAM_KEY}});
-  if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;throw e;}return r.json();}
+  // Windy checks a domain-limited key against the Referer: always send it
+  const r=await fetch(WC_API+'?'+params,{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
+  if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;try{e.msg=(await r.json()).message||'';}catch(_){}throw e;}return r.json();}
 // a readable reason for the user (and the review feedback)
 function wcErrTxt(e){const st=e&&e.status;
+  if((st===401||st===403)&&/domain/i.test(e.msg||''))return 'Webcams: Der Windy-Schlüssel ist für diese Adresse ('+(location.host||location.protocol)+') nicht freigegeben – in api.windy.com/keys beim Schlüssel die Domain ergänzen.';
   if(st===401||st===403)return 'Webcams: Windy lehnt den Schlüssel ab (401). Es braucht einen Schlüssel für die «Webcams API» von api.windy.com/keys.';
   if(st===429)return 'Webcams: Tageslimit von Windy erreicht – später nochmals versuchen.';
   if(st)return 'Webcams konnten nicht geladen werden (Windy antwortet '+st+').';
@@ -9841,7 +9843,7 @@ async function wcRefresh(){
   wcBusy=false;
 }
 async function wcPreview(id,mk){
-  try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls',{headers:{'x-windy-api-key':WEBCAM_KEY}});
+  try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
     const w=await r.json(),im=w.images&&(w.images.current||w.images.daylight)||{},src=im.preview||im.thumbnail;
     const loc=w.location||{},upd=w.lastUpdatedOn?new Date(w.lastUpdatedOn):null;
     const when=upd?new Intl.DateTimeFormat(LOCALE(),{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}).format(upd):'';
