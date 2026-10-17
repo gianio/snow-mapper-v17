@@ -1181,7 +1181,10 @@ def test_ski6_and_wind_classes():
              ((100, 1.0, 1.0, 300, 0), 2, "1 cm dust on crust is still Kruste"),
              ((100, 6, 1.0, 120, 0), 3, "6 cm on a crust -> Pulver 0-10"),
              ((100, 15, 0, 120, 0), 4, "15 cm -> Pulver 10-20"),
-             ((100, 35, 0, 120, 0), 5, "35 cm -> Pulver > 20"),
+             ((100, 25, 0, 120, 0), 5, "25 cm -> Pulver 20-30"),
+             ((100, 35, 0, 120, 0), 8, "35 cm -> Pulver 30-40"),
+             ((100, 40, 0, 120, 0), 9, "40 cm -> Pulver > 40"),
+             ((100, 80, 0, 120, 0), 9, "80 cm -> Pulver > 40"),
              ((100, 35, 0, 120, 2.0), 7, "liquid water on top -> nass")]
     for (hs, pw, cr, sd, lw), want, name in cases:
         got = int(C.classify_ski6(np.array([hs]), np.array([pw]), np.array([cr]),
