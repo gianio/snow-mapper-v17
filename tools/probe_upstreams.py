@@ -137,11 +137,17 @@ def probe_windy() -> bool:
     url = "https://api.windy.com/webcams/api/v3/webcams"
     origin = "https://gianio.github.io"
     q = "nearby=46.80,9.83,30&limit=5&include=location"
-    r = requests.get(f"{url}?{q}", headers={"x-windy-api-key": key, "Origin": origin}, timeout=20)
+    # exactly what the app's browser sends: a domain-restricted key is
+    # checked against Origin / Referer ("Unauthorized domain" otherwise)
+    r = requests.get(f"{url}?{q}", headers={"x-windy-api-key": key, "Origin": origin,
+                                            "Referer": origin + "/snow-mapper-v17/"}, timeout=20)
     print(f"    GET {q} -> {r.status_code}; Access-Control-Allow-Origin: {r.headers.get('access-control-allow-origin')!r}")
     ok = r.ok
     if not ok:
         print(f"    body: {r.text[:300]!r}")
+        if "domain" in r.text.lower():
+            print("    -> the key is limited to other domains: add gianio.github.io in the key's settings "
+                  "at api.windy.com/keys (and localhost / capacitor://localhost for the native app)")
     try:
         j = r.json()
         cams = j.get("webcams") or []
