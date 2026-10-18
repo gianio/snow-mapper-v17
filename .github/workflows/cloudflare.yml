@@ -117,7 +117,7 @@ jobs:
         run: |
           if [ "${{ inputs.source }}" = "live" ]; then
             RID=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=va-live&per_page=20" \
-                  --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .workflow_run.id // empty')
+                  --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_repository_id == .workflow_run.repository_id)] | sort_by(.created_at) | last | .workflow_run.id // empty')
             [ -n "$RID" ] || { echo "::error::no live cycle artifact (va-live) found"; exit 1; }
             mkdir -p export && gh run download "$RID" -n va-live -D export
             echo "EXPORT=export" >> "$GITHUB_ENV"; echo "RUN=live-${{ github.run_id }}" >> "$GITHUB_ENV"

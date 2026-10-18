@@ -188,7 +188,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           RID=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=va-live&per_page=20" \
-                --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .workflow_run.id // empty')
+                --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_repository_id == .workflow_run.repository_id)] | sort_by(.created_at) | last | .workflow_run.id // empty')
           if [ -n "$RID" ]; then
             mkdir -p dist/data/variant_a_live
             gh run download "$RID" -n va-live -D dist/data/variant_a_live

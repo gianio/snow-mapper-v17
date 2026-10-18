@@ -4325,6 +4325,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .tsh-acts button b{background:var(--accent);color:#fff;border-radius:999px;padding:1px 6px;font-size:10.5px}
  .tsh-acts button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
  .ts-warn{margin-top:8px;font-size:11.5px;font-weight:700;color:#B4332A}
+ .ts-note{margin-top:8px;font-size:12px;font-weight:600;line-height:1.4;color:#8A5A00;background:rgba(233,185,73,.16);border-radius:10px;padding:7px 10px}
  .tour-when{font-size:10.5px;margin-top:7px}
  .tour-sheet.min .tsh-body{display:none}
  .tour-sheet.min .tour-watch{display:none}
@@ -9267,7 +9268,7 @@ function tourSampleSeg(seg){
   if(p<0){seg.quality='unknown';return;}
   seg.elev=melevv(p);seg.slope=mslpv(p);seg.aspect=maspv(p);
   const pw=computePowder(p,a,b);
-  seg.powdered=!!pw.powdered;
+  seg.powdered=!!pw.powdered;seg.hs=cum[b*NP+p];
   seg.quality=pw.powdered?(pw.quality==='reduced'?'powder-reduced':'powder'):'kein Powder';
   if(!pw.powdered&&pw.reason_flags&&pw.reason_flags.length)seg.quality=tourFlagLabel(pw.reason_flags);
   // Core zone comes from SLF's own bulletin, never from our own reckoning.
@@ -9309,7 +9310,14 @@ function tourScoreOld(t){
   const segs=tourResample(t.coords,TOUR_STEP_M);
   segs.forEach(tourSampleSeg);
   const r=tourAggregate(segs);
-  r.name=t.name||'Skitour';r.id=t.id;r.powder=Math.round(r.powderShare*100);r.sulz=0;r.score=r.powder;
+  // weight each powdered descent stretch by the snow cover there (engine
+  // tourAggregate stays the shared, unweighted share)
+  let dW=0,pC=0,hS=0,hW=0;const n=segs.length,w=i=>n<2?1:(i===0?(segs[1].dist-segs[0].dist):(segs[i].dist-segs[i-1].dist));
+  for(let i=0;i<n;i++){const sg=segs[i];if(!tourIsDescent(sg))continue;const ww=w(i);dW+=ww;
+    if(sg.powdered)pC+=ww*tourCover(sg.hs);if(sg.hs!=null){hS+=sg.hs*ww;hW+=ww;}}
+  r.hsCm=hW?Math.round(hS/hW):null;
+  r.name=t.name||'Skitour';r.id=t.id;r.powder=dW?Math.round(pC/dW*100):Math.round(r.powderShare*100);r.sulz=0;r.score=r.powder;
+  {const cn=tourCoverNote(r.hsCm);if(cn)(r.caveats=r.caveats||[]).unshift(cn);}
   return r;
 }
 // ── Ski tours scored from SNOWPACK ─────────────────────────────────────────
@@ -9319,6 +9327,14 @@ function tourScoreOld(t){
 // the descent (22-50°) that lies in powder -- or, with the Sulz focus, in
 // wet/Sulz snow. The colour on the map is that share.
 const TOUR_VA_STEP_M=200,TOUR_GREY=[156,168,184];
+// Powder on top is only skiable when there is enough snow under it: below
+// TOUR_HS_MIN cm of total snow the ground comes through and a stretch counts
+// nothing, from TOUR_HS_FULL cm on it counts fully, linearly in between.
+const TOUR_HS_MIN=20,TOUR_HS_FULL=60;
+function tourCover(hs){return hs==null||!isFinite(hs)?1:Math.max(0,Math.min(1,(hs-TOUR_HS_MIN)/(TOUR_HS_FULL-TOUR_HS_MIN)));}
+const TOUR_POWDER_CLS=[3,4,5,8,9];
+function tourCoverNote(hs){return hs!=null&&hs<TOUR_HS_FULL?('Im Schnitt nur '+Math.round(hs)+' cm Schnee auf der Abfahrt – erst ab etwa '+TOUR_HS_FULL
+  +' cm deckt er den Untergrund. Die Bewertung ist entsprechend reduziert.'):null;}
 let tourFocus='powder';
 function _lerpC(stops,v){v=Math.max(0,Math.min(100,v));
   for(let i=1;i<stops.length;i++){const [v1,c1]=stops[i];if(v<=v1){const [v0,c0]=stops[i-1],f=(v-v0)/Math.max(1e-9,v1-v0);
@@ -9395,29 +9411,34 @@ function tourVaScoreOne(t,E0){
   const E=E0||tourVa.eng;if(!E||!t.coords||t.coords.length<2)return null;
   const g=tourGeo(t),segs=g.segs,n=segs.length;if(!n)return null;
   if(!g.cand){const mid=segs[Math.floor(n/2)];g.cand=E.candidates(mid.e,mid.n,60000);}
-  const m=new Float64Array(E.nm),x=E.mi,cls=new Int8Array(n);let pwS=0,pwW=0;
+  const m=new Float64Array(E.nm),x=E.mi,cls=new Int8Array(n),hs=new Float32Array(n).fill(NaN);let pwS=0,pwW=0;
   for(let i=0;i<n;i++){const s=segs[i];cls[i]=-1;
     if(s.el==null)continue;
     const sb=E.gridAt(E.shade,s.e,s.n);if(sb<0||sb===255)continue;
     if(!E.evalAt(s.e,s.n,s.el,s.sl||0,s.as==null?0:s.as,sb/254,g.cand,m))continue;
-    E.adjPrecip(m,s.e,s.n);cls[i]=E.clsSki6(m);
+    E.adjPrecip(m,s.e,s.n);cls[i]=E.clsSki6(m);hs[i]=m[x.total_hs_cm];
     if((cls[i]>=3&&cls[i]<=5)||cls[i]===8||cls[i]===9){pwS+=m[x.powder_depth_cm];pwW++;}}
   const desc=i=>segs[i].sl!=null&&segs[i].sl>=TOUR_MIN_SLOPE&&segs[i].sl<=TOUR_MAX_SLOPE;
   let dW=0;for(let i=1;i<n;i++)if(desc(i)&&cls[i]>=0)dW+=segs[i].dist-segs[i-1].dist;
-  const useD=dW>=300,sh={};let tot=0,known=0;
+  const useD=dW>=300,sh={};let tot=0,known=0,powC=0,sulC=0,hsS=0,hsW=0;
   for(let i=0;i<n;i++){const ww=i?segs[i].dist-segs[i-1].dist:(n>1?segs[1].dist-segs[0].dist:1);
     if(cls[i]>=0)known+=ww;
-    if(cls[i]<0||(useD&&!desc(i)))continue;sh[cls[i]]=(sh[cls[i]]||0)+ww;tot+=ww;}
+    if(cls[i]<0||(useD&&!desc(i)))continue;sh[cls[i]]=(sh[cls[i]]||0)+ww;tot+=ww;
+    const cf=tourCover(hs[i]);if(TOUR_POWDER_CLS.includes(cls[i]))powC+=ww*cf;if(cls[i]===6)sulC+=ww*cf;
+    if(isFinite(hs[i])){hsS+=hs[i]*ww;hsW+=ww;}}
   const share=k=>tot?(sh[k]||0)/tot:0;
-  const powder=Math.round((share(3)+share(4)+share(5))*100),sulz=Math.round(share(6)*100);
+  // the share of the descent in powder (Sulz), each stretch weighted by how
+  // well the snow covers the ground there
+  const powder=tot?Math.round(powC/tot*100):0,sulz=tot?Math.round(sulC/tot*100):0,hsMean=hsW?hsS/hsW:null;
   const clamped=g.core>=TOUR_CLAMP_SHARE,caveats=[];
   if(clamped)caveats.push(Math.round(g.core*100)+' % der Route liegt in der Kernzone des Lawinenbulletins.');
   if(g.len&&known<g.len*0.6)caveats.push('Nur '+Math.round(known/Math.max(1,g.len)*100)+' % der Route liegen im SNOWPACK-Modellgebiet.');
   if(!useD)caveats.push('Wenig Abfahrtsgelände ('+TOUR_MIN_SLOPE+'–'+TOUR_MAX_SLOPE+'°) – ganze Route bewertet.');
+  {const cn=tourCoverNote(hsMean);if(cn)caveats.push(cn);}
   caveats.push('Modellierte Schneeoberfläche, keine Lawinenbeurteilung. Das Bulletin des SLF bleibt massgebend.');
   const shares={};for(const k in sh)shares[k]=sh[k]/tot;
   return {id:t.id,name:t.name||'Skitour',powder,sulz,score:powder,cls,shares,clamped,caveats,when:tourVa.when,
-          powderCm:pwW?Math.round(pwS/pwW):null,gain:g.gain,len:g.len,maxSlope:g.maxSlope};
+          powderCm:pwW?Math.round(pwS/pwW):null,hsCm:hsMean!=null?Math.round(hsMean):null,gain:g.gain,len:g.len,maxSlope:g.maxSlope};
 }
 // The score of a route right now: SNOWPACK when the frame is ready, the
 // powder model otherwise.
@@ -9602,9 +9623,10 @@ function tourSheetRender(t,r){
   const st=(v,l)=>'<div><b>'+v+'</b><small>'+l+'</small></div>';
   const stats='<div class="tsh-stats">'+st(g.len?(Math.round(g.len/100)/10)+' km':'–','Distanz')+st(g.gain!=null?g.gain+' m':'–','Aufstieg')
     +st(g.hi.el!=null?Math.round(g.hi.el)+' m':'–','Gipfel')+st(g.avgSlope!=null?g.avgSlope+'°':'–','Ø Neigung')+st(g.maxSlope?g.maxSlope+'°':'–','Max. Neigung')+'</div>';
-  const facts=(g.lo.el!=null?'Start '+Math.round(g.lo.el)+' m':'');
+  const facts=(g.lo.el!=null?'Start '+Math.round(g.lo.el)+' m':'')+(r&&r.hsCm!=null?' · Ø Schnee '+r.hsCm+' cm':'');
   const nRep=tourReports(t).length;
-  const warn=r&&r.clamped?'<div class="ts-warn">Kernzone des Lawinenbulletins – Bulletin zuerst lesen.</div>':'';
+  const warn=(r&&r.clamped?'<div class="ts-warn">Kernzone des Lawinenbulletins – Bulletin zuerst lesen.</div>':'')
+    +(r&&r.hsCm!=null&&r.hsCm<TOUR_HS_FULL?'<div class="ts-note">'+escapeHtml(tourCoverNote(r.hsCm))+'</div>':'');
   el.innerHTML='<div class="tsh-grab" data-drag></div>'
     +'<div class="tour-hd" data-drag>'+(tourFromSearch?'<button type="button" class="tour-backi" onclick="tourBackToSearch()" aria-label="Zurück zur Liste">‹</button>':'')
     +'<span class="tour-score" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r):'–')+'<small>%</small></span>'
@@ -14247,7 +14269,34 @@ let sb=null,sbUser=null,authMode='login';
 // token) lives in localStorage and renews itself in the background, so
 // signing in once keeps you in until you sign out or the browser evicts its
 // storage -- there is no re-lock step of the app's own to get in the way.
-try{sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});}catch(e){console.warn('Supabase SDK not loaded',e);}
+// Everything other users wrote (captions, names, avatars, image links, the
+// whole condition_data tree) ends up in innerHTML and inline onclick strings
+// in hundreds of places. Rather than trust each of them to escape, rows are
+// cleaned once as they arrive: text loses the characters that could end a
+// tag, an attribute or a JS string, and links must be plain https or an
+// inline image -- so a crafted row can't run script in someone else's app.
+const URL_KEYS=/^(image_url|avatar_url|thumb|mid|images|drawImage|snapshot|map|img|url|photo)$/;
+function safeUrl(u){if(typeof u!=='string')return null;u=u.trim();
+  if(/^https:\/\/[^\s"'<>`\\()&]+$/.test(u))return u;
+  if(/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(u))return u;
+  return null;}
+function safeTxt(s){return s.replace(/</g,'‹').replace(/>/g,'›').replace(/"/g,'”').replace(/'/g,'’')
+  .replace(/`/g,'ʼ').replace(/\\/g,'∖').replace(/&(?=[#\w])/g,'＆');}
+function sanVal(v,k){if(typeof v==='string')return URL_KEYS.test(k)?safeUrl(v):safeTxt(v);
+  if(Array.isArray(v))return v.map(x=>sanVal(x,k));
+  if(v&&typeof v==='object'){const o={};for(const kk in v)o[safeTxt(kk)]=sanVal(v[kk],kk);return o;}
+  return v;}
+// for a name or id spliced into an inline onclick='…' argument
+function jsArg(s){return String(s==null?'':s).replace(/['"\\`<>&]/g,'');}
+async function sbFetch(input,init){const res=await fetch(input,init);
+  try{const u=typeof input==='string'?input:input.url;
+    if(!res.ok||u.indexOf('/rest/v1/')<0||!/json/.test(res.headers.get('content-type')||''))return res;
+    const t=await res.text();let out=t;
+    if(t){try{out=JSON.stringify(sanVal(JSON.parse(t),''));}catch(e){}}
+    const h=new Headers(res.headers);h.delete('content-length');h.delete('content-encoding');
+    return new Response(out,{status:res.status,statusText:res.statusText,headers:h});
+  }catch(e){return res;}}
+try{sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},global:{fetch:sbFetch}});}catch(e){console.warn('Supabase SDK not loaded',e);}
 function haptic(ms){try{const H=_capPlugin('Haptics');if(H){H.impact({style:(ms||8)>=15?'MEDIUM':'LIGHT'});return;}navigator.vibrate(ms||8);}catch(e){}}
 // --- Custom inline icon set (replaces emoji everywhere in the UI chrome) ---
 const IC={
@@ -15389,7 +15438,7 @@ let myProfile=null,profAvatarFile=null,profAvatarUrl=null;
 // Every picture the app has seen, by user id. Filled wherever profiles are
 // already being fetched, so nothing makes an extra round trip to draw a face.
 const AVATARS=Object.create(null);
-function avatarPut(id,url){if(id&&url)AVATARS[id]=url;}
+function avatarPut(id,url){url=safeUrl(url);if(id&&url)AVATARS[id]=url;}
 function avatarOf(id){return (id&&AVATARS[id])||null;}
 // One recipe for a face: the picture if there is one, the initial if not.
 function avatarHtml(id,name,cls){
@@ -15779,11 +15828,11 @@ async function dmList(){
       const nm=names[oid]||'User',url=avatarOf(oid),m=last[t.id];
       const unread=m&&m.sender_id!==sbUser.id&&!m.read_at;
       if(unread)_dmUnread=true;
-      if(tab==='req')return '<div class="dm-req" data-n="'+escapeHtml(nm.toLowerCase())+'"><button class="dm-row'+(unread?' new':'')+'" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+escapeHtml(nm).replace(/'/g,'')+'\')">'
+      if(tab==='req')return '<div class="dm-req" data-n="'+escapeHtml(nm.toLowerCase())+'"><button class="dm-row'+(unread?' new':'')+'" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+jsArg(nm)+'\')">'
         +'<span class="av"'+(url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'
         +'<span class="tx"><b>'+escapeHtml(nm)+trustBadge(progTrustOf(oid),true)+'</b><span>'+(m?escapeHtml(m.body):'möchte dir schreiben')+'</span></span></button>'
         +'<div class="dm-req-b"><button class="pri" onclick="dmAccept(\''+oid+'\')">Annehmen</button><button onclick="dmHide(\''+t.id+'\')">Ablehnen</button></div></div>';
-      return '<button class="dm-row'+(unread?' new':'')+'" data-n="'+escapeHtml(nm.toLowerCase())+'" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+escapeHtml(nm).replace(/'/g,'')+'\')">'+
+      return '<button class="dm-row'+(unread?' new':'')+'" data-n="'+escapeHtml(nm.toLowerCase())+'" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+jsArg(nm)+'\')">'+
         '<span class="av"'+(url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'+
         '<span class="tx"><b>'+escapeHtml(nm)+trustBadge(progTrustOf(oid),true)+'</b><span>'+(m?escapeHtml(/[?&]post=/.test(m.body)?'📍 Beitrag geteilt':m.body):'—')+'</span></span>'+
         (m?('<span class="when">'+timeAgo(m.created_at)+'</span>'):'')+
@@ -15864,7 +15913,7 @@ function usSuggest(box){
   const list=[...by.values()].sort((a,b)=>b.n-a.n).slice(0,12);
   if(!list.length){box.innerHTML='<div class="us-empty">Tippe einen Namen, um Leute zu finden.</div>';return;}
   box.innerHTML='<div class="us-sec">Aktiv in der Community</div>'+list.map(u=>{const fol=myFollowing.has(u.id);
-    return '<div class="us-row" onclick="usClose();viewUser(\''+u.id+'\',\''+escapeHtml(u.name||'User').replace(/'/g,'')+'\')">'
+    return '<div class="us-row" onclick="usClose();viewUser(\''+u.id+'\',\''+jsArg(u.name||'User')+'\')">'
       +'<div class="av"'+(u.avatar?' style="background-image:url(&quot;'+escapeHtml(u.avatar)+'&quot;)"':'')+'>'+(u.avatar?'':escapeHtml((u.name||'U')[0].toUpperCase()))+'</div>'
       +'<span class="us-t"><b>'+escapeHtml(u.name||'User')+'</b><em>'+u.n+' Meldung'+(u.n>1?'en':'')+' · zuletzt '+escapeHtml(u.last||'')+'</em></span>'
       +'<button class="feed-follow '+(fol?'following':'')+'" onclick="toggleFollow(\''+u.id+'\',event);this.classList.toggle(\'following\');this.textContent=this.classList.contains(\'following\')?\'Folge ich\':\'Folgen\';">'+(fol?'Folge ich':'Folgen')+'</button></div>';}).join('');
@@ -15883,7 +15932,7 @@ async function usSearch(){
     box.innerHTML=data.map(u=>{
       const me=sbUser&&u.id===sbUser.id;
       const fol=myFollowing.has(u.id);
-      return '<div class="us-row" onclick="usClose();viewUser(\''+u.id+'\',\''+escapeHtml(u.username||'User').replace(/'/g,'')+'\')">'
+      return '<div class="us-row" onclick="usClose();viewUser(\''+u.id+'\',\''+jsArg(u.username||'User')+'\')">'
         +'<div class="av"'+(u.avatar_url?' style="background-image:url('+u.avatar_url+')"':'')+'>'+(u.avatar_url?'':escapeHtml((u.username||'U')[0].toUpperCase()))+'</div>'
         +'<b>'+escapeHtml(u.username||'User')+'</b>'
         +(me?'':'<button class="feed-follow '+(fol?'following':'')+'" onclick="toggleFollow(\''+u.id+'\',event);this.classList.toggle(\'following\');this.textContent=this.classList.contains(\'following\')?\'Folge ich\':\'Folgen\';">'+(fol?'Folge ich':'Folgen')+'</button>')
