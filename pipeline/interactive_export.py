@@ -14269,7 +14269,34 @@ let sb=null,sbUser=null,authMode='login';
 // token) lives in localStorage and renews itself in the background, so
 // signing in once keeps you in until you sign out or the browser evicts its
 // storage -- there is no re-lock step of the app's own to get in the way.
-try{sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});}catch(e){console.warn('Supabase SDK not loaded',e);}
+// Everything other users wrote (captions, names, avatars, image links, the
+// whole condition_data tree) ends up in innerHTML and inline onclick strings
+// in hundreds of places. Rather than trust each of them to escape, rows are
+// cleaned once as they arrive: text loses the characters that could end a
+// tag, an attribute or a JS string, and links must be plain https or an
+// inline image -- so a crafted row can't run script in someone else's app.
+const URL_KEYS=/^(image_url|avatar_url|thumb|mid|images|drawImage|snapshot|map|img|url|photo)$/;
+function safeUrl(u){if(typeof u!=='string')return null;u=u.trim();
+  if(/^https:\/\/[^\s"'<>`\\()&]+$/.test(u))return u;
+  if(/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(u))return u;
+  return null;}
+function safeTxt(s){return s.replace(/</g,'‹').replace(/>/g,'›').replace(/"/g,'”').replace(/'/g,'’')
+  .replace(/`/g,'ʼ').replace(/\\/g,'∖').replace(/&(?=[#\w])/g,'＆');}
+function sanVal(v,k){if(typeof v==='string')return URL_KEYS.test(k)?safeUrl(v):safeTxt(v);
+  if(Array.isArray(v))return v.map(x=>sanVal(x,k));
+  if(v&&typeof v==='object'){const o={};for(const kk in v)o[safeTxt(kk)]=sanVal(v[kk],kk);return o;}
+  return v;}
+// for a name or id spliced into an inline onclick='…' argument
+function jsArg(s){return String(s==null?'':s).replace(/['"\\`<>&]/g,'');}
+async function sbFetch(input,init){const res=await fetch(input,init);
+  try{const u=typeof input==='string'?input:input.url;
+    if(!res.ok||u.indexOf('/rest/v1/')<0||!/json/.test(res.headers.get('content-type')||''))return res;
+    const t=await res.text();let out=t;
+    if(t){try{out=JSON.stringify(sanVal(JSON.parse(t),''));}catch(e){}}
+    const h=new Headers(res.headers);h.delete('content-length');h.delete('content-encoding');
+    return new Response(out,{status:res.status,statusText:res.statusText,headers:h});
+  }catch(e){return res;}}
+try{sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},global:{fetch:sbFetch}});}catch(e){console.warn('Supabase SDK not loaded',e);}
 function haptic(ms){try{const H=_capPlugin('Haptics');if(H){H.impact({style:(ms||8)>=15?'MEDIUM':'LIGHT'});return;}navigator.vibrate(ms||8);}catch(e){}}
 // --- Custom inline icon set (replaces emoji everywhere in the UI chrome) ---
 const IC={
@@ -15411,7 +15438,7 @@ let myProfile=null,profAvatarFile=null,profAvatarUrl=null;
 // Every picture the app has seen, by user id. Filled wherever profiles are
 // already being fetched, so nothing makes an extra round trip to draw a face.
 const AVATARS=Object.create(null);
-function avatarPut(id,url){if(id&&url)AVATARS[id]=url;}
+function avatarPut(id,url){url=safeUrl(url);if(id&&url)AVATARS[id]=url;}
 function avatarOf(id){return (id&&AVATARS[id])||null;}
 // One recipe for a face: the picture if there is one, the initial if not.
 function avatarHtml(id,name,cls){
@@ -15801,11 +15828,11 @@ async function dmList(){
       const nm=names[oid]||'User',url=avatarOf(oid),m=last[t.id];
       const unread=m&&m.sender_id!==sbUser.id&&!m.read_at;
       if(unread)_dmUnread=true;
-      if(tab==='req')return '<div class="dm-req" data-n="'+escapeHtml(nm.toLowerCase())+'"><button class="dm-row'+(unread?' new':'')+'" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+escapeHtml(nm).replace(/'/g,'')+'\')">'
+      if(tab==='req')return '<div class="dm-req" data-n="'+escapeHtml(nm.toLowerCase())+'"><button class="dm-row'+(unread?' new':'')+'" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+jsArg(nm)+'\')">'
         +'<span class="av"'+(url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'
         +'<span class="tx"><b>'+escapeHtml(nm)+trustBadge(progTrustOf(oid),true)+'</b><span>'+(m?escapeHtml(m.body):'möchte dir schreiben')+'</span></span></button>'
         +'<div class="dm-req-b"><button class="pri" onclick="dmAccept(\''+oid+'\')">Annehmen</button><button onclick="dmHide(\''+t.id+'\')">Ablehnen</button></div></div>';
-      return '<button class="dm-row'+(unread?' new':'')+'" data-n="'+escapeHtml(nm.toLowerCase())+'" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+escapeHtml(nm).replace(/'/g,'')+'\')">'+
+      return '<button class="dm-row'+(unread?' new':'')+'" data-n="'+escapeHtml(nm.toLowerCase())+'" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+jsArg(nm)+'\')">'+
         '<span class="av"'+(url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'+
         '<span class="tx"><b>'+escapeHtml(nm)+trustBadge(progTrustOf(oid),true)+'</b><span>'+(m?escapeHtml(/[?&]post=/.test(m.body)?'📍 Beitrag geteilt':m.body):'—')+'</span></span>'+
         (m?('<span class="when">'+timeAgo(m.created_at)+'</span>'):'')+
@@ -15886,7 +15913,7 @@ function usSuggest(box){
   const list=[...by.values()].sort((a,b)=>b.n-a.n).slice(0,12);
   if(!list.length){box.innerHTML='<div class="us-empty">Tippe einen Namen, um Leute zu finden.</div>';return;}
   box.innerHTML='<div class="us-sec">Aktiv in der Community</div>'+list.map(u=>{const fol=myFollowing.has(u.id);
-    return '<div class="us-row" onclick="usClose();viewUser(\''+u.id+'\',\''+escapeHtml(u.name||'User').replace(/'/g,'')+'\')">'
+    return '<div class="us-row" onclick="usClose();viewUser(\''+u.id+'\',\''+jsArg(u.name||'User')+'\')">'
       +'<div class="av"'+(u.avatar?' style="background-image:url(&quot;'+escapeHtml(u.avatar)+'&quot;)"':'')+'>'+(u.avatar?'':escapeHtml((u.name||'U')[0].toUpperCase()))+'</div>'
       +'<span class="us-t"><b>'+escapeHtml(u.name||'User')+'</b><em>'+u.n+' Meldung'+(u.n>1?'en':'')+' · zuletzt '+escapeHtml(u.last||'')+'</em></span>'
       +'<button class="feed-follow '+(fol?'following':'')+'" onclick="toggleFollow(\''+u.id+'\',event);this.classList.toggle(\'following\');this.textContent=this.classList.contains(\'following\')?\'Folge ich\':\'Folgen\';">'+(fol?'Folge ich':'Folgen')+'</button></div>';}).join('');
@@ -15905,7 +15932,7 @@ async function usSearch(){
     box.innerHTML=data.map(u=>{
       const me=sbUser&&u.id===sbUser.id;
       const fol=myFollowing.has(u.id);
-      return '<div class="us-row" onclick="usClose();viewUser(\''+u.id+'\',\''+escapeHtml(u.username||'User').replace(/'/g,'')+'\')">'
+      return '<div class="us-row" onclick="usClose();viewUser(\''+u.id+'\',\''+jsArg(u.username||'User')+'\')">'
         +'<div class="av"'+(u.avatar_url?' style="background-image:url('+u.avatar_url+')"':'')+'>'+(u.avatar_url?'':escapeHtml((u.username||'U')[0].toUpperCase()))+'</div>'
         +'<b>'+escapeHtml(u.username||'User')+'</b>'
         +(me?'':'<button class="feed-follow '+(fol?'following':'')+'" onclick="toggleFollow(\''+u.id+'\',event);this.classList.toggle(\'following\');this.textContent=this.classList.contains(\'following\')?\'Folge ich\':\'Folgen\';">'+(fol?'Folge ich':'Folgen')+'</button>')

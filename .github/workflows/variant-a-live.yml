@@ -121,7 +121,7 @@ jobs:
           mkdir -p state
           NAME=${{ inputs.limit == '' && 'va-state' || 'va-state-smoke' }}
           RID=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=$NAME&per_page=20" \
-                --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .workflow_run.id // empty')
+                --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_repository_id == .workflow_run.repository_id)] | sort_by(.created_at) | last | .workflow_run.id // empty')
           if [ -n "$RID" ]; then
             gh run download "$RID" -n "$NAME" -D state && ls -la state
             echo "::notice::continuing from the state of run $RID"
