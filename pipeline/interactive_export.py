@@ -4325,6 +4325,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .tsh-acts button b{background:var(--accent);color:#fff;border-radius:999px;padding:1px 6px;font-size:10.5px}
  .tsh-acts button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
  .ts-warn{margin-top:8px;font-size:11.5px;font-weight:700;color:#B4332A}
+ .ts-note{margin-top:8px;font-size:12px;font-weight:600;line-height:1.4;color:#8A5A00;background:rgba(233,185,73,.16);border-radius:10px;padding:7px 10px}
  .tour-when{font-size:10.5px;margin-top:7px}
  .tour-sheet.min .tsh-body{display:none}
  .tour-sheet.min .tour-watch{display:none}
@@ -9267,7 +9268,7 @@ function tourSampleSeg(seg){
   if(p<0){seg.quality='unknown';return;}
   seg.elev=melevv(p);seg.slope=mslpv(p);seg.aspect=maspv(p);
   const pw=computePowder(p,a,b);
-  seg.powdered=!!pw.powdered;
+  seg.powdered=!!pw.powdered;seg.hs=cum[b*NP+p];
   seg.quality=pw.powdered?(pw.quality==='reduced'?'powder-reduced':'powder'):'kein Powder';
   if(!pw.powdered&&pw.reason_flags&&pw.reason_flags.length)seg.quality=tourFlagLabel(pw.reason_flags);
   // Core zone comes from SLF's own bulletin, never from our own reckoning.
@@ -9309,7 +9310,14 @@ function tourScoreOld(t){
   const segs=tourResample(t.coords,TOUR_STEP_M);
   segs.forEach(tourSampleSeg);
   const r=tourAggregate(segs);
-  r.name=t.name||'Skitour';r.id=t.id;r.powder=Math.round(r.powderShare*100);r.sulz=0;r.score=r.powder;
+  // weight each powdered descent stretch by the snow cover there (engine
+  // tourAggregate stays the shared, unweighted share)
+  let dW=0,pC=0,hS=0,hW=0;const n=segs.length,w=i=>n<2?1:(i===0?(segs[1].dist-segs[0].dist):(segs[i].dist-segs[i-1].dist));
+  for(let i=0;i<n;i++){const sg=segs[i];if(!tourIsDescent(sg))continue;const ww=w(i);dW+=ww;
+    if(sg.powdered)pC+=ww*tourCover(sg.hs);if(sg.hs!=null){hS+=sg.hs*ww;hW+=ww;}}
+  r.hsCm=hW?Math.round(hS/hW):null;
+  r.name=t.name||'Skitour';r.id=t.id;r.powder=dW?Math.round(pC/dW*100):Math.round(r.powderShare*100);r.sulz=0;r.score=r.powder;
+  {const cn=tourCoverNote(r.hsCm);if(cn)(r.caveats=r.caveats||[]).unshift(cn);}
   return r;
 }
 // ── Ski tours scored from SNOWPACK ─────────────────────────────────────────
@@ -9319,6 +9327,14 @@ function tourScoreOld(t){
 // the descent (22-50°) that lies in powder -- or, with the Sulz focus, in
 // wet/Sulz snow. The colour on the map is that share.
 const TOUR_VA_STEP_M=200,TOUR_GREY=[156,168,184];
+// Powder on top is only skiable when there is enough snow under it: below
+// TOUR_HS_MIN cm of total snow the ground comes through and a stretch counts
+// nothing, from TOUR_HS_FULL cm on it counts fully, linearly in between.
+const TOUR_HS_MIN=20,TOUR_HS_FULL=60;
+function tourCover(hs){return hs==null||!isFinite(hs)?1:Math.max(0,Math.min(1,(hs-TOUR_HS_MIN)/(TOUR_HS_FULL-TOUR_HS_MIN)));}
+const TOUR_POWDER_CLS=[3,4,5,8,9];
+function tourCoverNote(hs){return hs!=null&&hs<TOUR_HS_FULL?('Im Schnitt nur '+Math.round(hs)+' cm Schnee auf der Abfahrt – erst ab etwa '+TOUR_HS_FULL
+  +' cm deckt er den Untergrund. Die Bewertung ist entsprechend reduziert.'):null;}
 let tourFocus='powder';
 function _lerpC(stops,v){v=Math.max(0,Math.min(100,v));
   for(let i=1;i<stops.length;i++){const [v1,c1]=stops[i];if(v<=v1){const [v0,c0]=stops[i-1],f=(v-v0)/Math.max(1e-9,v1-v0);
@@ -9395,29 +9411,34 @@ function tourVaScoreOne(t,E0){
   const E=E0||tourVa.eng;if(!E||!t.coords||t.coords.length<2)return null;
   const g=tourGeo(t),segs=g.segs,n=segs.length;if(!n)return null;
   if(!g.cand){const mid=segs[Math.floor(n/2)];g.cand=E.candidates(mid.e,mid.n,60000);}
-  const m=new Float64Array(E.nm),x=E.mi,cls=new Int8Array(n);let pwS=0,pwW=0;
+  const m=new Float64Array(E.nm),x=E.mi,cls=new Int8Array(n),hs=new Float32Array(n).fill(NaN);let pwS=0,pwW=0;
   for(let i=0;i<n;i++){const s=segs[i];cls[i]=-1;
     if(s.el==null)continue;
     const sb=E.gridAt(E.shade,s.e,s.n);if(sb<0||sb===255)continue;
     if(!E.evalAt(s.e,s.n,s.el,s.sl||0,s.as==null?0:s.as,sb/254,g.cand,m))continue;
-    E.adjPrecip(m,s.e,s.n);cls[i]=E.clsSki6(m);
+    E.adjPrecip(m,s.e,s.n);cls[i]=E.clsSki6(m);hs[i]=m[x.total_hs_cm];
     if((cls[i]>=3&&cls[i]<=5)||cls[i]===8||cls[i]===9){pwS+=m[x.powder_depth_cm];pwW++;}}
   const desc=i=>segs[i].sl!=null&&segs[i].sl>=TOUR_MIN_SLOPE&&segs[i].sl<=TOUR_MAX_SLOPE;
   let dW=0;for(let i=1;i<n;i++)if(desc(i)&&cls[i]>=0)dW+=segs[i].dist-segs[i-1].dist;
-  const useD=dW>=300,sh={};let tot=0,known=0;
+  const useD=dW>=300,sh={};let tot=0,known=0,powC=0,sulC=0,hsS=0,hsW=0;
   for(let i=0;i<n;i++){const ww=i?segs[i].dist-segs[i-1].dist:(n>1?segs[1].dist-segs[0].dist:1);
     if(cls[i]>=0)known+=ww;
-    if(cls[i]<0||(useD&&!desc(i)))continue;sh[cls[i]]=(sh[cls[i]]||0)+ww;tot+=ww;}
+    if(cls[i]<0||(useD&&!desc(i)))continue;sh[cls[i]]=(sh[cls[i]]||0)+ww;tot+=ww;
+    const cf=tourCover(hs[i]);if(TOUR_POWDER_CLS.includes(cls[i]))powC+=ww*cf;if(cls[i]===6)sulC+=ww*cf;
+    if(isFinite(hs[i])){hsS+=hs[i]*ww;hsW+=ww;}}
   const share=k=>tot?(sh[k]||0)/tot:0;
-  const powder=Math.round((share(3)+share(4)+share(5))*100),sulz=Math.round(share(6)*100);
+  // the share of the descent in powder (Sulz), each stretch weighted by how
+  // well the snow covers the ground there
+  const powder=tot?Math.round(powC/tot*100):0,sulz=tot?Math.round(sulC/tot*100):0,hsMean=hsW?hsS/hsW:null;
   const clamped=g.core>=TOUR_CLAMP_SHARE,caveats=[];
   if(clamped)caveats.push(Math.round(g.core*100)+' % der Route liegt in der Kernzone des Lawinenbulletins.');
   if(g.len&&known<g.len*0.6)caveats.push('Nur '+Math.round(known/Math.max(1,g.len)*100)+' % der Route liegen im SNOWPACK-Modellgebiet.');
   if(!useD)caveats.push('Wenig Abfahrtsgelände ('+TOUR_MIN_SLOPE+'–'+TOUR_MAX_SLOPE+'°) – ganze Route bewertet.');
+  {const cn=tourCoverNote(hsMean);if(cn)caveats.push(cn);}
   caveats.push('Modellierte Schneeoberfläche, keine Lawinenbeurteilung. Das Bulletin des SLF bleibt massgebend.');
   const shares={};for(const k in sh)shares[k]=sh[k]/tot;
   return {id:t.id,name:t.name||'Skitour',powder,sulz,score:powder,cls,shares,clamped,caveats,when:tourVa.when,
-          powderCm:pwW?Math.round(pwS/pwW):null,gain:g.gain,len:g.len,maxSlope:g.maxSlope};
+          powderCm:pwW?Math.round(pwS/pwW):null,hsCm:hsMean!=null?Math.round(hsMean):null,gain:g.gain,len:g.len,maxSlope:g.maxSlope};
 }
 // The score of a route right now: SNOWPACK when the frame is ready, the
 // powder model otherwise.
@@ -9602,9 +9623,10 @@ function tourSheetRender(t,r){
   const st=(v,l)=>'<div><b>'+v+'</b><small>'+l+'</small></div>';
   const stats='<div class="tsh-stats">'+st(g.len?(Math.round(g.len/100)/10)+' km':'–','Distanz')+st(g.gain!=null?g.gain+' m':'–','Aufstieg')
     +st(g.hi.el!=null?Math.round(g.hi.el)+' m':'–','Gipfel')+st(g.avgSlope!=null?g.avgSlope+'°':'–','Ø Neigung')+st(g.maxSlope?g.maxSlope+'°':'–','Max. Neigung')+'</div>';
-  const facts=(g.lo.el!=null?'Start '+Math.round(g.lo.el)+' m':'');
+  const facts=(g.lo.el!=null?'Start '+Math.round(g.lo.el)+' m':'')+(r&&r.hsCm!=null?' · Ø Schnee '+r.hsCm+' cm':'');
   const nRep=tourReports(t).length;
-  const warn=r&&r.clamped?'<div class="ts-warn">Kernzone des Lawinenbulletins – Bulletin zuerst lesen.</div>':'';
+  const warn=(r&&r.clamped?'<div class="ts-warn">Kernzone des Lawinenbulletins – Bulletin zuerst lesen.</div>':'')
+    +(r&&r.hsCm!=null&&r.hsCm<TOUR_HS_FULL?'<div class="ts-note">'+escapeHtml(tourCoverNote(r.hsCm))+'</div>':'');
   el.innerHTML='<div class="tsh-grab" data-drag></div>'
     +'<div class="tour-hd" data-drag>'+(tourFromSearch?'<button type="button" class="tour-backi" onclick="tourBackToSearch()" aria-label="Zurück zur Liste">‹</button>':'')
     +'<span class="tour-score" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r):'–')+'<small>%</small></span>'
