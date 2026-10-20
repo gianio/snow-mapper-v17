@@ -2686,7 +2686,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #bootTxt.out{opacity:0;transform:translateY(-3px)}
  @keyframes btTxt{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
  /* "sharper map ready" after a coarse start */
- #hiResChip{position:fixed;left:50%;top:calc(var(--bar-h,64px) + 48px);z-index:3000;
+ #hiResChip{position:fixed;left:50%;top:calc(var(--bar-h,64px) + 92px);z-index:3000;
    transform:translate(-50%,-12px);opacity:0;transition:opacity .3s,transform .3s;
    display:flex;gap:10px;align-items:center;padding:9px 14px;border-radius:99px;border:1px solid var(--hair,rgba(0,0,0,.08));
    background:var(--card,#fff);color:var(--fg,#1b2230);box-shadow:0 8px 24px rgba(0,0,0,.18);
@@ -3991,6 +3991,10 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .tour-kpi span.on b{color:var(--accent)}
  .tour-prof{display:block;margin:2px 0 6px;border-radius:12px;background:var(--fill)}
  .tour-prof .tp-t{font:600 9px Inter,system-ui;fill:var(--fg2)}
+ .tp-tg{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 6px}
+ .tp-tg button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid var(--hair);background:var(--card);color:var(--fg2);font:600 12px var(--font,inherit);cursor:pointer;opacity:.6}
+ .tp-tg button.on{opacity:1;color:var(--fg);border-color:var(--fg3,#9aa3b2)}
+ .tp-tg i{width:10px;height:10px;border-radius:3px;display:inline-block}
  .tp-cap{text-wrap:balance;margin:-2px 0 8px;font:500 11px var(--font,inherit);color:var(--fg2)}
  .tour-chips{display:flex;flex-wrap:wrap;gap:6px 10px;margin:4px 0 6px}
  .tour-chips .tc{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--fg)}
@@ -6260,6 +6264,7 @@ const I18N_DICT={
 "Farbe = Schneeart / Neuschnee · Füllung = Schneehöhe, voll ab 1 m":["Colour = snow type / new snow · fill = snow depth, full from 1 m","Couleur = type de neige / neige fraîche · remplissage = hauteur de neige, plein dès 1 m","Colore = tipo di neve / neve fresca · riempimento = altezza neve, pieno da 1 m"],
 "Welche Tour?":["Which tour?","Quel itinéraire ?","Quale gita?"],
 "Routen an dieser Stelle":["routes at this spot","itinéraires à cet endroit","percorsi in questo punto"],
+"Höhe links · rechts: Neuschnee/Pulver (Balken, Farbe = Schneetyp) und gesamte Schneehöhe (Linie)":["Elevation left · right: new/loose snow (bars, colour = snow type) and total snow depth (line)","Altitude à gauche · à droite : neige fraîche (barres, couleur = type) et hauteur totale (ligne)","Quota a sinistra · a destra: neve fresca (barre, colore = tipo) e altezza totale (linea)"],
 "Schneetyp zu diesem Zeitpunkt":["Snow type at this time","Type de neige à ce moment","Tipo di neve in questo momento"],
 "Bisher gemeldet":["Reported so far","Déjà signalé","Segnalato finora"],
 "Bitte Standort auf der Karte setzen.":["Please set the location on the map.","Place le lieu sur la carte.","Imposta la posizione sulla mappa."],
@@ -9655,12 +9660,12 @@ function tourVaScoreOne(t,E0){
   const E=E0||tourVa.eng;if(!E||!t.coords||t.coords.length<2)return null;
   const g=tourGeo(t),segs=g.segs,n=segs.length;if(!n)return null;
   if(!g.cand){const mid=segs[Math.floor(n/2)];g.cand=E.candidates(mid.e,mid.n,60000);}
-  const m=new Float64Array(E.nm),x=E.mi,cls=new Int8Array(n),hs=new Float32Array(n).fill(NaN);let pwS=0,pwW=0;
+  const m=new Float64Array(E.nm),x=E.mi,cls=new Int8Array(n),hs=new Float32Array(n).fill(NaN),pw=new Float32Array(n).fill(NaN);let pwS=0,pwW=0;
   for(let i=0;i<n;i++){const s=segs[i];cls[i]=-1;
     if(s.el==null)continue;
     const sb=E.gridAt(E.shade,s.e,s.n);if(sb<0||sb===255)continue;
     if(!E.evalAt(s.e,s.n,s.el,s.sl||0,s.as==null?0:s.as,sb/254,g.cand,m))continue;
-    E.adjPrecip(m,s.e,s.n);cls[i]=E.clsSki6(m);hs[i]=m[x.total_hs_cm];
+    E.adjPrecip(m,s.e,s.n);cls[i]=E.clsSki6(m);hs[i]=m[x.total_hs_cm];pw[i]=m[x.powder_depth_cm];
     if((cls[i]>=3&&cls[i]<=5)||cls[i]===8||cls[i]===9){pwS+=m[x.powder_depth_cm];pwW++;}}
   const desc=i=>segs[i].sl!=null&&segs[i].sl>=TOUR_MIN_SLOPE&&segs[i].sl<=TOUR_MAX_SLOPE;
   let dW=0;for(let i=1;i<n;i++)if(desc(i)&&cls[i]>=0)dW+=segs[i].dist-segs[i-1].dist;
@@ -9682,7 +9687,7 @@ function tourVaScoreOne(t,E0){
   caveats.push('Modellierte Schneeoberfläche, keine Lawinenbeurteilung. Das Bulletin des SLF bleibt massgebend.');
   const shares={};for(const k in sh)shares[k]=sh[k]/tot;
   return {id:t.id,name:t.name||'Skitour',powder,sulz,score:powder,cls,shares,clamped,caveats,when:tourVa.when,
-          powderCm:pwW?Math.round(pwS/pwW):null,hsCm:hsMean!=null?Math.round(hsMean):null,hs,gain:g.gain,len:g.len,maxSlope:g.maxSlope};
+          powderCm:pwW?Math.round(pwS/pwW):null,hsCm:hsMean!=null?Math.round(hsMean):null,hs,pw,gain:g.gain,len:g.len,maxSlope:g.maxSlope};
 }
 // The score of a route right now: SNOWPACK when the frame is ready, the
 // powder model otherwise.
@@ -9874,31 +9879,58 @@ function tourIsoDraw(t,r){
   grp.addLayer(pin(g.hi,'hi',(t.name||'Gipfel')+(g.hi.el!=null?' · '+Math.round(g.hi.el)+' m':'')));
   tourIsoLayer=grp.addTo(map);
 }
-function tourProfileSVG(t,r){
+// The tour profile: elevation (left axis) plus two graphs that can be
+// switched on and off, each with its own axis on the right: new / loose snow
+// as bars in the snow-type colour, and the total snow depth as a line.
+let tourProfOpt=(function(){try{return Object.assign({ns:true,hs:true},JSON.parse(localStorage.getItem('ssm_tprof')||'{}'));}catch(e){return {ns:true,hs:true};}})();
+let _tpLast=null;
+function tourProfTog(k){tourProfOpt[k]=!tourProfOpt[k];try{localStorage.setItem('ssm_tprof',JSON.stringify(tourProfOpt));}catch(e){}
+  const b=document.getElementById('tourProfBox');if(b&&_tpLast)b.outerHTML=tourProfileSVG(_tpLast[0],_tpLast[1]);try{haptic(3);}catch(e){}}
+const TP_HS_COL='#0284c7';
+function tourProfileSVG(t,r){_tpLast=[t,r];
   const g=tourGeo(t),segs=g.segs.filter(s=>s.el!=null);if(segs.length<2)return '';
-  const W=340,H=92,L0=34,R=6,T0=8,B=18,len=segs[segs.length-1].dist||1;
+  const idx=new Map(g.segs.map((s,i)=>[s,i])),has=r&&r.cls,ns=has&&r.pw&&tourProfOpt.ns,hsOn=has&&r.hs&&tourProfOpt.hs;
+  const W=340,H=128,L0=34,R=6+(ns?30:0)+(hsOn?32:0),T0=18,B=18,len=segs[segs.length-1].dist||1,base=H-B;
   let lo=1e9,hi=-1e9;segs.forEach(s=>{lo=Math.min(lo,s.el);hi=Math.max(hi,s.el);});
   const pad=Math.max(40,(hi-lo)*.12);lo-=pad;hi+=pad;
-  const X=d=>L0+d/len*(W-L0-R),Y=e=>T0+(1-(e-lo)/(hi-lo))*(H-T0-B);
-  let svg='';const idx=new Map(g.segs.map((s,i)=>[s,i]));
-  // colour = snow type (powder by its new-snow depth); how far the colour
-  // fills the column under the line = total snow depth, full from 1 m up
-  const base=H-B,col=(x0,y0,x1,y1,fill,op)=>'<path d="M'+x0.toFixed(1)+' '+y0.toFixed(1)+'L'+x1.toFixed(1)+' '+y1.toFixed(1)
-      +'L'+x1.toFixed(1)+' '+base+'L'+x0.toFixed(1)+' '+base+'Z" fill="'+fill+'"'+(op<1?' fill-opacity="'+op+'"':'')+'/>';
-  for(let i=1;i<segs.length;i++){const a0=segs[i-1],a1=segs[i],k=idx.get(a1),c=r&&r.cls?r.cls[k]:-1,fc=tourClassColor(c);
-    const x0=X(a0.dist),x1=X(a1.dist),y0=Y(a0.el),y1=Y(a1.el),hs=r&&r.hs?r.hs[k]:NaN;
-    if(c<0||!isFinite(hs)){svg+=col(x0,y0,x1,y1,fc,.45);continue;}
-    const f=Math.max(0,Math.min(1,hs/100));
-    if(f<1)svg+=col(x0,y0,x1,y1,fc,.18);
-    if(f>0)svg+=col(x0,base-f*(base-y0),x1,base-f*(base-y1),fc,1);}
+  const X=d=>L0+d/len*(W-L0-R),Y=e=>T0+(1-(e-lo)/(hi-lo))*(base-T0);
+  const val=(arr,s)=>{const v=arr[idx.get(s)];return isFinite(v)?v:null;};
+  const nice=(m,st)=>Math.max(st,Math.ceil(m/st)*st);
+  let svg='';
+  // elevation as a quiet area, the line on top at the end
+  let area='M'+X(segs[0].dist).toFixed(1)+' '+base;segs.forEach(s=>{area+='L'+X(s.dist).toFixed(1)+' '+Y(s.el).toFixed(1);});
+  area+='L'+X(segs[segs.length-1].dist).toFixed(1)+' '+base+'Z';
+  svg+='<path d="'+area+'" fill="var(--fg)" fill-opacity=".06"/>';
+  // new / loose snow: bars, coloured by snow type
+  let pMax=0;if(ns)segs.forEach(s=>{const v=val(r.pw,s);if(v!=null&&v>pMax)pMax=v;});const pTop=nice(pMax,10);
+  if(ns)for(let i=1;i<segs.length;i++){const a0=segs[i-1],a1=segs[i],k=idx.get(a1),c=r.cls[k],v=val(r.pw,a1);
+    if(c<0||v==null||v<=0)continue;const yv=base-(v/pTop)*(base-T0),x0=X(a0.dist),x1=X(a1.dist);
+    svg+='<rect x="'+x0.toFixed(1)+'" y="'+yv.toFixed(1)+'" width="'+Math.max(.6,x1-x0+.3).toFixed(1)+'" height="'+(base-yv).toFixed(1)+'" fill="'+tourClassColor(c)+'" fill-opacity=".85"/>';}
+  // total snow depth: a line
+  let hMax=0;if(hsOn)segs.forEach(s=>{const v=val(r.hs,s);if(v!=null&&v>hMax)hMax=v;});const hTop=nice(hMax,50);
+  if(hsOn){let ln='',on=false;segs.forEach(s=>{const v=val(r.hs,s);if(v==null){on=false;return;}
+      ln+=(on?'L':'M')+X(s.dist).toFixed(1)+' '+(base-(v/hTop)*(base-T0)).toFixed(1);on=true;});
+    svg+='<path d="'+ln+'" fill="none" stroke="'+TP_HS_COL+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';}
   let line='';segs.forEach((s,i)=>{line+=(i?'L':'M')+X(s.dist).toFixed(1)+' '+Y(s.el).toFixed(1);});
-  svg+='<path d="'+line+'" fill="none" stroke="var(--fg)" stroke-width="1.4" stroke-linejoin="round"/>';
+  svg+='<path d="'+line+'" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linejoin="round"/>';
+  // axes: km below, metres left, cm right (one per graph, in its colour)
   const ticks=[];const st=len>8000?2000:len>3000?1000:500;for(let d=0;d<=len;d+=st)ticks.push(d);
   svg+=ticks.map(d=>'<text x="'+X(d).toFixed(1)+'" y="'+(H-6)+'" class="tp-t" text-anchor="middle">'+(d/1000).toFixed(d%1000?1:0)+'</text>').join('');
   svg+='<text x="'+(W-R)+'" y="'+(H-6)+'" class="tp-t" text-anchor="end">km</text>';
   [lo+pad,hi-pad].forEach(e=>{svg+='<text x="'+(L0-4)+'" y="'+(Y(e)+3).toFixed(1)+'" class="tp-t" text-anchor="end">'+Math.round(e)+'</text>';});
-  return '<svg class="tour-prof" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Höhenprofil mit Schneeart entlang der Route">'+svg+'</svg>'
-    +(r&&r.hs?'<p class="tp-cap">'+tr('Farbe = Schneeart / Neuschnee · Füllung = Schneehöhe, voll ab 1 m')+'</p>':'');
+  svg+='<text x="'+(L0-4)+'" y="8" class="tp-t" text-anchor="end">m</text>';
+  let ax=W-R+4;
+  const axis=(top,unit,col)=>{const x=ax;ax+=32;
+    return '<line x1="'+(x-2)+'" y1="'+T0+'" x2="'+(x-2)+'" y2="'+base+'" stroke="'+col+'" stroke-opacity=".5"/>'
+      +[0,top/2,top].map(v=>'<text x="'+x+'" y="'+(base-(v/top)*(base-T0)+3).toFixed(1)+'" class="tp-t" fill="'+col+'" style="fill:'+col+'">'+Math.round(v)+'</text>').join('')
+      +'<text x="'+x+'" y="8" class="tp-t" style="fill:'+col+'">'+unit+'</text>';};
+  if(ns)svg+=axis(pTop,'cm','#6d28d9');
+  if(hsOn)svg+=axis(hTop,'cm',TP_HS_COL);
+  const tog=has?'<div class="tp-tg">'
+    +(r.pw?'<button type="button" class="'+(tourProfOpt.ns?'on':'')+'" onclick="tourProfTog(\'ns\')"><i style="background:linear-gradient(90deg,#60a5fa,#6d28d9)"></i>Neuschnee / Schneetyp</button>':'')
+    +(r.hs?'<button type="button" class="'+(tourProfOpt.hs?'on':'')+'" onclick="tourProfTog(\'hs\')"><i style="background:'+TP_HS_COL+'"></i>Schneehöhe absolut</button>':'')+'</div>':'';
+  return '<div id="tourProfBox">'+tog+'<svg class="tour-prof" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Höhenprofil mit Schnee entlang der Route">'+svg+'</svg>'
+    +(has?'<p class="tp-cap">'+tr('Höhe links · rechts: Neuschnee/Pulver (Balken, Farbe = Schneetyp) und gesamte Schneehöhe (Linie)')+'</p>':'')+'</div>';
 }
 function tourSheetRender(t,r){
   setTimeout(()=>{try{tpRender();}catch(e){}},0);
@@ -13339,7 +13371,12 @@ function lyNowPlace(){const n=document.getElementById('lyNow'),bp=document.getEl
   const r=bp.getBoundingClientRect(),cs=getComputedStyle(bp);
   const vis=r.height>0&&cs.display!=='none'&&cs.visibility!=='hidden'&&+cs.opacity>0.05;
   n.style.display=vis&&n.innerHTML?'':'none';if(!vis)return;
-  n.style.left=(r.left+14)+'px';n.style.top=(r.top-19)+'px';}
+  // top left, under the Feedback / info row (or the app bar): free map
+  // there, where above the timeline it sat on the play button
+  const fb=document.getElementById('rvFab'),ab=document.getElementById('appBar');
+  const fr=fb&&getComputedStyle(fb).display!=='none'?fb.getBoundingClientRect():null,ar=ab?ab.getBoundingClientRect():null;
+  const top=fr&&fr.height?fr.bottom+8:(ar&&ar.height?ar.bottom+8:70);
+  n.style.left=((fr&&fr.height?fr.left:14))+'px';n.style.top=Math.round(top)+'px';}
 function lyNowWatch(){const bp=document.getElementById('bottomPanel');const f=()=>requestAnimationFrame(lyNowPlace);
   try{new ResizeObserver(f).observe(bp);}catch(e){}addEventListener('resize',f);
   try{new MutationObserver(()=>setTimeout(lyNowPlace,260)).observe(document.body,{attributes:true,attributeFilter:['class']});}catch(e){}}
