@@ -4711,6 +4711,22 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #tourPick .tpk-list b{font:700 14px var(--font,inherit);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  #tourPick .tpk-list small{font:500 12px var(--font,inherit);color:var(--fg2)}
  #tourPick .tpk-list em{font:800 14px var(--mono,inherit);font-style:normal}
+ /* card ⋯ menu */
+ .fc-more-wrap{position:relative;display:inline-flex}
+ .fc-menu{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translate(-50%,6px);z-index:30;min-width:176px;padding:6px;display:flex;flex-direction:column;
+   background:var(--card);border:1px solid var(--hair);border-radius:14px;box-shadow:var(--elev3);opacity:0;pointer-events:none;transition:opacity .15s,transform .15s}
+ .fc-more-wrap.open .fc-menu{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+ .fc-menu button{display:flex!important;align-items:center;gap:10px;width:100%;padding:9px 10px!important;border:0;border-radius:10px;background:none;
+   color:var(--fg);font:600 14px var(--font,inherit);text-align:left;cursor:pointer;justify-content:flex-start!important}
+ .fc-menu button:hover{background:var(--fill)}.fc-menu button svg{width:19px;height:19px;flex:none}
+ .fc-menu .del-btn,.fc-menu .del-btn span{color:#e5484d}
+ /* a post opened on its own: room for it, then the rest */
+ .feed-card.focus{min-height:calc(100dvh - 210px);box-shadow:0 0 0 1.5px var(--accent,#2563eb),var(--elev2,0 6px 20px rgba(0,0,0,.08))}
+ .fc-det{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 14px 4px}
+ .fc-det>div{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:12px;background:var(--fill)}
+ .fc-det span{font:600 11px var(--font,inherit);color:var(--fg2)}.fc-det b{font:700 14px var(--font,inherit);color:var(--fg)}
+ .feed-more-hd{margin:22px 16px 8px;font:800 13px var(--font,inherit);letter-spacing:.04em;text-transform:uppercase;color:var(--fg2);display:flex;align-items:center;gap:10px}
+ .feed-more-hd::after{content:'';flex:1;height:1px;background:var(--hair)}
  #lyNow{position:fixed;left:22px;top:auto;z-index:1001;display:inline-flex;align-items:center;gap:6px;
    max-width:calc(100% - 120px);padding:4px 10px 4px 8px;cursor:pointer;
    border:1px solid var(--hair,rgba(0,0,0,.08));border-radius:999px;
@@ -16630,7 +16646,7 @@ function obsNewState(type){return{type,step:0,steps:OBS_STEPS[type]||[],media:[]
   location:{lat:null,lon:null,elevation:null,aspect:null,source:null},observedAt:null,
   avalanche:{triggerType:'unknown',remoteTrigger:false,caughtPersons:[],characteristics:{size:'unknown',sizeRank:0,avalancheType:'unknown',wetness:'unknown'}},
   whumpfFrequency:null,fresh:{kind:type==='wind_slab'?'drift':null,cm:20},
-  snow:{kind:null,depth:30,lightness:null,powderline:2200,thickness:null,alt:2200,altLow:1800,altHigh:2600,aspects:[],wetness:null,firnState:null,firnTime:''}};}
+  snow:{kind:null,depth:30,lightness:null,powderline:2200,thickness:null,alt:2200,altLow:1800,altHigh:2600,aspects:[],wetness:null,firnState:null,firnTime:'',tracks:null}};}
 function obsDEM(lat,lon){const fe=fineElev(lat,lon),fa=fineAspectDeg(lat,lon);
   const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
   let ce=null,ca=null;if(cx2>=0&&cx2<W&&cy2>=0&&cy2<H){const p=cy2*W+cx2;ce=Math.round(melevv(p));ca=aspectQ(maspv(p));}
@@ -17406,6 +17422,8 @@ function obsPickEnum(f,k){obsState[f]=k;haptic(6);obsRender();}
 function obsSnowHTML(){const s=obsState.snow;
   let h='<div class="obs-fld-l">Schneeart</div><div class="snow-kinds">'+SNOW_KINDS.map(k=>`<button class="snow-kind${s.kind===k.k?' active':''}" style="--k:${k.c}" onclick="obsSnowKind('${k.k}')">${k.l}</button>`).join('')+'</div>';
   if(s.kind)h+='<div class="snow-fields">'+obsSnowFields(s.kind)+'</div>';
+  // how tracked out the slope is -- the same scale as on a recorded tour
+  h+=obsSeg('tracks','Wie viele Spuren?',TRK_TRACKS);
   return h;}
 function obsSnowKind(k){obsState.snow.kind=(obsState.snow.kind===k?null:k);haptic(6);obsRender();}
 function obsSnowSet(f,v){obsState.snow[f]=(obsState.snow[f]===v?null:v);haptic(5);obsRender();}
@@ -17536,7 +17554,8 @@ function obsSummaryHTML(){const t=[];const ty=OBS_TYPE_LIST.find(x=>x.id===obsSt
     if(sn.kind==='melt_crust')t.push('<span class="rp-tag">'+sn.altLow+'–'+sn.altHigh+' m</span>');
     if(sn.kind==='wind_pressed'&&sn.alt)t.push('<span class="rp-tag">ab '+sn.alt+' m</span>');
     if(sn.aspects&&sn.aspects.length)t.push('<span class="rp-tag">'+sn.aspects.join(' ')+'</span>');
-    if(sn.firnTime)t.push('<span class="rp-tag">ab '+sn.firnTime+'</span>');}
+    if(sn.firnTime)t.push('<span class="rp-tag">ab '+sn.firnTime+'</span>');
+    if(sn.tracks)t.push('<span class="rp-tag">'+(TRK_TRACKS.find(x=>x[0]===sn.tracks)||[0,''])[1]+'</span>');}
   if(obsState.media.length)t.push('<span class="rp-tag">'+ic('cam')+' '+obsState.media.length+'</span>');
   return '<div class="obs-summary">'+t.join('')+'</div>';}
 function obsRemoveMedia(ix){obsState.media.splice(ix,1);obsRerenderMedia();}
@@ -17596,7 +17615,8 @@ function obsBuildCD(){const s=obsState;const cd={obsType:s.type,source:s.locatio
   if(s.type==='avalanche'){const a=s.avalanche;cd.avalanche={triggerType:a.triggerType,remoteTrigger:a.remoteTrigger,caughtPersons:a.caughtPersons,characteristics:{size:a.characteristics.size,sizeRank:a.characteristics.sizeRank,avalancheType:a.characteristics.avalancheType,wetness:a.characteristics.wetness}};if(a.characteristics.size!=='unknown')cd.measurement=obsSizeMeta(a.characteristics.size).l;}
   if(s.whumpfFrequency){cd.whumpfFrequency=s.whumpfFrequency;cd.measurement=obsEnumLabel('whumpfFrequency',s.whumpfFrequency);}
   if(s.type!=='snow'&&s.fresh&&s.fresh.kind){cd.fresh={kind:s.fresh.kind,cm:s.fresh.kind==='none'?0:s.fresh.cm};if(!cd.measurement)cd.measurement=obsFreshLabel(s.fresh);}
-  if(s.type==='snow'){cd.snow=s.snow;cd.measurement=snowMeasure(s.snow);}
+  if(s.type==='snow'){cd.snow=s.snow;cd.measurement=snowMeasure(s.snow);
+    if(s.snow.tracks){cd.tracks=s.snow.tracks;const tl=(TRK_TRACKS.find(x=>x[0]===s.snow.tracks)||[0,''])[1];cd.measurement=(cd.measurement?cd.measurement+' · ':'')+tl;}}
   return cd;}
 function obsSubLabel(){const s=obsState;if(s.type==='avalanche')return s.avalanche.characteristics.size!=='unknown'?('Lawine '+obsSizeMeta(s.avalanche.characteristics.size).l):'Lawine';if(s.type==='whumpf')return 'Wumm';if(s.type==='wind_slab')return 'Triebschnee';if(s.type==='snow')return snowKindLabel(s.snow.kind)||'Schnee';return 'Beobachtung';}
 // --- Feed (Instagram-style full page) ---
@@ -17622,6 +17642,11 @@ const FEED_SCOPES=[
   {id:'saved',label:'Gemerkt',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>'}
 ];
 let savedPosts=new Set();try{savedPosts=new Set(JSON.parse(localStorage.getItem('ssm_saved')||'[]'));}catch(e){}
+// the less-used card actions (share, save, flag, edit, delete) behind ⋯
+function fcMore(btn,ev){if(ev)ev.stopPropagation();const w=btn.parentNode,open=!w.classList.contains('open');
+  document.querySelectorAll('.fc-more-wrap.open').forEach(x=>x.classList.remove('open'));if(open)w.classList.add('open');}
+addEventListener('pointerdown',e=>{if(!e.target.closest||e.target.closest('.fc-more-wrap'))return;
+  document.querySelectorAll('.fc-more-wrap.open').forEach(x=>x.classList.remove('open'));},true);
 function toggleSave(id,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
   id=String(id);
   if(savedPosts.has(id)){savedPosts.delete(id);}else{savedPosts.add(id);try{haptic(6);}catch(e){}toast('Gemerkt — findest du in deinem Profil unter «Gemerkt».','ok');}
@@ -18054,13 +18079,50 @@ function feedTopRender(){const el=document.getElementById('feedTop');if(!el)retu
 function feedChipsRender(){feedTopRender();const el=document.getElementById('feedChips');if(!el)return;
   el.innerHTML=FEED_SCOPES.map(s=>`<button type="button" role="tab" data-s="${s.id}" aria-selected="${feedScope===s.id}" class="${feedScope===s.id?'on':''}" onclick="feedSetScope('${s.id}')">${s.icon}<span>${s.label}</span></button>`).join('');}
 let feedUserId=null,feedUserName='';
+// A post opened from a profile stands on its own at the top, with every
+// detail of what was reported; the person's other posts follow below it.
+let feedFocusId=null;
 async function feedOpenUser(uid,name,postId){if(!uid)return;
   try{pvClose();}catch(e){}
-  feedScope='user';feedUserId=uid;feedUserName=name||'';feedFilter='all';feedTour=null;
+  feedScope='user';feedUserId=uid;feedUserName=name||'';feedFilter='all';feedTour=null;feedFocusId=postId?String(postId):null;
   navGo('feed');feedTourBar();feedRender();
   try{await loadDbReports({uid});}catch(e){}
   feedRender();feedTourBar();
-  if(postId)setTimeout(()=>{const c=document.getElementById('feedcard-'+postId);if(c)c.scrollIntoView({block:'start',behavior:'smooth'});},120);}
+  setTimeout(()=>{const sc=document.querySelector('.feed-scroll');if(sc)sc.scrollTop=0;},60);}
+// Everything a report says, as label/value rows (only what is there).
+function feedDetailsHTML(r){const cd=r.condition_data||{},rows=[];
+  const lb=(arr,k)=>{try{const f=(arr||[]).find(x=>x[0]===k);return f?f[1]:k;}catch(e){return k;}};
+  try{
+    const A=cd.activity;
+    if(A){rows.push(['Distanz',trkFmtD(A.dist||0)],['Aufstieg',(A.up||0)+' m'],['Abstieg',(A.down||0)+' m'],['In Bewegung',trkFmtT(A.moving||0)]);
+      if(A.maxA!=null)rows.push(['Höchster Punkt',Math.round(A.maxA)+' m']);}
+    const sn=cd.snow;
+    if(sn){if(sn.kind)rows.push(['Schneeart',snowKindLabel(sn.kind)]);
+      if(sn.kind==='powder'&&sn.depth)rows.push(['Pulvertiefe',snowCmLabel(sn.depth)+' cm']);
+      if(sn.lightness)rows.push(['Konsistenz',lb(typeof SNOW_LIGHT!=='undefined'?SNOW_LIGHT:[],sn.lightness)]);
+      if(sn.thickness)rows.push(['Deckel',lb(typeof SNOW_THICK!=='undefined'?SNOW_THICK:[],sn.thickness)]);
+      if(sn.wetness)rows.push(['Nässe',lb(typeof SNOW_WET!=='undefined'?SNOW_WET:[],sn.wetness)]);
+      if(sn.firnState)rows.push(['Firn',lb(typeof SNOW_FIRN!=='undefined'?SNOW_FIRN:[],sn.firnState)]);
+      if(sn.firnTime)rows.push(['Fahrbereit ab',sn.firnTime]);
+      if(sn.altLow!=null&&sn.altHigh!=null)rows.push(['Höhenband',sn.altLow+'–'+sn.altHigh+' m']);
+      if(sn.aspects&&sn.aspects.length)rows.push(['Expositionen',sn.aspects.join(' ')]);}
+    else if(cd.powderAmountCm)rows.push(['Pulvertiefe',cd.powderAmountCm+' cm']);
+    if(cd.tracks)rows.push(['Spuren',lb(TRK_TRACKS,cd.tracks)]);
+    if(cd.fresh&&cd.fresh.kind)rows.push(['Neuschnee',obsFreshLabel(cd.fresh)]);
+    if(cd.whumpfFrequency)rows.push(['Wumm-Geräusche',obsEnumLabel('whumpfFrequency',cd.whumpfFrequency)]);
+    const av=cd.avalanche;
+    if(av){const c=av.characteristics||{};if(c.size&&c.size!=='unknown')rows.push(['Lawinengrösse',obsSizeMeta(c.size).l]);
+      if(c.avalancheType&&c.avalancheType!=='unknown')rows.push(['Lawinenart',obsLbl(OBS_AVTYPE,c.avalancheType)]);
+      if(av.triggerType&&av.triggerType!=='unknown')rows.push(['Auslösung',obsLbl(OBS_TRIGGER,av.triggerType)]);}
+    if(cd.altitudeM)rows.push(['Höhe',cd.altitudeM+' m']);
+    if(cd.snowPts&&cd.snowPts.length)cd.snowPts.slice(0,8).forEach((p,i)=>{const T=TRK_PT[p.type]||{};
+      rows.push([i?'':'Punkte',(T.l||p.type)+(p.cm!=null?' '+p.cm+' cm':'')+(p.alt!=null?' · '+p.alt+' m':'')]);});
+    if(r.stars)rows.push(['Bewertung','★'.repeat(r.stars)+'☆'.repeat(Math.max(0,5-r.stars))]);
+    if(cd.tour&&cd.tour.name)rows.push(['Tour',cd.tour.name]);
+    if(!rows.length&&r.measurement)rows.push(['Gemeldet',r.measurement]);
+  }catch(e){}
+  if(!rows.length)return '';
+  return '<div class="fc-det">'+rows.map(x=>'<div><span>'+escapeHtml(x[0])+'</span><b>'+escapeHtml(String(x[1]))+'</b></div>').join('')+'</div>';}
 function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)return;
   if(feedScope==='user'&&feedUserId){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.8"/><path d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0"/></svg>'+escapeHtml(feedUserName||'Beiträge')+'</span>'
@@ -18072,7 +18134,7 @@ function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)re
   if(feedScope==='tours'&&feedTour){b.style.display='flex';
     b.innerHTML='<span class="fab-tour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-10 4 6 2-3 4 7z"/></svg>'+escapeHtml(feedTour.name)+'</span><button type="button" onclick="feedTour=null;feedTourBar();feedRender()">✕ alle Touren</button>';}
   else if(b.querySelector('.fab-tour')){b.style.display='none';b.innerHTML='';}}
-function feedSetScope(s){if(s!=='tours')feedTour=null;if(s!=='user')feedUserId=null;feedScope=s;feedTourBar();if(s==='all')try{feedRender();}catch(e){}
+function feedSetScope(s){feedFocusId=null;if(s!=='tours')feedTour=null;if(s!=='user')feedUserId=null;feedScope=s;feedTourBar();if(s==='all')try{feedRender();}catch(e){}
   document.querySelectorAll('#feedScope button').forEach(b=>b.classList.toggle('active',b.dataset.s===s));
   document.querySelectorAll('#feedChips button').forEach(b=>{const on=b.dataset.s===s;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);
     if(on)try{b.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});}catch(e){}});
@@ -18252,6 +18314,8 @@ function feedRender(){
   // Building four hundred cards to show six is most of what made opening the
   // feed feel slow. Nobody scrolls past the first page before it re-renders.
   const FEED_PAGE=40;
+  const focus=feedScope==='user'&&feedFocusId?filtered.find(r=>String(r.id)===feedFocusId):null;
+  if(focus)filtered=[focus].concat(filtered.filter(r=>r!==focus));
   const shown=filtered.slice(0,FEED_PAGE),more=filtered.length-shown.length;
   list.innerHTML=shown.map(r=>{
     const col=CAT_COLORS[r.cat]||'#666';
@@ -18260,7 +18324,8 @@ function feedRender(){
     const canFollow=r.dbRow&&r.userId&&(!sbUser||r.userId!==sbUser.id);
     const followBtn=canFollow?`<button class="feed-follow ${myFollowing.has(r.userId)?'following':''}" onclick="toggleFollow('${r.userId}',event)">${myFollowing.has(r.userId)?'Folge ich':'Folgen'}</button>`:'';
     const endBtn=r.dbRow?`<button class="endorse-btn ${r.liked?'endorsed':''}" onclick="toggleEndorse('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> ${r.likes||0}<span class="endorse-lbl">${r.liked?'Bestätigt':'Bestätigen'}</span></button>`:'';
-    return`<div class="feed-card${r.img?' photo':' text'}" id="feedcard-${r.id}">
+    const isF=focus&&r===focus;
+    return`<div class="feed-card${r.img?' photo':' text'}${isF?' focus':''}" id="feedcard-${r.id}">
       <div class="feed-card-head">
         <div class="feed-card-avatar" style="${r.avatar?`background-image:url(${encodeURI(r.avatar)})`:''}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['\"<>]/g,'')}')"`:''}>${r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase())}</div>
         <div class="feed-card-info">
@@ -18280,17 +18345,21 @@ function feedRender(){
           (r.measurement?`<span class="fc-depth" title="${escapeHtml(r.measurement)}">${escapeHtml(r.measurement)}</span>`:'')}
         ${r.stars?`<span class="fc-stars"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z" fill="currentColor" stroke="none"/></svg>${r.stars}/5</span>`:''}
       </div>
+      ${isF?feedDetailsHTML(r):''}
       <div class="feed-card-actions">
         ${r.dbRow?`<button onclick="openComments('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg> ${r.comments||0}</button>`:''}
         <button class="fc-sp" title="Auf der Karte zeigen" aria-label="Auf der Karte zeigen" onclick="event.stopPropagation();${(r.condition_data&&r.condition_data.activity)?`actShowFeed('${r.id}')`:`feedFlyTo(${r.lat},${r.lng})`}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
-        <button title="Teilen" aria-label="Teilen" onclick="sharePost('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>
-        <button class="save-btn${savedPosts.has(String(r.id))?' saved':''}" title="Merken" aria-label="Merken" onclick="toggleSave('${r.id}',event)"><svg viewBox="0 0 24 24" fill="${savedPosts.has(String(r.id))?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
-        ${r.dbRow&&(!sbUser||r.userId!==sbUser.id)?`<button class="flag-btn ${r.flaggedByMe?'flagged':''}" title="Melden" aria-label="Report melden" onclick="reportFlag('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>`:''}
+        <span class="fc-more-wrap"><button class="fc-more" title="Mehr" aria-label="Mehr" aria-haspopup="menu" onclick="fcMore(this,event)"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+        <span class="fc-menu" role="menu">
+          <button title="Teilen" aria-label="Teilen" onclick="sharePost('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg><span>Teilen</span></button>
+          <button class="save-btn${savedPosts.has(String(r.id))?' saved':''}" title="Merken" aria-label="Merken" onclick="toggleSave('${r.id}',event)"><svg viewBox="0 0 24 24" fill="${savedPosts.has(String(r.id))?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Merken</span></button>
+          ${r.dbRow&&(!sbUser||r.userId!==sbUser.id)?`<button class="flag-btn ${r.flaggedByMe?'flagged':''}" title="Melden" aria-label="Report melden" onclick="reportFlag('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg><span>Melden</span></button>`:''}
+          ${r.dbRow&&sbUser&&r.userId===sbUser.id?`<button class="edit-btn" title="Bearbeiten" aria-label="Beitrag bearbeiten" onclick="postEdit('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Bearbeiten</span></button>`:''}
+          ${r.dbRow&&sbUser&&r.userId===sbUser.id?`<button class="del-btn" title="Löschen" aria-label="Beitrag löschen" onclick="deleteReport('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg><span>Löschen</span></button>`:''}
+        </span></span>
         ${endBtn}
-        ${r.dbRow&&sbUser&&r.userId===sbUser.id?`<button class="edit-btn" title="Bearbeiten" aria-label="Beitrag bearbeiten" onclick="postEdit('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`:''}
-        ${r.dbRow&&sbUser&&r.userId===sbUser.id?`<button class="del-btn" title="Löschen" aria-label="Beitrag löschen" onclick="deleteReport('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`:''}
       </div>
-    </div>`;
+    </div>${isF&&filtered.length>1?`<div class="feed-more-hd">Weitere Beiträge${feedUserName?' von '+escapeHtml(feedUserName):''}</div>`:''}`;
   }).join('')+(more>0?('<div class="feed-more">'+more+' weitere</div>'):'');
   feedAnimateCards();feedWireCarousels();
   try{feedHighlight(shown.map(r=>r.id));}catch(e){}
