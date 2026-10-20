@@ -4290,7 +4290,11 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #trSheet.on .trs-in{transform:none}
  .trs-x{position:absolute;top:12px;right:12px;width:32px;height:32px;border:0;border-radius:50%;background:var(--fill);color:var(--fg2);font:600 19px/1 system-ui;cursor:pointer}
  .trs-hd{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;padding:6px 30px 8px}
- .trs-emo{font-size:40px;line-height:1.1}.trs-hd b{font:800 19px var(--font-d,inherit);color:var(--fg)}.trs-hd small{font:500 12.5px var(--font,inherit);color:var(--fg2)}
+ .trs-emo{font-size:40px;line-height:1.1}
+ .tg{width:min(300px,86vw);height:auto;overflow:visible;margin:4px 0 2px}
+ .tg-t{font:700 9.5px var(--mono,inherit);fill:var(--fg2)}.tg-n{font:800 28px var(--font-d,inherit);fill:var(--fg)}
+ .tg-needle{transform-origin:150px 148px;animation:tgIn .9s cubic-bezier(.3,1.5,.5,1) both}
+ @keyframes tgIn{from{transform:rotate(calc(-90deg - var(--a)))}to{transform:none}}.trs-hd b{font:800 19px var(--font-d,inherit);color:var(--fg)}.trs-hd small{font:500 12.5px var(--font,inherit);color:var(--fg2)}
  .trs-p{margin:6px 2px 12px;font:500 13.5px/1.5 var(--font,inherit);color:var(--fg2)}.trs-p b{color:var(--fg)}
  .trs-board{display:block;width:100%;padding:12px;border:0;border-radius:14px;background:var(--accent,#2563eb);color:#fff;font:700 14.5px var(--font,inherit);cursor:pointer;margin:0 0 12px}
  .trl-list{display:flex;flex-direction:column;gap:6px}
@@ -11749,13 +11753,30 @@ function progTrustMap(){
 // a point. The levels make that visible -- and the same points already weight
 // your reports in the Gemeldetes Powder model (progReportWeight).
 // [from points, name, what it says about you, emoji]
-const TRUST_LV=[[0,'Pistenküken','Amateur – frisch auf den Brettern','🐣'],
-  [3,'Spitzkehren-Azubi','die ersten Meldungen sind bestätigt','🥾'],
-  [10,'Pulverschnüffler:in','hat die Nase für Powder','👃'],
+const TRUST_LV=[[0,'Sunntigsfahrer:in','Amateur – nur bei Sonnenschein unterwegs','🚙'],
+  [3,'Schneeflöckli','die ersten Meldungen sind bestätigt','❄️'],
+  [10,'Pulverschnüffler:in','riecht Powder von weitem','👃'],
   [25,'Spurleger:in','andere folgen deinen Spuren','🎿'],
-  [50,'Lokalkenner:in','kennt jeden Hang beim Vornamen','🏔️'],
-  [100,'Schneeflüsterer:in','der Schnee verrät dir alles','❄️'],
-  [200,'Bernhardiner-Legende','Legende der Community – mit Fässchen','🐕']];
+  [50,'Powderhound','jagt jeden Zentimeter','🐕'],
+  [100,'Schneeflüsterer:in','der Schnee erzählt dir alles','🌨️'],
+  [200,'Yeti','Legende – oft gesucht, selten gesichtet','🦣']];
+// Speedometer: one equal slice per level, the needle at your level plus the
+// way to the next one; colours run from fresh blue to legendary gold.
+const TRUST_COL=['#93c5fd','#60a5fa','#3b82f6','#6366f1','#8b5cf6','#c084fc','#f59e0b'];
+function trustGauge(n){const L=trustLevel(n),k=TRUST_LV.length,cx=150,cy=148,r=118,w=26;
+  const pt=(a,rr)=>[cx+rr*Math.cos(a),cy-rr*Math.sin(a)];
+  const ang=f=>Math.PI*(1-f);                      // f 0..1 → left .. right
+  let arcs='',labs='';
+  for(let i=0;i<k;i++){const a0=ang(i/k)-.012,a1=ang((i+1)/k)+.012,p0=pt(a0,r),p1=pt(a1,r),q1=pt(a1,r-w),q0=pt(a0,r-w);
+    arcs+='<path d="M'+p0[0].toFixed(1)+' '+p0[1].toFixed(1)+'A'+r+' '+r+' 0 0 1 '+p1[0].toFixed(1)+' '+p1[1].toFixed(1)
+      +'L'+q1[0].toFixed(1)+' '+q1[1].toFixed(1)+'A'+(r-w)+' '+(r-w)+' 0 0 0 '+q0[0].toFixed(1)+' '+q0[1].toFixed(1)+'Z" fill="'+TRUST_COL[i]+'"'+(i>L.i?' opacity=".28"':'')+'/>';
+    const m=pt(ang((i+.5)/k),r+17);labs+='<text x="'+m[0].toFixed(1)+'" y="'+(m[1]+5).toFixed(1)+'" text-anchor="middle" font-size="15">'+TRUST_LV[i][3]+'</text>';
+    const t=pt(ang(i/k),r-w-9);if(i)labs+='<text x="'+t[0].toFixed(1)+'" y="'+(t[1]+3).toFixed(1)+'" text-anchor="middle" class="tg-t">'+TRUST_LV[i][0]+'</text>';}
+  const f=Math.min(1,(L.i+(L.next!=null?L.pct/100:0.98))/k),na=ang(f),tip=pt(na,r-w-14),b1=pt(na+Math.PI/2,6),b2=pt(na-Math.PI/2,6);
+  return '<svg class="tg" viewBox="0 0 300 196" role="img" aria-label="Trust '+n+' – '+escapeHtml(L.name)+'">'+arcs+labs
+    +'<g class="tg-needle" style="--a:'+((f-.5)*180).toFixed(1)+'deg"><path d="M'+b1[0].toFixed(1)+' '+b1[1].toFixed(1)+'L'+tip[0].toFixed(1)+' '+tip[1].toFixed(1)+'L'+b2[0].toFixed(1)+' '+b2[1].toFixed(1)+'Z" fill="var(--fg)"/>'
+    +'<circle cx="'+cx+'" cy="'+cy+'" r="10" fill="var(--fg)"/><circle cx="'+cx+'" cy="'+cy+'" r="4" fill="var(--card)"/></g>'
+    +'<text x="'+cx+'" y="'+(cy+44)+'" text-anchor="middle" class="tg-n">'+n+'</text></svg>';}
 // how much more a report counts in «Gemeldetes Powder» at t points (= progReportWeight's trust factor)
 function trustWeight(t){return 1+PROG_TRUST_MAX*(t/(t+PROG_TRUST_HALF));}
 function trustLevel(n){n=n||0;let i=0;for(let k=0;k<TRUST_LV.length;k++)if(n>=TRUST_LV[k][0])i=k;
@@ -11775,7 +11796,7 @@ function trustInfo(n){if(n==null)n=sbUser?progTrustOf(sbUser.id):0;const L=trust
     return '<div class="trl'+(cur?' cur':done?' done':'')+'"><span class="trl-e">'+v[3]+'</span><span class="trl-t"><b>'+escapeHtml(v[1])+(cur?' <em>Du</em>':'')+'</b><small>'+escapeHtml(v[2])+'</small>'
       +(cur&&L.next!=null?'<i class="trl-bar"><i style="width:'+L.pct+'%"></i></i><small class="trl-nx">noch '+(L.next-n)+' bis «'+escapeHtml(TRUST_LV[i+1][1])+'»</small>':'')+'</span>'
       +'<span class="trl-n"><b>'+v[0]+'+</b><small>×'+w.toFixed(2)+'</small></span></div>';}).reverse().join('');
-  trSheet('<div class="trs-hd"><span class="trs-emo">'+L.emo+'</span><b>'+escapeHtml(L.name)+'</b><small>Trust '+n+' · '+escapeHtml(L.sub)+'</small></div>'
+  trSheet('<div class="trs-hd">'+trustGauge(n)+'<b>'+L.emo+' '+escapeHtml(L.name)+'</b><small>'+escapeHtml(L.sub)+(L.next!=null?' · noch '+(L.next-n)+' bis '+TRUST_LV[L.i+1][3]:'')+'</small></div>'
     +'<p class="trs-p">Jede Bestätigung, die <b>andere</b> deinen Meldungen geben, ist <b>+1 Punkt</b>. Je höher deine Stufe, desto stärker zählen deine Meldungen in «Gemeldetes Powder» (×-Faktor rechts).</p>'
     +'<button type="button" class="trs-board" onclick="trustBoard()">🏆 Rangliste ansehen</button>'
     +'<div class="trl-list">'+rows+'</div>'
