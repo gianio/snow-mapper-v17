@@ -702,6 +702,18 @@ def _tour_routes(max_routes=4000, tol_m=60.0, min_len_m=1500.0, min_gain_m=250.0
     if not routes:
         return []
     print(f"[INT] {len(routes)} Routen von swisstopo.")
+    # The lines are a network (shared approaches, forks below the summit).
+    # Each way from a low end to a high end becomes a tour of its own, so
+    # every variant runs from its lowest to its highest point.
+    if dem is not None:
+        try:
+            from pipeline.tour_graph import climbs_from_lines
+            climbs = climbs_from_lines(routes, lambda lon, lat: _elev_at_lonlat(dem, lon, lat))
+            if climbs:
+                print(f"[INT] Routennetz -> {len(climbs)} Aufstiege (Tal bis hoechster Punkt).")
+                routes = climbs
+        except Exception as e:                   # noqa: BLE001
+            print(f"[INT] Routennetz nicht auswertbar, Linien einzeln: {e!r}")
 
     def simplify(coords):
         out = [coords[0]]
@@ -1231,6 +1243,72 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     return out_dir / "index.html"
 
 
+# Maintenance screen: shown when the site or its data can't be loaded while
+# a new version is going up (GitHub Pages swaps files during a deploy). The
+# same markup is used by the boot loader and, when the page itself can't be
+# fetched, by the service worker. An avalanche dog nose-deep in powder.
+_MAINT_CSS = r"""
+#maint{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:24px;
+  background:linear-gradient(180deg,#e9f2ff 0%,#f7fbff 60%,#ffffff 100%);color:#16233a;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;text-align:center}
+#maint .mt-in{max-width:360px;width:100%;display:flex;flex-direction:column;align-items:center;gap:14px}
+#maint svg{width:min(300px,78vw);height:auto;overflow:visible}
+#maint h1{margin:4px 0 0;font-size:24px;line-height:1.2;font-weight:800;letter-spacing:-.01em}
+#maint p{margin:0;font-size:15px;line-height:1.5;font-weight:500;color:#43516a}
+#maint .mt-n{font-size:13px;font-weight:600;color:#6b7891}
+#maint button{margin-top:6px;padding:13px 22px;border:0;border-radius:999px;background:#2563eb;color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;
+  box-shadow:0 8px 22px rgba(37,99,235,.28)}
+#maint .fl{animation:mtFall 6s linear infinite}
+#maint .tail{transform-origin:212px 128px;animation:mtWag .5s ease-in-out infinite alternate}
+#maint .puff{animation:mtPuff 1.6s ease-out infinite;transform-origin:118px 152px}
+#maint .head{animation:mtSniff 1.6s ease-in-out infinite;transform-origin:156px 128px}
+@keyframes mtFall{from{transform:translateY(-30px)}to{transform:translateY(190px)}}
+@keyframes mtWag{from{transform:rotate(-14deg)}to{transform:rotate(18deg)}}
+@keyframes mtPuff{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(1.6) translateY(-10px)}}
+@keyframes mtSniff{0%,100%{transform:rotate(0)}50%{transform:rotate(4deg)}}
+@media (prefers-color-scheme:dark){#maint{background:linear-gradient(180deg,#0d1626,#111c30);color:#e8eef8}
+  #maint p{color:#b6c2d6}#maint .mt-n{color:#8a97ad}}
+@media (prefers-reduced-motion:reduce){#maint .fl,#maint .tail,#maint .puff,#maint .head{animation:none}}
+"""
+_MAINT_SVG = (
+    '<svg viewBox="0 0 300 200" aria-hidden="true">'
+    '<defs><clipPath id="mtc"><rect x="0" y="0" width="300" height="200" rx="28"/></clipPath></defs>'
+    '<g clip-path="url(#mtc)">'
+    '<rect width="300" height="200" fill="#dbe9ff"/>'
+    '<circle cx="236" cy="44" r="16" fill="#fff6d8"/>'
+    '<path d="M0 132 62 58l34 40 46-62 58 70 34-30 66 56v68H0z" fill="#b9cdea"/>'
+    '<path d="M62 58l14 17-8 2-6-6-6 8-8-3zM142 36l17 21-9 1-8-8-8 10-8-3z" fill="#fff"/>'
+    '<path d="M0 150c40-14 86-18 130-10s100 6 170-6v66H0z" fill="#fff"/>'
+    # dog: tail, body, legs, rescue vest, then the head going down with its
+    # nose buried in a powder mound (drawn last, over the snout)
+    '<path class="tail" d="M210 128c10-6 16-16 14-26" fill="none" stroke="#8a5a2b" stroke-width="7" stroke-linecap="round"/>'
+    '<ellipse cx="180" cy="136" rx="36" ry="20" fill="#a86f38"/>'
+    '<rect x="152" y="144" width="9" height="20" rx="4" fill="#8a5a2b"/><rect x="198" y="144" width="9" height="20" rx="4" fill="#8a5a2b"/>'
+    '<path d="M162 120h34a6 6 0 0 1 6 6v18h-46v-18a6 6 0 0 1 6-6z" fill="#e5484d"/>'
+    '<path d="M176 127h6v-5h4v5h6v4h-6v5h-4v-5h-6z" fill="#fff"/>'
+    '<g class="head"><path d="M158 124l-16 10 6 9 16-10z" fill="#a86f38"/>'
+    '<circle cx="140" cy="140" r="13" fill="#a86f38"/>'
+    '<ellipse cx="127" cy="151" rx="10" ry="6.5" transform="rotate(-38 127 151)" fill="#a86f38"/>'
+    '<path d="M141 128c-9 1-14 9-13 19 5-2 10-9 13-19z" fill="#6b4220"/>'
+    '<path d="M143 137q3 3 6 0" fill="none" stroke="#1d1d1f" stroke-width="1.8" stroke-linecap="round"/></g>'
+    '<ellipse cx="116" cy="158" rx="24" ry="10" fill="#f6f9ff"/>'
+    '<g class="puff"><circle cx="104" cy="148" r="4" fill="#fff"/><circle cx="126" cy="146" r="3" fill="#fff"/><circle cx="114" cy="141" r="2.5" fill="#fff"/></g>'
+    # falling snow
+    '<g fill="#fff">'
+    '<circle class="fl" cx="30" cy="0" r="2.5" style="animation-delay:-1s"/><circle class="fl" cx="80" cy="0" r="2" style="animation-delay:-3s"/>'
+    '<circle class="fl" cx="128" cy="0" r="3" style="animation-delay:-2s"/><circle class="fl" cx="190" cy="0" r="2" style="animation-delay:-4.5s"/>'
+    '<circle class="fl" cx="250" cy="0" r="2.6" style="animation-delay:-.4s"/><circle class="fl" cx="282" cy="0" r="2" style="animation-delay:-5.2s"/>'
+    '<circle class="fl" cx="56" cy="0" r="1.8" style="animation-delay:-2.6s"/><circle class="fl" cx="222" cy="0" r="1.6" style="animation-delay:-1.8s"/>'
+    '</g></g></svg>')
+_MAINT_TXT = {
+    "title": "Kurz in der Wartung",
+    "body": "Snowmapper bekommt gerade ein Update. Unsere Spürnase schnüffelt derweil nach frischem Pulver – in ein paar Minuten sind wir wieder für dich da.",
+    "offline": "Keine Verbindung. Sobald du wieder Netz hast, geht's weiter.",
+    "retry": "Jetzt nochmals versuchen",
+    "next": "Neuer Versuch in {s} s",
+}
+
+
 # Async loader for the split build: fetch latest.json -> data blob (with a real
 # progress bar on the intro), set window.__D, then inject the app script.
 _BOOT_SPLIT = r"""<script>
@@ -1251,9 +1329,11 @@ _BOOT_SPLIT = r"""<script>
     'Krusten werden abgeklopft','Die Temperatur wird nach Höhe verteilt','Die Zeitleiste wird gespurt','Stationen werden befragt'];
   for(var si=SENT.length-1;si>0;si--){var sj=Math.floor(Math.random()*(si+1)),st=SENT[si];SENT[si]=SENT[sj];SENT[sj]=st;}
   var sentI=0,sentT=null;
-  function sentNext(){var l=document.getElementById('bootTxt');if(!l)return;l.classList.remove('in');void l.offsetWidth;
-    l.textContent=SENT[sentI++%SENT.length];l.classList.add('in');}
-  function sentStart(){if(sentT)return;sentNext();sentT=setInterval(sentNext,2400);}
+  // each line stays at least 4 s: a slow fade out, the next one fades in
+  function sentNext(){var l=document.getElementById('bootTxt');if(!l)return;
+    if(!l.textContent){l.textContent=SENT[sentI++%SENT.length];return;}
+    l.classList.add('out');setTimeout(function(){if(!sentT)return;l.textContent=SENT[sentI++%SENT.length];l.classList.remove('out');},900);}
+  function sentStart(){if(sentT)return;sentT=setInterval(sentNext,5800);}
   function sentStop(){if(sentT){clearInterval(sentT);sentT=null;}}
   function bootDone(){sentStop();var e=document.getElementById('boot');if(!e)return;
     prog(1,'Fertig');e.classList.add('done');setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e);},300);
@@ -1270,14 +1350,21 @@ _BOOT_SPLIT = r"""<script>
         setTimeout(function(){c.classList.remove('on');setTimeout(function(){if(c.parentNode)c.parentNode.removeChild(c);},400);},20000);})
       .catch(function(){});}
   window.__bootDone=bootDone;
+  // Data or map library not reachable: almost always a deploy in progress
+  // (or no network). A friendly maintenance screen that retries by itself.
   function fail(m){
     var e=document.getElementById('boot');if(e&&e.parentNode)e.parentNode.removeChild(e);
-    var d=document.getElementById('bootErr');
-    if(!d){d=document.createElement('div');d.id='bootErr';document.body.appendChild(d);}
-    d.textContent=m;
-    var b=document.createElement('button');b.textContent='Erneut versuchen';
-    b.onclick=function(){location.reload();};d.appendChild(b);
-    d.classList.add('show');
+    if(document.getElementById('maint'))return;
+    var T=__MAINT_TXT__,off=navigator.onLine===false;
+    var st=document.createElement('style');st.textContent=__MAINT_CSS__;document.head.appendChild(st);
+    var d=document.createElement('div');d.id='maint';d.setAttribute('role','alert');
+    d.innerHTML='<div class="mt-in">'+__MAINT_SVG__+'<h1>'+T.title+'</h1><p>'+(off?T.offline:T.body)+'</p><div class="mt-n"></div><button type="button">'+T.retry+'</button></div>';
+    document.body.appendChild(d);
+    d.querySelector('button').onclick=function(){location.reload();};
+    var n=d.querySelector('.mt-n'),left=30;
+    (function tick(){if(navigator.onLine===false){n.textContent='';setTimeout(tick,1000);return;}
+      if(left<=0){location.reload();return;}n.textContent=T.next.replace('{s}',left);left--;setTimeout(tick,1000);})();
+    addEventListener('online',function(){location.reload();});
     try{if(window.Sentry)window.Sentry.captureMessage(m);}catch(e2){}}
   function fetchT(url,opts,ms){var c=('AbortController'in window)?new AbortController():null;
     if(c){opts=opts||{};opts.signal=c.signal;setTimeout(function(){c.abort();},ms||30000);}
@@ -1442,6 +1529,9 @@ _BOOT_SPLIT = r"""<script>
   })();
 })();
 </script>"""
+_BOOT_SPLIT = (_BOOT_SPLIT.replace("__MAINT_TXT__", json.dumps(_MAINT_TXT, ensure_ascii=False))
+               .replace("__MAINT_CSS__", json.dumps(_MAINT_CSS))
+               .replace("__MAINT_SVG__", json.dumps(_MAINT_SVG)))
 
 
 _ASSETS_DIR = Path(__file__).resolve().parent / "assets"
@@ -1532,18 +1622,43 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
     return;
   }
   const fresh=(r.mode==='navigate'||url.pathname.endsWith('/app.js')||url.pathname.endsWith('/index.html'));
+  const nav=r.mode==='navigate';
+  // the page itself unreachable or an error page (a deploy in progress):
+  // the last good copy, else the maintenance screen -- never a bare 404
+  const fallback=()=>caches.match(r).then(m=>m||(nav?caches.match('./index.html'):undefined))
+    .then(m=>m||(nav?new Response(MAINT_PAGE,{status:503,headers:{'content-type':'text/html; charset=utf-8','retry-after':'30'}}):undefined));
   e.respondWith(
-    fetch(r,fresh?{cache:'no-cache'}:undefined).then(resp=>{const cp=resp.clone();caches.open(C).then(c=>c.put(r,cp)).catch(()=>{});return resp;})
-      .catch(()=>caches.match(r).then(m=>m||(r.mode==='navigate'?caches.match('./index.html'):undefined)))
+    fetch(r,fresh?{cache:'no-cache'}:undefined).then(resp=>{
+      if(!resp.ok)return nav?fallback():resp;          // error pages are not cached
+      const cp=resp.clone();caches.open(C).then(c=>c.put(r,cp)).catch(()=>{});return resp;})
+      .catch(fallback)
   );
 });
+const MAINT_PAGE=__MAINT_PAGE__;
 """
+_MAINT_PAGE = ('<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>'
+               '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>'
+               '<title>Snowmapper · Wartung</title><style>' + _MAINT_CSS + '</style></head><body>'
+               '<div id="maint" role="alert"><div class="mt-in">' + _MAINT_SVG
+               + '<h1>' + _MAINT_TXT["title"] + '</h1><p>' + _MAINT_TXT["body"] + '</p><div class="mt-n"></div>'
+               '<button type="button" onclick="location.reload()">' + _MAINT_TXT["retry"] + '</button></div></div>'
+               '<script>var n=document.querySelector(".mt-n"),s=30;(function t(){if(s<=0){location.reload();return;}'
+               'n.textContent=' + json.dumps(_MAINT_TXT["next"]) + '.replace("{s}",s);s--;setTimeout(t,1000);})();</script>'
+               '</body></html>')
+_SERVICE_WORKER = _SERVICE_WORKER.replace("__MAINT_PAGE__", json.dumps(_MAINT_PAGE))
 
 
 _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<script>/* iOS home-screen app: the viewport units come out short there (newer
+   iOS by more than the status bar), which cut the tab bar off at the bottom.
+   The screen's own height is the real one in that mode. */
+(function(){if(navigator.standalone!==true)return;var d=document.documentElement;d.classList.add('ios-pwa');
+function fit(){var p=innerHeight>=innerWidth,sh=p?Math.max(screen.height,screen.width):Math.min(screen.height,screen.width);
+  d.style.setProperty('--app-h',Math.max(innerHeight,d.clientHeight,sh)+'px');}
+fit();addEventListener('resize',fit);addEventListener('orientationchange',function(){setTimeout(fit,300);});})();</script>
 <meta name="theme-color" content="#ffffff"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <title>Snowmapper</title>
@@ -1736,8 +1851,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     every bottom sheet. There the root takes the large viewport (the whole
     screen) and becomes the containing block of the fixed layers, so
     bottom:0 means the real bottom edge. A Safari tab is not affected. */
+ html.ios-pwa,html.ios-pwa body{height:var(--app-h,100lvh)!important;bottom:auto!important}
  @media all and (display-mode: standalone){
-   html,body{height:100vh!important;height:100lvh!important;bottom:auto!important}
+   html,body{height:100vh!important;height:var(--app-h,100lvh)!important;bottom:auto!important}
    body{transform:translateZ(0)}
    /* the status bar is see-through: full-screen views get a solid strip under it */
    body.nav-screen::after,body.trk-open::after,body.wcv-open::after,body.rp-open::after{content:'';position:fixed;left:0;right:0;top:0;
@@ -2562,7 +2678,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #boot .bt-flake circle{fill:var(--accent,#2563eb);stroke:none}
  @keyframes btSpin{to{transform:rotate(360deg)}}
  #bootTxt{font-size:15px;font-weight:600;min-height:1.3em}
- #bootTxt.in{animation:btTxt .45s ease}
+ #bootTxt{transition:opacity .9s ease,transform .9s ease;animation:btTxt .9s ease}
+ #bootTxt.out{opacity:0;transform:translateY(-3px)}
  @keyframes btTxt{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
  /* "sharper map ready" after a coarse start */
  #hiResChip{position:fixed;left:50%;top:calc(var(--bar-h,64px) + 48px);z-index:3000;
@@ -3870,6 +3987,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .tour-kpi span.on b{color:var(--accent)}
  .tour-prof{display:block;margin:2px 0 6px;border-radius:12px;background:var(--fill)}
  .tour-prof .tp-t{font:600 9px Inter,system-ui;fill:var(--fg2)}
+ .tp-cap{text-wrap:balance;margin:-2px 0 8px;font:500 11px var(--font,inherit);color:var(--fg2)}
  .tour-chips{display:flex;flex-wrap:wrap;gap:6px 10px;margin:4px 0 6px}
  .tour-chips .tc{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--fg)}
  .tour-chips .tc i{width:12px;height:12px;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
@@ -4154,9 +4272,49 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .trk-vis button span{font:500 11.5px Inter,system-ui;color:var(--fg2)}
  .trk-vis button.on{border-color:var(--accent);background:var(--accent-soft)}
  .pv{margin:4px 0 6px}
- .pv-stats{display:grid;grid-template-columns:repeat(5,1fr);text-align:center;margin:4px 0 12px}
- .pv-stats b{display:block;font:800 18px Inter,system-ui;color:var(--fg);letter-spacing:-.02em}
- .pv-stats span{font:600 11.5px Inter,system-ui;color:var(--fg2)}
+ /* the profile's numbers as small tiles */
+ .pv-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;text-align:center;margin:4px 0 12px}
+ .pv-stats>div{padding:10px 2px 9px;border-radius:14px;background:var(--fill);border:1px solid var(--hair);min-width:0}
+ .pv-stats b{display:block;font:800 18px Inter,system-ui;color:var(--fg);letter-spacing:-.02em;line-height:1.15}
+ .pv-stats span{display:block;font:600 10.5px Inter,system-ui;color:var(--fg2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .pv-stats>div:first-child{background:color-mix(in srgb,var(--accent,#2563eb) 10%,var(--card,#fff));border-color:color-mix(in srgb,var(--accent,#2563eb) 25%,transparent)}
+ .pv-stats>div:first-child b{color:var(--accent,#2563eb)}
+ .pv-tr-ic{font-size:22px}
+ .tr-b.tr-5,.tr-b.tr-6{color:#d97706}
+ .pv-trust.tr-l5 .pv-tr-ic,.pv-trust.tr-l6 .pv-tr-ic{background:linear-gradient(145deg,#fcd34d,#d97706)}
+ /* trust ladder + leaderboard sheet */
+ #trSheet{position:fixed;inset:0;z-index:6000;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,15,25,0);pointer-events:none;transition:background .25s}
+ #trSheet.on{background:rgba(10,15,25,.38);pointer-events:auto}
+ #trSheet .trs-in{position:relative;width:100%;max-width:480px;max-height:86vh;overflow-y:auto;background:var(--card);border-radius:22px 22px 0 0;
+   padding:18px 18px calc(env(safe-area-inset-bottom,0px) + 20px);box-shadow:var(--elev3);transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+ #trSheet.on .trs-in{transform:none}
+ .trs-x{position:absolute;top:12px;right:12px;width:32px;height:32px;border:0;border-radius:50%;background:var(--fill);color:var(--fg2);font:600 19px/1 system-ui;cursor:pointer}
+ .trs-hd{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;padding:6px 30px 8px}
+ .trs-emo{font-size:40px;line-height:1.1}
+ .tg{width:min(300px,86vw);height:auto;overflow:visible;margin:4px 0 2px}
+ .tg-t{font:700 9.5px var(--mono,inherit);fill:var(--fg2)}.tg-n{font:800 28px var(--font-d,inherit);fill:var(--fg)}
+ .tg-needle{transform-origin:150px 148px;animation:tgIn .9s cubic-bezier(.3,1.5,.5,1) both}
+ @keyframes tgIn{from{transform:rotate(calc(-90deg - var(--a)))}to{transform:none}}.trs-hd b{font:800 19px var(--font-d,inherit);color:var(--fg)}.trs-hd small{font:500 12.5px var(--font,inherit);color:var(--fg2)}
+ .trs-p{margin:6px 2px 12px;font:500 13.5px/1.5 var(--font,inherit);color:var(--fg2)}.trs-p b{color:var(--fg)}
+ .trs-board{display:block;width:100%;padding:12px;border:0;border-radius:14px;background:var(--accent,#2563eb);color:#fff;font:700 14.5px var(--font,inherit);cursor:pointer;margin:0 0 12px}
+ .trl-list{display:flex;flex-direction:column;gap:6px}
+ .trl{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;background:var(--fill);opacity:.72}
+ .trl.done{opacity:.95}.trl.cur{opacity:1;background:color-mix(in srgb,var(--accent,#2563eb) 12%,var(--card,#fff));box-shadow:inset 0 0 0 1.5px var(--accent,#2563eb)}
+ .trl-e{font-size:24px;width:32px;text-align:center;flex:none}
+ .trl-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+ .trl-t b{font:800 14px var(--font,inherit);color:var(--fg)}.trl-t b em{font-style:normal;font-size:10.5px;padding:1px 6px;border-radius:99px;background:var(--accent,#2563eb);color:#fff;margin-left:4px;vertical-align:1px}
+ .trl-t small{font:500 12px var(--font,inherit);color:var(--fg2)}
+ .trl-bar{display:block;height:5px;border-radius:3px;background:var(--fill2);overflow:hidden;margin-top:5px}.trl-bar i{display:block;height:100%;background:var(--accent,#2563eb)}
+ .trl-nx{font-weight:700!important;color:var(--accent,#2563eb)!important}
+ .trl-n{display:flex;flex-direction:column;align-items:flex-end;flex:none}.trl-n b{font:800 14px var(--mono,inherit);color:var(--fg)}.trl-n small{font:600 11px var(--font,inherit);color:var(--fg2)}
+ .trs-tip{margin:12px 2px 0;font:500 12px/1.45 var(--font,inherit);color:var(--fg2)}
+ .trb-list{display:flex;flex-direction:column;gap:4px;margin-top:6px}.trb-load{padding:24px;text-align:center;color:var(--fg2);font:500 13.5px var(--font,inherit)}
+ .trb-row{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:14px;background:none;text-align:left;cursor:pointer;color:var(--fg);font:inherit}
+ .trb-row:nth-child(-n+3){background:var(--fill)}.trb-row.me{box-shadow:inset 0 0 0 1.5px var(--accent,#2563eb)}
+ .trb-rk{width:28px;text-align:center;font:800 15px var(--mono,inherit);color:var(--fg2);flex:none}
+ .trb-av{width:36px;height:36px;border-radius:50%;flex:none;background:var(--fill2) center/cover;display:grid;place-items:center;font:800 15px var(--font,inherit);color:var(--fg2)}
+ .trb-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}.trb-t b{font:700 14px var(--font,inherit);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.trb-t small{font:500 12px var(--font,inherit);color:var(--fg2)}
+ .trb-n{font:800 16px var(--mono,inherit);color:var(--accent,#2563eb);flex:none}
  .pv-btns{display:flex;gap:6px;margin-bottom:14px}
  .pv-btns button{flex:1;height:36px;border-radius:10px;border:0;background:var(--fill);color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer}
  .pv-btns button.pri{background:var(--accent);color:#fff}
@@ -4418,12 +4576,12 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #wcFab[hidden]{display:none!important}
  /* review mode: one family of marks -- white, an amber ring, the speech bubble with a star */
  #rvFab{position:fixed;z-index:1160;left:14px;top:calc(var(--bar-h,64px) + 6px);display:inline-flex;align-items:center;gap:6px;
-   height:32px;padding:0 13px 0 9px;border-radius:999px;border:1.5px solid rgba(244,180,0,.9);background:color-mix(in srgb,var(--card,#fff) 92%,transparent);
+   height:32px;padding:0 13px 0 9px;border-radius:999px;border:1.5px solid var(--accent,#2563eb);background:color-mix(in srgb,var(--card,#fff) 92%,transparent);
    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:var(--fg);font:800 12.5px/1 var(--font,Inter),system-ui;
    box-shadow:0 4px 14px rgba(15,23,42,.14);cursor:pointer;transition:background .2s,color .2s,transform .15s}
- #rvFab svg{width:17px;height:17px;color:#E0A100}
- #rvFab:hover{background:#FFF4CC}
- #rvFab.on svg{color:#2b2100}
+ #rvFab svg{width:17px;height:17px;color:var(--accent,#2563eb)}
+ #rvFab:hover{background:color-mix(in srgb,var(--accent,#2563eb) 10%,var(--card,#fff))}
+ #rvFab.on svg{color:#fff}
  #rvFab:active{transform:scale(.95)}
  body.nav-screen #rvFab,body.ly-open #rvFab,body.insp-open #rvFab,body.trk-open #rvFab,body.draw-on #rvFab,body.ts-open #rvFab,body.wcv-open #rvFab{display:none}
  /* the intro, any time: a small (i) beside the feedback button */
@@ -4436,15 +4594,15 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.nav-screen #infoFab,body.ly-open #infoFab,body.insp-open #infoFab,body.trk-open #infoFab,body.draw-on #infoFab,body.ts-open #infoFab,body.wcv-open #infoFab{display:none}
  .rv-btn.rv-btn{position:absolute!important;top:-14px;left:50%;right:auto;transform:translateX(-50%);z-index:60;display:grid!important;place-items:center;
    width:30px!important;min-width:0!important;height:30px!important;padding:0!important;margin:0!important;
-   border:2px solid #F4B400!important;border-radius:50%!important;background:var(--card,#fff)!important;color:#E0A100!important;
+   border:2px solid var(--accent,#2563eb)!important;border-radius:50%!important;background:var(--card,#fff)!important;color:var(--accent,#2563eb)!important;
    box-shadow:0 3px 10px rgba(15,23,42,.22)!important;cursor:pointer;animation:rvIn .22s ease-out both}
  .rv-btn.rv-btn svg{width:16px!important;height:16px!important}
  .rv-btn span{display:none}
  /* parts that start at the very top of the screen: the mark sits just inside */
  #lyPanel>.rv-btn,#tourSearch>.rv-btn,#wcv .wcv-top>.rv-btn,#feedTop>.rv-btn{top:4px}
  @keyframes rvIn{from{opacity:0;transform:translateX(-50%) scale(.6)}to{opacity:1;transform:translateX(-50%) scale(1)}}
- .rv-dot{position:absolute;top:-6px;right:-6px;z-index:61;width:22px;height:22px;border-radius:50%;background:var(--card,#fff);color:#E0A100;
-   border:1.5px solid #F4B400;box-sizing:border-box;display:grid;place-items:center;box-shadow:0 2px 6px rgba(15,23,42,.22);cursor:pointer;pointer-events:auto;
+ .rv-dot{position:absolute;top:-6px;right:-6px;z-index:61;width:22px;height:22px;border-radius:50%;background:var(--card,#fff);color:var(--accent,#2563eb);
+   border:1.5px solid var(--accent,#2563eb);box-sizing:border-box;display:grid;place-items:center;box-shadow:0 2px 6px rgba(15,23,42,.22);cursor:pointer;pointer-events:auto;
    animation:rvDot .22s ease-out both}
  .rv-dot svg{width:13px;height:13px}
  @keyframes rvDot{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
@@ -4527,12 +4685,61 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .act-sh-map{width:100%;height:46px;border:0;border-radius:14px;background:var(--brand-grad,var(--accent));color:#fff;font:800 15px var(--font-d,inherit);margin-top:8px;cursor:pointer}
  #layersFab{position:relative}
  /* the active layer, named quietly at the top edge of the timeline card */
- #lyNow{position:fixed;left:26px;top:auto;z-index:1001;display:inline-flex;align-items:center;gap:5px;
-   max-width:60%;padding:0;border:0;background:none;cursor:pointer;
-   font:600 11px/1.2 var(--font,inherit);letter-spacing:.02em;color:var(--ink-900,#1b2230);opacity:.78;
-   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-   text-shadow:0 0 3px var(--card,#fff),0 0 6px var(--card,#fff),0 0 10px var(--card,#fff)}
+ /* a small frosted pill: readable over any map, still quiet */
+ /* profile activity on the map: its stats, and the way on to the post */
+ #actSum{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-h,70px) + 12px);z-index:5200;max-width:440px;margin:0 auto;
+   background:var(--card);border:1px solid var(--hair);border-radius:18px;box-shadow:var(--elev3);
+   transform:translateY(16px);opacity:0;pointer-events:none;transition:transform .25s ease,opacity .25s ease}
+ #actSum.on{transform:none;opacity:1;pointer-events:auto}
+ #actSum .as-main{display:flex;flex-direction:column;gap:10px;width:100%;padding:14px 16px;border:0;background:none;text-align:left;color:var(--fg);cursor:pointer;font:inherit}
+ #actSum .as-hd{display:flex;flex-direction:column;gap:2px;padding-right:28px}
+ #actSum .as-hd b{font:800 15.5px var(--font-d,inherit)}#actSum .as-hd small{font:500 12px var(--font,inherit);color:var(--fg2)}
+ #actSum .as-st{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+ #actSum .as-st span{display:flex;flex-direction:column;gap:1px}
+ #actSum .as-st small{font:600 11px var(--font,inherit);color:var(--fg2)}#actSum .as-st b{font:800 17px var(--font-d,inherit)}
+ #actSum .as-go{display:flex;align-items:center;justify-content:center;gap:4px;padding:9px;border-radius:12px;background:var(--fill);font:700 13.5px var(--font,inherit);color:var(--accent,#2563eb)}
+ #actSum .as-go svg{width:16px;height:16px}
+ #actSum .as-x{position:absolute;top:8px;right:8px;width:30px;height:30px;border:0;border-radius:50%;background:var(--fill);color:var(--fg2);font:600 18px/1 system-ui;cursor:pointer;z-index:1}
+ /* several tours under one tap: pick one */
+ #tourPick{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-h,70px) + 12px);z-index:5200;max-width:440px;margin:0 auto;
+   max-height:46vh;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--hair);border-radius:18px;box-shadow:var(--elev3);
+   transform:translateY(16px);opacity:0;pointer-events:none;transition:transform .22s ease,opacity .22s ease}
+ #tourPick.on{transform:none;opacity:1;pointer-events:auto}
+ #tourPick .tpk-hd{position:relative;padding:14px 48px 8px 16px;display:flex;flex-direction:column;gap:2px}
+ #tourPick .tpk-hd b{font:800 15.5px var(--font-d,inherit)}#tourPick .tpk-hd span{font:500 12px var(--font,inherit);color:var(--fg2)}
+ #tourPick .tpk-x{position:absolute;top:10px;right:10px;width:30px;height:30px;border:0;border-radius:50%;background:var(--fill);color:var(--fg2);font:600 18px/1 system-ui;cursor:pointer}
+ #tourPick .tpk-list{overflow-y:auto;padding:0 8px 8px}
+ #tourPick .tpk-list button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 8px;border:0;border-top:1px solid var(--hair);background:none;text-align:left;color:var(--fg);cursor:pointer;font:inherit}
+ #tourPick .tpk-list i{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:0 0 0 2px #fff,0 0 0 3px var(--hair)}
+ #tourPick .tpk-list span{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+ #tourPick .tpk-list b{font:700 14px var(--font,inherit);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #tourPick .tpk-list small{font:500 12px var(--font,inherit);color:var(--fg2)}
+ #tourPick .tpk-list em{font:800 14px var(--mono,inherit);font-style:normal}
+ /* card ⋯ menu */
+ .fc-more-wrap{position:relative;display:inline-flex}
+ .fc-menu{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translate(-50%,6px);z-index:30;min-width:176px;padding:6px;display:flex;flex-direction:column;
+   background:var(--card);border:1px solid var(--hair);border-radius:14px;box-shadow:var(--elev3);opacity:0;pointer-events:none;transition:opacity .15s,transform .15s}
+ .fc-more-wrap.open .fc-menu{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+ .fc-menu button{display:flex!important;align-items:center;gap:10px;width:100%;padding:9px 10px!important;border:0;border-radius:10px;background:none;
+   color:var(--fg);font:600 14px var(--font,inherit);text-align:left;cursor:pointer;justify-content:flex-start!important}
+ .fc-menu button:hover{background:var(--fill)}.fc-menu button svg{width:19px;height:19px;flex:none}
+ .fc-menu .del-btn,.fc-menu .del-btn span{color:#e5484d}
+ /* a post opened on its own: room for it, then the rest */
+ .feed-card.focus{min-height:calc(100dvh - 210px);box-shadow:0 0 0 1.5px var(--accent,#2563eb),var(--elev2,0 6px 20px rgba(0,0,0,.08))}
+ .fc-det{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 14px 4px}
+ .fc-det>div{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:12px;background:var(--fill)}
+ .fc-det span{font:600 11px var(--font,inherit);color:var(--fg2)}.fc-det b{font:700 14px var(--font,inherit);color:var(--fg)}
+ .feed-more-hd{margin:22px 16px 8px;font:800 13px var(--font,inherit);letter-spacing:.04em;text-transform:uppercase;color:var(--fg2);display:flex;align-items:center;gap:10px}
+ .feed-more-hd::after{content:'';flex:1;height:1px;background:var(--hair)}
+ #lyNow{position:fixed;left:22px;top:auto;z-index:1001;display:inline-flex;align-items:center;gap:6px;
+   max-width:calc(100% - 120px);padding:4px 10px 4px 8px;cursor:pointer;
+   border:1px solid var(--hair,rgba(0,0,0,.08));border-radius:999px;
+   background:color-mix(in srgb,var(--card,#fff) 82%,transparent);
+   -webkit-backdrop-filter:blur(12px) saturate(1.5);backdrop-filter:blur(12px) saturate(1.5);
+   font:650 12px/1.25 var(--font,inherit);letter-spacing:.01em;color:var(--fg,#1b2230);
+   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  #lyNow i{width:6px;height:6px;border-radius:50%;background:var(--accent,#2563eb);flex:none}
+ #lyNow small{font-weight:500;color:var(--fg2,#5b6472);overflow:hidden;text-overflow:ellipsis}
  #lyNow:empty{display:none}
  #layersFab .ly-fab-stack{position:absolute;right:4px;bottom:4px;width:15px;height:15px;border-radius:5px;background:var(--brand,#2D4A6E);color:#fff;display:grid;place-items:center}
  #layersFab .ly-fab-stack svg{width:10px;height:10px}
@@ -4658,8 +4865,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.nav-vis #mapFabs{top:calc(env(safe-area-inset-top,0px) + 66px);justify-content:flex-end}
  #mapFabs #miniLegend{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
  /* legend and the button bar under it: one column, exactly the same width */
- #mapFabs #miniLegend,#mapFabs .mfab-grp{align-self:stretch;box-sizing:border-box}
- #mapFabs #miniLegend{width:auto!important;min-width:0}
+ #mapFabs .mfab-grp{align-self:stretch;box-sizing:border-box}
  #mapFabs #miniLegend::-webkit-scrollbar{display:none}
  body.nav-vis .leg-info{bottom:calc(var(--nav-h) + var(--btm-h,80px) + 150px)}
  body.nav-vis .feed-page.open:not(.side){bottom:var(--nav-h)}
@@ -4694,6 +4900,16 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    color:#111;font:700 22px/1 system-ui;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)}
  .fc-nav.prev{left:10px}.fc-nav.next{right:10px}
  @media (hover:hover){.fc-wrap:hover .fc-nav{display:flex}}
+ /* Like a photo app: the pictures run edge to edge, one swipe = one picture
+    (snap-stop), and the dots sit under the picture instead of on it. */
+ .feed-card .fc-wrap{margin:12px 0 26px;border-radius:0;overflow:visible}
+ .feed-card .fc-wrap.fc-post{aspect-ratio:4/5;max-height:74vh}
+ .fc-carousel{overscroll-behavior-x:contain;scroll-behavior:smooth}
+ .fc-slide{scroll-snap-stop:always}
+ .feed-card .fc-dots{bottom:-17px;gap:5px;align-items:center}
+ .feed-card .fc-dots i{width:6px;height:6px;border-radius:50%;background:var(--fg3,#b6bcc6);box-shadow:none;opacity:.55;
+   transition:transform .25s ease,opacity .25s ease,background .25s ease}
+ .feed-card .fc-dots i.on{width:6px;border-radius:50%;background:var(--accent,#2563eb);opacity:1;transform:scale(1.15)}
 
  /* ── Desktop: tabs in the top bar, no bottom bar, no recording ── */
  .ab-tabs{display:none}
@@ -5453,7 +5669,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <div id="tlDetail">
       <button class="tl-corner tl-corner-l tl-play" id="tlPlayBtn" hidden onclick="tlPlayToggle()" aria-label="Animation abspielen"><svg viewBox="0 0 24 24"><path class="pl" d="M8 5.5v13l11-6.5z"/><path class="pa" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>
       <button class="tl-corner tl-corner-r" id="tlTomorrowBtn" onclick="tlGotoTomorrow()" title="Fenster bis morgen Abend">Bis morgen</button>
-      <canvas id="timeline" width="900" height="81" style="width:100%;height:81px;border-radius:10px;cursor:default;margin-top:0"></canvas>
+      <canvas id="timeline" width="900" height="88" style="width:100%;height:88px;border-radius:10px;cursor:default;margin-top:0"></canvas>
       <div id="tlExtended">
         <div class="tl-steprow">
           <button id="tlPrev" class="tl-step">◀ Früher</button>
@@ -5557,7 +5773,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <p class="auth-note" id="authNote">Karte &amp; Prognosen funktionieren ohne Konto — du brauchst es nur zum Melden, für den Feed und dein Profil.</p>
 <form id="authForm" onsubmit="authSubmit(event)" novalidate>
 <input type="text" id="authUser" placeholder="Username" autocomplete="username" style="display:none"/>
-<input type="email" id="authEmail" placeholder="E-Mail" autocomplete="email" required/>
+<input type="email" id="authEmail" name="email" placeholder="E-Mail" autocomplete="username email" required/>
 <input type="password" id="authPass" placeholder="Passwort" autocomplete="current-password" required minlength="8"/>
 <input type="password" id="authPass2" placeholder="Passwort wiederholen" autocomplete="new-password" minlength="8" style="display:none"/>
 <label class="auth-show" id="authShowWrap"><input type="checkbox" id="authShowPw" onchange="window.authPwShow(this.checked)"/> Passwort anzeigen</label>
@@ -6031,6 +6247,10 @@ const I18N_DICT={
 "Bewölkung":["Cloud cover","Nébulosité","Nuvolosità"],
 "Bewölkung [%]":["Cloud cover [%]","Nébulosité [%]","Nuvolosità [%]"],
 "Bis morgen":["Until tomorrow","Jusqu'à demain","Fino a domani"],
+"Farbe = Schneeart / Neuschnee · Füllung = Schneehöhe, voll ab 1 m":["Colour = snow type / new snow · fill = snow depth, full from 1 m","Couleur = type de neige / neige fraîche · remplissage = hauteur de neige, plein dès 1 m","Colore = tipo di neve / neve fresca · riempimento = altezza neve, pieno da 1 m"],
+"Welche Tour?":["Which tour?","Quel itinéraire ?","Quale gita?"],
+"Routen an dieser Stelle":["routes at this spot","itinéraires à cet endroit","percorsi in questo punto"],
+"Schneetyp zu diesem Zeitpunkt":["Snow type at this time","Type de neige à ce moment","Tipo di neve in questo momento"],
 "Bisher gemeldet":["Reported so far","Déjà signalé","Segnalato finora"],
 "Bitte Standort auf der Karte setzen.":["Please set the location on the map.","Place le lieu sur la carte.","Imposta la posizione sulla mappa."],
 "Breiter":["Wider","Plus large","Più largo"],
@@ -7259,7 +7479,9 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   // day labels and the time readouts have to go, or there is no room left for
   // the bars at all.
   const compact=ch<56;
-  const topPad=compact?3:17,botPad=compact?3:19;
+  // the top row carries the time readouts, the scale and the «Bis morgen»
+  // button: bars start below it so nothing sits on top of them
+  const topPad=compact?3:27,botPad=compact?3:19;
   const nx=tvX(nowIdx,cw),x1=tvX(a,cw),x2=tvX(b,cw),baseY=ch-botPad;
   const single=tlSingleMode();
   document.body.classList.toggle('tl-va',layer==='snowpack');
@@ -7318,7 +7540,7 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   // Rescaling each bar's fraction of the tallest bar in view (mx -- the same
   // denominator the bar HEIGHT already uses) onto the SLF colour ramp's full
   // span keeps the exact palette/order while actually using all of it.
-  let mx=0;for(const s of hSnow)if(s>mx)mx=s;mx=Math.max(.05,mx);
+  let mx=0;for(const s of hSnow)if(s>mx)mx=s;const mx0=mx;mx=Math.max(.05,mx);
   const slfTop=SB[SB.length-1];
   const barH=Math.max(6,ch-topPad-botPad-2),bw=Math.max(2,cw/tvSpan());
   for(let t=Math.max(0,Math.floor(tv0));t<Math.min(T,Math.ceil(tv1)+1);t++){
@@ -7330,6 +7552,14 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     // the user picked: shading it made a phantom window trail the handle.
     ctx2.globalAlpha=single?(fut?.8:.6):(inSel?(fut?1:.7):.28);
     rr(x+.5,baseY-h,Math.max(bw-1,1.8),h,Math.min(2.5,bw/2.2));ctx2.fill();ctx2.globalAlpha=1;}
+  // scale: a faint line where the tallest bar ends, labelled with its rate
+  // (mean snowfall over the map per hour), so a bar's height means something
+  if(!compact&&mx0>=.05){const yT=Math.round(baseY-barH)+.5;
+    ctx2.save();ctx2.strokeStyle=_P.mut;ctx2.globalAlpha=.35;ctx2.setLineDash([2,3]);ctx2.lineWidth=1;
+    ctx2.beginPath();ctx2.moveTo(0,yT);ctx2.lineTo(cw,yT);ctx2.stroke();ctx2.restore();
+    // left, or right when the play button holds the left corner
+    ctx2.fillStyle=_P.mut;ctx2.font='600 9.5px Inter,system-ui';ctx2.textAlign=single?'right':'left';
+    ctx2.fillText(tr('max')+' '+(mx0<10?mx0.toFixed(1):Math.round(mx0))+' cm/h',single?cw-4:4,yT-3);ctx2.textAlign='left';}
   if(single){
     // "Powder zu diesem Zeitpunkt": one point, not a range -- a full-height
     // accent line and a single rounded grab handle, no window-length pill
@@ -9438,7 +9668,7 @@ function tourVaScoreOne(t,E0){
   caveats.push('Modellierte Schneeoberfläche, keine Lawinenbeurteilung. Das Bulletin des SLF bleibt massgebend.');
   const shares={};for(const k in sh)shares[k]=sh[k]/tot;
   return {id:t.id,name:t.name||'Skitour',powder,sulz,score:powder,cls,shares,clamped,caveats,when:tourVa.when,
-          powderCm:pwW?Math.round(pwS/pwW):null,hsCm:hsMean!=null?Math.round(hsMean):null,gain:g.gain,len:g.len,maxSlope:g.maxSlope};
+          powderCm:pwW?Math.round(pwS/pwW):null,hsCm:hsMean!=null?Math.round(hsMean):null,hs,gain:g.gain,len:g.len,maxSlope:g.maxSlope};
 }
 // The score of a route right now: SNOWPACK when the frame is ready, the
 // powder model otherwise.
@@ -9517,13 +9747,45 @@ function tourBuildLayer(){
     const casing=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+3,opacity:.9,interactive:false,lineCap:'round',lineJoin:'round'});
     const line=L.polyline(latlngs,{renderer:tourRenderer,color:'rgb('+TOUR_GREY.join(',')+')',weight:w,opacity:.95,interactive:true,lineCap:'round',lineJoin:'round'});
     line.on('click',e=>{if(!tourZoomOk()||!tourVisible(t)||(tourIso&&tourIso!==t))return;
-      try{if(e&&e.originalEvent)L.DomEvent.stopPropagation(e);}catch(_){}try{haptic(4);}catch(e2){}tourOpen(t,tsOpen());});
+      try{if(e&&e.originalEvent)L.DomEvent.stopPropagation(e);}catch(_){}try{haptic(4);}catch(e2){}
+      // where tours share a stretch, a tap hits all of them: choose first
+      const hits=tourIso?[t]:tourHits(e.latlng);
+      if(hits.length>1)tourPickShow(hits);else tourOpen(hits[0]||t,tsOpen());});
     tourLayerGroup.addLayer(glow);tourLayerGroup.addLayer(casing);tourLayerGroup.addLayer(line);
     t._glow=glow;t._casing=casing;t._line=line;
   });
   setTimeout(tourPaintScores,0);
   return tourLayerGroup;
 }
+// every visible tour within a finger's width of the tap, nearest first
+function tourHits(ll){const P=map.latLngToContainerPoint(ll),tol=16,out=[];
+  const pad=map.containerPointToLatLng([P.x+tol,P.y+tol]),d=Math.max(Math.abs(pad.lat-ll.lat),Math.abs(pad.lng-ll.lng));
+  tourList().forEach(t=>{if(!t._line||!t.coords||!tourVisible(t))return;
+    if(!t._bb){let a=90,b=-90,c=180,e=-180;t.coords.forEach(q=>{a=Math.min(a,q[1]);b=Math.max(b,q[1]);c=Math.min(c,q[0]);e=Math.max(e,q[0]);});t._bb=[a,b,c,e];}
+    const B=t._bb;if(ll.lat<B[0]-d||ll.lat>B[1]+d||ll.lng<B[2]-d||ll.lng>B[3]+d)return;
+    let best=1e9,prev=null;
+    for(const q of t.coords){const c=map.latLngToContainerPoint([q[1],q[0]]);
+      if(prev){const dx=c.x-prev.x,dy=c.y-prev.y,l2=dx*dx+dy*dy;let f=l2?((P.x-prev.x)*dx+(P.y-prev.y)*dy)/l2:0;f=Math.max(0,Math.min(1,f));
+        const ex=prev.x+f*dx-P.x,ey=prev.y+f*dy-P.y,dd=ex*ex+ey*ey;if(dd<best)best=dd;}
+      prev=c;}
+    if(best<=tol*tol)out.push([best,t]);});
+  return out.sort((x,y)=>x[0]-y[0]).map(x=>x[1]);}
+function tourPickShow(ts){let el=document.getElementById('tourPick');
+  if(!el){el=document.createElement('div');el.id='tourPick';document.body.appendChild(el);}
+  const km=m=>m!=null?(m/1000).toFixed(m>=10000?0:1)+' km':'';
+  el.innerHTML='<div class="tpk-hd"><b>'+tr('Welche Tour?')+'</b><span>'+ts.length+' '+tr('Routen an dieser Stelle')+'</span>'
+    +'<button type="button" class="tpk-x" aria-label="Schliessen" onclick="tourPickHide()">×</button></div><div class="tpk-list">'
+    +ts.map(t=>{const r=tourScore(t),v=tourVal(r);
+      return '<button type="button" data-id="'+jsArg(t.id)+'" onclick="tourPickGo(this.dataset.id)" onpointerenter="tourPickHi(this.dataset.id,1)" onpointerleave="tourPickHi(this.dataset.id,0)">'
+        +'<i style="background:'+tourColor(r)+'"></i><span><b>'+escapeHtml(t.name||'Skitour')+'</b><small>'
+        +[t.lo&&t.lo[2]!=null?Math.round(t.lo[2])+'–'+Math.round((t.hi&&t.hi[2])||0)+' m':'',t.gain!=null?'↑ '+t.gain+' m':'',km(t.len)].filter(Boolean).join(' · ')
+        +'</small></span>'+(v>=0?'<em>'+v+' %</em>':'')+'</button>';}).join('')+'</div>';
+  requestAnimationFrame(()=>el.classList.add('on'));}
+function tourPickHide(){const el=document.getElementById('tourPick');if(el)el.classList.remove('on');}
+function tourPickHi(id,on){const t=tourList().find(x=>String(x.id)===String(id));if(!t||!t._line)return;
+  const w=tourW();t._line.setStyle({weight:on?w+3:w});if(on)t._line.bringToFront();}
+function tourPickGo(id){tourPickHide();const t=tourList().find(x=>String(x.id)===String(id));if(t)tourOpen(t,tsOpen());}
+map.on('click',()=>tourPickHide());
 let _tourZok=null;
 map.on('zoomend',()=>{if(!ovOn.skitourVec)return;const zok=tourZoomOk();
   if(zok!==_tourZok){_tourZok=zok;tourPaintScores();}
@@ -9605,16 +9867,24 @@ function tourProfileSVG(t,r){
   const pad=Math.max(40,(hi-lo)*.12);lo-=pad;hi+=pad;
   const X=d=>L0+d/len*(W-L0-R),Y=e=>T0+(1-(e-lo)/(hi-lo))*(H-T0-B);
   let svg='';const idx=new Map(g.segs.map((s,i)=>[s,i]));
-  for(let i=1;i<segs.length;i++){const a0=segs[i-1],a1=segs[i],c=r&&r.cls?r.cls[idx.get(a1)]:-1;
-    svg+='<path d="M'+X(a0.dist).toFixed(1)+' '+Y(a0.el).toFixed(1)+'L'+X(a1.dist).toFixed(1)+' '+Y(a1.el).toFixed(1)
-      +'L'+X(a1.dist).toFixed(1)+' '+(H-B)+'L'+X(a0.dist).toFixed(1)+' '+(H-B)+'Z" fill="'+tourClassColor(c)+'"'+(c<0?' fill-opacity=".45"':'')+'/>';}
+  // colour = snow type (powder by its new-snow depth); how far the colour
+  // fills the column under the line = total snow depth, full from 1 m up
+  const base=H-B,col=(x0,y0,x1,y1,fill,op)=>'<path d="M'+x0.toFixed(1)+' '+y0.toFixed(1)+'L'+x1.toFixed(1)+' '+y1.toFixed(1)
+      +'L'+x1.toFixed(1)+' '+base+'L'+x0.toFixed(1)+' '+base+'Z" fill="'+fill+'"'+(op<1?' fill-opacity="'+op+'"':'')+'/>';
+  for(let i=1;i<segs.length;i++){const a0=segs[i-1],a1=segs[i],k=idx.get(a1),c=r&&r.cls?r.cls[k]:-1,fc=tourClassColor(c);
+    const x0=X(a0.dist),x1=X(a1.dist),y0=Y(a0.el),y1=Y(a1.el),hs=r&&r.hs?r.hs[k]:NaN;
+    if(c<0||!isFinite(hs)){svg+=col(x0,y0,x1,y1,fc,.45);continue;}
+    const f=Math.max(0,Math.min(1,hs/100));
+    if(f<1)svg+=col(x0,y0,x1,y1,fc,.18);
+    if(f>0)svg+=col(x0,base-f*(base-y0),x1,base-f*(base-y1),fc,1);}
   let line='';segs.forEach((s,i)=>{line+=(i?'L':'M')+X(s.dist).toFixed(1)+' '+Y(s.el).toFixed(1);});
   svg+='<path d="'+line+'" fill="none" stroke="var(--fg)" stroke-width="1.4" stroke-linejoin="round"/>';
   const ticks=[];const st=len>8000?2000:len>3000?1000:500;for(let d=0;d<=len;d+=st)ticks.push(d);
   svg+=ticks.map(d=>'<text x="'+X(d).toFixed(1)+'" y="'+(H-6)+'" class="tp-t" text-anchor="middle">'+(d/1000).toFixed(d%1000?1:0)+'</text>').join('');
   svg+='<text x="'+(W-R)+'" y="'+(H-6)+'" class="tp-t" text-anchor="end">km</text>';
   [lo+pad,hi-pad].forEach(e=>{svg+='<text x="'+(L0-4)+'" y="'+(Y(e)+3).toFixed(1)+'" class="tp-t" text-anchor="end">'+Math.round(e)+'</text>';});
-  return '<svg class="tour-prof" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Höhenprofil mit Schneeart entlang der Route">'+svg+'</svg>';
+  return '<svg class="tour-prof" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Höhenprofil mit Schneeart entlang der Route">'+svg+'</svg>'
+    +(r&&r.hs?'<p class="tp-cap">'+tr('Farbe = Schneeart / Neuschnee · Füllung = Schneehöhe, voll ab 1 m')+'</p>':'');
 }
 function tourSheetRender(t,r){
   setTimeout(()=>{try{tpRender();}catch(e){}},0);
@@ -10268,9 +10538,12 @@ async function trkKeep(post){
   trkRec=null;trkSaveRec();trkGpsStop();trkWake(false);
   if(trkLine){trkLine.setLatLngs([]);}
   if(trkGuideLine){map.removeLayer(trkGuideLine);trkGuideLine=null;}trkGuide=null;
-  if(post&&d.vis!=='private'){const ok=await trkPost(d);if(!ok){trkView='list';trkRender();return;}}
-  else toast('Aktivität gespeichert','ok');
+  // the save sheet closes right away; posting carries on in the background
+  // (the detail shows "Wird gepostet…"), so a slow connection can't leave
+  // the button there to be tapped a second time
   trkDraft=null;trkCur=d.id;trkView='detail';trkRender();
+  if(post&&d.vis!=='private'){if(await trkPost(d)&&trkCur===d.id&&trkView==='detail')trkRender();}
+  else toast('Aktivität gespeichert','ok');
 }
 function trkDiscard(){
   if(!confirm('Aktivität verwerfen? Die Aufzeichnung geht verloren.'))return;
@@ -10281,10 +10554,20 @@ function trkDiscard(){
 }
 
 // -- posting -----------------------------------------------------------------
+// activities being posted right now: a second tap (or a retry while the
+// first request still hangs on a bad connection) must not post twice
+const _trkPosting=new Set();
 async function trkPost(a){
   if(!sb){toast('Keine Verbindung zum Server','err');return false;}
   if(!sbUser){authShow();toast('Zum Posten anmelden – die Aktivität ist gespeichert.','info');return false;}
+  if(a.postedId||_trkPosting.has(a.id))return !!a.postedId;
+  _trkPosting.add(a.id);try{trkRender();}catch(e){}
   toast('Aktivität wird gepostet…','info');
+  // the post's id is fixed before the first try: if a request reached the
+  // server but its answer got lost, the retry hits the same id instead of
+  // creating a second post
+  if(!a.postUid){a.postUid=(crypto.randomUUID?crypto.randomUUID():'10000000-1000-4000-8000-100000000000'.replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)));
+    try{await trkPut(a);}catch(e){}}
   try{
     const urls=[],flat0=trkLL(a.segs),repI=a.rep!=null?a.rep:trkRepDefault(flat0);
     let mapUrl=null;
@@ -10316,15 +10599,18 @@ async function trkPost(a){
     const row={user_id:sbUser.id,location:'POINT('+top[2]+' '+top[1]+')',primary_categories:['tour'],subtype:trkTypeLbl(a.type),
       condition_data:cd,image_url:urls[0]||null,caption:a.desc?(a.name+'\n'+a.desc):a.name,completion_score:(a.snow||sp.length)?85:70,
       captured_at:new Date(a.start).toISOString()};
-    await withThumb(row);
-    let{data,error}=await sb.from('reports').insert(Object.assign({visibility:'followers'},row)).select('id').single();
-    if(error&&/visibility/i.test(error.message||'')){({data,error}=await sb.from('reports').insert(row).select('id').single());}
-    if(error)throw error;
-    a.postedId=data&&data.id;await trkPut(a);
+    await withThumb(row);row.id=a.postUid;
+    const already=async()=>{try{const{data}=await sb.from('reports').select('id').eq('id',a.postUid).maybeSingle();return !!data;}catch(e){return false;}};
+    let{error}=await sb.from('reports').insert(Object.assign({visibility:'followers'},row));
+    if(error&&/visibility/i.test(error.message||'')){({error}=await sb.from('reports').insert(row));}
+    // duplicate id = an earlier try already went through
+    if(error&&!(error.code==='23505'||/duplicate key/i.test(error.message||''))&&!(await already()))throw error;
+    a.postedId=a.postUid;await trkPut(a);
     toast('Aktivität gepostet','ok');try{haptic(14);}catch(e){}
     try{loadDbReports();}catch(e){}
     return true;
-  }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e),'err');return false;}
+  }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e)+' – die Aktivität ist gespeichert, du kannst es nochmals versuchen.','err');return false;}
+  finally{_trkPosting.delete(a.id);if(trkView==='detail'&&trkCur===a.id)try{trkRender();}catch(e){}}
 }
 function trkSnowCD(a,flat0,cd){
   const sp=(a.snowPts||[]).filter(p=>flat0[p.i]);
@@ -10582,7 +10868,7 @@ async function trkRender(){
       +(a.snow?'<div class="trk-meta">Schnee: <b>'+escapeHtml(a.snow)+(a.snow==='Pulver'&&a.depth?' '+a.depth+' cm':'')+'</b>'+(a.stars?' · '+'★'.repeat(a.stars):'')+'</div>':'')
       +((a.photos||[]).length?'<div class="trk-photos">'+a.photos.map(b=>'<div class="trk-ph"><img src="'+URL.createObjectURL(b)+'" alt=""></div>').join('')+'</div>':'')
       +'</div><div class="trk-actions"><button class="trk-a sec danger" onclick="trkDelete(\''+a.id+'\')">Löschen</button><button class="trk-a sec" onclick="trkEdit(\''+a.id+'\')">Bearbeiten</button>'
-      +(a.postedId?'<button class="trk-a sec" disabled>Gepostet ✓</button>':'<button class="trk-a pri" onclick="trkPostId(\''+a.id+'\')">Posten</button>')+'</div>';
+      +(a.postedId?'<button class="trk-a sec" disabled>Gepostet ✓</button>':_trkPosting.has(a.id)?'<button class="trk-a sec" disabled>Wird gepostet…</button>':'<button class="trk-a pri" onclick="trkPostId(\''+a.id+'\')">Posten</button>')+'</div>';
     return;}
 }
 const TRK_GPX='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>';
@@ -10808,7 +11094,7 @@ async function pvLoad(uid,boxId,own){
         .eq('user_id',uid).order('created_at',{ascending:false}).limit(60).then(r=>r.data||[],()=>[]),cnt('following_id'),cnt('follower_id'),
       Promise.resolve(sb.rpc('feedback_count',{uid})).then(r=>(r&&r.data)||0,()=>0)]);
     posts=pr;fol=f1;ing=f2;fb=f3;
-    if(posts.length){try{const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',posts.map(p=>p.id));trust=count||0;}catch(e){}}
+    if(posts.length){try{const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',posts.map(p=>p.id)).neq('user_id',uid);trust=count||0;}catch(e){}}
     // the user sheet's confirmation count is the same number
     if(boxId==='uvPV'){const el=document.getElementById('uvEndoN');if(el)el.textContent=trust;}}
   posts.forEach(r=>{const A=r.condition_data&&r.condition_data.activity;
@@ -10857,9 +11143,9 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
       :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
         +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
         +'<button class="pv-more" onclick="uvReportUser()" aria-label="Nutzer melden">⋯</button>')+'</div>'
-    +(()=>{const L=trustLevel(S.trust);return '<button class="pv-trust tr-l'+L.i+'" onclick="trustInfo()"><span class="pv-tr-ic">'+TRUST_FLAKE+'</span>'
+    +(()=>{const L=trustLevel(S.trust);return '<button class="pv-trust tr-l'+L.i+'" onclick="trustInfo('+L.n+')"><span class="pv-tr-ic">'+L.emo+'</span>'
       +'<span class="pv-tr-t"><b>'+escapeHtml(L.name)+' · Trust '+L.n+'</b><small>'+(L.next!=null?(L.next-L.n)+' Bestätigungen bis «'+escapeHtml(TRUST_LV[L.i+1][1])+'»':escapeHtml(L.sub))+'</small>'
-      +'<i class="pv-tr-bar"><i style="width:'+L.pct+'%"></i></i></span><span class="pv-tr-q">?</span></button>';})()
+      +'<i class="pv-tr-bar"><i style="width:'+L.pct+'%"></i></i></span><span class="pv-tr-q">›</span></button>';})()
     +(hi?'<div class="pv-hls">'+hi+'</div>':'')
     +'<div class="pv-week"><div class="pv-wk-h"><b>Diese Woche</b><span>12 Wochen</span></div>'
     +'<div class="pv-wk"><div><small>Distanz</small><b>'+(cw.d/1000).toFixed(1)+' km</b></div><div><small>Zeit</small><b>'+trkFmtT(cw.mv)+'</b></div><div><small>Höhenmeter</small><b>'+cw.up+' m</b></div></div>'+chart+'</div>'
@@ -10891,10 +11177,27 @@ function pvOpenPost(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return
 function pvOpenPostOld(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;const cd=r.condition_data||{};pvClose();
   if(cd.activity&&cd.activity.track){setTimeout(()=>trkShowOnMap(cd.activity.track,cd.activity.rough),250);return;}
   const ll=parseGeo(r.location);if(ll)feedFlyTo(ll[0],ll[1]);}
-function pvOpenAct(boxId,i){const S=pvState[boxId],a=S&&S.acts[i];if(!a)return;if(a.local||!a.post)pvClose();
+// An activity from a profile goes straight to the map: the route drawn, a
+// summary card with the stats beside it; the card leads on to the post with
+// its pictures and description.
+function pvOpenAct(boxId,i){const S=pvState[boxId],a=S&&S.acts[i];if(!a)return;pvClose();
   if(a.local){trkCur=a.id;trkView='detail';trkOpen();return;}
-  if(a.post){feedOpenUser(S.uid,pvName(S),a.post);return;}
-  setTimeout(()=>trkShowOnMap(a.track),250);}
+  try{navGo('map');}catch(e){}
+  setTimeout(()=>{trkShowOnMap(a.track);actSumShow(a,S.uid,pvName(S));},250);}
+function actSumShow(a,uid,name){let el=document.getElementById('actSum');
+  if(!el){el=document.createElement('div');el.id='actSum';document.body.appendChild(el);}
+  const d=a.start?new Date(a.start).toLocaleDateString(LOCALE(),{weekday:'short',day:'numeric',month:'short'}):'';
+  el.innerHTML='<button type="button" class="as-x" aria-label="Schliessen" onclick="actSumHide(true)">×</button>'
+    +'<button type="button" class="as-main"'+(a.post?' onclick="actSumPost(\''+jsArg(uid)+'\',\''+jsArg(name)+'\',\''+jsArg(a.post)+'\')"':'')+'>'
+    +'<span class="as-hd"><b>'+escapeHtml(a.name||'Aktivität')+'</b><small>'+escapeHtml(d)+'</small></span>'
+    +'<span class="as-st"><span><small>Distanz</small><b>'+trkFmtD(a.dist||0)+'</b></span><span><small>Aufstieg</small><b>'+(a.up||0)+' m</b></span>'
+    +'<span><small>Zeit</small><b>'+trkFmtT(a.moving||0)+'</b></span></span>'
+    +(a.post?'<span class="as-go">Beitrag ansehen<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>':'')
+    +'</button>';
+  requestAnimationFrame(()=>el.classList.add('on'));}
+function actSumHide(clear){const el=document.getElementById('actSum');if(el)el.classList.remove('on');
+  if(clear&&trkShown){map.removeLayer(trkShown);trkShown=null;}}
+function actSumPost(uid,name,post){actSumHide(false);feedOpenUser(uid,name,post);}
 async function trkProfRender(){const el=document.getElementById('profActs');if(!el)return;let list=[];try{list=await trkAll();}catch(e){}
   el.innerHTML=list.length?list.slice(0,30).map(a=>{const s=a.stats||{};
     return '<button class="pa-card" onclick="profClose();trkCur=\''+a.id+'\';trkView=\'detail\';trkOpen()">'+trkThumb(trkLL(a.segs),160,100,'',a.rep)
@@ -11449,13 +11752,67 @@ function progTrustMap(){
 // Trust levels: every "Bestätigen" another user gives one of your reports is
 // a point. The levels make that visible -- and the same points already weight
 // your reports in the Gemeldetes Powder model (progReportWeight).
-const TRUST_LV=[[0,'Neu','neu dabei'],[3,'Bestätigt','erste bestätigte Meldungen'],[10,'Vertrauenswürdig','regelmässig bestätigt'],[30,'Lokalkenner','sehr oft bestätigt'],[75,'Schneeprofi','Top-Melder:in']];
+// [from points, name, what it says about you, emoji]
+const TRUST_LV=[[0,'Sunntigsfahrer:in','Amateur – nur bei Sonnenschein unterwegs','🚙'],
+  [3,'Schneeflöckli','die ersten Meldungen sind bestätigt','❄️'],
+  [10,'Pulverschnüffler:in','riecht Powder von weitem','👃'],
+  [25,'Spurleger:in','andere folgen deinen Spuren','🎿'],
+  [50,'Powderhound','jagt jeden Zentimeter','🐕'],
+  [100,'Schneeflüsterer:in','der Schnee erzählt dir alles','🌨️'],
+  [200,'Yeti','Legende – oft gesucht, selten gesichtet','🦣']];
+// Speedometer: one equal slice per level, the needle at your level plus the
+// way to the next one; colours run from fresh blue to legendary gold.
+const TRUST_COL=['#93c5fd','#60a5fa','#3b82f6','#6366f1','#8b5cf6','#c084fc','#f59e0b'];
+function trustGauge(n){const L=trustLevel(n),k=TRUST_LV.length,cx=150,cy=148,r=118,w=26;
+  const pt=(a,rr)=>[cx+rr*Math.cos(a),cy-rr*Math.sin(a)];
+  const ang=f=>Math.PI*(1-f);                      // f 0..1 → left .. right
+  let arcs='',labs='';
+  for(let i=0;i<k;i++){const a0=ang(i/k)-.012,a1=ang((i+1)/k)+.012,p0=pt(a0,r),p1=pt(a1,r),q1=pt(a1,r-w),q0=pt(a0,r-w);
+    arcs+='<path d="M'+p0[0].toFixed(1)+' '+p0[1].toFixed(1)+'A'+r+' '+r+' 0 0 1 '+p1[0].toFixed(1)+' '+p1[1].toFixed(1)
+      +'L'+q1[0].toFixed(1)+' '+q1[1].toFixed(1)+'A'+(r-w)+' '+(r-w)+' 0 0 0 '+q0[0].toFixed(1)+' '+q0[1].toFixed(1)+'Z" fill="'+TRUST_COL[i]+'"'+(i>L.i?' opacity=".28"':'')+'/>';
+    const m=pt(ang((i+.5)/k),r+17);labs+='<text x="'+m[0].toFixed(1)+'" y="'+(m[1]+5).toFixed(1)+'" text-anchor="middle" font-size="15">'+TRUST_LV[i][3]+'</text>';
+    const t=pt(ang(i/k),r-w-9);if(i)labs+='<text x="'+t[0].toFixed(1)+'" y="'+(t[1]+3).toFixed(1)+'" text-anchor="middle" class="tg-t">'+TRUST_LV[i][0]+'</text>';}
+  const f=Math.min(1,(L.i+(L.next!=null?L.pct/100:0.98))/k),na=ang(f),tip=pt(na,r-w-14),b1=pt(na+Math.PI/2,6),b2=pt(na-Math.PI/2,6);
+  return '<svg class="tg" viewBox="0 0 300 196" role="img" aria-label="Trust '+n+' – '+escapeHtml(L.name)+'">'+arcs+labs
+    +'<g class="tg-needle" style="--a:'+((f-.5)*180).toFixed(1)+'deg"><path d="M'+b1[0].toFixed(1)+' '+b1[1].toFixed(1)+'L'+tip[0].toFixed(1)+' '+tip[1].toFixed(1)+'L'+b2[0].toFixed(1)+' '+b2[1].toFixed(1)+'Z" fill="var(--fg)"/>'
+    +'<circle cx="'+cx+'" cy="'+cy+'" r="10" fill="var(--fg)"/><circle cx="'+cx+'" cy="'+cy+'" r="4" fill="var(--card)"/></g>'
+    +'<text x="'+cx+'" y="'+(cy+44)+'" text-anchor="middle" class="tg-n">'+n+'</text></svg>';}
+// how much more a report counts in «Gemeldetes Powder» at t points (= progReportWeight's trust factor)
+function trustWeight(t){return 1+PROG_TRUST_MAX*(t/(t+PROG_TRUST_HALF));}
 function trustLevel(n){n=n||0;let i=0;for(let k=0;k<TRUST_LV.length;k++)if(n>=TRUST_LV[k][0])i=k;
-  const nx=TRUST_LV[i+1];return {i,name:TRUST_LV[i][1],sub:TRUST_LV[i][2],n,next:nx?nx[0]:null,pct:nx?Math.round((n-TRUST_LV[i][0])/(nx[0]-TRUST_LV[i][0])*100):100};}
+  const nx=TRUST_LV[i+1];return {i,name:TRUST_LV[i][1],sub:TRUST_LV[i][2],emo:TRUST_LV[i][3],n,next:nx?nx[0]:null,pct:nx?Math.round((n-TRUST_LV[i][0])/(nx[0]-TRUST_LV[i][0])*100):100};}
 const TRUST_FLAKE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17M12 2l-2.2 2.4M12 2l2.2 2.4M12 22l-2.2-2.4M12 22l2.2-2.4"/></svg>';
 function trustBadge(n,compact){const L=trustLevel(n);if(!L.i&&compact)return '';
-  return '<span class="tr-b tr-'+L.i+'" title="Trust Score '+L.n+' · '+escapeHtml(L.name)+'">'+TRUST_FLAKE.repeat(Math.max(1,Math.min(3,L.i)))+(compact?'':'<em>'+escapeHtml(L.name)+'</em>')+'</span>';}
-function trustInfo(){toast('Trust Score: Jede Bestätigung, die andere deinen Meldungen geben, zählt +1. Bestätigte Melder:innen wiegen im Modell «Gemeldetes Powder» mehr.','info');}
+  return '<span class="tr-b tr-'+L.i+'" title="Trust Score '+L.n+' · '+escapeHtml(L.name)+'">'+TRUST_FLAKE.repeat(Math.max(1,Math.min(3,Math.ceil(L.i/2))))+(compact?'':'<em>'+escapeHtml(L.name)+'</em>')+'</span>';}
+// A sheet, reused by the trust ladder and the leaderboard.
+function trSheet(html){let o=document.getElementById('trSheet');
+  if(!o){o=document.createElement('div');o.id='trSheet';o.onclick=e=>{if(e.target===o)trSheetClose();};document.body.appendChild(o);}
+  o.innerHTML='<div class="trs-in" role="dialog"><button type="button" class="trs-x" aria-label="Schliessen" onclick="trSheetClose()">×</button>'+html+'</div>';
+  requestAnimationFrame(()=>o.classList.add('on'));}
+function trSheetClose(){const o=document.getElementById('trSheet');if(o)o.classList.remove('on');}
+// The ladder: every level, what it takes, what it does -- and where you are.
+function trustInfo(n){if(n==null)n=sbUser?progTrustOf(sbUser.id):0;const L=trustLevel(n);
+  const rows=TRUST_LV.map((v,i)=>{const cur=i===L.i,done=i<L.i,w=trustWeight(v[0]);
+    return '<div class="trl'+(cur?' cur':done?' done':'')+'"><span class="trl-e">'+v[3]+'</span><span class="trl-t"><b>'+escapeHtml(v[1])+(cur?' <em>Du</em>':'')+'</b><small>'+escapeHtml(v[2])+'</small>'
+      +(cur&&L.next!=null?'<i class="trl-bar"><i style="width:'+L.pct+'%"></i></i><small class="trl-nx">noch '+(L.next-n)+' bis «'+escapeHtml(TRUST_LV[i+1][1])+'»</small>':'')+'</span>'
+      +'<span class="trl-n"><b>'+v[0]+'+</b><small>×'+w.toFixed(2)+'</small></span></div>';}).reverse().join('');
+  trSheet('<div class="trs-hd">'+trustGauge(n)+'<b>'+L.emo+' '+escapeHtml(L.name)+'</b><small>'+escapeHtml(L.sub)+(L.next!=null?' · noch '+(L.next-n)+' bis '+TRUST_LV[L.i+1][3]:'')+'</small></div>'
+    +'<p class="trs-p">Jede Bestätigung, die <b>andere</b> deinen Meldungen geben, ist <b>+1 Punkt</b>. Je höher deine Stufe, desto stärker zählen deine Meldungen in «Gemeldetes Powder» (×-Faktor rechts).</p>'
+    +'<button type="button" class="trs-board" onclick="trustBoard()">🏆 Rangliste ansehen</button>'
+    +'<div class="trl-list">'+rows+'</div>'
+    +'<p class="trs-tip">Tipp: Fotos, Höhe und Exposition machen eine Meldung glaubwürdig – und bestätigungswürdig.</p>');}
+async function trustBoard(){
+  trSheet('<div class="trs-hd"><span class="trs-emo">🏆</span><b>Rangliste</b><small>Bestätigungen von anderen auf öffentlichen Beiträgen</small></div><div class="trb-list"><div class="trb-load">Lädt…</div></div>');
+  let rows=[];try{const{data,error}=await sb.rpc('trust_board',{lim:50});if(error)throw error;rows=data||[];}catch(e){}
+  const el=document.querySelector('#trSheet .trb-list');if(!el)return;
+  if(!rows.length){el.innerHTML='<div class="trb-load">Noch keine Rangliste – sei die erste Spürnase!</div>';return;}
+  const med=['🥇','🥈','🥉'];
+  el.innerHTML=rows.map((r,i)=>{const L=trustLevel(r.trust),me=sbUser&&r.user_id===sbUser.id,av=safeUrl(r.avatar_url);
+    return '<button type="button" class="trb-row'+(me?' me':'')+'" onclick="trSheetClose();viewUser(\''+jsArg(r.user_id)+'\',\''+jsArg(r.username||'User')+'\')">'
+      +'<span class="trb-rk">'+(med[i]||(i+1))+'</span>'
+      +'<span class="trb-av"'+(av?' style="background-image:url(\''+av+'\')"':'')+'>'+(av?'':escapeHtml((r.username||'?').slice(0,1).toUpperCase()))+'</span>'
+      +'<span class="trb-t"><b>'+escapeHtml(r.username||'User')+(me?' (du)':'')+'</b><small>'+L.emo+' '+escapeHtml(L.name)+' · '+r.posts+' Beiträge</small></span>'
+      +'<span class="trb-n">'+r.trust+'</span></button>';}).join('');}
 function progTrustOf(uid){if(!uid)return 0;return progTrustMap().get(uid)||0;}
 function progInvalidateTrust(){_progTrust=null;}
 // Weight of one report, 1.0 = unconfirmed post by an unknown author.
@@ -12046,9 +12403,30 @@ function chMask(){if(_chMask)return _chMask;
     c.width=1;c.height=1;
   }catch(e){m.fill(1);}
   return (_chMask=m);}
-function setRaster(get,border){const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;const chm=chMask();
+function setRaster(get,border){if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;const chm=chMask();
   for(let p=0;p<NP;p++){const r=(inDomainEdge(p)||!chm[p])?null:get(p);const o=p*4;if(r){d[o]=r[0];d[o+1]=r[1];d[o+2]=r[2];d[o+3]=r[3]==null?210:r[3];if(cls)cls[p]=r[4];}else{d[o+3]=0;if(cls)cls[p]=-999;}}
   if(border){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=y*W+x;if(cls[p]==-999)continue;const rt=x<W-1?cls[p+1]:cls[p],bt=y<H-1?cls[p+W]:cls[p];if(rt!=cls[p]||bt!=cls[p]){const o=p*4;d[o]=20;d[o+1]=20;d[o+2]=30;d[o+3]=230;}}}
+  cx.putImageData(img,0,0);}
+// Bands with contour lines, like a map's isolines: the cell values are
+// interpolated onto a k-times finer grid, coloured by band (no blended
+// in-between colours) and every band edge gets a faint line, so the steps
+// read as snow levels. val(p) gives the cell value or null.
+function snowBand(v){if(v==null||v<SB[0])return -1;let j=0;while(j+1<SB.length&&v>=SB[j+1])j++;return Math.min(j,SB.length-2,RGB.length-1);}
+function setRasterIso(val,alpha,k){const chm=chMask(),V=new Float32Array(NP);
+  for(let p=0;p<NP;p++){const v=(inDomainEdge(p)||!chm[p])?null:val(p);V[p]=v==null?NaN:v;}
+  const w=W*k,h=H*k;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
+  const img=cx.createImageData(w,h),d=img.data,B=new Int8Array(w*h);
+  for(let Y=0;Y<h;Y++){const fy=Math.min(H-1,Math.max(0,(Y+.5)/k-.5)),y0=fy|0,y1=Math.min(H-1,y0+1),ty=fy-y0;
+    for(let X=0;X<w;X++){const fx=Math.min(W-1,Math.max(0,(X+.5)/k-.5)),x0=fx|0,x1=Math.min(W-1,x0+1),tx=fx-x0,q=Y*w+X;
+      // outside the data (nearest cell empty) stays empty: keeps the outline
+      if(isNaN(V[(Math.round(fy))*W+Math.round(fx)])){B[q]=-1;continue;}
+      let su=0,sw=0;const add=(p,wt)=>{const v=V[p];if(!isNaN(v)&&wt>0){su+=v*wt;sw+=wt;}};
+      add(y0*W+x0,(1-tx)*(1-ty));add(y0*W+x1,tx*(1-ty));add(y1*W+x0,(1-tx)*ty);add(y1*W+x1,tx*ty);
+      B[q]=sw?snowBand(su/sw):-1;}}
+  for(let q=0;q<w*h;q++){const bq=B[q];if(bq<0)continue;const o=q*4,c=RGB[bq],X=q%w;
+    const edge=(X<w-1&&B[q+1]!==bq)||(q+w<w*h&&B[q+w]!==bq);
+    // the line is a darker shade of the band itself: present, but faint
+    const f=edge?.8:1;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=edge?Math.min(255,alpha+30):alpha;}
   cx.putImageData(img,0,0);}
 // Min / max / sum of an hourly uint8 cube over the window [a,b) for every
 // cell, in raw units, hour by hour (contiguous memory) instead of cell by
@@ -12077,7 +12455,8 @@ function winRaw(arr,key){const k=key+'|'+a+'|'+b;if(_ws.key===k)return _ws;
 function aggT(p,m){let mn=1e9,mx=-1e9,su=0,c=0,cold=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;if(v<0)cold++;}return m=="max"?mx:m=="min"?mn:m=="sub0"?cold:m=="max05"?mx:su/Math.max(1,c);}
 function renderRaster(){
   const _hid=legHideFn(layer);
-  if(layer=="snow"){const ca=a*NP,cb=b*NP;setRaster(p=>{const v=cum[cb+p]-cum[ca+p];if(_hid&&_hid(v))return null;const c=snowCol(v);return c?[c[0],c[1],c[2],170]:null;});}
+  // 3x finer bands on a coarse grid, 2x on the national one (scrub speed)
+  if(layer=="snow"){const ca=a*NP,cb=b*NP;setRasterIso(p=>{const v=cum[cb+p]-cum[ca+p];return _hid&&_hid(v)?null:v;},205,NP>50000?2:3);}
   else if(layer=="depth"){const cb2=b*NP;setRaster(p=>{const v=cum[cb2+p];if(v<1||(_hid&&_hid(v)))return null;const c=depthCol(v);return c?[c[0],c[1],c[2],215]:null;});}
   else if(layer=="temp"){const R=winRaw(TEMP,'temp'),tm=M.temp_mul,to=M.temp_off,c=Math.max(0,b-a);
     setRaster(p=>{if(!c)return null;const mn=R.mn[p]/tm-to,mx=R.mx[p]/tm-to,su=R.su[p]/tm-c*to;
@@ -12323,11 +12702,14 @@ function legSpec(l){
 // opens on the classes that answer its usual question (Skiqualität: powder
 // only); what you pick is remembered per layer.
 const LEG_DEFAULT={
-  'va:ski6':r=>r.k===3||r.k===4||r.k===5||r.k===8||r.k===9,   // Pulver 0–10 … > 40 cm
   temp:r=>r.hi<=10                           // unter 10 °C
 };
 const LEG_KEY='ssm_legsel_v2';
-let _legSel=(function(){try{return JSON.parse(localStorage.getItem(LEG_KEY)||'{}')||{};}catch(e){return {};}})();
+let _legSel=(function(){try{const o=JSON.parse(localStorage.getItem(LEG_KEY)||'{}')||{};
+  // snow quality now starts with every snow type on: a selection saved under
+  // the old powder-only default is dropped once
+  if(!localStorage.getItem('ssm_ski6_all')){delete o['va:ski6'];localStorage.setItem('ssm_ski6_all','1');localStorage.setItem(LEG_KEY,JSON.stringify(o));}
+  return o;}catch(e){return {};}})();
 function legKey(l){l=l||layer;return l==='snowpack'?'va:'+vaKey:l;}
 // These only explain their colours: every class always on the map.
 const LEG_FIXED=new Set(['wind','cloud','va:wind','snow','depth','temp','tsurf']);
@@ -12414,10 +12796,7 @@ function legInfoRender(){
   el.innerHTML='<div class="li-hd"><div><b>'+escapeHtml(sp.t)+'</b><span>Einheit: '+escapeHtml(sp.u||'–')+'</span></div>'
     +'<button type="button" class="tour-x" onclick="legInfoClose()" aria-label="Schliessen">×</button></div>'
     +(info?'<p class="li-desc">'+escapeHtml(info.d)+'</p>':(sp.va?'<p class="li-desc">'+escapeHtml(LY_TEXT.snowpack.d)+'</p>':''))
-    +body+(sp.va?vaNoteHTML():'')
-    +((typeof ovOn!=='undefined'&&ovOn.skitourVec&&tourList().length)?'<div class="li-tours"><b>Skitouren</b><div class="li-ramp" style="background:linear-gradient(90deg,'
-      +[0,8,50,100].map(v=>tourRamp(v)).join(',')+')"></div><div class="li-ticks"><span>0</span><span>50</span><span>100 %</span></div>'
-      +'<p class="li-note">Farbe = Anteil der Abfahrt mit '+(tourFocus==='sulz'?'Sulz':'Pulver')+' im SNOWPACK-Modell zur gewählten Zeit. Tour antippen für den Verlauf.</p></div>':'');
+    +body+(sp.va?vaNoteHTML():'');
 }
 addEventListener('pointerdown',e=>{if(!document.body.classList.contains('leg-open'))return;
   const t=e.target;if(t&&t.closest&&(t.closest('#legInfo')||t.closest('#miniLegend')))return;legInfoClose();},true);
@@ -12850,7 +13229,9 @@ function lyFabSync(){const b=document.getElementById('layersFab');if(!b)return;
   const name=it?tr(it.label):'';
   let n=document.getElementById('lyNow');
   if(!n){n=document.createElement('button');n.id='lyNow';n.type='button';n.onclick=()=>lyPanelOpen();document.body.appendChild(n);lyNowWatch();}
-  if(n.dataset.ly!==id){n.dataset.ly=id||'';n.innerHTML=name?'<i aria-hidden="true"></i>'+escapeHtml(name):'';n.title=tr('Ebenen');}
+  // snow quality is a moment, not a sum over the window: say so
+  const sub=id==='snowpack'?tr('Schneetyp zu diesem Zeitpunkt'):'';
+  if(n.dataset.ly!==id){n.dataset.ly=id||'';n.innerHTML=name?'<i aria-hidden="true"></i><span>'+escapeHtml(name)+'</span>'+(sub?'<small>· '+escapeHtml(sub)+'</small>':''):'';n.title=tr('Ebenen');}
   lyNowPlace();
   if(b.dataset.ly===id)return;b.dataset.ly=id||'';
   if(!b.dataset.menu){b.innerHTML=LY_MENU_SVG;b.dataset.menu='1';}
@@ -13393,7 +13774,7 @@ function navCur(){const B=document.body.classList,f=document.getElementById('fee
   if(pm&&pm.style.display&&pm.style.display!=='none')return 'you';
   if(B.contains('ts-open')||B.contains('tour-open'))return 'tours';
   return 'map';}
-function navGo(t){try{haptic(4);}catch(e){}try{repSheetToggle(false);}catch(e){}
+function navGo(t){try{haptic(4);}catch(e){}if(t!=='map')try{actSumHide(false);}catch(e){}try{repSheetToggle(false);}catch(e){}
   // tapping the tab that is already open goes back to the map
   if(t!=='map'&&navCur()===t){if(t==='rec'){try{trkClose();}catch(e){}}t='map';}
   if(t==='map')navClose();
@@ -15166,7 +15547,9 @@ else{const fb=document.getElementById('mapFeedFab');if(fb)fb.style.display='flex
 let authPendingEmail=null;
 function authShow(){const p=authPendingGet();
   if(p){authPendingEmail=p.email;authCodeType=p.type==='recovery'?'recovery':'signup';authMode='code';}else authMode='login';
-  authRender();document.getElementById('authOverlay').style.display='flex';}
+  authRender();document.getElementById('authOverlay').style.display='flex';
+  {const el=document.getElementById('authEmail');let m='';try{m=localStorage.getItem('ssm_last_email')||'';}catch(e){}
+   if(el&&!el.value&&m){el.value=m;setTimeout(()=>{const pw=document.getElementById('authPass');if(pw&&authMode==='login')pw.focus();},120);}}}
 function authHide(){document.getElementById('authOverlay').style.display='none';document.getElementById('authErr').textContent='';document.getElementById('authCodeErr').textContent='';}
 function authToggle(){authMode=authMode==='login'?'register':'login';authRender();}
 function authBackToForm(){authMode='login';authPendingSet(null);authRender();}
@@ -15318,6 +15701,8 @@ async function authSubmit(e){
   if(!sb){const er=document.getElementById('authErr');er.style.color='var(--danger)';
     er.textContent='Keine Verbindung zum Server. Prüfe dein Internet und versuche es nochmals.';return;}
   const email=document.getElementById('authEmail').value.trim();
+  // remembered for next time: the form opens with it filled in
+  try{if(email)localStorage.setItem('ssm_last_email',email);}catch(e){}
   const pass=document.getElementById('authPass').value;
   const errEl=document.getElementById('authErr');errEl.textContent='';errEl.style.color='var(--danger)';
   if(authMode==='forgot'){await authSendRecovery(email);return;}
@@ -16266,12 +16651,13 @@ const OBS_CONSEQ=[['uninjured','Unverletzt'],['injured','Verletzt'],['deceased',
 const OBS_AVTYPE=[['glide_snow','Gleitschnee'],['loose_snow','Lockerschnee'],['slab','Schneebrett'],['unknown','Unbekannt']];
 const OBS_WET=[['dry','Trocken'],['wet','Nass'],['unknown','Unbekannt']];
 const OBS_STEPS={
- avalanche:[{k:'media'},{k:'avdetails'},{k:'comment'},{k:'submit'}],
+ // Photos, comment and the place always come last, the details first.
+ avalanche:[{k:'avdetails'},{k:'media'},{k:'comment'},{k:'submit'}],
  whumpf:[{k:'enum',f:'whumpfFrequency'},{k:'fresh'},{k:'media_comment',final:true}],
  wind_slab:[{k:'fresh'},{k:'media_comment',final:true}],
- // Place first: the location then pre-fills altitude band and aspect on the
- // snow-quality screen, and the nearby tours are suggested right away.
- snow:[{k:'media_comment',loc:true},{k:'snowcond',final:true}],
+ // The device position (taken when the sheet opens) still pre-fills altitude
+ // band and aspect on the snow-quality screen.
+ snow:[{k:'snowcond'},{k:'media_comment',final:true}],
  other:[{k:'media'},{k:'comment',final:true}]
 };
 function obsLbl(arr,k){const f=arr.find(x=>x[0]===k);return f?f[1]:k;}
@@ -16281,7 +16667,7 @@ function obsNewState(type){return{type,step:0,steps:OBS_STEPS[type]||[],media:[]
   location:{lat:null,lon:null,elevation:null,aspect:null,source:null},observedAt:null,
   avalanche:{triggerType:'unknown',remoteTrigger:false,caughtPersons:[],characteristics:{size:'unknown',sizeRank:0,avalancheType:'unknown',wetness:'unknown'}},
   whumpfFrequency:null,fresh:{kind:type==='wind_slab'?'drift':null,cm:20},
-  snow:{kind:null,depth:30,lightness:null,powderline:2200,thickness:null,alt:2200,altLow:1800,altHigh:2600,aspects:[],wetness:null,firnState:null,firnTime:''}};}
+  snow:{kind:null,depth:30,lightness:null,powderline:2200,thickness:null,alt:2200,altLow:1800,altHigh:2600,aspects:[],wetness:null,firnState:null,firnTime:'',tracks:null}};}
 function obsDEM(lat,lon){const fe=fineElev(lat,lon),fa=fineAspectDeg(lat,lon);
   const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
   let ce=null,ca=null;if(cx2>=0&&cx2<W&&cy2>=0&&cy2<H){const p=cy2*W+cx2;ce=Math.round(melevv(p));ca=aspectQ(maspv(p));}
@@ -16300,7 +16686,8 @@ function obsOpen(){if(!sb||!sbUser){authShow();return;}
   document.getElementById('obsNav').style.display='none';
   const SCATTER=[{dx:-4,dy:0,r:-2},{dx:5,dy:9,r:1.6},{dx:-6,dy:-5,r:1.2},{dx:4,dy:-8,r:-1.4},{dx:0,dy:2,r:.8}];
   document.getElementById('obsBody').innerHTML=
-    '<div class="obs-types cluster">'+OBS_TYPE_LIST.map((t,i)=>{const s=SCATTER[i%SCATTER.length];
+    // drawing has its own entry (the brush): not one of the observations
+    '<div class="obs-types cluster">'+OBS_TYPE_LIST.filter(t=>t.id!=='draw').map((t,i)=>{const s=SCATTER[i%SCATTER.length];
     return `<button class="obs-type" style="--i:${i};--dx:${s.dx}px;--dy:${s.dy}px;--rot:${s.r}deg;--tc:${t.color};--tt:${t.tint}" onclick="${t.id==='draw'?'obsClose();drawOpen()':'obsStart(\''+t.id+'\')'}"><span class="obs-type-ic">${t.icon}</span><span class="obs-type-tx"><b>${t.label}</b><span>${t.sub}</span></span></button>`;}).join('')+'</div>'+
     (FEATURES.quickPowder?'<button class="obs-quick" style="--i:5" onclick="obsClose();qrOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span><b>Quick Powder Report</b><em>Ein Fingertipp — Menge &amp; Qualität</em></span></button>':'');
   obsWarmLocation();
@@ -17056,6 +17443,8 @@ function obsPickEnum(f,k){obsState[f]=k;haptic(6);obsRender();}
 function obsSnowHTML(){const s=obsState.snow;
   let h='<div class="obs-fld-l">Schneeart</div><div class="snow-kinds">'+SNOW_KINDS.map(k=>`<button class="snow-kind${s.kind===k.k?' active':''}" style="--k:${k.c}" onclick="obsSnowKind('${k.k}')">${k.l}</button>`).join('')+'</div>';
   if(s.kind)h+='<div class="snow-fields">'+obsSnowFields(s.kind)+'</div>';
+  // how tracked out the slope is -- the same scale as on a recorded tour
+  h+=obsSeg('tracks','Wie viele Spuren?',TRK_TRACKS);
   return h;}
 function obsSnowKind(k){obsState.snow.kind=(obsState.snow.kind===k?null:k);haptic(6);obsRender();}
 function obsSnowSet(f,v){obsState.snow[f]=(obsState.snow[f]===v?null:v);haptic(5);obsRender();}
@@ -17186,7 +17575,8 @@ function obsSummaryHTML(){const t=[];const ty=OBS_TYPE_LIST.find(x=>x.id===obsSt
     if(sn.kind==='melt_crust')t.push('<span class="rp-tag">'+sn.altLow+'–'+sn.altHigh+' m</span>');
     if(sn.kind==='wind_pressed'&&sn.alt)t.push('<span class="rp-tag">ab '+sn.alt+' m</span>');
     if(sn.aspects&&sn.aspects.length)t.push('<span class="rp-tag">'+sn.aspects.join(' ')+'</span>');
-    if(sn.firnTime)t.push('<span class="rp-tag">ab '+sn.firnTime+'</span>');}
+    if(sn.firnTime)t.push('<span class="rp-tag">ab '+sn.firnTime+'</span>');
+    if(sn.tracks)t.push('<span class="rp-tag">'+(TRK_TRACKS.find(x=>x[0]===sn.tracks)||[0,''])[1]+'</span>');}
   if(obsState.media.length)t.push('<span class="rp-tag">'+ic('cam')+' '+obsState.media.length+'</span>');
   return '<div class="obs-summary">'+t.join('')+'</div>';}
 function obsRemoveMedia(ix){obsState.media.splice(ix,1);obsRerenderMedia();}
@@ -17246,7 +17636,8 @@ function obsBuildCD(){const s=obsState;const cd={obsType:s.type,source:s.locatio
   if(s.type==='avalanche'){const a=s.avalanche;cd.avalanche={triggerType:a.triggerType,remoteTrigger:a.remoteTrigger,caughtPersons:a.caughtPersons,characteristics:{size:a.characteristics.size,sizeRank:a.characteristics.sizeRank,avalancheType:a.characteristics.avalancheType,wetness:a.characteristics.wetness}};if(a.characteristics.size!=='unknown')cd.measurement=obsSizeMeta(a.characteristics.size).l;}
   if(s.whumpfFrequency){cd.whumpfFrequency=s.whumpfFrequency;cd.measurement=obsEnumLabel('whumpfFrequency',s.whumpfFrequency);}
   if(s.type!=='snow'&&s.fresh&&s.fresh.kind){cd.fresh={kind:s.fresh.kind,cm:s.fresh.kind==='none'?0:s.fresh.cm};if(!cd.measurement)cd.measurement=obsFreshLabel(s.fresh);}
-  if(s.type==='snow'){cd.snow=s.snow;cd.measurement=snowMeasure(s.snow);}
+  if(s.type==='snow'){cd.snow=s.snow;cd.measurement=snowMeasure(s.snow);
+    if(s.snow.tracks){cd.tracks=s.snow.tracks;const tl=(TRK_TRACKS.find(x=>x[0]===s.snow.tracks)||[0,''])[1];cd.measurement=(cd.measurement?cd.measurement+' · ':'')+tl;}}
   return cd;}
 function obsSubLabel(){const s=obsState;if(s.type==='avalanche')return s.avalanche.characteristics.size!=='unknown'?('Lawine '+obsSizeMeta(s.avalanche.characteristics.size).l):'Lawine';if(s.type==='whumpf')return 'Wumm';if(s.type==='wind_slab')return 'Triebschnee';if(s.type==='snow')return snowKindLabel(s.snow.kind)||'Schnee';return 'Beobachtung';}
 // --- Feed (Instagram-style full page) ---
@@ -17272,6 +17663,11 @@ const FEED_SCOPES=[
   {id:'saved',label:'Gemerkt',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>'}
 ];
 let savedPosts=new Set();try{savedPosts=new Set(JSON.parse(localStorage.getItem('ssm_saved')||'[]'));}catch(e){}
+// the less-used card actions (share, save, flag, edit, delete) behind ⋯
+function fcMore(btn,ev){if(ev)ev.stopPropagation();const w=btn.parentNode,open=!w.classList.contains('open');
+  document.querySelectorAll('.fc-more-wrap.open').forEach(x=>x.classList.remove('open'));if(open)w.classList.add('open');}
+addEventListener('pointerdown',e=>{if(!e.target.closest||e.target.closest('.fc-more-wrap'))return;
+  document.querySelectorAll('.fc-more-wrap.open').forEach(x=>x.classList.remove('open'));},true);
 function toggleSave(id,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
   id=String(id);
   if(savedPosts.has(id)){savedPosts.delete(id);}else{savedPosts.add(id);try{haptic(6);}catch(e){}toast('Gemerkt — findest du in deinem Profil unter «Gemerkt».','ok');}
@@ -17704,13 +18100,50 @@ function feedTopRender(){const el=document.getElementById('feedTop');if(!el)retu
 function feedChipsRender(){feedTopRender();const el=document.getElementById('feedChips');if(!el)return;
   el.innerHTML=FEED_SCOPES.map(s=>`<button type="button" role="tab" data-s="${s.id}" aria-selected="${feedScope===s.id}" class="${feedScope===s.id?'on':''}" onclick="feedSetScope('${s.id}')">${s.icon}<span>${s.label}</span></button>`).join('');}
 let feedUserId=null,feedUserName='';
+// A post opened from a profile stands on its own at the top, with every
+// detail of what was reported; the person's other posts follow below it.
+let feedFocusId=null;
 async function feedOpenUser(uid,name,postId){if(!uid)return;
   try{pvClose();}catch(e){}
-  feedScope='user';feedUserId=uid;feedUserName=name||'';feedFilter='all';feedTour=null;
+  feedScope='user';feedUserId=uid;feedUserName=name||'';feedFilter='all';feedTour=null;feedFocusId=postId?String(postId):null;
   navGo('feed');feedTourBar();feedRender();
   try{await loadDbReports({uid});}catch(e){}
   feedRender();feedTourBar();
-  if(postId)setTimeout(()=>{const c=document.getElementById('feedcard-'+postId);if(c)c.scrollIntoView({block:'start',behavior:'smooth'});},120);}
+  setTimeout(()=>{const sc=document.querySelector('.feed-scroll');if(sc)sc.scrollTop=0;},60);}
+// Everything a report says, as label/value rows (only what is there).
+function feedDetailsHTML(r){const cd=r.condition_data||{},rows=[];
+  const lb=(arr,k)=>{try{const f=(arr||[]).find(x=>x[0]===k);return f?f[1]:k;}catch(e){return k;}};
+  try{
+    const A=cd.activity;
+    if(A){rows.push(['Distanz',trkFmtD(A.dist||0)],['Aufstieg',(A.up||0)+' m'],['Abstieg',(A.down||0)+' m'],['In Bewegung',trkFmtT(A.moving||0)]);
+      if(A.maxA!=null)rows.push(['Höchster Punkt',Math.round(A.maxA)+' m']);}
+    const sn=cd.snow;
+    if(sn){if(sn.kind)rows.push(['Schneeart',snowKindLabel(sn.kind)]);
+      if(sn.kind==='powder'&&sn.depth)rows.push(['Pulvertiefe',snowCmLabel(sn.depth)+' cm']);
+      if(sn.lightness)rows.push(['Konsistenz',lb(typeof SNOW_LIGHT!=='undefined'?SNOW_LIGHT:[],sn.lightness)]);
+      if(sn.thickness)rows.push(['Deckel',lb(typeof SNOW_THICK!=='undefined'?SNOW_THICK:[],sn.thickness)]);
+      if(sn.wetness)rows.push(['Nässe',lb(typeof SNOW_WET!=='undefined'?SNOW_WET:[],sn.wetness)]);
+      if(sn.firnState)rows.push(['Firn',lb(typeof SNOW_FIRN!=='undefined'?SNOW_FIRN:[],sn.firnState)]);
+      if(sn.firnTime)rows.push(['Fahrbereit ab',sn.firnTime]);
+      if(sn.altLow!=null&&sn.altHigh!=null)rows.push(['Höhenband',sn.altLow+'–'+sn.altHigh+' m']);
+      if(sn.aspects&&sn.aspects.length)rows.push(['Expositionen',sn.aspects.join(' ')]);}
+    else if(cd.powderAmountCm)rows.push(['Pulvertiefe',cd.powderAmountCm+' cm']);
+    if(cd.tracks)rows.push(['Spuren',lb(TRK_TRACKS,cd.tracks)]);
+    if(cd.fresh&&cd.fresh.kind)rows.push(['Neuschnee',obsFreshLabel(cd.fresh)]);
+    if(cd.whumpfFrequency)rows.push(['Wumm-Geräusche',obsEnumLabel('whumpfFrequency',cd.whumpfFrequency)]);
+    const av=cd.avalanche;
+    if(av){const c=av.characteristics||{};if(c.size&&c.size!=='unknown')rows.push(['Lawinengrösse',obsSizeMeta(c.size).l]);
+      if(c.avalancheType&&c.avalancheType!=='unknown')rows.push(['Lawinenart',obsLbl(OBS_AVTYPE,c.avalancheType)]);
+      if(av.triggerType&&av.triggerType!=='unknown')rows.push(['Auslösung',obsLbl(OBS_TRIGGER,av.triggerType)]);}
+    if(cd.altitudeM)rows.push(['Höhe',cd.altitudeM+' m']);
+    if(cd.snowPts&&cd.snowPts.length)cd.snowPts.slice(0,8).forEach((p,i)=>{const T=TRK_PT[p.type]||{};
+      rows.push([i?'':'Punkte',(T.l||p.type)+(p.cm!=null?' '+p.cm+' cm':'')+(p.alt!=null?' · '+p.alt+' m':'')]);});
+    if(r.stars)rows.push(['Bewertung','★'.repeat(r.stars)+'☆'.repeat(Math.max(0,5-r.stars))]);
+    if(cd.tour&&cd.tour.name)rows.push(['Tour',cd.tour.name]);
+    if(!rows.length&&r.measurement)rows.push(['Gemeldet',r.measurement]);
+  }catch(e){}
+  if(!rows.length)return '';
+  return '<div class="fc-det">'+rows.map(x=>'<div><span>'+escapeHtml(x[0])+'</span><b>'+escapeHtml(String(x[1]))+'</b></div>').join('')+'</div>';}
 function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)return;
   if(feedScope==='user'&&feedUserId){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.8"/><path d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0"/></svg>'+escapeHtml(feedUserName||'Beiträge')+'</span>'
@@ -17722,7 +18155,7 @@ function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)re
   if(feedScope==='tours'&&feedTour){b.style.display='flex';
     b.innerHTML='<span class="fab-tour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-10 4 6 2-3 4 7z"/></svg>'+escapeHtml(feedTour.name)+'</span><button type="button" onclick="feedTour=null;feedTourBar();feedRender()">✕ alle Touren</button>';}
   else if(b.querySelector('.fab-tour')){b.style.display='none';b.innerHTML='';}}
-function feedSetScope(s){if(s!=='tours')feedTour=null;if(s!=='user')feedUserId=null;feedScope=s;feedTourBar();if(s==='all')try{feedRender();}catch(e){}
+function feedSetScope(s){feedFocusId=null;if(s!=='tours')feedTour=null;if(s!=='user')feedUserId=null;feedScope=s;feedTourBar();if(s==='all')try{feedRender();}catch(e){}
   document.querySelectorAll('#feedScope button').forEach(b=>b.classList.toggle('active',b.dataset.s===s));
   document.querySelectorAll('#feedChips button').forEach(b=>{const on=b.dataset.s===s;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);
     if(on)try{b.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});}catch(e){}});
@@ -17853,9 +18286,14 @@ function feedVisual(r,col){
 function feedWireCarousels(){document.querySelectorAll('.fc-carousel').forEach(c=>{if(c._w)return;c._w=1;
   const dots=document.getElementById('fcd-'+c.id.slice(5));
   const cnt=document.getElementById('fcn-'+c.id.slice(5));
-  c.addEventListener('scroll',()=>{const i=Math.round(c.scrollLeft/Math.max(1,c.clientWidth));
+  let raf=0,last=0;
+  c.addEventListener('scroll',()=>{if(raf)return;raf=requestAnimationFrame(()=>{raf=0;
+    const i=Math.round(c.scrollLeft/Math.max(1,c.clientWidth));if(i===last)return;last=i;
     if(dots)dots.querySelectorAll('i').forEach((d,k)=>d.classList.toggle('on',k===i));
-    if(cnt)cnt.textContent=(i+1)+'/'+c.children.length;},{passive:true});});}
+    if(cnt)cnt.textContent=(i+1)+'/'+c.children.length;
+    // the picture after the next one starts loading now, so a swipe never lands on a blank
+    const nx=c.children[i+1]&&c.children[i+1].querySelector('img');if(nx)nx.loading='eager';});},{passive:true});
+  const n1=c.children[1]&&c.children[1].querySelector('img');if(n1)n1.loading='eager';});}
 function fcStep(id,d){const c=document.getElementById('fcar-'+id);if(!c)return;
   const i=Math.max(0,Math.min(c.children.length-1,Math.round(c.scrollLeft/Math.max(1,c.clientWidth))+d));
   c.scrollTo({left:i*c.clientWidth,behavior:'smooth'});}
@@ -17897,6 +18335,8 @@ function feedRender(){
   // Building four hundred cards to show six is most of what made opening the
   // feed feel slow. Nobody scrolls past the first page before it re-renders.
   const FEED_PAGE=40;
+  const focus=feedScope==='user'&&feedFocusId?filtered.find(r=>String(r.id)===feedFocusId):null;
+  if(focus)filtered=[focus].concat(filtered.filter(r=>r!==focus));
   const shown=filtered.slice(0,FEED_PAGE),more=filtered.length-shown.length;
   list.innerHTML=shown.map(r=>{
     const col=CAT_COLORS[r.cat]||'#666';
@@ -17905,7 +18345,8 @@ function feedRender(){
     const canFollow=r.dbRow&&r.userId&&(!sbUser||r.userId!==sbUser.id);
     const followBtn=canFollow?`<button class="feed-follow ${myFollowing.has(r.userId)?'following':''}" onclick="toggleFollow('${r.userId}',event)">${myFollowing.has(r.userId)?'Folge ich':'Folgen'}</button>`:'';
     const endBtn=r.dbRow?`<button class="endorse-btn ${r.liked?'endorsed':''}" onclick="toggleEndorse('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> ${r.likes||0}<span class="endorse-lbl">${r.liked?'Bestätigt':'Bestätigen'}</span></button>`:'';
-    return`<div class="feed-card${r.img?' photo':' text'}" id="feedcard-${r.id}">
+    const isF=focus&&r===focus;
+    return`<div class="feed-card${r.img?' photo':' text'}${isF?' focus':''}" id="feedcard-${r.id}">
       <div class="feed-card-head">
         <div class="feed-card-avatar" style="${r.avatar?`background-image:url(${encodeURI(r.avatar)})`:''}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['\"<>]/g,'')}')"`:''}>${r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase())}</div>
         <div class="feed-card-info">
@@ -17925,17 +18366,21 @@ function feedRender(){
           (r.measurement?`<span class="fc-depth" title="${escapeHtml(r.measurement)}">${escapeHtml(r.measurement)}</span>`:'')}
         ${r.stars?`<span class="fc-stars"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z" fill="currentColor" stroke="none"/></svg>${r.stars}/5</span>`:''}
       </div>
+      ${isF?feedDetailsHTML(r):''}
       <div class="feed-card-actions">
         ${r.dbRow?`<button onclick="openComments('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg> ${r.comments||0}</button>`:''}
         <button class="fc-sp" title="Auf der Karte zeigen" aria-label="Auf der Karte zeigen" onclick="event.stopPropagation();${(r.condition_data&&r.condition_data.activity)?`actShowFeed('${r.id}')`:`feedFlyTo(${r.lat},${r.lng})`}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
-        <button title="Teilen" aria-label="Teilen" onclick="sharePost('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>
-        <button class="save-btn${savedPosts.has(String(r.id))?' saved':''}" title="Merken" aria-label="Merken" onclick="toggleSave('${r.id}',event)"><svg viewBox="0 0 24 24" fill="${savedPosts.has(String(r.id))?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
-        ${r.dbRow&&(!sbUser||r.userId!==sbUser.id)?`<button class="flag-btn ${r.flaggedByMe?'flagged':''}" title="Melden" aria-label="Report melden" onclick="reportFlag('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>`:''}
+        <span class="fc-more-wrap"><button class="fc-more" title="Mehr" aria-label="Mehr" aria-haspopup="menu" onclick="fcMore(this,event)"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+        <span class="fc-menu" role="menu">
+          <button title="Teilen" aria-label="Teilen" onclick="sharePost('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg><span>Teilen</span></button>
+          <button class="save-btn${savedPosts.has(String(r.id))?' saved':''}" title="Merken" aria-label="Merken" onclick="toggleSave('${r.id}',event)"><svg viewBox="0 0 24 24" fill="${savedPosts.has(String(r.id))?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Merken</span></button>
+          ${r.dbRow&&(!sbUser||r.userId!==sbUser.id)?`<button class="flag-btn ${r.flaggedByMe?'flagged':''}" title="Melden" aria-label="Report melden" onclick="reportFlag('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg><span>Melden</span></button>`:''}
+          ${r.dbRow&&sbUser&&r.userId===sbUser.id?`<button class="edit-btn" title="Bearbeiten" aria-label="Beitrag bearbeiten" onclick="postEdit('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Bearbeiten</span></button>`:''}
+          ${r.dbRow&&sbUser&&r.userId===sbUser.id?`<button class="del-btn" title="Löschen" aria-label="Beitrag löschen" onclick="deleteReport('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg><span>Löschen</span></button>`:''}
+        </span></span>
         ${endBtn}
-        ${r.dbRow&&sbUser&&r.userId===sbUser.id?`<button class="edit-btn" title="Bearbeiten" aria-label="Beitrag bearbeiten" onclick="postEdit('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`:''}
-        ${r.dbRow&&sbUser&&r.userId===sbUser.id?`<button class="del-btn" title="Löschen" aria-label="Beitrag löschen" onclick="deleteReport('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`:''}
       </div>
-    </div>`;
+    </div>${isF&&filtered.length>1?`<div class="feed-more-hd">Weitere Beiträge${feedUserName?' von '+escapeHtml(feedUserName):''}</div>`:''}`;
   }).join('')+(more>0?('<div class="feed-more">'+more+' weitere</div>'):'');
   feedAnimateCards();feedWireCarousels();
   try{feedHighlight(shown.map(r=>r.id));}catch(e){}
