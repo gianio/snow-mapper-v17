@@ -4053,6 +4053,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #dmFab[hidden]{display:none}
  .dm-dot{position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;background:#E5484D;box-shadow:0 0 0 2px var(--card)}
  .dm-dot[hidden]{display:none}
+ #mapAcc.notif,#appBar #mapAcc.notif,#appBar #mapAcc.notif.has-img{box-shadow:0 0 0 2.5px #E5484D,0 0 0 5px color-mix(in srgb,#E5484D 25%,transparent)!important;animation:accPulse 2.4s ease-in-out infinite}
+ @keyframes accPulse{50%{box-shadow:0 0 0 2.5px #E5484D,0 0 0 8px rgba(229,72,77,0)}}
+ @media (prefers-reduced-motion:reduce){#mapAcc.notif,#appBar #mapAcc.notif{animation:none}}
 
  /* Meine Meldungen: stats on top, compact */
  .rp-stats:empty{display:none}
@@ -15481,7 +15484,7 @@ function authUpdateUI(user){
   // INITIAL_SESSION, getSession() and every token refresh all land here;
   // the feed and markers only need reloading when the user changed.
   const uid=user?user.id:'';
-  if(uid!==_authLoadedUid){_authLoadedUid=uid;loadSocial().then(()=>{loadReportMarkers();loadDbReports();});}
+  if(uid!==_authLoadedUid){_authLoadedUid=uid;loadSocial().then(()=>{loadReportMarkers();loadDbReports();});setTimeout(dmUnreadCheck,1500);}
 }
 let _authLoadedUid;
 // --- Social state ---
@@ -15502,7 +15505,19 @@ async function loadSocial(){
 // posts and posts from people you follow, both since you last opened the
 // feed. Written to whichever .feed-dot elements exist (only #mapFeedFab's
 // is visible today, but the rail carries a second one).
-function feedNotifRender(n){
+// The account picture gets a red ring while something new waits for you:
+// comments on your posts / posts from people you follow (the feed count)
+// or unread direct messages.
+var _feedN=0,_dmN=0;
+function accNotifSync(){const b=document.getElementById('mapAcc');if(!b)return;const on=_feedN+_dmN>0;
+  b.classList.toggle('notif',on);b.setAttribute('aria-label',on?'Konto – Neues für dich':'Konto');}
+async function dmUnreadCheck(){if(!sb||!sbUser){_dmN=0;accNotifSync();return;}
+  try{const{count}=await sb.from('dm_messages').select('id',{count:'exact',head:true}).is('read_at',null).neq('sender_id',sbUser.id);
+    _dmN=count||0;const d=document.getElementById('dmDot');if(d)d.hidden=!_dmN;}catch(e){}
+  accNotifSync();}
+setInterval(()=>{if(document.visibilityState==='visible')dmUnreadCheck();},120000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')dmUnreadCheck();});
+function feedNotifRender(n){_feedN=n||0;accNotifSync();
   // the count also on the installed app's icon (App Badging API)
   try{if('setAppBadge' in navigator){if(n>0)navigator.setAppBadge(n);else navigator.clearAppBadge();}}catch(e){}
   document.querySelectorAll('.feed-dot').forEach(el=>{
@@ -16411,7 +16426,7 @@ async function dmRender(){
     body.scrollTop=body.scrollHeight;
     // anything addressed to me that is on screen has been read
     const unread=data.filter(m=>m.sender_id!==sbUser.id&&!m.read_at).map(m=>m.id);
-    if(unread.length){try{await sb.from('dm_messages').update({read_at:new Date().toISOString()}).in('id',unread);}catch(e){}}
+    if(unread.length){try{await sb.from('dm_messages').update({read_at:new Date().toISOString()}).in('id',unread);}catch(e){}dmUnreadCheck();}
   }catch(e){body.innerHTML='<div class="dm-empty">Konnte nicht geladen werden.</div>';}
 }
 async function dmSend(){
