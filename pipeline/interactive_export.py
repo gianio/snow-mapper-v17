@@ -16447,12 +16447,13 @@ const OBS_CONSEQ=[['uninjured','Unverletzt'],['injured','Verletzt'],['deceased',
 const OBS_AVTYPE=[['glide_snow','Gleitschnee'],['loose_snow','Lockerschnee'],['slab','Schneebrett'],['unknown','Unbekannt']];
 const OBS_WET=[['dry','Trocken'],['wet','Nass'],['unknown','Unbekannt']];
 const OBS_STEPS={
- avalanche:[{k:'media'},{k:'avdetails'},{k:'comment'},{k:'submit'}],
+ // Photos, comment and the place always come last, the details first.
+ avalanche:[{k:'avdetails'},{k:'media'},{k:'comment'},{k:'submit'}],
  whumpf:[{k:'enum',f:'whumpfFrequency'},{k:'fresh'},{k:'media_comment',final:true}],
  wind_slab:[{k:'fresh'},{k:'media_comment',final:true}],
- // Place first: the location then pre-fills altitude band and aspect on the
- // snow-quality screen, and the nearby tours are suggested right away.
- snow:[{k:'media_comment',loc:true},{k:'snowcond',final:true}],
+ // The device position (taken when the sheet opens) still pre-fills altitude
+ // band and aspect on the snow-quality screen.
+ snow:[{k:'snowcond'},{k:'media_comment',final:true}],
  other:[{k:'media'},{k:'comment',final:true}]
 };
 function obsLbl(arr,k){const f=arr.find(x=>x[0]===k);return f?f[1]:k;}
@@ -16481,7 +16482,8 @@ function obsOpen(){if(!sb||!sbUser){authShow();return;}
   document.getElementById('obsNav').style.display='none';
   const SCATTER=[{dx:-4,dy:0,r:-2},{dx:5,dy:9,r:1.6},{dx:-6,dy:-5,r:1.2},{dx:4,dy:-8,r:-1.4},{dx:0,dy:2,r:.8}];
   document.getElementById('obsBody').innerHTML=
-    '<div class="obs-types cluster">'+OBS_TYPE_LIST.map((t,i)=>{const s=SCATTER[i%SCATTER.length];
+    // drawing has its own entry (the brush): not one of the observations
+    '<div class="obs-types cluster">'+OBS_TYPE_LIST.filter(t=>t.id!=='draw').map((t,i)=>{const s=SCATTER[i%SCATTER.length];
     return `<button class="obs-type" style="--i:${i};--dx:${s.dx}px;--dy:${s.dy}px;--rot:${s.r}deg;--tc:${t.color};--tt:${t.tint}" onclick="${t.id==='draw'?'obsClose();drawOpen()':'obsStart(\''+t.id+'\')'}"><span class="obs-type-ic">${t.icon}</span><span class="obs-type-tx"><b>${t.label}</b><span>${t.sub}</span></span></button>`;}).join('')+'</div>'+
     (FEATURES.quickPowder?'<button class="obs-quick" style="--i:5" onclick="obsClose();qrOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span><b>Quick Powder Report</b><em>Ein Fingertipp — Menge &amp; Qualität</em></span></button>':'');
   obsWarmLocation();
