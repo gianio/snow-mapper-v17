@@ -4758,8 +4758,14 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .wcv-bar input[type=range]{flex:1;min-width:140px;accent-color:#6FB4F0}
  .wcv-bar button,.wcv-btn{border:0;border-radius:999px;padding:8px 14px;background:rgba(255,255,255,.12);color:#fff;font:700 13px Inter,system-ui;cursor:pointer}
  .wcv-bar button.on{background:#6FB4F0;color:#0b0e14}
- .wcv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px}
+ .wcv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,160px),1fr));gap:8px}
  .wcv-tile{position:relative;border-radius:16px;overflow:hidden;background:#1a1f2a;aspect-ratio:16/10}
+ button.wcv-tile{display:block;width:100%;padding:0;border:0;cursor:pointer;font:inherit;color:inherit;text-align:left}
+ .wcv-noimg{position:absolute;inset:0;display:grid;place-items:center;color:#8a97ad;font:600 13px var(--font,inherit)}
+ .wcv-tile .wcv-star.on{position:absolute;top:8px;right:8px;color:#fcd34d;font-size:18px;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+ .wcv-kind{display:flex;gap:4px;padding:4px;margin:10px 0 2px;border-radius:14px;background:rgba(255,255,255,.08)}
+ .wcv-kind button{flex:1;padding:9px 4px;border:0;border-radius:10px;background:none;color:#cfd8e6;font:700 13px var(--font,inherit);cursor:pointer}
+ .wcv-kind button.on{background:#fff;color:#111827}
  .wcv-tile img,.wcv-tile iframe,.wcv-tv img,.wcv-tv iframe{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:0;display:block}
  .wcv-cap{position:absolute;left:0;right:0;bottom:0;padding:18px 10px 8px;background:linear-gradient(transparent,rgba(0,0,0,.75));
    font:700 13px Inter,system-ui;display:flex;align-items:flex-end;gap:6px;pointer-events:none}
@@ -10120,7 +10126,7 @@ function wcIcon(){return L.divIcon({className:'',iconSize:[30,30],iconAnchor:[15
 function wcBuildLayer(){wcLayer=L.layerGroup();setTimeout(wcRefresh,0);return wcLayer;}
 async function wcRefresh(){
   if(!WEBCAM_KEY||!ovOn.webcams||!wcLayer||wcBusy)return;
-  if(map.getZoom()<8.5){toastOnce('wc-zoom','Für Webcams näher heranzoomen');return;}
+  if(map.getZoom()<7.5){toastOnce('wc-zoom','Für Webcams näher heranzoomen');return;}
   wcBusy=true;
   try{const c=map.getCenter(),b=map.getBounds();
     const rad=Math.min(250,Math.max(5,Math.round(tourDistM(c.lng,c.lat,b.getEast(),b.getNorth())/1000)));
@@ -10155,7 +10161,7 @@ map.on('moveend',()=>{if(!ovOn.webcams)return;clearTimeout(wcT);wcT=setTimeout(w
 // (all at once), or shows the latest picture. TV runs through the
 // favourites one after another; "In der Nähe" runs through the cameras
 // around you above a chosen altitude (our terrain model gives the altitude).
-const WCV={mode:'fav',play:true,tv:0,tvT:0,tvList:[],minAlt:1500,near:null,busy:false};
+const WCV={mode:null,kind:'img',tv:0,tvT:0,tvList:[],minAlt:1000,near:null,busy:false,view:-1,viewT:0};
 const WC_TV_MS=15000;
 function wcFavs(){try{const v=JSON.parse(localStorage.getItem('ssm_wcfav')||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}}
 function wcFavSave(v){try{localStorage.setItem('ssm_wcfav',JSON.stringify(v));}catch(e){}}
@@ -10170,16 +10176,20 @@ async function wcDetails(ids){if(!ids.length)return [];
   const j=await wcFetch('webcamIds='+ids.map(encodeURIComponent).join(',')+'&limit=50&include=images,location,player');
   return (j.webcams||[]).map(w=>{const loc=w.location||{},im=w.images&&(w.images.current||w.images.daylight)||{},pl=w.player||{};
     const day=typeof pl.day==='string'?pl.day:(pl.day&&typeof pl.day==='object'?(pl.day.embed||pl.day.link):null),alt=loc.latitude!=null?fineElev(loc.latitude,loc.longitude):null;
+    const live=typeof pl.live==='string'?pl.live:(pl.live&&typeof pl.live==='object'?(pl.live.embed||pl.live.link):null);
     return {id:String(w.webcamId||w.id),t:w.title||'Webcam',lat:loc.latitude,lon:loc.longitude,img:im.preview||im.thumbnail||null,
-      player:typeof day==='string'?day:null,alt:alt!=null?Math.round(alt):null};});}
-function wcMedia(c,live){
-  return (live&&c.player)?'<iframe src="'+escapeHtml(c.player)+'" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer-when-downgrade" title="'+escapeHtml(c.t)+'"></iframe>'
-    :(c.img?'<img src="'+escapeHtml(c.img)+'" alt="" loading="lazy">':'');}
+      player:typeof day==='string'?day:null,live:typeof live==='string'?live:null,alt:alt!=null?Math.round(alt):null,at:Date.now()};});}
+// kind: true/'day' = 24 h timelapse, 'live' = live stream (where the camera
+// has one, else its player says so), anything else = the latest picture
+function wcMedia(c,kind){const src=kind==='live'?(c.live||c.player):(kind===true||kind==='day')?c.player:null;
+  return src?'<iframe src="'+escapeHtml(src)+'" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer-when-downgrade" title="'+escapeHtml(c.t)+'"></iframe>'
+    :(c.img?'<img src="'+escapeHtml(c.img)+'" alt="" loading="lazy">':'<div class="wcv-noimg">kein Bild</div>');}
 function wcCap(c){return '<div class="wcv-cap"><span>'+escapeHtml(c.t)+'</span>'+(c.alt!=null?'<em>'+c.alt+' m</em>':'')+'</div>';}
-function wcvOpen(){document.getElementById('wcv').hidden=false;document.body.classList.add('wcv-open');wcvMode(WCV.mode);}
-function wcvClose(){clearTimeout(WCV.tvT);document.getElementById('wcv').hidden=true;document.body.classList.remove('wcv-open');
+// without favourites the screen starts with the cameras around you
+function wcvOpen(){document.getElementById('wcv').hidden=false;document.body.classList.add('wcv-open');wcvMode(WCV.mode||(wcFavs().length?'fav':'near'));}
+function wcvClose(){clearTimeout(WCV.tvT);clearTimeout(WCV.viewT);WCV.view=-1;document.getElementById('wcv').hidden=true;document.body.classList.remove('wcv-open');
   document.getElementById('wcvBody').innerHTML='';}
-function wcvMode(m){WCV.mode=m;clearTimeout(WCV.tvT);
+function wcvMode(m){WCV.mode=m;WCV.view=-1;clearTimeout(WCV.tvT);clearTimeout(WCV.viewT);
   document.querySelectorAll('#wcv .wcv-seg button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));wcvRender();}
 async function wcvRender(){const el=document.getElementById('wcvBody');if(!el)return;clearTimeout(WCV.tvT);
   if(!WEBCAM_KEY){el.innerHTML='<div class="wcv-empty">Webcams sind noch nicht freigeschaltet.<br>Es fehlt der Windy-Schlüssel (GitHub-Secret <b>WINDY_WEBCAMS_KEY</b>). Sobald er hinterlegt ist, erscheinen hier deine Favoriten, das Webcam-TV und die Kameras in deiner Nähe.</div>';return;}
@@ -10189,15 +10199,44 @@ async function wcvRender(){const el=document.getElementById('wcvBody');if(!el)re
   if(!favs.length){el.innerHTML='<div class="wcv-empty">Noch keine Favoriten.<br>So findest du Webcams: <b>In der Nähe</b> (oben) zeigt die Kameras rund um dich. Oder auf der Karte unter <b>Ebenen → Auf der Karte → Webcams</b> einschalten, nah heranzoomen, eine Kamera antippen und <b>☆ Merken</b>.</div>';return;}
   el.innerHTML='<div class="wcv-empty">Lade Webcams …</div>';
   let cams;try{cams=await wcDetails(favs.map(f=>f.id));}catch(e){el.innerHTML='<div class="wcv-empty">'+escapeHtml(tr(wcErrTxt(e)))+'</div>';return;}
-  if(WCV.mode==='fav'){
-    el.innerHTML='<div class="wcv-bar"><button class="'+(WCV.play?'on':'')+'" onclick="WCV.play=!WCV.play;wcvRender()">'+(WCV.play?'▶ Zeitraffer 24 h':'Aktuelles Bild')+'</button><span>'+cams.length+' Favoriten</span></div>'
-      +'<div class="wcv-grid">'+cams.map(c=>'<div class="wcv-tile">'+wcMedia(c,WCV.play)+wcCap(c)
-        +'<button class="wcv-star" onclick="wcFavToggle(\''+escapeHtml(c.id)+'\')" aria-label="Aus Favoriten entfernen">★</button></div>').join('')+'</div>'+ap;}
+  if(WCV.mode==='fav'){WCV.tvList=cams;wcvGrid(el,cams,cams.length+' Favoriten',ap);}
   else wcvTv(el,cams,ap,'Favoriten');}
+// Picture | timelapse | live: the same switch on the grid, the viewer and TV
+function wcvKindBar(){return '<div class="wcv-kind">'+[['img','Live-Bild'],['day','Zeitraffer 24 h'],['live','Live-Video']]
+  .map(k=>'<button class="'+(WCV.kind===k[0]?'on':'')+'" onclick="wcvKind(\''+k[0]+'\')">'+k[1]+'</button>').join('')+'</div>';}
+function wcvKind(k){WCV.kind=k;const el=document.getElementById('wcvBody');if(!el)return;
+  if(WCV.view>=0)wcvView(WCV.view);else if(WCV.mode==='near')wcvNearShow(el);else wcvRender();}
+// The grid always shows pictures (one video per tile would be too much);
+// a tap opens the camera large, with the switch.
+function wcvGrid(el,cams,label,extra){
+  el.innerHTML=(extra&&extra.bar||'')+'<div class="wcv-bar"><span>'+label+' · antippen für Zeitraffer & Live</span>'
+    +'<button onclick="wcvOnMap()">Auf der Karte</button></div>'
+    +'<div class="wcv-grid">'+cams.map((c,i)=>'<button type="button" class="wcv-tile" onclick="wcvView('+i+')">'+wcMedia(c,'img')+wcCap(c)
+      +(wcFavHas(c.id)?'<span class="wcv-star on" aria-hidden="true">★</span>':'')+'</button>').join('')+'</div>'+(typeof extra==='string'?extra:(extra&&extra.ap)||'');}
+async function wcvView(i){const cams=WCV.tvList,c=cams[i];if(!c)return;WCV.view=i;clearTimeout(WCV.viewT);clearTimeout(WCV.tvT);
+  const el=document.getElementById('wcvBody');if(!el)return;
+  // picture links expire after a few minutes: fetch fresh ones when old
+  if(Date.now()-(c.at||0)>8*60e3){try{const f=(await wcDetails([c.id]))[0];if(f)cams[i]=Object.assign(c,f);}catch(e){}}
+  const fav=wcFavHas(c.id);
+  el.innerHTML='<div class="wcv-bar"><button onclick="wcvBack()">‹ Übersicht</button><span>'+(i+1)+' / '+cams.length+'</span></div>'
+    +'<div class="wcv-tv">'+wcMedia(c,WCV.kind)+wcCap(c)
+    +'<button class="wcv-star" onclick="wcFavToggle(\''+escapeHtml(c.id)+'\',this);this.textContent=wcFavHas(\''+escapeHtml(c.id)+'\')?\'★\':\'☆\'" data-t="'+escapeHtml(c.t)+'" data-lat="'+c.lat+'" data-lon="'+c.lon+'" aria-label="Merken">'+(fav?'★':'☆')+'</button></div>'
+    +wcvKindBar()
+    +'<div class="wcv-bar"><button onclick="wcvView('+((i-1+cams.length)%cams.length)+')">‹</button><span style="flex:1;text-align:center">'
+    +(WCV.kind==='img'?'aktualisiert sich jede Minute':WCV.kind==='live'?'Live, wo die Kamera einen Stream hat':'die letzten 24 Stunden')
+    +'</span><button onclick="wcvView('+((i+1)%cams.length)+')">›</button></div>';
+  // the latest picture refreshes itself while you look at it
+  if(WCV.kind==='img')WCV.viewT=setTimeout(()=>{c.at=0;if(WCV.view===i)wcvView(i);},60e3);}
+// the camera pins on the map (Ebenen → Auf der Karte → Webcams), in one tap
+function wcvOnMap(){wcvClose();try{navGo('map');}catch(e){}
+  if(!ovOn.webcams)try{ovToggle('webcams',true);}catch(e){}
+  if(map.getZoom()<9)map.setZoom(9);toast('Webcams auf der Karte – Kamera antippen für das Bild','info');}
+function wcvBack(){clearTimeout(WCV.viewT);WCV.view=-1;const el=document.getElementById('wcvBody');if(!el)return;
+  if(WCV.mode==='near')wcvNearShow(el);else wcvRender();}
 function wcvTv(el,cams,ap,what){WCV.tvList=cams;if(WCV.tv>=cams.length)WCV.tv=0;
   if(!cams.length){el.innerHTML='<div class="wcv-empty">Keine Webcams gefunden.</div>';return;}
   const c=cams[WCV.tv];
-  el.innerHTML='<div class="wcv-tv">'+wcMedia(c,true)+'<div class="wcv-prog" id="wcvProg"></div>'+wcCap(c)+'</div>'
+  el.innerHTML='<div class="wcv-tv">'+wcMedia(c,WCV.kind==='img'?'day':WCV.kind)+'<div class="wcv-prog" id="wcvProg"></div>'+wcCap(c)+'</div>'
     +'<div class="wcv-bar"><button onclick="wcvStep(-1)">‹</button><span style="flex:1;text-align:center">'+(WCV.tv+1)+' / '+cams.length+' · '+what+'</span><button onclick="wcvStep(1)">›</button></div>'+ap;
   const pr=document.getElementById('wcvProg');if(pr){pr.style.width='0';pr.animate([{width:'0%'},{width:'100%'}],{duration:WC_TV_MS,fill:'forwards'});}
   WCV.tvT=setTimeout(()=>wcvStep(1),WC_TV_MS);}
@@ -10213,16 +10252,11 @@ async function wcvNear(el,ap){
   catch(e){el.innerHTML='<div class="wcv-empty">'+escapeHtml(tr(wcErrTxt(e)))+'</div>';return;}
   WCV.tv=0;wcvNearShow(el,ap);}
 function wcvNearShow(el,ap){const cams=(WCV.near||[]).filter(x=>x.alt==null||x.alt>=WCV.minAlt).sort((p,q)=>(q.alt||0)-(p.alt||0));
-  WCV.tvList=cams;if(WCV.tv>=cams.length)WCV.tv=0;
+  WCV.tvList=cams;clearTimeout(WCV.tvT);
   const bar='<div class="wcv-bar"><span>ab <b id="wcvAltV">'+WCV.minAlt+'</b> m</span><input type="range" min="0" max="3500" step="100" value="'+WCV.minAlt+'" '
-    +'oninput="document.getElementById(\'wcvAltV\').textContent=this.value" onchange="WCV.minAlt=+this.value;WCV.tv=0;wcvNearShow(document.getElementById(\'wcvBody\'))" aria-label="Mindesthöhe der Webcams"></div>';
+    +'oninput="document.getElementById(\'wcvAltV\').textContent=this.value" onchange="WCV.minAlt=+this.value;wcvNearShow(document.getElementById(\'wcvBody\'))" aria-label="Mindesthöhe der Webcams"></div>';
   if(!cams.length){el.innerHTML=bar+'<div class="wcv-empty">Keine Webcams über '+WCV.minAlt+' m im Umkreis von 40 km. Schieb den Regler nach links.</div>';return;}
-  const c=cams[WCV.tv];clearTimeout(WCV.tvT);
-  el.innerHTML=bar+'<div class="wcv-tv">'+wcMedia(c,true)+'<div class="wcv-prog" id="wcvProg"></div>'+wcCap(c)
-    +'<button class="wcv-star" onclick="wcFavToggle(\''+escapeHtml(c.id)+'\',this);this.textContent=wcFavHas(\''+escapeHtml(c.id)+'\')?\'★\':\'☆\'" data-t="'+escapeHtml(c.t)+'" data-lat="'+c.lat+'" data-lon="'+c.lon+'" aria-label="Merken">'+(wcFavHas(c.id)?'★':'☆')+'</button></div>'
-    +'<div class="wcv-bar"><button onclick="wcvStep(-1)">‹</button><span style="flex:1;text-align:center">'+(WCV.tv+1)+' / '+cams.length+' · in der Nähe</span><button onclick="wcvStep(1)">›</button></div>'+(ap||'');
-  const pr=document.getElementById('wcvProg');if(pr)pr.animate([{width:'0%'},{width:'100%'}],{duration:WC_TV_MS,fill:'forwards'});
-  WCV.tvT=setTimeout(()=>wcvStep(1),WC_TV_MS);}
+  wcvGrid(el,cams,cams.length+' in der Nähe',{bar,ap:ap||''});}
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('wcv').hidden)wcvClose();});
 // ── View Transitions: screens cross-fade and slide instead of popping ──
 // Progressive: browsers without the API (or with reduced motion) just switch.
