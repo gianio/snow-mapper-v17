@@ -1243,6 +1243,72 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     return out_dir / "index.html"
 
 
+# Maintenance screen: shown when the site or its data can't be loaded while
+# a new version is going up (GitHub Pages swaps files during a deploy). The
+# same markup is used by the boot loader and, when the page itself can't be
+# fetched, by the service worker. An avalanche dog nose-deep in powder.
+_MAINT_CSS = r"""
+#maint{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:24px;
+  background:linear-gradient(180deg,#e9f2ff 0%,#f7fbff 60%,#ffffff 100%);color:#16233a;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;text-align:center}
+#maint .mt-in{max-width:360px;width:100%;display:flex;flex-direction:column;align-items:center;gap:14px}
+#maint svg{width:min(300px,78vw);height:auto;overflow:visible}
+#maint h1{margin:4px 0 0;font-size:24px;line-height:1.2;font-weight:800;letter-spacing:-.01em}
+#maint p{margin:0;font-size:15px;line-height:1.5;font-weight:500;color:#43516a}
+#maint .mt-n{font-size:13px;font-weight:600;color:#6b7891}
+#maint button{margin-top:6px;padding:13px 22px;border:0;border-radius:999px;background:#2563eb;color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;
+  box-shadow:0 8px 22px rgba(37,99,235,.28)}
+#maint .fl{animation:mtFall 6s linear infinite}
+#maint .tail{transform-origin:212px 128px;animation:mtWag .5s ease-in-out infinite alternate}
+#maint .puff{animation:mtPuff 1.6s ease-out infinite;transform-origin:118px 152px}
+#maint .head{animation:mtSniff 1.6s ease-in-out infinite;transform-origin:156px 128px}
+@keyframes mtFall{from{transform:translateY(-30px)}to{transform:translateY(190px)}}
+@keyframes mtWag{from{transform:rotate(-14deg)}to{transform:rotate(18deg)}}
+@keyframes mtPuff{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(1.6) translateY(-10px)}}
+@keyframes mtSniff{0%,100%{transform:rotate(0)}50%{transform:rotate(4deg)}}
+@media (prefers-color-scheme:dark){#maint{background:linear-gradient(180deg,#0d1626,#111c30);color:#e8eef8}
+  #maint p{color:#b6c2d6}#maint .mt-n{color:#8a97ad}}
+@media (prefers-reduced-motion:reduce){#maint .fl,#maint .tail,#maint .puff,#maint .head{animation:none}}
+"""
+_MAINT_SVG = (
+    '<svg viewBox="0 0 300 200" aria-hidden="true">'
+    '<defs><clipPath id="mtc"><rect x="0" y="0" width="300" height="200" rx="28"/></clipPath></defs>'
+    '<g clip-path="url(#mtc)">'
+    '<rect width="300" height="200" fill="#dbe9ff"/>'
+    '<circle cx="236" cy="44" r="16" fill="#fff6d8"/>'
+    '<path d="M0 132 62 58l34 40 46-62 58 70 34-30 66 56v68H0z" fill="#b9cdea"/>'
+    '<path d="M62 58l14 17-8 2-6-6-6 8-8-3zM142 36l17 21-9 1-8-8-8 10-8-3z" fill="#fff"/>'
+    '<path d="M0 150c40-14 86-18 130-10s100 6 170-6v66H0z" fill="#fff"/>'
+    # dog: tail, body, legs, rescue vest, then the head going down with its
+    # nose buried in a powder mound (drawn last, over the snout)
+    '<path class="tail" d="M210 128c10-6 16-16 14-26" fill="none" stroke="#8a5a2b" stroke-width="7" stroke-linecap="round"/>'
+    '<ellipse cx="180" cy="136" rx="36" ry="20" fill="#a86f38"/>'
+    '<rect x="152" y="144" width="9" height="20" rx="4" fill="#8a5a2b"/><rect x="198" y="144" width="9" height="20" rx="4" fill="#8a5a2b"/>'
+    '<path d="M162 120h34a6 6 0 0 1 6 6v18h-46v-18a6 6 0 0 1 6-6z" fill="#e5484d"/>'
+    '<path d="M176 127h6v-5h4v5h6v4h-6v5h-4v-5h-6z" fill="#fff"/>'
+    '<g class="head"><path d="M158 124l-16 10 6 9 16-10z" fill="#a86f38"/>'
+    '<circle cx="140" cy="140" r="13" fill="#a86f38"/>'
+    '<ellipse cx="127" cy="151" rx="10" ry="6.5" transform="rotate(-38 127 151)" fill="#a86f38"/>'
+    '<path d="M141 128c-9 1-14 9-13 19 5-2 10-9 13-19z" fill="#6b4220"/>'
+    '<path d="M143 137q3 3 6 0" fill="none" stroke="#1d1d1f" stroke-width="1.8" stroke-linecap="round"/></g>'
+    '<ellipse cx="116" cy="158" rx="24" ry="10" fill="#f6f9ff"/>'
+    '<g class="puff"><circle cx="104" cy="148" r="4" fill="#fff"/><circle cx="126" cy="146" r="3" fill="#fff"/><circle cx="114" cy="141" r="2.5" fill="#fff"/></g>'
+    # falling snow
+    '<g fill="#fff">'
+    '<circle class="fl" cx="30" cy="0" r="2.5" style="animation-delay:-1s"/><circle class="fl" cx="80" cy="0" r="2" style="animation-delay:-3s"/>'
+    '<circle class="fl" cx="128" cy="0" r="3" style="animation-delay:-2s"/><circle class="fl" cx="190" cy="0" r="2" style="animation-delay:-4.5s"/>'
+    '<circle class="fl" cx="250" cy="0" r="2.6" style="animation-delay:-.4s"/><circle class="fl" cx="282" cy="0" r="2" style="animation-delay:-5.2s"/>'
+    '<circle class="fl" cx="56" cy="0" r="1.8" style="animation-delay:-2.6s"/><circle class="fl" cx="222" cy="0" r="1.6" style="animation-delay:-1.8s"/>'
+    '</g></g></svg>')
+_MAINT_TXT = {
+    "title": "Kurz in der Wartung",
+    "body": "Snowmapper bekommt gerade ein Update. Unsere Spürnase schnüffelt derweil nach frischem Pulver – in ein paar Minuten sind wir wieder für dich da.",
+    "offline": "Keine Verbindung. Sobald du wieder Netz hast, geht's weiter.",
+    "retry": "Jetzt nochmals versuchen",
+    "next": "Neuer Versuch in {s} s",
+}
+
+
 # Async loader for the split build: fetch latest.json -> data blob (with a real
 # progress bar on the intro), set window.__D, then inject the app script.
 _BOOT_SPLIT = r"""<script>
@@ -1284,14 +1350,21 @@ _BOOT_SPLIT = r"""<script>
         setTimeout(function(){c.classList.remove('on');setTimeout(function(){if(c.parentNode)c.parentNode.removeChild(c);},400);},20000);})
       .catch(function(){});}
   window.__bootDone=bootDone;
+  // Data or map library not reachable: almost always a deploy in progress
+  // (or no network). A friendly maintenance screen that retries by itself.
   function fail(m){
     var e=document.getElementById('boot');if(e&&e.parentNode)e.parentNode.removeChild(e);
-    var d=document.getElementById('bootErr');
-    if(!d){d=document.createElement('div');d.id='bootErr';document.body.appendChild(d);}
-    d.textContent=m;
-    var b=document.createElement('button');b.textContent='Erneut versuchen';
-    b.onclick=function(){location.reload();};d.appendChild(b);
-    d.classList.add('show');
+    if(document.getElementById('maint'))return;
+    var T=__MAINT_TXT__,off=navigator.onLine===false;
+    var st=document.createElement('style');st.textContent=__MAINT_CSS__;document.head.appendChild(st);
+    var d=document.createElement('div');d.id='maint';d.setAttribute('role','alert');
+    d.innerHTML='<div class="mt-in">'+__MAINT_SVG__+'<h1>'+T.title+'</h1><p>'+(off?T.offline:T.body)+'</p><div class="mt-n"></div><button type="button">'+T.retry+'</button></div>';
+    document.body.appendChild(d);
+    d.querySelector('button').onclick=function(){location.reload();};
+    var n=d.querySelector('.mt-n'),left=30;
+    (function tick(){if(navigator.onLine===false){n.textContent='';setTimeout(tick,1000);return;}
+      if(left<=0){location.reload();return;}n.textContent=T.next.replace('{s}',left);left--;setTimeout(tick,1000);})();
+    addEventListener('online',function(){location.reload();});
     try{if(window.Sentry)window.Sentry.captureMessage(m);}catch(e2){}}
   function fetchT(url,opts,ms){var c=('AbortController'in window)?new AbortController():null;
     if(c){opts=opts||{};opts.signal=c.signal;setTimeout(function(){c.abort();},ms||30000);}
@@ -1456,6 +1529,9 @@ _BOOT_SPLIT = r"""<script>
   })();
 })();
 </script>"""
+_BOOT_SPLIT = (_BOOT_SPLIT.replace("__MAINT_TXT__", json.dumps(_MAINT_TXT, ensure_ascii=False))
+               .replace("__MAINT_CSS__", json.dumps(_MAINT_CSS))
+               .replace("__MAINT_SVG__", json.dumps(_MAINT_SVG)))
 
 
 _ASSETS_DIR = Path(__file__).resolve().parent / "assets"
@@ -1546,12 +1622,30 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
     return;
   }
   const fresh=(r.mode==='navigate'||url.pathname.endsWith('/app.js')||url.pathname.endsWith('/index.html'));
+  const nav=r.mode==='navigate';
+  // the page itself unreachable or an error page (a deploy in progress):
+  // the last good copy, else the maintenance screen -- never a bare 404
+  const fallback=()=>caches.match(r).then(m=>m||(nav?caches.match('./index.html'):undefined))
+    .then(m=>m||(nav?new Response(MAINT_PAGE,{status:503,headers:{'content-type':'text/html; charset=utf-8','retry-after':'30'}}):undefined));
   e.respondWith(
-    fetch(r,fresh?{cache:'no-cache'}:undefined).then(resp=>{const cp=resp.clone();caches.open(C).then(c=>c.put(r,cp)).catch(()=>{});return resp;})
-      .catch(()=>caches.match(r).then(m=>m||(r.mode==='navigate'?caches.match('./index.html'):undefined)))
+    fetch(r,fresh?{cache:'no-cache'}:undefined).then(resp=>{
+      if(!resp.ok)return nav?fallback():resp;          // error pages are not cached
+      const cp=resp.clone();caches.open(C).then(c=>c.put(r,cp)).catch(()=>{});return resp;})
+      .catch(fallback)
   );
 });
+const MAINT_PAGE=__MAINT_PAGE__;
 """
+_MAINT_PAGE = ('<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>'
+               '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>'
+               '<title>Snowmapper · Wartung</title><style>' + _MAINT_CSS + '</style></head><body>'
+               '<div id="maint" role="alert"><div class="mt-in">' + _MAINT_SVG
+               + '<h1>' + _MAINT_TXT["title"] + '</h1><p>' + _MAINT_TXT["body"] + '</p><div class="mt-n"></div>'
+               '<button type="button" onclick="location.reload()">' + _MAINT_TXT["retry"] + '</button></div></div>'
+               '<script>var n=document.querySelector(".mt-n"),s=30;(function t(){if(s<=0){location.reload();return;}'
+               'n.textContent=' + json.dumps(_MAINT_TXT["next"]) + '.replace("{s}",s);s--;setTimeout(t,1000);})();</script>'
+               '</body></html>')
+_SERVICE_WORKER = _SERVICE_WORKER.replace("__MAINT_PAGE__", json.dumps(_MAINT_PAGE))
 
 
 _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
@@ -4178,9 +4272,45 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .trk-vis button span{font:500 11.5px Inter,system-ui;color:var(--fg2)}
  .trk-vis button.on{border-color:var(--accent);background:var(--accent-soft)}
  .pv{margin:4px 0 6px}
- .pv-stats{display:grid;grid-template-columns:repeat(5,1fr);text-align:center;margin:4px 0 12px}
- .pv-stats b{display:block;font:800 18px Inter,system-ui;color:var(--fg);letter-spacing:-.02em}
- .pv-stats span{font:600 11.5px Inter,system-ui;color:var(--fg2)}
+ /* the profile's numbers as small tiles */
+ .pv-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;text-align:center;margin:4px 0 12px}
+ .pv-stats>div{padding:10px 2px 9px;border-radius:14px;background:var(--fill);border:1px solid var(--hair);min-width:0}
+ .pv-stats b{display:block;font:800 18px Inter,system-ui;color:var(--fg);letter-spacing:-.02em;line-height:1.15}
+ .pv-stats span{display:block;font:600 10.5px Inter,system-ui;color:var(--fg2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .pv-stats>div:first-child{background:color-mix(in srgb,var(--accent,#2563eb) 10%,var(--card,#fff));border-color:color-mix(in srgb,var(--accent,#2563eb) 25%,transparent)}
+ .pv-stats>div:first-child b{color:var(--accent,#2563eb)}
+ .pv-tr-ic{font-size:22px}
+ .tr-b.tr-5,.tr-b.tr-6{color:#d97706}
+ .pv-trust.tr-l5 .pv-tr-ic,.pv-trust.tr-l6 .pv-tr-ic{background:linear-gradient(145deg,#fcd34d,#d97706)}
+ /* trust ladder + leaderboard sheet */
+ #trSheet{position:fixed;inset:0;z-index:6000;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,15,25,0);pointer-events:none;transition:background .25s}
+ #trSheet.on{background:rgba(10,15,25,.38);pointer-events:auto}
+ #trSheet .trs-in{position:relative;width:100%;max-width:480px;max-height:86vh;overflow-y:auto;background:var(--card);border-radius:22px 22px 0 0;
+   padding:18px 18px calc(env(safe-area-inset-bottom,0px) + 20px);box-shadow:var(--elev3);transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+ #trSheet.on .trs-in{transform:none}
+ .trs-x{position:absolute;top:12px;right:12px;width:32px;height:32px;border:0;border-radius:50%;background:var(--fill);color:var(--fg2);font:600 19px/1 system-ui;cursor:pointer}
+ .trs-hd{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;padding:6px 30px 8px}
+ .trs-emo{font-size:40px;line-height:1.1}.trs-hd b{font:800 19px var(--font-d,inherit);color:var(--fg)}.trs-hd small{font:500 12.5px var(--font,inherit);color:var(--fg2)}
+ .trs-p{margin:6px 2px 12px;font:500 13.5px/1.5 var(--font,inherit);color:var(--fg2)}.trs-p b{color:var(--fg)}
+ .trs-board{display:block;width:100%;padding:12px;border:0;border-radius:14px;background:var(--accent,#2563eb);color:#fff;font:700 14.5px var(--font,inherit);cursor:pointer;margin:0 0 12px}
+ .trl-list{display:flex;flex-direction:column;gap:6px}
+ .trl{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;background:var(--fill);opacity:.72}
+ .trl.done{opacity:.95}.trl.cur{opacity:1;background:color-mix(in srgb,var(--accent,#2563eb) 12%,var(--card,#fff));box-shadow:inset 0 0 0 1.5px var(--accent,#2563eb)}
+ .trl-e{font-size:24px;width:32px;text-align:center;flex:none}
+ .trl-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+ .trl-t b{font:800 14px var(--font,inherit);color:var(--fg)}.trl-t b em{font-style:normal;font-size:10.5px;padding:1px 6px;border-radius:99px;background:var(--accent,#2563eb);color:#fff;margin-left:4px;vertical-align:1px}
+ .trl-t small{font:500 12px var(--font,inherit);color:var(--fg2)}
+ .trl-bar{display:block;height:5px;border-radius:3px;background:var(--fill2);overflow:hidden;margin-top:5px}.trl-bar i{display:block;height:100%;background:var(--accent,#2563eb)}
+ .trl-nx{font-weight:700!important;color:var(--accent,#2563eb)!important}
+ .trl-n{display:flex;flex-direction:column;align-items:flex-end;flex:none}.trl-n b{font:800 14px var(--mono,inherit);color:var(--fg)}.trl-n small{font:600 11px var(--font,inherit);color:var(--fg2)}
+ .trs-tip{margin:12px 2px 0;font:500 12px/1.45 var(--font,inherit);color:var(--fg2)}
+ .trb-list{display:flex;flex-direction:column;gap:4px;margin-top:6px}.trb-load{padding:24px;text-align:center;color:var(--fg2);font:500 13.5px var(--font,inherit)}
+ .trb-row{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:14px;background:none;text-align:left;cursor:pointer;color:var(--fg);font:inherit}
+ .trb-row:nth-child(-n+3){background:var(--fill)}.trb-row.me{box-shadow:inset 0 0 0 1.5px var(--accent,#2563eb)}
+ .trb-rk{width:28px;text-align:center;font:800 15px var(--mono,inherit);color:var(--fg2);flex:none}
+ .trb-av{width:36px;height:36px;border-radius:50%;flex:none;background:var(--fill2) center/cover;display:grid;place-items:center;font:800 15px var(--font,inherit);color:var(--fg2)}
+ .trb-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}.trb-t b{font:700 14px var(--font,inherit);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.trb-t small{font:500 12px var(--font,inherit);color:var(--fg2)}
+ .trb-n{font:800 16px var(--mono,inherit);color:var(--accent,#2563eb);flex:none}
  .pv-btns{display:flex;gap:6px;margin-bottom:14px}
  .pv-btns button{flex:1;height:36px;border-radius:10px;border:0;background:var(--fill);color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer}
  .pv-btns button.pri{background:var(--accent);color:#fff}
@@ -4442,12 +4572,12 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #wcFab[hidden]{display:none!important}
  /* review mode: one family of marks -- white, an amber ring, the speech bubble with a star */
  #rvFab{position:fixed;z-index:1160;left:14px;top:calc(var(--bar-h,64px) + 6px);display:inline-flex;align-items:center;gap:6px;
-   height:32px;padding:0 13px 0 9px;border-radius:999px;border:1.5px solid rgba(244,180,0,.9);background:color-mix(in srgb,var(--card,#fff) 92%,transparent);
+   height:32px;padding:0 13px 0 9px;border-radius:999px;border:1.5px solid var(--accent,#2563eb);background:color-mix(in srgb,var(--card,#fff) 92%,transparent);
    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:var(--fg);font:800 12.5px/1 var(--font,Inter),system-ui;
    box-shadow:0 4px 14px rgba(15,23,42,.14);cursor:pointer;transition:background .2s,color .2s,transform .15s}
- #rvFab svg{width:17px;height:17px;color:#E0A100}
- #rvFab:hover{background:#FFF4CC}
- #rvFab.on svg{color:#2b2100}
+ #rvFab svg{width:17px;height:17px;color:var(--accent,#2563eb)}
+ #rvFab:hover{background:color-mix(in srgb,var(--accent,#2563eb) 10%,var(--card,#fff))}
+ #rvFab.on svg{color:#fff}
  #rvFab:active{transform:scale(.95)}
  body.nav-screen #rvFab,body.ly-open #rvFab,body.insp-open #rvFab,body.trk-open #rvFab,body.draw-on #rvFab,body.ts-open #rvFab,body.wcv-open #rvFab{display:none}
  /* the intro, any time: a small (i) beside the feedback button */
@@ -4460,15 +4590,15 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  body.nav-screen #infoFab,body.ly-open #infoFab,body.insp-open #infoFab,body.trk-open #infoFab,body.draw-on #infoFab,body.ts-open #infoFab,body.wcv-open #infoFab{display:none}
  .rv-btn.rv-btn{position:absolute!important;top:-14px;left:50%;right:auto;transform:translateX(-50%);z-index:60;display:grid!important;place-items:center;
    width:30px!important;min-width:0!important;height:30px!important;padding:0!important;margin:0!important;
-   border:2px solid #F4B400!important;border-radius:50%!important;background:var(--card,#fff)!important;color:#E0A100!important;
+   border:2px solid var(--accent,#2563eb)!important;border-radius:50%!important;background:var(--card,#fff)!important;color:var(--accent,#2563eb)!important;
    box-shadow:0 3px 10px rgba(15,23,42,.22)!important;cursor:pointer;animation:rvIn .22s ease-out both}
  .rv-btn.rv-btn svg{width:16px!important;height:16px!important}
  .rv-btn span{display:none}
  /* parts that start at the very top of the screen: the mark sits just inside */
  #lyPanel>.rv-btn,#tourSearch>.rv-btn,#wcv .wcv-top>.rv-btn,#feedTop>.rv-btn{top:4px}
  @keyframes rvIn{from{opacity:0;transform:translateX(-50%) scale(.6)}to{opacity:1;transform:translateX(-50%) scale(1)}}
- .rv-dot{position:absolute;top:-6px;right:-6px;z-index:61;width:22px;height:22px;border-radius:50%;background:var(--card,#fff);color:#E0A100;
-   border:1.5px solid #F4B400;box-sizing:border-box;display:grid;place-items:center;box-shadow:0 2px 6px rgba(15,23,42,.22);cursor:pointer;pointer-events:auto;
+ .rv-dot{position:absolute;top:-6px;right:-6px;z-index:61;width:22px;height:22px;border-radius:50%;background:var(--card,#fff);color:var(--accent,#2563eb);
+   border:1.5px solid var(--accent,#2563eb);box-sizing:border-box;display:grid;place-items:center;box-shadow:0 2px 6px rgba(15,23,42,.22);cursor:pointer;pointer-events:auto;
    animation:rvDot .22s ease-out both}
  .rv-dot svg{width:13px;height:13px}
  @keyframes rvDot{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
@@ -10944,7 +11074,7 @@ async function pvLoad(uid,boxId,own){
         .eq('user_id',uid).order('created_at',{ascending:false}).limit(60).then(r=>r.data||[],()=>[]),cnt('following_id'),cnt('follower_id'),
       Promise.resolve(sb.rpc('feedback_count',{uid})).then(r=>(r&&r.data)||0,()=>0)]);
     posts=pr;fol=f1;ing=f2;fb=f3;
-    if(posts.length){try{const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',posts.map(p=>p.id));trust=count||0;}catch(e){}}
+    if(posts.length){try{const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',posts.map(p=>p.id)).neq('user_id',uid);trust=count||0;}catch(e){}}
     // the user sheet's confirmation count is the same number
     if(boxId==='uvPV'){const el=document.getElementById('uvEndoN');if(el)el.textContent=trust;}}
   posts.forEach(r=>{const A=r.condition_data&&r.condition_data.activity;
@@ -10993,9 +11123,9 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
       :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
         +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
         +'<button class="pv-more" onclick="uvReportUser()" aria-label="Nutzer melden">⋯</button>')+'</div>'
-    +(()=>{const L=trustLevel(S.trust);return '<button class="pv-trust tr-l'+L.i+'" onclick="trustInfo()"><span class="pv-tr-ic">'+TRUST_FLAKE+'</span>'
+    +(()=>{const L=trustLevel(S.trust);return '<button class="pv-trust tr-l'+L.i+'" onclick="trustInfo('+L.n+')"><span class="pv-tr-ic">'+L.emo+'</span>'
       +'<span class="pv-tr-t"><b>'+escapeHtml(L.name)+' · Trust '+L.n+'</b><small>'+(L.next!=null?(L.next-L.n)+' Bestätigungen bis «'+escapeHtml(TRUST_LV[L.i+1][1])+'»':escapeHtml(L.sub))+'</small>'
-      +'<i class="pv-tr-bar"><i style="width:'+L.pct+'%"></i></i></span><span class="pv-tr-q">?</span></button>';})()
+      +'<i class="pv-tr-bar"><i style="width:'+L.pct+'%"></i></i></span><span class="pv-tr-q">›</span></button>';})()
     +(hi?'<div class="pv-hls">'+hi+'</div>':'')
     +'<div class="pv-week"><div class="pv-wk-h"><b>Diese Woche</b><span>12 Wochen</span></div>'
     +'<div class="pv-wk"><div><small>Distanz</small><b>'+(cw.d/1000).toFixed(1)+' km</b></div><div><small>Zeit</small><b>'+trkFmtT(cw.mv)+'</b></div><div><small>Höhenmeter</small><b>'+cw.up+' m</b></div></div>'+chart+'</div>'
@@ -11602,13 +11732,50 @@ function progTrustMap(){
 // Trust levels: every "Bestätigen" another user gives one of your reports is
 // a point. The levels make that visible -- and the same points already weight
 // your reports in the Gemeldetes Powder model (progReportWeight).
-const TRUST_LV=[[0,'Neu','neu dabei'],[3,'Bestätigt','erste bestätigte Meldungen'],[10,'Vertrauenswürdig','regelmässig bestätigt'],[30,'Lokalkenner','sehr oft bestätigt'],[75,'Schneeprofi','Top-Melder:in']];
+// [from points, name, what it says about you, emoji]
+const TRUST_LV=[[0,'Pistenküken','Amateur – frisch auf den Brettern','🐣'],
+  [3,'Spitzkehren-Azubi','die ersten Meldungen sind bestätigt','🥾'],
+  [10,'Pulverschnüffler:in','hat die Nase für Powder','👃'],
+  [25,'Spurleger:in','andere folgen deinen Spuren','🎿'],
+  [50,'Lokalkenner:in','kennt jeden Hang beim Vornamen','🏔️'],
+  [100,'Schneeflüsterer:in','der Schnee verrät dir alles','❄️'],
+  [200,'Bernhardiner-Legende','Legende der Community – mit Fässchen','🐕']];
+// how much more a report counts in «Gemeldetes Powder» at t points (= progReportWeight's trust factor)
+function trustWeight(t){return 1+PROG_TRUST_MAX*(t/(t+PROG_TRUST_HALF));}
 function trustLevel(n){n=n||0;let i=0;for(let k=0;k<TRUST_LV.length;k++)if(n>=TRUST_LV[k][0])i=k;
-  const nx=TRUST_LV[i+1];return {i,name:TRUST_LV[i][1],sub:TRUST_LV[i][2],n,next:nx?nx[0]:null,pct:nx?Math.round((n-TRUST_LV[i][0])/(nx[0]-TRUST_LV[i][0])*100):100};}
+  const nx=TRUST_LV[i+1];return {i,name:TRUST_LV[i][1],sub:TRUST_LV[i][2],emo:TRUST_LV[i][3],n,next:nx?nx[0]:null,pct:nx?Math.round((n-TRUST_LV[i][0])/(nx[0]-TRUST_LV[i][0])*100):100};}
 const TRUST_FLAKE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17M12 2l-2.2 2.4M12 2l2.2 2.4M12 22l-2.2-2.4M12 22l2.2-2.4"/></svg>';
 function trustBadge(n,compact){const L=trustLevel(n);if(!L.i&&compact)return '';
-  return '<span class="tr-b tr-'+L.i+'" title="Trust Score '+L.n+' · '+escapeHtml(L.name)+'">'+TRUST_FLAKE.repeat(Math.max(1,Math.min(3,L.i)))+(compact?'':'<em>'+escapeHtml(L.name)+'</em>')+'</span>';}
-function trustInfo(){toast('Trust Score: Jede Bestätigung, die andere deinen Meldungen geben, zählt +1. Bestätigte Melder:innen wiegen im Modell «Gemeldetes Powder» mehr.','info');}
+  return '<span class="tr-b tr-'+L.i+'" title="Trust Score '+L.n+' · '+escapeHtml(L.name)+'">'+TRUST_FLAKE.repeat(Math.max(1,Math.min(3,Math.ceil(L.i/2))))+(compact?'':'<em>'+escapeHtml(L.name)+'</em>')+'</span>';}
+// A sheet, reused by the trust ladder and the leaderboard.
+function trSheet(html){let o=document.getElementById('trSheet');
+  if(!o){o=document.createElement('div');o.id='trSheet';o.onclick=e=>{if(e.target===o)trSheetClose();};document.body.appendChild(o);}
+  o.innerHTML='<div class="trs-in" role="dialog"><button type="button" class="trs-x" aria-label="Schliessen" onclick="trSheetClose()">×</button>'+html+'</div>';
+  requestAnimationFrame(()=>o.classList.add('on'));}
+function trSheetClose(){const o=document.getElementById('trSheet');if(o)o.classList.remove('on');}
+// The ladder: every level, what it takes, what it does -- and where you are.
+function trustInfo(n){if(n==null)n=sbUser?progTrustOf(sbUser.id):0;const L=trustLevel(n);
+  const rows=TRUST_LV.map((v,i)=>{const cur=i===L.i,done=i<L.i,w=trustWeight(v[0]);
+    return '<div class="trl'+(cur?' cur':done?' done':'')+'"><span class="trl-e">'+v[3]+'</span><span class="trl-t"><b>'+escapeHtml(v[1])+(cur?' <em>Du</em>':'')+'</b><small>'+escapeHtml(v[2])+'</small>'
+      +(cur&&L.next!=null?'<i class="trl-bar"><i style="width:'+L.pct+'%"></i></i><small class="trl-nx">noch '+(L.next-n)+' bis «'+escapeHtml(TRUST_LV[i+1][1])+'»</small>':'')+'</span>'
+      +'<span class="trl-n"><b>'+v[0]+'+</b><small>×'+w.toFixed(2)+'</small></span></div>';}).reverse().join('');
+  trSheet('<div class="trs-hd"><span class="trs-emo">'+L.emo+'</span><b>'+escapeHtml(L.name)+'</b><small>Trust '+n+' · '+escapeHtml(L.sub)+'</small></div>'
+    +'<p class="trs-p">Jede Bestätigung, die <b>andere</b> deinen Meldungen geben, ist <b>+1 Punkt</b>. Je höher deine Stufe, desto stärker zählen deine Meldungen in «Gemeldetes Powder» (×-Faktor rechts).</p>'
+    +'<button type="button" class="trs-board" onclick="trustBoard()">🏆 Rangliste ansehen</button>'
+    +'<div class="trl-list">'+rows+'</div>'
+    +'<p class="trs-tip">Tipp: Fotos, Höhe und Exposition machen eine Meldung glaubwürdig – und bestätigungswürdig.</p>');}
+async function trustBoard(){
+  trSheet('<div class="trs-hd"><span class="trs-emo">🏆</span><b>Rangliste</b><small>Bestätigungen von anderen auf öffentlichen Beiträgen</small></div><div class="trb-list"><div class="trb-load">Lädt…</div></div>');
+  let rows=[];try{const{data,error}=await sb.rpc('trust_board',{lim:50});if(error)throw error;rows=data||[];}catch(e){}
+  const el=document.querySelector('#trSheet .trb-list');if(!el)return;
+  if(!rows.length){el.innerHTML='<div class="trb-load">Noch keine Rangliste – sei die erste Spürnase!</div>';return;}
+  const med=['🥇','🥈','🥉'];
+  el.innerHTML=rows.map((r,i)=>{const L=trustLevel(r.trust),me=sbUser&&r.user_id===sbUser.id,av=safeUrl(r.avatar_url);
+    return '<button type="button" class="trb-row'+(me?' me':'')+'" onclick="trSheetClose();viewUser(\''+jsArg(r.user_id)+'\',\''+jsArg(r.username||'User')+'\')">'
+      +'<span class="trb-rk">'+(med[i]||(i+1))+'</span>'
+      +'<span class="trb-av"'+(av?' style="background-image:url(\''+av+'\')"':'')+'>'+(av?'':escapeHtml((r.username||'?').slice(0,1).toUpperCase()))+'</span>'
+      +'<span class="trb-t"><b>'+escapeHtml(r.username||'User')+(me?' (du)':'')+'</b><small>'+L.emo+' '+escapeHtml(L.name)+' · '+r.posts+' Beiträge</small></span>'
+      +'<span class="trb-n">'+r.trust+'</span></button>';}).join('');}
 function progTrustOf(uid){if(!uid)return 0;return progTrustMap().get(uid)||0;}
 function progInvalidateTrust(){_progTrust=null;}
 // Weight of one report, 1.0 = unconfirmed post by an unknown author.
