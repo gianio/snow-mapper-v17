@@ -702,6 +702,18 @@ def _tour_routes(max_routes=4000, tol_m=60.0, min_len_m=1500.0, min_gain_m=250.0
     if not routes:
         return []
     print(f"[INT] {len(routes)} Routen von swisstopo.")
+    # The lines are a network (shared approaches, forks below the summit).
+    # Each way from a low end to a high end becomes a tour of its own, so
+    # every variant runs from its lowest to its highest point.
+    if dem is not None:
+        try:
+            from pipeline.tour_graph import climbs_from_lines
+            climbs = climbs_from_lines(routes, lambda lon, lat: _elev_at_lonlat(dem, lon, lat))
+            if climbs:
+                print(f"[INT] Routennetz -> {len(climbs)} Aufstiege (Tal bis hoechster Punkt).")
+                routes = climbs
+        except Exception as e:                   # noqa: BLE001
+            print(f"[INT] Routennetz nicht auswertbar, Linien einzeln: {e!r}")
 
     def simplify(coords):
         out = [coords[0]]
@@ -1251,9 +1263,11 @@ _BOOT_SPLIT = r"""<script>
     'Krusten werden abgeklopft','Die Temperatur wird nach Höhe verteilt','Die Zeitleiste wird gespurt','Stationen werden befragt'];
   for(var si=SENT.length-1;si>0;si--){var sj=Math.floor(Math.random()*(si+1)),st=SENT[si];SENT[si]=SENT[sj];SENT[sj]=st;}
   var sentI=0,sentT=null;
-  function sentNext(){var l=document.getElementById('bootTxt');if(!l)return;l.classList.remove('in');void l.offsetWidth;
-    l.textContent=SENT[sentI++%SENT.length];l.classList.add('in');}
-  function sentStart(){if(sentT)return;sentNext();sentT=setInterval(sentNext,2400);}
+  // each line stays at least 4 s: a slow fade out, the next one fades in
+  function sentNext(){var l=document.getElementById('bootTxt');if(!l)return;
+    if(!l.textContent){l.textContent=SENT[sentI++%SENT.length];return;}
+    l.classList.add('out');setTimeout(function(){if(!sentT)return;l.textContent=SENT[sentI++%SENT.length];l.classList.remove('out');},900);}
+  function sentStart(){if(sentT)return;sentT=setInterval(sentNext,5800);}
   function sentStop(){if(sentT){clearInterval(sentT);sentT=null;}}
   function bootDone(){sentStop();var e=document.getElementById('boot');if(!e)return;
     prog(1,'Fertig');e.classList.add('done');setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e);},300);
@@ -1544,6 +1558,13 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<script>/* iOS home-screen app: the viewport units come out short there (newer
+   iOS by more than the status bar), which cut the tab bar off at the bottom.
+   The screen's own height is the real one in that mode. */
+(function(){if(navigator.standalone!==true)return;var d=document.documentElement;d.classList.add('ios-pwa');
+function fit(){var p=innerHeight>=innerWidth,sh=p?Math.max(screen.height,screen.width):Math.min(screen.height,screen.width);
+  d.style.setProperty('--app-h',Math.max(innerHeight,d.clientHeight,sh)+'px');}
+fit();addEventListener('resize',fit);addEventListener('orientationchange',function(){setTimeout(fit,300);});})();</script>
 <meta name="theme-color" content="#ffffff"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <title>Snowmapper</title>
@@ -1736,8 +1757,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     every bottom sheet. There the root takes the large viewport (the whole
     screen) and becomes the containing block of the fixed layers, so
     bottom:0 means the real bottom edge. A Safari tab is not affected. */
+ html.ios-pwa,html.ios-pwa body{height:var(--app-h,100lvh)!important;bottom:auto!important}
  @media all and (display-mode: standalone){
-   html,body{height:100vh!important;height:100lvh!important;bottom:auto!important}
+   html,body{height:100vh!important;height:var(--app-h,100lvh)!important;bottom:auto!important}
    body{transform:translateZ(0)}
    /* the status bar is see-through: full-screen views get a solid strip under it */
    body.nav-screen::after,body.trk-open::after,body.wcv-open::after,body.rp-open::after{content:'';position:fixed;left:0;right:0;top:0;
@@ -2562,7 +2584,8 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  #boot .bt-flake circle{fill:var(--accent,#2563eb);stroke:none}
  @keyframes btSpin{to{transform:rotate(360deg)}}
  #bootTxt{font-size:15px;font-weight:600;min-height:1.3em}
- #bootTxt.in{animation:btTxt .45s ease}
+ #bootTxt{transition:opacity .9s ease,transform .9s ease;animation:btTxt .9s ease}
+ #bootTxt.out{opacity:0;transform:translateY(-3px)}
  @keyframes btTxt{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
  /* "sharper map ready" after a coarse start */
  #hiResChip{position:fixed;left:50%;top:calc(var(--bar-h,64px) + 48px);z-index:3000;
@@ -3870,6 +3893,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .tour-kpi span.on b{color:var(--accent)}
  .tour-prof{display:block;margin:2px 0 6px;border-radius:12px;background:var(--fill)}
  .tour-prof .tp-t{font:600 9px Inter,system-ui;fill:var(--fg2)}
+ .tp-cap{text-wrap:balance;margin:-2px 0 8px;font:500 11px var(--font,inherit);color:var(--fg2)}
  .tour-chips{display:flex;flex-wrap:wrap;gap:6px 10px;margin:4px 0 6px}
  .tour-chips .tc{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--fg)}
  .tour-chips .tc i{width:12px;height:12px;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
@@ -4527,12 +4551,45 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  .act-sh-map{width:100%;height:46px;border:0;border-radius:14px;background:var(--brand-grad,var(--accent));color:#fff;font:800 15px var(--font-d,inherit);margin-top:8px;cursor:pointer}
  #layersFab{position:relative}
  /* the active layer, named quietly at the top edge of the timeline card */
- #lyNow{position:fixed;left:26px;top:auto;z-index:1001;display:inline-flex;align-items:center;gap:5px;
-   max-width:60%;padding:0;border:0;background:none;cursor:pointer;
-   font:600 11px/1.2 var(--font,inherit);letter-spacing:.02em;color:var(--ink-900,#1b2230);opacity:.78;
-   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-   text-shadow:0 0 3px var(--card,#fff),0 0 6px var(--card,#fff),0 0 10px var(--card,#fff)}
+ /* a small frosted pill: readable over any map, still quiet */
+ /* profile activity on the map: its stats, and the way on to the post */
+ #actSum{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-h,70px) + 12px);z-index:5200;max-width:440px;margin:0 auto;
+   background:var(--card);border:1px solid var(--hair);border-radius:18px;box-shadow:var(--elev3);
+   transform:translateY(16px);opacity:0;pointer-events:none;transition:transform .25s ease,opacity .25s ease}
+ #actSum.on{transform:none;opacity:1;pointer-events:auto}
+ #actSum .as-main{display:flex;flex-direction:column;gap:10px;width:100%;padding:14px 16px;border:0;background:none;text-align:left;color:var(--fg);cursor:pointer;font:inherit}
+ #actSum .as-hd{display:flex;flex-direction:column;gap:2px;padding-right:28px}
+ #actSum .as-hd b{font:800 15.5px var(--font-d,inherit)}#actSum .as-hd small{font:500 12px var(--font,inherit);color:var(--fg2)}
+ #actSum .as-st{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+ #actSum .as-st span{display:flex;flex-direction:column;gap:1px}
+ #actSum .as-st small{font:600 11px var(--font,inherit);color:var(--fg2)}#actSum .as-st b{font:800 17px var(--font-d,inherit)}
+ #actSum .as-go{display:flex;align-items:center;justify-content:center;gap:4px;padding:9px;border-radius:12px;background:var(--fill);font:700 13.5px var(--font,inherit);color:var(--accent,#2563eb)}
+ #actSum .as-go svg{width:16px;height:16px}
+ #actSum .as-x{position:absolute;top:8px;right:8px;width:30px;height:30px;border:0;border-radius:50%;background:var(--fill);color:var(--fg2);font:600 18px/1 system-ui;cursor:pointer;z-index:1}
+ /* several tours under one tap: pick one */
+ #tourPick{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-h,70px) + 12px);z-index:5200;max-width:440px;margin:0 auto;
+   max-height:46vh;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--hair);border-radius:18px;box-shadow:var(--elev3);
+   transform:translateY(16px);opacity:0;pointer-events:none;transition:transform .22s ease,opacity .22s ease}
+ #tourPick.on{transform:none;opacity:1;pointer-events:auto}
+ #tourPick .tpk-hd{position:relative;padding:14px 48px 8px 16px;display:flex;flex-direction:column;gap:2px}
+ #tourPick .tpk-hd b{font:800 15.5px var(--font-d,inherit)}#tourPick .tpk-hd span{font:500 12px var(--font,inherit);color:var(--fg2)}
+ #tourPick .tpk-x{position:absolute;top:10px;right:10px;width:30px;height:30px;border:0;border-radius:50%;background:var(--fill);color:var(--fg2);font:600 18px/1 system-ui;cursor:pointer}
+ #tourPick .tpk-list{overflow-y:auto;padding:0 8px 8px}
+ #tourPick .tpk-list button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 8px;border:0;border-top:1px solid var(--hair);background:none;text-align:left;color:var(--fg);cursor:pointer;font:inherit}
+ #tourPick .tpk-list i{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:0 0 0 2px #fff,0 0 0 3px var(--hair)}
+ #tourPick .tpk-list span{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+ #tourPick .tpk-list b{font:700 14px var(--font,inherit);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #tourPick .tpk-list small{font:500 12px var(--font,inherit);color:var(--fg2)}
+ #tourPick .tpk-list em{font:800 14px var(--mono,inherit);font-style:normal}
+ #lyNow{position:fixed;left:22px;top:auto;z-index:1001;display:inline-flex;align-items:center;gap:6px;
+   max-width:calc(100% - 120px);padding:4px 10px 4px 8px;cursor:pointer;
+   border:1px solid var(--hair,rgba(0,0,0,.08));border-radius:999px;
+   background:color-mix(in srgb,var(--card,#fff) 82%,transparent);
+   -webkit-backdrop-filter:blur(12px) saturate(1.5);backdrop-filter:blur(12px) saturate(1.5);
+   font:650 12px/1.25 var(--font,inherit);letter-spacing:.01em;color:var(--fg,#1b2230);
+   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  #lyNow i{width:6px;height:6px;border-radius:50%;background:var(--accent,#2563eb);flex:none}
+ #lyNow small{font-weight:500;color:var(--fg2,#5b6472);overflow:hidden;text-overflow:ellipsis}
  #lyNow:empty{display:none}
  #layersFab .ly-fab-stack{position:absolute;right:4px;bottom:4px;width:15px;height:15px;border-radius:5px;background:var(--brand,#2D4A6E);color:#fff;display:grid;place-items:center}
  #layersFab .ly-fab-stack svg{width:10px;height:10px}
@@ -4658,8 +4715,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
  body.nav-vis #mapFabs{top:calc(env(safe-area-inset-top,0px) + 66px);justify-content:flex-end}
  #mapFabs #miniLegend{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
  /* legend and the button bar under it: one column, exactly the same width */
- #mapFabs #miniLegend,#mapFabs .mfab-grp{align-self:stretch;box-sizing:border-box}
- #mapFabs #miniLegend{width:auto!important;min-width:0}
+ #mapFabs .mfab-grp{align-self:stretch;box-sizing:border-box}
  #mapFabs #miniLegend::-webkit-scrollbar{display:none}
  body.nav-vis .leg-info{bottom:calc(var(--nav-h) + var(--btm-h,80px) + 150px)}
  body.nav-vis .feed-page.open:not(.side){bottom:var(--nav-h)}
@@ -4694,6 +4750,16 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    color:#111;font:700 22px/1 system-ui;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)}
  .fc-nav.prev{left:10px}.fc-nav.next{right:10px}
  @media (hover:hover){.fc-wrap:hover .fc-nav{display:flex}}
+ /* Like a photo app: the pictures run edge to edge, one swipe = one picture
+    (snap-stop), and the dots sit under the picture instead of on it. */
+ .feed-card .fc-wrap{margin:12px 0 26px;border-radius:0;overflow:visible}
+ .feed-card .fc-wrap.fc-post{aspect-ratio:4/5;max-height:74vh}
+ .fc-carousel{overscroll-behavior-x:contain;scroll-behavior:smooth}
+ .fc-slide{scroll-snap-stop:always}
+ .feed-card .fc-dots{bottom:-17px;gap:5px;align-items:center}
+ .feed-card .fc-dots i{width:6px;height:6px;border-radius:50%;background:var(--fg3,#b6bcc6);box-shadow:none;opacity:.55;
+   transition:transform .25s ease,opacity .25s ease,background .25s ease}
+ .feed-card .fc-dots i.on{width:6px;border-radius:50%;background:var(--accent,#2563eb);opacity:1;transform:scale(1.15)}
 
  /* ── Desktop: tabs in the top bar, no bottom bar, no recording ── */
  .ab-tabs{display:none}
@@ -5453,7 +5519,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
     <div id="tlDetail">
       <button class="tl-corner tl-corner-l tl-play" id="tlPlayBtn" hidden onclick="tlPlayToggle()" aria-label="Animation abspielen"><svg viewBox="0 0 24 24"><path class="pl" d="M8 5.5v13l11-6.5z"/><path class="pa" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>
       <button class="tl-corner tl-corner-r" id="tlTomorrowBtn" onclick="tlGotoTomorrow()" title="Fenster bis morgen Abend">Bis morgen</button>
-      <canvas id="timeline" width="900" height="81" style="width:100%;height:81px;border-radius:10px;cursor:default;margin-top:0"></canvas>
+      <canvas id="timeline" width="900" height="88" style="width:100%;height:88px;border-radius:10px;cursor:default;margin-top:0"></canvas>
       <div id="tlExtended">
         <div class="tl-steprow">
           <button id="tlPrev" class="tl-step">◀ Früher</button>
@@ -5557,7 +5623,7 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
 <p class="auth-note" id="authNote">Karte &amp; Prognosen funktionieren ohne Konto — du brauchst es nur zum Melden, für den Feed und dein Profil.</p>
 <form id="authForm" onsubmit="authSubmit(event)" novalidate>
 <input type="text" id="authUser" placeholder="Username" autocomplete="username" style="display:none"/>
-<input type="email" id="authEmail" placeholder="E-Mail" autocomplete="email" required/>
+<input type="email" id="authEmail" name="email" placeholder="E-Mail" autocomplete="username email" required/>
 <input type="password" id="authPass" placeholder="Passwort" autocomplete="current-password" required minlength="8"/>
 <input type="password" id="authPass2" placeholder="Passwort wiederholen" autocomplete="new-password" minlength="8" style="display:none"/>
 <label class="auth-show" id="authShowWrap"><input type="checkbox" id="authShowPw" onchange="window.authPwShow(this.checked)"/> Passwort anzeigen</label>
@@ -6031,6 +6097,10 @@ const I18N_DICT={
 "Bewölkung":["Cloud cover","Nébulosité","Nuvolosità"],
 "Bewölkung [%]":["Cloud cover [%]","Nébulosité [%]","Nuvolosità [%]"],
 "Bis morgen":["Until tomorrow","Jusqu'à demain","Fino a domani"],
+"Farbe = Schneeart / Neuschnee · Füllung = Schneehöhe, voll ab 1 m":["Colour = snow type / new snow · fill = snow depth, full from 1 m","Couleur = type de neige / neige fraîche · remplissage = hauteur de neige, plein dès 1 m","Colore = tipo di neve / neve fresca · riempimento = altezza neve, pieno da 1 m"],
+"Welche Tour?":["Which tour?","Quel itinéraire ?","Quale gita?"],
+"Routen an dieser Stelle":["routes at this spot","itinéraires à cet endroit","percorsi in questo punto"],
+"Schneetyp zu diesem Zeitpunkt":["Snow type at this time","Type de neige à ce moment","Tipo di neve in questo momento"],
 "Bisher gemeldet":["Reported so far","Déjà signalé","Segnalato finora"],
 "Bitte Standort auf der Karte setzen.":["Please set the location on the map.","Place le lieu sur la carte.","Imposta la posizione sulla mappa."],
 "Breiter":["Wider","Plus large","Più largo"],
@@ -7259,7 +7329,9 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   // day labels and the time readouts have to go, or there is no room left for
   // the bars at all.
   const compact=ch<56;
-  const topPad=compact?3:17,botPad=compact?3:19;
+  // the top row carries the time readouts, the scale and the «Bis morgen»
+  // button: bars start below it so nothing sits on top of them
+  const topPad=compact?3:27,botPad=compact?3:19;
   const nx=tvX(nowIdx,cw),x1=tvX(a,cw),x2=tvX(b,cw),baseY=ch-botPad;
   const single=tlSingleMode();
   document.body.classList.toggle('tl-va',layer==='snowpack');
@@ -7318,7 +7390,7 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   // Rescaling each bar's fraction of the tallest bar in view (mx -- the same
   // denominator the bar HEIGHT already uses) onto the SLF colour ramp's full
   // span keeps the exact palette/order while actually using all of it.
-  let mx=0;for(const s of hSnow)if(s>mx)mx=s;mx=Math.max(.05,mx);
+  let mx=0;for(const s of hSnow)if(s>mx)mx=s;const mx0=mx;mx=Math.max(.05,mx);
   const slfTop=SB[SB.length-1];
   const barH=Math.max(6,ch-topPad-botPad-2),bw=Math.max(2,cw/tvSpan());
   for(let t=Math.max(0,Math.floor(tv0));t<Math.min(T,Math.ceil(tv1)+1);t++){
@@ -7330,6 +7402,14 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     // the user picked: shading it made a phantom window trail the handle.
     ctx2.globalAlpha=single?(fut?.8:.6):(inSel?(fut?1:.7):.28);
     rr(x+.5,baseY-h,Math.max(bw-1,1.8),h,Math.min(2.5,bw/2.2));ctx2.fill();ctx2.globalAlpha=1;}
+  // scale: a faint line where the tallest bar ends, labelled with its rate
+  // (mean snowfall over the map per hour), so a bar's height means something
+  if(!compact&&mx0>=.05){const yT=Math.round(baseY-barH)+.5;
+    ctx2.save();ctx2.strokeStyle=_P.mut;ctx2.globalAlpha=.35;ctx2.setLineDash([2,3]);ctx2.lineWidth=1;
+    ctx2.beginPath();ctx2.moveTo(0,yT);ctx2.lineTo(cw,yT);ctx2.stroke();ctx2.restore();
+    // left, or right when the play button holds the left corner
+    ctx2.fillStyle=_P.mut;ctx2.font='600 9.5px Inter,system-ui';ctx2.textAlign=single?'right':'left';
+    ctx2.fillText(tr('max')+' '+(mx0<10?mx0.toFixed(1):Math.round(mx0))+' cm/h',single?cw-4:4,yT-3);ctx2.textAlign='left';}
   if(single){
     // "Powder zu diesem Zeitpunkt": one point, not a range -- a full-height
     // accent line and a single rounded grab handle, no window-length pill
@@ -9438,7 +9518,7 @@ function tourVaScoreOne(t,E0){
   caveats.push('Modellierte Schneeoberfläche, keine Lawinenbeurteilung. Das Bulletin des SLF bleibt massgebend.');
   const shares={};for(const k in sh)shares[k]=sh[k]/tot;
   return {id:t.id,name:t.name||'Skitour',powder,sulz,score:powder,cls,shares,clamped,caveats,when:tourVa.when,
-          powderCm:pwW?Math.round(pwS/pwW):null,hsCm:hsMean!=null?Math.round(hsMean):null,gain:g.gain,len:g.len,maxSlope:g.maxSlope};
+          powderCm:pwW?Math.round(pwS/pwW):null,hsCm:hsMean!=null?Math.round(hsMean):null,hs,gain:g.gain,len:g.len,maxSlope:g.maxSlope};
 }
 // The score of a route right now: SNOWPACK when the frame is ready, the
 // powder model otherwise.
@@ -9517,13 +9597,45 @@ function tourBuildLayer(){
     const casing=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+3,opacity:.9,interactive:false,lineCap:'round',lineJoin:'round'});
     const line=L.polyline(latlngs,{renderer:tourRenderer,color:'rgb('+TOUR_GREY.join(',')+')',weight:w,opacity:.95,interactive:true,lineCap:'round',lineJoin:'round'});
     line.on('click',e=>{if(!tourZoomOk()||!tourVisible(t)||(tourIso&&tourIso!==t))return;
-      try{if(e&&e.originalEvent)L.DomEvent.stopPropagation(e);}catch(_){}try{haptic(4);}catch(e2){}tourOpen(t,tsOpen());});
+      try{if(e&&e.originalEvent)L.DomEvent.stopPropagation(e);}catch(_){}try{haptic(4);}catch(e2){}
+      // where tours share a stretch, a tap hits all of them: choose first
+      const hits=tourIso?[t]:tourHits(e.latlng);
+      if(hits.length>1)tourPickShow(hits);else tourOpen(hits[0]||t,tsOpen());});
     tourLayerGroup.addLayer(glow);tourLayerGroup.addLayer(casing);tourLayerGroup.addLayer(line);
     t._glow=glow;t._casing=casing;t._line=line;
   });
   setTimeout(tourPaintScores,0);
   return tourLayerGroup;
 }
+// every visible tour within a finger's width of the tap, nearest first
+function tourHits(ll){const P=map.latLngToContainerPoint(ll),tol=16,out=[];
+  const pad=map.containerPointToLatLng([P.x+tol,P.y+tol]),d=Math.max(Math.abs(pad.lat-ll.lat),Math.abs(pad.lng-ll.lng));
+  tourList().forEach(t=>{if(!t._line||!t.coords||!tourVisible(t))return;
+    if(!t._bb){let a=90,b=-90,c=180,e=-180;t.coords.forEach(q=>{a=Math.min(a,q[1]);b=Math.max(b,q[1]);c=Math.min(c,q[0]);e=Math.max(e,q[0]);});t._bb=[a,b,c,e];}
+    const B=t._bb;if(ll.lat<B[0]-d||ll.lat>B[1]+d||ll.lng<B[2]-d||ll.lng>B[3]+d)return;
+    let best=1e9,prev=null;
+    for(const q of t.coords){const c=map.latLngToContainerPoint([q[1],q[0]]);
+      if(prev){const dx=c.x-prev.x,dy=c.y-prev.y,l2=dx*dx+dy*dy;let f=l2?((P.x-prev.x)*dx+(P.y-prev.y)*dy)/l2:0;f=Math.max(0,Math.min(1,f));
+        const ex=prev.x+f*dx-P.x,ey=prev.y+f*dy-P.y,dd=ex*ex+ey*ey;if(dd<best)best=dd;}
+      prev=c;}
+    if(best<=tol*tol)out.push([best,t]);});
+  return out.sort((x,y)=>x[0]-y[0]).map(x=>x[1]);}
+function tourPickShow(ts){let el=document.getElementById('tourPick');
+  if(!el){el=document.createElement('div');el.id='tourPick';document.body.appendChild(el);}
+  const km=m=>m!=null?(m/1000).toFixed(m>=10000?0:1)+' km':'';
+  el.innerHTML='<div class="tpk-hd"><b>'+tr('Welche Tour?')+'</b><span>'+ts.length+' '+tr('Routen an dieser Stelle')+'</span>'
+    +'<button type="button" class="tpk-x" aria-label="Schliessen" onclick="tourPickHide()">×</button></div><div class="tpk-list">'
+    +ts.map(t=>{const r=tourScore(t),v=tourVal(r);
+      return '<button type="button" data-id="'+jsArg(t.id)+'" onclick="tourPickGo(this.dataset.id)" onpointerenter="tourPickHi(this.dataset.id,1)" onpointerleave="tourPickHi(this.dataset.id,0)">'
+        +'<i style="background:'+tourColor(r)+'"></i><span><b>'+escapeHtml(t.name||'Skitour')+'</b><small>'
+        +[t.lo&&t.lo[2]!=null?Math.round(t.lo[2])+'–'+Math.round((t.hi&&t.hi[2])||0)+' m':'',t.gain!=null?'↑ '+t.gain+' m':'',km(t.len)].filter(Boolean).join(' · ')
+        +'</small></span>'+(v>=0?'<em>'+v+' %</em>':'')+'</button>';}).join('')+'</div>';
+  requestAnimationFrame(()=>el.classList.add('on'));}
+function tourPickHide(){const el=document.getElementById('tourPick');if(el)el.classList.remove('on');}
+function tourPickHi(id,on){const t=tourList().find(x=>String(x.id)===String(id));if(!t||!t._line)return;
+  const w=tourW();t._line.setStyle({weight:on?w+3:w});if(on)t._line.bringToFront();}
+function tourPickGo(id){tourPickHide();const t=tourList().find(x=>String(x.id)===String(id));if(t)tourOpen(t,tsOpen());}
+map.on('click',()=>tourPickHide());
 let _tourZok=null;
 map.on('zoomend',()=>{if(!ovOn.skitourVec)return;const zok=tourZoomOk();
   if(zok!==_tourZok){_tourZok=zok;tourPaintScores();}
@@ -9605,16 +9717,24 @@ function tourProfileSVG(t,r){
   const pad=Math.max(40,(hi-lo)*.12);lo-=pad;hi+=pad;
   const X=d=>L0+d/len*(W-L0-R),Y=e=>T0+(1-(e-lo)/(hi-lo))*(H-T0-B);
   let svg='';const idx=new Map(g.segs.map((s,i)=>[s,i]));
-  for(let i=1;i<segs.length;i++){const a0=segs[i-1],a1=segs[i],c=r&&r.cls?r.cls[idx.get(a1)]:-1;
-    svg+='<path d="M'+X(a0.dist).toFixed(1)+' '+Y(a0.el).toFixed(1)+'L'+X(a1.dist).toFixed(1)+' '+Y(a1.el).toFixed(1)
-      +'L'+X(a1.dist).toFixed(1)+' '+(H-B)+'L'+X(a0.dist).toFixed(1)+' '+(H-B)+'Z" fill="'+tourClassColor(c)+'"'+(c<0?' fill-opacity=".45"':'')+'/>';}
+  // colour = snow type (powder by its new-snow depth); how far the colour
+  // fills the column under the line = total snow depth, full from 1 m up
+  const base=H-B,col=(x0,y0,x1,y1,fill,op)=>'<path d="M'+x0.toFixed(1)+' '+y0.toFixed(1)+'L'+x1.toFixed(1)+' '+y1.toFixed(1)
+      +'L'+x1.toFixed(1)+' '+base+'L'+x0.toFixed(1)+' '+base+'Z" fill="'+fill+'"'+(op<1?' fill-opacity="'+op+'"':'')+'/>';
+  for(let i=1;i<segs.length;i++){const a0=segs[i-1],a1=segs[i],k=idx.get(a1),c=r&&r.cls?r.cls[k]:-1,fc=tourClassColor(c);
+    const x0=X(a0.dist),x1=X(a1.dist),y0=Y(a0.el),y1=Y(a1.el),hs=r&&r.hs?r.hs[k]:NaN;
+    if(c<0||!isFinite(hs)){svg+=col(x0,y0,x1,y1,fc,.45);continue;}
+    const f=Math.max(0,Math.min(1,hs/100));
+    if(f<1)svg+=col(x0,y0,x1,y1,fc,.18);
+    if(f>0)svg+=col(x0,base-f*(base-y0),x1,base-f*(base-y1),fc,1);}
   let line='';segs.forEach((s,i)=>{line+=(i?'L':'M')+X(s.dist).toFixed(1)+' '+Y(s.el).toFixed(1);});
   svg+='<path d="'+line+'" fill="none" stroke="var(--fg)" stroke-width="1.4" stroke-linejoin="round"/>';
   const ticks=[];const st=len>8000?2000:len>3000?1000:500;for(let d=0;d<=len;d+=st)ticks.push(d);
   svg+=ticks.map(d=>'<text x="'+X(d).toFixed(1)+'" y="'+(H-6)+'" class="tp-t" text-anchor="middle">'+(d/1000).toFixed(d%1000?1:0)+'</text>').join('');
   svg+='<text x="'+(W-R)+'" y="'+(H-6)+'" class="tp-t" text-anchor="end">km</text>';
   [lo+pad,hi-pad].forEach(e=>{svg+='<text x="'+(L0-4)+'" y="'+(Y(e)+3).toFixed(1)+'" class="tp-t" text-anchor="end">'+Math.round(e)+'</text>';});
-  return '<svg class="tour-prof" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Höhenprofil mit Schneeart entlang der Route">'+svg+'</svg>';
+  return '<svg class="tour-prof" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Höhenprofil mit Schneeart entlang der Route">'+svg+'</svg>'
+    +(r&&r.hs?'<p class="tp-cap">'+tr('Farbe = Schneeart / Neuschnee · Füllung = Schneehöhe, voll ab 1 m')+'</p>':'');
 }
 function tourSheetRender(t,r){
   setTimeout(()=>{try{tpRender();}catch(e){}},0);
@@ -10268,9 +10388,12 @@ async function trkKeep(post){
   trkRec=null;trkSaveRec();trkGpsStop();trkWake(false);
   if(trkLine){trkLine.setLatLngs([]);}
   if(trkGuideLine){map.removeLayer(trkGuideLine);trkGuideLine=null;}trkGuide=null;
-  if(post&&d.vis!=='private'){const ok=await trkPost(d);if(!ok){trkView='list';trkRender();return;}}
-  else toast('Aktivität gespeichert','ok');
+  // the save sheet closes right away; posting carries on in the background
+  // (the detail shows "Wird gepostet…"), so a slow connection can't leave
+  // the button there to be tapped a second time
   trkDraft=null;trkCur=d.id;trkView='detail';trkRender();
+  if(post&&d.vis!=='private'){if(await trkPost(d)&&trkCur===d.id&&trkView==='detail')trkRender();}
+  else toast('Aktivität gespeichert','ok');
 }
 function trkDiscard(){
   if(!confirm('Aktivität verwerfen? Die Aufzeichnung geht verloren.'))return;
@@ -10281,10 +10404,20 @@ function trkDiscard(){
 }
 
 // -- posting -----------------------------------------------------------------
+// activities being posted right now: a second tap (or a retry while the
+// first request still hangs on a bad connection) must not post twice
+const _trkPosting=new Set();
 async function trkPost(a){
   if(!sb){toast('Keine Verbindung zum Server','err');return false;}
   if(!sbUser){authShow();toast('Zum Posten anmelden – die Aktivität ist gespeichert.','info');return false;}
+  if(a.postedId||_trkPosting.has(a.id))return !!a.postedId;
+  _trkPosting.add(a.id);try{trkRender();}catch(e){}
   toast('Aktivität wird gepostet…','info');
+  // the post's id is fixed before the first try: if a request reached the
+  // server but its answer got lost, the retry hits the same id instead of
+  // creating a second post
+  if(!a.postUid){a.postUid=(crypto.randomUUID?crypto.randomUUID():'10000000-1000-4000-8000-100000000000'.replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)));
+    try{await trkPut(a);}catch(e){}}
   try{
     const urls=[],flat0=trkLL(a.segs),repI=a.rep!=null?a.rep:trkRepDefault(flat0);
     let mapUrl=null;
@@ -10316,15 +10449,18 @@ async function trkPost(a){
     const row={user_id:sbUser.id,location:'POINT('+top[2]+' '+top[1]+')',primary_categories:['tour'],subtype:trkTypeLbl(a.type),
       condition_data:cd,image_url:urls[0]||null,caption:a.desc?(a.name+'\n'+a.desc):a.name,completion_score:(a.snow||sp.length)?85:70,
       captured_at:new Date(a.start).toISOString()};
-    await withThumb(row);
-    let{data,error}=await sb.from('reports').insert(Object.assign({visibility:'followers'},row)).select('id').single();
-    if(error&&/visibility/i.test(error.message||'')){({data,error}=await sb.from('reports').insert(row).select('id').single());}
-    if(error)throw error;
-    a.postedId=data&&data.id;await trkPut(a);
+    await withThumb(row);row.id=a.postUid;
+    const already=async()=>{try{const{data}=await sb.from('reports').select('id').eq('id',a.postUid).maybeSingle();return !!data;}catch(e){return false;}};
+    let{error}=await sb.from('reports').insert(Object.assign({visibility:'followers'},row));
+    if(error&&/visibility/i.test(error.message||'')){({error}=await sb.from('reports').insert(row));}
+    // duplicate id = an earlier try already went through
+    if(error&&!(error.code==='23505'||/duplicate key/i.test(error.message||''))&&!(await already()))throw error;
+    a.postedId=a.postUid;await trkPut(a);
     toast('Aktivität gepostet','ok');try{haptic(14);}catch(e){}
     try{loadDbReports();}catch(e){}
     return true;
-  }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e),'err');return false;}
+  }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e)+' – die Aktivität ist gespeichert, du kannst es nochmals versuchen.','err');return false;}
+  finally{_trkPosting.delete(a.id);if(trkView==='detail'&&trkCur===a.id)try{trkRender();}catch(e){}}
 }
 function trkSnowCD(a,flat0,cd){
   const sp=(a.snowPts||[]).filter(p=>flat0[p.i]);
@@ -10582,7 +10718,7 @@ async function trkRender(){
       +(a.snow?'<div class="trk-meta">Schnee: <b>'+escapeHtml(a.snow)+(a.snow==='Pulver'&&a.depth?' '+a.depth+' cm':'')+'</b>'+(a.stars?' · '+'★'.repeat(a.stars):'')+'</div>':'')
       +((a.photos||[]).length?'<div class="trk-photos">'+a.photos.map(b=>'<div class="trk-ph"><img src="'+URL.createObjectURL(b)+'" alt=""></div>').join('')+'</div>':'')
       +'</div><div class="trk-actions"><button class="trk-a sec danger" onclick="trkDelete(\''+a.id+'\')">Löschen</button><button class="trk-a sec" onclick="trkEdit(\''+a.id+'\')">Bearbeiten</button>'
-      +(a.postedId?'<button class="trk-a sec" disabled>Gepostet ✓</button>':'<button class="trk-a pri" onclick="trkPostId(\''+a.id+'\')">Posten</button>')+'</div>';
+      +(a.postedId?'<button class="trk-a sec" disabled>Gepostet ✓</button>':_trkPosting.has(a.id)?'<button class="trk-a sec" disabled>Wird gepostet…</button>':'<button class="trk-a pri" onclick="trkPostId(\''+a.id+'\')">Posten</button>')+'</div>';
     return;}
 }
 const TRK_GPX='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>';
@@ -10891,10 +11027,27 @@ function pvOpenPost(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return
 function pvOpenPostOld(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;const cd=r.condition_data||{};pvClose();
   if(cd.activity&&cd.activity.track){setTimeout(()=>trkShowOnMap(cd.activity.track,cd.activity.rough),250);return;}
   const ll=parseGeo(r.location);if(ll)feedFlyTo(ll[0],ll[1]);}
-function pvOpenAct(boxId,i){const S=pvState[boxId],a=S&&S.acts[i];if(!a)return;if(a.local||!a.post)pvClose();
+// An activity from a profile goes straight to the map: the route drawn, a
+// summary card with the stats beside it; the card leads on to the post with
+// its pictures and description.
+function pvOpenAct(boxId,i){const S=pvState[boxId],a=S&&S.acts[i];if(!a)return;pvClose();
   if(a.local){trkCur=a.id;trkView='detail';trkOpen();return;}
-  if(a.post){feedOpenUser(S.uid,pvName(S),a.post);return;}
-  setTimeout(()=>trkShowOnMap(a.track),250);}
+  try{navGo('map');}catch(e){}
+  setTimeout(()=>{trkShowOnMap(a.track);actSumShow(a,S.uid,pvName(S));},250);}
+function actSumShow(a,uid,name){let el=document.getElementById('actSum');
+  if(!el){el=document.createElement('div');el.id='actSum';document.body.appendChild(el);}
+  const d=a.start?new Date(a.start).toLocaleDateString(LOCALE(),{weekday:'short',day:'numeric',month:'short'}):'';
+  el.innerHTML='<button type="button" class="as-x" aria-label="Schliessen" onclick="actSumHide(true)">×</button>'
+    +'<button type="button" class="as-main"'+(a.post?' onclick="actSumPost(\''+jsArg(uid)+'\',\''+jsArg(name)+'\',\''+jsArg(a.post)+'\')"':'')+'>'
+    +'<span class="as-hd"><b>'+escapeHtml(a.name||'Aktivität')+'</b><small>'+escapeHtml(d)+'</small></span>'
+    +'<span class="as-st"><span><small>Distanz</small><b>'+trkFmtD(a.dist||0)+'</b></span><span><small>Aufstieg</small><b>'+(a.up||0)+' m</b></span>'
+    +'<span><small>Zeit</small><b>'+trkFmtT(a.moving||0)+'</b></span></span>'
+    +(a.post?'<span class="as-go">Beitrag ansehen<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>':'')
+    +'</button>';
+  requestAnimationFrame(()=>el.classList.add('on'));}
+function actSumHide(clear){const el=document.getElementById('actSum');if(el)el.classList.remove('on');
+  if(clear&&trkShown){map.removeLayer(trkShown);trkShown=null;}}
+function actSumPost(uid,name,post){actSumHide(false);feedOpenUser(uid,name,post);}
 async function trkProfRender(){const el=document.getElementById('profActs');if(!el)return;let list=[];try{list=await trkAll();}catch(e){}
   el.innerHTML=list.length?list.slice(0,30).map(a=>{const s=a.stats||{};
     return '<button class="pa-card" onclick="profClose();trkCur=\''+a.id+'\';trkView=\'detail\';trkOpen()">'+trkThumb(trkLL(a.segs),160,100,'',a.rep)
@@ -12046,9 +12199,30 @@ function chMask(){if(_chMask)return _chMask;
     c.width=1;c.height=1;
   }catch(e){m.fill(1);}
   return (_chMask=m);}
-function setRaster(get,border){const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;const chm=chMask();
+function setRaster(get,border){if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;const chm=chMask();
   for(let p=0;p<NP;p++){const r=(inDomainEdge(p)||!chm[p])?null:get(p);const o=p*4;if(r){d[o]=r[0];d[o+1]=r[1];d[o+2]=r[2];d[o+3]=r[3]==null?210:r[3];if(cls)cls[p]=r[4];}else{d[o+3]=0;if(cls)cls[p]=-999;}}
   if(border){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=y*W+x;if(cls[p]==-999)continue;const rt=x<W-1?cls[p+1]:cls[p],bt=y<H-1?cls[p+W]:cls[p];if(rt!=cls[p]||bt!=cls[p]){const o=p*4;d[o]=20;d[o+1]=20;d[o+2]=30;d[o+3]=230;}}}
+  cx.putImageData(img,0,0);}
+// Bands with contour lines, like a map's isolines: the cell values are
+// interpolated onto a k-times finer grid, coloured by band (no blended
+// in-between colours) and every band edge gets a faint line, so the steps
+// read as snow levels. val(p) gives the cell value or null.
+function snowBand(v){if(v==null||v<SB[0])return -1;let j=0;while(j+1<SB.length&&v>=SB[j+1])j++;return Math.min(j,SB.length-2,RGB.length-1);}
+function setRasterIso(val,alpha,k){const chm=chMask(),V=new Float32Array(NP);
+  for(let p=0;p<NP;p++){const v=(inDomainEdge(p)||!chm[p])?null:val(p);V[p]=v==null?NaN:v;}
+  const w=W*k,h=H*k;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
+  const img=cx.createImageData(w,h),d=img.data,B=new Int8Array(w*h);
+  for(let Y=0;Y<h;Y++){const fy=Math.min(H-1,Math.max(0,(Y+.5)/k-.5)),y0=fy|0,y1=Math.min(H-1,y0+1),ty=fy-y0;
+    for(let X=0;X<w;X++){const fx=Math.min(W-1,Math.max(0,(X+.5)/k-.5)),x0=fx|0,x1=Math.min(W-1,x0+1),tx=fx-x0,q=Y*w+X;
+      // outside the data (nearest cell empty) stays empty: keeps the outline
+      if(isNaN(V[(Math.round(fy))*W+Math.round(fx)])){B[q]=-1;continue;}
+      let su=0,sw=0;const add=(p,wt)=>{const v=V[p];if(!isNaN(v)&&wt>0){su+=v*wt;sw+=wt;}};
+      add(y0*W+x0,(1-tx)*(1-ty));add(y0*W+x1,tx*(1-ty));add(y1*W+x0,(1-tx)*ty);add(y1*W+x1,tx*ty);
+      B[q]=sw?snowBand(su/sw):-1;}}
+  for(let q=0;q<w*h;q++){const bq=B[q];if(bq<0)continue;const o=q*4,c=RGB[bq],X=q%w;
+    const edge=(X<w-1&&B[q+1]!==bq)||(q+w<w*h&&B[q+w]!==bq);
+    // the line is a darker shade of the band itself: present, but faint
+    const f=edge?.8:1;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=edge?Math.min(255,alpha+30):alpha;}
   cx.putImageData(img,0,0);}
 // Min / max / sum of an hourly uint8 cube over the window [a,b) for every
 // cell, in raw units, hour by hour (contiguous memory) instead of cell by
@@ -12077,7 +12251,8 @@ function winRaw(arr,key){const k=key+'|'+a+'|'+b;if(_ws.key===k)return _ws;
 function aggT(p,m){let mn=1e9,mx=-1e9,su=0,c=0,cold=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;if(v<0)cold++;}return m=="max"?mx:m=="min"?mn:m=="sub0"?cold:m=="max05"?mx:su/Math.max(1,c);}
 function renderRaster(){
   const _hid=legHideFn(layer);
-  if(layer=="snow"){const ca=a*NP,cb=b*NP;setRaster(p=>{const v=cum[cb+p]-cum[ca+p];if(_hid&&_hid(v))return null;const c=snowCol(v);return c?[c[0],c[1],c[2],170]:null;});}
+  // 3x finer bands on a coarse grid, 2x on the national one (scrub speed)
+  if(layer=="snow"){const ca=a*NP,cb=b*NP;setRasterIso(p=>{const v=cum[cb+p]-cum[ca+p];return _hid&&_hid(v)?null:v;},205,NP>50000?2:3);}
   else if(layer=="depth"){const cb2=b*NP;setRaster(p=>{const v=cum[cb2+p];if(v<1||(_hid&&_hid(v)))return null;const c=depthCol(v);return c?[c[0],c[1],c[2],215]:null;});}
   else if(layer=="temp"){const R=winRaw(TEMP,'temp'),tm=M.temp_mul,to=M.temp_off,c=Math.max(0,b-a);
     setRaster(p=>{if(!c)return null;const mn=R.mn[p]/tm-to,mx=R.mx[p]/tm-to,su=R.su[p]/tm-c*to;
@@ -12323,11 +12498,14 @@ function legSpec(l){
 // opens on the classes that answer its usual question (Skiqualität: powder
 // only); what you pick is remembered per layer.
 const LEG_DEFAULT={
-  'va:ski6':r=>r.k===3||r.k===4||r.k===5||r.k===8||r.k===9,   // Pulver 0–10 … > 40 cm
   temp:r=>r.hi<=10                           // unter 10 °C
 };
 const LEG_KEY='ssm_legsel_v2';
-let _legSel=(function(){try{return JSON.parse(localStorage.getItem(LEG_KEY)||'{}')||{};}catch(e){return {};}})();
+let _legSel=(function(){try{const o=JSON.parse(localStorage.getItem(LEG_KEY)||'{}')||{};
+  // snow quality now starts with every snow type on: a selection saved under
+  // the old powder-only default is dropped once
+  if(!localStorage.getItem('ssm_ski6_all')){delete o['va:ski6'];localStorage.setItem('ssm_ski6_all','1');localStorage.setItem(LEG_KEY,JSON.stringify(o));}
+  return o;}catch(e){return {};}})();
 function legKey(l){l=l||layer;return l==='snowpack'?'va:'+vaKey:l;}
 // These only explain their colours: every class always on the map.
 const LEG_FIXED=new Set(['wind','cloud','va:wind','snow','depth','temp','tsurf']);
@@ -12414,10 +12592,7 @@ function legInfoRender(){
   el.innerHTML='<div class="li-hd"><div><b>'+escapeHtml(sp.t)+'</b><span>Einheit: '+escapeHtml(sp.u||'–')+'</span></div>'
     +'<button type="button" class="tour-x" onclick="legInfoClose()" aria-label="Schliessen">×</button></div>'
     +(info?'<p class="li-desc">'+escapeHtml(info.d)+'</p>':(sp.va?'<p class="li-desc">'+escapeHtml(LY_TEXT.snowpack.d)+'</p>':''))
-    +body+(sp.va?vaNoteHTML():'')
-    +((typeof ovOn!=='undefined'&&ovOn.skitourVec&&tourList().length)?'<div class="li-tours"><b>Skitouren</b><div class="li-ramp" style="background:linear-gradient(90deg,'
-      +[0,8,50,100].map(v=>tourRamp(v)).join(',')+')"></div><div class="li-ticks"><span>0</span><span>50</span><span>100 %</span></div>'
-      +'<p class="li-note">Farbe = Anteil der Abfahrt mit '+(tourFocus==='sulz'?'Sulz':'Pulver')+' im SNOWPACK-Modell zur gewählten Zeit. Tour antippen für den Verlauf.</p></div>':'');
+    +body+(sp.va?vaNoteHTML():'');
 }
 addEventListener('pointerdown',e=>{if(!document.body.classList.contains('leg-open'))return;
   const t=e.target;if(t&&t.closest&&(t.closest('#legInfo')||t.closest('#miniLegend')))return;legInfoClose();},true);
@@ -12850,7 +13025,9 @@ function lyFabSync(){const b=document.getElementById('layersFab');if(!b)return;
   const name=it?tr(it.label):'';
   let n=document.getElementById('lyNow');
   if(!n){n=document.createElement('button');n.id='lyNow';n.type='button';n.onclick=()=>lyPanelOpen();document.body.appendChild(n);lyNowWatch();}
-  if(n.dataset.ly!==id){n.dataset.ly=id||'';n.innerHTML=name?'<i aria-hidden="true"></i>'+escapeHtml(name):'';n.title=tr('Ebenen');}
+  // snow quality is a moment, not a sum over the window: say so
+  const sub=id==='snowpack'?tr('Schneetyp zu diesem Zeitpunkt'):'';
+  if(n.dataset.ly!==id){n.dataset.ly=id||'';n.innerHTML=name?'<i aria-hidden="true"></i><span>'+escapeHtml(name)+'</span>'+(sub?'<small>· '+escapeHtml(sub)+'</small>':''):'';n.title=tr('Ebenen');}
   lyNowPlace();
   if(b.dataset.ly===id)return;b.dataset.ly=id||'';
   if(!b.dataset.menu){b.innerHTML=LY_MENU_SVG;b.dataset.menu='1';}
@@ -13393,7 +13570,7 @@ function navCur(){const B=document.body.classList,f=document.getElementById('fee
   if(pm&&pm.style.display&&pm.style.display!=='none')return 'you';
   if(B.contains('ts-open')||B.contains('tour-open'))return 'tours';
   return 'map';}
-function navGo(t){try{haptic(4);}catch(e){}try{repSheetToggle(false);}catch(e){}
+function navGo(t){try{haptic(4);}catch(e){}if(t!=='map')try{actSumHide(false);}catch(e){}try{repSheetToggle(false);}catch(e){}
   // tapping the tab that is already open goes back to the map
   if(t!=='map'&&navCur()===t){if(t==='rec'){try{trkClose();}catch(e){}}t='map';}
   if(t==='map')navClose();
@@ -15166,7 +15343,9 @@ else{const fb=document.getElementById('mapFeedFab');if(fb)fb.style.display='flex
 let authPendingEmail=null;
 function authShow(){const p=authPendingGet();
   if(p){authPendingEmail=p.email;authCodeType=p.type==='recovery'?'recovery':'signup';authMode='code';}else authMode='login';
-  authRender();document.getElementById('authOverlay').style.display='flex';}
+  authRender();document.getElementById('authOverlay').style.display='flex';
+  {const el=document.getElementById('authEmail');let m='';try{m=localStorage.getItem('ssm_last_email')||'';}catch(e){}
+   if(el&&!el.value&&m){el.value=m;setTimeout(()=>{const pw=document.getElementById('authPass');if(pw&&authMode==='login')pw.focus();},120);}}}
 function authHide(){document.getElementById('authOverlay').style.display='none';document.getElementById('authErr').textContent='';document.getElementById('authCodeErr').textContent='';}
 function authToggle(){authMode=authMode==='login'?'register':'login';authRender();}
 function authBackToForm(){authMode='login';authPendingSet(null);authRender();}
@@ -15318,6 +15497,8 @@ async function authSubmit(e){
   if(!sb){const er=document.getElementById('authErr');er.style.color='var(--danger)';
     er.textContent='Keine Verbindung zum Server. Prüfe dein Internet und versuche es nochmals.';return;}
   const email=document.getElementById('authEmail').value.trim();
+  // remembered for next time: the form opens with it filled in
+  try{if(email)localStorage.setItem('ssm_last_email',email);}catch(e){}
   const pass=document.getElementById('authPass').value;
   const errEl=document.getElementById('authErr');errEl.textContent='';errEl.style.color='var(--danger)';
   if(authMode==='forgot'){await authSendRecovery(email);return;}
@@ -17853,9 +18034,14 @@ function feedVisual(r,col){
 function feedWireCarousels(){document.querySelectorAll('.fc-carousel').forEach(c=>{if(c._w)return;c._w=1;
   const dots=document.getElementById('fcd-'+c.id.slice(5));
   const cnt=document.getElementById('fcn-'+c.id.slice(5));
-  c.addEventListener('scroll',()=>{const i=Math.round(c.scrollLeft/Math.max(1,c.clientWidth));
+  let raf=0,last=0;
+  c.addEventListener('scroll',()=>{if(raf)return;raf=requestAnimationFrame(()=>{raf=0;
+    const i=Math.round(c.scrollLeft/Math.max(1,c.clientWidth));if(i===last)return;last=i;
     if(dots)dots.querySelectorAll('i').forEach((d,k)=>d.classList.toggle('on',k===i));
-    if(cnt)cnt.textContent=(i+1)+'/'+c.children.length;},{passive:true});});}
+    if(cnt)cnt.textContent=(i+1)+'/'+c.children.length;
+    // the picture after the next one starts loading now, so a swipe never lands on a blank
+    const nx=c.children[i+1]&&c.children[i+1].querySelector('img');if(nx)nx.loading='eager';});},{passive:true});
+  const n1=c.children[1]&&c.children[1].querySelector('img');if(n1)n1.loading='eager';});}
 function fcStep(id,d){const c=document.getElementById('fcar-'+id);if(!c)return;
   const i=Math.max(0,Math.min(c.children.length-1,Math.round(c.scrollLeft/Math.max(1,c.clientWidth))+d));
   c.scrollTo({left:i*c.clientWidth,behavior:'smooth'});}
