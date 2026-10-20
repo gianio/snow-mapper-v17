@@ -7558,14 +7558,16 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     // the user picked: shading it made a phantom window trail the handle.
     ctx2.globalAlpha=single?(fut?.8:.6):(inSel?(fut?1:.7):.28);
     rr(x+.5,baseY-h,Math.max(bw-1,1.8),h,Math.min(2.5,bw/2.2));ctx2.fill();ctx2.globalAlpha=1;}
-  // scale: a faint line where the tallest bar ends, labelled with its rate
-  // (mean snowfall over the map per hour), so a bar's height means something
-  if(!compact&&mx0>=.05){const yT=Math.round(baseY-barH)+.5;
-    ctx2.save();ctx2.strokeStyle=_P.mut;ctx2.globalAlpha=.35;ctx2.setLineDash([2,3]);ctx2.lineWidth=1;
-    ctx2.beginPath();ctx2.moveTo(0,yT);ctx2.lineTo(cw,yT);ctx2.stroke();ctx2.restore();
-    // left, or right when the play button holds the left corner
-    ctx2.fillStyle=_P.mut;ctx2.font='600 9.5px Inter,system-ui';ctx2.textAlign=single?'right':'left';
-    ctx2.fillText(tr('max')+' '+(mx0<10?mx0.toFixed(1):Math.round(mx0))+' cm/h',single?cw-4:4,yT-3);ctx2.textAlign='left';}
+  // each snowfall "hill" carries its own peak rate (cm/h, mean over the map)
+  // just above its tallest bar, so the heights have a scale
+  if(!compact){ctx2.font='700 9.5px Inter,system-ui';ctx2.fillStyle=_P.mut;ctx2.textAlign='center';let lastR=-1e9;
+    for(const ev of snowEvents){if(ev[1]<tv0||ev[0]>tv1)continue;
+      let pk=ev[0];for(let t=ev[0];t<ev[1];t++)if(hSnow[t]>hSnow[pk])pk=t;
+      const v=hSnow[pk];if(v<.05)continue;
+      const x=tvX(pk,cw)+bw/2,y=baseY-Math.max(3,v/mx*barH)-4,lab=(v<10?v.toFixed(1):Math.round(v))+' cm/h',w=ctx2.measureText(lab).width;
+      if(x-w/2<lastR+6||x<w/2||x>cw-w/2)continue;
+      ctx2.fillText(lab,x,Math.max(9,y));lastR=x+w/2;}
+    ctx2.textAlign='left';}
   if(single){
     // "Powder zu diesem Zeitpunkt": one point, not a range -- a full-height
     // accent line and a single rounded grab handle, no window-length pill
@@ -11177,7 +11179,7 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
       :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
         +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
         +'<button class="pv-more" onclick="uvReportUser()" aria-label="Nutzer melden">⋯</button>')+'</div>'
-    +(()=>{const L=trustLevel(S.trust);return '<button class="pv-trust tr-l'+L.i+'" onclick="trustInfo('+L.n+')"><span class="pv-tr-ic">'+L.emo+'</span>'
+    +(()=>{const L=trustLevel(S.trust);return '<button class="pv-trust tr-l'+L.i+'" onclick="trustInfo('+L.n+')"><span class="pv-tr-ic">'+trustIco(L.i,24,'#fff')+'</span>'
       +'<span class="pv-tr-t"><b>'+escapeHtml(L.name)+' · Trust '+L.n+'</b><small>'+(L.next!=null?(L.next-L.n)+' Bestätigungen bis «'+escapeHtml(TRUST_LV[L.i+1][1])+'»':escapeHtml(L.sub))+'</small>'
       +'<i class="pv-tr-bar"><i style="width:'+L.pct+'%"></i></i></span><span class="pv-tr-q">›</span></button>';})()
     +(hi?'<div class="pv-hls">'+hi+'</div>':'')
@@ -11787,16 +11789,25 @@ function progTrustMap(){
 // a point. The levels make that visible -- and the same points already weight
 // your reports in the Gemeldetes Powder model (progReportWeight).
 // [from points, name, what it says about you, emoji]
-const TRUST_LV=[[0,'Sunntigsfahrer:in','Amateur – nur bei Sonnenschein unterwegs','🚙'],
-  [3,'Schneeflöckli','die ersten Meldungen sind bestätigt','❄️'],
-  [10,'Pulverschnüffler:in','riecht Powder von weitem','👃'],
-  [25,'Spurleger:in','andere folgen deinen Spuren','🎿'],
-  [50,'Powderhound','jagt jeden Zentimeter','🐕'],
-  [100,'Schneeflüsterer:in','der Schnee erzählt dir alles','🌨️'],
-  [200,'Yeti','Legende – oft gesucht, selten gesichtet','🦣']];
+// [from points, name, what it says about you, icon]
+const TRUST_LV=[[0,'Sunntigsfahrer:in','Amateur – nur bei Sonnenschein unterwegs','sun'],
+  [3,'Schneeflöckli','die ersten Meldungen sind bestätigt','flake'],
+  [10,'Spurleger:in','andere folgen deinen Spuren','tracks'],
+  [30,'Pulverschnüffler:in','riecht Powder von weitem','nose'],
+  [80,'Schneeflüsterer:in','der Schnee erzählt dir alles','cloud'],
+  [200,'Yeti','Legende – oft gesucht, selten gesichtet','yeti']];
 // Speedometer: one equal slice per level, the needle at your level plus the
 // way to the next one; colours run from fresh blue to legendary gold.
-const TRUST_COL=['#93c5fd','#60a5fa','#3b82f6','#6366f1','#8b5cf6','#c084fc','#f59e0b'];
+const TRUST_COL=['#93c5fd','#60a5fa','#3b82f6','#6366f1','#8b5cf6','#f59e0b'];
+// one line-icon family for the levels (24 px grid, drawn in the level colour)
+const TRUST_IC={
+  sun:'<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/>',
+  flake:'<path d="M12 2.5v19M3.8 7.2l16.4 9.6M20.2 7.2 3.8 16.8M12 2.5 9.8 4.9M12 2.5l2.2 2.4M12 21.5l-2.2-2.4M12 21.5l2.2-2.4"/>',
+  tracks:'<path d="M6.5 21.5c0-5.5 4-7.5 4-12.5 0-2.4-1-4.6-2.4-6.5M13.5 21.5c0-5.5 4-7.5 4-12.5 0-2.4-1-4.6-2.4-6.5"/>',
+  nose:'<path d="M4.5 15c0-3.8 3.3-6.5 7.5-6.5s7.5 2.7 7.5 6.5c0 2.8-3.1 4.5-7.5 4.5S4.5 17.8 4.5 15z"/><path d="M9.3 14.6h.01M14.7 14.6h.01"/><path d="M7 3.5l1 2.2M12 2.5v2.6M17 3.5l-1 2.2"/>',
+  cloud:'<path d="M7 14.5a4 4 0 1 1 .9-7.9 5.2 5.2 0 0 1 9.9 1.9 3.3 3.3 0 0 1-.6 6z"/><path d="M8.5 18.5h.01M12 20.5h.01M15.5 18.5h.01"/>',
+  yeti:'<path d="M10 21.5c-3.2 0-4.6-2.8-4.1-6.1.5-3.4 2.6-6.1 5.6-6.1s4.4 2.9 3.9 6.3c-.5 3.3-2.3 5.9-5.4 5.9z"/><circle cx="6.2" cy="5.6" r="1.5"/><circle cx="9.9" cy="3.8" r="1.5"/><circle cx="13.8" cy="4.3" r="1.5"/><circle cx="16.9" cy="6.9" r="1.4"/>'};
+function trustIco(i,px,col){return '<svg class="tr-ico" viewBox="0 0 24 24" width="'+(px||18)+'" height="'+(px||18)+'" fill="none" stroke="'+(col||TRUST_COL[i])+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+TRUST_IC[TRUST_LV[i][3]]+'</svg>';}
 function trustGauge(n){const L=trustLevel(n),k=TRUST_LV.length,cx=150,cy=148,r=118,w=26;
   const pt=(a,rr)=>[cx+rr*Math.cos(a),cy-rr*Math.sin(a)];
   const ang=f=>Math.PI*(1-f);                      // f 0..1 → left .. right
@@ -11804,7 +11815,7 @@ function trustGauge(n){const L=trustLevel(n),k=TRUST_LV.length,cx=150,cy=148,r=1
   for(let i=0;i<k;i++){const a0=ang(i/k)-.012,a1=ang((i+1)/k)+.012,p0=pt(a0,r),p1=pt(a1,r),q1=pt(a1,r-w),q0=pt(a0,r-w);
     arcs+='<path d="M'+p0[0].toFixed(1)+' '+p0[1].toFixed(1)+'A'+r+' '+r+' 0 0 1 '+p1[0].toFixed(1)+' '+p1[1].toFixed(1)
       +'L'+q1[0].toFixed(1)+' '+q1[1].toFixed(1)+'A'+(r-w)+' '+(r-w)+' 0 0 0 '+q0[0].toFixed(1)+' '+q0[1].toFixed(1)+'Z" fill="'+TRUST_COL[i]+'"'+(i>L.i?' opacity=".28"':'')+'/>';
-    const m=pt(ang((i+.5)/k),r+17);labs+='<text x="'+m[0].toFixed(1)+'" y="'+(m[1]+5).toFixed(1)+'" text-anchor="middle" font-size="15">'+TRUST_LV[i][3]+'</text>';
+    const m=pt(ang((i+.5)/k),r+18);labs+='<g transform="translate('+(m[0]-10).toFixed(1)+' '+(m[1]-10).toFixed(1)+') scale(.8333)" fill="none" stroke="'+TRUST_COL[i]+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"'+(i>L.i?' opacity=".45"':'')+'>'+TRUST_IC[TRUST_LV[i][3]]+'</g>';
     const t=pt(ang(i/k),r-w-9);if(i)labs+='<text x="'+t[0].toFixed(1)+'" y="'+(t[1]+3).toFixed(1)+'" text-anchor="middle" class="tg-t">'+TRUST_LV[i][0]+'</text>';}
   const f=Math.min(1,(L.i+(L.next!=null?L.pct/100:0.98))/k),na=ang(f),tip=pt(na,r-w-14),b1=pt(na+Math.PI/2,6),b2=pt(na-Math.PI/2,6);
   return '<svg class="tg" viewBox="0 0 300 196" role="img" aria-label="Trust '+n+' – '+escapeHtml(L.name)+'">'+arcs+labs
@@ -11814,7 +11825,7 @@ function trustGauge(n){const L=trustLevel(n),k=TRUST_LV.length,cx=150,cy=148,r=1
 // how much more a report counts in «Gemeldetes Powder» at t points (= progReportWeight's trust factor)
 function trustWeight(t){return 1+PROG_TRUST_MAX*(t/(t+PROG_TRUST_HALF));}
 function trustLevel(n){n=n||0;let i=0;for(let k=0;k<TRUST_LV.length;k++)if(n>=TRUST_LV[k][0])i=k;
-  const nx=TRUST_LV[i+1];return {i,name:TRUST_LV[i][1],sub:TRUST_LV[i][2],emo:TRUST_LV[i][3],n,next:nx?nx[0]:null,pct:nx?Math.round((n-TRUST_LV[i][0])/(nx[0]-TRUST_LV[i][0])*100):100};}
+  const nx=TRUST_LV[i+1];return {i,name:TRUST_LV[i][1],sub:TRUST_LV[i][2],emo:trustIco(i,18),n,next:nx?nx[0]:null,pct:nx?Math.round((n-TRUST_LV[i][0])/(nx[0]-TRUST_LV[i][0])*100):100};}
 const TRUST_FLAKE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17M12 2l-2.2 2.4M12 2l2.2 2.4M12 22l-2.2-2.4M12 22l2.2-2.4"/></svg>';
 function trustBadge(n,compact){const L=trustLevel(n);if(!L.i&&compact)return '';
   return '<span class="tr-b tr-'+L.i+'" title="Trust Score '+L.n+' · '+escapeHtml(L.name)+'">'+TRUST_FLAKE.repeat(Math.max(1,Math.min(3,Math.ceil(L.i/2))))+(compact?'':'<em>'+escapeHtml(L.name)+'</em>')+'</span>';}
@@ -11827,10 +11838,10 @@ function trSheetClose(){const o=document.getElementById('trSheet');if(o)o.classL
 // The ladder: every level, what it takes, what it does -- and where you are.
 function trustInfo(n){if(n==null)n=sbUser?progTrustOf(sbUser.id):0;const L=trustLevel(n);
   const rows=TRUST_LV.map((v,i)=>{const cur=i===L.i,done=i<L.i,w=trustWeight(v[0]);
-    return '<div class="trl'+(cur?' cur':done?' done':'')+'"><span class="trl-e">'+v[3]+'</span><span class="trl-t"><b>'+escapeHtml(v[1])+(cur?' <em>Du</em>':'')+'</b><small>'+escapeHtml(v[2])+'</small>'
+    return '<div class="trl'+(cur?' cur':done?' done':'')+'"><span class="trl-e">'+trustIco(i,26)+'</span><span class="trl-t"><b>'+escapeHtml(v[1])+(cur?' <em>Du</em>':'')+'</b><small>'+escapeHtml(v[2])+'</small>'
       +(cur&&L.next!=null?'<i class="trl-bar"><i style="width:'+L.pct+'%"></i></i><small class="trl-nx">noch '+(L.next-n)+' bis «'+escapeHtml(TRUST_LV[i+1][1])+'»</small>':'')+'</span>'
       +'<span class="trl-n"><b>'+v[0]+'+</b><small>×'+w.toFixed(2)+'</small></span></div>';}).reverse().join('');
-  trSheet('<div class="trs-hd">'+trustGauge(n)+'<b>'+L.emo+' '+escapeHtml(L.name)+'</b><small>'+escapeHtml(L.sub)+(L.next!=null?' · noch '+(L.next-n)+' bis '+TRUST_LV[L.i+1][3]:'')+'</small></div>'
+  trSheet('<div class="trs-hd">'+trustGauge(n)+'<b>'+L.emo+' '+escapeHtml(L.name)+'</b><small>'+escapeHtml(L.sub)+(L.next!=null?' · noch '+(L.next-n)+' bis «'+escapeHtml(TRUST_LV[L.i+1][1])+'»':'')+'</small></div>'
     +'<p class="trs-p">Jede Bestätigung, die <b>andere</b> deinen Meldungen geben, ist <b>+1 Punkt</b>. Je höher deine Stufe, desto stärker zählen deine Meldungen in «Gemeldetes Powder» (×-Faktor rechts).</p>'
     +'<button type="button" class="trs-board" onclick="trustBoard()">🏆 Rangliste ansehen</button>'
     +'<div class="trl-list">'+rows+'</div>'
@@ -15894,7 +15905,8 @@ async function profLoadPosts(){
     });
     if(!withImg.length){box.innerHTML='<div class="prof-hint">Noch keine Beiträge.</div>';return;}
     const grid='<div class="uv-grid">'+withImg.map(r=>{const ll=parseGeo(r.location);
-      return '<div class="uv-cell" onclick="profClose();'+(ll?('feedFlyTo('+ll[0]+','+ll[1]+')'):'')+'"><img src="'+r.image_url+'" loading="lazy" alt=""/>'+del(r.id)+'</div>';}).join('')+'</div>';
+      // a tap opens the whole post (isolated, all details), not the map
+      return '<div class="uv-cell" onclick="profClose();feedOpenUser(sbUser.id,(myProfile&&myProfile.username)||\'Ich\',\''+jsArg(r.id)+'\')"><img src="'+safeUrl(r.image_url)+'" loading="lazy" alt=""/>'+del(r.id)+'</div>';}).join('')+'</div>';
     box.innerHTML=grid;
   }catch(e){box.innerHTML='<div class="prof-hint">Beiträge konnten nicht geladen werden.</div>';}
 }
