@@ -11694,7 +11694,9 @@ let _progField=null,_progConf=null,_progType=null,_progModel=null,_progDiff=null
 // Zones behind the last renderPowderFind() paint, cached so a map tap can ask
 // "how much snow near here" without recomputing progZones()/progNearZones().
 let _progFindSel=null,_progFindOth=null;
-const PROG_COL={powder:[74,163,255],drift:[232,89,12],wet:[245,158,11],suncrust:[244,208,63],windpressed:[150,168,196],firn:[63,178,127],scoured:[154,135,120]};
+// the reported snow types in the Skiqualität colours (as the drawing pens)
+const PROG_COL={powder:VA_PALETTE.ski6[4].slice(0,3),drift:VA_PALETTE.wind[3].slice(0,3),wet:VA_PALETTE.ski6[7].slice(0,3),suncrust:VA_PALETTE.ski6[2].slice(0,3),
+  windpressed:VA_PALETTE.ski6[1].slice(0,3),firn:VA_PALETTE.ski6[6].slice(0,3),scoured:VA_PALETTE.wind[1].slice(0,3)};
 // Colourful, perceptually ordered ramp for the 0-100% confidence map.
 const PROG_CONF_STOPS=[[0.00,48,18,59],[0.15,62,73,204],[0.30,33,144,231],[0.45,26,196,171],
                        [0.60,96,214,79],[0.72,212,225,53],[0.85,249,152,42],[1.00,231,49,38]];
@@ -12383,10 +12385,12 @@ function snowPatternTile(type,ink,bg){
   }
   return c;
 }
-function progPatternTile(type){return snowPatternTile(type,'#14161a',null);}
+// the texture says the type, the ink colour matches the Skiqualität layer
+function penInk(type,dflt){try{return (DRAW_PENS[type]&&DRAW_PENS[type].color)||dflt;}catch(e){return dflt;}}
+function progPatternTile(type){return snowPatternTile(type,penInk(type,'#14161a'),null);}
 // CSS background-image for a palette swatch — same geometry, drawn small.
 function snowPatternURL(type){
-  const c=snowPatternTile(type,'#20242b','#f2f5f9');
+  const c=snowPatternTile(type,penInk(type,'#20242b'),'#f2f5f9');
   try{return c.toDataURL();}catch(e){return '';}
 }
 const _progPatCache={};
@@ -16855,16 +16859,22 @@ function snowCmLabel(v){return (+v>=SNOW_CM_MAX?SNOW_CM_MAX+'+':(''+v));}
 // Route colours: uphill is the darker orange, downhill the bright one.
 const ROUTE_UP_COL='#b45309',ROUTE_DOWN_COL='#fb923c';
 const TRACK_LABELS=['< 3 Personen','< 10 Personen','> 20 Personen'];
+// Pens in the classes and colours of the Skiqualität (SNOWPACK ski6) layer,
+// so what you paint reads the same as the model map; Triebschnee in its
+// violets. The pen ids stay: they are what reports store.
+const _ski6=k=>'rgb('+VA_PALETTE.ski6[k].slice(0,3).join(',')+')',_wind=k=>'rgb('+VA_PALETTE.wind[k].slice(0,3).join(',')+')';
+// powder coloured by its depth class: 0–10, 10–20, 20–30, 30–40, > 40 cm
+function drawPowCol(cm){const k=cm<10?3:cm<20?4:cm<30?5:cm<40?8:9;return VA_PALETTE.ski6[k].slice(0,3);}
 const DRAW_PENS={
- powder:{id:'powder',label:'Powder',color:'#4aa3ff',kind:'zone',slfDepth:true,slider:{label:'Tiefe',min:5,max:SNOW_CM_MAX,step:5,unit:' cm',val:30}},
- drift:{id:'drift',label:'Triebschnee',color:'#e8590c',kind:'zone',slider:{label:'Mächtigkeit',min:5,max:SNOW_CM_MAX,step:5,unit:' cm',val:20}},
+ powder:{id:'powder',label:'Pulver',color:_ski6(4),kind:'zone',slfDepth:true,slider:{label:'Tiefe',min:5,max:SNOW_CM_MAX,step:5,unit:' cm',val:30}},
+ firn:{id:'firn',label:'Sulz (aufgefirnt)',color:_ski6(6),kind:'zone'},
+ wet:{id:'wet',label:'nass / faul',color:_ski6(7),kind:'zone',slider:{label:'Nässe',min:1,max:5,step:1,unit:'/5',val:3}},
+ suncrust:{id:'suncrust',label:'Kruste',color:_ski6(2),kind:'zone',slider:{label:'Deckel',min:1,max:3,step:1,val:2,labels:_CRUST_LABELS}},
+ windpressed:{id:'windpressed',label:'hart / windgepresst',color:_ski6(1),kind:'zone',slider:{label:'Deckel',min:1,max:3,step:1,val:2,labels:_CRUST_LABELS}},
+ icy:{id:'icy',label:'Eisig',color:_ski6(1),kind:'zone',dash:[24,20]},
+ drift:{id:'drift',label:'Triebschnee',color:_wind(3),kind:'zone',slider:{label:'Mächtigkeit',min:5,max:SNOW_CM_MAX,step:5,unit:' cm',val:20}},
+ scoured:{id:'scoured',label:'Abgeweht',color:_wind(1),kind:'zone',dash:[24,20]},
  compact:{id:'compact',label:'Kompakt',color:'#8aa0c8',kind:'zone'},
- wet:{id:'wet',label:'Nassschnee',color:'#f59e0b',kind:'zone',slider:{label:'Nässe',min:1,max:5,step:1,unit:'/5',val:3}},
- suncrust:{id:'suncrust',label:'Sonnendeckel',color:'#f4d03f',kind:'zone',slider:{label:'Deckel',min:1,max:3,step:1,val:2,labels:_CRUST_LABELS}},
- windpressed:{id:'windpressed',label:'Windgepresst',color:'#b9c4d4',kind:'zone',slider:{label:'Deckel',min:1,max:3,step:1,val:2,labels:_CRUST_LABELS}},
- firn:{id:'firn',label:'Firn',color:'#3fb27f',kind:'zone'},
- scoured:{id:'scoured',label:'Abgeweht',color:'#9a8778',kind:'zone',dash:[24,20]},
- icy:{id:'icy',label:'Eisig',color:'#38bdf8',kind:'zone',dash:[24,20]},
  nosnow:{id:'nosnow',label:'Kein Schnee',color:'#e0483c',kind:'zone',dash:[9,16]},
  // One route pen: each segment is coloured from the DEM, so the app decides
  // uphill (dark orange) vs downhill (bright orange) instead of the user.
@@ -16873,7 +16883,7 @@ const DRAW_PENS={
  eraser:{id:'eraser',label:'Radierer',color:'#eef2f7',kind:'eraser'}
 };
 const DRAW_CATS=[
- {id:'snow',label:'Schnee',icon:_SVG_SNOW,pens:['powder','drift','compact','wet','suncrust','windpressed','firn','scoured','icy','nosnow']},
+ {id:'snow',label:'Schnee',icon:_SVG_SNOW,pens:['powder','firn','wet','suncrust','windpressed','icy','drift','scoured','compact','nosnow']},
  {id:'route',label:'Route',icon:_SVG_ROUTE,pens:['route']},
  {id:'tracks',label:'Spuren',icon:_SVG_TRACKS,pens:['tracks']},
  {id:'eraser',label:'Radierer',icon:_SVG_ERASER,pens:['eraser']}
@@ -17214,7 +17224,7 @@ function drawCommitSeg(a,b){
     // scale); every other snow type paints as its texture, so the drawing is
     // readable without colour.
     let col;
-    if(drawPen.slfDepth)col='rgb('+((snowCol(drawPen.slider.val)||[74,163,255]).join(','))+')';
+    if(drawPen.slfDepth)col='rgb('+drawPowCol(drawPen.slider.val).join(',')+')';
     else if(SNOW_PATTERNS[drawPen.id])col=drawPenPattern(octx,drawPen.id);
     else col=drawPen.color;
     octx.strokeStyle=col;octx.lineWidth=drawBrushEff*scale;
@@ -17230,7 +17240,7 @@ function drawCommitSeg(a,b){
 const _drawPatCache=new WeakMap();
 function drawPenPattern(ctx,type){
   let m=_drawPatCache.get(ctx);if(!m){m={};_drawPatCache.set(ctx,m);}
-  if(!m[type]){const tile=snowPatternTile(type,'#1d2430','rgba(246,248,251,.88)');
+  if(!m[type]){const tile=snowPatternTile(type,penInk(type,'#1d2430'),'rgba(246,248,251,.88)');
     m[type]=ctx.createPattern(tile,'repeat');}
   return m[type];
 }
@@ -17366,7 +17376,7 @@ function drawWireVertical(){
     bi.oninput=function(){drawBrushSize=+this.value;drawSyncBrushV();};
     const di=dv.querySelector('input');
     di.oninput=function(){const sl=drawDepthSlider();if(sl){sl.val=+this.value;
-      if(drawPen.slfDepth){const c=snowCol(sl.val);if(c){const sw=document.querySelector('#drawPens .dt-sw.on i');if(sw)sw.style.background='rgb('+c.join(',')+')';}}}
+      if(drawPen.slfDepth){const c=drawPowCol(sl.val);if(c){const sw=document.querySelector('#drawPens .dt-sw.on i');if(sw)sw.style.background='rgb('+c.join(',')+')';}}}
       drawSyncDepthV();};
   }
   drawSyncBrushV();drawSyncDepthV();
@@ -17405,7 +17415,7 @@ function drawShowSlider(){
   box.innerHTML='<label>'+sl.label+'</label><input type="range" min="'+sl.min+'" max="'+sl.max+'" step="'+sl.step+'" value="'+sl.val+'"><b id="drawSliderVal">'+drawSliderTxt(sl)+'</b>';
   const inp=box.querySelector('input');
   inp.oninput=function(){sl.val=+this.value;document.getElementById('drawSliderVal').textContent=drawSliderTxt(sl);
-    if(drawPen.slfDepth){const c=snowCol(sl.val);if(c){const sw=document.querySelector('#drawPens .dt-sw.on i');if(sw)sw.style.background='rgb('+c.join(',')+')';}}};
+    if(drawPen.slfDepth){const c=drawPowCol(sl.val);if(c){const sw=document.querySelector('#drawPens .dt-sw.on i');if(sw)sw.style.background='rgb('+c.join(',')+')';}}};
 }
 function drawSummary(){
   const out=[];
