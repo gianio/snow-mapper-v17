@@ -2606,6 +2606,10 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
    bottom:calc(var(--btm-h,0px) + 44px)!important;margin:0!important;z-index:800;
    border-radius:5px!important}
  body.draw-on .leaflet-control-attribution{display:none!important}
+ /* a sheet over the map: the credits move into the sheet's own footer
+    (sheetAttr) instead of floating on top of its buttons */
+ body.tour-open .leaflet-control-attribution,body.ts-open .leaflet-control-attribution{display:none!important}
+ .sheet-attr{margin:6px 0 2px;font:500 10.5px var(--font,inherit);color:var(--fg3,#8a94a6)}.sheet-attr a{color:inherit}
  body.draw-on .leaflet-control-scale{display:none!important}
  #demoPill[hidden]{display:none}
  /* Sits directly below the brand mark (top:+12px, 36px tall) rather than
@@ -7887,6 +7891,8 @@ function ovToggle(k,auto){
   if(k==='variantA')ovRender();
   ovSyncUI();ovAttrSync();
 }
+function sheetAttr(){const el=document.querySelector('.leaflet-control-attribution');
+  return '<div class="sheet-attr">'+(el&&el.innerHTML?el.innerHTML:BASE_ATTR)+'</div>';}
 function ovAttrSync(){
   const extra=Object.keys(OVERLAYS).filter(k=>ovOn[k]&&OVERLAYS[k].attr).map(k=>OVERLAYS[k].attr);
   const el=document.querySelector('.leaflet-control-attribution');
@@ -9922,7 +9928,7 @@ function tourSheetRender(t,r){
     +'<button type="button" onclick="trkFromTour()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg>Aufzeichnen</button>'
     +'</div>'+warn
     +'<div class="tour-sulz" id="tourSulzWin"></div>'
-    +'<div class="tour-when">'+(va?'Pulver-Anteil der Abfahrt · SNOWPACK '+escapeHtml(r.when||''):'Powder-Modell im Zeitfenster')+' · Modell, kein Lawinenbulletin</div>'
+    +'<div class="tour-when">'+(va?'Pulver-Anteil der Abfahrt · SNOWPACK '+escapeHtml(r.when||''):'Powder-Modell im Zeitfenster')+' · Modell, kein Lawinenbulletin</div>'+sheetAttr()
     +'</div>';
   tourSheetDragWire(el);
   if(va)setTimeout(()=>{try{tourSulzFill(t);}catch(e){}},50);
@@ -11371,7 +11377,7 @@ function tsRender(onlyMap){
     +'<span class="ts-hd-b"><button type="button" class="ts-x" onclick="event.stopPropagation();tsClose()" aria-label="Schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>'
     +ctrls+'<div class="ts-res"><span class="ts-count">'+list.length+' Touren</span><span>nach '+(tsF.focus==='sulz'?'Sulz':'Pulver')+'-Anteil'
     +(nf?' · <button type="button" class="ts-reset" onclick="tsSet(\'reset\')">Filter zurücksetzen</button>':'')+'</span></div>'
-    +'<div class="ts-list tn-list">'+(rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>')+'</div>'
+    +'<div class="ts-list tn-list">'+(rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>')+'</div>'+sheetAttr()
     +'<div class="tn-foot">Anteil der Abfahrt (22–50°) mit Pulver bzw. Sulz im SNOWPACK-Modell – keine Lawinenbeurteilung, Bulletin des SLF beachten.</div>';
   el.scrollTop=keepS;tsSliderSync();
 }
