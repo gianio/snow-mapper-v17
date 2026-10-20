@@ -9723,7 +9723,7 @@ function tourRecolor(){
 // other: the network only appears once the map is close enough to tell
 // one valley from the next. A search result set is small, so it may show
 // from further out.
-const TOUR_MIN_Z=11.5,TOUR_MIN_Z_SEARCH=9;
+const TOUR_MIN_Z=11.5,TOUR_MIN_Z_SEARCH=8.5;
 function tourZoomOk(){const z=map.getZoom();return z>=(tsOpen()||(tourFromSearch&&tourIso)?TOUR_MIN_Z_SEARCH:TOUR_MIN_Z);}
 function tourPaintScores(){
   const zok=tourZoomOk();
@@ -11279,6 +11279,10 @@ async function tsOpenUI(){
       meMarker=L.marker(myLoc,{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1900}).addTo(map);}catch(e){}
     if(tsOpen()){tsRender();try{map.flyTo(myLoc,Math.max(map.getZoom(),10),{duration:.6});}catch(e){}}},()=>{},{maximumAge:300000,timeout:8000});}catch(e){}}
   tsRender(true);
+  // the tours show from the start: zoomed out too far they are hidden, so
+  // the map moves to the search circle (above the sheet)
+  if(map.getZoom()<TOUR_MIN_Z_SEARCH&&tsCircle){try{map.fitBounds(tsCircle.getBounds(),{paddingTopLeft:[20,70],paddingBottomRight:[20,Math.max(80,Math.round(innerHeight-((document.getElementById('tourSearch')||{getBoundingClientRect:()=>({top:innerHeight*.5})}).getBoundingClientRect().top)+10))],maxZoom:11,animate:true});}catch(e){}}
+  tourPaintScores();
   try{await tourVaPrepare();}catch(e){}
   tsRender();try{haptic(4);}catch(e){}
 }
@@ -12448,7 +12452,7 @@ function chMask(){if(_chMask)return _chMask;
     c.width=1;c.height=1;
   }catch(e){m.fill(1);}
   return (_chMask=m);}
-function setRaster(get,border){if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;const chm=chMask();
+function setRaster(get,border){_isoV=null;isoHiHide();if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;const chm=chMask();
   for(let p=0;p<NP;p++){const r=(inDomainEdge(p)||!chm[p])?null:get(p);const o=p*4;if(r){d[o]=r[0];d[o+1]=r[1];d[o+2]=r[2];d[o+3]=r[3]==null?210:r[3];if(cls)cls[p]=r[4];}else{d[o+3]=0;if(cls)cls[p]=-999;}}
   if(border){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=y*W+x;if(cls[p]==-999)continue;const rt=x<W-1?cls[p+1]:cls[p],bt=y<H-1?cls[p+W]:cls[p];if(rt!=cls[p]||bt!=cls[p]){const o=p*4;d[o]=20;d[o+1]=20;d[o+2]=30;d[o+3]=230;}}}
   cx.putImageData(img,0,0);}
@@ -12472,7 +12476,49 @@ function setRasterIso(val,alpha,k){const chm=chMask(),V=new Float32Array(NP);
     const edge=(X<w-1&&B[q+1]!==bq)||(q+w<w*h&&B[q+w]!==bq);
     // the line is a darker shade of the band itself: present, but faint
     const f=edge?.8:1;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=edge?Math.min(255,alpha+30):alpha;}
-  cx.putImageData(img,0,0);}
+  cx.putImageData(img,0,0);
+  _isoV=V;_isoA=alpha;isoHiSoon();}
+// The coarse picture above covers the whole country; zoomed in, a 1 km cell
+// is tens of pixels and its band edges turn into stairs. So the part on
+// screen is drawn once more at screen resolution: the values interpolated
+// per pixel, crisp 1-px lines where the band changes.
+var _isoV=null,_isoA=205,isoHi=null,isoHiCv=null,_isoRaf=0;   // var: setRaster may run before this line
+function isoHiSoon(){if(_isoRaf)return;_isoRaf=requestAnimationFrame(()=>{_isoRaf=0;isoHiRender();});}
+function isoHiHide(){if(isoHi&&map.hasLayer(isoHi))map.removeLayer(isoHi);const e=raster&&raster.getElement&&raster.getElement();if(e)e.style.visibility='';}
+function isoHiRender(){const V=_isoV;
+  if(!V||layer!=='snow'||!map.hasLayer(raster)){isoHiHide();return;}
+  const bb=raster.getBounds(),sz=map.getSize(),p0=map.latLngToContainerPoint(bb.getNorthWest()),p1=map.latLngToContainerPoint(bb.getSouthEast());
+  const sx=p1.x-p0.x,sy=p1.y-p0.y;
+  if(sx/W<2.5){isoHiHide();return;}                 // cells already small: the coarse picture is fine
+  const x0=Math.max(0,Math.floor(p0.x)),y0=Math.max(0,Math.floor(p0.y)),x1=Math.min(sz.x,Math.ceil(p1.x)),y1=Math.min(sz.y,Math.ceil(p1.y));
+  if(x1-x0<4||y1-y0<4){isoHiHide();return;}
+  const q=Math.min(1,Math.sqrt(450000/((x1-x0)*(y1-y0)))),w=Math.max(1,Math.round((x1-x0)*q)),h=Math.max(1,Math.round((y1-y0)*q));
+  if(!isoHiCv)isoHiCv=document.createElement('canvas');
+  if(isoHiCv.width!==w||isoHiCv.height!==h){isoHiCv.width=w;isoHiCv.height=h;}
+  const g=isoHiCv.getContext('2d'),img=g.createImageData(w,h),d=img.data,B=new Int8Array(w*h);
+  for(let Y=0;Y<h;Y++){const fy=Math.min(H-1,Math.max(0,((y0+(Y+.5)/q)-p0.y)/sy*H-.5)),ya=fy|0,yb=Math.min(H-1,ya+1),ty=fy-ya,yn=Math.round(fy)*W;
+    for(let X=0;X<w;X++){const fx=Math.min(W-1,Math.max(0,((x0+(X+.5)/q)-p0.x)/sx*W-.5)),xa=fx|0,xb=Math.min(W-1,xa+1),tx=fx-xa,qq=Y*w+X;
+      if(isNaN(V[yn+Math.round(fx)])){B[qq]=-1;continue;}
+      let su=0,sw=0,v,wt;
+      v=V[ya*W+xa];wt=(1-tx)*(1-ty);if(v===v&&wt>0){su+=v*wt;sw+=wt;}
+      v=V[ya*W+xb];wt=tx*(1-ty);if(v===v&&wt>0){su+=v*wt;sw+=wt;}
+      v=V[yb*W+xa];wt=(1-tx)*ty;if(v===v&&wt>0){su+=v*wt;sw+=wt;}
+      v=V[yb*W+xb];wt=tx*ty;if(v===v&&wt>0){su+=v*wt;sw+=wt;}
+      B[qq]=sw?snowBand(su/sw):-1;}}
+  const al=_isoA;
+  for(let qq=0;qq<w*h;qq++){const bq=B[qq];if(bq<0)continue;const o=qq*4,c=RGB[bq],X=qq%w;
+    const edge=(X<w-1&&B[qq+1]!==bq)||(qq+w<w*h&&B[qq+w]!==bq);
+    const f=edge?.72:1;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=edge?Math.min(255,al+40):al;}
+  g.putImageData(img,0,0);
+  const bounds=L.latLngBounds(map.containerPointToLatLng([x0,y1]),map.containerPointToLatLng([x1,y0]));
+  if(!isoHi)isoHi=L.svgOverlay(isoHiCv,bounds,{opacity:raster.options.opacity,interactive:false});
+  else isoHi.setBounds(bounds);
+  isoHi.setOpacity(raster.options.opacity);if(!map.hasLayer(isoHi))isoHi.addTo(map);
+  const e=isoHi.getElement();if(e)e.style.visibility='';
+  const re=raster.getElement();if(re)re.style.visibility='hidden';}
+// while the map moves the coarse picture carries on, the sharp one follows
+map.on('movestart',()=>{if(!isoHi||!map.hasLayer(isoHi))return;const re=raster.getElement();if(re)re.style.visibility='';const e=isoHi.getElement();if(e)e.style.visibility='hidden';});
+map.on('moveend',()=>{if(_isoV&&layer==='snow')isoHiSoon();});
 // Min / max / sum of an hourly uint8 cube over the window [a,b) for every
 // cell, in raw units, hour by hour (contiguous memory) instead of cell by
 // cell with a stride of NP. Cached per window, so a threshold or stat change
@@ -12876,7 +12922,7 @@ function showOverlay(){
   // the same blues and reds with a different meaning and a different legend.
   const vaUp=!!(ovOn.variantA&&typeof vaAvailable==='function'&&vaAvailable());
   const om=vaUp?0:layerOpacityMul();
-  raster.setOpacity(grid?0.94*om:0);
+  raster.setOpacity(grid?0.94*om:0);if(isoHi)isoHi.setOpacity(grid?0.94*om:0);isoHiSoon();
   if(radg){radOverlay.setOpacity(0.9*om);map.addLayer(radOverlay);}
   if(layer=="slope"){slopeWMTS.setOpacity(0.7*om);map.addLayer(slopeWMTS);}
   else if(layer=="shade"){reliefWMTS.setOpacity(0.85*om);map.addLayer(reliefWMTS);}
