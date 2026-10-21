@@ -13638,11 +13638,20 @@ function searchPlace(){const w=document.getElementById('searchWrap'),b=document.
   const r=b.getBoundingClientRect();if(!r.width){w.classList.remove('side');w.style.cssText='';return;}
   w.classList.add('side');const wd=Math.min(300,r.left-20);
   w.style.cssText='left:'+Math.max(12,r.left-wd-8)+'px;right:auto;width:'+wd+'px;top:'+(r.top+r.height/2-22)+'px';}
+// The phone keyboard covers the lower half where the button sits: while it
+// is up the field rides on top of it, full width, results above it.
+function searchKbPlace(){const w=document.getElementById('searchWrap'),vv=window.visualViewport;
+  if(!w||w.classList.contains('hid')||!vv||!w.classList.contains('side'))return;
+  const kb=innerHeight-vv.height-vv.offsetTop;
+  if(kb<80){searchPlace();return;}
+  w.style.cssText='left:12px;right:auto;width:'+(vv.width-24)+'px;top:'+Math.round(vv.offsetTop+vv.height-44-10)+'px';}
+try{if(window.visualViewport){visualViewport.addEventListener('resize',searchKbPlace);visualViewport.addEventListener('scroll',searchKbPlace);}}catch(e){}
 function searchFieldOpen(){
   const w=document.getElementById('searchWrap'),i=document.getElementById('searchIn');
   if(!w||!i)return;
   searchPlace();w.classList.remove('hid');
   try{i.focus({preventScroll:true});i.select();}catch(e){i.focus();}
+  setTimeout(searchKbPlace,350);setTimeout(searchKbPlace,700);
   try{haptic(4);}catch(e){}
 }
 // Once you have jumped somewhere, the field has done its job.
