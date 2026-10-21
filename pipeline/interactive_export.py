@@ -1634,6 +1634,18 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
       .catch(fallback)
   );
 });
+// Web push (comments, likes, messages, followers): the payload is
+// {title, body, url, tag}; a tap focuses an open app and hands it the link,
+// else opens the link.
+self.addEventListener('push',e=>{let d={};try{d=e.data?e.data.json():{};}catch(x){d={body:e.data?e.data.text():''};}
+  e.waitUntil(self.registration.showNotification(d.title||'Snowmapper',{body:d.body||'',tag:d.tag||undefined,renotify:!!d.tag,
+    icon:'icon-192.png',badge:'icon-192.png',data:{url:d.url||'./'}}));});
+self.addEventListener('notificationclick',e=>{e.notification.close();
+  const url=(e.notification.data&&e.notification.data.url)||'./';
+  e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{
+    const c=cs.find(c=>new URL(c.url).origin===location.origin);
+    if(c){c.postMessage({type:'push-open',url});return c.focus();}
+    return self.clients.openWindow(url);}));});
 const MAINT_PAGE=__MAINT_PAGE__;
 """
 _MAINT_PAGE = ('<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>'
@@ -6064,7 +6076,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
         <button class="prof-back" onclick="profNav('main')">‹ Zurück</button>
         <div class="prof-sec-title">Benachrichtigungen</div>
         <div class="prof-row"><span>Push-Benachrichtigungen</span><button class="prof-toggle" id="profPush" onclick="profTogglePush()"><span></span></button></div>
-        <div class="prof-hint">Push-Benachrichtigungen werden mit einem der nächsten Updates aktiviert — deine Einstellung wird dann automatisch übernommen.</div>
+        <div class="prof-hint">Du bekommst eine Mitteilung bei Kommentaren und Likes zu deinen Beiträgen, bei neuen Nachrichten und neuen Follower:innen. Auf dem iPhone nur in der App auf dem Home-Bildschirm (ab iOS 16.4).</div>
+        <button class="prof-item" id="profPushTest" onclick="profPushTest(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Test-Benachrichtigung senden</button>
       </div>
       <div class="prof-view" id="profViewApp" style="display:none">
         <button class="prof-back" onclick="profNav('main')">‹ Zurück</button>
@@ -14776,8 +14789,9 @@ setTimeout(dismissIntro,0);
 requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}
   try{document.body.classList.add('scr-home');}catch(e){}
   try{lyRender();}catch(e){}});
-try{const _pid=new URLSearchParams(location.search).get('post');
-  if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);}catch(e){}
+try{const _q=new URLSearchParams(location.search),_pid=_q.get('post');
+  if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);
+  else if(_q.get('dm')||_q.get('user'))setTimeout(()=>pushRoute(location.href),2200);}catch(e){}
 // The split build registers it from the boot loader (app.js only arrives
 // after 'load' has fired, so a load listener here never ran).
 if(!window.__bootDone&&'serviceWorker'in navigator&&location.protocol!=='file:'){const _swReg=()=>navigator.serviceWorker.register('sw.js').then(reg=>{try{reg.update();}catch(e){}}).catch(()=>{});
@@ -15465,6 +15479,7 @@ function feedOpenAt(id){feedScope='all';feedFilter='all';feedAnchor=null;
 // --- Auth UI ---
 function authUpdateUI(user){
   sbUser=user;
+  if(user&&window._pushFor!==user.id){window._pushFor=user.id;setTimeout(pushSync,3000);}
   const btn=document.getElementById('btnLogin');
   const feedB=document.getElementById('mapFeedFab'),banner=document.getElementById('emailBanner');
   if(user){
@@ -16188,9 +16203,71 @@ async function profUploadAvatar(file){
 }
 async function profTogglePush(){
   const t=document.getElementById('profPush');const willOn=!t.classList.contains('on');
-  if(willOn&&'Notification'in window){try{const perm=await Notification.requestPermission();if(perm!=='granted'){alert('Benachrichtigungen wurden nicht erlaubt. Bitte im Browser aktivieren.');return;}}catch(e){}}
+  if(willOn){
+    if(pushIosNeedsHome()){alert('Auf dem iPhone kommen Benachrichtigungen nur in der App auf dem Home-Bildschirm: im Safari «Teilen» → «Zum Home-Bildschirm», dann dort einschalten (ab iOS 16.4).');return;}
+    if(!pushSupported()){alert('Dieser Browser kann keine Benachrichtigungen empfangen.');return;}
+    try{const perm=await Notification.requestPermission();if(perm!=='granted'){alert('Benachrichtigungen wurden nicht erlaubt. Bitte in den Browser-Einstellungen für diese Seite erlauben.');return;}}catch(e){}
+    try{if(!await pushSubscribe())throw new Error('kein Abo');}
+    catch(e){toast('Benachrichtigungen konnten nicht eingerichtet werden: '+(e.message||e),'err');return;}
+  }
   t.classList.toggle('on',willOn);
+  // saved at once: the server reads the switch for every push
+  try{if(sb&&sbUser)await sb.from('profiles').update({push_enabled:willOn}).eq('id',sbUser.id);}catch(e){}
 }
+async function profPushTest(btn){
+  if(!sb||!sbUser){authShow();return;}
+  if(pushIosNeedsHome()){alert('Auf dem iPhone kommen Benachrichtigungen nur in der App auf dem Home-Bildschirm.');return;}
+  if(!pushSupported()){alert('Dieser Browser kann keine Benachrichtigungen empfangen.');return;}
+  if(Notification.permission!=='granted'){toast('Schalte zuerst die Push-Benachrichtigungen ein.','err');return;}
+  btn.disabled=true;
+  try{await pushSubscribe();const{error}=await sb.rpc('push_test');if(error)throw error;
+    toast('Gesendet – die Mitteilung sollte in wenigen Sekunden erscheinen.','ok');}
+  catch(e){toast('Test fehlgeschlagen: '+(e.message||e),'err');}
+  setTimeout(()=>{btn.disabled=false;},4000);
+}
+// ── Web push ─────────────────────────────────────────────────────────────
+// The device subscribes with the server's public key (push_public_key) and
+// hands the subscription to push_subscribe; comments, likes, messages and
+// followers are pushed by the push-notify function while push_enabled is on.
+// iOS only delivers to the app on the home screen (16.4+); the iOS shell
+// (WKWebView) has no PushManager and is left out.
+function pushSupported(){return'serviceWorker'in navigator&&'PushManager'in window&&'Notification'in window&&location.protocol==='https:';}
+function pushIosNeedsHome(){return/iPhone|iPad|iPod/.test(navigator.userAgent||'')&&!(navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches));}
+function _b64u(s){const b=atob((s+'='.repeat((4-s.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0));}
+function _swReady(){return Promise.race([navigator.serviceWorker.ready,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Service Worker fehlt')),8000))]);}
+async function pushSubscribe(){
+  if(!pushSupported()||!sb||!sbUser)return false;
+  const reg=await _swReady();
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub){const{data:k,error}=await sb.rpc('push_public_key');if(error||!k)return false;
+    sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:_b64u(k)});}
+  const j=sub.toJSON(),mark=sbUser.id+'|'+j.endpoint;
+  let last='';try{last=localStorage.getItem('ssm_push_sub')||'';}catch(e){}
+  if(last!==mark){
+    const{error}=await sb.rpc('push_subscribe',{p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_ua:(navigator.userAgent||'').slice(0,300)});
+    if(error)throw error;
+    try{localStorage.setItem('ssm_push_sub',mark);}catch(e){}}
+  return true;
+}
+// signing out: this device stops getting the person's notifications
+async function pushUnsubscribe(){try{
+  if(!pushSupported())return;
+  const sub=await(await _swReady()).pushManager.getSubscription();
+  if(sub){if(sb&&sbUser)await sb.from('push_subscriptions').delete().eq('endpoint',sub.endpoint);await sub.unsubscribe();}
+  }catch(e){}
+  try{localStorage.removeItem('ssm_push_sub');}catch(e){}}
+// after sign-in: keep this device's subscription with the signed-in person
+async function pushSync(){try{
+  if(!pushSupported()||!sb||!sbUser||Notification.permission!=='granted')return;
+  const{data}=await sb.from('profiles').select('push_enabled').eq('id',sbUser.id).single();
+  if(data&&data.push_enabled)await pushSubscribe();}catch(e){}}
+// a tapped notification: ?post= / ?dm= / ?user=
+function pushRoute(url){try{const q=new URL(url,location.href).searchParams;
+  if(q.get('post'))feedOpenAt(q.get('post'));
+  else if(q.get('dm')){if(!sb||!sbUser){authShow();return;}dmWith(q.get('dm'),q.get('n')||'');}
+  else if(q.get('user'))viewUser(q.get('user'),'');}catch(e){}}
+try{if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',e=>{
+  if(e.data&&e.data.type==='push-open')pushRoute(e.data.url);});}catch(e){}
 async function profSave(){
   try{const d=document.getElementById('profDisplay');
     const home=document.getElementById('profHome'),lay=document.getElementById('profLayer');
@@ -16218,7 +16295,7 @@ async function profSave(){
   }catch(e){alert('Fehler: '+(e.message||e));}
   btn.disabled=false;btn.textContent='Speichern';
 }
-function profSignOut(){if(sb)sb.auth.signOut();profClose();authUpdateUI(null);}
+async function profSignOut(){await pushUnsubscribe();window._pushFor=null;if(sb)sb.auth.signOut();profClose();authUpdateUI(null);}
 function sendFeedback(){try{haptic(8);}catch(e){}
   const body=encodeURIComponent('\n\n---\nSnowmapper\n'+(navigator.userAgent||''));
   window.location.href='mailto:giani.morf@bluewin.ch?subject='+encodeURIComponent('Snowmapper Feedback')+'&body='+body;}
