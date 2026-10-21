@@ -2552,13 +2552,17 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .insp-panel{left:50%;top:44%;right:auto;bottom:auto;
    width:min(320px,84vw);max-height:min(46vh,380px);
    margin-left:calc(min(320px,84vw) / -2);margin-top:calc(min(46vh,380px) / -2)}
+ /* phone: docked at the top, so the point and the timeline stay in view */
+ body.insp-open #lyNow{display:none!important}
+ @media (max-width:700px){.insp-panel{top:calc(env(safe-area-inset-top,0px) + 8px);margin-top:0;
+   width:min(380px,calc(100vw - 16px));margin-left:calc(min(380px,calc(100vw - 16px)) / -2);max-height:min(50vh,440px)}}
  /* the grab bar: the only part of the head that starts a drag */
  .insp-grab{flex-shrink:0;height:16px;display:flex;align-items:center;justify-content:center;
    cursor:grab;touch-action:none}
  .insp-grab::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--ink-150)}
  .insp-panel.dragging .insp-grab{cursor:grabbing}
  .insp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:2px 12px 9px;border-bottom:1px solid var(--bd);flex-shrink:0}
- .insp-head .insp-t{min-width:0}
+ .insp-head .insp-t{min-width:0;flex:1}
  .insp-head .insp-t b{font-size:13px;color:var(--fg);font-weight:800;letter-spacing:-.01em}
  .insp-chips{display:flex;gap:6px;margin-top:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-right:12px;-webkit-mask-image:linear-gradient(90deg,#000 91%,transparent);mask-image:linear-gradient(90deg,#000 91%,transparent)}
  .insp-chips::-webkit-scrollbar{display:none}
@@ -2581,6 +2585,14 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .tc-leg span{display:inline-flex;align-items:center;gap:6px}
  .tc-leg i{display:inline-block;width:22px;height:0;border-top:3px solid #3E7C8C;border-radius:2px}
  .tc-leg i.tc-srf{border-top:2.5px dashed #C9821F}
+ .tc-leg i.tc-snow{width:12px;height:10px;border:0;border-radius:2px;background:rgba(42,143,216,.5)}
+ .insp-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
+ .insp-kpis>div{background:var(--fill);border-radius:10px;padding:6px 8px;min-width:0}
+ .insp-kpis span{display:block;font-size:10.5px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .insp-kpis b{display:block;font-size:18px;font-weight:800;color:var(--fg);letter-spacing:-.02em;line-height:1.15;white-space:nowrap}
+ .insp-kpis b small{font-size:11.5px;color:var(--mut);font-weight:700}
+ .insp-kpis .k-snow b{color:#2A6FB0}
+ .insp-kpis em{display:block;font-style:normal;font-size:10.5px;font-weight:600;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .stn-now{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
  .stn-v{background:var(--fill);border-radius:12px;padding:8px 10px;min-width:0;display:flex;flex-direction:column;gap:2px}
  .stn-v span{font-size:11.5px;font-weight:700;color:var(--mut)}
@@ -7493,6 +7505,9 @@ function tvT(x,cw){return tv0+x/cw*tvSpan();}
 // so it gets a single point to drag instead of a two-handle range. Every
 // other layer keeps the range untouched.
 function tlSingleMode(){
+  // the point card reads over a window, so while it is open the slider
+  // offers start and end even on an instant layer
+  if(document.body.classList.contains('insp-open'))return false;
   // SNOWPACK is a state at an instant, not an accumulation, so while its
   // layer is up the main slider has to stop offering a from-to window: two
   // handles would claim the layer integrates between them, and it does not.
@@ -14090,7 +14105,19 @@ const _mz2=map.getBoundsZoom([[laMinW,loMinW],[laMaxW,loMaxW]])+0.3;if(map.getZo
 function iTabSw(el,tab){const c=el.closest('.icard');c.querySelectorAll('.itab').forEach(x=>x.classList.remove('active'));el.classList.add('active');c.querySelectorAll('.ipane').forEach(x=>x.classList.toggle('active',x.dataset.p===tab));}
 // --- Map-click inspect panel with charts + red X marker ---
 let inspMarker=null;
-function inspClose(){document.getElementById('inspPanel').classList.remove('open');document.body.classList.remove('insp-open');if(inspMarker){map.removeLayer(inspMarker);inspMarker=null;}}
+function inspClose(){document.getElementById('inspPanel').classList.remove('open');document.body.classList.remove('insp-open');if(inspMarker){map.removeLayer(inspMarker);inspMarker=null;}
+  _inspPanKey=null;try{if(tlMode==='detail')drawTimeline();}catch(e){}}
+// On a phone the card sits at the top; the tapped point is moved into the
+// map that stays visible between the card and the timeline, once per point.
+let _inspPanKey=null;
+function inspKeepPointVisible(lat,lon){const k=lat+','+lon;if(_inspPanKey===k)return;_inspPanKey=k;
+  if(innerWidth>700)return;
+  requestAnimationFrame(()=>{try{const pn=document.getElementById('inspPanel'),bp=document.getElementById('bottomPanel');
+    const top=pn.getBoundingClientRect().bottom,bot=bp&&bp.offsetParent!==null?bp.getBoundingClientRect().top:innerHeight-90;
+    if(bot-top<60)return;
+    const mr=map.getContainer().getBoundingClientRect(),pt=map.latLngToContainerPoint([lat,lon]),y=pt.y+mr.top;
+    const want=(top+bot)/2;if(Math.abs(y-want)<24)return;
+    map.panBy([0,y-want],{animate:true,duration:.35});}catch(e){}});}
 // Tapping the sliver of map that stays visible beside an open feed is a
 // dismiss, not a probe -- the point inspector would fight the panel for
 // the same screen space, so it is skipped while the feed is open.
@@ -14185,8 +14212,10 @@ function inspApplyPos(){const e=document.getElementById('inspPanel');
 const INSP_FIRST={snowpack:'va',cloud:'cloud',wind:'wind',snow:'snow',depth:'depth',temp:'temp',tsurf:'temp',
   sun:'rad',rad:'rad',radsun:'rad',powder:'prog',powfind:'prog',prog:'prog',progdiff:'prog',progpat:'prog'};
 function inspOrder(sec){
-  const base=['prog','va','snow','depth','temp','cloud','wind','rad'],first=INSP_FIRST[layer];
-  const order=first?[first].concat(base.filter(k=>k!==first)):base;
+  // new snow always first (with temperature in the same chart), then depth;
+  // a layer's own section comes right after
+  const base=['snow','depth','prog','cloud','wind','rad','va'],first=INSP_FIRST[layer];
+  const order=first&&first!=='snow'&&first!=='depth'&&first!=='temp'?['snow','depth',first].concat(base.filter(k=>k!=='snow'&&k!=='depth'&&k!==first)):base;
   return order.map(k=>sec[k]||'').join('');
 }
 function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-open');
@@ -14260,28 +14289,36 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
       (!cmTxt&&!note&&!otherChips&&!vizHtml?'<div class="prog-note">Keine Meldungen in der Nähe.</div>':'')+
       '</div>';
   }catch(e){}}
+  // the numbers first: what fell in the chosen window, what lies, how cold
+  let kpi='';try{let tmn=1e9,tmx=-1e9;for(let t=a;t<Math.min(b,T);t++){const v=tv(t,p);if(v==null||v!==v)continue;if(v<tmn)tmn=v;if(v>tmx)tmx=v;}
+    const kt=t=>{const d=zLocal(tMs(t));return WD()[d.getUTCDay()]+' '+String(d.getUTCHours()).padStart(2,'0')+'h';};
+    kpi='<div class="insp-kpis"><div class="k-snow"><span>Neuschnee</span><b>+'+newSnow.toFixed(newSnow<10?1:0)+'<small> cm</small></b><em>'+kt(a)+' – '+kt(Math.max(a,b-1))+'</em></div>'
+      +'<div><span>Schneehöhe</span><b>'+depthNow.toFixed(0)+'<small> cm</small></b><em>am Ende</em></div>'
+      +(tmx>-1e9?'<div><span>Luft</span><b>'+tmn.toFixed(0)+'…'+tmx.toFixed(0)+'<small>°</small></b><em>min … max</em></div>':'')+'</div>';}catch(e){}
   pan.innerHTML=
    '<div class="insp-grab" aria-hidden="true"></div>'+
    '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b>'+
-     '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+
+     '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+kpi+
    '</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
    '<div class="insp-body">'+inspOrder({va:vaSec,prog:progSec,
-     snow:'<div class="insp-sec"><h4>Neuschnee <em>+'+newSnow.toFixed(1)+' cm</em></h4><canvas id="icNew"></canvas></div>',
+     snow:'<div class="insp-sec"><h4>Neuschnee &amp; Temperatur <em>+'+newSnow.toFixed(1)+' cm</em></h4><div class="tc-leg"><span><i class="tc-snow"></i>Neuschnee cm/h</span><span><i class="tc-air"></i>Luft (2 m)</span><span><i class="tc-srf"></i>Schneeoberfläche</span></div><canvas id="icSnowTemp"></canvas></div>',
      depth:'<div class="insp-sec"><h4>Schneehöhe <em>'+depthNow.toFixed(0)+' cm</em></h4><canvas id="icDepth"></canvas></div>',
-     temp:'<div class="insp-sec"><h4>Temperatur <em>°C</em></h4><div class="tc-leg"><span><i class="tc-air"></i>Luft (2 m über Boden)</span><span><i class="tc-srf"></i>Schneeoberfläche</span></div><canvas id="icTemp"></canvas></div>',
+     temp:'',
      wind:'<div class="insp-sec"><h4>Windrose <em>Min · Median · Max</em></h4><canvas id="icWind"></canvas></div>',
      cloud:_clvData?'<div class="insp-sec"><h4>Bewölkung <em>nach Höhe</em></h4><canvas id="icCloud"></canvas></div>':'',
      rad:'<div class="insp-sec"><h4>Strahlung <em>% vom Tagesmaximum</em></h4><canvas id="icRad"></canvas></div>'})+
    '</div>';
   pan.classList.add('open');
   requestAnimationFrame(()=>{
-    icNewSnow(document.getElementById('icNew'),p);
+    icSnowTemp(document.getElementById('icSnowTemp'),p);
     icDepth(document.getElementById('icDepth'),p);
-    icTemp(document.getElementById('icTemp'),p);
     icWind(document.getElementById('icWind'),p,wk);
     icRad(document.getElementById('icRad'),p);
     if(_clvData)icCloud(document.getElementById('icCloud'),p);
   });
+  // while the card is open the timeline shows a from–to window to set
+  try{if(tlMode==='detail')drawTimeline();}catch(e){}
+  inspKeepPointVisible(lat,lon);
 }
 // Three bands like a meteogram: high (cirrus) on top, mid, low (stratus/fog)
 // at the bottom; the darker a cell, the more of that layer covers the sky.
@@ -14335,11 +14372,17 @@ function icDepth(cv,p){const{ctx,w,h}=icSetup(cv,80);const t0=a,t1=b;const LG=4,
 function icTemp(cv,p){const t0=a,t1=Math.max(a+2,b),air=[],srf=[];
   for(let t=t0;t<t1&&t<T;t++){air[t]=tv(t,p);srf[t]=tsurfEst(t,p);}
   tempChart(cv,air,srf,t0,Math.min(t1,T));}
+// New snow and temperature in one chart: whether it snowed and whether it
+// was cold enough for it to stay powder are read together. Bars = new snow
+// per hour on the right axis, lines = air and snow surface on the left.
+function icSnowTemp(cv,p){const t0=a,t1=Math.min(T,Math.max(a+2,b)),air=[],srf=[],sn=[];
+  for(let t=t0;t<t1;t++){air[t]=tv(t,p);srf[t]=tsurfEst(t,p);sn[t]=SNOW[t*NP+p]*M.snow_scale;}
+  tempChart(cv,air,srf,t0,t1,sn);}
 // Temperature over time with real axes: °C ticks on the left, hours and days
 // along the bottom. Air is a solid line, the snow surface a dashed one -- the
 // same marks as the legend above the canvas, so the two cannot be mixed up.
-function tempChart(cv,air,srf,t0,t1){const{ctx,w,h}=icSetup(cv,164);
-  const L=34,R=8,topY=12,baseY=h-36,plotW=w-L-R,n=Math.max(2,t1-t0),xOf=t=>L+(t-t0)/(n-1)*plotW;
+function tempChart(cv,air,srf,t0,t1,snow){const{ctx,w,h}=icSetup(cv,snow?196:164);
+  const L=34,R=snow?40:8,topY=snow?24:12,baseY=h-36,plotW=w-L-R,n=Math.max(2,t1-t0),xOf=t=>L+(t-t0)/(n-1)*plotW;
   let mn=1e9,mx=-1e9;for(const arr of [air,srf]){if(!arr)continue;for(let t=t0;t<t1;t++){const v=arr[t];if(v==null||v!==v)continue;if(v<mn)mn=v;if(v>mx)mx=v;}}
   if(mx<mn)return;
   const raw=Math.max(1,mx-mn),st=raw<=5?1:raw<=12?2:raw<=28?5:10;
@@ -14355,6 +14398,18 @@ function tempChart(cv,air,srf,t0,t1){const{ctx,w,h}=icSetup(cv,164);
     ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(L+plotW,y);ctx.stroke();ctx.setLineDash([]);
     ctx.fillStyle=v===0?'rgba(168,58,46,.9)':mut;ctx.fillText(v+'°',L-5,y);}
   ctx.textBaseline='alphabetic';
+  if(snow){let smx=0,smT=t0;for(let t=t0;t<t1;t++){const v=snow[t]||0;if(v>smx){smx=v;smT=t;}}
+    const steps=[0.1,0.2,0.5,1,2,3,5,10];let top=steps.find(v=>v>=smx*1.05)||Math.ceil(smx);
+    const ySn=v=>baseY-v/top*(baseY-topY),bw=Math.max(1.2,plotW/(n-1)*0.78);
+    ctx.fillStyle='rgba(42,143,216,.42)';
+    for(let t=t0;t<t1;t++){const v=snow[t]||0;if(v<0.005)continue;const y=ySn(v);icRR(ctx,xOf(t)-bw/2,y,bw,baseY-y,Math.min(2,bw/2.2));ctx.fill();}
+    ctx.font='600 10.5px Inter,system-ui';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle='#2A6FB0';
+    for(const f of [0,.5,1]){const v=top*f;ctx.fillText(v>=1||v===0?String(+v.toFixed(1)):v.toFixed(2).replace(/0$/,''),L+plotW+5,ySn(v));}
+    ctx.strokeStyle='rgba(42,111,176,.5)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(L+plotW+.5,topY-4);ctx.lineTo(L+plotW+.5,baseY);ctx.stroke();
+    ctx.textBaseline='alphabetic';ctx.font='700 10px Inter,system-ui';
+    ctx.fillStyle=mut;ctx.textAlign='left';ctx.fillText('°C',4,10);
+    ctx.fillStyle='#2A6FB0';ctx.textAlign='right';ctx.fillText('cm/h',w-2,10);
+    if(smx>=0.05)snow._peak={x:xOf(smT),y:ySn(smx),v:smx};}
   // x axis: hour ticks, day separators, day names centred under their day
   const pxH=plotW/(n-1),hs=pxH*3>=26?3:pxH*6>=26?6:pxH*12>=26?12:24;
   ctx.strokeStyle='rgba(18,21,26,.35)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(L,baseY+.5);ctx.lineTo(L+plotW,baseY+.5);ctx.moveTo(L+.5,topY-4);ctx.lineTo(L+.5,baseY);ctx.stroke();
@@ -14373,6 +14428,7 @@ function tempChart(cv,air,srf,t0,t1){const{ctx,w,h}=icSetup(cv,164);
     let aMx=-1e9,aMxT=t0,aMn=1e9,aMnT=t0;for(let t=t0;t<t1;t++){const v=air[t];if(v==null||v!==v)continue;if(v>aMx){aMx=v;aMxT=t;}if(v<aMn){aMn=v;aMnT=t;}}
     if(aMx>-1e9){icPill(ctx,xOf(aMxT),yOf(aMx)-21,tr('Luft max')+' '+aMx.toFixed(0)+'°','#B4552A',w);
       icPill(ctx,xOf(aMnT),Math.min(baseY-18,yOf(aMn)+5),tr('Luft min')+' '+aMn.toFixed(0)+'°',cvTok('--accent-meteo','#2A8FD8'),w);}}
+  if(snow&&snow._peak){const pk=snow._peak;icPill(ctx,Math.max(pk.x,L+40),Math.max(topY-2,pk.y-21),pk.v.toFixed(pk.v>=1?1:2)+' cm/h','#2A6FB0',w);}
   ctx.textAlign='left';}
 function icWind(cv,p,wk){const sm=[];
   for(let t=a;t<b;t++){let dir=(WDIR[t*P+wk]*M.dir_div)%360;if(dir<0)dir+=360;sm.push([dir,SPD[t*P+wk]/M.spd_mul*3.6]);}
