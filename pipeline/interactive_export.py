@@ -2585,6 +2585,16 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .tc-leg span{display:inline-flex;align-items:center;gap:6px}
  .tc-leg i{display:inline-block;width:22px;height:0;border-top:3px solid #3E7C8C;border-radius:2px}
  .tc-leg i.tc-srf{border-top:2.5px dashed #C9821F}
+ .mg{position:relative;margin:2px 0 0;overflow:hidden}
+ .mg-sc{position:absolute;inset:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;overscroll-behavior-x:contain}
+ .mg-sc::-webkit-scrollbar{display:none}
+ .mg-sc canvas{display:block}
+ .mg-ax{position:absolute;left:0;top:0;pointer-events:none}
+ .mg-leg{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0 0 4px;font:700 12px/1.3 var(--font,inherit);color:var(--fg2)}
+ .mg-leg span{display:inline-flex;align-items:center;gap:6px}
+ .mg-leg i.tc-air{display:inline-block;width:22px;border-top:3px solid #D7262B;border-radius:2px}
+ .mg-leg i.tc-srf{display:inline-block;width:22px;border-top:2.5px dashed #C9821F}
+ .mg-sw{display:inline-block;width:14px;height:11px;border-radius:2px;background:linear-gradient(0deg,#A99BB8 0 25%,#3F63E0 25% 50%,#2F9A4C 50% 75%,#7ED957 75%)}
  .tc-leg i.tc-snow{width:12px;height:10px;border:0;border-radius:2px;background:rgba(42,143,216,.5)}
  .insp-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
  .insp-kpis>div{background:var(--fill);border-radius:10px;padding:6px 8px;min-width:0}
@@ -14340,25 +14350,130 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
      '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+kpi+
    '</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
    '<div class="insp-body">'+inspOrder({va:vaSec,prog:progSec,
-     snow:'<div class="insp-sec"><h4>Neuschnee &amp; Temperatur <em>+'+newSnow.toFixed(1)+' cm</em></h4><div class="tc-leg"><span><i class="tc-snow"></i>Neuschnee cm/h</span><span><i class="tc-air"></i>Luft (2 m)</span><span><i class="tc-srf"></i>Schneeoberfläche</span></div><canvas id="icSnowTemp"></canvas></div>',
-     depth:'<div class="insp-sec"><h4>Schneehöhe <em>'+depthNow.toFixed(0)+' cm</em></h4><canvas id="icDepth"></canvas></div>',
+     snow:mgHTML(),
+     depth:'',
      temp:'',
      wind:'<div class="insp-sec"><h4>Windrose <em>Min · Median · Max</em></h4><canvas id="icWind"></canvas></div>',
-     cloud:_clvData?'<div class="insp-sec"><h4>Bewölkung <em>nach Höhe</em></h4><canvas id="icCloud"></canvas></div>':'',
-     rad:'<div class="insp-sec"><h4>Strahlung <em>% vom Tagesmaximum</em></h4><canvas id="icRad"></canvas></div>'})+
+     cloud:'',rad:''})+
    '</div>';
   pan.classList.add('open');
   requestAnimationFrame(()=>{
-    icSnowTemp(document.getElementById('icSnowTemp'),p);
-    icDepth(document.getElementById('icDepth'),p);
+    try{mgDraw(p,wk);}catch(e){console.warn('mg',e);}
     icWind(document.getElementById('icWind'),p,wk);
-    icRad(document.getElementById('icRad'),p);
-    if(_clvData)icCloud(document.getElementById('icCloud'),p);
   });
   // while the card is open the timeline shows a from–to window to set
   try{if(tlMode==='detail')drawTimeline();}catch(e){}
   inspKeepPointVisible(lat,lon);
 }
+// ── Meteogram in the point card ─────────────────────────────────────────
+// One long time axis for every chart, like a weather app: the panels sit in
+// one horizontal scroller, so a swipe moves new snow, temperature, depth,
+// clouds, sun and wind together. The axes stay put on top of it. The whole
+// run is there; the window chosen on the timeline is the light band, the
+// past is greyed.
+// new snow cm/h in classes (stacked as in a meteogram), with their colours
+const MG_SNOW=[[0,.5,'#A99BB8'],[.5,1,'#3F63E0'],[1,2,'#2F9A4C'],[2,3,'#7ED957'],[3,99,'#E8E24A']];
+const MG_PX=7,MG_L=40,MG_R=40;
+let _mgScroll=null,_mgKey=null;
+function mgPanels(){return [{k:'snow',h:176,t:'Neuschnee & Temperatur'},{k:'depth',h:74,t:'Schneehöhe'},
+  _clvData?{k:'cloud',h:66,t:'Bewölkung'}:null,{k:'sun',h:66,t:'Sonne'},{k:'wind',h:112,t:'Wind'}].filter(Boolean);}
+function mgHTML(){const H=mgPanels().reduce((s,q)=>s+q.h+30,0)+20;
+  return '<div class="insp-sec insp-mg"><div class="mg-leg"><span><i class="mg-sw"></i>Neuschnee cm/h</span><span><i class="tc-air"></i>Luft</span><span><i class="tc-srf"></i>Schneeoberfläche</span></div>'
+    +'<div class="mg" style="height:'+H+'px"><div class="mg-sc" id="mgSc"><canvas id="mgCv"></canvas></div><canvas class="mg-ax" id="mgAx"></canvas></div>'
+    +'<div class="insp-hint">← wischen →  alle Diagramme laufen mit · hell = gewähltes Zeitfenster</div></div>';}
+function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getElementById('mgCv'),ax=document.getElementById('mgAx');if(!sc||!cv||!ax)return;
+  const vw=sc.clientWidth||320,panels=mgPanels(),TOP=20,GAP=30,H=TOP+panels.reduce((s,q)=>s+q.h+GAP,0);
+  const W=MG_L+T*MG_PX+MG_R,dpr=Math.min(2,window.devicePixelRatio||1);
+  cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.width=W+'px';cv.style.height=H+'px';
+  ax.width=Math.round(vw*dpr);ax.height=Math.round(H*dpr);ax.style.width=vw+'px';ax.style.height=H+'px';
+  const c=cv.getContext('2d'),g=ax.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);g.setTransform(dpr,0,0,dpr,0,0);
+  const X=t=>MG_L+t*MG_PX,mut=cvTok('--fg2','#5B6472'),grid=cvTok('--ink-050','#ECEEF0'),fg=cvTok('--fg','#16152e');
+  const bg=cvTok('--card','#FFFFFF');
+  // days on top, nights, past, window
+  c.font='700 11px Inter,system-ui';c.textAlign='center';
+  for(let t=0;t<T;t++){const d=zLocal(tMs(t));if(d.getUTCHours()!==0&&t!==0)continue;
+    let e=t+1;while(e<T&&zLocal(tMs(e)).getUTCHours()!==0)e++;
+    c.fillStyle=fg;if((e-t)*MG_PX>40)c.fillText(WD()[d.getUTCDay()]+' '+d.getUTCDate()+'.',(X(t)+X(e))/2,13);}
+  let y0=TOP;const rows=[];
+  for(const q of panels){rows.push({q,top:y0+16,base:y0+16+q.h-18});y0+=q.h+GAP;}
+  const yTop=TOP,yBot=H-6;
+  c.fillStyle='rgba(30,41,66,.07)';c.fillRect(X(0),yTop,X(Math.min(nowIdx,T))-X(0),yBot-yTop);           // past
+  c.fillStyle='rgba(42,143,216,.08)';c.fillRect(X(a),yTop,X(b)-X(a),yBot-yTop);                          // window
+  c.strokeStyle='rgba(42,111,176,.55)';c.lineWidth=1.2;c.setLineDash([4,3]);
+  for(const t of [a,b]){c.beginPath();c.moveTo(X(t)+.5,yTop);c.lineTo(X(t)+.5,yBot);c.stroke();}c.setLineDash([]);
+  if(nowIdx>=0&&nowIdx<T){c.strokeStyle='#e0245e';c.lineWidth=1.4;c.beginPath();c.moveTo(X(nowIdx),yTop);c.lineTo(X(nowIdx),yBot);c.stroke();}
+  // axis overlay: strips with the page colour so the numbers stay readable
+  g.clearRect(0,0,vw,H);
+  const strip=(x,w,edge)=>{g.fillStyle=bg;g.fillRect(x,TOP,w,H-TOP);g.fillStyle='rgba(18,21,26,.14)';g.fillRect(edge,TOP,1,H-TOP);};
+  strip(0,MG_L,MG_L-1);strip(vw-MG_R,MG_R,vw-MG_R);
+  const lab=(txt,x,y,al,col)=>{g.fillStyle=col||mut;g.textAlign=al;g.textBaseline='middle';g.font='600 10.5px Inter,system-ui';g.fillText(txt,x,y);};
+  const hours=(r)=>{c.textAlign='center';c.font='600 9.5px Inter,system-ui';c.fillStyle=mut;
+    for(let t=0;t<T;t++){const d=zLocal(tMs(t)),hr=d.getUTCHours(),x=X(t);
+      if(hr===0){c.strokeStyle='rgba(18,21,26,.18)';c.lineWidth=1;c.beginPath();c.moveTo(x,r.top-4);c.lineTo(x,r.base+4);c.stroke();}
+      if(hr%6===0){c.fillText(String(hr).padStart(2,'0'),x,r.base+13);}}
+    c.strokeStyle='rgba(18,21,26,.3)';c.beginPath();c.moveTo(X(0),r.base+.5);c.lineTo(X(T),r.base+.5);c.stroke();};
+  const title=(r,txt)=>{g.fillStyle=fg;g.font='800 12px Inter,system-ui';g.textAlign='left';g.textBaseline='alphabetic';g.fillText(txt,MG_L+4,r.top-5);};
+  for(const r of rows){const q=r.q,hgt=r.base-r.top;
+    if(q.k==='snow'){
+      const air=[],srf=[],sn=[];let mn=1e9,mx=-1e9,smx=0;
+      for(let t=0;t<T;t++){air[t]=tv(t,p);srf[t]=tsurfEst(t,p);sn[t]=SNOW[t*NP+p]*M.snow_scale;
+        for(const v of [air[t],srf[t]])if(v==v&&v!=null){if(v<mn)mn=v;if(v>mx)mx=v;}if(sn[t]>smx)smx=sn[t];}
+      const raw=Math.max(1,mx-mn),st=raw<=5?1:raw<=12?2:raw<=28?5:10;mn=Math.floor(mn/st)*st;mx=Math.ceil(mx/st)*st;if(mx===mn)mx+=st;
+      const yT=v=>r.base-(v-mn)/(mx-mn)*hgt;
+      for(let v=mn;v<=mx+1e-9;v+=st){const y=yT(v);c.strokeStyle=v===0?'rgba(168,58,46,.5)':grid;c.lineWidth=1;if(v===0)c.setLineDash([4,3]);
+        c.beginPath();c.moveTo(X(0),y);c.lineTo(X(T),y);c.stroke();c.setLineDash([]);lab(v+'°',MG_L-5,y,'right',v===0?'#A83A2E':mut);}
+      const top=Math.max(1,[1,2,3,5,8,10].find(v=>v>=smx*1.05)||Math.ceil(smx)),yS=v=>r.base-v/top*hgt,bw=MG_PX-1.2;
+      for(let t=0;t<T;t++){const v=sn[t];if(v<0.01)continue;
+        for(const [lo,hi,col] of MG_SNOW){if(v<=lo)break;const y1=yS(Math.min(v,hi)),y2=yS(lo);c.fillStyle=col;c.fillRect(X(t)+.6,y1,bw,Math.max(.5,y2-y1));}}
+      // colour scale on the right: the classes on the cm/h axis
+      const sx=vw-12;for(const [lo,hi,col] of MG_SNOW){if(lo>=top)break;const y1=yS(Math.min(hi,top)),y2=yS(lo);g.fillStyle=col;g.fillRect(sx,y1,7,y2-y1);}
+      for(const v of [0,top/2,top]){lab((v%1?v.toFixed(1):String(v)),sx-4,yS(v),'right','#2A6FB0');}
+      g.font='700 9.5px Inter,system-ui';g.fillStyle='#2A6FB0';g.textAlign='right';g.textBaseline='alphabetic';g.fillText('cm/h',vw-4,r.top-5);
+      g.fillStyle=mut;g.textAlign='left';g.fillText('°C',2,r.top-5);
+      c.lineJoin='round';
+      c.beginPath();let pen=false;for(let t=0;t<T;t++){const v=srf[t];if(v==null||v!==v){pen=false;continue;}const x=X(t)+MG_PX/2,y=yT(v);pen?c.lineTo(x,y):c.moveTo(x,y);pen=true;}
+      c.strokeStyle='#C9821F';c.lineWidth=1.8;c.setLineDash([5,3]);c.stroke();c.setLineDash([]);
+      c.beginPath();pen=false;for(let t=0;t<T;t++){const v=air[t];if(v==null||v!==v){pen=false;continue;}const x=X(t)+MG_PX/2,y=yT(v);pen?c.lineTo(x,y):c.moveTo(x,y);pen=true;}
+      c.strokeStyle='#D7262B';c.lineWidth=2.6;c.stroke();
+      hours(r);title(r,q.t);}
+    else if(q.k==='depth'){let mx=1;const v=[];for(let t=0;t<T;t++){v[t]=cum[t*NP+p];if(v[t]>mx)mx=v[t];}
+      mx=Math.ceil(mx/10)*10;const yD=x=>r.base-x/mx*hgt;
+      for(const s of [0,mx/2,mx]){c.strokeStyle=grid;c.beginPath();c.moveTo(X(0),yD(s));c.lineTo(X(T),yD(s));c.stroke();lab(Math.round(s)+'',MG_L-5,yD(s),'right');}
+      c.beginPath();for(let t=0;t<T;t++){const x=X(t)+MG_PX/2,y=yD(v[t]);t?c.lineTo(x,y):c.moveTo(x,y);}
+      c.lineTo(X(T),r.base);c.lineTo(X(0),r.base);c.closePath();c.fillStyle='rgba(42,143,216,.16)';c.fill();
+      c.beginPath();for(let t=0;t<T;t++){const x=X(t)+MG_PX/2,y=yD(v[t]);t?c.lineTo(x,y):c.moveTo(x,y);}c.strokeStyle='#2A8FD8';c.lineWidth=2;c.stroke();
+      g.font='700 9.5px Inter,system-ui';g.fillStyle=mut;g.textAlign='left';g.textBaseline='alphabetic';g.fillText('cm',2,r.top-5);
+      hours(r);title(r,q.t);}
+    else if(q.k==='cloud'){const names=['hoch','mittel','tief'],cols=[CLV_COL[2],CLV_COL[1],CLV_COL[0]],bh=(hgt-4)/3;
+      for(let k=0;k<3;k++){const y=r.top+k*(bh+2);g.font='600 9.5px Inter,system-ui';g.fillStyle=mut;g.textAlign='right';g.textBaseline='middle';g.fillText(names[k],MG_L-4,y+bh/2);
+        c.fillStyle=cvTok('--ink-050','#F0F2F4');c.fillRect(X(0),y,X(T)-X(0),bh);
+        for(let t=0;t<T;t++){const f=cloudLv(t,p)[2-k];if(f<=0.05)continue;const cc=cols[k];
+          c.fillStyle='rgba('+cc[0]+','+cc[1]+','+cc[2]+','+(0.15+0.85*f).toFixed(2)+')';c.fillRect(X(t),y,MG_PX+.5,bh);}}
+      hours(r);title(r,q.t);}
+    else if(q.k==='sun'){let mx=0;for(let t=0;t<T;t++)mx=Math.max(mx,sunv(t,p));mx=mx||1;
+      for(const s of [0,50,100]){const y=r.base-s/100*hgt;c.strokeStyle=grid;c.beginPath();c.moveTo(X(0),y);c.lineTo(X(T),y);c.stroke();lab(s+'%',MG_L-5,y,'right');}
+      c.fillStyle='#F2C335';for(let t=0;t<T;t++){const f=sunv(t,p)/mx;if(f<0.02)continue;const bh=f*hgt;c.fillRect(X(t)+.6,r.base-bh,MG_PX-1.2,bh);}
+      hours(r);title(r,q.t);}
+    else if(q.k==='wind'){const sp=[];let mx=10;for(let t=0;t<T;t++){sp[t]=SPD[t*P+wk]/M.spd_mul*3.6;if(sp[t]>mx)mx=sp[t];}
+      mx=Math.ceil(mx/10)*10;const arrH=28,yW=v=>r.base-v/mx*(hgt-arrH);
+      for(const s of [0,mx/2,mx]){c.strokeStyle=grid;c.beginPath();c.moveTo(X(0),yW(s));c.lineTo(X(T),yW(s));c.stroke();lab(Math.round(s)+'',MG_L-5,yW(s),'right');}
+      c.beginPath();for(let t=0;t<T;t++){const x=X(t)+MG_PX/2,y=yW(sp[t]);t?c.lineTo(x,y):c.moveTo(x,y);}
+      c.lineTo(X(T),r.base);c.lineTo(X(0),r.base);c.closePath();c.fillStyle='rgba(124,108,214,.15)';c.fill();
+      c.beginPath();for(let t=0;t<T;t++){const x=X(t)+MG_PX/2,y=yW(sp[t]);t?c.lineTo(x,y):c.moveTo(x,y);}c.strokeStyle='#7C6CD6';c.lineWidth=2.2;c.stroke();
+      // arrows every 3 h: where the wind blows to, the speed beneath
+      c.textAlign='center';c.font='700 9.5px Inter,system-ui';
+      for(let t=1;t<T;t+=3){let dir=(WDIR[t*P+wk]*M.dir_div)%360;if(dir<0)dir+=360;const x=X(t)+MG_PX/2,y=r.top+8,ang=(dir+180)*Math.PI/180;
+        c.save();c.translate(x,y);c.rotate(ang);c.strokeStyle=fg;c.fillStyle=fg;c.lineWidth=1.6;c.beginPath();c.moveTo(0,6);c.lineTo(0,-5);c.stroke();
+        c.beginPath();c.moveTo(0,-7);c.lineTo(-3.5,-2);c.lineTo(3.5,-2);c.closePath();c.fill();c.restore();
+        c.fillStyle=mut;c.fillText(String(Math.round(sp[t])),x,y+18);}
+      g.font='700 9.5px Inter,system-ui';g.fillStyle=mut;g.textAlign='left';g.textBaseline='alphabetic';g.fillText('km/h',2,r.top-5);
+      hours(r);title(r,q.t);}}
+  // where it was, else the window near the left edge
+  const key=p+':'+a+':'+b;
+  if(_mgScroll!=null&&_mgKey&&_mgKey.split(':')[0]===String(p))sc.scrollLeft=_mgScroll;
+  else sc.scrollLeft=Math.max(0,X(a)-MG_L-24);
+  _mgKey=key;
+  sc.onscroll=()=>{_mgScroll=sc.scrollLeft;};}
 // Three bands like a meteogram: high (cirrus) on top, mid, low (stratus/fog)
 // at the bottom; the darker a cell, the more of that layer covers the sky.
 function icCloud(cv,p){if(!cv)return;const{ctx,w,h}=icSetup(cv,104);
