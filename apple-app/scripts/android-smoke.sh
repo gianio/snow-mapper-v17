@@ -51,10 +51,15 @@ if ! adb get-state 2>/dev/null | grep -q device; then
 fi
 
 fail=0
-if grep -q "FATAL EXCEPTION" "$OUT/logcat-after-back.txt"; then
+# Only our own process counts: the emulator's Google Play services crash on
+# their own now and then (CrisisAlerts in gms.persistent), which says nothing
+# about the app. The line after "FATAL EXCEPTION" names the process.
+if grep -A 1 "FATAL EXCEPTION" "$OUT/logcat-after-back.txt" | grep -q "Process: $PKG,"; then
   echo "::error::the app crashed -- see logcat-after-back.txt"
   grep -A 25 "FATAL EXCEPTION" "$OUT/logcat-after-back.txt" | head -60
   fail=1
+elif grep -q "FATAL EXCEPTION" "$OUT/logcat-after-back.txt"; then
+  echo "::warning::another process crashed in the emulator (not $PKG) -- ignored"
 fi
 if ! a shell pidof "$PKG" >/dev/null; then
   echo "::error::$PKG is not running after launch + back"
