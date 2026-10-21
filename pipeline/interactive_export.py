@@ -1872,7 +1872,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
      height:env(safe-area-inset-top,0px);background:var(--page,#0f172a);z-index:99990;pointer-events:none}
  }
  html,body{margin:0;padding:0;height:100%;height:100dvh;width:100%;overflow:hidden;font-family:var(--font);color:var(--fg);overscroll-behavior:none;background:var(--map-bg);position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
- #map{position:absolute;top:0;left:0;right:0;bottom:0;background:var(--map-bg)}
+ #map{position:absolute;top:0;left:0;right:0;bottom:0;background:var(--map-bg);-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
  .leaflet-control-scale{margin-right:92px!important;margin-bottom:10px!important}
  #flow{position:absolute;top:0;left:0;right:0;bottom:0;z-index:450;pointer-events:none}
  #modeGlow{display:none}
@@ -4250,6 +4250,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .trk-stars span{margin-left:8px;font:600 12.5px Inter,system-ui;color:var(--fg2)}
  .trk-more{display:flex;gap:8px;margin-top:12px}
  .trk-more button{flex:1;height:40px;border-radius:12px;border:1px dashed var(--hair);background:var(--card);font:700 12.5px Inter,system-ui;color:var(--accent);cursor:pointer}
+ .trk-more button.pri{border-style:solid;border-color:var(--accent);background:var(--accent-soft,rgba(42,90,140,.1))}
  .trk-photos{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
  .trk-ph{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--fill)}
  .trk-ph img{width:100%;height:100%;object-fit:cover}
@@ -4768,6 +4769,10 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .fc-det{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 14px 4px}
  .fc-det>div{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:12px;background:var(--fill)}
  .fc-det span{font:600 11px var(--font,inherit);color:var(--fg2)}.fc-det b{font:700 14px var(--font,inherit);color:var(--fg)}
+ .act-draw{position:absolute;top:10px;right:10px;z-index:3;width:40px;height:40px;border-radius:50%;border:0;
+   background:var(--brand,#2A5A8C);color:#fff;display:grid;place-items:center;box-shadow:0 2px 10px rgba(0,0,0,.28);cursor:pointer}
+ .act-draw svg{width:20px;height:20px}
+ .act-wrap .fc-slide{position:relative}
  .feed-more-hd{margin:22px 16px 8px;font:800 13px var(--font,inherit);letter-spacing:.04em;text-transform:uppercase;color:var(--fg2);display:flex;align-items:center;gap:10px}
  .feed-more-hd::after{content:'';flex:1;height:1px;background:var(--hair)}
  #lyNow{position:fixed;left:22px;top:auto;z-index:1001;display:inline-flex;align-items:center;gap:6px;
@@ -7693,6 +7698,9 @@ const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
 // A real mouse wheel still works: its notches are large, so it crosses the
 // threshold in one or two clicks.
 const _trackpad=_desktop&&/Mac/.test(navigator.platform||navigator.userAgent||'');
+// A double tap is one whole zoom step (Leaflet would take zoomDelta, half).
+L.Map.DoubleClickZoom.prototype._onDoubleClick=function(e){const m=this._map,z=m.getZoom(),zz=e.originalEvent.shiftKey?z-1:z+1;
+  if(m.options.doubleClickZoom==='center')m.setZoom(zz);else m.setZoomAround(e.containerPoint,zz);};
 const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,
   wheelPxPerZoomLevel:_trackpad?120:(_desktop?38:90),
   wheelDebounceTime:_trackpad?34:(_desktop?12:40),
@@ -10936,11 +10944,9 @@ async function trkRender(){
       +'<label class="trk-f"><span>Titel</span><input id="trkName" maxlength="80" value="'+escapeHtml(d.name)+'"></label>'
       +'<label class="trk-f"><span>Beschreibung</span><textarea id="trkDesc" rows="3" maxlength="1000" placeholder="Wie war\'s? Route, Verhältnisse, Gruppe …">'+escapeHtml(d.desc||'')+'</textarea></label>'
       +'<div class="tour-pick" id="trkTourPick"></div>'
-      +'<div class="trk-lbl">Schnee entlang der Route</div>'
-      +'<div id="trkSnowBox">'+trkSnowEditor(d,ll)+'</div>'
       +'<div class="trk-lbl">Verspurung</div><div class="trk-chips">'+TRK_TRACKS.map(([k,l])=>'<button type="button" class="trk-chip'+(d.tracks===k?' on':'')+'" onclick="trkKeepFields();trkDraft.tracks=trkDraft.tracks===\''+k+'\'?null:\''+k+'\';trkRender()">'+l+'</button>').join('')+'</div>'
       +'<div class="trk-stars">'+[1,2,3,4,5].map(n=>'<button type="button" class="'+(d.stars>=n?'on':'')+'" onclick="trkKeepFields();trkDraft.stars='+n+';trkRender()" aria-label="'+n+' Sterne">★</button>').join('')+'<span>Abfahrt</span></div>'
-      +'<div class="trk-more"><button type="button" onclick="trkThen(\'draw\')">Schnee-Karte zur Spur zeichnen</button><button type="button" onclick="trkThen(\'obs\')">Beobachtung melden</button></div>'
+      +'<div class="trk-more"><button type="button" class="pri" onclick="trkThen(\'draw\')">Powder entlang der Spur einzeichnen</button><button type="button" onclick="trkThen(\'obs\')">Beobachtung melden</button></div>'
       +'<div class="trk-lbl">Fotos</div><div class="trk-photos">'+(d.photos||[]).map((b,i)=>'<div class="trk-ph"><img src="'+URL.createObjectURL(b)+'" alt=""><button onclick="trkKeepFields();trkDraft.photos.splice('+i+',1);trkRender()" aria-label="Foto entfernen">×</button></div>').join('')
       +'<label class="trk-ph add"><input type="file" accept="image/*" multiple hidden onchange="trkAddPhotos(this.files)"><span>+</span></label></div>'
       +'<div class="trk-lbl">Sichtbar für</div><div class="trk-vis"><button type="button" class="'+(priv?'':'on')+'" onclick="trkKeepFields();trkDraft.vis=\'followers\';trkRender()"><b>Follower</b><span>erscheint im Feed deiner Follower</span></button>'
@@ -11105,6 +11111,14 @@ function trkShowOnMap(ll,rough){
   else trkShown=L.polyline(ll.map(p=>[p[0],p[1]]),Object.assign({},o,{color:trkCol()})).addTo(map);
   try{map.fitBounds(trkShown.getBounds(),{paddingTopLeft:[30,60],paddingBottomRight:[30,Math.round(innerHeight*.55)],maxZoom:15});}catch(e){}
 }
+// «+» on your activity: the route on the map, the brush ready -- the powder
+// you paint is saved as a snow map that belongs to this post
+function actDraw(id){const r=(allReports||[]).find(x=>String(x.id)===String(id));const A=r&&r.condition_data&&r.condition_data.activity;
+  if(!A||!A.track)return;
+  try{feedClose();}catch(e){}try{navGo('map');}catch(e){}
+  setTimeout(()=>{trkShowOnMap(A.track,A.rough);trkLinkAct={post:String(r.id),name:A.name||''};drawOpen();
+    try{drawSelectCat('snow');}catch(e){}
+    toastOnce('actdraw','Mal mit dem Finger, wo Powder lag – dann «Posten»');},380);}
 // from the feed: show a posted activity's route
 function actShowFeed(id){const r=(allReports||[]).find(x=>String(x.id)===String(id));const A=r&&r.condition_data&&r.condition_data.activity;
   if(!A||!A.track){if(r)feedFlyTo(r.lat,r.lng);return;}
@@ -11114,8 +11128,10 @@ function actShowFeed(id){const r=(allReports||[]).find(x=>String(x.id)===String(
 function actFeedVisual(r){const cd=r.condition_data,A=cd.activity;
   const fmt=n=>n>=1000?(n/1000).toFixed(1)+' km':n+' m';
   const ims=(cd.images||[]).filter(u=>u&&u!==A.map),id=String(r.id).replace(/[^\w-]/g,'');
-  const slides=[A.map?'<div class="fc-slide" onclick="event.stopPropagation();actOpen(\''+r.id+'\')"><img src="'+A.map+'" alt="" loading="lazy"></div>'
-      :'<div class="fc-slide act-svg" onclick="event.stopPropagation();actOpen(\''+r.id+'\')">'+trkThumb(A.track,400,300,'',A.rep)+'</div>']
+  const mine=sbUser&&r.userId===sbUser.id,
+    plus=mine?'<button type="button" class="act-draw" onclick="event.stopPropagation();actDraw(\''+r.id+'\')" aria-label="Powder einzeichnen" title="Powder einzeichnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>':'';
+  const slides=[A.map?'<div class="fc-slide" onclick="event.stopPropagation();actOpen(\''+r.id+'\')"><img src="'+A.map+'" alt="" loading="lazy">'+plus+'</div>'
+      :'<div class="fc-slide act-svg" onclick="event.stopPropagation();actOpen(\''+r.id+'\')">'+trkThumb(A.track,400,300,'',A.rep)+plus+'</div>']
     .concat(ims.map(u=>'<div class="fc-slide"><img src="'+u+'" alt="" loading="lazy"></div>'));
   return '<div class="act-card"><div class="fc-wrap act-wrap"><div class="fc-carousel" id="fcar-a'+id+'">'+slides.join('')+'</div>'
     +(slides.length>1?'<div class="fc-dots" id="fcd-a'+id+'">'+slides.map((x,i)=>'<i class="'+(i?'':'on')+'"></i>').join('')+'</div>':'')+'</div>'
@@ -11134,6 +11150,7 @@ function actLinked(r){const A=r&&r.condition_data&&r.condition_data.activity;if(
   const t0=(A.start||0)-36e5,t1=(A.end||A.start||0)+6*36e5;
   let la0=90,la1=-90,lo0=180,lo1=-180;A.track.forEach(p=>{la0=Math.min(la0,p[0]);la1=Math.max(la1,p[0]);lo0=Math.min(lo0,p[1]);lo1=Math.max(lo1,p[1]);});
   const out=(allReports||[]).filter(x=>{if(x===r||x.userId!==r.userId)return false;const cd=x.condition_data||{};if(cd.activity||cd.snowp)return false;
+    if(cd.act&&cd.act.post!=null)return String(cd.act.post)===String(r.id);   // drawn onto it later
     const t=Date.parse(x.createdAt||'')||0;if(!t||t<t0||t>t1)return false;
     if(x.lat<la0-.02||x.lat>la1+.02||x.lng<lo0-.03||x.lng>lo1+.03)return false;
     return A.track.some(p=>haversineKm(p[0],p[1],x.lat,x.lng)<1.5);});
@@ -11291,6 +11308,8 @@ function pvOpenPostOld(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)ret
 // its pictures and description.
 function pvOpenAct(boxId,i){const S=pvState[boxId],a=S&&S.acts[i];if(!a)return;pvClose();
   if(a.local){trkCur=a.id;trkView='detail';trkOpen();return;}
+  // a posted activity opens as its post; only one without a post goes to the map
+  if(a.post){feedOpenPost(a.post,S.uid);return;}
   try{navGo('map');}catch(e){}
   setTimeout(()=>{trkShowOnMap(a.track);actSumShow(a,S.uid,pvName(S));},250);}
 function actSumShow(a,uid,name){let el=document.getElementById('actSum');
@@ -14130,12 +14149,32 @@ map.on('moveend',function(){if(vaLegendUp()){try{miniLegendRender();}catch(e){}}
 // close is remembered for a moment.
 let _popClosedAt=0;
 map.on('popupclose',function(){_popClosedAt=Date.now();});
+// The point card opens on a long press; a short tap only closes what is
+// open (and a double tap zooms), so moving around the map never pops a card.
+let _lpAt=0;
 map.on('click',function(e){
+  if(Date.now()-_lpAt<800)return;
   if(document.body.classList.contains('feed-side')){feedClose();return;}
   if(document.body.classList.contains('insp-open')){inspClose();return;}
   if(Date.now()-_popClosedAt<450)return;
-  inspOpen(e.latlng.lat,e.latlng.lng);
+  try{toastOnce('lp-hint','Lange drücken für die Punkt-Info · doppelt tippen zum Zoomen');}catch(x){}
 });
+function mapLongPress(cx,cy){
+  if(document.body.classList.contains('feed-side')||document.body.classList.contains('draw-on')||document.body.classList.contains('trk-open'))return;
+  const r=map.getContainer().getBoundingClientRect(),ll=map.containerPointToLatLng([cx-r.left,cy-r.top]);
+  _lpAt=Date.now();try{haptic(12);}catch(x){}
+  inspOpen(ll.lat,ll.lng);}
+(function(){const el=map.getContainer();let t=0,sx=0,sy=0,n=0;
+  const stop=()=>{clearTimeout(t);t=0;};
+  el.addEventListener('pointerdown',e=>{n++;
+    if(n>1||(e.pointerType==='mouse'&&e.button!==0)||(e.target.closest&&e.target.closest('.leaflet-marker-icon,.leaflet-popup,.leaflet-control,.leaflet-interactive'))){stop();return;}
+    sx=e.clientX;sy=e.clientY;stop();t=setTimeout(()=>{t=0;mapLongPress(sx,sy);},480);},{passive:true});
+  el.addEventListener('pointermove',e=>{if(t&&Math.hypot(e.clientX-sx,e.clientY-sy)>10)stop();},{passive:true});
+  const up=()=>{n=Math.max(0,n-1);stop();};
+  el.addEventListener('pointerup',up,{passive:true});el.addEventListener('pointercancel',up,{passive:true});
+  // the system menu of a long press (and a right click on a desk) is the card too
+  el.addEventListener('contextmenu',e=>{e.preventDefault();if(Date.now()-_lpAt>800)mapLongPress(e.clientX,e.clientY);});
+  map.on('movestart zoomstart',stop);})();
 // Marker popups (reports, stations) open through Leaflet's own click
 // handling rather than the map's 'click' event above, so they need the
 // same guard: while the feed is open beside the map, a tap closes the
@@ -15541,7 +15580,7 @@ function loadReportMarkers(){
   try{applyFeedHighlight();}catch(e){}
 }
 let rptLastOpen=null;
-function feedOpenAt(id){feedScope='all';feedFilter='all';feedAnchor=null;
+function feedOpenAt(id){feedScope='post';feedFocusId=String(id);feedFilter='all';feedAnchor=null;
   if(document.getElementById('inspPanel'))document.getElementById('inspPanel').classList.remove('open');
   feedOpen();
   setTimeout(()=>{const el=document.getElementById('feedcard-'+id);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1800);}},160);}
@@ -18133,7 +18172,7 @@ function feedOpen(){
 addEventListener('keydown',e=>{if(e.key==='Escape'){const f=document.getElementById('feedPage');if(f&&f.classList.contains('open')&&!document.querySelector('.feed-sheet.open'))try{navGo('map');}catch(x){}}});
 function feedClose(){
   const el=document.getElementById('feedPage');if(!el)return;
-  if(feedScope==='user'||feedScope==='saved'||feedScope==='tours'){feedScope='all';feedUserId=null;feedTour=null;try{feedTourBar();}catch(e){}}
+  if(feedScope==='user'||feedScope==='saved'||feedScope==='tours'||feedScope==='post'){feedScope='all';feedUserId=null;feedTour=null;try{feedTourBar();}catch(e){}}
   el.classList.remove('open');
   document.body.setAttribute('data-screen','search');
   // it opens as a column again next time
@@ -18434,7 +18473,16 @@ let feedUserId=null,feedUserName='';
 // A post opened from a profile stands on its own at the top, with every
 // detail of what was reported; the person's other posts follow below it.
 let feedFocusId=null;
+// One post on its own at the top, the newest posts below it; the map only
+// when asked for (the pin on the card, «Route auf der Karte zeigen»).
+async function feedOpenPost(id,uid){if(!id)return;
+  try{pvClose();}catch(e){}
+  feedScope='post';feedFocusId=String(id);feedUserId=null;feedFilter='all';feedTour=null;feedAnchor=null;
+  navGo('feed');feedTourBar();feedRender();
+  if(uid&&!allReports.some(r=>String(r.id)===String(id))){try{await loadDbReports({uid});}catch(e){}feedRender();}
+  setTimeout(()=>{const sc=document.querySelector('.feed-scroll');if(sc)sc.scrollTop=0;},60);}
 async function feedOpenUser(uid,name,postId){if(!uid)return;
+  if(postId)return feedOpenPost(postId,uid);
   try{pvClose();}catch(e){}
   feedScope='user';feedUserId=uid;feedUserName=name||'';feedFilter='all';feedTour=null;feedFocusId=postId?String(postId):null;
   navGo('feed');feedTourBar();feedRender();
@@ -18479,6 +18527,9 @@ function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)re
   if(feedScope==='user'&&feedUserId){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.8"/><path d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0"/></svg>'+escapeHtml(feedUserName||'Beiträge')+'</span>'
       +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Alle Beiträge">×</button>';return;}
+  if(feedScope==='post'){b.style.display='flex';
+    b.innerHTML='<span class="fab-tour fab-user">Beitrag</span>'
+      +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Zurück zum Feed">×</button>';return;}
   if(feedScope==='saved'){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Gemerkt</span>'
       +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Zurück zum Feed">×</button>';return;}
@@ -18662,13 +18713,16 @@ function feedRender(){
   }
   let filtered=feedFilter==='all'?base:base.filter(r=>r.cat===feedFilter);
   if(feedAnchor){filtered=filtered.map(r=>({r,km:haversineKm(feedAnchor.lat,feedAnchor.lng,r.lat,r.lng)})).sort((a,b)=>a.km-b.km).map(o=>{o.r._km=o.km;return o.r;});}
-  else if(feedScope==='all')filtered=feedRank(filtered);
+  else if(feedScope==='all'||feedScope==='post')filtered=feedRank(filtered);
+  let focus=(feedScope==='user'||feedScope==='post')&&feedFocusId?filtered.find(r=>String(r.id)===feedFocusId):null;
+  // a post opened on its own may be one the feed would leave out (a drawn
+  // map, someone else's activity): it is shown anyway, it was asked for
+  if(!focus&&feedScope==='post'&&feedFocusId)focus=allReports.find(r=>String(r.id)===feedFocusId)||null;
+  if(focus)filtered=[focus].concat(filtered.filter(r=>r!==focus));
   if(!filtered.length){list.innerHTML='<div class="feed-empty">Noch keine Reports in dieser Kategorie.</div>';return;}
   // Building four hundred cards to show six is most of what made opening the
   // feed feel slow. Nobody scrolls past the first page before it re-renders.
   const FEED_PAGE=40;
-  const focus=feedScope==='user'&&feedFocusId?filtered.find(r=>String(r.id)===feedFocusId):null;
-  if(focus)filtered=[focus].concat(filtered.filter(r=>r!==focus));
   const shown=filtered.slice(0,FEED_PAGE),more=filtered.length-shown.length;
   list.innerHTML=shown.map(r=>{
     const col=CAT_COLORS[r.cat]||'#666';
@@ -18712,7 +18766,7 @@ function feedRender(){
         </span></span>
         ${endBtn}
       </div>
-    </div>${isF&&filtered.length>1?`<div class="feed-more-hd">Weitere Beiträge${feedUserName?' von '+escapeHtml(feedUserName):''}</div>`:''}`;
+    </div>${isF&&filtered.length>1?`<div class="feed-more-hd">${feedScope==='post'?'Neueste Beiträge':'Weitere Beiträge'+(feedUserName?' von '+escapeHtml(feedUserName):'')}</div>`:''}`;
   }).join('')+(more>0?('<div class="feed-more">'+more+' weitere</div>'):'');
   feedAnimateCards();feedWireCarousels();
   try{feedHighlight(shown.map(r=>r.id));}catch(e){}
