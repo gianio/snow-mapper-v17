@@ -1634,6 +1634,18 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
       .catch(fallback)
   );
 });
+// Web push (comments, likes, messages, followers): the payload is
+// {title, body, url, tag}; a tap focuses an open app and hands it the link,
+// else opens the link.
+self.addEventListener('push',e=>{let d={};try{d=e.data?e.data.json():{};}catch(x){d={body:e.data?e.data.text():''};}
+  e.waitUntil(self.registration.showNotification(d.title||'Snowmapper',{body:d.body||'',tag:d.tag||undefined,renotify:!!d.tag,
+    icon:'icon-192.png',badge:'icon-192.png',data:{url:d.url||'./'}}));});
+self.addEventListener('notificationclick',e=>{e.notification.close();
+  const url=(e.notification.data&&e.notification.data.url)||'./';
+  e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{
+    const c=cs.find(c=>new URL(c.url).origin===location.origin);
+    if(c){c.postMessage({type:'push-open',url});return c.focus();}
+    return self.clients.openWindow(url);}));});
 const MAINT_PAGE=__MAINT_PAGE__;
 """
 _MAINT_PAGE = ('<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>'
@@ -2540,13 +2552,17 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .insp-panel{left:50%;top:44%;right:auto;bottom:auto;
    width:min(320px,84vw);max-height:min(46vh,380px);
    margin-left:calc(min(320px,84vw) / -2);margin-top:calc(min(46vh,380px) / -2)}
+ /* phone: docked at the top, so the point and the timeline stay in view */
+ body.insp-open #lyNow{display:none!important}
+ @media (max-width:700px){.insp-panel{top:calc(env(safe-area-inset-top,0px) + 8px);margin-top:0;
+   width:min(380px,calc(100vw - 16px));margin-left:calc(min(380px,calc(100vw - 16px)) / -2);max-height:min(50vh,440px)}}
  /* the grab bar: the only part of the head that starts a drag */
  .insp-grab{flex-shrink:0;height:16px;display:flex;align-items:center;justify-content:center;
    cursor:grab;touch-action:none}
  .insp-grab::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--ink-150)}
  .insp-panel.dragging .insp-grab{cursor:grabbing}
  .insp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:2px 12px 9px;border-bottom:1px solid var(--bd);flex-shrink:0}
- .insp-head .insp-t{min-width:0}
+ .insp-head .insp-t{min-width:0;flex:1}
  .insp-head .insp-t b{font-size:13px;color:var(--fg);font-weight:800;letter-spacing:-.01em}
  .insp-chips{display:flex;gap:6px;margin-top:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-right:12px;-webkit-mask-image:linear-gradient(90deg,#000 91%,transparent);mask-image:linear-gradient(90deg,#000 91%,transparent)}
  .insp-chips::-webkit-scrollbar{display:none}
@@ -2569,6 +2585,14 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .tc-leg span{display:inline-flex;align-items:center;gap:6px}
  .tc-leg i{display:inline-block;width:22px;height:0;border-top:3px solid #3E7C8C;border-radius:2px}
  .tc-leg i.tc-srf{border-top:2.5px dashed #C9821F}
+ .tc-leg i.tc-snow{width:12px;height:10px;border:0;border-radius:2px;background:rgba(42,143,216,.5)}
+ .insp-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
+ .insp-kpis>div{background:var(--fill);border-radius:10px;padding:6px 8px;min-width:0}
+ .insp-kpis span{display:block;font-size:10.5px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .insp-kpis b{display:block;font-size:18px;font-weight:800;color:var(--fg);letter-spacing:-.02em;line-height:1.15;white-space:nowrap}
+ .insp-kpis b small{font-size:11.5px;color:var(--mut);font-weight:700}
+ .insp-kpis .k-snow b{color:#2A6FB0}
+ .insp-kpis em{display:block;font-style:normal;font-size:10.5px;font-weight:600;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .stn-now{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
  .stn-v{background:var(--fill);border-radius:12px;padding:8px 10px;min-width:0;display:flex;flex-direction:column;gap:2px}
  .stn-v span{font-size:11.5px;font-weight:700;color:var(--mut)}
@@ -3176,7 +3200,11 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .feed-page{transition:transform .28s cubic-bezier(.32,.72,.42,1),opacity .2s var(--ease),left .3s cubic-bezier(.32,.72,.42,1),width .3s cubic-bezier(.32,.72,.42,1)}
  /* the filter sheet belongs to the panel, not to the screen */
  .feed-page .feed-sheet{position:absolute;inset:0}
- .feed-page .feed-sheet-in{border-radius:var(--r-lg) var(--r-lg) 0 0}
+ .feed-page .feed-sheet{align-items:flex-start;padding:0 12px}
+ .feed-page .feed-sheet-in{border-radius:var(--r-lg);max-height:calc(100% - 140px);overflow:auto;
+   padding-bottom:16px;box-shadow:var(--elev3);animation:dropIn .2s var(--ease) both;transform-origin:top left}
+ @keyframes dropIn{from{transform:translateY(-8px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+ .ft-row .ft-me{margin-left:0;width:40px;height:40px;border-width:2px}
  .feed-filt-fab,.feed-page .feed-fab,.feed-page .feed-qr{position:absolute}
  .fn-btn{width:36px;height:36px;flex-shrink:0;border-radius:var(--r-1);border:1px solid var(--hair);
    background:var(--card);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
@@ -6064,7 +6092,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
         <button class="prof-back" onclick="profNav('main')">‹ Zurück</button>
         <div class="prof-sec-title">Benachrichtigungen</div>
         <div class="prof-row"><span>Push-Benachrichtigungen</span><button class="prof-toggle" id="profPush" onclick="profTogglePush()"><span></span></button></div>
-        <div class="prof-hint">Push-Benachrichtigungen werden mit einem der nächsten Updates aktiviert — deine Einstellung wird dann automatisch übernommen.</div>
+        <div class="prof-hint">Du bekommst eine Mitteilung bei Kommentaren und Likes zu deinen Beiträgen, bei neuen Nachrichten und neuen Follower:innen. Auf dem iPhone nur in der App auf dem Home-Bildschirm (ab iOS 16.4).</div>
+        <button class="prof-item" id="profPushTest" onclick="profPushTest(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Test-Benachrichtigung senden</button>
       </div>
       <div class="prof-view" id="profViewApp" style="display:none">
         <button class="prof-back" onclick="profNav('main')">‹ Zurück</button>
@@ -7476,6 +7505,9 @@ function tvT(x,cw){return tv0+x/cw*tvSpan();}
 // so it gets a single point to drag instead of a two-handle range. Every
 // other layer keeps the range untouched.
 function tlSingleMode(){
+  // the point card reads over a window, so while it is open the slider
+  // offers start and end even on an instant layer
+  if(document.body.classList.contains('insp-open'))return false;
   // SNOWPACK is a state at an instant, not an accumulation, so while its
   // layer is up the main slider has to stop offering a from-to window: two
   // handles would claim the layer integrates between them, and it does not.
@@ -13621,11 +13653,20 @@ function searchPlace(){const w=document.getElementById('searchWrap'),b=document.
   const r=b.getBoundingClientRect();if(!r.width){w.classList.remove('side');w.style.cssText='';return;}
   w.classList.add('side');const wd=Math.min(300,r.left-20);
   w.style.cssText='left:'+Math.max(12,r.left-wd-8)+'px;right:auto;width:'+wd+'px;top:'+(r.top+r.height/2-22)+'px';}
+// The phone keyboard covers the lower half where the button sits: while it
+// is up the field rides on top of it, full width, results above it.
+function searchKbPlace(){const w=document.getElementById('searchWrap'),vv=window.visualViewport;
+  if(!w||w.classList.contains('hid')||!vv||!w.classList.contains('side'))return;
+  const kb=innerHeight-vv.height-vv.offsetTop;
+  if(kb<80){searchPlace();return;}
+  w.style.cssText='left:12px;right:auto;width:'+(vv.width-24)+'px;top:'+Math.round(vv.offsetTop+vv.height-44-10)+'px';}
+try{if(window.visualViewport){visualViewport.addEventListener('resize',searchKbPlace);visualViewport.addEventListener('scroll',searchKbPlace);}}catch(e){}
 function searchFieldOpen(){
   const w=document.getElementById('searchWrap'),i=document.getElementById('searchIn');
   if(!w||!i)return;
   searchPlace();w.classList.remove('hid');
   try{i.focus({preventScroll:true});i.select();}catch(e){i.focus();}
+  setTimeout(searchKbPlace,350);setTimeout(searchKbPlace,700);
   try{haptic(4);}catch(e){}
 }
 // Once you have jumped somewhere, the field has done its job.
@@ -14064,7 +14105,19 @@ const _mz2=map.getBoundsZoom([[laMinW,loMinW],[laMaxW,loMaxW]])+0.3;if(map.getZo
 function iTabSw(el,tab){const c=el.closest('.icard');c.querySelectorAll('.itab').forEach(x=>x.classList.remove('active'));el.classList.add('active');c.querySelectorAll('.ipane').forEach(x=>x.classList.toggle('active',x.dataset.p===tab));}
 // --- Map-click inspect panel with charts + red X marker ---
 let inspMarker=null;
-function inspClose(){document.getElementById('inspPanel').classList.remove('open');document.body.classList.remove('insp-open');if(inspMarker){map.removeLayer(inspMarker);inspMarker=null;}}
+function inspClose(){document.getElementById('inspPanel').classList.remove('open');document.body.classList.remove('insp-open');if(inspMarker){map.removeLayer(inspMarker);inspMarker=null;}
+  _inspPanKey=null;try{if(tlMode==='detail')drawTimeline();}catch(e){}}
+// On a phone the card sits at the top; the tapped point is moved into the
+// map that stays visible between the card and the timeline, once per point.
+let _inspPanKey=null;
+function inspKeepPointVisible(lat,lon){const k=lat+','+lon;if(_inspPanKey===k)return;_inspPanKey=k;
+  if(innerWidth>700)return;
+  requestAnimationFrame(()=>{try{const pn=document.getElementById('inspPanel'),bp=document.getElementById('bottomPanel');
+    const top=pn.getBoundingClientRect().bottom,bot=bp&&bp.offsetParent!==null?bp.getBoundingClientRect().top:innerHeight-90;
+    if(bot-top<60)return;
+    const mr=map.getContainer().getBoundingClientRect(),pt=map.latLngToContainerPoint([lat,lon]),y=pt.y+mr.top;
+    const want=(top+bot)/2;if(Math.abs(y-want)<24)return;
+    map.panBy([0,y-want],{animate:true,duration:.35});}catch(e){}});}
 // Tapping the sliver of map that stays visible beside an open feed is a
 // dismiss, not a probe -- the point inspector would fight the panel for
 // the same screen space, so it is skipped while the feed is open.
@@ -14159,8 +14212,10 @@ function inspApplyPos(){const e=document.getElementById('inspPanel');
 const INSP_FIRST={snowpack:'va',cloud:'cloud',wind:'wind',snow:'snow',depth:'depth',temp:'temp',tsurf:'temp',
   sun:'rad',rad:'rad',radsun:'rad',powder:'prog',powfind:'prog',prog:'prog',progdiff:'prog',progpat:'prog'};
 function inspOrder(sec){
-  const base=['prog','va','snow','depth','temp','cloud','wind','rad'],first=INSP_FIRST[layer];
-  const order=first?[first].concat(base.filter(k=>k!==first)):base;
+  // new snow always first (with temperature in the same chart), then depth;
+  // a layer's own section comes right after
+  const base=['snow','depth','prog','cloud','wind','rad','va'],first=INSP_FIRST[layer];
+  const order=first&&first!=='snow'&&first!=='depth'&&first!=='temp'?['snow','depth',first].concat(base.filter(k=>k!=='snow'&&k!=='depth'&&k!==first)):base;
   return order.map(k=>sec[k]||'').join('');
 }
 function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-open');
@@ -14234,28 +14289,36 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
       (!cmTxt&&!note&&!otherChips&&!vizHtml?'<div class="prog-note">Keine Meldungen in der Nähe.</div>':'')+
       '</div>';
   }catch(e){}}
+  // the numbers first: what fell in the chosen window, what lies, how cold
+  let kpi='';try{let tmn=1e9,tmx=-1e9;for(let t=a;t<Math.min(b,T);t++){const v=tv(t,p);if(v==null||v!==v)continue;if(v<tmn)tmn=v;if(v>tmx)tmx=v;}
+    const kt=t=>{const d=zLocal(tMs(t));return WD()[d.getUTCDay()]+' '+String(d.getUTCHours()).padStart(2,'0')+'h';};
+    kpi='<div class="insp-kpis"><div class="k-snow"><span>Neuschnee</span><b>+'+newSnow.toFixed(newSnow<10?1:0)+'<small> cm</small></b><em>'+kt(a)+' – '+kt(Math.max(a,b-1))+'</em></div>'
+      +'<div><span>Schneehöhe</span><b>'+depthNow.toFixed(0)+'<small> cm</small></b><em>am Ende</em></div>'
+      +(tmx>-1e9?'<div><span>Luft</span><b>'+tmn.toFixed(0)+'…'+tmx.toFixed(0)+'<small>°</small></b><em>min … max</em></div>':'')+'</div>';}catch(e){}
   pan.innerHTML=
    '<div class="insp-grab" aria-hidden="true"></div>'+
    '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b>'+
-     '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+
+     '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+kpi+
    '</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
    '<div class="insp-body">'+inspOrder({va:vaSec,prog:progSec,
-     snow:'<div class="insp-sec"><h4>Neuschnee <em>+'+newSnow.toFixed(1)+' cm</em></h4><canvas id="icNew"></canvas></div>',
+     snow:'<div class="insp-sec"><h4>Neuschnee &amp; Temperatur <em>+'+newSnow.toFixed(1)+' cm</em></h4><div class="tc-leg"><span><i class="tc-snow"></i>Neuschnee cm/h</span><span><i class="tc-air"></i>Luft (2 m)</span><span><i class="tc-srf"></i>Schneeoberfläche</span></div><canvas id="icSnowTemp"></canvas></div>',
      depth:'<div class="insp-sec"><h4>Schneehöhe <em>'+depthNow.toFixed(0)+' cm</em></h4><canvas id="icDepth"></canvas></div>',
-     temp:'<div class="insp-sec"><h4>Temperatur <em>°C</em></h4><div class="tc-leg"><span><i class="tc-air"></i>Luft (2 m über Boden)</span><span><i class="tc-srf"></i>Schneeoberfläche</span></div><canvas id="icTemp"></canvas></div>',
+     temp:'',
      wind:'<div class="insp-sec"><h4>Windrose <em>Min · Median · Max</em></h4><canvas id="icWind"></canvas></div>',
      cloud:_clvData?'<div class="insp-sec"><h4>Bewölkung <em>nach Höhe</em></h4><canvas id="icCloud"></canvas></div>':'',
      rad:'<div class="insp-sec"><h4>Strahlung <em>% vom Tagesmaximum</em></h4><canvas id="icRad"></canvas></div>'})+
    '</div>';
   pan.classList.add('open');
   requestAnimationFrame(()=>{
-    icNewSnow(document.getElementById('icNew'),p);
+    icSnowTemp(document.getElementById('icSnowTemp'),p);
     icDepth(document.getElementById('icDepth'),p);
-    icTemp(document.getElementById('icTemp'),p);
     icWind(document.getElementById('icWind'),p,wk);
     icRad(document.getElementById('icRad'),p);
     if(_clvData)icCloud(document.getElementById('icCloud'),p);
   });
+  // while the card is open the timeline shows a from–to window to set
+  try{if(tlMode==='detail')drawTimeline();}catch(e){}
+  inspKeepPointVisible(lat,lon);
 }
 // Three bands like a meteogram: high (cirrus) on top, mid, low (stratus/fog)
 // at the bottom; the darker a cell, the more of that layer covers the sky.
@@ -14309,11 +14372,17 @@ function icDepth(cv,p){const{ctx,w,h}=icSetup(cv,80);const t0=a,t1=b;const LG=4,
 function icTemp(cv,p){const t0=a,t1=Math.max(a+2,b),air=[],srf=[];
   for(let t=t0;t<t1&&t<T;t++){air[t]=tv(t,p);srf[t]=tsurfEst(t,p);}
   tempChart(cv,air,srf,t0,Math.min(t1,T));}
+// New snow and temperature in one chart: whether it snowed and whether it
+// was cold enough for it to stay powder are read together. Bars = new snow
+// per hour on the right axis, lines = air and snow surface on the left.
+function icSnowTemp(cv,p){const t0=a,t1=Math.min(T,Math.max(a+2,b)),air=[],srf=[],sn=[];
+  for(let t=t0;t<t1;t++){air[t]=tv(t,p);srf[t]=tsurfEst(t,p);sn[t]=SNOW[t*NP+p]*M.snow_scale;}
+  tempChart(cv,air,srf,t0,t1,sn);}
 // Temperature over time with real axes: °C ticks on the left, hours and days
 // along the bottom. Air is a solid line, the snow surface a dashed one -- the
 // same marks as the legend above the canvas, so the two cannot be mixed up.
-function tempChart(cv,air,srf,t0,t1){const{ctx,w,h}=icSetup(cv,164);
-  const L=34,R=8,topY=12,baseY=h-36,plotW=w-L-R,n=Math.max(2,t1-t0),xOf=t=>L+(t-t0)/(n-1)*plotW;
+function tempChart(cv,air,srf,t0,t1,snow){const{ctx,w,h}=icSetup(cv,snow?196:164);
+  const L=34,R=snow?40:8,topY=snow?24:12,baseY=h-36,plotW=w-L-R,n=Math.max(2,t1-t0),xOf=t=>L+(t-t0)/(n-1)*plotW;
   let mn=1e9,mx=-1e9;for(const arr of [air,srf]){if(!arr)continue;for(let t=t0;t<t1;t++){const v=arr[t];if(v==null||v!==v)continue;if(v<mn)mn=v;if(v>mx)mx=v;}}
   if(mx<mn)return;
   const raw=Math.max(1,mx-mn),st=raw<=5?1:raw<=12?2:raw<=28?5:10;
@@ -14329,6 +14398,18 @@ function tempChart(cv,air,srf,t0,t1){const{ctx,w,h}=icSetup(cv,164);
     ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(L+plotW,y);ctx.stroke();ctx.setLineDash([]);
     ctx.fillStyle=v===0?'rgba(168,58,46,.9)':mut;ctx.fillText(v+'°',L-5,y);}
   ctx.textBaseline='alphabetic';
+  if(snow){let smx=0,smT=t0;for(let t=t0;t<t1;t++){const v=snow[t]||0;if(v>smx){smx=v;smT=t;}}
+    const steps=[0.1,0.2,0.5,1,2,3,5,10];let top=steps.find(v=>v>=smx*1.05)||Math.ceil(smx);
+    const ySn=v=>baseY-v/top*(baseY-topY),bw=Math.max(1.2,plotW/(n-1)*0.78);
+    ctx.fillStyle='rgba(42,143,216,.42)';
+    for(let t=t0;t<t1;t++){const v=snow[t]||0;if(v<0.005)continue;const y=ySn(v);icRR(ctx,xOf(t)-bw/2,y,bw,baseY-y,Math.min(2,bw/2.2));ctx.fill();}
+    ctx.font='600 10.5px Inter,system-ui';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle='#2A6FB0';
+    for(const f of [0,.5,1]){const v=top*f;ctx.fillText(v>=1||v===0?String(+v.toFixed(1)):v.toFixed(2).replace(/0$/,''),L+plotW+5,ySn(v));}
+    ctx.strokeStyle='rgba(42,111,176,.5)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(L+plotW+.5,topY-4);ctx.lineTo(L+plotW+.5,baseY);ctx.stroke();
+    ctx.textBaseline='alphabetic';ctx.font='700 10px Inter,system-ui';
+    ctx.fillStyle=mut;ctx.textAlign='left';ctx.fillText('°C',4,10);
+    ctx.fillStyle='#2A6FB0';ctx.textAlign='right';ctx.fillText('cm/h',w-2,10);
+    if(smx>=0.05)snow._peak={x:xOf(smT),y:ySn(smx),v:smx};}
   // x axis: hour ticks, day separators, day names centred under their day
   const pxH=plotW/(n-1),hs=pxH*3>=26?3:pxH*6>=26?6:pxH*12>=26?12:24;
   ctx.strokeStyle='rgba(18,21,26,.35)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(L,baseY+.5);ctx.lineTo(L+plotW,baseY+.5);ctx.moveTo(L+.5,topY-4);ctx.lineTo(L+.5,baseY);ctx.stroke();
@@ -14347,6 +14428,7 @@ function tempChart(cv,air,srf,t0,t1){const{ctx,w,h}=icSetup(cv,164);
     let aMx=-1e9,aMxT=t0,aMn=1e9,aMnT=t0;for(let t=t0;t<t1;t++){const v=air[t];if(v==null||v!==v)continue;if(v>aMx){aMx=v;aMxT=t;}if(v<aMn){aMn=v;aMnT=t;}}
     if(aMx>-1e9){icPill(ctx,xOf(aMxT),yOf(aMx)-21,tr('Luft max')+' '+aMx.toFixed(0)+'°','#B4552A',w);
       icPill(ctx,xOf(aMnT),Math.min(baseY-18,yOf(aMn)+5),tr('Luft min')+' '+aMn.toFixed(0)+'°',cvTok('--accent-meteo','#2A8FD8'),w);}}
+  if(snow&&snow._peak){const pk=snow._peak;icPill(ctx,Math.max(pk.x,L+40),Math.max(topY-2,pk.y-21),pk.v.toFixed(pk.v>=1?1:2)+' cm/h','#2A6FB0',w);}
   ctx.textAlign='left';}
 function icWind(cv,p,wk){const sm=[];
   for(let t=a;t<b;t++){let dir=(WDIR[t*P+wk]*M.dir_div)%360;if(dir<0)dir+=360;sm.push([dir,SPD[t*P+wk]/M.spd_mul*3.6]);}
@@ -14776,8 +14858,9 @@ setTimeout(dismissIntro,0);
 requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}
   try{document.body.classList.add('scr-home');}catch(e){}
   try{lyRender();}catch(e){}});
-try{const _pid=new URLSearchParams(location.search).get('post');
-  if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);}catch(e){}
+try{const _q=new URLSearchParams(location.search),_pid=_q.get('post');
+  if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);
+  else if(_q.get('dm')||_q.get('user'))setTimeout(()=>pushRoute(location.href),2200);}catch(e){}
 // The split build registers it from the boot loader (app.js only arrives
 // after 'load' has fired, so a load listener here never ran).
 if(!window.__bootDone&&'serviceWorker'in navigator&&location.protocol!=='file:'){const _swReg=()=>navigator.serviceWorker.register('sw.js').then(reg=>{try{reg.update();}catch(e){}}).catch(()=>{});
@@ -15465,6 +15548,7 @@ function feedOpenAt(id){feedScope='all';feedFilter='all';feedAnchor=null;
 // --- Auth UI ---
 function authUpdateUI(user){
   sbUser=user;
+  if(user&&window._pushFor!==user.id){window._pushFor=user.id;setTimeout(pushSync,3000);}
   const btn=document.getElementById('btnLogin');
   const feedB=document.getElementById('mapFeedFab'),banner=document.getElementById('emailBanner');
   if(user){
@@ -16188,9 +16272,71 @@ async function profUploadAvatar(file){
 }
 async function profTogglePush(){
   const t=document.getElementById('profPush');const willOn=!t.classList.contains('on');
-  if(willOn&&'Notification'in window){try{const perm=await Notification.requestPermission();if(perm!=='granted'){alert('Benachrichtigungen wurden nicht erlaubt. Bitte im Browser aktivieren.');return;}}catch(e){}}
+  if(willOn){
+    if(pushIosNeedsHome()){alert('Auf dem iPhone kommen Benachrichtigungen nur in der App auf dem Home-Bildschirm: im Safari «Teilen» → «Zum Home-Bildschirm», dann dort einschalten (ab iOS 16.4).');return;}
+    if(!pushSupported()){alert('Dieser Browser kann keine Benachrichtigungen empfangen.');return;}
+    try{const perm=await Notification.requestPermission();if(perm!=='granted'){alert('Benachrichtigungen wurden nicht erlaubt. Bitte in den Browser-Einstellungen für diese Seite erlauben.');return;}}catch(e){}
+    try{if(!await pushSubscribe())throw new Error('kein Abo');}
+    catch(e){toast('Benachrichtigungen konnten nicht eingerichtet werden: '+(e.message||e),'err');return;}
+  }
   t.classList.toggle('on',willOn);
+  // saved at once: the server reads the switch for every push
+  try{if(sb&&sbUser)await sb.from('profiles').update({push_enabled:willOn}).eq('id',sbUser.id);}catch(e){}
 }
+async function profPushTest(btn){
+  if(!sb||!sbUser){authShow();return;}
+  if(pushIosNeedsHome()){alert('Auf dem iPhone kommen Benachrichtigungen nur in der App auf dem Home-Bildschirm.');return;}
+  if(!pushSupported()){alert('Dieser Browser kann keine Benachrichtigungen empfangen.');return;}
+  if(Notification.permission!=='granted'){toast('Schalte zuerst die Push-Benachrichtigungen ein.','err');return;}
+  btn.disabled=true;
+  try{await pushSubscribe();const{error}=await sb.rpc('push_test');if(error)throw error;
+    toast('Gesendet – die Mitteilung sollte in wenigen Sekunden erscheinen.','ok');}
+  catch(e){toast('Test fehlgeschlagen: '+(e.message||e),'err');}
+  setTimeout(()=>{btn.disabled=false;},4000);
+}
+// ── Web push ─────────────────────────────────────────────────────────────
+// The device subscribes with the server's public key (push_public_key) and
+// hands the subscription to push_subscribe; comments, likes, messages and
+// followers are pushed by the push-notify function while push_enabled is on.
+// iOS only delivers to the app on the home screen (16.4+); the iOS shell
+// (WKWebView) has no PushManager and is left out.
+function pushSupported(){return'serviceWorker'in navigator&&'PushManager'in window&&'Notification'in window&&location.protocol==='https:';}
+function pushIosNeedsHome(){return/iPhone|iPad|iPod/.test(navigator.userAgent||'')&&!(navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches));}
+function _b64u(s){const b=atob((s+'='.repeat((4-s.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0));}
+function _swReady(){return Promise.race([navigator.serviceWorker.ready,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Service Worker fehlt')),8000))]);}
+async function pushSubscribe(){
+  if(!pushSupported()||!sb||!sbUser)return false;
+  const reg=await _swReady();
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub){const{data:k,error}=await sb.rpc('push_public_key');if(error||!k)return false;
+    sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:_b64u(k)});}
+  const j=sub.toJSON(),mark=sbUser.id+'|'+j.endpoint;
+  let last='';try{last=localStorage.getItem('ssm_push_sub')||'';}catch(e){}
+  if(last!==mark){
+    const{error}=await sb.rpc('push_subscribe',{p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_ua:(navigator.userAgent||'').slice(0,300)});
+    if(error)throw error;
+    try{localStorage.setItem('ssm_push_sub',mark);}catch(e){}}
+  return true;
+}
+// signing out: this device stops getting the person's notifications
+async function pushUnsubscribe(){try{
+  if(!pushSupported())return;
+  const sub=await(await _swReady()).pushManager.getSubscription();
+  if(sub){if(sb&&sbUser)await sb.from('push_subscriptions').delete().eq('endpoint',sub.endpoint);await sub.unsubscribe();}
+  }catch(e){}
+  try{localStorage.removeItem('ssm_push_sub');}catch(e){}}
+// after sign-in: keep this device's subscription with the signed-in person
+async function pushSync(){try{
+  if(!pushSupported()||!sb||!sbUser||Notification.permission!=='granted')return;
+  const{data}=await sb.from('profiles').select('push_enabled').eq('id',sbUser.id).single();
+  if(data&&data.push_enabled)await pushSubscribe();}catch(e){}}
+// a tapped notification: ?post= / ?dm= / ?user=
+function pushRoute(url){try{const q=new URL(url,location.href).searchParams;
+  if(q.get('post'))feedOpenAt(q.get('post'));
+  else if(q.get('dm')){if(!sb||!sbUser){authShow();return;}dmWith(q.get('dm'),q.get('n')||'');}
+  else if(q.get('user'))viewUser(q.get('user'),'');}catch(e){}}
+try{if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',e=>{
+  if(e.data&&e.data.type==='push-open')pushRoute(e.data.url);});}catch(e){}
 async function profSave(){
   try{const d=document.getElementById('profDisplay');
     const home=document.getElementById('profHome'),lay=document.getElementById('profLayer');
@@ -16218,7 +16364,7 @@ async function profSave(){
   }catch(e){alert('Fehler: '+(e.message||e));}
   btn.disabled=false;btn.textContent='Speichern';
 }
-function profSignOut(){if(sb)sb.auth.signOut();profClose();authUpdateUI(null);}
+async function profSignOut(){await pushUnsubscribe();window._pushFor=null;if(sb)sb.auth.signOut();profClose();authUpdateUI(null);}
 function sendFeedback(){try{haptic(8);}catch(e){}
   const body=encodeURIComponent('\n\n---\nSnowmapper\n'+(navigator.userAgent||''));
   window.location.href='mailto:giani.morf@bluewin.ch?subject='+encodeURIComponent('Snowmapper Feedback')+'&body='+body;}
@@ -17801,7 +17947,7 @@ function obsBuildCD(){const s=obsState;const cd={obsType:s.type,source:s.locatio
   return cd;}
 function obsSubLabel(){const s=obsState;if(s.type==='avalanche')return s.avalanche.characteristics.size!=='unknown'?('Lawine '+obsSizeMeta(s.avalanche.characteristics.size).l):'Lawine';if(s.type==='whumpf')return 'Wumm';if(s.type==='wind_slab')return 'Triebschnee';if(s.type==='snow')return snowKindLabel(s.snow.kind)||'Schnee';return 'Beobachtung';}
 // --- Feed (Instagram-style full page) ---
-let feedFilter='all',feedAnchor=null,feedScope='here',feedGroup=null;
+let feedFilter='all',feedAnchor=null,feedScope='all',feedGroup=null;
 // The selected window, as real dates, so a report can be tested against it.
 function feedWindowMs(){
   try{const t0=new Date(M.times[Math.max(0,Math.min(T-1,a))]+'Z').getTime();
@@ -17813,6 +17959,25 @@ function feedWindowMs(){
 // its timestamp fell outside the timeline's currently selected window, which
 // reads as "not stored" rather than "filtered out" from the user's side.
 function feedInWindow(r){return true;}
+// One feed, no tabs: close by, fresh and from people you follow first.
+// Each counts on a log scale, so a post from this morning next door beats
+// yesterday's in the valley over, and a friend's lifts it by about a day
+// or a valley. Distance from your position, else from the map centre.
+function feedRank(list){
+  let o=null;try{o=myLoc?{lat:myLoc[0],lng:myLoc[1]}:map.getCenter();}catch(e){}
+  const now=Date.now();
+  return list.map(r=>{
+    const km=o?haversineKm(o.lat,o.lng,r.lat,r.lng):0;r._km=o?km:null;
+    const h=Math.max(0,(now-(Date.parse(r.createdAt)||now))/3.6e6);
+    const fol=r.userId&&myFollowing.has(r.userId),fr=fol&&myFollowers&&myFollowers.has(r.userId);
+    return{r,s:Math.log1p(h/18)+Math.log1p(km/20)-(fr?1.4:fol?1:0)};})
+    .sort((a,b)=>a.s-b.s).map(x=>x.r);}
+// the position for the ranking, quietly once permission is there
+function feedWarmLoc(){if(myLoc||!navigator.geolocation||!navigator.permissions)return;
+  try{navigator.permissions.query({name:'geolocation'}).then(q=>{if(q.state!=='granted')return;
+    navigator.geolocation.getCurrentPosition(p=>{if(myLoc)return;myLoc=[p.coords.latitude,p.coords.longitude];
+      const el=document.getElementById('feedPage');if(el&&el.classList.contains('open')&&feedScope==='all')try{feedRender();}catch(e){}},
+      ()=>{},{maximumAge:600000,timeout:8000});}).catch(()=>{});}catch(e){}}
 const FEED_SCOPES=[
   {id:'here',label:'Hier & jetzt',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v4l3 2"/></svg>'},
   {id:'all',label:'Entdecken',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.2 7.8 14 14 7.8 16.2 10 10"/></svg>'},
@@ -17937,9 +18102,13 @@ function feedLiveRefresh(){
   clearTimeout(_feedLiveT);_feedLiveT=setTimeout(()=>{try{feedRender();}catch(e){}},180);
 }
 try{map.on('moveend zoomend',feedLiveRefresh);}catch(e){}
+// The filter drops down under its button at the top, where the finger is.
 function feedFilterOpen(){
   const sh=document.getElementById('feedSheet');if(!sh)return;
   sh.classList.add('open');try{haptic(4);}catch(e){}
+  try{const b=document.querySelector('#feedTop .ft-cat'),inn=sh.querySelector('.feed-sheet-in');
+    if(b&&inn){const top=b.getBoundingClientRect().bottom-sh.getBoundingClientRect().top+8;
+      inn.style.marginTop=Math.max(8,top)+'px';}}catch(e){}
 }
 function feedFilterClose(){
   const sh=document.getElementById('feedSheet');if(sh)sh.classList.remove('open');
@@ -17951,6 +18120,7 @@ addEventListener('keydown',e=>{
 });
 function feedOpen(){
   const el=document.getElementById('feedPage');if(!el)return;
+  try{feedWarmLoc();}catch(e){}
   // [data-dm] entry points (this screen's messages FAB included) otherwise
   // only ever get unhidden from openProfile() -- someone who never opens
   // their profile would never see messaging even when it's fully set up.
@@ -17963,7 +18133,7 @@ function feedOpen(){
 addEventListener('keydown',e=>{if(e.key==='Escape'){const f=document.getElementById('feedPage');if(f&&f.classList.contains('open')&&!document.querySelector('.feed-sheet.open'))try{navGo('map');}catch(x){}}});
 function feedClose(){
   const el=document.getElementById('feedPage');if(!el)return;
-  if(feedScope==='user'||feedScope==='saved'||feedScope==='tours'){feedScope='here';feedUserId=null;feedTour=null;try{feedTourBar();}catch(e){}}
+  if(feedScope==='user'||feedScope==='saved'||feedScope==='tours'){feedScope='all';feedUserId=null;feedTour=null;try{feedTourBar();}catch(e){}}
   el.classList.remove('open');
   document.body.setAttribute('data-screen','search');
   // it opens as a column again next time
@@ -18247,16 +18417,17 @@ async function addComment(){
 // now, the people you follow, everything), the category, people search --
 // and on a desk your posts and messages. "Gemerkt" lives in your profile,
 // tour reports on the tour, a person's posts behind their name.
-const FEED_TABS=[['here','Hier & jetzt'],['following','Folge ich'],['all','Alle']];
 function feedTopRender(){const el=document.getElementById('feedTop');if(!el)return;
   const cat=feedFilter==='all'?'Alle Meldungen':catLabel(feedFilter);
   const ic=d=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
-  el.innerHTML='<div class="ft-tabs" role="tablist" aria-label="Ansicht">'+FEED_TABS.map(t=>'<button type="button" role="tab" aria-selected="'+(feedScope===t[0])+'" class="'+(feedScope===t[0]?'on':'')+'" onclick="feedSetScope(\''+t[0]+'\')">'+t[1]+'</button>').join('')+'</div>'
-    +'<div class="ft-row"><button type="button" class="ft-cat'+(feedFilter!=='all'?' on':'')+'" onclick="feedFilterOpen()">'+ic('<path d="M4 6h16M7 12h10M10 18h4"/>')+'<span>'+escapeHtml(cat)+'</span></button>'
+  el.innerHTML='<div class="ft-row"><button type="button" class="ft-cat'+(feedFilter!=='all'?' on':'')+'" onclick="feedFilterOpen()">'+ic('<path d="M4 6h16M7 12h10M10 18h4"/>')+'<span>'+escapeHtml(cat)+'</span></button>'
     +'<button type="button" class="ft-ic" onclick="usOpen()" aria-label="Leute finden" title="Leute finden">'+ic('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')+'</button>'
-    +'<button type="button" class="ft-ic" onclick="accountTap()" aria-label="Meine Beiträge" title="Meine Beiträge">'+ic('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>')+'</button>'
+    +'<button type="button" class="ft-ic pt-acc ft-me" onclick="accountTap()" aria-label="Mein Profil" title="Mein Profil">'+ic('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>')+'<span class="pt-ini"></span></button>'
     +'<button type="button" class="ft-ic ft-desk" data-dm hidden onclick="dmOpen()" aria-label="Nachrichten" title="Nachrichten">'+ic('<path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 15 21l-4.4-7.6L3 9z"/>')+'</button></div>';
-  try{if(typeof dmReady!=='undefined'&&dmReady)el.querySelectorAll('[data-dm]').forEach(x=>x.hidden=false);}catch(e){}}
+  try{if(typeof dmReady!=='undefined'&&dmReady)el.querySelectorAll('[data-dm]').forEach(x=>x.hidden=false);}catch(e){}
+  // your own picture, as on the map; it opens your profile
+  try{let u=null;const c=(localStorage.getItem('ssm_avatar')||'').split('|');
+    if(sbUser&&c[0]===sbUser.id&&c[1])u=c.slice(1).join('|');updateAccountBtn(u);}catch(e){}}
 function feedChipsRender(){feedTopRender();const el=document.getElementById('feedChips');if(!el)return;
   el.innerHTML=FEED_SCOPES.map(s=>`<button type="button" role="tab" data-s="${s.id}" aria-selected="${feedScope===s.id}" class="${feedScope===s.id?'on':''}" onclick="feedSetScope('${s.id}')">${s.icon}<span>${s.label}</span></button>`).join('');}
 let feedUserId=null,feedUserName='';
@@ -18307,10 +18478,10 @@ function feedDetailsHTML(r){const cd=r.condition_data||{},rows=[];
 function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)return;
   if(feedScope==='user'&&feedUserId){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.8"/><path d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0"/></svg>'+escapeHtml(feedUserName||'Beiträge')+'</span>'
-      +'<button type="button" onclick="feedSetScope(\'here\')" aria-label="Alle Beiträge">×</button>';return;}
+      +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Alle Beiträge">×</button>';return;}
   if(feedScope==='saved'){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Gemerkt</span>'
-      +'<button type="button" onclick="feedSetScope(\'here\')" aria-label="Zurück zum Feed">×</button>';return;}
+      +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Zurück zum Feed">×</button>';return;}
   if(b.querySelector('.fab-user')){b.style.display='none';b.innerHTML='';}
   if(feedScope==='tours'&&feedTour){b.style.display='flex';
     b.innerHTML='<span class="fab-tour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-10 4 6 2-3 4 7z"/></svg>'+escapeHtml(feedTour.name)+'</span><button type="button" onclick="feedTour=null;feedTourBar();feedRender()">✕ alle Touren</button>';}
@@ -18491,6 +18662,7 @@ function feedRender(){
   }
   let filtered=feedFilter==='all'?base:base.filter(r=>r.cat===feedFilter);
   if(feedAnchor){filtered=filtered.map(r=>({r,km:haversineKm(feedAnchor.lat,feedAnchor.lng,r.lat,r.lng)})).sort((a,b)=>a.km-b.km).map(o=>{o.r._km=o.km;return o.r;});}
+  else if(feedScope==='all')filtered=feedRank(filtered);
   if(!filtered.length){list.innerHTML='<div class="feed-empty">Noch keine Reports in dieser Kategorie.</div>';return;}
   // Building four hundred cards to show six is most of what made opening the
   // feed feel slow. Nobody scrolls past the first page before it re-renders.
@@ -18501,7 +18673,7 @@ function feedRender(){
   list.innerHTML=shown.map(r=>{
     const col=CAT_COLORS[r.cat]||'#666';
     const bg=CAT_BG[r.cat]||'linear-gradient(135deg,#f0f0f0,#e0e0e0)';
-    const distTag=(feedAnchor&&r._km!=null)?`<span class="feed-card-dist">${r._km<1?Math.round(r._km*1000)+' m':r._km.toFixed(r._km<10?1:0)+' km'}</span>`:'';
+    const distTag=((feedAnchor||feedScope==='all')&&r._km!=null)?`<span class="feed-card-dist">${r._km<1?Math.round(r._km*1000)+' m':r._km.toFixed(r._km<10?1:0)+' km'}</span>`:'';
     const canFollow=r.dbRow&&r.userId&&(!sbUser||r.userId!==sbUser.id);
     const followBtn=canFollow?`<button class="feed-follow ${myFollowing.has(r.userId)?'following':''}" onclick="toggleFollow('${r.userId}',event)">${myFollowing.has(r.userId)?'Folge ich':'Folgen'}</button>`:'';
     const endBtn=r.dbRow?`<button class="endorse-btn ${r.liked?'endorsed':''}" onclick="toggleEndorse('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> ${r.likes||0}<span class="endorse-lbl">${r.liked?'Bestätigt':'Bestätigen'}</span></button>`:'';
