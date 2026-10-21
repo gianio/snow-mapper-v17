@@ -3188,7 +3188,11 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .feed-page{transition:transform .28s cubic-bezier(.32,.72,.42,1),opacity .2s var(--ease),left .3s cubic-bezier(.32,.72,.42,1),width .3s cubic-bezier(.32,.72,.42,1)}
  /* the filter sheet belongs to the panel, not to the screen */
  .feed-page .feed-sheet{position:absolute;inset:0}
- .feed-page .feed-sheet-in{border-radius:var(--r-lg) var(--r-lg) 0 0}
+ .feed-page .feed-sheet{align-items:flex-start;padding:0 12px}
+ .feed-page .feed-sheet-in{border-radius:var(--r-lg);max-height:calc(100% - 140px);overflow:auto;
+   padding-bottom:16px;box-shadow:var(--elev3);animation:dropIn .2s var(--ease) both;transform-origin:top left}
+ @keyframes dropIn{from{transform:translateY(-8px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+ .ft-row .ft-me{margin-left:0;width:40px;height:40px;border-width:2px}
  .feed-filt-fab,.feed-page .feed-fab,.feed-page .feed-qr{position:absolute}
  .fn-btn{width:36px;height:36px;flex-shrink:0;border-radius:var(--r-1);border:1px solid var(--hair);
    background:var(--card);color:var(--ink-700);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
@@ -17878,7 +17882,7 @@ function obsBuildCD(){const s=obsState;const cd={obsType:s.type,source:s.locatio
   return cd;}
 function obsSubLabel(){const s=obsState;if(s.type==='avalanche')return s.avalanche.characteristics.size!=='unknown'?('Lawine '+obsSizeMeta(s.avalanche.characteristics.size).l):'Lawine';if(s.type==='whumpf')return 'Wumm';if(s.type==='wind_slab')return 'Triebschnee';if(s.type==='snow')return snowKindLabel(s.snow.kind)||'Schnee';return 'Beobachtung';}
 // --- Feed (Instagram-style full page) ---
-let feedFilter='all',feedAnchor=null,feedScope='here',feedGroup=null;
+let feedFilter='all',feedAnchor=null,feedScope='all',feedGroup=null;
 // The selected window, as real dates, so a report can be tested against it.
 function feedWindowMs(){
   try{const t0=new Date(M.times[Math.max(0,Math.min(T-1,a))]+'Z').getTime();
@@ -17890,6 +17894,25 @@ function feedWindowMs(){
 // its timestamp fell outside the timeline's currently selected window, which
 // reads as "not stored" rather than "filtered out" from the user's side.
 function feedInWindow(r){return true;}
+// One feed, no tabs: close by, fresh and from people you follow first.
+// Each counts on a log scale, so a post from this morning next door beats
+// yesterday's in the valley over, and a friend's lifts it by about a day
+// or a valley. Distance from your position, else from the map centre.
+function feedRank(list){
+  let o=null;try{o=myLoc?{lat:myLoc[0],lng:myLoc[1]}:map.getCenter();}catch(e){}
+  const now=Date.now();
+  return list.map(r=>{
+    const km=o?haversineKm(o.lat,o.lng,r.lat,r.lng):0;r._km=o?km:null;
+    const h=Math.max(0,(now-(Date.parse(r.createdAt)||now))/3.6e6);
+    const fol=r.userId&&myFollowing.has(r.userId),fr=fol&&myFollowers&&myFollowers.has(r.userId);
+    return{r,s:Math.log1p(h/18)+Math.log1p(km/20)-(fr?1.4:fol?1:0)};})
+    .sort((a,b)=>a.s-b.s).map(x=>x.r);}
+// the position for the ranking, quietly once permission is there
+function feedWarmLoc(){if(myLoc||!navigator.geolocation||!navigator.permissions)return;
+  try{navigator.permissions.query({name:'geolocation'}).then(q=>{if(q.state!=='granted')return;
+    navigator.geolocation.getCurrentPosition(p=>{if(myLoc)return;myLoc=[p.coords.latitude,p.coords.longitude];
+      const el=document.getElementById('feedPage');if(el&&el.classList.contains('open')&&feedScope==='all')try{feedRender();}catch(e){}},
+      ()=>{},{maximumAge:600000,timeout:8000});}).catch(()=>{});}catch(e){}}
 const FEED_SCOPES=[
   {id:'here',label:'Hier & jetzt',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v4l3 2"/></svg>'},
   {id:'all',label:'Entdecken',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.2 7.8 14 14 7.8 16.2 10 10"/></svg>'},
@@ -18014,9 +18037,13 @@ function feedLiveRefresh(){
   clearTimeout(_feedLiveT);_feedLiveT=setTimeout(()=>{try{feedRender();}catch(e){}},180);
 }
 try{map.on('moveend zoomend',feedLiveRefresh);}catch(e){}
+// The filter drops down under its button at the top, where the finger is.
 function feedFilterOpen(){
   const sh=document.getElementById('feedSheet');if(!sh)return;
   sh.classList.add('open');try{haptic(4);}catch(e){}
+  try{const b=document.querySelector('#feedTop .ft-cat'),inn=sh.querySelector('.feed-sheet-in');
+    if(b&&inn){const top=b.getBoundingClientRect().bottom-sh.getBoundingClientRect().top+8;
+      inn.style.marginTop=Math.max(8,top)+'px';}}catch(e){}
 }
 function feedFilterClose(){
   const sh=document.getElementById('feedSheet');if(sh)sh.classList.remove('open');
@@ -18028,6 +18055,7 @@ addEventListener('keydown',e=>{
 });
 function feedOpen(){
   const el=document.getElementById('feedPage');if(!el)return;
+  try{feedWarmLoc();}catch(e){}
   // [data-dm] entry points (this screen's messages FAB included) otherwise
   // only ever get unhidden from openProfile() -- someone who never opens
   // their profile would never see messaging even when it's fully set up.
@@ -18040,7 +18068,7 @@ function feedOpen(){
 addEventListener('keydown',e=>{if(e.key==='Escape'){const f=document.getElementById('feedPage');if(f&&f.classList.contains('open')&&!document.querySelector('.feed-sheet.open'))try{navGo('map');}catch(x){}}});
 function feedClose(){
   const el=document.getElementById('feedPage');if(!el)return;
-  if(feedScope==='user'||feedScope==='saved'||feedScope==='tours'){feedScope='here';feedUserId=null;feedTour=null;try{feedTourBar();}catch(e){}}
+  if(feedScope==='user'||feedScope==='saved'||feedScope==='tours'){feedScope='all';feedUserId=null;feedTour=null;try{feedTourBar();}catch(e){}}
   el.classList.remove('open');
   document.body.setAttribute('data-screen','search');
   // it opens as a column again next time
@@ -18324,16 +18352,17 @@ async function addComment(){
 // now, the people you follow, everything), the category, people search --
 // and on a desk your posts and messages. "Gemerkt" lives in your profile,
 // tour reports on the tour, a person's posts behind their name.
-const FEED_TABS=[['here','Hier & jetzt'],['following','Folge ich'],['all','Alle']];
 function feedTopRender(){const el=document.getElementById('feedTop');if(!el)return;
   const cat=feedFilter==='all'?'Alle Meldungen':catLabel(feedFilter);
   const ic=d=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
-  el.innerHTML='<div class="ft-tabs" role="tablist" aria-label="Ansicht">'+FEED_TABS.map(t=>'<button type="button" role="tab" aria-selected="'+(feedScope===t[0])+'" class="'+(feedScope===t[0]?'on':'')+'" onclick="feedSetScope(\''+t[0]+'\')">'+t[1]+'</button>').join('')+'</div>'
-    +'<div class="ft-row"><button type="button" class="ft-cat'+(feedFilter!=='all'?' on':'')+'" onclick="feedFilterOpen()">'+ic('<path d="M4 6h16M7 12h10M10 18h4"/>')+'<span>'+escapeHtml(cat)+'</span></button>'
+  el.innerHTML='<div class="ft-row"><button type="button" class="ft-cat'+(feedFilter!=='all'?' on':'')+'" onclick="feedFilterOpen()">'+ic('<path d="M4 6h16M7 12h10M10 18h4"/>')+'<span>'+escapeHtml(cat)+'</span></button>'
     +'<button type="button" class="ft-ic" onclick="usOpen()" aria-label="Leute finden" title="Leute finden">'+ic('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')+'</button>'
-    +'<button type="button" class="ft-ic" onclick="accountTap()" aria-label="Meine Beiträge" title="Meine Beiträge">'+ic('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>')+'</button>'
+    +'<button type="button" class="ft-ic pt-acc ft-me" onclick="accountTap()" aria-label="Mein Profil" title="Mein Profil">'+ic('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>')+'<span class="pt-ini"></span></button>'
     +'<button type="button" class="ft-ic ft-desk" data-dm hidden onclick="dmOpen()" aria-label="Nachrichten" title="Nachrichten">'+ic('<path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 15 21l-4.4-7.6L3 9z"/>')+'</button></div>';
-  try{if(typeof dmReady!=='undefined'&&dmReady)el.querySelectorAll('[data-dm]').forEach(x=>x.hidden=false);}catch(e){}}
+  try{if(typeof dmReady!=='undefined'&&dmReady)el.querySelectorAll('[data-dm]').forEach(x=>x.hidden=false);}catch(e){}
+  // your own picture, as on the map; it opens your profile
+  try{let u=null;const c=(localStorage.getItem('ssm_avatar')||'').split('|');
+    if(sbUser&&c[0]===sbUser.id&&c[1])u=c.slice(1).join('|');updateAccountBtn(u);}catch(e){}}
 function feedChipsRender(){feedTopRender();const el=document.getElementById('feedChips');if(!el)return;
   el.innerHTML=FEED_SCOPES.map(s=>`<button type="button" role="tab" data-s="${s.id}" aria-selected="${feedScope===s.id}" class="${feedScope===s.id?'on':''}" onclick="feedSetScope('${s.id}')">${s.icon}<span>${s.label}</span></button>`).join('');}
 let feedUserId=null,feedUserName='';
@@ -18384,10 +18413,10 @@ function feedDetailsHTML(r){const cd=r.condition_data||{},rows=[];
 function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)return;
   if(feedScope==='user'&&feedUserId){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.8"/><path d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0"/></svg>'+escapeHtml(feedUserName||'Beiträge')+'</span>'
-      +'<button type="button" onclick="feedSetScope(\'here\')" aria-label="Alle Beiträge">×</button>';return;}
+      +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Alle Beiträge">×</button>';return;}
   if(feedScope==='saved'){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Gemerkt</span>'
-      +'<button type="button" onclick="feedSetScope(\'here\')" aria-label="Zurück zum Feed">×</button>';return;}
+      +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Zurück zum Feed">×</button>';return;}
   if(b.querySelector('.fab-user')){b.style.display='none';b.innerHTML='';}
   if(feedScope==='tours'&&feedTour){b.style.display='flex';
     b.innerHTML='<span class="fab-tour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-10 4 6 2-3 4 7z"/></svg>'+escapeHtml(feedTour.name)+'</span><button type="button" onclick="feedTour=null;feedTourBar();feedRender()">✕ alle Touren</button>';}
@@ -18568,6 +18597,7 @@ function feedRender(){
   }
   let filtered=feedFilter==='all'?base:base.filter(r=>r.cat===feedFilter);
   if(feedAnchor){filtered=filtered.map(r=>({r,km:haversineKm(feedAnchor.lat,feedAnchor.lng,r.lat,r.lng)})).sort((a,b)=>a.km-b.km).map(o=>{o.r._km=o.km;return o.r;});}
+  else if(feedScope==='all')filtered=feedRank(filtered);
   if(!filtered.length){list.innerHTML='<div class="feed-empty">Noch keine Reports in dieser Kategorie.</div>';return;}
   // Building four hundred cards to show six is most of what made opening the
   // feed feel slow. Nobody scrolls past the first page before it re-renders.
@@ -18578,7 +18608,7 @@ function feedRender(){
   list.innerHTML=shown.map(r=>{
     const col=CAT_COLORS[r.cat]||'#666';
     const bg=CAT_BG[r.cat]||'linear-gradient(135deg,#f0f0f0,#e0e0e0)';
-    const distTag=(feedAnchor&&r._km!=null)?`<span class="feed-card-dist">${r._km<1?Math.round(r._km*1000)+' m':r._km.toFixed(r._km<10?1:0)+' km'}</span>`:'';
+    const distTag=((feedAnchor||feedScope==='all')&&r._km!=null)?`<span class="feed-card-dist">${r._km<1?Math.round(r._km*1000)+' m':r._km.toFixed(r._km<10?1:0)+' km'}</span>`:'';
     const canFollow=r.dbRow&&r.userId&&(!sbUser||r.userId!==sbUser.id);
     const followBtn=canFollow?`<button class="feed-follow ${myFollowing.has(r.userId)?'following':''}" onclick="toggleFollow('${r.userId}',event)">${myFollowing.has(r.userId)?'Folge ich':'Folgen'}</button>`:'';
     const endBtn=r.dbRow?`<button class="endorse-btn ${r.liked?'endorsed':''}" onclick="toggleEndorse('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> ${r.likes||0}<span class="endorse-lbl">${r.liked?'Bestätigt':'Bestätigen'}</span></button>`:'';
