@@ -4371,6 +4371,19 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .trb-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}.trb-t b{font:700 14px var(--font,inherit);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.trb-t small{font:500 12px var(--font,inherit);color:var(--fg2)}
  .trb-n{font:800 16px var(--mono,inherit);color:var(--accent,#2563eb);flex:none}
  .pv-btns{display:flex;gap:6px;margin-bottom:14px}
+ #depBanner{position:fixed;z-index:5400;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 8px);display:flex;align-items:center;gap:10px;
+   padding:10px 12px;border-radius:16px;background:#FFF4D6;color:#5C4300;border:1px solid #F0D58A;box-shadow:0 8px 24px rgba(0,0,0,.14);
+   font:600 13px/1.35 Inter,system-ui;max-width:560px;margin:0 auto}
+ #depBanner[hidden]{display:none}
+ #depBanner b{font-weight:800}
+ #depBanner .db-ic{flex:none;width:28px;height:28px;border-radius:50%;background:#F6C343;color:#5C4300;display:grid;place-items:center;font-weight:900}
+ #depBanner .db-ic svg{width:16px;height:16px}
+ #depBanner>span:nth-child(2){flex:1}
+ #depBanner button{flex:none;border:0;border-radius:10px;padding:7px 11px;background:#5C4300;color:#fff;font:800 12.5px Inter,system-ui;cursor:pointer}
+ #depBanner button.x{background:none;color:#5C4300;font-size:20px;padding:2px 6px}
+ #depBanner.done{background:#E3F5EA;color:#14532D;border-color:#9FD8B5}
+ #depBanner.done .db-ic{background:#2F9A4C;color:#fff}
+ #depBanner.done button{background:#14532D}
  .prof-msg{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--hair);background:var(--card);
    color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer;margin-right:6px}
  .prof-msg[hidden]{display:none}
@@ -10896,10 +10909,9 @@ function trkClose(force){
 // recording continues; the app is usable, a pill at the top brings it back
 function trkMin(){document.body.classList.add('trk-min');document.body.classList.remove('trk-open');document.getElementById('trk').hidden=true;trkPill();}
 function trkExpand(){document.body.classList.remove('trk-min');trkOpen();}
-function trkPill(){const p=document.getElementById('trkPill');if(!p)return;
-  if(!trkRec||document.body.classList.contains('trk-open')){p.hidden=true;return;}
-  const st=trkStats(trkRec.segs,0);p.hidden=false;
-  p.innerHTML='<i class="'+(trkRec.paused?'pz':'')+'"></i><b>'+trkFmtT(trkMoving(trkRec))+'</b><span>'+trkFmtD(st.dist)+'</span>';}
+// No floating time/distance pill over the map while recording: the pulsing
+// record button in the tab bar already says it is running and opens it.
+function trkPill(){const p=document.getElementById('trkPill');if(p)p.hidden=true;}
 function trkPaint(){
   trkPill();
   if(document.getElementById('trk').hidden)return;
@@ -15023,6 +15035,36 @@ setTimeout(dismissIntro,0);
 requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}
   try{document.body.classList.add('scr-home');}catch(e){}
   try{lyRender();}catch(e){}});
+// ── Maintenance banner while a merge is being deployed ───────────────────
+// The site stays up during a deploy (the old version serves until the new
+// one is switched in), so nothing told people an update was on its way. The
+// app asks GitHub whether a deploy started by a push to main is running (a
+// public repository: no key, 60 requests an hour per address -- one every
+// three minutes, only while the app is in front). Scheduled data refreshes
+// do not count; only merges show the banner. When it is done: reload.
+const DEPLOY_API='https://api.github.com/repos/gianio/snow-mapper-v17/actions/workflows/deploy.yml/runs?per_page=1&event=push&status=in_progress';
+let _depRun=null,_depT=0,_depBack=0;
+async function deployWatch(){clearTimeout(_depT);
+  if(document.visibilityState!=='visible'||!navigator.onLine){_depT=setTimeout(deployWatch,60e3);return;}
+  if(Date.now()<_depBack){_depT=setTimeout(deployWatch,_depBack-Date.now());return;}
+  try{const r=await fetch(DEPLOY_API,{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
+    if(r.status===403||r.status===429){_depBack=Date.now()+30*60e3;}
+    else if(r.ok){const j=await r.json(),run=(j.workflow_runs||[])[0];
+      if(run&&run.status!=='completed'){_depRun=run;deployBanner(run);}
+      else if(_depRun){deployBanner(null,true);_depRun=null;}}}catch(e){}
+  _depT=setTimeout(deployWatch,_depRun?120e3:180e3);}
+function deployBanner(run,done){let el=document.getElementById('depBanner');
+  if(!el){el=document.createElement('div');el.id='depBanner';el.setAttribute('role','status');document.body.appendChild(el);}
+  let x=null;try{x=sessionStorage.getItem('ssm_dep_x');}catch(e){}
+  if(run&&x===String(run.id)){el.hidden=true;return;}
+  if(done){el.innerHTML='<span class="db-ic">✓</span><span><b>Update fertig</b> – lade neu für die neue Version.</span><button type="button" onclick="location.reload()">Neu laden</button>';el.className='done';el.hidden=false;return;}
+  const t0=Date.parse(run.run_started_at||run.created_at)||Date.now(),left=Math.max(2,Math.round(40-(Date.now()-t0)/60e3));
+  el.className='';el.hidden=false;
+  el.innerHTML='<span class="db-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg></span>'
+    +'<span><b>Wartungsarbeiten</b> – ein Update wird eingespielt, noch etwa '+left+' Min. Die App läuft weiter.</span>'
+    +'<button type="button" class="x" aria-label="Ausblenden" onclick="try{sessionStorage.setItem(\'ssm_dep_x\',\''+run.id+'\')}catch(e){};this.parentNode.hidden=true">×</button>';}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')deployWatch();});
+setTimeout(deployWatch,6000);
 try{const _q=new URLSearchParams(location.search),_pid=_q.get('post');
   if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);
   else if(_q.get('dm')||_q.get('user'))setTimeout(()=>pushRoute(location.href),2200);}catch(e){}
