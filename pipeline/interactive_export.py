@@ -1669,7 +1669,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    The screen's own height is the real one in that mode. */
 (function(){if(navigator.standalone!==true)return;var d=document.documentElement;d.classList.add('ios-pwa');
 function fit(){var p=innerHeight>=innerWidth,sh=p?Math.max(screen.height,screen.width):Math.min(screen.height,screen.width);
-  d.style.setProperty('--app-h',Math.max(innerHeight,d.clientHeight,sh)+'px');}
+  // the visible height, never more than the screen: taller than that and
+  // the tab bar sat under the home indicator, cut off
+  d.style.setProperty('--app-h',Math.min(sh,Math.max(innerHeight,d.clientHeight))+'px');}
 fit();addEventListener('resize',fit);addEventListener('orientationchange',function(){setTimeout(fit,300);});})();</script>
 <meta name="theme-color" content="#ffffff"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -1864,6 +1866,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     screen) and becomes the containing block of the fixed layers, so
     bottom:0 means the real bottom edge. A Safari tab is not affected. */
  html.ios-pwa,html.ios-pwa body{height:var(--app-h,100lvh)!important;bottom:auto!important}
+ /* installed app: the floating tab bar a little higher above the home indicator */
+ html.ios-pwa #tabBar{bottom:calc(env(safe-area-inset-bottom,0px) + 18px)!important}
+ html.ios-pwa{--nav-h:calc(env(safe-area-inset-bottom,0px) + 92px)!important}
  @media all and (display-mode: standalone){
    html,body{height:100vh!important;height:var(--app-h,100lvh)!important;bottom:auto!important}
    body{transform:translateZ(0)}
@@ -4366,6 +4371,13 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .trb-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}.trb-t b{font:700 14px var(--font,inherit);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.trb-t small{font:500 12px var(--font,inherit);color:var(--fg2)}
  .trb-n{font:800 16px var(--mono,inherit);color:var(--accent,#2563eb);flex:none}
  .pv-btns{display:flex;gap:6px;margin-bottom:14px}
+ .prof-msg{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--hair);background:var(--card);
+   color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer;margin-right:6px}
+ .prof-msg[hidden]{display:none}
+ .prof-msg svg{width:16px;height:16px}
+ .prof-msg b{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#E0245E;color:#fff;font:800 11px/18px Inter,system-ui;text-align:center}
+ .prof-msg.unread{border-color:#E0245E;color:#C21F52;animation:msgBlink 1.4s ease-in-out infinite}
+ @keyframes msgBlink{0%,100%{box-shadow:0 0 0 0 rgba(224,36,94,.45)}50%{box-shadow:0 0 0 6px rgba(224,36,94,0)}}
  .pv-btns button{flex:1;height:36px;border-radius:10px;border:0;background:var(--fill);color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer}
  .pv-btns button.pri{background:var(--accent);color:#fff}
  .pv-btns .pv-more{flex:0 0 40px;font-size:18px}
@@ -5703,16 +5715,15 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <button class="feed-qr" id="mapQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Report Powder" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Report Powder</span></button>
 <div id="mapFabs">
-<div id="miniLegend" role="button" tabindex="0" aria-label="Legende – Details" onclick="legInfoToggle(event)">
-  <div id="mlUnit"></div>
-  <div id="mlScale"></div>
-</div>
   <div class="mfab-grp" role="toolbar" aria-label="Karte">
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
-    <button class="mfab" id="wcFab" onclick="wcvOpen()" title="Webcams" aria-label="Webcams"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
   </div>
+<div id="miniLegend" role="button" tabindex="0" aria-label="Legende – Details" onclick="legInfoToggle(event)">
+  <div id="mlUnit"></div>
+  <div id="mlScale"></div>
+</div>
   <div class="mfab-row" id="reportRow">
     <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg><i>Report Powder</i></button>
     <button class="mfab act" id="fabObs" onclick="fabMenu(false);obsOpen()" title="Beobachtung melden" aria-label="Beobachtung melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><i>Beobachtung</i></button>
@@ -5949,7 +5960,6 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <button class="feed-qr" id="feedQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <!-- one column, bottom right: messages last, so it sits in the corner -->
 <div class="feed-fabs">
-<button class="feed-msg-fab" id="feedMsgFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 14.6 21.5l-4-8.1-8.1-4z"/></svg><span class="dm-dot" id="dmDot" hidden></span><span class="ff-l">Nachrichten</span></button>
 </div>
 <button class="feed-fab" id="feedFab" onclick="feedCreatePost()" title="Bedingungen melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
 </div>
@@ -6035,7 +6045,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 </div>
 <div class="prof-modal" id="profModal" style="display:none" onclick="if(event.target===this)profClose()">
   <div class="prof-sheet">
-    <div class="prof-head"><span>Profil</span><span class="prof-head-b"><button class="prof-gear" onclick="profNav('set')" aria-label="Einstellungen" title="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button onclick="profClose()">✕</button></span></div>
+    <div class="prof-head"><span>Profil</span><span class="prof-head-b"><button type="button" class="prof-msg" id="profMsgBtn" data-dm hidden onclick="profClose();dmOpen()" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 15 21l-4.4-7.6L3 9z"/></svg>Nachrichten<b id="profMsgN" hidden></b></button><button class="prof-gear" onclick="profNav('set')" aria-label="Einstellungen" title="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button onclick="profClose()">✕</button></span></div>
     <div class="prof-body">
       <div class="prof-top">
         <div class="prof-av" id="profAv" onclick="document.getElementById('profAvFile').click()"><span id="profAvInitial"></span><div class="prof-av-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div></div>
@@ -10202,7 +10212,7 @@ var WEBCAM_KEY=null,wcLayer=null,wcSeen=new Map(),wcT=0,wcBusy=false;   // var: 
 const WC_API='https://api.windy.com/webcams/api/v3/webcams';
 fetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
   if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}
-    const f=document.getElementById('wcFab');if(f)f.hidden=false;}}).catch(()=>{});
+    window._wcOk=true;try{ovRender();}catch(e){}}}).catch(()=>{});
 async function wcFetch(params){
   // Windy checks a domain-limited key against the Referer: always send it
   const r=await fetch(WC_API+'?'+params,{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
@@ -11275,7 +11285,7 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
       +'<span class="pv-ac-prof">'+trkProfile(a.track,340,46)+'</span></button>').join('')
     :'<div class="prof-hint">'+(me?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aktivitäten.')+'</div>';
   box.innerHTML='<div class="pv-stats"><div><b>'+n(S.posts.length)+'</b><span>Beiträge</span></div><div><b>'+n(S.fol)+'</b><span>Follower</span></div><div><b>'+n(S.ing)+'</b><span>Folge ich</span></div><div><b>'+n(S.acts.length)+'</b><span>Aktivitäten</span></div><div><b>'+n(S.fb||0)+'</b><span>Feedbacks</span></div></div>'
-    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button onclick="profClose();navGo(\'feed\');feedSetScope(\'saved\')">Gemerkt</button><button data-dm onclick="profClose();dmOpen()">Nachrichten</button><button onclick="pvShare(\''+S.uid+'\')">Teilen</button>'
+    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button onclick="profClose();navGo(\'feed\');feedSetScope(\'saved\')">Gemerkt</button><button onclick="pvShare(\''+S.uid+'\')">Teilen</button>'
       :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
         +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
         +'<button class="pv-more" onclick="uvReportUser()" aria-label="Nutzer melden">⋯</button>')+'</div>'
@@ -11963,7 +11973,7 @@ async function trustBoard(){
   el.innerHTML=rows.map((r,i)=>{const L=trustLevel(r.trust),me=sbUser&&r.user_id===sbUser.id,av=safeUrl(r.avatar_url);
     return '<button type="button" class="trb-row'+(me?' me':'')+'" onclick="trSheetClose();viewUser(\''+jsArg(r.user_id)+'\',\''+jsArg(r.username||'User')+'\')">'
       +'<span class="trb-rk">'+(med[i]||(i+1))+'</span>'
-      +'<span class="trb-av"'+(av?' style="background-image:url(\''+av+'\')"':'')+'>'+(av?'':escapeHtml((r.username||'?').slice(0,1).toUpperCase()))+'</span>'
+      +'<span class="trb-av"'+(av?' style="background-image:'+cssUrl(av)+'"':'')+'>'+(av?'':escapeHtml((r.username||'?').slice(0,1).toUpperCase()))+'</span>'
       +'<span class="trb-t"><b>'+escapeHtml(r.username||'User')+(me?' (du)':'')+'</b><small>'+L.emo+' '+escapeHtml(L.name)+' · '+r.posts+' Beiträge</small></span>'
       +'<span class="trb-n">'+r.trust+'</span></button>';}).join('');}
 function progTrustOf(uid){if(!uid)return 0;return progTrustMap().get(uid)||0;}
@@ -13395,6 +13405,7 @@ function ovRender(){
   }).join('')
   // map extras that used to live in the settings
   +lyExtraRow('stn','Messstationen',typeof showStn!=='undefined'&&showStn,'<line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0"/>','toggleStations();ovRender()')
+  +(window._wcOk?lyExtraRow('wc','Webcams',false,'<path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/>','lyPanelClose();wcvOpen()'):'')
   +lyExtraRow('3d','3D-Ansicht',typeof is3d!=='undefined'&&is3d,'<path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/>','lyPanelClose();document.getElementById(\'btn3dFloat\').click()');
 }
 function lyExtraRow(k,label,on,ic,act){
@@ -13864,7 +13875,7 @@ function setRender(){
     const q=dm.querySelector('.st');if(q)q.textContent=liveOn?'an':'aus';}
   const acc=document.getElementById('setAccount');
   if(acc){const url=sbUser?avatarOf(sbUser.id):null;
-    acc.innerHTML=(url?('<span class="set-av" style="background-image:url('+encodeURI(url)+')"></span>')
+    acc.innerHTML=(url?('<span class="set-av" style="background-image:'+cssUrl(url)+'"></span>')
       :'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>')
       +(sbUser?'Mein Profil':'Anmelden');}
 }
@@ -13919,7 +13930,7 @@ function updateAccountBtn(avatarUrl){
     // glyph is the same shape the convention uses for "log out".
     btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.6"/><path d="M3.5 20a6.5 6.5 0 0 1 13 0"/><line x1="19" y1="6" x2="19" y2="12"/><line x1="16" y1="9" x2="22" y2="9"/></svg>';return;}
   btn.classList.add('signed');btn.title='Mein Profil';
-  if(avatarUrl){btn.innerHTML='<span class="acct-img" style="background-image:url('+avatarUrl+')"></span>';}
+  if(avatarUrl){btn.innerHTML='<span class="acct-img" style="background-image:'+cssUrl(avatarUrl)+'"></span>';}
   else{btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';}}
 let meMarker=null,myLoc=null;
 // Desktop Safari often answers a high-accuracy request with "position
@@ -15035,6 +15046,10 @@ let sb=null,sbUser=null,authMode='login';
 // tag, an attribute or a JS string, and links must be plain https or an
 // inline image -- so a crafted row can't run script in someone else's app.
 const URL_KEYS=/^(image_url|avatar_url|thumb|mid|images|drawImage|snapshot|map|img|url|photo)$/;
+// A picture URL for CSS url(): storage URLs already carry %-escapes, so
+// encodeURI() double-encoded them and the picture never showed. Only the
+// characters that would break out of url('…') or the attribute are escaped.
+function cssUrl(u){return "url('"+String(u||'').replace(/['"\\()\s<>]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase().padStart(2,'0'))+"')";}
 function safeUrl(u){if(typeof u!=='string')return null;u=u.trim();
   if(/^https:\/\/[^\s"'<>`\\()&]+$/.test(u))return u;
   if(/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(u))return u;
@@ -15546,7 +15561,7 @@ function reportPopupHTML(r){
   return '<div class="rpop">'
     +(r.img?('<div class="rpop-img" onclick="feedOpenAt(\''+r.id+'\')"><img src="'+((r.condition_data&&(r.condition_data.mid||r.condition_data.thumb))||r.img)+'" loading="lazy" alt=""/>'+catBadge+'</div>'):'')
     +'<div class="rpop-body"><div class="rpop-head">'
-      +'<div class="rpop-av"'+(r.avatar?(' style="background-image:url('+r.avatar+')"'):'')+'>'+(r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase()))+'</div>'
+      +'<div class="rpop-av"'+(r.avatar?(' style="background-image:'+cssUrl(r.avatar)+'"'):'')+'>'+(r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase()))+'</div>'
       +'<div class="rpop-meta"><b>'+escapeHtml(r.user||'User')+'</b><span>'+escapeHtml(r.time||'')+'</span></div>'
       +(r.img?'':catBadge)
     +'</div>'
@@ -15635,7 +15650,7 @@ function _rptMergedPopup(g,m){
   const rows=g.slice().sort((a,b)=>_rptImportance(b)-_rptImportance(a)).map(r=>{
     const cm=_rptDepth(r),col=_rptColor(r);
     return '<button class="rmg-row" onclick="feedOpenAt(\''+r.id+'\')">'+
-      '<span class="rmg-av"'+(r.avatar?(' style="background-image:url('+encodeURI(r.avatar)+')"'):'')+'>'+
+      '<span class="rmg-av"'+(r.avatar?(' style="background-image:'+cssUrl(r.avatar)+'"'):'')+'>'+
         (r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase()))+'</span>'+
       '<span class="rmg-t"><b>'+escapeHtml(r.user||'User')+'</b><span>'+escapeHtml(r.time||'')+'</span></span>'+
       (cm!=null?('<span class="rmg-cm" style="--cc:'+col+'">'+cm+' cm</span>'):'')+
@@ -15755,7 +15770,9 @@ function accNotifSync(){const b=document.getElementById('mapAcc');if(!b)return;c
   b.classList.toggle('notif',on);b.setAttribute('aria-label',on?'Konto – Neues für dich':'Konto');}
 async function dmUnreadCheck(){if(!sb||!sbUser){_dmN=0;accNotifSync();return;}
   try{const{count}=await sb.from('dm_messages').select('id',{count:'exact',head:true}).is('read_at',null).neq('sender_id',sbUser.id);
-    _dmN=count||0;const d=document.getElementById('dmDot');if(d)d.hidden=!_dmN;}catch(e){}
+    _dmN=count||0;const d=document.getElementById('dmDot');if(d)d.hidden=!_dmN;
+    const mb=document.getElementById('profMsgBtn'),mn=document.getElementById('profMsgN');
+    if(mb)mb.classList.toggle('unread',_dmN>0);if(mn){mn.hidden=!_dmN;mn.textContent=_dmN>9?'9+':String(_dmN);}}catch(e){}
   accNotifSync();}
 setInterval(()=>{if(document.visibilityState==='visible')dmUnreadCheck();},120000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')dmUnreadCheck();});
@@ -16220,7 +16237,7 @@ function avatarOf(id){return (id&&AVATARS[id])||null;}
 function avatarHtml(id,name,cls){
   const url=avatarOf(id),ini=escapeHtml(((name||'U')[0]||'U').toUpperCase());
   return '<div class="'+(cls||'cmt-av')+(url?' has-img':'')+'"'+
-    (url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':ini)+'</div>';
+    (url?(' style="background-image:'+cssUrl(url)+'"'):'')+'>'+(url?'':ini)+'</div>';
 }
 function profNav(v){['Main','Set','Pers','Priv','Notif','App'].forEach(k=>{const el=document.getElementById('profView'+k);if(el)el.style.display=(v===k.toLowerCase())?'':'none';});try{haptic(4);}catch(e){}}
 function profSetVis(v){try{localStorage.setItem('ssm_visibility',v);}catch(e){}
@@ -16292,13 +16309,14 @@ async function loadMyProfileAvatar(){if(!sb||!sbUser)return;
   try{const{data}=await sb.from('profiles').select('avatar_url').eq('id',sbUser.id).single();
     const url=(data&&data.avatar_url)||null;
     avatarPut(sbUser.id,url);
-    if(url){const av=document.getElementById('userPillAv');if(av){av.style.backgroundImage='url('+encodeURI(url)+')';av.style.backgroundSize='cover';av.style.backgroundPosition='center';const sp=av.querySelector('span');if(sp)sp.style.display='none';}}
+    if(url){const av=document.getElementById('userPillAv');if(av){av.style.backgroundImage=cssUrl(url);av.style.backgroundSize='cover';av.style.backgroundPosition='center';const sp=av.querySelector('span');if(sp)sp.style.display='none';}}
     // always, so signing in as someone without a picture clears the last one
     updateAccountBtn(url);}catch(e){updateAccountBtn(null);}}
 async function openProfile(){
   setTimeout(()=>{try{trkProfRender();}catch(e){}},0);
   if(!sb||!sbUser){authShow();return;}
   try{dmAvailable();}catch(e){}
+  try{dmUnreadCheck();}catch(e){}
   document.getElementById('profModal').style.display='flex';
   profNav('main');
   try{const vv=localStorage.getItem('ssm_visibility')||'all';document.querySelectorAll('#profVis button').forEach(b2=>b2.classList.toggle('active',b2.dataset.v===vv));}catch(e){}
@@ -16315,7 +16333,7 @@ async function openProfile(){
     document.getElementById('profBio').value=data?.bio||'';profBioInput();
     document.getElementById('profBioView').textContent=data?.bio||'';
     const av=document.getElementById('profAv');
-    if(data?.avatar_url){av.classList.add('has-img');av.style.backgroundImage='url('+data.avatar_url+')';profAvatarUrl=data.avatar_url;avatarPut(sbUser.id,data.avatar_url);}
+    if(data?.avatar_url){av.classList.add('has-img');av.style.backgroundImage=cssUrl(data.avatar_url);profAvatarUrl=data.avatar_url;avatarPut(sbUser.id,data.avatar_url);}
     else{av.classList.remove('has-img');av.style.backgroundImage='';}
     document.getElementById('profPush').classList.toggle('on',!!data?.push_enabled);
   }catch(e){myProfile={};}
@@ -16395,14 +16413,14 @@ function prefsApplyStartup(){
 try{map.on('moveend',()=>{try{const c=map.getCenter();
   localStorage.setItem('ssm_lastview',JSON.stringify({lat:c.lat,lng:c.lng,z:map.getZoom()}));}catch(e){}});}catch(e){}
 function profSetAvatar(inp){if(!inp.files||!inp.files[0])return;profAvatarFile=inp.files[0];
-  const url=URL.createObjectURL(profAvatarFile);const av=document.getElementById('profAv');av.classList.add('has-img');av.style.backgroundImage='url('+url+')';
+  const url=URL.createObjectURL(profAvatarFile);const av=document.getElementById('profAv');av.classList.add('has-img');av.style.backgroundImage=cssUrl(url);
   inp.value='';
   // a picked picture is saved right here -- it used to wait for the Save
   // button at the very bottom of the profile, which nobody scrolled to
   const bar=document.getElementById('profAvBar');if(bar)bar.hidden=false;profDirty();}
 function profAvCancel(){profAvatarFile=null;const bar=document.getElementById('profAvBar');if(bar)bar.hidden=true;
   const av=document.getElementById('profAv');
-  if(profAvatarUrl){av.classList.add('has-img');av.style.backgroundImage='url('+profAvatarUrl+')';}
+  if(profAvatarUrl){av.classList.add('has-img');av.style.backgroundImage=cssUrl(profAvatarUrl);}
   else{av.classList.remove('has-img');av.style.backgroundImage='';}}
 async function profAvSave(){
   if(!profAvatarFile)return;if(!sb||!sbUser){authShow();return;}
@@ -16542,7 +16560,7 @@ async function viewUser(uid,username){
     if(data){document.getElementById('uvName').textContent=data.username||username||'User';document.getElementById('uvInitial').textContent=(data.username||'U')[0].toUpperCase();
       document.getElementById('uvBio').textContent=data.bio||'';
       if(data.created_at){const d=new Date(data.created_at);document.getElementById('uvSince').textContent=d.toLocaleDateString(LOCALE(),{month:'short',year:'2-digit'});}
-      if(data.avatar_url){av.classList.add('has-img');av.style.backgroundImage='url('+data.avatar_url+')';avatarPut(uid,data.avatar_url);}}
+      if(data.avatar_url){av.classList.add('has-img');av.style.backgroundImage=cssUrl(data.avatar_url);avatarPut(uid,data.avatar_url);}}
   }catch(e){}
   // Posts, follower and like counts come from pvLoad (uvPV) -- asking for
   // them here as well doubled every query of the profile view.
@@ -16668,11 +16686,11 @@ async function dmList(){
       const unread=m&&m.sender_id!==sbUser.id&&!m.read_at;
       if(unread)_dmUnread=true;
       if(tab==='req')return '<div class="dm-req" data-n="'+escapeHtml(nm.toLowerCase())+'"><button class="dm-row'+(unread?' new':'')+'" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+jsArg(nm)+'\')">'
-        +'<span class="av"'+(url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'
+        +'<span class="av"'+(url?(' style="background-image:'+cssUrl(url)+'"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'
         +'<span class="tx"><b>'+escapeHtml(nm)+trustBadge(progTrustOf(oid),true)+'</b><span>'+(m?escapeHtml(m.body):'möchte dir schreiben')+'</span></span></button>'
         +'<div class="dm-req-b"><button class="pri" onclick="dmAccept(\''+oid+'\')">Annehmen</button><button onclick="dmHide(\''+t.id+'\')">Ablehnen</button></div></div>';
       return '<button class="dm-row'+(unread?' new':'')+'" data-n="'+escapeHtml(nm.toLowerCase())+'" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+jsArg(nm)+'\')">'+
-        '<span class="av"'+(url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'+
+        '<span class="av"'+(url?(' style="background-image:'+cssUrl(url)+'"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'+
         '<span class="tx"><b>'+escapeHtml(nm)+trustBadge(progTrustOf(oid),true)+'</b><span>'+(m?escapeHtml(/[?&]post=/.test(m.body)?'📍 Beitrag geteilt':m.body):'—')+'</span></span>'+
         (m?('<span class="when">'+timeAgo(m.created_at)+'</span>'):'')+
         (unread?'<span class="unread"></span>':'')+
@@ -16772,7 +16790,7 @@ async function usSearch(){
       const me=sbUser&&u.id===sbUser.id;
       const fol=myFollowing.has(u.id);
       return '<div class="us-row" onclick="usClose();viewUser(\''+u.id+'\',\''+jsArg(u.username||'User')+'\')">'
-        +'<div class="av"'+(u.avatar_url?' style="background-image:url('+u.avatar_url+')"':'')+'>'+(u.avatar_url?'':escapeHtml((u.username||'U')[0].toUpperCase()))+'</div>'
+        +'<div class="av"'+(u.avatar_url?' style="background-image:'+cssUrl(u.avatar_url)+'"':'')+'>'+(u.avatar_url?'':escapeHtml((u.username||'U')[0].toUpperCase()))+'</div>'
         +'<b>'+escapeHtml(u.username||'User')+'</b>'
         +(me?'':'<button class="feed-follow '+(fol?'following':'')+'" onclick="toggleFollow(\''+u.id+'\',event);this.classList.toggle(\'following\');this.textContent=this.classList.contains(\'following\')?\'Folge ich\':\'Folgen\';">'+(fol?'Folge ich':'Folgen')+'</button>')
         +'</div>';}).join('');
@@ -18526,7 +18544,7 @@ function mentionRender(){
     const url=avatarOf(u.id);
     return '<button type="button" class="'+(i===_mnSel?'on':'')+'" onmousedown="event.preventDefault()" '+
       'onclick="mentionPick('+i+')">'+
-      '<span class="mn-av"'+(url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+
+      '<span class="mn-av"'+(url?(' style="background-image:'+cssUrl(url)+'"'):'')+'>'+
         (url?'':escapeHtml(u.username[0].toUpperCase()))+'</span>'+
       escapeHtml(u.username)+'<span class="mn-h">@'+escapeHtml(u.username)+'</span></button>';}).join('');
   box.hidden=false;
@@ -18577,7 +18595,7 @@ function feedTopRender(){const el=document.getElementById('feedTop');if(!el)retu
   el.innerHTML='<div class="ft-row"><button type="button" class="ft-cat'+(feedFilter!=='all'?' on':'')+'" onclick="feedFilterOpen()">'+ic('<path d="M4 6h16M7 12h10M10 18h4"/>')+'<span>'+escapeHtml(cat)+'</span></button>'
     +'<button type="button" class="ft-ic" onclick="usOpen()" aria-label="Leute finden" title="Leute finden">'+ic('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')+'</button>'
     +'<button type="button" class="ft-ic pt-acc ft-me" onclick="accountTap()" aria-label="Mein Profil" title="Mein Profil">'+ic('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>')+'<span class="pt-ini"></span></button>'
-    +'<button type="button" class="ft-ic ft-desk" data-dm hidden onclick="dmOpen()" aria-label="Nachrichten" title="Nachrichten">'+ic('<path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 15 21l-4.4-7.6L3 9z"/>')+'</button></div>';
+    +'</div>';
   try{if(typeof dmReady!=='undefined'&&dmReady)el.querySelectorAll('[data-dm]').forEach(x=>x.hidden=false);}catch(e){}
   // your own picture, as on the map; it opens your profile
   try{let u=null;const c=(localStorage.getItem('ssm_avatar')||'').split('|');
@@ -18849,7 +18867,7 @@ function feedRender(){
     const isF=focus&&r===focus;
     return`<div class="feed-card${r.img?' photo':' text'}${isF?' focus':''}" id="feedcard-${r.id}">
       <div class="feed-card-head">
-        <div class="feed-card-avatar" style="${r.avatar?`background-image:url(${encodeURI(r.avatar)})`:''}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['\"<>]/g,'')}')"`:''}>${r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase())}</div>
+        <div class="feed-card-avatar" style="${r.avatar?`background-image:${cssUrl(r.avatar)}`:''}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['\"<>]/g,'')}')"`:''}>${r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase())}</div>
         <div class="feed-card-info">
           <span class="feed-card-user"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['"<>]/g,'')}')"`:''}>${escapeHtml(r.user)}${r.userId?trustBadge(progTrustOf(r.userId),true):''}</span>
           <span class="feed-card-loc">${escapeHtml(r.time||'')} · ${escapeHtml(rptPlace(r))}${distTag?' · ':''}${distTag}</span>
