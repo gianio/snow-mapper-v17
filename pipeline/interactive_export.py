@@ -1669,7 +1669,9 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    The screen's own height is the real one in that mode. */
 (function(){if(navigator.standalone!==true)return;var d=document.documentElement;d.classList.add('ios-pwa');
 function fit(){var p=innerHeight>=innerWidth,sh=p?Math.max(screen.height,screen.width):Math.min(screen.height,screen.width);
-  d.style.setProperty('--app-h',Math.max(innerHeight,d.clientHeight,sh)+'px');}
+  // the visible height, never more than the screen: taller than that and
+  // the tab bar sat under the home indicator, cut off
+  d.style.setProperty('--app-h',Math.min(sh,Math.max(innerHeight,d.clientHeight))+'px');}
 fit();addEventListener('resize',fit);addEventListener('orientationchange',function(){setTimeout(fit,300);});})();</script>
 <meta name="theme-color" content="#ffffff"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -1864,6 +1866,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     screen) and becomes the containing block of the fixed layers, so
     bottom:0 means the real bottom edge. A Safari tab is not affected. */
  html.ios-pwa,html.ios-pwa body{height:var(--app-h,100lvh)!important;bottom:auto!important}
+ /* installed app: the floating tab bar a little higher above the home indicator */
+ html.ios-pwa #tabBar{bottom:calc(env(safe-area-inset-bottom,0px) + 18px)!important}
+ html.ios-pwa{--nav-h:calc(env(safe-area-inset-bottom,0px) + 92px)!important}
  @media all and (display-mode: standalone){
    html,body{height:100vh!important;height:var(--app-h,100lvh)!important;bottom:auto!important}
    body{transform:translateZ(0)}
@@ -1872,7 +1877,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
      height:env(safe-area-inset-top,0px);background:var(--page,#0f172a);z-index:99990;pointer-events:none}
  }
  html,body{margin:0;padding:0;height:100%;height:100dvh;width:100%;overflow:hidden;font-family:var(--font);color:var(--fg);overscroll-behavior:none;background:var(--map-bg);position:fixed;inset:0;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
- #map{position:absolute;top:0;left:0;right:0;bottom:0;background:var(--map-bg)}
+ #map{position:absolute;top:0;left:0;right:0;bottom:0;background:var(--map-bg);-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
  .leaflet-control-scale{margin-right:92px!important;margin-bottom:10px!important}
  #flow{position:absolute;top:0;left:0;right:0;bottom:0;z-index:450;pointer-events:none}
  #modeGlow{display:none}
@@ -2585,6 +2590,16 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .tc-leg span{display:inline-flex;align-items:center;gap:6px}
  .tc-leg i{display:inline-block;width:22px;height:0;border-top:3px solid #3E7C8C;border-radius:2px}
  .tc-leg i.tc-srf{border-top:2.5px dashed #C9821F}
+ .mg{position:relative;margin:2px 0 0;overflow:hidden}
+ .mg-sc{position:absolute;inset:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;overscroll-behavior-x:contain}
+ .mg-sc::-webkit-scrollbar{display:none}
+ .mg-sc canvas{display:block}
+ .mg-ax{position:absolute;left:0;top:0;pointer-events:none}
+ .mg-leg{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0 0 4px;font:700 12px/1.3 var(--font,inherit);color:var(--fg2)}
+ .mg-leg span{display:inline-flex;align-items:center;gap:6px}
+ .mg-leg i.tc-air{display:inline-block;width:22px;border-top:3px solid #D7262B;border-radius:2px}
+ .mg-leg i.tc-srf{display:inline-block;width:22px;border-top:2.5px dashed #C9821F}
+ .mg-sw{display:inline-block;width:14px;height:11px;border-radius:2px;background:linear-gradient(0deg,#A99BB8 0 25%,#3F63E0 25% 50%,#2F9A4C 50% 75%,#7ED957 75%)}
  .tc-leg i.tc-snow{width:12px;height:10px;border:0;border-radius:2px;background:rgba(42,143,216,.5)}
  .insp-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
  .insp-kpis>div{background:var(--fill);border-radius:10px;padding:6px 8px;min-width:0}
@@ -4250,6 +4265,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .trk-stars span{margin-left:8px;font:600 12.5px Inter,system-ui;color:var(--fg2)}
  .trk-more{display:flex;gap:8px;margin-top:12px}
  .trk-more button{flex:1;height:40px;border-radius:12px;border:1px dashed var(--hair);background:var(--card);font:700 12.5px Inter,system-ui;color:var(--accent);cursor:pointer}
+ .trk-more button.pri{border-style:solid;border-color:var(--accent);background:var(--accent-soft,rgba(42,90,140,.1))}
  .trk-photos{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
  .trk-ph{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--fill)}
  .trk-ph img{width:100%;height:100%;object-fit:cover}
@@ -4355,6 +4371,13 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .trb-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}.trb-t b{font:700 14px var(--font,inherit);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.trb-t small{font:500 12px var(--font,inherit);color:var(--fg2)}
  .trb-n{font:800 16px var(--mono,inherit);color:var(--accent,#2563eb);flex:none}
  .pv-btns{display:flex;gap:6px;margin-bottom:14px}
+ .prof-msg{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--hair);background:var(--card);
+   color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer;margin-right:6px}
+ .prof-msg[hidden]{display:none}
+ .prof-msg svg{width:16px;height:16px}
+ .prof-msg b{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#E0245E;color:#fff;font:800 11px/18px Inter,system-ui;text-align:center}
+ .prof-msg.unread{border-color:#E0245E;color:#C21F52;animation:msgBlink 1.4s ease-in-out infinite}
+ @keyframes msgBlink{0%,100%{box-shadow:0 0 0 0 rgba(224,36,94,.45)}50%{box-shadow:0 0 0 6px rgba(224,36,94,0)}}
  .pv-btns button{flex:1;height:36px;border-radius:10px;border:0;background:var(--fill);color:var(--fg);font:700 13px Inter,system-ui;cursor:pointer}
  .pv-btns button.pri{background:var(--accent);color:#fff}
  .pv-btns .pv-more{flex:0 0 40px;font-size:18px}
@@ -4768,6 +4791,10 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .fc-det{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 14px 4px}
  .fc-det>div{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:12px;background:var(--fill)}
  .fc-det span{font:600 11px var(--font,inherit);color:var(--fg2)}.fc-det b{font:700 14px var(--font,inherit);color:var(--fg)}
+ .act-draw{position:absolute;top:10px;right:10px;z-index:3;width:40px;height:40px;border-radius:50%;border:0;
+   background:var(--brand,#2A5A8C);color:#fff;display:grid;place-items:center;box-shadow:0 2px 10px rgba(0,0,0,.28);cursor:pointer}
+ .act-draw svg{width:20px;height:20px}
+ .act-wrap .fc-slide{position:relative}
  .feed-more-hd{margin:22px 16px 8px;font:800 13px var(--font,inherit);letter-spacing:.04em;text-transform:uppercase;color:var(--fg2);display:flex;align-items:center;gap:10px}
  .feed-more-hd::after{content:'';flex:1;height:1px;background:var(--hair)}
  #lyNow{position:fixed;left:22px;top:auto;z-index:1001;display:inline-flex;align-items:center;gap:6px;
@@ -5688,16 +5715,15 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <button class="feed-qr" id="mapQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Report Powder" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Report Powder</span></button>
 <div id="mapFabs">
-<div id="miniLegend" role="button" tabindex="0" aria-label="Legende – Details" onclick="legInfoToggle(event)">
-  <div id="mlUnit"></div>
-  <div id="mlScale"></div>
-</div>
   <div class="mfab-grp" role="toolbar" aria-label="Karte">
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
-    <button class="mfab" id="wcFab" onclick="wcvOpen()" title="Webcams" aria-label="Webcams"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
   </div>
+<div id="miniLegend" role="button" tabindex="0" aria-label="Legende – Details" onclick="legInfoToggle(event)">
+  <div id="mlUnit"></div>
+  <div id="mlScale"></div>
+</div>
   <div class="mfab-row" id="reportRow">
     <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg><i>Report Powder</i></button>
     <button class="mfab act" id="fabObs" onclick="fabMenu(false);obsOpen()" title="Beobachtung melden" aria-label="Beobachtung melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><i>Beobachtung</i></button>
@@ -5934,7 +5960,6 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <button class="feed-qr" id="feedQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <!-- one column, bottom right: messages last, so it sits in the corner -->
 <div class="feed-fabs">
-<button class="feed-msg-fab" id="feedMsgFab" data-dm hidden onclick="dmOpen()" title="Nachrichten" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 14.6 21.5l-4-8.1-8.1-4z"/></svg><span class="dm-dot" id="dmDot" hidden></span><span class="ff-l">Nachrichten</span></button>
 </div>
 <button class="feed-fab" id="feedFab" onclick="feedCreatePost()" title="Bedingungen melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Melden</span></button>
 </div>
@@ -6020,7 +6045,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 </div>
 <div class="prof-modal" id="profModal" style="display:none" onclick="if(event.target===this)profClose()">
   <div class="prof-sheet">
-    <div class="prof-head"><span>Profil</span><span class="prof-head-b"><button class="prof-gear" onclick="profNav('set')" aria-label="Einstellungen" title="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button onclick="profClose()">✕</button></span></div>
+    <div class="prof-head"><span>Profil</span><span class="prof-head-b"><button type="button" class="prof-msg" id="profMsgBtn" data-dm hidden onclick="profClose();dmOpen()" aria-label="Nachrichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 15 21l-4.4-7.6L3 9z"/></svg>Nachrichten<b id="profMsgN" hidden></b></button><button class="prof-gear" onclick="profNav('set')" aria-label="Einstellungen" title="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button onclick="profClose()">✕</button></span></div>
     <div class="prof-body">
       <div class="prof-top">
         <div class="prof-av" id="profAv" onclick="document.getElementById('profAvFile').click()"><span id="profAvInitial"></span><div class="prof-av-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div></div>
@@ -7693,6 +7718,9 @@ const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
 // A real mouse wheel still works: its notches are large, so it crosses the
 // threshold in one or two clicks.
 const _trackpad=_desktop&&/Mac/.test(navigator.platform||navigator.userAgent||'');
+// A double tap is one whole zoom step (Leaflet would take zoomDelta, half).
+L.Map.DoubleClickZoom.prototype._onDoubleClick=function(e){const m=this._map,z=m.getZoom(),zz=e.originalEvent.shiftKey?z-1:z+1;
+  if(m.options.doubleClickZoom==='center')m.setZoom(zz);else m.setZoomAround(e.containerPoint,zz);};
 const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,
   wheelPxPerZoomLevel:_trackpad?120:(_desktop?38:90),
   wheelDebounceTime:_trackpad?34:(_desktop?12:40),
@@ -10184,7 +10212,7 @@ var WEBCAM_KEY=null,wcLayer=null,wcSeen=new Map(),wcT=0,wcBusy=false;   // var: 
 const WC_API='https://api.windy.com/webcams/api/v3/webcams';
 fetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
   if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}
-    const f=document.getElementById('wcFab');if(f)f.hidden=false;}}).catch(()=>{});
+    window._wcOk=true;try{ovRender();}catch(e){}}}).catch(()=>{});
 async function wcFetch(params){
   // Windy checks a domain-limited key against the Referer: always send it
   const r=await fetch(WC_API+'?'+params,{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
@@ -10936,11 +10964,9 @@ async function trkRender(){
       +'<label class="trk-f"><span>Titel</span><input id="trkName" maxlength="80" value="'+escapeHtml(d.name)+'"></label>'
       +'<label class="trk-f"><span>Beschreibung</span><textarea id="trkDesc" rows="3" maxlength="1000" placeholder="Wie war\'s? Route, Verhältnisse, Gruppe …">'+escapeHtml(d.desc||'')+'</textarea></label>'
       +'<div class="tour-pick" id="trkTourPick"></div>'
-      +'<div class="trk-lbl">Schnee entlang der Route</div>'
-      +'<div id="trkSnowBox">'+trkSnowEditor(d,ll)+'</div>'
       +'<div class="trk-lbl">Verspurung</div><div class="trk-chips">'+TRK_TRACKS.map(([k,l])=>'<button type="button" class="trk-chip'+(d.tracks===k?' on':'')+'" onclick="trkKeepFields();trkDraft.tracks=trkDraft.tracks===\''+k+'\'?null:\''+k+'\';trkRender()">'+l+'</button>').join('')+'</div>'
       +'<div class="trk-stars">'+[1,2,3,4,5].map(n=>'<button type="button" class="'+(d.stars>=n?'on':'')+'" onclick="trkKeepFields();trkDraft.stars='+n+';trkRender()" aria-label="'+n+' Sterne">★</button>').join('')+'<span>Abfahrt</span></div>'
-      +'<div class="trk-more"><button type="button" onclick="trkThen(\'draw\')">Schnee-Karte zur Spur zeichnen</button><button type="button" onclick="trkThen(\'obs\')">Beobachtung melden</button></div>'
+      +'<div class="trk-more"><button type="button" class="pri" onclick="trkThen(\'draw\')">Powder entlang der Spur einzeichnen</button><button type="button" onclick="trkThen(\'obs\')">Beobachtung melden</button></div>'
       +'<div class="trk-lbl">Fotos</div><div class="trk-photos">'+(d.photos||[]).map((b,i)=>'<div class="trk-ph"><img src="'+URL.createObjectURL(b)+'" alt=""><button onclick="trkKeepFields();trkDraft.photos.splice('+i+',1);trkRender()" aria-label="Foto entfernen">×</button></div>').join('')
       +'<label class="trk-ph add"><input type="file" accept="image/*" multiple hidden onchange="trkAddPhotos(this.files)"><span>+</span></label></div>'
       +'<div class="trk-lbl">Sichtbar für</div><div class="trk-vis"><button type="button" class="'+(priv?'':'on')+'" onclick="trkKeepFields();trkDraft.vis=\'followers\';trkRender()"><b>Follower</b><span>erscheint im Feed deiner Follower</span></button>'
@@ -11105,6 +11131,14 @@ function trkShowOnMap(ll,rough){
   else trkShown=L.polyline(ll.map(p=>[p[0],p[1]]),Object.assign({},o,{color:trkCol()})).addTo(map);
   try{map.fitBounds(trkShown.getBounds(),{paddingTopLeft:[30,60],paddingBottomRight:[30,Math.round(innerHeight*.55)],maxZoom:15});}catch(e){}
 }
+// «+» on your activity: the route on the map, the brush ready -- the powder
+// you paint is saved as a snow map that belongs to this post
+function actDraw(id){const r=(allReports||[]).find(x=>String(x.id)===String(id));const A=r&&r.condition_data&&r.condition_data.activity;
+  if(!A||!A.track)return;
+  try{feedClose();}catch(e){}try{navGo('map');}catch(e){}
+  setTimeout(()=>{trkShowOnMap(A.track,A.rough);trkLinkAct={post:String(r.id),name:A.name||''};drawOpen();
+    try{drawSelectCat('snow');}catch(e){}
+    toastOnce('actdraw','Mal mit dem Finger, wo Powder lag – dann «Posten»');},380);}
 // from the feed: show a posted activity's route
 function actShowFeed(id){const r=(allReports||[]).find(x=>String(x.id)===String(id));const A=r&&r.condition_data&&r.condition_data.activity;
   if(!A||!A.track){if(r)feedFlyTo(r.lat,r.lng);return;}
@@ -11114,8 +11148,10 @@ function actShowFeed(id){const r=(allReports||[]).find(x=>String(x.id)===String(
 function actFeedVisual(r){const cd=r.condition_data,A=cd.activity;
   const fmt=n=>n>=1000?(n/1000).toFixed(1)+' km':n+' m';
   const ims=(cd.images||[]).filter(u=>u&&u!==A.map),id=String(r.id).replace(/[^\w-]/g,'');
-  const slides=[A.map?'<div class="fc-slide" onclick="event.stopPropagation();actOpen(\''+r.id+'\')"><img src="'+A.map+'" alt="" loading="lazy"></div>'
-      :'<div class="fc-slide act-svg" onclick="event.stopPropagation();actOpen(\''+r.id+'\')">'+trkThumb(A.track,400,300,'',A.rep)+'</div>']
+  const mine=sbUser&&r.userId===sbUser.id,
+    plus=mine?'<button type="button" class="act-draw" onclick="event.stopPropagation();actDraw(\''+r.id+'\')" aria-label="Powder einzeichnen" title="Powder einzeichnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>':'';
+  const slides=[A.map?'<div class="fc-slide" onclick="event.stopPropagation();actOpen(\''+r.id+'\')"><img src="'+A.map+'" alt="" loading="lazy">'+plus+'</div>'
+      :'<div class="fc-slide act-svg" onclick="event.stopPropagation();actOpen(\''+r.id+'\')">'+trkThumb(A.track,400,300,'',A.rep)+plus+'</div>']
     .concat(ims.map(u=>'<div class="fc-slide"><img src="'+u+'" alt="" loading="lazy"></div>'));
   return '<div class="act-card"><div class="fc-wrap act-wrap"><div class="fc-carousel" id="fcar-a'+id+'">'+slides.join('')+'</div>'
     +(slides.length>1?'<div class="fc-dots" id="fcd-a'+id+'">'+slides.map((x,i)=>'<i class="'+(i?'':'on')+'"></i>').join('')+'</div>':'')+'</div>'
@@ -11134,6 +11170,7 @@ function actLinked(r){const A=r&&r.condition_data&&r.condition_data.activity;if(
   const t0=(A.start||0)-36e5,t1=(A.end||A.start||0)+6*36e5;
   let la0=90,la1=-90,lo0=180,lo1=-180;A.track.forEach(p=>{la0=Math.min(la0,p[0]);la1=Math.max(la1,p[0]);lo0=Math.min(lo0,p[1]);lo1=Math.max(lo1,p[1]);});
   const out=(allReports||[]).filter(x=>{if(x===r||x.userId!==r.userId)return false;const cd=x.condition_data||{};if(cd.activity||cd.snowp)return false;
+    if(cd.act&&cd.act.post!=null)return String(cd.act.post)===String(r.id);   // drawn onto it later
     const t=Date.parse(x.createdAt||'')||0;if(!t||t<t0||t>t1)return false;
     if(x.lat<la0-.02||x.lat>la1+.02||x.lng<lo0-.03||x.lng>lo1+.03)return false;
     return A.track.some(p=>haversineKm(p[0],p[1],x.lat,x.lng)<1.5);});
@@ -11248,7 +11285,7 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
       +'<span class="pv-ac-prof">'+trkProfile(a.track,340,46)+'</span></button>').join('')
     :'<div class="prof-hint">'+(me?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aktivitäten.')+'</div>';
   box.innerHTML='<div class="pv-stats"><div><b>'+n(S.posts.length)+'</b><span>Beiträge</span></div><div><b>'+n(S.fol)+'</b><span>Follower</span></div><div><b>'+n(S.ing)+'</b><span>Folge ich</span></div><div><b>'+n(S.acts.length)+'</b><span>Aktivitäten</span></div><div><b>'+n(S.fb||0)+'</b><span>Feedbacks</span></div></div>'
-    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button onclick="profClose();navGo(\'feed\');feedSetScope(\'saved\')">Gemerkt</button><button data-dm onclick="profClose();dmOpen()">Nachrichten</button><button onclick="pvShare(\''+S.uid+'\')">Teilen</button>'
+    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button onclick="profClose();navGo(\'feed\');feedSetScope(\'saved\')">Gemerkt</button><button onclick="pvShare(\''+S.uid+'\')">Teilen</button>'
       :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
         +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
         +'<button class="pv-more" onclick="uvReportUser()" aria-label="Nutzer melden">⋯</button>')+'</div>'
@@ -11291,6 +11328,8 @@ function pvOpenPostOld(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)ret
 // its pictures and description.
 function pvOpenAct(boxId,i){const S=pvState[boxId],a=S&&S.acts[i];if(!a)return;pvClose();
   if(a.local){trkCur=a.id;trkView='detail';trkOpen();return;}
+  // a posted activity opens as its post; only one without a post goes to the map
+  if(a.post){feedOpenPost(a.post,S.uid);return;}
   try{navGo('map');}catch(e){}
   setTimeout(()=>{trkShowOnMap(a.track);actSumShow(a,S.uid,pvName(S));},250);}
 function actSumShow(a,uid,name){let el=document.getElementById('actSum');
@@ -11934,7 +11973,7 @@ async function trustBoard(){
   el.innerHTML=rows.map((r,i)=>{const L=trustLevel(r.trust),me=sbUser&&r.user_id===sbUser.id,av=safeUrl(r.avatar_url);
     return '<button type="button" class="trb-row'+(me?' me':'')+'" onclick="trSheetClose();viewUser(\''+jsArg(r.user_id)+'\',\''+jsArg(r.username||'User')+'\')">'
       +'<span class="trb-rk">'+(med[i]||(i+1))+'</span>'
-      +'<span class="trb-av"'+(av?' style="background-image:url(\''+av+'\')"':'')+'>'+(av?'':escapeHtml((r.username||'?').slice(0,1).toUpperCase()))+'</span>'
+      +'<span class="trb-av"'+(av?' style="background-image:'+cssUrl(av)+'"':'')+'>'+(av?'':escapeHtml((r.username||'?').slice(0,1).toUpperCase()))+'</span>'
       +'<span class="trb-t"><b>'+escapeHtml(r.username||'User')+(me?' (du)':'')+'</b><small>'+L.emo+' '+escapeHtml(L.name)+' · '+r.posts+' Beiträge</small></span>'
       +'<span class="trb-n">'+r.trust+'</span></button>';}).join('');}
 function progTrustOf(uid){if(!uid)return 0;return progTrustMap().get(uid)||0;}
@@ -13366,6 +13405,7 @@ function ovRender(){
   }).join('')
   // map extras that used to live in the settings
   +lyExtraRow('stn','Messstationen',typeof showStn!=='undefined'&&showStn,'<line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0"/>','toggleStations();ovRender()')
+  +(window._wcOk?lyExtraRow('wc','Webcams',false,'<path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/>','lyPanelClose();wcvOpen()'):'')
   +lyExtraRow('3d','3D-Ansicht',typeof is3d!=='undefined'&&is3d,'<path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/>','lyPanelClose();document.getElementById(\'btn3dFloat\').click()');
 }
 function lyExtraRow(k,label,on,ic,act){
@@ -13835,7 +13875,7 @@ function setRender(){
     const q=dm.querySelector('.st');if(q)q.textContent=liveOn?'an':'aus';}
   const acc=document.getElementById('setAccount');
   if(acc){const url=sbUser?avatarOf(sbUser.id):null;
-    acc.innerHTML=(url?('<span class="set-av" style="background-image:url('+encodeURI(url)+')"></span>')
+    acc.innerHTML=(url?('<span class="set-av" style="background-image:'+cssUrl(url)+'"></span>')
       :'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>')
       +(sbUser?'Mein Profil':'Anmelden');}
 }
@@ -13890,7 +13930,7 @@ function updateAccountBtn(avatarUrl){
     // glyph is the same shape the convention uses for "log out".
     btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.6"/><path d="M3.5 20a6.5 6.5 0 0 1 13 0"/><line x1="19" y1="6" x2="19" y2="12"/><line x1="16" y1="9" x2="22" y2="9"/></svg>';return;}
   btn.classList.add('signed');btn.title='Mein Profil';
-  if(avatarUrl){btn.innerHTML='<span class="acct-img" style="background-image:url('+avatarUrl+')"></span>';}
+  if(avatarUrl){btn.innerHTML='<span class="acct-img" style="background-image:'+cssUrl(avatarUrl)+'"></span>';}
   else{btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';}}
 let meMarker=null,myLoc=null;
 // Desktop Safari often answers a high-accuracy request with "position
@@ -14130,12 +14170,32 @@ map.on('moveend',function(){if(vaLegendUp()){try{miniLegendRender();}catch(e){}}
 // close is remembered for a moment.
 let _popClosedAt=0;
 map.on('popupclose',function(){_popClosedAt=Date.now();});
+// The point card opens on a long press; a short tap only closes what is
+// open (and a double tap zooms), so moving around the map never pops a card.
+let _lpAt=0;
 map.on('click',function(e){
+  if(Date.now()-_lpAt<800)return;
   if(document.body.classList.contains('feed-side')){feedClose();return;}
   if(document.body.classList.contains('insp-open')){inspClose();return;}
   if(Date.now()-_popClosedAt<450)return;
-  inspOpen(e.latlng.lat,e.latlng.lng);
+  try{toastOnce('lp-hint','Lange drücken für die Punkt-Info · doppelt tippen zum Zoomen');}catch(x){}
 });
+function mapLongPress(cx,cy){
+  if(document.body.classList.contains('feed-side')||document.body.classList.contains('draw-on')||document.body.classList.contains('trk-open'))return;
+  const r=map.getContainer().getBoundingClientRect(),ll=map.containerPointToLatLng([cx-r.left,cy-r.top]);
+  _lpAt=Date.now();try{haptic(12);}catch(x){}
+  inspOpen(ll.lat,ll.lng);}
+(function(){const el=map.getContainer();let t=0,sx=0,sy=0,n=0;
+  const stop=()=>{clearTimeout(t);t=0;};
+  el.addEventListener('pointerdown',e=>{n++;
+    if(n>1||(e.pointerType==='mouse'&&e.button!==0)||(e.target.closest&&e.target.closest('.leaflet-marker-icon,.leaflet-popup,.leaflet-control,.leaflet-interactive'))){stop();return;}
+    sx=e.clientX;sy=e.clientY;stop();t=setTimeout(()=>{t=0;mapLongPress(sx,sy);},480);},{passive:true});
+  el.addEventListener('pointermove',e=>{if(t&&Math.hypot(e.clientX-sx,e.clientY-sy)>10)stop();},{passive:true});
+  const up=()=>{n=Math.max(0,n-1);stop();};
+  el.addEventListener('pointerup',up,{passive:true});el.addEventListener('pointercancel',up,{passive:true});
+  // the system menu of a long press (and a right click on a desk) is the card too
+  el.addEventListener('contextmenu',e=>{e.preventDefault();if(Date.now()-_lpAt>800)mapLongPress(e.clientX,e.clientY);});
+  map.on('movestart zoomstart',stop);})();
 // Marker popups (reports, stations) open through Leaflet's own click
 // handling rather than the map's 'click' event above, so they need the
 // same guard: while the feed is open beside the map, a tap closes the
@@ -14301,25 +14361,130 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
      '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+kpi+
    '</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
    '<div class="insp-body">'+inspOrder({va:vaSec,prog:progSec,
-     snow:'<div class="insp-sec"><h4>Neuschnee &amp; Temperatur <em>+'+newSnow.toFixed(1)+' cm</em></h4><div class="tc-leg"><span><i class="tc-snow"></i>Neuschnee cm/h</span><span><i class="tc-air"></i>Luft (2 m)</span><span><i class="tc-srf"></i>Schneeoberfläche</span></div><canvas id="icSnowTemp"></canvas></div>',
-     depth:'<div class="insp-sec"><h4>Schneehöhe <em>'+depthNow.toFixed(0)+' cm</em></h4><canvas id="icDepth"></canvas></div>',
+     snow:mgHTML(),
+     depth:'',
      temp:'',
      wind:'<div class="insp-sec"><h4>Windrose <em>Min · Median · Max</em></h4><canvas id="icWind"></canvas></div>',
-     cloud:_clvData?'<div class="insp-sec"><h4>Bewölkung <em>nach Höhe</em></h4><canvas id="icCloud"></canvas></div>':'',
-     rad:'<div class="insp-sec"><h4>Strahlung <em>% vom Tagesmaximum</em></h4><canvas id="icRad"></canvas></div>'})+
+     cloud:'',rad:''})+
    '</div>';
   pan.classList.add('open');
   requestAnimationFrame(()=>{
-    icSnowTemp(document.getElementById('icSnowTemp'),p);
-    icDepth(document.getElementById('icDepth'),p);
+    try{mgDraw(p,wk);}catch(e){console.warn('mg',e);}
     icWind(document.getElementById('icWind'),p,wk);
-    icRad(document.getElementById('icRad'),p);
-    if(_clvData)icCloud(document.getElementById('icCloud'),p);
   });
   // while the card is open the timeline shows a from–to window to set
   try{if(tlMode==='detail')drawTimeline();}catch(e){}
   inspKeepPointVisible(lat,lon);
 }
+// ── Meteogram in the point card ─────────────────────────────────────────
+// One long time axis for every chart, like a weather app: the panels sit in
+// one horizontal scroller, so a swipe moves new snow, temperature, depth,
+// clouds, sun and wind together. The axes stay put on top of it. The whole
+// run is there; the window chosen on the timeline is the light band, the
+// past is greyed.
+// new snow cm/h in classes (stacked as in a meteogram), with their colours
+const MG_SNOW=[[0,.5,'#A99BB8'],[.5,1,'#3F63E0'],[1,2,'#2F9A4C'],[2,3,'#7ED957'],[3,99,'#E8E24A']];
+const MG_PX=7,MG_L=40,MG_R=40;
+let _mgScroll=null,_mgKey=null;
+function mgPanels(){return [{k:'snow',h:176,t:'Neuschnee & Temperatur'},{k:'depth',h:74,t:'Schneehöhe'},
+  _clvData?{k:'cloud',h:66,t:'Bewölkung'}:null,{k:'sun',h:66,t:'Sonne'},{k:'wind',h:112,t:'Wind'}].filter(Boolean);}
+function mgHTML(){const H=mgPanels().reduce((s,q)=>s+q.h+30,0)+20;
+  return '<div class="insp-sec insp-mg"><div class="mg-leg"><span><i class="mg-sw"></i>Neuschnee cm/h</span><span><i class="tc-air"></i>Luft</span><span><i class="tc-srf"></i>Schneeoberfläche</span></div>'
+    +'<div class="mg" style="height:'+H+'px"><div class="mg-sc" id="mgSc"><canvas id="mgCv"></canvas></div><canvas class="mg-ax" id="mgAx"></canvas></div>'
+    +'<div class="insp-hint">← wischen →  alle Diagramme laufen mit · hell = gewähltes Zeitfenster</div></div>';}
+function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getElementById('mgCv'),ax=document.getElementById('mgAx');if(!sc||!cv||!ax)return;
+  const vw=sc.clientWidth||320,panels=mgPanels(),TOP=20,GAP=30,H=TOP+panels.reduce((s,q)=>s+q.h+GAP,0);
+  const W=MG_L+T*MG_PX+MG_R,dpr=Math.min(2,window.devicePixelRatio||1);
+  cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.width=W+'px';cv.style.height=H+'px';
+  ax.width=Math.round(vw*dpr);ax.height=Math.round(H*dpr);ax.style.width=vw+'px';ax.style.height=H+'px';
+  const c=cv.getContext('2d'),g=ax.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);g.setTransform(dpr,0,0,dpr,0,0);
+  const X=t=>MG_L+t*MG_PX,mut=cvTok('--fg2','#5B6472'),grid=cvTok('--ink-050','#ECEEF0'),fg=cvTok('--fg','#16152e');
+  const bg=cvTok('--card','#FFFFFF');
+  // days on top, nights, past, window
+  c.font='700 11px Inter,system-ui';c.textAlign='center';
+  for(let t=0;t<T;t++){const d=zLocal(tMs(t));if(d.getUTCHours()!==0&&t!==0)continue;
+    let e=t+1;while(e<T&&zLocal(tMs(e)).getUTCHours()!==0)e++;
+    c.fillStyle=fg;if((e-t)*MG_PX>40)c.fillText(WD()[d.getUTCDay()]+' '+d.getUTCDate()+'.',(X(t)+X(e))/2,13);}
+  let y0=TOP;const rows=[];
+  for(const q of panels){rows.push({q,top:y0+16,base:y0+16+q.h-18});y0+=q.h+GAP;}
+  const yTop=TOP,yBot=H-6;
+  c.fillStyle='rgba(30,41,66,.07)';c.fillRect(X(0),yTop,X(Math.min(nowIdx,T))-X(0),yBot-yTop);           // past
+  c.fillStyle='rgba(42,143,216,.08)';c.fillRect(X(a),yTop,X(b)-X(a),yBot-yTop);                          // window
+  c.strokeStyle='rgba(42,111,176,.55)';c.lineWidth=1.2;c.setLineDash([4,3]);
+  for(const t of [a,b]){c.beginPath();c.moveTo(X(t)+.5,yTop);c.lineTo(X(t)+.5,yBot);c.stroke();}c.setLineDash([]);
+  if(nowIdx>=0&&nowIdx<T){c.strokeStyle='#e0245e';c.lineWidth=1.4;c.beginPath();c.moveTo(X(nowIdx),yTop);c.lineTo(X(nowIdx),yBot);c.stroke();}
+  // axis overlay: strips with the page colour so the numbers stay readable
+  g.clearRect(0,0,vw,H);
+  const strip=(x,w,edge)=>{g.fillStyle=bg;g.fillRect(x,TOP,w,H-TOP);g.fillStyle='rgba(18,21,26,.14)';g.fillRect(edge,TOP,1,H-TOP);};
+  strip(0,MG_L,MG_L-1);strip(vw-MG_R,MG_R,vw-MG_R);
+  const lab=(txt,x,y,al,col)=>{g.fillStyle=col||mut;g.textAlign=al;g.textBaseline='middle';g.font='600 10.5px Inter,system-ui';g.fillText(txt,x,y);};
+  const hours=(r)=>{c.textAlign='center';c.font='600 9.5px Inter,system-ui';c.fillStyle=mut;
+    for(let t=0;t<T;t++){const d=zLocal(tMs(t)),hr=d.getUTCHours(),x=X(t);
+      if(hr===0){c.strokeStyle='rgba(18,21,26,.18)';c.lineWidth=1;c.beginPath();c.moveTo(x,r.top-4);c.lineTo(x,r.base+4);c.stroke();}
+      if(hr%6===0){c.fillText(String(hr).padStart(2,'0'),x,r.base+13);}}
+    c.strokeStyle='rgba(18,21,26,.3)';c.beginPath();c.moveTo(X(0),r.base+.5);c.lineTo(X(T),r.base+.5);c.stroke();};
+  const title=(r,txt)=>{g.fillStyle=fg;g.font='800 12px Inter,system-ui';g.textAlign='left';g.textBaseline='alphabetic';g.fillText(txt,MG_L+4,r.top-5);};
+  for(const r of rows){const q=r.q,hgt=r.base-r.top;
+    if(q.k==='snow'){
+      const air=[],srf=[],sn=[];let mn=1e9,mx=-1e9,smx=0;
+      for(let t=0;t<T;t++){air[t]=tv(t,p);srf[t]=tsurfEst(t,p);sn[t]=SNOW[t*NP+p]*M.snow_scale;
+        for(const v of [air[t],srf[t]])if(v==v&&v!=null){if(v<mn)mn=v;if(v>mx)mx=v;}if(sn[t]>smx)smx=sn[t];}
+      const raw=Math.max(1,mx-mn),st=raw<=5?1:raw<=12?2:raw<=28?5:10;mn=Math.floor(mn/st)*st;mx=Math.ceil(mx/st)*st;if(mx===mn)mx+=st;
+      const yT=v=>r.base-(v-mn)/(mx-mn)*hgt;
+      for(let v=mn;v<=mx+1e-9;v+=st){const y=yT(v);c.strokeStyle=v===0?'rgba(168,58,46,.5)':grid;c.lineWidth=1;if(v===0)c.setLineDash([4,3]);
+        c.beginPath();c.moveTo(X(0),y);c.lineTo(X(T),y);c.stroke();c.setLineDash([]);lab(v+'°',MG_L-5,y,'right',v===0?'#A83A2E':mut);}
+      const top=Math.max(1,[1,2,3,5,8,10].find(v=>v>=smx*1.05)||Math.ceil(smx)),yS=v=>r.base-v/top*hgt,bw=MG_PX-1.2;
+      for(let t=0;t<T;t++){const v=sn[t];if(v<0.01)continue;
+        for(const [lo,hi,col] of MG_SNOW){if(v<=lo)break;const y1=yS(Math.min(v,hi)),y2=yS(lo);c.fillStyle=col;c.fillRect(X(t)+.6,y1,bw,Math.max(.5,y2-y1));}}
+      // colour scale on the right: the classes on the cm/h axis
+      const sx=vw-12;for(const [lo,hi,col] of MG_SNOW){if(lo>=top)break;const y1=yS(Math.min(hi,top)),y2=yS(lo);g.fillStyle=col;g.fillRect(sx,y1,7,y2-y1);}
+      for(const v of [0,top/2,top]){lab((v%1?v.toFixed(1):String(v)),sx-4,yS(v),'right','#2A6FB0');}
+      g.font='700 9.5px Inter,system-ui';g.fillStyle='#2A6FB0';g.textAlign='right';g.textBaseline='alphabetic';g.fillText('cm/h',vw-4,r.top-5);
+      g.fillStyle=mut;g.textAlign='left';g.fillText('°C',2,r.top-5);
+      c.lineJoin='round';
+      c.beginPath();let pen=false;for(let t=0;t<T;t++){const v=srf[t];if(v==null||v!==v){pen=false;continue;}const x=X(t)+MG_PX/2,y=yT(v);pen?c.lineTo(x,y):c.moveTo(x,y);pen=true;}
+      c.strokeStyle='#C9821F';c.lineWidth=1.8;c.setLineDash([5,3]);c.stroke();c.setLineDash([]);
+      c.beginPath();pen=false;for(let t=0;t<T;t++){const v=air[t];if(v==null||v!==v){pen=false;continue;}const x=X(t)+MG_PX/2,y=yT(v);pen?c.lineTo(x,y):c.moveTo(x,y);pen=true;}
+      c.strokeStyle='#D7262B';c.lineWidth=2.6;c.stroke();
+      hours(r);title(r,q.t);}
+    else if(q.k==='depth'){let mx=1;const v=[];for(let t=0;t<T;t++){v[t]=cum[t*NP+p];if(v[t]>mx)mx=v[t];}
+      mx=Math.ceil(mx/10)*10;const yD=x=>r.base-x/mx*hgt;
+      for(const s of [0,mx/2,mx]){c.strokeStyle=grid;c.beginPath();c.moveTo(X(0),yD(s));c.lineTo(X(T),yD(s));c.stroke();lab(Math.round(s)+'',MG_L-5,yD(s),'right');}
+      c.beginPath();for(let t=0;t<T;t++){const x=X(t)+MG_PX/2,y=yD(v[t]);t?c.lineTo(x,y):c.moveTo(x,y);}
+      c.lineTo(X(T),r.base);c.lineTo(X(0),r.base);c.closePath();c.fillStyle='rgba(42,143,216,.16)';c.fill();
+      c.beginPath();for(let t=0;t<T;t++){const x=X(t)+MG_PX/2,y=yD(v[t]);t?c.lineTo(x,y):c.moveTo(x,y);}c.strokeStyle='#2A8FD8';c.lineWidth=2;c.stroke();
+      g.font='700 9.5px Inter,system-ui';g.fillStyle=mut;g.textAlign='left';g.textBaseline='alphabetic';g.fillText('cm',2,r.top-5);
+      hours(r);title(r,q.t);}
+    else if(q.k==='cloud'){const names=['hoch','mittel','tief'],cols=[CLV_COL[2],CLV_COL[1],CLV_COL[0]],bh=(hgt-4)/3;
+      for(let k=0;k<3;k++){const y=r.top+k*(bh+2);g.font='600 9.5px Inter,system-ui';g.fillStyle=mut;g.textAlign='right';g.textBaseline='middle';g.fillText(names[k],MG_L-4,y+bh/2);
+        c.fillStyle=cvTok('--ink-050','#F0F2F4');c.fillRect(X(0),y,X(T)-X(0),bh);
+        for(let t=0;t<T;t++){const f=cloudLv(t,p)[2-k];if(f<=0.05)continue;const cc=cols[k];
+          c.fillStyle='rgba('+cc[0]+','+cc[1]+','+cc[2]+','+(0.15+0.85*f).toFixed(2)+')';c.fillRect(X(t),y,MG_PX+.5,bh);}}
+      hours(r);title(r,q.t);}
+    else if(q.k==='sun'){let mx=0;for(let t=0;t<T;t++)mx=Math.max(mx,sunv(t,p));mx=mx||1;
+      for(const s of [0,50,100]){const y=r.base-s/100*hgt;c.strokeStyle=grid;c.beginPath();c.moveTo(X(0),y);c.lineTo(X(T),y);c.stroke();lab(s+'%',MG_L-5,y,'right');}
+      c.fillStyle='#F2C335';for(let t=0;t<T;t++){const f=sunv(t,p)/mx;if(f<0.02)continue;const bh=f*hgt;c.fillRect(X(t)+.6,r.base-bh,MG_PX-1.2,bh);}
+      hours(r);title(r,q.t);}
+    else if(q.k==='wind'){const sp=[];let mx=10;for(let t=0;t<T;t++){sp[t]=SPD[t*P+wk]/M.spd_mul*3.6;if(sp[t]>mx)mx=sp[t];}
+      mx=Math.ceil(mx/10)*10;const arrH=28,yW=v=>r.base-v/mx*(hgt-arrH);
+      for(const s of [0,mx/2,mx]){c.strokeStyle=grid;c.beginPath();c.moveTo(X(0),yW(s));c.lineTo(X(T),yW(s));c.stroke();lab(Math.round(s)+'',MG_L-5,yW(s),'right');}
+      c.beginPath();for(let t=0;t<T;t++){const x=X(t)+MG_PX/2,y=yW(sp[t]);t?c.lineTo(x,y):c.moveTo(x,y);}
+      c.lineTo(X(T),r.base);c.lineTo(X(0),r.base);c.closePath();c.fillStyle='rgba(124,108,214,.15)';c.fill();
+      c.beginPath();for(let t=0;t<T;t++){const x=X(t)+MG_PX/2,y=yW(sp[t]);t?c.lineTo(x,y):c.moveTo(x,y);}c.strokeStyle='#7C6CD6';c.lineWidth=2.2;c.stroke();
+      // arrows every 3 h: where the wind blows to, the speed beneath
+      c.textAlign='center';c.font='700 9.5px Inter,system-ui';
+      for(let t=1;t<T;t+=3){let dir=(WDIR[t*P+wk]*M.dir_div)%360;if(dir<0)dir+=360;const x=X(t)+MG_PX/2,y=r.top+8,ang=(dir+180)*Math.PI/180;
+        c.save();c.translate(x,y);c.rotate(ang);c.strokeStyle=fg;c.fillStyle=fg;c.lineWidth=1.6;c.beginPath();c.moveTo(0,6);c.lineTo(0,-5);c.stroke();
+        c.beginPath();c.moveTo(0,-7);c.lineTo(-3.5,-2);c.lineTo(3.5,-2);c.closePath();c.fill();c.restore();
+        c.fillStyle=mut;c.fillText(String(Math.round(sp[t])),x,y+18);}
+      g.font='700 9.5px Inter,system-ui';g.fillStyle=mut;g.textAlign='left';g.textBaseline='alphabetic';g.fillText('km/h',2,r.top-5);
+      hours(r);title(r,q.t);}}
+  // where it was, else the window near the left edge
+  const key=p+':'+a+':'+b;
+  if(_mgScroll!=null&&_mgKey&&_mgKey.split(':')[0]===String(p))sc.scrollLeft=_mgScroll;
+  else sc.scrollLeft=Math.max(0,X(a)-MG_L-24);
+  _mgKey=key;
+  sc.onscroll=()=>{_mgScroll=sc.scrollLeft;};}
 // Three bands like a meteogram: high (cirrus) on top, mid, low (stratus/fog)
 // at the bottom; the darker a cell, the more of that layer covers the sky.
 function icCloud(cv,p){if(!cv)return;const{ctx,w,h}=icSetup(cv,104);
@@ -14881,6 +15046,10 @@ let sb=null,sbUser=null,authMode='login';
 // tag, an attribute or a JS string, and links must be plain https or an
 // inline image -- so a crafted row can't run script in someone else's app.
 const URL_KEYS=/^(image_url|avatar_url|thumb|mid|images|drawImage|snapshot|map|img|url|photo)$/;
+// A picture URL for CSS url(): storage URLs already carry %-escapes, so
+// encodeURI() double-encoded them and the picture never showed. Only the
+// characters that would break out of url('…') or the attribute are escaped.
+function cssUrl(u){return "url('"+String(u||'').replace(/['"\\()\s<>]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase().padStart(2,'0'))+"')";}
 function safeUrl(u){if(typeof u!=='string')return null;u=u.trim();
   if(/^https:\/\/[^\s"'<>`\\()&]+$/.test(u))return u;
   if(/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(u))return u;
@@ -15392,7 +15561,7 @@ function reportPopupHTML(r){
   return '<div class="rpop">'
     +(r.img?('<div class="rpop-img" onclick="feedOpenAt(\''+r.id+'\')"><img src="'+((r.condition_data&&(r.condition_data.mid||r.condition_data.thumb))||r.img)+'" loading="lazy" alt=""/>'+catBadge+'</div>'):'')
     +'<div class="rpop-body"><div class="rpop-head">'
-      +'<div class="rpop-av"'+(r.avatar?(' style="background-image:url('+r.avatar+')"'):'')+'>'+(r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase()))+'</div>'
+      +'<div class="rpop-av"'+(r.avatar?(' style="background-image:'+cssUrl(r.avatar)+'"'):'')+'>'+(r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase()))+'</div>'
       +'<div class="rpop-meta"><b>'+escapeHtml(r.user||'User')+'</b><span>'+escapeHtml(r.time||'')+'</span></div>'
       +(r.img?'':catBadge)
     +'</div>'
@@ -15481,7 +15650,7 @@ function _rptMergedPopup(g,m){
   const rows=g.slice().sort((a,b)=>_rptImportance(b)-_rptImportance(a)).map(r=>{
     const cm=_rptDepth(r),col=_rptColor(r);
     return '<button class="rmg-row" onclick="feedOpenAt(\''+r.id+'\')">'+
-      '<span class="rmg-av"'+(r.avatar?(' style="background-image:url('+encodeURI(r.avatar)+')"'):'')+'>'+
+      '<span class="rmg-av"'+(r.avatar?(' style="background-image:'+cssUrl(r.avatar)+'"'):'')+'>'+
         (r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase()))+'</span>'+
       '<span class="rmg-t"><b>'+escapeHtml(r.user||'User')+'</b><span>'+escapeHtml(r.time||'')+'</span></span>'+
       (cm!=null?('<span class="rmg-cm" style="--cc:'+col+'">'+cm+' cm</span>'):'')+
@@ -15541,7 +15710,7 @@ function loadReportMarkers(){
   try{applyFeedHighlight();}catch(e){}
 }
 let rptLastOpen=null;
-function feedOpenAt(id){feedScope='all';feedFilter='all';feedAnchor=null;
+function feedOpenAt(id){feedScope='post';feedFocusId=String(id);feedFilter='all';feedAnchor=null;
   if(document.getElementById('inspPanel'))document.getElementById('inspPanel').classList.remove('open');
   feedOpen();
   setTimeout(()=>{const el=document.getElementById('feedcard-'+id);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1800);}},160);}
@@ -15601,7 +15770,9 @@ function accNotifSync(){const b=document.getElementById('mapAcc');if(!b)return;c
   b.classList.toggle('notif',on);b.setAttribute('aria-label',on?'Konto – Neues für dich':'Konto');}
 async function dmUnreadCheck(){if(!sb||!sbUser){_dmN=0;accNotifSync();return;}
   try{const{count}=await sb.from('dm_messages').select('id',{count:'exact',head:true}).is('read_at',null).neq('sender_id',sbUser.id);
-    _dmN=count||0;const d=document.getElementById('dmDot');if(d)d.hidden=!_dmN;}catch(e){}
+    _dmN=count||0;const d=document.getElementById('dmDot');if(d)d.hidden=!_dmN;
+    const mb=document.getElementById('profMsgBtn'),mn=document.getElementById('profMsgN');
+    if(mb)mb.classList.toggle('unread',_dmN>0);if(mn){mn.hidden=!_dmN;mn.textContent=_dmN>9?'9+':String(_dmN);}}catch(e){}
   accNotifSync();}
 setInterval(()=>{if(document.visibilityState==='visible')dmUnreadCheck();},120000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')dmUnreadCheck();});
@@ -16066,7 +16237,7 @@ function avatarOf(id){return (id&&AVATARS[id])||null;}
 function avatarHtml(id,name,cls){
   const url=avatarOf(id),ini=escapeHtml(((name||'U')[0]||'U').toUpperCase());
   return '<div class="'+(cls||'cmt-av')+(url?' has-img':'')+'"'+
-    (url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':ini)+'</div>';
+    (url?(' style="background-image:'+cssUrl(url)+'"'):'')+'>'+(url?'':ini)+'</div>';
 }
 function profNav(v){['Main','Set','Pers','Priv','Notif','App'].forEach(k=>{const el=document.getElementById('profView'+k);if(el)el.style.display=(v===k.toLowerCase())?'':'none';});try{haptic(4);}catch(e){}}
 function profSetVis(v){try{localStorage.setItem('ssm_visibility',v);}catch(e){}
@@ -16138,13 +16309,14 @@ async function loadMyProfileAvatar(){if(!sb||!sbUser)return;
   try{const{data}=await sb.from('profiles').select('avatar_url').eq('id',sbUser.id).single();
     const url=(data&&data.avatar_url)||null;
     avatarPut(sbUser.id,url);
-    if(url){const av=document.getElementById('userPillAv');if(av){av.style.backgroundImage='url('+encodeURI(url)+')';av.style.backgroundSize='cover';av.style.backgroundPosition='center';const sp=av.querySelector('span');if(sp)sp.style.display='none';}}
+    if(url){const av=document.getElementById('userPillAv');if(av){av.style.backgroundImage=cssUrl(url);av.style.backgroundSize='cover';av.style.backgroundPosition='center';const sp=av.querySelector('span');if(sp)sp.style.display='none';}}
     // always, so signing in as someone without a picture clears the last one
     updateAccountBtn(url);}catch(e){updateAccountBtn(null);}}
 async function openProfile(){
   setTimeout(()=>{try{trkProfRender();}catch(e){}},0);
   if(!sb||!sbUser){authShow();return;}
   try{dmAvailable();}catch(e){}
+  try{dmUnreadCheck();}catch(e){}
   document.getElementById('profModal').style.display='flex';
   profNav('main');
   try{const vv=localStorage.getItem('ssm_visibility')||'all';document.querySelectorAll('#profVis button').forEach(b2=>b2.classList.toggle('active',b2.dataset.v===vv));}catch(e){}
@@ -16161,7 +16333,7 @@ async function openProfile(){
     document.getElementById('profBio').value=data?.bio||'';profBioInput();
     document.getElementById('profBioView').textContent=data?.bio||'';
     const av=document.getElementById('profAv');
-    if(data?.avatar_url){av.classList.add('has-img');av.style.backgroundImage='url('+data.avatar_url+')';profAvatarUrl=data.avatar_url;avatarPut(sbUser.id,data.avatar_url);}
+    if(data?.avatar_url){av.classList.add('has-img');av.style.backgroundImage=cssUrl(data.avatar_url);profAvatarUrl=data.avatar_url;avatarPut(sbUser.id,data.avatar_url);}
     else{av.classList.remove('has-img');av.style.backgroundImage='';}
     document.getElementById('profPush').classList.toggle('on',!!data?.push_enabled);
   }catch(e){myProfile={};}
@@ -16241,14 +16413,14 @@ function prefsApplyStartup(){
 try{map.on('moveend',()=>{try{const c=map.getCenter();
   localStorage.setItem('ssm_lastview',JSON.stringify({lat:c.lat,lng:c.lng,z:map.getZoom()}));}catch(e){}});}catch(e){}
 function profSetAvatar(inp){if(!inp.files||!inp.files[0])return;profAvatarFile=inp.files[0];
-  const url=URL.createObjectURL(profAvatarFile);const av=document.getElementById('profAv');av.classList.add('has-img');av.style.backgroundImage='url('+url+')';
+  const url=URL.createObjectURL(profAvatarFile);const av=document.getElementById('profAv');av.classList.add('has-img');av.style.backgroundImage=cssUrl(url);
   inp.value='';
   // a picked picture is saved right here -- it used to wait for the Save
   // button at the very bottom of the profile, which nobody scrolled to
   const bar=document.getElementById('profAvBar');if(bar)bar.hidden=false;profDirty();}
 function profAvCancel(){profAvatarFile=null;const bar=document.getElementById('profAvBar');if(bar)bar.hidden=true;
   const av=document.getElementById('profAv');
-  if(profAvatarUrl){av.classList.add('has-img');av.style.backgroundImage='url('+profAvatarUrl+')';}
+  if(profAvatarUrl){av.classList.add('has-img');av.style.backgroundImage=cssUrl(profAvatarUrl);}
   else{av.classList.remove('has-img');av.style.backgroundImage='';}}
 async function profAvSave(){
   if(!profAvatarFile)return;if(!sb||!sbUser){authShow();return;}
@@ -16388,7 +16560,7 @@ async function viewUser(uid,username){
     if(data){document.getElementById('uvName').textContent=data.username||username||'User';document.getElementById('uvInitial').textContent=(data.username||'U')[0].toUpperCase();
       document.getElementById('uvBio').textContent=data.bio||'';
       if(data.created_at){const d=new Date(data.created_at);document.getElementById('uvSince').textContent=d.toLocaleDateString(LOCALE(),{month:'short',year:'2-digit'});}
-      if(data.avatar_url){av.classList.add('has-img');av.style.backgroundImage='url('+data.avatar_url+')';avatarPut(uid,data.avatar_url);}}
+      if(data.avatar_url){av.classList.add('has-img');av.style.backgroundImage=cssUrl(data.avatar_url);avatarPut(uid,data.avatar_url);}}
   }catch(e){}
   // Posts, follower and like counts come from pvLoad (uvPV) -- asking for
   // them here as well doubled every query of the profile view.
@@ -16514,11 +16686,11 @@ async function dmList(){
       const unread=m&&m.sender_id!==sbUser.id&&!m.read_at;
       if(unread)_dmUnread=true;
       if(tab==='req')return '<div class="dm-req" data-n="'+escapeHtml(nm.toLowerCase())+'"><button class="dm-row'+(unread?' new':'')+'" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+jsArg(nm)+'\')">'
-        +'<span class="av"'+(url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'
+        +'<span class="av"'+(url?(' style="background-image:'+cssUrl(url)+'"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'
         +'<span class="tx"><b>'+escapeHtml(nm)+trustBadge(progTrustOf(oid),true)+'</b><span>'+(m?escapeHtml(m.body):'möchte dir schreiben')+'</span></span></button>'
         +'<div class="dm-req-b"><button class="pri" onclick="dmAccept(\''+oid+'\')">Annehmen</button><button onclick="dmHide(\''+t.id+'\')">Ablehnen</button></div></div>';
       return '<button class="dm-row'+(unread?' new':'')+'" data-n="'+escapeHtml(nm.toLowerCase())+'" onclick="dmThreadOpen(\''+t.id+'\',\''+oid+'\',\''+jsArg(nm)+'\')">'+
-        '<span class="av"'+(url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'+
+        '<span class="av"'+(url?(' style="background-image:'+cssUrl(url)+'"'):'')+'>'+(url?'':escapeHtml(nm[0].toUpperCase()))+'</span>'+
         '<span class="tx"><b>'+escapeHtml(nm)+trustBadge(progTrustOf(oid),true)+'</b><span>'+(m?escapeHtml(/[?&]post=/.test(m.body)?'📍 Beitrag geteilt':m.body):'—')+'</span></span>'+
         (m?('<span class="when">'+timeAgo(m.created_at)+'</span>'):'')+
         (unread?'<span class="unread"></span>':'')+
@@ -16618,7 +16790,7 @@ async function usSearch(){
       const me=sbUser&&u.id===sbUser.id;
       const fol=myFollowing.has(u.id);
       return '<div class="us-row" onclick="usClose();viewUser(\''+u.id+'\',\''+jsArg(u.username||'User')+'\')">'
-        +'<div class="av"'+(u.avatar_url?' style="background-image:url('+u.avatar_url+')"':'')+'>'+(u.avatar_url?'':escapeHtml((u.username||'U')[0].toUpperCase()))+'</div>'
+        +'<div class="av"'+(u.avatar_url?' style="background-image:'+cssUrl(u.avatar_url)+'"':'')+'>'+(u.avatar_url?'':escapeHtml((u.username||'U')[0].toUpperCase()))+'</div>'
         +'<b>'+escapeHtml(u.username||'User')+'</b>'
         +(me?'':'<button class="feed-follow '+(fol?'following':'')+'" onclick="toggleFollow(\''+u.id+'\',event);this.classList.toggle(\'following\');this.textContent=this.classList.contains(\'following\')?\'Folge ich\':\'Folgen\';">'+(fol?'Folge ich':'Folgen')+'</button>')
         +'</div>';}).join('');
@@ -18133,7 +18305,7 @@ function feedOpen(){
 addEventListener('keydown',e=>{if(e.key==='Escape'){const f=document.getElementById('feedPage');if(f&&f.classList.contains('open')&&!document.querySelector('.feed-sheet.open'))try{navGo('map');}catch(x){}}});
 function feedClose(){
   const el=document.getElementById('feedPage');if(!el)return;
-  if(feedScope==='user'||feedScope==='saved'||feedScope==='tours'){feedScope='all';feedUserId=null;feedTour=null;try{feedTourBar();}catch(e){}}
+  if(feedScope==='user'||feedScope==='saved'||feedScope==='tours'||feedScope==='post'){feedScope='all';feedUserId=null;feedTour=null;try{feedTourBar();}catch(e){}}
   el.classList.remove('open');
   document.body.setAttribute('data-screen','search');
   // it opens as a column again next time
@@ -18372,7 +18544,7 @@ function mentionRender(){
     const url=avatarOf(u.id);
     return '<button type="button" class="'+(i===_mnSel?'on':'')+'" onmousedown="event.preventDefault()" '+
       'onclick="mentionPick('+i+')">'+
-      '<span class="mn-av"'+(url?(' style="background-image:url('+encodeURI(url)+')"'):'')+'>'+
+      '<span class="mn-av"'+(url?(' style="background-image:'+cssUrl(url)+'"'):'')+'>'+
         (url?'':escapeHtml(u.username[0].toUpperCase()))+'</span>'+
       escapeHtml(u.username)+'<span class="mn-h">@'+escapeHtml(u.username)+'</span></button>';}).join('');
   box.hidden=false;
@@ -18423,7 +18595,7 @@ function feedTopRender(){const el=document.getElementById('feedTop');if(!el)retu
   el.innerHTML='<div class="ft-row"><button type="button" class="ft-cat'+(feedFilter!=='all'?' on':'')+'" onclick="feedFilterOpen()">'+ic('<path d="M4 6h16M7 12h10M10 18h4"/>')+'<span>'+escapeHtml(cat)+'</span></button>'
     +'<button type="button" class="ft-ic" onclick="usOpen()" aria-label="Leute finden" title="Leute finden">'+ic('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')+'</button>'
     +'<button type="button" class="ft-ic pt-acc ft-me" onclick="accountTap()" aria-label="Mein Profil" title="Mein Profil">'+ic('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>')+'<span class="pt-ini"></span></button>'
-    +'<button type="button" class="ft-ic ft-desk" data-dm hidden onclick="dmOpen()" aria-label="Nachrichten" title="Nachrichten">'+ic('<path d="M21.5 2.5 10.6 13.4"/><path d="M21.5 2.5 15 21l-4.4-7.6L3 9z"/>')+'</button></div>';
+    +'</div>';
   try{if(typeof dmReady!=='undefined'&&dmReady)el.querySelectorAll('[data-dm]').forEach(x=>x.hidden=false);}catch(e){}
   // your own picture, as on the map; it opens your profile
   try{let u=null;const c=(localStorage.getItem('ssm_avatar')||'').split('|');
@@ -18434,7 +18606,16 @@ let feedUserId=null,feedUserName='';
 // A post opened from a profile stands on its own at the top, with every
 // detail of what was reported; the person's other posts follow below it.
 let feedFocusId=null;
+// One post on its own at the top, the newest posts below it; the map only
+// when asked for (the pin on the card, «Route auf der Karte zeigen»).
+async function feedOpenPost(id,uid){if(!id)return;
+  try{pvClose();}catch(e){}
+  feedScope='post';feedFocusId=String(id);feedUserId=null;feedFilter='all';feedTour=null;feedAnchor=null;
+  navGo('feed');feedTourBar();feedRender();
+  if(uid&&!allReports.some(r=>String(r.id)===String(id))){try{await loadDbReports({uid});}catch(e){}feedRender();}
+  setTimeout(()=>{const sc=document.querySelector('.feed-scroll');if(sc)sc.scrollTop=0;},60);}
 async function feedOpenUser(uid,name,postId){if(!uid)return;
+  if(postId)return feedOpenPost(postId,uid);
   try{pvClose();}catch(e){}
   feedScope='user';feedUserId=uid;feedUserName=name||'';feedFilter='all';feedTour=null;feedFocusId=postId?String(postId):null;
   navGo('feed');feedTourBar();feedRender();
@@ -18479,6 +18660,9 @@ function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)re
   if(feedScope==='user'&&feedUserId){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.8"/><path d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0"/></svg>'+escapeHtml(feedUserName||'Beiträge')+'</span>'
       +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Alle Beiträge">×</button>';return;}
+  if(feedScope==='post'){b.style.display='flex';
+    b.innerHTML='<span class="fab-tour fab-user">Beitrag</span>'
+      +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Zurück zum Feed">×</button>';return;}
   if(feedScope==='saved'){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Gemerkt</span>'
       +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Zurück zum Feed">×</button>';return;}
@@ -18662,13 +18846,16 @@ function feedRender(){
   }
   let filtered=feedFilter==='all'?base:base.filter(r=>r.cat===feedFilter);
   if(feedAnchor){filtered=filtered.map(r=>({r,km:haversineKm(feedAnchor.lat,feedAnchor.lng,r.lat,r.lng)})).sort((a,b)=>a.km-b.km).map(o=>{o.r._km=o.km;return o.r;});}
-  else if(feedScope==='all')filtered=feedRank(filtered);
+  else if(feedScope==='all'||feedScope==='post')filtered=feedRank(filtered);
+  let focus=(feedScope==='user'||feedScope==='post')&&feedFocusId?filtered.find(r=>String(r.id)===feedFocusId):null;
+  // a post opened on its own may be one the feed would leave out (a drawn
+  // map, someone else's activity): it is shown anyway, it was asked for
+  if(!focus&&feedScope==='post'&&feedFocusId)focus=allReports.find(r=>String(r.id)===feedFocusId)||null;
+  if(focus)filtered=[focus].concat(filtered.filter(r=>r!==focus));
   if(!filtered.length){list.innerHTML='<div class="feed-empty">Noch keine Reports in dieser Kategorie.</div>';return;}
   // Building four hundred cards to show six is most of what made opening the
   // feed feel slow. Nobody scrolls past the first page before it re-renders.
   const FEED_PAGE=40;
-  const focus=feedScope==='user'&&feedFocusId?filtered.find(r=>String(r.id)===feedFocusId):null;
-  if(focus)filtered=[focus].concat(filtered.filter(r=>r!==focus));
   const shown=filtered.slice(0,FEED_PAGE),more=filtered.length-shown.length;
   list.innerHTML=shown.map(r=>{
     const col=CAT_COLORS[r.cat]||'#666';
@@ -18680,7 +18867,7 @@ function feedRender(){
     const isF=focus&&r===focus;
     return`<div class="feed-card${r.img?' photo':' text'}${isF?' focus':''}" id="feedcard-${r.id}">
       <div class="feed-card-head">
-        <div class="feed-card-avatar" style="${r.avatar?`background-image:url(${encodeURI(r.avatar)})`:''}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['\"<>]/g,'')}')"`:''}>${r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase())}</div>
+        <div class="feed-card-avatar" style="${r.avatar?`background-image:${cssUrl(r.avatar)}`:''}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['\"<>]/g,'')}')"`:''}>${r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase())}</div>
         <div class="feed-card-info">
           <span class="feed-card-user"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['"<>]/g,'')}')"`:''}>${escapeHtml(r.user)}${r.userId?trustBadge(progTrustOf(r.userId),true):''}</span>
           <span class="feed-card-loc">${escapeHtml(r.time||'')} · ${escapeHtml(rptPlace(r))}${distTag?' · ':''}${distTag}</span>
@@ -18712,7 +18899,7 @@ function feedRender(){
         </span></span>
         ${endBtn}
       </div>
-    </div>${isF&&filtered.length>1?`<div class="feed-more-hd">Weitere Beiträge${feedUserName?' von '+escapeHtml(feedUserName):''}</div>`:''}`;
+    </div>${isF&&filtered.length>1?`<div class="feed-more-hd">${feedScope==='post'?'Neueste Beiträge':'Weitere Beiträge'+(feedUserName?' von '+escapeHtml(feedUserName):'')}</div>`:''}`;
   }).join('')+(more>0?('<div class="feed-more">'+more+' weitere</div>'):'');
   feedAnimateCards();feedWireCarousels();
   try{feedHighlight(shown.map(r=>r.id));}catch(e){}
