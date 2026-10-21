@@ -10896,10 +10896,9 @@ function trkClose(force){
 // recording continues; the app is usable, a pill at the top brings it back
 function trkMin(){document.body.classList.add('trk-min');document.body.classList.remove('trk-open');document.getElementById('trk').hidden=true;trkPill();}
 function trkExpand(){document.body.classList.remove('trk-min');trkOpen();}
-function trkPill(){const p=document.getElementById('trkPill');if(!p)return;
-  if(!trkRec||document.body.classList.contains('trk-open')){p.hidden=true;return;}
-  const st=trkStats(trkRec.segs,0);p.hidden=false;
-  p.innerHTML='<i class="'+(trkRec.paused?'pz':'')+'"></i><b>'+trkFmtT(trkMoving(trkRec))+'</b><span>'+trkFmtD(st.dist)+'</span>';}
+// No floating time/distance pill over the map while recording: the pulsing
+// record button in the tab bar already says it is running and opens it.
+function trkPill(){const p=document.getElementById('trkPill');if(p)p.hidden=true;}
 function trkPaint(){
   trkPill();
   if(document.getElementById('trk').hidden)return;
