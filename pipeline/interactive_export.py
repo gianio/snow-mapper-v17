@@ -2742,6 +2742,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
    display:flex;gap:10px;align-items:center;padding:9px 14px;border-radius:99px;border:1px solid var(--hair,rgba(0,0,0,.08));
    background:var(--card,#fff);color:var(--fg,#1b2230);box-shadow:0 8px 24px rgba(0,0,0,.18);
    font:600 13px/1.2 var(--font,system-ui);cursor:pointer;white-space:nowrap}
+ body.ly-open #hiResChip,body.insp-open #hiResChip,body.locked #hiResChip{display:none}
  #hiResChip.on{opacity:1;transform:translate(-50%,0)}
  #hiResChip span{color:var(--accent,#2563eb)}
  #bootPct{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
@@ -7041,7 +7042,7 @@ const I18N_DICT={
 "«Freunde» heisst: ihr folgt euch gegenseitig. Die Einstellung gilt für deine Beiträge auf der Karte und im Feed.":["“Friends” means you follow each other. The setting applies to your posts on the map and in the feed.","« Amis » signifie que vous vous suivez mutuellement. Le réglage s'applique à tes publications sur la carte et dans le fil.","«Amici» significa che vi seguite a vicenda. L'impostazione vale per i tuoi post sulla mappa e nel feed."],
 "· # Tage neben der Zeitleiste":["· # days beside the timeline","· # jours à côté de la frise","· # giorni accanto alla timeline"],
 "Öffne das Browser-Menü (⋮) und wähle":["Open the browser menu (⋮) and choose","Ouvre le menu du navigateur (⋮) et choisis","Apri il menu del browser (⋮) e scegli"],
-"Öffnet die Ebenen — zuerst die Ebene, darunter ihre Unterebenen.":["Opens the layers — first the layer, below it its sub-layers.","Ouvre les couches — d'abord la couche, puis ses sous-couches.","Apre i livelli — prima il livello, sotto i suoi sottolivelli."],
+"Hier wählst du, was die Karte zeigt: Neuschnee, Skiqualität, Wind, Webcams …":["Choose what the map shows: new snow, ski quality, wind, webcams …","Choisis ce que montre la carte : neige fraîche, qualité de ski, vent, webcams …","Scegli cosa mostra la mappa: neve fresca, qualità sciistica, vento, webcam …"],
 "Über dich":["About you","À propos de toi","Su di te"],
 "Übersicht + Detail helfen am meisten":["Overview + detail help most","Vue d'ensemble + détail aident le plus","Panoramica + dettaglio aiutano di più"],
 "Überspringen":["Skip","Passer","Salta"],
@@ -7667,9 +7668,12 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     for(const ev of snowEvents){if(ev[1]<tv0||ev[0]>tv1)continue;
       let pk=ev[0];for(let t=ev[0];t<ev[1];t++)if(hSnow[t]>hSnow[pk])pk=t;
       const v=hSnow[pk];if(v<.05)continue;
-      const x=tvX(pk,cw)+bw/2,y=baseY-Math.max(3,v/mx*barH)-4,lab=(v<10?v.toFixed(1):Math.round(v))+' cm/h',w=ctx2.measureText(lab).width;
+      let x=tvX(pk,cw)+bw/2;const y=baseY-Math.max(3,v/mx*barH)-4,lab=(v<10?v.toFixed(1):Math.round(v))+' cm/h',w=ctx2.measureText(lab).width;
       if(x-w/2<lastR+6||x<w/2||x>cw-w/2)continue;
-      ctx2.fillText(lab,x,Math.max(9,y));lastR=x+w/2;}
+      // never under the dashed now line: step to its side
+      if(Math.abs(x-nx)<w/2+5){const sx=x>=nx?nx+w/2+7:nx-w/2-7;if(sx-w/2>2&&sx+w/2<cw-2)x=sx;}
+      const ly=Math.max(9,y);ctx2.fillStyle=_P.paper;ctx2.globalAlpha=.88;rr(x-w/2-4,ly-9.5,w+8,13,6.5);ctx2.fill();ctx2.globalAlpha=1;
+      ctx2.fillStyle=_P.mut;ctx2.fillText(lab,x,ly);lastR=x+w/2;}
     ctx2.textAlign='left';}
   if(single){
     // "Powder zu diesem Zeitpunkt": one point, not a range -- a full-height
@@ -7724,7 +7728,7 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     // clips off either edge of the canvas.
     ctx2.font='800 13.5px Inter,system-ui';ctx2.fillStyle=tlSel;ctx2.textAlign='center';
     const tP=fmtTime(b-1),wP=ctx2.measureText(tP).width;
-    let px=x2;if(px-wP/2<2)px=wP/2+2;if(px+wP/2>cw-2)px=cw-2-wP/2;
+    let px=x2+8+wP/2;if(px+wP/2>cw-2)px=x2-8-wP/2;if(px-wP/2<2)px=wP/2+2;
     ctx2.fillText(tP,px,14);
     return;
   }
@@ -14039,7 +14043,8 @@ function navCur(){const B=document.body.classList,f=document.getElementById('fee
   if(pm&&pm.style.display&&pm.style.display!=='none')return 'you';
   if(B.contains('ts-open')||B.contains('tour-open'))return 'tours';
   return 'map';}
-function navGo(t){try{haptic(4);}catch(e){}if(t!=='map')try{actSumHide(false);}catch(e){}try{repSheetToggle(false);}catch(e){}
+function navGo(t){try{haptic(4);}catch(e){}try{const c=document.getElementById('coach');if(c&&c.style.display&&c.style.display!=='none')endCoach();}catch(e){}
+  try{const h=document.getElementById('hiResChip');if(h)h.remove();}catch(e){}if(t!=='map')try{actSumHide(false);}catch(e){}try{repSheetToggle(false);}catch(e){}
   // tapping the tab that is already open goes back to the map
   if(t!=='map'&&navCur()===t){if(t==='rec'){try{trkClose();}catch(e){}}t='map';}
   if(t==='map')navClose();
@@ -14972,10 +14977,10 @@ function dismissIntro(){try{if(window.__bootDone)window.__bootDone();else{const 
 // These pointed at the old floating layer card, which no longer exists — they
 // now walk the one-screen console.
 const COACH_STEPS=[
-  {sel:'#layersFab',html:'<b>Ebenen.</b><br>Öffnet die Ebenen — zuerst die Ebene, darunter ihre Unterebenen.'},
+  {sel:'#layersFab',html:'<b>Ebenen.</b><br>Hier wählst du, was die Karte zeigt: Neuschnee, Skiqualität, Wind, Webcams …'},
   {sel:'#btmMain',html:'<b>Zeitfenster.</b><br>Wähle den Zeitraum – die Karte rechnet sofort neu.'},
   {sel:'#searchFab',html:'<b>Spring zu einem Ort.</b><br>Suche einen Berg oder Ort und zoome direkt dorthin.'},
-  {sel:'#tabBar [data-tab=feed]',html:'<b>Community.</b><br>Meldungen aus dem sichtbaren Kartenausschnitt und dem gewählten Zeitfenster.'},
+  {sel:'#tabBar [data-tab=feed]',html:'<b>Community.</b><br>Beiträge in deiner Nähe, die neusten und die deiner Freunde zuerst.'},
   {sel:'#mapFab',html:'<b>Melden.</b><br>Zeichne eine Schnee-Karte oder melde eine Beobachtung.'}
 ];
 let coachIdx=0;
@@ -18972,7 +18977,7 @@ function feedRender(){
   // map, someone else's activity): it is shown anyway, it was asked for
   if(!focus&&feedScope==='post'&&feedFocusId)focus=allReports.find(r=>String(r.id)===feedFocusId)||null;
   if(focus)filtered=[focus].concat(filtered.filter(r=>r!==focus));
-  if(!filtered.length){list.innerHTML='<div class="feed-empty">Noch keine Reports in dieser Kategorie.</div>';return;}
+  if(!filtered.length){list.innerHTML='<div class="feed-empty">'+(feedFilter==='all'?'Noch keine Beiträge hier. Sei die erste Person – tippe unten auf ＋.':'Noch keine Beiträge in dieser Kategorie.')+'</div>';return;}
   // Building four hundred cards to show six is most of what made opening the
   // feed feel slow. Nobody scrolls past the first page before it re-renders.
   const FEED_PAGE=40;
