@@ -2590,6 +2590,13 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .tc-leg span{display:inline-flex;align-items:center;gap:6px}
  .tc-leg i{display:inline-block;width:22px;height:0;border-top:3px solid #3E7C8C;border-radius:2px}
  .tc-leg i.tc-srf{border-top:2.5px dashed #C9821F}
+ .va-kpi{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:6px;margin:2px 0 8px}
+ .va-kpi>div{background:var(--fill);border-radius:10px;padding:7px 9px;min-width:0}
+ .va-kpi span{display:block;font-size:10.5px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}
+ .va-kpi b{display:block;font-size:17px;font-weight:800;color:var(--fg);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .va-kpi b small{font-size:11.5px;color:var(--mut)}
+ .va-kpi .vk-cls{position:relative;padding-left:26px}
+ .va-kpi .vk-cls i{position:absolute;left:8px;top:9px;bottom:9px;width:10px;border-radius:4px}
  .mg{position:relative;margin:2px 0 0;overflow:hidden}
  .mg-sc{position:absolute;inset:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;overscroll-behavior-x:contain}
  .mg-sc::-webkit-scrollbar{display:none}
@@ -7732,7 +7739,8 @@ const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
 // threshold in one or two clicks.
 const _trackpad=_desktop&&/Mac/.test(navigator.platform||navigator.userAgent||'');
 // A double tap is one whole zoom step (Leaflet would take zoomDelta, half).
-L.Map.DoubleClickZoom.prototype._onDoubleClick=function(e){const m=this._map,z=m.getZoom(),zz=e.originalEvent.shiftKey?z-1:z+1;
+let _dtAt=0;   // a double tap the touch handler below already zoomed
+L.Map.DoubleClickZoom.prototype._onDoubleClick=function(e){if(Date.now()-_dtAt<700)return;const m=this._map,z=m.getZoom(),zz=e.originalEvent.shiftKey?z-1:z+1;
   if(m.options.doubleClickZoom==='center')m.setZoom(zz);else m.setZoomAround(e.containerPoint,zz);};
 const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,
   wheelPxPerZoomLevel:_trackpad?120:(_desktop?38:90),
@@ -9195,9 +9203,14 @@ function vaPointHTML(lat,lon,elev,slope,aspect){
   if(m[x.wind_scour]>=0.2)bits.push('Wind-Index '+m[x.wind_scour].toFixed(2));
   if(sb>12)bits.push('Horizontschatten '+Math.round(sb/2.54)+'%');
   if(fo>0)bits.push('Wald '+Math.round(fo/2.55)+'%');
-  return '<div class="insp-sec va-pt"><h4>Modell hier <em>'+escapeHtml(nm('ski18',ski))+'</em></h4>'
-    +'<div class="va-run">'+escapeHtml(nm('simple',sim))+'</div>'
-    +'<div class="va-pt-v">'+bits.map(escapeHtml).join(' · ')+'</div></div>';
+  // first what lies here and how much of it, as on the map
+  const k6=(typeof VA_SIMPLE_TO_SKI6!=='undefined'&&VA_SIMPLE_TO_SKI6[sim])||0,c6=(VA_PALETTE.ski6&&VA_PALETTE.ski6[k6])||[150,160,175];
+  const hs=Math.round(m[x.total_hs_cm]),pw=Math.round(m[x.powder_depth_cm]||0);
+  const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+c6.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(nm('simple',sim)||nm('ski18',ski))+'</b></div>'
+    +'<div><span>Pulver</span><b>'+(pw>=1?pw+'<small> cm</small>':'–')+'</b></div>'
+    +'<div><span>Schneehöhe</span><b>'+hs+'<small> cm</small></b></div></div>';
+  return '<div class="insp-sec va-pt"><h4>Schneequalität <em>'+escapeHtml(nm('ski18',ski))+'</em></h4>'+kpi
+    +'<div class="va-pt-v">'+bits.slice(1).map(escapeHtml).join(' · ')+'</div></div>';
 }
 
 // How far the exported model window sits from what the timeline is showing.
@@ -12949,7 +12962,9 @@ let _thrRaf=0;
 function thrSet(k,v,live){thrVal[k]=v;const e=document.getElementById('thrV');if(e)e.textContent=thrTxt(k);
   if(!live){try{localStorage.setItem('ssm_thr_'+k,String(v));}catch(x){}}
   if(_thrRaf)return;_thrRaf=requestAnimationFrame(()=>{_thrRaf=0;try{renderRaster();}catch(x){}try{miniLegendRender();}catch(x){}});}
-function legSwitchable(l){return !LEG_FIXED.has(legKey(l));}
+// the snow-quality views always show every class: a map with holes in it
+// read as "no snow there"
+function legSwitchable(l){const k=legKey(l);return !LEG_FIXED.has(k)&&k.indexOf('va:')!==0;}
 function legRows(l){if(!legSwitchable(l))return null;const sp=legSpec(l||layer);return sp&&sp.rows&&sp.rows.every(r=>r.k!=null)?sp.rows:null;}
 function legDefaultSet(l){const rows=legRows(l)||[],f=LEG_DEFAULT[legKey(l)];
   const ks=rows.filter(r=>!f||f(r)).map(r=>r.k);return new Set(ks.length?ks:rows.map(r=>r.k));}
@@ -14203,6 +14218,16 @@ function mapLongPress(cx,cy){
     if(n>1||(e.pointerType==='mouse'&&e.button!==0)||(e.target.closest&&e.target.closest('.leaflet-marker-icon,.leaflet-popup,.leaflet-control,.leaflet-interactive'))){stop();return;}
     sx=e.clientX;sy=e.clientY;stop();t=setTimeout(()=>{t=0;mapLongPress(sx,sy);},480);},{passive:true});
   el.addEventListener('pointermove',e=>{if(t&&Math.hypot(e.clientX-sx,e.clientY-sy)>10)stop();},{passive:true});
+  // double tap on a phone: iOS sends no dblclick for touches on the map, so
+  // two quick taps close together are recognised here
+  let tDown=0,tX=0,tY=0,lastTap=0,lX=0,lY=0;
+  el.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'){tDown=Date.now();tX=e.clientX;tY=e.clientY;}},{passive:true});
+  el.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'||n>1)return;const now=Date.now();
+    if(now-tDown>280||Math.hypot(e.clientX-tX,e.clientY-tY)>12){lastTap=0;return;}
+    if(now-lastTap<330&&Math.hypot(e.clientX-lX,e.clientY-lY)<40){lastTap=0;_dtAt=now;_lpAt=now;
+      if(document.body.classList.contains('draw-on'))return;
+      const r=el.getBoundingClientRect();try{map.setZoomAround([e.clientX-r.left,e.clientY-r.top],map.getZoom()+1);}catch(x){}return;}
+    lastTap=now;lX=e.clientX;lY=e.clientY;},{passive:true});
   const up=()=>{n=Math.max(0,n-1);stop();};
   el.addEventListener('pointerup',up,{passive:true});el.addEventListener('pointercancel',up,{passive:true});
   // the system menu of a long press (and a right click on a desk) is the card too
@@ -14286,6 +14311,8 @@ const INSP_FIRST={snowpack:'va',cloud:'cloud',wind:'wind',snow:'snow',depth:'dep
 function inspOrder(sec){
   // new snow always first (with temperature in the same chart), then depth;
   // a layer's own section comes right after
+  // on the snow-quality layer what lies on the slope comes first
+  if(layer==='snowpack'&&sec.va)return ['va','snow','depth','prog','cloud','wind','rad'].map(k=>sec[k]||'').join('');
   const base=['snow','depth','prog','cloud','wind','rad','va'],first=INSP_FIRST[layer];
   const order=first&&first!=='snow'&&first!=='depth'&&first!=='temp'?['snow','depth',first].concat(base.filter(k=>k!=='snow'&&k!=='depth'&&k!==first)):base;
   return order.map(k=>sec[k]||'').join('');
@@ -14370,7 +14397,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   pan.innerHTML=
    '<div class="insp-grab" aria-hidden="true"></div>'+
    '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b>'+
-     '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+kpi+
+     '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+(layer==='snowpack'&&vaSec?'':kpi)+
    '</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
    '<div class="insp-body">'+inspOrder({va:vaSec,prog:progSec,
      snow:mgHTML(),
