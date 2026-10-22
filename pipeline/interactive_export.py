@@ -2539,12 +2539,12 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     reading is about -- and it is translucent and draggable so it can be pushed
     off whatever you are looking at. */
  .insp-panel{position:absolute;z-index:2600;display:none;flex-direction:column;overflow:hidden;
-   background:rgba(255,255,255,.82);border:1px solid var(--bd);border-radius:var(--r-2);
-   box-shadow:var(--elev2);will-change:transform}
+   background:color-mix(in srgb,var(--card) 94%,transparent);color:var(--fg);border:1px solid var(--bd);border-radius:var(--r-2);
+   -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:var(--elev2);will-change:transform}
  @media (prefers-reduced-transparency:reduce){.insp-panel{background:var(--paper)}}
- .insp-chip{background:rgba(18,21,26,.06)}
- .insp-tile{background:rgba(18,21,26,.05);border-color:var(--bd)}
- .insp-head button{background:rgba(18,21,26,.06)}
+ .insp-chip{background:var(--fill);color:var(--fg2)}
+ .insp-tile{background:var(--fill);border-color:var(--bd)}
+ .insp-head button{background:var(--fill);color:var(--fg)}
  .insp-panel.open{display:flex;animation:inspIn .26s var(--ease)}
  .insp-panel.dragging{transition:none;box-shadow:var(--elev3)}
  /* opacity only. A keyframe that touches `transform` outranks the inline
@@ -2558,7 +2558,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
    width:min(320px,84vw);max-height:min(46vh,380px);
    margin-left:calc(min(320px,84vw) / -2);margin-top:calc(min(46vh,380px) / -2)}
  /* phone: docked at the top, so the point and the timeline stay in view */
- body.insp-open #lyNow{display:none!important}
+ /* the chosen layer shows in the layer button and the legend: no extra label */
+ #lyNow{display:none!important}
  @media (max-width:700px){.insp-panel{top:calc(env(safe-area-inset-top,0px) + 8px);margin-top:0;
    width:min(380px,calc(100vw - 16px));margin-left:calc(min(380px,calc(100vw - 16px)) / -2);max-height:min(50vh,440px)}}
  /* the grab bar: the only part of the head that starts a drag */
@@ -2696,6 +2697,10 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #railToggles.active{color:var(--accent-meteo);background:var(--accent-meteo-soft);border-color:rgba(42,143,216,.26)}
  .rail-note{position:absolute;right:56px;padding:6px 11px;border-radius:10px;background:var(--fg);color:#fff;font-size:12px;font-weight:700;white-space:nowrap;opacity:0;transform:translateX(6px);transition:.25s var(--ease);pointer-events:none}
  .rail-note.show{opacity:1;transform:translateX(0)}
+ .act-start{width:26px;height:26px;border-radius:50%;background:#3F6FD6;padding:2px;box-shadow:0 1px 6px rgba(0,0,0,.35)}
+ .act-start i{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;background:#E8EEF8 center/cover no-repeat;color:#1D3A6E;font:800 11px/1 Inter,system-ui;font-style:normal}
+ .act-fin{width:22px;height:22px;border-radius:50%;background:#fff;color:#1D3A6E;display:grid;place-items:center;box-shadow:0 1px 5px rgba(0,0,0,.3)}
+ .act-fin svg{width:13px;height:13px}
  .me-dot{position:relative;width:18px;height:18px;border-radius:50%;background:var(--fg);border:3px solid var(--paper);box-shadow:0 1px 6px rgba(0,0,0,.35)}
  .me-dot::after{content:'';position:absolute;inset:-7px;border-radius:50%;border:2px solid rgba(18,21,26,.45);animation:xpulse 2s ease-out infinite}
  .acct-img{display:block;width:34px;height:34px;border-radius:28%;background-size:cover;background-position:center;box-shadow:0 0 0 2px var(--paper)}
@@ -3348,8 +3353,10 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .groups-row button.joined{background:var(--acc);color:#fff}
  .groups-empty{text-align:center;color:var(--mut);padding:30px;font-size:14px}
  /* Comments sheet */
- .cmt-modal{position:fixed;inset:0;z-index:3900;background:rgba(14,17,22,.32);display:flex;flex-direction:column;justify-content:flex-end}
+ .cmt-modal{position:fixed;inset:0;z-index:5600;background:rgba(14,17,22,.32);display:flex;flex-direction:column;justify-content:flex-end}
  .cmt-sheet{border:none;background:var(--glass2);border-radius:var(--r-xl) var(--r-xl) 0 0;max-height:82vh;display:flex;flex-direction:column;box-shadow:var(--elev3)}
+ /* above the tab bar, the input clear of the home indicator */
+ .cmt-sheet{padding-bottom:env(safe-area-inset-bottom,0px)}
  .sheet-grab::before,.cmt-sheet::before,.prof-sheet::before,.loc-picker-sheet::before{content:'';display:block;width:38px;height:4px;border-radius:2px;background:rgba(22,21,46,.16);margin:8px auto 0;flex-shrink:0}
  @media(min-width:561px){.prof-sheet::before{display:none}}
  .cmt-head{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 12px;font-size:18px;font-weight:800;color:var(--fg);border-bottom:1px solid var(--hair)}
@@ -5190,7 +5197,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .pv-ac-prof .trk-prof-l{display:none}
  .pv-hl{flex:0 0 100px!important;width:100px!important}
  .pv-hl .pv-hl-m img,.pv-hl .pv-hl-m svg{width:100%!important;height:100%!important;border-radius:0!important;box-shadow:none!important;border:0!important;background:none!important}
- .pv-hl-m{display:block;width:96px;height:96px;border-radius:18px!important;overflow:hidden;background:var(--fill);border:2px solid var(--card);box-shadow:0 0 0 2px var(--brand)}
+ .pv-hls-all{flex-wrap:wrap;overflow:visible;justify-content:flex-start}
+ .pv-hl-m{display:block;width:96px;height:96px;border-radius:50%!important;overflow:hidden;background:var(--fill);border:2px solid var(--card);box-shadow:0 0 0 2px var(--brand)}
  .pv-hl-m img,.pv-hl-m svg{width:100%;height:100%;object-fit:cover;display:block}
 
  /* ===================================================================
@@ -5952,7 +5960,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 </div>
 </div>
 <input type="file" id="obsFile" accept="image/*" multiple onchange="obsAddMedia(this)" hidden/>
-<div class="feed-page side" id="feedPage">
+<div class="feed-page wide" id="feedPage">
 <div class="feed-nav">
 <button class="pt-home" onclick="feedClose()" aria-label="Zur Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg><span>Snowmapper</span></button>
 <button class="fn-btn" id="feedExpand" title="Breiter" aria-label="Breiter" onclick="feedToggleWide()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,5 4,5 4,10"/><polyline points="15,19 20,19 20,14"/><line x1="4" y1="5" x2="10" y2="11"/><line x1="20" y1="19" x2="14" y2="13"/></svg></button>
@@ -6176,7 +6184,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <div class="prof-modal" id="userViewModal" style="display:none" onclick="if(event.target===this)userViewClose()">
   <div class="prof-sheet uv-sheet">
     <div class="uv-hero"><button class="uv-close" onclick="userViewClose()" aria-label="Schliessen">✕</button>
-      <button class="uv-msg" id="uvMsg" data-dm hidden onclick="userViewClose();dmWith(uvUid,document.getElementById('uvName').textContent)" aria-label="Nachricht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 4l-1.4 4.1A8.5 8.5 0 0 1 21 11.5z"/></svg></button></div>
+      <button class="uv-msg" id="uvMsg" hidden style="display:none" onclick="userViewClose();dmWith(uvUid,document.getElementById('uvName').textContent)" aria-label="Nachricht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 4l-1.4 4.1A8.5 8.5 0 0 1 21 11.5z"/></svg></button></div>
     <div class="prof-body uv-body">
       <div class="uv-top">
         <div class="prof-av uv-av" id="uvAv"><span id="uvInitial"></span></div>
@@ -7514,8 +7522,10 @@ function tvSpan(){return Math.max(TV_MIN,tv1-tv0);}
 const TV_MIN=8;                       // never closer than eight hours across
 const TV_DEF=96;                      // four days at the start
 const TV_MAX=1e9;                     // two fingers open it to the whole run
+// the past days are in the data too: the opening view shows a good part
+// of them left of "now", so it is plain they can be looked at
 function tvInit(){const span=Math.min(T,TV_DEF);
-  tv0=nowIdx-span*0.25;tv1=tv0+span;tvClamp();}
+  tv0=nowIdx-span*0.4;tv1=tv0+span;tvClamp();}
 function tvClamp(){
   let span=Math.max(TV_MIN,Math.min(T,TV_MAX,tv1-tv0));
   if(tv0<0){tv0=0;}
@@ -7738,11 +7748,7 @@ const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
 // A real mouse wheel still works: its notches are large, so it crosses the
 // threshold in one or two clicks.
 const _trackpad=_desktop&&/Mac/.test(navigator.platform||navigator.userAgent||'');
-// A double tap is one whole zoom step (Leaflet would take zoomDelta, half).
-let _dtAt=0;   // a double tap the touch handler below already zoomed
-L.Map.DoubleClickZoom.prototype._onDoubleClick=function(e){if(Date.now()-_dtAt<700)return;const m=this._map,z=m.getZoom(),zz=e.originalEvent.shiftKey?z-1:z+1;
-  if(m.options.doubleClickZoom==='center')m.setZoom(zz);else m.setZoomAround(e.containerPoint,zz);};
-const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,
+const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,doubleClickZoom:false,
   wheelPxPerZoomLevel:_trackpad?120:(_desktop?38:90),
   wheelDebounceTime:_trackpad?34:(_desktop?12:40),
   maxBoundsViscosity:1.0,inertia:true}).fitBounds([[laMin,loMin],[laMax,loMax]],{padding:[6,6]});
@@ -7926,7 +7932,7 @@ const OVERLAYS={
            attr:'Skitouren © swisstopo'},
   // Shown with the routes on purpose: entering a wildlife rest zone is an
   // offence in several cantons, and swisstopo publishes the two together.
-  webcams:{label:'Webcams',vector:true,attr:'Webcams © <a href="https://www.windy.com/" target="_blank" rel="noopener">windy.com</a>'},
+  webcams:{label:'Webcams auf der Karte',vector:true,attr:'Webcams © <a href="https://www.windy.com/" target="_blank" rel="noopener">windy.com</a>'},
   wildlife:{label:'Wildruhezonen',wmts:'ch.bafu.wrz-wildruhezonen_portal',op:.6,
             attr:'Wildruhezonen © BAFU'},
   // swisstopo's slope classes from 30° (30/35/40/45°+): on top of any layer,
@@ -9213,6 +9219,14 @@ function vaPointHTML(lat,lon,elev,slope,aspect){
     +'<div class="va-pt-v">'+bits.slice(1).map(escapeHtml).join(' · ')+'</div></div>';
 }
 
+function vaPointFromProfile(pf){if(!pf||!pf.hs)return '';
+  const gl=((vaIdx||vaProf||{}).grain)||{},nb=pf.dens.length,bin=(pf.top_cm?Math.min(pf.hs,pf.top_cm):pf.hs)/Math.max(1,nb);
+  let pw=0;for(let j=0;j<nb;j++){if(pf.dens[j]>0&&pf.dens[j]<170)pw+=bin;else break;}
+  const e=gl[pf.grain[0]]||gl[String(pf.grain[0])],nm=e?e[0]:'Schnee',col=e?e[1]:[150,160,175];
+  const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+col.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(nm)+'</b></div>'
+    +'<div><span>Pulver</span><b>'+(pw>=1?Math.round(pw)+'<small> cm</small>':'–')+'</b></div>'
+    +'<div><span>Schneehöhe</span><b>'+Math.round(pf.hs)+'<small> cm</small></b></div></div>';
+  return '<div class="insp-sec va-pt"><h4>Schneequalität <em>Oberfläche</em></h4>'+kpi+'</div>';}
 // How far the exported model window sits from what the timeline is showing.
 // The SNOWPACK run is an offline batch over a fixed date range, so it will
 // not always match the live forecast window -- and when it does not, the user
@@ -9671,7 +9685,7 @@ const TOUR_VA_STEP_M=200,TOUR_GREY=[156,168,184];
 const TOUR_HS_MIN=20,TOUR_HS_FULL=60;
 function tourCover(hs){return hs==null||!isFinite(hs)?1:Math.max(0,Math.min(1,(hs-TOUR_HS_MIN)/(TOUR_HS_FULL-TOUR_HS_MIN)));}
 const TOUR_POWDER_CLS=[3,4,5,8,9];
-function tourCoverNote(hs){return hs!=null&&hs<TOUR_HS_FULL?('Im Schnitt nur '+Math.round(hs)+' cm Schnee auf der Abfahrt – erst ab etwa '+TOUR_HS_FULL
+function tourCoverNote(hs){return null&&hs!=null&&hs<TOUR_HS_FULL?('Im Schnitt nur '+Math.round(hs)+' cm Schnee auf der Abfahrt – erst ab etwa '+TOUR_HS_FULL
   +' cm deckt er den Untergrund. Die Bewertung ist entsprechend reduziert.'):null;}
 let tourFocus='powder';
 function _lerpC(stops,v){v=Math.max(0,Math.min(100,v));
@@ -9831,14 +9845,15 @@ function tourPaintScores(){
     const r=tourVa.eng?tourVa.scores.get(t.id):t._old;
     const vis=zok&&tourVisible(t),iso=tourIso&&tourIso!==t;
     const col=tourColor(r),v=r?tourVal(r):0;
-    t._line.setStyle({color:col,opacity:!vis?0:(iso?.12:1)});
-    if(t._casing)t._casing.setStyle({opacity:!vis||iso?0:.95});
-    if(t._glow)t._glow.setStyle({color:'#5B9BFF',opacity:!vis||iso?0:(v>=40?.22:0)});});
+    t._line.setStyle({color:col,opacity:!vis?0:(iso?.12:.78)});
+    if(t._casing)t._casing.setStyle({opacity:!vis||iso?0:.55});
+    if(t._glow)t._glow.setStyle({color:'#5B9BFF',opacity:!vis||iso?0:(v>=40?.14:0)});});
 }
 let tourLayerGroup=null,tourRenderer=null;
 // Thousands of routes as SVG would be thousands of DOM paths; one canvas
 // draws them all, and its tolerance gives the thumb a wide hit area.
-function tourW(){const z=map.getZoom();return z<11?2.4:z<13?3.4:4.2;}
+// finer lines, a little see-through: the map under them stays readable
+function tourW(){const z=map.getZoom();return z<11?1.6:z<13?2.2:2.8;}
 function tourBuildLayer(){
   const ts=tourList();
   if(!ts.length)return null;
@@ -9852,7 +9867,7 @@ function tourBuildLayer(){
     // a soft halo in the tour's own colour under everything: the good
     // ones glow
     const glow=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+6,opacity:0,interactive:false,lineCap:'round',lineJoin:'round'});
-    const casing=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+3,opacity:.9,interactive:false,lineCap:'round',lineJoin:'round'});
+    const casing=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+2,opacity:.55,interactive:false,lineCap:'round',lineJoin:'round'});
     const line=L.polyline(latlngs,{renderer:tourRenderer,color:'rgb('+TOUR_GREY.join(',')+')',weight:w,opacity:.95,interactive:true,lineCap:'round',lineJoin:'round'});
     line.on('click',e=>{if(!tourZoomOk()||!tourVisible(t)||(tourIso&&tourIso!==t))return;
       try{if(e&&e.originalEvent)L.DomEvent.stopPropagation(e);}catch(_){}try{haptic(4);}catch(e2){}
@@ -9899,7 +9914,7 @@ map.on('zoomend',()=>{if(!ovOn.skitourVec)return;const zok=tourZoomOk();
   if(zok!==_tourZok){_tourZok=zok;tourPaintScores();}
   if(!zok&&!tourIso)toastOnce('tourzoom','Näher heranzoomen, um die Skitouren zu sehen');
   const w=tourW();
-  tourList().forEach(t=>{if(t._line&&t._line.options.weight!==w){t._line.setStyle({weight:w});if(t._casing)t._casing.setStyle({weight:w+3});if(t._glow)t._glow.setStyle({weight:w+6});}});});
+  tourList().forEach(t=>{if(t._line&&t._line.options.weight!==w){t._line.setStyle({weight:w});if(t._casing)t._casing.setStyle({weight:w+2});if(t._glow)t._glow.setStyle({weight:w+6});}});});
 // ── one route on its own ───────────────────────────────────────────────────
 let tourIso=null,tourIsoLayer=null,tourFromSearch=false;
 function tourOpen(t,fromSearch){
@@ -11181,8 +11196,9 @@ function actFeedVisual(r){const cd=r.condition_data,A=cd.activity;
   return '<div class="act-card"><div class="fc-wrap act-wrap"><div class="fc-carousel" id="fcar-a'+id+'">'+slides.join('')+'</div>'
     +(slides.length>1?'<div class="fc-dots" id="fcd-a'+id+'">'+slides.map((x,i)=>'<i class="'+(i?'':'on')+'"></i>').join('')+'</div>':'')+'</div>'
     +'<div class="act-st" onclick="event.stopPropagation();actOpen(\''+r.id+'\')"><div><small>Distanz</small><b>'+fmt(A.dist||0)+'</b></div><div><small>Aufstieg</small><b>'+(A.up||0)+' m</b></div><div><small>Zeit</small><b>'+trkFmtT(A.moving||0)+'</b></div></div>'
-    +(cd.measurement?'<div class="act-rep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17"/></svg>'+escapeHtml(cd.measurement)+(cd.altitudeM?' · '+cd.altitudeM+' m':'')+(cd.stars?' · '+'★'.repeat(cd.stars):'')+'</div>':'')
-    +actLinked(r).map(x=>'<div class="act-rep act-link">'+ACT_SNOW_IC+escapeHtml(actLinkTxt(x))+'</div>').join('')+'</div>';
+    // the snow along the route is in the stats sheet and the drawn map, not
+    // listed in the feed
+    +'</div>';
 }
 // ── One post per tour: the activity and the powder reports made on it ──
 // A report by the same person, during the tour (from an hour before to six
@@ -11302,12 +11318,9 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
       const ic=cd.activity?'<svg class="pv-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg>':(cd.snowp?'<svg class="pv-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/></svg>':'');
       return '<button class="pv-cell" onclick="pvOpenPost(\''+boxId+'\','+i+')">'+(im?'<img src="'+im+'" '+(i<9?'fetchpriority="high"':'loading="lazy"')+' decoding="async" alt="">':'<span class="pv-txt">'+escapeHtml((r.caption||r.subtype||catLabel((r.primary_categories||[])[0]||'info')||'').slice(0,60))+'</span>')+ic+'</button>';}).join('')+'</div>'
     :'<div class="prof-hint">Noch keine Beiträge.</div>';
-  const list=S.acts.length?S.acts.map((a,i)=>'<button class="pv-ac" onclick="pvOpenAct(\''+boxId+'\','+i+')">'
-      +'<span class="pv-ac-hd"><i>'+(TRK_TYPE_IC[a.type]||TRK_TYPE_IC.skitour)+'</i><span><b>'+escapeHtml(a.name)+'</b><small>'
-      +new Date(a.start).toLocaleDateString(LOCALE(),{weekday:'short',day:'numeric',month:'short'})+' · '+trkTypeLbl(a.type)+(a.priv?' · 🔒 nur ich':'')+'</small></span></span>'
-      +'<span class="pv-ac-st"><span><small>Distanz</small><b>'+trkFmtD(a.dist)+'</b></span><span><small>Aufstieg</small><b>'+a.up+' m</b></span><span><small>Zeit</small><b>'+trkFmtT(a.moving)+'</b></span></span>'
-      +'<span class="pv-ac-map" data-pvmap="'+a.id+'">'+pvMapImg(a)+'</span>'
-      +'<span class="pv-ac-prof">'+trkProfile(a.track,340,46)+'</span></button>').join('')
+  // activities as circles, the same as the row above the tabs: the route
+  // and the name are enough here, the numbers are one tap away
+  const list=S.acts.length?'<div class="pv-hls pv-hls-all">'+S.acts.map((a,i)=>'<button class="pv-hl" onclick="pvOpenAct(\''+boxId+'\','+i+')"><span class="pv-hl-m" data-pvmap="'+a.id+'">'+pvMapImg(a)+'</span><span>'+escapeHtml(a.name)+'</span></button>').join('')+'</div>'
     :'<div class="prof-hint">'+(me?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aktivitäten.')+'</div>';
   box.innerHTML='<div class="pv-stats"><div><b>'+n(S.posts.length)+'</b><span>Beiträge</span></div><div><b>'+n(S.fol)+'</b><span>Follower</span></div><div><b>'+n(S.ing)+'</b><span>Folge ich</span></div><div><b>'+n(S.acts.length)+'</b><span>Aktivitäten</span></div><div><b>'+n(S.fb||0)+'</b><span>Feedbacks</span></div></div>'
     +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button onclick="profClose();navGo(\'feed\');feedSetScope(\'saved\')">Gemerkt</button><button onclick="pvShare(\''+S.uid+'\')">Teilen</button>'
@@ -11317,12 +11330,11 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
     +(()=>{const L=trustLevel(S.trust);return '<button class="pv-trust tr-l'+L.i+'" onclick="trustInfo('+L.n+')"><span class="pv-tr-ic">'+trustIco(L.i,24,'#fff')+'</span>'
       +'<span class="pv-tr-t"><b>'+escapeHtml(L.name)+' · Trust '+L.n+'</b><small>'+(L.next!=null?(L.next-L.n)+' Bestätigungen bis «'+escapeHtml(TRUST_LV[L.i+1][1])+'»':escapeHtml(L.sub))+'</small>'
       +'<i class="pv-tr-bar"><i style="width:'+L.pct+'%"></i></i></span><span class="pv-tr-q">›</span></button>';})()
-    +(hi?'<div class="pv-hls">'+hi+'</div>':'')
     +'<div class="pv-week"><div class="pv-wk-h"><b>Diese Woche</b><span>12 Wochen</span></div>'
     +'<div class="pv-wk"><div><small>Distanz</small><b>'+(cw.d/1000).toFixed(1)+' km</b></div><div><small>Zeit</small><b>'+trkFmtT(cw.mv)+'</b></div><div><small>Höhenmeter</small><b>'+cw.up+' m</b></div></div>'+chart+'</div>'
-    +'<div class="pv-tabs"><button class="'+(S.tab==='grid'?'on':'')+'" onclick="pvTab(\''+boxId+'\',\'grid\')" aria-label="Beiträge"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="9.5" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16" y="9.5" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><rect x="9.5" y="16" width="5" height="5" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/></svg></button>'
-    +'<button class="'+(S.tab==='acts'?'on':'')+'" onclick="pvTab(\''+boxId+'\',\'acts\')" aria-label="Aktivitäten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg></button></div>'
-    +(S.tab==='grid'?grid:'<div class="pv-acts">'+list+'</div>');
+    // the profile: this week's numbers and the posts -- the activities are
+    // posts like any other, no list or gallery of their own
+    +grid;
   box.querySelectorAll('[data-dm]').forEach(el=>{el.hidden=dmReady!==true;});
   if(dmReady===null)dmAvailable();
   pvMapFill(boxId);
@@ -13432,7 +13444,7 @@ function ovRender(){
   }).join('')
   // map extras that used to live in the settings
   +lyExtraRow('stn','Messstationen',typeof showStn!=='undefined'&&showStn,'<line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0"/>','toggleStations();ovRender()')
-  +(window._wcOk?lyExtraRow('wc','Webcams',false,'<path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/>','lyPanelClose();wcvOpen()'):'')
+  +(window._wcOk?lyExtraRow('wc','Webcam-Galerie (Bilder & Live)',false,'<path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/>','lyPanelClose();wcvOpen()'):'')
   +lyExtraRow('3d','3D-Ansicht',typeof is3d!=='undefined'&&is3d,'<path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/>','lyPanelClose();document.getElementById(\'btn3dFloat\').click()');
 }
 function lyExtraRow(k,label,on,ic,act){
@@ -14197,42 +14209,13 @@ map.on('moveend',function(){if(vaLegendUp()){try{miniLegendRender();}catch(e){}}
 // close is remembered for a moment.
 let _popClosedAt=0;
 map.on('popupclose',function(){_popClosedAt=Date.now();});
-// The point card opens on a long press; a short tap only closes what is
-// open (and a double tap zooms), so moving around the map never pops a card.
-let _lpAt=0;
+// A tap opens the point card (a tap beside an open one closes it first).
 map.on('click',function(e){
-  if(Date.now()-_lpAt<800)return;
   if(document.body.classList.contains('feed-side')){feedClose();return;}
   if(document.body.classList.contains('insp-open')){inspClose();return;}
   if(Date.now()-_popClosedAt<450)return;
-  try{toastOnce('lp-hint','Lange drücken für die Punkt-Info · doppelt tippen zum Zoomen');}catch(x){}
+  inspOpen(e.latlng.lat,e.latlng.lng);
 });
-function mapLongPress(cx,cy){
-  if(document.body.classList.contains('feed-side')||document.body.classList.contains('draw-on')||document.body.classList.contains('trk-open'))return;
-  const r=map.getContainer().getBoundingClientRect(),ll=map.containerPointToLatLng([cx-r.left,cy-r.top]);
-  _lpAt=Date.now();try{haptic(12);}catch(x){}
-  inspOpen(ll.lat,ll.lng);}
-(function(){const el=map.getContainer();let t=0,sx=0,sy=0,n=0;
-  const stop=()=>{clearTimeout(t);t=0;};
-  el.addEventListener('pointerdown',e=>{n++;
-    if(n>1||(e.pointerType==='mouse'&&e.button!==0)||(e.target.closest&&e.target.closest('.leaflet-marker-icon,.leaflet-popup,.leaflet-control,.leaflet-interactive'))){stop();return;}
-    sx=e.clientX;sy=e.clientY;stop();t=setTimeout(()=>{t=0;mapLongPress(sx,sy);},480);},{passive:true});
-  el.addEventListener('pointermove',e=>{if(t&&Math.hypot(e.clientX-sx,e.clientY-sy)>10)stop();},{passive:true});
-  // double tap on a phone: iOS sends no dblclick for touches on the map, so
-  // two quick taps close together are recognised here
-  let tDown=0,tX=0,tY=0,lastTap=0,lX=0,lY=0;
-  el.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'){tDown=Date.now();tX=e.clientX;tY=e.clientY;}},{passive:true});
-  el.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'||n>1)return;const now=Date.now();
-    if(now-tDown>280||Math.hypot(e.clientX-tX,e.clientY-tY)>12){lastTap=0;return;}
-    if(now-lastTap<330&&Math.hypot(e.clientX-lX,e.clientY-lY)<40){lastTap=0;_dtAt=now;_lpAt=now;
-      if(document.body.classList.contains('draw-on'))return;
-      const r=el.getBoundingClientRect();try{map.setZoomAround([e.clientX-r.left,e.clientY-r.top],map.getZoom()+1);}catch(x){}return;}
-    lastTap=now;lX=e.clientX;lY=e.clientY;},{passive:true});
-  const up=()=>{n=Math.max(0,n-1);stop();};
-  el.addEventListener('pointerup',up,{passive:true});el.addEventListener('pointercancel',up,{passive:true});
-  // the system menu of a long press (and a right click on a desk) is the card too
-  el.addEventListener('contextmenu',e=>{e.preventDefault();if(Date.now()-_lpAt>800)mapLongPress(e.clientX,e.clientY);});
-  map.on('movestart zoomstart',stop);})();
 // Marker popups (reports, stations) open through Leaflet's own click
 // handling rather than the map's 'click' event above, so they need the
 // same guard: while the feed is open beside the map, a tap closes the
@@ -14339,7 +14322,11 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   // density and grain type are what you look at next after depth.
   let vaSec='';
   try{vaSec=vaPointHTML(lat,lon,_fe,_fs,_fa);}catch(e){}
-  try{vaSec+=vaProfileHTML(vaProfileAt(lat,lon,_fe,_fa,_fs));}catch(e){}
+  let _pf=null;try{_pf=vaProfileAt(lat,lon,_fe,_fa,_fs);}catch(e){}
+  // the snow at this spot first, also when the fine engine is not loaded:
+  // then the profile of the nearest run says what lies on top and how deep
+  if(!vaSec&&_pf&&!_pf.loading){try{vaSec=vaPointFromProfile(_pf);}catch(e){}}
+  try{vaSec+=vaProfileHTML(_pf);}catch(e){}
   requestAnimationFrame(()=>{try{window._inspClamp();}catch(e){}});
   let progSec='';
   if(layer==='prog'){try{const pr=prognosisAt(lat,lon);if(pr){const cl=(PROG_LABEL[pr.type]||pr.type);const zc=progZones().filter(z=>z.type===pr.type).length;
@@ -14437,7 +14424,7 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
   cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.width=W+'px';cv.style.height=H+'px';
   ax.width=Math.round(vw*dpr);ax.height=Math.round(H*dpr);ax.style.width=vw+'px';ax.style.height=H+'px';
   const c=cv.getContext('2d'),g=ax.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);g.setTransform(dpr,0,0,dpr,0,0);
-  const X=t=>MG_L+t*MG_PX,mut=cvTok('--fg2','#5B6472'),grid=cvTok('--ink-050','#ECEEF0'),fg=cvTok('--fg','#16152e');
+  const X=t=>MG_L+t*MG_PX,mut=cvTok('--fg2','#5B6472'),grid=cvTok('--hair','rgba(18,21,26,.08)'),fg=cvTok('--fg','#16152e');
   const bg=cvTok('--card','#FFFFFF');
   // days on top, nights, past, window
   c.font='700 11px Inter,system-ui';c.textAlign='center';
@@ -14446,12 +14433,16 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
     c.fillStyle=fg;if((e-t)*MG_PX>40)c.fillText(WD()[d.getUTCDay()]+' '+d.getUTCDate()+'.',(X(t)+X(e))/2,13);}
   let y0=TOP;const rows=[];
   for(const q of panels){rows.push({q,top:y0+16,base:y0+16+q.h-18});y0+=q.h+GAP;}
+  // each chart on its own soft card, as everywhere in the app
+  for(const r of rows){c.fillStyle=cvTok('--fill','#EEF2F7');icRR(c,X(0)-4,r.top-6,X(T)-X(0)+8,r.base-r.top+12,12);c.fill();}
   const yTop=TOP,yBot=H-6;
   c.fillStyle='rgba(30,41,66,.07)';c.fillRect(X(0),yTop,X(Math.min(nowIdx,T))-X(0),yBot-yTop);           // past
   c.fillStyle='rgba(42,143,216,.08)';c.fillRect(X(a),yTop,X(b)-X(a),yBot-yTop);                          // window
   c.strokeStyle='rgba(42,111,176,.55)';c.lineWidth=1.2;c.setLineDash([4,3]);
   for(const t of [a,b]){c.beginPath();c.moveTo(X(t)+.5,yTop);c.lineTo(X(t)+.5,yBot);c.stroke();}c.setLineDash([]);
-  if(nowIdx>=0&&nowIdx<T){c.strokeStyle='#e0245e';c.lineWidth=1.4;c.beginPath();c.moveTo(X(nowIdx),yTop);c.lineTo(X(nowIdx),yBot);c.stroke();}
+  if(nowIdx>=0&&nowIdx<T){c.strokeStyle='#e0245e';c.lineWidth=1.4;c.beginPath();c.moveTo(X(nowIdx),yTop);c.lineTo(X(nowIdx),yBot);c.stroke();
+    const ly=rows[0].top+12;c.font='800 10px Inter,system-ui';c.fillStyle='#e0245e';c.textAlign='right';c.fillText('◀ Rückblick',X(nowIdx)-5,ly);
+    c.textAlign='left';c.fillText('Prognose ▶',X(nowIdx)+5,ly);}
   // axis overlay: strips with the page colour so the numbers stay readable
   g.clearRect(0,0,vw,H);
   const strip=(x,w,edge)=>{g.fillStyle=bg;g.fillRect(x,TOP,w,H-TOP);g.fillStyle='rgba(18,21,26,.14)';g.fillRect(edge,TOP,1,H-TOP);};
@@ -14462,7 +14453,7 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
       if(hr===0){c.strokeStyle='rgba(18,21,26,.18)';c.lineWidth=1;c.beginPath();c.moveTo(x,r.top-4);c.lineTo(x,r.base+4);c.stroke();}
       if(hr%6===0){c.fillText(String(hr).padStart(2,'0'),x,r.base+13);}}
     c.strokeStyle='rgba(18,21,26,.3)';c.beginPath();c.moveTo(X(0),r.base+.5);c.lineTo(X(T),r.base+.5);c.stroke();};
-  const title=(r,txt)=>{g.fillStyle=fg;g.font='800 12px Inter,system-ui';g.textAlign='left';g.textBaseline='alphabetic';g.fillText(txt,MG_L+4,r.top-5);};
+  const title=(r,txt)=>{g.fillStyle=cvTok('--brand','#2A5A8C');g.font='800 12px Inter,system-ui';g.textAlign='left';g.textBaseline='alphabetic';g.fillText(txt,MG_L+4,r.top-5);};
   for(const r of rows){const q=r.q,hgt=r.base-r.top;
     if(q.k==='snow'){
       const air=[],srf=[],sn=[];let mn=1e9,mx=-1e9,smx=0;
@@ -14521,7 +14512,7 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
   // where it was, else the window near the left edge
   const key=p+':'+a+':'+b;
   if(_mgScroll!=null&&_mgKey&&_mgKey.split(':')[0]===String(p))sc.scrollLeft=_mgScroll;
-  else sc.scrollLeft=Math.max(0,X(a)-MG_L-24);
+  else sc.scrollLeft=Math.max(0,Math.min(X(a),X(nowIdx))-vw*0.35);
   _mgKey=key;
   sc.onscroll=()=>{_mgScroll=sc.scrollLeft;};}
 // Three bands like a meteogram: high (cirrus) on top, mid, low (stratus/fog)
@@ -14818,8 +14809,18 @@ function make3dOverlay(mode){
     else if(mode==='powder'){const pw=computePowder(p,a,b);if(pw.powdered){r=200;g=220;bl=255;al=pw.quality==='reduced'?140:180;}}
     od[o]=r;od[o+1]=g;od[o+2]=bl;od[o+3]=al;}
   ox.putImageData(oi,0,0);return oc.toDataURL();}
+// the 3D view opens with the layer that is on the 2D map
+function sync3dLayer(){const sel=document.getElementById('overlay3d');if(!sel)return;
+  if(layer==='snowpack'&&typeof vaOv!=='undefined'&&vaOv){
+    if(!sel.querySelector('option[value="va"]')){const o=document.createElement('option');o.value='va';o.textContent='Skiqualität';sel.appendChild(o);}
+    sel.value='va';return;}
+  if(sel.querySelector('option[value="'+layer+'"]'))sel.value=layer;}
 function update3dOverlay(){if(!map3d||!is3d)return;const sel=document.getElementById('overlay3d').value;
   if(sel==='none'){if(map3d.getLayer('data-overlay'))map3d.setLayoutProperty('data-overlay','visibility','none');return;}
+  if(sel==='va'&&typeof vaOv!=='undefined'&&vaOv&&vaOv._url){const bb=vaOv.getBounds(),q=[[bb.getWest(),bb.getNorth()],[bb.getEast(),bb.getNorth()],[bb.getEast(),bb.getSouth()],[bb.getWest(),bb.getSouth()]];
+    if(map3d.getLayer('data-overlay')){map3d.removeLayer('data-overlay');map3d.removeSource('data-src');}
+    map3d.addSource('data-src',{type:'image',url:vaOv._url,coordinates:q});
+    map3d.addLayer({id:'data-overlay',type:'raster',source:'data-src',paint:{'raster-opacity':0.8,'raster-fade-duration':0}});return;}
   const url=make3dOverlay(sel);
   if(map3d.getSource('data-src')){map3d.getSource('data-src').updateImage({url:url,coordinates:[[loMin,laMax],[loMax,laMax],[loMax,laMin],[loMin,laMin]]});}
   else{map3d.addSource('data-src',{type:'image',url:url,coordinates:[[loMin,laMax],[loMax,laMax],[loMax,laMin],[loMin,laMin]]});
@@ -14835,6 +14836,15 @@ function ensureMaplibre(cb){
   sc.onload=()=>{const q=_ml;_ml=null;q.forEach(f=>{try{f();}catch(e){}});};
   sc.onerror=()=>{_ml=null;toast('3D-Karte konnte nicht geladen werden — Verbindung prüfen.','err');};
   document.head.appendChild(sc);}
+// Two fingers pushed up together (not a pinch) tip the map into 3D, the
+// chosen layer stays on it.
+let _tilt3d=false;
+(function(){const el=map.getContainer();let y0=null,d0=0;
+  const mid=t=>(t[0].clientY+t[1].clientY)/2,dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+  el.addEventListener('touchstart',e=>{if(e.touches.length===2&&!is3d){y0=mid(e.touches);d0=dist(e.touches);}else y0=null;},{passive:true});
+  el.addEventListener('touchmove',e=>{if(y0==null||e.touches.length!==2||is3d)return;
+    if(y0-mid(e.touches)>70&&Math.abs(dist(e.touches)-d0)<d0*.22){y0=null;_tilt3d=true;try{haptic(10);}catch(x){}init3D();}},{passive:true});
+  el.addEventListener('touchend',()=>{y0=null;},{passive:true});})();
 function init3D(){
   if(!window.maplibregl){toast('3D wird geladen …','ok');ensureMaplibre(()=>init3D());return;}
   const wrap=document.getElementById('three-wrap');wrap.style.display='block';is3d=true;
@@ -14849,7 +14859,7 @@ function init3D(){
         {id:'swisstopo-base',type:'raster',source:'swisstopo',paint:{'raster-opacity':0.3}},
         {id:'hillshade',type:'raster',source:'hillshade-tiles',paint:{'raster-opacity':0.7}}],
       terrain:{source:'terrain-dem',exaggeration:exag3d}},
-    center:[lc.lng,lc.lat],zoom:lz,pitch:60,bearing:-20,maxPitch:85,
+    center:[lc.lng,lc.lat],zoom:lz,pitch:_tilt3d?0:60,bearing:_tilt3d?0:-20,maxPitch:85,
     maxBounds:[[loMinW-0.1,laMinW-0.05],[loMaxW+0.1,laMaxW+0.05]],
     touchZoomRotate:true,touchPitch:true,dragRotate:true});
   map3d.addControl(new maplibregl.NavigationControl({visualizePitch:true,showCompass:true}),'top-left');
@@ -14858,7 +14868,9 @@ function init3D(){
   map3d.keyboard.enable();
   document.getElementById('btn3dFloat').classList.add('active');
   if(!isMobile)document.getElementById('keys3d').style.display='inline';
-  map3d.on('load',()=>update3dOverlay());
+  map3d.on('load',()=>{try{sync3dLayer();}catch(e){}update3dOverlay();
+    // from the two-finger gesture: the flat map tips over into 3D
+    if(_tilt3d){_tilt3d=false;map3d.easeTo({pitch:60,bearing:-15,duration:1100});}});
   map3d.on('moveend',sync3dTo2d);
   // Desktop keyboard controls for 3D
   document.addEventListener('keydown',function(e){
@@ -15765,7 +15777,12 @@ function loadReportMarkers(){
   // Drawn snow-maps are model input for Reported Powder, not posts -- they
   // feed progZones() straight out of allReports but never get a marker, an
   // overlay snapshot, or a feed/profile entry of their own.
-  const rest=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r)&&!(r.condition_data&&r.condition_data.snowp));
+  const rest0=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r)&&!(r.condition_data&&r.condition_data.snowp));
+  // an activity is its route: the track, the person's picture at the start
+  // and a flag at the finish -- no photo bubble
+  const isAct=r=>{const A=r.condition_data&&r.condition_data.activity;return !!(A&&A.track&&A.track.length>1);};
+  rest0.filter(isAct).forEach(r=>_rptActivity(r,tiny));
+  const rest=rest0.filter(r=>!isAct(r));
   if(tiny){rest.forEach(r=>_rptMarker(r,'dot'));return;}
   const cells={};
   rest.forEach(r=>{let key;
@@ -15778,6 +15795,13 @@ function loadReportMarkers(){
     g.forEach(r=>{ if(rich)_rptMarker(r,r.img?'photo':'chip'); else _rptMarker(r,'pin'); });});
   try{applyFeedHighlight();}catch(e){}
 }
+function _rptActivity(r,tiny){const A=r.condition_data.activity,ll=A.track.map(p=>[p[0],p[1]]),open=()=>feedOpenPost(r.id,r.userId);
+  if(!tiny){const pl=L.polyline(ll,{color:'#3F6FD6',weight:3,opacity:.85,lineCap:'round',lineJoin:'round'}).addTo(reportMarkers);
+    pl.on('click',e=>{L.DomEvent.stopPropagation(e);open();});
+    const e=ll[ll.length-1];
+    _rptAdd(e[0],e[1],'<div class="act-fin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg></div>',22,22,open,650,[r.id]);}
+  const av=r.avatar?'<i style="background-image:'+cssUrl(r.avatar)+'"></i>':'<i>'+escapeHtml((r.user||'?')[0].toUpperCase())+'</i>';
+  _rptAdd(ll[0][0],ll[0][1],'<div class="act-start">'+av+'</div>',26,26,open,700,[r.id]);}
 let rptLastOpen=null;
 function feedOpenAt(id){feedScope='post';feedFocusId=String(id);feedFilter='all';feedAnchor=null;
   if(document.getElementById('inspPanel'))document.getElementById('inspPanel').classList.remove('open');
@@ -17353,7 +17377,7 @@ function drawClose(){
   if(_drawGestureRAF!=null){cancelAnimationFrame(_drawGestureRAF);_drawGestureRAF=null;}
   if(_drawBtmH)document.documentElement.style.setProperty('--btm-h',_drawBtmH);
   try{map.invalidateSize({animate:false,pan:false});}catch(e){}
-  try{map.dragging.enable();map.touchZoom.enable();map.doubleClickZoom.enable();if(_desktop)map.scrollWheelZoom.enable();}catch(e){}
+  try{map.dragging.enable();map.touchZoom.enable();if(_desktop)map.scrollWheelZoom.enable();}catch(e){}
 }
 // Centroid + spread of the first two active touches (client coords), for the
 // hand-rolled two-finger pan/zoom in drawSetupCanvas below.
@@ -18378,7 +18402,7 @@ function feedClose(){
   el.classList.remove('open');
   document.body.setAttribute('data-screen','search');
   // it opens as a column again next time
-  setTimeout(()=>{if(!el.classList.contains('open')){el.classList.remove('wide');el.classList.add('side');}},300);
+  // always the whole screen: no column beside the map
   feedSideSync();
 }
 // A column beside the map, or the whole screen. Both are useful: one to
@@ -18394,8 +18418,7 @@ function feedClose(){
 })();
 function feedToggleWide(){
   const el=document.getElementById('feedPage');if(!el)return;
-  const wide=el.classList.toggle('wide');
-  el.classList.toggle('side',!wide);
+  el.classList.add('wide');el.classList.remove('side');
   feedSideSync();
   try{haptic(3);}catch(e){}
 }
@@ -18717,8 +18740,6 @@ function feedDetailsHTML(r){const cd=r.condition_data||{},rows=[];
       if(c.avalancheType&&c.avalancheType!=='unknown')rows.push(['Lawinenart',obsLbl(OBS_AVTYPE,c.avalancheType)]);
       if(av.triggerType&&av.triggerType!=='unknown')rows.push(['Auslösung',obsLbl(OBS_TRIGGER,av.triggerType)]);}
     if(cd.altitudeM)rows.push(['Höhe',cd.altitudeM+' m']);
-    if(cd.snowPts&&cd.snowPts.length)cd.snowPts.slice(0,8).forEach((p,i)=>{const T=TRK_PT[p.type]||{};
-      rows.push([i?'':'Punkte',(T.l||p.type)+(p.cm!=null?' '+p.cm+' cm':'')+(p.alt!=null?' · '+p.alt+' m':'')]);});
     if(r.stars)rows.push(['Bewertung','★'.repeat(r.stars)+'☆'.repeat(Math.max(0,5-r.stars))]);
     if(cd.tour&&cd.tour.name)rows.push(['Tour',cd.tour.name]);
     if(!rows.length&&r.measurement)rows.push(['Gemeldet',r.measurement]);
