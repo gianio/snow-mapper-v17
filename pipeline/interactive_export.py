@@ -5653,9 +5653,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <div id="onb" hidden role="dialog" aria-modal="true" aria-label="Willkommen"><div class="onb-bg" aria-hidden="true"><i></i><i></i><i></i></div><div class="onb-card" id="onbCard"></div></div>
 <div id="appLock" hidden role="dialog" aria-modal="true" aria-label="Gesperrt"><div class="onb-bg" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="lock-card"><div class="lock-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9v1.5M15 9v1.5M12 9v4h-1M9.5 16a3.5 3.5 0 0 0 5 0"/></svg></div>
-  <b>Snowmapper ist gesperrt</b><span>Mit Face ID entsperren</span>
-  <button class="onb-pri" onclick="lockUnlock()">Entsperren</button>
-  <button class="onb-link" onclick="lockReset()">Sperre aufheben und abmelden</button></div></div>
+  <b>Wieder anmelden</b><span>Deine Sitzung ist abgelaufen – melde dich mit Face ID wieder an.</span>
+  <button class="onb-pri" onclick="lockUnlock()">Mit Face ID anmelden</button>
+  <button class="onb-link" onclick="lockHide();authShow()">Mit Passwort anmelden</button></div></div>
 <div id="wcv" class="wcv" hidden role="dialog" aria-label="Webcams"><div class="wcv-top"><button class="wcv-x" onclick="wcvClose()" aria-label="Schliessen">×</button><b>Webcams</b>
 <div class="wcv-seg" role="tablist"><button data-m="fav" onclick="wcvMode('fav')">Favoriten</button><button data-m="tv" onclick="wcvMode('tv')">Webcam-TV</button><button data-m="near" onclick="wcvMode('near')">In der Nähe</button></div></div>
 <div class="wcv-body" id="wcvBody"></div></div>
@@ -5807,7 +5807,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     </div>
     <span class="lbl-micro">Konto</span>
     <div class="set-rows">
-      <button id="setLock" hidden onclick="lockToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9v1.5M15 9v1.5M12 9v4h-1M9.5 16a3.5 3.5 0 0 0 5 0"/></svg>Face ID-Sperre<span class="set-val" id="setLockSt">Aus</span></button>
+      <button id="setLock" hidden onclick="lockToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9v1.5M15 9v1.5M12 9v4h-1M9.5 16a3.5 3.5 0 0 0 5 0"/></svg>Mit Face ID anmelden<span class="set-val" id="setLockSt">Aus</span></button>
       <button onclick="_setCameFromProfile=false;setClose();onbOpen(true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z"/></svg>Einführung erneut zeigen</button>
       <button id="setAccount" onclick="_setCameFromProfile=false;setClose();accountTap()">Anmelden</button>
       <button data-dm hidden onclick="_setCameFromProfile=false;setClose();dmOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 4l-1.4 4.1A8.5 8.5 0 0 1 21 11.5z"/></svg>Nachrichten</button>
@@ -6880,7 +6880,7 @@ const I18N_DICT={
 "Haftungsausschluss":["Disclaimer", "Clause de non-responsabilité", "Esclusione di responsabilità"],
 "Akzeptieren":["Accept", "Accepter", "Accetta"],
 "Face ID":["Face ID", "Face ID", "Face ID"],
-"Schütze Snowmapper mit Face ID: Deine Nachrichten, Aufzeichnungen und dein Konto öffnen sich nur für dich. Jederzeit in den Einstellungen änderbar.":["Protect Snowmapper with Face ID: your messages, recordings and account open only for you. Change it any time in settings.", "Protège Snowmapper avec Face ID : tes messages, enregistrements et ton compte ne s'ouvrent que pour toi. Modifiable à tout moment dans les réglages.", "Proteggi Snowmapper con Face ID: messaggi, registrazioni e account si aprono solo per te. Modificabile in qualsiasi momento nelle impostazioni."],
+"Du bleibst angemeldet. Läuft deine Sitzung einmal ab, meldest du dich mit Face ID wieder an – ohne Passwort. Jederzeit in den Einstellungen änderbar.":["You stay signed in. If your session ever runs out, sign back in with Face ID – no password. Change it any time in settings.", "Tu restes connecté. Si ta session expire, reconnecte-toi avec Face ID – sans mot de passe. Modifiable à tout moment dans les réglages.", "Resti connesso. Se la sessione scade, accedi di nuovo con Face ID – senza password. Modificabile in qualsiasi momento nelle impostazioni."],
 "Face ID einrichten":["Set up Face ID", "Configurer Face ID", "Configura Face ID"],
 "Standort":["Location", "Position", "Posizione"],
 "Mit deinem Standort zeigt die Karte, wo du bist, und die Tourensuche beginnt in deiner Nähe. Er wird nur für Meldungen gespeichert, die du selbst postest.":["With your location the map shows where you are and the tour finder starts near you. It is only stored with reports you post yourself.", "Avec ta position, la carte montre où tu es et la recherche d'itinéraires commence près de toi. Elle n'est enregistrée qu'avec les signalements que tu publies.", "Con la tua posizione la mappa mostra dove sei e la ricerca gite parte vicino a te. Viene salvata solo con le segnalazioni che pubblichi tu."],
@@ -6889,13 +6889,17 @@ const I18N_DICT={
 "Mit Face ID entsperren":["Unlock with Face ID", "Déverrouiller avec Face ID", "Sblocca con Face ID"],
 "Entsperren":["Unlock", "Déverrouiller", "Sblocca"],
 "Sperre aufheben und abmelden":["Remove lock and sign out", "Retirer le verrou et se déconnecter", "Rimuovi il blocco ed esci"],
-"Face ID-Sperre":["Face ID lock", "Verrou Face ID", "Blocco Face ID"],
+"Mit Face ID anmelden":["Sign in with Face ID", "Se connecter avec Face ID", "Accedi con Face ID"],
+"Wieder anmelden":["Sign in again", "Se reconnecter", "Accedi di nuovo"],
+"Deine Sitzung ist abgelaufen – melde dich mit Face ID wieder an.":["Your session has expired – sign back in with Face ID.", "Ta session a expiré – reconnecte-toi avec Face ID.", "La sessione è scaduta – accedi di nuovo con Face ID."],
+"Mit Passwort anmelden":["Sign in with password", "Se connecter avec le mot de passe", "Accedi con la password"],
+"Willkommen zurück":["Welcome back", "Bon retour", "Bentornato"],
+"Bitte melde dich mit deinem Passwort an":["Please sign in with your password", "Connecte-toi avec ton mot de passe", "Accedi con la tua password"],
 "Einführung erneut zeigen":["Show the introduction again", "Revoir l'introduction", "Mostra di nuovo l'introduzione"],
 "Face ID ist eingerichtet":["Face ID is set up", "Face ID est configuré", "Face ID è configurato"],
 "Face ID ist auf diesem Gerät nicht verfügbar":["Face ID is not available on this device", "Face ID n'est pas disponible sur cet appareil", "Face ID non è disponibile su questo dispositivo"],
 "Face ID konnte nicht eingerichtet werden":["Face ID could not be set up", "Impossible de configurer Face ID", "Impossibile configurare Face ID"],
-"Face ID-Sperre aus":["Face ID lock off", "Verrou Face ID désactivé", "Blocco Face ID disattivato"],
-"Face ID-Sperre aufheben? Du wirst dabei abgemeldet.":["Remove the Face ID lock? You will be signed out.", "Retirer le verrou Face ID ? Tu seras déconnecté.", "Rimuovere il blocco Face ID? Verrai disconnesso."],
+"Anmelden mit Face ID aus":["Face ID sign-in off", "Connexion Face ID désactivée", "Accesso con Face ID disattivato"],
 "Sperre aufgehoben – bitte neu anmelden":["Lock removed – please sign in again", "Verrou retiré – reconnecte-toi", "Blocco rimosso – accedi di nuovo"],
 "An":["On", "Activé", "Attivo"],
 "Aus":["Off", "Désactivé", "Disattivo"],
@@ -14418,42 +14422,61 @@ function mgHTML(){const H=mgPanels().reduce((s,q)=>s+q.h+30,0)+20;
   return '<div class="insp-sec insp-mg"><div class="mg-leg"><span><i class="mg-sw"></i>Neuschnee cm/h</span><span><i class="tc-air"></i>Luft</span><span><i class="tc-srf"></i>Schneeoberfläche</span></div>'
     +'<div class="mg" style="height:'+H+'px"><div class="mg-sc" id="mgSc"><canvas id="mgCv"></canvas></div><canvas class="mg-ax" id="mgAx"></canvas></div>'
     +'<div class="insp-hint">← wischen →  alle Diagramme laufen mit · hell = gewähltes Zeitfenster</div></div>';}
+// smooth curve through the points (Catmull-Rom as Béziers); null breaks it
+function mgSmooth(c,pts,move){let first=true;
+  for(let i=0;i<pts.length;i++){const p=pts[i];if(!p){first=true;continue;}
+    if(first){move!==false?c.moveTo(p[0],p[1]):c.lineTo(p[0],p[1]);first=false;continue;}
+    const p0=pts[i-2]||pts[i-1],p1=pts[i-1],p2=p,p3=pts[i+1]||p;
+    if(!p0||!p3){c.lineTo(p2[0],p2[1]);continue;}
+    const t=.18;c.bezierCurveTo(p1[0]+(p2[0]-p0[0])*t,p1[1]+(p2[1]-p0[1])*t,p2[0]-(p3[0]-p1[0])*t,p2[1]-(p3[1]-p1[1])*t,p2[0],p2[1]);}}
+// a gentle 1-2-1 average, so hourly jitter does not read as zigzag
+function mgSoft(v){return v.map((x,i)=>{if(x==null||x!==x)return x;const l=v[i-1],r=v[i+1];
+  return (l==null||l!==l||r==null||r!==r)?x:(l+2*x+r)/4;});}
 function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getElementById('mgCv'),ax=document.getElementById('mgAx');if(!sc||!cv||!ax)return;
   const vw=sc.clientWidth||320,panels=mgPanels(),TOP=20,GAP=30,H=TOP+panels.reduce((s,q)=>s+q.h+GAP,0);
   const W=MG_L+T*MG_PX+MG_R,dpr=Math.min(2,window.devicePixelRatio||1);
   cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.width=W+'px';cv.style.height=H+'px';
   ax.width=Math.round(vw*dpr);ax.height=Math.round(H*dpr);ax.style.width=vw+'px';ax.style.height=H+'px';
   const c=cv.getContext('2d'),g=ax.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);g.setTransform(dpr,0,0,dpr,0,0);
-  const X=t=>MG_L+t*MG_PX,mut=cvTok('--fg2','#5B6472'),grid=cvTok('--hair','rgba(18,21,26,.08)'),fg=cvTok('--fg','#16152e');
-  const bg=cvTok('--card','#FFFFFF');
-  // days on top, nights, past, window
+  const X=t=>MG_L+t*MG_PX,XC=t=>X(t)+MG_PX/2,mut=cvTok('--fg2','#5B6472'),fg=cvTok('--fg','#16152e');
+  const dark=(document.documentElement.getAttribute('data-theme')==='dark')||(matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches&&document.documentElement.getAttribute('data-theme')!=='light');
+  const grid=dark?'rgba(255,255,255,.07)':'rgba(30,50,90,.07)',bg=cvTok('--card','#FFFFFF'),brand=cvTok('--brand','#2A5A8C');
+  const vgrad=(y0,y1,a,b2)=>{const gr=c.createLinearGradient(0,y0,0,y1);gr.addColorStop(0,a);gr.addColorStop(1,b2);return gr;};
+  // day names on top
   c.font='700 11px Inter,system-ui';c.textAlign='center';
   for(let t=0;t<T;t++){const d=zLocal(tMs(t));if(d.getUTCHours()!==0&&t!==0)continue;
     let e=t+1;while(e<T&&zLocal(tMs(e)).getUTCHours()!==0)e++;
     c.fillStyle=fg;if((e-t)*MG_PX>40)c.fillText(WD()[d.getUTCDay()]+' '+d.getUTCDate()+'.',(X(t)+X(e))/2,13);}
   let y0=TOP;const rows=[];
   for(const q of panels){rows.push({q,top:y0+16,base:y0+16+q.h-18});y0+=q.h+GAP;}
-  // each chart on its own soft card, as everywhere in the app
-  for(const r of rows){c.fillStyle=cvTok('--fill','#EEF2F7');icRR(c,X(0)-4,r.top-6,X(T)-X(0)+8,r.base-r.top+12,12);c.fill();}
+  // each chart on its own soft card
+  for(const r of rows){c.fillStyle=dark?'rgba(255,255,255,.035)':'rgba(42,90,140,.045)';icRR(c,X(0)-4,r.top-8,X(T)-X(0)+8,r.base-r.top+14,14);c.fill();}
   const yTop=TOP,yBot=H-6;
-  c.fillStyle='rgba(30,41,66,.07)';c.fillRect(X(0),yTop,X(Math.min(nowIdx,T))-X(0),yBot-yTop);           // past
-  c.fillStyle='rgba(42,143,216,.08)';c.fillRect(X(a),yTop,X(b)-X(a),yBot-yTop);                          // window
-  c.strokeStyle='rgba(42,111,176,.55)';c.lineWidth=1.2;c.setLineDash([4,3]);
-  for(const t of [a,b]){c.beginPath();c.moveTo(X(t)+.5,yTop);c.lineTo(X(t)+.5,yBot);c.stroke();}c.setLineDash([]);
-  if(nowIdx>=0&&nowIdx<T){c.strokeStyle='#e0245e';c.lineWidth=1.4;c.beginPath();c.moveTo(X(nowIdx),yTop);c.lineTo(X(nowIdx),yBot);c.stroke();
-    const ly=rows[0].top+12;c.font='800 10px Inter,system-ui';c.fillStyle='#e0245e';c.textAlign='right';c.fillText('◀ Rückblick',X(nowIdx)-5,ly);
-    c.textAlign='left';c.fillText('Prognose ▶',X(nowIdx)+5,ly);}
-  // axis overlay: strips with the page colour so the numbers stay readable
+  // past softly veiled, the chosen window lit
+  for(const r of rows){c.fillStyle=dark?'rgba(0,0,0,.16)':'rgba(30,41,66,.045)';icRR(c,X(0)-4,r.top-8,Math.max(0,X(Math.min(nowIdx,T))-X(0)+4),r.base-r.top+14,14);c.fill();
+    c.fillStyle=dark?'rgba(91,155,255,.10)':'rgba(42,143,216,.08)';icRR(c,X(a),r.top-8,X(b)-X(a),r.base-r.top+14,8);c.fill();}
+  if(nowIdx>=0&&nowIdx<T){const x=X(nowIdx);
+    for(const r of rows){c.strokeStyle='rgba(224,36,94,.55)';c.lineWidth=1.5;c.setLineDash([2,4]);c.lineCap='round';c.beginPath();c.moveTo(x,r.top-8);c.lineTo(x,r.base+6);c.stroke();c.setLineDash([]);}
+    const ly=rows[0].top+4;c.font='800 10px Inter,system-ui';c.textBaseline='middle';
+    const pill=(txt,xx,al)=>{const w=c.measureText(txt).width+12,px=al==='right'?xx-w:xx;c.fillStyle=dark?'rgba(224,36,94,.22)':'rgba(224,36,94,.10)';icRR(c,px,ly-8,w,16,8);c.fill();
+      c.fillStyle='#E0245E';c.textAlign='center';c.fillText(txt,px+w/2,ly);};
+    pill('Rückblick',x-6,'right');pill('Prognose',x+6,'left');c.textBaseline='alphabetic';}
+  // axis overlay: the numbers stay put, fading into the chart
   g.clearRect(0,0,vw,H);
-  const strip=(x,w,edge)=>{g.fillStyle=bg;g.fillRect(x,TOP,w,H-TOP);g.fillStyle='rgba(18,21,26,.14)';g.fillRect(edge,TOP,1,H-TOP);};
-  strip(0,MG_L,MG_L-1);strip(vw-MG_R,MG_R,vw-MG_R);
-  const lab=(txt,x,y,al,col)=>{g.fillStyle=col||mut;g.textAlign=al;g.textBaseline='middle';g.font='600 10.5px Inter,system-ui';g.fillText(txt,x,y);};
-  const hours=(r)=>{c.textAlign='center';c.font='600 9.5px Inter,system-ui';c.fillStyle=mut;
+  const bg0=/^#[0-9a-f]{6}$/i.test(bg)?bg+'00':bg.replace(/^rgba?\(([^,]+),([^,]+),([^,)]+).*$/,'rgba($1,$2,$3,0)');
+  const strip=(x,w,toRight)=>{const gr=g.createLinearGradient(x,0,x+w,0);
+    if(toRight){gr.addColorStop(0,bg);gr.addColorStop(.82,bg);gr.addColorStop(1,bg0);}else{gr.addColorStop(0,bg0);gr.addColorStop(.18,bg);gr.addColorStop(1,bg);}
+    g.fillStyle=gr;g.fillRect(x,TOP,w,H-TOP);};
+  strip(0,MG_L+8,true);strip(vw-MG_R-8,MG_R+8,false);
+  const lab=(txt,x,y,al,col)=>{g.fillStyle=col||mut;g.textAlign=al;g.textBaseline='middle';g.font='600 10px Inter,system-ui';g.fillText(txt,x,y);};
+  const hours=(r)=>{c.textAlign='center';c.font='600 9px Inter,system-ui';c.fillStyle=mut;c.globalAlpha=.75;
     for(let t=0;t<T;t++){const d=zLocal(tMs(t)),hr=d.getUTCHours(),x=X(t);
-      if(hr===0){c.strokeStyle='rgba(18,21,26,.18)';c.lineWidth=1;c.beginPath();c.moveTo(x,r.top-4);c.lineTo(x,r.base+4);c.stroke();}
-      if(hr%6===0){c.fillText(String(hr).padStart(2,'0'),x,r.base+13);}}
-    c.strokeStyle='rgba(18,21,26,.3)';c.beginPath();c.moveTo(X(0),r.base+.5);c.lineTo(X(T),r.base+.5);c.stroke();};
-  const title=(r,txt)=>{g.fillStyle=cvTok('--brand','#2A5A8C');g.font='800 12px Inter,system-ui';g.textAlign='left';g.textBaseline='alphabetic';g.fillText(txt,MG_L+4,r.top-5);};
+      if(hr===0){c.strokeStyle=grid;c.lineWidth=1;c.beginPath();c.moveTo(x,r.top-4);c.lineTo(x,r.base+2);c.stroke();}
+      if(hr%6===0&&hr)c.fillText(String(hr).padStart(2,'0'),x,r.base+12);}
+    c.globalAlpha=1;};
+  const title=(r,txt)=>{g.fillStyle=brand;g.font='800 12px Inter,system-ui';g.textAlign='left';g.textBaseline='alphabetic';g.fillText(txt,MG_L+4,r.top-10);};
+  const unit=(r,txt,right,col)=>{g.font='700 9.5px Inter,system-ui';g.fillStyle=col||mut;g.textAlign=right?'right':'left';g.textBaseline='alphabetic';g.fillText(txt,right?vw-4:4,r.top-10);};
+  const hline=(y)=>{c.strokeStyle=grid;c.lineWidth=1;c.beginPath();c.moveTo(X(0),y);c.lineTo(X(T),y);c.stroke();};
   for(const r of rows){const q=r.q,hgt=r.base-r.top;
     if(q.k==='snow'){
       const air=[],srf=[],sn=[];let mn=1e9,mx=-1e9,smx=0;
@@ -14461,54 +14484,55 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
         for(const v of [air[t],srf[t]])if(v==v&&v!=null){if(v<mn)mn=v;if(v>mx)mx=v;}if(sn[t]>smx)smx=sn[t];}
       const raw=Math.max(1,mx-mn),st=raw<=5?1:raw<=12?2:raw<=28?5:10;mn=Math.floor(mn/st)*st;mx=Math.ceil(mx/st)*st;if(mx===mn)mx+=st;
       const yT=v=>r.base-(v-mn)/(mx-mn)*hgt;
-      for(let v=mn;v<=mx+1e-9;v+=st){const y=yT(v);c.strokeStyle=v===0?'rgba(168,58,46,.5)':grid;c.lineWidth=1;if(v===0)c.setLineDash([4,3]);
-        c.beginPath();c.moveTo(X(0),y);c.lineTo(X(T),y);c.stroke();c.setLineDash([]);lab(v+'°',MG_L-5,y,'right',v===0?'#A83A2E':mut);}
-      const top=Math.max(1,[1,2,3,5,8,10].find(v=>v>=smx*1.05)||Math.ceil(smx)),yS=v=>r.base-v/top*hgt,bw=MG_PX-1.2;
-      for(let t=0;t<T;t++){const v=sn[t];if(v<0.01)continue;
-        for(const [lo,hi,col] of MG_SNOW){if(v<=lo)break;const y1=yS(Math.min(v,hi)),y2=yS(lo);c.fillStyle=col;c.fillRect(X(t)+.6,y1,bw,Math.max(.5,y2-y1));}}
-      // colour scale on the right: the classes on the cm/h axis
-      const sx=vw-12;for(const [lo,hi,col] of MG_SNOW){if(lo>=top)break;const y1=yS(Math.min(hi,top)),y2=yS(lo);g.fillStyle=col;g.fillRect(sx,y1,7,y2-y1);}
+      for(let v=mn;v<=mx+1e-9;v+=st){const y=yT(v);if(v!==0)hline(y);lab(v+'°',MG_L-6,y,'right',v===0?'#D23F3F':mut);}
+      if(mn<0&&mx>0){c.strokeStyle='rgba(210,63,63,.35)';c.setLineDash([3,4]);c.beginPath();c.moveTo(X(0),yT(0));c.lineTo(X(T),yT(0));c.stroke();c.setLineDash([]);}
+      // new snow: soft rounded bars in the colour of their class
+      const top=Math.max(1,[1,2,3,5,8,10].find(v=>v>=smx*1.05)||Math.ceil(smx)),yS=v=>r.base-v/top*hgt,bw=MG_PX-1.6;
+      for(let t=0;t<T;t++){const v=sn[t];if(v<0.01)continue;const cls=MG_SNOW.find(s=>v<s[1])||MG_SNOW[MG_SNOW.length-1],y=yS(Math.min(v,top));
+        c.fillStyle=vgrad(y,r.base,cls[2],cls[2]+'99');icRR(c,X(t)+.8,y,bw,r.base-y,Math.min(3,bw/2));c.fill();}
+      const sx=vw-13;for(const [lo,hi,col] of MG_SNOW){if(lo>=top)break;const y1=yS(Math.min(hi,top)),y2=yS(lo);g.fillStyle=col;icRR(g,sx,y1,7,Math.max(1,y2-y1-1),2);g.fill();}
       for(const v of [0,top/2,top]){lab((v%1?v.toFixed(1):String(v)),sx-4,yS(v),'right','#2A6FB0');}
-      g.font='700 9.5px Inter,system-ui';g.fillStyle='#2A6FB0';g.textAlign='right';g.textBaseline='alphabetic';g.fillText('cm/h',vw-4,r.top-5);
-      g.fillStyle=mut;g.textAlign='left';g.fillText('°C',2,r.top-5);
-      c.lineJoin='round';
-      c.beginPath();let pen=false;for(let t=0;t<T;t++){const v=srf[t];if(v==null||v!==v){pen=false;continue;}const x=X(t)+MG_PX/2,y=yT(v);pen?c.lineTo(x,y):c.moveTo(x,y);pen=true;}
-      c.strokeStyle='#C9821F';c.lineWidth=1.8;c.setLineDash([5,3]);c.stroke();c.setLineDash([]);
-      c.beginPath();pen=false;for(let t=0;t<T;t++){const v=air[t];if(v==null||v!==v){pen=false;continue;}const x=X(t)+MG_PX/2,y=yT(v);pen?c.lineTo(x,y):c.moveTo(x,y);pen=true;}
-      c.strokeStyle='#D7262B';c.lineWidth=2.6;c.stroke();
+      unit(r,'cm/h',true,'#2A6FB0');unit(r,'°C',false);
+      // temperatures: smooth lines, the air one warm above 0 °C and cool below
+      const pS=mgSoft(srf).map((v,t)=>v==null||v!==v?null:[XC(t),yT(v)]),pA=mgSoft(air).map((v,t)=>v==null||v!==v?null:[XC(t),yT(v)]);
+      c.lineCap='round';c.lineJoin='round';
+      c.beginPath();mgSmooth(c,pS);c.strokeStyle='rgba(214,140,40,.85)';c.lineWidth=1.8;c.setLineDash([1,4]);c.stroke();c.setLineDash([]);
+      const z=yT(0),tg=c.createLinearGradient(0,r.top,0,r.base),zf=Math.max(0,Math.min(1,(z-r.top)/hgt));
+      tg.addColorStop(0,'#F0564A');tg.addColorStop(Math.max(0,zf-.001),'#F0564A');tg.addColorStop(Math.min(1,zf+.001),'#3D8BF0');tg.addColorStop(1,'#3D8BF0');
+      c.beginPath();mgSmooth(c,pA);c.strokeStyle=tg;c.lineWidth=3;c.stroke();
       hours(r);title(r,q.t);}
     else if(q.k==='depth'){let mx=1;const v=[];for(let t=0;t<T;t++){v[t]=cum[t*NP+p];if(v[t]>mx)mx=v[t];}
-      mx=Math.ceil(mx/10)*10;const yD=x=>r.base-x/mx*hgt;
-      for(const s of [0,mx/2,mx]){c.strokeStyle=grid;c.beginPath();c.moveTo(X(0),yD(s));c.lineTo(X(T),yD(s));c.stroke();lab(Math.round(s)+'',MG_L-5,yD(s),'right');}
-      c.beginPath();for(let t=0;t<T;t++){const x=X(t)+MG_PX/2,y=yD(v[t]);t?c.lineTo(x,y):c.moveTo(x,y);}
-      c.lineTo(X(T),r.base);c.lineTo(X(0),r.base);c.closePath();c.fillStyle='rgba(42,143,216,.16)';c.fill();
-      c.beginPath();for(let t=0;t<T;t++){const x=X(t)+MG_PX/2,y=yD(v[t]);t?c.lineTo(x,y):c.moveTo(x,y);}c.strokeStyle='#2A8FD8';c.lineWidth=2;c.stroke();
-      g.font='700 9.5px Inter,system-ui';g.fillStyle=mut;g.textAlign='left';g.textBaseline='alphabetic';g.fillText('cm',2,r.top-5);
-      hours(r);title(r,q.t);}
-    else if(q.k==='cloud'){const names=['hoch','mittel','tief'],cols=[CLV_COL[2],CLV_COL[1],CLV_COL[0]],bh=(hgt-4)/3;
-      for(let k=0;k<3;k++){const y=r.top+k*(bh+2);g.font='600 9.5px Inter,system-ui';g.fillStyle=mut;g.textAlign='right';g.textBaseline='middle';g.fillText(names[k],MG_L-4,y+bh/2);
-        c.fillStyle=cvTok('--ink-050','#F0F2F4');c.fillRect(X(0),y,X(T)-X(0),bh);
-        for(let t=0;t<T;t++){const f=cloudLv(t,p)[2-k];if(f<=0.05)continue;const cc=cols[k];
-          c.fillStyle='rgba('+cc[0]+','+cc[1]+','+cc[2]+','+(0.15+0.85*f).toFixed(2)+')';c.fillRect(X(t),y,MG_PX+.5,bh);}}
+      mx=Math.ceil(mx/10)*10;const yD=x=>r.base-x/mx*hgt,pts=v.map((x,t)=>[XC(t),yD(x)]);
+      for(const s of [mx/2,mx])hline(yD(s));for(const s of [0,mx/2,mx])lab(Math.round(s)+'',MG_L-6,yD(s),'right');
+      c.beginPath();mgSmooth(c,pts);c.lineTo(XC(T-1),r.base);c.lineTo(XC(0),r.base);c.closePath();c.fillStyle=vgrad(r.top,r.base,'rgba(61,139,240,.38)','rgba(61,139,240,.04)');c.fill();
+      c.beginPath();mgSmooth(c,pts);c.strokeStyle='#3D8BF0';c.lineWidth=2.4;c.stroke();
+      unit(r,'cm',false);hours(r);title(r,q.t);}
+    else if(q.k==='cloud'){const names=['hoch','mittel','tief'],cols=[CLV_COL[2],CLV_COL[1],CLV_COL[0]],bh=(hgt-8)/3;
+      for(let k=0;k<3;k++){const y=r.top+k*(bh+4);g.font='600 9.5px Inter,system-ui';g.fillStyle=mut;g.textAlign='right';g.textBaseline='middle';g.fillText(names[k],MG_L-6,y+bh/2);
+        c.fillStyle=grid;icRR(c,X(0),y,X(T)-X(0),bh,bh/2);c.fill();
+        const cc=cols[k];c.save();icRR(c,X(0),y,X(T)-X(0),bh,bh/2);c.clip();
+        for(let t=0;t<T;t++){const f=cloudLv(t,p)[2-k];if(f<=0.05)continue;
+          c.fillStyle='rgba('+cc[0]+','+cc[1]+','+cc[2]+','+(0.12+0.78*f).toFixed(2)+')';c.fillRect(X(t)-.5,y,MG_PX+1,bh);}
+        c.restore();}
       hours(r);title(r,q.t);}
     else if(q.k==='sun'){let mx=0;for(let t=0;t<T;t++)mx=Math.max(mx,sunv(t,p));mx=mx||1;
-      for(const s of [0,50,100]){const y=r.base-s/100*hgt;c.strokeStyle=grid;c.beginPath();c.moveTo(X(0),y);c.lineTo(X(T),y);c.stroke();lab(s+'%',MG_L-5,y,'right');}
-      c.fillStyle='#F2C335';for(let t=0;t<T;t++){const f=sunv(t,p)/mx;if(f<0.02)continue;const bh=f*hgt;c.fillRect(X(t)+.6,r.base-bh,MG_PX-1.2,bh);}
+      for(const s of [50,100])hline(r.base-s/100*hgt);for(const s of [0,50,100])lab(s+'%',MG_L-6,r.base-s/100*hgt,'right');
+      for(let t=0;t<T;t++){const f=sunv(t,p)/mx;if(f<0.02)continue;const bh=f*hgt,y=r.base-bh;
+        c.fillStyle=vgrad(y,r.base,'#FFD25A','rgba(245,166,35,.55)');icRR(c,X(t)+.8,y,MG_PX-1.6,bh,Math.min(3,(MG_PX-1.6)/2));c.fill();}
       hours(r);title(r,q.t);}
     else if(q.k==='wind'){const sp=[];let mx=10;for(let t=0;t<T;t++){sp[t]=SPD[t*P+wk]/M.spd_mul*3.6;if(sp[t]>mx)mx=sp[t];}
-      mx=Math.ceil(mx/10)*10;const arrH=28,yW=v=>r.base-v/mx*(hgt-arrH);
-      for(const s of [0,mx/2,mx]){c.strokeStyle=grid;c.beginPath();c.moveTo(X(0),yW(s));c.lineTo(X(T),yW(s));c.stroke();lab(Math.round(s)+'',MG_L-5,yW(s),'right');}
-      c.beginPath();for(let t=0;t<T;t++){const x=X(t)+MG_PX/2,y=yW(sp[t]);t?c.lineTo(x,y):c.moveTo(x,y);}
-      c.lineTo(X(T),r.base);c.lineTo(X(0),r.base);c.closePath();c.fillStyle='rgba(124,108,214,.15)';c.fill();
-      c.beginPath();for(let t=0;t<T;t++){const x=X(t)+MG_PX/2,y=yW(sp[t]);t?c.lineTo(x,y):c.moveTo(x,y);}c.strokeStyle='#7C6CD6';c.lineWidth=2.2;c.stroke();
-      // arrows every 3 h: where the wind blows to, the speed beneath
-      c.textAlign='center';c.font='700 9.5px Inter,system-ui';
-      for(let t=1;t<T;t+=3){let dir=(WDIR[t*P+wk]*M.dir_div)%360;if(dir<0)dir+=360;const x=X(t)+MG_PX/2,y=r.top+8,ang=(dir+180)*Math.PI/180;
-        c.save();c.translate(x,y);c.rotate(ang);c.strokeStyle=fg;c.fillStyle=fg;c.lineWidth=1.6;c.beginPath();c.moveTo(0,6);c.lineTo(0,-5);c.stroke();
-        c.beginPath();c.moveTo(0,-7);c.lineTo(-3.5,-2);c.lineTo(3.5,-2);c.closePath();c.fill();c.restore();
-        c.fillStyle=mut;c.fillText(String(Math.round(sp[t])),x,y+18);}
-      g.font='700 9.5px Inter,system-ui';g.fillStyle=mut;g.textAlign='left';g.textBaseline='alphabetic';g.fillText('km/h',2,r.top-5);
-      hours(r);title(r,q.t);}}
+      mx=Math.ceil(mx/10)*10;const arrH=30,yW=v=>r.base-v/mx*(hgt-arrH),pts=mgSoft(sp).map((v,t)=>[XC(t),yW(v)]);
+      for(const s of [mx/2,mx])hline(yW(s));for(const s of [0,mx/2,mx])lab(Math.round(s)+'',MG_L-6,yW(s),'right');
+      c.beginPath();mgSmooth(c,pts);c.lineTo(XC(T-1),r.base);c.lineTo(XC(0),r.base);c.closePath();c.fillStyle=vgrad(r.top+arrH,r.base,'rgba(124,108,214,.34)','rgba(124,108,214,.03)');c.fill();
+      c.beginPath();mgSmooth(c,pts);c.strokeStyle='#7C6CD6';c.lineWidth=2.4;c.lineCap='round';c.stroke();
+      // every 3 h a little chip: where the wind blows to, and how strong
+      c.textAlign='center';c.font='700 9px Inter,system-ui';c.textBaseline='middle';
+      for(let t=1;t<T;t+=3){let dir=(WDIR[t*P+wk]*M.dir_div)%360;if(dir<0)dir+=360;const x=XC(t),y=r.top+7,ang=(dir+180)*Math.PI/180;
+        c.fillStyle=dark?'rgba(124,108,214,.22)':'rgba(124,108,214,.12)';c.beginPath();c.arc(x,y,7.5,0,Math.PI*2);c.fill();
+        c.save();c.translate(x,y);c.rotate(ang);c.strokeStyle='#6A5AD0';c.lineWidth=1.8;c.lineCap='round';c.lineJoin='round';
+        c.beginPath();c.moveTo(0,4.5);c.lineTo(0,-4);c.moveTo(-3,-1.5);c.lineTo(0,-4.5);c.lineTo(3,-1.5);c.stroke();c.restore();
+        c.fillStyle=mut;c.fillText(String(Math.round(sp[t])),x,y+16);}
+      c.textBaseline='alphabetic';unit(r,'km/h',false);hours(r);title(r,q.t);}}
   // where it was, else the window near the left edge
   const key=p+':'+a+':'+b;
   if(_mgScroll!=null&&_mgKey&&_mgKey.split(':')[0]===String(p))sc.scrollLeft=_mgScroll;
@@ -15247,7 +15271,7 @@ function onbRender(){const el=document.getElementById('onbCard');if(!el)return;c
       +'<button class="onb-pri" '+(ok?'':'disabled')+' onclick="try{localStorage.setItem(\'ssm_disclaimer_v\'+DISC_VER,\'1\')}catch(e){};onbNext()">Akzeptieren</button>';}
   else if(k==='lock'){const on=!!(lockGet()&&lockGet().on);
     h='<div class="onb-hero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9v1.5M15 9v1.5M12 9v4h-1M9.5 16a3.5 3.5 0 0 0 5 0"/></svg></div>'
-      +'<h1>Face ID</h1><p>Schütze Snowmapper mit Face ID: Deine Nachrichten, Aufzeichnungen und dein Konto öffnen sich nur für dich. Jederzeit in den Einstellungen änderbar.</p>'
+      +'<h1>Face ID</h1><p>Du bleibst angemeldet. Läuft deine Sitzung einmal ab, meldest du dich mit Face ID wieder an – ohne Passwort. Jederzeit in den Einstellungen änderbar.</p>'
       +(on?'<div class="onb-ok">✓ Face ID ist eingerichtet</div><button class="onb-pri" onclick="onbNext()">Weiter</button>'
         :'<button class="onb-pri" onclick="lockEnable().then(r=>{if(r)onbNext();})">Face ID einrichten</button><button class="onb-link" onclick="onbNext()">Später</button>');}
   else if(k==='loc'){
@@ -15264,10 +15288,11 @@ function onbRender(){const el=document.getElementById('onbCard');if(!el)return;c
 
 // ── Face ID: an app lock ─────────────────────────────────────────────────
 // Native app: the biometric plugin (Face ID / Touch ID, device passcode as
-// fallback). Browser: a platform passkey (WebAuthn) that is only ever used to
-// unlock this device -- nothing leaves the device. It locks the app, it does
-// not replace the account password.
-const LOCK_KEY='ssm_lock';let _lockHiddenAt=0;
+// fallback). Browser: a platform passkey (WebAuthn) that is only ever used on
+// this device -- nothing leaves the device. You stay signed in by default;
+// Face ID is only asked for when the session is gone and you would have to
+// sign in again: it then restores the session from the last refresh token.
+const LOCK_KEY='ssm_lock';
 function lockGet(){try{return JSON.parse(localStorage.getItem(LOCK_KEY)||'null');}catch(e){return null;}}
 function _bioNative(){return _capPlugin('BiometricAuthNative')||_capPlugin('BiometricAuth');}
 async function lockAvailable(){const N=_bioNative();
@@ -15285,30 +15310,32 @@ async function lockEnable(){const N=_bioNative();
       localStorage.setItem(LOCK_KEY,JSON.stringify({on:true,id:_b64(c.rawId)}));}
     toast('Face ID ist eingerichtet','ok');lockRender();return true;
   }catch(e){if(!e||e.name!=='NotAllowedError')toast('Face ID konnte nicht eingerichtet werden','err');return false;}}
-function lockShow(){const el=document.getElementById('appLock');if(!el)return;el.hidden=false;document.body.classList.add('locked');
-  const L=lockGet();if(L&&L.native)setTimeout(lockUnlock,250);}
-async function lockUnlock(){const L=lockGet();if(!L||!L.on){lockHide();return true;}const N=_bioNative();
+function lockShow(){const el=document.getElementById('appLock');if(!el)return;el.hidden=false;document.body.classList.add('locked');}
+async function lockVerify(){const L=lockGet();if(!L||!L.on)return true;const N=_bioNative();
   try{
-    if(L.native&&N)await N.authenticate({reason:'Snowmapper entsperren',cancelTitle:'Abbrechen',allowDeviceCredential:true});
+    if(L.native&&N)await N.authenticate({reason:'Bei Snowmapper anmelden',cancelTitle:'Abbrechen',allowDeviceCredential:true});
     else await navigator.credentials.get({publicKey:{challenge:_rnd(32),allowCredentials:L.id?[{type:'public-key',id:_unb64(L.id),transports:['internal']}]:[],userVerification:'required',timeout:60000}});
-    lockHide();try{haptic(10);}catch(e){}return true;
+    try{haptic(10);}catch(e){}return true;
   }catch(e){return false;}}
+// the refresh token kept for the Face ID sign-in (only while it is on)
+const BIO_RT='ssm_bio_rt';
+function bioKeep(session){try{const L=lockGet();if(L&&L.on&&session&&session.refresh_token)localStorage.setItem(BIO_RT,session.refresh_token);}catch(e){}}
+function bioForget(){try{localStorage.removeItem(BIO_RT);}catch(e){}}
+function bioCan(){try{const L=lockGet();return !!(L&&L.on&&localStorage.getItem(BIO_RT));}catch(e){return false;}}
+async function lockUnlock(){if(!(await lockVerify()))return false;lockHide();
+  let ok=false;try{const rt=localStorage.getItem(BIO_RT);if(sb&&rt){const{data,error}=await sb.auth.refreshSession({refresh_token:rt});ok=!error&&!!(data&&data.session);}}catch(e){}
+  if(ok){toast('Willkommen zurück','ok');return true;}
+  bioForget();toast('Bitte melde dich mit deinem Passwort an','info');try{authShow();}catch(e){}return false;}
 function lockHide(){const el=document.getElementById('appLock');if(el)el.hidden=true;document.body.classList.remove('locked');}
-async function lockReset(){if(!confirm('Face ID-Sperre aufheben? Du wirst dabei abgemeldet.'))return;
-  try{localStorage.removeItem(LOCK_KEY);}catch(e){}try{if(sb)await sb.auth.signOut();}catch(e){}lockHide();lockRender();toast('Sperre aufgehoben – bitte neu anmelden','info');}
 async function lockToggle(){const L=lockGet();
-  if(L&&L.on){if(!(await lockUnlock()))return;try{localStorage.removeItem(LOCK_KEY);}catch(e){}toast('Face ID-Sperre aus','info');lockRender();return;}
+  if(L&&L.on){if(!(await lockVerify()))return;try{localStorage.removeItem(LOCK_KEY);}catch(e){}bioForget();toast('Anmelden mit Face ID aus','info');lockRender();return;}
   if(!(await lockAvailable())){toast('Face ID ist auf diesem Gerät nicht verfügbar','err');return;}
-  await lockEnable();}
+  if(await lockEnable()&&sb){try{const{data}=await sb.auth.getSession();bioKeep(data&&data.session);}catch(e){}}}
 function lockRender(){const b=document.getElementById('setLock'),v=document.getElementById('setLockSt');const L=lockGet();
   if(v)v.textContent=L&&L.on?'An':'Aus';
   if(b)lockAvailable().then(ok=>{b.hidden=!ok&&!(L&&L.on);}).catch(()=>{});}
-document.addEventListener('visibilitychange',()=>{const L=lockGet();if(!L||!L.on)return;
-  if(document.visibilityState==='hidden')_lockHiddenAt=Date.now();
-  else if(_lockHiddenAt&&Date.now()-_lockHiddenAt>5*60e3)lockShow();});
 setTimeout(lockRender,800);
 function maybeDisclaimer(){
-  try{if(lockGet()&&lockGet().on)lockShow();}catch(e){}
   try{if(localStorage.getItem('ssm_disclaimer_v'+DISC_VER)){maybeOnboard();return;}}catch(e){}
   // a new user: language, a short tour, the disclaimer, Face ID, location
   try{if(!localStorage.getItem('ssm_welcome_v1')){onbOpen();return;}}catch(e){}
@@ -16040,10 +16067,13 @@ addEventListener('focus',authCheckLinked);
     try{authShow();}catch(e){}},800);
   try{history.replaceState(null,'',location.pathname);}catch(e){}})();
 if(sb){sb.auth.onAuthStateChange((ev,session)=>{
+    if(session)bioKeep(session);
     if(ev==='PASSWORD_RECOVERY'){authUpdateUI(session?.user||null);authOnRecovery();return;}
     authUpdateUI(session?.user||null);
     if(ev==='SIGNED_IN'&&session&&session.user)authLinkConfirmed(session.user);});
-  sb.auth.getSession().then(({data})=>{authUpdateUI(data.session?.user||null);});}
+  sb.auth.getSession().then(({data})=>{authUpdateUI(data.session?.user||null);
+    // signed out without asking for it (the session ran out): Face ID signs you back in
+    if(!data.session&&bioCan())setTimeout(lockShow,900);});}
 else{const fb=document.getElementById('mapFeedFab');if(fb)fb.style.display='flex';loadReportMarkers();}
 let authPendingEmail=null;
 function authShow(){const p=authPendingGet();
@@ -16629,7 +16659,7 @@ async function profSave(){
   }catch(e){alert('Fehler: '+(e.message||e));}
   btn.disabled=false;btn.textContent='Speichern';
 }
-async function profSignOut(){await pushUnsubscribe();window._pushFor=null;if(sb)sb.auth.signOut();profClose();authUpdateUI(null);}
+async function profSignOut(){bioForget();await pushUnsubscribe();window._pushFor=null;if(sb)sb.auth.signOut();profClose();authUpdateUI(null);}
 function sendFeedback(){try{haptic(8);}catch(e){}
   const body=encodeURIComponent('\n\n---\nSnowmapper\n'+(navigator.userAgent||''));
   window.location.href='mailto:giani.morf@bluewin.ch?subject='+encodeURIComponent('Snowmapper Feedback')+'&body='+body;}
@@ -16693,7 +16723,7 @@ async function profDeleteAccount(btn){if(!sb||!sbUser)return;
   if(!confirm('Wirklich sicher? Dieser Schritt kann nicht rückgängig gemacht werden.'))return;
   if(btn)btn.disabled=true;
   const done=msg=>{toast(msg,'ok');
-    try{sb.auth.signOut();}catch(e){}
+    bioForget();try{sb.auth.signOut();}catch(e){}
     setTimeout(()=>{try{localStorage.clear();}catch(e){}location.reload();},1400);};
   try{
     let fnOk=false,fnMsg='';
