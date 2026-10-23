@@ -5678,6 +5678,32 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
    box-shadow:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.35)!important}
  .map-fade{display:none!important}
  body,button,input,select,textarea{font-family:var(--font)}
+ /* ===== Einfach ======================================================
+    One radius, one weight of line, words under the tab icons, nothing that
+    floats or glows unless it is data. */
+ #bottomPanel,.mfab-grp,#miniLegend,#inspPanel,.insp-panel,#lyPanel,.tour-sheet,.ts-sheet,.trk-sheet,.dm-sheet,.prof-sheet{border-radius:16px!important}
+ @media (max-width:899px){
+   :root{--nav-h:calc(env(safe-area-inset-bottom,0px) + 58px)!important}
+   #tabBar{left:0!important;right:0!important;bottom:0!important;height:calc(env(safe-area-inset-bottom,0px) + 58px)!important;
+     padding:0 6px env(safe-area-inset-bottom,0px)!important;border-radius:0!important;border:0!important;
+     border-top:1px solid var(--bd)!important;box-shadow:none!important}
+   html.ios-pwa #tabBar{bottom:0!important}}
+ #tabBar button,#tabBar #tbReport{color:var(--fg2)!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+ #tabBar button>span:not(.feed-dot):not(.tb-av){position:static;width:auto;height:auto;overflow:visible;clip:auto;
+   font:500 10.5px/1.1 var(--font);letter-spacing:0}
+ #tabBar button[aria-current=page],#tabBar #tbReport[aria-expanded=true]{color:var(--brand)!important}
+ #tabBar button[aria-current=page]::before{display:none!important}
+ #tabBar button svg{width:22px;height:22px}
+ #tabBar .tb-rec{color:var(--mut)}
+ #tabBar .tb-rec i{width:auto!important;height:auto!important;margin:0!important;background:none!important;box-shadow:none!important;color:#E5233F!important}
+ #tabBar .tb-rec i svg{width:22px!important;height:22px!important}
+ #tabBar .tb-rec.live i{background:none!important;color:#E5233F}
+ :root .ab-brand,:root[data-theme="dark"] .ab-brand{background:none!important;border:0!important;box-shadow:none!important}
+ :root #tabBar button[aria-current=page],:root[data-theme="dark"] #tabBar button[aria-current=page]{background:none!important;box-shadow:none!important}
+ #rvFab{width:32px;padding:0!important;justify-content:center;border:1px solid var(--bd)!important;border-radius:50%!important}
+ #rvFab span{display:none}
+ #rvFab svg,#infoFab svg{color:var(--fg2)!important}
+ #hiResChip{display:none!important}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -19041,7 +19067,7 @@ function feedRender(){
   // map, someone else's activity): it is shown anyway, it was asked for
   if(!focus&&feedScope==='post'&&feedFocusId)focus=allReports.find(r=>String(r.id)===feedFocusId)||null;
   if(focus)filtered=[focus].concat(filtered.filter(r=>r!==focus));
-  if(!filtered.length){list.innerHTML='<div class="feed-empty">'+(feedFilter==='all'?'Noch keine Beiträge hier. Sei die erste Person – tippe unten auf ＋.':'Noch keine Beiträge in dieser Kategorie.')+'</div>';return;}
+  if(!filtered.length){list.innerHTML='<div class="feed-empty">'+(feedFilter==='all'?'Noch keine Beiträge hier. Sei die erste Person – tippe unten auf «Melden».':'Noch keine Beiträge in dieser Kategorie.')+'</div>';return;}
   // Building four hundred cards to show six is most of what made opening the
   // feed feel slow. Nobody scrolls past the first page before it re-renders.
   const FEED_PAGE=40;
