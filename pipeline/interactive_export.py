@@ -8530,7 +8530,10 @@ function vaHiEngine(){
   E.clsSki6=function(m){
     var T=E.pk.thresholds,x=E.mi;
     var hs=m[x.total_hs_cm],pw=m[x.powder_depth_cm],cr=m[x.crust_thick_cm],sd=m[x.surface_density],lw=m[x.surface_lw];
-    if(!(hs>=T.THIN_COVER_HS))return 0;
+    // thin cover: only dry powder (early season), from SK_THIN_POWDER_HS on
+    if(!(hs>=T.THIN_COVER_HS)){var tp=T.SK_THIN_POWDER_HS!=null?T.SK_THIN_POWDER_HS:3;
+      if(!(hs>=tp)||!(pw>=T.SK_POWDER_MIN)||lw>T.SK_WET_LWC)return 0;
+      return pw<T.SK_P1?3:pw<T.SK_P2?4:(T.SK_P3==null||pw<T.SK_P3)?5:(T.SK_P4==null||pw<T.SK_P4)?8:9;}
     // corn: thin softened top on a supportive base that froze overnight
     if(x.soft_top_cm!=null&&x.mf_base_cm!=null&&x.refrozen!=null){
       var so=m[x.soft_top_cm],ba=m[x.mf_base_cm],rf=m[x.refrozen],SL=T.SOFT_LWC!=null?T.SOFT_LWC:0.3;
@@ -8561,7 +8564,7 @@ function vaHiEngine(){
     else if(layer==='powder'){
       // dry powder depth in the SLF snow-depth bands (classify_powder)
       var T=E.pk.thresholds,x=E.mi,hs=m[x.total_hs_cm],pw=m[x.powder_depth_cm],lw=m[x.surface_lw];
-      if(!(hs>=T.THIN_COVER_HS)||!(pw>=T.SK_POWDER_MIN)||lw>T.SK_WET_LWC){out[0]=out[1]=out[2]=out[3]=0;return;}
+      if(!(hs>=Math.min(T.THIN_COVER_HS,T.SK_THIN_POWDER_HS!=null?T.SK_THIN_POWDER_HS:3))||!(pw>=T.SK_POWDER_MIN)||lw>T.SK_WET_LWC){out[0]=out[1]=out[2]=out[3]=0;return;}
       var B=E.pk.powder_bounds||[1,5,10,20,30,50,75,100,150],i=0;while(i<B.length&&pw>=B[i])i++;
       var PT=(E.pk.rgba&&E.pk.rgba.powder&&E.pk.rgba.powder.length>9)?E.pk.rgba.powder
         :[[0,0,0,0],[232,245,233,225],[165,214,167,225],[102,187,106,225],[66,165,245,225],[30,136,229,225],[21,101,192,225],[123,31,162,225],[233,30,99,225],[183,28,28,225]];
@@ -9306,9 +9309,10 @@ function vaPointHTML(lat,lon,elev,slope,aspect){
   if(sb>12)bits.push('Horizontschatten '+Math.round(sb/2.54)+'%');
   if(fo>0)bits.push('Wald '+Math.round(fo/2.55)+'%');
   // first what lies here and how much of it, as on the map
-  const k6=(typeof VA_SIMPLE_TO_SKI6!=='undefined'&&VA_SIMPLE_TO_SKI6[sim])||0,c6=(VA_PALETTE.ski6&&VA_PALETTE.ski6[k6])||[150,160,175];
+  const T=vaEng.pk&&vaEng.pk.thresholds||{},thinP=m[x.total_hs_cm]<(T.THIN_COVER_HS||20)&&vaEng.clsSki6&&vaEng.clsSki6(m)>=3;
+  const k6=thinP?vaEng.clsSki6(m):((typeof VA_SIMPLE_TO_SKI6!=='undefined'&&VA_SIMPLE_TO_SKI6[sim])||0),c6=(VA_PALETTE.ski6&&VA_PALETTE.ski6[k6])||[150,160,175];
   const hs=Math.round(m[x.total_hs_cm]),pw=Math.round(m[x.powder_depth_cm]||0);
-  const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+c6.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(nm('simple',sim)||nm('ski18',ski))+'</b></div>'
+  const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+c6.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(thinP?'Pulver auf dünner Unterlage – Steine möglich':(nm('simple',sim)||nm('ski18',ski)))+'</b></div>'
     +'<div><span>Pulver</span><b>'+(pw>=1?pw+'<small> cm</small>':'–')+'</b></div>'
     +'<div><span>Schneehöhe</span><b>'+hs+'<small> cm</small></b></div></div>';
   return '<div class="insp-sec va-pt"><h4>Schneequalität <em>'+escapeHtml(nm('ski18',ski))+'</em></h4>'+kpi

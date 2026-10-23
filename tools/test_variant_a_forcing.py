@@ -1174,7 +1174,10 @@ def test_ski6_and_wind_classes():
     print("ski6 / wind classes")
     from variant_a import classify as C
     #            hs   powder crust dens  lw
-    cases = [((10, 30, 0, 100, 0), 0, "thin cover -> nothing"),
+    cases = [((10, 0, 0, 300, 0), 0, "thin cover, no powder -> nothing"),
+             ((10, 8, 0, 100, 0), 3, "8 cm powder on a thin cover -> Pulver 0-10 (early season)"),
+             ((10, 8, 0, 100, 2.0), 0, "thin cover, wet -> nothing"),
+             ((2, 2, 0, 100, 0), 0, "under 3 cm in all -> nothing"),
              ((100, 0, 0, 300, 0), 1, "no powder, no crust -> hart"),
              ((100, 0, 1.0, 300, 0), 2, "crust -> Kruste"),
              ((100, 0, 0, 750, 0), 2, "ice -> Kruste"),
@@ -1193,11 +1196,11 @@ def test_ski6_and_wind_classes():
     w = C.classify_wind(np.array([100, 100, 100, 100, 10]), np.array([0, 0.5, 0.8, 0, 0.9]),
                         np.array([0, 0, 0, 0.6, 0]))
     check("wind: none / light / drift / scoured / thin", w.tolist() == [0, 2, 3, 1, 0], str(w.tolist()))
-    p = C.classify_powder(np.array([100, 100, 100, 100, 100, 100, 10, 100]),
-                          np.array([1, 3, 7, 25, 60, 200, 30, 25]),
-                          np.array([0, 0, 0, 0, 0, 0, 0, 2.0]))
-    check("powder: SLF bands, blank under 2 cm / thin / wet",
-          p.tolist() == [0, 1, 2, 4, 6, 9, 0, 0], str(p.tolist()))
+    p = C.classify_powder(np.array([100, 100, 100, 100, 100, 100, 2, 100, 10]),
+                          np.array([1, 3, 7, 25, 60, 200, 2, 25, 8]),
+                          np.array([0, 0, 0, 0, 0, 0, 0, 2.0, 0]))
+    check("powder: SLF bands, blank under 2 cm / under 3 cm in all / wet; thin cover keeps powder",
+          p.tolist() == [0, 1, 2, 4, 6, 9, 0, 0, 2], str(p.tolist()))
     # corn: (soft top, frozen base, refrozen) -> Sulz only on a supportive base after a cold night
     S = lambda lw, so, ba, rf: int(C.classify_ski6(np.array([100]), np.array([0]), np.array([0]), np.array([350]),
                                                    np.array([lw]), np.array([so]), np.array([ba]), np.array([rf]))[0])
