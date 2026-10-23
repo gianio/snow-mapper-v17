@@ -7492,6 +7492,24 @@ const hSnow=M.hourly_snow,nowIdx=(function(){const t0=Date.parse((M.times||[])[0
 const SNOW_THRESH=0.005;
 const snowEvents=[];
 (function(){let s=-1;for(let t=0;t<T;t++){if(hSnow[t]>SNOW_THRESH){if(s<0)s=t;}else{if(s>=0){snowEvents.push([s,t]);s=-1;}}}if(s>=0)snowEvents.push([s,T]);})();
+// The timeline bars follow the map: mean new snow per hour over the cells
+// in view (sampled, so a whole-Switzerland view stays cheap). snowEvents
+// above stays the whole-map one -- it only picks the default window.
+let tlSnow=hSnow,tlEvents=snowEvents;
+function tlSnowView(){
+  try{if(typeof map==='undefined'||!map)return false;
+    const bb=map.getBounds(),la0=bb.getSouth(),la1=bb.getNorth(),lo0=bb.getWest(),lo1=bb.getEast();
+    const x0=Math.max(0,Math.floor((lo0-loMin)/(loMax-loMin)*(W-1))),x1=Math.min(W-1,Math.ceil((lo1-loMin)/(loMax-loMin)*(W-1)));
+    const y0=Math.max(0,Math.floor((laMax-la1)/(laMax-laMin)*(H-1))),y1=Math.min(H-1,Math.ceil((laMax-la0)/(laMax-laMin)*(H-1)));
+    let v=hSnow;
+    if(x1>=x0&&y1>=y0&&!(x0===0&&y0===0&&x1===W-1&&y1===H-1)){
+      const n=(x1-x0+1)*(y1-y0+1),st=Math.max(1,Math.ceil(Math.sqrt(n/4000))),cells=[];
+      for(let y=y0;y<=y1;y+=st)for(let x=x0;x<=x1;x+=st)cells.push(y*W+x);
+      const sc=M.snow_scale,k=cells.length;v=new Float32Array(T);
+      for(let t=0;t<T;t++){const o=t*NP;let sum=0;for(let i=0;i<k;i++)sum+=SNOW[o+cells[i]];v[t]=sum*sc/k;}}
+    if(v===tlSnow)return false;
+    const ev=[];let s0=-1;for(let t=0;t<T;t++){if(v[t]>SNOW_THRESH){if(s0<0)s0=t;}else if(s0>=0){ev.push([s0,t]);s0=-1;}}if(s0>=0)ev.push([s0,T]);
+    tlSnow=v;tlEvents=ev;return true;}catch(e){return false;}}
 function sinceLastSnowfall(){let ls=nowIdx;for(const[s,e]of snowEvents){if(s<=nowIdx)ls=s;}return[ls,Math.min(T,nowIdx+1)];}
 function tillTomorrow(){for(let t=nowIdx+1;t<T;t++){const d=new Date(M.times[t]+'Z');if(d.getUTCHours()===8)return[nowIdx,t];}return[nowIdx,Math.min(T,nowIdx+24)];}
 // The data runs in UTC; everything the timeline prints is Swiss time.
@@ -7662,11 +7680,11 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   // Rescaling each bar's fraction of the tallest bar in view (mx -- the same
   // denominator the bar HEIGHT already uses) onto the SLF colour ramp's full
   // span keeps the exact palette/order while actually using all of it.
-  let mx=0;for(const s of hSnow)if(s>mx)mx=s;const mx0=mx;mx=Math.max(.05,mx);
+  let mx=0;for(const s of tlSnow)if(s>mx)mx=s;const mx0=mx;mx=Math.max(.05,mx);
   const slfTop=SB[SB.length-1];
   const barH=Math.max(6,ch-topPad-botPad-2),bw=Math.max(2,cw/tvSpan());
   for(let t=Math.max(0,Math.floor(tv0));t<Math.min(T,Math.ceil(tv1)+1);t++){
-    const v=hSnow[t];if(v<.002)continue;const h=Math.max(3,v/mx*barH);const x=tvX(t,cw);
+    const v=tlSnow[t];if(v<.002)continue;const h=Math.max(3,v/mx*barH);const x=tvX(t,cw);
     const inSel=(t>=a&&t<b),fut=t>=nowIdx;
     const c=snowColLerp(v/mx*slfTop)||RGB[0];
     ctx2.fillStyle='rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')';
@@ -7674,12 +7692,12 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     // the user picked: shading it made a phantom window trail the handle.
     ctx2.globalAlpha=single?(fut?.8:.6):(inSel?(fut?1:.7):.28);
     rr(x+.5,baseY-h,Math.max(bw-1,1.8),h,Math.min(2.5,bw/2.2));ctx2.fill();ctx2.globalAlpha=1;}
-  // each snowfall "hill" carries its own peak rate (cm/h, mean over the map)
+  // each snowfall "hill" carries its own peak rate (cm/h, mean over the map in view)
   // just above its tallest bar, so the heights have a scale
   if(!compact){ctx2.font='700 9.5px Inter,system-ui';ctx2.fillStyle=_P.mut;ctx2.textAlign='center';let lastR=-1e9;
-    for(const ev of snowEvents){if(ev[1]<tv0||ev[0]>tv1)continue;
-      let pk=ev[0];for(let t=ev[0];t<ev[1];t++)if(hSnow[t]>hSnow[pk])pk=t;
-      const v=hSnow[pk];if(v<.05)continue;
+    for(const ev of tlEvents){if(ev[1]<tv0||ev[0]>tv1)continue;
+      let pk=ev[0];for(let t=ev[0];t<ev[1];t++)if(tlSnow[t]>tlSnow[pk])pk=t;
+      const v=tlSnow[pk];if(v<.05)continue;
       let x=tvX(pk,cw)+bw/2;const y=baseY-Math.max(3,v/mx*barH)-4,lab=(v<10?v.toFixed(1):Math.round(v))+' cm/h',w=ctx2.measureText(lab).width;
       if(x-w/2<lastR+6||x<w/2||x>cw-w/2)continue;
       // never under the dashed now line: step to its side
@@ -14977,6 +14995,9 @@ function sync3dTo2d(){if(!map3d||syncLock)return;syncLock=true;
   const c=map3d.getCenter(),z=map3d.getZoom();
   map.setView([c.lat,c.lng],z,{animate:false});syncLock=false;}
 map.on('moveend',sync2dTo3d);
+// timeline bars = precipitation in the map section you are looking at
+let _tlSnowT=null;map.on('moveend',()=>{clearTimeout(_tlSnowT);_tlSnowT=setTimeout(()=>{if(tlSnowView())try{drawTimeline();}catch(e){}},120);});
+setTimeout(()=>{if(tlSnowView())try{drawTimeline();}catch(e){}},0);
 // Declared here, above the boot call below, on purpose: maybeDisclaimer() runs
 // during module evaluation, so a const declared further down would still be in
 // its temporal dead zone and the gate would re-prompt everyone on every start.
