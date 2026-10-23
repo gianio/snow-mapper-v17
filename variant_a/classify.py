@@ -972,6 +972,10 @@ SKI6_RGBA = {0: (0, 0, 0, 0), 1: (156, 168, 184, 185), 2: (214, 108, 98, 215),
              6: (226, 170, 72, 220), 7: (150, 104, 74, 225),
              8: (24, 46, 120, 238), 9: (88, 36, 150, 240)}
 SK_POWDER_MIN = 2.0      # cm -- less loose snow than this is not "powder" to ski
+SK_THIN_POWDER_HS = 3.0  # cm -- early season: dry powder on a cover thinner than
+                         # THIN_COVER_HS is still drawn (as powder, nothing else)
+                         # once the whole pack reaches this; 0-10 cm of fresh
+                         # snow on grass is what a skier wants to know about
 SK_P1, SK_P2, SK_P3, SK_P4 = 10.0, 20.0, 30.0, 40.0
 SK_WET_LWC = WET_LWC_MIN
 
@@ -1003,7 +1007,10 @@ def classify_ski6(hs, powder, crust, sdens, slw, soft=None, base=None, refrozen=
         lab[corn] = 6
     else:
         lab[lw > SK_WET_LWC] = 7                            # nass wins
-    lab[~(hs >= THIN_COVER_HS)] = 0
+    # thin cover: only dry powder stays (early season), everything else blank
+    thin = ~(hs >= THIN_COVER_HS)
+    keep = p & ~(lw > SK_WET_LWC) & (hs >= SK_THIN_POWDER_HS)
+    lab[thin & ~keep] = 0
     return lab
 
 
@@ -1037,7 +1044,7 @@ def classify_powder(hs, powder, slw):
     """Vectorised powder class (uint8): 0 none, 1..9 the SLF depth bands."""
     hs = np.asarray(hs, float); pw = np.asarray(powder, float); lw = np.asarray(slw, float)
     lab = np.zeros(hs.shape, np.uint8)
-    ok = (hs >= THIN_COVER_HS) & (pw >= SK_POWDER_MIN) & ~(lw > SK_WET_LWC)
+    ok = (hs >= min(THIN_COVER_HS, SK_THIN_POWDER_HS)) & (pw >= SK_POWDER_MIN) & ~(lw > SK_WET_LWC)
     lab[ok] = np.clip(np.searchsorted(POWDER_BOUNDS, pw[ok], side="right"), 1, len(POWDER_BOUNDS))
     return lab
 
