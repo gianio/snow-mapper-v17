@@ -21,7 +21,10 @@ _VARS = ["temperature_2m", "relative_humidity_2m", "precipitation",
 # A fixed -6.5 K/km misses exactly the situations that matter for snow:
 # inversions (cold valleys, mild slopes), warm air aloft, a cold-air pool.
 _PL_LEVELS = (850, 700, 500)
-_PL = [f"temperature_{p}hPa" for p in _PL_LEVELS] + [f"geopotential_height_{p}hPa" for p in _PL_LEVELS]
+_PL = ([f"temperature_{p}hPa" for p in _PL_LEVELS] + [f"geopotential_height_{p}hPa" for p in _PL_LEVELS]
+       # free-air wind: what blows over the crests, for the drift (wind.py)
+       + [f"wind_speed_{p}hPa" for p in _PL_LEVELS] + [f"wind_direction_{p}hPa" for p in _PL_LEVELS])
+_PL_T = [v for v in _PL if not v.startswith("wind_")]
 LAPSE_MIN, LAPSE_MAX = -0.0098, 0.015   # K/m: dry adiabatic .. strong inversion
 
 
@@ -334,8 +337,11 @@ def fetch_weather(lat, lon, elev, start, end, models=None):
             break
         d, why = _fetch_json(url, {**base, "models": m})
         if d is None and why and "hPa" in why:
-            # a model without pressure levels: the surface values still count
-            d, why = _fetch_json(url, {**base, "models": m, "hourly": ",".join(_VARS)})
+            # a model without wind on pressure levels keeps its temperature
+            # profile; one without any levels still counts for the surface
+            d, why = _fetch_json(url, {**base, "models": m, "hourly": ",".join(_VARS + _PL_T)})
+            if d is None and why and "hPa" in why:
+                d, why = _fetch_json(url, {**base, "models": m, "hourly": ",".join(_VARS)})
         hm = (d or {}).get("hourly") or {}
         if not hm.get("time"):
             notes.append(f"{m}: {why or 'no data'}")
@@ -361,7 +367,8 @@ def fetch_weather(lat, lon, elev, start, end, models=None):
     # model publishes pressure levels), one extra request for the profile
     # alone from ICON seamless (ICON-D2/EU/global), which always has it.
     n = len(h.get("time") or [])
-    have = sum(1 for v in (h.get("temperature_850hPa") or []) if v is not None)
+    have = min(sum(1 for v in (h.get("temperature_850hPa") or []) if v is not None),
+               sum(1 for v in (h.get("wind_speed_700hPa") or []) if v is not None))
     if n and have < 0.9 * n:
         d, why = _fetch_json(url, {**base, "models": config.FORCING_FAR_MODEL, "hourly": ",".join(_PL)})
         hp = (d or {}).get("hourly") or {}
