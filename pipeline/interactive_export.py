@@ -1958,7 +1958,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .pt-home:active{transform:scale(.96)}
  .pt-acc{position:relative;overflow:hidden}
  .pt-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
- .pt-acc.has-img svg,.pt-acc.has-img .pt-ini{display:none}
+ .pt-acc.has-img svg{display:none}
+ .pt-acc .pt-img{z-index:1}
  /* the account button is the user's initials, set in the mono face inside an
     accent ring -- the same badge the design uses on every screen */
  .pt-acc{margin-left:auto;width:36px;height:36px;border-radius:var(--r-full);
@@ -5704,6 +5705,21 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #rvFab span{display:none}
  #rvFab svg,#infoFab svg{color:var(--fg2)!important}
  #hiResChip{display:none!important}
+ #tabBar .tb-rec:not(.live) i{color:var(--c-violet,#6A5BD8)!important}
+ #tabBar .tb-rec.live i{color:#E5233F!important}
+ /* recording: a small red dot pulses beside the name at the top */
+ body.trk-live #appBar .ab-name::after{content:'';display:inline-block;width:8px;height:8px;margin-left:8px;border-radius:50%;
+   background:#E5233F;vertical-align:middle;box-shadow:0 0 0 0 rgba(229,35,63,.5);animation:recDot 1.6s ease-out infinite}
+ @keyframes recDot{0%{box-shadow:0 0 0 0 rgba(229,35,63,.55)}100%{box-shadow:0 0 0 8px rgba(229,35,63,0)}}
+ #actPlusW{position:fixed;inset:0;z-index:6000;background:rgba(10,14,22,.35);display:flex;align-items:flex-end;justify-content:center;padding:12px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px)}
+ #actPlusW[hidden]{display:none}
+ #actPlusW .ap-in{width:100%;max-width:440px;background:var(--card);border-radius:16px;padding:14px 12px 8px;display:flex;flex-direction:column;gap:2px;box-shadow:0 8px 28px rgba(0,0,0,.22)}
+ #actPlusW .ap-in>b{font-size:15px;padding:2px 8px 8px;color:var(--fg)}
+ #actPlusW .ap-in button{display:flex;align-items:center;gap:12px;border:0;background:none;padding:11px 8px;border-radius:10px;text-align:left;color:var(--fg);font:600 15px/1.25 var(--font);cursor:pointer}
+ #actPlusW .ap-in button:active{background:var(--fill)}
+ #actPlusW .ap-in button svg{width:22px;height:22px;flex:none;color:var(--brand)}
+ #actPlusW .ap-in small{display:block;font-weight:400;font-size:12.5px;color:var(--mut);margin-top:2px}
+ #actPlusW .ap-in .ap-x{justify-content:center;color:var(--mut);margin-top:4px;border-top:1px solid var(--bd);border-radius:0}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -7763,6 +7779,12 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
       const ly=Math.max(9,y);ctx2.fillStyle=_P.paper;ctx2.globalAlpha=.88;rr(x-w/2-4,ly-9.5,w+8,13,6.5);ctx2.fill();ctx2.globalAlpha=1;
       ctx2.fillStyle=_P.mut;ctx2.fillText(lab,x,ly);lastR=x+w/2;}
     ctx2.textAlign='left';}
+  try{rptWindowSync();}catch(e){}
+  // the reports the map shows: a faint band under the axis, so it is clear
+  // which of them belong to what you see (the map itself is the rear edge)
+  if(!compact){const W=rptWindow();if(W){const tl=x=>tvX(Math.max(0,Math.min(T,(x-tMs(0))/36e5)),cw);
+    const rx1=tl(W.lo),rx2=tl(Math.min(W.hi,tMs(T-1)));if(rx2-rx1>2){
+      ctx2.fillStyle=tlSel;ctx2.globalAlpha=.32;rr(rx1,baseY+2,rx2-rx1,4,2);ctx2.fill();ctx2.globalAlpha=1;}}}
   if(single){
     // "Powder zu diesem Zeitpunkt": one point, not a range -- a full-height
     // accent line and a single rounded grab handle, no window-length pill
@@ -10633,9 +10655,14 @@ function trkOnPos(p){
       if(seg.length%5===0)trkSaveRec();}}
   if(trkMe)trkMe.setLatLng([pt[1],pt[2]]);
   else if(typeof map!=='undefined'){try{trkMe=L.marker([pt[1],pt[2]],{icon:L.divIcon({className:'',html:TRK_CONE+'<div class="me-dot trk-me"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1950}).addTo(map);trkHeadPaint();}catch(e){}}
-  if(trkRec&&!trkRec.paused&&trkRec.follow!==false&&trkView==='rec'){try{map.panTo([pt[1],pt[2]],{animate:true});}catch(e){}}
+  if(trkRec&&!trkRec.paused&&trkRec.follow===true){try{map.panTo([pt[1],pt[2]],{animate:true});}catch(e){}}
   trkPaint();
 }
+// While recording the map follows you only until you move it yourself; the
+// locate button on the side brings the follow back.
+function trkUnfollow(){if(typeof trkRec!=='undefined'&&trkRec&&trkRec.follow){trkRec.follow=false;trkSaveRec();}}
+try{map.on('dragstart',trkUnfollow);map.getContainer().addEventListener('touchstart',e=>{if(e.touches&&e.touches.length>1)trkUnfollow();},{passive:true});
+  map.getContainer().addEventListener('wheel',trkUnfollow,{passive:true});}catch(e){}
 function trkGpsStart(hi){
   trkGpsStop();
   const BG=typeof _capPlugin==='function'?_capPlugin('BackgroundGeolocation'):null;
@@ -10819,9 +10846,9 @@ async function trkKeep(post){
   // the save sheet closes right away; posting carries on in the background
   // (the detail shows "Wird gepostet…"), so a slow connection can't leave
   // the button there to be tapped a second time
-  trkDraft=null;trkCur=d.id;trkView='detail';trkRender();
-  if(post&&d.vis!=='private'){if(await trkPost(d)&&trkCur===d.id&&trkView==='detail')trkRender();}
-  else toast('Aktivität gespeichert','ok');
+  trkDraft=null;trkCur=d.id;
+  if(post&&d.vis!=='private'){trkView='detail';try{trkClose();navGo('map');}catch(e){}await trkPost(d);}
+  else{trkView='detail';trkRender();toast('Aktivität gespeichert','ok');}
 }
 function trkDiscard(){
   if(!confirm('Aktivität verwerfen? Die Aufzeichnung geht verloren.'))return;
@@ -11243,7 +11270,10 @@ async function trkEditSave(){const d=trkDraft;if(!d)return;trkKeepFields();
   toast('Aktivität aktualisiert','ok');try{trkActsRefresh();}catch(e){}
   trkDraft=null;trkCur=a.id;trkView='detail';trkRender();}
 function trkPref(k,v){trkPrefs[k]=v;try{localStorage.setItem('ssm_trk_prefs',JSON.stringify(trkPrefs));}catch(e){}
-  if(k==='acc'&&!trkRec)trkGpsStart(TRK_ACC[v].hiAcc);try{haptic(3);}catch(e){}trkRender();}
+  // a recording takes the new accuracy at once (it used to keep the one it
+  // was started with, so switching to «Hoch» mid-tour changed nothing)
+  if(k==='acc'&&trkRec){trkRec.acc=v;trkSaveRec();if(!trkRec.paused)trkGpsStart(TRK_ACC[v].hiAcc);}
+  else if(k==='acc')trkGpsStart(TRK_ACC[v].hiAcc);try{haptic(3);}catch(e){}trkRender();}
 function trkKeepFields(){const d=trkDraft;if(!d)return;if(document.getElementById('trkTourPick'))d.tour=rptTourSel?{id:rptTourSel.id,name:rptTourSel.name}:null;const nm=document.getElementById('trkName'),ds=document.getElementById('trkDesc');
   if(nm)d.name=nm.value;if(ds)d.desc=ds.value;}
 function trkSnow(x){const d=trkDraft;if(!d)return;trkKeepFields();d.snow=d.snow===x?null:x;trkRender();}
@@ -11279,6 +11309,32 @@ function actDraw(id){const r=(allReports||[]).find(x=>String(x.id)===String(id))
   setTimeout(()=>{trkShowOnMap(A.track,A.rough);trkLinkAct={post:String(r.id),name:A.name||''};drawOpen();
     try{drawSelectCat('snow');}catch(e){}
     toastOnce('actdraw','Mal mit dem Finger, wo Powder lag – dann «Posten»');},380);}
+// «+» on your own activity: powder on the map, photos, the text
+function actPlus(id){let el=document.getElementById('actPlusW');if(!el){el=document.createElement('div');el.id='actPlusW';document.body.appendChild(el);}
+  const ic=d=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
+  el.innerHTML='<div class="ap-in" role="menu" aria-label="Aktivität ergänzen"><b>Aktivität ergänzen</b>'
+    +'<button type="button" onclick="actPlusClose();actDraw(\''+id+'\')">'+ic('<path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/>')+'<span>Powder einzeichnen<small>Wo lag Schnee? Mit dem Finger malen</small></span></button>'
+    +'<button type="button" onclick="actPlusClose();actAddPhotos(\''+id+'\')">'+ic('<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.2"/><path d="M8 5l1.5-2h5L16 5"/>')+'<span>Fotos hinzufügen<small>Bilder von der Tour</small></span></button>'
+    +'<button type="button" onclick="actPlusClose();postEdit(\''+id+'\')">'+ic('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>')+'<span>Beschreibung bearbeiten<small>Text zum Beitrag</small></span></button>'
+    +'<button type="button" class="ap-x" onclick="actPlusClose()">Abbrechen</button></div>';
+  el.onclick=e=>{if(e.target===el)actPlusClose();};el.hidden=false;}
+function actPlusClose(){const el=document.getElementById('actPlusW');if(el)el.hidden=true;}
+function actAddPhotos(id){if(!sb||!sbUser){authShow();return;}
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;
+  inp.onchange=async()=>{const files=[...(inp.files||[])].slice(0,8);if(!files.length)return;
+    const r=(allReports||[]).find(x=>String(x.id)===String(id));if(!r)return;
+    toast('Fotos werden hochgeladen…','info');const urls=[];
+    for(const f of files){try{const up=await downscaleImage(f);const path=sbUser.id+'/act'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.jpg';
+      const{error}=await sb.storage.from('report-images').upload(path,up,{cacheControl:'31536000',contentType:up.type||'image/jpeg'});
+      if(!error){const{data}=sb.storage.from('report-images').getPublicUrl(path);if(data&&data.publicUrl)urls.push(data.publicUrl);}}catch(e){}}
+    if(!urls.length){toast('Hochladen fehlgeschlagen','err');return;}
+    const cd=Object.assign({},r.condition_data||{});cd.images=(cd.images||[]).concat(urls);
+    const upd={condition_data:cd};if(!r.img)upd.image_url=cd.images[0];
+    const{error}=await sb.from('reports').update(upd).eq('id',id).eq('user_id',sbUser.id);
+    if(error){toast('Speichern fehlgeschlagen: '+error.message,'err');return;}
+    r.condition_data=cd;if(upd.image_url)r.img=upd.image_url;
+    toast(urls.length===1?'Foto hinzugefügt':urls.length+' Fotos hinzugefügt','ok');try{feedRender();}catch(e){}};
+  inp.click();}
 // from the feed: show a posted activity's route
 function actShowFeed(id){const r=(allReports||[]).find(x=>String(x.id)===String(id));const A=r&&r.condition_data&&r.condition_data.activity;
   if(!A||!A.track){if(r)feedFlyTo(r.lat,r.lng);return;}
@@ -11289,7 +11345,7 @@ function actFeedVisual(r){const cd=r.condition_data,A=cd.activity;
   const fmt=n=>n>=1000?(n/1000).toFixed(1)+' km':n+' m';
   const ims=(cd.images||[]).filter(u=>u&&u!==A.map),id=String(r.id).replace(/[^\w-]/g,'');
   const mine=sbUser&&r.userId===sbUser.id,
-    plus=mine?'<button type="button" class="act-draw" onclick="event.stopPropagation();actDraw(\''+r.id+'\')" aria-label="Powder einzeichnen" title="Powder einzeichnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>':'';
+    plus=mine?'<button type="button" class="act-draw" onclick="event.stopPropagation();actPlus(\''+r.id+'\')" aria-label="Ergänzen" title="Ergänzen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>':'';
   const slides=[A.map?'<div class="fc-slide" onclick="event.stopPropagation();actOpen(\''+r.id+'\')"><img src="'+A.map+'" alt="" loading="lazy">'+plus+'</div>'
       :'<div class="fc-slide act-svg" onclick="event.stopPropagation();actOpen(\''+r.id+'\')">'+trkThumb(A.track,400,300,'',A.rep)+plus+'</div>']
     .concat(ims.map(u=>'<div class="fc-slide"><img src="'+u+'" alt="" loading="lazy"></div>'));
@@ -14052,7 +14108,7 @@ function updateAccountBtn(avatarUrl){
     // never showed even though the test load above it had succeeded.
     const old=b.querySelector('.pt-img');
     if(!avatarUrl){b.classList.remove('has-img');if(old)old.remove();return;}
-    if(old&&old.getAttribute('src')===avatarUrl)return;
+    if(old&&old.getAttribute('src')===avatarUrl&&old.complete&&old.naturalWidth>0)return;
     const img=new Image();img.className='pt-img';img.alt='';img.decoding='async';
     img.onload=()=>{const prev=b.querySelector('.pt-img');if(prev&&prev!==img)prev.remove();
       b.appendChild(img);b.classList.add('has-img');};
@@ -14088,6 +14144,8 @@ function geoLocate(ok,fail){
   },{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
 }
 function flyToMe(){haptic(8);
+  if(typeof trkRec!=='undefined'&&trkRec&&trkFix&&Date.now()-trkFix[0]<60000){trkRec.follow=true;trkSaveRec();
+    try{map.flyTo([trkFix[1],trkFix[2]],Math.max(map.getZoom(),15),{duration:.8});}catch(e){}return;}
   geoLocate(p=>{const ll=[p.coords.latitude,p.coords.longitude];
     try{
       if(meMarker)map.removeLayer(meMarker);
@@ -14160,7 +14218,7 @@ function navSync(){if(_navRaf)return;_navRaf=requestAnimationFrame(()=>{_navRaf=
   const tab=B.contains('rep-open')?'report':vis('profModal')?'you':feed?'feed':(B.contains('ts-open')||B.contains('tour-open'))?'tours':'map';
   B.toggle('nav-vis',!hide);B.toggle('nav-screen',tab!=='map');
   document.querySelectorAll('#tabBar [data-tab],.ab-tabs [data-tab]').forEach(b=>{if(b.dataset.tab===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
-  const r=document.querySelector('#tabBar .tb-rec');if(r)r.classList.toggle('live',typeof trkRec!=='undefined'&&!!trkRec);
+  const _live=typeof trkRec!=='undefined'&&!!trkRec;const r=document.querySelector('#tabBar .tb-rec');if(r)r.classList.toggle('live',_live);B.toggle('trk-live',_live);
   const a=document.getElementById('mapAcc'),av=document.getElementById('tbAv');
   if(a&&av){const im=a.querySelector('img');const src=im&&a.classList.contains('has-img')?im.src:'';
     if(av.dataset.src!==src){av.dataset.src=src;av.classList.toggle('img',!!src);av.style.backgroundImage=src?'url('+JSON.stringify(src)+')':'';}}
@@ -15894,6 +15952,17 @@ function _rptCluster(g,zoom){
   const ph2=ph?('<i class="rc-ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="12" cy="12" r="3"/></svg>'+ph+'</i>'):'';
   const html='<div class="rpt-cluster" style="width:'+sz+'px;height:'+sz+'px;--cc:'+col+'"><span>'+n+'</span>'+ph2+'</div>';
   _rptAdd(lat,lng,html,sz,sz,()=>map.flyTo([lat,lng],Math.min(15,zoom+2.3),{duration:.7}),500,g.map(r=>r.id));}
+// Which reports the map shows follows the time window: those made between its
+// start and its end (never later than now). A window that is mostly in the
+// future still shows the last 48 h before now, the latest word on the snow.
+function rptTimeMs(r){const t=Date.parse(r.capturedAt||r.createdAt||'');return isFinite(t)?t:Date.now()-progAgeH(r)*3.6e6;}
+function rptWindow(){try{const now=Date.now(),hi=Math.min(tMs(b),now);let lo=tMs(a);
+  if(!(hi-lo>=24*3.6e6))lo=hi-48*3.6e6;return {lo,hi:hi+30*60e3};}catch(e){return null;}}
+function rptInWindow(r,W){if(!W)return true;if(sbUser&&r.userId===sbUser.id&&Date.now()-rptTimeMs(r)<10*60e3)return true;
+  const t=rptTimeMs(r);return t>=W.lo&&t<=W.hi;}
+let _rptWinKey='';
+function rptWindowSync(){const W=rptWindow();const k=W?Math.round(W.lo/36e5)+':'+Math.round(W.hi/36e5):'';
+  if(k===_rptWinKey)return;_rptWinKey=k;clearTimeout(rptWindowSync._t);rptWindowSync._t=setTimeout(()=>{try{loadReportMarkers();}catch(e){}},250);}
 function loadReportMarkers(){
   reportMarkers.clearLayers();
   if(!allReports||!allReports.length)return;
@@ -15903,11 +15972,16 @@ function loadReportMarkers(){
   // Drawn snow-maps are model input for Reported Powder, not posts -- they
   // feed progZones() straight out of allReports but never get a marker, an
   // overlay snapshot, or a feed/profile entry of their own.
-  const rest0=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r)&&!(r.condition_data&&r.condition_data.snowp));
+  const W=rptWindow();
+  const rest0=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r)&&!(r.condition_data&&r.condition_data.snowp)&&rptInWindow(r,W));
   // an activity is its route: the track, the person's picture at the start
-  // and a flag at the finish -- no photo bubble
+  // and a flag at the finish -- no photo bubble. Only your own and your
+  // friends' (following each other), and only each person's latest one.
   const isAct=r=>{const A=r.condition_data&&r.condition_data.activity;return !!(A&&A.track&&A.track.length>1);};
-  rest0.filter(isAct).forEach(r=>_rptActivity(r,tiny));
+  const lastAct={};rest0.filter(isAct).forEach(r=>{
+    const mine=sbUser&&r.userId===sbUser.id,fr=r.userId&&myFollowing&&myFollowing.has(r.userId)&&myFollowers&&myFollowers.has(r.userId);
+    if(!mine&&!fr)return;const k=r.userId||r.id;if(!lastAct[k]||rptTimeMs(r)>rptTimeMs(lastAct[k]))lastAct[k]=r;});
+  Object.values(lastAct).forEach(r=>_rptActivity(r,tiny));
   const rest=rest0.filter(r=>!isAct(r));
   if(tiny){rest.forEach(r=>_rptMarker(r,'dot'));return;}
   const cells={};
@@ -15995,6 +16069,10 @@ async function dmUnreadCheck(){if(!sb||!sbUser){_dmN=0;accNotifSync();return;}
   accNotifSync();}
 setInterval(()=>{if(document.visibilityState==='visible')dmUnreadCheck();},120000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')dmUnreadCheck();});
+// iOS can drop a decoded picture while the app is in the background: back in
+// front, the avatar is checked and reloaded if it lost its pixels
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible'||!sbUser)return;
+  try{const c=(localStorage.getItem('ssm_avatar')||'').split('|');if(c[0]===sbUser.id&&c[1])updateAccountBtn(c.slice(1).join('|'));}catch(e){}});
 function feedNotifRender(n){_feedN=n||0;accNotifSync();
   // the count also on the installed app's icon (App Badging API)
   try{if('setAppBadge' in navigator){if(n>0)navigator.setAppBadge(n);else navigator.clearAppBadge();}}catch(e){}
@@ -16040,7 +16118,7 @@ async function loadDbReports(opts){
       if(r.flagged)return null; // hide community-flagged reports
       const ll=parseGeo(r.location);if(!ll||(ll[0]===0&&ll[1]===0))return null;const lat=ll[0],lng=ll[1];
       const catId=r.primary_categories?.[0]||'info';const catObj=RP_CATS.find(c=>c.id===catId);
-      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||ic('pin'),sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,condition_data:r.condition_data||null,createdAt:r.created_at,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,
+      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||ic('pin'),sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,condition_data:r.condition_data||null,createdAt:r.created_at,capturedAt:r.captured_at||null,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,
         condN:condAgg[r.id]?condAgg[r.id].n:0,condAvg:condAgg[r.id]?condAgg[r.id].sum/condAgg[r.id].n:0,condPow:condAgg[r.id]?condAgg[r.id].pow:0,myCond:myCond[r.id]||null,dbRow:true};
     }).filter(Boolean);
     if(opts.uid){const have=new Set(allReports.map(x=>String(x.id)));
