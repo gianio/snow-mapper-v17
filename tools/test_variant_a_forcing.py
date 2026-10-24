@@ -690,6 +690,23 @@ def test_wind_indices():
     check("apply(): lee run loaded, windward run scoured",
           res["a"][0][0, d] > 0.8 and res["a"][0][0, sc] == 0
           and res["b"][0][0, sc] > 0.8 and res["b"][0][0, d] == 0)
+    now, load, _ = wind.load_series(storm, [hours[23], hours[47]])
+    check("drift load stays the day after the storm (fading), scour does not",
+          load[1] > 0.5 and load[1] < load[0] and now[1] < 0.05, f"load {load[0]:.2f}->{load[1]:.2f} now {now[1]:.2f}")
+    # free air: a calm valley under a strong north wind aloft
+    aloft = dict(storm, wind_speed_10m=[1.0] * 48)
+    for p_, gz, sp in ((850, 1500.0, 10.0), (700, 3000.0, 25.0), (500, 5600.0, 40.0)):
+        aloft[f"geopotential_height_{p_}hPa"] = [gz] * 48
+        aloft[f"wind_speed_{p_}hPa"] = [sp] * 48
+        aloft[f"wind_direction_{p_}hPa"] = [0.0] * 48
+    fa = wind.free_air(aloft, 0, 2250.0)
+    check("free-air wind interpolated by height", fa and abs(fa[0] - 17.5) < 0.01, str(fa))
+    u_lo, _ = wind.wind_at(aloft, 1200.0); u_hi, _ = wind.wind_at(aloft, 2800.0)
+    check("crests feel the wind aloft, low slopes less", u_hi[0] > 12 and u_lo[0] < u_hi[0], f"{u_lo[0]:.1f} / {u_hi[0]:.1f}")
+    runs2 = [{"id": "c", "wp": "w", "slope": 38.0, "aspect": 180.0, "elev": 2800.0}]
+    res2 = {"c": (met.copy(), None, None, None)}
+    wind.apply(runs2, res2, [hours[23]], {"w": aloft}, METS)
+    check("a high lee slope loads under wind aloft though the valley is calm", res2["c"][0][0, d] > 0.5, f"{res2['c'][0][0, d]:.2f}")
 
 
 def test_terrain_shading():
@@ -1265,9 +1282,25 @@ def test_temperature_by_height():
         hh, label, notes = f.fetch_weather(46.8, 9.8, 2000, "2026-03-30", "2026-03-30", models=["m1"])
     finally:
         f._fetch_json = real
-    check("pressure levels refused -> same model again without them", hh is not None and label == "m1"
-          and "hPa" in calls[0] and "hPa" not in calls[1], str(calls)[:120])
-    check("... then one request for the profile alone", len(calls) == 3 and "temperature_2m" not in calls[2])
+    check("pressure levels refused -> without the wind levels, then without any", hh is not None and label == "m1"
+          and "wind_speed_700hPa" in calls[0] and "temperature_850hPa" in calls[1] and "wind_speed_700hPa" not in calls[1]
+          and "hPa" not in calls[2], str(calls)[:160])
+    check("... then one request for the profile alone", len(calls) == 4 and "temperature_2m" not in calls[3])
+    # a model that has temperatures aloft but no wind there keeps its profile
+    calls.clear()
+    def fake2(url, params):
+        calls.append(params["hourly"])
+        if "wind_speed_700hPa" in params["hourly"] and params.get("models") == "m1":
+            return None, "Cannot find variable wind_speed_700hPa"
+        hv = {v: [1.0] * 24 for v in params["hourly"].split(",")}
+        return {"hourly": {"time": T, **hv}}, None
+    f._fetch_json = fake2
+    try:
+        hh, label, notes = f.fetch_weather(46.8, 9.8, 2000, "2026-03-30", "2026-03-30", models=["m1"])
+    finally:
+        f._fetch_json = real
+    check("no wind aloft -> the model's own temperature profile stays", hh is not None
+          and hh.get("temperature_850hPa") == [1.0] * 24 and hh.get("wind_speed_700hPa") == [1.0] * 24, str(calls)[:160])
     # elevtemp: cells at the band's height around a weather point
     g = _synth_grid(60, 60, 7)
     wps = matrix.weather_points(g, spacing_km=5.0, min_top_m=1800.0)

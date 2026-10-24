@@ -1321,19 +1321,23 @@ _BOOT_SPLIT = r"""<script>
   function prog(f,label){f=Math.max(0,Math.min(1,f));if(f<shown)f=shown;shown=f;
     var b=document.querySelector('#boot .bt-bar i');if(b)b.style.width=(Math.max(2,f*100))+'%';
     var p=document.getElementById('bootPct');if(p)p.textContent=Math.round(f*100)+' %';
-    if(label){sentStop();var l=document.getElementById('bootTxt');if(l)l.textContent=label;}}
-  // While it loads: short snow lines in a new random order every start.
-  var SENT=['Die Schneedecke wird aufgebaut und analysiert','Neuschnee wird gezählt','Schneeschichten werden gestapelt',
-    'Der Wind verfrachtet den Schnee','Sonnenhänge werden aufgewärmt','Pulver wird gesucht','Triebschnee wird aufgespürt',
-    'Kristalle werden sortiert','Hänge werden nach Exposition sortiert','Die Nacht friert den Firn','Schneehöhen werden verglichen',
-    'Krusten werden abgeklopft','Die Temperatur wird nach Höhe verteilt','Die Zeitleiste wird gespurt','Stationen werden befragt'];
-  for(var si=SENT.length-1;si>0;si--){var sj=Math.floor(Math.random()*(si+1)),st=SENT[si];SENT[si]=SENT[sj];SENT[sj]=st;}
-  var sentI=0,sentT=null;
-  // each line stays at least 4 s: a slow fade out, the next one fades in
-  function sentNext(){var l=document.getElementById('bootTxt');if(!l)return;
-    if(!l.textContent){l.textContent=SENT[sentI++%SENT.length];return;}
-    l.classList.add('out');setTimeout(function(){if(!sentT)return;l.textContent=SENT[sentI++%SENT.length];l.classList.remove('out');},900);}
-  function sentStart(){if(sentT)return;sentT=setInterval(sentNext,5800);}
+    if(label){var l=document.getElementById('bootTxt');if(l)l.textContent=label;}}
+  // While it loads: what goes into the crystal, one data source at a time,
+  // with a pulse running from it into the middle -- something to learn while
+  // waiting instead of loading jokes.
+  var SRC=[['Wetter','MeteoSchweiz ICON-CH1/CH2: Temperatur, Niederschlag, Wind und Sonne – stündlich, auf etwa 1 km genau.'],
+    ['Höhenwind','Der Wind über den Graten aus dem Höhenprofil des Wettermodells – er verfrachtet den Schnee in die Leehänge.'],
+    ['Gelände','Höhe, Steilheit und Exposition jedes Hangs aus dem Höhenmodell – samt Schatten der Nachbargipfel.'],
+    ['Schneedecke','SNOWPACK, das Schneedeckenmodell des SLF, rechnet jeden Hang Schicht für Schicht – seit dem 1. September.'],
+    ['Messstationen','Über 120 IMIS-Stationen messen die Schneehöhe – das Modell wird laufend mit ihnen abgeglichen.'],
+    ['Eure Meldungen','Pulver, Harsch, Lawinen: was ihr meldet, prüft das Modell und zeigt, wo es daneben liegt.']];
+  var sentI=Math.floor(Math.random()*SRC.length),sentT=null;
+  function sentNext(){var t=document.getElementById('bootSrcT'),d=document.getElementById('bootSrcD'),box=document.getElementById('bootSrc');if(!t||!d)return;
+    var k=sentI++%SRC.length,show=function(){t.textContent=SRC[k][0];d.textContent=SRC[k][1];if(box)box.classList.remove('out');
+      var q=document.querySelectorAll('#boot [data-k]');for(var i=0;i<q.length;i++)q[i].classList.toggle('on',+q[i].getAttribute('data-k')===k);};
+    if(!t.textContent){show();return;}
+    if(box)box.classList.add('out');setTimeout(function(){if(sentT)show();},450);}
+  function sentStart(){if(sentT)return;sentNext();sentT=setInterval(sentNext,4200);}
   function sentStop(){if(sentT){clearInterval(sentT);sentT=null;}}
   function bootDone(){sentStop();var e=document.getElementById('boot');if(!e)return;
     prog(1,'Fertig');e.classList.add('done');setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e);},300);
@@ -1958,7 +1962,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .pt-home:active{transform:scale(.96)}
  .pt-acc{position:relative;overflow:hidden}
  .pt-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
- .pt-acc.has-img svg,.pt-acc.has-img .pt-ini{display:none}
+ .pt-acc.has-img svg{display:none}
+ .pt-acc .pt-img{z-index:1}
  /* the account button is the user's initials, set in the mono face inside an
     accent ring -- the same badge the design uses on every screen */
  .pt-acc{margin-left:auto;width:36px;height:36px;border-radius:var(--r-full);
@@ -2734,6 +2739,23 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #boot .bt-in{display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 24px;text-align:center}
  /* a snow crystal that grows arm by arm, holds, and melts away again;
     the whole crystal turns slowly and a soft halo breathes behind it */
+ #boot .bt-orbit{position:relative;width:240px;height:240px;margin-bottom:4px}
+ #boot .bt-orbit .bt-crys{position:absolute;left:74px;top:74px}
+ #boot .bt-lines{position:absolute;inset:0;width:240px;height:240px;overflow:visible}
+ #boot .bt-ln{fill:none;stroke:var(--bd,rgba(0,0,0,.12));stroke-width:1.5;stroke-dasharray:3 5;transition:stroke .4s}
+ #boot .bt-ln.on{stroke:#3F8AD6;animation:btFlow .9s linear infinite}
+ @keyframes btFlow{to{stroke-dashoffset:-16}}
+ #boot .bt-pk{fill:#3F8AD6;opacity:0;offset-distance:0%}
+ #boot .bt-pk.on{animation:btPk 1.4s ease-in infinite}
+ @keyframes btPk{0%{offset-distance:0%;opacity:0}15%{opacity:1}85%{opacity:1}100%{offset-distance:100%;opacity:0}}
+ #boot .bt-src{position:absolute;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--card,#fff);
+   border:1px solid var(--bd,rgba(0,0,0,.1));color:var(--mut,#6b7280);transition:transform .4s,background .4s,color .4s,box-shadow .4s}
+ #boot .bt-src svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+ #boot .bt-src.on{background:#3F8AD6;border-color:#3F8AD6;color:#fff;transform:scale(1.15);box-shadow:0 0 0 6px rgba(63,138,214,.15)}
+ #bootSrc{max-width:320px;min-height:6.2em;display:flex;flex-direction:column;align-items:center;gap:6px;transition:opacity .45s,transform .45s}
+ #bootSrc.out{opacity:0;transform:translateY(-3px)}
+ #bootSrc b{font:700 19px/1.2 "Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--fg,#1b2230)}
+ #bootSrc span{font:400 15px/1.4 "Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--fg2,#4b5158);text-wrap:balance}
  #boot .bt-crys{position:relative;width:92px;height:92px;margin-bottom:8px;display:grid;place-items:center}
  #boot .bt-halo{position:absolute;inset:6px;border-radius:50%;background:radial-gradient(circle,rgba(111,180,240,.45),rgba(111,180,240,0) 70%);animation:btHalo 3.6s ease-in-out infinite}
  #boot .bt-flake{position:relative;width:84px;height:84px;fill:none;stroke:url(#btG);stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;
@@ -2748,7 +2770,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  @keyframes btGrowB{0%,26%{stroke-dashoffset:1;opacity:0}30%{opacity:1}52%{stroke-dashoffset:0}80%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
  @keyframes btCore{0%,100%{transform:scale(.6);opacity:.5}40%,80%{transform:scale(1);opacity:1}}
  @keyframes btHalo{0%,100%{transform:scale(.7);opacity:.35}50%{transform:scale(1.15);opacity:1}}
- #bootTxt{font:500 20px/1.3 "Helvetica Neue",Helvetica,Arial,sans-serif;letter-spacing:-.01em;max-width:320px;min-height:2.6em;display:flex;align-items:center;justify-content:center;text-wrap:balance}
+ #bootTxt{font:500 13px/1.3 "Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--mut,#6b7280);max-width:320px;min-height:1.3em}
  #bootTxt{transition:opacity .9s ease,transform .9s ease;animation:btTxt .9s ease}
  #bootTxt.out{opacity:0;transform:translateY(-3px)}
  @keyframes btTxt{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -2765,6 +2787,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #boot .bt-bar{width:180px;height:4px;border-radius:99px;background:var(--hair,rgba(0,0,0,.08));overflow:hidden}
  #boot .bt-bar i{display:block;height:100%;width:2%;border-radius:99px;background:var(--accent,#2563eb);transition:width .25s linear}
  #boot.done{opacity:0;transition:opacity .3s ease}
+ @media (prefers-reduced-motion:reduce){#boot .bt-ln.on,#boot .bt-pk.on{animation:none}}
  @media (prefers-reduced-motion:reduce){#boot .bt-rot,#boot .bt-halo,#boot .bt-core{animation:none}#boot .bt-arm,#boot .bt-br{animation:none;stroke-dashoffset:0}}
  /* A load that failed needs words, not a stalled bar. */
  #bootErr{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:9999;
@@ -5704,6 +5727,21 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #rvFab span{display:none}
  #rvFab svg,#infoFab svg{color:var(--fg2)!important}
  #hiResChip{display:none!important}
+ #tabBar .tb-rec:not(.live) i{color:var(--c-violet,#6A5BD8)!important}
+ #tabBar .tb-rec.live i{color:#E5233F!important}
+ /* recording: a small red dot pulses beside the name at the top */
+ body.trk-live #appBar .ab-name::after{content:'';display:inline-block;width:8px;height:8px;margin-left:8px;border-radius:50%;
+   background:#E5233F;vertical-align:middle;box-shadow:0 0 0 0 rgba(229,35,63,.5);animation:recDot 1.6s ease-out infinite}
+ @keyframes recDot{0%{box-shadow:0 0 0 0 rgba(229,35,63,.55)}100%{box-shadow:0 0 0 8px rgba(229,35,63,0)}}
+ #actPlusW{position:fixed;inset:0;z-index:6000;background:rgba(10,14,22,.35);display:flex;align-items:flex-end;justify-content:center;padding:12px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px)}
+ #actPlusW[hidden]{display:none}
+ #actPlusW .ap-in{width:100%;max-width:440px;background:var(--card);border-radius:16px;padding:14px 12px 8px;display:flex;flex-direction:column;gap:2px;box-shadow:0 8px 28px rgba(0,0,0,.22)}
+ #actPlusW .ap-in>b{font-size:15px;padding:2px 8px 8px;color:var(--fg)}
+ #actPlusW .ap-in button{display:flex;align-items:center;gap:12px;border:0;background:none;padding:11px 8px;border-radius:10px;text-align:left;color:var(--fg);font:600 15px/1.25 var(--font);cursor:pointer}
+ #actPlusW .ap-in button:active{background:var(--fill)}
+ #actPlusW .ap-in button svg{width:22px;height:22px;flex:none;color:var(--brand)}
+ #actPlusW .ap-in small{display:block;font-weight:400;font-size:12.5px;color:var(--mut);margin-top:2px}
+ #actPlusW .ap-in .ap-x{justify-content:center;color:var(--mut);margin-top:4px;border-top:1px solid var(--bd);border-radius:0}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -5719,7 +5757,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 </head><body>
 <!-- No splash. The app is the first thing on screen; while the forecast data
      streams in, a hairline at the top edge carries the real progress. -->
-<div id="boot" role="status" aria-live="polite"><div class="bt-in"><div class="bt-crys" aria-hidden="true"><i class="bt-halo"></i><svg class="bt-flake" viewBox="0 0 64 64"><defs><linearGradient id="btG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#8FD0FF"/><stop offset=".55" stop-color="#3F8AD6"/><stop offset="1" stop-color="#2D5A8C"/></linearGradient></defs><g class="bt-rot"><g transform="rotate(0 32 32)" style="--i:0"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(60 32 32)" style="--i:1"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(120 32 32)" style="--i:2"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(180 32 32)" style="--i:3"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(240 32 32)" style="--i:4"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(300 32 32)" style="--i:5"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><circle class="bt-core" cx="32" cy="32" r="3.4"/></g></svg></div><div id="bootTxt">Die Schneedecke wird aufgebaut und analysiert</div><div id="bootPct">0 %</div><div class="bt-bar"><i></i></div></div></div>
+<div id="boot" role="status" aria-live="polite"><div class="bt-in"><div class="bt-orbit" aria-hidden="true"><svg class="bt-lines" viewBox="0 0 240 240"><path class="bt-ln" data-k="0" d="M120.0 46.0L120.0 68.0"/><circle class="bt-pk" data-k="0" r="3" style="offset-path:path('M120.0 46.0L120.0 68.0')"/><path class="bt-ln" data-k="1" d="M184.1 83.0L165.0 94.0"/><circle class="bt-pk" data-k="1" r="3" style="offset-path:path('M184.1 83.0L165.0 94.0')"/><path class="bt-ln" data-k="2" d="M184.1 157.0L165.0 146.0"/><circle class="bt-pk" data-k="2" r="3" style="offset-path:path('M184.1 157.0L165.0 146.0')"/><path class="bt-ln" data-k="3" d="M120.0 194.0L120.0 172.0"/><circle class="bt-pk" data-k="3" r="3" style="offset-path:path('M120.0 194.0L120.0 172.0')"/><path class="bt-ln" data-k="4" d="M55.9 157.0L75.0 146.0"/><circle class="bt-pk" data-k="4" r="3" style="offset-path:path('M55.9 157.0L75.0 146.0')"/><path class="bt-ln" data-k="5" d="M55.9 83.0L75.0 94.0"/><circle class="bt-pk" data-k="5" r="3" style="offset-path:path('M55.9 83.0L75.0 94.0')"/></svg><i class="bt-src" data-k="0" style="left:100px;top:2px"><svg viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 1 1 1.2-8.8A6 6 0 0 1 19.5 11 3.5 3.5 0 0 1 18 18z"/></svg></i><i class="bt-src" data-k="1" style="left:185px;top:51px"><svg viewBox="0 0 24 24"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/></svg></i><i class="bt-src" data-k="2" style="left:185px;top:149px"><svg viewBox="0 0 24 24"><path d="M2 20l6.5-11 4 6 3-4.5L22 20z"/></svg></i><i class="bt-src" data-k="3" style="left:100px;top:198px"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="3.5" rx="1"/><rect x="4" y="10.25" width="16" height="3.5" rx="1"/><rect x="4" y="15.5" width="16" height="3.5" rx="1"/></svg></i><i class="bt-src" data-k="4" style="left:15px;top:149px"><svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="M8 21h8"/><circle cx="12" cy="6" r="2.5"/><path d="M7.5 3.5a6.5 6.5 0 0 0 0 5M16.5 3.5a6.5 6.5 0 0 1 0 5"/></svg></i><i class="bt-src" data-k="5" style="left:15px;top:51px"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-3-5.5"/></svg></i><div class="bt-crys"><i class="bt-halo"></i><svg class="bt-flake" viewBox="0 0 64 64"><defs><linearGradient id="btG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#8FD0FF"/><stop offset=".55" stop-color="#3F8AD6"/><stop offset="1" stop-color="#2D5A8C"/></linearGradient></defs><g class="bt-rot"><g transform="rotate(0 32 32)" style="--i:0"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(60 32 32)" style="--i:1"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(120 32 32)" style="--i:2"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(180 32 32)" style="--i:3"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(240 32 32)" style="--i:4"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(300 32 32)" style="--i:5"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><circle class="bt-core" cx="32" cy="32" r="3.4"/></g></svg></div></div><div id="bootSrc"><b id="bootSrcT"></b><span id="bootSrcD"></span></div><div id="bootPct">0 %</div><div class="bt-bar"><i></i></div><div id="bootTxt"></div></div></div>
 <div id="toastWrap" aria-live="polite"></div>
 <div id="onb" hidden role="dialog" aria-modal="true" aria-label="Willkommen"><div class="onb-bg" aria-hidden="true"><i></i><i></i><i></i></div><div class="onb-card" id="onbCard"></div></div>
 <div id="appLock" hidden role="dialog" aria-modal="true" aria-label="Gesperrt"><div class="onb-bg" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -7763,6 +7801,12 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
       const ly=Math.max(9,y);ctx2.fillStyle=_P.paper;ctx2.globalAlpha=.88;rr(x-w/2-4,ly-9.5,w+8,13,6.5);ctx2.fill();ctx2.globalAlpha=1;
       ctx2.fillStyle=_P.mut;ctx2.fillText(lab,x,ly);lastR=x+w/2;}
     ctx2.textAlign='left';}
+  try{rptWindowSync();}catch(e){}
+  // the reports the map shows: a faint band under the axis, so it is clear
+  // which of them belong to what you see (the map itself is the rear edge)
+  if(!compact){const W=rptWindow();if(W){const tl=x=>tvX(Math.max(0,Math.min(T,(x-tMs(0))/36e5)),cw);
+    const rx1=tl(W.lo),rx2=tl(Math.min(W.hi,tMs(T-1)));if(rx2-rx1>2){
+      ctx2.fillStyle=tlSel;ctx2.globalAlpha=.32;rr(rx1,baseY+2,rx2-rx1,4,2);ctx2.fill();ctx2.globalAlpha=1;}}}
   if(single){
     // "Powder zu diesem Zeitpunkt": one point, not a range -- a full-height
     // accent line and a single rounded grab handle, no window-length pill
@@ -10633,9 +10677,14 @@ function trkOnPos(p){
       if(seg.length%5===0)trkSaveRec();}}
   if(trkMe)trkMe.setLatLng([pt[1],pt[2]]);
   else if(typeof map!=='undefined'){try{trkMe=L.marker([pt[1],pt[2]],{icon:L.divIcon({className:'',html:TRK_CONE+'<div class="me-dot trk-me"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1950}).addTo(map);trkHeadPaint();}catch(e){}}
-  if(trkRec&&!trkRec.paused&&trkRec.follow!==false&&trkView==='rec'){try{map.panTo([pt[1],pt[2]],{animate:true});}catch(e){}}
+  if(trkRec&&!trkRec.paused&&trkRec.follow===true){try{map.panTo([pt[1],pt[2]],{animate:true});}catch(e){}}
   trkPaint();
 }
+// While recording the map follows you only until you move it yourself; the
+// locate button on the side brings the follow back.
+function trkUnfollow(){if(typeof trkRec!=='undefined'&&trkRec&&trkRec.follow){trkRec.follow=false;trkSaveRec();}}
+try{map.on('dragstart',trkUnfollow);map.getContainer().addEventListener('touchstart',e=>{if(e.touches&&e.touches.length>1)trkUnfollow();},{passive:true});
+  map.getContainer().addEventListener('wheel',trkUnfollow,{passive:true});}catch(e){}
 function trkGpsStart(hi){
   trkGpsStop();
   const BG=typeof _capPlugin==='function'?_capPlugin('BackgroundGeolocation'):null;
@@ -10819,9 +10868,9 @@ async function trkKeep(post){
   // the save sheet closes right away; posting carries on in the background
   // (the detail shows "Wird gepostet…"), so a slow connection can't leave
   // the button there to be tapped a second time
-  trkDraft=null;trkCur=d.id;trkView='detail';trkRender();
-  if(post&&d.vis!=='private'){if(await trkPost(d)&&trkCur===d.id&&trkView==='detail')trkRender();}
-  else toast('Aktivität gespeichert','ok');
+  trkDraft=null;trkCur=d.id;
+  if(post&&d.vis!=='private'){trkView='detail';try{trkClose();navGo('map');}catch(e){}await trkPost(d);}
+  else{trkView='detail';trkRender();toast('Aktivität gespeichert','ok');}
 }
 function trkDiscard(){
   if(!confirm('Aktivität verwerfen? Die Aufzeichnung geht verloren.'))return;
@@ -11243,7 +11292,10 @@ async function trkEditSave(){const d=trkDraft;if(!d)return;trkKeepFields();
   toast('Aktivität aktualisiert','ok');try{trkActsRefresh();}catch(e){}
   trkDraft=null;trkCur=a.id;trkView='detail';trkRender();}
 function trkPref(k,v){trkPrefs[k]=v;try{localStorage.setItem('ssm_trk_prefs',JSON.stringify(trkPrefs));}catch(e){}
-  if(k==='acc'&&!trkRec)trkGpsStart(TRK_ACC[v].hiAcc);try{haptic(3);}catch(e){}trkRender();}
+  // a recording takes the new accuracy at once (it used to keep the one it
+  // was started with, so switching to «Hoch» mid-tour changed nothing)
+  if(k==='acc'&&trkRec){trkRec.acc=v;trkSaveRec();if(!trkRec.paused)trkGpsStart(TRK_ACC[v].hiAcc);}
+  else if(k==='acc')trkGpsStart(TRK_ACC[v].hiAcc);try{haptic(3);}catch(e){}trkRender();}
 function trkKeepFields(){const d=trkDraft;if(!d)return;if(document.getElementById('trkTourPick'))d.tour=rptTourSel?{id:rptTourSel.id,name:rptTourSel.name}:null;const nm=document.getElementById('trkName'),ds=document.getElementById('trkDesc');
   if(nm)d.name=nm.value;if(ds)d.desc=ds.value;}
 function trkSnow(x){const d=trkDraft;if(!d)return;trkKeepFields();d.snow=d.snow===x?null:x;trkRender();}
@@ -11279,6 +11331,32 @@ function actDraw(id){const r=(allReports||[]).find(x=>String(x.id)===String(id))
   setTimeout(()=>{trkShowOnMap(A.track,A.rough);trkLinkAct={post:String(r.id),name:A.name||''};drawOpen();
     try{drawSelectCat('snow');}catch(e){}
     toastOnce('actdraw','Mal mit dem Finger, wo Powder lag – dann «Posten»');},380);}
+// «+» on your own activity: powder on the map, photos, the text
+function actPlus(id){let el=document.getElementById('actPlusW');if(!el){el=document.createElement('div');el.id='actPlusW';document.body.appendChild(el);}
+  const ic=d=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
+  el.innerHTML='<div class="ap-in" role="menu" aria-label="Aktivität ergänzen"><b>Aktivität ergänzen</b>'
+    +'<button type="button" onclick="actPlusClose();actDraw(\''+id+'\')">'+ic('<path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/>')+'<span>Powder einzeichnen<small>Wo lag Schnee? Mit dem Finger malen</small></span></button>'
+    +'<button type="button" onclick="actPlusClose();actAddPhotos(\''+id+'\')">'+ic('<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.2"/><path d="M8 5l1.5-2h5L16 5"/>')+'<span>Fotos hinzufügen<small>Bilder von der Tour</small></span></button>'
+    +'<button type="button" onclick="actPlusClose();postEdit(\''+id+'\')">'+ic('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>')+'<span>Beschreibung bearbeiten<small>Text zum Beitrag</small></span></button>'
+    +'<button type="button" class="ap-x" onclick="actPlusClose()">Abbrechen</button></div>';
+  el.onclick=e=>{if(e.target===el)actPlusClose();};el.hidden=false;}
+function actPlusClose(){const el=document.getElementById('actPlusW');if(el)el.hidden=true;}
+function actAddPhotos(id){if(!sb||!sbUser){authShow();return;}
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;
+  inp.onchange=async()=>{const files=[...(inp.files||[])].slice(0,8);if(!files.length)return;
+    const r=(allReports||[]).find(x=>String(x.id)===String(id));if(!r)return;
+    toast('Fotos werden hochgeladen…','info');const urls=[];
+    for(const f of files){try{const up=await downscaleImage(f);const path=sbUser.id+'/act'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.jpg';
+      const{error}=await sb.storage.from('report-images').upload(path,up,{cacheControl:'31536000',contentType:up.type||'image/jpeg'});
+      if(!error){const{data}=sb.storage.from('report-images').getPublicUrl(path);if(data&&data.publicUrl)urls.push(data.publicUrl);}}catch(e){}}
+    if(!urls.length){toast('Hochladen fehlgeschlagen','err');return;}
+    const cd=Object.assign({},r.condition_data||{});cd.images=(cd.images||[]).concat(urls);
+    const upd={condition_data:cd};if(!r.img)upd.image_url=cd.images[0];
+    const{error}=await sb.from('reports').update(upd).eq('id',id).eq('user_id',sbUser.id);
+    if(error){toast('Speichern fehlgeschlagen: '+error.message,'err');return;}
+    r.condition_data=cd;if(upd.image_url)r.img=upd.image_url;
+    toast(urls.length===1?'Foto hinzugefügt':urls.length+' Fotos hinzugefügt','ok');try{feedRender();}catch(e){}};
+  inp.click();}
 // from the feed: show a posted activity's route
 function actShowFeed(id){const r=(allReports||[]).find(x=>String(x.id)===String(id));const A=r&&r.condition_data&&r.condition_data.activity;
   if(!A||!A.track){if(r)feedFlyTo(r.lat,r.lng);return;}
@@ -11289,7 +11367,7 @@ function actFeedVisual(r){const cd=r.condition_data,A=cd.activity;
   const fmt=n=>n>=1000?(n/1000).toFixed(1)+' km':n+' m';
   const ims=(cd.images||[]).filter(u=>u&&u!==A.map),id=String(r.id).replace(/[^\w-]/g,'');
   const mine=sbUser&&r.userId===sbUser.id,
-    plus=mine?'<button type="button" class="act-draw" onclick="event.stopPropagation();actDraw(\''+r.id+'\')" aria-label="Powder einzeichnen" title="Powder einzeichnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>':'';
+    plus=mine?'<button type="button" class="act-draw" onclick="event.stopPropagation();actPlus(\''+r.id+'\')" aria-label="Ergänzen" title="Ergänzen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>':'';
   const slides=[A.map?'<div class="fc-slide" onclick="event.stopPropagation();actOpen(\''+r.id+'\')"><img src="'+A.map+'" alt="" loading="lazy">'+plus+'</div>'
       :'<div class="fc-slide act-svg" onclick="event.stopPropagation();actOpen(\''+r.id+'\')">'+trkThumb(A.track,400,300,'',A.rep)+plus+'</div>']
     .concat(ims.map(u=>'<div class="fc-slide"><img src="'+u+'" alt="" loading="lazy"></div>'));
@@ -14052,7 +14130,7 @@ function updateAccountBtn(avatarUrl){
     // never showed even though the test load above it had succeeded.
     const old=b.querySelector('.pt-img');
     if(!avatarUrl){b.classList.remove('has-img');if(old)old.remove();return;}
-    if(old&&old.getAttribute('src')===avatarUrl)return;
+    if(old&&old.getAttribute('src')===avatarUrl&&old.complete&&old.naturalWidth>0)return;
     const img=new Image();img.className='pt-img';img.alt='';img.decoding='async';
     img.onload=()=>{const prev=b.querySelector('.pt-img');if(prev&&prev!==img)prev.remove();
       b.appendChild(img);b.classList.add('has-img');};
@@ -14088,6 +14166,8 @@ function geoLocate(ok,fail){
   },{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
 }
 function flyToMe(){haptic(8);
+  if(typeof trkRec!=='undefined'&&trkRec&&trkFix&&Date.now()-trkFix[0]<60000){trkRec.follow=true;trkSaveRec();
+    try{map.flyTo([trkFix[1],trkFix[2]],Math.max(map.getZoom(),15),{duration:.8});}catch(e){}return;}
   geoLocate(p=>{const ll=[p.coords.latitude,p.coords.longitude];
     try{
       if(meMarker)map.removeLayer(meMarker);
@@ -14160,7 +14240,7 @@ function navSync(){if(_navRaf)return;_navRaf=requestAnimationFrame(()=>{_navRaf=
   const tab=B.contains('rep-open')?'report':vis('profModal')?'you':feed?'feed':(B.contains('ts-open')||B.contains('tour-open'))?'tours':'map';
   B.toggle('nav-vis',!hide);B.toggle('nav-screen',tab!=='map');
   document.querySelectorAll('#tabBar [data-tab],.ab-tabs [data-tab]').forEach(b=>{if(b.dataset.tab===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
-  const r=document.querySelector('#tabBar .tb-rec');if(r)r.classList.toggle('live',typeof trkRec!=='undefined'&&!!trkRec);
+  const _live=typeof trkRec!=='undefined'&&!!trkRec;const r=document.querySelector('#tabBar .tb-rec');if(r)r.classList.toggle('live',_live);B.toggle('trk-live',_live);
   const a=document.getElementById('mapAcc'),av=document.getElementById('tbAv');
   if(a&&av){const im=a.querySelector('img');const src=im&&a.classList.contains('has-img')?im.src:'';
     if(av.dataset.src!==src){av.dataset.src=src;av.classList.toggle('img',!!src);av.style.backgroundImage=src?'url('+JSON.stringify(src)+')':'';}}
@@ -15894,6 +15974,17 @@ function _rptCluster(g,zoom){
   const ph2=ph?('<i class="rc-ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="12" cy="12" r="3"/></svg>'+ph+'</i>'):'';
   const html='<div class="rpt-cluster" style="width:'+sz+'px;height:'+sz+'px;--cc:'+col+'"><span>'+n+'</span>'+ph2+'</div>';
   _rptAdd(lat,lng,html,sz,sz,()=>map.flyTo([lat,lng],Math.min(15,zoom+2.3),{duration:.7}),500,g.map(r=>r.id));}
+// Which reports the map shows follows the time window: those made between its
+// start and its end (never later than now). A window that is mostly in the
+// future still shows the last 48 h before now, the latest word on the snow.
+function rptTimeMs(r){const t=Date.parse(r.capturedAt||r.createdAt||'');return isFinite(t)?t:Date.now()-progAgeH(r)*3.6e6;}
+function rptWindow(){try{const now=Date.now(),hi=Math.min(tMs(b),now);let lo=tMs(a);
+  if(!(hi-lo>=24*3.6e6))lo=hi-48*3.6e6;return {lo,hi:hi+30*60e3};}catch(e){return null;}}
+function rptInWindow(r,W){if(!W)return true;if(sbUser&&r.userId===sbUser.id&&Date.now()-rptTimeMs(r)<10*60e3)return true;
+  const t=rptTimeMs(r);return t>=W.lo&&t<=W.hi;}
+let _rptWinKey='';
+function rptWindowSync(){const W=rptWindow();const k=W?Math.round(W.lo/36e5)+':'+Math.round(W.hi/36e5):'';
+  if(k===_rptWinKey)return;_rptWinKey=k;clearTimeout(rptWindowSync._t);rptWindowSync._t=setTimeout(()=>{try{loadReportMarkers();}catch(e){}},250);}
 function loadReportMarkers(){
   reportMarkers.clearLayers();
   if(!allReports||!allReports.length)return;
@@ -15903,11 +15994,16 @@ function loadReportMarkers(){
   // Drawn snow-maps are model input for Reported Powder, not posts -- they
   // feed progZones() straight out of allReports but never get a marker, an
   // overlay snapshot, or a feed/profile entry of their own.
-  const rest0=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r)&&!(r.condition_data&&r.condition_data.snowp));
+  const W=rptWindow();
+  const rest0=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r)&&!(r.condition_data&&r.condition_data.snowp)&&rptInWindow(r,W));
   // an activity is its route: the track, the person's picture at the start
-  // and a flag at the finish -- no photo bubble
+  // and a flag at the finish -- no photo bubble. Only your own and your
+  // friends' (following each other), and only each person's latest one.
   const isAct=r=>{const A=r.condition_data&&r.condition_data.activity;return !!(A&&A.track&&A.track.length>1);};
-  rest0.filter(isAct).forEach(r=>_rptActivity(r,tiny));
+  const lastAct={};rest0.filter(isAct).forEach(r=>{
+    const mine=sbUser&&r.userId===sbUser.id,fr=r.userId&&myFollowing&&myFollowing.has(r.userId)&&myFollowers&&myFollowers.has(r.userId);
+    if(!mine&&!fr)return;const k=r.userId||r.id;if(!lastAct[k]||rptTimeMs(r)>rptTimeMs(lastAct[k]))lastAct[k]=r;});
+  Object.values(lastAct).forEach(r=>_rptActivity(r,tiny));
   const rest=rest0.filter(r=>!isAct(r));
   if(tiny){rest.forEach(r=>_rptMarker(r,'dot'));return;}
   const cells={};
@@ -15995,6 +16091,10 @@ async function dmUnreadCheck(){if(!sb||!sbUser){_dmN=0;accNotifSync();return;}
   accNotifSync();}
 setInterval(()=>{if(document.visibilityState==='visible')dmUnreadCheck();},120000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')dmUnreadCheck();});
+// iOS can drop a decoded picture while the app is in the background: back in
+// front, the avatar is checked and reloaded if it lost its pixels
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible'||!sbUser)return;
+  try{const c=(localStorage.getItem('ssm_avatar')||'').split('|');if(c[0]===sbUser.id&&c[1])updateAccountBtn(c.slice(1).join('|'));}catch(e){}});
 function feedNotifRender(n){_feedN=n||0;accNotifSync();
   // the count also on the installed app's icon (App Badging API)
   try{if('setAppBadge' in navigator){if(n>0)navigator.setAppBadge(n);else navigator.clearAppBadge();}}catch(e){}
@@ -16040,7 +16140,7 @@ async function loadDbReports(opts){
       if(r.flagged)return null; // hide community-flagged reports
       const ll=parseGeo(r.location);if(!ll||(ll[0]===0&&ll[1]===0))return null;const lat=ll[0],lng=ll[1];
       const catId=r.primary_categories?.[0]||'info';const catObj=RP_CATS.find(c=>c.id===catId);
-      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||ic('pin'),sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,condition_data:r.condition_data||null,createdAt:r.created_at,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,
+      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||ic('pin'),sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,condition_data:r.condition_data||null,createdAt:r.created_at,capturedAt:r.captured_at||null,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,
         condN:condAgg[r.id]?condAgg[r.id].n:0,condAvg:condAgg[r.id]?condAgg[r.id].sum/condAgg[r.id].n:0,condPow:condAgg[r.id]?condAgg[r.id].pow:0,myCond:myCond[r.id]||null,dbRow:true};
     }).filter(Boolean);
     if(opts.uid){const have=new Set(allReports.map(x=>String(x.id)));
