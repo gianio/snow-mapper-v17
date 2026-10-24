@@ -1321,19 +1321,23 @@ _BOOT_SPLIT = r"""<script>
   function prog(f,label){f=Math.max(0,Math.min(1,f));if(f<shown)f=shown;shown=f;
     var b=document.querySelector('#boot .bt-bar i');if(b)b.style.width=(Math.max(2,f*100))+'%';
     var p=document.getElementById('bootPct');if(p)p.textContent=Math.round(f*100)+' %';
-    if(label){sentStop();var l=document.getElementById('bootTxt');if(l)l.textContent=label;}}
-  // While it loads: short snow lines in a new random order every start.
-  var SENT=['Die Schneedecke wird aufgebaut und analysiert','Neuschnee wird gezählt','Schneeschichten werden gestapelt',
-    'Der Wind verfrachtet den Schnee','Sonnenhänge werden aufgewärmt','Pulver wird gesucht','Triebschnee wird aufgespürt',
-    'Kristalle werden sortiert','Hänge werden nach Exposition sortiert','Die Nacht friert den Firn','Schneehöhen werden verglichen',
-    'Krusten werden abgeklopft','Die Temperatur wird nach Höhe verteilt','Die Zeitleiste wird gespurt','Stationen werden befragt'];
-  for(var si=SENT.length-1;si>0;si--){var sj=Math.floor(Math.random()*(si+1)),st=SENT[si];SENT[si]=SENT[sj];SENT[sj]=st;}
-  var sentI=0,sentT=null;
-  // each line stays at least 4 s: a slow fade out, the next one fades in
-  function sentNext(){var l=document.getElementById('bootTxt');if(!l)return;
-    if(!l.textContent){l.textContent=SENT[sentI++%SENT.length];return;}
-    l.classList.add('out');setTimeout(function(){if(!sentT)return;l.textContent=SENT[sentI++%SENT.length];l.classList.remove('out');},900);}
-  function sentStart(){if(sentT)return;sentT=setInterval(sentNext,5800);}
+    if(label){var l=document.getElementById('bootTxt');if(l)l.textContent=label;}}
+  // While it loads: what goes into the crystal, one data source at a time,
+  // with a pulse running from it into the middle -- something to learn while
+  // waiting instead of loading jokes.
+  var SRC=[['Wetter','MeteoSchweiz ICON-CH1/CH2: Temperatur, Niederschlag, Wind und Sonne – stündlich, auf etwa 1 km genau.'],
+    ['Höhenwind','Der Wind über den Graten aus dem Höhenprofil des Wettermodells – er verfrachtet den Schnee in die Leehänge.'],
+    ['Gelände','Höhe, Steilheit und Exposition jedes Hangs aus dem Höhenmodell – samt Schatten der Nachbargipfel.'],
+    ['Schneedecke','SNOWPACK, das Schneedeckenmodell des SLF, rechnet jeden Hang Schicht für Schicht – seit dem 1. September.'],
+    ['Messstationen','Über 120 IMIS-Stationen messen die Schneehöhe – das Modell wird laufend mit ihnen abgeglichen.'],
+    ['Eure Meldungen','Pulver, Harsch, Lawinen: was ihr meldet, prüft das Modell und zeigt, wo es daneben liegt.']];
+  var sentI=Math.floor(Math.random()*SRC.length),sentT=null;
+  function sentNext(){var t=document.getElementById('bootSrcT'),d=document.getElementById('bootSrcD'),box=document.getElementById('bootSrc');if(!t||!d)return;
+    var k=sentI++%SRC.length,show=function(){t.textContent=SRC[k][0];d.textContent=SRC[k][1];if(box)box.classList.remove('out');
+      var q=document.querySelectorAll('#boot [data-k]');for(var i=0;i<q.length;i++)q[i].classList.toggle('on',+q[i].getAttribute('data-k')===k);};
+    if(!t.textContent){show();return;}
+    if(box)box.classList.add('out');setTimeout(function(){if(sentT)show();},450);}
+  function sentStart(){if(sentT)return;sentNext();sentT=setInterval(sentNext,4200);}
   function sentStop(){if(sentT){clearInterval(sentT);sentT=null;}}
   function bootDone(){sentStop();var e=document.getElementById('boot');if(!e)return;
     prog(1,'Fertig');e.classList.add('done');setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e);},300);
@@ -2735,6 +2739,23 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #boot .bt-in{display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 24px;text-align:center}
  /* a snow crystal that grows arm by arm, holds, and melts away again;
     the whole crystal turns slowly and a soft halo breathes behind it */
+ #boot .bt-orbit{position:relative;width:240px;height:240px;margin-bottom:4px}
+ #boot .bt-orbit .bt-crys{position:absolute;left:74px;top:74px}
+ #boot .bt-lines{position:absolute;inset:0;width:240px;height:240px;overflow:visible}
+ #boot .bt-ln{fill:none;stroke:var(--bd,rgba(0,0,0,.12));stroke-width:1.5;stroke-dasharray:3 5;transition:stroke .4s}
+ #boot .bt-ln.on{stroke:#3F8AD6;animation:btFlow .9s linear infinite}
+ @keyframes btFlow{to{stroke-dashoffset:-16}}
+ #boot .bt-pk{fill:#3F8AD6;opacity:0;offset-distance:0%}
+ #boot .bt-pk.on{animation:btPk 1.4s ease-in infinite}
+ @keyframes btPk{0%{offset-distance:0%;opacity:0}15%{opacity:1}85%{opacity:1}100%{offset-distance:100%;opacity:0}}
+ #boot .bt-src{position:absolute;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--card,#fff);
+   border:1px solid var(--bd,rgba(0,0,0,.1));color:var(--mut,#6b7280);transition:transform .4s,background .4s,color .4s,box-shadow .4s}
+ #boot .bt-src svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+ #boot .bt-src.on{background:#3F8AD6;border-color:#3F8AD6;color:#fff;transform:scale(1.15);box-shadow:0 0 0 6px rgba(63,138,214,.15)}
+ #bootSrc{max-width:320px;min-height:6.2em;display:flex;flex-direction:column;align-items:center;gap:6px;transition:opacity .45s,transform .45s}
+ #bootSrc.out{opacity:0;transform:translateY(-3px)}
+ #bootSrc b{font:700 19px/1.2 "Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--fg,#1b2230)}
+ #bootSrc span{font:400 15px/1.4 "Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--fg2,#4b5158);text-wrap:balance}
  #boot .bt-crys{position:relative;width:92px;height:92px;margin-bottom:8px;display:grid;place-items:center}
  #boot .bt-halo{position:absolute;inset:6px;border-radius:50%;background:radial-gradient(circle,rgba(111,180,240,.45),rgba(111,180,240,0) 70%);animation:btHalo 3.6s ease-in-out infinite}
  #boot .bt-flake{position:relative;width:84px;height:84px;fill:none;stroke:url(#btG);stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;
@@ -2749,7 +2770,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  @keyframes btGrowB{0%,26%{stroke-dashoffset:1;opacity:0}30%{opacity:1}52%{stroke-dashoffset:0}80%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
  @keyframes btCore{0%,100%{transform:scale(.6);opacity:.5}40%,80%{transform:scale(1);opacity:1}}
  @keyframes btHalo{0%,100%{transform:scale(.7);opacity:.35}50%{transform:scale(1.15);opacity:1}}
- #bootTxt{font:500 20px/1.3 "Helvetica Neue",Helvetica,Arial,sans-serif;letter-spacing:-.01em;max-width:320px;min-height:2.6em;display:flex;align-items:center;justify-content:center;text-wrap:balance}
+ #bootTxt{font:500 13px/1.3 "Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--mut,#6b7280);max-width:320px;min-height:1.3em}
  #bootTxt{transition:opacity .9s ease,transform .9s ease;animation:btTxt .9s ease}
  #bootTxt.out{opacity:0;transform:translateY(-3px)}
  @keyframes btTxt{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -2766,6 +2787,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #boot .bt-bar{width:180px;height:4px;border-radius:99px;background:var(--hair,rgba(0,0,0,.08));overflow:hidden}
  #boot .bt-bar i{display:block;height:100%;width:2%;border-radius:99px;background:var(--accent,#2563eb);transition:width .25s linear}
  #boot.done{opacity:0;transition:opacity .3s ease}
+ @media (prefers-reduced-motion:reduce){#boot .bt-ln.on,#boot .bt-pk.on{animation:none}}
  @media (prefers-reduced-motion:reduce){#boot .bt-rot,#boot .bt-halo,#boot .bt-core{animation:none}#boot .bt-arm,#boot .bt-br{animation:none;stroke-dashoffset:0}}
  /* A load that failed needs words, not a stalled bar. */
  #bootErr{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:9999;
@@ -5735,7 +5757,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 </head><body>
 <!-- No splash. The app is the first thing on screen; while the forecast data
      streams in, a hairline at the top edge carries the real progress. -->
-<div id="boot" role="status" aria-live="polite"><div class="bt-in"><div class="bt-crys" aria-hidden="true"><i class="bt-halo"></i><svg class="bt-flake" viewBox="0 0 64 64"><defs><linearGradient id="btG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#8FD0FF"/><stop offset=".55" stop-color="#3F8AD6"/><stop offset="1" stop-color="#2D5A8C"/></linearGradient></defs><g class="bt-rot"><g transform="rotate(0 32 32)" style="--i:0"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(60 32 32)" style="--i:1"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(120 32 32)" style="--i:2"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(180 32 32)" style="--i:3"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(240 32 32)" style="--i:4"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(300 32 32)" style="--i:5"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><circle class="bt-core" cx="32" cy="32" r="3.4"/></g></svg></div><div id="bootTxt">Die Schneedecke wird aufgebaut und analysiert</div><div id="bootPct">0 %</div><div class="bt-bar"><i></i></div></div></div>
+<div id="boot" role="status" aria-live="polite"><div class="bt-in"><div class="bt-orbit" aria-hidden="true"><svg class="bt-lines" viewBox="0 0 240 240"><path class="bt-ln" data-k="0" d="M120.0 46.0L120.0 68.0"/><circle class="bt-pk" data-k="0" r="3" style="offset-path:path('M120.0 46.0L120.0 68.0')"/><path class="bt-ln" data-k="1" d="M184.1 83.0L165.0 94.0"/><circle class="bt-pk" data-k="1" r="3" style="offset-path:path('M184.1 83.0L165.0 94.0')"/><path class="bt-ln" data-k="2" d="M184.1 157.0L165.0 146.0"/><circle class="bt-pk" data-k="2" r="3" style="offset-path:path('M184.1 157.0L165.0 146.0')"/><path class="bt-ln" data-k="3" d="M120.0 194.0L120.0 172.0"/><circle class="bt-pk" data-k="3" r="3" style="offset-path:path('M120.0 194.0L120.0 172.0')"/><path class="bt-ln" data-k="4" d="M55.9 157.0L75.0 146.0"/><circle class="bt-pk" data-k="4" r="3" style="offset-path:path('M55.9 157.0L75.0 146.0')"/><path class="bt-ln" data-k="5" d="M55.9 83.0L75.0 94.0"/><circle class="bt-pk" data-k="5" r="3" style="offset-path:path('M55.9 83.0L75.0 94.0')"/></svg><i class="bt-src" data-k="0" style="left:100px;top:2px"><svg viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 1 1 1.2-8.8A6 6 0 0 1 19.5 11 3.5 3.5 0 0 1 18 18z"/></svg></i><i class="bt-src" data-k="1" style="left:185px;top:51px"><svg viewBox="0 0 24 24"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/></svg></i><i class="bt-src" data-k="2" style="left:185px;top:149px"><svg viewBox="0 0 24 24"><path d="M2 20l6.5-11 4 6 3-4.5L22 20z"/></svg></i><i class="bt-src" data-k="3" style="left:100px;top:198px"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="3.5" rx="1"/><rect x="4" y="10.25" width="16" height="3.5" rx="1"/><rect x="4" y="15.5" width="16" height="3.5" rx="1"/></svg></i><i class="bt-src" data-k="4" style="left:15px;top:149px"><svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="M8 21h8"/><circle cx="12" cy="6" r="2.5"/><path d="M7.5 3.5a6.5 6.5 0 0 0 0 5M16.5 3.5a6.5 6.5 0 0 1 0 5"/></svg></i><i class="bt-src" data-k="5" style="left:15px;top:51px"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-3-5.5"/></svg></i><div class="bt-crys"><i class="bt-halo"></i><svg class="bt-flake" viewBox="0 0 64 64"><defs><linearGradient id="btG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#8FD0FF"/><stop offset=".55" stop-color="#3F8AD6"/><stop offset="1" stop-color="#2D5A8C"/></linearGradient></defs><g class="bt-rot"><g transform="rotate(0 32 32)" style="--i:0"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(60 32 32)" style="--i:1"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(120 32 32)" style="--i:2"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(180 32 32)" style="--i:3"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(240 32 32)" style="--i:4"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(300 32 32)" style="--i:5"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><circle class="bt-core" cx="32" cy="32" r="3.4"/></g></svg></div></div><div id="bootSrc"><b id="bootSrcT"></b><span id="bootSrcD"></span></div><div id="bootPct">0 %</div><div class="bt-bar"><i></i></div><div id="bootTxt"></div></div></div>
 <div id="toastWrap" aria-live="polite"></div>
 <div id="onb" hidden role="dialog" aria-modal="true" aria-label="Willkommen"><div class="onb-bg" aria-hidden="true"><i></i><i></i><i></i></div><div class="onb-card" id="onbCard"></div></div>
 <div id="appLock" hidden role="dialog" aria-modal="true" aria-label="Gesperrt"><div class="onb-bg" aria-hidden="true"><i></i><i></i><i></i></div>
