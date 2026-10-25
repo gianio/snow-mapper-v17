@@ -945,8 +945,10 @@ def classify_simple(hs, powder, crust, sdens, slw, sh=None, drift=None, scour=No
 
 
 # ── Skiqualität, simplified (the default SNOWPACK view in the app) ──────────
-# Six things a skier decides on, nothing else. Where there is no or only a
-# thin snow cover (< THIN_COVER_HS) nothing is drawn at all.
+# Six things a skier decides on, nothing else. A thin snow cover
+# (< THIN_COVER_HS) is one class of its own, "dünne Schneedecke" (10), unless
+# it carries dry powder; it used to be left blank, which read as "no snow" as
+# soon as an early-season cover had settled, crusted or got moist.
 #   nass   the top layer holds liquid water: SNOWPACK's volumetric liquid
 #          water content (theta_w) of the surface layer > SK_WET_LWC %. It is
 #          computed from the energy balance (melt) and rain; above ~1 % the
@@ -956,12 +958,13 @@ def classify_simple(hs, powder, crust, sdens, slw, sh=None, drift=None, scour=No
 #   hart   everything else: settled / wind-pressed / hard old snow.
 # Deep powder is split further (20-30, 30-40, > 40 cm). The two new classes
 # take the next free ids (8, 9) so 6 and 7 keep their meaning in older
-# exports; class 5 was "> 20 cm" there and is "20-30 cm" now.
+# exports; class 5 was "> 20 cm" there and is "20-30 cm" now. The thin cover
+# took the next one after that (10).
 SKI6_LABELS = ["none", "hard", "crust", "powder_0_10", "powder_10_20", "powder_20_30", "corn", "wet",
-               "powder_30_40", "powder_gt_40"]
+               "powder_30_40", "powder_gt_40", "thin_cover"]
 SKI6_DE = ["kein / wenig Schnee", "durchgehend hart", "Kruste", "Pulver 0–10 cm",
            "Pulver 10–20 cm", "Pulver 20–30 cm", "Sulz (aufgefirnt)", "nass / faul",
-           "Pulver 30–40 cm", "Pulver > 40 cm"]
+           "Pulver 30–40 cm", "Pulver > 40 cm", "dünne Schneedecke (< 20 cm)"]
 # Powder in the app's blues, light -> accent -> navy (more is darker,
 # readable in grey too); the surfaces you would rather avoid are the
 # warm/neutral ones: cool grey for hard, muted coral for crust, honey for
@@ -970,12 +973,13 @@ SKI6_DE = ["kein / wenig Schnee", "durchgehend hart", "Kruste", "Pulver 0–10 c
 SKI6_RGBA = {0: (0, 0, 0, 0), 1: (156, 168, 184, 185), 2: (214, 108, 98, 215),
              3: (147, 197, 240, 205), 4: (59, 125, 214, 225), 5: (36, 84, 178, 230),
              6: (226, 170, 72, 220), 7: (150, 104, 74, 225),
-             8: (24, 46, 120, 238), 9: (88, 36, 150, 240)}
+             8: (24, 46, 120, 238), 9: (88, 36, 150, 240), 10: (208, 214, 224, 170)}
 SK_POWDER_MIN = 2.0      # cm -- less loose snow than this is not "powder" to ski
-SK_THIN_POWDER_HS = 3.0  # cm -- early season: dry powder on a cover thinner than
-                         # THIN_COVER_HS is still drawn (as powder, nothing else)
-                         # once the whole pack reaches this; 0-10 cm of fresh
-                         # snow on grass is what a skier wants to know about
+SK_THIN_POWDER_HS = 3.0  # cm -- early season: a cover thinner than THIN_COVER_HS
+                         # is drawn once the whole pack reaches this -- as powder
+                         # when it carries dry powder (0-10 cm of fresh snow on
+                         # grass is what a skier wants to know about), else as
+                         # "dünne Schneedecke" (10)
 SK_P1, SK_P2, SK_P3, SK_P4 = 10.0, 20.0, 30.0, 40.0
 SK_WET_LWC = WET_LWC_MIN
 
@@ -1007,10 +1011,12 @@ def classify_ski6(hs, powder, crust, sdens, slw, soft=None, base=None, refrozen=
         lab[corn] = 6
     else:
         lab[lw > SK_WET_LWC] = 7                            # nass wins
-    # thin cover: only dry powder stays (early season), everything else blank
+    # thin cover: dry powder stays (early season), the rest is "dünne
+    # Schneedecke"; below SK_THIN_POWDER_HS nothing is drawn
     thin = ~(hs >= THIN_COVER_HS)
     keep = p & ~(lw > SK_WET_LWC) & (hs >= SK_THIN_POWDER_HS)
-    lab[thin & ~keep] = 0
+    lab[thin & ~keep] = 10
+    lab[~(hs >= SK_THIN_POWDER_HS)] = 0
     return lab
 
 
