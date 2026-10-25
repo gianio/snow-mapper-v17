@@ -7633,8 +7633,16 @@ function rampBYR(x){x=Math.max(0,Math.min(1,x));if(x<.33){const k=x/.33;return[3
 function sunCol(h,vmax){const x=Math.min(1,h/Math.max(1,vmax));return[255,250-x*135|0,210-x*210|0];}
 const TH=[-15,-10,-5,0,5,10];
 function tClass(v){let c=0;for(const t of TH)if(v>=t)c++;return c;}
-function tsurfEst(t,p){
-  const ta=tv(t,p),sun=sunv(t,p);
+// Temperature at a tapped point: the model cell is 1 km and carries its MEAN
+// height, a summit or ridge in it can be 300-800 m higher -- read straight
+// off the cell it came out several degrees too warm. The popup and its charts
+// shift the cell's values to the point's own height with the same lapse rate
+// the pipeline uses (config/model_params.yaml: -6.5 K/km).
+const TEMP_LAPSE=-0.0065;
+let _inspPt=-1,_inspDT=0;
+function tvI(t,p){return tv(t,p)+(p===_inspPt?_inspDT:0);}
+function tsurfEst(t,p,dT){
+  const ta=tv(t,p)+(dT||0),sun=sunv(t,p);
   const wk=mainToWind[p],ws=SPD[t*P+wk]/M.spd_mul*3.6;
   const radCool=(sun<0.01&&ws<10)?-3.0*(1-ws/10)*(ta<2?1:0.3):0;
   const solarWarm=sun>0.3?1.5*Math.min(1,sun):0;
@@ -14601,6 +14609,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
       &&document.getElementById('inspPanel').classList.contains('open'))inspOpen(lat,lon);}catch(e){}});
   const _fe=_ft?_ft.elev:fineElev(lat,lon),_fa=_ft?_ft.aspect:fineAspectDeg(lat,lon),_fs=_ft?_ft.slope:fineSlope(lat,lon);
   const elevD=(_fe!=null?_fe:elev),slp=(_fs!=null?_fs:mslpv(p));
+  _inspPt=p;_inspDT=_fe!=null?Math.max(-8,Math.min(8,TEMP_LAPSE*(_fe-elev))):0;
   const QD8={N:'Nord',NO:'Nordost',O:'Ost',SO:'Südost',S:'Süd',SW:'Südwest',W:'West',NW:'Nordwest'},QD4={N:'Nord',E:'Ost',S:'Süd',W:'West'};
   const aspDeg=(_fa!=null?_fa:maspv(p)),aspLbl=(_fa!=null?QD8[asp8(_fa)]:(QD4[aspectQ(maspv(p))]||''));
   const pan=document.getElementById('inspPanel');
@@ -14663,11 +14672,11 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
       '</div>';
   }catch(e){}}
   // the numbers first: what fell in the chosen window, what lies, how cold
-  let kpi='';try{let tmn=1e9,tmx=-1e9;for(let t=a;t<Math.min(b,T);t++){const v=tv(t,p);if(v==null||v!==v)continue;if(v<tmn)tmn=v;if(v>tmx)tmx=v;}
+  let kpi='';try{let tmn=1e9,tmx=-1e9;for(let t=a;t<Math.min(b,T);t++){const v=tvI(t,p);if(v==null||v!==v)continue;if(v<tmn)tmn=v;if(v>tmx)tmx=v;}
     const kt=t=>{const d=zLocal(tMs(t));return WD()[d.getUTCDay()]+' '+String(d.getUTCHours()).padStart(2,'0')+'h';};
     kpi='<div class="insp-kpis"><div class="k-snow"><span>Neuschnee</span><b>+'+newSnow.toFixed(newSnow<10?1:0)+'<small> cm</small></b><em>'+kt(a)+' – '+kt(Math.max(a,b-1))+'</em></div>'
       +'<div><span>Schneehöhe</span><b>'+depthNow.toFixed(0)+'<small> cm</small></b><em>am Ende</em></div>'
-      +(tmx>-1e9?'<div><span>Luft</span><b>'+tmn.toFixed(0)+'…'+tmx.toFixed(0)+'<small>°</small></b><em>min … max</em></div>':'')+'</div>';}catch(e){}
+      +(tmx>-1e9?'<div><span>Luft</span><b>'+tmn.toFixed(0)+'…'+tmx.toFixed(0)+'<small>°</small></b><em>auf '+Math.round(elevD)+' m</em></div>':'')+'</div>';}catch(e){}
   pan.innerHTML=
    '<div class="insp-grab" aria-hidden="true"></div>'+
    '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b>'+
@@ -14763,7 +14772,7 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
   for(const r of rows){const q=r.q,hgt=r.base-r.top;
     if(q.k==='snow'){
       const air=[],srf=[],sn=[];let mn=1e9,mx=-1e9,smx=0;
-      for(let t=0;t<T;t++){air[t]=tv(t,p);srf[t]=tsurfEst(t,p);sn[t]=SNOW[t*NP+p]*M.snow_scale;
+      for(let t=0;t<T;t++){air[t]=tvI(t,p);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);sn[t]=SNOW[t*NP+p]*M.snow_scale;
         for(const v of [air[t],srf[t]])if(v==v&&v!=null){if(v<mn)mn=v;if(v>mx)mx=v;}if(sn[t]>smx)smx=sn[t];}
       const raw=Math.max(1,mx-mn),st=raw<=5?1:raw<=12?2:raw<=28?5:10;mn=Math.floor(mn/st)*st;mx=Math.ceil(mx/st)*st;if(mx===mn)mx+=st;
       const yT=v=>r.base-(v-mn)/(mx-mn)*hgt;
@@ -14872,13 +14881,13 @@ function icDepth(cv,p){const{ctx,w,h}=icSetup(cv,80);const t0=a,t1=b;const LG=4,
   ctx.beginPath();for(let i=0;i<Ln;i++){const x=px(i),y=py(vals[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.strokeStyle=cvTok('--accent-meteo','#2A8FD8');ctx.lineWidth=2.2;ctx.stroke();
   icPill(ctx,px(mi),py(vals[mi])-21,vals[mi].toFixed(0)+' cm',cvTok('--accent-meteo','#2A8FD8'),w);}
 function icTemp(cv,p){const t0=a,t1=Math.max(a+2,b),air=[],srf=[];
-  for(let t=t0;t<t1&&t<T;t++){air[t]=tv(t,p);srf[t]=tsurfEst(t,p);}
+  for(let t=t0;t<t1&&t<T;t++){air[t]=tvI(t,p);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);}
   tempChart(cv,air,srf,t0,Math.min(t1,T));}
 // New snow and temperature in one chart: whether it snowed and whether it
 // was cold enough for it to stay powder are read together. Bars = new snow
 // per hour on the right axis, lines = air and snow surface on the left.
 function icSnowTemp(cv,p){const t0=a,t1=Math.min(T,Math.max(a+2,b)),air=[],srf=[],sn=[];
-  for(let t=t0;t<t1;t++){air[t]=tv(t,p);srf[t]=tsurfEst(t,p);sn[t]=SNOW[t*NP+p]*M.snow_scale;}
+  for(let t=t0;t<t1;t++){air[t]=tvI(t,p);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);sn[t]=SNOW[t*NP+p]*M.snow_scale;}
   tempChart(cv,air,srf,t0,t1,sn);}
 // Temperature over time with real axes: °C ticks on the left, hours and days
 // along the bottom. Air is a solid line, the snow surface a dashed one -- the
