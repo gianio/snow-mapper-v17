@@ -5751,6 +5751,12 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #profMsgBtn{display:none!important}
  #profModal .prof-sheet{padding-top:env(safe-area-inset-top,0px)}
  #userViewModal .prof-sheet{padding-top:0}
+ /* short screens (phone held sideways): the side controls must fit between
+    the header and the timeline -- the legend steps back (it is in the layer
+    panel under (i)), and on very short ones the buttons lie in a row */
+ @media (max-height:560px){#mapFabs #miniLegend{display:none!important}}
+ @media (max-height:430px){#mapFabs .mfab-grp{flex-direction:row!important}
+   #mapFabs .mfab-grp>*+*::before{display:none!important}}
  .pv-dm{position:relative}
  /* own profile: four buttons in two even rows, no wrapped labels */
  .pv-btns:has(.pv-dm:not([hidden])){display:grid;grid-template-columns:1fr 1fr}
