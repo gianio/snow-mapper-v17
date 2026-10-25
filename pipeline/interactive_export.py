@@ -5747,6 +5747,31 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #rvFab span{display:none}
  #rvFab svg,#infoFab svg{color:var(--fg2)!important}
  #hiResChip{display:none!important}
+ /* profile: messages sit with the other buttons; the header keeps settings and close */
+ #profMsgBtn{display:none!important}
+ #profModal .prof-sheet{padding-top:env(safe-area-inset-top,0px)}
+ #userViewModal .prof-sheet{padding-top:0}
+ .pv-dm{position:relative}
+ /* own profile: four buttons in two even rows, no wrapped labels */
+ .pv-btns:has(.pv-dm:not([hidden])){display:grid;grid-template-columns:1fr 1fr}
+ .pv-btns button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px}
+ .pv-dm b{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:6px;padding:0 5px;border-radius:9px;background:#E5233F;color:#fff;font:700 11px/1 var(--font)}
+ .pv-dm.unread{border-color:#E5233F!important;color:#E5233F!important}
+ /* a public profile: the close button above the overlapping body */
+ .uv-close,.uv-msg{z-index:10!important}
+ /* the profile reaches under the tab bar: room at the end */
+ #profModal .prof-body,#userViewModal .uv-body{padding-bottom:calc(var(--nav-h,58px) + 16px)!important}
+ /* feed: the status-bar gap belongs to the first header, not the scroller --
+    else the sticky filter row floated a status bar below the "Beitrag" bar */
+ .feed-page .feed-scroll{padding-top:0!important}
+ .feed-page .feed-top{padding-top:calc(env(safe-area-inset-top,0px) + 8px)}
+ .feed-page #feedAnchorBar{padding-top:calc(env(safe-area-inset-top,0px) + 8px)}
+ .feed-page:has(#feedAnchorBar[style*="flex"]) .feed-top{padding-top:6px}
+ body.desk .feed-page .feed-top,body.desk .feed-page #feedAnchorBar{padding-top:8px}
+ .feed-top{background:var(--paper)!important}
+ /* edit dialog: a centred card, clear of the tab bar and the keyboard edge */
+ #postEditW{align-items:center!important;background:rgba(13,21,37,.45)!important;padding:16px 16px calc(var(--nav-h,58px) + 16px)!important}
+ #postEditW .pe-in{background:var(--card)!important;box-shadow:0 12px 40px rgba(0,0,0,.25)!important;max-height:calc(100% - 20px);overflow:auto;border-radius:18px}
  /* the legend card names the layer that is on */
  #mlName{display:flex;flex-direction:column;align-items:center;gap:3px;max-width:78px;margin:0 auto 5px;padding-bottom:5px;
    border-bottom:1px solid var(--bd);font:700 9px/1.12 var(--font);color:var(--brand);text-align:center;letter-spacing:-.01em;text-transform:none;
@@ -11488,7 +11513,7 @@ let pvState={};
 async function pvLoad(uid,boxId,own){
   const box=document.getElementById(boxId);if(!box)return;
   // the last copy paints at once; the network only refreshes it
-  const ck='ssm_pv_'+uid;let cached=null;try{cached=JSON.parse(sessionStorage.getItem(ck)||'null');}catch(e){}
+  const ck='ssm_pv_'+uid;let cached=null;try{cached=JSON.parse(localStorage.getItem(ck)||sessionStorage.getItem(ck)||'null');}catch(e){}
   if(cached&&cached.v===1){pvState[boxId]=Object.assign(cached.S,{tab:(pvState[boxId]&&pvState[boxId].tab)||cached.S.tab||'grid'});pvRender(boxId);}
   else box.innerHTML='<div class="pv-skel"><i></i><i></i><i></i><i></i><i></i><i></i></div>';
   let posts=[],fol=0,ing=0,acts=[],trust=0,fb=0;
@@ -11496,8 +11521,12 @@ async function pvLoad(uid,boxId,own){
     const cnt=(col)=>sb.from('follows').select('*',{count:'exact',head:true}).eq(col,uid).then(r=>r.count||0,()=>0);
     // the post list only needs a light condition_data: no drawn snapshots
     const [pr,f1,f2,f3]=await Promise.all([
-      sb.from('reports').select('id,caption,subtype,image_url,condition_data,location,created_at,primary_categories')
-        .eq('user_id',uid).order('created_at',{ascending:false}).limit(60).then(r=>r.data||[],()=>[]),cnt('following_id'),cnt('follower_id'),
+      // only the parts of condition_data the profile shows -- not the drawn
+      // snapshots, zones and measurements that made this the slow request
+      sb.from('reports').select('id,caption,subtype,image_url,location,created_at,primary_categories,cd_thumb:condition_data->thumb,cd_act:condition_data->activity,cd_snowp:condition_data->snowp,cd_draw:condition_data->draw')
+        .eq('user_id',uid).order('created_at',{ascending:false}).limit(60)
+        .then(r=>(r.data||[]).map(x=>{const cd={};if(x.cd_thumb)cd.thumb=x.cd_thumb;if(x.cd_act)cd.activity=x.cd_act;if(x.cd_snowp)cd.snowp=x.cd_snowp;if(x.cd_draw)cd.draw=x.cd_draw;
+          delete x.cd_thumb;delete x.cd_act;delete x.cd_snowp;delete x.cd_draw;x.condition_data=cd;x._lite=true;return x;}),()=>[]),cnt('following_id'),cnt('follower_id'),
       Promise.resolve(sb.rpc('feedback_count',{uid})).then(r=>(r&&r.data)||0,()=>0)]);
     posts=pr;fol=f1;ing=f2;fb=f3;
     if(posts.length){try{const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',posts.map(p=>p.id)).neq('user_id',uid);trust=count||0;}catch(e){}}
@@ -11509,10 +11538,12 @@ async function pvLoad(uid,boxId,own){
     acts.push({id:a.id,local:true,name:a.name,start:a.start,dist:st.dist||0,up:st.up||0,moving:st.moving||0,track:trkLL(a.segs),type:a.type,priv:a.vis==='private'});});}catch(e){}}
   acts.sort((x,y)=>y.start-x.start);
   pvState[boxId]={uid,own,posts,acts,fol,ing,trust,fb,tab:(pvState[boxId]&&pvState[boxId].tab)||'grid'};
-  pvRender(boxId);
-  if(own)setTimeout(()=>{pvBackfillThumbs(posts).then(()=>{try{sessionStorage.setItem(ck,JSON.stringify({v:1,S:Object.assign({},pvState[boxId],{acts:pvState[boxId].acts.filter(a=>!a.local)})}));}catch(e){}});},1500);
-  try{sessionStorage.setItem(ck,JSON.stringify({v:1,S:Object.assign({},pvState[boxId],{acts:pvState[boxId].acts.filter(a=>!a.local)})}));}catch(e){}
+  pvRender(boxId);if(boxId==='profPV')try{profEndoSync();}catch(e){}
+  if(own)setTimeout(()=>{pvBackfillThumbs(posts).then(()=>{pvCacheSave(ck,boxId);});},1500);
+  pvCacheSave(ck,boxId);
 }
+function pvCacheSave(ck,boxId){try{const v=JSON.stringify({v:1,S:Object.assign({},pvState[boxId],{acts:pvState[boxId].acts.filter(a=>!a.local)})});
+  try{localStorage.setItem(ck,v);}catch(e){sessionStorage.setItem(ck,v);}}catch(e){}}
 function pvImg(r){const cd=r.condition_data||{};if(cd.thumb)return cd.thumb;if(cd.activity&&cd.activity.map)return cd.activity.map;return r.image_url||cd.snapshot||null;}
 // Own profile: posts from before thumbnails get one now, a few at a time in
 // the background, so the next visit (and everyone else's) loads small.
@@ -11520,10 +11551,24 @@ let _thumbBusy=false;
 async function pvBackfillThumbs(posts){if(_thumbBusy||!sb||!sbUser)return;_thumbBusy=true;
   try{const todo=posts.filter(r=>r.image_url&&!(r.condition_data&&r.condition_data.thumb)&&!(r.condition_data&&r.condition_data.activity&&r.condition_data.activity.map)).slice(0,9);
     for(const r of todo){const t=await uploadThumb(r.image_url);if(!t)continue;
-      const cd=Object.assign({},r.condition_data||{},{thumb:t});
+      let full=r.condition_data||{};if(r._lite){const{data:fr}=await sb.from('reports').select('condition_data').eq('id',r.id).single();if(!fr)continue;full=fr.condition_data||{};}
+      const cd=Object.assign({},full,{thumb:t});
       const{error}=await sb.from('reports').update({condition_data:cd}).eq('id',r.id).eq('user_id',sbUser.id);
-      if(!error)r.condition_data=cd;}}catch(e){}finally{_thumbBusy=false;}}
-function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxId);if(!S||!box)return;
+      if(!error)r.condition_data=Object.assign({},r.condition_data||{},{thumb:t});}}catch(e){}finally{_thumbBusy=false;}}
+// Profile tiles open on pointerup, found by position: the cached copy paints
+// first and the network copy re-renders it, and a tap that straddled that
+// swap used to be lost (the click never fired) -- "only the second tap works".
+function pvBindTap(box){if(box._pvTap)return;box._pvTap=true;let d=null;
+  box.addEventListener('pointerdown',e=>{d={x:e.clientX,y:e.clientY,t:Date.now()};},{passive:true});
+  box.addEventListener('pointerup',e=>{const s=d;d=null;if(!s||Math.hypot(e.clientX-s.x,e.clientY-s.y)>10||Date.now()-s.t>800)return;
+    const el=document.elementFromPoint(e.clientX,e.clientY),b=el&&el.closest&&el.closest('.pv-cell,.pv-hl');if(!b||!box.contains(b))return;
+    const m=String(b.getAttribute('onclick')||'').match(/pvOpen(Post|Act)\('([^']*)',(\d+)\)/);if(!m)return;
+    e.preventDefault();box._pvSkip=Date.now();(m[1]==='Post'?pvOpenPost:pvOpenAct)(m[2],+m[3]);});
+  box.addEventListener('click',e=>{if(box._pvSkip&&Date.now()-box._pvSkip<700&&e.target.closest('.pv-cell,.pv-hl')){e.stopPropagation();e.preventDefault();}},true);}
+function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxId);if(!S||!box)return;pvBindTap(box);
+  // the same data again (cache, then network): leave the DOM alone
+  const sig=JSON.stringify([S.posts.map(r=>[r.id,r.caption,r.image_url,pvImg(r)]),S.acts.map(a=>[a.id,a.name]),S.fol,S.ing,S.trust,S.fb,S.tab,_dmN>0]);
+  if(box._pvSig===sig&&box.firstChild)return;box._pvSig=sig;
   const n=v=>v>=10000?(v/1000).toFixed(0)+'k':v>=1000?(v/1000).toFixed(1)+'k':String(v);
   const me=sbUser&&S.uid===sbUser.id,foll=!me&&myFollowing&&myFollowing.has(S.uid);
   // this week + 12 weeks of distance, Strava style
@@ -11542,7 +11587,8 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
   const list=S.acts.length?'<div class="pv-hls pv-hls-all">'+S.acts.map((a,i)=>'<button class="pv-hl" onclick="pvOpenAct(\''+boxId+'\','+i+')"><span class="pv-hl-m" data-pvmap="'+a.id+'">'+pvMapImg(a)+'</span><span>'+escapeHtml(a.name)+'</span></button>').join('')+'</div>'
     :'<div class="prof-hint">'+(me?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aktivitäten.')+'</div>';
   box.innerHTML='<div class="pv-stats"><div><b>'+n(S.posts.length)+'</b><span>Beiträge</span></div><div><b>'+n(S.fol)+'</b><span>Follower</span></div><div><b>'+n(S.ing)+'</b><span>Folge ich</span></div><div><b>'+n(S.acts.length)+'</b><span>Aktivitäten</span></div><div><b>'+n(S.fb||0)+'</b><span>Feedbacks</span></div></div>'
-    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button onclick="profClose();navGo(\'feed\');feedSetScope(\'saved\')">Gemerkt</button><button onclick="pvShare(\''+S.uid+'\')">Teilen</button>'
+    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button onclick="_feedReturn=openProfile;profClose();navGo(\'feed\');feedSetScope(\'saved\')">Gemerkt</button>'
+        +'<button onclick="pvShare(\''+S.uid+'\')">Teilen</button><button class="pv-dm'+(_dmN>0?' unread':'')+'" data-dm onclick="profClose();dmOpen()">Nachrichten'+(_dmN>0?'<b>'+(_dmN>9?'9+':_dmN)+'</b>':'')+'</button>'
       :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
         +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
         +'<button class="pv-more" onclick="uvReportUser()" aria-label="Nutzer melden">⋯</button>')+'</div>'
@@ -11575,7 +11621,8 @@ function pvShare(uid){const u=location.origin+location.pathname+'?u='+encodeURIC
 function pvClose(){try{profClose();}catch(e){}try{userViewClose();}catch(e){}}
 function pvName(S){if(sbUser&&S.uid===sbUser.id)return (sbUser.user_metadata&&sbUser.user_metadata.username)||(sbUser.email||'').split('@')[0]||'Du';
   const n=document.getElementById('uvName');return n?n.textContent:'';}
-function pvOpenPost(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;feedOpenUser(S.uid,pvName(S),r.id);}
+function pvReturnFn(boxId,S){const nm=pvName(S);return boxId==='profPV'?openProfile:()=>viewUser(S.uid,nm);}
+function pvOpenPost(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;const back=pvReturnFn(boxId,S);pvClose();feedOpenUser(S.uid,pvName(S),r.id);_feedReturn=back;}
 function pvOpenPostOld(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)return;const cd=r.condition_data||{};pvClose();
   if(cd.activity&&cd.activity.track){setTimeout(()=>trkShowOnMap(cd.activity.track,cd.activity.rough),250);return;}
   const ll=parseGeo(r.location);if(ll)feedFlyTo(ll[0],ll[1]);}
@@ -11585,7 +11632,7 @@ function pvOpenPostOld(boxId,i){const S=pvState[boxId],r=S&&S.posts[i];if(!r)ret
 function pvOpenAct(boxId,i){const S=pvState[boxId],a=S&&S.acts[i];if(!a)return;pvClose();
   if(a.local){trkCur=a.id;trkView='detail';trkOpen();return;}
   // a posted activity opens as its post; only one without a post goes to the map
-  if(a.post){feedOpenPost(a.post,S.uid);return;}
+  if(a.post){const back=pvReturnFn(boxId,S);feedOpenPost(a.post,S.uid);_feedReturn=back;return;}
   try{navGo('map');}catch(e){}
   setTimeout(()=>{trkShowOnMap(a.track);actSumShow(a,S.uid,pvName(S));},250);}
 function actSumShow(a,uid,name){let el=document.getElementById('actSum');
@@ -14266,7 +14313,7 @@ function navCur(){const B=document.body.classList,f=document.getElementById('fee
   if(pm&&pm.style.display&&pm.style.display!=='none')return 'you';
   if(B.contains('ts-open')||B.contains('tour-open'))return 'tours';
   return 'map';}
-function navGo(t){try{haptic(4);}catch(e){}try{const c=document.getElementById('coach');if(c&&c.style.display&&c.style.display!=='none')endCoach();}catch(e){}
+function navGo(t){try{haptic(4);}catch(e){}if(t!=='feed')_feedReturn=null;try{const c=document.getElementById('coach');if(c&&c.style.display&&c.style.display!=='none')endCoach();}catch(e){}
   try{const h=document.getElementById('hiResChip');if(h)h.remove();}catch(e){}if(t!=='map')try{actSumHide(false);}catch(e){}try{repSheetToggle(false);}catch(e){}
   // tapping the tab that is already open goes back to the map
   if(t!=='map'&&navCur()===t){if(t==='rec'){try{trkClose();}catch(e){}}t='map';}
@@ -16140,7 +16187,9 @@ async function dmUnreadCheck(){if(!sb||!sbUser){_dmN=0;accNotifSync();return;}
   try{const{count}=await sb.from('dm_messages').select('id',{count:'exact',head:true}).is('read_at',null).neq('sender_id',sbUser.id);
     _dmN=count||0;const d=document.getElementById('dmDot');if(d)d.hidden=!_dmN;
     const mb=document.getElementById('profMsgBtn'),mn=document.getElementById('profMsgN');
-    if(mb)mb.classList.toggle('unread',_dmN>0);if(mn){mn.hidden=!_dmN;mn.textContent=_dmN>9?'9+':String(_dmN);}}catch(e){}
+    if(mb)mb.classList.toggle('unread',_dmN>0);if(mn){mn.hidden=!_dmN;mn.textContent=_dmN>9?'9+':String(_dmN);}
+    document.querySelectorAll('.pv-dm').forEach(x=>{x.classList.toggle('unread',_dmN>0);let bb=x.querySelector('b');
+      if(_dmN>0){if(!bb){bb=document.createElement('b');x.appendChild(bb);}bb.textContent=_dmN>9?'9+':String(_dmN);}else if(bb)bb.remove();});}catch(e){}
   accNotifSync();}
 setInterval(()=>{if(document.visibilityState==='visible')dmUnreadCheck();},120000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')dmUnreadCheck();});
@@ -16228,6 +16277,7 @@ function storagePathFromUrl(u){
     return m?decodeURIComponent(m[1].split('?')[0]):null;}catch(e){return null;}
 }
 function postEdit(id,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
+  document.querySelectorAll('.fc-more-wrap.open').forEach(x=>x.classList.remove('open'));
   const r=allReports.find(x=>String(x.id)===String(id));if(!r)return;
   let el=document.getElementById('postEditW');if(!el){el=document.createElement('div');el.id='postEditW';document.body.appendChild(el);}
   el.innerHTML='<div class="pe-in" role="dialog" aria-modal="true" aria-label="Beitrag bearbeiten"><b>Beitrag bearbeiten</b>'
@@ -16623,7 +16673,7 @@ function profSetVis(v){try{localStorage.setItem('ssm_visibility',v);}catch(e){}
 // user can remove a single report instead of only the all-or-nothing wipe.
 async function profLoadPosts(){
   if(sbUser)pvLoad(sbUser.id,'profPV',true);
-  const box=document.getElementById('profPosts');if(!box)return;
+  const box=document.getElementById('profPosts');if(!box||!box.offsetParent)return;
   if(!sb||!sbUser){box.innerHTML='';return;}
   const del=id=>'<button class="uv-del" title="Löschen" aria-label="Beitrag löschen" onclick="uvDeletePost(\''+id+'\',event)">'+
     '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>';
@@ -16712,19 +16762,11 @@ async function openProfile(){
     else{av.classList.remove('has-img');av.style.backgroundImage='';}
     document.getElementById('profPush').classList.toggle('on',!!data?.push_enabled);
   }catch(e){myProfile={};}
-  // endorsement total = sum of endorsements across my reports
-  try{
-    const{data:rs}=await sb.from('reports').select('id').eq('user_id',sbUser.id);
-    const ids=(rs||[]).map(r=>r.id);let total=0;
-    if(ids.length){const{count}=await sb.from('report_reactions').select('*',{count:'exact',head:true}).eq('type','like').in('report_id',ids);total=count||0;}
-    document.getElementById('profEndo').innerHTML='<b>'+total+'</b> Trust Score';
-    const sr=document.getElementById('profStatReports');if(sr)sr.textContent=ids.length;
-  }catch(e){document.getElementById('profEndo').textContent='';}
-  try{
-    const{count:fc}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',sbUser.id);
-    const sf=document.getElementById('profStatFollowers');if(sf)sf.textContent=fc||0;
-  }catch(e){}
+  // the trust total and the counts come with the profile view (pvLoad)
+  profEndoSync();
 }
+function profEndoSync(n){n=n||0;const S=pvState&&pvState.profPV,el=document.getElementById('profEndo');if(!el)return;
+  if(S&&S.uid===(sbUser&&sbUser.id))el.innerHTML='<b>'+(S.trust||0)+'</b> Trust Score';else if(n<30)setTimeout(()=>profEndoSync(n+1),600);}
 function profClose(){document.getElementById('profModal').style.display='none';}
 let _profDirty=false;
 function profDirty(){_profDirty=true;const b=document.getElementById('profSave');if(b)b.classList.add('on');}
@@ -18678,6 +18720,9 @@ function feedOpen(){
   try{haptic(4);}catch(e){}
 }
 addEventListener('keydown',e=>{if(e.key==='Escape'){const f=document.getElementById('feedPage');if(f&&f.classList.contains('open')&&!document.querySelector('.feed-sheet.open'))try{navGo('map');}catch(x){}}});
+// a list opened from a profile (Gemerkt, a post, an activity) returns to it
+let _feedReturn=null;
+function feedBack(){const f=_feedReturn;_feedReturn=null;if(f){feedClose();try{f();}catch(e){}}else feedSetScope('all');}
 function feedClose(){
   const el=document.getElementById('feedPage');if(!el)return;
   if(feedScope==='user'||feedScope==='saved'||feedScope==='tours'||feedScope==='post'){feedScope='all';feedUserId=null;feedTour=null;try{feedTourBar();}catch(e){}}
@@ -19034,10 +19079,10 @@ function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)re
       +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Alle Beiträge">×</button>';return;}
   if(feedScope==='post'){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user">Beitrag</span>'
-      +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Zurück zum Feed">×</button>';return;}
+      +'<button type="button" onclick="feedBack()" aria-label="Zurück">×</button>';return;}
   if(feedScope==='saved'){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Gemerkt</span>'
-      +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Zurück zum Feed">×</button>';return;}
+      +'<button type="button" onclick="feedBack()" aria-label="Zurück">×</button>';return;}
   if(b.querySelector('.fab-user')){b.style.display='none';b.innerHTML='';}
   if(feedScope==='tours'&&feedTour){b.style.display='flex';
     b.innerHTML='<span class="fab-tour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-10 4 6 2-3 4 7z"/></svg>'+escapeHtml(feedTour.name)+'</span><button type="button" onclick="feedTour=null;feedTourBar();feedRender()">✕ alle Touren</button>';}
