@@ -1672,10 +1672,17 @@ _HTML = r"""<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"/>
    iOS by more than the status bar), which cut the tab bar off at the bottom.
    The screen's own height is the real one in that mode. */
 (function(){if(navigator.standalone!==true)return;var d=document.documentElement;d.classList.add('ios-pwa');
-function fit(){var p=innerHeight>=innerWidth,sh=p?Math.max(screen.height,screen.width):Math.min(screen.height,screen.width);
-  // the visible height, never more than the screen: taller than that and
-  // the tab bar sat under the home indicator, cut off
-  d.style.setProperty('--app-h',Math.min(sh,Math.max(innerHeight,d.clientHeight))+'px');}
+function fit(){var p=innerHeight>=innerWidth,sh=p?Math.max(screen.height,screen.width):Math.min(screen.height,screen.width),
+    sw=p?Math.min(screen.height,screen.width):Math.max(screen.height,screen.width),lvh=0;
+  try{var pr=document.createElement('div');pr.style.cssText='position:fixed;top:0;left:0;width:1px;height:100lvh;visibility:hidden;pointer-events:none';
+    d.appendChild(pr);lvh=pr.getBoundingClientRect().height;d.removeChild(pr);}catch(e){}
+  // iOS reports innerHeight short by the status bar in some launches, which
+  // ended the app above the screen edge: a grey band under it and the tab bar
+  // cut. A window as wide as the screen (every iPhone) is the whole screen
+  // (black-translucent status bar), so it takes the screen height; otherwise
+  // the largest of the measured heights, never more than the screen.
+  var h=Math.max(innerHeight,d.clientHeight,lvh);if(Math.abs(innerWidth-sw)<=2)h=sh;
+  d.style.setProperty('--app-h',Math.min(sh,h)+'px');}
 fit();addEventListener('resize',fit);addEventListener('orientationchange',function(){setTimeout(fit,300);});})();</script>
 <meta name="theme-color" content="#ffffff"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -1869,7 +1876,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  html.ios-pwa,html.ios-pwa body{height:var(--app-h,100lvh)!important;bottom:auto!important}
  /* installed app: the floating tab bar a little higher above the home indicator */
  html.ios-pwa #tabBar{bottom:calc(env(safe-area-inset-bottom,0px) + 18px)!important}
- html.ios-pwa{--nav-h:calc(env(safe-area-inset-bottom,0px) + 92px)!important}
+ html.ios-pwa{--nav-h:calc(env(safe-area-inset-bottom,0px) + 58px)!important}
  @media all and (display-mode: standalone){
    html,body{height:100vh!important;height:var(--app-h,100lvh)!important;bottom:auto!important}
    body{transform:translateZ(0)}
@@ -2562,8 +2569,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  /* phone: docked at the top, so the point and the timeline stay in view */
  /* the chosen layer shows in the layer button and the legend: no extra label */
  #lyNow{display:none!important}
- @media (max-width:700px){.insp-panel{top:calc(env(safe-area-inset-top,0px) + 8px);margin-top:0;
-   width:min(380px,calc(100vw - 16px));margin-left:calc(min(380px,calc(100vw - 16px)) / -2);max-height:min(50vh,440px)}}
+ @media (max-width:700px){.insp-panel{top:calc(var(--bar-h,44px) + 6px);margin-top:0;
+   width:min(380px,calc(100vw - 16px));margin-left:calc(min(380px,calc(100vw - 16px)) / -2);
+   max-height:min(460px,calc(var(--app-h,100dvh) - var(--bar-h,44px) - var(--nav-h,58px) - 150px))}}
  /* the grab bar: the only part of the head that starts a drag */
  .insp-grab{flex-shrink:0;height:16px;display:flex;align-items:center;justify-content:center;
    cursor:grab;touch-action:none}
@@ -4994,7 +5002,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #tabBar .feed-dot.on{display:block}
 
  /* everything that sat on the bottom edge now sits on the tab bar */
- body.nav-vis #bottomPanel{bottom:calc(var(--nav-h) + 8px)!important}
+ body.nav-vis #bottomPanel{bottom:calc(var(--nav-h) + 6px)!important}
  body.nav-vis #mapFabs{bottom:calc(var(--nav-h) + var(--btm-h,120px) + 20px)!important}
  #mapFabs #miniLegend{position:relative!important;bottom:auto!important;right:auto!important;left:auto!important;top:auto!important;
    flex:0 1 auto;min-height:0;overflow:hidden;margin:0}
@@ -5690,7 +5698,19 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     with a hairline and one small shadow -- no frosted blur, no see-through
     panels, no gradient buttons, no fades over the map. Helvetica throughout. */
  :root,:root[data-theme="dark"],:root:not([data-theme="light"]){
-   --glass:var(--card);--glass2:var(--card);--blur:none;--brand-grad:var(--brand)}
+   --glass:var(--card);--glass2:var(--card);--blur:none;--brand-grad:var(--brand);
+   --lg-bg:var(--card);--lg-bg2:var(--card);--lg-tint:transparent;--lg-pill:var(--fill);--lg-blur:none;
+   --lg-edge:0 0 0 1px var(--bd);--lg-shadow:0 4px 14px rgba(18,21,26,.12)}
+ @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+   --lg-bg:var(--card);--lg-bg2:var(--card);--lg-tint:transparent;--lg-pill:var(--fill);--lg-blur:none;--lg-edge:0 0 0 1px var(--bd)}}
+ /* sheets you work in (recording, reporting, drawing) are solid */
+ .trk-sheet,.rs-in,#drawBar,.rp-wiz-nav{background:var(--card)!important;background-image:none!important}
+ #drawBar{border-top:1px solid var(--bd)}
+ /* the profile is a screen of its own: full height, opaque, no map behind */
+ .prof-modal,.dm-wrap{background:var(--page)!important}
+ .prof-modal .prof-sheet{max-height:none!important;height:100%!important;border-radius:0!important;box-shadow:none!important;
+   padding-top:env(safe-area-inset-top,0px)}
+ .prof-modal .prof-sheet::before{display:none}
  *,*::before,*::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
  #appBar,#tabBar,#infoFab,#rvFab,.ab-brand,.ab-acts,#searchIn,.mfab-grp,#miniLegend,#bottomPanel,
  #lyPanel,#feedTop,#feedFab,#inspPanel,.insp-panel,.toast,#coachCard,.auth-modal,#hiResChip,.legend,.rail-btn{
@@ -5727,6 +5747,18 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #rvFab span{display:none}
  #rvFab svg,#infoFab svg{color:var(--fg2)!important}
  #hiResChip{display:none!important}
+ /* the legend card names the layer that is on */
+ #mlName{display:flex;flex-direction:column;align-items:center;gap:3px;max-width:78px;margin:0 auto 5px;padding-bottom:5px;
+   border-bottom:1px solid var(--bd);font:700 9px/1.12 var(--font);color:var(--brand);text-align:center;letter-spacing:-.01em;text-transform:none;
+   hyphens:manual;-webkit-hyphens:manual}
+ #mlName span{max-width:100%}
+ #mlName:empty{display:none}
+ #mlName svg{width:17px;height:17px}
+ /* layer panel: the classes of the chosen layer fold out with (i) only */
+ #lyPanel:not(.ly-showinfo) .ly-subs .leg-chip,#lyPanel:not(.ly-showinfo) .ly-subs .leg-acts{display:none!important}
+ #lyPanel:not(.ly-showinfo) .ly-subs:not(:has(.ly-varrow)):not(:has(.ly-thr)){display:none!important}
+ /* start buttons: one solid colour */
+ .trk-start,.trk-go,#trkStartBtn{background:var(--brand)!important;background-image:none!important}
  #tabBar .tb-rec:not(.live) i{color:var(--c-violet,#6A5BD8)!important}
  #tabBar .tb-rec.live i{color:#E5233F!important}
  /* recording: a small red dot pulses beside the name at the top */
@@ -5858,6 +5890,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
   </div>
 <div id="miniLegend" role="button" tabindex="0" aria-label="Legende – Details" onclick="legInfoToggle(event)">
+  <div id="mlName"></div>
   <div id="mlUnit"></div>
   <div id="mlScale"></div>
 </div>
@@ -8604,7 +8637,12 @@ function vaHiEngine(){
       out[0]=255*Math.min(1,2*x);out[1]=255*Math.min(1,2*(1-x));out[2]=120*(1-x);out[3]=d>0?190:0;return;
     }
     var L,key;
-    if(layer==='ski6'){L=E.clsSki6(m);key='ski6';}
+    if(layer==='ski6'){L=E.clsSki6(m);key='ski6';
+      // powder in the SLF bands and colours of Neuschnee / Schneehöhe (50+ in one)
+      if(L===3||L===4||L===5||L===8||L===9){var pw6=m[E.mi.powder_depth_cm],B6=E.pk.powder_bounds||[1,5,10,20,30,50,75,100,150],j6=0;
+        while(j6<B6.length&&pw6>=B6[j6])j6++;j6=Math.max(1,Math.min(6,j6));
+        var P6=[[0,0,0,0],[232,245,233,225],[165,214,167,225],[102,187,106,225],[66,165,245,225],[30,136,229,225],[21,101,192,225]][j6];
+        E.cls=L;out[0]=P6[0];out[1]=P6[1];out[2]=P6[2];out[3]=P6[3];return;}}
     else if(layer==='powder'){
       // dry powder depth in the SLF snow-depth bands (classify_powder)
       var T=E.pk.thresholds,x=E.mi,hs=m[x.total_hs_cm],pw=m[x.powder_depth_cm],lw=m[x.surface_lw];
@@ -9354,8 +9392,11 @@ function vaPointHTML(lat,lon,elev,slope,aspect){
   if(fo>0)bits.push('Wald '+Math.round(fo/2.55)+'%');
   // first what lies here and how much of it, as on the map
   const T=vaEng.pk&&vaEng.pk.thresholds||{},thinP=m[x.total_hs_cm]<(T.THIN_COVER_HS||20)&&vaEng.clsSki6&&vaEng.clsSki6(m)>=3;
-  const k6=thinP?vaEng.clsSki6(m):((typeof VA_SIMPLE_TO_SKI6!=='undefined'&&VA_SIMPLE_TO_SKI6[sim])||0),c6=(VA_PALETTE.ski6&&VA_PALETTE.ski6[k6])||[150,160,175];
+  const k6=thinP?vaEng.clsSki6(m):((typeof VA_SIMPLE_TO_SKI6!=='undefined'&&VA_SIMPLE_TO_SKI6[sim])||0);let c6=(VA_PALETTE.ski6&&VA_PALETTE.ski6[k6])||[150,160,175];
   const hs=Math.round(m[x.total_hs_cm]),pw=Math.round(m[x.powder_depth_cm]||0);
+  // powder: the swatch in the SLF band colour the map uses
+  if([3,4,5,8,9].includes(k6)){const B=[1,5,10,20,30,50],C=[[232,245,233],[165,214,167],[102,187,106],[66,165,245],[30,136,229],[21,101,192]];
+    let j=0;while(j+1<B.length&&(m[x.powder_depth_cm]||0)>=B[j+1])j++;c6=C[j];}
   const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+c6.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(thinP?'Pulver auf dünner Unterlage – Steine möglich':(nm('simple',sim)||nm('ski18',ski)))+'</b></div>'
     +'<div><span>Pulver</span><b>'+(pw>=1?pw+'<small> cm</small>':'–')+'</b></div>'
     +'<div><span>Schneehöhe</span><b>'+hs+'<small> cm</small></b></div></div>';
@@ -12752,7 +12793,8 @@ const isMobile=window.innerWidth<=560;
 // Same 9-colour SLF palette the Neuschnee layer uses, but banded for total
 // snow depth (typically 0-300cm+ at a base) instead of new-snow-per-window
 // (typically 0-100cm) -- discrete steps, not the old continuous gradient.
-const DEPTH_BOUNDS=[10,25,50,75,100,150,200,250,300,450];
+// the same SLF classes as Neuschnee (and the powder in Skiqualität)
+const DEPTH_BOUNDS=SB;
 function depthCol(v){if(v<DEPTH_BOUNDS[0])return null;
   for(let i=DEPTH_BOUNDS.length-1;i>=1;i--)if(v>=DEPTH_BOUNDS[i-1])return RGB[Math.min(i-1,RGB.length-1)];
   return RGB[0];}
@@ -12817,7 +12859,7 @@ var _isoV=null,_isoA=205,isoHi=null,isoHiCv=null,_isoRaf=0;   // var: setRaster 
 function isoHiSoon(){if(_isoRaf)return;_isoRaf=requestAnimationFrame(()=>{_isoRaf=0;isoHiRender();});}
 function isoHiHide(){if(isoHi&&map.hasLayer(isoHi))map.removeLayer(isoHi);const e=raster&&raster.getElement&&raster.getElement();if(e)e.style.visibility='';}
 function isoHiRender(){const V=_isoV;
-  if(!V||layer!=='snow'||!map.hasLayer(raster)){isoHiHide();return;}
+  if(!V||(layer!=='snow'&&layer!=='depth')||!map.hasLayer(raster)){isoHiHide();return;}
   const bb=raster.getBounds(),sz=map.getSize(),p0=map.latLngToContainerPoint(bb.getNorthWest()),p1=map.latLngToContainerPoint(bb.getSouthEast());
   const sx=p1.x-p0.x,sy=p1.y-p0.y;
   if(sx/W<2.5){isoHiHide();return;}                 // cells already small: the coarse picture is fine
@@ -12849,7 +12891,7 @@ function isoHiRender(){const V=_isoV;
   const re=raster.getElement();if(re)re.style.visibility='hidden';}
 // while the map moves the coarse picture carries on, the sharp one follows
 map.on('movestart',()=>{if(!isoHi||!map.hasLayer(isoHi))return;const re=raster.getElement();if(re)re.style.visibility='';const e=isoHi.getElement();if(e)e.style.visibility='hidden';});
-map.on('moveend',()=>{if(_isoV&&layer==='snow')isoHiSoon();});
+map.on('moveend',()=>{if(_isoV&&(layer==='snow'||layer==='depth'))isoHiSoon();});
 // Min / max / sum of an hourly uint8 cube over the window [a,b) for every
 // cell, in raw units, hour by hour (contiguous memory) instead of cell by
 // cell with a stride of NP. Cached per window, so a threshold or stat change
@@ -12879,7 +12921,7 @@ function renderRaster(){
   const _hid=legHideFn(layer);
   // 3x finer bands on a coarse grid, 2x on the national one (scrub speed)
   if(layer=="snow"){const ca=a*NP,cb=b*NP;setRasterIso(p=>{const v=cum[cb+p]-cum[ca+p];return _hid&&_hid(v)?null:v;},205,NP>50000?2:3);}
-  else if(layer=="depth"){const cb2=b*NP;setRaster(p=>{const v=cum[cb2+p];if(v<1||(_hid&&_hid(v)))return null;const c=depthCol(v);return c?[c[0],c[1],c[2],215]:null;});}
+  else if(layer=="depth"){const cb2=b*NP;setRasterIso(p=>{const v=cum[cb2+p];return (v<1||(_hid&&_hid(v)))?null:v;},215,NP>50000?2:3);}
   else if(layer=="temp"){const R=winRaw(TEMP,'temp'),tm=M.temp_mul,to=M.temp_off,c=Math.max(0,b-a);
     setRaster(p=>{if(!c)return null;const mn=R.mn[p]/tm-to,mx=R.mx[p]/tm-to,su=R.su[p]/tm-c*to;
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[40,120-(x*60|0),255,215];}
@@ -13036,6 +13078,11 @@ function miniLegendRender(l){
   const sp=legSpec(l||layer);
   if(!sp){box.classList.remove('show');return;}
   document.getElementById('mlUnit').textContent=sp.u||'';
+  // which layer is on: its icon and name on top of the scale
+  try{const LL=lyLayers(),it=LL[lyIndex()]&&LL[lyIndex()][2],nm=document.getElementById('mlName');
+    // a soft hyphen where the long German words may break in the narrow card
+    const tx=String(sp.t||it.label).replace(/^(Neu|Schnee|Ski|Trieb|Tempe|Bewöl|Gemeldetes )(schnee|höhe|qualität|ratur|kung|Powder)/,'$1\u00AD$2');
+    if(nm)nm.innerHTML=it?lyIconFor(it.id)+'<span>'+escapeHtml(tx)+'</span>':'';}catch(e){}
   let h='';
   if(sp.grad){
     h='<div class="ml-grad"><i style="background:'+sp.grad+'"></i><div>'
@@ -13044,7 +13091,7 @@ function miniLegendRender(l){
     let rows=sp.rows;
     // A detailed view has ~20 classes: the card lists the ones in view,
     // largest first, with their share instead of a cut-off name.
-    if(sp.va&&rows.length>7){const sh=vaViewShares();
+    if(sp.va&&!sp.noShare&&rows.length>7){const sh=vaViewShares();
       if(sh&&sh.tot>0){rows=rows.filter(r=>(sh.cnt[r.k]||0)/sh.tot>=0.01)
         .sort((x,y)=>(sh.cnt[y.k]||0)-(sh.cnt[x.k]||0)).slice(0,7)
         .map(r=>Object.assign({},r,{s:Math.round((sh.cnt[r.k]||0)/sh.tot*100)+'%'}));}
@@ -13085,6 +13132,10 @@ function legSpec(l){
       :({ski6:[9,8,5,4,3,6,7,2,1],powder:[9,8,5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0));
     const SH=realPow?Object.fromEntries(ORD.map(k=>[k,String((leg[k]&&leg[k][2])||'').replace(/^Pulver\s*/,'').replace(/\s*cm$/,'').replace(/^>\s*/,'>')]))
       :({ski6:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz',7:'faul'},powder:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
+    if(vaKey==='ski6'&&vaEng){const B=[1,5,10,20,30,50],C=['#e8f5e9','#a5d6a7','#66bb6a','#42a5f5','#1e88e5','#1565c0'],rows=[];
+      for(let i=B.length-1;i>=0;i--)rows.push({k:100+i,c:C[i],s:B[i]+(i===B.length-1?'+':''),n:'Pulver '+B[i]+(i===B.length-1?'+ cm':'–'+B[i+1]+' cm')});
+      [[6,'Sulz'],[7,'faul'],[2,'Kruste'],[1,'hart']].forEach(([k,sv])=>{if(leg[k]&&leg[k][1])rows.push({k,c:rgb(leg[k][1]),s:sv,n:leg[k][2]||sv});});
+      return {t:name,u:'Pulver cm',va:true,noShare:true,rows};}
     const rows=ORD.filter(k=>leg[k]&&leg[k][1]).map(k=>{const e=leg[k],nm=e[2]||String(e[0]).replace(/_/g,' ');
       return {k,c:rgb(e[1]),s:SH[k]||nm.split(/[\s/(]/)[0].slice(0,7),n:nm};});
     return {t:name,u:(vaKey==='ski6'||vaKey==='powder')?'Pulver cm':vaKey==='wind'?'Wind':'Klasse',va:true,rows};
@@ -13557,7 +13608,7 @@ function lyInfoRender(){
 const LY_COLS=3;
 // The picker in two short shelves -- what the snow does, what the weather
 // does -- instead of one long run of equal tiles.
-const LY_SECTIONS=[['Schnee',['snowpack','vadrift','reppow','newsnow','depth','powder']],['Wetter',['temp','wind','cloud']]];
+const LY_SECTIONS=[['Schnee',['snowpack','newsnow','depth','powder','reppow','vadrift']],['Wetter',['temp','wind','cloud']]];
 function lyRender(){
   const grid=document.getElementById('lyGrid');if(!grid)return;
   const L=lyLayers(),i=lyIndex(),it=L[i]&&L[i][2],vars=(it&&it.vars)||[];
@@ -14436,7 +14487,9 @@ function inspApplyPos(){const e=document.getElementById('inspPanel');
     if(!r.width||!r.height)return false;
     const x0=r.left-_inspDx,y0=r.top-_inspDy;          // its undragged position
     const minX=8-x0,maxX=innerWidth-x0-r.width-8;
-    const minY=8-y0,maxY=innerHeight-y0-r.height-8;
+    // never above the header (the status bar and clock live there)
+    const ab=document.getElementById('appBar'),topMin=ab&&ab.offsetHeight?ab.getBoundingClientRect().bottom+4:8;
+    const minY=topMin-y0,maxY=innerHeight-y0-r.height-8;
     _inspDx=maxX<minX?0:Math.max(Math.min(_inspDx,maxX),minX);
     _inspDy=maxY<minY?0:Math.max(Math.min(_inspDy,maxY),minY);
     return true;
