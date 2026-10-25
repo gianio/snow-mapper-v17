@@ -5847,6 +5847,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  @media (max-width:899px){
    .feed-page:not(.side){opacity:1!important;transition:transform .26s cubic-bezier(.32,.72,.42,1),visibility 0s!important}
    .feed-page:not(.side):not(.open){visibility:hidden;transition:transform .26s cubic-bezier(.32,.72,.42,1),visibility 0s .26s!important}}
+ /* Skiqualität legend: powder depths, a hairline, then the surfaces */
+ .ml-sep{border:0;border-top:1px solid var(--bd);margin:3px 0;height:0}
  /* the side legend folds to its icon */
  #mlFold{display:flex;align-items:center;justify-content:center;width:100%;height:20px;margin:5px 0 -5px;padding:0;border:0;
    border-top:1px solid var(--bd);background:none;color:var(--fg2);cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -7466,7 +7468,9 @@ function clvCol(l,m,h){let r=0,g=0,b=0,a=0;
   for(const [f,c] of [[h,CLV_COL[2]],[m,CLV_COL[1]],[l,CLV_COL[0]]]){const al=f*c[3];if(al<=0)continue;
     r=c[0]*al+r*(1-al);g=c[1]*al+g*(1-al);b=c[2]*al+b*(1-al);a=al+a*(1-al);}
   if(a<0.06)return null;return [Math.round(r/a),Math.round(g/a),Math.round(b/a),Math.round(Math.min(.9,a)*255)];}
-const SB=M.slf_bounds,SC=M.slf_colors,RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
+// The two lightest SLF bands a shade stronger than the printed scale: on the
+// light map 1–5 cm (near white) and 5–10 cm all but vanished
+const SB=M.slf_bounds,SC=(M.slf_colors||[]).map((c,i)=>['#c2e5c4','#95cf99'][i]||c),RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
 function snowCol(v){if(v<SB[0])return null;for(let i=SB.length-1;i>=1;i--)if(v>=SB[i-1])return RGB[Math.min(i-1,RGB.length-1)];return RGB[0];}
 // The stepped legend above is right for the model layers (an official
 // SLF-style band scale), but a field built by blending overlapping reports
@@ -8340,11 +8344,13 @@ function vaProfAvailable(){
 // hard a cool grey, crust a muted coral, wet/Sulz a honey tone; Triebschnee
 // in violets so it never reads as powder.
 const VA_PALETTE={
-  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[147,197,240,205],4:[59,125,214,225],5:[36,84,178,230],6:[226,170,72,220],7:[150,104,74,225],8:[24,46,120,238],9:[88,36,150,240],10:[208,214,224,170]},
+  // powder in the SLF snow-depth colours (the map draws it in those bands
+  // zoomed in; the coarse frames, tours and pens follow)
+  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[149,207,153,250],4:[102,187,106,240],5:[66,165,245,235],6:[226,170,72,220],7:[150,104,74,225],8:[30,136,229,235],9:[21,101,192,240],10:[208,214,224,170]},
   wind:{1:[156,168,184,190],2:[186,170,236,205],3:[112,72,200,230]}};
 // Nur Pulver on an export without its own powder layer: the three ski6 powder
 // classes, coloured like the nearest SLF snow-depth bands.
-const VA_VPAL={powder:{3:[165,214,167,225],4:[102,187,106,225],5:[66,165,245,225],8:[30,136,229,225],9:[21,101,192,225]}};
+const VA_VPAL={powder:{3:[149,207,153,250],4:[102,187,106,235],5:[66,165,245,230],8:[30,136,229,230],9:[21,101,192,235]}};
 const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver 20–30 cm',6:'Sulz (aufgefirnt)',7:'nass / faul',8:'Pulver 30–40 cm',9:'Pulver > 40 cm',10:'dünne Schneedecke (< 20 cm)'};
 // An export without the simple six classes still has "simple" (15 kinds of
 // surface): the six are folded from it, so Skiqualität always opens simple.
@@ -8540,7 +8546,7 @@ function vaFrameUrl(key,idx){
 // 0.34 zoomed in washed the classes out to pastel. 0.72 -> 0.5 keeps both the
 // map and the classes readable, and the panel's "Transparenz" slider scales
 // it like every other layer.
-const VA_OP_OUT=0.72, VA_OP_IN=0.5, VA_Z_OUT=8, VA_Z_IN=14;
+const VA_OP_OUT=0.74, VA_OP_IN=0.58, VA_Z_OUT=8, VA_Z_IN=14;
 function vaOpacity(){
   const z=(map&&map.getZoom&&map.getZoom())||VA_Z_OUT;
   const t=Math.max(0,Math.min(1,(z-VA_Z_OUT)/(VA_Z_IN-VA_Z_OUT)));
@@ -8734,7 +8740,7 @@ function vaHiEngine(){
       // powder in the SLF bands and colours of Neuschnee / Schneehöhe (50+ in one)
       if(L===3||L===4||L===5||L===8||L===9){var pw6=m[E.mi.powder_depth_cm],B6=E.pk.powder_bounds||[1,5,10,20,30,50,75,100,150],j6=0;
         while(j6<B6.length&&pw6>=B6[j6])j6++;j6=Math.max(1,Math.min(6,j6));
-        var P6=[[0,0,0,0],[232,245,233,225],[165,214,167,225],[102,187,106,225],[66,165,245,225],[30,136,229,225],[21,101,192,225]][j6];
+        var P6=[[0,0,0,0],[194,229,196,250],[149,207,153,250],[102,187,106,235],[66,165,245,230],[30,136,229,230],[21,101,192,235]][j6];
         E.cls=L;out[0]=P6[0];out[1]=P6[1];out[2]=P6[2];out[3]=P6[3];return;}}
     else if(layer==='powder'){
       // dry powder depth in the SLF snow-depth bands (classify_powder)
@@ -8742,7 +8748,7 @@ function vaHiEngine(){
       if(!(hs>=Math.min(T.THIN_COVER_HS,T.SK_THIN_POWDER_HS!=null?T.SK_THIN_POWDER_HS:3))||!(pw>=T.SK_POWDER_MIN)||lw>T.SK_WET_LWC){out[0]=out[1]=out[2]=out[3]=0;return;}
       var B=E.pk.powder_bounds||[1,5,10,20,30,50,75,100,150],i=0;while(i<B.length&&pw>=B[i])i++;
       var PT=(E.pk.rgba&&E.pk.rgba.powder&&E.pk.rgba.powder.length>9)?E.pk.rgba.powder
-        :[[0,0,0,0],[232,245,233,225],[165,214,167,225],[102,187,106,225],[66,165,245,225],[30,136,229,225],[21,101,192,225],[123,31,162,225],[233,30,99,225],[183,28,28,225]];
+        :[[0,0,0,0],[194,229,196,250],[149,207,153,250],[102,187,106,235],[66,165,245,230],[30,136,229,230],[21,101,192,235],[123,31,162,235],[233,30,99,235],[183,28,28,235]];
       E.cls=i;var pc=PT[Math.max(1,Math.min(PT.length-1,i))];out[0]=pc[0];out[1]=pc[1];out[2]=pc[2];out[3]=pc[3];return;}
     else if(layer==='wind'){L=E.clsWind(m);key='wind';}
     else if(layer==='simple'){L=E.clsSimple(m);key='simple';}
@@ -9488,7 +9494,7 @@ function vaPointHTML(lat,lon,elev,slope,aspect){
   const k6=thinP?vaEng.clsSki6(m):((typeof VA_SIMPLE_TO_SKI6!=='undefined'&&VA_SIMPLE_TO_SKI6[sim])||0);let c6=(VA_PALETTE.ski6&&VA_PALETTE.ski6[k6])||[150,160,175];
   const hs=Math.round(m[x.total_hs_cm]),pw=Math.round(m[x.powder_depth_cm]||0);
   // powder: the swatch in the SLF band colour the map uses
-  if([3,4,5,8,9].includes(k6)){const B=[1,5,10,20,30,50],C=[[232,245,233],[165,214,167],[102,187,106],[66,165,245],[30,136,229],[21,101,192]];
+  if([3,4,5,8,9].includes(k6)){const B=[1,5,10,20,30,50],C=[[194,229,196],[149,207,153],[102,187,106],[66,165,245],[30,136,229],[21,101,192]];
     let j=0;while(j+1<B.length&&(m[x.powder_depth_cm]||0)>=B[j+1])j++;c6=C[j];}
   const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+c6.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(thin6===10?'Dünne Schneedecke – Steine, kaum fahrbar':thinP?'Pulver auf dünner Unterlage – Steine möglich':(nm('simple',sim)||nm('ski18',ski)))+'</b></div>'
     +'<div><span>Pulver</span><b>'+(pw>=1?pw+'<small> cm</small>':'–')+'</b></div>'
@@ -12945,7 +12951,7 @@ function chMask(){if(_chMask)return _chMask;
     c.width=1;c.height=1;
   }catch(e){m.fill(1);}
   return (_chMask=m);}
-function setRaster(get,border){_isoV=null;isoHiHide();if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;const chm=chMask();
+function setRaster(get,border){_isoV=null;isoHiHide();_tmpV=null;tempHiHide();if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;const chm=chMask();
   for(let p=0;p<NP;p++){const r=(inDomainEdge(p)||!chm[p])?null:get(p);const o=p*4;if(r){d[o]=r[0];d[o+1]=r[1];d[o+2]=r[2];d[o+3]=r[3]==null?210:r[3];if(cls)cls[p]=r[4];}else{d[o+3]=0;if(cls)cls[p]=-999;}}
   if(border){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=y*W+x;if(cls[p]==-999)continue;const rt=x<W-1?cls[p+1]:cls[p],bt=y<H-1?cls[p+W]:cls[p];if(rt!=cls[p]||bt!=cls[p]){const o=p*4;d[o]=20;d[o+1]=20;d[o+2]=30;d[o+3]=230;}}}
   cx.putImageData(img,0,0);}
@@ -12954,7 +12960,7 @@ function setRaster(get,border){_isoV=null;isoHiHide();if(cv.width!==W||cv.height
 // in-between colours) and every band edge gets a faint line, so the steps
 // read as snow levels. val(p) gives the cell value or null.
 function snowBand(v){if(v==null||v<SB[0])return -1;let j=0;while(j+1<SB.length&&v>=SB[j+1])j++;return Math.min(j,SB.length-2,RGB.length-1);}
-function setRasterIso(val,alpha,k){const chm=chMask(),V=new Float32Array(NP);
+function setRasterIso(val,alpha,k){_tmpV=null;if(tempHi&&map.hasLayer(tempHi))map.removeLayer(tempHi);const chm=chMask(),V=new Float32Array(NP);
   for(let p=0;p<NP;p++){const v=(inDomainEdge(p)||!chm[p])?null:val(p);V[p]=v==null?NaN:v;}
   const w=W*k,h=H*k;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
   const img=cx.createImageData(w,h),d=img.data,B=new Int8Array(w*h);
@@ -12968,7 +12974,7 @@ function setRasterIso(val,alpha,k){const chm=chMask(),V=new Float32Array(NP);
   for(let q=0;q<w*h;q++){const bq=B[q];if(bq<0)continue;const o=q*4,c=RGB[bq],X=q%w;
     const edge=(X<w-1&&B[q+1]!==bq)||(q+w<w*h&&B[q+w]!==bq);
     // the line is a darker shade of the band itself: present, but faint
-    const f=edge?.8:1;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=edge?Math.min(255,alpha+30):alpha;}
+    const f=edge?.8:1,al=bq<2?Math.min(255,alpha+30):alpha;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=edge?Math.min(255,al+30):al;}
   cx.putImageData(img,0,0);
   _isoV=V;_isoA=alpha;isoHiSoon();}
 // The coarse picture above covers the whole country; zoomed in, a 1 km cell
@@ -13001,7 +13007,7 @@ function isoHiRender(){const V=_isoV;
   const al=_isoA;
   for(let qq=0;qq<w*h;qq++){const bq=B[qq];if(bq<0)continue;const o=qq*4,c=RGB[bq],X=qq%w;
     const edge=(X<w-1&&B[qq+1]!==bq)||(qq+w<w*h&&B[qq+w]!==bq);
-    const f=edge?.72:1;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=edge?Math.min(255,al+40):al;}
+    const f=edge?.72:1,ab=bq<2?Math.min(255,al+30):al;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=edge?Math.min(255,ab+40):ab;}
   g.putImageData(img,0,0);
   const bounds=L.latLngBounds(map.containerPointToLatLng([x0,y1]),map.containerPointToLatLng([x1,y0]));
   if(!isoHi)isoHi=L.svgOverlay(isoHiCv,bounds,{opacity:raster.options.opacity,interactive:false});
@@ -13012,6 +13018,48 @@ function isoHiRender(){const V=_isoV;
 // while the map moves the coarse picture carries on, the sharp one follows
 map.on('movestart',()=>{if(!isoHi||!map.hasLayer(isoHi))return;const re=raster.getElement();if(re)re.style.visibility='';const e=isoHi.getElement();if(e)e.style.visibility='hidden';});
 map.on('moveend',()=>{if(_isoV&&(layer==='snow'||layer==='depth'))isoHiSoon();});
+// Temperature the same way, and at the terrain's own height: a 1 km cell
+// carries its mean height, so a summit read 2-5 K warm and a valley floor
+// cold. Zoomed in, every pixel takes the cell temperature (interpolated)
+// moved from the cell's height to the ~150 m terrain there with the
+// pipeline's lapse rate -- what the point card does for one point.
+var _tmpV=null,tempHi=null,tempHiCv=null,_tmpRaf=0,_tmpME=null;
+function tempHiSoon(){if(_tmpRaf)return;_tmpRaf=requestAnimationFrame(()=>{_tmpRaf=0;tempHiRender();});}
+function tempHiHide(){if(tempHi&&map.hasLayer(tempHi))map.removeLayer(tempHi);if(!_isoV){const e=raster&&raster.getElement&&raster.getElement();if(e)e.style.visibility='';}}
+function tempHiRender(){const V=_tmpV;
+  if(!V||layer!=='temp'||!map.hasLayer(raster)||!elevData){tempHiHide();return;}
+  const bb=raster.getBounds(),sz=map.getSize(),p0=map.latLngToContainerPoint(bb.getNorthWest()),p1=map.latLngToContainerPoint(bb.getSouthEast());
+  const sx=p1.x-p0.x,sy=p1.y-p0.y;
+  if(sx/W<2.5){tempHiHide();return;}
+  const x0=Math.max(0,Math.floor(p0.x)),y0=Math.max(0,Math.floor(p0.y)),x1=Math.min(sz.x,Math.ceil(p1.x)),y1=Math.min(sz.y,Math.ceil(p1.y));
+  if(x1-x0<4||y1-y0<4){tempHiHide();return;}
+  if(!_tmpME){_tmpME=new Float32Array(NP);for(let p=0;p<NP;p++)_tmpME[p]=melevv(p);}
+  const ME=_tmpME,q=Math.min(1,Math.sqrt(250000/((x1-x0)*(y1-y0)))),w=Math.max(1,Math.round((x1-x0)*q)),h=Math.max(1,Math.round((y1-y0)*q));
+  if(!tempHiCv)tempHiCv=document.createElement('canvas');
+  if(tempHiCv.width!==w||tempHiCv.height!==h){tempHiCv.width=w;tempHiCv.height=h;}
+  const g=tempHiCv.getContext('2d'),img=g.createImageData(w,h),d=img.data;
+  // a pixel's latitude depends on its row only, its longitude on its column
+  const lat=new Float64Array(h),lng=new Float64Array(w);
+  for(let Y=0;Y<h;Y++)lat[Y]=map.containerPointToLatLng([x0,y0+(Y+.5)/q]).lat;
+  for(let X=0;X<w;X++)lng[X]=map.containerPointToLatLng([x0+(X+.5)/q,y0]).lng;
+  for(let Y=0;Y<h;Y++){const fy=Math.min(H-1,Math.max(0,((y0+(Y+.5)/q)-p0.y)/sy*H-.5)),ya=fy|0,yb=Math.min(H-1,ya+1),ty=fy-ya,yn=Math.round(fy)*W;
+    for(let X=0;X<w;X++){const fx=Math.min(W-1,Math.max(0,((x0+(X+.5)/q)-p0.x)/sx*W-.5)),xa=fx|0,xb=Math.min(W-1,xa+1),tx=fx-xa;
+      if(isNaN(V[yn+Math.round(fx)]))continue;
+      let su=0,se=0,sw=0;const add=(p,wt)=>{const v=V[p];if(v===v&&wt>0){su+=v*wt;se+=ME[p]*wt;sw+=wt;}};
+      add(ya*W+xa,(1-tx)*(1-ty));add(ya*W+xb,tx*(1-ty));add(yb*W+xa,(1-tx)*ty);add(yb*W+xb,tx*ty);
+      if(!sw)continue;let t=su/sw;const z=fineElev(lat[Y],lng[X]);
+      if(z!=null)t+=Math.max(-8,Math.min(8,TEMP_LAPSE*(z-se/sw)));
+      if(thrHides('temp',t))continue;
+      const c=tempCol(t),o=(Y*w+X)*4;d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=205;}}
+  g.putImageData(img,0,0);
+  const bounds=L.latLngBounds(map.containerPointToLatLng([x0,y1]),map.containerPointToLatLng([x1,y0]));
+  if(!tempHi)tempHi=L.svgOverlay(tempHiCv,bounds,{opacity:raster.options.opacity,interactive:false});
+  else tempHi.setBounds(bounds);
+  tempHi.setOpacity(raster.options.opacity);if(!map.hasLayer(tempHi))tempHi.addTo(map);
+  const e=tempHi.getElement();if(e)e.style.visibility='';
+  const re=raster.getElement();if(re)re.style.visibility='hidden';}
+map.on('movestart',()=>{if(!tempHi||!map.hasLayer(tempHi))return;const re=raster.getElement();if(re)re.style.visibility='';const e=tempHi.getElement();if(e)e.style.visibility='hidden';});
+map.on('moveend',()=>{if(_tmpV&&layer==='temp')tempHiSoon();});
 // Min / max / sum of an hourly uint8 cube over the window [a,b) for every
 // cell, in raw units, hour by hour (contiguous memory) instead of cell by
 // cell with a stride of NP. Cached per window, so a threshold or stat change
@@ -13046,7 +13094,12 @@ function renderRaster(){
     setRaster(p=>{if(!c)return null;const mn=R.mn[p]/tm-to,mx=R.mx[p]/tm-to,su=R.su[p]/tm-c*to;
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[40,120-(x*60|0),255,215];}
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[255,200-(x*110|0),60,235];}
-      const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(thrHides('temp',v))return null;const col=tempCol(v);return[col[0],col[1],col[2],205];});}
+      const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(thrHides('temp',v))return null;const col=tempCol(v);return[col[0],col[1],col[2],205];});
+    // zoomed in, the temperature is drawn again at the terrain's own height
+    if(c&&stat!=="sub0"&&stat!=="max05"){const V=new Float32Array(NP),chm=chMask();
+      for(let p=0;p<NP;p++){if(inDomainEdge(p)||!chm[p]){V[p]=NaN;continue;}
+        const mn=R.mn[p]/tm-to,mx=R.mx[p]/tm-to,su=R.su[p]/tm-c*to;V[p]=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);}
+      _tmpV=V;tempHiSoon();}}
   else if(layer=="wind"){const R=winRaw(WIND_LVLS[windLvl][2],'wind'+windLvl),k=3.6/M.spd_mul,c=Math.max(0,b-a);
     setRaster(p=>{if(!c)return null;const mn=R.mn[p]*k,mx=R.mx[p]*k,su=R.su[p]*k;
       if(stat=="lt10"){if(mx>=10)return null;return[40,190,90,215];}
@@ -13220,7 +13273,7 @@ function miniLegendRender(l){
     const sw=legSwitchable(l||layer)&&rows.every(r=>r.k!=null),vis=sw?legVisSet(l||layer):null;
     h='<div class="ml-cls">'+rows.map(r=>sw
       ?'<button type="button" class="'+(vis.has(r.k)?'on':'off')+'" aria-pressed="'+vis.has(r.k)+'" aria-label="'+escapeHtml(r.n||r.s)+'" onclick="legToggle('+r.k+',event)"><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.s)+'</span></button>'
-      :'<div><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.s)+'</span></div>').join('')+'</div>'
+      :(r.sep?'<hr class="ml-sep">':'')+'<div><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.s)+'</span></div>').join('')+'</div>'
       +(sw&&!legIsDefault(l||layer)?'<button type="button" class="ml-reset" onclick="legReset(event)" aria-label="Standard wiederherstellen">↺</button>':'');
   }
   document.getElementById('mlScale').innerHTML=h;
@@ -13243,7 +13296,7 @@ function legSpec(l){
         ticks:[r[1],Math.round((r[0]+r[1])/2),r[0]],long:'Dichte der obersten Schneeschicht'};}
     // Nur Pulver: always the SLF snow-depth bands -- the sharp map is drawn
     // in them even when the export is an older one without its own layer
-    if(vaKey==='powder'){const B=[1,5,10,20,30,50,75,100,150],C=['#e8f5e9','#a5d6a7','#66bb6a','#42a5f5','#1e88e5','#1565c0','#7b1fa2','#e91e63','#b71c1c'];
+    if(vaKey==='powder'){const B=[1,5,10,20,30,50,75,100,150],C=['#c2e5c4','#95cf99','#66bb6a','#42a5f5','#1e88e5','#1565c0','#7b1fa2','#e91e63','#b71c1c'];
       const rows=[];for(let i=B.length-1;i>=0;i--)rows.push({k:i+1,c:C[i],s:i===B.length-1?'>'+B[i]:B[i]+'–'+B[i+1],n:'Pulver '+(i===B.length-1?'> '+B[i]:B[i]+'–'+B[i+1])+' cm'});
       return {t:name,u:'Pulver cm',va:true,rows,long:'Trockener Pulver in den Schneehöhen-Klassen des SLF'};}
     const leg=L.legend||{};
@@ -13252,10 +13305,16 @@ function legSpec(l){
       :({ski6:[9,8,5,4,3,6,7,2,1,10],powder:[9,8,5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0));
     const SH=realPow?Object.fromEntries(ORD.map(k=>[k,String((leg[k]&&leg[k][2])||'').replace(/^Pulver\s*/,'').replace(/\s*cm$/,'').replace(/^>\s*/,'>')]))
       :({ski6:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz',7:'faul',10:'dünn'},powder:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
-    if(vaKey==='ski6'&&vaEng){const B=[1,5,10,20,30,50],C=['#e8f5e9','#a5d6a7','#66bb6a','#42a5f5','#1e88e5','#1565c0'],rows=[];
-      for(let i=B.length-1;i>=0;i--)rows.push({k:100+i,c:C[i],s:B[i]+(i===B.length-1?'+':'–'+B[i+1]),n:'Pulver '+B[i]+(i===B.length-1?'+ cm':'–'+B[i+1]+' cm')});
-      [[6,'Sulz'],[7,'faul'],[2,'Kruste'],[1,'hart'],[10,'dünn']].forEach(([k,sv])=>{const e=leg[k]&&leg[k][1]?leg[k]:k===10?[10,VA_PALETTE.ski6[10],VA_SKI6_DE[10]]:null;
-        if(e)rows.push({k,c:rgb(e[1]),s:sv,n:e[2]||sv});});
+    // Skiqualität: the powder depths, then the other surfaces by name --
+    // never shares of the view. Zoomed in the map draws powder in the SLF
+    // bands (device engine); the coarse frames in the five powder classes.
+    if(vaKey==='ski6'){const rows=[];
+      if(vaEng){const B=[1,5,10,20,30,50],C=['#c2e5c4','#95cf99','#66bb6a','#42a5f5','#1e88e5','#1565c0'];
+        for(let i=B.length-1;i>=0;i--)rows.push({k:100+i,c:C[i],s:B[i]+(i===B.length-1?'+':'–'+B[i+1]),n:'Pulver '+B[i]+(i===B.length-1?'+ cm':'–'+B[i+1]+' cm')});}
+      else [[9,'40+'],[8,'30–40'],[5,leg[8]?'20–30':'20+'],[4,'10–20'],[3,'2–10']].forEach(([k,sv])=>{if(k===8&&!leg[8])return;
+        rows.push({k,c:rgb(VA_PALETTE.ski6[k]),s:sv,n:'Pulver '+sv+' cm'});});
+      [[6,'Sulz'],[7,'nass'],[2,'Kruste'],[1,'hart'],[10,'dünn']].forEach(([k,sv],i)=>{
+        rows.push({k,c:rgb(VA_PALETTE.ski6[k]),s:sv,n:(leg[k]&&leg[k][2])||VA_SKI6_DE[k]||sv,sep:!i});});
       return {t:name,u:'Pulver cm',va:true,noShare:true,rows};}
     const rows=ORD.filter(k=>leg[k]&&leg[k][1]).map(k=>{const e=leg[k],nm=e[2]||String(e[0]).replace(/_/g,' ');
       return {k,c:rgb(e[1]),s:SH[k]||nm.split(/[\s/(]/)[0].slice(0,7),n:nm};});
@@ -13281,7 +13340,7 @@ function legSpec(l){
     const nm=l==='temp'?'Temperatur 2 m':'Schneeoberfläche';
     const T5=[[-Infinity,-10,'<−10',-15],[-10,-5,'−10–−5',-7],[-5,0,'−5–0',-2],[0,5,'0–5',2],[5,10,'5–10',7],[10,Infinity,'10+',14]];
     const rows=T5.map((x,k)=>({k,lo:x[0],hi:x[1],c:rgb(tempCol(x[3])),s:x[2],n:x[2]+' °C'})).reverse();
-    return {t:nm,u:'°C',rows,long:'Mittlere Temperatur im gewählten Zeitfenster'};}
+    return {t:nm,u:'°C',rows,long:l==='temp'?'Mittlere Temperatur im gewählten Zeitfenster; herangezoomt auf der Höhe des Geländes (nicht der 1-km-Zelle)':'Mittlere Temperatur im gewählten Zeitfenster'};}
   if(l==='cloud'&&_clvData){const nm=['Tiefe Wolken, Nebel – dicht','Mittelhohe Wolken','Hohe Wolken, Cirren – dünn'];
     const rows=[0,1,2].map(k=>{const c=CLV_COL[k];return {k,c:'rgba('+c[0]+','+c[1]+','+c[2]+','+Math.max(.6,c[3]).toFixed(2)+')',s:['Tief','Mittel','Hoch'][k],n:nm[k]};}).reverse();
     return {t:'Bewölkung',u:'Höhe',rows,long:'Wolken nach Höhe zur gewählten Stunde: tief (unter ~2000 m, Stratus und Nebel – dicht, keine Sicht), mittel (~2000–6000 m) und hoch (über ~6000 m, Cirren – dünn, die Sonne scheint oft durch). Je kräftiger die Farbe, desto mehr Bedeckung.'};}
@@ -13437,6 +13496,7 @@ function showOverlay(){
   const vaUp=!!(ovOn.variantA&&typeof vaAvailable==='function'&&vaAvailable());
   const om=vaUp?0:layerOpacityMul();
   raster.setOpacity(grid?0.94*om:0);if(isoHi)isoHi.setOpacity(grid?0.94*om:0);isoHiSoon();
+  if(tempHi)tempHi.setOpacity(grid?0.94*om:0);tempHiSoon();
   if(radg){radOverlay.setOpacity(0.9*om);map.addLayer(radOverlay);}
   if(layer=="slope"){slopeWMTS.setOpacity(0.7*om);map.addLayer(slopeWMTS);}
   else if(layer=="shade"){reliefWMTS.setOpacity(0.85*om);map.addLayer(reliefWMTS);}

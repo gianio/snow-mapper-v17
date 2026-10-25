@@ -30,8 +30,8 @@ from PIL import Image
 # damit das Ergebnis direkt mit der SLF-Neuschneekarte vergleichbar ist.
 SLF_BOUNDS = [1, 5, 10, 20, 30, 50, 75, 100, 150, 300]  # cm-Grenzen (SLF-nah)
 SLF_COLORS = [
-    "#e8f5e9",  # 1-5    sehr hell gruen
-    "#a5d6a7",  # 5-10   hellgruen
+    "#c2e5c4",  # 1-5    hellgruen (kraeftiger als die SLF-Karte: auf hellem Grund sonst unsichtbar)
+    "#95cf99",  # 5-10   hellgruen
     "#66bb6a",  # 10-20  gruen
     "#42a5f5",  # 20-30  blau
     "#1e88e5",  # 30-50  mittelblau

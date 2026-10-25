@@ -38,5 +38,10 @@ check("run-averaged radiation -> hourly means", h["shortwave_radiation"] == [150
       str(h["shortwave_radiation"]))
 check("v = -5 is wind FROM the north", h["wind_direction_10m"][0] == 0.0 and h["wind_speed_10m"][0] == 5.0)
 check("RH from the dew point", 80 < h["relative_humidity_2m"][0] < 92, str(h["relative_humidity_2m"][0]))
+hhl = np.array([[3000., 3200., 2900.], [1500., 2100., 900.], [1210., 1840., 455.]])
+check("terrain = lowest half level of HHL", o._terrain_from_hhl(hhl).tolist() == [1210., 1840., 455.])
+check("terrain from HHL with extra leading dims", o._terrain_from_hhl(hhl[None]).tolist() == [1210., 1840., 455.])
+check("constants asset suffix per collection", o._CONST_SUFFIX[o.COLL["ch1"]] == "icon-ch1-eps"
+      and o._CONST_SUFFIX[o.COLL["ch2"]] == "icon-ch2-eps")
 print("\n" + ("OGD EXTRACT OK" if not fails else f"FAILED: {fails}"))
 sys.exit(1 if fails else 0)
