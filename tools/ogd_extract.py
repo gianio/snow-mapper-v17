@@ -110,6 +110,38 @@ def save_precip_field(field_dir, model, vals, lead, ref_dt, lat, lon):
     print(f"  {model} TOT_PREC field: {int(m.sum())} cells x {len(keep)} leads -> {f.name}", flush=True)
 
 
+# ICON's terrain height is not a forecast variable on OGD (asking for HSURF as
+# one always failed, so the heights came from our DEM): it is one of the
+# collection's static assets -- HSURF in the horizontal constants, and the
+# lowest half level of HHL in the vertical ones.
+_CONST_SUFFIX = {"ogd-forecasting-icon-ch1": "icon-ch1-eps", "ogd-forecasting-icon-ch2": "icon-ch2-eps"}
+
+
+def _terrain_from_hhl(hhl):
+    """Model terrain from HHL (half levels x cells): its lowest half level."""
+    a = np.asarray(hhl, float)
+    a = a.reshape(-1, a.shape[-1]) if a.ndim > 1 else a[None]
+    return np.nanmin(a, axis=0)
+
+
+def _hsurf(coll):
+    """ICON terrain height per cell, in the order of the forecast fields."""
+    from meteodatalab import data_source, grib_decoder, ogd_api
+    cid, suf, errs = f"ch.meteoschweiz.{coll}", _CONST_SUFFIX[coll], []
+    for prefix, param in (("horizontal", "HSURF"), ("vertical", "HHL")):
+        try:
+            url = ogd_api.get_collection_asset_url(cid, f"{prefix}_constants_{suf}.grib2")
+            da = grib_decoder.load(data_source.URLDataSource(urls=[url]), {"param": [param]},
+                                   geo_coords=lambda uuid: {})[param].squeeze()
+            if "cell" in da.dims:
+                da = da.transpose(..., "cell")
+            a = np.asarray(da.values, float)
+            return a.ravel() if param == "HSURF" else _terrain_from_hhl(a)
+        except Exception as e:
+            errs.append(f"{param}: {type(e).__name__}")
+    raise RuntimeError("; ".join(errs))
+
+
 def save_t2m_field(field_dir, model, coll, vals, lead, ref_dt, lat, lon, hsurf=None):
     """2 m temperature on every ICON cell over Switzerland, hourly, plus the
     model's terrain height (HSURF) when OGD offers it. variant_a/elevtemp.py
@@ -122,11 +154,9 @@ def save_t2m_field(field_dir, model, coll, vals, lead, ref_dt, lat, lon, hsurf=N
         t = t - 273.15
     if hsurf is None:
         try:
-            hs = _get(coll, "HSURF", [0])
-            hv, _, _ = _series(hs)
-            hsurf = np.asarray(hv, float)[0]
+            hsurf = _hsurf(coll)
         except Exception as e:
-            print(f"  {model} HSURF not available ({type(e).__name__}) -- heights from the DEM", flush=True)
+            print(f"  {model} HSURF not available ({e}) -- heights from the DEM", flush=True)
     kw = {}
     if hsurf is not None and np.asarray(hsurf).shape[-1] == len(lat):
         kw["hsurf"] = np.asarray(hsurf, float)[m].astype(np.float32)

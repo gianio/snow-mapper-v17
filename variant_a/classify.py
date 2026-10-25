@@ -965,15 +965,15 @@ SKI6_LABELS = ["none", "hard", "crust", "powder_0_10", "powder_10_20", "powder_2
 SKI6_DE = ["kein / wenig Schnee", "durchgehend hart", "Kruste", "Pulver 0–10 cm",
            "Pulver 10–20 cm", "Pulver 20–30 cm", "Sulz (aufgefirnt)", "nass / faul",
            "Pulver 30–40 cm", "Pulver > 40 cm", "dünne Schneedecke (< 20 cm)"]
-# Powder in the app's blues, light -> accent -> navy (more is darker,
-# readable in grey too); the surfaces you would rather avoid are the
-# warm/neutral ones: cool grey for hard, muted coral for crust, honey for
-# wet / Sulz. The app carries the same table (VA_PALETTE) so older exports
-# are shown in it as well.
+# Powder in the SLF snow-depth colours of the Neuschnee / Schneehöhe layers
+# (5-10 green .. 50-75 navy, the class's band); the surfaces you would
+# rather avoid are the warm/neutral ones: cool grey for hard, muted coral
+# for crust, honey for wet / Sulz. The app carries the same table
+# (VA_PALETTE) so older exports are shown in it as well.
 SKI6_RGBA = {0: (0, 0, 0, 0), 1: (156, 168, 184, 185), 2: (214, 108, 98, 215),
-             3: (147, 197, 240, 205), 4: (59, 125, 214, 225), 5: (36, 84, 178, 230),
+             3: (149, 207, 153, 250), 4: (102, 187, 106, 240), 5: (66, 165, 245, 235),
              6: (226, 170, 72, 220), 7: (150, 104, 74, 225),
-             8: (24, 46, 120, 238), 9: (88, 36, 150, 240), 10: (208, 214, 224, 170)}
+             8: (30, 136, 229, 235), 9: (21, 101, 192, 240), 10: (208, 214, 224, 170)}
 SK_POWDER_MIN = 2.0      # cm -- less loose snow than this is not "powder" to ski
 SK_THIN_POWDER_HS = 3.0  # cm -- early season: a cover thinner than THIN_COVER_HS
                          # is drawn once the whole pack reaches this -- as powder
@@ -1041,8 +1041,8 @@ def refrozen_series(times, surface_lw, hours=15.0):
 POWDER_BOUNDS = [1, 5, 10, 20, 30, 50, 75, 100, 150]
 POWDER_LABELS = ["none"] + [f"powder_{a}_{b}" for a, b in zip(POWDER_BOUNDS[:-1], POWDER_BOUNDS[1:])] + ["powder_gt_150"]
 POWDER_DE = ["–"] + [f"Pulver {a}–{b} cm" for a, b in zip(POWDER_BOUNDS[:-1], POWDER_BOUNDS[1:])] + ["Pulver > 150 cm"]
-_SLF_HEX = ["#e8f5e9", "#a5d6a7", "#66bb6a", "#42a5f5", "#1e88e5", "#1565c0", "#7b1fa2", "#e91e63", "#b71c1c"]
-POWDER_RGBA = {0: (0, 0, 0, 0), **{i + 1: (int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16), 225)
+_SLF_HEX = ["#c2e5c4", "#95cf99", "#66bb6a", "#42a5f5", "#1e88e5", "#1565c0", "#7b1fa2", "#e91e63", "#b71c1c"]
+POWDER_RGBA = {0: (0, 0, 0, 0), **{i + 1: (int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16), 250 if i < 2 else 235)
                                     for i, h in enumerate(_SLF_HEX)}}
 
 
