@@ -3853,6 +3853,18 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .feed-tx{position:relative;margin:2px 16px 0;padding:16px 18px 15px 22px;border-radius:16px;font-size:17px;line-height:1.5;font-weight:550;color:var(--fg);letter-spacing:-.012em;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
  .feed-tx-bar{position:absolute;left:8px;top:14px;bottom:14px;width:4px;border-radius:2px;opacity:.75}
  .feed-card.text .feed-card-actions{margin-top:8px}
+ /* text-only posts: short and quiet, they are not pictures */
+ .feed-card.text .feed-tx{margin:0 16px;padding:8px 12px 8px 18px;border-radius:12px;font-size:14.5px;line-height:1.4;font-weight:500;-webkit-line-clamp:3}
+ .feed-card.text .feed-tx-bar{left:7px;top:9px;bottom:9px;width:3px}
+ .feed-card.text .feed-card-actions{margin-top:4px}
+ .feed-card.text .feed-card-body:not(:has(*)),.feed-card.text .feed-card-read:not(:has(*)){display:none}
+ .feed-txt-sw{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 2px 4px;font:600 14.5px var(--font,inherit);color:var(--fg);cursor:pointer}
+ .feed-txt-sw input{position:absolute;opacity:0;pointer-events:none}
+ .feed-txt-sw i{flex:none;width:44px;height:26px;border-radius:13px;background:var(--fill-2,#d5d9e0);position:relative;transition:background .2s}
+ .feed-txt-sw i::after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+ .feed-txt-sw input:checked+i{background:var(--accent,#2563eb)}
+ .feed-txt-sw input:checked+i::after{transform:translateX(18px)}
+ .feed-txt-more{display:block;margin:14px auto 24px;padding:9px 16px;border-radius:999px;border:1px solid var(--hair);background:var(--card);color:var(--fg2);font:700 13px var(--font,inherit);cursor:pointer}
  @media(min-width:561px){.feed-grid{padding:18px 0 120px}.feed-card{margin:0 0 20px}}
  /* --- Report markers --- */
  /* --- Map report markers: progressive disclosure by zoom --- */
@@ -3974,7 +3986,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 
  /* ── legend: as narrow as the toolbar under it, units on top; tap for the
     full card ── */
- #miniLegend{width:54px;padding:8px 6px 9px;border-radius:18px;right:14px;cursor:pointer;
+ #miniLegend{width:60px;padding:8px 5px 9px;border-radius:18px;right:14px;cursor:pointer;
    background:color-mix(in srgb,var(--card) 90%,transparent);border:1px solid var(--hair);
    backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:var(--elev3);
    bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 358px)}
@@ -4010,7 +4022,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .li-rows>div.sw{cursor:pointer;border-radius:8px}
  .li-rows>div.off{opacity:.4}
  .li-rows>div.off i{background:transparent!important;box-shadow:inset 0 0 0 1.5px var(--fg2)}
- .ml-cls i{width:9px;height:15px;border-radius:3px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+ .ml-cls i{width:8px;height:15px;border-radius:3px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
  .ml-cls span{font:700 9px/1 Helvetica Neue,Helvetica,Arial,sans-serif;color:var(--fg);white-space:nowrap;overflow:hidden;letter-spacing:-.02em}
  .leg-info{position:absolute;z-index:1160;right:78px;bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,80px) + 290px);
    width:min(300px,calc(100vw - 104px));max-height:60vh;overflow-y:auto;background:var(--card);border:1px solid var(--hair);
@@ -5805,6 +5817,44 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #actPlusW .ap-in button svg{width:22px;height:22px;flex:none;color:var(--brand)}
  #actPlusW .ap-in small{display:block;font-weight:400;font-size:12.5px;color:var(--mut);margin-top:2px}
  #actPlusW .ap-in .ap-x{justify-content:center;color:var(--mut);margin-top:4px;border-top:1px solid var(--bd);border-radius:0}
+ /* ===== Karte bis an den Rand (phone) =================================
+    No bar at the top: the map runs up under the status bar, the account
+    button and the two small buttons float over it in one row. At the bottom
+    the timeline and the tab bar are one surface -- no strip of map between
+    them, one hairline where they meet. */
+ @media (max-width:899px){
+   body:not(.desk) #appBar{background:transparent!important;border:0!important;box-shadow:none!important;pointer-events:none}
+   body:not(.desk) #appBar::before{display:none!important}
+   body:not(.desk) #appBar .ab-brand{display:none!important}
+   body:not(.desk) #appBar .ab-acts{pointer-events:auto;height:40px;border-radius:999px!important}
+   body:not(.desk) #rvFab,body:not(.desk) #infoFab{top:calc(env(safe-area-inset-top,0px) + 9px)!important}
+   /* recording: the red dot sits in the account pill now */
+   body.trk-live:not(.desk) #appBar .ab-acts::before{content:'';flex:none;width:8px;height:8px;margin:0 4px 0 9px;border-radius:50%;
+     background:#E5233F;animation:recDot 1.6s ease-out infinite}
+   /* the timeline is the top of the bottom sheet; when the tab bar slides
+      away (a point card, a sign-in) it glides down with it instead of
+      jumping to a floating card -- that jump was the flicker */
+   body:not(.desk) #bottomPanel{left:0!important;right:0!important;bottom:0!important;width:auto!important;max-width:none!important;
+     border-radius:16px 16px 0 0!important;border:0!important;border-top:1px solid var(--bd)!important;
+     padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;
+     box-shadow:0 -6px 18px rgba(18,21,26,.08)!important;
+     transition:bottom .28s cubic-bezier(.2,.8,.2,1),padding-bottom .28s cubic-bezier(.2,.8,.2,1),opacity .2s!important}
+   body.nav-vis:not(.desk) #bottomPanel{bottom:var(--nav-h)!important;padding-bottom:8px!important}
+   :root[data-theme="dark"] body:not(.desk) #bottomPanel{box-shadow:0 -6px 18px rgba(0,0,0,.35)!important}
+   body.nav-vis:not(.desk) #mapFabs{bottom:calc(var(--nav-h) + var(--btm-h,120px) + 14px)!important}}
+ /* screens on a phone: the feed slides in opaque -- it used to fade in
+    while sliding, so the map showed through it for a moment (flicker) */
+ @media (max-width:899px){
+   .feed-page:not(.side){opacity:1!important;transition:transform .26s cubic-bezier(.32,.72,.42,1),visibility 0s!important}
+   .feed-page:not(.side):not(.open){visibility:hidden;transition:transform .26s cubic-bezier(.32,.72,.42,1),visibility 0s .26s!important}}
+ /* the side legend folds to its icon */
+ #mlFold{display:flex;align-items:center;justify-content:center;width:100%;height:20px;margin:5px 0 -5px;padding:0;border:0;
+   border-top:1px solid var(--bd);background:none;color:var(--fg2);cursor:pointer;-webkit-tap-highlight-color:transparent}
+ #mlFold svg{width:15px;height:15px;transition:transform .2s}
+ #miniLegend.fold #mlUnit,#miniLegend.fold #mlScale,#miniLegend.fold .ml-reset,#miniLegend.fold #mlName span{display:none!important}
+ #miniLegend.fold #mlName{border-bottom:0;margin-bottom:0;padding-bottom:0}
+ #miniLegend.fold #mlFold{border-top:0;margin-top:2px}
+ #miniLegend.fold #mlFold svg{transform:rotate(180deg)}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -5924,6 +5974,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
   <div id="mlName"></div>
   <div id="mlUnit"></div>
   <div id="mlScale"></div>
+  <button type="button" id="mlFold" onclick="legFold(event)" aria-label="Legende einklappen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
 </div>
   <div class="mfab-row" id="reportRow">
     <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg><i>Report Powder</i></button>
@@ -6147,6 +6198,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     <div class="feed-scope" id="feedScope" hidden></div>
     <span class="lbl-micro">Kategorie</span>
     <div class="feed-filter" id="feedFilter"></div>
+    <label class="feed-txt-sw"><span>Beiträge ohne Bild zeigen</span><input type="checkbox" id="feedTxtSw" onchange="feedTxtSet(this.checked)"><i></i></label>
     <button class="feed-sheet-x" onclick="feedFilterClose()">Fertig</button>
   </div>
 </div>
@@ -8186,7 +8238,7 @@ function ovToggle(k,auto){
   ovOn[k]=!ovOn[k];
   if(k==='skitourVec'&&!auto){try{localStorage.setItem('ssm_tours',ovOn[k]?'1':'0');}catch(e){}}
   if(k==='reports'){try{localStorage.setItem('ssm_reports',ovOn[k]?'1':'0');}catch(e){}}
-  if(k==='myacts'){try{localStorage.setItem('ssm_myacts',ovOn[k]?'1':'0');}catch(e){}if(ovOn[k])trkActsRefresh();}
+  if(k==='myacts'){try{localStorage.setItem('ssm_myacts',ovOn[k]?'1':'0');}catch(e){}if(ovOn[k])trkActsRefresh();try{loadReportMarkers();}catch(e){}}
   if(ovOn[k])map.addLayer(l);else map.removeLayer(l);
   if(k==='skitourVec'){if(ovOn[k])tourRecolor();else tourClose();}
   if(k==='variantA'&&ovOn[k])vaRefresh();
@@ -8288,12 +8340,12 @@ function vaProfAvailable(){
 // hard a cool grey, crust a muted coral, wet/Sulz a honey tone; Triebschnee
 // in violets so it never reads as powder.
 const VA_PALETTE={
-  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[147,197,240,205],4:[59,125,214,225],5:[36,84,178,230],6:[226,170,72,220],7:[150,104,74,225],8:[24,46,120,238],9:[88,36,150,240]},
+  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[147,197,240,205],4:[59,125,214,225],5:[36,84,178,230],6:[226,170,72,220],7:[150,104,74,225],8:[24,46,120,238],9:[88,36,150,240],10:[208,214,224,170]},
   wind:{1:[156,168,184,190],2:[186,170,236,205],3:[112,72,200,230]}};
 // Nur Pulver on an export without its own powder layer: the three ski6 powder
 // classes, coloured like the nearest SLF snow-depth bands.
 const VA_VPAL={powder:{3:[165,214,167,225],4:[102,187,106,225],5:[66,165,245,225],8:[30,136,229,225],9:[21,101,192,225]}};
-const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver 20–30 cm',6:'Sulz (aufgefirnt)',7:'nass / faul',8:'Pulver 30–40 cm',9:'Pulver > 40 cm'};
+const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver 20–30 cm',6:'Sulz (aufgefirnt)',7:'nass / faul',8:'Pulver 30–40 cm',9:'Pulver > 40 cm',10:'dünne Schneedecke (< 20 cm)'};
 // An export without the simple six classes still has "simple" (15 kinds of
 // surface): the six are folded from it, so Skiqualität always opens simple.
 // 12 (wet / spring) goes to "nass": the simple view cannot tell good corn
@@ -8646,9 +8698,11 @@ function vaHiEngine(){
   E.clsSki6=function(m){
     var T=E.pk.thresholds,x=E.mi;
     var hs=m[x.total_hs_cm],pw=m[x.powder_depth_cm],cr=m[x.crust_thick_cm],sd=m[x.surface_density],lw=m[x.surface_lw];
-    // thin cover: only dry powder (early season), from SK_THIN_POWDER_HS on
+    // thin cover, from SK_THIN_POWDER_HS on: dry powder (early season), else
+    // "dünne Schneedecke" (10) -- blank there read as "the snow has melted"
     if(!(hs>=T.THIN_COVER_HS)){var tp=T.SK_THIN_POWDER_HS!=null?T.SK_THIN_POWDER_HS:3;
-      if(!(hs>=tp)||!(pw>=T.SK_POWDER_MIN)||lw>T.SK_WET_LWC)return 0;
+      if(!(hs>=tp))return 0;
+      if(!(pw>=T.SK_POWDER_MIN)||lw>T.SK_WET_LWC)return 10;
       return pw<T.SK_P1?3:pw<T.SK_P2?4:(T.SK_P3==null||pw<T.SK_P3)?5:(T.SK_P4==null||pw<T.SK_P4)?8:9;}
     // corn: thin softened top on a supportive base that froze overnight
     if(x.soft_top_cm!=null&&x.mf_base_cm!=null&&x.refrozen!=null){
@@ -8693,7 +8747,7 @@ function vaHiEngine(){
     else if(layer==='wind'){L=E.clsWind(m);key='wind';}
     else if(layer==='simple'){L=E.clsSimple(m);key='simple';}
     else{L=E.clsSki(m);key='ski18';}
-    E.cls=L;var tab=E.pk.rgba[key]||E.pk.rgba.ski18,c=tab[L]||[0,0,0,0];
+    E.cls=L;var tab=E.pk.rgba[key]||E.pk.rgba.ski18,c=tab[L]||(key==='ski6'&&VA_PALETTE.ski6[L])||[0,0,0,0];
     out[0]=c[0];out[1]=c[1];out[2]=c[2];out[3]=c[3];
   };
   E.metsFor=function(layer){
@@ -9430,13 +9484,13 @@ function vaPointHTML(lat,lon,elev,slope,aspect){
   if(sb>12)bits.push('Horizontschatten '+Math.round(sb/2.54)+'%');
   if(fo>0)bits.push('Wald '+Math.round(fo/2.55)+'%');
   // first what lies here and how much of it, as on the map
-  const T=vaEng.pk&&vaEng.pk.thresholds||{},thinP=m[x.total_hs_cm]<(T.THIN_COVER_HS||20)&&vaEng.clsSki6&&vaEng.clsSki6(m)>=3;
+  const T=vaEng.pk&&vaEng.pk.thresholds||{},thin6=m[x.total_hs_cm]<(T.THIN_COVER_HS||20)&&vaEng.clsSki6?vaEng.clsSki6(m):0,thinP=thin6>=3;
   const k6=thinP?vaEng.clsSki6(m):((typeof VA_SIMPLE_TO_SKI6!=='undefined'&&VA_SIMPLE_TO_SKI6[sim])||0);let c6=(VA_PALETTE.ski6&&VA_PALETTE.ski6[k6])||[150,160,175];
   const hs=Math.round(m[x.total_hs_cm]),pw=Math.round(m[x.powder_depth_cm]||0);
   // powder: the swatch in the SLF band colour the map uses
   if([3,4,5,8,9].includes(k6)){const B=[1,5,10,20,30,50],C=[[232,245,233],[165,214,167],[102,187,106],[66,165,245],[30,136,229],[21,101,192]];
     let j=0;while(j+1<B.length&&(m[x.powder_depth_cm]||0)>=B[j+1])j++;c6=C[j];}
-  const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+c6.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(thinP?'Pulver auf dünner Unterlage – Steine möglich':(nm('simple',sim)||nm('ski18',ski)))+'</b></div>'
+  const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+c6.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(thin6===10?'Dünne Schneedecke – Steine, kaum fahrbar':thinP?'Pulver auf dünner Unterlage – Steine möglich':(nm('simple',sim)||nm('ski18',ski)))+'</b></div>'
     +'<div><span>Pulver</span><b>'+(pw>=1?pw+'<small> cm</small>':'–')+'</b></div>'
     +'<div><span>Schneehöhe</span><b>'+hs+'<small> cm</small></b></div></div>';
   return '<div class="insp-sec va-pt"><h4>Schneequalität <em>'+escapeHtml(nm('ski18',ski))+'</em></h4>'+kpi
@@ -11448,10 +11502,12 @@ function actFeedVisual(r){const cd=r.condition_data,A=cd.activity;
   const ims=(cd.images||[]).filter(u=>u&&u!==A.map),id=String(r.id).replace(/[^\w-]/g,'');
   const mine=sbUser&&r.userId===sbUser.id,
     plus=mine?'<button type="button" class="act-draw" onclick="event.stopPropagation();actPlus(\''+r.id+'\')" aria-label="Ergänzen" title="Ergänzen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>':'';
-  const slides=[A.map?'<div class="fc-slide" onclick="event.stopPropagation();actOpen(\''+r.id+'\')"><img src="'+A.map+'" alt="" loading="lazy">'+plus+'</div>'
-      :'<div class="fc-slide act-svg" onclick="event.stopPropagation();actOpen(\''+r.id+'\')">'+trkThumb(A.track,400,300,'',A.rep)+plus+'</div>']
-    .concat(ims.map(u=>'<div class="fc-slide"><img src="'+u+'" alt="" loading="lazy"></div>'));
-  return '<div class="act-card"><div class="fc-wrap act-wrap"><div class="fc-carousel" id="fcar-a'+id+'">'+slides.join('')+'</div>'
+  // the photos first, the route map after them: a new photo goes in just
+  // before the map; «+» stays in the corner on every picture
+  const slides=ims.map((u,i)=>'<div class="fc-slide"><img src="'+u+'" alt="" '+(i?'loading="lazy"':'')+'></div>')
+    .concat([A.map?'<div class="fc-slide" onclick="event.stopPropagation();actOpen(\''+r.id+'\')"><img src="'+A.map+'" alt="" loading="lazy"></div>'
+      :'<div class="fc-slide act-svg" onclick="event.stopPropagation();actOpen(\''+r.id+'\')">'+trkThumb(A.track,400,300,'',A.rep)+'</div>']);
+  return '<div class="act-card"><div class="fc-wrap act-wrap"><div class="fc-carousel" id="fcar-a'+id+'">'+slides.join('')+'</div>'+plus
     +(slides.length>1?'<div class="fc-dots" id="fcd-a'+id+'">'+slides.map((x,i)=>'<i class="'+(i?'':'on')+'"></i>').join('')+'</div>':'')+'</div>'
     +'<div class="act-st" onclick="event.stopPropagation();actOpen(\''+r.id+'\')"><div><small>Distanz</small><b>'+fmt(A.dist||0)+'</b></div><div><small>Aufstieg</small><b>'+(A.up||0)+' m</b></div><div><small>Zeit</small><b>'+trkFmtT(A.moving||0)+'</b></div></div>'
     // the snow along the route is in the stats sheet and the drawn map, not
@@ -11506,6 +11562,9 @@ addEventListener('keydown',e=>{if(e.key==='Escape')actSheetClose();});
 function actVisible(r){if(r&&r.condition_data&&r.condition_data.snowp)return false;
   const A=r&&r.condition_data&&r.condition_data.activity;if(!A)return true;
   if(sbUser&&r.userId===sbUser.id)return true;return !!(r.userId&&myFollowing&&myFollowing.has(r.userId));}
+// A route's tap target: invisible, wide enough for a finger
+function actHitLine(ll,fn,pane){const o={color:'#000',weight:26,opacity:0,lineCap:'round',lineJoin:'round',className:'act-hit'};if(pane)o.pane=pane;
+  const h=L.polyline(ll,o);h.on('click',e=>{L.DomEvent.stopPropagation(e);fn();});return h;}
 // «Meine Aufzeichnungen» on the map
 let trkActsGrp=null;
 function trkActsLayer(){if(!trkActsGrp)trkActsGrp=L.layerGroup();trkActsRefresh();return trkActsGrp;}
@@ -11513,9 +11572,9 @@ async function trkActsRefresh(){if(!trkActsGrp)return;let list=[];try{list=await
   trkActsGrp.clearLayers();trkLayerEnsure();const col=trkCol();
   list.forEach(a=>{const ll=trkLL(a.segs).map(p=>[p[0],p[1]]);if(ll.length<2)return;
     L.polyline(ll,{pane:'trkPane',color:'#fff',weight:8,opacity:.9,interactive:false}).addTo(trkActsGrp);
-    const pl=L.polyline(ll,{pane:'trkPane',color:col,weight:4.5,opacity:.95,lineCap:'round',lineJoin:'round'}).addTo(trkActsGrp);
-    pl.bindTooltip(escapeHtml(a.name)+' · '+new Date(a.start).toLocaleDateString(LOCALE(),{day:'numeric',month:'short'}),{sticky:true});
-    pl.on('click',()=>{trkCur=a.id;trkView='detail';trkOpen();});});
+    L.polyline(ll,{pane:'trkPane',color:col,weight:4.5,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false}).addTo(trkActsGrp);
+    const pl=actHitLine(ll,()=>{trkCur=a.id;trkView='detail';trkOpen();},'trkPane').addTo(trkActsGrp);
+    pl.bindTooltip(escapeHtml(a.name)+' · '+new Date(a.start).toLocaleDateString(LOCALE(),{day:'numeric',month:'short'}),{sticky:true});});
   try{map.getPane('trkPane').style.pointerEvents='auto';}catch(e){}
 }
 // the profile lists your activities too
@@ -13190,12 +13249,13 @@ function legSpec(l){
     const leg=L.legend||{};
     const realPow=vaKey==='powder'&&!L._virt;
     const ORD=realPow?Object.keys(leg).map(Number).filter(k=>k>0).sort((a,b)=>b-a)
-      :({ski6:[9,8,5,4,3,6,7,2,1],powder:[9,8,5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0));
+      :({ski6:[9,8,5,4,3,6,7,2,1,10],powder:[9,8,5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0));
     const SH=realPow?Object.fromEntries(ORD.map(k=>[k,String((leg[k]&&leg[k][2])||'').replace(/^Pulver\s*/,'').replace(/\s*cm$/,'').replace(/^>\s*/,'>')]))
-      :({ski6:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz',7:'faul'},powder:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
+      :({ski6:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz',7:'faul',10:'dünn'},powder:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
     if(vaKey==='ski6'&&vaEng){const B=[1,5,10,20,30,50],C=['#e8f5e9','#a5d6a7','#66bb6a','#42a5f5','#1e88e5','#1565c0'],rows=[];
-      for(let i=B.length-1;i>=0;i--)rows.push({k:100+i,c:C[i],s:B[i]+(i===B.length-1?'+':''),n:'Pulver '+B[i]+(i===B.length-1?'+ cm':'–'+B[i+1]+' cm')});
-      [[6,'Sulz'],[7,'faul'],[2,'Kruste'],[1,'hart']].forEach(([k,sv])=>{if(leg[k]&&leg[k][1])rows.push({k,c:rgb(leg[k][1]),s:sv,n:leg[k][2]||sv});});
+      for(let i=B.length-1;i>=0;i--)rows.push({k:100+i,c:C[i],s:B[i]+(i===B.length-1?'+':'–'+B[i+1]),n:'Pulver '+B[i]+(i===B.length-1?'+ cm':'–'+B[i+1]+' cm')});
+      [[6,'Sulz'],[7,'faul'],[2,'Kruste'],[1,'hart'],[10,'dünn']].forEach(([k,sv])=>{const e=leg[k]&&leg[k][1]?leg[k]:k===10?[10,VA_PALETTE.ski6[10],VA_SKI6_DE[10]]:null;
+        if(e)rows.push({k,c:rgb(e[1]),s:sv,n:e[2]||sv});});
       return {t:name,u:'Pulver cm',va:true,noShare:true,rows};}
     const rows=ORD.filter(k=>leg[k]&&leg[k][1]).map(k=>{const e=leg[k],nm=e[2]||String(e[0]).replace(/_/g,' ');
       return {k,c:rgb(e[1]),s:SH[k]||nm.split(/[\s/(]/)[0].slice(0,7),n:nm};});
@@ -13204,10 +13264,10 @@ function legSpec(l){
   // rows carry k (the class) and lo/hi (its value range): the legend is
   // also the filter, see legHideFn()
   if(l==='snow'){const rows=[];for(let i=SB.length-2;i>=0;i--){const top=i===SB.length-2;
-      rows.push({k:i,lo:SB[i],hi:top?Infinity:SB[i+1],c:SC[Math.min(i,SC.length-1)],s:String(SB[i])+(top?'+':''),n:SB[i]+(top?'+':'–'+SB[i+1])+' cm'});}
+      rows.push({k:i,lo:SB[i],hi:top?Infinity:SB[i+1],c:SC[Math.min(i,SC.length-1)],s:SB[i]+(top?'+':'–'+SB[i+1]),n:SB[i]+(top?'+':'–'+SB[i+1])+' cm'});}
     return {t:'Neuschnee',u:'cm',rows};}
   if(l==='depth'){const rows=[];for(let i=DEPTH_BOUNDS.length-2;i>=0;i--){const top=i===DEPTH_BOUNDS.length-2;
-      rows.push({k:i,lo:DEPTH_BOUNDS[i],hi:top?Infinity:DEPTH_BOUNDS[i+1],c:SC[Math.min(i,SC.length-1)],s:String(DEPTH_BOUNDS[i])+(top?'+':''),
+      rows.push({k:i,lo:DEPTH_BOUNDS[i],hi:top?Infinity:DEPTH_BOUNDS[i+1],c:SC[Math.min(i,SC.length-1)],s:DEPTH_BOUNDS[i]+(top?'+':'–'+DEPTH_BOUNDS[i+1]),
       n:DEPTH_BOUNDS[i]+(top?'+':'–'+DEPTH_BOUNDS[i+1])+' cm'});}
     return {t:'Schneehöhe',u:'cm',rows};}
   if(l==='powder')return {t:'Powder',u:'cm',grad:'linear-gradient(0deg,rgb(93,181,255),rgb(10,71,209))',
@@ -13228,7 +13288,7 @@ function legSpec(l){
   if(l==='cloud'){const C3=[[10,40,'wenig'],[40,70,'teils'],[70,101,'bedeckt']];
     const rows=C3.map((x,k)=>{const c=cloudCol(((x[0]+x[1])/2-10)/90);return {k,lo:x[0],hi:x[1],c:'rgba('+c[0]+','+c[1]+','+c[2]+','+Math.max(.55,c[3]/255).toFixed(2)+')',s:x[2],n:x[0]+'–'+Math.min(100,x[1])+' % · '+x[2]};}).reverse();
     return {t:'Bewölkung',u:'%',rows,long:'Gesamtbewölkung zur gewählten Stunde (wie ein Satellitenbild)'};}
-  if(l==='powfind')return {t:'Gemeldetes Powder',u:'cm',rows:[100,60,30,10].map(cm=>{const c=snowCol(cm)||[150,150,150];return {c:rgb(c),s:String(cm),n:cm+' cm'};})};
+  if(l==='powfind')return {t:'Gemeldetes Powder',u:'cm',rows:[[100],[60,100],[30,60],[10,30]].map(([cm,hi])=>{const c=snowCol(cm)||[150,150,150];return {c:rgb(c),s:cm+(hi?'–'+hi:'+'),n:cm+(hi?'–'+hi:'+')+' cm'};})};
   return null;
 }
 // ── The legend is the switch ─────────────────────────────────────────────
@@ -13305,9 +13365,18 @@ function legChipsHTML(){const rows=legRows();
     +(legIsDefault()?'':'<button type="button" onclick="legReset(event)">Standard</button>')+'</div>';}
 // Tap the card: the full legend with names, units and what the layer is.
 function legInfoToggle(e){if(e)e.stopPropagation();
+  // a folded legend opens again first; the details are the next tap
+  const ml=document.getElementById('miniLegend');if(ml&&ml.classList.contains('fold')){legFold(null,false);return;}
   if(document.body.classList.contains('leg-open')){legInfoClose();return;}
   legInfoRender();document.body.classList.add('leg-open');try{haptic(3);}catch(e2){}}
 function legInfoClose(){document.body.classList.remove('leg-open');}
+// The side legend folds down to the layer's icon (the chevron under it), and
+// stays so until opened again.
+function legFold(e,v){if(e)e.stopPropagation();const ml=document.getElementById('miniLegend');if(!ml)return;
+  const f=v==null?!ml.classList.contains('fold'):!!v;ml.classList.toggle('fold',f);
+  const b=document.getElementById('mlFold');if(b)b.setAttribute('aria-label',f?'Legende aufklappen':'Legende einklappen');
+  try{localStorage.setItem('ssm_leg_fold',f?'1':'0');}catch(_){}try{haptic(3);}catch(_){}}
+try{if(localStorage.getItem('ssm_leg_fold')==='1')legFold(null,true);}catch(e){}
 function legInfoRender(){
   const el=document.getElementById('legInfo');if(!el)return;
   const sp=legSpec(layer);if(!sp){el.innerHTML='';return;}
@@ -15900,6 +15969,8 @@ const DEMO_REPORTS=(FEATURES.demoOther?DEMO_DEFS:[]).map((d,i2)=>({id:'d'+(i2+1)
 let reportMarkers=L.layerGroup().addTo(map);
 ovOn.reports=true;
 try{if(localStorage.getItem('ssm_reports')==='0'){ovOn.reports=false;map.removeLayer(reportMarkers);}}catch(e){}
+// «Meine Aufzeichnungen» stays as you left it (it is off unless you turned it on)
+try{if(localStorage.getItem('ssm_myacts')==='1')setTimeout(()=>{try{if(!ovOn.myacts)ovToggle('myacts',true);}catch(e){}},0);}catch(e){}
 // Default is the 1 April 2026 demo dataset; live/current weather is an
 // explicit opt-in, remembered in localStorage so it survives a fresh load
 // with no URL params (the ?demo/?live params still work as one-off overrides
@@ -16093,8 +16164,13 @@ function _rptCluster(g,zoom){
 // start and its end (never later than now). A window that is mostly in the
 // future still shows the last 48 h before now, the latest word on the snow.
 function rptTimeMs(r){const t=Date.parse(r.capturedAt||r.createdAt||'');return isFinite(t)?t:Date.now()-progAgeH(r)*3.6e6;}
+// The reports shown follow the timeline: a window in the past shows what was
+// reported then; one that reaches now (the usual case, now or the forecast)
+// shows the last week -- 48 h left the map empty on quiet days.
+const RPT_RECENT_D=7;
 function rptWindow(){try{const now=Date.now(),hi=Math.min(tMs(b),now);let lo=tMs(a);
-  if(!(hi-lo>=24*3.6e6))lo=hi-48*3.6e6;return {lo,hi:hi+30*60e3};}catch(e){return null;}}
+  if(hi>=now-3.6e6)lo=Math.min(lo,now-RPT_RECENT_D*864e5);
+  else if(!(hi-lo>=24*3.6e6))lo=hi-48*3.6e6;return {lo,hi:hi+30*60e3};}catch(e){return null;}}
 function rptInWindow(r,W){if(!W)return true;if(sbUser&&r.userId===sbUser.id&&Date.now()-rptTimeMs(r)<10*60e3)return true;
   const t=rptTimeMs(r);return t>=W.lo&&t<=W.hi;}
 let _rptWinKey='';
@@ -16115,9 +16191,10 @@ function loadReportMarkers(){
   // and a flag at the finish -- no photo bubble. Only your own and your
   // friends' (following each other), and only each person's latest one.
   const isAct=r=>{const A=r.condition_data&&r.condition_data.activity;return !!(A&&A.track&&A.track.length>1);};
+  // your own follow «Meine Aufzeichnungen» in the layers
   const lastAct={};rest0.filter(isAct).forEach(r=>{
     const mine=sbUser&&r.userId===sbUser.id,fr=r.userId&&myFollowing&&myFollowing.has(r.userId)&&myFollowers&&myFollowers.has(r.userId);
-    if(!mine&&!fr)return;const k=r.userId||r.id;if(!lastAct[k]||rptTimeMs(r)>rptTimeMs(lastAct[k]))lastAct[k]=r;});
+    if(mine?!ovOn.myacts:!fr)return;const k=r.userId||r.id;if(!lastAct[k]||rptTimeMs(r)>rptTimeMs(lastAct[k]))lastAct[k]=r;});
   Object.values(lastAct).forEach(r=>_rptActivity(r,tiny));
   const rest=rest0.filter(r=>!isAct(r));
   if(tiny){rest.forEach(r=>_rptMarker(r,'dot'));return;}
@@ -16133,8 +16210,11 @@ function loadReportMarkers(){
   try{applyFeedHighlight();}catch(e){}
 }
 function _rptActivity(r,tiny){const A=r.condition_data.activity,ll=A.track.map(p=>[p[0],p[1]]),open=()=>feedOpenPost(r.id,r.userId);
-  if(!tiny){const pl=L.polyline(ll,{color:'#3F6FD6',weight:3,opacity:.85,lineCap:'round',lineJoin:'round'}).addTo(reportMarkers);
-    pl.on('click',e=>{L.DomEvent.stopPropagation(e);open();});
+  if(!tiny){L.polyline(ll,{color:'#3F6FD6',weight:3,opacity:.85,lineCap:'round',lineJoin:'round',interactive:false}).addTo(reportMarkers);
+    // the 3 px line is hard to hit with a finger -- a tap just beside it went
+    // to the map and opened the point card instead: an invisible 26 px band
+    // along the route takes the tap
+    actHitLine(ll,open).addTo(reportMarkers);
     const e=ll[ll.length-1];
     _rptAdd(e[0],e[1],'<div class="act-fin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg></div>',22,22,open,650,[r.id]);}
   const av=r.avatar?'<i style="background-image:'+cssUrl(r.avatar)+'"></i>':'<i>'+escapeHtml((r.user||'?')[0].toUpperCase())+'</i>';
@@ -18693,9 +18773,15 @@ function feedRefresh(){
 // everything, because a filter you have forgotten about looks like an empty
 // feed.
 function feedFiltMark(){
+  const sw=document.getElementById('feedTxtSw');if(sw)sw.checked=feedTxtOn();
   const b=document.getElementById('feedFiltFab');if(!b)return;
   b.classList.toggle('on',feedFilter!=='all');
 }
+// Posts without a picture (text only): off in the feed by default, small when on.
+function feedNoPic(r){const cd=r.condition_data||{};
+  return !r.img&&!(cd.activity&&cd.activity.track)&&!(cd.images&&cd.images.length)&&!cd.drawImage&&!cd.snapshot;}
+function feedTxtOn(){try{return localStorage.getItem('ssm_feed_text')==='1';}catch(e){return false;}}
+function feedTxtSet(on){try{localStorage.setItem('ssm_feed_text',on?'1':'0');}catch(e){}feedFiltMark();feedTopRender();feedRender();}
 // "Hier & jetzt" is a live question: panning the map or moving the window
 // changes the answer, so the list follows them while it is open.
 let _feedLiveT=null;
@@ -18709,7 +18795,7 @@ try{map.on('moveend zoomend',feedLiveRefresh);}catch(e){}
 // The filter drops down under its button at the top, where the finger is.
 function feedFilterOpen(){
   const sh=document.getElementById('feedSheet');if(!sh)return;
-  sh.classList.add('open');try{haptic(4);}catch(e){}
+  sh.classList.add('open');try{haptic(4);}catch(e){}feedFiltMark();
   try{const b=document.querySelector('#feedTop .ft-cat'),inn=sh.querySelector('.feed-sheet-in');
     if(b&&inn){const top=b.getBoundingClientRect().bottom-sh.getBoundingClientRect().top+8;
       inn.style.marginTop=Math.max(8,top)+'px';}}catch(e){}
@@ -19234,6 +19320,16 @@ function feedWireCarousels(){document.querySelectorAll('.fc-carousel').forEach(c
   const dots=document.getElementById('fcd-'+c.id.slice(5));
   const cnt=document.getElementById('fcn-'+c.id.slice(5));
   let raf=0,last=0;
+  // one swipe = one picture, also where the browser's own snapping stops
+  // half way (iOS after a fling, or when the list re-renders mid-swipe):
+  // the finger's direction picks the next picture, a settled scroll that is
+  // still between two is pulled to the nearer one
+  let t0=null,idle=0;const w=()=>Math.max(1,c.clientWidth),go=i=>{i=Math.max(0,Math.min(c.children.length-1,i));
+    if(Math.abs(c.scrollLeft-i*w())>1)c.scrollTo({left:i*w(),behavior:'smooth'});};
+  c.addEventListener('touchstart',e=>{const p=e.touches[0];t0={x:p.clientX,y:p.clientY,i:Math.round(c.scrollLeft/w())};},{passive:true});
+  c.addEventListener('touchend',e=>{const s=t0;t0=null;if(!s)return;const p=e.changedTouches[0],dx=p.clientX-s.x,dy=p.clientY-s.y;
+    if(Math.abs(dx)<30||Math.abs(dx)<Math.abs(dy))return;go(s.i+(dx<0?1:-1));},{passive:true});
+  c.addEventListener('scroll',()=>{clearTimeout(idle);idle=setTimeout(()=>{if(t0)return;const f=c.scrollLeft/w();if(Math.abs(f-Math.round(f))>0.02)go(Math.round(f));},140);},{passive:true});
   c.addEventListener('scroll',()=>{if(raf)return;raf=requestAnimationFrame(()=>{raf=0;
     const i=Math.round(c.scrollLeft/Math.max(1,c.clientWidth));if(i===last)return;last=i;
     if(dots)dots.querySelectorAll('i').forEach((d,k)=>d.classList.toggle('on',k===i));
@@ -19277,6 +19373,10 @@ function feedRender(){
     if(!base.length){list.innerHTML='<div class="feed-empty">Noch nichts gespeichert. Tippe bei einem Report auf das Lesezeichen.</div>';return;}
   }
   let filtered=feedFilter==='all'?base:base.filter(r=>r.cat===feedFilter);
+  // posts without a picture stay out of the list unless the filter asks for
+  // them (a person's own page, the saved ones and an opened post show all)
+  let txtHidden=0;
+  if(!feedTxtOn()&&!['user','saved','post'].includes(feedScope)){const n0=filtered.length;filtered=filtered.filter(r=>!feedNoPic(r));txtHidden=n0-filtered.length;}
   if(feedAnchor){filtered=filtered.map(r=>({r,km:haversineKm(feedAnchor.lat,feedAnchor.lng,r.lat,r.lng)})).sort((a,b)=>a.km-b.km).map(o=>{o.r._km=o.km;return o.r;});}
   else if(feedScope==='all'||feedScope==='post')filtered=feedRank(filtered);
   let focus=(feedScope==='user'||feedScope==='post')&&feedFocusId?filtered.find(r=>String(r.id)===feedFocusId):null;
@@ -19284,6 +19384,7 @@ function feedRender(){
   // map, someone else's activity): it is shown anyway, it was asked for
   if(!focus&&feedScope==='post'&&feedFocusId)focus=allReports.find(r=>String(r.id)===feedFocusId)||null;
   if(focus)filtered=[focus].concat(filtered.filter(r=>r!==focus));
+  if(!filtered.length&&txtHidden){list.innerHTML='<div class="feed-empty">Nur Beiträge ohne Bild hier.</div><button type="button" class="feed-txt-more" onclick="feedTxtSet(true)">'+txtHidden+' Beitr'+(txtHidden===1?'ag':'äge')+' ohne Bild einblenden</button>';return;}
   if(!filtered.length){list.innerHTML='<div class="feed-empty">'+(feedFilter==='all'?'Noch keine Beiträge hier. Sei die erste Person – tippe unten auf «Melden».':'Noch keine Beiträge in dieser Kategorie.')+'</div>';return;}
   // Building four hundred cards to show six is most of what made opening the
   // feed feel slow. Nobody scrolls past the first page before it re-renders.
@@ -19332,7 +19433,8 @@ function feedRender(){
         ${endBtn}
       </div>
     </div>${isF&&filtered.length>1?`<div class="feed-more-hd">${feedScope==='post'?'Neueste Beiträge':'Weitere Beiträge'+(feedUserName?' von '+escapeHtml(feedUserName):'')}</div>`:''}`;
-  }).join('')+(more>0?('<div class="feed-more">'+more+' weitere</div>'):'');
+  }).join('')+(more>0?('<div class="feed-more">'+more+' weitere</div>'):'')
+    +(txtHidden?'<button type="button" class="feed-txt-more" onclick="feedTxtSet(true)">'+txtHidden+' Beitr'+(txtHidden===1?'ag':'äge')+' ohne Bild einblenden</button>':'');
   feedAnimateCards();feedWireCarousels();
   try{feedHighlight(shown.map(r=>r.id));}catch(e){}
 }

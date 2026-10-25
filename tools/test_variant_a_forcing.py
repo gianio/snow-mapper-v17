@@ -1191,10 +1191,12 @@ def test_ski6_and_wind_classes():
     print("ski6 / wind classes")
     from variant_a import classify as C
     #            hs   powder crust dens  lw
-    cases = [((10, 0, 0, 300, 0), 0, "thin cover, no powder -> nothing"),
+    cases = [((10, 0, 0, 300, 0), 10, "thin cover, no powder -> duenne Schneedecke"),
              ((10, 8, 0, 100, 0), 3, "8 cm powder on a thin cover -> Pulver 0-10 (early season)"),
-             ((10, 8, 0, 100, 2.0), 0, "thin cover, wet -> nothing"),
+             ((10, 8, 0, 100, 2.0), 10, "thin cover, wet -> duenne Schneedecke"),
+             ((12, 0, 1.0, 300, 0), 10, "thin cover with a crust -> duenne Schneedecke"),
              ((2, 2, 0, 100, 0), 0, "under 3 cm in all -> nothing"),
+             ((2, 0, 0, 300, 0), 0, "2 cm settled -> nothing"),
              ((100, 0, 0, 300, 0), 1, "no powder, no crust -> hart"),
              ((100, 0, 1.0, 300, 0), 2, "crust -> Kruste"),
              ((100, 0, 0, 750, 0), 2, "ice -> Kruste"),
