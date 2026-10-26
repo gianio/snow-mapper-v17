@@ -655,6 +655,14 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         "elev_bounds": fine["elev_bounds"], "rad": rad, "stations": stations,
         "avalanche": avalanche, "tours": tours,
         "rough_grid": rough_w, "hourly_snow": hourly_snow,
+        # the new-snow model's height terms, so the app can carry a cell's
+        # snowfall to the terrain's own height (Neuschnee zoomed in)
+        "nsp": {"t_center": params["temperature"]["t_center_c"], "k": params["temperature"]["k"],
+                "slr_i": params["slr"]["slr_intercept"], "slr_s": params["slr"]["slr_slope"],
+                "slr_min": params["slr"]["slr_min"], "slr_max": params["slr"]["slr_max"],
+                "gamma": params["altitude"]["precip_gamma_per_m"],
+                "fmin": params["altitude"]["precip_factor_min"], "fmax": params["altitude"]["precip_factor_max"],
+                "lapse": params["altitude"]["temp_lapse_k_per_m"]},
     }
 
 
@@ -943,7 +951,7 @@ def _build_meta_blobs(data):
         "cloud_mul": _CLOUD_MUL if data.get("cloud") is not None else None,
         "cloud_lv": list(_CLV_N) if data.get("clv") is not None else None,
         "wind_levels": [k for k in ("wind850", "wind700") if data.get(k) is not None],
-        "elev_scale": _ELEV_SCALE,
+        "elev_scale": _ELEV_SCALE, "nsp": data.get("nsp"),
         "slf_bounds": SLF_BOUNDS, "slf_colors": SLF_COLORS,
         "avalanche": data.get("avalanche"), "tours": data.get("tours") or [],
         "png_bounds": data["png_bounds"],
@@ -3629,11 +3637,13 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
    flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  /* Elevation-band mountain glyph + aspect rose: replaces the plain-text
     "Powder · 1500-2100 m · N" reading wherever a report carries zones. */
- .rpt-viz{display:flex;align-items:center;gap:6px;color:var(--ink-700);flex:0 1 auto;min-width:0}
- .rpt-mtn,.rpt-rose{flex:none;display:block}
- .rpt-viz-txt{display:flex;flex-direction:column;gap:1px;font-family:var(--mono);line-height:1.25;min-width:0}
- .rpt-viz-txt b{font-size:12.5px;font-weight:800;color:var(--fg2);white-space:nowrap}
- .rpt-viz-txt span{font-size:12px;font-weight:700;color:var(--mut)}
+ .rpt-viz{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex:0 1 auto;min-width:0}
+ .rv-chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px 0 7px;border-radius:999px;
+   background:var(--fill);color:var(--ink-700);white-space:nowrap}
+ .rv-chip b{font:700 12.5px var(--font);font-variant-numeric:tabular-nums;color:var(--fg2);letter-spacing:.01em}
+ .rv-ico{width:20px;height:20px;flex:none;display:block}
+ .rv-ico .rv-m{fill:color-mix(in srgb,var(--accent) 9%,transparent)}
+ .rv-ico .rv-band{fill:var(--accent)}
  .feed-card-actions .fc-sp{margin-left:auto}
  .feed-card-actions button:hover{color:var(--fg)}
  .feed-card-actions .flag-btn{color:var(--mut)}
@@ -7895,22 +7905,19 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
       ctx2.textAlign='center';ctx2.fillText(String(hr).padStart(2,'0'),x,ch-5);ctx2.textAlign='left';ctx2.globalAlpha=1;_lastHrX=x+8;}}
   // baseline
   ctx2.strokeStyle=_P.hair;ctx2.lineWidth=1;ctx2.beginPath();ctx2.moveTo(0,baseY+.5);ctx2.lineTo(cw,baseY+.5);ctx2.stroke();
-  // snowfall bars — each bar coloured on the SLF new-snow palette (the same
-  // hue progression as the Neuschnee legend), not a single flat accent -- so
-  // bar heights AND colours both read as "how much". hSnow holds an HOURLY
-  // rate though, almost always well under the SLF scale's own 1 cm floor (its
-  // bands are built for multi-day totals), so mapping v through it directly
-  // left every bar the same barely-there pale green regardless of height.
-  // Rescaling each bar's fraction of the tallest bar in view (mx -- the same
-  // denominator the bar HEIGHT already uses) onto the SLF colour ramp's full
-  // span keeps the exact palette/order while actually using all of it.
+  // snowfall bars in blues, light to deep with the bar's share of the tallest
+  // bar in view (mx -- the same denominator the bar HEIGHT uses), so height
+  // and colour both read as "how much". (They were on the SLF new-snow
+  // palette, whose greens and reds read as a second layer's legend.)
   let mx=0;for(const s of tlSnow)if(s>mx)mx=s;const mx0=mx;mx=Math.max(.05,mx);
-  const slfTop=SB[SB.length-1];
+  const TL_BLUE=[[176,210,252],[59,130,246],[29,58,160]];
+  const tlBlue=f=>{f=Math.max(0,Math.min(1,f))*2;const i=Math.min(1,f|0),u=f-i,A=TL_BLUE[i],B=TL_BLUE[i+1];
+    return [A[0]+(B[0]-A[0])*u,A[1]+(B[1]-A[1])*u,A[2]+(B[2]-A[2])*u];};
   const barH=Math.max(6,ch-topPad-botPad-2),bw=Math.max(2,cw/tvSpan());
   for(let t=Math.max(0,Math.floor(tv0));t<Math.min(T,Math.ceil(tv1)+1);t++){
     const v=tlSnow[t];if(v<.002)continue;const h=Math.max(3,v/mx*barH);const x=tvX(t,cw);
     const inSel=(t>=a&&t<b),fut=t>=nowIdx;
-    const c=snowColLerp(v/mx*slfTop)||RGB[0];
+    const c=tlBlue(v/mx);
     ctx2.fillStyle='rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')';
     // In single-point mode a..b is only the hidden lookback, not something
     // the user picked: shading it made a phantom window trail the handle.
@@ -9884,12 +9891,13 @@ function vaProfileHTML(pf){
   const AS=['N','NO','O','SO','S','SW','W','NW'];
   const slopeTxt=pf.run?(pf.run.slope?(pf.run.slope+'° '+AS[Math.round(pf.run.aspect/45)%8]):'flach')
     +' · '+pf.run.elev+' m':'';
-  return '<div class="insp-sec va-prof"><h4>Schneeprofil <em>HS '+hsShow+' cm'
-    +(pf.exact?'':' · interpoliert')+'</em></h4>'
-    +(pf.run?'<div class="va-run">Schichtung vom Modellhang '+escapeHtml(slopeTxt)
-      +(k!==1?' (HS '+Math.round(pf.hs)+' cm), auf die Schneehöhe hier gestreckt':'')
-      +(pf.top_cm?' · oberste '+Math.round(span)+' cm':'')+'</div>':'')
-    +vaNoteHTML()
+  // just the profile: where it comes from sits in the heading's tooltip,
+  // the time in the section above (only a frame far off the timeline says so)
+  const src=pf.run?'Modellhang '+slopeTxt+(k!==1?', HS '+Math.round(pf.hs)+' cm auf die Schneehöhe hier gestreckt':'')
+    +(pf.top_cm?' · oberste '+Math.round(span)+' cm':''):'';
+  const dn=vaDataNote();
+  return '<div class="insp-sec va-prof"><h4'+(src?' title="'+escapeHtml(src)+'"':'')+'>Schneeprofil <em>Modell · HS '+hsShow+' cm</em></h4>'
+    +(dn&&dn.stale?vaNoteHTML():'')
     +'<svg class="va-prof-svg" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Schneeprofil: Dichte und Kornform nach Tiefe">'+g+'</svg>'
     +'<div class="va-grain-leg">'+chips+'</div></div>';
 }
@@ -13043,11 +13051,28 @@ function isoHiRender(){const V=_isoV;
   if(sx/W<2.5){isoHiHide();return;}                 // cells already small: the coarse picture is fine
   const x0=Math.max(0,Math.floor(p0.x)),y0=Math.max(0,Math.floor(p0.y)),x1=Math.min(sz.x,Math.ceil(p1.x)),y1=Math.min(sz.y,Math.ceil(p1.y));
   if(x1-x0<4||y1-y0<4){isoHiHide();return;}
-  const q=Math.min(1,Math.sqrt(450000/((x1-x0)*(y1-y0)))),w=Math.max(1,Math.round((x1-x0)*q)),h=Math.max(1,Math.round((y1-y0)*q));
+  // Neuschnee at the terrain's height once a cell is a few pixels across
+  // (zoomed further out the terrain detail would not show, and the whole
+  // country's cells would have to be recomputed)
+  const terr=layer==='snow'&&_nsV&&_nsOk&&elevData&&sx/W>=6;
+  const q=Math.min(1,Math.sqrt((terr?300000:450000)/((x1-x0)*(y1-y0)))),w=Math.max(1,Math.round((x1-x0)*q)),h=Math.max(1,Math.round((y1-y0)*q));
   if(!isoHiCv)isoHiCv=document.createElement('canvas');
   if(isoHiCv.width!==w||isoHiCv.height!==h){isoHiCv.width=w;isoHiCv.height=h;}
   const g=isoHiCv.getContext('2d'),img=g.createImageData(w,h),d=img.data,B=new Int8Array(w*h);
-  for(let Y=0;Y<h;Y++){const fy=Math.min(H-1,Math.max(0,((y0+(Y+.5)/q)-p0.y)/sy*H-.5)),ya=fy|0,yb=Math.min(H-1,ya+1),ty=fy-ya,yn=Math.round(fy)*W;
+  if(terr){const NV=_nsV,hid=_nsHid,chm=chMask(),ME=_tmpME||(_tmpME=(()=>{const e=new Float32Array(NP);for(let p=0;p<NP;p++)e[p]=melevv(p);return e;})());
+    const out=p=>inDomainEdge(p)||!chm[p];
+    // a pixel's latitude depends on its row only, its longitude on its column
+    const lat=new Float64Array(h),lng=new Float64Array(w);
+    for(let Y=0;Y<h;Y++)lat[Y]=map.containerPointToLatLng([x0,y0+(Y+.5)/q]).lat;
+    for(let X=0;X<w;X++)lng[X]=map.containerPointToLatLng([x0+(X+.5)/q,y0]).lng;
+    for(let Y=0;Y<h;Y++){const fy=Math.min(H-1,Math.max(0,((y0+(Y+.5)/q)-p0.y)/sy*H-.5)),ya=fy|0,yb=Math.min(H-1,ya+1),ty=fy-ya,yn=Math.round(fy)*W;
+      for(let X=0;X<w;X++){const fx=Math.min(W-1,Math.max(0,((x0+(X+.5)/q)-p0.x)/sx*W-.5)),xa=fx|0,xb=Math.min(W-1,xa+1),tx=fx-xa,qq=Y*w+X;
+        if(out(yn+Math.round(fx))){B[qq]=-1;continue;}
+        const z=fineElev(lat[Y],lng[X]);let su=0,sw=0;
+        const add=(p,wt)=>{if(wt>0&&!out(p)){su+=wt*(z==null?NV[p]:nsAtHeight(p,NV[p],z-ME[p]));sw+=wt;}};
+        add(ya*W+xa,(1-tx)*(1-ty));add(ya*W+xb,tx*(1-ty));add(yb*W+xa,(1-tx)*ty);add(yb*W+xb,tx*ty);
+        const v=sw?su/sw:null;B[qq]=(v==null||(hid&&hid(v)))?-1:snowBand(v);}}}
+  else for(let Y=0;Y<h;Y++){const fy=Math.min(H-1,Math.max(0,((y0+(Y+.5)/q)-p0.y)/sy*H-.5)),ya=fy|0,yb=Math.min(H-1,ya+1),ty=fy-ya,yn=Math.round(fy)*W;
     for(let X=0;X<w;X++){const fx=Math.min(W-1,Math.max(0,((x0+(X+.5)/q)-p0.x)/sx*W-.5)),xa=fx|0,xb=Math.min(W-1,xa+1),tx=fx-xa,qq=Y*w+X;
       if(isNaN(V[yn+Math.round(fx)])){B[qq]=-1;continue;}
       let su=0,sw=0,v,wt;
@@ -13136,11 +13161,52 @@ function winRaw(arr,key){const k=key+'|'+a+'|'+b;if(_ws.key===k)return _ws;
     hours(k1*WB,b);}
   else hours(a,b);
   _ws.key=k;return _ws;}
+// New snow in a window = what FELL in it: the hourly snowfall summed. The
+// mass balance (cum) also loses settling and melt, so its difference over a
+// longer window came out SMALLER than over a shorter one inside it.
+function nsAt(p,t0,t1){let s=0;for(let t=t0;t<t1;t++)s+=SNOW[t*NP+p];return s*M.snow_scale;}
+// ...and at the terrain's own height. A 1 km cell carries one value for its
+// mean height -- valley and summit at once -- so zoomed in the bands were
+// round blobs, and a peak 800 m above the cell got the valley's share of
+// rain. The cell's snowfall is recomputed at other heights with the
+// pipeline's own model (config/model_params.yaml, handed over as M.nsp):
+// precipitation +4 %/100 m, the rain/snow split and the snow density from
+// the temperature moved there with the lapse rate. A pixel takes the cell's
+// value times the model's ratio between its height and the cell's, so
+// everything else the pipeline did (Luv/Lee, wind) stays in.
+const NS_DZ=200,NS_K=13,NS_MID=6;     // -1200..+1200 m around the cell
+const NS_ALPHA=175;                   // a little more see-through than 205: the map reads underneath
+let _nsV=null,_nsHid=null;            // window snowfall per cell, the legend's hide filter
+const _nsOk=PREC.length>=T*NP&&TEMP.length>=T*NP;
+let _nsProf=null,_nsHave=null,_nsKey='',_nsFS=null;
+function nsFS(){if(_nsFS)return _nsFS;const q=M.nsp||{},tc=q.t_center??1,k=q.k??1.4,si=q.slr_i??10,ss=q.slr_s??-0.8,s0=q.slr_min??6,s1=q.slr_max??25;
+  _nsFS=new Float32Array(801);       // snow share x snow-to-liquid ratio, -50..+30 degC in 0.1 K
+  for(let i=0;i<=800;i++){const t=-50+i*0.1,f=1/(1+Math.exp(Math.max(-50,Math.min(50,k*(t-tc)))));_nsFS[i]=f*Math.max(s0,Math.min(s1,si+ss*t))/10;}
+  return _nsFS;}
+function nsProfile(p){
+  const key=a+'|'+b;
+  if(!_nsProf){_nsProf=new Float32Array(NP*NS_K);_nsHave=new Uint8Array(NP);}
+  if(_nsKey!==key){_nsKey=key;_nsHave.fill(0);}
+  const o=p*NS_K;if(_nsHave[p])return o;
+  const FS=nsFS(),q=M.nsp||{},g=q.gamma??0.0004,f0=q.fmin??0.6,f1=q.fmax??1.8,LR=q.lapse??TEMP_LAPSE;
+  for(let k=0;k<NS_K;k++)_nsProf[o+k]=0;
+  for(let t=a;t<b;t++){const pr=PREC[t*NP+p];if(!pr)continue;const P=pr/M.prec_mul,tc=tv(t,p);
+    for(let k=0;k<NS_K;k++){const dz=(k-NS_MID)*NS_DZ,i=Math.round((tc+LR*dz+50)*10);
+      _nsProf[o+k]+=P*Math.max(f0,Math.min(f1,1+g*dz))*FS[i<0?0:i>800?800:i];}}
+  _nsHave[p]=1;return o;}
+// cell p's window snowfall v carried dz metres up (or down)
+function nsAtHeight(p,v,dz){
+  if(!_nsOk||!(dz===dz))return v;
+  const o=nsProfile(p),x=Math.max(0,Math.min(NS_K-1,dz/NS_DZ+NS_MID)),k0=Math.min(NS_K-2,x|0),f=x-k0;
+  const m=_nsProf[o+k0]*(1-f)+_nsProf[o+k0+1]*f,m0=_nsProf[o+NS_MID];
+  return m0>=0.5?v*Math.min(3,m/m0):v+Math.max(0,m-m0);}
 function aggT(p,m){let mn=1e9,mx=-1e9,su=0,c=0,cold=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;if(v<0)cold++;}return m=="max"?mx:m=="min"?mn:m=="sub0"?cold:m=="max05"?mx:su/Math.max(1,c);}
 function renderRaster(){
   const _hid=legHideFn(layer);
   // 3x finer bands on a coarse grid, 2x on the national one (scrub speed)
-  if(layer=="snow"){const ca=a*NP,cb=b*NP;setRasterIso(p=>{const v=cum[cb+p]-cum[ca+p];return _hid&&_hid(v)?null:v;},205,NP>50000?2:3);}
+  if(layer=="snow"){const R=winRaw(SNOW,'snow'),sc=M.snow_scale,nv=_nsV||(_nsV=new Float32Array(NP));
+    for(let p=0;p<NP;p++)nv[p]=R.su[p]*sc;
+    _nsHid=_hid;setRasterIso(p=>{const v=nv[p];return _hid&&_hid(v)?null:v;},NS_ALPHA,NP>50000?2:3);}
   else if(layer=="depth"){const cb2=b*NP;setRasterIso(p=>{const v=cum[cb2+p];return (v<1||(_hid&&_hid(v)))?null:v;},215,NP>50000?2:3);}
   else if(layer=="temp"){const R=winRaw(TEMP,'temp'),tm=M.temp_mul,to=M.temp_off,c=Math.max(0,b-a);
     setRaster(p=>{if(!c)return null;const mn=R.mn[p]/tm-to,mx=R.mx[p]/tm-to,su=R.su[p]/tm-c*to;
@@ -14782,7 +14848,9 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   const p=cy2*W+cx2,elev=melevv(p),wk=mainToWind[p];
   if(inspMarker)map.removeLayer(inspMarker);
   inspMarker=L.marker([lat,lon],{icon:L.divIcon({className:'',html:'<div class="insp-xmark"><i></i></div>',iconSize:[30,30],iconAnchor:[15,15]}),interactive:false,zIndexOffset:2000}).addTo(map);
-  const ca=a*NP,cb=b*NP;const newSnow=cum[cb+p]-cum[ca+p],depthNow=cum[cb+p];
+  const cb=b*NP,_fz=fineElev(lat,lon);
+  // what fell in the window, at this spot's height -- as the map draws it
+  const newSnow=nsAtHeight(p,nsAt(p,a,b),_fz==null?NaN:_fz-melevv(p)),depthNow=cum[cb+p];
   let wsum=0;for(let t=a;t<b;t++)wsum+=SPD[t*P+wk]/M.spd_mul*3.6;const wmean=wsum/Math.max(1,b-a);
   // ~25 m terrain from the Terrarium tile when it is loaded (re-opens itself
   // once it arrives), else the national ~115 m rasters.
@@ -15302,7 +15370,7 @@ function make3dOverlay(mode){
   const oc=document.createElement('canvas');oc.width=W;oc.height=H;
   const ox=oc.getContext('2d'),oi=ox.createImageData(W,H),od=oi.data;
   for(let p=0;p<NP;p++){const o=p*4;let r=0,g=0,bl=0,al=0;
-    if(mode==='snow'){const ca2=a*NP,cb2=b*NP;const v=cum[cb2+p]-cum[ca2+p];const c=snowCol(v);if(c){r=c[0];g=c[1];bl=c[2];al=200;}}
+    if(mode==='snow'){const v=nsAt(p,a,b);const c=snowCol(v);if(c){r=c[0];g=c[1];bl=c[2];al=200;}}
     else if(mode==='depth'){const cb2=b*NP;const v=cum[cb2+p];if(v>=1){const x=Math.min(1,v/300);r=220-x*180|0;g=235-x*95|0;bl=255-x*30|0;al=180;}}
     else if(mode==='temp'){let su=0,c=0;for(let t=a;t<b;t++){su+=tv(t,p);c++;}const v=su/Math.max(1,c);const tc2=tempCol(v);r=tc2[0];g=tc2[1];bl=tc2[2];al=170;}
     else if(mode==='wind'){let su=0,c=0;for(let t=a;t<b;t++){su+=wg_(t,p)*3.6;c++;}const v=su/Math.max(1,c);if(v>=1){const c2=rampBYR(v/70);r=c2[0];g=c2[1];bl=c2[2];al=160;}}
@@ -19365,47 +19433,54 @@ function rptNormZone(z){
   return {elevMin:z.elevMin!=null?z.elevMin:z.e0,elevMax:z.elevMax!=null?z.elevMax:z.e1,
     aspectDeg:z.aspectDeg!=null?z.aspectDeg:z.asp,aspectConc:z.aspectConc!=null?z.aspectConc:z.conc,cm:z.cm};
 }
-function rptMountainSVG(nz,size){
-  const mw=size*0.92,mh=size*0.8,tipY=size*0.06,baseY=tipY+mh,tipX=size/2,lx=(size-mw)/2,rx=lx+mw;
-  const eY=e=>{const t=Math.max(0,Math.min(1,(e-RPTVIZ_ELEV_LO)/(RPTVIZ_ELEV_HI-RPTVIZ_ELEV_LO)));return baseY-t*(baseY-tipY);};
-  const cid='rvm'+Math.random().toString(36).slice(2,9);
+// Three small chips instead of two bare outlines: a mountain with the
+// reported height band drawn on it (a band below the glyph's range still
+// shows, at its foot), a compass with the reported aspects filled -- only
+// when the report has aspects -- and the snow depth.
+const RPT_ASP_DE=['N','NO','O','SO','S','SW','W','NW'];
+function rptMountainSVG(nz){
+  const top=4.5,foot=20.5,eY=e=>foot-Math.max(0,Math.min(1,(e-RPTVIZ_ELEV_LO)/(RPTVIZ_ELEV_HI-RPTVIZ_ELEV_LO)))*(foot-top);
+  const cid='rvm'+Math.random().toString(36).slice(2,9),M='M1.5 20.5L8.4 9.6l3.1 4.4 4-8.5 7 15z';
   let bands='';
   nz.forEach(z=>{if(z.elevMin==null||z.elevMax==null)return;
-    const y1=eY(Math.max(z.elevMin,z.elevMax)),y0=eY(Math.min(z.elevMin,z.elevMax));
-    bands+='<rect x="'+lx.toFixed(1)+'" y="'+y1.toFixed(1)+'" width="'+(rx-lx).toFixed(1)+'" height="'+Math.max(1.6,y0-y1).toFixed(1)+'" fill="#171923" opacity=".7"/>';});
-  return '<svg class="rpt-mtn" viewBox="0 0 '+size+' '+size+'" width="'+size+'" height="'+size+'" aria-hidden="true">'+
-    '<defs><clipPath id="'+cid+'"><polygon points="'+lx.toFixed(1)+','+baseY.toFixed(1)+' '+tipX.toFixed(1)+','+tipY.toFixed(1)+' '+rx.toFixed(1)+','+baseY.toFixed(1)+'"/></clipPath></defs>'+
-    '<polygon points="'+lx.toFixed(1)+','+baseY.toFixed(1)+' '+tipX.toFixed(1)+','+tipY.toFixed(1)+' '+rx.toFixed(1)+','+baseY.toFixed(1)+'" fill="rgba(74,163,255,.10)" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>'+
-    '<g clip-path="url(#'+cid+')">'+bands+'</g></svg>';
+    let y1=eY(Math.max(z.elevMin,z.elevMax)),y0=eY(Math.min(z.elevMin,z.elevMax));
+    if(y0-y1<2.4){const c=Math.min(foot-1.2,Math.max(top+1.2,(y0+y1)/2));y1=c-1.2;y0=c+1.2;}
+    bands+='<rect class="rv-band" x="0" y="'+y1.toFixed(1)+'" width="24" height="'+(y0-y1).toFixed(1)+'"/>';});
+  return '<svg class="rv-ico" viewBox="0 0 24 24" aria-hidden="true"><defs><clipPath id="'+cid+'"><path d="'+M+'"/></clipPath></defs>'
+    +'<path class="rv-m" d="'+M+'"/><g clip-path="url(#'+cid+')">'+bands+'</g>'
+    +'<path d="'+M+'" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
 }
-function rptRoseSVG(nz,size){
-  const cx=size/2,cy=size/2,r=size*0.44;
-  const dirs=[0,45,90,135,180,225,270,315];
-  const str=dirs.map(brg=>{let m=0;nz.forEach(z=>{if(z.aspectDeg==null)return;
+function rptAspects(nz){
+  return [0,45,90,135,180,225,270,315].map(brg=>{let m=0;nz.forEach(z=>{if(z.aspectDeg==null)return;
     const mm=progAspectMatch(brg,z.aspectDeg,z.aspectConc==null?0.7:z.aspectConc);if(mm>m)m=mm;});return m;});
-  const pt=(brg,rad)=>{const a=brg*Math.PI/180;return [cx+rad*Math.sin(a),cy-rad*Math.cos(a)];};
-  let wedges='';
-  for(let i=0;i<8;i++){
-    const p0=pt(dirs[i]-22.5,r),p1=pt(dirs[i]+22.5,r);
-    const op=(0.10+0.78*str[i]).toFixed(2);
-    wedges+='<path d="M'+cx+','+cy+' L'+p0[0].toFixed(1)+','+p0[1].toFixed(1)+' A'+r.toFixed(1)+','+r.toFixed(1)+' 0 0 1 '+p1[0].toFixed(1)+','+p1[1].toFixed(1)+' Z" fill="rgb(74,163,255)" fill-opacity="'+op+'"/>';
-  }
-  return '<svg class="rpt-rose" viewBox="0 0 '+size+' '+size+'" width="'+size+'" height="'+size+'" aria-hidden="true">'+wedges+
-    '<circle cx="'+cx+'" cy="'+cy+'" r="'+r.toFixed(1)+'" fill="none" stroke="currentColor" stroke-width="1" opacity=".3"/></svg>';
 }
-function rptVizHTML(zones,size){
+function rptRoseSVG(str){
+  const c=12,r=9.2,pt=(b,rad)=>{const a=b*Math.PI/180;return (c+rad*Math.sin(a)).toFixed(2)+','+(c-rad*Math.cos(a)).toFixed(2);};
+  let w='';
+  for(let i=0;i<8;i++){if(str[i]<0.15)continue;const b=i*45;
+    w+='<path class="rv-band" fill-opacity="'+(0.35+0.65*str[i]).toFixed(2)+'" d="M12,12 L'+pt(b-21,r)+' A'+r+','+r+' 0 0 1 '+pt(b+21,r)+' Z"/>';}
+  return '<svg class="rv-ico" viewBox="0 0 24 24" aria-hidden="true">'
+    +'<circle class="rv-m" cx="12" cy="12" r="'+r+'"/>'+w
+    +'<circle cx="12" cy="12" r="'+r+'" fill="none" stroke="currentColor" stroke-width="1.4"/>'
+    +'<path d="M12 .8l2 3.4h-4z" fill="currentColor"/></svg>';
+}
+const RV_FLAKE='<svg class="rv-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">'
+  +'<path d="M12 2.5v19M3.8 7.2l16.4 9.6M3.8 16.8l16.4-9.6"/><path d="M9.6 4.4L12 6.6l2.4-2.2M9.6 19.6L12 17.4l2.4 2.2"/></svg>';
+function rptVizHTML(zones){
   if(!zones||!zones.length)return '';
-  size=size||34;
   const nz=zones.map(rptNormZone).filter(z=>z.elevMin!=null||z.elevMax!=null||z.aspectDeg!=null);
   if(!nz.length)return '';
   const elevs=nz.filter(z=>z.elevMin!=null&&z.elevMax!=null);
-  const eLo=elevs.length?Math.min(...elevs.map(z=>z.elevMin)):null;
-  const eHi=elevs.length?Math.max(...elevs.map(z=>z.elevMax)):null;
+  const eLo=elevs.length?Math.min(...elevs.map(z=>Math.min(z.elevMin,z.elevMax))):null;
+  const eHi=elevs.length?Math.max(...elevs.map(z=>Math.max(z.elevMin,z.elevMax))):null;
   const cms=nz.map(z=>z.cm).filter(v=>v!=null);
-  const cmTxt=cms.length?Math.round(cms.reduce((a,b)=>a+b,0)/cms.length)+' cm'+(cms.length>1?' Ø':''):'';
-  const elevTxt=(eLo!=null&&eHi!=null)?Math.round(eLo)+'–'+Math.round(eHi)+' m':'';
-  return '<div class="rpt-viz">'+rptMountainSVG(nz,size)+rptRoseSVG(nz,size)+
-    '<div class="rpt-viz-txt">'+(elevTxt?'<b>'+elevTxt+'</b>':'')+(cmTxt?'<span>'+cmTxt+'</span>':'')+'</div></div>';
+  const chip=(ico,txt,tip)=>'<span class="rv-chip" title="'+tip+'">'+ico+'<b>'+txt+'</b></span>';
+  let h='';
+  if(eLo!=null)h+=chip(rptMountainSVG(nz),Math.round(eLo)+'–'+Math.round(eHi)+' m','Höhenbereich');
+  if(nz.some(z=>z.aspectDeg!=null)){const st=rptAspects(nz),on=RPT_ASP_DE.filter((n,i)=>st[i]>=0.5);
+    h+=chip(rptRoseSVG(st),on.length>=8?'alle':on.length?on.join(' · '):'–','Exposition');}
+  if(cms.length)h+=chip(RV_FLAKE,Math.round(cms.reduce((a,b)=>a+b,0)/cms.length)+' cm'+(cms.length>1?' Ø':''),'Schnee');
+  return h?'<div class="rpt-viz">'+h+'</div>':'';
 }
 // A drawing is a statement about terrain, and terrain does not survive being
 // shrunk into a card -- a thumbnail of a few painted blobs says nothing you

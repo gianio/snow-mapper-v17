@@ -291,6 +291,9 @@ console.log('\nmatrix mode (weather point x virtual slopes)');
   const html = vaProfileHTML(n38);
   check('the profile names the model slope it came from', /Modellhang/.test(html) && /2400 m/.test(html));
   check('...and the depth it covers', /oberste \d+ cm/.test(html), (html.match(/oberste \d+ cm/)||[''])[0]);
+  const shown = html.replace(/title="[^"]*"/g, '').replace(/<[^>]+>/g, ' ');
+  check('...in the heading tooltip only: no text block above the profile',
+        !/Modellhang|oberste|Zustand:/.test(shown) && /Modell · HS \d+ cm/.test(shown), shown.slice(0, 120));
   sandbox.vaWp.w002 = 'missing';
   check('a missing weather-point file yields no profile', vaProfileAt(47.30, 7.60, 1200, 0, 30) === null);
   const saveHs = sandbox.vaWp.w001.hs;
