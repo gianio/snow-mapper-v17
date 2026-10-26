@@ -26,6 +26,7 @@ export function fsBucket(run, exportDir, extra = {}) {
     return {
       size: u8.length, range, httpEtag: '"t"', body: part,
       arrayBuffer: async () => part.buffer.slice(part.byteOffset, part.byteOffset + part.byteLength),
+      text: async () => new TextDecoder().decode(part),
     };
   };
   return {

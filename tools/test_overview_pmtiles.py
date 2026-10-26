@@ -52,6 +52,26 @@ def main():
             check("east of the middle stays blue", px(46.85, 9.53)[:3] == (30, 30, 200), str(px(46.85, 9.53)))
             top = px(47.75, 8.0)
             check("transparent stays transparent", top is None or top[3] == 0, str(top))
+        # a frame with nothing to show (no powder anywhere) still makes a
+        # valid archive -- an empty one used to crash the writer
+        Image.fromarray(np.zeros((200, 460, 4), np.uint8), "RGBA").save(exp / "layers" / "ski6_2026-03-30T1400.png")
+        (exp / "manifest.json").write_text(json.dumps({
+            "bounds": bounds, "tags": ["2026-03-30T1400"],
+            "layers": {"ski6": {"file": "layers/ski6_{tag}.png"}}}))
+        try:
+            n = m.build(exp, td / "out2", zmax=8)
+            ok = n == 1
+        except Exception as e:
+            ok, n = False, repr(e)
+        f = td / "out2" / "ski6" / "2026-03-30T1400.pmtiles"
+        check("an empty frame still makes an archive", ok and f.exists(), str(n))
+        if ok and f.exists():
+            with open(f, "rb") as fh:
+                r = Reader(MmapSource(fh))
+                tiles = dict(all_tiles(r.get_bytes))
+                check("... with nothing visible in it",
+                      len(tiles) >= 1 and all(not np.asarray(Image.open(io.BytesIO(t)).convert("RGBA"))[..., 3].any()
+                                              for t in tiles.values()), f"{len(tiles)} tiles")
     print("\nOVERVIEW PMTILES " + ("OK" if not FAILS else f"FAILED: {FAILS}"))
     sys.exit(1 if FAILS else 0)
 

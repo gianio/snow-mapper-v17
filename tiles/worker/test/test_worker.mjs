@@ -32,6 +32,10 @@ const man = JSON.parse(readFileSync(`${EXP}/manifest.json`, 'utf8'));
 const tag = man.tags[Math.floor(man.tags.length / 2)];
 const env = { BUCKET: fsBucket('r1', EXP) };
 const get = (p, h = {}) => handle(new Request('https://tiles.test' + p, { headers: h }), env, null);
+// the run's first ski18 frame was pre-rendered in CI (only tiles with snow
+// stored); every other frame and view is rendered on demand
+const preTag = man.tags[0];
+await env.BUCKET.put('runs/r1/cache/sharp.json', new TextEncoder().encode(JSON.stringify({ ski18: [preTag] })));
 
 // Bernese Oberland, zoom 12
 function tileOf(lat, lon, z) {
@@ -87,6 +91,29 @@ console.log('same pixels as the app engine');
   const px = E.render({ z: 11, x: x >> 1, y: y >> 1, size: 256, layer: 'ski18', tkey, tz, tx: x >> 1, ty: y >> 1, tbytes: tb });
   let diff = 0; for (let i = 0; i < px.length; i++) if (px[i] !== im.data[i]) diff++;
   check('server tile == app engine render, byte for byte', diff === 0, diff + ' bytes differ');
+}
+
+console.log('pre-rendered frames');
+{
+  const stored = new Uint8Array([1, 2, 3]);
+  await env.BUCKET.put(`runs/r1/cache/ski18/${preTag}/${z}/${x}/${y}.png`, stored);
+  const r = await get(`/v1/r1/ski18/${preTag}/${z}/${x}/${y}.png`);
+  check('a stored tile is served from the bucket', r.headers.get('X-Tile') === 'r2'
+        && (await r.arrayBuffer()).byteLength === 3, r.headers.get('X-Tile'));
+  const before = env.BUCKET.mem.size;
+  const e = await get(`/v1/r1/ski18/${preTag}/${z}/${x + 1}/${y}.png`);
+  const im = decode(new Uint8Array(await e.arrayBuffer()));
+  let painted = 0; for (let i = 3; i < im.data.length; i += 4) if (im.data[i]) painted++;
+  check('a missing tile of a pre-rendered frame -> blank 256 px tile, not rendered',
+        e.status === 200 && e.headers.get('X-Tile') === 'empty' && im.width === 256 && painted === 0,
+        `${e.status} ${e.headers.get('X-Tile')} ${painted} px`);
+  check('... cached like a tile, nothing written to the bucket',
+        /immutable/.test(e.headers.get('Cache-Control') || '') && env.BUCKET.mem.size === before);
+  const o = await get(`/v1/r1/ski18/${tag}/${z}/${x + 1}/${y}.png`);
+  check('a frame that was not pre-rendered is still rendered', o.status === 200 && o.headers.get('X-Tile') === 'rendered',
+        `${o.status} ${o.headers.get('X-Tile')}`);
+  const w = await get(`/v1/r1/density/${preTag}/${z}/${x + 1}/${y}.png`);
+  check('... and so is another view of that frame', w.headers.get('X-Tile') !== 'empty', `${w.status} ${w.headers.get('X-Tile')}`);
 }
 
 console.log('bad input');

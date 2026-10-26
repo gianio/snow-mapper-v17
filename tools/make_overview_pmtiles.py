@@ -85,6 +85,15 @@ def build(export_dir: Path, out_dir: Path, zmax: int = 9, views=None, tags=None)
                             Image.fromarray(t, "RGBA").save(buf, "PNG", optimize=True)
                             wr.write_tile(zxy_to_tileid(z, x, y), buf.getvalue())
                             n_t += 1
+                if not n_t:
+                    # nothing to show in this frame (e.g. "Nur Pulver" with no
+                    # dry powder anywhere): one transparent tile keeps the
+                    # archive valid -- the writer cannot finalize an empty one
+                    # and the app expects an archive for every frame
+                    x0, x1, y0, y1 = _tile_range(bounds, ZMIN)
+                    buf = io.BytesIO()
+                    Image.new("RGBA", (256, 256)).save(buf, "PNG", optimize=True)
+                    wr.write_tile(zxy_to_tileid(ZMIN, (x0 + x1) // 2, (y0 + y1) // 2), buf.getvalue())
                 wr.finalize({
                     "tile_type": TileType.PNG, "tile_compression": Compression.NONE,
                     "min_lon_e7": int(w * 1e7), "min_lat_e7": int(s * 1e7),
