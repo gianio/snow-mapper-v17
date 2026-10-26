@@ -5,9 +5,10 @@
 //
 // Picks the frames on the app's 2 h grid within +-hours/2 of now (or of the
 // export's middle when "now" is outside it), the zoom 10-12 tiles that touch
-// snow in that frame's overview PNG, and writes
+// snow in that frame's overview PNG, and writes those with snow on them as
 //   <outDir>/<view>/<tag>/<z>/<x>/<y>.png
-// plus <outDir>/sharp.json = {view: [tags]}  (what the app may ask for).
+// plus <outDir>/sharp.json = {view: [tags]}  (what the app may ask for; the
+// Worker answers the missing, empty tiles of these frames with a blank one).
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fork, execFileSync } from 'node:child_process';
@@ -94,9 +95,13 @@ async function work(jobs) {
     if (existsSync(out)) continue;
     try {
       const { png, painted } = await R.renderTile('pre', view, tag, z, x, y);
+      n++;
+      // an empty tile is not stored: the Worker answers it with a blank one
+      // for every frame in sharp.json (most tiles are empty, and each stored
+      // file is one more upload and one more R2 write)
+      if (!painted) { empty++; continue; }
       mkdirSync(dir, { recursive: true });
       writeFileSync(out, png);
-      n++; if (!painted) empty++;
     } catch (e) { failed++; if (failed <= 20) console.error(`  ${view} ${tag} ${z}/${x}/${y}: ${e.message}${e.cause ? ' (' + (e.cause.code || e.cause.message) + ')' : ''}`); }
   }
   return { n, empty, failed };
@@ -128,7 +133,7 @@ if (process.env.PRERENDER_CHILD) {
         failed = res.reduce((s, r) => s + r.failed, 0);
   mkdirSync(OUT, { recursive: true });
   writeFileSync(join(OUT, 'sharp.json'), JSON.stringify(sharp));
-  console.log(`prerender: ${n} tiles written (${empty} empty, ${failed} failed) in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  console.log(`prerender: ${n} tiles rendered, ${n - empty} with snow written (${empty} empty, served blank by the Worker; ${failed} failed) in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   // Frames with holes would show blank squares: the app asks the service
   // for every tile of a "sharp" frame. Too many failures -> stop here.
   if (failed > jobs.length * 0.01) { console.error(`prerender: ${failed} of ${jobs.length} tiles failed -- not publishing them`); process.exit(1); }

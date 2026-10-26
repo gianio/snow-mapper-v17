@@ -9,8 +9,14 @@
 // later request -- by anyone -- is a cache hit. Runs are immutable (the run
 // id is part of the URL), so everything is cached for a year.
 //
+// Pre-rendered frames (CI, tiles/worker/prerender.mjs) upload only the tiles
+// with snow on them; the frames are listed in runs/<run>/cache/sharp.json. A
+// tile of such a frame that is not in the bucket is empty: it is answered
+// with a transparent tile, never rendered (the free plan could not).
+//
 // Bindings (wrangler.toml): BUCKET = the R2 bucket the pipeline uploads to.
-import { createRenderer } from './render.js';
+import { encode } from 'fast-png';
+import { createRenderer, SIZE, ZMIN, ZMAX } from './render.js';
 
 const TERRAIN = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/';
 const CORS = {
@@ -34,6 +40,23 @@ function rendererFor(env) {
     },
   });
   return renderer;
+}
+
+let blank = null;
+function blankPng() {
+  return blank || (blank = encode({ width: SIZE, height: SIZE, data: new Uint8Array(SIZE * SIZE * 4), channels: 4, depth: 8 }));
+}
+
+// run -> {view: [tags]} of its pre-rendered frames. Runs are immutable, so a
+// found list is kept; a missing one only briefly (the upload may be under way).
+const sharpOf = new Map();
+async function sharpFrames(env, run) {
+  const c = sharpOf.get(run);
+  if (c && (c.list || Date.now() - c.at < 60e3)) return c.list;
+  let list = null;
+  try { const o = await env.BUCKET.get(`runs/${run}/cache/sharp.json`); if (o) list = JSON.parse(await o.text()); } catch (e) {}
+  sharpOf.set(run, { list, at: Date.now() });
+  return list;
 }
 
 function resp(body, status, headers) {
@@ -83,6 +106,12 @@ export async function handle(request, env, ctx) {
   const stored = await env.BUCKET.get(rkey);
   if (stored) {
     const r = resp(stored.body, 200, { ...hdr, 'X-Tile': 'r2' });
+    if (cache && ctx) ctx.waitUntil(cache.put(ckey, r.clone()));
+    return r;
+  }
+  const pre = await sharpFrames(env, run);
+  if (pre && (pre[view] || []).includes(tag) && z >= ZMIN && z <= ZMAX) {
+    const r = resp(blankPng(), 200, { ...hdr, 'X-Tile': 'empty' });
     if (cache && ctx) ctx.waitUntil(cache.put(ckey, r.clone()));
     return r;
   }

@@ -17,7 +17,7 @@ for another provider), R2_BUCKET (default snowmapper-tiles), TILES_BASE_URL
 (the Worker's public URL). Missing settings -> exit 0 with a note.
 """
 from __future__ import annotations
-import json, os, re, subprocess, sys
+import json, os, re, subprocess, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -120,8 +120,9 @@ def main():
     # built outside the export: the demo export is committed to git, the
     # archives only go to the bucket
     ov = Path(tempfile.mkdtemp(prefix="overview_"))
+    t0 = time.time()
     n = make_overview_pmtiles.build(exp, ov)
-    print(f"tiles: {n} overview archives")
+    print(f"tiles: {n} overview archives in {time.time() - t0:.0f} s", flush=True)
     dest = f"s3://{env['BUCKET']}/runs/{run}"
     # pre-rendered sharp tiles (tiles/worker/prerender.mjs), if any
     cache = Path(os.environ["TILES_CACHE_DIR"]) if os.environ.get("TILES_CACHE_DIR") else None
@@ -133,8 +134,10 @@ def main():
         if src is None:
             continue
         if src.is_dir():
+            t0, nf = time.time(), sum(1 for f in src.rglob("*") if f.is_file())
+            print(f"tiles: uploading {sub}/ ({nf} files) ...", flush=True)
             _aws(["sync", str(src), f"{dest}/{sub}"], env)
-            print(f"tiles: uploaded {sub}/")
+            print(f"tiles: uploaded {sub}/ in {time.time() - t0:.0f} s", flush=True)
     # keep the newest runs only -- per kind (live-*, demo-*), so live cycles
     # never delete the demo the app may still be pointing at
     kind = run.split("-")[0] + "-"
