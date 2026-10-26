@@ -8887,7 +8887,11 @@ async function vaImgBytes(url,maxW){
   return {w,h,rgba};
 }
 function vaGray(img){const n=img.w*img.h,d=new Uint8Array(n);for(let i=0;i<n;i++)d[i]=img.rgba[i*4];return {w:img.w,h:img.h,data:d};}
-async function vaPkLoad(){
+// one load at a time: the point card and the renderer may both ask
+let _vaPkP=null;
+function vaPkLoad(){if(vaPk||!vaMan||!vaMan.pack)return Promise.resolve(vaPk);
+  if(!_vaPkP)_vaPkP=_vaPkLoad();return _vaPkP;}
+async function _vaPkLoad(){
   if(vaPk||vaPkTried||!vaMan||!vaMan.pack)return vaPk;
   vaPkTried=true;
   try{
@@ -9468,10 +9472,31 @@ function vaPickLayer(k){
   vaHiRepaint();
   ovRender();
 }
+// The point card reads the SAME frame the map shows, whichever renderer
+// draws the map: with the tile service (or the render workers) this thread
+// never had the pack, or held whatever frame the tour scoring used last --
+// the card then fell back to the raw profile of the nearest model slope and
+// disagreed with the map. Pack and frame are loaded here on demand and the
+// card opens again once they are in.
+let _vaPtWant=null;const _vaPtFail=new Set();
+function vaPointFrame(){
+  if(!vaAvailable()||!vaMan.pack||(vaPkTried&&!vaPk&&!_vaPkP))return null;
+  const tag=(vaMan.tags||[])[vaTagIndex()];if(!tag||_vaPtFail.has(tag))return null;
+  if(vaPk&&vaEng&&vaPkFrames.has(tag)){const f=vaPkFrames.get(tag);vaEng.setFrame(f.vals,f.ok);return tag;}
+  if(!ovOn.variantA)return null;          // fetched only while the SNOWPACK layer is on
+  if(_vaPtWant!==tag){_vaPtWant=tag;(async()=>{
+    try{if(!(await vaPkLoad())){_vaPtFail.add(tag);}else await vaPkFrame(tag);}catch(e){_vaPtFail.add(tag);}
+    if(_vaPtWant!==tag)return;_vaPtWant=null;
+    const pn=document.getElementById('inspPanel');
+    if(inspLast&&!inspLast.stn&&pn&&pn.classList.contains('open')){const st=pn.scrollTop;inspOpen(inspLast.lat,inspLast.lon);pn.scrollTop=st;}})();}
+  return 'loading';
+}
 // The model's own reading of the tapped spot: same numbers the map is drawn
 // from, at the tapped height, steepness and aspect.
-function vaPointHTML(lat,lon,elev,slope,aspect){
-  if(!vaEng||!vaHiTag||elev==null)return '';
+function vaPointHTML(lat,lon,elev,slope,aspect){vaPointHTML.hs=null;
+  if(elev==null)return '';
+  const st=vaPointFrame();if(!st)return '';
+  if(st==='loading')return '<div class="insp-sec va-pt"><h4>Schneequalität <em>lädt…</em></h4></div>';
   const en=vaEng.wgs2lv03(lat,lon),sb=vaEng.gridAt(vaEng.shade,en[0],en[1]);
   if(sb<0||sb===255)return '';
   const m=new Float64Array(vaEng.nm);
@@ -9492,7 +9517,7 @@ function vaPointHTML(lat,lon,elev,slope,aspect){
   // first what lies here and how much of it, as on the map
   const T=vaEng.pk&&vaEng.pk.thresholds||{},thin6=m[x.total_hs_cm]<(T.THIN_COVER_HS||20)&&vaEng.clsSki6?vaEng.clsSki6(m):0,thinP=thin6>=3;
   const k6=thinP?vaEng.clsSki6(m):((typeof VA_SIMPLE_TO_SKI6!=='undefined'&&VA_SIMPLE_TO_SKI6[sim])||0);let c6=(VA_PALETTE.ski6&&VA_PALETTE.ski6[k6])||[150,160,175];
-  const hs=Math.round(m[x.total_hs_cm]),pw=Math.round(m[x.powder_depth_cm]||0);
+  const hs=Math.round(m[x.total_hs_cm]),pw=Math.round(m[x.powder_depth_cm]||0);vaPointHTML.hs=m[x.total_hs_cm];
   // powder: the swatch in the SLF band colour the map uses
   if([3,4,5,8,9].includes(k6)){const B=[1,5,10,20,30,50],C=[[194,229,196],[149,207,153],[102,187,106],[66,165,245],[30,136,229],[21,101,192]];
     let j=0;while(j+1<B.length&&(m[x.powder_depth_cm]||0)>=B[j+1])j++;c6=C[j];}
@@ -9506,7 +9531,7 @@ function vaPointHTML(lat,lon,elev,slope,aspect){
 function vaPointFromProfile(pf){if(!pf||!pf.hs)return '';
   const gl=((vaIdx||vaProf||{}).grain)||{},nb=pf.dens.length,bin=(pf.top_cm?Math.min(pf.hs,pf.top_cm):pf.hs)/Math.max(1,nb);
   let pw=0;for(let j=0;j<nb;j++){if(pf.dens[j]>0&&pf.dens[j]<170)pw+=bin;else break;}
-  const e=gl[pf.grain[0]]||gl[String(pf.grain[0])],nm=e?e[0]:'Schnee',col=e?e[1]:[150,160,175];
+  const e=gl[pf.grain[0]]||gl[String(pf.grain[0])],nm=e?(VA_GRAIN_DE[e[0]]||e[0]):'Schnee',col=e?e[1]:[150,160,175];
   const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+col.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(nm)+'</b></div>'
     +'<div><span>Pulver</span><b>'+(pw>=1?Math.round(pw)+'<small> cm</small>':'–')+'</b></div>'
     +'<div><span>Schneehöhe</span><b>'+Math.round(pf.hs)+'<small> cm</small></b></div></div>';
@@ -9787,7 +9812,10 @@ function vaProfileHTML(pf){
   if(!pf)return '';
   if(pf.loading)return '<div class="insp-sec va-prof"><h4>Schneeprofil <em>lädt…</em></h4></div>';
   const nb=pf.dens.length,gl=((vaIdx||vaProf||{}).grain)||{};
-  const span=Math.max(2,pf.top_cm?Math.min(pf.hs,pf.top_cm):pf.hs);
+  // stretched to the snow height of the tapped spot (what the map shows),
+  // when that differs from the model slope's own
+  const k=(pf.hsPt!=null&&pf.hs>0&&Math.abs(pf.hsPt-pf.hs)>=1)?pf.hsPt/pf.hs:1,hsShow=Math.round(pf.hs*k);
+  const span=Math.max(2,(pf.top_cm?Math.min(pf.hs,pf.top_cm):pf.hs)*k);
   const W=300,H=196,L=40,GW=24,X0=L+GW+6,X1=W-8,T=10,B=H-34,dmin=0,dmax=500;
   const yOf=cm=>T+cm/span*(B-T),xOf=d=>X0+Math.max(0,Math.min(1,(d-dmin)/(dmax-dmin)))*(X1-X0);
   const binCm=span/nb;
@@ -9833,9 +9861,10 @@ function vaProfileHTML(pf){
   const AS=['N','NO','O','SO','S','SW','W','NW'];
   const slopeTxt=pf.run?(pf.run.slope?(pf.run.slope+'° '+AS[Math.round(pf.run.aspect/45)%8]):'flach')
     +' · '+pf.run.elev+' m':'';
-  return '<div class="insp-sec va-prof"><h4>Schneeprofil <em>HS '+pf.hs+' cm'
+  return '<div class="insp-sec va-prof"><h4>Schneeprofil <em>HS '+hsShow+' cm'
     +(pf.exact?'':' · interpoliert')+'</em></h4>'
-    +(pf.run?'<div class="va-run">Modellhang '+escapeHtml(slopeTxt)
+    +(pf.run?'<div class="va-run">Schichtung vom Modellhang '+escapeHtml(slopeTxt)
+      +(k!==1?' (HS '+Math.round(pf.hs)+' cm), auf die Schneehöhe hier gestreckt':'')
       +(pf.top_cm?' · oberste '+Math.round(span)+' cm':'')+'</div>':'')
     +vaNoteHTML()
     +'<svg class="va-prof-svg" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Schneeprofil: Dichte und Kornform nach Tiefe">'+g+'</svg>'
@@ -14751,6 +14780,9 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   // the snow at this spot first, also when the fine engine is not loaded:
   // then the profile of the nearest run says what lies on top and how deep
   if(!vaSec&&_pf&&!_pf.loading){try{vaSec=vaPointFromProfile(_pf);}catch(e){}}
+  // the profile is one model slope's layering, shown at the snow height the
+  // map has here; no snow here -> no profile
+  if(_pf&&!_pf.loading&&vaPointHTML.hs!=null){if(vaPointHTML.hs<1)_pf=null;else _pf=Object.assign({},_pf,{hsPt:vaPointHTML.hs});}
   try{vaSec+=vaProfileHTML(_pf);}catch(e){}
   requestAnimationFrame(()=>{try{window._inspClamp();}catch(e){}});
   let progSec='';
