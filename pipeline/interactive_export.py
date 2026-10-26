@@ -9479,6 +9479,24 @@ function vaPickLayer(k){
 // disagreed with the map. Pack and frame are loaded here on demand and the
 // card opens again once they are in.
 let _vaPtWant=null;const _vaPtFail=new Set();
+function vaPointReopen(){const pn=document.getElementById('inspPanel');
+  if(inspLast&&!inspLast.stn&&pn&&pn.classList.contains('open')){const st=pn.scrollTop;inspOpen(inspLast.lat,inspLast.lon);pn.scrollTop=st;}}
+// The terrain the map is drawn on at that spot: the same Terrarium tile, the
+// same pixel, the same slope and aspect (E.terrain) -- on a ridge the 25 m
+// terrain of the card turned the aspect from south to north and with it
+// every number. null: tile unavailable (the card's own terrain is used).
+const _vaTerrWant=new Set(),_vaTerrFail=new Set();
+function vaPointTerr(lat,lon){
+  const tz=VA_TERR_Z,n=Math.pow(2,tz),gx=(lon+180)/360,sn=Math.sin(lat*Math.PI/180),gy=0.5-Math.log((1+sn)/(1-sn))/(4*Math.PI);
+  const tx=Math.floor(gx*n),ty=Math.floor(gy*n),key=tz+'/'+tx+'/'+ty;
+  if(_vaTerrFail.has(key))return null;
+  const by=vaTerrC.get(key);
+  if(!by){if(!_vaTerrWant.has(key)){_vaTerrWant.add(key);
+      vaTerrBytes(key).then(()=>{_vaTerrWant.delete(key);vaPointReopen();},()=>{_vaTerrWant.delete(key);_vaTerrFail.add(key);vaPointReopen();});}
+    return 'loading';}
+  const T=vaEng.terrain(key,by,tz,ty),X=Math.min(255,Math.max(0,Math.floor(gx*256*n-tx*256))),Y=Math.min(255,Math.max(0,Math.floor(gy*256*n-ty*256))),i=Y*256+X;
+  return {el:T.el[i],sl:T.sl[i],as:T.as[i]};
+}
 function vaPointFrame(){
   if(!vaAvailable()||!vaMan.pack||(vaPkTried&&!vaPk&&!_vaPkP))return null;
   const tag=(vaMan.tags||[])[vaTagIndex()];if(!tag||_vaPtFail.has(tag))return null;
@@ -9486,9 +9504,7 @@ function vaPointFrame(){
   if(!ovOn.variantA)return null;          // fetched only while the SNOWPACK layer is on
   if(_vaPtWant!==tag){_vaPtWant=tag;(async()=>{
     try{if(!(await vaPkLoad())){_vaPtFail.add(tag);}else await vaPkFrame(tag);}catch(e){_vaPtFail.add(tag);}
-    if(_vaPtWant!==tag)return;_vaPtWant=null;
-    const pn=document.getElementById('inspPanel');
-    if(inspLast&&!inspLast.stn&&pn&&pn.classList.contains('open')){const st=pn.scrollTop;inspOpen(inspLast.lat,inspLast.lon);pn.scrollTop=st;}})();}
+    if(_vaPtWant!==tag)return;_vaPtWant=null;vaPointReopen();})();}
   return 'loading';
 }
 // The model's own reading of the tapped spot: same numbers the map is drawn
@@ -9496,9 +9512,12 @@ function vaPointFrame(){
 function vaPointHTML(lat,lon,elev,slope,aspect){vaPointHTML.hs=null;
   if(elev==null)return '';
   const st=vaPointFrame();if(!st)return '';
-  if(st==='loading')return '<div class="insp-sec va-pt"><h4>Schneequalität <em>lädt…</em></h4></div>';
-  const en=vaEng.wgs2lv03(lat,lon),sb=vaEng.gridAt(vaEng.shade,en[0],en[1]);
+  const tr=vaPointTerr(lat,lon);
+  if(st==='loading'||tr==='loading')return '<div class="insp-sec va-pt"><h4>Schneequalität <em>lädt…</em></h4></div>';
+  if(tr){elev=tr.el;slope=tr.sl;aspect=tr.as;}
+  const en=vaEng.wgs2lv03(lat,lon);let sb=vaEng.gridAt(vaEng.shade,en[0],en[1]);
   if(sb<0||sb===255)return '';
+  sb=vaEng.gridBil(vaEng.shade,en[0],en[1]);if(sb<0)return '';
   const m=new Float64Array(vaEng.nm);
   if(!vaEng.evalAt(en[0],en[1],elev,slope||0,aspect||0,sb/254,vaEng.candidates(en[0],en[1],60000),m))return '';
   vaEng.adjPrecip(m,en[0],en[1]);
@@ -9514,17 +9533,20 @@ function vaPointHTML(lat,lon,elev,slope,aspect){vaPointHTML.hs=null;
   if(m[x.wind_scour]>=0.2)bits.push('Wind-Index '+m[x.wind_scour].toFixed(2));
   if(sb>12)bits.push('Horizontschatten '+Math.round(sb/2.54)+'%');
   if(fo>0)bits.push('Wald '+Math.round(fo/2.55)+'%');
-  // first what lies here and how much of it, as on the map
-  const T=vaEng.pk&&vaEng.pk.thresholds||{},thin6=m[x.total_hs_cm]<(T.THIN_COVER_HS||20)&&vaEng.clsSki6?vaEng.clsSki6(m):0,thinP=thin6>=3;
-  const k6=thinP?vaEng.clsSki6(m):((typeof VA_SIMPLE_TO_SKI6!=='undefined'&&VA_SIMPLE_TO_SKI6[sim])||0);let c6=(VA_PALETTE.ski6&&VA_PALETTE.ski6[k6])||[150,160,175];
+  // first what lies here and how much of it: the Skiqualität class and the
+  // colour the map draws at this very spot (same engine, terrain and frame)
+  const T=vaEng.pk&&vaEng.pk.thresholds||{},k6=vaEng.clsSki6(m),c6=[150,160,175,0];vaEng.color('ski6',m,c6);
   const hs=Math.round(m[x.total_hs_cm]),pw=Math.round(m[x.powder_depth_cm]||0);vaPointHTML.hs=m[x.total_hs_cm];
-  // powder: the swatch in the SLF band colour the map uses
-  if([3,4,5,8,9].includes(k6)){const B=[1,5,10,20,30,50],C=[[194,229,196],[149,207,153],[102,187,106],[66,165,245],[30,136,229],[21,101,192]];
-    let j=0;while(j+1<B.length&&(m[x.powder_depth_cm]||0)>=B[j+1])j++;c6=C[j];}
-  const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+c6.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(thin6===10?'Dünne Schneedecke – Steine, kaum fahrbar':thinP?'Pulver auf dünner Unterlage – Steine möglich':(nm('simple',sim)||nm('ski18',ski)))+'</b></div>'
+  const isPow=[3,4,5,8,9].includes(k6),thinC=m[x.total_hs_cm]<(T.THIN_COVER_HS||20);
+  const lbl=k6===0?'kein / wenig Schnee':k6===10?'Dünne Schneedecke – Steine, kaum fahrbar'
+    :isPow?(thinC?'Pulver auf dünner Unterlage – Steine möglich':'Pulver, trocken'):(VA_SKI6_DE[k6]||nm('simple',sim)||'');
+  if(!c6[3]){c6[0]=150;c6[1]=160;c6[2]=175;}
+  if(tr){const AS=['N','NO','O','SO','S','SW','W','NW'];bits.splice(1,0,'Modellgelände '+Math.round(tr.el)+' m · '+Math.round(tr.sl)+'° '+AS[Math.round(tr.as/45)%8]);}
+  const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+c6.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(lbl)+'</b></div>'
     +'<div><span>Pulver</span><b>'+(pw>=1?pw+'<small> cm</small>':'–')+'</b></div>'
     +'<div><span>Schneehöhe</span><b>'+hs+'<small> cm</small></b></div></div>';
-  return '<div class="insp-sec va-pt"><h4>Schneequalität <em>'+escapeHtml(nm('ski18',ski))+'</em></h4>'+kpi
+  const dn=vaDataNote();
+  return '<div class="insp-sec va-pt"><h4>Schneequalität <em>'+escapeHtml(dn?dn.label:nm('ski18',ski))+'</em></h4>'+kpi
     +'<div class="va-pt-v">'+bits.slice(1).map(escapeHtml).join(' · ')+'</div></div>';
 }
 
@@ -9557,7 +9579,8 @@ function vaDataNote(){
 }
 function vaNoteHTML(){
   const n=vaDataNote();if(!n)return '';
-  return '<div class="va-date'+(n.stale?' va-date-stale':'')+'">Modelllauf: '+escapeHtml(n.label)
+  // the frame on screen: the state at the END of the timeline window
+  return '<div class="va-date'+(n.stale?' va-date-stale':'')+'">Zustand: '+escapeHtml(n.label)+' (Ende des Zeitfensters)'
     +(n.stale?' <b>· '+n.days+' Tage neben der Zeitleiste</b>':'')+'</div>';
 }
 
