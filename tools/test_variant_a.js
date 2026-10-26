@@ -213,7 +213,7 @@ console.log('\nmodel-run date stamp');
   check('reports the exported model timestamp', !!near && /2026/.test(near.label), near && near.label);
   check('a window next to the timeline is not stale', near && near.stale === false,
         near && (near.days + 'd'));
-  check('the note names the model run', /Modelllauf/.test(vaNoteHTML()));
+  check('the note names the state shown (end of the window)', /Zustand: .*Ende des Zeitfensters/.test(vaNoteHTML()));
   check('a fresh note carries no warning', !/Tage neben/.test(vaNoteHTML()));
 }
 {
