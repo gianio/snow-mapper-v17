@@ -23,10 +23,26 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
+_AWS_CFG = None
+
+
+def _aws_config():
+    """A pre-render is ~64 000 small tile files (most of them empty). With the
+    CLI's default of 10 parallel requests the sync took longer than the
+    pre-render itself; R2 takes many more at once."""
+    global _AWS_CFG
+    if _AWS_CFG is None:
+        import tempfile
+        fd, _AWS_CFG = tempfile.mkstemp(prefix="aws_", suffix=".cfg")
+        with os.fdopen(fd, "w") as f:
+            f.write("[default]\ns3 =\n  max_concurrent_requests = 64\n  max_queue_size = 10000\n")
+    return _AWS_CFG
+
+
 def _aws(args, env):
     cmd = ["aws", "s3"] + args + ["--endpoint-url", env["S3_ENDPOINT"], "--only-show-errors"]
-    return subprocess.run(cmd, env={**os.environ, **env["AWS"]}, check=True,
-                          capture_output=True, text=True)
+    return subprocess.run(cmd, env={**os.environ, "AWS_CONFIG_FILE": _aws_config(), **env["AWS"]},
+                          check=True, capture_output=True, text=True)
 
 
 def _clean(v):
