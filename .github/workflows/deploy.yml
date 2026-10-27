@@ -45,10 +45,15 @@ jobs:
         with:
           node-version: "20"
 
+      # rasterio and fiona bring their own GDAL in the wheel; these are a
+      # fallback only. A hung package mirror stalled whole runs for the
+      # job's limit, so: bounded, and never fatal.
       - name: Install system dependencies
+        timeout-minutes: 6
+        continue-on-error: true
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq libgdal-dev libproj-dev gdal-bin
+          timeout 150 sudo apt-get update -qq || echo '::warning::apt-get update failed'
+          timeout 180 sudo apt-get install -y -qq libgdal-dev libproj-dev gdal-bin || echo '::warning::apt-get install failed -- using the wheels GDAL'
 
       - name: Install Python dependencies
         run: pip install -r requirements.txt

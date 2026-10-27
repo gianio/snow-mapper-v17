@@ -24,11 +24,6 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq libgdal-dev libproj-dev gdal-bin
-
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 

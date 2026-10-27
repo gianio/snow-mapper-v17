@@ -2273,6 +2273,15 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .tl-play svg{width:14px;height:14px;fill:currentColor}
  .tl-play .pa{display:none}.tl-play.on .pa{display:inline}.tl-play.on .pl{display:none}
  .tl-play[hidden],#tlTomorrowBtn[hidden]{display:none!important}
+ /* ready-made times above the timeline: a window for the accumulating
+    layers, an instant for the ones that show a state */
+ #tlPresets{position:fixed;z-index:4000;display:flex;flex-direction:column;gap:2px;
+   min-width:168px;padding:6px;border-radius:14px;background:var(--card);box-shadow:var(--elev3,0 8px 28px rgba(0,0,0,.18));border:1px solid var(--bd)}
+ #tlPresets[hidden]{display:none}
+ #tlPresets button{display:flex;justify-content:space-between;gap:12px;align-items:center;border:0;background:none;color:var(--fg);
+   font:600 13.5px var(--font);padding:9px 10px;border-radius:9px;text-align:left;cursor:pointer}
+ #tlPresets button:active,#tlPresets button.on{background:var(--fill)}
+ #tlPresets button span{color:var(--mut);font-weight:600;font-size:12px}
  /* Collapsed keeps the scrubber -- it is the thing the console is for -- and
     drops everything that only describes it. */
 
@@ -2850,6 +2859,15 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  body.standalone #profInstall{display:none}
  /* --- Onboarding coach marks --- */
  #coach{position:fixed;inset:0;z-index:8000}
+ /* the gesture itself, drawn in the spotlight: a finger that taps, or one
+    that drags along the timeline */
+ #coachSpot .coach-finger{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;left:50%;top:50%;border-radius:50%;
+   background:rgba(255,255,255,.92);box-shadow:0 0 0 3px rgba(26,108,255,.85),0 4px 14px rgba(0,0,0,.35);pointer-events:none}
+ #coachSpot.cg-tap .coach-finger{animation:cgTap 1.4s ease-in-out infinite}
+ #coachSpot.cg-drag .coach-finger{animation:cgDrag 2.2s ease-in-out infinite}
+ @keyframes cgTap{0%,100%{transform:scale(1);opacity:.95}45%{transform:scale(.72);opacity:1;box-shadow:0 0 0 3px rgba(26,108,255,.85),0 0 0 14px rgba(26,108,255,.18)}}
+ @keyframes cgDrag{0%{left:22%;opacity:0}12%{opacity:1}75%{left:78%;opacity:1}100%{left:78%;opacity:0}}
+ @media (prefers-reduced-motion:reduce){#coachSpot .coach-finger{animation:none!important}}
  #coachSpot{position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(14,17,22,.32);transition:all .35s cubic-bezier(.4,0,.2,1);pointer-events:none}
  #coachCard{position:absolute;width:min(300px,calc(100vw - 32px));background:var(--glass2);border:1px solid var(--ink-100);border-radius:var(--r-lg);padding:18px 20px;box-shadow:var(--elev3);transition:top .35s var(--ease),left .35s var(--ease);opacity:0;animation:coachIn .3s .1s ease forwards}
  @keyframes coachIn{to{opacity:1}}
@@ -3992,6 +4010,13 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .tour-sheet{background:var(--card);border-radius:var(--r-sheet);box-shadow:var(--elev3);padding:14px 16px}
  body.tour-open #mapFabs{opacity:0;pointer-events:none}
  .tour-row{border-radius:10px;padding:5px 9px}
+ .ft-reg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px 0 2px;margin:0 -2px}
+ .ft-reg::-webkit-scrollbar{display:none}
+ .ft-reg button{flex:none;border:1px solid var(--bd);background:var(--card);color:var(--fg2);font:600 13px var(--font);
+   padding:6px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}
+ .ft-reg button.on{background:var(--brand,#1d4ed8);border-color:transparent;color:#fff}
+ .tn-v{display:block;font-style:normal;font-weight:700;font-size:12.5px;color:var(--fg2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .tour-verdict{margin:2px 0 8px;font:700 14.5px/1.3 var(--font);color:var(--fg);letter-spacing:-.005em}
  .tour-row i{background:color-mix(in srgb,var(--accent) 18%,transparent)}
 
  /* ── legend: as narrow as the toolbar under it, units on top; tap for the
@@ -5894,7 +5919,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <div id="wcv" class="wcv" hidden role="dialog" aria-label="Webcams"><div class="wcv-top"><button class="wcv-x" onclick="wcvClose()" aria-label="Schliessen">×</button><b>Webcams</b>
 <div class="wcv-seg" role="tablist"><button data-m="fav" onclick="wcvMode('fav')">Favoriten</button><button data-m="tv" onclick="wcvMode('tv')">Webcam-TV</button><button data-m="near" onclick="wcvMode('near')">In der Nähe</button></div></div>
 <div class="wcv-body" id="wcvBody"></div></div>
-<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:linear-gradient(150deg,#6FB4F0,#3F8AD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg></i><span><b>Report Powder</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:linear-gradient(150deg,#4A86C8,#2D5A8C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button></div></div>
+<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:linear-gradient(150deg,#6FB4F0,#3F8AD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg></i><span><b>Powder melden</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:linear-gradient(150deg,#4A86C8,#2D5A8C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button></div></div>
 <nav id="tabBar" aria-label="Navigation">
   <button data-tab="map" onclick="navGo('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg><span>Karte</span></button>
   <button data-tab="tours" id="tourFab" onclick="navGo('tours')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/></svg><span>Touren</span></button>
@@ -5932,7 +5957,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     </button>
     <button class="si-card" onclick="scrGo('search')">
       <span class="si-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span>
-      <b>Powder Map</b><span>Karte &amp; Ebenen</span>
+      <b>Powder-Karte</b><span>Karte &amp; Ebenen</span>
     </button>
     <button class="si-card" onclick="scrGo('search');setTimeout(feedOpen,200)">
       <span class="si-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></span>
@@ -5975,8 +6000,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
   <button class="rail-btn" id="btn3dFloat" title="3D-Ansicht" aria-label="3D-Ansicht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.6" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif,sans-serif" font-size="8.6" font-weight="800" fill="currentColor" stroke="none">3D</text></svg></button>
   <button class="rail-btn" id="locBtn" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg></button>
 </div>
-<button class="feed-qr" id="mapQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
-<button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Report Powder" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Report Powder</span></button>
+<button class="feed-qr" id="mapQr" onclick="qrOpen(event)" title="Schnellmeldung Powder" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
+<button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Powder melden" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Powder melden</span></button>
 <div id="mapFabs">
   <div class="mfab-grp" role="toolbar" aria-label="Karte">
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
@@ -5990,7 +6015,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
   <button type="button" id="mlFold" onclick="legFold(event)" aria-label="Legende einklappen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
 </div>
   <div class="mfab-row" id="reportRow">
-    <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Report Powder" aria-label="Report Powder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg><i>Report Powder</i></button>
+    <button class="mfab act" id="fabDraw" onclick="fabMenu(false);drawOpen()" title="Powder melden" aria-label="Powder melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg><i>Powder melden</i></button>
     <button class="mfab act" id="fabObs" onclick="fabMenu(false);obsOpen()" title="Beobachtung melden" aria-label="Beobachtung melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><i>Beobachtung</i></button>
     <button class="mfab" id="mapFab" onclick="fabMenu()" title="Melden" aria-label="Melden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
   </div>
@@ -6004,7 +6029,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
   <div id="btmMain">
     <div id="tlDetail">
       <button class="tl-corner tl-corner-l tl-play" id="tlPlayBtn" hidden onclick="tlPlayToggle()" aria-label="Animation abspielen"><svg viewBox="0 0 24 24"><path class="pl" d="M8 5.5v13l11-6.5z"/><path class="pa" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>
-      <button class="tl-corner tl-corner-r" id="tlTomorrowBtn" onclick="tlGotoTomorrow()" title="Fenster bis morgen Abend">Bis morgen</button>
+      <button class="tl-corner tl-corner-r" id="tlTomorrowBtn" onclick="tlPresetsToggle(event)" title="Zeitraum wählen" aria-haspopup="menu">Zeitraum<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px;margin-left:3px"><path d="M6 9l6 6 6-6"/></svg></button>
       <canvas id="timeline" width="900" height="88" style="width:100%;height:88px;border-radius:10px;cursor:default;margin-top:0"></canvas>
       <div id="tlExtended">
         <div class="tl-steprow">
@@ -6094,12 +6119,12 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <div id="three-wrap"><div id="map3d" style="width:100%;height:100%"></div><button id="btn3dClose">✕ 2D</button>
 <div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="30" style="width:100px;accent-color:var(--acc)"> Map <span id="mapOpacLbl">30%</span></label>
 <button id="btn3dExag">×1.5</button>
-<select id="overlay3d" style="padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:16px;min-height:46px"><option value="none">No overlay</option><option value="snow">Snow</option><option value="temp">Temperature</option><option value="wind">Wind</option><option value="depth">Schneehöhe</option><option value="powder">Powder</option></select>
-<span id="keys3d" style="font-size:12px;color:var(--mut);opacity:.7;padding:6px 10px;display:none">WASD/Arrows: rotate · +/-: zoom · R: reset</span></div>
+<select id="overlay3d" style="padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:16px;min-height:46px"><option value="none">Keine Ebene</option><option value="snow">Neuschnee</option><option value="temp">Temperatur</option><option value="wind">Wind</option><option value="depth">Schneehöhe</option><option value="powder">Powder</option></select>
+<span id="keys3d" style="font-size:12px;color:var(--mut);opacity:.7;padding:6px 10px;display:none">WASD/Pfeile: drehen · +/-: zoomen · R: zurücksetzen</span></div>
 </div>
 <!-- Auth & Reports UI -->
 <div id="userBar"><button class="login-btn" id="btnLogin" onclick="authShow()">Anmelden</button></div>
-<div class="email-banner" id="emailBanner"><span>Please confirm your email to post reports.</span><button onclick="authResend()">Resend</button></div>
+<div class="email-banner" id="emailBanner"><span>Bitte bestätige deine E-Mail, um Meldungen zu posten.</span><button onclick="authResend()">Erneut senden</button></div>
 <div class="radial-wrap" id="radialWrap"><div class="radial-bg"></div><div class="radial-ring" id="radialRing"></div><div class="radial-center" id="radialCenter">✕</div></div>
 <div class="auth-overlay" id="authOverlay" style="display:none" onclick="authHide()">
 <div class="auth-modal" onclick="event.stopPropagation()">
@@ -6108,7 +6133,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <p class="auth-sub" id="authSub">Anmelden für Community &amp; Meldungen</p>
 <p class="auth-note" id="authNote">Karte &amp; Prognosen funktionieren ohne Konto — du brauchst es nur zum Melden, für den Feed und dein Profil.</p>
 <form id="authForm" onsubmit="authSubmit(event)" novalidate>
-<input type="text" id="authUser" placeholder="Username" autocomplete="username" style="display:none"/>
+<input type="text" id="authUser" placeholder="Benutzername" autocomplete="username" style="display:none"/>
 <input type="email" id="authEmail" name="email" placeholder="E-Mail" autocomplete="username email" required/>
 <input type="password" id="authPass" placeholder="Passwort" autocomplete="current-password" required minlength="8"/>
 <input type="password" id="authPass2" placeholder="Passwort wiederholen" autocomplete="new-password" minlength="8" style="display:none"/>
@@ -6223,7 +6248,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 </div>
 <div class="feed-anchor-bar" id="feedAnchorBar" style="display:none"></div>
 <div class="feed-scroll"><div class="feed-top" id="feedTop"></div><div class="feed-grid" id="feedList"><div class="feed-empty">Lade Beiträge…</div></div></div>
-<button class="feed-qr" id="feedQr" onclick="qrOpen(event)" title="Quick Powder Report" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
+<button class="feed-qr" id="feedQr" onclick="qrOpen(event)" title="Schnellmeldung Powder" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <!-- one column, bottom right: messages last, so it sits in the corner -->
 <div class="feed-fabs">
 </div>
@@ -6261,7 +6286,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 </div>
 <div class="cond-modal" id="qrModal" style="display:none" onclick="if(event.target===this)qrClose()">
   <div class="cond-sheet">
-    <div class="cond-head"><b><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:19px;height:19px;vertical-align:-3px;color:var(--warn)"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Quick Powder Report</b><button onclick="qrClose()">✕</button></div>
+    <div class="cond-head"><b><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:19px;height:19px;vertical-align:-3px;color:var(--warn)"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Schnellmeldung Powder</b><button onclick="qrClose()">✕</button></div>
     <div class="cond-body">
       <div class="qr-loc" id="qrLoc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;color:var(--acc2)"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> <span id="qrLocTxt">Standort wird ermittelt…</span></div>
       <div class="qr-step" id="qrStep0">
@@ -6316,7 +6341,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
       <div class="prof-top">
         <div class="prof-av" id="profAv" onclick="document.getElementById('profAvFile').click()"><span id="profAvInitial"></span><div class="prof-av-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div></div>
         <input type="file" id="profAvFile" accept="image/*" hidden onchange="profSetAvatar(this)"/>
-        <div class="prof-meta"><div class="prof-name" id="profName">User</div><div class="prof-endo" id="profEndo">– Endorsements</div></div>
+        <div class="prof-meta"><div class="prof-name" id="profName">User</div><div class="prof-endo" id="profEndo">– Bestätigungen</div></div>
       </div>
       <div class="prof-avbar" id="profAvBar" hidden><span>Neues Profilbild</span><button type="button" onclick="profAvCancel()">Abbrechen</button><button type="button" class="pri" onclick="profAvSave()">Speichern</button></div>
       <div class="prof-bioview" id="profBioView"></div>
@@ -6445,6 +6470,30 @@ const __D=window.__D||{};const M=__D.meta||{};function db(k){return (__D.b&&__D.
 const _CAP=(typeof window!=='undefined'&&window.Capacitor)?window.Capacitor:null;
 const _isNative=!!(_CAP&&_CAP.isNativePlatform&&_CAP.isNativePlatform());
 const I18N_DICT={
+"Zeitraum":["Time range", "Période", "Periodo"],
+"Zeitraum wählen":["Choose a time range", "Choisir une période", "Scegli un periodo"],
+"Heute Abend":["This evening", "Ce soir", "Stasera"],
+"Morgen früh":["Tomorrow morning", "Demain matin", "Domani mattina"],
+"Morgen Mittag":["Tomorrow noon", "Demain midi", "Domani a mezzogiorno"],
+"Übermorgen früh":["Day after tomorrow, morning", "Après-demain matin", "Dopodomani mattina"],
+"Letzte 24 h":["Last 24 h", "Dernières 24 h", "Ultime 24 h"],
+"Letzte 72 h":["Last 72 h", "Dernières 72 h", "Ultime 72 h"],
+"Letzte 7 Tage":["Last 7 days", "7 derniers jours", "Ultimi 7 giorni"],
+"Nächste 24 h":["Next 24 h", "Prochaines 24 h", "Prossime 24 h"],
+"Bis morgen Abend":["Until tomorrow evening", "Jusqu'à demain soir", "Fino a domani sera"],
+"Tippe auf die Karte.":["Tap the map.", "Touche la carte.", "Tocca la mappa."],
+"Du siehst den Schnee genau dort: Art, Menge, Profil und Wetter.":["You see the snow right there: type, depth, profile and weather.", "Tu vois la neige à cet endroit : type, quantité, profil et météo.", "Vedi la neve proprio lì: tipo, quantità, profilo e meteo."],
+"Zieh an der Zeitleiste.":["Drag the timeline.", "Fais glisser la frise.", "Trascina la linea del tempo."],
+"Vergangene Tage und Prognose – die Karte rechnet sofort neu. «Zeitraum» oben rechts hat fertige Zeiten.":["Past days and forecast – the map recalculates at once. «Time range» at the top right has ready-made times.", "Jours passés et prévision – la carte se recalcule aussitôt. « Période » en haut à droite propose des choix prêts.", "Giorni passati e previsione – la mappa si ricalcola subito. «Periodo» in alto a destra ha tempi pronti."],
+"Wechsle die Ebene.":["Switch the layer.", "Change de couche.", "Cambia livello."],
+"Skiqualität, Neuschnee, Schneehöhe, Wind … Rechts steht immer, was die Karte gerade zeigt.":["Ski quality, new snow, snow depth, wind … On the right it always says what the map shows.", "Qualité de ski, neige fraîche, hauteur de neige, vent … À droite, tu vois toujours ce que montre la carte.", "Qualità sciistica, neve fresca, altezza neve, vento … A destra c'è sempre scritto cosa mostra la mappa."],
+"Graubünden":["Grisons", "Grisons", "Grigioni"],
+"Wallis":["Valais", "Valais", "Vallese"],
+"Berner Oberland":["Bernese Oberland", "Oberland bernois", "Oberland bernese"],
+"Zentralschweiz":["Central Switzerland", "Suisse centrale", "Svizzera centrale"],
+"Tessin":["Ticino", "Tessin", "Ticino"],
+"Waadt / Freiburg":["Vaud / Fribourg", "Vaud / Fribourg", "Vaud / Friburgo"],
+"Ostschweiz":["Eastern Switzerland", "Suisse orientale", "Svizzera orientale"],
 "+ Person hinzufügen":["+ Add person","+ Ajouter une personne","+ Aggiungi persona"],
 "-Symbol":["icon","icône","icona"],
 ". Entscheidungen im Gelände triffst du auf":[". Decisions in the terrain are made at your","Les décisions sur le terrain se prennent à tes","Le decisioni sul terreno le prendi a tuo"],
@@ -6556,7 +6605,7 @@ const I18N_DICT={
 "App & Rechtliches":["App & legal","App & mentions légales","App & note legali"],
 "App installieren":["Install app","Installer l'app","Installa l'app"],
 "App installiert!":["App installed!","App installée !","App installata!"],
-"Arrows show flow direction":["Arrows show flow direction","Les flèches indiquent la direction","Le frecce indicano la direzione"],
+"Pfeile zeigen die Windrichtung":["Arrows show the wind direction", "Les flèches indiquent la direction du vent", "Le frecce indicano la direzione del vento"],
 "Auf der Karte":["On the map","Sur la carte","Sulla mappa"],
 "Auf der Karte zeigen":["Show on map","Afficher sur la carte","Mostra sulla mappa"],
 "Aufstieg":["Climb","Montée","Salita"],
@@ -6705,7 +6754,6 @@ const I18N_DICT={
 "Suche nicht erreichbar – Verbindung prüfen":["Search unavailable – check your connection","Recherche indisponible – vérifie ta connexion","Ricerca non disponibile – controlla la connessione"],
 "Erfasste Personen":["People involved","Personnes concernées","Persone coinvolte"],
 "Erneut senden":["Send again","Renvoyer","Invia di nuovo"],
-"Error:":["Error:","Erreur :","Errore:"],
 "Experimentelle Modelldaten.":["Experimental model data.","Données de modèle expérimentales.","Dati di modello sperimentali."],
 "Export fehlgeschlagen:":["Export failed:","Échec de l'export :","Esportazione non riuscita:"],
 "Export und Löschung entsprechen deinen Rechten nach DSG/DSGVO. Das Löschen des Kontos entfernt alle Inhalte unwiderruflich.":["Export and deletion reflect your rights under the Swiss FADP/GDPR. Deleting the account removes all content permanently.","L'export et la suppression correspondent à tes droits selon la LPD/RGPD. Supprimer le compte efface tout le contenu définitivement.","Esportazione e cancellazione corrispondono ai tuoi diritti secondo LPD/GDPR. Eliminare l'account rimuove tutti i contenuti in modo definitivo."],
@@ -6921,7 +6969,7 @@ const I18N_DICT={
 "Neuschnee im Zeitfenster":["New snow in the time window","Neige fraîche dans la fenêtre","Neve fresca nella finestra"],
 "Neuschnee, der als Pulver liegen bleibt; Deckkraft = wie sicher":["New snow that stays as powder; opacity = how certain","Neige fraîche qui reste poudreuse ; opacité = degré de certitude","Neve fresca che resta polvere; opacità = quanto è certo"],
 "Nicht verfügbar.":["Not available.","Indisponible.","Non disponibile."],
-"No overlay":["No overlay","Aucune superposition","Nessuna sovrapposizione"],
+"Keine Ebene":["No layer", "Aucune couche", "Nessun livello"],
 "Noch keine Aktivität. Starte deine erste Aufzeichnung.":["No activity yet. Start your first recording.","Pas encore d'activité. Lance ton premier enregistrement.","Nessuna attività. Avvia la tua prima registrazione."],
 "Normal":["Normal","Normale","Normale"],
 "Nur Flächen mit einem Maximum zwischen # und # °C — Firn-Bedingungen.":["Only areas with a maximum between # and # °C — corn snow conditions.","Seulement les zones avec un maximum entre # et # °C — conditions de neige de printemps.","Solo aree con un massimo tra # e # °C — condizioni da firn."],
@@ -6951,12 +6999,11 @@ const I18N_DICT={
 "Pinsel":["Brush","Pinceau","Pennello"],
 "Pinselgrösse":["Brush size","Taille du pinceau","Dimensione pennello"],
 "Pistenfahrzeug":["Groomer","Dameuse","Gatto delle nevi"],
-"Please confirm your email to post reports.":["Please confirm your email to post reports.","Confirme ton e-mail pour publier des observations.","Conferma la tua e-mail per pubblicare segnalazioni."],
+"Bitte bestätige deine E-Mail, um Meldungen zu posten.":["Please confirm your email to post reports.","Confirme ton e-mail pour publier des observations.","Conferma la tua e-mail per pubblicare segnalazioni."],
 "Posten":["Post","Publier","Pubblica"],
 "Posten fehlgeschlagen:":["Posting failed:","Échec de la publication :","Pubblicazione non riuscita:"],
 "Powder":["Powder","Poudreuse","Polvere"],
-"Powder Conditions":["Powder conditions","Conditions de poudreuse","Condizioni di polvere"],
-"Powder Map":["Powder map","Carte poudreuse","Mappa polvere"],
+"Powder-Bedingungen":["Powder conditions","Conditions de poudreuse","Condizioni di polvere"],
 "Powder-Report gepostet — danke!":["Powder report posted — thanks!","Rapport poudreuse publié — merci !","Report polvere pubblicato — grazie!"],
 "Powder?":["Powder?","Poudreuse ?","Polvere?"],
 "Privatsphäre & Daten":["Privacy & data","Confidentialité & données","Privacy & dati"],
@@ -6969,15 +7016,13 @@ const I18N_DICT={
 "Pulvertiefe":["Powder depth","Profondeur de poudreuse","Profondità polvere"],
 "Push-Benachrichtigungen":["Push notifications","Notifications push","Notifiche push"],
 "Push-Benachrichtigungen werden mit einem der nächsten Updates aktiviert — deine Einstellung wird dann automatisch übernommen.":["Push notifications will be enabled with an upcoming update — your setting will then apply automatically.","Les notifications push seront activées dans une prochaine mise à jour — ton réglage sera repris automatiquement.","Le notifiche push saranno attivate con un prossimo aggiornamento — la tua impostazione verrà applicata automaticamente."],
-"Quick Powder Report":["Quick powder report","Rapport poudreuse rapide","Report polvere rapido"],
+"Schnellmeldung Powder":["Quick powder report","Rapport poudreuse rapide","Report polvere rapido"],
 "Radierer":["Eraser","Gomme","Gomma"],
 "Registrieren":["Sign up","S'inscrire","Registrati"],
 "Relevante Beobachtungen aus dem Gelände. Fotos liefern automatisch Standort & Zeit.":["Relevant observations from the field. Photos provide location & time automatically.","Observations pertinentes du terrain. Les photos fournissent lieu et heure automatiquement.","Osservazioni rilevanti dal terreno. Le foto forniscono luogo e ora automaticamente."],
 "Relief":["Relief","Relief","Rilievo"],
-"Report Powder":["Report powder","Signaler la poudreuse","Segnala polvere"],
-"Reported Powder":["Reported powder","Poudreuse signalée","Polvere segnalata"],
+"Powder melden":["Report powder","Signaler la poudreuse","Segnala polvere"],
 "Reports":["Reports","Observations","Segnalazioni"],
-"Resend":["Resend","Renvoyer","Invia di nuovo"],
 "Route":["Route","Itinéraire","Percorso"],
 "Route auf der Karte – Ebenen ▸ Meldungen zum Ausblenden":["Route on the map – Layers ▸ Reports to hide it","Itinéraire sur la carte – Couches ▸ Observations pour le masquer","Percorso sulla mappa – Livelli ▸ Segnalazioni per nasconderlo"],
 "Rückgängig":["Undo","Annuler","Annulla"],
@@ -7018,7 +7063,6 @@ const I18N_DICT={
 "Skitouren":["Ski tours","Randonnées à ski","Gite scialpinistiche"],
 "Skitouren (Karte)":["Ski tours (map)","Randonnées à ski (carte)","Gite scialpinistiche (mappa)"],
 "Skitouren · Powder-Score":["Ski tours · powder score","Randonnées · score poudreuse","Gite · punteggio polvere"],
-"Snow":["Snow","Neige","Neve"],
 "Snowmapper aufs Home-Screen":["Snowmapper on your home screen","Snowmapper sur l'écran d'accueil","Snowmapper nella schermata Home"],
 "Sonnen-":["Sun","Soleil","Sole"],
 "Sonnendeckel":["Sun crust","Croûte de soleil","Crosta da sole"],
@@ -7048,7 +7092,7 @@ const I18N_DICT={
 "Start & Karte":["Start & map","Démarrage & carte","Avvio & mappa"],
 "Start · # m":["Start · # m","Départ · # m","Partenza · # m"],
 "Startansicht":["Start view","Vue de départ","Vista iniziale"],
-"Station (click for details)":["Station (click for details)","Station (clic pour les détails)","Stazione (clic per i dettagli)"],
+"Station (antippen für Details)":["Station (tap for details)", "Station (toucher pour les détails)", "Stazione (tocca per i dettagli)"],
 "Steilste Stelle":["Steepest pitch","Passage le plus raide","Tratto più ripido"],
 "Suchen…":["Search…","Rechercher…","Cerca…"],
 "Sulz":["Corn snow","Neige de printemps","Firn"],
@@ -7058,7 +7102,6 @@ const I18N_DICT={
 "Temperatur":["Temperature","Température","Temperatura"],
 "Temperatur # m":["Temperature # m","Température # m","Temperatura # m"],
 "Temperatur auf # m":["Temperature at # m","Température à # m","Temperatura a # m"],
-"Temperature":["Temperature","Température","Temperatura"],
 "Tempo km/h":["Speed km/h","Vitesse km/h","Velocità km/h"],
 "Tippe einen Namen, um Leute zu finden.":["Type a name to find people.","Tape un nom pour trouver des personnes.","Digita un nome per trovare persone."],
 "Tippe oben auf dein Profilbild, um es zu ändern. Anzeigename und Beschreibung erscheinen auf deinem öffentlichen Profil; alles unter „Darstellung“ und „Start & Karte“ bleibt auf diesem Gerät.":["Tap your profile picture above to change it. Display name and description appear on your public profile; everything under “Appearance” and “Start & map” stays on this device.","Touche ta photo de profil en haut pour la changer. Le nom et la description apparaissent sur ton profil public ; tout ce qui est sous « Affichage » et « Démarrage & carte » reste sur cet appareil.","Tocca in alto la tua foto profilo per cambiarla. Nome e descrizione appaiono sul profilo pubblico; tutto in «Aspetto» e «Avvio & mappa» resta su questo dispositivo."],
@@ -7077,14 +7120,14 @@ const I18N_DICT={
 "Umkreis ab Standort":["Radius from my location","Rayon depuis ma position","Raggio dalla mia posizione"],
 "Unbekannt":["Unknown","Inconnu","Sconosciuto"],
 "Unterebene":["Sub-layer","Sous-couche","Sottolivello"],
-"Username":["Username","Nom d'utilisateur","Nome utente"],
+"Benutzername":["Username","Nom d'utilisateur","Nome utente"],
 "Verhältnisse direkt auf die Karte malen":["Paint the conditions straight onto the map","Peindre les conditions directement sur la carte","Dipingi le condizioni direttamente sulla mappa"],
 "Verhältnisse melden":["Report conditions","Signaler les conditions","Segnala condizioni"],
 "Verstanden – loslegen":["Got it – let's go","Compris – c'est parti","Capito – iniziamo"],
 "Verwerfen":["Discard","Abandonner","Scarta"],
 "Veröffentlichen":["Publish","Publier","Pubblica"],
 "Von der Community gemeldetes Powder":["Powder reported by the community","Poudreuse signalée par la communauté","Polvere segnalata dalla community"],
-"WASD/Arrows: rotate · +/-: zoom · R: reset":["WASD/Arrows: rotate · +/-: zoom · R: reset","WASD/Flèches : pivoter · +/- : zoom · R : réinitialiser","WASD/Frecce: ruota · +/-: zoom · R: reset"],
+"WASD/Pfeile: drehen · +/-: zoomen · R: zurücksetzen":["WASD/Arrows: rotate · +/-: zoom · R: reset","WASD/Flèches : pivoter · +/- : zoom · R : réinitialiser","WASD/Frecce: ruota · +/-: zoom · R: reset"],
 "Wandern":["Hiking","Randonnée","Escursione"],
 "Was hast du gesehen?":["What did you see?","Qu'as-tu vu ?","Cosa hai visto?"],
 "Was liegt & wie fährt es sich?":["What's there & how does it ski?","Qu'y a-t-il & comment ça skie ?","Cosa c'è & come si scia?"],
@@ -7239,7 +7282,7 @@ const I18N_DICT={
 "Speichert…":["Saving…","Enregistrement…","Salvataggio…"],
 "bleibt im ganzen Fenster unter # °C":["stays below # °C in the whole window","reste sous # °C toute la fenêtre","resta sotto # °C per tutta la finestra"],
 "bleibt im ganzen Fenster unter # km/h":["stays below # km/h in the whole window","reste sous # km/h toute la fenêtre","resta sotto # km/h per tutta la finestra"],
-"blue=cold · red=warm":["blue=cold · red=warm","bleu=froid · rouge=chaud","blu=freddo · rosso=caldo"],
+"blau = kalt · rot = warm":["blue = cold · red = warm", "bleu = froid · rouge = chaud", "blu = freddo · rosso = caldo"],
 "bzw.":["or","ou","o"],
 "cm, aus Meldungen":["cm, from reports","cm, d'après les observations","cm, dalle segnalazioni"],
 "deckel":["crust","(croûte)","(crosta)"],
@@ -7248,10 +7291,10 @@ const I18N_DICT={
 "dünner Harsch auf Pulver":["thin crust on powder","croûte fine sur poudreuse","crosta sottile su polvere"],
 "dünner Harsch auf Schwachschicht":["thin crust on weak layer","croûte fine sur couche fragile","crosta sottile su strato debole"],
 "eigenes Risiko":["your own risk","tes propres risques","tuo rischio"],
-"estimated: air ± radiative cooling/warming":["estimated: air ± radiative cooling/warming","estimé : air ± refroidissement/réchauffement radiatif","stimato: aria ± raffreddamento/riscaldamento radiativo"],
+"geschätzt: Luft ± Abkühlung/Erwärmung durch Strahlung":["estimated: air ± radiative cooling/warming","estimé : air ± refroidissement/réchauffement radiatif","stimato: aria ± raffreddamento/riscaldamento radiativo"],
 "geschickt. Öffne die E-Mail und tippe auf":["Open the email and tap","Ouvre l'e-mail et touche","Apri l'e-mail e tocca"],
 "gesetzt":["set","défini","impostato"],
-"green = max wind stays below # km/h":["green = max wind stays below # km/h","vert = vent max reste sous # km/h","verde = vento max resta sotto # km/h"],
+"grün = Höchstwind bleibt unter # km/h":["green = max wind stays below # km/h","vert = vent max reste sous # km/h","verde = vento max resta sotto # km/h"],
 "gepostet":["posted","publié","pubblicato"],
 "guter Pulver":["good powder","bonne poudreuse","buona polvere"],
 "hart":["hard","dure","dura"],
@@ -7264,8 +7307,8 @@ const I18N_DICT={
 "nass / Sulz":["wet / corn","mouillée / printemps","bagnata / firn"],
 "nasser Pulver":["wet powder","poudreuse humide","polvere bagnata"],
 "nässt":["","",""],
-"only cells staying below #°C for entire window":["only cells staying below #°C for entire window","seulement les cellules restant sous #°C toute la fenêtre","solo celle sotto #°C per tutta la finestra"],
-"only cells with max #–#°C":["only cells with max #–#°C","seulement les cellules avec max #–#°C","solo celle con max #–#°C"],
+"nur Zellen, die im ganzen Fenster unter #°C bleiben":["only cells staying below #°C for entire window","seulement les cellules restant sous #°C toute la fenêtre","solo celle sotto #°C per tutta la finestra"],
+"nur Zellen mit Höchstwert #–#°C":["only cells with max #–#°C","seulement les cellules avec max #–#°C","solo celle con max #–#°C"],
 "schauen gerade":["watching now","regardent","stanno guardando"],
 "tiefer Pulver":["deep powder","poudreuse profonde","polvere profonda"],
 "tragender Harsch":["supportive crust","croûte portante","crosta portante"],
@@ -7283,7 +7326,7 @@ const I18N_DICT={
 "Über dich":["About you","À propos de toi","Su di te"],
 "Übersicht + Detail helfen am meisten":["Overview + detail help most","Vue d'ensemble + détail aident le plus","Panoramica + dettaglio aiutano di più"],
 "Überspringen":["Skip","Passer","Salta"],
-"– Endorsements":["– endorsements","– confirmations","– conferme"],
+"– Bestätigungen":["– endorsements","– confirmations","– conferme"],
 "— danach kannst du hier direkt ein neues Passwort setzen.":["— then you can set a new password right here.","— ensuite tu peux définir un nouveau mot de passe ici.","— poi puoi impostare subito qui una nuova password."],
 "„Passwort zurücksetzen“":["“Reset password”","« Réinitialiser le mot de passe »","«Reimposta password»"],
 "‹ Zurück":["‹ Back","‹ Retour","‹ Indietro"],
@@ -7843,7 +7886,7 @@ function tlSingleMode(){
 }
 function drawTimeline(){const tc=document.getElementById('timeline');const rect=tc.getBoundingClientRect();
   {const pb=document.getElementById('tlPlayBtn');if(pb){const sm=tlSingleMode();if(pb.hidden===sm)pb.hidden=!sm;if(!sm&&_tlPlay)tlPlayStop();
-    const tb=document.getElementById('tlTomorrowBtn');if(tb&&tb.hidden!==sm)tb.hidden=sm;}}
+    const tb=document.getElementById('tlTomorrowBtn');if(tb&&tb.hidden)tb.hidden=false;}}
   if(!tv1)tvInit();
   if(!rect.width)return;
   const cw=rect.width,ch=rect.height||120,dpr=window.devicePixelRatio||1;
@@ -10382,6 +10425,32 @@ function tourProfileSVG(t,r){_tpLast=[t,r];
   return '<div id="tourProfBox">'+tog+'<svg class="tour-prof" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Höhenprofil mit Schnee entlang der Route">'+svg+'</svg>'
     +(has?'<p class="tp-cap">'+tr('Höhe links · rechts: Neuschnee/Pulver (Balken, Farbe = Schneetyp) und gesamte Schneehöhe (Linie)')+'</p>':'')+'</div>';
 }
+// The tour in one line: what the descent is like up high and further down,
+// and which way it faces -- "Oben Pulver 15 cm, unten Kruste · Abfahrt N".
+// From the same per-stretch SNOWPACK classes the score is made of.
+const TV_WORD={0:'kein Schnee',1:'hart',2:'Kruste',6:'Sulz',7:'nass',10:'dünn'};
+function tourVerdict(t,r){
+  if(!r||!r.cls)return '';
+  const segs=tourGeo(t).segs,n=Math.min(segs.length,r.cls.length);if(n<3)return '';
+  const desc=i=>segs[i].sl!=null&&segs[i].sl>=TOUR_MIN_SLOPE&&segs[i].sl<=TOUR_MAX_SLOPE;
+  let idx=[];for(let i=1;i<n;i++)if(r.cls[i]>=0&&segs[i].el!=null&&desc(i))idx.push(i);
+  if(idx.length<3){idx=[];for(let i=1;i<n;i++)if(r.cls[i]>=0&&segs[i].el!=null)idx.push(i);}
+  if(idx.length<3)return '';
+  const els=idx.map(i=>segs[i].el).sort((x,y)=>x-y),mid=els[Math.floor(els.length/2)];
+  const isPow=c=>c===3||c===4||c===5||c===8||c===9;
+  const half=up=>{const w={};let pS=0,pW=0;
+    for(const i of idx){if((segs[i].el>=mid)!==up)continue;const d=segs[i].dist-segs[i-1].dist,c=isPow(r.cls[i])?'P':r.cls[i];
+      w[c]=(w[c]||0)+d;if(c==='P'&&r.pw&&isFinite(r.pw[i])){pS+=r.pw[i]*d;pW+=d;}}
+    const k=Object.keys(w).sort((x,y)=>w[y]-w[x])[0];if(k==null)return null;
+    return k==='P'?'Pulver'+(pW?' '+Math.max(1,Math.round(pS/pW))+' cm':''):(TV_WORD[k]||VA_SKI6_DE[k]||'');};
+  const hi=half(true),lo=half(false);
+  // the way the descent faces: the aspect most of its length points to
+  const as={};for(const i of idx){const a=segs[i].as;if(a==null)continue;const k=['N','NO','O','SO','S','SW','W','NW'][Math.round(a/45)%8];
+    as[k]=(as[k]||0)+segs[i].dist-segs[i-1].dist;}
+  const asp=Object.keys(as).sort((x,y)=>as[y]-as[x])[0];
+  const body=!hi||!lo?(hi||lo):hi===lo?'Durchgehend '+hi:'Oben '+hi+', unten '+lo;
+  return body?body+(asp?' · Abfahrt '+asp:''):'';
+}
 function tourSheetRender(t,r){
   setTimeout(()=>{try{tpRender();}catch(e){}},0);
   const el=document.getElementById('tourSheet');if(!el)return;
@@ -10398,6 +10467,7 @@ function tourSheetRender(t,r){
     +'<span class="tour-score" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r):'–')+'<small>%</small></span>'
     +'<div class="tour-tt"><b>'+escapeHtml(t.name||'Skitour')+'</b><span>'+escapeHtml(facts)+'</span></div>'
     +'<button type="button" class="tour-x" onclick="tourClose()" aria-label="Schliessen">×</button></div>'
+    +(function(){const v=tourVerdict(t,r);return v?'<div class="tour-verdict">'+escapeHtml(v)+'</div>':'';})()
     +stats
     +(function(){const V=tourVariants(t);if(V.length<2)return '';
       return '<div class="tour-vars"><span>'+V.length+' Varianten</span>'+V.map(x=>'<button type="button" class="'+(x===t?'on':'')+'" onclick="tourOpenVar(\''+escapeHtml(String(x.id))+'\')">'+escapeHtml(x.variant||'Variante')+'</button>').join('')+'</div>';})()
@@ -11734,8 +11804,7 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
         +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
         +'<button class="pv-more" onclick="uvReportUser()" aria-label="Nutzer melden">⋯</button>')+'</div>'
     +(()=>{const L=trustLevel(S.trust);return '<button class="pv-trust tr-l'+L.i+'" onclick="trustInfo('+L.n+')"><span class="pv-tr-ic">'+trustIco(L.i,24,'#fff')+'</span>'
-      +'<span class="pv-tr-t"><b>'+escapeHtml(L.name)+' · Trust '+L.n+'</b><small>'+(L.next!=null?(L.next-L.n)+' Bestätigungen bis «'+escapeHtml(TRUST_LV[L.i+1][1])+'»':escapeHtml(L.sub))+'</small>'
-      +'<i class="pv-tr-bar"><i style="width:'+L.pct+'%"></i></i></span><span class="pv-tr-q">›</span></button>';})()
+      +'<span class="pv-tr-t"><b>'+escapeHtml(L.name)+'</b><small>'+escapeHtml(L.sub)+'</small></span><span class="pv-tr-q">›</span></button>';})()
     +'<div class="pv-week"><div class="pv-wk-h"><b>Diese Woche</b><span>12 Wochen</span></div>'
     +'<div class="pv-wk"><div><small>Distanz</small><b>'+(cw.d/1000).toFixed(1)+' km</b></div><div><small>Zeit</small><b>'+trkFmtT(cw.mv)+'</b></div><div><small>Höhenmeter</small><b>'+cw.up+' m</b></div></div>'+chart+'</div>'
     // the profile: this week's numbers and the posts -- the activities are
@@ -11916,7 +11985,8 @@ function tsRender(onlyMap){
     const nw=tpPeople(o.t.id).length;
     return '<button type="button" class="tn-row" data-tid="'+escapeHtml(String(o.t.id))+'" onclick="tsPick('+i+')"><span class="tn-sc" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r)+'%':'…')+'</span>'
       +'<span class="tn-t"><b>'+escapeHtml(o.nv>1?(o.t.pname||o.t.name):(o.t.name||'Skitour'))+'</b><span>'+(o.nv>1?o.nv+' Varianten · ':'')+(Math.round(o.d/100)/10)+' km · '
-      +(g.gain!=null?g.gain+' Hm · ':'')+'bis '+g.maxSlope+'°'+(g.hi.el!=null?' · '+Math.round(g.hi.el)+' m':'')+'</span></span>'
+      +(g.gain!=null?g.gain+' Hm · ':'')+'bis '+g.maxSlope+'°'+(g.hi.el!=null?' · '+Math.round(g.hi.el)+' m':'')+'</span>'
+      +(function(){let v='';try{v=tourVerdict(o.t,r);}catch(e){}return v?'<em class="tn-v">'+escapeHtml(v)+'</em>':'';})()+'</span>'
       +'<span class="tn-w'+(nw?' on':'')+'" title="schauen gerade">'+(nw?(nw>10?'10+':nw):'')+'</span></button>';}).join('');
   if(onlyMap&&el.querySelector('.ts-list')){el.querySelector('.ts-count').textContent=list.length+' Touren';
     el.querySelector('.ts-list').innerHTML=rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>';tsSliderSync();return;}
@@ -12388,9 +12458,10 @@ function trustGauge(n){const L=trustLevel(n),k=TRUST_LV.length,cx=150,cy=148,r=1
 function trustWeight(t){return 1+PROG_TRUST_MAX*(t/(t+PROG_TRUST_HALF));}
 function trustLevel(n){n=n||0;let i=0;for(let k=0;k<TRUST_LV.length;k++)if(n>=TRUST_LV[k][0])i=k;
   const nx=TRUST_LV[i+1];return {i,name:TRUST_LV[i][1],sub:TRUST_LV[i][2],emo:trustIco(i,18),n,next:nx?nx[0]:null,pct:nx?Math.round((n-TRUST_LV[i][0])/(nx[0]-TRUST_LV[i][0])*100):100};}
-const TRUST_FLAKE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17M12 2l-2.2 2.4M12 2l2.2 2.4M12 22l-2.2-2.4M12 22l2.2-2.4"/></svg>';
+// Next to a name: the level's own icon (not a row of flakes to count); its
+// name on hover, everything else in the ladder on tap of your profile.
 function trustBadge(n,compact){const L=trustLevel(n);if(!L.i&&compact)return '';
-  return '<span class="tr-b tr-'+L.i+'" title="Trust Score '+L.n+' · '+escapeHtml(L.name)+'">'+TRUST_FLAKE.repeat(Math.max(1,Math.min(3,Math.ceil(L.i/2))))+(compact?'':'<em>'+escapeHtml(L.name)+'</em>')+'</span>';}
+  return '<span class="tr-b tr-'+L.i+'" title="'+escapeHtml(L.name)+'">'+trustIco(L.i,12)+(compact?'':'<em>'+escapeHtml(L.name)+'</em>')+'</span>';}
 // A sheet, reused by the trust ladder and the leaderboard.
 function trSheet(html){let o=document.getElementById('trSheet');
   if(!o){o=document.createElement('div');o.id='trSheet';o.onclick=e=>{if(e.target===o)trSheetClose();};document.body.appendChild(o);}
@@ -13313,23 +13384,23 @@ let _lastTier=-1;
 map.on('zoomend',()=>{if(document.body.classList.contains('draw-on'))return;try{const t=detailTier();if(t!==_lastTier){_lastTier=t;renderStations();}loadReportMarkers();}catch(e){}});
 function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");const wd=WD()[d.getUTCDay()];return wd+' '+d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'., '+d.getUTCHours()+':00';}
 function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString(LOCALE(),{day:'2-digit',month:'short'});}
-function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
-  if(l=="snow"){let h="<b>Neuschnee [cm] (SLF-Skala)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (click for details)</div>";}
+function legendFor(l){const sn={avg:'Mittel',max:'Max',min:'Min',sub0:'immer <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
+  if(l=="snow"){let h="<b>Neuschnee [cm] (SLF-Skala)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (antippen für Details)</div>";}
   if(l=="depth"){let h="<b>Schneehöhe [cm] (SLF-Skala)</b><br>";for(let i=0;i<DEPTH_BOUNDS.length-1;i++)h+=`<div><i style="background:${SC[Math.min(i,SC.length-1)]}"></i>${DEPTH_BOUNDS[i]}${i===DEPTH_BOUNDS.length-2?'+':'–'+DEPTH_BOUNDS[i+1]}</div>`;return h;}
-  if(l=="temp"){let extra="blue=cold · red=warm";if(stat=="sub0")extra="only cells staying below 0°C for entire window";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>Temp 2 m [°C] (${sn})</b><br>${extra}`;}
-  if(l=="wind"){const wl=WIND_LVLS[windLvl][1];if(stat=="lt10")return "<b>Wind "+wl+" ("+sn+")</b><br>green = max wind stays below 10 km/h";return '<b>Wind '+wl+' (km/h, '+sn+')</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(30,120,255),rgb(30,240,135),rgb(255,240,0),rgb(255,40,0));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:11px"><span>0</span><span>25</span><span>50</span><span>70+</span></div><div style="margin-top:4px;font-size:12px">Arrows show flow direction</div>';}
+  if(l=="temp"){let extra="blau = kalt · rot = warm";if(stat=="sub0")extra="nur Zellen, die im ganzen Fenster unter 0°C bleiben";if(stat=="max05")extra="nur Zellen mit Höchstwert 0–5°C";return `<b>Temp 2 m [°C] (${sn})</b><br>${extra}`;}
+  if(l=="wind"){const wl=WIND_LVLS[windLvl][1];if(stat=="lt10")return "<b>Wind "+wl+" ("+sn+")</b><br>grün = Höchstwind bleibt unter 10 km/h";return '<b>Wind '+wl+' (km/h, '+sn+')</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(30,120,255),rgb(30,240,135),rgb(255,240,0),rgb(255,40,0));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:11px"><span>0</span><span>25</span><span>50</span><span>70+</span></div><div style="margin-top:4px;font-size:12px">Pfeile zeigen die Windrichtung</div>';}
   if(l=="cloud")return "<b>Bewölkung [%]</b><br>zur gewählten Stunde · hellblau = wenig, tiefblau = bedeckt";
-  if(l=="sun")return "<b>Σ Sunshine Hours</b><br>Scale 0–48 h+ · light→orange = more sun";
-  if(l=="rad")return "<b>Clear-sky Radiation [Wh/m²/d]</b><br>Day: "+dayLabel(bandDoy())+" (= window start)<br>dark=shade/low · yellow=high<br>incl. slope, aspect & terrain shadow";
-  if(l=="radsun")return "<b>Effective Radiation [Wh/m²/d]</b><br>Clear-sky × cloud attenuation (20% diffuse + 80% × sunshine)<br>Day: "+dayLabel(bandDoy());
-  if(l=="slope")return "<b>Slope Classes (swisstopo)</b><br>all classes from 30° (30/35/40/45°+)";
+  if(l=="sun")return "<b>Σ Sonnenstunden</b><br>Skala 0–48 h+ · hell→orange = mehr Sonne";
+  if(l=="rad")return "<b>Einstrahlung bei klarem Himmel [Wh/m²/Tag]</b><br>Tag: "+dayLabel(bandDoy())+" (= Fensterbeginn)<br>dunkel = Schatten/wenig · gelb = viel<br>inkl. Neigung, Exposition und Geländeschatten";
+  if(l=="radsun")return "<b>Effektive Einstrahlung [Wh/m²/Tag]</b><br>Klarer Himmel × Bewölkung (20 % diffus + 80 % × Sonnenschein)<br>Tag: "+dayLabel(bandDoy());
+  if(l=="slope")return "<b>Hangneigung (swisstopo)</b><br>alle Klassen ab 30° (30/35/40/45°+)";
   if(l=="aspect")return '<b>Aspekt (Horn · swissALTIRegio 60 m · 8 Sektoren)</b><br><div><i style="background:#4A90D9"></i>N</div><div><i style="background:#45C0C0"></i>NO</div><div><i style="background:#66BB6A"></i>O</div><div><i style="background:#BEDB39"></i>SO</div><div><i style="background:#EF5350"></i>S</div><div><i style="background:#FF9E42"></i>SW</div><div><i style="background:#FFC107"></i>W</div><div><i style="background:#A987E0"></i>NW</div><div><i style="background:#9E9E9E"></i>flach (&lt;5°)</div>';
-  if(l=="tsurf"){let extra="estimated: air ± radiative cooling/warming";if(stat=="sub0")extra="only cells with max surface temp &lt;0°C";if(stat=="max05")extra="only cells with max 0–5°C";return `<b>T Surface [°C] (${sn})</b><br>${extra}`;}
-  if(l=="rough")return "<b>Terrain Roughness</b><br>light→dark brown = rougher";
-  if(l=="skiable")return '<b>Skiability Estimate</b><br>Snow depth vs. terrain roughness need<div style="margin-top:4px"><div><i style="background:#64dc64"></i>Plenty of snow</div><div><i style="background:#a0dc64"></i>Skiable</div><div><i style="background:#ffdc32"></i>Marginal</div><div><i style="background:#ff8c28"></i>Needs more snow</div><div><i style="background:#ff3c28"></i>Far from skiable</div><div><i style="background:#500000"></i>Too steep (&gt;55°)</div></div>';
+  if(l=="tsurf"){let extra="geschätzt: Luft ± Abkühlung/Erwärmung durch Strahlung";if(stat=="sub0")extra="nur Zellen mit Oberflächen-Höchstwert &lt;0°C";if(stat=="max05")extra="nur Zellen mit Höchstwert 0–5°C";return `<b>Oberfläche [°C] (${sn})</b><br>${extra}`;}
+  if(l=="rough")return "<b>Geländerauigkeit</b><br>hell→dunkelbraun = rauer";
+  if(l=="skiable")return '<b>Befahrbarkeit (Schätzung)</b><br>Schneehöhe gegen das, was das Gelände braucht<div style="margin-top:4px"><div><i style="background:#64dc64"></i>Reichlich Schnee</div><div><i style="background:#a0dc64"></i>Befahrbar</div><div><i style="background:#ffdc32"></i>Knapp</div><div><i style="background:#ff8c28"></i>Braucht mehr Schnee</div><div><i style="background:#ff3c28"></i>Weit weg von befahrbar</div><div><i style="background:#500000"></i>Zu steil (&gt;55°)</div></div>';
   if(l=="powfind"){
     const sw=(cm)=>{const c=snowCol(cm)||[150,150,150];return '<div><i style="background:rgb('+c[0]+','+c[1]+','+c[2]+')"></i>'+cm+' cm</div>';};
-    return '<b>Reported Powder</b><br>'+sw(10)+sw(30)+sw(60)+sw(100)+
+    return '<b>Gemeldetes Powder</b><br>'+sw(10)+sw(30)+sw(60)+sw(100)+
       '<div style="margin-top:4px;font-size:12px">Farbe = Schneehöhe (SLF-Skala), gemittelt über die nahen Zeichnen-Reports pro Exposition und Höhenband.</div>'+
       '<div style="font-size:12px">Nur Zeichnen-Reports · Vertrauen ≥ '+progConfMin+'%</div>';}
   if(l=="progpat"){const ty=_progType||stat,pt=PROG_PATTERNS[ty]||{label:ty,hint:''};
@@ -13351,10 +13422,10 @@ function legendFor(l){const sn={avg:'Mean',max:'Max',min:'Min',sub0:'always <0°
       '<div style="font-size:12px">Farbe = <b>Vertrauen</b>, Deckkraft = Wahrscheinlichkeit für '+cl+'.</div>'+
       '<div style="margin-top:3px;font-size:12px">Hänge mit gleichem Aspekt &amp; gleicher Höhe nahe einer Meldung · Quelle: '+(PROG_SRC_LABEL[progSrc]||progSrc)+'</div>';}
   if(l=="qprheat")return '<b>Powder-Reports (Heatmap)</b><br><div><i style="background:#cde4ff"></i>vereinzelt / wenig</div><div><i style="background:#5b83d9"></i>guter Powder</div><div><i style="background:#0f2a7d"></i>tief &amp; fluffy</div><div style="margin-top:4px;font-size:12px">aus Quick-Powder-Reports · inkl. Demo-Daten</div>';
-  if(l=="powder")return '<b>Powder Conditions</b><br><div style="margin:3px 0 2px"><span style="display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,rgb(93,181,255),rgb(10,71,209))"></span>'+
+  if(l=="powder")return '<b>Powder-Bedingungen</b><br><div style="margin:3px 0 2px"><span style="display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,rgb(93,181,255),rgb(10,71,209))"></span>'+
     '<span style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px"><span>0 cm</span><span>'+(PD_STRONG_BLUE_CM/2)+' cm</span><span>'+PD_STRONG_BLUE_CM+'+ cm</span></span></div>'+
-    '<div style="font-size:12px">Farbe = Neuschnee, Deckkraft = <b>stable</b> vs. <b>reduced</b></div><div style="margin-top:3px;font-size:12px">Gust ≈ mean wind × 1.5</div>';
-  return "<b>Hillshade / Relief (swisstopo)</b>";}
+    '<div style="font-size:12px">Farbe = Neuschnee, Deckkraft = <b>stabil</b> vs. <b>reduziert</b></div><div style="margin-top:3px;font-size:12px">Böen ≈ mittlerer Wind × 1,5</div>';
+  return "<b>Relief (swisstopo)</b>";}
 function legend(l){
   // The full legend follows whatever is actually drawn: with SNOWPACK up
   // that is the SNOWPACK layer, not the (hidden) base layer under it.
@@ -13684,6 +13755,52 @@ function tlPlayToggle(){
     tvFollow();renderAll();};
   step();_tlPlay=setInterval(step,layer==='snowpack'?1100:650);
 }
+// Ready-made times: a window for the layers that add up (Neuschnee, Wind
+// ...), an instant for the ones that show a state (Schneehöhe, SNOWPACK,
+// Bewölkung). Index of the first hour at or after a UTC time on day d (0 =
+// today) and local hour h -- the app's clock is Swiss time.
+function tlIdxAt(dayOff,hLocal){
+  // Zurich's offset from UTC (1 or 2 h), whatever the device's own zone
+  const n=new Date(),z=new Date(n.toLocaleString('en-US',{timeZone:'Europe/Zurich'})),
+        u=new Date(n.toLocaleString('en-US',{timeZone:'UTC'})),off=Math.round((z-u)/36e5);
+  const d0=Date.UTC(z.getFullYear(),z.getMonth(),z.getDate())+dayOff*86400000+(hLocal-off)*36e5;
+  for(let t=0;t<T;t++)if(Date.parse(M.times[t]+'Z')>=d0)return t;
+  return T-1;}
+function tlPresetList(){
+  const n=nowIdx;
+  if(tlSingleMode())return [
+    ['Jetzt','',()=>n],
+    ['Heute Abend','18:00',()=>tlIdxAt(0,18)],
+    ['Morgen früh','08:00',()=>tlIdxAt(1,8)],
+    ['Morgen Mittag','13:00',()=>tlIdxAt(1,13)],
+    ['Übermorgen früh','08:00',()=>tlIdxAt(2,8)]].map(p=>({l:p[0],s:p[1],pt:p[2]}));
+  return [
+    ['Letzte 24 h','',[n-23,n+1]],
+    ['Letzte 72 h','',[n-71,n+1]],
+    ['Letzte 7 Tage','',[n-167,n+1]],
+    ['Nächste 24 h','',[n,n+24]],
+    ['Bis morgen Abend','',null]].map(p=>({l:p[0],s:p[1],w:p[2]}));
+}
+function tlPresetsToggle(e,open){if(e)e.stopPropagation();
+  // on the page itself, above the button: the bottom panel clips what
+  // sticks out of it
+  let el=document.getElementById('tlPresets');
+  if(!el){el=document.createElement('div');el.id='tlPresets';el.setAttribute('role','menu');el.hidden=true;document.body.appendChild(el);}
+  const on=open==null?el.hidden:open;
+  if(!on){el.hidden=true;return;}
+  el.innerHTML=tlPresetList().map((p,i)=>'<button type="button" role="menuitem" onclick="tlPresetPick('+i+',event)">'+escapeHtml(p.l)+(p.s?'<span>'+p.s+'</span>':'')+'</button>').join('');
+  const r=document.getElementById('tlTomorrowBtn').getBoundingClientRect();
+  el.style.right=Math.max(8,window.innerWidth-r.right)+'px';el.style.bottom=(window.innerHeight-r.top+6)+'px';
+  el.hidden=false;try{haptic(3);}catch(_){}
+  setTimeout(()=>document.addEventListener('click',function off(ev){if(!el.contains(ev.target)){el.hidden=true;}document.removeEventListener('click',off,true);},true),0);}
+function tlPresetPick(i,e){if(e)e.stopPropagation();
+  const p=tlPresetList()[i];document.getElementById('tlPresets').hidden=true;if(!p)return;
+  if(p.pt){const t=Math.max(0,Math.min(T-1,p.pt()));b=t+1;a=Math.max(0,b-windowSize);
+    if(typeof vaFollowTimeline==='function')try{vaFollowTimeline();}catch(_){}
+    tvFollow();renderAll();try{haptic(3);}catch(_){}return;}
+  if(!p.w){tlGotoTomorrow();return;}
+  a=Math.max(0,Math.min(T-1,p.w[0]));b=Math.max(a+TV_MIN,Math.min(T,p.w[1]));a=Math.min(a,b-1);windowSize=b-a;
+  tvFollow();renderAll();try{haptic(3);}catch(_){}}
 function tlGotoTomorrow(){
   const now=new Date(M.times[nowIdx]+'Z');
   const dayStart=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate());
@@ -14658,7 +14775,7 @@ function renderMyReports(){
   const st=document.getElementById('rpStats');
   if(st){const conf=mine.reduce((a,r)=>a+(r.likes||0),0),tr=progTrustOf(sbUser.id),L=trustLevel(tr),wk=mine.filter(r=>Date.now()-Date.parse(r.createdAt||0)<7*864e5).length;
     st.innerHTML='<div><b>'+mine.length+'</b><span>Meldungen</span></div><div><b>'+wk+'</b><span>diese Woche</span></div><div><b>'+conf+'</b><span>Bestätigungen</span></div>'
-      +'<div class="rp-st-tr" onclick="trustInfo()"><b>'+TRUST_FLAKE+tr+'</b><span>'+escapeHtml(L.name)+'</span></div>';}
+      +'<div class="rp-st-tr" onclick="trustInfo()"><b>'+trustIco(L.i,20)+'</b><span>'+escapeHtml(L.name)+'</span></div>';}
   if(!mine.length){el.innerHTML='<div class="rp-mine-empty">Noch keine Meldung von dir. Zeichne eine Karte oder melde eine Beobachtung.</div>';return;}
   el.innerHTML=mine.map(r=>{
     const col=CAT_COLORS[r.cat]||'var(--ink-300)';
@@ -15520,12 +15637,14 @@ function dismissIntro(){try{if(window.__bootDone)window.__bootDone();else{const 
 // --- First-run onboarding coach marks ---
 // These pointed at the old floating layer card, which no longer exists — they
 // now walk the one-screen console.
+// Three gestures, shown once on the map after the welcome screens: what
+// to DO, not a tour of the buttons. A finger shows the gesture on the spot.
 const COACH_STEPS=[
-  {sel:'#layersFab',html:'<b>Ebenen.</b><br>Hier wählst du, was die Karte zeigt: Neuschnee, Skiqualität, Wind, Webcams …'},
-  {sel:'#btmMain',html:'<b>Zeitfenster.</b><br>Wähle den Zeitraum – die Karte rechnet sofort neu.'},
-  {sel:'#searchFab',html:'<b>Spring zu einem Ort.</b><br>Suche einen Berg oder Ort und zoome direkt dorthin.'},
-  {sel:'#tabBar [data-tab=feed]',html:'<b>Community.</b><br>Beiträge in deiner Nähe, die neusten und die deiner Freunde zuerst.'},
-  {sel:'#mapFab',html:'<b>Melden.</b><br>Zeichne eine Schnee-Karte oder melde eine Beobachtung.'}
+  {rect:()=>{const m=document.getElementById('map').getBoundingClientRect(),cx=m.left+m.width*.42,cy=m.top+m.height*.42;
+    return {left:cx-34,top:cy-34,width:68,height:68,right:cx+34,bottom:cy+34};},g:'tap',
+   html:'<b>Tippe auf die Karte.</b><br>Du siehst den Schnee genau dort: Art, Menge, Profil und Wetter.'},
+  {sel:'#timeline',g:'drag',html:'<b>Zieh an der Zeitleiste.</b><br>Vergangene Tage und Prognose – die Karte rechnet sofort neu. «Zeitraum» oben rechts hat fertige Zeiten.'},
+  {sel:'#layersFab',g:'tap',html:'<b>Wechsle die Ebene.</b><br>Skiqualität, Neuschnee, Schneehöhe, Wind … Rechts steht immer, was die Karte gerade zeigt.'}
 ];
 let coachIdx=0;
 function maybeOnboard(){try{if(localStorage.getItem('ssm_onboarded')){maybeA2HS();return;}}catch(e){}coachIdx=0;startCoach();}
@@ -15566,12 +15685,13 @@ function endCoach(){try{localStorage.setItem('ssm_onboarded','1');}catch(e){}con
 function showCoachStep(){
   const c=document.getElementById('coach');
   // Skip steps whose target is missing or hidden (e.g. non-Ski topics in Simple mode)
-  const vis=s=>{const e=document.querySelector(s);return e&&e.getBoundingClientRect().width>0;};
-  while(coachIdx<COACH_STEPS.length&&!vis(COACH_STEPS[coachIdx].sel))coachIdx++;
+  const vis=st=>{if(st.rect)return true;const e=document.querySelector(st.sel);return e&&e.getBoundingClientRect().width>0;};
+  while(coachIdx<COACH_STEPS.length&&!vis(COACH_STEPS[coachIdx]))coachIdx++;
   if(coachIdx>=COACH_STEPS.length){endCoach();return;}
-  const step=COACH_STEPS[coachIdx],el=document.querySelector(step.sel),r=el.getBoundingClientRect();
+  const step=COACH_STEPS[coachIdx],r=step.rect?step.rect():document.querySelector(step.sel).getBoundingClientRect();
   const pad=8,spot=document.getElementById('coachSpot'),card=document.getElementById('coachCard');
   spot.style.left=(r.left-pad)+'px';spot.style.top=(r.top-pad)+'px';spot.style.width=(r.width+pad*2)+'px';spot.style.height=(r.height+pad*2)+'px';
+  spot.className=step.g?'cg-'+step.g:'';spot.innerHTML=step.g?'<i class="coach-finger"></i>':'';
   document.getElementById('coachText').innerHTML=step.html;
   document.getElementById('coachDots').innerHTML=COACH_STEPS.map((_,i)=>'<i class="'+(i===coachIdx?'on':'')+'"></i>').join('');
   document.getElementById('coachNext').textContent=coachIdx===COACH_STEPS.length-1?'Los geht’s':'Weiter';
@@ -15633,8 +15753,17 @@ function _gotoCountry(){try{map.stop();map.invalidateSize({animate:false});
   }catch(e){}
   map.setView(bb.getCenter(),Math.min(z,zTall+2.4),{animate:false});
   map.setMinZoom(Math.min(map.getZoom(),zFit));updateBaseFade();}catch(e){}}
+// The app opens where you last were (map centre and zoom, kept a week);
+// the country view only the first time, or after a week away.
+const VIEW_KEY='ssm_view',VIEW_TTL=7*864e5;
+function _savedView(){try{const v=JSON.parse(localStorage.getItem(VIEW_KEY)||'null');
+  if(v&&isFinite(v.lat)&&isFinite(v.lng)&&isFinite(v.z)&&Date.now()-(v.t||0)<VIEW_TTL)return v;}catch(e){}return null;}
+function _gotoSaved(){const v=_savedView();_gotoCountry();if(!v)return;
+  try{map.setView([v.lat,v.lng],Math.max(map.getMinZoom(),v.z),{animate:false});}catch(e){}}
+{let _vt=0;map.on('moveend',()=>{clearTimeout(_vt);_vt=setTimeout(()=>{try{const c=map.getCenter();
+  localStorage.setItem(VIEW_KEY,JSON.stringify({lat:+c.lat.toFixed(5),lng:+c.lng.toFixed(5),z:+map.getZoom().toFixed(2),t:Date.now()}));}catch(e){}},800);});}
 (function(){const davos=(function(){try{return location.search.indexOf('start=davos')>=0;}catch(e){return false;}})();
-  const go=davos?_gotoDavos:_gotoCountry;go();setTimeout(go,400);})();
+  const go=davos?_gotoDavos:_gotoSaved;go();setTimeout(go,400);})();
 window.__APP_OK=true;
 setTopic('meteo',0,0);
 // After the rest of app.js has run: the welcome flow (ONB_SLIDES, onb) is
@@ -15777,7 +15906,10 @@ const ONB_SLIDES=[
  ['','Aufzeichnen','Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil. Der Bewegungssensor misst dabei, wie ruppig die Abfahrt war.','<svg class="onb-ill" viewBox="0 0 300 150" aria-hidden="true"><rect x="10" y="10" width="280" height="88" rx="14" class="onb-mapbg"/><path id="onbTr" d="M30 80C70 70 80 30 120 34S170 70 210 52 250 30 270 26" class="onb-track"/><circle r="6" class="onb-walker"><animateMotion dur="5s" repeatCount="indefinite"><mpath href="#onbTr"/></animateMotion></circle><circle cx="272" cy="86" r="5" class="onb-rec"/><rect x="14.0" y="132" width="7" height="8" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:0.00s"/><rect x="23.2" y="130" width="7" height="10" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:0.08s"/><rect x="32.4" y="131" width="7" height="9" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:0.16s"/><rect x="41.6" y="128" width="7" height="12" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:0.24s"/><rect x="50.8" y="124" width="7" height="16" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:0.32s"/><rect x="60.0" y="120" width="7" height="20" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:0.40s"/><rect x="69.2" y="126" width="7" height="14" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:0.48s"/><rect x="78.4" y="129" width="7" height="11" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:0.56s"/><rect x="87.6" y="131" width="7" height="9" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:0.64s"/><rect x="96.8" y="118" width="7" height="22" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:0.72s"/><rect x="106.0" y="112" width="7" height="28" rx="2" fill="#D9534F" class="onb-bar" style="animation-delay:0.80s"/><rect x="115.2" y="116" width="7" height="24" rx="2" fill="#D9534F" class="onb-bar" style="animation-delay:0.88s"/><rect x="124.4" y="122" width="7" height="18" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:0.96s"/><rect x="133.6" y="128" width="7" height="12" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:1.04s"/><rect x="142.8" y="130" width="7" height="10" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:1.12s"/><rect x="152.0" y="131" width="7" height="9" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:1.20s"/><rect x="161.2" y="129" width="7" height="11" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:1.28s"/><rect x="170.4" y="125" width="7" height="15" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:1.36s"/><rect x="179.6" y="121" width="7" height="19" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:1.44s"/><rect x="188.8" y="114" width="7" height="26" rx="2" fill="#D9534F" class="onb-bar" style="animation-delay:1.52s"/><rect x="198.0" y="110" width="7" height="30" rx="2" fill="#D9534F" class="onb-bar" style="animation-delay:1.60s"/><rect x="207.2" y="118" width="7" height="22" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:1.68s"/><rect x="216.4" y="124" width="7" height="16" rx="2" fill="#E9B949" class="onb-bar" style="animation-delay:1.76s"/><rect x="225.6" y="128" width="7" height="12" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:1.84s"/><rect x="234.8" y="130" width="7" height="10" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:1.92s"/><rect x="244.0" y="131" width="7" height="9" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:2.00s"/><rect x="253.2" y="132" width="7" height="8" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:2.08s"/><rect x="262.4" y="130" width="7" height="10" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:2.16s"/><rect x="271.6" y="128" width="7" height="12" rx="2" fill="#3BAA63" class="onb-bar" style="animation-delay:2.24s"/></svg>'],
  ['','Community','Folge Leuten aus deinem Gebiet, bestätige gute Meldungen und baue Vertrauen auf. Deine Meldungen verbessern das Modell.','<svg class="onb-ill" viewBox="0 0 300 150" aria-hidden="true"><g transform="translate(80 92)"><circle r="26" fill="#4A86C8"/><circle cy="-7" r="9" fill="#fff" opacity=".9"/><path d="M-15 16a15 13 0 0 1 30 0" fill="#fff" opacity=".9"/></g><g transform="translate(150 92)"><circle r="26" fill="#2D5A8C"/><circle cy="-7" r="9" fill="#fff" opacity=".9"/><path d="M-15 16a15 13 0 0 1 30 0" fill="#fff" opacity=".9"/></g><g transform="translate(220 92)"><circle r="26" fill="#6FB4F0"/><circle cy="-7" r="9" fill="#fff" opacity=".9"/><path d="M-15 16a15 13 0 0 1 30 0" fill="#fff" opacity=".9"/></g><g transform="translate(86 60)"><path d="M0 -4C-4-12-14-8-10 0L0 10 10 0C14-8 4-12 0-4Z" class="onb-heart" style="animation-delay:0s"/></g><g transform="translate(156 60)"><path d="M0 -4C-4-12-14-8-10 0L0 10 10 0C14-8 4-12 0-4Z" class="onb-heart" style="animation-delay:0.9s"/></g><g transform="translate(214 60)"><path d="M0 -4C-4-12-14-8-10 0L0 10 10 0C14-8 4-12 0-4Z" class="onb-heart" style="animation-delay:1.8s"/></g><g transform="translate(176 68)"><g class="onb-ok"><circle r="11"/><path d="M-5 0l3.5 3.5L5-4"/></g></g></svg>']];
 let onb={step:0,slide:0,again:false,lockOk:null};
-function onbSteps(){const st=['lang','tour','disc'];if(onb.lockOk)st.push('lock');st.push('loc');return st;}
+// No location step: the position is asked for the first time when you tap
+// «Mein Standort» (or open the tour finder) -- a prompt with a reason you
+// just gave yourself, not one more screen before the map.
+function onbSteps(){const st=['lang','tour','disc'];if(onb.lockOk)st.push('lock');return st;}
 async function onbOpen(again){onb={step:0,slide:0,again:!!again,lockOk:null};
   document.getElementById('onb').hidden=false;document.body.classList.add('onb-open');onbRender();
   try{onb.lockOk=await lockAvailable();}catch(e){onb.lockOk=false;}onbRender();}
@@ -15793,8 +15925,12 @@ function onbNext(){const st=onbSteps();
   if(onb.step>=st.length-1){onbFinish();return;}
   onb.step++;onbRender();try{haptic(4);}catch(e){}}
 function onbBack(){const st=onbSteps();if(st[onb.step]==='tour'&&onb.slide>0){onb.slide--;onbRender();return;}if(onb.step>0){onb.step--;onbRender();}}
-function onbFinish(){try{localStorage.setItem('ssm_welcome_v1','1');localStorage.setItem('ssm_onboarded','1');}catch(e){}
-  onbClose();try{haptic(12);}catch(e){}if(!onb.again){try{maybeA2HS();}catch(e){}}}
+function onbFinish(){try{localStorage.setItem('ssm_welcome_v1','1');}catch(e){}
+  onbClose();try{haptic(12);}catch(e){}
+  // first time: the three gestures on the map itself (endCoach marks the
+  // app as onboarded and offers the home-screen sheet afterwards)
+  if(!onb.again){let seen=false;try{seen=!!localStorage.getItem('ssm_onboarded');}catch(e){}
+    if(seen){try{maybeA2HS();}catch(e){}}else setTimeout(()=>{coachIdx=0;try{startCoach();}catch(e){endCoach();}},600);}}
 function onbDots(n,i){return '<div class="onb-dots">'+Array.from({length:n},(_,k)=>'<i class="'+(k===i?'on':'')+'"></i>').join('')+'</div>';}
 function onbRender(){const el=document.getElementById('onbCard');if(!el)return;const st=onbSteps(),k=st[onb.step];
   const prog='<div class="onb-prog">'+st.map((x,i)=>'<i class="'+(i<=onb.step?'on':'')+'"></i>').join('')+'</div>';
@@ -15948,6 +16084,10 @@ const CAT_BG={snow:'linear-gradient(135deg,#e3f2fd,#bbdefb)',route:'linear-gradi
 // new SLF report-type icons reuse existing glyphs
 CAT_SVG.avalanche=CAT_SVG.danger;CAT_SVG.whumpf=CAT_SVG.danger;CAT_SVG.wind_slab=CAT_SVG.snow;CAT_SVG.other=CAT_SVG.info;
 const CAT_LABEL={snow:'Schnee',route:'Menschen',danger:'Gefahr',info:'Info',tour:'Tour',avalanche:'Lawine',whumpf:'Wumm',wind_slab:'Triebschnee',other:'Beobachtung'};
+// Subtypes stored in English by older app versions, named in German here
+// (the stored value stays as it is -- other clients and the data read it).
+const SUB_DE={'Quick Powder Report':'Schnellmeldung Powder','Report Powder':'Powder melden'};
+function subDe(v){return (v&&SUB_DE[v])||v;}
 function catLabel(id){return CAT_LABEL[id]||id;}
 function catSvg(id,size){return `<span class="cat-ico" style="width:${size||16}px;height:${size||16}px">${CAT_SVG[id]||''}</span>`;}
 // --- Swiss peaks & famous ski destinations (for peak detection + feed filters) ---
@@ -16522,7 +16662,7 @@ async function loadDbReports(opts){
       if(r.flagged)return null; // hide community-flagged reports
       const ll=parseGeo(r.location);if(!ll||(ll[0]===0&&ll[1]===0))return null;const lat=ll[0],lng=ll[1];
       const catId=r.primary_categories?.[0]||'info';const catObj=RP_CATS.find(c=>c.id===catId);
-      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||ic('pin'),sub:r.subtype,measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,condition_data:r.condition_data||null,createdAt:r.created_at,capturedAt:r.captured_at||null,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,
+      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||ic('pin'),sub:subDe(r.subtype),measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,condition_data:r.condition_data||null,createdAt:r.created_at,capturedAt:r.captured_at||null,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,
         condN:condAgg[r.id]?condAgg[r.id].n:0,condAvg:condAgg[r.id]?condAgg[r.id].sum/condAgg[r.id].n:0,condPow:condAgg[r.id]?condAgg[r.id].pow:0,myCond:myCond[r.id]||null,dbRow:true};
     }).filter(Boolean);
     if(opts.uid){const have=new Set(allReports.map(x=>String(x.id)));
@@ -17770,7 +17910,7 @@ async function reportSubmit(){
     if(error)throw error;
     reportClose();loadDbReports();
     showUndo();
-  }catch(err){alert('Error: '+(err.message||err));next.disabled=false;next.textContent='Report posten';}
+  }catch(err){alert('Fehler: '+(err.message||err));next.disabled=false;next.textContent='Report posten';}
 }
 function showUndo(){
   const bar=document.createElement('div');bar.className='undo-bar';
@@ -17858,7 +17998,7 @@ function obsOpen(){if(!sb||!sbUser){authShow();return;}
     // drawing has its own entry (the brush): not one of the observations
     '<div class="obs-types cluster">'+OBS_TYPE_LIST.filter(t=>t.id!=='draw').map((t,i)=>{const s=SCATTER[i%SCATTER.length];
     return `<button class="obs-type" style="--i:${i};--dx:${s.dx}px;--dy:${s.dy}px;--rot:${s.r}deg;--tc:${t.color};--tt:${t.tint}" onclick="${t.id==='draw'?'obsClose();drawOpen()':'obsStart(\''+t.id+'\')'}"><span class="obs-type-ic">${t.icon}</span><span class="obs-type-tx"><b>${t.label}</b><span>${t.sub}</span></span></button>`;}).join('')+'</div>'+
-    (FEATURES.quickPowder?'<button class="obs-quick" style="--i:5" onclick="obsClose();qrOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span><b>Quick Powder Report</b><em>Ein Fingertipp — Menge &amp; Qualität</em></span></button>':'');
+    (FEATURES.quickPowder?'<button class="obs-quick" style="--i:5" onclick="obsClose();qrOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span><b>Schnellmeldung Powder</b><em>Ein Fingertipp — Menge &amp; Qualität</em></span></button>':'');
   obsWarmLocation();
 }
 // ===== Draw-based snow report v3 (paint condition zones on the map) =====
@@ -18817,6 +18957,26 @@ function obsBuildCD(){const s=obsState;const cd={obsType:s.type,source:s.locatio
 function obsSubLabel(){const s=obsState;if(s.type==='avalanche')return s.avalanche.characteristics.size!=='unknown'?('Lawine '+obsSizeMeta(s.avalanche.characteristics.size).l):'Lawine';if(s.type==='whumpf')return 'Wumm';if(s.type==='wind_slab')return 'Triebschnee';if(s.type==='snow')return snowKindLabel(s.snow.kind)||'Schnee';return 'Beobachtung';}
 // --- Feed (Instagram-style full page) ---
 let feedFilter='all',feedAnchor=null,feedScope='all',feedGroup=null;
+// Regions as one-tap chips under the feed's title. Coarse boxes (first match
+// wins), good enough to say "Wallis" or "Graubünden" -- not a border survey.
+const FEED_REGIONS=[
+  {id:'near',label:'In der Nähe'},
+  {id:'gr',label:'Graubünden',b:[46.15,8.65,47.07,10.50]},
+  {id:'vs',label:'Wallis',b:[45.85,6.75,46.50,8.45]},
+  {id:'be',label:'Berner Oberland',b:[46.35,7.20,46.90,8.45]},
+  {id:'zs',label:'Zentralschweiz',b:[46.50,8.20,47.15,9.20]},
+  {id:'ti',label:'Tessin',b:[45.80,8.35,46.55,9.20]},
+  {id:'vd',label:'Waadt / Freiburg',b:[46.25,6.60,46.75,7.35]},
+  {id:'os',label:'Ostschweiz',b:[46.95,8.90,47.60,9.75]}];
+let feedRegion='';try{feedRegion=localStorage.getItem('ssm_feed_region')||'';}catch(e){}
+function feedRegionOf(r){for(const g of FEED_REGIONS){if(!g.b)continue;const b=g.b;
+  if(r.lat>=b[0]&&r.lat<=b[2]&&r.lng>=b[1]&&r.lng<=b[3])return g.id;}return '';}
+function feedRegionSet(id){feedRegion=feedRegion===id?'':id;try{localStorage.setItem('ssm_feed_region',feedRegion);}catch(e){}
+  if(feedRegion==='near'&&!myLoc){try{geoLocate(p=>{myLoc=[p.coords.latitude,p.coords.longitude];feedRender();},()=>{});}catch(e){}}
+  try{haptic(3);}catch(e){}try{feedTopRender();}catch(e){}feedRender();}
+function feedRegionFilter(list){if(!feedRegion)return list;
+  if(feedRegion==='near'){if(!myLoc)return list;return list.filter(r=>haversineKm(myLoc[0],myLoc[1],r.lat,r.lng)<=40);}
+  return list.filter(r=>feedRegionOf(r)===feedRegion);}
 // The selected window, as real dates, so a report can be tested against it.
 function feedWindowMs(){
   try{const t0=new Date(M.times[Math.max(0,Math.min(T-1,a))]+'Z').getTime();
@@ -19300,7 +19460,9 @@ function feedTopRender(){const el=document.getElementById('feedTop');if(!el)retu
   el.innerHTML='<div class="ft-row"><button type="button" class="ft-cat'+(feedFilter!=='all'?' on':'')+'" onclick="feedFilterOpen()">'+ic('<path d="M4 6h16M7 12h10M10 18h4"/>')+'<span>'+escapeHtml(cat)+'</span></button>'
     +'<button type="button" class="ft-ic" onclick="usOpen()" aria-label="Leute finden" title="Leute finden">'+ic('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')+'</button>'
     +'<button type="button" class="ft-ic pt-acc ft-me" onclick="accountTap()" aria-label="Mein Profil" title="Mein Profil">'+ic('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>')+'<span class="pt-ini"></span></button>'
-    +'</div>';
+    +'</div>'
+    +(['all','here','following'].includes(feedScope)?'<div class="ft-reg" role="tablist" aria-label="Region">'
+      +FEED_REGIONS.map(g=>'<button type="button" role="tab" aria-selected="'+(feedRegion===g.id)+'" class="'+(feedRegion===g.id?'on':'')+'" onclick="feedRegionSet(\''+g.id+'\')">'+escapeHtml(g.label)+'</button>').join('')+'</div>':'');
   try{if(typeof dmReady!=='undefined'&&dmReady)el.querySelectorAll('[data-dm]').forEach(x=>x.hidden=false);}catch(e){}
   // your own picture, as on the map; it opens your profile
   try{let u=null;const c=(localStorage.getItem('ssm_avatar')||'').split('|');
@@ -19565,6 +19727,8 @@ function feedRender(){
     if(!base.length){list.innerHTML='<div class="feed-empty">Noch nichts gespeichert. Tippe bei einem Report auf das Lesezeichen.</div>';return;}
   }
   let filtered=feedFilter==='all'?base:base.filter(r=>r.cat===feedFilter);
+  if(['all','here','following'].includes(feedScope)){const n0=filtered.length;filtered=feedRegionFilter(filtered);
+    if(n0&&!filtered.length){list.innerHTML='<div class="feed-empty">In «'+escapeHtml((FEED_REGIONS.find(g=>g.id===feedRegion)||{}).label||'')+'» gibt es gerade keine Beiträge. Tippe die Region nochmals an, um alle zu sehen.</div>';return;}}
   // posts without a picture stay out of the list unless the filter asks for
   // them (a person's own page, the saved ones and an opened post show all)
   let txtHidden=0;
