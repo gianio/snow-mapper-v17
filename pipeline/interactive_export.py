@@ -1032,6 +1032,8 @@ def write_bin_blob(path: Path, meta, blobs):
 
 
 LO_FACTOR = 4          # the quick first-start blob keeps every 4th cell
+# fetched by the app on first use (latest.json "x"), not with the package
+LAZY_BLOBS = ("CLOUD", "CLV", "W850", "W700")
 
 
 def coarse_meta_blobs(meta, blobs, f=LO_FACTOR):
@@ -1213,8 +1215,17 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     # Current clients read it in a Web Worker; the JSON .gz stays for shells
     # that predate it (cached index.html, the native seed copy).
     binname = "snowdata-%s.bin.gz" % stamp
-    write_bin_blob(ddir / binname, meta, blobs)
+    # Cloud and free-air wind (about a third of the package) go in a file of
+    # their own, which the app fetches only once something shows them. The
+    # coarse first-start copy below still carries them (small at 1/4).
+    main = {k: v for k, v in blobs.items() if k not in LAZY_BLOBS}
+    write_bin_blob(ddir / binname, meta, main)
     pointer["bin"] = binname
+    lazy = {k: blobs[k] for k in LAZY_BLOBS if k in blobs}
+    if lazy:
+        xname = "snowdata-%s.x.bin.gz" % stamp
+        write_bin_blob(ddir / xname, {"T": meta["T"], "width": meta["width"], "height": meta["height"]}, lazy)
+        pointer["x"] = xname
     # ... and a coarse copy, shown first while the full one loads behind it
     try:
         loname = "snowdata-%s.lo.bin.gz" % stamp
@@ -1505,7 +1516,9 @@ _BOOT_SPLIT = r"""<script>
           try{var Dl=await loadBin(pre+'data/'+lj.lo);window.__fullPending={url:pre+'data/'+lj.bin,name:lj.bin};return Dl;}
           catch(e){try{if(window.Sentry)window.Sentry.captureException(e);}catch(_){}}
         }
-        try{var Df=await loadBin(pre+'data/'+lj.bin);try{localStorage.setItem('ssm_full',lj.bin);}catch(e){}return Df;}
+        try{var Df=await loadBin(pre+'data/'+lj.bin);try{localStorage.setItem('ssm_full',lj.bin);}catch(e){}
+          // cloud and free-air wind, fetched by the app when first shown
+          if(lj.x)window.__dataX=pre+'data/'+lj.x;return Df;}
         catch(e){try{if(window.Sentry)window.Sentry.captureException(e);}catch(_){}}
       }
       var useGz=!!(lj.gz&&window.DecompressionStream);
@@ -7708,7 +7721,7 @@ function _pngUrl(k){const b=db(k);if(b instanceof Uint8Array){try{return URL.cre
 const SNOW=dec(db('SNOW')),TEMP=dec(db('TEMP')),SUN=dec(db('SUN')),SPD=dec(db('SPD')),WDIR=dec(db('DIR'));
 const ABL=dec(db('ABL'));
 const WINDG=dec(db('WINDG')),RSLOPE=dec(db('RSLOPE')),RASPECT=dec(db('RASPECT')),RHOR=dec(db('RHOR'));
-const CLOUD=dec(db('CLOUD')),CLV=dec(db('CLV'));
+let CLOUD=dec(db('CLOUD')),CLV=dec(db('CLV'));   // let: may arrive later (extraLoad)
 const PREC=dec(db('PREC')),MASPECT=dec(db('MASPECT')),MSLOPE=dec(db('MSLOPE')),MELEV=dec(db('MELEV')),ROUGHG=dec(db('ROUGHGRID'));
 const ASPECT_PNG=_pngUrl('ASPECTPNG'),ROUGH_PNG=_pngUrl('ROUGHPNG'),ELEV_PNG=_pngUrl('ELEVPNG');
 const T=M.T,W=M.width,H=M.height,NP=W*H,P=M.wind.lat.length,NX=M.wind.nx;
@@ -7716,9 +7729,36 @@ const RW=M.rad.width,RH=M.rad.height,RK=M.rad.K,RNP=RW*RH;
 const [RbS,RlW,RbN,RlE]=M.rad.bounds;
 // Wind height: 10 m above ground, or free air at 850 hPa (~1500 m) and
 // 700 hPa (~3000 m) when the build fetched them.
-const W850=dec(db('W850')),W700=dec(db('W700'));
+let W850=dec(db('W850')),W700=dec(db('W700'));
 const WIND_LVLS=[['10m','10 m',WINDG]].concat(W850.length>=T*NP?[['850','1500 m',W850]]:[]).concat(W700.length>=T*NP?[['700','3000 m',W700]]:[]);
 let windLvl=0;try{windLvl=Math.min(WIND_LVLS.length-1,+(localStorage.getItem('ssm_wlvl')||0)||0);}catch(e){}
+// the saved height once the free-air wind has arrived (extraLoad)
+function windLvlRestore(){try{const w=+(localStorage.getItem('ssm_wlvl')||0)||0;if(w>windLvl&&w<WIND_LVLS.length)windLvl=w;}catch(e){}}
+// ── Cloud and free-air wind, fetched on first use ──────────────────────
+// The full package leaves them out (latest.json "x", about a third of its
+// size): fetched the first time the cloud layer, the wind layer or the
+// weather run of a point card wants them, then everything is drawn again.
+let _xP=null;
+function extraNeeded(){return !!window.__dataX&&!_xP&&(CLOUD.length<T*NP||CLV.length<T*NP||W850.length<T*NP);}
+function extraLoad(){
+  if(_xP)return _xP;if(!extraNeeded())return Promise.resolve(false);
+  _xP=(async()=>{try{
+    const r=await fetch(window.__dataX,{cache:'force-cache'});if(!r.ok)throw new Error('HTTP '+r.status);
+    const buf=await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer(),u8=new Uint8Array(buf);
+    if(u8[0]!==83||u8[1]!==77||u8[2]!==66||u8[3]!==49)throw new Error('not SMB1');
+    const n=new DataView(buf).getUint32(4,true),head=JSON.parse(new TextDecoder().decode(u8.subarray(8,8+n)));
+    const base=8+n+((8-(8+n)%8)%8),ix=head.blobs||{},hm=head.meta||{};
+    if(hm.width&&(hm.width!==W||hm.height!==H||hm.T!==T))throw new Error('other grid');
+    const v=k=>ix[k]?new Uint8Array(buf,base+ix[k][0],ix[k][1]):null;
+    const c=v('CLOUD'),l=v('CLV'),w8=v('W850'),w7=v('W700');
+    if(c&&c.length>=T*NP){CLOUD=c;_cloudData=!!M.cloud_mul;}
+    if(l&&l.length>=T*NP){CLV=l;_clvData=!!M.cloud_lv;}
+    if(w8&&w8.length>=T*NP&&!WIND_LVLS.some(x=>x[0]==='850')){W850=w8;WIND_LVLS.push(['850','1500 m',W850]);}
+    if(w7&&w7.length>=T*NP&&!WIND_LVLS.some(x=>x[0]==='700')){W700=w7;WIND_LVLS.push(['700','3000 m',W700]);}
+    windLvlRestore();
+    try{renderAll();}catch(e){}try{lyRender();}catch(e){}try{inspAutoRefresh();}catch(e){}
+    return true;}catch(e){console.warn('cloud/wind data',e);return false;}})();
+  return _xP;}
 function windLvlSet(i){windLvl=Math.max(0,Math.min(WIND_LVLS.length-1,i));try{localStorage.setItem('ssm_wlvl',String(windLvl));}catch(e){}
   try{haptic(3);}catch(e){}try{renderAll();}catch(e){}try{lyRender();}catch(e){}}
 const wg_=(t,p)=>WIND_LVLS[windLvl][2][t*NP+p]/M.spd_mul;
@@ -7740,7 +7780,7 @@ if(!_cumW)for(let t=0;t<T;t++){const o0=t*NP,o1=(t+1)*NP,s=t*NP,sc=M.snow_scale;
   else {for(let p=0;p<NP;p++)cum[o1+p]=cum[o0+p]+SNOW[s+p]*sc;}}
 const tv=(t,p)=>TEMP[t*NP+p]/M.temp_mul-M.temp_off, sunv=(t,p)=>SUN[t*NP+p]/M.sun_mul;
 // Cloud cover [%]; older blobs have no CLOUD field and the layer stays out.
-const _cloudData=!!M.cloud_mul&&CLOUD.length>=T*NP;
+let _cloudData=!!M.cloud_mul&&CLOUD.length>=T*NP;
 // A blob without the field still has hourly sunshine: by day, the share of
 // the hour without sun is a fair stand-in for cloud; nights are left out.
 const _hasCloud=_cloudData||SUN.length>=T*NP;
@@ -7755,7 +7795,7 @@ function cloudCol(x){x=Math.max(0,Math.min(1,x));
     if(x<=p1){const f=(x-p0)/(p1-p0);return c0.map((v,j)=>Math.round(v+(c1[j]-v)*f));}}
   return CLOUD_STOPS[CLOUD_STOPS.length-1][1].slice();}
 // Cloud by height (blob field CLV): low = stratus/fog, mid, high = cirrus.
-const _clvData=!!M.cloud_lv&&CLV.length>=T*NP;
+let _clvData=!!M.cloud_lv&&CLV.length>=T*NP;
 function cloudLv(t,p){const v=CLV[t*NP+p],N=M.cloud_lv,b=N[1]*N[2];
   return [Math.floor(v/b)/(N[0]-1),Math.floor((v%b)/N[2])/(N[1]-1),(v%N[2])/(N[2]-1)];}
 // Like a meteogram: a thin, light cirrus veil, mid cloud grey-blue, low
@@ -14186,6 +14226,7 @@ function setTopic(t,itemIdx,varIdx){
   // rendering it first left it a step behind on every change
   // the layer before the strip: the strip shows the chosen layer's legend
   const sel=vars[curVar];layer=sel.l;stat=sel.s;
+  if((layer==='cloud'||layer==='wind')&&extraNeeded())extraLoad();
   renderLayerStrip();
   renderAll();progRenderBar();legend();
   // SNOWPACK picks its view (vaKey) inside renderAll: draw its classes again
@@ -15342,6 +15383,7 @@ function avChipHTML(av,extra){
     +'<i>'+av.lvl+'</i><span class="av-t"><span>Lawinengefahr</span> <span>'+(AV_LABELS[av.lvl]||'')+'</span> · <small>'
     +escapeHtml(extra!=null?extra:av.core?'Kernzone':'ausserhalb Kernzone')+'</small></span><b>›</b></a>';}
 function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-open');
+  if(extraNeeded())extraLoad();
   const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
   if(cx2<0||cx2>=W||cy2<0||cy2>=H)return;
   const p=cy2*W+cx2,elev=melevv(p),wk=mainToWind[p];
