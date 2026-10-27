@@ -5863,7 +5863,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #mlFold{display:flex;align-items:center;justify-content:center;width:100%;height:20px;margin:5px 0 -5px;padding:0;border:0;
    border-top:1px solid var(--bd);background:none;color:var(--fg2);cursor:pointer;-webkit-tap-highlight-color:transparent}
  #mlFold svg{width:15px;height:15px;transition:transform .2s}
- #miniLegend.fold #mlUnit,#miniLegend.fold #mlScale,#miniLegend.fold .ml-reset,#miniLegend.fold #mlName span{display:none!important}
+ /* folded: the icon AND the layer's name stay -- the card still says what is on */
+ #miniLegend.fold #mlUnit,#miniLegend.fold #mlScale,#miniLegend.fold .ml-reset{display:none!important}
  #miniLegend.fold #mlName{border-bottom:0;margin-bottom:0;padding-bottom:0}
  #miniLegend.fold #mlFold{border-top:0;margin-top:2px}
  #miniLegend.fold #mlFold svg{transform:rotate(180deg)}
@@ -6863,7 +6864,7 @@ const I18N_DICT={
 "Min":["Min","Min","Min"],
 "Minimieren":["Minimise","Réduire","Riduci"],
 "Mittel":["Mean","Moyenne","Media"],
-"Modellierte Schneedecke am Boden, nicht nur der frische Anteil. Farbe ist immer Tiefe — dieselbe Skala wie auf den Zeichnungen der Community.":["Modelled snowpack on the ground, not just the fresh part. Colour is always depth — the same scale as on the community drawings.","Manteau neigeux modélisé au sol, pas seulement la neige fraîche. La couleur est toujours la hauteur — même échelle que sur les dessins de la communauté.","Manto nevoso modellato al suolo, non solo la neve fresca. Il colore è sempre l'altezza — la stessa scala dei disegni della community."],
+"Modellierte Schneedecke am Boden zum gewählten Zeitpunkt, nicht nur der frische Anteil. Farbe ist immer Tiefe — dieselbe Skala wie auf den Zeichnungen der Community.":["Modelled snowpack on the ground at the chosen time, not just the fresh part. Colour is always depth — the same scale as on the community drawings.","Manteau neigeux modélisé au sol à l'heure choisie, pas seulement la neige fraîche. La couleur est toujours la hauteur — même échelle que sur les dessins de la communauté.","Manto nevoso modellato al suolo all'ora scelta, non solo la neve fresca. Il colore è sempre l'altezza — la stessa scala dei disegni della community."],
 "Modellschätzung aus Neuschneemenge, Wind und Temperatur — wo lockerer, ungepresster Schnee zu erwarten ist. Keine Messung und kein Lawinenbulletin.":["Model estimate from new snow, wind and temperature — where loose, unpacked snow can be expected. Not a measurement and not an avalanche bulletin.","Estimation du modèle à partir de neige fraîche, vent et température — où l'on peut attendre de la neige meuble, non tassée. Ni mesure, ni bulletin d'avalanches.","Stima del modello da neve fresca, vento e temperatura — dove ci si può aspettare neve soffice e non pressata. Né misura né bollettino valanghe."],
 "Nachricht":["Message","Message","Messaggio"],
 "Nachrichten":["Messages","Messages","Messaggi"],
@@ -7835,7 +7836,8 @@ function tlSingleMode(){
   // SNOWPACK is a state at an instant, not an accumulation, so while its
   // layer is up the main slider has to stop offering a from-to window: two
   // handles would claim the layer integrates between them, and it does not.
-  if(layer==='snowpack'||layer==='cloud')return true;
+  // Schneehöhe too: the depth at one time, not anything between two
+  if(layer==='snowpack'||layer==='cloud'||layer==='depth')return true;
   if(ovOn.variantA&&typeof vaAvailable==='function'&&vaAvailable())return true;
   return layer==='powder';
 }
@@ -13547,8 +13549,8 @@ function legInfoToggle(e){if(e)e.stopPropagation();
   if(document.body.classList.contains('leg-open')){legInfoClose();return;}
   legInfoRender();document.body.classList.add('leg-open');try{haptic(3);}catch(e2){}}
 function legInfoClose(){document.body.classList.remove('leg-open');}
-// The side legend folds down to the layer's icon (the chevron under it), and
-// stays so until opened again.
+// The side legend folds down to the layer's icon and name (the chevron under
+// it), and stays so until opened again.
 function legFold(e,v){if(e)e.stopPropagation();const ml=document.getElementById('miniLegend');if(!ml)return;
   const f=v==null?!ml.classList.contains('fold'):!!v;ml.classList.toggle('fold',f);
   const b=document.getElementById('mlFold');if(b)b.setAttribute('aria-label',f?'Legende aufklappen':'Legende einklappen');
@@ -13858,7 +13860,7 @@ const LY_TEXT={
     d:'Summe des Neuschnees über den unten gewählten Zeitraum, in der SLF-Skala eingefärbt. Verschiebe das Fenster, und die Karte rechnet neu.',
     u:'cm'},
   depth:{t:'Gesamte Schneehöhe',
-    d:'Modellierte Schneedecke am Boden, nicht nur der frische Anteil. Farbe ist immer Tiefe — dieselbe Skala wie auf den Zeichnungen der Community.',
+    d:'Modellierte Schneedecke am Boden zum gewählten Zeitpunkt, nicht nur der frische Anteil. Farbe ist immer Tiefe — dieselbe Skala wie auf den Zeichnungen der Community.',
     u:'cm'},
   wind:{t:'Wind auf 10 m',
     d:'Windgeschwindigkeit im gewählten Fenster. Wind verfrachtet Schnee: viel Wind heisst gepresste Hänge auf der einen und Triebschnee auf der anderen Seite. 10 m = Wind über dem Boden mit Geländeeinfluss; 1500 m und 3000 m = Wind in der freien Atmosphäre (850 / 700 hPa) – auf Gratniveau massgebend für Verfrachtung.',
