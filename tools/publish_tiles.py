@@ -40,7 +40,10 @@ def _aws_config():
 
 
 def _aws(args, env):
-    cmd = ["aws", "s3"] + args + ["--endpoint-url", env["S3_ENDPOINT"], "--only-show-errors"]
+    # --only-show-errors exists for the transfer commands only; `aws s3 ls`
+    # refuses it, which silently skipped the cleanup of old runs
+    quiet = ["--only-show-errors"] if args[0] in ("sync", "cp", "rm", "mv") else []
+    cmd = ["aws", "s3"] + args + ["--endpoint-url", env["S3_ENDPOINT"]] + quiet
     return subprocess.run(cmd, env={**os.environ, "AWS_CONFIG_FILE": _aws_config(), **env["AWS"]},
                           check=True, capture_output=True, text=True)
 
