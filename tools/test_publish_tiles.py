@@ -18,7 +18,13 @@ FAKE_AWS = r'''#!/usr/bin/env python3
 import os, shutil, sys
 from pathlib import Path
 B = Path(os.environ["FAKE_S3"])
-a = [x for x in sys.argv[1:] if x not in ("--only-show-errors",)]
+a = sys.argv[1:]
+# like the real CLI: ls has no --only-show-errors (sync/cp/rm/mv do)
+if "--only-show-errors" in a:
+    if a[1] not in ("sync", "cp", "rm", "mv"):
+        sys.stderr.write("aws: [ERROR]: An error occurred (ParamValidation): Unknown options: --only-show-errors\n")
+        sys.exit(252)
+    a.remove("--only-show-errors")
 if "--endpoint-url" in a:
     i = a.index("--endpoint-url"); del a[i:i + 2]
 assert a[0] == "s3"
