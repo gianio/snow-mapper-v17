@@ -5963,6 +5963,85 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  :root[data-theme="dark"]{--frost-sheet:linear-gradient(180deg,#1C222C,#141A22)}
  .tour-sheet,.ts-sheet,.trk-sheet,.ly-panel,.set-in,.dm-sheet,.prof-sheet{background:var(--frost-sheet)!important}
  @media (max-width:560px){.set-in,.cmt-sheet,.cond-sheet,.report-sheet,.sh-sheet{max-height:88vh;max-height:88dvh}}
+ /* favourites: the star (popup, tour sheet) and the list in the settings */
+ .fav-btn{flex:0 0 auto;width:30px;height:30px;border:0;border-radius:9px;background:var(--fill);color:var(--mut);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+ .fav-btn svg{width:17px;height:17px;fill:none}
+ .fav-btn.on{color:#E8A317}
+ .fav-btn.on svg{fill:currentColor}
+ .insp-head .fav-btn{margin-right:6px;width:28px;height:28px}
+ .tour-hd .tour-fav{margin-left:auto;margin-right:4px;align-self:center}
+ .fav-list{gap:6px}
+ .fav-row{display:flex;align-items:center;gap:6px;min-height:var(--tap);padding:4px 6px 4px 12px;border-radius:var(--r-md);border:1px solid var(--hair);background:var(--card)}
+ .set-rows .fav-row button{min-height:0;border:0;padding:0;background:none}
+ .fav-row .fav-go{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:1px;cursor:pointer;text-align:left}
+ .fav-row .fav-go b{font-size:13.5px;font-weight:750;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+ .fav-row .fav-go small{font-size:11.5px;font-weight:600;color:var(--mut)}
+ .fav-th{flex:0 0 auto;font:700 12px var(--font);color:var(--fg2);background:var(--fill);border:0;border-radius:8px;padding:6px 6px;max-width:96px}
+ .set-rows .fav-row .fav-bell,.set-rows .fav-row .fav-del{width:32px;height:32px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;color:var(--mut);font-size:18px;cursor:pointer}
+ .set-rows .fav-row .fav-bell svg{width:17px;height:17px;color:inherit}
+ .set-rows .fav-row .fav-bell.on{color:var(--accent);background:var(--accent-soft,rgba(42,143,216,.13))}
+ .set-rows .fav-push{justify-content:center;border-color:var(--accent)!important;color:var(--accent)!important}
+ .set-rows .fav-push svg{color:var(--accent)!important}
+ .fav-empty,.fav-note{font-size:12.5px;line-height:1.4;color:var(--mut);font-weight:600;padding:2px 2px}
+ /* one tap: "Pulver hier" first in the report menu, and the bar after it */
+ .rs-it.rs-one b{color:var(--accent)}
+ .ot-bar{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-h,64px) + 12px + env(safe-area-inset-bottom,0px));z-index:3200;max-width:440px;margin:0 auto;
+   background:var(--frost-sheet,var(--card));border-radius:16px;box-shadow:var(--ice-edge),0 12px 30px rgba(10,30,60,.22);padding:10px 12px;
+   transform:translateY(16px);opacity:0;transition:transform .24s var(--ease),opacity .2s}
+ .ot-bar.open{transform:none;opacity:1}
+ .ot-hd{display:flex;align-items:center;gap:10px}
+ .ot-hd>i{width:32px;height:32px;border-radius:10px;flex:none;display:grid;place-items:center;color:#fff;background:linear-gradient(150deg,#8FD9FF,#2F8FDB)}
+ .ot-hd>i svg{width:18px;height:18px}
+ .ot-hd>span{flex:1;min-width:0;display:flex;flex-direction:column}
+ .ot-hd b{font:800 14px/1.2 var(--font);color:var(--fg)}
+ .ot-hd small{font:600 12px/1.3 var(--font);color:var(--mut)}
+ .ot-undo{border:0;background:none;color:var(--accent);font:750 13px var(--font);cursor:pointer;padding:6px}
+ .ot-x{border:0;background:var(--fill);color:var(--fg2);width:28px;height:28px;border-radius:9px;font-size:16px;cursor:pointer}
+ .ot-q{display:flex;align-items:center;gap:6px;margin-top:9px}
+ .ot-q>span{font:700 12px var(--font);color:var(--mut);margin-right:2px}
+ .ot-q button{border:1px solid var(--hair);background:var(--card);color:var(--fg);border-radius:999px;padding:6px 0;min-width:44px;font:700 12.5px var(--font);cursor:pointer}
+ .ot-q button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+ .ot-ph{margin-left:auto;width:34px;height:34px;border-radius:10px;background:var(--fill);color:var(--fg2);display:grid;place-items:center;cursor:pointer}
+ .ot-ph svg{width:18px;height:18px}
+ /* the best powder nearby: a pill at the top, three tours on a tap */
+ .nb{position:fixed;z-index:1100;top:calc(env(safe-area-inset-top,0px) + 14px);left:50%;transform:translateX(-50%);
+   display:flex;flex-direction:column;align-items:center;max-width:calc(100vw - 196px)}
+ .nb-pill{display:inline-flex;align-items:center;gap:6px;max-width:100%;height:34px;padding:0 12px;border:0;border-radius:999px;cursor:pointer;
+   background:var(--frost-sheet,var(--card));box-shadow:var(--ice-edge),0 6px 16px rgba(20,50,90,.16);color:var(--fg);font:750 12.5px var(--font)}
+ .nb-pill svg{width:15px;height:15px;color:var(--accent);flex:none}
+ .nb-pill span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .nb-card{display:none}
+ .nb.open{max-width:none}
+ .nb.open .nb-card{display:block;margin-top:8px;width:min(360px,calc(100vw - 24px));padding:12px 12px 6px;border-radius:16px;
+   background:var(--frost-sheet,var(--card));box-shadow:var(--ice-edge),0 14px 34px rgba(20,50,90,.22)}
+ .nb-hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+ .nb-hd b{font:800 14.5px/1.2 var(--font);color:var(--fg)}
+ .nb-hd button{border:0;background:var(--fill);color:var(--fg2);width:28px;height:28px;border-radius:9px;font-size:16px;cursor:pointer}
+ .nb-sub{display:block;font:600 11.5px/1.3 var(--font);color:var(--mut);margin:2px 0 6px}
+ .nb-row{display:flex;align-items:center;gap:10px;width:100%;padding:8px 0;border:0;border-top:1px solid var(--hair);background:none;text-align:left;cursor:pointer;color:var(--fg)}
+ .nb-row .tn-sc{flex:none}
+ .nb-t{min-width:0;display:flex;flex-direction:column;gap:1px}
+ .nb-t b{font:800 13.5px/1.2 var(--font);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .nb-t em{font:700 12px/1.25 var(--font);font-style:normal;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .nb-t span{font:600 11.5px/1.2 var(--font);color:var(--mut)}
+ body.nav-screen .nb,body.insp-open .nb,body.ly-open .nb,body.trk-open .nb,body.draw-on .nb,body.tour-open .nb,body.ts-open .nb,body.rep-open .nb{display:none}
+ /* model against reports, on the community page */
+ .mvr{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin:8px 2px 0;padding:8px 10px;border-radius:12px;background:var(--fill);font:600 12px/1.35 var(--font);color:var(--fg2)}
+ .mvr b{font-weight:800;color:var(--fg)}
+ /* right after a recording: how was the snow? */
+ .tsq{margin:0 0 12px;padding:12px;border-radius:16px;background:var(--fill)}
+ .tsq>b{display:block;font:800 15px/1.2 var(--font);color:var(--fg);margin-bottom:10px}
+ .tsq.done>b{font-size:13px;color:var(--fg2);margin-bottom:8px}
+ .tsq-b{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+ .tsq-b button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border:1.5px solid var(--hair);border-radius:14px;background:var(--card);
+   color:var(--fg);font:750 13.5px var(--font);cursor:pointer}
+ .tsq-b button svg{width:26px;height:26px}
+ .tsq-b .tsq-pulver svg{color:#2F8FDB}.tsq-b .tsq-gemischt svg{color:#C08A2E}.tsq-b .tsq-schlecht svg{color:#B4552A}
+ .tsq-b button.on{border-color:var(--accent);background:var(--accent-soft,rgba(42,143,216,.13))}
+ .tsq-d{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap}
+ .tsq-d span{font:700 12px var(--font);color:var(--mut)}
+ .tsq-d button{border:1px solid var(--hair);background:var(--card);color:var(--fg);border-radius:999px;padding:6px 0;min-width:48px;font:700 12.5px var(--font);cursor:pointer}
+ .tsq-d button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -5989,7 +6068,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <div id="wcv" class="wcv" hidden role="dialog" aria-label="Webcams"><div class="wcv-top"><button class="wcv-x" onclick="wcvClose()" aria-label="Schliessen">×</button><b>Webcams</b>
 <div class="wcv-seg" role="tablist"><button data-m="fav" onclick="wcvMode('fav')">Favoriten</button><button data-m="tv" onclick="wcvMode('tv')">Webcam-TV</button><button data-m="near" onclick="wcvMode('near')">In der Nähe</button></div></div>
 <div class="wcv-body" id="wcvBody"></div></div>
-<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:linear-gradient(150deg,#6FB4F0,#3F8AD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg></i><span><b>Powder melden</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:linear-gradient(150deg,#4A86C8,#2D5A8C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button></div></div>
+<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it rs-one" onclick="repSheetToggle(false);oneTapPowder()"><i style="--rc:linear-gradient(150deg,#8FD9FF,#2F8FDB)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg></i><span><b>Pulver hier</b><small>Ein Tipp · Standort, Höhe, Exposition automatisch</small></span></button><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:linear-gradient(150deg,#6FB4F0,#3F8AD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg></i><span><b>Powder melden</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:linear-gradient(150deg,#4A86C8,#2D5A8C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button></div></div>
 <nav id="tabBar" aria-label="Navigation">
   <button data-tab="map" onclick="navGo('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg><span>Karte</span></button>
   <button data-tab="tours" id="tourFab" onclick="navGo('tours')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/></svg><span>Touren</span></button>
@@ -6133,6 +6212,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
       <button data-v="fr" onclick="langSet('fr')">Français</button>
       <button data-v="it" onclick="langSet('it')">Italiano</button>
     </div>
+    <span class="lbl-micro">Favoriten · Neuschnee-Push</span>
+    <div class="set-rows fav-list" id="setFavs"></div>
     <span class="lbl-micro">Melden</span>
     <div class="set-rows">
       <button onclick="_setCameFromProfile=false;setClose();rpOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg>Meine Meldungen &amp; melden</button>
@@ -7473,7 +7554,50 @@ const I18N_DICT={
 "Messstationen (SLF) · gemessen":["Weather stations (SLF) · measured", "Stations de mesure (SLF) · mesuré", "Stazioni di misura (SLF) · misurato"],
 "Böen ≈#":["Gusts ≈#", "Rafales ≈#", "Raffiche ≈#"],
 "Oberfl. #°":["Surf. #°", "Surf. #°", "Sup. #°"],
-"Oberfl. -#°":["Surf. -#°", "Surf. -#°", "Sup. -#°"]
+"Oberfl. -#°":["Surf. -#°", "Surf. -#°", "Sup. -#°"],
+"Pulver hier":["Powder here", "Poudreuse ici", "Polvere qui"],
+"Ein Tipp · Standort, Höhe, Exposition automatisch":["One tap · position, elevation, aspect automatic", "Un tap · position, altitude, exposition automatiques", "Un tocco · posizione, quota, esposizione automatiche"],
+"Favoriten · Neuschnee-Push":["Favourites · new snow push", "Favoris · push neige fraîche", "Preferiti · push neve fresca"],
+"Zum Merken anmelden":["Sign in to save", "Connecte-toi pour enregistrer", "Accedi per salvare"],
+"Gemerkt – Push, sobald 20 cm Neuschnee erwartet werden":["Saved – push once 20 cm of new snow is expected", "Enregistré – push dès que 20 cm de neige fraîche sont attendus", "Salvato – push quando sono attesi 20 cm di neve fresca"],
+"Gemerkt. Für den Neuschnee-Push: Einstellungen → Favoriten → Push einschalten":["Saved. For the new-snow push: Settings → Favourites → turn on push", "Enregistré. Pour le push neige fraîche : Réglages → Favoris → activer le push", "Salvato. Per il push neve fresca: Impostazioni → Preferiti → attiva push"],
+"Push eingeschaltet":["Push turned on", "Push activé", "Push attivato"],
+"Melde dich an, um Gebiete und Touren zu merken. Dann kommt ein Push, sobald dort Neuschnee erwartet wird.":["Sign in to save areas and tours. You then get a push as soon as new snow is expected there.", "Connecte-toi pour enregistrer des zones et des courses. Tu reçois un push dès que de la neige fraîche y est attendue.", "Accedi per salvare zone e gite. Riceverai un push appena vi è attesa neve fresca."],
+"Ort":["Place", "Lieu", "Luogo"],
+"ab # cm":["from # cm", "dès # cm", "da # cm"],
+"Noch keine Favoriten. Tippe im Punkt-Popup oder bei einer Tour auf den Stern.":["No favourites yet. Tap the star in the point card or on a tour.", "Pas encore de favoris. Touche l'étoile dans la fiche d'un point ou d'une course.", "Nessun preferito. Tocca la stella nella scheda di un punto o di una gita."],
+"Push für Neuschnee einschalten":["Turn on new-snow push", "Activer le push neige fraîche", "Attiva push neve fresca"],
+"Push, wenn in den nächsten 48 h so viel Neuschnee erwartet wird (Modell) – höchstens einmal in 36 h je Favorit.":["A push when this much new snow is expected in the next 48 h (model) – at most once in 36 h per favourite.", "Un push quand autant de neige fraîche est attendue dans les 48 h (modèle) – au plus une fois en 36 h par favori.", "Un push quando nelle prossime 48 h è attesa tanta neve fresca (modello) – al massimo una volta ogni 36 h per preferito."],
+"Gemerkt – nochmals tippen zum Entfernen":["Saved – tap again to remove", "Enregistré – touche encore pour retirer", "Salvato – tocca ancora per rimuovere"],
+"Merken – Push bei Neuschnee":["Save – push on new snow", "Enregistrer – push en cas de neige fraîche", "Salva – push con neve fresca"],
+"Push für diesen Favoriten":["Push for this favourite", "Push pour ce favori", "Push per questo preferito"],
+"Entfernen":["Remove", "Retirer", "Rimuovi"],
+"Push ab":["Push from", "Push dès", "Push da"],
+"Standort wird bestimmt…":["Finding your position…", "Recherche de la position…", "Rilevamento posizione…"],
+"Kein GPS-Signal – nicht gemeldet":["No GPS signal – not reported", "Pas de signal GPS – non signalé", "Nessun segnale GPS – non segnalato"],
+"Pulver gemeldet":["Powder reported", "Poudreuse signalée", "Polvere segnalata"],
+"Wie tief?":["How deep?", "Quelle profondeur ?", "Quanto profonda?"],
+"~# cm":["~# cm", "~# cm", "~# cm"],
+"Foto ergänzt":["Photo added", "Photo ajoutée", "Foto aggiunta"],
+"Foto wird hochgeladen…":["Uploading photo…", "Envoi de la photo…", "Caricamento foto…"],
+"Meldung zurückgenommen":["Report withdrawn", "Signalement retiré", "Segnalazione ritirata"],
+"Bestes Pulver in deiner Nähe":["Best powder near you", "Meilleure poudreuse près de toi", "La migliore polvere vicino a te"],
+"Ausblenden":["Hide", "Masquer", "Nascondi"],
+"Umkreis # km um dich":["Within # km of you", "Dans un rayon de # km autour de toi", "Entro # km da te"],
+"Umkreis # km um die Kartenmitte":["Within # km of the map centre", "Dans un rayon de # km autour du centre", "Entro # km dal centro mappa"],
+"Modell vs. Meldungen":["Model vs. reports", "Modèle vs signalements", "Modello vs segnalazioni"],
+"# Tage":["# days", "# jours", "# giorni"],
+"Ø # cm daneben":["off by # cm on average", "écart moyen # cm", "scarto medio # cm"],
+"# Meldungen":["# reports", "# signalements", "# segnalazioni"],
+"liegt im Mittel richtig":["right on average", "juste en moyenne", "corretto in media"],
+"eher zu wenig Schnee":["rather too little snow", "plutôt trop peu de neige", "piuttosto troppo poca neve"],
+"eher zu viel Schnee":["rather too much snow", "plutôt trop de neige", "piuttosto troppa neve"],
+"Gemeldete Pulvertiefe gegen den Modell-Neuschnee der 72 h davor, am selben Ort und auf derselben Höhe":["Reported powder depth against the model's new snow of the 72 h before, at the same place and height", "Profondeur de poudreuse signalée comparée à la neige fraîche du modèle des 72 h précédentes, au même endroit et à la même altitude", "Profondità di polvere segnalata rispetto alla neve fresca del modello nelle 72 h precedenti, nello stesso luogo e alla stessa quota"],
+"Wie war der Schnee?":["How was the snow?", "Comment était la neige ?", "Com'era la neve?"],
+"Gemischt":["Mixed", "Mitigée", "Mista"],
+"Schlecht":["Bad", "Mauvaise", "Cattiva"],
+"GPS zu ungenau (# m) – nicht gemeldet":["GPS too imprecise (# m) – not reported", "GPS trop imprécis (# m) – non signalé", "GPS troppo impreciso (# m) – non segnalato"],
+"Wie tief? (cm)":["How deep? (cm)", "Quelle profondeur ? (cm)", "Quanto profonda? (cm)"]
 };
 
 // ── Sprachen ──────────────────────────────────────────────────────────────
@@ -10328,6 +10452,7 @@ function tourVaScoreAll(done){
 // again for the frame it is on.
 let tourRecolorT=0;
 function tourRecolor(){
+  try{nearBestSoon(3000);}catch(e){}
   if(!tourList().length||!ovOn.skitourVec)return;
   clearTimeout(tourRecolorT);
   tourRecolorT=setTimeout(async()=>{
@@ -10587,6 +10712,7 @@ function tourSheetRender(t,r){
     +'<div class="tour-hd" data-drag>'+(tourFromSearch?'<button type="button" class="tour-backi" onclick="tourBackToSearch()" aria-label="Zurück zur Liste">‹</button>':'')
     +'<span class="tour-score" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r):'–')+'<small>%</small></span>'
     +'<div class="tour-tt"><b>'+escapeHtml(t.name||'Skitour')+'</b><span>'+escapeHtml(facts)+'</span></div>'
+    +favBtnHTML('tour',t.id,t.pname||t.name||'Skitour',g.hi.lat!=null?g.hi.lat:t.coords[0][1],g.hi.lon!=null?g.hi.lon:t.coords[0][0],g.hi.el,'tour-fav')
     +'<button type="button" class="tour-x" onclick="tourClose()" aria-label="Schliessen">×</button></div>'
     +(function(){const v=tourVerdict(t,r);return v?'<div class="tour-verdict">'+escapeHtml(v)+'</div>':'';})()
     // SLF's level for the route's region(s), the highest one it touches
@@ -11312,8 +11438,10 @@ async function trkPost(a){
     if(roughA&&roughA.some(v=>v!=null))cd.activity.rough=roughA.map(v=>v==null?null:Math.round(v*10)/10);
     if(a.snow){cd.details={snow:a.snow};cd.measurement=a.snow+(a.snow==='Pulver'&&a.depth?' '+a.depth+' cm':'');
       // the report point also feeds the Reported Powder model, like a quick report
+      // "Gemischt" / "Schlecht" (the question after a recording) say nothing
+      // about which kind of snow: they stay out of the model
       const Q={Pulver:85,Windgepresst:15,Bruchharsch:30,Sulz:55,Nass:45,Hart:10}[a.snow];
-      cd.quick=true;cd.powderAmountCm=a.snow==='Pulver'?(a.depth||0):0;cd.powderQuality=a.stars&&a.snow==='Pulver'?Math.max(Q-20,a.stars*20):Q;
+      if(Q!=null){cd.quick=true;cd.powderAmountCm=a.snow==='Pulver'?(a.depth||0):0;cd.powderQuality=a.stars&&a.snow==='Pulver'?Math.max(Q-20,a.stars*20):Q;}
       if(rp[2]!=null)cd.altitudeM=Math.round(rp[2]);}
     const sp=trkSnowCD(a,flat0,cd);
     if(a.stars)cd.stars=a.stars;
@@ -11542,7 +11670,7 @@ async function trkRender(){
     const priv=d.vis==='private';
     if(d.snowPts&&d.snowPts.length)d.rep=d.snowPts[0].i;
     el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="'+(d._edit?'trkEditCancel()':'trkBackToRec()')+'" aria-label="Zurück">'+TRK_DOWN+'</button><b>'+(d._edit?'Aktivität bearbeiten':'Aktivität speichern')+'</b><button class="trk-gpx" onclick="trkExportDraft()">'+TRK_GPX+'<span>GPX</span></button></div>'
-      +'<div class="trk-scroll"><div class="trk-map" id="trkMapBox">'+(d._mapUrl?'<img src="'+d._mapUrl+'" alt="">':'')+trkThumb(ll,680,340,'',d.rep,true)+'</div>'
+      +'<div class="trk-scroll">'+(d._edit?'':trkSnowQHTML(d))+'<div class="trk-map" id="trkMapBox">'+(d._mapUrl?'<img src="'+d._mapUrl+'" alt="">':'')+trkThumb(ll,680,340,'',d.rep,true)+'</div>'
       +'<div class="trk-sum"><div><b>'+trkFmtD(s.dist)+'</b><small>Distanz</small></div><div><b>'+s.up+' m</b><small>Aufstieg</small></div><div><b>'+trkFmtT(s.moving)+'</b><small>Bewegungszeit</small></div></div>'
       +(d._edit?'':(trkRoughHTML(ll,trkRoughAlong(trkFlat(d.segs),d.rough))?trkRoughHTML(ll,trkRoughAlong(trkFlat(d.segs),d.rough))+trkRoughTimeHTML(d.rough):trkRoughNone()))
       +'<label class="trk-f"><span>Titel</span><input id="trkName" maxlength="80" value="'+escapeHtml(d.name)+'"></label>'
@@ -11694,6 +11822,19 @@ function trkPref(k,v){trkPrefs[k]=v;try{localStorage.setItem('ssm_trk_prefs',JSO
 function trkKeepFields(){const d=trkDraft;if(!d)return;if(document.getElementById('trkTourPick'))d.tour=rptTourSel?{id:rptTourSel.id,name:rptTourSel.name}:null;const nm=document.getElementById('trkName'),ds=document.getElementById('trkDesc');
   if(nm)d.name=nm.value;if(ds)d.desc=ds.value;}
 function trkSnow(x){const d=trkDraft;if(!d)return;trkKeepFields();d.snow=d.snow===x?null:x;trkRender();}
+// Right after stopping: one question, three big answers. "Pulver" (with how
+// deep) also feeds the reported-powder model; the other two only the post.
+const TRK_SNOWQ=[['Pulver','Pulver','<path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17"/>'],
+  ['Gemischt','Gemischt','<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17" /><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>'],
+  ['Schlecht','Schlecht','<path d="M3 17l5-5 4 4 4-6 5 7"/><path d="M3 21h18"/>']];
+function trkSnowQHTML(d){
+  return '<div class="tsq'+(d.snow?' done':'')+'"><b>Wie war der Schnee?</b><div class="tsq-b">'
+    +TRK_SNOWQ.map(([k,l,ic])=>'<button type="button" class="tsq-'+k.toLowerCase()+(d.snow===k?' on':'')+'" aria-pressed="'+(d.snow===k)+'" onclick="trkSnowQ(\''+k+'\')">'
+      +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ic+'</svg><span>'+l+'</span></button>').join('')+'</div>'
+    +(d.snow==='Pulver'?'<div class="tsq-d"><span>Wie tief? (cm)</span>'+[10,20,30,40].map(v=>'<button type="button" class="'+(d.depth===v?'on':'')+'" onclick="trkSnowDepth('+v+')">'+(v===40?'40+':'~'+v)+'</button>').join('')+'</div>':'')
+    +'</div>';}
+function trkSnowQ(k){const d=trkDraft;if(!d)return;trkKeepFields();d.snow=d.snow===k?null:k;if(d.snow!=='Pulver')d.depth=0;try{haptic(8);}catch(e){}trkRender();}
+function trkSnowDepth(v){const d=trkDraft;if(!d)return;trkKeepFields();d.depth=d.depth===v?0:v;try{haptic(4);}catch(e){}trkRender();}
 async function trkAddPhotos(files){const d=trkDraft;if(!d||!files)return;const nm=document.getElementById('trkName'),ds=document.getElementById('trkDesc');
   if(nm)d.name=nm.value;if(ds)d.desc=ds.value;
   for(const f of Array.from(files).slice(0,10-d.photos.length)){try{d.photos.push(await downscaleImage(f,1600,.82));}catch(e){}}
@@ -14711,6 +14852,7 @@ function setClose(){
     const pm=document.getElementById('profModal');if(pm)pm.style.display='flex';}}
 function setRender(){
   try{langRender();}catch(e){}
+  try{favSetRender();}catch(e){}
   const v=themePref();
   document.querySelectorAll('#setTheme button').forEach(b=>
     b.classList.toggle('active',b.dataset.v===v));
@@ -15293,7 +15435,10 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
      inspVerdictHTML({st:vaSec?vaPointHTML.st:null,newSnow,depth:depthNow,tmn,tmx,asp:aspLbl,slope:slp})+
      (function(){let av=null;try{av=avLevelAt(lat,lon,elevD,aspDeg);}catch(e){}return avChipHTML(av);})()+
      (layer==='snowpack'&&vaSec?'':kpi)+
-   '</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
+   '</div>'+(function(){const nm=(function(){try{const n=tourNearPoint(lat,lon,1500,1);if(n.length)return 'bei '+(n[0].t.pname||n[0].t.name||'Skitour');}catch(e){}
+       return lat.toFixed(3)+'°N '+lon.toFixed(3)+'°E';})();
+     return favBtnHTML('area',lat.toFixed(3)+','+lon.toFixed(3),nm,lat,lon,elevD,'insp-fav');})()
+   +'<button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
    '<div class="insp-body">'+inspOrder({va:vaSec,prog:progSec,
      prof:inspFold('prof',profSec),
      snow:inspFold('mg',mgHTML(),'Wetterverlauf','Neuschnee · Temperatur · Wind'),
@@ -16039,7 +16184,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 setTimeout(deployWatch,6000);
 try{const _q=new URLSearchParams(location.search),_pid=_q.get('post');
   if(_pid)setTimeout(()=>{try{feedOpenAt(_pid);}catch(e){}},1400);
-  else if(_q.get('dm')||_q.get('user'))setTimeout(()=>pushRoute(location.href),2200);}catch(e){}
+  else if(_q.get('dm')||_q.get('user')||_q.get('fav'))setTimeout(()=>pushRoute(location.href),2200);}catch(e){}
 // The split build registers it from the boot loader (app.js only arrives
 // after 'load' has fired, so a load listener here never ran).
 if(!window.__bootDone&&'serviceWorker'in navigator&&location.protocol!=='file:'){const _swReg=()=>navigator.serviceWorker.register('sw.js').then(reg=>{try{reg.update();}catch(e){}}).catch(()=>{});
@@ -16784,6 +16929,8 @@ function feedOpenAt(id){feedScope='post';feedFocusId=String(id);feedFilter='all'
 function authUpdateUI(user){
   sbUser=user;
   if(user&&window._pushFor!==user.id){window._pushFor=user.id;setTimeout(pushSync,3000);}
+  // favourites (the stars) and the push state belong to the person
+  if((user&&user.id)!==window._favFor){window._favFor=user&&user.id;favs=null;_favPush=null;if(user)setTimeout(()=>favLoad(true),2500);}
   const btn=document.getElementById('btnLogin');
   const feedB=document.getElementById('mapFeedFab'),banner=document.getElementById('emailBanner');
   if(user){
@@ -17581,13 +17728,227 @@ async function pushSync(){try{
   if(!pushSupported()||!sb||!sbUser||Notification.permission!=='granted')return;
   const{data}=await sb.from('profiles').select('push_enabled').eq('id',sbUser.id).single();
   if(data&&data.push_enabled)await pushSubscribe();}catch(e){}}
-// a tapped notification: ?post= / ?dm= / ?user=
+// a tapped notification: ?post= / ?dm= / ?user= / ?fav=
 function pushRoute(url){try{const q=new URL(url,location.href).searchParams;
-  if(q.get('post'))feedOpenAt(q.get('post'));
+  if(q.get('fav'))favOpen(q.get('fav'));
+  else if(q.get('post'))feedOpenAt(q.get('post'));
   else if(q.get('dm')){if(!sb||!sbUser){authShow();return;}dmWith(q.get('dm'),q.get('n')||'');}
   else if(q.get('user'))viewUser(q.get('user'),'');}catch(e){}}
 try{if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',e=>{
   if(e.data&&e.data.type==='push-open')pushRoute(e.data.url);});}catch(e){}
+// ── Favoriten: Gebiete und Touren, mit Neuschnee-Alarm ───────────────────
+// Kept in Supabase (favorites). The fav-alerts function checks them every
+// two hours against the forecast (data/alerts.json) and pushes once one
+// reaches its own threshold -- 20 cm in the next 48 h unless changed here.
+let favs=null,_favPush=null;const _favArgs=[];
+const FAV_STAR='<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></svg>';
+const FAV_BELL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
+async function favLoad(force){
+  if(!sb||!sbUser){favs=[];return favs;}
+  if(favs&&!force)return favs;
+  try{const{data,error}=await sb.from('favorites').select('*').order('created_at');favs=error?(favs||[]):(data||[]);}catch(e){favs=favs||[];}
+  return favs;}
+function favOf(kind,ref){return (favs||[]).find(f=>f.kind===kind&&String(f.ref)===String(ref))||null;}
+// the star: what it stands for is kept here, not in the onclick string
+function favBtnHTML(kind,ref,name,lat,lon,elev,cls){
+  const k=_favArgs.push([kind,String(ref),name,lat,lon,elev])-1,on=!!favOf(kind,ref);
+  return '<button type="button" class="fav-btn'+(cls?' '+cls:'')+(on?' on':'')+'" data-fav="'+k+'" aria-pressed="'+on+'" onclick="favTap('+k+')"'
+    +' title="'+(on?'Gemerkt – nochmals tippen zum Entfernen':'Merken – Push bei Neuschnee')+'" aria-label="Merken">'+FAV_STAR+'</button>';}
+async function favTap(k){const a=_favArgs[k];if(!a)return;
+  if(!sb||!sbUser){authShow();toast('Zum Merken anmelden','info');return;}
+  await favLoad();const [kind,ref,name,lat,lon,elev]=a,f=favOf(kind,ref);
+  try{haptic(6);}catch(e){}
+  if(f){const{error}=await sb.from('favorites').delete().eq('id',f.id);
+    if(error){toast('Entfernen fehlgeschlagen: '+error.message,'err');return;}
+    favs=favs.filter(x=>x!==f);toast('Aus den Favoriten entfernt','info');}
+  else{const{data,error}=await sb.from('favorites').insert({kind,ref,name:String(name||'Ort').slice(0,120),lat:+lat,lon:+lon,
+      elev:elev==null||isNaN(elev)?null:Math.round(elev)}).select().single();
+    if(error){toast('Merken fehlgeschlagen: '+(/50 Favoriten/.test(error.message)?'höchstens 50 Favoriten':error.message),'err');return;}
+    favs.push(data);favNudge();}
+  const on=!f;
+  document.querySelectorAll('.fav-btn[data-fav]').forEach(b=>{const x=_favArgs[+b.dataset.fav];
+    if(x&&x[0]===kind&&x[1]===ref){b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);}});
+  favSetRender();}
+async function favPushState(){
+  if(_favPush!=null)return _favPush;
+  try{if(!pushSupported()||Notification.permission!=='granted')return (_favPush=false);
+    const{data}=await sb.from('profiles').select('push_enabled').eq('id',sbUser.id).single();_favPush=!!(data&&data.push_enabled);}
+  catch(e){_favPush=false;}
+  return _favPush;}
+async function favNudge(){
+  toast((await favPushState())?'Gemerkt – Push, sobald 20 cm Neuschnee erwartet werden'
+    :'Gemerkt. Für den Neuschnee-Push: Einstellungen → Favoriten → Push einschalten','ok');}
+// the same steps as the profile's switch, from the favourites list
+async function favPushOn(){
+  if(!sb||!sbUser){authShow();return;}
+  if(pushIosNeedsHome()){alert('Auf dem iPhone kommen Benachrichtigungen nur in der App auf dem Home-Bildschirm: im Safari «Teilen» → «Zum Home-Bildschirm», dann dort einschalten (ab iOS 16.4).');return;}
+  if(!pushSupported()){alert('Dieser Browser kann keine Benachrichtigungen empfangen.');return;}
+  try{const perm=await Notification.requestPermission();if(perm!=='granted'){alert('Benachrichtigungen wurden nicht erlaubt. Bitte in den Browser-Einstellungen für diese Seite erlauben.');return;}}catch(e){}
+  try{if(!await pushSubscribe())throw new Error('kein Abo');}
+  catch(e){toast('Benachrichtigungen konnten nicht eingerichtet werden: '+(e.message||e),'err');return;}
+  try{await sb.from('profiles').update({push_enabled:true}).eq('id',sbUser.id);}catch(e){}
+  _favPush=true;const t=document.getElementById('profPush');if(t)t.classList.add('on');
+  toast('Push eingeschaltet','ok');favSetRender();}
+async function favSet(id,patch){const f=(favs||[]).find(x=>x.id===id);if(!f)return;
+  const{error}=await sb.from('favorites').update(patch).eq('id',id);
+  if(error){toast('Ändern fehlgeschlagen: '+error.message,'err');return;}
+  Object.assign(f,patch);try{haptic(3);}catch(e){}favSetRender();}
+async function favDel(id){const f=(favs||[]).find(x=>x.id===id);if(!f)return;
+  const{error}=await sb.from('favorites').delete().eq('id',id);
+  if(error){toast('Entfernen fehlgeschlagen: '+error.message,'err');return;}
+  favs=favs.filter(x=>x!==f);favSetRender();}
+// the list in the settings: threshold, push on/off, remove
+async function favSetRender(){const el=document.getElementById('setFavs');if(!el)return;
+  if(!sb||!sbUser){el.innerHTML='<div class="fav-empty">Melde dich an, um Gebiete und Touren zu merken. Dann kommt ein Push, sobald dort Neuschnee erwartet wird.</div>';return;}
+  await favLoad();const push=await favPushState();
+  el.innerHTML=(favs.length?favs.map(f=>'<div class="fav-row">'
+      +'<button type="button" class="fav-go" onclick="favOpen(\''+f.id+'\')"><b>'+escapeHtml(f.name)+'</b><small>'+(f.kind==='tour'?'Tour':'Ort')+(f.elev?' · '+f.elev+' m':'')+'</small></button>'
+      +'<select class="fav-th" onchange="favSet(\''+f.id+'\',{threshold_cm:+this.value})" aria-label="Push ab">'
+      +[10,20,30,50].map(v=>'<option value="'+v+'"'+(f.threshold_cm===v?' selected':'')+'>ab '+v+' cm</option>').join('')+'</select>'
+      +'<button type="button" class="fav-bell'+(f.notify?' on':'')+'" onclick="favSet(\''+f.id+'\',{notify:'+(!f.notify)+'})" aria-pressed="'+!!f.notify+'" aria-label="Push für diesen Favoriten">'+FAV_BELL+'</button>'
+      +'<button type="button" class="fav-del" onclick="favDel(\''+f.id+'\')" aria-label="Entfernen">×</button></div>').join('')
+    :'<div class="fav-empty">Noch keine Favoriten. Tippe im Punkt-Popup oder bei einer Tour auf den Stern.</div>')
+    +(favs.length&&!push?'<button type="button" class="fav-push" onclick="favPushOn()">'+FAV_BELL+'<span>Push für Neuschnee einschalten</span></button>':'')
+    +(favs.length?'<div class="fav-note">Push, wenn in den nächsten 48 h so viel Neuschnee erwartet wird (Modell) – höchstens einmal in 36 h je Favorit.</div>':'');}
+async function favOpen(id){
+  if(!sb||!sbUser){authShow();return;}
+  await favLoad();const f=(favs||[]).find(x=>x.id===id);if(!f){toast('Favorit nicht gefunden','err');return;}
+  try{setClose();}catch(e){}try{navGo('map');}catch(e){}
+  if(f.kind==='tour'){try{map.setView([f.lat,f.lon],13);tourOpenById(f.ref);return;}catch(e){}}
+  map.setView([f.lat,f.lon],13);setTimeout(()=>{try{inspOpen(f.lat,f.lon);}catch(e){}},400);}
+
+// ── Ein Tipp: "Pulver hier" ─────────────────────────────────────────────
+// Where you stand, how high, which way the slope faces and when -- all from
+// the GPS fix and the terrain, posted at once. How deep and a photo can be
+// added in the bar that follows; "Rückgängig" takes it back.
+let _ot=null,_otT=0;
+function oneTapPowder(){
+  if(!sb||!sbUser){authShow();return;}
+  if(!navigator.geolocation){toast('Kein GPS verfügbar','err');return;}
+  toast('Standort wird bestimmt…','info');
+  navigator.geolocation.getCurrentPosition(async p=>{
+    const lat=p.coords.latitude,lon=p.coords.longitude,acc=p.coords.accuracy;
+    if(acc&&acc>500){toast('GPS zu ungenau ('+Math.round(acc)+' m) – nicht gemeldet','err');return;}
+    const d=obsDEM(lat,lon),el=d.elev!=null?d.elev:(p.coords.altitude!=null?Math.round(p.coords.altitude):null);
+    const cd={quick:true,oneTap:true,powder:true,powderQuality:85,aspect:d.aspect||null,altitudeM:el,measurement:'Pulver',gpsAcc:acc?Math.round(acc):null};
+    const row={user_id:sbUser.id,location:'POINT('+lon+' '+lat+')',elevation_m:el,primary_categories:['snow'],subtype:'Quick Powder Report',
+      condition_data:cd,caption:null,completion_score:30,captured_at:new Date().toISOString()};
+    try{const{data,error}=await sb.from('reports').insert(row).select('id').single();if(error)throw error;
+      _ot={id:data&&data.id,cd,el,asp:d.aspect};try{haptic(14);}catch(e){}oneTapBar();loadDbReports();}
+    catch(e){toast('Melden fehlgeschlagen: '+(e.message||e),'err');}
+  },()=>toast('Kein GPS-Signal – nicht gemeldet','err'),{enableHighAccuracy:true,timeout:12000,maximumAge:30000});}
+function oneTapBar(){
+  let el=document.getElementById('otBar');
+  if(!el){el=document.createElement('div');el.id='otBar';el.className='ot-bar';el.setAttribute('role','status');document.body.appendChild(el);}
+  const o=_ot;if(!o){el.remove();return;}
+  const t=new Date().toLocaleTimeString(LOCALE(),{hour:'2-digit',minute:'2-digit'});
+  el.innerHTML='<div class="ot-hd"><i>'+FAV_STAR.replace('fill="currentColor"','fill="none"')+'</i><span><b>Pulver gemeldet</b><small>'+[o.el!=null?o.el+' m':'',o.asp||'',t].filter(Boolean).join(' · ')+'</small></span>'
+    +'<button type="button" class="ot-undo" onclick="oneTapUndo()">Rückgängig</button><button type="button" class="ot-x" onclick="oneTapDone()" aria-label="Schliessen">×</button></div>'
+    +'<div class="ot-q"><span>Wie tief? (cm)</span>'+[10,20,30,40].map(v=>'<button type="button" class="'+(o.cm===v?'on':'')+'" onclick="oneTapDepth('+v+')">'+(v===40?'40+':'~'+v)+'</button>').join('')
+    +'<label class="ot-ph" aria-label="Foto">'+'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/></svg>'
+    +'<input type="file" accept="image/*" hidden onchange="oneTapPhoto(this)"></label></div>';
+  try{document.querySelectorAll('#toastWrap .toast').forEach(t=>t.remove());}catch(e){}
+  el.classList.add('open');clearTimeout(_otT);_otT=setTimeout(oneTapDone,14000);}
+function oneTapDone(){clearTimeout(_otT);_ot=null;const el=document.getElementById('otBar');if(el){el.classList.remove('open');setTimeout(()=>{if(!_ot)el.remove();},260);}}
+async function oneTapDepth(cm){const o=_ot;if(!o||!o.id)return;clearTimeout(_otT);
+  o.cm=o.cm===cm?null:cm;const cd=Object.assign({},o.cd,{powderAmountCm:o.cm||undefined,measurement:'Pulver'+(o.cm?' '+(o.cm>=40?'40+':o.cm)+' cm':'')});
+  const{error}=await sb.from('reports').update({condition_data:cd}).eq('id',o.id);
+  if(error){toast('Ändern fehlgeschlagen: '+error.message,'err');return;}
+  o.cd=cd;try{haptic(4);}catch(e){}oneTapBar();loadDbReports();}
+async function oneTapPhoto(inp){const o=_ot;if(!o||!o.id||!inp.files||!inp.files[0])return;clearTimeout(_otT);
+  const f=inp.files[0];inp.value='';toast('Foto wird hochgeladen…','info');
+  try{const up=await downscaleImage(f),path=sbUser.id+'/'+Date.now()+'.jpg';
+    const{error:upErr}=await sb.storage.from('report-images').upload(path,up,{cacheControl:'31536000',contentType:up.type||'image/jpeg'});
+    if(upErr)throw upErr;
+    const{data:ud}=sb.storage.from('report-images').getPublicUrl(path);
+    const patch={image_url:ud&&ud.publicUrl||null};await withThumb(patch,f);
+    const{error}=await sb.from('reports').update(patch).eq('id',o.id);if(error)throw error;
+    toast('Foto ergänzt','ok');loadDbReports();oneTapDone();}
+  catch(e){toast('Foto fehlgeschlagen: '+(e.message||e),'err');}}
+async function oneTapUndo(){const o=_ot;if(!o||!o.id)return;
+  const{error}=await sb.from('reports').delete().eq('id',o.id);
+  if(error){toast('Rückgängig fehlgeschlagen: '+error.message,'err');return;}
+  toast('Meldung zurückgenommen','info');oneTapDone();loadDbReports();}
+
+// ── Bestes Pulver in deiner Nähe ─────────────────────────────────────────
+// The three tours within 30 km (of you once the position is known, else of
+// the map centre) with the most powder on the descent, from the same
+// SNOWPACK scoring the tour finder uses. A pill at the top; a tap opens them.
+let _nbT=0,_nbKey='',_nbList=[],_nbMe=false;
+function nearBestSoon(ms){clearTimeout(_nbT);_nbT=setTimeout(nearBestRun,ms==null?1500:ms);}
+function nearBestShut(){try{return sessionStorage.getItem('ssm_nb_x')==='1';}catch(e){return false;}}
+async function nearBestRun(){
+  if(nearBestShut()||!(typeof vaAvailable==='function'&&vaAvailable()))return;
+  try{await toursEnsure();}catch(e){return;}
+  if(!tourList().length||!(await tourVaPrepare()))return;
+  const me=!!myLoc,c=me?{lat:myLoc[0],lon:myLoc[1]}:(()=>{const x=map.getCenter();return {lat:x.lat,lon:x.lng};})();
+  const key=tourVa.key+'|'+c.lat.toFixed(2)+','+c.lon.toFixed(2);if(key===_nbKey)return;_nbKey=key;
+  const cand=[];
+  for(const t of tourList()){if(!t.coords||t.coords.length<2)continue;
+    const lo=t.lo?{lat:t.lo[1],lon:t.lo[0]}:{lat:t.coords[0][1],lon:t.coords[0][0]};
+    const d=tourDistM(c.lon,c.lat,lo.lon,lo.lat);if(d<=30000)cand.push({t,d});}
+  cand.sort((x,y)=>x.d-y.d);cand.length=Math.min(cand.length,120);
+  // scored a slice at a time: the map stays responsive
+  for(let i=0;i<cand.length;i++){cand[i].r=tourScore(cand[i].t);if(i%8===7){await new Promise(r=>setTimeout(r,0));if(_nbKey!==key)return;}}
+  const seen=new Set(),out=[];
+  cand.filter(o=>o.r&&o.r.powder>=25)
+    .sort((x,y)=>(y.r.powder*(1+(y.r.powderCm||0)/40))-(x.r.powder*(1+(x.r.powderCm||0)/40)))
+    .forEach(o=>{const g=o.t.group||o.t.id;if(seen.has(g)||out.length>=3)return;seen.add(g);out.push(o);});
+  _nbList=out;_nbMe=me;nearBestRender();}
+function nearBestName(o){return o.t.pname||o.t.name||'Skitour';}
+function nearBestRender(){
+  let el=document.getElementById('nearBest');
+  if(!_nbList.length||nearBestShut()){if(el)el.remove();return;}
+  if(!el){el=document.createElement('div');el.id='nearBest';el.className='nb';document.body.appendChild(el);}
+  const top=_nbList[0];
+  el.innerHTML='<button type="button" class="nb-pill" onclick="nearBestToggle()" aria-expanded="'+el.classList.contains('open')+'">'
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17"/></svg>'
+    +'<span>'+escapeHtml(nearBestName(top))+(top.r.powderCm?' · '+top.r.powderCm+' cm':'')+'</span></button>'
+    +'<div class="nb-card" role="dialog" aria-label="Bestes Pulver in deiner Nähe"><div class="nb-hd"><b>Bestes Pulver in deiner Nähe</b>'
+    +'<button type="button" onclick="nearBestClose()" aria-label="Ausblenden">×</button></div>'
+    +'<small class="nb-sub"><span>'+(_nbMe?'Umkreis 30 km um dich':'Umkreis 30 km um die Kartenmitte')+'</span>'+(tourVa.when?' · <span>Modell</span> '+escapeHtml(tourVa.when):'')+'</small>'
+    +_nbList.map((o,i)=>{const g=tourGeo(o.t);let v='';try{v=tourVerdict(o.t,o.r);}catch(e){}
+      if(!v||/keine/i.test(v))v=o.r.powderCm?'Pulver '+o.r.powderCm+' cm':'';
+      return '<button type="button" class="nb-row" onclick="nearBestPick('+i+')"><span class="tn-sc" style="--sc:'+tourColor(o.r)+'">'+o.r.powder+'%</span>'
+        +'<span class="nb-t"><b>'+escapeHtml(nearBestName(o))+'</b><em>'+escapeHtml(v||('Pulver '+(o.r.powderCm||'')+' cm'))+'</em>'
+        +'<span>'+[(g.hi&&g.hi.el!=null?Math.round(g.hi.el)+' m':''),(Math.round(o.d/100)/10)+' km'].filter(Boolean).join(' · ')+'</span></span></button>';}).join('')
+    +'</div>';}
+function nearBestToggle(open){const el=document.getElementById('nearBest');if(!el)return;
+  open=open==null?!el.classList.contains('open'):open;el.classList.toggle('open',open);
+  const b=el.querySelector('.nb-pill');if(b)b.setAttribute('aria-expanded',open);try{haptic(3);}catch(e){}}
+function nearBestClose(){try{sessionStorage.setItem('ssm_nb_x','1');}catch(e){}const el=document.getElementById('nearBest');if(el)el.remove();}
+function nearBestPick(i){const o=_nbList[i];if(!o)return;nearBestToggle(false);try{tourOpen(o.t,false);}catch(e){}}
+try{map.on('moveend',()=>{if(!myLoc)nearBestSoon(2500);});}catch(e){}
+setTimeout(()=>nearBestSoon(0),9000);
+
+// ── Modell gegen Meldungen ────────────────────────────────────────────────
+// Over the last days: the powder depth people reported against the model's
+// new snow of the 72 h before, at the same spot and height. Shown on the
+// community page once there are enough reports to say something.
+// the last time step at or before ms (the steps are not always hourly)
+function tIdxAt(ms){let lo=0,hi=T-1;if(!(ms>tMs(0)))return 0;
+  while(lo<hi){const m=(lo+hi+1)>>1;if(tMs(m)<=ms)lo=m;else hi=m-1;}return lo;}
+function modelVsReports(days){
+  days=days||7;const since=Date.now()-days*864e5,t0ms=tMs(0),t1ms=tMs(T-1),pairs=[];
+  for(const r of allReports||[]){
+    if(!r.dbRow||r.lat==null||r.lng==null)continue;
+    const ts=Date.parse(r.capturedAt||r.createdAt||0);if(!(ts>=since)||ts<t0ms||ts>t1ms)continue;
+    const cd=r.condition_data||{};let cm=null;
+    if(cd.quick&&+cd.powderAmountCm>0)cm=+cd.powderAmountCm;
+    else if(cd.zones&&cd.zones.length){const v=cd.zones.map(z=>z&&+z.cm).filter(x=>x>0);if(v.length)cm=v.reduce((s,x)=>s+x,0)/v.length;}
+    if(!(cm>0))continue;
+    const ti=tIdxAt(ts),ta=tIdxAt(ts-72*3.6e6);if(tMs(ti)-tMs(ta)<24*3.6e6)continue;
+    const p=tourCell(r.lat,r.lng);if(p<0)continue;
+    const fe=fineElev(r.lat,r.lng),m=nsAtHeight(p,nsAt(p,ta,ti+1),fe==null?NaN:fe-melevv(p));
+    if(isFinite(m))pairs.push([cm,m]);}
+  if(pairs.length<3)return {n:pairs.length};
+  const n=pairs.length,mae=pairs.reduce((s,[o,m])=>s+Math.abs(m-o),0)/n,bias=pairs.reduce((s,[o,m])=>s+(m-o),0)/n;
+  return {n,mae,bias};}
+function modelVsReportsHTML(){let s=null;try{s=modelVsReports(7);}catch(e){}
+  if(!s||!(s.n>=3))return '';
+  const lean=Math.abs(s.bias)<2?'liegt im Mittel richtig':s.bias<0?'eher zu wenig Schnee':'eher zu viel Schnee';
+  return '<div class="mvr" title="Gemeldete Pulvertiefe gegen den Modell-Neuschnee der 72 h davor, am selben Ort und auf derselben Höhe">'
+    +'<b>Modell vs. Meldungen</b><span><span>7 Tage</span> · <span>Ø '+Math.round(s.mae)+' cm daneben</span> · <span>'+s.n+' Meldungen</span> · <span>'+lean+'</span></span></div>';}
 async function profSave(){
   try{const d=document.getElementById('profDisplay');
     const home=document.getElementById('profHome'),lay=document.getElementById('profLayer');
@@ -19705,6 +20066,7 @@ function feedTopRender(){const el=document.getElementById('feedTop');if(!el)retu
     +'</div>'
     +(['all','here','following'].includes(feedScope)?'<div class="ft-reg" role="tablist" aria-label="Region">'
       +FEED_REGIONS.map(g=>'<button type="button" role="tab" aria-selected="'+(feedRegion===g.id)+'" class="'+(feedRegion===g.id?'on':'')+'" onclick="feedRegionSet(\''+g.id+'\')">'+escapeHtml(g.label)+'</button>').join('')+'</div>':'');
+  try{if(['all','here'].includes(feedScope))el.insertAdjacentHTML('beforeend',modelVsReportsHTML());}catch(e){}
   try{if(typeof dmReady!=='undefined'&&dmReady)el.querySelectorAll('[data-dm]').forEach(x=>x.hidden=false);}catch(e){}
   // your own picture, as on the map; it opens your profile
   try{let u=null;const c=(localStorage.getItem('ssm_avatar')||'').split('|');
