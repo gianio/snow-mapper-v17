@@ -2643,6 +2643,34 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .insp-kpis b small{font-size:11.5px;color:var(--mut);font-weight:700}
  .insp-kpis .k-snow b{color:#2A6FB0}
  .insp-kpis em{display:block;font-style:normal;font-size:10.5px;font-weight:600;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ /* the verdict: one sentence for what the numbers add up to */
+ .insp-verdict{display:flex;align-items:flex-start;gap:7px;margin-top:9px;font:750 14px/1.3 var(--font);color:var(--fg);letter-spacing:-.01em}
+ .insp-verdict p{margin:0;min-width:0}
+ .insp-verdict i{flex:0 0 9px;height:9px;border-radius:50%;margin-top:4.5px;background:var(--mut)}
+ .insp-verdict.iv-good i{background:#2F9A4C}
+ .insp-verdict.iv-bad i{background:#E08A1E}
+ /* SLF danger level: the level square in SLF's own colour, links to the bulletin */
+ .av-chip{display:inline-flex;align-items:center;gap:7px;margin-top:8px;padding:3px 10px 3px 3px;border-radius:999px;background:var(--fill);
+   color:var(--fg);font:700 12px/1.2 var(--font);text-decoration:none;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .av-chip i{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;
+   background:var(--avc,#999);color:#1d1d1f;font:800 12px/1 var(--font);font-style:normal;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+ .av-chip .av-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .av-chip .av-t small{font-size:11.5px;font-weight:650;color:var(--fg2)}
+ .av-chip b{margin-left:auto;color:var(--mut);font-weight:800}
+ .av-chip.av-none{padding-left:9px;color:var(--fg2)}
+ .av-chip.av-none svg{width:14px;height:14px;flex:0 0 auto}
+ .av-chip:active{opacity:.7}
+ /* folded rows under the verdict: profile, weather run, wind rose */
+ .insp-fold{border-bottom:1px solid var(--hair)}
+ .insp-fold:last-child{border-bottom:none}
+ .insp-fold>summary{list-style:none;display:flex;align-items:baseline;gap:8px;padding:11px 0;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+ .insp-fold>summary::-webkit-details-marker{display:none}
+ .insp-fold>summary b{font-size:13px;font-weight:800;color:var(--fg);letter-spacing:-.01em}
+ .insp-fold>summary em{font-style:normal;font-size:12px;font-weight:700;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+ .insp-fold>summary svg{width:15px;height:15px;margin-left:auto;align-self:center;flex:0 0 auto;color:var(--mut);transition:transform .2s var(--ease)}
+ .insp-fold[open]>summary svg{transform:rotate(90deg)}
+ .insp-fold>.insp-sec{border-bottom:none;padding-top:0}
+ .insp-fold>.insp-sec>h4:first-child{display:none}
  .stn-now{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
  .stn-v{background:var(--fill);border-radius:12px;padding:8px 10px;min-width:0;display:flex;flex-direction:column;gap:2px}
  .stn-v span{font-size:11.5px;font-weight:700;color:var(--mut)}
@@ -4015,6 +4043,10 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .ft-reg button{flex:none;border:1px solid var(--bd);background:var(--card);color:var(--fg2);font:600 13px var(--font);
    padding:6px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}
  .ft-reg button.on{background:var(--brand,#1d4ed8);border-color:transparent;color:#fff}
+ .tn-av{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:5px;margin-right:6px;vertical-align:1px;
+   background:var(--avc,#999);color:#1d1d1f;font:800 11px/1 var(--font);font-style:normal;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+ .tour-av{margin:-2px 0 8px}
+ .tour-av .av-chip{margin-top:0}
  .tn-v{display:block;font-style:normal;font-weight:700;font-size:12.5px;color:var(--fg2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .tour-verdict{margin:2px 0 8px;font:700 14.5px/1.3 var(--font);color:var(--fg);letter-spacing:-.005em}
  .tour-row i{background:color-mix(in srgb,var(--accent) 18%,transparent)}
@@ -5893,6 +5925,15 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #miniLegend.fold #mlName{border-bottom:0;margin-bottom:0;padding-bottom:0}
  #miniLegend.fold #mlFold{border-top:0;margin-top:2px}
  #miniLegend.fold #mlFold svg{transform:rotate(180deg)}
+ /* One family of sheets (Einstellungen, Meine Meldungen, Touren, Aufzeichnen,
+    Ebenen, Nachrichten, Profil): the frost of the floating controls, but
+    opaque -- without a blur behind it the map, the legend and the tab bar
+    read through a 75 % sheet. And one height limit for every bottom sheet. */
+ :root{--frost-sheet:linear-gradient(180deg,#FFFFFF,#F1F6FC)}
+ @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--frost-sheet:linear-gradient(180deg,#1C222C,#141A22)}}
+ :root[data-theme="dark"]{--frost-sheet:linear-gradient(180deg,#1C222C,#141A22)}
+ .tour-sheet,.ts-sheet,.trk-sheet,.ly-panel,.set-in,.dm-sheet,.prof-sheet{background:var(--frost-sheet)!important}
+ @media (max-width:560px){.set-in,.cmt-sheet,.cond-sheet,.report-sheet,.sh-sheet{max-height:88vh;max-height:88dvh}}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -7354,7 +7395,56 @@ const I18N_DICT={
 "Tag":["Day","Jour","Giorno"],
 "Winddeckel":["Wind crust","Croûte de vent","Crosta da vento"],
 "Durchnässter Pulver":["Soaked powder","Poudreuse trempée","Polvere fradicia"],
-"Gealterter Pulver":["Aged powder","Poudreuse vieillie","Polvere invecchiata"]
+"Gealterter Pulver":["Aged powder","Poudreuse vieillie","Polvere invecchiata"],
+"Wetterverlauf":["Weather run", "Évolution météo", "Andamento meteo"],
+"Neuschnee · Temperatur · Wind":["New snow · temperature · wind", "Neige fraîche · température · vent", "Neve fresca · temperatura · vento"],
+"Schneeprofil":["Snow profile", "Profil de neige", "Profilo della neve"],
+"Modell · HS # cm":["Model · HS # cm", "Modèle · HS # cm", "Modello · HS # cm"],
+"Windrose":["Wind rose", "Rose des vents", "Rosa dei venti"],
+"Lawinenbulletin SLF":["SLF avalanche bulletin", "Bulletin d'avalanches SLF", "Bollettino valanghe SLF"],
+"Lawinengefahr":["Avalanche danger", "Danger d'avalanche", "Pericolo valanghe"],
+"gering":["low", "faible", "debole"],
+"mässig":["moderate", "limité", "moderato"],
+"erheblich":["considerable", "marqué", "marcato"],
+"gross":["high", "fort", "forte"],
+"sehr gross":["very high", "très fort", "molto forte"],
+"Kernzone":["core zone", "zone centrale", "zona centrale"],
+"ausserhalb Kernzone":["outside core zone", "hors zone centrale", "fuori zona centrale"],
+"nicht in Kernzone":["not in core zone", "pas en zone centrale", "non in zona centrale"],
+"# % in Kernzone":["# % in core zone", "# % en zone centrale", "# % in zona centrale"],
+"Gefahrenstufe des SLF-Bulletins für diese Region – Bulletin öffnen":["SLF bulletin danger level for this region – open the bulletin", "Degré de danger du bulletin SLF pour cette région – ouvrir le bulletin", "Grado di pericolo del bollettino SLF per questa regione – apri il bollettino"],
+"Kaum Schnee":["Hardly any snow", "Presque pas de neige", "Quasi niente neve"],
+"nicht fahrbar":["not skiable", "pas skiable", "non sciabile"],
+"Dünne Schneedecke":["Thin snow cover", "Manteau mince", "Manto sottile"],
+"Steine, kaum fahrbar":["rocks, hardly skiable", "cailloux, à peine skiable", "sassi, poco sciabile"],
+"Pulver # cm":["Powder # cm", "Poudreuse # cm", "Polvere # cm"],
+"Steine möglich":["rocks possible", "cailloux possibles", "possibili sassi"],
+"sehr gut fahrbar":["excellent skiing", "excellent à skier", "ottima sciata"],
+"gut fahrbar":["good skiing", "bon à skier", "buona sciata"],
+"fahrbar":["skiable", "skiable", "sciabile"],
+"zur richtigen Zeit gut":["good at the right time", "bon au bon moment", "buona al momento giusto"],
+"griffig bis eisig":["grippy to icy", "accrocheuse à glacée", "aderente o ghiacciata"],
+"anspruchsvoll":["demanding", "exigeante", "impegnativa"],
+"Nass / faul":["Wet / rotten", "Mouillée / pourrie", "Bagnata / marcia"],
+"schwer, eher meiden":["heavy, better avoid", "lourde, plutôt éviter", "pesante, meglio evitare"],
+"# cm Neuschnee":["# cm new snow", "# cm de neige fraîche", "# cm di neve fresca"],
+"Altschnee # cm":["Old snow # cm", "Neige ancienne # cm", "Neve vecchia # cm"],
+"kein Neuschnee":["no new snow", "pas de neige fraîche", "niente neve fresca"],
+"kalt":["cold", "froid", "freddo"],
+"mild":["mild", "doux", "mite"],
+"flach":["flat", "plat", "piano"],
+"Nordhang":["north slope", "versant nord", "versante nord"],
+"Nordosthang":["north-east slope", "versant nord-est", "versante nord-est"],
+"Osthang":["east slope", "versant est", "versante est"],
+"Südosthang":["south-east slope", "versant sud-est", "versante sud-est"],
+"Südhang":["south slope", "versant sud", "versante sud"],
+"Südwesthang":["south-west slope", "versant sud-ouest", "versante sud-ovest"],
+"Westhang":["west slope", "versant ouest", "versante ovest"],
+"Nordwesthang":["north-west slope", "versant nord-ouest", "versante nord-ovest"],
+"Messstationen (SLF) · gemessen":["Weather stations (SLF) · measured", "Stations de mesure (SLF) · mesuré", "Stazioni di misura (SLF) · misurato"],
+"Böen ≈#":["Gusts ≈#", "Rafales ≈#", "Raffiche ≈#"],
+"Oberfl. #°":["Surf. #°", "Surf. #°", "Sup. #°"],
+"Oberfl. -#°":["Surf. -#°", "Surf. -#°", "Sup. -#°"]
 };
 
 // ── Sprachen ──────────────────────────────────────────────────────────────
@@ -9561,7 +9651,7 @@ function vaPointFrame(){
 }
 // The model's own reading of the tapped spot: same numbers the map is drawn
 // from, at the tapped height, steepness and aspect.
-function vaPointHTML(lat,lon,elev,slope,aspect){vaPointHTML.hs=null;
+function vaPointHTML(lat,lon,elev,slope,aspect){vaPointHTML.hs=null;vaPointHTML.st=null;
   if(elev==null)return '';
   const st=vaPointFrame();if(!st)return '';
   const tr=vaPointTerr(lat,lon);
@@ -9593,6 +9683,7 @@ function vaPointHTML(lat,lon,elev,slope,aspect){vaPointHTML.hs=null;
   const lbl=k6===0?'kein / wenig Schnee':k6===10?'Dünne Schneedecke – Steine, kaum fahrbar'
     :isPow?(thinC?'Pulver auf dünner Unterlage – Steine möglich':'Pulver, trocken'):(VA_SKI6_DE[k6]||nm('simple',sim)||'');
   if(!c6[3]){c6[0]=150;c6[1]=160;c6[2]=175;}
+  vaPointHTML.st={k6,pw,hs:m[x.total_hs_cm],thin:thinC};
   if(tr){const AS=['N','NO','O','SO','S','SW','W','NW'];bits.splice(1,0,'Modellgelände '+Math.round(tr.el)+' m · '+Math.round(tr.sl)+'° '+AS[Math.round(tr.as/45)%8]);}
   const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+c6.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(lbl)+'</b></div>'
     +'<div><span>Pulver</span><b>'+(pw>=1?pw+'<small> cm</small>':'–')+'</b></div>'
@@ -10138,12 +10229,13 @@ function tourGeo(t){
   const H0=hi?{lat:hi.lat,lon:hi.lon,el:hi.el}:(P?P.hi:{lat:e1.lat,lon:e1.lon,el:null});
   // slope: mean over the route (where it is skied, >= 15 deg) and the steepest pitch
   let slS=0,slW=0;for(let i=1;i<n;i++){const s1=segs[i];if(s1.sl!=null&&s1.sl>=15&&s1.sl<=60){const ww=s1.dist-segs[i-1].dist;slS+=s1.sl*ww;slW+=ww;}}
-  let coreW=0,allW=0;
+  let coreW=0,allW=0,avMax=0;
   for(let i=0;i<n;i++){const ww=i?segs[i].dist-segs[i-1].dist:0;allW+=ww;
-    try{const reg=tourRegionAt(segs[i].lat,segs[i].lon);if(reg&&avCoreZone(reg,segs[i].el,segs[i].as))coreW+=ww;}catch(e){}}
+    try{const reg=tourRegionAt(segs[i].lat,segs[i].lon);if(reg){if(reg.danger>avMax)avMax=reg.danger;
+      if(avCoreZone(reg,segs[i].el,segs[i].as))coreW+=ww;}}catch(e){}}
   const g={segs,lo:L0,hi:H0,len:t.len||(n?segs[n-1].dist:0),
         gain:(H0.el!=null&&L0.el!=null)?Math.round(H0.el-L0.el):(t.gain!=null?t.gain:null),
-        maxSlope:Math.round(maxS),avgSlope:slW?Math.round(slS/slW):null,core:allW?coreW/allW:0};
+        maxSlope:Math.round(maxS),avgSlope:slW?Math.round(slS/slW):null,core:allW?coreW/allW:0,avMax};
   // terrain not loaded yet: answer now, but measure again next time
   if(known>=n*0.7)t._g=g;
   return g;
@@ -10468,6 +10560,8 @@ function tourSheetRender(t,r){
     +'<div class="tour-tt"><b>'+escapeHtml(t.name||'Skitour')+'</b><span>'+escapeHtml(facts)+'</span></div>'
     +'<button type="button" class="tour-x" onclick="tourClose()" aria-label="Schliessen">×</button></div>'
     +(function(){const v=tourVerdict(t,r);return v?'<div class="tour-verdict">'+escapeHtml(v)+'</div>':'';})()
+    // SLF's level for the route's region(s), the highest one it touches
+    +'<div class="tour-av">'+avChipHTML(g.avMax?{lvl:g.avMax}:null,g.core>0.005?Math.round(g.core*100)+' % in Kernzone':'nicht in Kernzone')+'</div>'
     +stats
     +(function(){const V=tourVariants(t);if(V.length<2)return '';
       return '<div class="tour-vars"><span>'+V.length+' Varianten</span>'+V.map(x=>'<button type="button" class="'+(x===t?'on':'')+'" onclick="tourOpenVar(\''+escapeHtml(String(x.id))+'\')">'+escapeHtml(x.variant||'Variante')+'</button>').join('')+'</div>';})()
@@ -11984,7 +12078,8 @@ function tsRender(onlyMap){
   const rows=list.slice(0,40).map((o,i)=>{const r=o.r,g=tourGeo(o.t);
     const nw=tpPeople(o.t.id).length;
     return '<button type="button" class="tn-row" data-tid="'+escapeHtml(String(o.t.id))+'" onclick="tsPick('+i+')"><span class="tn-sc" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r)+'%':'…')+'</span>'
-      +'<span class="tn-t"><b>'+escapeHtml(o.nv>1?(o.t.pname||o.t.name):(o.t.name||'Skitour'))+'</b><span>'+(o.nv>1?o.nv+' Varianten · ':'')+(Math.round(o.d/100)/10)+' km · '
+      +'<span class="tn-t"><b>'+(g.avMax?'<i class="tn-av" style="--avc:'+AV_COLORS[g.avMax]+'" title="Lawinengefahr '+g.avMax+' – '+AV_LABELS[g.avMax]+' (SLF)">'+g.avMax+'</i>':'')
+      +escapeHtml(o.nv>1?(o.t.pname||o.t.name):(o.t.name||'Skitour'))+'</b><span>'+(o.nv>1?o.nv+' Varianten · ':'')+(Math.round(o.d/100)/10)+' km · '
       +(g.gain!=null?g.gain+' Hm · ':'')+'bis '+g.maxSlope+'°'+(g.hi.el!=null?' · '+Math.round(g.hi.el)+' m':'')+'</span>'
       +(function(){let v='';try{v=tourVerdict(o.t,r);}catch(e){}return v?'<em class="tn-v">'+escapeHtml(v)+'</em>':'';})()+'</span>'
       +'<span class="tn-w'+(nw?' on':'')+'" title="schauen gerade">'+(nw?(nw>10?'10+':nw):'')+'</span></button>';}).join('');
@@ -13039,7 +13134,8 @@ function nearbyPowderZones(lat,lon,radiusKm){
   return _progFindSel.filter(z=>progDistKm(lat,lon,z)<=radiusKm);
 }
 const windArr=L.layerGroup(); const stnGroup=L.layerGroup().addTo(map);
-let layer="snow",stat="avg",windowSize=48,a=nowIdx,b=Math.min(T,nowIdx+48),showStn=false,wtimer=null;
+let layer="snow",stat="avg",windowSize=48,a=nowIdx,b=Math.min(T,nowIdx+48),wtimer=null,
+  showStn=(function(){try{return localStorage.getItem('ssm_stn')==='1';}catch(e){return false;}})();
 // Declared here (empty) rather than where it is actually populated further
 // down: the default layer is now Reported Powder, which reads this array
 // during the very first render at boot -- before demoActive()/DEMO_REPORTS
@@ -13323,6 +13419,12 @@ function renderWind(){windArr.clearLayers();}
 function newSnowInt(s){if(!s.hs)return null;let sum=0,have=false;for(let t=a+1;t<b;t++){const h0=s.hs[t-1],h1=s.hs[t];if(h0!=null&&h1!=null){if(h1-h0>0.5)sum+=h1-h0;have=true;}}return have?sum:null;}
 // Detail tiers by zoom: 0 = tiny dot, 1 = simple value pill, 2 = full multi-value card
 function detailTier(){const z=map.getZoom();if(z<9.4)return 0;if(z<11.2||isMobile)return 1;return 2;}
+// "gemessen +12 cm · Modell hier +9 cm" -- the model at the station's own height
+function stnTip(s,sv){let t=(s.label||s.code)+' · '+s.elev+' m';
+  try{const p=tourCell(s.lat,s.lon);if(p<0||(layer!="snow"&&layer!="depth"))return t;
+    const mv=layer=="snow"?nsAtHeight(p,nsAt(p,a,b),s.elev-melevv(p)):cum[b*NP+p];
+    t+=' · gemessen '+(sv!=null?(layer=="snow"?'+':'')+Math.round(sv)+' cm':'–')+' · Modell '+(layer=="snow"?'+':'')+Math.round(mv)+' cm';}catch(e){}
+  return t;}
 function renderStations(){stnGroup.clearLayers();if(!showStn)return;
   const dirAb=d=>["N","NE","E","SE","S","SW","W","NW"][Math.round(d/45)%8];
   const tier=detailTier();
@@ -13336,6 +13438,12 @@ function renderStations(){stnGroup.clearLayers();if(!showStn)return;
     const ta=s.ta!=null?s.ta.toFixed(0)+"°":"";
     const gust=s.vw!=null?(s.vw*3.6*1.5).toFixed(0):"";
     let lbl=hs;
+    // On new snow and depth the station carries what it MEASURED, in the
+    // map's own colour band: model and measurement side by side at a glance.
+    const sv=layer=="snow"?ns:layer=="depth"?s.hs_now:null;
+    if(layer=="snow")lbl=nsv||"–";
+    let pc='';if(sv!=null&&sv>=1){const c=RGB[snowBand(sv)];if(c){const lum=.299*c[0]+.587*c[1]+.114*c[2];
+      pc=' style="background:rgb('+c[0]+','+c[1]+','+c[2]+');border-color:rgba(0,0,0,.25);color:'+(lum>150?'#1d1d1f':'#fff')+'"';}}
     if(layer=="wind")lbl=wind||"–";
     else if(layer=="temp"||layer=="tsurf")lbl=ta||"–";
     else if(layer=="sun"||layer=="rad"||layer=="radsun")lbl=s.elev+"m";
@@ -13345,16 +13453,17 @@ function renderStations(){stnGroup.clearLayers();if(!showStn)return;
     }else if(tier===1){
       let unit='';if(layer=='wind')unit='';else if(layer=='temp'||layer=='tsurf')unit='';
       else if(layer=='sun'||layer=='rad'||layer=='radsun')unit='';else if(lbl!=='–')unit='';
-      html='<div class="stn">'+lbl+unit+'</div>';iSize=[46,22];iAnc=[23,11];
+      html='<div class="stn"'+pc+' title="'+escapeHtml(stnTip(s,sv))+'">'+lbl+((layer=="snow"||layer=="depth")&&lbl!=="–"?'<small> cm</small>':'')+'</div>';iSize=[52,22];iAnc=[26,11];
     }else{
       let top="",bot="",ll="",lr="";
-      if(layer=="wind"){top=gust?("≈"+gust+" gust"):"";bot=s.elev+"m";}
-      else if(layer=="temp"||layer=="tsurf"){top=tss?("Surf "+tss):"";lr=hs!="–"?hs+"cm":"";}
+      if(layer=="wind"){top=gust?("Böen ≈"+gust):"";bot=s.elev+"m";}
+      else if(layer=="temp"||layer=="tsurf"){top=tss?("Oberfl. "+tss):"";lr=hs!="–"?hs+"cm":"";}
+      else if(layer=="snow"){top=tss;ll=hs!="–"?hs+"cm":"";bot=ta;}
       else if(layer=="sun"||layer=="rad"||layer=="radsun"){bot=ta||"";}
       else{top=tss;ll=wind;lr=nsv;bot=ta;}
       const pill=(v,c)=>v?'<span class="s-pill" style="color:'+c+'">'+v+'</span>':'';
       html='<div class="scl"><div class="s-t">'+pill(top,'#6bc5f0')+'</div>'+
-        '<div class="s-row">'+pill(ll,'#b0c4de')+'<span class="s-c">'+lbl+'</span>'+pill(lr,'#70d890')+'</div>'+
+        '<div class="s-row">'+pill(ll,'#b0c4de')+'<span class="s-c"'+pc+' title="'+escapeHtml(stnTip(s,sv))+'">'+lbl+'</span>'+pill(lr,'#70d890')+'</div>'+
         '<div class="s-b">'+pill(bot,'#f07070')+'</div></div>';
       iSize=[104,52];iAnc=[52,26];}
     const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:html,iconSize:iSize,iconAnchor:iAnc}),zIndexOffset:500});
@@ -13816,17 +13925,11 @@ function tlGotoTomorrow(){
 // buttons appear in, and vars[0] is what a fresh selection shows.
 const GROUPS={
   meteo:{tag:'A',label:'Meteo-Modell',items:[
-    {id:'reppow',label:'Gemeldetes Powder',vars:[{l:'powfind',s:'powder',label:'Gemeldetes Powder'}]},
+    // In picker order: Skiqualität first (what a fresh start opens on), then
+    // the weather, then what the community reported (LY_SECTIONS).
     // The rule-based powder map only stands in while there is no SNOWPACK
     // export: Skiqualität opens on "only powder" and answers the same question.
     {id:'powder',label:'Powder',noVa:true,vars:[{l:'powder',s:'avg',label:'Powder'}]},
-    {id:'newsnow',label:'Neuschnee',vars:[{l:'snow',s:'avg',label:'Neuschnee'}]},
-    {id:'depth',label:'Schneehöhe',vars:[{l:'depth',s:'avg',label:'Schneehöhe'}]},
-    // Wind and temperature keep their statistic (over the chosen window) as
-    // sub-layers; which classes show is picked on the legend.
-    {id:'wind',label:'Wind',vars:[{l:'wind',s:'avg',label:'Mittel'},{l:'wind',s:'max',label:'Max'},{l:'wind',s:'min',label:'Min'}]},
-    {id:'cloud',label:'Bewölkung',needs:'cloud',vars:[{l:'cloud',s:'avg',label:'Bewölkung'}]},
-    {id:'temp',label:'Temperatur',vars:[{l:'temp',s:'avg',label:'Mittel'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'tsurf',s:'avg',label:'Oberfläche'}]},
     // SNOWPACK is a layer like the others, not an overlay: its sub-layers are
     // the variants. Only listed once the export is there (groupItems), and
     // only the views the export actually carries.
@@ -13834,7 +13937,15 @@ const GROUPS={
     // powder only). Triebschnee is its own tile: it is a different question.
     {id:'snowpack',label:'Skiqualität',va:true,single:true,vars:[{l:'snowpack',s:'ski6',label:'Skiqualität'},
       {l:'snowpack',s:'ski18',label:'Skiqualität'}]},
-    {id:'vadrift',label:'Triebschnee',va:true,vars:[{l:'snowpack',s:'wind',label:'Triebschnee'}]}
+    {id:'vadrift',label:'Triebschnee',va:true,vars:[{l:'snowpack',s:'wind',label:'Triebschnee'}]},
+    {id:'newsnow',label:'Neuschnee',vars:[{l:'snow',s:'avg',label:'Neuschnee'}]},
+    {id:'depth',label:'Schneehöhe',vars:[{l:'depth',s:'avg',label:'Schneehöhe'}]},
+    // Wind and temperature keep their statistic (over the chosen window) as
+    // sub-layers; which classes show is picked on the legend.
+    {id:'temp',label:'Temperatur',vars:[{l:'temp',s:'avg',label:'Mittel'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'tsurf',s:'avg',label:'Oberfläche'}]},
+    {id:'wind',label:'Wind',vars:[{l:'wind',s:'avg',label:'Mittel'},{l:'wind',s:'max',label:'Max'},{l:'wind',s:'min',label:'Min'}]},
+    {id:'cloud',label:'Bewölkung',needs:'cloud',vars:[{l:'cloud',s:'avg',label:'Bewölkung'}]},
+    {id:'reppow',label:'Gemeldetes Powder',vars:[{l:'powfind',s:'powder',label:'Gemeldetes Powder'}]}
   ]},
   // The Report-Modell layers still exist and the drawings still feed the
   // prognosis -- they are just not in the picker. Drop `menu:false` to bring
@@ -14033,9 +14144,10 @@ function lyInfoRender(){
       escapeHtml(vt||'Variante dieser Ebene.')+'</p></div>'):'');
 }
 const LY_COLS=3;
-// The picker in two short shelves -- what the snow does, what the weather
-// does -- instead of one long run of equal tiles.
-const LY_SECTIONS=[['Schnee',['snowpack','newsnow','depth','powder','reppow','vadrift']],['Wetter',['temp','wind','cloud']]];
+// The picker in three short shelves -- how the skiing is, what the weather
+// does, what people found -- instead of one long run of equal tiles. The
+// community's map pins sit with the last one.
+const LY_SECTIONS=[['Skiqualität',['snowpack','powder','vadrift']],['Wetter',['newsnow','depth','temp','wind','cloud']],['Community',['reppow']]];
 function lyRender(){
   const grid=document.getElementById('lyGrid');if(!grid)return;
   const L=lyLayers(),i=lyIndex(),it=L[i]&&L[i][2],vars=(it&&it.vars)||[];
@@ -14060,7 +14172,8 @@ function lyRender(){
       rows.map(([[g,k,item],n],p)=>{const hi=false;
         return '<button type="button" class="ly-tile'+(n===i?' on':'')+(hi?' ly-hi':'')+'" onclick="lyPick('+n+')"'+
         (n===i?' aria-current="true"':'')+' title="'+(hi?'Echte Meldungen, nicht modelliert':escapeHtml(item.label))+'">'+lyIconFor(item.id)+
-        '<span>'+escapeHtml(item.label)+'</span></button>'+(p===after?subsHtml:'');}).join('')+'</div></div>';}).join('');
+        '<span>'+escapeHtml(item.label)+'</span></button>'+(p===after?subsHtml:'');}).join('')+'</div>'+
+      (name==='Community'?'<div class="ly-ovs" id="lyCommOv"></div>':name==='Wetter'?'<div class="ly-ovs" id="lyWxOv"></div>':'')+'</div>';}).join('');
   ovRender();
   lyInfoRender();
 }
@@ -14073,33 +14186,41 @@ const OV_ICON={
   wildlife:'<path d="M7 4c0 3 2 4 5 4s5-1 5-4"/><path d="M12 8v4"/><ellipse cx="12" cy="16" rx="5" ry="4"/>',
   slope:'<path d="M3 20h18L3 6z"/><path d="M8 20a5 5 0 0 0-2-4"/>',
   avalanche:'<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>'};
+function ovRowHTML(k){
+  const o=OVERLAYS[k],na=!ovAvailable(k);
+  let extra='';
+  // Three views (18-class, simplified, density) plus a legend that comes
+  // from the manifest -- classify.py owns those labels and colours, and a
+  // second copy in here would drift out of date silently.
+  if(k==='variantA'&&ovOn[k]&&vaAvailable()){
+    const names={ski18:'Ski (18)',simple:'Vereinfacht',density:'Dichte'};
+    extra='<div class="va-subs">'+Object.keys(vaMan.layers).map(lk=>
+      '<button type="button" class="ly-sub'+(lk===vaKey?' on':'')+'"'
+      +' onclick="vaPickLayer(\''+lk+'\')">'+escapeHtml(names[lk]||lk)+'</button>').join('')
+      +'</div>'+vaTimeHTML()+vaLegendHTML();
+  }
+  // what the slope colours mean, right under the switch while it is on
+  if(k==='slope'&&ovOn[k])extra='<div class="ov-slope">'+[['#f2e33a','30–35°'],['#f39b2b','35–40°'],['#e0362c','40–45°'],['#9b3fbf','> 45°']]
+    .map(c=>'<span><i style="background:'+c[0]+'"></i>'+c[1]+'</span>').join('')+'</div>';
+  const ic=OV_ICON[k]?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+OV_ICON[k]+'</svg>':'';
+  return '<button type="button" id="ov_'+k+'" class="ly-ov'
+    +(ovOn[k]?' on':'')+(na?' na':'')+'" role="switch" aria-checked="'+(ovOn[k]?'true':'false')+'"'
+    +' onclick="ovToggle(\''+k+'\')" title="'
+    +escapeHtml(na?o.label+' – keine Daten':o.attr)+'">'
+    +'<span class="ly-ov-ic">'+ic+'</span><span class="ly-ov-t">'+escapeHtml(o.label)+'</span><span class="ly-sw" aria-hidden="true"></span></button>'+extra;
+}
+// the community's own pins live under its shelf, not with the map extras
+const OV_COMMUNITY=['reports','myacts'];
 function ovRender(){
   const g=document.getElementById('lyOverlays');if(!g)return;
-  g.innerHTML=Object.keys(OVERLAYS).filter(k=>k!=='variantA').map(k=>{
-    const o=OVERLAYS[k],na=!ovAvailable(k);
-    let extra='';
-    // Three views (18-class, simplified, density) plus a legend that comes
-    // from the manifest -- classify.py owns those labels and colours, and a
-    // second copy in here would drift out of date silently.
-    if(k==='variantA'&&ovOn[k]&&vaAvailable()){
-      const names={ski18:'Ski (18)',simple:'Vereinfacht',density:'Dichte'};
-      extra='<div class="va-subs">'+Object.keys(vaMan.layers).map(lk=>
-        '<button type="button" class="ly-sub'+(lk===vaKey?' on':'')+'"'
-        +' onclick="vaPickLayer(\''+lk+'\')">'+escapeHtml(names[lk]||lk)+'</button>').join('')
-        +'</div>'+vaTimeHTML()+vaLegendHTML();
-    }
-    // what the slope colours mean, right under the switch while it is on
-    if(k==='slope'&&ovOn[k])extra='<div class="ov-slope">'+[['#f2e33a','30–35°'],['#f39b2b','35–40°'],['#e0362c','40–45°'],['#9b3fbf','> 45°']]
-      .map(c=>'<span><i style="background:'+c[0]+'"></i>'+c[1]+'</span>').join('')+'</div>';
-    const ic=OV_ICON[k]?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+OV_ICON[k]+'</svg>':'';
-    return '<button type="button" id="ov_'+k+'" class="ly-ov'
-      +(ovOn[k]?' on':'')+(na?' na':'')+'" role="switch" aria-checked="'+(ovOn[k]?'true':'false')+'"'
-      +' onclick="ovToggle(\''+k+'\')" title="'
-      +escapeHtml(na?o.label+' – keine Daten':o.attr)+'">'
-      +'<span class="ly-ov-ic">'+ic+'</span><span class="ly-ov-t">'+escapeHtml(o.label)+'</span><span class="ly-sw" aria-hidden="true"></span></button>'+extra;
-  }).join('')
+  const cm=document.getElementById('lyCommOv');
+  if(cm)cm.innerHTML=OV_COMMUNITY.filter(k=>OVERLAYS[k]).map(ovRowHTML).join('');
+  // what the stations measured, right with the weather it is compared to
+  const wx=document.getElementById('lyWxOv'),stnRow=lyExtraRow('stn','Messstationen (SLF) · gemessen',typeof showStn!=='undefined'&&showStn,'<line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0"/>','toggleStations();ovRender()');
+  if(wx)wx.innerHTML=stnRow;
+  g.innerHTML=Object.keys(OVERLAYS).filter(k=>k!=='variantA'&&!(cm&&OV_COMMUNITY.includes(k))).map(ovRowHTML).join('')
   // map extras that used to live in the settings
-  +lyExtraRow('stn','Messstationen',typeof showStn!=='undefined'&&showStn,'<line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0"/>','toggleStations();ovRender()')
+  +(wx?'':stnRow)
   +(window._wcOk?lyExtraRow('wc','Webcam-Galerie (Bilder & Live)',false,'<path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/>','lyPanelClose();wcvOpen()'):'')
   +lyExtraRow('3d','3D-Ansicht',typeof is3d!=='undefined'&&is3d,'<path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/>','lyPanelClose();document.getElementById(\'btn3dFloat\').click()');
 }
@@ -14354,10 +14475,12 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
 function toggleReportLayer(on){if(on)map.addLayer(reportMarkers);else map.removeLayer(reportMarkers);}
 // Marker-visibility popover on the control rail
 function toggleStations(){showStn=!showStn;renderStations();
+  try{localStorage.setItem('ssm_stn',showStn?'1':'0');}catch(e){}
   const btn=document.getElementById('railToggles');
   if(btn)btn.classList.toggle('active',showStn);
   try{toast(showStn?'Stationen an':'Stationen aus');}catch(e){}
   try{haptic(6);}catch(e){}}
+try{const _rb=document.getElementById('railToggles');if(_rb)_rb.classList.toggle('active',showStn);}catch(e){}
 // --- Rail: account button + locate-me ---
 // The field is not worth a permanent strip of the map: it appears where it
 // always was, with the keyboard already up, and leaves when it is done.
@@ -14746,25 +14869,38 @@ function scrPrev(){}
 function rpOpen(){const sh=document.getElementById('rpSheet');if(!sh)return;
   try{renderMyReports();}catch(e){}sh.classList.add('open');try{haptic(4);}catch(e){}}
 function rpClose(){const sh=document.getElementById('rpSheet');if(sh)sh.classList.remove('open');}
-// Bottom sheets sit still: they never stretch upwards or bounce. The only
-// gesture is a pull down from the top of their content, which closes them.
+// Bottom sheets sit still: they never stretch upwards or bounce. Every one of
+// them closes the same three ways -- its X, a tap beside it, and a pull down
+// from the top of its content (only once that content is scrolled to the
+// top, and never from a slider, a text field or a map inside it).
+const SHEET_PULL=[
+  ['.set-sheet.open .set-in',i=>{const o=i.closest('.set-sheet');try{o.dispatchEvent(new MouseEvent('click',{bubbles:true}));}catch(e){}
+    if(o.classList.contains('open'))o.classList.remove('open');}],
+  ['#cmtModal .cmt-sheet',()=>commentsClose()],
+  ['#condModal .cond-sheet',()=>condClose()],
+  ['#qrModal .cond-sheet',()=>qrClose()],
+  ['#reportOverlay .report-sheet',()=>{if(typeof obsState!=='undefined'&&obsState)obsClose();else reportClose();}],
+  ['#shareModal .sh-sheet',()=>shareClose()]];
 (function(){
-  let sh=null,inn=null,y0=0,dy=0,on=false;
-  document.addEventListener('touchstart',e=>{
-    const i=e.target&&e.target.closest&&e.target.closest('.set-sheet.open .set-in');
-    if(!i||i.scrollTop>0||e.touches.length>1){on=false;return;}
-    inn=i;sh=i.closest('.set-sheet');y0=e.touches[0].clientY;dy=0;on=true;},{passive:true});
+  let inn=null,fn=null,y0=0,x0=0,dy=0,on=false,dir=0;
+  const scrolled=(t,root)=>{for(let n=t;n&&n!==root.parentNode;n=n.parentNode)if(n.nodeType===1&&n.scrollTop>0)return true;return false;};
+  document.addEventListener('touchstart',e=>{on=false;
+    const t=e.target;if(!t||!t.closest||e.touches.length>1)return;
+    if(t.closest('input[type=range],textarea,canvas,.leaflet-container,[data-nopull]'))return;
+    for(const [sel,f] of SHEET_PULL){const i=t.closest(sel);if(!i)continue;
+      if(scrolled(t,i))return;
+      inn=i;fn=f;y0=e.touches[0].clientY;x0=e.touches[0].clientX;dy=0;dir=0;on=true;return;}},{passive:true});
   document.addEventListener('touchmove',e=>{if(!on)return;
-    dy=Math.max(0,e.touches[0].clientY-y0);
-    if(dy>0&&inn.scrollTop<=0){inn.classList.add('dragging');inn.style.transform='translateY('+dy+'px)';
-      if(e.cancelable)e.preventDefault();}},{passive:false});
-  document.addEventListener('touchend',()=>{if(!on)return;on=false;
-    const i=inn,s0=sh;i.classList.remove('dragging');i.classList.add('snap');
+    const y=e.touches[0].clientY-y0,x=e.touches[0].clientX-x0;
+    // a sideways swipe (photo strip, chips) is not a pull
+    if(!dir){if(Math.abs(x)<7&&Math.abs(y)<7)return;dir=(y>0&&Math.abs(y)>Math.abs(x))?1:-1;if(dir<0){on=false;return;}}
+    dy=Math.max(0,y);inn.classList.add('dragging');inn.style.transition='none';inn.style.transform='translateY('+dy+'px)';
+    if(e.cancelable)e.preventDefault();},{passive:false});
+  document.addEventListener('touchend',()=>{if(!on)return;on=false;if(dir<1)return;
+    const i=inn,f=fn;i.classList.remove('dragging');i.style.transition='transform .22s cubic-bezier(.32,.72,.42,1)';
     if(dy>Math.min(120,i.offsetHeight*.25)){i.style.transform='translateY(100%)';
-      setTimeout(()=>{i.classList.remove('snap');i.style.transform='';
-        try{s0.dispatchEvent(new MouseEvent('click',{bubbles:true}));}catch(e){}
-        if(s0.classList.contains('open'))s0.classList.remove('open');},200);}
-    else{i.style.transform='';setTimeout(()=>i.classList.remove('snap'),230);}});
+      setTimeout(()=>{i.style.transition='';i.style.transform='';try{f(i);}catch(e){}},200);}
+    else{i.style.transform='';setTimeout(()=>{i.style.transition='';},240);}});
 })();
 // Everything here is already in allReports; this only reads it back.
 function renderMyReports(){
@@ -14953,14 +15089,87 @@ function inspApplyPos(){const e=document.getElementById('inspPanel');
 const INSP_FIRST={snowpack:'va',cloud:'cloud',wind:'wind',snow:'snow',depth:'depth',temp:'temp',tsurf:'temp',
   sun:'rad',rad:'rad',radsun:'rad',powder:'prog',powfind:'prog',prog:'prog',progdiff:'prog',progpat:'prog'};
 function inspOrder(sec){
-  // new snow always first (with temperature in the same chart), then depth;
-  // a layer's own section comes right after
-  // on the snow-quality layer what lies on the slope comes first
-  if(layer==='snowpack'&&sec.va)return ['va','snow','depth','prog','cloud','wind','rad'].map(k=>sec[k]||'').join('');
-  const base=['snow','depth','prog','cloud','wind','rad','va'],first=INSP_FIRST[layer];
-  const order=first&&first!=='snow'&&first!=='depth'&&first!=='temp'?['snow','depth',first].concat(base.filter(k=>k!=='snow'&&k!=='depth'&&k!==first)):base;
-  return order.map(k=>sec[k]||'').join('');
+  // open: what lies here (and, on the reports layer, what people found);
+  // folded below it: the chosen layer's own chart first
+  const open=layer==='powfind'?['prog','va']:['va','prog'];
+  const folds=layer==='wind'?['wind','snow','prof']:layer==='snowpack'?['prof','snow','wind']:['snow','prof','wind'];
+  return open.concat(folds).map(k=>sec[k]||'').join('');
 }
+// ── Point card: one sentence on top, the rest folded ────────────────────
+// The verdict says in words what the numbers below add up to; the profile,
+// the weather run and the wind rose open on a tap and stay open next time
+// (per section) for whoever reads them every time.
+let _inspWk=0;
+const INSP_FOLD_KEY='ssm_insp_open';
+function inspFoldOpen(){try{return JSON.parse(localStorage.getItem(INSP_FOLD_KEY)||'{}')||{};}catch(e){return {};}}
+function inspFold(k,html,title,sub){if(!html)return '';
+  // the section's own heading becomes the row: "Schneeprofil  Modell · HS 85 cm"
+  const m=/<h4[^>]*>([^<]*)<em>([^<]*)<\/em><\/h4>/.exec(html);
+  const t=title||(m?m[1].trim():''),st=sub||(m?m[2]:'');
+  return '<details class="insp-fold" data-k="'+k+'"'+(inspFoldOpen()[k]?' open':'')+' ontoggle="inspFoldToggle(this)">'
+    +'<summary><b>'+escapeHtml(t)+'</b>'+(st?'<em>'+escapeHtml(st)+'</em>':'')
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></summary>'
+    +html+'</details>';}
+// charts are drawn to their width: only once their row is open
+function inspFoldDraw(root){
+  const o=k=>{const d=root.querySelector('.insp-fold[data-k="'+k+'"]');return d&&d.open;};
+  if(o('mg')){try{mgDraw(_inspPt,_inspWk);}catch(e){console.warn('mg',e);}}
+  if(o('wind')){try{icWind(document.getElementById('icWind'),_inspPt,_inspWk);}catch(e){}}}
+function inspFoldToggle(d){
+  const st=inspFoldOpen();st[d.dataset.k]=d.open?1:0;
+  try{localStorage.setItem(INSP_FOLD_KEY,JSON.stringify(st));}catch(e){}
+  if(d.open){_mgKey=null;requestAnimationFrame(()=>{inspFoldDraw(d.parentNode);
+    // the opened section in view, not below the fold
+    try{const b=d.closest('.insp-body');if(b&&d.offsetTop+60>b.scrollTop+b.clientHeight)b.scrollTo({top:d.offsetTop-8,behavior:'smooth'});}catch(e){}});}
+  try{haptic(3);}catch(e){}}
+// What the slope is like, in words. From the model's own class at this very
+// spot when SNOWPACK is in; from new snow and depth otherwise.
+function inspVerdict(o){
+  let what='',rate='',tone='ok';
+  const st=o.st;
+  if(st&&st.k6!=null){const k=st.k6,pw=st.pw||0;
+    if(k===0){what='Kaum Schnee';rate='nicht fahrbar';tone='bad';}
+    else if(k===10){what='Dünne Schneedecke';rate='Steine, kaum fahrbar';tone='bad';}
+    else if([3,4,5,8,9].includes(k)){what='Pulver'+(pw>=1?' '+pw+' cm':'');
+      if(st.thin){rate='Steine möglich';tone='bad';}
+      else if(pw>=20){rate='sehr gut fahrbar';tone='good';}
+      else if(pw>=10){rate='gut fahrbar';tone='good';}
+      else rate='fahrbar';}
+    else if(k===6){what='Sulz';rate='zur richtigen Zeit gut';tone='good';}
+    else if(k===1){what='Hart';rate='griffig bis eisig';tone='bad';}
+    else if(k===2){what='Kruste';rate='anspruchsvoll';tone='bad';}
+    else if(k===7){what='Nass / faul';rate='schwer, eher meiden';tone='bad';}
+    else what=VA_SKI6_DE[k]||'';}
+  else{const d=o.depth,n=o.newSnow;
+    if(!(d>=5)){what='Kaum Schnee';rate='nicht fahrbar';tone='bad';}
+    else if(n>=3){what=Math.round(n)+' cm Neuschnee';
+      if(d<20){rate='Steine möglich';tone='bad';}else if(n>=15){rate='sehr gut fahrbar';tone='good';}
+      else if(n>=8){rate='gut fahrbar';tone='good';}else rate='fahrbar';}
+    else if(d<20){what='Dünne Schneedecke';rate='Steine, kaum fahrbar';tone='bad';}
+    else{what='Altschnee '+Math.round(d)+' cm';rate='kein Neuschnee';}}
+  const bits=[what];
+  if(o.tmx>-1e9){if(o.tmx<=-4)bits.push('kalt');else if(o.tmx>=3)bits.push('mild');}
+  if(o.slope!=null&&o.slope<12)bits.push('flach');else if(o.asp)bits.push(o.asp+'hang');
+  return {bits:bits.filter(Boolean),rate,tone};}
+// each piece its own text node, so the translation layer finds it
+function inspVerdictHTML(o){let v=null;try{v=inspVerdict(o);}catch(e){}
+  if(!v||!v.bits.length)return '';
+  const sp=t=>'<span>'+escapeHtml(t)+'</span>';
+  return '<div class="insp-verdict iv-'+v.tone+'"><i aria-hidden="true"></i><p>'+v.bits.map(sp).join(' · ')+(v.rate?' – '+sp(v.rate):'')+'</p></div>';}
+// SLF's danger level where a point lies -- looked up, never worked out. The
+// level is the region's published one; inside the core zone (height band and
+// aspects of the main problem) it applies in full, outside it it is said so.
+const SLF_BULLETIN_URL='https://www.slf.ch/de/lawinenbulletin-und-schneesituation/';
+function avLevelAt(lat,lon,el,as){const r=tourRegionAt(lat,lon);
+  if(!r||!r.danger)return null;
+  return {lvl:r.danger,core:avCoreZone(r,el,as)};}
+function avChipHTML(av,extra){
+  const ico='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg>';
+  if(!av)return '<a class="av-chip av-none" href="'+SLF_BULLETIN_URL+'" target="_blank" rel="noopener">'+ico+'<span class="av-t">Lawinenbulletin SLF</span><b>›</b></a>';
+  return '<a class="av-chip" href="'+SLF_BULLETIN_URL+'" target="_blank" rel="noopener" style="--avc:'+(AV_COLORS[av.lvl]||'#999')+'"'
+    +' title="Gefahrenstufe des SLF-Bulletins für diese Region – Bulletin öffnen">'
+    +'<i>'+av.lvl+'</i><span class="av-t"><span>Lawinengefahr</span> <span>'+(AV_LABELS[av.lvl]||'')+'</span> · <small>'
+    +escapeHtml(extra!=null?extra:av.core?'Kernzone':'ausserhalb Kernzone')+'</small></span><b>›</b></a>';}
 function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-open');
   const cx2=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy2=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
   if(cx2<0||cx2>=W||cy2<0||cy2>=H)return;
@@ -14993,7 +15202,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   // the profile is one model slope's layering, shown at the snow height the
   // map has here; no snow here -> no profile
   if(_pf&&!_pf.loading&&vaPointHTML.hs!=null){if(vaPointHTML.hs<1)_pf=null;else _pf=Object.assign({},_pf,{hsPt:vaPointHTML.hs});}
-  try{vaSec+=vaProfileHTML(_pf);}catch(e){}
+  let profSec='';try{profSec=vaProfileHTML(_pf);}catch(e){}
   requestAnimationFrame(()=>{try{window._inspClamp();}catch(e){}});
   let progSec='';
   if(layer==='prog'){try{const pr=prognosisAt(lat,lon);if(pr){const cl=(PROG_LABEL[pr.type]||pr.type);const zc=progZones().filter(z=>z.type===pr.type).length;
@@ -15043,7 +15252,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
       '</div>';
   }catch(e){}}
   // the numbers first: what fell in the chosen window, what lies, how cold
-  let kpi='';try{let tmn=1e9,tmx=-1e9;for(let t=a;t<Math.min(b,T);t++){const v=tvI(t,p);if(v==null||v!==v)continue;if(v<tmn)tmn=v;if(v>tmx)tmx=v;}
+  let kpi='',tmn=1e9,tmx=-1e9;try{for(let t=a;t<Math.min(b,T);t++){const v=tvI(t,p);if(v==null||v!==v)continue;if(v<tmn)tmn=v;if(v>tmx)tmx=v;}
     const kt=t=>{const d=zLocal(tMs(t));return WD()[d.getUTCDay()]+' '+String(d.getUTCHours()).padStart(2,'0')+'h';};
     kpi='<div class="insp-kpis"><div class="k-snow"><span>Neuschnee</span><b>+'+newSnow.toFixed(newSnow<10?1:0)+'<small> cm</small></b><em>'+kt(a)+' – '+kt(Math.max(a,b-1))+'</em></div>'
       +'<div><span>Schneehöhe</span><b>'+depthNow.toFixed(0)+'<small> cm</small></b><em>am Ende</em></div>'
@@ -15051,20 +15260,22 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   pan.innerHTML=
    '<div class="insp-grab" aria-hidden="true"></div>'+
    '<div class="insp-head"><div class="insp-t"><b>'+lat.toFixed(4)+'° N, '+lon.toFixed(4)+'° E</b>'+
-     '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+(layer==='snowpack'&&vaSec?'':kpi)+
+     '<div class="insp-chips"><span class="insp-chip">'+ic('peak')+' '+elevD.toFixed(0)+' m</span><span class="insp-chip accent">'+aspLbl+' · '+aspDeg.toFixed(0)+'°</span><span class="insp-chip">'+slp.toFixed(0)+'°</span></div>'+
+     inspVerdictHTML({st:vaSec?vaPointHTML.st:null,newSnow,depth:depthNow,tmn,tmx,asp:aspLbl,slope:slp})+
+     (function(){let av=null;try{av=avLevelAt(lat,lon,elevD,aspDeg);}catch(e){}return avChipHTML(av);})()+
+     (layer==='snowpack'&&vaSec?'':kpi)+
    '</div><button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
    '<div class="insp-body">'+inspOrder({va:vaSec,prog:progSec,
-     snow:mgHTML(),
+     prof:inspFold('prof',profSec),
+     snow:inspFold('mg',mgHTML(),'Wetterverlauf','Neuschnee · Temperatur · Wind'),
      depth:'',
      temp:'',
-     wind:'<div class="insp-sec"><h4>Windrose <em>Min · Median · Max</em></h4><canvas id="icWind"></canvas></div>',
+     wind:inspFold('wind','<div class="insp-sec"><h4>Windrose <em>Min · Median · Max</em></h4><canvas id="icWind"></canvas></div>'),
      cloud:'',rad:''})+
    '</div>';
   pan.classList.add('open');
-  requestAnimationFrame(()=>{
-    try{mgDraw(p,wk);}catch(e){console.warn('mg',e);}
-    icWind(document.getElementById('icWind'),p,wk);
-  });
+  _inspWk=wk;
+  requestAnimationFrame(()=>inspFoldDraw(pan));
   // while the card is open the timeline shows a from–to window to set
   try{if(tlMode==='detail')drawTimeline();}catch(e){}
   inspKeepPointVisible(lat,lon);
@@ -15753,17 +15964,8 @@ function _gotoCountry(){try{map.stop();map.invalidateSize({animate:false});
   }catch(e){}
   map.setView(bb.getCenter(),Math.min(z,zTall+2.4),{animate:false});
   map.setMinZoom(Math.min(map.getZoom(),zFit));updateBaseFade();}catch(e){}}
-// The app opens where you last were (map centre and zoom, kept a week);
-// the country view only the first time, or after a week away.
-const VIEW_KEY='ssm_view',VIEW_TTL=7*864e5;
-function _savedView(){try{const v=JSON.parse(localStorage.getItem(VIEW_KEY)||'null');
-  if(v&&isFinite(v.lat)&&isFinite(v.lng)&&isFinite(v.z)&&Date.now()-(v.t||0)<VIEW_TTL)return v;}catch(e){}return null;}
-function _gotoSaved(){const v=_savedView();_gotoCountry();if(!v)return;
-  try{map.setView([v.lat,v.lng],Math.max(map.getMinZoom(),v.z),{animate:false});}catch(e){}}
-{let _vt=0;map.on('moveend',()=>{clearTimeout(_vt);_vt=setTimeout(()=>{try{const c=map.getCenter();
-  localStorage.setItem(VIEW_KEY,JSON.stringify({lat:+c.lat.toFixed(5),lng:+c.lng.toFixed(5),z:+map.getZoom().toFixed(2),t:Date.now()}));}catch(e){}},800);});}
 (function(){const davos=(function(){try{return location.search.indexOf('start=davos')>=0;}catch(e){return false;}})();
-  const go=davos?_gotoDavos:_gotoSaved;go();setTimeout(go,400);})();
+  const go=davos?_gotoDavos:_gotoCountry;go();setTimeout(go,400);})();
 window.__APP_OK=true;
 setTopic('meteo',0,0);
 // After the rest of app.js has run: the welcome flow (ONB_SLIDES, onb) is
@@ -17064,7 +17266,8 @@ function authMenu(){openProfile();}
 // --- Personal preferences ---------------------------------------------------
 // Device-local, so they work before sign-in and never need a round trip.
 const PREF_KEY='ssm_prefs_v1';
-const PREF_DEFAULTS={start:'country',home:'',layer:'meteo:powder',window:'48',showMyReports:false};
+// opens where you last were (Einstellungen: or the whole country, or your home area)
+const PREF_DEFAULTS={start:'last',home:'',layer:'meteo:powder',window:'48',showMyReports:false};
 let prefs=Object.assign({},PREF_DEFAULTS);
 function prefsLoad(){try{const v=JSON.parse(localStorage.getItem(PREF_KEY)||'{}');
   prefs=Object.assign({},PREF_DEFAULTS,v||{});}catch(e){prefs=Object.assign({},PREF_DEFAULTS);}
@@ -17200,6 +17403,14 @@ function profSeg(id,key,after){
       box.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
       if(after)after();try{haptic(4);}catch(e){}};});
 }
+// Older builds stored the layer by its position in the list of that day:
+// read those back by what sat there then.
+const PREF_LAYER_OLD=['powder','powder','newsnow','depth','wind','cloud','temp','snowpack','vadrift'];
+function prefLayerId(v){
+  const m=/^(\w+):(\d+)$/.exec(v||'');
+  if(!v||m&&m[1]!=='meteo')return 'meteo:powder';
+  if(m)return 'meteo:'+(PREF_LAYER_OLD[+m[2]]||'powder');
+  return v.replace(':snowpack',':powder');}
 function profRenderPrefs(){
   prefsLoad();
   profSeg('profStart','start');
@@ -17212,9 +17423,11 @@ function profRenderPrefs(){
   if(home)home.value=prefs.home||'';
   const lay=document.getElementById('profLayer');
   if(lay&&!lay._filled){lay._filled=true;
-    lay.innerHTML=Object.keys(GROUPS).map(g=>GROUPS[g].items.map((it,i)=>
-      '<option value="'+g+':'+i+'">'+GROUPS[g].tag+' · '+it.label+'</option>').join('')).join('');}
-  if(lay)lay.value=prefs.layer||'meteo:0';
+    // by id, not by position: the list order changes between builds and
+    // with the SNOWPACK export (powder stands for Skiqualität)
+    lay.innerHTML=GROUPS.meteo.items.filter(it=>it.id!=='snowpack').map(it=>
+      '<option value="meteo:'+it.id+'">'+escapeHtml(it.id==='powder'?'Skiqualität':it.label)+'</option>').join('');}
+  if(lay)lay.value=prefLayerId(prefs.layer);
   const sm=document.getElementById('profShowMine');
   if(sm)sm.classList.toggle('on',!!prefs.showMyReports);
 }
@@ -17229,8 +17442,8 @@ function prefsApplyStartup(){
   try{
     const w=parseInt(prefs.window||'48');
     if(w&&w!==(b-a)){windowSize=w;a=Math.max(0,Math.min(T-w,nowIdx-Math.floor(w/2)));b=Math.min(T,a+w);}
-    // the old default ('meteo:0', reported powder) becomes the new one: Powder
-    const lv=(!prefs.layer||prefs.layer==='meteo:0'?'meteo:powder':prefs.layer).split(':');
+    // opens on Skiqualität unless a layer was picked in the settings
+    const lv=prefLayerId(prefs.layer).split(':');
     const grp=(GROUPS[lv[0]]&&GROUPS[lv[0]].menu!==false)?lv[0]:'meteo';
     let li=parseInt(lv[1]);
     if(isNaN(li)){let ix=groupItems(grp).findIndex(it=>it.id===lv[1]);
