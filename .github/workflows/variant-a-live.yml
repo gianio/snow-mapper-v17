@@ -15,6 +15,9 @@
 #             pass; the deploy picks the newest one, so a bad cycle simply
 #             leaves the previous good one online.
 name: Variant A live
+# a cycle meant as one of the four a day -- GitHub's cron or the Cloudflare
+# cron (input "cron") -- carries this title; the guard looks for it
+run-name: ${{ (github.event_name == 'schedule' || inputs.cron) && 'Variant A live · scheduled' || 'Variant A live' }}
 
 on:
   schedule:
@@ -37,6 +40,13 @@ on:
         description: "Put MeteoSwiss OGD ICON-CH1/CH2 over the forecast hours"
         type: boolean
         default: true
+      cron:
+        # Set by the Cloudflare Worker's Cron Trigger (tiles/worker,
+        # scheduled()): GitHub's own schedule runs up to hours late or drops a
+        # cycle, the Worker starts it on the minute. Counts as scheduled.
+        description: "Started by the Cloudflare cron (counts as a scheduled cycle)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -51,7 +61,43 @@ env:
   PREFIX: ${{ github.workspace }}/snowpack-build/install
 
 jobs:
+  # Each scheduled cycle is started twice -- on the minute by the Cloudflare
+  # cron, and whenever GitHub's own cron gets to it. The second one stands
+  # down when the first has its cycle running or done in the last 5 h (one
+  # that failed is run again) and cancels itself, so no deploy follows it.
+  # Manual runs always go ahead.
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      actions: write
+    outputs:
+      run: ${{ steps.g.outputs.run }}
+    steps:
+      - id: g
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN=true
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.cron }}" = "true" ]; then
+            SINCE=$(date -u -d '-300 minutes' +%Y-%m-%dT%H:%M:%SZ)
+            for R in $(gh api -X GET "repos/${{ github.repository }}/actions/workflows/variant-a-live.yml/runs" \
+                         -f created=">=$SINCE" -f per_page=20 \
+                         --jq '.workflow_runs[] | select(.id != ${{ github.run_id }} and .display_title == "Variant A live · scheduled") | .id' 2>/dev/null); do
+              if gh api "repos/${{ github.repository }}/actions/runs/$R/jobs" \
+                   --jq '.jobs[] | select(.name == "cycle" and (.status != "completed" or .conclusion == "success")) | .id' 2>/dev/null | grep -q .; then
+                RUN=false; echo "this cycle already runs or ran: run $R"; fi
+            done
+          fi
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"; echo "run this cycle: $RUN"
+          if [ "$RUN" = false ]; then
+            echo "### Stood down: this cycle was already started" >> "$GITHUB_STEP_SUMMARY"
+            gh run cancel ${{ github.run_id }} -R "${{ github.repository }}" || true
+          fi
+
   cycle:
+    needs: guard
+    if: needs.guard.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 300
     outputs:
@@ -135,7 +181,7 @@ jobs:
       # (meteodata-lab pins numpy < 2.4). Best effort: without it the cycle
       # runs on Open-Meteo alone, which serves the same ICON-CH models.
       - name: MeteoSwiss OGD forecast at the weather points
-        if: ${{ github.event_name == 'schedule' || inputs.use_ogd }}
+        if: ${{ github.event_name == 'schedule' || inputs.cron || inputs.use_ogd }}
         continue-on-error: true
         run: |
           python -m venv .ogd && .ogd/bin/pip install -q meteodata-lab && .ogd/bin/python tools/test_ogd_extract.py
@@ -202,7 +248,7 @@ jobs:
       # zoomed in on the device again).
       - name: Daily tiles?
         id: daily
-        if: github.event_name == 'schedule' && steps.cycle.outputs.rc == '0'
+        if: (github.event_name == 'schedule' || inputs.cron) && steps.cycle.outputs.rc == '0'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

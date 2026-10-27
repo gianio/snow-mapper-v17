@@ -102,10 +102,18 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # the Worker's cron starts the live cycles on time with it (see
+          # scheduled() in tiles/worker/src/index.js); optional
+          GH_DISPATCH_TOKEN: ${{ secrets.GH_DISPATCH_TOKEN }}
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
             echo "::error::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not set"; exit 1; fi
           npx wrangler deploy
+          if [ -n "$GH_DISPATCH_TOKEN" ]; then
+            printf '%s' "$GH_DISPATCH_TOKEN" | npx wrangler secret put GH_DISPATCH_TOKEN
+          else
+            echo "::warning::GH_DISPATCH_TOKEN not set -- the live cycles keep running on GitHub's own (late) schedule"
+          fi
 
   publish:
     needs: worker

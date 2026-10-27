@@ -131,4 +131,24 @@ export async function handle(request, env, ctx) {
   }
 }
 
-export default { fetch: handle };
+// Punctual live cycles. GitHub's own cron starts the Variant A live workflow
+// up to hours late, and sometimes not at all; this Cron Trigger (wrangler.toml,
+// free plan) starts it on the minute instead, with cron=true so it counts as
+// a scheduled cycle. The workflow's guard job stands the later of the two
+// down. Needs the secret GH_DISPATCH_TOKEN (a fine-grained token for this
+// repository with Actions: read and write); without it nothing happens.
+async function scheduled(event, env) {
+  if (!env.GH_DISPATCH_TOKEN) return;
+  const repo = env.GH_REPO || 'gianio/snow-mapper-v17';
+  const r = await fetch(`https://api.github.com/repos/${repo}/actions/workflows/variant-a-live.yml/dispatches`, {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + env.GH_DISPATCH_TOKEN, Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'snowmapper-tiles-cron',
+    },
+    body: JSON.stringify({ ref: env.GH_REF || 'main', inputs: { cron: 'true' } }),
+  });
+  if (!r.ok) console.log('dispatch failed', r.status, (await r.text()).slice(0, 300));
+}
+
+export default { fetch: handle, scheduled };

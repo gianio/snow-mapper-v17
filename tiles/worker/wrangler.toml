@@ -20,3 +20,8 @@ bucket_name = "snowmapper-tiles"
 [observability]
 enabled = true
 head_sampling_rate = 1
+
+# The four Variant A live cycles a day, on the minute (scheduled() in
+# src/index.js). Same times as the workflow's own cron, which then stands down.
+[triggers]
+crons = ["40 2,8,14,20 * * *"]
