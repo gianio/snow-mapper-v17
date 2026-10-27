@@ -60,6 +60,7 @@ PACK_METS = [  # (metric, byte = clip(round(value * mul), 0, 255))
     ("surface_lw", 50.0), ("total_hs_cm", 0.5), ("weak_below_cm", 5.0),
     ("sh_surface", 255.0), ("weak_layer_depth_cm", 4.0), ("drift_load", 255.0),
     ("wind_scour", 255.0), ("soft_top_cm", 10.0), ("mf_base_cm", 4.0), ("refrozen", 255.0),
+    ("powder_facet", 255.0),
 ]
 PACK_RUNS_PER_ROW = 256
 
@@ -127,7 +128,8 @@ def export_pack(out_dir: Path, runs, results, layer_ts, wps, grid, shade, mets, 
             "WEAK_BELOW_MIN", "WIND_MIN", "S_THIN_HS", "S_DUST", "S_PT1", "S_PT2", "S_PT3",
             "S_CRUST_TRACE", "S_THIN_CRUST", "S_CARRY", "S_WET_LWC",
             "SK_POWDER_MIN", "SK_THIN_POWDER_HS", "SK_P1", "SK_P2", "SK_P3", "SK_P4", "SK_WET_LWC", "WD_STRONG",
-            "SOFT_LWC", "SULZ_LWC_MAX", "SULZ_SOFT_MIN", "SULZ_SOFT_MAX", "SULZ_BASE_MIN")},
+            "SOFT_LWC", "SULZ_LWC_MAX", "SULZ_SOFT_MIN", "SULZ_SOFT_MAX", "SULZ_BASE_MIN",
+            "SK_FACET_SHARE")},
         "grid": {"crs": "EPSG:21781", "xll": grid.xll, "yll": grid.yll, "cs": grid.cs,
                  "nr": grid.nr, "nc": grid.nc},
         "shade": "terrain/shade.png",

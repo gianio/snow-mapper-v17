@@ -1,10 +1,11 @@
 // Pre-render sharp SNOWPACK tiles in CI (GitHub Actions), so the Worker
 // only has to SERVE them -- which fits the Cloudflare Workers free plan.
 //
-//   node prerender.mjs <exportDir> <outDir> --views ski6 --hours 24 [--procs 4]
+//   node prerender.mjs <exportDir> <outDir> --views ski6 --hours 24 [--procs 4] [--shift 10]
 //
 // Picks the frames on the app's 2 h grid within +-hours/2 of now (or of the
-// export's middle when "now" is outside it), the zoom 10-12 tiles that touch
+// export's middle when "now" is outside it; --shift moves that centre ahead),
+// the zoom 10-12 tiles that touch
 // snow in that frame's overview PNG, and writes those with snow on them as
 //   <outDir>/<view>/<tag>/<z>/<x>/<y>.png
 // plus <outDir>/sharp.json = {view: [tags]}  (what the app may ask for; the
@@ -21,6 +22,9 @@ const opt = (k, d) => { const i = args.indexOf('--' + k); return i >= 0 ? args[i
 const [EXP, OUT] = args;
 const VIEWS = opt('views', 'ski6').split(',').filter(Boolean);
 const HOURS = +opt('hours', '24'), PROCS = +opt('procs', '4'), STEP_H = 2;
+// --shift H: centre the window H hours after now (the daily run looks ahead
+// to tomorrow, where planning happens, instead of half into the past)
+const SHIFT = +opt('shift', '0');
 
 net.setDefaultAutoSelectFamilyAttemptTimeout?.(2000);
 
@@ -29,7 +33,7 @@ const man = JSON.parse(readFileSync(join(EXP, 'manifest.json'), 'utf8'));
 function pickTags() {
   const ts = man.timestamps.map(t => Date.parse(t.slice(0, 16) + ':00Z'));
   const now = Date.now(), lo = ts[0], hi = ts[ts.length - 1];
-  const anchor = now >= lo && now <= hi ? now : (lo + hi) / 2;
+  const anchor = Math.min(hi, Math.max(lo, (now >= lo && now <= hi ? now : (lo + hi) / 2) + SHIFT * 3600e3));
   const half = HOURS / 2 * 3600e3;
   // same rule as the app's slider (vaAllowedIdx): only an hourly export is
   // thinned to even hours; a 2 h export keeps its frames whatever the hour

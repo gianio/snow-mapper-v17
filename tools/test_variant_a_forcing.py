@@ -1237,6 +1237,24 @@ def test_ski6_and_wind_classes():
     so, ba = C._corn_layers(th, lwv, gr, _np.full(5, 350.0), _np.zeros(5))
     check("corn layers: 3 cm softened top over 15 cm frozen MF", (so, ba) == (3.0, 15.0), str((so, ba)))
     check("powder: one colour per SLF band", len(C.POWDER_RGBA) == len(C.POWDER_LABELS) == len(C.POWDER_DE) == 10)
+    # loose old snow: powder made mostly of facets / depth hoar / surface hoar
+    F = lambda hs, pw, fa, lw=0: int(C.classify_ski6(np.array([hs]), np.array([pw]), np.array([0]), np.array([150]),
+                                                     np.array([lw]), facet=np.array([fa]))[0])
+    check("faceted loose top -> Lockerer Altschnee (11), not powder", F(100, 15, 0.8) == 11)
+    check("mostly fresh grains -> still powder", F(100, 15, 0.2) == 4)
+    check("faceted on a thin cover -> duenne Schneedecke", F(12, 8, 0.9) == 10)
+    check("wet wins over faceted", F(100, 15, 0.9, lw=2.0) == 7)
+    check("ski6: one colour / label / name per class", len(C.SKI6_LABELS) == len(C.SKI6_DE) == len(C.SKI6_RGBA) == 12)
+    ts = {"n": 3, "heights": np.array([60., 75., 90.]),
+          "density": np.array([300., 180., 160.]), "lw": np.zeros(3), "dd": np.zeros(3), "sp": np.zeros(3),
+          "rg": np.array([0.5, 1.2, 1.0]), "grain": np.array([300, 400, 500]),
+          "ice_frac": np.zeros(3), "hardness": np.zeros(3)}
+    q = C.assess_ski_quality(ts)
+    check("facets and depth hoar on top: the loose top counts as faceted",
+          q["powder_depth_cm"] > 0 and q["powder_facet"] > 0.9, str((q["powder_depth_cm"], q["powder_facet"])))
+    ts["grain"] = np.array([300, 200, 200])
+    q = C.assess_ski_quality(ts)
+    check("fresh grains on top: not faceted", q["powder_facet"] == 0.0, str(q["powder_facet"]))
 
 
 def test_temperature_by_height():

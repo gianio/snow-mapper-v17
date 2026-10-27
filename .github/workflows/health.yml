@@ -1,0 +1,69 @@
+name: Health check
+
+# Once an hour: is the forecast on the site fresh, and did the last live
+# cycle and the last deploy go through? If not, an issue labelled "health"
+# is opened -- GitHub mails it to the repository's watchers, the owner
+# included -- and kept up to date while the problem lasts. It closes itself
+# once everything is fine again. The check never fails itself: one mail per
+# problem, not one an hour.
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+concurrency:
+  group: health
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the site and the last runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SITE: https://gianio.github.io/snow-mapper-v17/
+          MAX_AGE_H: "12"
+        run: |
+          set -u
+          P=""
+          add() { P="${P}- $1"$'\n'; }
+          # 1. how old the forecast on the site is
+          GEN=$(curl -fsSL --max-time 30 "${SITE}data/latest.json?t=$(date +%s)" | jq -r '.generated // empty' 2>/dev/null || true)
+          if [ -z "$GEN" ]; then add "data/latest.json is not readable on the site"
+          else
+            AGE=$(( ( $(date -u +%s) - $(date -u -d "${GEN%Z}" +%s) ) / 3600 ))
+            echo "forecast generated $GEN ($AGE h ago)"
+            [ "$AGE" -ge "$MAX_AGE_H" ] && add "the forecast on the site is $AGE h old (generated $GEN UTC, limit $MAX_AGE_H h)"
+          fi
+          # 2. the last live cycle that actually ran (not one that stood down)
+          for R in $(gh api "repos/$REPO/actions/workflows/variant-a-live.yml/runs?status=completed&per_page=8" --jq '.workflow_runs[].id'); do
+            C=$(gh api "repos/$REPO/actions/runs/$R/jobs" --jq '[.jobs[] | select(.name == "cycle")][0].conclusion // "none"')
+            case "$C" in skipped|none|null) continue;; esac
+            echo "last live cycle: run $R -> $C"
+            [ "$C" = success ] || add "the last Variant A live cycle ended **$C**: https://github.com/$REPO/actions/runs/$R"
+            break
+          done
+          # 3. the last deploy
+          D=$(gh api "repos/$REPO/actions/workflows/deploy.yml/runs?status=completed&per_page=5" \
+                --jq '[.workflow_runs[] | select(.conclusion != "skipped")][0] | "\(.conclusion) \(.html_url)"')
+          echo "last deploy: $D"
+          case "$D" in success*|"null null"|"") ;; *) add "the last deploy ended **${D%% *}**: ${D#* }";; esac
+
+          NUM=$(gh issue list -R "$REPO" --label health --state open --json number --jq '.[0].number // empty')
+          if [ -n "$P" ]; then
+            BODY=$(printf 'The hourly health check (%s UTC) found:\n\n%s\nThis issue closes itself once everything is fine again.\n' "$(date -u '+%F %H:%M')" "$P")
+            echo "$BODY"
+            gh label create health -R "$REPO" --color B60205 --description "Automatic health check" 2>/dev/null || true
+            if [ -z "$NUM" ]; then gh issue create -R "$REPO" --title "Snowmapper: forecast stale or a run failed" --label health --body "$BODY"
+            else gh issue edit "$NUM" -R "$REPO" --body "$BODY"; fi
+          elif [ -n "$NUM" ]; then
+            gh issue close "$NUM" -R "$REPO" --comment "Everything is fine again ($(date -u '+%F %H:%M') UTC)."
+          fi
