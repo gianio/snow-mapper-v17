@@ -1150,6 +1150,31 @@ def minify_shell(out_dir: Path) -> None:
         print(f"[OUT] minify: index.html {len(html)/1e3:.0f} -> {len(small)/1e3:.0f} kB")
 
 
+def alerts_grid(data, now=None):
+    """New snow over the next 24 and 48 h per grid cell, in whole cm (0-255).
+
+    What the favourite alerts (Supabase function fav-alerts) read: the whole
+    forecast blob is far too big for a server function that only needs one
+    number per favourite. Rows run north to south like the app's grid."""
+    snow = np.asarray(data["snow"])
+    cm = snow.astype(np.float32) * _SNOW_SCALE if snow.dtype == np.uint8 else snow.astype(np.float32)
+    times = list(data["times"])
+    now = now or datetime.utcnow()
+    stamp = now.strftime("%Y-%m-%dT%H")
+    i0 = next((i for i, t in enumerate(times) if str(t)[:13] >= stamp), len(times))
+    T, H, W = cm.shape
+    enc = lambda a: base64.b64encode(np.clip(np.round(a), 0, 255).astype(np.uint8).tobytes()).decode()
+    return {"from": times[i0] if i0 < T else None, "hours": int(max(0, min(48, T - i0))),
+            "w": int(W), "h": int(H), "bounds": [float(x) for x in data["bounds"]],
+            "ns24": enc(cm[i0:i0 + 24].sum(axis=0)), "ns48": enc(cm[i0:i0 + 48].sum(axis=0))}
+
+
+def _write_alerts(data, ddir: Path):
+    g = alerts_grid(data)
+    g["generated"] = datetime.now().replace(microsecond=0).isoformat() + "Z"
+    (ddir / "alerts.json").write_text(json.dumps(g), encoding="utf-8")
+
+
 def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     """App-shell + external data blob + latest.json pointer. The shell/binary is
     stable and small; forecast data updates independently (for GitHub Pages and
@@ -1211,6 +1236,10 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     if os.environ.get("WINDY_WEBCAMS_KEY"):
         cfg["windy_webcams_key"] = os.environ["WINDY_WEBCAMS_KEY"].strip()
     (ddir / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    try:
+        _write_alerts(data, ddir)
+    except Exception as e:
+        print(f"[OUT] alerts.json skipped: {type(e).__name__}: {e}")
     # The ski-tour routes once more on their own: the demo blob comes from a
     # cache and may predate them, and the tour layer should not depend on
     # which data set is on screen. Only written when there are routes.
