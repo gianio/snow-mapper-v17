@@ -7644,7 +7644,11 @@ const I18N_DICT={
 "gespeichert:":["saved:", "enregistré :", "salvato:"],
 "nur bereits geladene Gebiete":["only areas already loaded", "seulement les zones déjà chargées", "solo le aree già caricate"],
 "Speichert… # %":["Saving… # %", "Enregistrement… # %", "Salvataggio… # %"],
-"Offline gespeichert · # MB":["Saved offline · # MB", "Enregistré hors ligne · # Mo", "Salvato offline · # MB"]
+"Offline gespeichert · # MB":["Saved offline · # MB", "Enregistré hors ligne · # Mo", "Salvato offline · # MB"],
+"Lockerer Altschnee (kantig)":["Loose old snow (faceted)", "Vieille neige meuble (anguleuse)", "Neve vecchia sciolta (angolosa)"],
+"kantig":["faceted", "anguleuse", "angolosa"],
+"kantiger Altschnee":["faceted old snow", "vieille neige anguleuse", "neve vecchia angolosa"],
+"locker, aber alt":["loose, but old", "meuble, mais vieille", "sciolta, ma vecchia"]
 };
 
 // ── Sprachen ──────────────────────────────────────────────────────────────
@@ -8715,12 +8719,12 @@ function vaProfAvailable(){
 const VA_PALETTE={
   // powder in the SLF snow-depth colours (the map draws it in those bands
   // zoomed in; the coarse frames, tours and pens follow)
-  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[149,207,153,250],4:[102,187,106,240],5:[66,165,245,235],6:[226,170,72,220],7:[150,104,74,225],8:[30,136,229,235],9:[21,101,192,240],10:[208,214,224,170]},
+  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[149,207,153,250],4:[102,187,106,240],5:[66,165,245,235],6:[226,170,72,220],7:[150,104,74,225],8:[30,136,229,235],9:[21,101,192,240],10:[208,214,224,170],11:[176,162,212,225]},
   wind:{1:[156,168,184,190],2:[186,170,236,205],3:[112,72,200,230]}};
 // Nur Pulver on an export without its own powder layer: the three ski6 powder
 // classes, coloured like the nearest SLF snow-depth bands.
 const VA_VPAL={powder:{3:[149,207,153,250],4:[102,187,106,235],5:[66,165,245,230],8:[30,136,229,230],9:[21,101,192,235]}};
-const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver 20–30 cm',6:'Sulz (aufgefirnt)',7:'nass / faul',8:'Pulver 30–40 cm',9:'Pulver > 40 cm',10:'dünne Schneedecke (< 20 cm)'};
+const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver 20–30 cm',6:'Sulz (aufgefirnt)',7:'nass / faul',8:'Pulver 30–40 cm',9:'Pulver > 40 cm',10:'dünne Schneedecke (< 20 cm)',11:'Lockerer Altschnee (kantig)'};
 // An export without the simple six classes still has "simple" (15 kinds of
 // surface): the six are folded from it, so Skiqualität always opens simple.
 // 12 (wet / spring) goes to "nass": the simple view cannot tell good corn
@@ -9073,11 +9077,14 @@ function vaHiEngine(){
   E.clsSki6=function(m){
     var T=E.pk.thresholds,x=E.mi;
     var hs=m[x.total_hs_cm],pw=m[x.powder_depth_cm],cr=m[x.crust_thick_cm],sd=m[x.surface_density],lw=m[x.surface_lw];
+    // loose but old: mostly facets / depth hoar / surface hoar (exports with
+    // powder_facet only) -- "Lockerer Altschnee (kantig)", not powder
+    var lo=x.powder_facet!=null&&pw>=T.SK_POWDER_MIN&&m[x.powder_facet]>=(T.SK_FACET_SHARE!=null?T.SK_FACET_SHARE:0.5);
     // thin cover, from SK_THIN_POWDER_HS on: dry powder (early season), else
     // "dünne Schneedecke" (10) -- blank there read as "the snow has melted"
     if(!(hs>=T.THIN_COVER_HS)){var tp=T.SK_THIN_POWDER_HS!=null?T.SK_THIN_POWDER_HS:3;
       if(!(hs>=tp))return 0;
-      if(!(pw>=T.SK_POWDER_MIN)||lw>T.SK_WET_LWC)return 10;
+      if(!(pw>=T.SK_POWDER_MIN)||lw>T.SK_WET_LWC||lo)return 10;
       return pw<T.SK_P1?3:pw<T.SK_P2?4:(T.SK_P3==null||pw<T.SK_P3)?5:(T.SK_P4==null||pw<T.SK_P4)?8:9;}
     // corn: thin softened top on a supportive base that froze overnight
     if(x.soft_top_cm!=null&&x.mf_base_cm!=null&&x.refrozen!=null){
@@ -9088,6 +9095,7 @@ function vaHiEngine(){
       if(lw>T.SK_WET_LWC)return 7;
     }else if(lw>T.SK_WET_LWC)return 7;
     // 20-30 / 30-40 / > 40 cm; a pack without SK_P3 keeps the old "> 20" (5)
+    if(lo)return 11;
     if(pw>=T.SK_POWDER_MIN)return pw<T.SK_P1?3:pw<T.SK_P2?4:(T.SK_P3==null||pw<T.SK_P3)?5:(T.SK_P4==null||pw<T.SK_P4)?8:9;
     if(cr>=T.CRUST_FINE||sd>=T.ICE_DENSITY_MIN)return 2;
     return 1;
@@ -9127,7 +9135,7 @@ function vaHiEngine(){
   };
   E.metsFor=function(layer){
     var x=E.mi,names=layer==='density'?['surface_density']
-      :(layer==='ski6'||layer==='powder')?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_density','surface_lw','soft_top_cm','mf_base_cm','refrozen']
+      :(layer==='ski6'||layer==='powder')?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_density','surface_lw','soft_top_cm','mf_base_cm','refrozen'].concat(x.powder_facet!=null?['powder_facet']:[])
       :layer==='wind'?['total_hs_cm','drift_load','wind_scour']
       :layer==='simple'
       ?['total_hs_cm','powder_depth_cm','crust_thick_cm','surface_lw','sh_surface','drift_load','wind_scour']
@@ -9905,7 +9913,8 @@ function vaPointHTML(lat,lon,elev,slope,aspect){vaPointHTML.hs=null;vaPointHTML.
   // first what lies here and how much of it: the Skiqualität class and the
   // colour the map draws at this very spot (same engine, terrain and frame)
   const T=vaEng.pk&&vaEng.pk.thresholds||{},k6=vaEng.clsSki6(m),c6=[150,160,175,0];vaEng.color('ski6',m,c6);
-  const hs=Math.round(m[x.total_hs_cm]),pw=Math.round(m[x.powder_depth_cm]||0);vaPointHTML.hs=m[x.total_hs_cm];
+  // loose old (faceted) snow is not counted as powder
+  const hs=Math.round(m[x.total_hs_cm]),pw=k6===11?0:Math.round(m[x.powder_depth_cm]||0);vaPointHTML.hs=m[x.total_hs_cm];
   const isPow=[3,4,5,8,9].includes(k6),thinC=m[x.total_hs_cm]<(T.THIN_COVER_HS||20);
   const lbl=k6===0?'kein / wenig Schnee':k6===10?'Dünne Schneedecke – Steine, kaum fahrbar'
     :isPow?(thinC?'Pulver auf dünner Unterlage – Steine möglich':'Pulver, trocken'):(VA_SKI6_DE[k6]||nm('simple',sim)||'');
@@ -10748,7 +10757,7 @@ function tourProfileSVG(t,r){_tpLast=[t,r];
 // The tour in one line: what the descent is like up high and further down,
 // and which way it faces -- "Oben Pulver 15 cm, unten Kruste · Abfahrt N".
 // From the same per-stretch SNOWPACK classes the score is made of.
-const TV_WORD={0:'kein Schnee',1:'hart',2:'Kruste',6:'Sulz',7:'nass',10:'dünn'};
+const TV_WORD={0:'kein Schnee',1:'hart',2:'Kruste',6:'Sulz',7:'nass',10:'dünn',11:'kantiger Altschnee'};
 function tourVerdict(t,r){
   if(!r||!r.cls)return '';
   const segs=tourGeo(t).segs,n=Math.min(segs.length,r.cls.length);if(n<3)return '';
@@ -13846,9 +13855,9 @@ function legSpec(l){
     const leg=L.legend||{};
     const realPow=vaKey==='powder'&&!L._virt;
     const ORD=realPow?Object.keys(leg).map(Number).filter(k=>k>0).sort((a,b)=>b-a)
-      :({ski6:[9,8,5,4,3,6,7,2,1,10],powder:[9,8,5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0));
+      :({ski6:[9,8,5,4,3,11,6,7,2,1,10],powder:[9,8,5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0));
     const SH=realPow?Object.fromEntries(ORD.map(k=>[k,String((leg[k]&&leg[k][2])||'').replace(/^Pulver\s*/,'').replace(/\s*cm$/,'').replace(/^>\s*/,'>')]))
-      :({ski6:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10',1:'hart',2:'Kruste',6:'Sulz',7:'faul',10:'dünn'},powder:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
+      :({ski6:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10',11:'kantig',1:'hart',2:'Kruste',6:'Sulz',7:'faul',10:'dünn'},powder:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
     // Skiqualität: the powder depths, then the other surfaces by name --
     // never shares of the view. Zoomed in the map draws powder in the SLF
     // bands (device engine); the coarse frames in the five powder classes.
@@ -13857,7 +13866,8 @@ function legSpec(l){
         for(let i=B.length-1;i>=0;i--)rows.push({k:100+i,c:C[i],s:B[i]+(i===B.length-1?'+':'–'+B[i+1]),n:'Pulver '+B[i]+(i===B.length-1?'+ cm':'–'+B[i+1]+' cm')});}
       else [[9,'40+'],[8,'30–40'],[5,leg[8]?'20–30':'20+'],[4,'10–20'],[3,'2–10']].forEach(([k,sv])=>{if(k===8&&!leg[8])return;
         rows.push({k,c:rgb(VA_PALETTE.ski6[k]),s:sv,n:'Pulver '+sv+' cm'});});
-      [[6,'Sulz'],[7,'nass'],[2,'Kruste'],[1,'hart'],[10,'dünn']].forEach(([k,sv],i)=>{
+      // loose old snow (facets) only once the export knows the class
+      (leg[11]?[[11,'kantig']]:[]).concat([[6,'Sulz'],[7,'nass'],[2,'Kruste'],[1,'hart'],[10,'dünn']]).forEach(([k,sv],i)=>{
         rows.push({k,c:rgb(VA_PALETTE.ski6[k]),s:sv,n:(leg[k]&&leg[k][2])||VA_SKI6_DE[k]||sv,sep:!i});});
       return {t:name,u:'Pulver cm',va:true,noShare:true,rows};}
     const rows=ORD.filter(k=>leg[k]&&leg[k][1]).map(k=>{const e=leg[k],nm=e[2]||String(e[0]).replace(/_/g,' ');
@@ -15383,6 +15393,7 @@ function inspVerdict(o){
       else if(pw>=10){rate='gut fahrbar';tone='good';}
       else rate='fahrbar';}
     else if(k===6){what='Sulz';rate='zur richtigen Zeit gut';tone='good';}
+    else if(k===11){what='Lockerer Altschnee (kantig)';rate='locker, aber alt';}
     else if(k===1){what='Hart';rate='griffig bis eisig';tone='bad';}
     else if(k===2){what='Kruste';rate='anspruchsvoll';tone='bad';}
     else if(k===7){what='Nass / faul';rate='schwer, eher meiden';tone='bad';}

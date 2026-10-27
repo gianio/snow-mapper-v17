@@ -451,7 +451,8 @@ def grid_frames(grid: NationalGrid, runs, results, layer_ts, W, cell_index, prec
             drift=m["drift_load"], scour=m["wind_scour"])
         ski6 = classify.classify_ski6(m["total_hs_cm"], m["powder_depth_cm"], m["crust_thick_cm"],
                                       m["surface_density"], m["surface_lw"],
-                                      m.get("soft_top_cm"), m.get("mf_base_cm"), m.get("refrozen"))
+                                      m.get("soft_top_cm"), m.get("mf_base_cm"), m.get("refrozen"),
+                                      m.get("powder_facet"))
         windc = classify.classify_wind(m["total_hs_cm"], m["drift_load"], m["wind_scour"])
         powderc = classify.classify_powder(m["total_hs_cm"], m["powder_depth_cm"], m["surface_lw"])
         powderc[~valid] = 0

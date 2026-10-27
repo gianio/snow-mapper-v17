@@ -317,6 +317,9 @@ def assess_ski_quality(ts):
                                      # (FC/DH/SH) within the profile's top; 0 = none
         "soft_top_cm":     0.0,   # moist/wet layers from the surface down (corn: the softened top)
         "mf_base_cm":      0.0,   # frozen, supportive melt-freeze base right under it
+        "powder_facet":    0.0,   # share (0-1) of the loose top made of facets,
+                                  # depth hoar or surface hoar (FC/DH/SH): old
+                                  # loose snow, not fresh powder
     }
 
     if n == 0:
@@ -459,8 +462,10 @@ def assess_ski_quality(ts):
 
         mean_dd = float(np.nanmean(dd_vals)) if dd_vals else 0.0
         mean_lw = float(np.nanmean(lw_vals)) if lw_vals else 0.0
+        facet_cm = sum(float(thicks[k]) for k in range(i + 1, n) if int(grain[k]) // 100 in (4, 5, 6))
 
         result["powder_depth_cm"] = powder_cm
+        result["powder_facet"]    = facet_cm / powder_cm if powder_cm > 0 else 0.0
         result["powder_dd"]       = mean_dd
         result["powder_lw"]       = mean_lw
 
@@ -961,10 +966,11 @@ def classify_simple(hs, powder, crust, sdens, slw, sh=None, drift=None, scour=No
 # exports; class 5 was "> 20 cm" there and is "20-30 cm" now. The thin cover
 # took the next one after that (10).
 SKI6_LABELS = ["none", "hard", "crust", "powder_0_10", "powder_10_20", "powder_20_30", "corn", "wet",
-               "powder_30_40", "powder_gt_40", "thin_cover"]
+               "powder_30_40", "powder_gt_40", "thin_cover", "loose_faceted"]
 SKI6_DE = ["kein / wenig Schnee", "durchgehend hart", "Kruste", "Pulver 0–10 cm",
            "Pulver 10–20 cm", "Pulver 20–30 cm", "Sulz (aufgefirnt)", "nass / faul",
-           "Pulver 30–40 cm", "Pulver > 40 cm", "dünne Schneedecke (< 20 cm)"]
+           "Pulver 30–40 cm", "Pulver > 40 cm", "dünne Schneedecke (< 20 cm)",
+           "Lockerer Altschnee (kantig)"]
 # Powder in the SLF snow-depth colours of the Neuschnee / Schneehöhe layers
 # (5-10 green .. 50-75 navy, the class's band); the surfaces you would
 # rather avoid are the warm/neutral ones: cool grey for hard, muted coral
@@ -973,7 +979,10 @@ SKI6_DE = ["kein / wenig Schnee", "durchgehend hart", "Kruste", "Pulver 0–10 c
 SKI6_RGBA = {0: (0, 0, 0, 0), 1: (156, 168, 184, 185), 2: (214, 108, 98, 215),
              3: (149, 207, 153, 250), 4: (102, 187, 106, 240), 5: (66, 165, 245, 235),
              6: (226, 170, 72, 220), 7: (150, 104, 74, 225),
-             8: (30, 136, 229, 235), 9: (21, 101, 192, 240), 10: (208, 214, 224, 170)}
+             8: (30, 136, 229, 235), 9: (21, 101, 192, 240), 10: (208, 214, 224, 170),
+             # loose but old (facets, depth hoar, surface hoar): a dusty
+             # lavender -- loose like powder, but not the fresh-powder colours
+             11: (176, 162, 212, 225)}
 SK_POWDER_MIN = 2.0      # cm -- less loose snow than this is not "powder" to ski
 SK_THIN_POWDER_HS = 3.0  # cm -- early season: a cover thinner than THIN_COVER_HS
                          # is drawn once the whole pack reaches this -- as powder
@@ -981,11 +990,17 @@ SK_THIN_POWDER_HS = 3.0  # cm -- early season: a cover thinner than THIN_COVER_H
                          # grass is what a skier wants to know about), else as
                          # "dünne Schneedecke" (10)
 SK_P1, SK_P2, SK_P3, SK_P4 = 10.0, 20.0, 30.0, 40.0
+SK_FACET_SHARE = 0.5     # loose top at least half facets / depth hoar / surface
+                         # hoar -> "Lockerer Altschnee (kantig)" (11), not powder
 SK_WET_LWC = WET_LWC_MIN
 
 
-def classify_ski6(hs, powder, crust, sdens, slw, soft=None, base=None, refrozen=None):
+def classify_ski6(hs, powder, crust, sdens, slw, soft=None, base=None, refrozen=None, facet=None):
     """Vectorised SKI6 class (uint8) from interpolated metric fields.
+
+    With powder_facet (facet) loose snow that is mostly facets, depth hoar or
+    surface hoar is 11 ("Lockerer Altschnee (kantig)") instead of powder; on a
+    thin cover it is "dünne Schneedecke" (10) like every other old snow.
 
     With the corn metrics (soft top, frozen base, refrozen last night) a wet
     surface is split into Sulz (6: thin softened top on a supportive base
@@ -1002,6 +1017,10 @@ def classify_ski6(hs, powder, crust, sdens, slw, soft=None, base=None, refrozen=
     lab[p & (pw >= SK_P2) & (pw < SK_P3)] = 5
     lab[p & (pw >= SK_P3) & (pw < SK_P4)] = 8
     lab[p & (pw >= SK_P4)] = 9
+    lo = np.zeros(hs.shape, bool)
+    if facet is not None:
+        lo = p & (np.asarray(facet, float) >= SK_FACET_SHARE)
+        lab[lo] = 11
     if soft is not None and base is not None and refrozen is not None:
         so = np.asarray(soft, float); ba = np.asarray(base, float); rf = np.asarray(refrozen, float)
         softened = (so >= SULZ_SOFT_MIN) | (lw > SOFT_LWC)
@@ -1014,7 +1033,7 @@ def classify_ski6(hs, powder, crust, sdens, slw, soft=None, base=None, refrozen=
     # thin cover: dry powder stays (early season), the rest is "dünne
     # Schneedecke"; below SK_THIN_POWDER_HS nothing is drawn
     thin = ~(hs >= THIN_COVER_HS)
-    keep = p & ~(lw > SK_WET_LWC) & (hs >= SK_THIN_POWDER_HS)
+    keep = p & ~lo & ~(lw > SK_WET_LWC) & (hs >= SK_THIN_POWDER_HS)
     lab[thin & ~keep] = 10
     lab[~(hs >= SK_THIN_POWDER_HS)] = 0
     return lab

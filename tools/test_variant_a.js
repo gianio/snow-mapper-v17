@@ -304,5 +304,23 @@ console.log('\nmatrix mode (weather point x virtual slopes)');
   check('without an index the points mode still works', !!vaProfileAt(46.80, 9.83, 2400, 0));
 }
 
+// The device engine's Skiqualität class: loose snow made mostly of facets /
+// depth hoar / surface hoar is "Lockerer Altschnee (kantig)" (11) once the
+// pack carries powder_facet; older packs (no such metric) keep powder.
+{
+  const E = new Function(grab('vaHiEngine') + '\nreturn vaHiEngine();')();
+  const names = ['total_hs_cm', 'powder_depth_cm', 'crust_thick_cm', 'surface_density', 'surface_lw', 'powder_facet'];
+  E.pk = {thresholds: {THIN_COVER_HS: 20, SK_THIN_POWDER_HS: 3, SK_POWDER_MIN: 2, SK_P1: 10, SK_P2: 20, SK_P3: 30, SK_P4: 40,
+                       SK_WET_LWC: 1, CRUST_FINE: 0.5, ICE_DENSITY_MIN: 700, SK_FACET_SHARE: 0.5}};
+  E.mi = Object.fromEntries(names.map((k, i) => [k, i]));
+  const cls = (hs, pw, fa, lw = 0) => E.clsSki6([hs, pw, 0, 150, lw, fa]);
+  check('engine: faceted loose top -> 11', cls(100, 15, 0.8) === 11, String(cls(100, 15, 0.8)));
+  check('engine: fresh loose top -> powder 10-20', cls(100, 15, 0.2) === 4);
+  check('engine: faceted on a thin cover -> duenne Schneedecke', cls(12, 8, 0.9) === 10);
+  check('engine: wet wins over faceted', cls(100, 15, 0.9, 2) === 7);
+  delete E.mi.powder_facet;
+  check('engine: a pack without powder_facet keeps powder', cls(100, 15, 0.9) === 4);
+}
+
 console.log('\n' + (fails.length ? `FAILED: ${fails}` : 'VARIANT A OK'));
 process.exit(fails.length ? 1 : 0);
