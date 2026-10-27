@@ -1506,6 +1506,7 @@ _BOOT_SPLIT = r"""<script>
       if(!ljr.ok&&isDemo)ljr=await fetchT(pre+'data/latest.json',{cache:'no-cache'},15000);
       if(!ljr.ok)throw new Error('latest.json HTTP '+ljr.status);
       var lj=await ljr.json();
+      window.__dataLj={pre:pre,lj:lj};   // for "offline speichern"
       if(lj.bin&&window.DecompressionStream&&window.TransformStream){
         // A coarse copy first (every 4th cell, a few MB) unless the full
         // one of this very run is already on the phone; the full one then
@@ -1633,6 +1634,8 @@ _SERVICE_WORKER = r"""// Snowmapper — service worker (installable + offline la
 // online users always get the latest, and offline falls back to the last cache.
 const C='ssm-v6';
 const T='ssm-tiles-v1';
+const OFF='ssm-offline-v1';      // an area saved for the field (offlineSave in app.js): never trimmed
+const offMatch=r=>caches.open(OFF).then(o=>o.match(r));
 const TILE_MAX=1200;             // roughly a canton at working zooms
 let _trim=0;
 // Cheap and approximate on purpose: an exact LRU would cost more than the
@@ -1645,7 +1648,7 @@ async function tileTrim(c){
 }
 const CORE=['./','./index.html','./app.js','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(CORE).catch(()=>{})));});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C&&k!==T).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C&&k!==T&&k!==OFF).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
   const url=new URL(r.url);
   // swisstopo tiles are addressed by z/x/y and never change, so the second
@@ -1653,17 +1656,22 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
   // Terrarium elevation tiles (device-side Variant A rendering) never change
   // either, and go through the same capped tile cache.
   if(url.host==='wmts.geo.admin.ch'||(url.host==='s3.amazonaws.com'&&url.pathname.indexOf('/elevation-tiles-prod/')===0)){
-    e.respondWith(caches.open(T).then(c=>c.match(r).then(m=>m||fetch(r).then(resp=>{
+    e.respondWith(offMatch(r).then(o=>o||caches.open(T).then(c=>c.match(r).then(m=>m||fetch(r).then(resp=>{
       if(resp&&resp.status===200){const cp=resp.clone();
         c.put(r,cp).then(()=>tileTrim(c)).catch(()=>{});}
-      return resp;}).catch(()=>m))));
+      return resp;}).catch(()=>m)))));
     return;
   }
-  if(url.origin!==location.origin)return; // Supabase / CDNs -> network
+  // the libraries the page boots with: from the saved area when offline
+  if(url.host==='unpkg.com'||url.host==='cdn.jsdelivr.net'){
+    e.respondWith(fetch(r).catch(()=>offMatch(r).then(m=>m||Response.error())));return;}
+  if(url.origin!==location.origin)return; // Supabase -> network
   // SNOWPACK exports are hundreds of MB of frames. Copying each one into
   // Cache Storage on every slide filled the phone's storage and kept the
   // disk busy; the browser's HTTP cache (versioned URLs) already holds them.
-  if(url.pathname.indexOf('/data/variant_a')>=0)return;
+  // (an area saved for offline use keeps the next 24 h of them)
+  if(url.pathname.indexOf('/data/variant_a')>=0){
+    e.respondWith(fetch(r).catch(()=>offMatch(r).then(m=>m||Response.error())));return;}
   // Content-stamped data blobs are immutable -> cache-first (repeat loads use 0 network),
   // and stale stamps are purged whenever a new one is stored.
   if(url.pathname.includes('/data/snowdata-')){
@@ -1679,7 +1687,8 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
   const nav=r.mode==='navigate';
   // the page itself unreachable or an error page (a deploy in progress):
   // the last good copy, else the maintenance screen -- never a bare 404
-  const fallback=()=>caches.match(r).then(m=>m||(nav?caches.match('./index.html'):undefined))
+  const fallback=()=>(url.pathname.endsWith('/data/latest.json')?offMatch(r):Promise.resolve(null)).then(o=>o||caches.match(r))
+    .then(m=>m||(nav?caches.match('./index.html'):undefined))
     .then(m=>m||(nav?new Response(MAINT_PAGE,{status:503,headers:{'content-type':'text/html; charset=utf-8','retry-after':'30'}}):undefined));
   e.respondWith(
     fetch(r,fresh?{cache:'no-cache'}:undefined).then(resp=>{
@@ -6055,6 +6064,14 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .tsq-d span{font:700 12px var(--font);color:var(--mut)}
  .tsq-d button{border:1px solid var(--hair);background:var(--card);color:var(--fg);border-radius:999px;padding:6px 0;min-width:48px;font:700 12.5px var(--font);cursor:pointer}
  .tsq-d button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+ /* offline: the saved area in the settings, and the bar while offline */
+ .off-info{display:flex;flex-direction:column;gap:2px;padding:2px 2px 4px}
+ .off-info b{font:750 13.5px/1.25 var(--font);color:var(--fg)}
+ .off-info small{font:600 12px/1.35 var(--font);color:var(--mut)}
+ .off-bar{position:fixed;z-index:1150;top:calc(env(safe-area-inset-top,0px) + 56px);left:50%;transform:translateX(-50%);max-width:calc(100vw - 24px);
+   padding:7px 12px;border-radius:999px;background:#2B2F36;color:#fff;font:650 12px/1.3 var(--font);box-shadow:0 6px 16px rgba(0,0,0,.25);
+   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .off-bar b{font-weight:800;color:#FFD27A}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -6225,6 +6242,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
       <button data-v="fr" onclick="langSet('fr')">Français</button>
       <button data-v="it" onclick="langSet('it')">Italiano</button>
     </div>
+    <span class="lbl-micro">Offline im Gelände</span>
+    <div class="set-rows" id="setOffline"></div>
     <span class="lbl-micro">Favoriten · Neuschnee-Push</span>
     <div class="set-rows fav-list" id="setFavs"></div>
     <span class="lbl-micro">Melden</span>
@@ -7610,7 +7629,22 @@ const I18N_DICT={
 "Gemischt":["Mixed", "Mitigée", "Mista"],
 "Schlecht":["Bad", "Mauvaise", "Cattiva"],
 "GPS zu ungenau (# m) – nicht gemeldet":["GPS too imprecise (# m) – not reported", "GPS trop imprécis (# m) – non signalé", "GPS troppo impreciso (# m) – non segnalato"],
-"Wie tief? (cm)":["How deep? (cm)", "Quelle profondeur ? (cm)", "Quanto profonda? (cm)"]
+"Wie tief? (cm)":["How deep? (cm)", "Quelle profondeur ? (cm)", "Quanto profonda? (cm)"],
+"Offline im Gelände":["Offline in the field", "Hors ligne sur le terrain", "Offline sul terreno"],
+"Kartenausschnitt offline speichern":["Save this map area offline", "Enregistrer cette zone hors ligne", "Salva quest'area offline"],
+"Neu speichern (aktueller Kartenausschnitt)":["Save again (current map area)", "Réenregistrer (zone actuelle)", "Salva di nuovo (area attuale)"],
+"Offline-Daten löschen":["Delete offline data", "Supprimer les données hors ligne", "Elimina dati offline"],
+"Gespeichert":["Saved", "Enregistré", "Salvato"],
+"Vorhersage vom":["forecast of", "prévision du", "previsione del"],
+"Karte, Vorhersage und Skiqualität der nächsten 24 h für das Gebiet auf dem Bildschirm (bis ca. 25 × 25 km). Oben am Berg ohne Netz startet die App damit.":["Map, forecast and ski quality of the next 24 h for the area on screen (up to about 25 × 25 km). Up on the mountain without signal the app starts from it.", "Carte, prévision et qualité de ski des prochaines 24 h pour la zone à l'écran (jusqu'à env. 25 × 25 km). Sans réseau en montagne, l'app démarre avec.", "Mappa, previsione e qualità sciistica delle prossime 24 h per l'area sullo schermo (fino a circa 25 × 25 km). In montagna senza rete l'app parte da qui."],
+"Dieser Browser kann nichts offline speichern":["This browser cannot save anything offline", "Ce navigateur ne peut rien enregistrer hors ligne", "Questo browser non può salvare offline"],
+"Zum Speichern braucht es Netz":["Saving needs a connection", "Il faut du réseau pour enregistrer", "Per salvare serve la rete"],
+"Offline-Daten gelöscht":["Offline data deleted", "Données hors ligne supprimées", "Dati offline eliminati"],
+"Offline":["Offline", "Hors ligne", "Offline"],
+"gespeichert:":["saved:", "enregistré :", "salvato:"],
+"nur bereits geladene Gebiete":["only areas already loaded", "seulement les zones déjà chargées", "solo le aree già caricate"],
+"Speichert… # %":["Saving… # %", "Enregistrement… # %", "Salvataggio… # %"],
+"Offline gespeichert · # MB":["Saved offline · # MB", "Enregistré hors ligne · # Mo", "Salvato offline · # MB"]
 };
 
 // ── Sprachen ──────────────────────────────────────────────────────────────
@@ -14894,6 +14928,7 @@ function setClose(){
 function setRender(){
   try{langRender();}catch(e){}
   try{favSetRender();}catch(e){}
+  try{offRender();}catch(e){}
   const v=themePref();
   document.querySelectorAll('#setTheme button').forEach(b=>
     b.classList.toggle('active',b.dataset.v===v));
@@ -17991,6 +18026,93 @@ function modelVsReportsHTML(){let s=null;try{s=modelVsReports(7);}catch(e){}
   const lean=Math.abs(s.bias)<2?'liegt im Mittel richtig':s.bias<0?'eher zu wenig Schnee':'eher zu viel Schnee';
   return '<div class="mvr" title="Gemeldete Pulvertiefe gegen den Modell-Neuschnee der 72 h davor, am selben Ort und auf derselben Höhe">'
     +'<b>Modell vs. Meldungen</b><span><span>7 Tage</span> · <span>Ø '+Math.round(s.mae)+' cm daneben</span> · <span>'+s.n+' Meldungen</span> · <span>'+lean+'</span></span></div>';}
+// ── Offline im Gelände ──────────────────────────────────────────────────
+// "Kartenausschnitt offline speichern": the map tiles of the area on screen
+// (zoom 11-15), the forecast package, the tours, the libraries the page
+// boots with and the next 24 h of SNOWPACK go into a cache of their own
+// (ssm-offline-v1) that nothing trims. Up on the mountain without signal the
+// app starts from it, and a bar says which forecast it shows.
+const OFF_CACHE='ssm-offline-v1',OFF_KEY='ssm_offline';
+function offInfo(){try{return JSON.parse(localStorage.getItem(OFF_KEY)||'null');}catch(e){return null;}}
+function _offTX(lon,z){return Math.floor((lon+180)/360*Math.pow(2,z));}
+function _offTY(lat,z){const r=lat*Math.PI/180;return Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*Math.pow(2,z));}
+function offlineUrls(){
+  const c=map.getCenter(),b=map.getBounds(),R=0.11;   // at most ~25 x 25 km
+  const s=Math.max(b.getSouth(),c.lat-R),n=Math.min(b.getNorth(),c.lat+R),w=Math.max(b.getWest(),c.lng-R*1.47),e=Math.min(b.getEast(),c.lng+R*1.47);
+  const tiles=[],other=new Set();
+  const box=(z,fn)=>{const x0=_offTX(w,z),x1=_offTX(e,z),y0=_offTY(n,z),y1=_offTY(s,z);
+    for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)fn(x,y);};
+  const tl=[];map.eachLayer(l=>{if(l instanceof L.TileLayer&&l._url&&/^https?:/.test(l._url))tl.push(l);});
+  // the deepest zoom only while the whole set stays reasonable
+  let zMax=15;const cnt=z=>{let k=0;box(z,()=>k++);return k;};
+  while(zMax>12&&tl.length*[11,12,13,14,15].filter(z=>z<=zMax).reduce((t,z)=>t+cnt(z),0)>3000)zMax--;
+  for(const l of tl)for(let z=11;z<=zMax;z++){const tz=l._tileZoom;l._tileZoom=z;
+    box(z,(x,y)=>{try{tiles.push(l.getTileUrl({x,y,z}));}catch(_){}});l._tileZoom=tz;}
+  // the terrain the snow-quality map and the point card read
+  for(const z of [VA_TERR_Z,TERR_FZ])box(z,(x,y)=>tiles.push(VA_TERR+z+'/'+x+'/'+y+'.png'));
+  const D=window.__dataLj;
+  if(D&&D.lj){const p=D.pre+'data/';other.add(p+'latest.json');other.add(p+'tours.json');other.add(p+'config.json');
+    ['bin','x'].forEach(k=>{if(D.lj[k])other.add(p+D.lj[k]);});}
+  document.querySelectorAll('script[src],link[rel=stylesheet][href]').forEach(el=>{const u=el.src||el.href;
+    if(/^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net)\//.test(u))other.add(u);});
+  return {tiles,other:[...other],bounds:[s,w,n,e]};}
+// the SNOWPACK pack and the frames of the next 24 h, loaded the app's way
+async function offlineVaUrls(){const out=[];
+  if(!(typeof vaAvailable==='function'&&vaAvailable()))return out;
+  try{await vaPkLoad();}catch(e){}
+  if(!vaPk)return out;
+  out.push(VA_BASE+'/manifest.json',vaV(VA_BASE+'/'+vaMan.pack),vaV(VA_BASE+'/'+vaPk.shade));
+  if(vaPk.forest)out.push(vaV(VA_BASE+'/'+vaPk.forest.file));
+  if(vaPk.precip)out.push(vaV(VA_BASE+'/'+vaPk.precip.file));
+  const now=Date.now()-3600e3,ts=vaMan.timestamps||[];
+  let i0=ts.findIndex(t=>Date.parse(String(t).slice(0,16)+':00Z')>=now);if(i0<0)i0=Math.max(0,ts.length-24);
+  for(let i=i0;i<Math.min(ts.length,i0+25);i++)out.push(vaV(VA_BASE+'/'+vaPk.file.replace('{tag}',vaMan.tags[i])));
+  return out;}
+let _offBusy=false;
+async function offlineSave(){
+  if(_offBusy)return;
+  if(!('caches' in window)){toast('Dieser Browser kann nichts offline speichern','err');return;}
+  if(navigator.onLine===false){toast('Zum Speichern braucht es Netz','err');return;}
+  _offBusy=true;const set=t=>{const b=document.getElementById('offSaveBtn');if(b)b.querySelector('span').textContent=t;};
+  try{
+    const U=offlineUrls(),va=await offlineVaUrls(),all=[...U.other,...va,...U.tiles];
+    const cache=await caches.open(OFF_CACHE);
+    // a new area replaces the old one
+    for(const k of await cache.keys())await cache.delete(k);
+    let done=0,bytes=0,fail=0,i=0;set('Speichert… 0 %');
+    const one=async u=>{try{let r=null;
+        try{r=await fetch(u,{cache:'force-cache'});}catch(e){r=null;}
+        if(!r||!(r.ok||r.type==='opaque'))r=await fetch(u,{mode:'no-cors'});
+        const bl=await r.clone().blob().catch(()=>null);if(bl)bytes+=bl.size;
+        await cache.put(u,r);}catch(e){fail++;}
+      done++;if(done%20===0)set('Speichert… '+Math.round(done/all.length*100)+' %');};
+    const work=async()=>{while(i<all.length){const u=all[i++];await one(u);}};
+    await Promise.all([work(),work(),work(),work(),work(),work()]);
+    const D=window.__dataLj,nm=(function(){const c=map.getCenter();try{const t=tourNearPoint(c.lat,c.lng,6000,1);if(t.length)return 'bei '+(t[0].t.pname||t[0].t.name);}catch(e){}
+      return c.lat.toFixed(2)+'°N '+c.lng.toFixed(2)+'°E';})();
+    const info={at:Date.now(),name:nm,n:all.length-fail,bytes,bounds:U.bounds,gen:D&&D.lj&&D.lj.generated||null};
+    try{localStorage.setItem(OFF_KEY,JSON.stringify(info));if(D&&D.lj&&D.lj.bin)localStorage.setItem('ssm_full',D.lj.bin);}catch(e){}
+    toast(fail>all.length*0.1?'Teilweise gespeichert ('+fail+' fehlten)':'Offline gespeichert · '+Math.round(bytes/1e6)+' MB','ok');
+  }catch(e){toast('Offline-Speichern fehlgeschlagen: '+(e.message||e),'err');}
+  _offBusy=false;offRender();}
+async function offlineDrop(){try{await caches.delete(OFF_CACHE);}catch(e){}
+  try{localStorage.removeItem(OFF_KEY);}catch(e){}toast('Offline-Daten gelöscht','info');offRender();}
+function offWhen(ms){try{return new Date(ms).toLocaleString(LOCALE(),{weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return '';}}
+function offRender(){const el=document.getElementById('setOffline');if(!el)return;
+  const o=offInfo(),ic='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>';
+  el.innerHTML=(o?'<div class="off-info"><b>'+escapeHtml(o.name)+'</b><small><span>Gespeichert</span> '+escapeHtml(offWhen(o.at))+' · '+Math.round((o.bytes||0)/1e6)+' MB'
+      +(o.gen?' · <span>Vorhersage vom</span> '+escapeHtml(offWhen(Date.parse(o.gen))):'')+'</small></div>':'')
+    +'<button type="button" id="offSaveBtn" onclick="offlineSave()">'+ic+'<span>'+(o?'Neu speichern (aktueller Kartenausschnitt)':'Kartenausschnitt offline speichern')+'</span></button>'
+    +(o?'<button type="button" onclick="offlineDrop()"><span>Offline-Daten löschen</span></button>'
+      :'<div class="fav-note">Karte, Vorhersage und Skiqualität der nächsten 24 h für das Gebiet auf dem Bildschirm (bis ca. 25 × 25 km). Oben am Berg ohne Netz startet die App damit.</div>');}
+// offline: one bar that says which forecast the map shows
+function offBar(){let el=document.getElementById('offBar');
+  if(navigator.onLine!==false){if(el)el.remove();return;}
+  if(!el){el=document.createElement('div');el.id='offBar';el.className='off-bar';el.setAttribute('role','status');document.body.appendChild(el);}
+  const o=offInfo(),D=window.__dataLj,gen=D&&D.lj&&D.lj.generated?Date.parse(D.lj.generated):null;
+  el.innerHTML='<b>Offline</b>'+(gen?' · <span>Vorhersage vom</span> '+escapeHtml(offWhen(gen)):'')
+    +(o?' · <span>gespeichert:</span> '+escapeHtml(o.name):' · <span>nur bereits geladene Gebiete</span>');}
+addEventListener('online',offBar);addEventListener('offline',offBar);setTimeout(offBar,1500);
 async function profSave(){
   try{const d=document.getElementById('profDisplay');
     const home=document.getElementById('profHome'),lay=document.getElementById('profLayer');
