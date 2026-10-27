@@ -54,6 +54,8 @@ jobs:
   cycle:
     runs-on: ubuntu-latest
     timeout-minutes: 300
+    outputs:
+      daily_tiles: ${{ steps.daily.outputs.go }}
     steps:
       - uses: actions/checkout@v5
 
@@ -192,6 +194,31 @@ jobs:
           path: outputs/variant_a/
           retention-days: 5
 
+      # Once a day this cycle's export also goes to the tile service (job
+      # "tiles" below): the first published scheduled cycle that ends between
+      # 14 and 20 UTC -- the forecast the next day is planned with. A run is
+      # ~19 000 R2 writes; once a day stays inside Cloudflare's free plan.
+      # The other cycles replace that export as usual (the map then renders
+      # zoomed in on the device again).
+      - name: Daily tiles?
+        id: daily
+        if: github.event_name == 'schedule' && steps.cycle.outputs.rc == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          H=$(date -u +%H); GO=false
+          if [ "$((10#$H))" -ge 14 ] && [ "$((10#$H))" -lt 20 ]; then
+            GO=true
+            for R in $(gh api -X GET "repos/${{ github.repository }}/actions/workflows/variant-a-live.yml/runs" \
+                         -f created=">=$(date -u +%F)" -f per_page=20 \
+                         --jq '.workflow_runs[] | select(.id != ${{ github.run_id }}) | .id' 2>/dev/null); do
+              if gh api "repos/${{ github.repository }}/actions/runs/$R/jobs" \
+                   --jq '.jobs[] | select((.name | startswith("tiles")) and .conclusion == "success") | .id' 2>/dev/null | grep -q .; then
+                GO=false; echo "tiles already published today (run $R)"; fi
+            done
+          fi
+          echo "go=$GO" >> "$GITHUB_OUTPUT"; echo "daily tiles: $GO (cycle ended $H UTC)"
+
       - name: Summary
         if: always()
         run: |
@@ -224,3 +251,24 @@ jobs:
         run: |
           echo "::error::publish gates failed -- the previous cycle stays online"
           exit 1
+
+  # The daily sharp tiles (see "Daily tiles?"): the Cloudflare workflow,
+  # called with this run's export. It never fails the run -- a tile problem
+  # leaves the forecast publishable and the map renders on the device -- and
+  # the site deploy, which follows this whole workflow, then carries the
+  # tiles. Pre-rendered: 24 h centred 10 h ahead (about now-2 h .. now+22 h).
+  tiles:
+    needs: cycle
+    if: needs.cycle.outputs.daily_tiles == 'true'
+    permissions:
+      contents: write
+      actions: read
+    uses: ./.github/workflows/cloudflare.yml
+    with:
+      publish: true
+      source: live
+      prerender_hours: "24"
+      prerender_shift: "10"
+      views: ski6,powder
+      same_run: true
+    secrets: inherit

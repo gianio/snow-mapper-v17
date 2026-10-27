@@ -1,8 +1,10 @@
 name: Cloudflare tiles
 
-# Everything Cloudflare in ONE workflow, started BY HAND only. Nothing else
-# in the repository touches Cloudflare (no schedule, no push trigger), so it
-# is only used -- and only costs -- when you run this.
+# Everything Cloudflare in ONE workflow: started by hand, and once a day by
+# the "Variant A live" cycle that ends in the afternoon (workflow_call, job
+# "tiles" there -- the forecast the next day is planned with). Each run is
+# ~19 000 R2 writes, so once a day stays inside Cloudflare's free plan.
+# Nothing else in the repository touches Cloudflare.
 #
 #   deploy_worker  test and deploy the Worker (tiles/worker). Needed once, and
 #                  again after a change to the Worker or the app's SNOWPACK
@@ -44,6 +46,21 @@ on:
         description: "Let the Worker render missing tiles itself (only with Workers Paid)"
         type: boolean
         default: false
+      prerender_shift:
+        description: "Centre the pre-render window this many hours after now"
+        default: "0"
+  # the daily run, from the live cycle itself: its export is an artifact of
+  # the same run, and a tile failure must never hold back the forecast
+  workflow_call:
+    inputs:
+      deploy_worker: {type: boolean, default: false}
+      publish: {type: boolean, default: true}
+      source: {type: string, default: live}
+      prerender_hours: {type: string, default: "24"}
+      views: {type: string, default: "ski6,powder"}
+      on_demand: {type: boolean, default: false}
+      prerender_shift: {type: string, default: "0"}
+      same_run: {type: boolean, default: false}
 
 permissions:
   contents: write        # demo: commit the manifest with the tiles block
@@ -95,6 +112,9 @@ jobs:
     # runs when asked, after the Worker deploy if that was asked too (and
     # not after a failed one)
     if: always() && inputs.publish && needs.worker.result != 'failure' && needs.worker.result != 'cancelled'
+    # called from the live cycle: a tile failure must not fail that run (the
+    # site deploy follows it only on success, and would hold the forecast)
+    continue-on-error: ${{ inputs.same_run == true }}
     runs-on: ubuntu-latest
     timeout-minutes: 150
     steps:
@@ -111,11 +131,20 @@ jobs:
           pip install -r requirements.txt
           cd tiles/worker && npm ci --no-audit --no-fund --omit=dev
 
+      - name: Get the export (this run's)
+        if: inputs.same_run
+        uses: actions/download-artifact@v4
+        with:
+          name: va-live
+          path: export
+
       - name: Get the export
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "${{ inputs.source }}" = "live" ]; then
+          if [ "${{ inputs.same_run }}" = "true" ]; then
+            echo "EXPORT=export" >> "$GITHUB_ENV"; echo "RUN=live-${{ github.run_id }}" >> "$GITHUB_ENV"
+          elif [ "${{ inputs.source }}" = "live" ]; then
             RID=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=va-live&per_page=20" \
                   --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_repository_id == .workflow_run.repository_id)] | sort_by(.created_at) | last | .workflow_run.id // empty')
             [ -n "$RID" ] || { echo "::error::no live cycle artifact (va-live) found"; exit 1; }
@@ -128,16 +157,19 @@ jobs:
 
       - name: Pre-render sharp tiles
         if: inputs.prerender_hours != '0'
+        continue-on-error: ${{ inputs.same_run == true }}
         run: |
           mkdir -p dist
           python run_interactive.py --split --offline --date 2026-04-01 --res 4000 --out-dir dist
           python tools/make_va_engine.py dist/app.js tiles/worker/src/va_engine.js
           node tiles/worker/prerender.mjs "$EXPORT" tilecache --views "${{ inputs.views }}" \
-               --hours "${{ inputs.prerender_hours }}" --procs "$(nproc)"
+               --hours "${{ inputs.prerender_hours }}" --shift "${{ inputs.prerender_shift || '0' }}" --procs "$(nproc)"
           du -sh tilecache
           echo "TILES_CACHE_DIR=$PWD/tilecache" >> "$GITHUB_ENV"
 
       - name: Upload to R2 and write the tiles block
+        id: upload
+        continue-on-error: ${{ inputs.same_run == true }}
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -151,13 +183,15 @@ jobs:
           python -c "import json;t=json.load(open('$EXPORT/manifest.json')).get('tiles');print(json.dumps(t)[:400] if t else 'NO tiles block -- see the tiles: lines above (secrets / upload)');exit(0 if t else 1)"
 
       # The deploy takes the newest va-live artifact: this one, with tiles.
+      # (Called from the live cycle it replaces that run's own va-live.)
       - name: Republish the live export with tiles
-        if: inputs.source == 'live'
+        if: inputs.source == 'live' && steps.upload.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: va-live
           path: export/
           retention-days: 5
+          overwrite: true
 
       - name: Commit the demo manifest with tiles
         if: inputs.source == 'demo'
