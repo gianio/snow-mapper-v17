@@ -5256,8 +5256,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .ly-x,.feed-sheet-x{background:var(--card)!important;color:var(--fg)!important;border:1px solid var(--hair)!important;box-shadow:var(--elev3)!important}
  .tl-play{background:var(--brand)!important;color:var(--on-brand)!important}
 
- /* initials avatars in the brand, not black */
- .user-avatar,.cmt-av,.us-row .av,.rmg-av,.rpop-av{background:linear-gradient(145deg,var(--brand),var(--brand-deep))!important;color:#fff!important}
+ /* initials avatars in the brand, not black -- only those without a picture:
+    the !important shorthand would otherwise paint over the inline photo */
+ :is(.user-avatar,.cmt-av,.us-row .av,.rmg-av,.rpop-av):not(.has-img):not([style*="background-image"]){background:linear-gradient(145deg,var(--brand),var(--brand-deep))!important;color:#fff!important}
 
  /* links and small accents */
  a,.link,.auth-link,.as-link{color:var(--brand)}
