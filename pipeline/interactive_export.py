@@ -4598,6 +4598,16 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .pv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;border-radius:6px;overflow:hidden}
  .pv-cell{position:relative;aspect-ratio:1;border:0;padding:0;background:var(--fill);cursor:pointer;overflow:hidden}
  .pv-cell img{width:100%;height:100%;object-fit:cover;display:block}
+ .pv-sec{display:flex;align-items:baseline;justify-content:space-between;margin:16px 2px 6px}
+ .pv-sec b{font:800 13px/1.2 var(--font);color:var(--fg)}
+ .pv-sec span{font:700 12px var(--font);color:var(--mut)}
+ .pv-plain{display:flex;flex-direction:column;border-radius:12px;overflow:hidden;background:var(--fill)}
+ .pv-pl{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;border-bottom:1px solid var(--hair);background:none;text-align:left;cursor:pointer;color:var(--fg)}
+ .pv-pl:last-child{border-bottom:0}
+ .pv-pl i{width:14px;height:14px;border-radius:4px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+ .pv-pl span{display:flex;flex-direction:column;min-width:0}
+ .pv-pl b{font:750 13.5px/1.25 var(--font);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .pv-pl small{font:600 11.5px/1.3 var(--font);color:var(--mut)}
  .pv-txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:8px;font:700 11.5px/1.3 Helvetica Neue,Helvetica,Arial,sans-serif;color:var(--fg);text-align:center;
    background:linear-gradient(150deg,var(--accent-soft),var(--fill))}
  .pv-badge{position:absolute;top:6px;right:6px;width:18px;height:18px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
@@ -6047,7 +6057,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  body.trk-open #trkShownChip,body.draw-on #trkShownChip,body.nav-screen #trkShownChip,body.qs-open #trkShownChip{display:none}
  /* ski areas: the resort names */
  .ski-lbl{display:flex!important;align-items:center;gap:5px;white-space:nowrap;width:auto!important;height:auto!important;pointer-events:auto}
- .ski-lbl i{width:14px;height:14px;border-radius:4px;flex:none;background:#E0245E;box-shadow:0 0 0 2px #fff}
+ .ski-lbl i{width:20px;height:20px;border-radius:6px;flex:none;background:#E0245E;box-shadow:0 0 0 2px #fff;display:grid;place-items:center}
+ .ski-lbl i svg{width:15px;height:15px}
  .ski-lbl span{font:800 11.5px/1 var(--font);color:#16152e;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff}
  /* the save sheet's buttons: one row, one size -- "Posten" differs only in colour */
  .trk-actions{align-items:stretch!important}
@@ -7695,7 +7706,8 @@ const I18N_DICT={
 "Bild von":["image of", "image de", "immagine delle"],
 "Regenradar gerade nicht erreichbar":["Rain radar not reachable right now", "Radar de pluie momentanément indisponible", "Radar pioggia non raggiungibile"],
 "ab Saisonbeginn (SLF)":["from the start of the season (SLF)", "dès le début de la saison (SLF)", "da inizio stagione (SLF)"],
-"Das SLF gibt ausserhalb der Lawinensaison keine Gefahrenstufen heraus":["SLF publishes no danger levels outside the avalanche season", "Le SLF ne publie pas de degrés de danger hors saison", "L'SLF non pubblica gradi di pericolo fuori stagione"]
+"Das SLF gibt ausserhalb der Lawinensaison keine Gefahrenstufen heraus":["SLF publishes no danger levels outside the avalanche season", "Le SLF ne publie pas de degrés de danger hors saison", "L'SLF non pubblica gradi di pericolo fuori stagione"],
+"Schnellmeldungen & ohne Foto":["Quick reports & without photo", "Signalements rapides & sans photo", "Segnalazioni rapide & senza foto"]
 };
 
 // ── Sprachen ──────────────────────────────────────────────────────────────
@@ -8653,10 +8665,11 @@ const ovOn={};
 const ovLayer={};
 // Ski areas: the pistes and lifts as a transparent tile layer once zoomed in,
 // the resort names as small labels (a tap zooms to the area).
+const SKI_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="15" cy="4.2" r="1.9" fill="#fff" stroke="none"/><path d="M5.5 9.5l5.2 1.4 2.4-2.4 2.6 3.2-3.6 2.6"/><path d="M12.1 14.3l-1.9 3.6"/><path d="M3 17.5l17.5 3.8"/></svg>';
 function skiBuildLayer(){const g=L.layerGroup();
   L.tileLayer('https://tiles.opensnowmap.org/pistes/{z}/{x}/{y}.png',{minZoom:8,maxZoom:19,maxNativeZoom:18,opacity:.95,pane:'overlayPane'}).addTo(g);
   CH_RESORTS.forEach(r=>{const m=L.marker([r.lat,r.lng],{keyboard:false,zIndexOffset:400,
-      icon:L.divIcon({className:'ski-lbl',html:'<i></i><span>'+escapeHtml(r.name)+'</span>',iconSize:null,iconAnchor:[7,7]})});
+      icon:L.divIcon({className:'ski-lbl',html:'<i>'+SKI_ICON+'</i><span>'+escapeHtml(r.name)+'</span>',iconSize:null,iconAnchor:[10,10]})});
     m.on('click',ev=>{L.DomEvent.stopPropagation(ev);map.setView([r.lat,r.lng],Math.max(map.getZoom(),13));});m.addTo(g);});
   return g;}
 // Regenradar: the newest composite frame as tiles (RainViewer's free API;
@@ -12252,9 +12265,18 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
   const cw=W[W.length-1],mx=Math.max(1,...W.map(w=>w.d));
   const chart='<div class="pv-chart">'+W.map((w,i)=>'<i class="'+(i===W.length-1?'cur':'')+'" style="height:'+Math.max(3,w.d/mx*100)+'%" title="'+(w.d/1000).toFixed(1)+' km"></i>').join('')+'</div>';
   const hi=S.acts.slice(0,10).map((a,i)=>'<button class="pv-hl" onclick="pvOpenAct(\''+boxId+'\','+i+')"><span class="pv-hl-m" data-pvmap="'+a.id+'">'+pvMapImg(a)+'</span><span>'+escapeHtml(a.name)+'</span></button>').join('');
-  const grid=S.posts.length?'<div class="pv-grid">'+S.posts.map((r,i)=>{const im=pvImg(r),cd=r.condition_data||{};
+  // the grid only for posts with a picture (a photo, a route map); quick
+  // reports and posts without one go to a short list below it
+  const pic=S.posts.map((r,i)=>[r,i]).filter(([r])=>pvImg(r)),plain=S.posts.map((r,i)=>[r,i]).filter(([r])=>!pvImg(r));
+  const plainList=plain.length?'<div class="pv-sec"><b>Schnellmeldungen &amp; ohne Foto</b><span>'+plain.length+'</span></div><div class="pv-plain">'
+    +plain.map(([r,i])=>{const cd=r.condition_data||{},sub=subDe(r.subtype),t=cd.measurement||sub||catLabel((r.primary_categories||[])[0]||'info')||'Beitrag';
+      const qt=QS_TYPES.find(x=>x.k===cd.snow),col=qt?qt.c:(CAT_COLORS[(r.primary_categories||[])[0]]||'var(--accent)');
+      const when=r.captured_at||r.created_at;
+      return '<button type="button" class="pv-pl" onclick="pvOpenPost(\''+boxId+'\','+i+')"><i style="background:'+col+'"></i><span><b>'+escapeHtml(String(t).slice(0,70))+'</b>'
+        +'<small>'+escapeHtml([sub&&sub!==t?sub:'',cd.altitudeM?cd.altitudeM+' m':'',cd.aspect||'',when?new Date(when).toLocaleDateString(LOCALE(),{day:'numeric',month:'short'}):''].filter(Boolean).join(' · '))+'</small></span></button>';}).join('')+'</div>':'';
+  const grid=S.posts.length?(pic.length?'<div class="pv-grid">'+pic.map(([r,i])=>{const im=pvImg(r),cd=r.condition_data||{};
       const ic=cd.activity?'<svg class="pv-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg>':(cd.snowp?'<svg class="pv-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/></svg>':'');
-      return '<button class="pv-cell" onclick="pvOpenPost(\''+boxId+'\','+i+')">'+(im?'<img src="'+im+'" '+(i<9?'fetchpriority="high"':'loading="lazy"')+' decoding="async" alt="">':'<span class="pv-txt">'+escapeHtml((r.caption||r.subtype||catLabel((r.primary_categories||[])[0]||'info')||'').slice(0,60))+'</span>')+ic+'</button>';}).join('')+'</div>'
+      return '<button class="pv-cell" onclick="pvOpenPost(\''+boxId+'\','+i+')">'+(im?'<img src="'+im+'" '+(i<9?'fetchpriority="high"':'loading="lazy"')+' decoding="async" alt="">':'<span class="pv-txt">'+escapeHtml((r.caption||r.subtype||catLabel((r.primary_categories||[])[0]||'info')||'').slice(0,60))+'</span>')+ic+'</button>';}).join('')+'</div>':'')+plainList
     :'<div class="prof-hint">Noch keine Beiträge.</div>';
   // activities as circles, the same as the row above the tabs: the route
   // and the name are enough here, the numbers are one tap away
@@ -14571,7 +14593,7 @@ const OV_ICON={
   slope:'<path d="M3 20h18L3 6z"/><path d="M8 20a5 5 0 0 0-2-4"/>',
   avalanche:'<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>',
   radar:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6-6"/><circle cx="12" cy="12" r="1"/>',
-  skiareas:'<path d="M3 20h18"/><path d="M6 20l5-9 3 4 2-3 3 8"/><path d="M4 6l16 4"/><circle cx="9" cy="7.2" r="1.2"/>'};
+  skiareas:'<circle cx="15" cy="4.2" r="1.6"/><path d="M5.5 9.5l5.2 1.4 2.4-2.4 2.6 3.2-3.6 2.6"/><path d="M12.1 14.3l-1.9 3.6"/><path d="M3 17.5l17.5 3.8"/>'};
 function ovRowHTML(k){
   const o=OVERLAYS[k],na=!ovAvailable(k);
   let extra='';
