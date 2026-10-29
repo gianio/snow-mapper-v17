@@ -464,5 +464,8 @@ def grid_frames(grid: NationalGrid, runs, results, layer_ts, W, cell_index, prec
         hsv = m["total_hs_cm"][valid]
         yield dt, {"ski18": ski18, "simple": simple, "ski6": ski6, "wind": windc, "powder": powderc,
                    "density": density,
+                   # depth of what lies on a thin cover (export._thin_hatch)
+                   "thin_cm": np.where(m["powder_depth_cm"] >= classify.SK_POWDER_MIN,
+                                       m["powder_depth_cm"], m["total_hs_cm"]),
                    "hs_max": float(hsv.max()) if hsv.size else 0.0,
                    "finite": bool(np.isfinite(G).all())}

@@ -2711,17 +2711,6 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .av-chip.av-none{padding-left:9px;color:var(--fg2)}
  .av-chip.av-none svg{width:14px;height:14px;flex:0 0 auto}
  .av-chip:active{opacity:.7}
- /* folded rows under the verdict: profile, weather run, wind rose */
- .insp-fold{border-bottom:1px solid var(--hair)}
- .insp-fold:last-child{border-bottom:none}
- .insp-fold>summary{list-style:none;display:flex;align-items:baseline;gap:8px;padding:11px 0;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
- .insp-fold>summary::-webkit-details-marker{display:none}
- .insp-fold>summary b{font-size:13px;font-weight:800;color:var(--fg);letter-spacing:-.01em}
- .insp-fold>summary em{font-style:normal;font-size:12px;font-weight:700;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
- .insp-fold>summary svg{width:15px;height:15px;margin-left:auto;align-self:center;flex:0 0 auto;color:var(--mut);transition:transform .2s var(--ease)}
- .insp-fold[open]>summary svg{transform:rotate(90deg)}
- .insp-fold>.insp-sec{border-bottom:none;padding-top:0}
- .insp-fold>.insp-sec>h4:first-child{display:none}
  .stn-now{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
  .stn-v{background:var(--fill);border-radius:12px;padding:8px 10px;min-width:0;display:flex;flex-direction:column;gap:2px}
  .stn-v span{font-size:11.5px;font-weight:700;color:var(--mut)}
@@ -8135,9 +8124,14 @@ function sunTimes(dayMs){const d=new Date(dayMs),lat=46.8*Math.PI/180,lon=8.2;
 // reused, which shows up as a shape wearing some unrelated chart's colour.
 // Anything drawn on a canvas resolves its tokens through here instead.
 var _cvTok={};
-function cvTok(n,fb){if(_cvTok[n])return _cvTok[n];
+// cached per theme: a value read while the page was still light (before the
+// saved theme applied) used to stay -- white edges on the dark timeline
+function cvTok(n,fb){var k=(document.documentElement.getAttribute('data-theme')||'')+n;if(_cvTok[k])return _cvTok[k];
   var v='';try{v=getComputedStyle(document.documentElement).getPropertyValue(n).trim();}catch(e){}
-  return (_cvTok[n]=v||fb);}
+  return (_cvTok[k]=v||fb);}
+// the same colour, fully transparent: a fade into rgba(255,255,255,0) turns
+// grey-white halfway on a dark card
+function cvClear(c){return /^#[0-9a-f]{6}$/i.test(c)?c+'00':String(c).replace(/^rgba?\(([^,]+),([^,]+),([^,)]+).*$/,'rgba($1,$2,$3,0)');}
 // The timeline is a canvas, so it cannot inherit CSS variables -- it reads them
 // once per paint instead, which is what makes it follow the theme.
 const TL_NOW_COLOR='#FF9E42';   // the SW-orange already used for aspect/warmth elsewhere
@@ -8340,7 +8334,7 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   // clear where the swipe leads.
   {const bg=cvTok('--card','#fff'),fw=26;
    const edge=(left)=>{const g=ctx2.createLinearGradient(left?0:cw,0,left?fw:cw-fw,0);
-     g.addColorStop(0,bg);g.addColorStop(1,'rgba(255,255,255,0)');
+     g.addColorStop(0,bg);g.addColorStop(1,cvClear(bg));
      ctx2.fillStyle=g;ctx2.fillRect(left?0:cw-fw,0,fw,ch);
      const cx=left?7:cw-7,cy=compact?ch/2:(ch-botPad)/2+topPad/2;
      ctx2.strokeStyle=_P.mut;ctx2.lineWidth=1.8;ctx2.lineCap='round';ctx2.beginPath();
@@ -8719,7 +8713,7 @@ function vaProfAvailable(){
 const VA_PALETTE={
   // powder in the SLF snow-depth colours (the map draws it in those bands
   // zoomed in; the coarse frames, tours and pens follow)
-  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[149,207,153,250],4:[102,187,106,240],5:[66,165,245,235],6:[226,170,72,220],7:[150,104,74,225],8:[30,136,229,235],9:[21,101,192,240],10:[208,214,224,170],11:[176,162,212,225]},
+  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[149,207,153,250],4:[102,187,106,240],5:[66,165,245,235],6:[226,170,72,220],7:[150,104,74,225],8:[30,136,229,235],9:[21,101,192,240],10:[194,229,196,235],11:[176,162,212,225]},
   wind:{1:[156,168,184,190],2:[186,170,236,205],3:[112,72,200,230]}};
 // Nur Pulver on an export without its own powder layer: the three ski6 powder
 // classes, coloured like the nearest SLF snow-depth bands.
@@ -9115,7 +9109,10 @@ function vaHiEngine(){
     var L,key;
     if(layer==='ski6'){L=E.clsSki6(m);key='ski6';
       // powder in the SLF bands and colours of Neuschnee / Schneehöhe (50+ in one)
-      if(L===3||L===4||L===5||L===8||L===9){var pw6=m[E.mi.powder_depth_cm],B6=E.pk.powder_bounds||[1,5,10,20,30,50,75,100,150],j6=0;
+      // thin cover (10) too: coloured by what lies there -- the powder, else
+      // the whole thin pack -- and hatched red in render(): rocks possible
+      if(L===3||L===4||L===5||L===8||L===9||L===10){var pw6=m[E.mi.powder_depth_cm],B6=E.pk.powder_bounds||[1,5,10,20,30,50,75,100,150],j6=0;
+        if(L===10&&!(pw6>=E.pk.thresholds.SK_POWDER_MIN))pw6=m[E.mi.total_hs_cm];
         while(j6<B6.length&&pw6>=B6[j6])j6++;j6=Math.max(1,Math.min(6,j6));
         var P6=[[0,0,0,0],[194,229,196,250],[149,207,153,250],[102,187,106,235],[66,165,245,230],[30,136,229,230],[21,101,192,235]][j6];
         E.cls=L;out[0]=P6[0];out[1]=P6[1];out[2]=P6[2];out[3]=P6[3];return;}}
@@ -9220,9 +9217,13 @@ function vaHiEngine(){
         E.color(q.layer,m,col);
         if(!col[3])continue;
         if(hide&&(hide>>E.cls)&1)continue;
-        var a=col[3];
+        var a=col[3],r0=col[0],g0=col[1],b0=col[2];
+        // thin cover: thin red dashes across the colour, in map pixels so
+        // they run on across tile edges
+        if(E.cls===10&&lk.indexOf('ski6')===0){var hk=S/256,hx=q.x*S+px,hy=q.y*S+py,sp=7*hk,d1=(hx+hy)%sp,d2=((hx-hy)%(3*sp)+3*sp)%(3*sp);
+          if(d1<1.3*hk&&d2<2*sp){r0=214;g0=40;b0=40;a=235;}}
         if(fd&&E.forest){var fv=E.gridBil(E.forest,en[0],en[1],fcs,true);if(fv>0)a*=1-fd*(fv/255);}
-        var o=(py*S+px)*4;out[o]=col[0];out[o+1]=col[1];out[o+2]=col[2];out[o+3]=a;
+        var o=(py*S+px)*4;out[o]=r0;out[o+1]=g0;out[o+2]=b0;out[o+3]=a;
       }
     }
     return out;
@@ -12224,6 +12225,15 @@ async function trkProfRender(){const el=document.getElementById('profActs');if(!
 // the routes that pass the filters. Distance is measured to the route's
 // lowest point -- where the tour starts.
 const tsF={focus:'powder',radius:25,gainMin:0,gainMax:2500,slope:new Set()};
+// the filters stay as last set, from one visit to the next
+const TSF_KEY='ssm_tsf';
+try{const o=JSON.parse(localStorage.getItem(TSF_KEY)||'null');
+  if(o){if(o.focus==='powder'||o.focus==='sulz')tsF.focus=o.focus;
+    if(o.radius>=5&&o.radius<=100)tsF.radius=+o.radius;
+    if(o.gainMin>=0&&o.gainMin<=2500)tsF.gainMin=+o.gainMin;
+    if(o.gainMax>=100&&o.gainMax<=2500&&o.gainMax>tsF.gainMin)tsF.gainMax=+o.gainMax;
+    if(Array.isArray(o.slope))o.slope.forEach(x=>tsF.slope.add(String(x)));}}catch(e){}
+function tsSave(){try{localStorage.setItem(TSF_KEY,JSON.stringify({focus:tsF.focus,radius:tsF.radius,gainMin:tsF.gainMin,gainMax:tsF.gainMax,slope:[...tsF.slope]}));}catch(e){}}
 // Buckets instead of two-thumb sliders: a thumb is fiddly on a phone and
 // nobody plans a tour to the degree. An empty set means "any".
 const TS_SLOPE=[['lt30','< 30°',0,30],['30','30–35°',30,35],['35','35–40°',35,40],['40','40°+',40,99]];
@@ -12267,6 +12277,7 @@ function tsSet(k,v){
   else tsF[k]=v;
   if(k==='gainMin'&&tsF.gainMin>tsF.gainMax-100)tsF.gainMin=tsF.gainMax-100;
   if(k==='gainMax'&&tsF.gainMax<tsF.gainMin+100)tsF.gainMax=tsF.gainMin+100;
+  tsSave();
   // sliders only update labels and the list while dragging; rebuilding the
   // whole sheet would drop the thumb out from under the finger
   if(k==='radius'||k==='gainMin'||k==='gainMax'){clearTimeout(tsSet._t);tsSet._t=setTimeout(()=>tsRender(true),60);tsSliderSync();return;}
@@ -13868,7 +13879,9 @@ function legSpec(l){
         rows.push({k,c:rgb(VA_PALETTE.ski6[k]),s:sv,n:'Pulver '+sv+' cm'});});
       // loose old snow (facets) only once the export knows the class
       (leg[11]?[[11,'kantig']]:[]).concat([[6,'Sulz'],[7,'nass'],[2,'Kruste'],[1,'hart'],[10,'dünn']]).forEach(([k,sv],i)=>{
-        rows.push({k,c:rgb(VA_PALETTE.ski6[k]),s:sv,n:(leg[k]&&leg[k][2])||VA_SKI6_DE[k]||sv,sep:!i});});
+        // thin cover: the powder colour with the red dashes the map draws
+        rows.push({k,c:k===10?'repeating-linear-gradient(135deg,#d62828 0 1.4px,transparent 1.4px 4.5px),'+rgb(VA_PALETTE.ski6[k]):rgb(VA_PALETTE.ski6[k]),
+          s:sv,n:(leg[k]&&leg[k][2])||VA_SKI6_DE[k]||sv,sep:!i});});
       return {t:name,u:'Pulver cm',va:true,noShare:true,rows};}
     const rows=ORD.filter(k=>leg[k]&&leg[k][1]).map(k=>{const e=leg[k],nm=e[2]||String(e[0]).replace(/_/g,' ');
       return {k,c:rgb(e[1]),s:SH[k]||nm.split(/[\s/(]/)[0].slice(0,7),n:nm};});
@@ -14179,8 +14192,9 @@ function tlGotoTomorrow(){
 // buttons appear in, and vars[0] is what a fresh selection shows.
 const GROUPS={
   meteo:{tag:'A',label:'Meteo-Modell',items:[
-    // In picker order: Skiqualität first (what a fresh start opens on), then
-    // the weather, then what the community reported (LY_SECTIONS).
+    // In picker order (LY_SECTIONS): Skiqualität first (what a fresh start
+    // opens on) with what the community reported last in that row, then the
+    // weather.
     // The rule-based powder map only stands in while there is no SNOWPACK
     // export: Skiqualität opens on "only powder" and answers the same question.
     {id:'powder',label:'Powder',noVa:true,vars:[{l:'powder',s:'avg',label:'Powder'}]},
@@ -14192,14 +14206,14 @@ const GROUPS={
     {id:'snowpack',label:'Skiqualität',va:true,single:true,vars:[{l:'snowpack',s:'ski6',label:'Skiqualität'},
       {l:'snowpack',s:'ski18',label:'Skiqualität'}]},
     {id:'vadrift',label:'Triebschnee',va:true,vars:[{l:'snowpack',s:'wind',label:'Triebschnee'}]},
+    {id:'reppow',label:'Gemeldetes Powder',vars:[{l:'powfind',s:'powder',label:'Gemeldetes Powder'}]},
     {id:'newsnow',label:'Neuschnee',vars:[{l:'snow',s:'avg',label:'Neuschnee'}]},
     {id:'depth',label:'Schneehöhe',vars:[{l:'depth',s:'avg',label:'Schneehöhe'}]},
     // Wind and temperature keep their statistic (over the chosen window) as
     // sub-layers; which classes show is picked on the legend.
     {id:'temp',label:'Temperatur',vars:[{l:'temp',s:'avg',label:'Mittel'},{l:'temp',s:'max',label:'Max'},{l:'temp',s:'min',label:'Min'},{l:'tsurf',s:'avg',label:'Oberfläche'}]},
     {id:'wind',label:'Wind',vars:[{l:'wind',s:'avg',label:'Mittel'},{l:'wind',s:'max',label:'Max'},{l:'wind',s:'min',label:'Min'}]},
-    {id:'cloud',label:'Bewölkung',needs:'cloud',vars:[{l:'cloud',s:'avg',label:'Bewölkung'}]},
-    {id:'reppow',label:'Gemeldetes Powder',vars:[{l:'powfind',s:'powder',label:'Gemeldetes Powder'}]}
+    {id:'cloud',label:'Bewölkung',needs:'cloud',vars:[{l:'cloud',s:'avg',label:'Bewölkung'}]}
   ]},
   // The Report-Modell layers still exist and the drawings still feed the
   // prognosis -- they are just not in the picker. Drop `menu:false` to bring
@@ -14399,10 +14413,10 @@ function lyInfoRender(){
       escapeHtml(vt||'Variante dieser Ebene.')+'</p></div>'):'');
 }
 const LY_COLS=3;
-// The picker in three short shelves -- how the skiing is, what the weather
-// does, what people found -- instead of one long run of equal tiles. The
-// community's map pins sit with the last one.
-const LY_SECTIONS=[['Skiqualität',['snowpack','powder','vadrift']],['Wetter',['newsnow','depth','temp','wind','cloud']],['Community',['reppow']]];
+// The picker in short shelves -- how the skiing is (with what people
+// reported, last), what the weather does -- instead of one long run of
+// equal tiles. The community's map pins have a shelf of their own.
+const LY_SECTIONS=[['Skiqualität',['snowpack','powder','vadrift','reppow']],['Wetter',['newsnow','depth','temp','wind','cloud']],['Community',[]]];
 function lyRender(){
   const grid=document.getElementById('lyGrid');if(!grid)return;
   const L=lyLayers(),i=lyIndex(),it=L[i]&&L[i][2],vars=(it&&it.vars)||[];
@@ -14413,7 +14427,7 @@ function lyRender(){
     rows.forEach(([x])=>seen.add(x[2].id));return [name,rows];});
   const rest=L.map((x,n)=>[x,n]).filter(([x])=>!seen.has(x[2].id));
   if(rest.length)secs.push(['Weitere',rest]);
-  grid.innerHTML=secs.filter(s=>s[1].length).map(([name,rows])=>{
+  grid.innerHTML=secs.filter(s=>s[1].length||s[0]==='Community').map(([name,rows])=>{
     const pos=rows.findIndex(r=>r[1]===i);
     // the sub-layers open under the row of the chosen tile, so they read as
     // belonging to it
@@ -14423,7 +14437,7 @@ function lyRender(){
       'style="--notch:'+(((pos%LY_COLS)+0.5)/LY_COLS*100)+'%">'+
       (many?'<div class="ly-varrow">'+vars.map((v,n)=>'<button type="button" class="ly-sub'+(n===curVar?' on':'')+'" '+
         'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join('')+'</div>':'')+thrHTML()+(chips||'')+'</div>'):'';
-    return '<div class="ly-sec"><span class="lbl-micro">'+name+'</span><div class="ly-grid ly-g3">'+
+    return '<div class="ly-sec"><span class="lbl-micro">'+name+'</span>'+(rows.length?'<div class="ly-grid ly-g3">':'<div hidden>')+
       rows.map(([[g,k,item],n],p)=>{const hi=false;
         return '<button type="button" class="ly-tile'+(n===i?' on':'')+(hi?' ly-hi':'')+'" onclick="lyPick('+n+')"'+
         (n===i?' aria-current="true"':'')+' title="'+(hi?'Echte Meldungen, nicht modelliert':escapeHtml(item.label))+'">'+lyIconFor(item.id)+
@@ -15346,39 +15360,13 @@ function inspApplyPos(){const e=document.getElementById('inspPanel');
 const INSP_FIRST={snowpack:'va',cloud:'cloud',wind:'wind',snow:'snow',depth:'depth',temp:'temp',tsurf:'temp',
   sun:'rad',rad:'rad',radsun:'rad',powder:'prog',powfind:'prog',prog:'prog',progdiff:'prog',progpat:'prog'};
 function inspOrder(sec){
-  // open: what lies here (and, on the reports layer, what people found);
-  // folded below it: the chosen layer's own chart first
-  const open=layer==='powfind'?['prog','va']:['va','prog'];
-  const folds=layer==='wind'?['wind','snow','prof']:layer==='snowpack'?['prof','snow','wind']:['snow','prof','wind'];
-  return open.concat(folds).map(k=>sec[k]||'').join('');
+  // what lies here (and, on the reports layer, what people found) first,
+  // then everything else in one scroll: the chosen layer's own chart first
+  const top=layer==='powfind'?['prog','va']:['va','prog'];
+  const rest=layer==='wind'?['wind','snow','prof']:layer==='snowpack'?['prof','snow','wind']:['snow','prof','wind'];
+  return top.concat(rest).map(k=>sec[k]||'').join('');
 }
-// ── Point card: one sentence on top, the rest folded ────────────────────
-// The verdict says in words what the numbers below add up to; the profile,
-// the weather run and the wind rose open on a tap and stay open next time
-// (per section) for whoever reads them every time.
-let _inspWk=0;
-const INSP_FOLD_KEY='ssm_insp_open';
-function inspFoldOpen(){try{return JSON.parse(localStorage.getItem(INSP_FOLD_KEY)||'{}')||{};}catch(e){return {};}}
-function inspFold(k,html,title,sub){if(!html)return '';
-  // the section's own heading becomes the row: "Schneeprofil  Modell · HS 85 cm"
-  const m=/<h4[^>]*>([^<]*)<em>([^<]*)<\/em><\/h4>/.exec(html);
-  const t=title||(m?m[1].trim():''),st=sub||(m?m[2]:'');
-  return '<details class="insp-fold" data-k="'+k+'"'+(inspFoldOpen()[k]?' open':'')+' ontoggle="inspFoldToggle(this)">'
-    +'<summary><b>'+escapeHtml(t)+'</b>'+(st?'<em>'+escapeHtml(st)+'</em>':'')
-    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></summary>'
-    +html+'</details>';}
-// charts are drawn to their width: only once their row is open
-function inspFoldDraw(root){
-  const o=k=>{const d=root.querySelector('.insp-fold[data-k="'+k+'"]');return d&&d.open;};
-  if(o('mg')){try{mgDraw(_inspPt,_inspWk);}catch(e){console.warn('mg',e);}}
-  if(o('wind')){try{icWind(document.getElementById('icWind'),_inspPt,_inspWk);}catch(e){}}}
-function inspFoldToggle(d){
-  const st=inspFoldOpen();st[d.dataset.k]=d.open?1:0;
-  try{localStorage.setItem(INSP_FOLD_KEY,JSON.stringify(st));}catch(e){}
-  if(d.open){_mgKey=null;requestAnimationFrame(()=>{inspFoldDraw(d.parentNode);
-    // the opened section in view, not below the fold
-    try{const b=d.closest('.insp-body');if(b&&d.offsetTop+60>b.scrollTop+b.clientHeight)b.scrollTo({top:d.offsetTop-8,behavior:'smooth'});}catch(e){}});}
-  try{haptic(3);}catch(e){}}
+// ── Point card: one sentence on top, then everything below it ───────────
 // What the slope is like, in words. From the model's own class at this very
 // spot when SNOWPACK is in; from new snow and depth otherwise.
 function inspVerdict(o){
@@ -15528,16 +15516,18 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
      return favBtnHTML('area',lat.toFixed(3)+','+lon.toFixed(3),nm,lat,lon,elevD,'insp-fav');})()
    +'<button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
    '<div class="insp-body">'+inspOrder({va:vaSec,prog:progSec,
-     prof:inspFold('prof',profSec),
-     snow:inspFold('mg',mgHTML(),'Wetterverlauf','Neuschnee · Temperatur · Wind'),
+     prof:profSec,
+     snow:mgHTML(),
      depth:'',
      temp:'',
-     wind:inspFold('wind','<div class="insp-sec"><h4>Windrose <em>Min · Median · Max</em></h4><canvas id="icWind"></canvas></div>'),
+     wind:'<div class="insp-sec"><h4>Windrose <em>Min · Median · Max</em></h4><canvas id="icWind"></canvas></div>',
      cloud:'',rad:''})+
    '</div>';
   pan.classList.add('open');
-  _inspWk=wk;
-  requestAnimationFrame(()=>inspFoldDraw(pan));
+  requestAnimationFrame(()=>{
+    try{mgDraw(p,wk);}catch(e){console.warn('mg',e);}
+    try{icWind(document.getElementById('icWind'),p,wk);}catch(e){}
+  });
   // while the card is open the timeline shows a from–to window to set
   try{if(tlMode==='detail')drawTimeline();}catch(e){}
   inspKeepPointVisible(lat,lon);
@@ -15599,7 +15589,7 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
     pill('Rückblick',x-6,'right');pill('Prognose',x+6,'left');c.textBaseline='alphabetic';}
   // axis overlay: the numbers stay put, fading into the chart
   g.clearRect(0,0,vw,H);
-  const bg0=/^#[0-9a-f]{6}$/i.test(bg)?bg+'00':bg.replace(/^rgba?\(([^,]+),([^,]+),([^,)]+).*$/,'rgba($1,$2,$3,0)');
+  const bg0=cvClear(bg);
   const strip=(x,w,toRight)=>{const gr=g.createLinearGradient(x,0,x+w,0);
     if(toRight){gr.addColorStop(0,bg);gr.addColorStop(.82,bg);gr.addColorStop(1,bg0);}else{gr.addColorStop(0,bg0);gr.addColorStop(.18,bg);gr.addColorStop(1,bg);}
     g.fillStyle=gr;g.fillRect(x,TOP,w,H-TOP);};

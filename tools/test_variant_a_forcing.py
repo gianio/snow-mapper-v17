@@ -1245,6 +1245,13 @@ def test_ski6_and_wind_classes():
     check("faceted on a thin cover -> duenne Schneedecke", F(12, 8, 0.9) == 10)
     check("wet wins over faceted", F(100, 15, 0.9, lw=2.0) == 7)
     check("ski6: one colour / label / name per class", len(C.SKI6_LABELS) == len(C.SKI6_DE) == len(C.SKI6_RGBA) == 12)
+    from variant_a import export as X
+    lab = np.full((8, 8), 10, np.uint8); lab[:, 4:] = 4
+    rgba = X._thin_hatch(X._rgba_from_labels(lab, C.SKI6_RGBA), lab, np.full((8, 8), 7.0))
+    red = (rgba[..., 0] == 214) & (rgba[..., 1] == 40)
+    check("thin cover: red dashes on it, none on powder", red[:, :4].any() and not red[:, 4:].any())
+    check("thin cover: 7 cm in the 5-10 cm powder colour",
+          tuple(rgba[1, 0]) == tuple(C.POWDER_RGBA[2]), str(tuple(rgba[1, 0])))
     ts = {"n": 3, "heights": np.array([60., 75., 90.]),
           "density": np.array([300., 180., 160.]), "lw": np.zeros(3), "dd": np.zeros(3), "sp": np.zeros(3),
           "rg": np.array([0.5, 1.2, 1.0]), "grain": np.array([300, 400, 500]),
