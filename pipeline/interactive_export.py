@@ -4992,7 +4992,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .fc-menu button:hover{background:var(--fill)}.fc-menu button svg{width:19px;height:19px;flex:none}
  .fc-menu .del-btn,.fc-menu .del-btn span{color:#e5484d}
  /* a post opened on its own: room for it, then the rest */
- .feed-card.focus{min-height:calc(100dvh - 210px);box-shadow:0 0 0 1.5px var(--accent,#2563eb),var(--elev2,0 6px 20px rgba(0,0,0,.08))}
+ .feed-card.focus{box-shadow:0 0 0 1.5px var(--accent,#2563eb),var(--elev2,0 6px 20px rgba(0,0,0,.08))}
  .fc-det{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 14px 4px}
  .fc-det>div{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:12px;background:var(--fill)}
  .fc-det span{font:600 11px var(--font,inherit);color:var(--fg2)}.fc-det b{font:700 14px var(--font,inherit);color:var(--fg)}
@@ -6111,6 +6111,120 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
    padding:7px 12px;border-radius:999px;background:#2B2F36;color:#fff;font:650 12px/1.3 var(--font);box-shadow:0 6px 16px rgba(0,0,0,.25);
    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .off-bar b{font-weight:800;color:#FFD27A}
+ /* the profile, calmer: the numbers stand on the page instead of each in its
+    own box, and one hairline parts the sections instead of a frame round each */
+ .prof-top{background:none!important;border:0!important;box-shadow:none!important;padding:4px 2px 0!important;margin-bottom:12px!important}
+ .prof-endo{font:650 13px/1.3 var(--font)!important}
+ .pv-stats{display:flex!important;gap:0!important;margin:4px 0 16px!important}
+ .pv-stats>div,.pv-stats>div:first-child{flex:1;min-width:0;padding:0!important;background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+ .pv-stats b,.pv-stats>div:first-child b{font:750 21px/1.1 Helvetica Neue,Helvetica,Arial,sans-serif!important;font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--fg)!important}
+ .pv-stats span{font:500 11.5px/1.3 Helvetica Neue,Helvetica,Arial,sans-serif!important;color:var(--fg2)!important;margin-top:3px!important}
+ .pv-btns,.pv-btns:has(.pv-dm:not([hidden])){display:flex!important;gap:8px!important;margin-bottom:14px!important}
+ .pv-btns button{flex:1;height:34px!important;border:0!important;border-radius:9px!important;background:var(--fill)!important;box-shadow:none!important;color:var(--fg)!important;font:650 13.5px Helvetica Neue,Helvetica,Arial,sans-serif!important}
+ .pv-btns button.pri{background:var(--accent)!important;color:#fff!important}
+ .pv-btns .pv-ic{flex:0 0 40px!important;padding:0!important;display:grid!important;place-items:center}
+ .pv-btns .pv-ic svg{width:18px;height:18px}
+ .pv-trust{background:none!important;box-shadow:none!important;border:0!important;border-top:1px solid var(--hair)!important;border-radius:0!important;padding:12px 2px!important;margin:0!important}
+ .pv-tr-ic{width:30px!important;height:30px!important;border-radius:9px!important}
+ .pv-tr-ic svg{width:17px!important;height:17px!important}
+ .pv-tr-t b{font:700 14px/1.25 Helvetica Neue,Helvetica,Arial,sans-serif}
+ .pv-tr-t small{font:500 12px/1.3 Helvetica Neue,Helvetica,Arial,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .pv-tr-q{background:none!important;font-size:16px!important}
+ .pv-week{background:none!important;box-shadow:none!important;border-radius:0!important;border-top:1px solid var(--hair);padding:12px 2px 16px!important;margin:0!important}
+ .pv-wk{margin-bottom:12px!important}
+ .pv-wk b{display:block;font:750 22px/1.1 Helvetica Neue,Helvetica,Arial,sans-serif!important;font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--fg)}
+ .pv-wk b em{font:600 13px Helvetica Neue,Helvetica,Arial,sans-serif;font-style:normal;color:var(--fg2);margin-left:3px;letter-spacing:0}
+ .pv-wk small{font:500 11.5px/1.3 Helvetica Neue,Helvetica,Arial,sans-serif!important;text-transform:none!important;letter-spacing:0!important;margin-top:3px}
+ .pv-chart{height:26px!important;gap:3px!important}
+ .pv-chart i{border-radius:2px 2px 0 0!important}
+ .pv-plain{background:none!important;border-radius:0!important;border-top:1px solid var(--hair)}
+ .pv-pl{padding:10px 2px!important}
+ .pv-pl.act i{width:22px;height:22px;border-radius:0;box-shadow:none;background:none;color:var(--accent);display:grid;place-items:center}
+ .pv-pl.act i svg{width:20px;height:20px}
+ .prof-feedback{background:var(--fill)!important;color:var(--fg)!important;box-shadow:none!important;border-radius:12px!important;padding:12px 14px!important}
+ .prof-feedback svg{color:var(--accent);width:22px!important;height:22px!important}
+ /* a quick report's facts on its card */
+ .fc-facts{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px}
+ .fc-snow{display:inline-flex;align-items:center;gap:7px;font:700 14px/1.3 var(--font);color:var(--fg)}
+ .fc-snow i{width:13px;height:13px;border-radius:4px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+ .fc-facts b{font:750 15px/1.3 var(--font);font-variant-numeric:tabular-nums;color:var(--fg)}
+ .fc-where{font:600 13px/1.3 var(--font);color:var(--fg2);font-variant-numeric:tabular-nums}
+ .qs-tour:empty{display:none}
+ .qs-tour{margin:-2px 0 10px}
+ /* no search here: the chips follow the point, drag it to another tour */
+ .qs-tour .tp-q{display:none}
+ .qs-tour .tp-hd{margin-bottom:4px}
+ /* feed: filter and map side by side, the kinds of report as chips */
+ .ft-row .ft-cat{margin-right:0}
+ .ft-sp{flex:1}
+ .ft-kinds{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:10px 0 4px;margin:0 -2px}
+ .ft-kinds::-webkit-scrollbar{display:none}
+ .ft-kinds button{flex:none;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:0;background:var(--fill);color:var(--fg);font:650 13px var(--font);cursor:pointer;white-space:nowrap}
+ .ft-kinds button i{width:9px;height:9px;border-radius:50%;flex:none}
+ .ft-kinds button em{font-style:normal;font-weight:600;font-size:12px;color:var(--fg2);font-variant-numeric:tabular-nums}
+ .ft-kinds button.on{background:var(--fg);color:var(--card)}
+ .ft-kinds button.on em{color:color-mix(in srgb,var(--card) 70%,transparent)}
+ /* what you have already seen: below a line, dimmed */
+ .feed-seen-hd{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:6px 2px 2px;color:var(--fg2);font:650 12px var(--font);letter-spacing:.02em}
+ .feed-seen-hd::before,.feed-seen-hd::after{content:'';flex:1;height:1px;background:var(--hair)}
+ .feed-uptodate{grid-column:1/-1;text-align:center;padding:14px 8px 4px;color:var(--fg2);font:600 13px var(--font)}
+ .feed-card.seen{opacity:.6;filter:saturate(.75);transition:opacity .2s,filter .2s}
+ .feed-card.seen:hover,.feed-card.seen:active,.feed-card.seen:focus-within{opacity:1;filter:none}
+ /* the feed on the map */
+ .feed-map-chip{position:fixed;z-index:1200;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 62px);display:flex;align-items:center;gap:8px;
+   max-width:calc(100vw - 24px);padding:5px 5px 5px 14px;border-radius:999px;background:var(--card);color:var(--fg);box-shadow:0 6px 18px rgba(0,0,0,.18);font:600 13px var(--font);white-space:nowrap}
+ .feed-map-chip[hidden],body[data-screen=feed] .feed-map-chip{display:none}
+ .feed-map-chip span{overflow:hidden;text-overflow:ellipsis}
+ .feed-map-chip button{height:30px;padding:0 12px;border-radius:999px;border:0;background:var(--fill);color:var(--fg);font:700 13px var(--font);cursor:pointer}
+ .feed-map-chip button.x{width:30px;padding:0;font-size:17px}
+ .fm-open{display:block;width:100%;margin-top:8px;height:34px;border:0;border-radius:9px;background:var(--accent);color:var(--on-brand,#fff);font:700 13px var(--font);cursor:pointer}
+ /* invitations: the group badge, the code screen, the welcome, the owner's sheet */
+ .coh-b{display:inline-flex;align-items:center;height:17px;padding:0 6px;margin-left:6px;border-radius:6px;vertical-align:1px;
+   background:color-mix(in srgb,var(--cc) 16%,transparent);color:var(--cc);font:750 10.5px/1 var(--font);letter-spacing:.02em;white-space:nowrap}
+ .coh-b.big{height:26px;padding:0 12px;margin:0 0 12px;border-radius:9px;font-size:13px}
+ .prof-coh{display:flex;align-items:center;gap:6px;margin-top:4px;font:600 12.5px var(--font);color:var(--fg2)}
+ .prof-coh:empty{display:none}
+ .prof-coh .coh-b{margin-left:0}
+ .inv-gate{position:fixed;inset:0;z-index:4900;display:flex;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom));
+   background:linear-gradient(160deg,#1d3a5f,#0f1b2d 70%);overflow-y:auto}
+ .inv-gate[hidden]{display:none}
+ body.inv-gated #tabBar,body.inv-gated #appBar{display:none!important}
+ #invWelcome{z-index:5400;background:rgba(10,18,30,.55)}
+ .inv-card{width:100%;max-width:400px;padding:26px 22px 20px;border-radius:22px;background:var(--card);color:var(--fg);box-shadow:0 20px 50px rgba(0,0,0,.35);text-align:left}
+ .inv-mark{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;margin-bottom:14px;color:#fff;background:linear-gradient(145deg,#5BB4F0,#1F6FB5)}
+ .inv-mark svg{width:28px;height:28px}
+ .inv-card h2{font:800 22px/1.2 var(--font-d,var(--font));margin:0 0 8px;letter-spacing:-.01em}
+ .inv-card p{font:500 14.5px/1.5 var(--font);color:var(--fg2);margin:0 0 14px}
+ .inv-in{width:100%;box-sizing:border-box;height:50px;border-radius:13px;border:1.5px solid var(--hair);background:var(--fill);color:var(--fg);
+   font:700 19px/1 var(--mono);letter-spacing:.08em;text-align:center;text-transform:uppercase}
+ .inv-in:focus{outline:none;border-color:var(--accent)}
+ .inv-err{min-height:18px;margin:6px 2px;font:600 12.5px var(--font);color:var(--danger,#E5484D)}
+ .inv-pri{display:block;width:100%;height:48px;border:0;border-radius:13px;background:var(--accent);color:var(--on-brand,#fff);font:750 15.5px var(--font);cursor:pointer;margin-top:4px}
+ .inv-sec{display:block;width:100%;height:42px;margin-top:8px;border:0;background:none;color:var(--accent);font:650 14px var(--font);cursor:pointer}
+ .inv-list{margin:0 0 12px;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+ .inv-list li{font:500 14px/1.4 var(--font);color:var(--fg2);padding-left:20px;position:relative}
+ .inv-list li::before{content:'';position:absolute;left:4px;top:7px;width:7px;height:7px;border-radius:50%;background:var(--accent)}
+ .inv-list b{color:var(--fg)}
+ .inv-fb{font-size:13px!important}
+ .inv-seg{display:grid;grid-template-columns:1fr 1fr;margin-bottom:8px}
+ .inv-note{font:500 12.5px/1.4 var(--font);color:var(--fg2);margin:2px 2px 6px}
+ .inv-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+ .inv-row label{display:flex;flex-direction:column;gap:4px;font:600 12px var(--font);color:var(--fg2)}
+ .inv-row input{height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--card);color:var(--fg);padding:0 10px;font:650 15px var(--font)}
+ .inv-adm .prof-input{margin-bottom:10px}
+ .inv-new{margin:12px 0 4px;padding:6px 10px;border-radius:12px;background:color-mix(in srgb,var(--accent) 10%,transparent)}
+ .inv-code{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--hair)}
+ .inv-code:last-child{border-bottom:0}
+ .inv-code .coh-b{margin-left:0;flex:none}
+ .inv-code.off{opacity:.5}
+ .inv-c{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+ .inv-c b{font:700 14px var(--mono);letter-spacing:.04em}
+ .inv-c small{font:500 11.5px/1.3 var(--font);color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .inv-code button{flex:none;height:30px;padding:0 12px;border:0;border-radius:8px;background:var(--fill);color:var(--fg);font:700 12.5px var(--font);cursor:pointer}
+ .inv-code button.x{width:30px;padding:0;font-size:16px;color:var(--fg2)}
+ /* over a screen (profile, feed) the tab bar is solid: the 20 % glass is for the map */
+ :root body:has(#profModal[style*="flex"]) #tabBar,:root body:has(#userViewModal[style*="flex"]) #tabBar,:root body[data-screen=feed] #tabBar{background:var(--card)!important}
+ .fc-depth{font:650 14px/1.3 var(--font)!important;font-variant-numeric:tabular-nums}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -6457,7 +6571,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <div class="feed-sheet" id="feedSheet" onclick="if(event.target===this)feedFilterClose()">
   <div class="feed-sheet-in">
     <div class="feed-scope" id="feedScope" hidden></div>
-    <span class="lbl-micro">Kategorie</span>
+    <span class="lbl-micro">Region</span>
     <div class="feed-filter" id="feedFilter"></div>
     <label class="feed-txt-sw"><span>Beiträge ohne Bild zeigen</span><input type="checkbox" id="feedTxtSw" onchange="feedTxtSet(this.checked)"><i></i></label>
     <button class="feed-sheet-x" onclick="feedFilterClose()">Fertig</button>
@@ -6564,7 +6678,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
       <div class="prof-top">
         <div class="prof-av" id="profAv" onclick="document.getElementById('profAvFile').click()"><span id="profAvInitial"></span><div class="prof-av-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div></div>
         <input type="file" id="profAvFile" accept="image/*" hidden onchange="profSetAvatar(this)"/>
-        <div class="prof-meta"><div class="prof-name" id="profName">User</div><div class="prof-endo" id="profEndo">– Bestätigungen</div></div>
+        <div class="prof-meta"><div class="prof-name" id="profName">User</div><div class="prof-endo" id="profEndo">– Bestätigungen</div><div class="prof-coh" id="profCoh"></div></div>
       </div>
       <div class="prof-avbar" id="profAvBar" hidden><span>Neues Profilbild</span><button type="button" onclick="profAvCancel()">Abbrechen</button><button type="button" class="pri" onclick="profAvSave()">Speichern</button></div>
       <div class="prof-bioview" id="profBioView"></div>
@@ -6583,6 +6697,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
         <button class="prof-item nav" onclick="profNav('priv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Privatsphäre &amp; Daten<span class="chev">›</span></button>
         <button class="prof-item nav" onclick="profNav('notif')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Benachrichtigungen<span class="chev">›</span></button>
         <button class="prof-item nav" onclick="profNav('app')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="9" y1="18" x2="15" y2="18"/></svg>App &amp; Rechtliches<span class="chev">›</span></button>
+        <button class="prof-item nav" id="setInvBtn" hidden onclick="invAdminOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 10l9 5 9-5"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>Einladungen &amp; Zugang<span class="chev">›</span></button>
         <button class="prof-signout" onclick="profSignOut()">Abmelden</button>
       </div>
       <div class="prof-view" id="profViewPers" style="display:none">
@@ -6675,7 +6790,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
       <div class="uv-top">
         <div class="prof-av uv-av" id="uvAv"><span id="uvInitial"></span></div>
         <div class="uv-idn">
-          <div class="uv-name" id="uvName"></div>
+          <div class="uv-name" id="uvName"></div><div class="prof-coh" id="uvCoh"></div>
           <span class="uv-trust" id="uvTrust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg><span id="uvEndoN">–</span> Bestätigungen</span>
         </div>
       </div>
@@ -7708,7 +7823,43 @@ const I18N_DICT={
 "Regenradar gerade nicht erreichbar":["Rain radar not reachable right now", "Radar de pluie momentanément indisponible", "Radar pioggia non raggiungibile"],
 "ab Saisonbeginn (SLF)":["from the start of the season (SLF)", "dès le début de la saison (SLF)", "da inizio stagione (SLF)"],
 "Das SLF gibt ausserhalb der Lawinensaison keine Gefahrenstufen heraus":["SLF publishes no danger levels outside the avalanche season", "Le SLF ne publie pas de degrés de danger hors saison", "L'SLF non pubblica gradi di pericolo fuori stagione"],
-"Schnellmeldungen & ohne Foto":["Quick reports & without photo", "Signalements rapides & sans photo", "Segnalazioni rapide & senza foto"]
+"Schnellmeldungen & ohne Foto":["Quick reports & without photo", "Signalements rapides & sans photo", "Segnalazioni rapide & senza foto"],
+"Ohne Foto":["Without photo", "Sans photo", "Senza foto"],
+"Überall":["Everywhere", "Partout", "Ovunque"],
+"Region":["Region", "Région", "Regione"],
+"Schnellmeldungen":["Quick reports", "Signalements rapides", "Segnalazioni rapide"],
+"Lawinen":["Avalanches", "Avalanches", "Valanghe"],
+"Wumm":["Whumpf", "Whumpf", "Whumpf"],
+"Bereits gesehen":["Already seen", "Déjà vu", "Già visti"],
+"Du bist auf dem neuesten Stand":["You're all caught up", "Vous êtes à jour", "Sei aggiornato"],
+"Liste":["List", "Liste", "Elenco"],
+"Beitrag öffnen ›":["Open post ›", "Ouvrir la publication ›", "Apri il post ›"],
+"Alle Beiträge auf der Karte":["All posts on the map", "Toutes les publications sur la carte", "Tutti i post sulla mappa"],
+"Gipfel der Tour – Punkt auf die Stelle ziehen":["Summit of the tour – drag the point to the spot", "Sommet de la course – glissez le point à l'endroit", "Cima del giro – trascina il punto sul posto"],
+"Exposition":["Aspect", "Exposition", "Esposizione"],
+"Geschlossene Testphase":["Closed test phase", "Phase de test fermée", "Fase di test chiusa"],
+"Snowmapper ist im Moment nur mit Einladung offen. Gib deinen Code ein – er steht in der Nachricht, mit der du eingeladen wurdest.":["Snowmapper is invite-only for now. Enter your code – it is in the message you were invited with.", "Snowmapper est pour l'instant sur invitation. Saisissez votre code – il figure dans le message d'invitation.", "Snowmapper per ora è solo su invito. Inserisci il tuo codice – è nel messaggio d'invito."],
+"Code einlösen":["Redeem code", "Utiliser le code", "Usa il codice"],
+"Ich habe schon ein Konto – anmelden":["I already have an account – sign in", "J'ai déjà un compte – se connecter", "Ho già un account – accedi"],
+"Mit einem anderen Konto anmelden":["Sign in with another account", "Se connecter avec un autre compte", "Accedi con un altro account"],
+"Bitte gib deinen Code ein.":["Please enter your code.", "Veuillez saisir votre code.", "Inserisci il tuo codice."],
+"Diesen Code kennen wir nicht. Tippfehler?":["We don't know this code. A typo?", "Code inconnu. Une faute de frappe ?", "Codice sconosciuto. Errore di battitura?"],
+"Dieser Code ist schon aufgebraucht.":["This code has been used up.", "Ce code est épuisé.", "Questo codice è esaurito."],
+"Zu viele Versuche – bitte in einer Stunde nochmals.":["Too many tries – please try again in an hour.", "Trop d'essais – réessayez dans une heure.", "Troppi tentativi – riprova tra un'ora."],
+"Family & Friends":["Family & Friends", "Family & Friends", "Family & Friends"],
+"Tester:in der ersten Stunde":["Early tester", "Testeur·se de la première heure", "Tester della prima ora"],
+"Snowmapper-Team":["Snowmapper team", "Équipe Snowmapper", "Team Snowmapper"],
+"Einladungen & Zugang":["Invitations & access", "Invitations & accès", "Inviti & accesso"],
+"Einladungen":["Invitations", "Invitations", "Inviti"],
+"Zugang":["Access", "Accès", "Accesso"],
+"Offen für alle":["Open to everyone", "Ouvert à tous", "Aperto a tutti"],
+"Nur mit Einladung":["Invite only", "Sur invitation", "Solo su invito"],
+"Neue Codes":["New codes", "Nouveaux codes", "Nuovi codici"],
+"Tester":["Tester", "Testeur", "Tester"],
+"Anzahl":["Number", "Nombre", "Numero"],
+"Personen pro Code":["People per code", "Personnes par code", "Persone per codice"],
+"Codes erstellen":["Create codes", "Créer des codes", "Crea codici"],
+"Alle Codes":["All codes", "Tous les codes", "Tutti i codici"]
 };
 
 // ── Sprachen ──────────────────────────────────────────────────────────────
@@ -12233,6 +12384,12 @@ async function pvLoad(uid,boxId,own){
 function pvCacheSave(ck,boxId){try{const v=JSON.stringify({v:1,S:Object.assign({},pvState[boxId],{acts:pvState[boxId].acts.filter(a=>!a.local)})});
   try{localStorage.setItem(ck,v);}catch(e){sessionStorage.setItem(ck,v);}}catch(e){}}
 function pvImg(r){const cd=r.condition_data||{};if(cd.thumb)return cd.thumb;if(cd.activity&&cd.activity.map)return cd.activity.map;return r.image_url||cd.snapshot||null;}
+// The grid shows photos only: an activity with no picture of its own (just
+// its route map) and a drawn map go to the list below it.
+function pvPhoto(r){const cd=r.condition_data||{},A=cd.activity,not=u=>u&&typeof u==='string'&&u!==cd.drawImage&&u!==cd.snapshot&&!(A&&u===A.map);
+  if(A){const ph=(cd.images||[]).filter(not);return ph.length?ph[0]:null;}
+  if(not(r.image_url))return cd.thumb||r.image_url;
+  const ph=(cd.images||[]).filter(not);return ph.length?ph[0]:null;}
 // Own profile: posts from before thumbnails get one now, a few at a time in
 // the background, so the next visit (and everyone else's) loads small.
 let _thumbBusy=false;
@@ -12255,7 +12412,7 @@ function pvBindTap(box){if(box._pvTap)return;box._pvTap=true;let d=null;
   box.addEventListener('click',e=>{if(box._pvSkip&&Date.now()-box._pvSkip<700&&e.target.closest('.pv-cell,.pv-hl')){e.stopPropagation();e.preventDefault();}},true);}
 function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxId);if(!S||!box)return;pvBindTap(box);
   // the same data again (cache, then network): leave the DOM alone
-  const sig=JSON.stringify([S.posts.map(r=>[r.id,r.caption,r.image_url,pvImg(r)]),S.acts.map(a=>[a.id,a.name]),S.fol,S.ing,S.trust,S.fb,S.tab,_dmN>0]);
+  const sig=JSON.stringify([S.posts.map(r=>[r.id,r.caption,r.image_url,pvPhoto(r)]),S.acts.map(a=>[a.id,a.name]),S.fol,S.ing,S.trust,S.fb,S.tab,_dmN>0]);
   if(box._pvSig===sig&&box.firstChild)return;box._pvSig=sig;
   const n=v=>v>=10000?(v/1000).toFixed(0)+'k':v>=1000?(v/1000).toFixed(1)+'k':String(v);
   const me=sbUser&&S.uid===sbUser.id,foll=!me&&myFollowing&&myFollowing.has(S.uid);
@@ -12266,16 +12423,20 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
   const cw=W[W.length-1],mx=Math.max(1,...W.map(w=>w.d));
   const chart='<div class="pv-chart">'+W.map((w,i)=>'<i class="'+(i===W.length-1?'cur':'')+'" style="height:'+Math.max(3,w.d/mx*100)+'%" title="'+(w.d/1000).toFixed(1)+' km"></i>').join('')+'</div>';
   const hi=S.acts.slice(0,10).map((a,i)=>'<button class="pv-hl" onclick="pvOpenAct(\''+boxId+'\','+i+')"><span class="pv-hl-m" data-pvmap="'+a.id+'">'+pvMapImg(a)+'</span><span>'+escapeHtml(a.name)+'</span></button>').join('');
-  // the grid only for posts with a picture (a photo, a route map); quick
-  // reports and posts without one go to a short list below it
-  const pic=S.posts.map((r,i)=>[r,i]).filter(([r])=>pvImg(r)),plain=S.posts.map((r,i)=>[r,i]).filter(([r])=>!pvImg(r));
-  const plainList=plain.length?'<div class="pv-sec"><b>Schnellmeldungen &amp; ohne Foto</b><span>'+plain.length+'</span></div><div class="pv-plain">'
-    +plain.map(([r,i])=>{const cd=r.condition_data||{},sub=subDe(r.subtype),t=cd.measurement||sub||catLabel((r.primary_categories||[])[0]||'info')||'Beitrag';
+  // the grid only for posts with a photo; activities with just their route,
+  // quick reports and posts without a picture go to a short list below it
+  const pic=S.posts.map((r,i)=>[r,i]).filter(([r])=>pvPhoto(r)),plain=S.posts.map((r,i)=>[r,i]).filter(([r])=>!pvPhoto(r));
+  const ROUTE_I='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg>';
+  const plainList=plain.length?'<div class="pv-sec"><b>Ohne Foto</b><span>'+plain.length+'</span></div><div class="pv-plain">'
+    +plain.map(([r,i])=>{const cd=r.condition_data||{},A=cd.activity,sub=subDe(r.subtype),when=r.captured_at||r.created_at;
+      const date=when?new Date(when).toLocaleDateString(LOCALE(),{day:'numeric',month:'short'}):'';
+      if(A)return '<button type="button" class="pv-pl act" onclick="pvOpenPost(\''+boxId+'\','+i+')"><i>'+ROUTE_I+'</i><span><b>'+escapeHtml(String(A.name||sub||'Aktivität').slice(0,70))+'</b>'
+        +'<small>'+escapeHtml([A.dist?(A.dist/1000).toFixed(1)+' km':'',A.up?A.up+' hm':'',date].filter(Boolean).join(' · '))+'</small></span></button>';
+      const t=cd.measurement||sub||catLabel((r.primary_categories||[])[0]||'info')||'Beitrag';
       const qt=QS_TYPES.find(x=>x.k===cd.snow),col=qt?qt.c:(CAT_COLORS[(r.primary_categories||[])[0]]||'var(--accent)');
-      const when=r.captured_at||r.created_at;
       return '<button type="button" class="pv-pl" onclick="pvOpenPost(\''+boxId+'\','+i+')"><i style="background:'+col+'"></i><span><b>'+escapeHtml(String(t).slice(0,70))+'</b>'
-        +'<small>'+escapeHtml([sub&&sub!==t?sub:'',cd.altitudeM?cd.altitudeM+' m':'',cd.aspect||'',when?new Date(when).toLocaleDateString(LOCALE(),{day:'numeric',month:'short'}):''].filter(Boolean).join(' · '))+'</small></span></button>';}).join('')+'</div>':'';
-  const grid=S.posts.length?(pic.length?'<div class="pv-grid">'+pic.map(([r,i])=>{const im=pvImg(r),cd=r.condition_data||{};
+        +'<small>'+escapeHtml([sub&&sub!==t?sub:'',cd.altitudeM?cd.altitudeM+' m':'',cd.aspect||'',cd.tour&&cd.tour.name?cd.tour.name:'',date].filter(Boolean).join(' · '))+'</small></span></button>';}).join('')+'</div>':'';
+  const grid=S.posts.length?(pic.length?'<div class="pv-grid">'+pic.map(([r,i])=>{const im=pvPhoto(r),cd=r.condition_data||{};
       const ic=cd.activity?'<svg class="pv-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg>':(cd.snowp?'<svg class="pv-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/></svg>':'');
       return '<button class="pv-cell" onclick="pvOpenPost(\''+boxId+'\','+i+')">'+(im?'<img src="'+im+'" '+(i<9?'fetchpriority="high"':'loading="lazy"')+' decoding="async" alt="">':'<span class="pv-txt">'+escapeHtml((r.caption||r.subtype||catLabel((r.primary_categories||[])[0]||'info')||'').slice(0,60))+'</span>')+ic+'</button>';}).join('')+'</div>':'')+plainList
     :'<div class="prof-hint">Noch keine Beiträge.</div>';
@@ -12284,15 +12445,16 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
   const list=S.acts.length?'<div class="pv-hls pv-hls-all">'+S.acts.map((a,i)=>'<button class="pv-hl" onclick="pvOpenAct(\''+boxId+'\','+i+')"><span class="pv-hl-m" data-pvmap="'+a.id+'">'+pvMapImg(a)+'</span><span>'+escapeHtml(a.name)+'</span></button>').join('')+'</div>'
     :'<div class="prof-hint">'+(me?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aktivitäten.')+'</div>';
   box.innerHTML='<div class="pv-stats"><div><b>'+n(S.posts.length)+'</b><span>Beiträge</span></div><div><b>'+n(S.fol)+'</b><span>Follower</span></div><div><b>'+n(S.ing)+'</b><span>Folge ich</span></div><div><b>'+n(S.acts.length)+'</b><span>Aktivitäten</span></div><div><b>'+n(S.fb||0)+'</b><span>Feedbacks</span></div></div>'
-    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button onclick="_feedReturn=openProfile;profClose();navGo(\'feed\');feedSetScope(\'saved\')">Gemerkt</button>'
-        +'<button onclick="pvShare(\''+S.uid+'\')">Teilen</button><button class="pv-dm'+(_dmN>0?' unread':'')+'" data-dm onclick="profClose();dmOpen()">Nachrichten'+(_dmN>0?'<b>'+(_dmN>9?'9+':_dmN)+'</b>':'')+'</button>'
+    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button class="pv-dm'+(_dmN>0?' unread':'')+'" data-dm onclick="profClose();dmOpen()">Nachrichten'+(_dmN>0?'<b>'+(_dmN>9?'9+':_dmN)+'</b>':'')+'</button>'
+        +'<button class="pv-ic" aria-label="Gemerkt" title="Gemerkt" onclick="_feedReturn=openProfile;profClose();navGo(\'feed\');feedSetScope(\'saved\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>'
+        +'<button class="pv-ic" aria-label="Teilen" title="Teilen" onclick="pvShare(\''+S.uid+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>'
       :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
         +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
         +'<button class="pv-more" onclick="uvReportUser()" aria-label="Nutzer melden">⋯</button>')+'</div>'
     +(()=>{const L=trustLevel(S.trust);return '<button class="pv-trust tr-l'+L.i+'" onclick="trustInfo('+L.n+')"><span class="pv-tr-ic">'+trustIco(L.i,24,'#fff')+'</span>'
       +'<span class="pv-tr-t"><b>'+escapeHtml(L.name)+'</b><small>'+escapeHtml(L.sub)+'</small></span><span class="pv-tr-q">›</span></button>';})()
     +'<div class="pv-week"><div class="pv-wk-h"><b>Diese Woche</b><span>12 Wochen</span></div>'
-    +'<div class="pv-wk"><div><small>Distanz</small><b>'+(cw.d/1000).toFixed(1)+' km</b></div><div><small>Zeit</small><b>'+trkFmtT(cw.mv)+'</b></div><div><small>Höhenmeter</small><b>'+cw.up+' m</b></div></div>'+chart+'</div>'
+    +'<div class="pv-wk"><div><b>'+(cw.d?(cw.d/1000).toFixed(1):'0')+'<em>km</em></b><small>Distanz</small></div><div><b>'+trkFmtT(cw.mv)+'<em>h</em></b><small>Zeit</small></div><div><b>'+Math.round(cw.up).toLocaleString('de-CH')+'<em>hm</em></b><small>Aufstieg</small></div></div>'+chart+'</div>'
     // the profile: this week's numbers and the posts -- the activities are
     // posts like any other, no list or gallery of their own
     +grid;
@@ -15228,7 +15390,7 @@ function navCur(){const B=document.body.classList,f=document.getElementById('fee
   if(pm&&pm.style.display&&pm.style.display!=='none')return 'you';
   if(B.contains('ts-open')||B.contains('tour-open'))return 'tours';
   return 'map';}
-function navGo(t){try{haptic(4);}catch(e){}if(t!=='feed')_feedReturn=null;try{const c=document.getElementById('coach');if(c&&c.style.display&&c.style.display!=='none')endCoach();}catch(e){}
+function navGo(t){try{haptic(4);}catch(e){}if(t!=='feed')_feedReturn=null;if(t!=='map'&&document.body.classList.contains('feed-map'))try{feedMapClear();}catch(e){}try{const c=document.getElementById('coach');if(c&&c.style.display&&c.style.display!=='none')endCoach();}catch(e){}
   try{const h=document.getElementById('hiResChip');if(h)h.remove();}catch(e){}if(t!=='map')try{actSumHide(false);}catch(e){}try{repSheetToggle(false);}catch(e){}
   // tapping the tab that is already open goes back to the map
   if(t!=='map'&&navCur()===t){if(t==='rec'){try{trkClose();}catch(e){}}t='map';}
@@ -17146,13 +17308,14 @@ function _rptActivity(r,tiny){const A=r.condition_data.activity,ll=A.track.map(p
   const av=r.avatar?'<i style="background-image:'+cssUrl(r.avatar)+'"></i>':'<i>'+escapeHtml((r.user||'?')[0].toUpperCase())+'</i>';
   _rptAdd(ll[0][0],ll[0][1],'<div class="act-start">'+av+'</div>',26,26,open,700,[r.id]);}
 let rptLastOpen=null;
-function feedOpenAt(id){feedScope='post';feedFocusId=String(id);feedFilter='all';feedAnchor=null;
+function feedOpenAt(id){feedScope='post';feedFocusId=String(id);feedAnchor=null;
   if(document.getElementById('inspPanel'))document.getElementById('inspPanel').classList.remove('open');
   feedOpen();
   setTimeout(()=>{const el=document.getElementById('feedcard-'+id);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1800);}},160);}
 // --- Auth UI ---
 function authUpdateUI(user){
   sbUser=user;
+  if((user&&user.id)!==window._invFor){window._invFor=user&&user.id;setTimeout(invLoad,300);}
   if(user&&window._pushFor!==user.id){window._pushFor=user.id;setTimeout(pushSync,3000);}
   // favourites (the stars) and the push state belong to the person
   if((user&&user.id)!==window._favFor){window._favFor=user&&user.id;favs=null;_favPush=null;if(user)setTimeout(()=>favLoad(true),2500);}
@@ -17250,7 +17413,9 @@ async function loadDbReports(opts){
       // arrived since the feed was last opened from an old one
       _q(sb.from('report_comments').select('report_id,created_at').in('report_id',ids)),
       // crowdsourced snow quality: stars 1–5 + powder
-      _q(sb.from('report_conditions').select('report_id,user_id,stars,powder').in('report_id',ids))]);
+      _q(sb.from('report_conditions').select('report_id,user_id,stars,powder').in('report_id',ids)),
+      // the group (Family & Friends, tester) for the badge; empty before the invites migration
+      _q(sb.from('profiles').select('id,cohort').in('id',uids))]).then(a=>{try{(a[4]||[]).forEach(p=>{COHORT_OF[p.id]=p.cohort||null;});}catch(e){}return a;});
     // usernames
     let nameMap={},avatarMap={};try{pr.forEach(p=>{nameMap[p.id]=p.username;if(p.avatar_url){avatarMap[p.id]=p.avatar_url;avatarPut(p.id,p.avatar_url);}});}catch(e){}
     // likes (reuse report_reactions type=like)
@@ -17688,6 +17853,121 @@ function avatarHtml(id,name,cls){
   return '<div class="'+(cls||'cmt-av')+(url?' has-img':'')+'"'+
     (url?(' style="background-image:'+cssUrl(url)+'"'):'')+'>'+(url?'':ini)+'</div>';
 }
+// ── Invitations: Family & Friends and the first testers ────────────────
+// A code (FF-XXXX-XXXX, BETA-XXXX-XXXX) puts a person into a group for good:
+// one welcome, and a small badge by their name. In the closed phase
+// (app_settings.access = 'invite') the app asks for a code first; the
+// database itself holds back posts from anyone without one. The owner hands
+// out codes under Einstellungen › Einladungen & Zugang.
+const COHORTS={ff:{l:'Family & Friends',s:'F&F',c:'#E0577A'},beta:{l:'Tester:in der ersten Stunde',s:'Tester',c:'#2F8FDB'},team:{l:'Snowmapper-Team',s:'Team',c:'#0F766E'}};
+const COHORT_OF=Object.create(null);
+let invAccess='open',myCohort=null,myRole=null,_invReady=false;
+try{invAccess=localStorage.getItem('ssm_access')||'open';}catch(e){}
+function cohortBadge(uid){const c=COHORTS[uid&&COHORT_OF[uid]];
+  return c?'<span class="coh-b" style="--cc:'+c.c+'" title="'+escapeHtml(c.l)+'">'+escapeHtml(c.s)+'</span>':'';}
+function invCohortShow(id,co){const el=document.getElementById(id);if(!el)return;const c=COHORTS[co];
+  el.innerHTML=c?'<span class="coh-b" style="--cc:'+c.c+'">'+escapeHtml(c.s)+'</span><span>'+escapeHtml(c.l)+'</span>':'';}
+// a link with ?code=… keeps the code until you are signed in
+(function(){try{const u=new URL(location.href),c=u.searchParams.get('code');
+  if(c){localStorage.setItem('ssm_invite',c.trim().toUpperCase());u.searchParams.delete('code');history.replaceState(null,'',u.toString());}}catch(e){}})();
+function invPending(){try{return localStorage.getItem('ssm_invite')||'';}catch(e){return '';}}
+async function invLoad(){if(!sb)return;
+  try{const{data,error}=await sb.from('app_settings').select('value').eq('key','access').maybeSingle();
+    if(!error){invAccess=(data&&data.value)||'open';try{localStorage.setItem('ssm_access',invAccess);}catch(e){}}}catch(e){}
+  myCohort=null;myRole=null;
+  if(sbUser){try{const{data,error}=await sb.from('profiles').select('cohort,role').eq('id',sbUser.id).maybeSingle();
+      if(!error&&data){myCohort=data.cohort||null;myRole=data.role||null;COHORT_OF[sbUser.id]=myCohort;}}catch(e){}
+    const p=invPending();if(p&&!myCohort)await invRedeem(p,true);}
+  _invReady=true;invGateSync();invCohortShow('profCoh',myCohort);
+  const b=document.getElementById('setInvBtn');if(b)b.hidden=myRole!=='admin';}
+async function invRedeem(code,auto){code=String(code||'').trim().toUpperCase();if(!code)return false;
+  if(!sb||!sbUser){try{localStorage.setItem('ssm_invite',code);}catch(e){}authShow();return false;}
+  let res=null;
+  try{const{data,error}=await sb.rpc('invite_redeem',{c:code});if(error)throw error;res=data;}
+  catch(e){if(!auto)invErr('Der Code konnte gerade nicht geprüft werden. Versuch es gleich nochmals.');return false;}
+  try{localStorage.removeItem('ssm_invite');}catch(e){}
+  if(res&&res.ok){myCohort=res.cohort;COHORT_OF[sbUser.id]=myCohort;invGateSync();invCohortShow('profCoh',myCohort);
+    if(!res.already)invWelcome(myCohort);return true;}
+  const why=res&&res.reason==='used'?'Dieser Code ist schon aufgebraucht.':res&&res.reason==='rate'?'Zu viele Versuche – bitte in einer Stunde nochmals.':'Diesen Code kennen wir nicht. Tippfehler?';
+  if(auto)toast('Einladungscode: '+why,'err');else invErr(why);return false;}
+function invErr(t){const e=document.getElementById('invErr');if(e)e.textContent=t||'';}
+// the closed phase: a code before anything else
+function invGateSync(){const need=_invReady&&invAccess==='invite'&&!myCohort;let g=document.getElementById('invGate');
+  document.body.classList.toggle('inv-gated',need);
+  if(!need){if(g)g.hidden=true;return;}
+  if(!g){g=document.createElement('div');g.id='invGate';g.className='inv-gate';g.setAttribute('role','dialog');g.setAttribute('aria-label','Einladung');document.body.appendChild(g);}
+  g.innerHTML='<div class="inv-card"><div class="inv-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v19M3.8 7.2l16.4 9.6M3.8 16.8l16.4-9.6"/><path d="M9.6 4.4L12 6.6l2.4-2.2M9.6 19.6L12 17.4l2.4 2.2"/></svg></div><h2>Geschlossene Testphase</h2>'
+    +'<p>Snowmapper ist im Moment nur mit Einladung offen. Gib deinen Code ein – er steht in der Nachricht, mit der du eingeladen wurdest.</p>'
+    +'<input id="invCode" class="inv-in" placeholder="FF-XXXX-XXXX" autocapitalize="characters" autocomplete="off" spellcheck="false" value="'+escapeHtml(invPending())+'" onkeydown="if(event.key===\'Enter\')invSubmit()">'
+    +'<div class="inv-err" id="invErr"></div>'
+    +'<button type="button" class="inv-pri" onclick="invSubmit()">Code einlösen</button>'
+    +(sbUser?'<button type="button" class="inv-sec" onclick="profSignOut()">Mit einem anderen Konto anmelden</button>'
+      :'<button type="button" class="inv-sec" onclick="authShow()">Ich habe schon ein Konto – anmelden</button>')+'</div>';
+  g.hidden=false;}
+function invSubmit(){const v=(document.getElementById('invCode')||{}).value||'';if(!v.trim()){invErr('Bitte gib deinen Code ein.');return;}
+  invErr('');if(!sbUser){try{localStorage.setItem('ssm_invite',v.trim().toUpperCase());}catch(e){}authShow();return;}invRedeem(v,false);}
+// once, right after a code: who you are here
+function invWelcome(co){const c=COHORTS[co];if(!c)return;
+  const k='ssm_welcomed_'+co+'_'+(sbUser&&sbUser.id||'');try{if(localStorage.getItem(k))return;localStorage.setItem(k,'1');}catch(e){}
+  const nm=escapeHtml((sbUser&&sbUser.user_metadata&&sbUser.user_metadata.username)||'');
+  const T={ff:['Willkommen bei Family &amp; Friends'+(nm?', '+nm:'')+'!','Schön, dass du dabei bist. Du gehörst zu den Allerersten, die Snowmapper ausprobieren – dein Name trägt jetzt das F&amp;F-Abzeichen.'],
+    beta:['Willkommen im Testteam'+(nm?', '+nm:'')+'!','Du testest Snowmapper als eine der ersten Personen – dein Name trägt jetzt das Tester-Abzeichen.'],
+    team:['Willkommen im Team'+(nm?', '+nm:'')+'!','Du hast Zugang zu allem, auch zu den Einladungen.']}[co];
+  let w=document.getElementById('invWelcome');
+  if(!w){w=document.createElement('div');w.id='invWelcome';w.className='inv-gate';w.setAttribute('role','dialog');document.body.appendChild(w);}
+  w.innerHTML='<div class="inv-card"><span class="coh-b big" style="--cc:'+c.c+'">'+escapeHtml(c.s)+'</span><h2>'+T[0]+'</h2><p>'+T[1]+'</p>'
+    +'<ul class="inv-list"><li><b>Tippe auf die Karte</b> – Skiqualität und Pulver an jedem Punkt</li><li><b>Melden › Schnellmeldung</b> – in zehn Sekunden sagen, wie der Schnee ist</li><li><b>Aufzeichnen</b> – deine Tour mit Spur und Höhenmetern</li></ul>'
+    +'<p class="inv-fb">Was dir auffällt, zählt: <b>Profil › Feedback senden</b>.</p>'
+    +'<button type="button" class="inv-pri" onclick="document.getElementById(\'invWelcome\').hidden=true">Los geht\'s</button></div>';
+  w.hidden=false;try{haptic(12);}catch(e){}}
+// the owner: open or closed, and codes to hand out
+function invLink(code){return postUrl('x').replace(/\?post=.*$/,'')+'?code='+encodeURIComponent(code);}
+function invShareText(code,co){const c=COHORTS[co]||COHORTS.beta;
+  return 'Du bist eingeladen, Snowmapper zu testen ('+c.l+'). Dein Code: '+code+'\n'+invLink(code);}
+async function invAdminOpen(){if(myRole!=='admin')return;
+  let el=document.getElementById('invAdmin');
+  if(!el){el=document.createElement('div');el.id='invAdmin';el.className='prof-modal';el.onclick=e=>{if(e.target===el)el.style.display='none';};document.body.appendChild(el);}
+  el.innerHTML='<div class="prof-sheet inv-adm" role="dialog" aria-label="Einladungen"><div class="prof-head"><span>Einladungen</span><button onclick="document.getElementById(\'invAdmin\').style.display=\'none\'" aria-label="Schliessen">✕</button></div>'
+    +'<div class="prof-body"><div class="prof-sec-title">Zugang</div>'
+    +'<div class="prof-seg inv-seg"><button type="button" data-m="open" onclick="invAccessSet(\'open\')">Offen für alle</button><button type="button" data-m="invite" onclick="invAccessSet(\'invite\')">Nur mit Einladung</button></div>'
+    +'<p class="inv-note" id="invAccNote"></p>'
+    +'<div class="prof-sec-title">Neue Codes</div>'
+    +'<div class="prof-seg inv-seg" id="invCo"><button type="button" data-c="ff" class="active" onclick="invCoPick(\'ff\')">Family &amp; Friends</button><button type="button" data-c="beta" onclick="invCoPick(\'beta\')">Tester</button></div>'
+    +'<div class="inv-row"><label>Anzahl<input id="invN" type="number" min="1" max="20" value="1"></label><label>Personen pro Code<input id="invU" type="number" min="1" max="100" value="1"></label></div>'
+    +'<input id="invLbl" class="prof-input" maxlength="80" placeholder="Für wen? (nur du siehst das)">'
+    +'<button type="button" class="inv-pri" onclick="invCreate()">Codes erstellen</button>'
+    +'<div id="invNew"></div><div class="prof-sec-title">Alle Codes</div><div id="invAll" class="inv-all"><div class="us-empty">Lade…</div></div></div></div>';
+  el.style.display='flex';invAccessMark();invListLoad();}
+let _invCo='ff';
+function invCoPick(c){_invCo=c;document.querySelectorAll('#invCo button').forEach(b=>b.classList.toggle('active',b.dataset.c===c));}
+function invAccessMark(){document.querySelectorAll('.inv-adm [data-m]').forEach(b=>b.classList.toggle('active',b.dataset.m===invAccess));
+  const n=document.getElementById('invAccNote');if(n)n.textContent=invAccess==='invite'?'Nur wer einen Code eingelöst hat, kommt in die App und kann posten.':'Alle können die App nutzen und posten. Codes geben trotzdem das Abzeichen.';}
+async function invAccessSet(m){if(m===invAccess)return;
+  if(m==='invite'&&!confirm('Geschlossene Testphase einschalten? Wer keinen Code eingelöst hat, sieht dann nur noch den Code-Bildschirm.'))return;
+  try{const{error}=await sb.rpc('access_set',{mode:m});if(error)throw error;invAccess=m;try{localStorage.setItem('ssm_access',m);}catch(e){}
+    invAccessMark();toast(m==='invite'?'Nur noch mit Einladung':'Offen für alle','ok');}catch(e){toast('Ging nicht: '+(e.message||e),'err');}}
+async function invCreate(){const n=Math.max(1,Math.min(20,+document.getElementById('invN').value||1)),u=Math.max(1,Math.min(100,+document.getElementById('invU').value||1));
+  const lbl=(document.getElementById('invLbl').value||'').trim();
+  try{const{data,error}=await sb.rpc('invite_create',{p_cohort:_invCo,p_n:n,p_uses:u,p_label:lbl||null,p_days:null});if(error)throw error;
+    const codes=(data||[]).map(x=>typeof x==='string'?x:(x.invite_create||Object.values(x)[0]));
+    document.getElementById('invNew').innerHTML='<div class="inv-new">'+codes.map(c=>invCodeRow({code:c,cohort:_invCo,uses:0,max_uses:u,label:lbl})).join('')+'</div>';
+    document.getElementById('invLbl').value='';invListLoad();try{haptic(8);}catch(e){}}
+  catch(e){toast('Codes erstellen ging nicht: '+(e.message||e),'err');}}
+function invCodeRow(r){const c=COHORTS[r.cohort]||COHORTS.beta,used=(r.used_by||[]).filter(Boolean);
+  return '<div class="inv-code'+(r.revoked?' off':'')+'"><span class="coh-b" style="--cc:'+c.c+'">'+escapeHtml(c.s)+'</span>'
+    +'<span class="inv-c"><b>'+escapeHtml(r.code)+'</b><small>'+escapeHtml([(r.uses||0)+'/'+(r.max_uses||1)+' eingelöst',r.label||'',used.length?used.join(', '):'',r.revoked?'gesperrt':''].filter(Boolean).join(' · '))+'</small></span>'
+    +(r.revoked?'':'<button type="button" onclick="invShare(\''+escapeHtml(r.code)+'\',\''+r.cohort+'\')">Teilen</button>'
+      +'<button type="button" class="x" aria-label="Sperren" onclick="invRevoke(\''+escapeHtml(r.code)+'\')">×</button>')+'</div>';}
+async function invListLoad(){const box=document.getElementById('invAll');if(!box)return;
+  try{const{data,error}=await sb.rpc('invite_list');if(error)throw error;
+    box.innerHTML=(data&&data.length)?data.map(invCodeRow).join(''):'<div class="us-empty">Noch keine Codes.</div>';}
+  catch(e){box.innerHTML='<div class="us-empty">Konnte nicht geladen werden.</div>';}}
+function invShare(code,co){const t=invShareText(code,co);
+  if(typeof nativeShare==='function'&&nativeShare(t,invLink(code)))return;
+  if(navigator.share){navigator.share({title:'Snowmapper',text:t}).catch(()=>{});return;}
+  try{navigator.clipboard.writeText(t).then(()=>toast('Einladung kopiert','ok'),()=>toast(t,'ok'));}catch(e){toast(t,'ok');}}
+async function invRevoke(code){if(!confirm('Code '+code+' sperren? Wer ihn schon eingelöst hat, bleibt dabei.'))return;
+  try{const{error}=await sb.rpc('invite_revoke',{c:code});if(error)throw error;invListLoad();}catch(e){toast('Ging nicht','err');}}
 function profNav(v){['Main','Set','Pers','Priv','Notif','App'].forEach(k=>{const el=document.getElementById('profView'+k);if(el)el.style.display=(v===k.toLowerCase())?'':'none';});try{haptic(4);}catch(e){}}
 function profSetVis(v){try{localStorage.setItem('ssm_visibility',v);}catch(e){}
   document.querySelectorAll('#profVis button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
@@ -18070,12 +18350,17 @@ let qs=null,qsMarker=null,_qsWT=0;
 function qsOpen(){
   if(!sb||!sbUser){authShow();return;}
   qs={type:0,depth:2,ll:null,acc:null,moved:false,photo:null,busy:false};
+  // opened from a tour («Melden» on its sheet): the point starts on its summit
+  // and the report is tagged with it; GPS takes over only when you are on it
+  const tl=rptTourLock&&rptTourSel?tourList().find(t=>String(t.id)===String(rptTourSel.id)):null;
+  if(tl){try{const g=tourGeo(tl);qs.tour=tl;qs.tourPt=g.hi&&g.hi.lat!=null?[g.hi.lat,g.hi.lon]:[tl.coords[0][1],tl.coords[0][0]];}catch(e){}}
   let el=document.getElementById('qsSheet');
   if(!el){el=document.createElement('div');el.id='qsSheet';el.className='qs-sheet';el.setAttribute('role','dialog');el.setAttribute('aria-label','Schnellmeldung');document.body.appendChild(el);}
   const dg=QS_DEPTH.map(d=>d[2]),stops=dg.map((c,i)=>c+' '+(i/dg.length*100).toFixed(2)+'% '+((i+1)/dg.length*100).toFixed(2)+'%').join(',');
   el.innerHTML='<div class="qs-in"><div class="qs-grab"></div>'
     +'<div class="qs-hd"><b>Schnellmeldung</b><button type="button" class="qs-x" onclick="qsClose()" aria-label="Schliessen">×</button></div>'
     +'<div class="qs-loc" id="qsLoc"><span>Standort wird bestimmt…</span></div>'
+    +'<div class="qs-tour" id="qsTour"></div>'
     +'<div class="qs-lbl">Schneeart</div>'
     +'<div class="qs-wheel-w"><div class="qs-wheel" id="qsWheel" data-nopull onscroll="qsWheelScroll()">'
     +QS_TYPES.map((t,i)=>'<button type="button" class="qs-it'+(i===0?' on':'')+'" onclick="qsPick('+i+')"><i style="background:'+t.c+'"></i><span>'+escapeHtml(t.l)+'</span></button>').join('')
@@ -18089,18 +18374,22 @@ function qsOpen(){
   el.classList.add('open');document.body.classList.add('qs-open');try{navSync();}catch(e){}
   qsDepth(2);
   const fall=()=>{if(qs&&!qs.ll){const c=map.getCenter();qsPlace(c.lat,c.lng,null,true);}};
+  if(qs.tourPt)qsPlace(qs.tourPt[0],qs.tourPt[1],null,true);
   // the first fix is often the coarse one: keep listening for ~20 s and move
   // the point while it gets better (unless it was moved by hand)
   if(navigator.geolocation){try{
     qs.watch=navigator.geolocation.watchPosition(p=>{if(!qs)return;const a=p.coords.accuracy;gpsCoarseCheck(a);
+      if(qs.tour&&!qsOnTour(p.coords.latitude,p.coords.longitude))return;
       if(!qs.ll||qs.noGps||(!qs.moved&&a<(qs.acc||1e9))){if(!qs.ll||qs.noGps)qsPlace(p.coords.latitude,p.coords.longitude,a,false);
         else{qs.ll=[p.coords.latitude,p.coords.longitude];qs.acc=a;if(qsMarker)qsMarker.setLatLng(qs.ll);qsLocText();}}
       if(a<=10)qsGpsStop();},e=>{if(e.code===1)fall();},{enableHighAccuracy:true,timeout:20000,maximumAge:0});}catch(e){}
     setTimeout(fall,9000);setTimeout(qsGpsStop,20000);}
   else fall();
   try{haptic(6);}catch(e){}}
+function qsOnTour(lat,lon){const t=qs&&qs.tour;if(!t||!t.coords)return true;
+  for(let i=0;i<t.coords.length;i+=2){if(tourDistM(lon,lat,t.coords[i][0],t.coords[i][1])<=1500)return true;}return false;}
 function qsGpsStop(){if(qs&&qs.watch!=null){try{navigator.geolocation.clearWatch(qs.watch);}catch(e){}qs.watch=null;}}
-function qsClose(){qsGpsStop();const el=document.getElementById('qsSheet');if(el)el.classList.remove('open');
+function qsClose(){qsGpsStop();if(qs&&!qs.posted){rptTourSel=null;rptTourLock=false;rptTourQ='';}const el=document.getElementById('qsSheet');if(el)el.classList.remove('open');
   document.body.classList.remove('qs-open');if(qsMarker){try{map.removeLayer(qsMarker);}catch(e){}qsMarker=null;}qs=null;try{navSync();}catch(e){}}
 // your position as a point on the map, dragged to where you really were
 function qsPlace(lat,lon,acc,noGps){if(!qs)return;
@@ -18108,16 +18397,18 @@ function qsPlace(lat,lon,acc,noGps){if(!qs)return;
   if(qsMarker)map.removeLayer(qsMarker);
   qsMarker=L.marker([lat,lon],{draggable:true,autoPan:true,zIndexOffset:3000,
     icon:L.divIcon({className:'',html:'<div class="qs-pin"><i></i></div>',iconSize:[34,34],iconAnchor:[17,17]})}).addTo(map);
-  qsMarker.on('dragend',()=>{const p=qsMarker.getLatLng();qs.ll=[p.lat,p.lng];qs.moved=true;qsGpsStop();qsLocText();try{haptic(4);}catch(e){}});
+  qsMarker.on('dragend',()=>{const p=qsMarker.getLatLng();qs.ll=[p.lat,p.lng];qs.moved=true;qsGpsStop();qsLocText();qsTourSync();try{haptic(4);}catch(e){}});
   const sh=document.getElementById('qsSheet');
   map.setView([lat,lon],Math.max(map.getZoom(),14),{animate:false});
   if(sh)map.panBy([0,Math.round(sh.offsetHeight/2)],{animate:false});
-  qsLocText();const b=document.getElementById('qsPost');if(b)b.disabled=false;}
+  qsLocText();qsTourSync();const b=document.getElementById('qsPost');if(b)b.disabled=false;}
+function qsTourSync(){if(!qs||!qs.ll)return;const ll=qs.ll;
+  toursEnsure().then(()=>{if(qs)tourPickRender('qsTour',ll[0],ll[1]);}).catch(()=>{});}
 function qsLocText(){const el=document.getElementById('qsLoc');if(!el||!qs||!qs.ll)return;
   const d=obsDEM(qs.ll[0],qs.ll[1]);
   el.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>'
     +'<span><b>'+(d.elev!=null?d.elev+' m':'–')+(d.aspect?' · '+escapeHtml(d.aspect):'')+'</b>'
-    +'<small>'+(qs.moved?'<span>Punkt verschoben</span>':qs.noGps?'<span>Kein GPS – Punkt auf die Stelle ziehen</span>':'<span>Dein Standort</span>'+(qs.acc?' ±'+Math.round(qs.acc)+' m':''))
+    +'<small>'+(qs.moved?'<span>Punkt verschoben</span>':(qs.tourPt&&qs.noGps)?'<span>Gipfel der Tour – Punkt auf die Stelle ziehen</span>':qs.noGps?'<span>Kein GPS – Punkt auf die Stelle ziehen</span>':'<span>Dein Standort</span>'+(qs.acc?' ±'+Math.round(qs.acc)+' m':''))
     +' · <span>auf der Karte verschiebbar</span></small></span>';}
 // the wheel: the item in the middle is the one chosen
 function qsWheelScroll(){clearTimeout(_qsWT);_qsWT=setTimeout(()=>{const w=document.getElementById('qsWheel');if(!w||!qs)return;
@@ -18139,6 +18430,7 @@ async function qsPost(){if(!qs||qs.busy||!qs.ll)return;
     const cd={snow:t.k,measurement:t.l+(dp?' '+(dp[1]==null?dp[0]+'+':dp[0]+'–'+dp[1])+' cm':''),
       aspect:d.aspect||null,altitudeM:d.elev!=null?d.elev:null,gpsAcc:qs.acc?Math.round(qs.acc):null,moved:qs.moved||undefined};
     if(dp)cd.depthBand=[dp[0],dp[1]];
+    const tour=tourPickTake();if(tour)cd.tour=tour;
     // what feeds the reported-powder model (thin cover says nothing about the surface)
     if(t.q!=null){cd.quick=true;cd.powderQuality=t.q;cd.powderAmountCm=cm;cd.powder=t.k==='pulver';}
     const row={user_id:sbUser.id,location:'POINT('+lon+' '+lat+')',elevation_m:cd.altitudeM,primary_categories:['snow'],subtype:'Schnellmeldung',
@@ -18147,8 +18439,8 @@ async function qsPost(){if(!qs||qs.busy||!qs.ll)return;
       const{error:upErr}=await sb.storage.from('report-images').upload(path,up,{cacheControl:'31536000',contentType:up.type||'image/jpeg'});
       if(upErr)throw upErr;
       const{data:ud}=sb.storage.from('report-images').getPublicUrl(path);row.image_url=ud&&ud.publicUrl||null;await withThumb(row,qs.photo);}
-    const{error}=await sb.from('reports').insert(row);if(error)throw error;
-    toast('Schnellmeldung gepostet – danke!','ok');try{haptic(12);}catch(e){}qsClose();loadDbReports();
+    const{error}=await sb.from('reports').insert(row);if(error){if(tour){rptTourSel=tour;rptTourLock=true;}throw error;}
+    qs.posted=true;toast('Schnellmeldung gepostet – danke!','ok');try{haptic(12);}catch(e){}qsClose();loadDbReports();
   }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e),'err');if(qs){qs.busy=false;if(btn){btn.disabled=false;btn.textContent='Posten';}}}}
 // ── Bestes Pulver in deiner Nähe ─────────────────────────────────────────
 // The three tours within 30 km (of you once the position is known, else of
@@ -18363,6 +18655,8 @@ async function viewUser(uid,username){
   ['uvReports','uvEndoN','uvSince','uvFollowers'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='–';});
   const fb=document.getElementById('uvFollow');fb.textContent=myFollowing.has(uid)?'Folge ich':'Folgen';fb.classList.toggle('following',myFollowing.has(uid));
   if(!sb)return;
+  invCohortShow('uvCoh',COHORT_OF[uid]);
+  Promise.resolve(sb.from('profiles').select('cohort').eq('id',uid).maybeSingle()).then(r=>{if(r&&r.data&&uvUid===uid){COHORT_OF[uid]=r.data.cohort||null;invCohortShow('uvCoh',COHORT_OF[uid]);}},()=>{});
   try{const{data}=await sb.from('profiles').select('username,bio,avatar_url,created_at').eq('id',uid).single();
     if(data){document.getElementById('uvName').textContent=data.username||username||'User';document.getElementById('uvInitial').textContent=(data.username||'U')[0].toUpperCase();
       document.getElementById('uvBio').textContent=data.bio||'';
@@ -19941,7 +20235,8 @@ const FEED_REGIONS=[
 let feedRegion='';try{feedRegion=localStorage.getItem('ssm_feed_region')||'';}catch(e){}
 function feedRegionOf(r){for(const g of FEED_REGIONS){if(!g.b)continue;const b=g.b;
   if(r.lat>=b[0]&&r.lat<=b[2]&&r.lng>=b[1]&&r.lng<=b[3])return g.id;}return '';}
-function feedRegionSet(id){feedRegion=feedRegion===id?'':id;try{localStorage.setItem('ssm_feed_region',feedRegion);}catch(e){}
+function feedRegionSet(id,keep){feedRegion=(feedRegion===id&&!keep)?'':id;try{localStorage.setItem('ssm_feed_region',feedRegion);}catch(e){}
+  try{feedRegionsRender();}catch(e){}
   if(feedRegion==='near'&&!myLoc){try{geoLocate(p=>{myLoc=[p.coords.latitude,p.coords.longitude];feedRender();},()=>{});}catch(e){}}
   try{haptic(3);}catch(e){}try{feedTopRender();}catch(e){}feedRender();}
 function feedRegionFilter(list){if(!feedRegion)return list;
@@ -20077,9 +20372,7 @@ function feedRefresh(){
   document.getElementById('feedScope').innerHTML=FEED_SCOPES.map(s=>
     `<button data-s="${s.id}" class="${feedScope===s.id?'active':''}" onclick="feedSetScope('${s.id}')">${s.icon}${s.label}</button>`).join('');
   feedChipsRender();
-  document.getElementById('feedFilter').innerHTML=FEED_CATS.map(f=>{
-    const lbl=f==='all'?'Alle':(catSvg(f,14)+' '+catLabel(f));
-    return`<button class="${feedFilter===f?'active':''}" onclick="feedSetFilter('${f}')">${lbl}</button>`;}).join('');
+  feedRegionsRender();
   document.getElementById('feedLoc').style.display=feedScope==='near'?'flex':'none';
   feedFiltMark();
   feedRender();
@@ -20090,8 +20383,11 @@ function feedRefresh(){
 function feedFiltMark(){
   const sw=document.getElementById('feedTxtSw');if(sw)sw.checked=feedTxtOn();
   const b=document.getElementById('feedFiltFab');if(!b)return;
-  b.classList.toggle('on',feedFilter!=='all');
+  b.classList.toggle('on',!!feedRegion||feedTxtOn());
 }
+function feedRegionsRender(){const el=document.getElementById('feedFilter');if(!el)return;
+  el.innerHTML='<button class="'+(feedRegion?'':'active')+'" onclick="feedRegionSet(\'\');feedFilterClose()">Überall</button>'
+    +FEED_REGIONS.map(g=>'<button class="'+(feedRegion===g.id?'active':'')+'" onclick="feedRegionSet(\''+g.id+'\',true);feedFilterClose()">'+escapeHtml(g.label)+'</button>').join('');}
 // Posts without a picture (text only): off in the feed by default, small when on.
 function feedNoPic(r){const cd=r.condition_data||{};
   return !r.img&&!(cd.activity&&cd.activity.track)&&!(cd.images&&cd.images.length)&&!cd.drawImage&&!cd.snapshot;}
@@ -20130,7 +20426,7 @@ function feedOpen(){
   // only ever get unhidden from openProfile() -- someone who never opens
   // their profile would never see messaging even when it's fully set up.
   try{dmAvailable();}catch(e){}
-  feedRefresh();el.classList.add('open');
+  feedSeenReset();feedRefresh();el.classList.add('open');
   document.body.setAttribute('data-screen','feed');
   feedSideSync();
   try{haptic(4);}catch(e){}
@@ -20324,12 +20620,13 @@ async function loadComments(id){
   try{
     const{data}=await sb.from('report_comments').select('*').eq('report_id',id).order('created_at',{ascending:true});
     let names={};const uids=[...new Set((data||[]).map(c=>c.user_id).filter(Boolean))];
-    if(uids.length){try{const{data:pr}=await sb.from('profiles').select('id,username,avatar_url').in('id',uids);
-      (pr||[]).forEach(p=>{names[p.id]=p.username;avatarPut(p.id,p.avatar_url);});}catch(e){}}
+    if(uids.length){try{const[{data:pr},co]=await Promise.all([sb.from('profiles').select('id,username,avatar_url').in('id',uids),
+        Promise.resolve(sb.from('profiles').select('id,cohort').in('id',uids)).then(r=>(r&&r.data)||[],()=>[])]);
+      (pr||[]).forEach(p=>{names[p.id]=p.username;avatarPut(p.id,p.avatar_url);});(co||[]).forEach(p=>{COHORT_OF[p.id]=p.cohort||null;});}catch(e){}}
     const list=document.getElementById('cmtList');
     if(!data||!data.length){list.innerHTML='<div class="cmt-empty">Noch keine Kommentare. Sei der Erste!</div>';return;}
     list.innerHTML=data.map(c=>{const nm=names[c.user_id]||(c.user_id?c.user_id.substring(0,8):'User');
-      return`<div class="cmt-row">${avatarHtml(c.user_id,nm)}<div class="cmt-b"><span class="cmt-u">${escapeHtml(nm)}</span> <span class="cmt-t">${cmtBody(c.body)}</span><div class="cmt-time">${timeAgo(c.created_at)}</div></div></div>`;}).join('');
+      return`<div class="cmt-row">${avatarHtml(c.user_id,nm)}<div class="cmt-b"><span class="cmt-u">${escapeHtml(nm)}</span>${cohortBadge(c.user_id)} <span class="cmt-t">${cmtBody(c.body)}</span><div class="cmt-time">${timeAgo(c.created_at)}</div></div></div>`;}).join('');
     list.scrollTop=list.scrollHeight;
   }catch(e){document.getElementById('cmtList').innerHTML='<div class="cmt-empty">Fehler beim Laden.</div>';}
 }
@@ -20425,14 +20722,16 @@ async function addComment(){
 // and on a desk your posts and messages. "Gemerkt" lives in your profile,
 // tour reports on the tour, a person's posts behind their name.
 function feedTopRender(){const el=document.getElementById('feedTop');if(!el)return;
-  const cat=feedFilter==='all'?'Alle Meldungen':catLabel(feedFilter);
+  const reg=feedRegion?(FEED_REGIONS.find(g=>g.id===feedRegion)||{}).label:'';
   const ic=d=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
-  el.innerHTML='<div class="ft-row"><button type="button" class="ft-cat'+(feedFilter!=='all'?' on':'')+'" onclick="feedFilterOpen()">'+ic('<path d="M4 6h16M7 12h10M10 18h4"/>')+'<span>'+escapeHtml(cat)+'</span></button>'
+  const main=['all','here','following'].includes(feedScope);
+  el.innerHTML='<div class="ft-row"><button type="button" class="ft-cat'+(reg?' on':'')+'" onclick="feedFilterOpen()">'+ic('<path d="M4 6h16M7 12h10M10 18h4"/>')+'<span>'+escapeHtml(reg||'Überall')+'</span></button>'
+    +(main?'<button type="button" class="ft-ic ft-map" onclick="feedMapOpen()" aria-label="Auf der Karte" title="Alle Beiträge auf der Karte">'+ic('<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>')+'</button>':'')
+    +'<span class="ft-sp"></span>'
     +'<button type="button" class="ft-ic" onclick="usOpen()" aria-label="Leute finden" title="Leute finden">'+ic('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')+'</button>'
     +'<button type="button" class="ft-ic pt-acc ft-me" onclick="accountTap()" aria-label="Mein Profil" title="Mein Profil">'+ic('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>')+'<span class="pt-ini"></span></button>'
     +'</div>'
-    +(['all','here','following'].includes(feedScope)?'<div class="ft-reg" role="tablist" aria-label="Region">'
-      +FEED_REGIONS.map(g=>'<button type="button" role="tab" aria-selected="'+(feedRegion===g.id)+'" class="'+(feedRegion===g.id?'on':'')+'" onclick="feedRegionSet(\''+g.id+'\')">'+escapeHtml(g.label)+'</button>').join('')+'</div>':'');
+    +(main?'<div class="ft-kinds" id="feedKinds" role="tablist" aria-label="Meldeart"></div>':'');
   try{if(['all','here'].includes(feedScope))el.insertAdjacentHTML('beforeend',modelVsReportsHTML());}catch(e){}
   try{if(typeof dmReady!=='undefined'&&dmReady)el.querySelectorAll('[data-dm]').forEach(x=>x.hidden=false);}catch(e){}
   // your own picture, as on the map; it opens your profile
@@ -20448,18 +20747,24 @@ let feedFocusId=null;
 // when asked for (the pin on the card, «Route auf der Karte zeigen»).
 async function feedOpenPost(id,uid){if(!id)return;
   try{pvClose();}catch(e){}
-  feedScope='post';feedFocusId=String(id);feedUserId=null;feedFilter='all';feedTour=null;feedAnchor=null;
+  feedScope='post';feedFocusId=String(id);feedUserId=null;feedTour=null;feedAnchor=null;
   navGo('feed');feedTourBar();feedRender();
   if(uid&&!allReports.some(r=>String(r.id)===String(id))){try{await loadDbReports({uid});}catch(e){}feedRender();}
   setTimeout(()=>{const sc=document.querySelector('.feed-scroll');if(sc)sc.scrollTop=0;},60);}
 async function feedOpenUser(uid,name,postId){if(!uid)return;
   if(postId)return feedOpenPost(postId,uid);
   try{pvClose();}catch(e){}
-  feedScope='user';feedUserId=uid;feedUserName=name||'';feedFilter='all';feedTour=null;feedFocusId=postId?String(postId):null;
+  feedScope='user';feedUserId=uid;feedUserName=name||'';feedTour=null;feedFocusId=postId?String(postId):null;
   navGo('feed');feedTourBar();feedRender();
   try{await loadDbReports({uid});}catch(e){}
   feedRender();feedTourBar();
   setTimeout(()=>{const sc=document.querySelector('.feed-scroll');if(sc)sc.scrollTop=0;},60);}
+// What a quick report says, in one line: the snow in its colour, how deep, where.
+function feedFactsHTML(r){const cd=r.condition_data||{},qt=typeof cd.snow==='string'&&QS_TYPES.find(x=>x.k===cd.snow);if(!qt)return '';
+  const b=cd.depthBand,dep=b?(b[1]==null?b[0]+'+':b[0]+'–'+b[1])+' cm':'';
+  const where=[cd.altitudeM?cd.altitudeM+' m':'',cd.aspect||''].filter(Boolean).join(' · ');
+  return '<div class="fc-facts"><span class="fc-snow"><i style="background:'+qt.c+'"></i>'+escapeHtml(qt.l)+'</span>'
+    +(dep?'<b>'+dep+'</b>':'')+(where?'<span class="fc-where">'+escapeHtml(where)+'</span>':'')+'</div>';}
 // Everything a report says, as label/value rows (only what is there).
 function feedDetailsHTML(r){const cd=r.condition_data||{},rows=[];
   const lb=(arr,k)=>{try{const f=(arr||[]).find(x=>x[0]===k);return f?f[1]:k;}catch(e){return k;}};
@@ -20468,7 +20773,10 @@ function feedDetailsHTML(r){const cd=r.condition_data||{},rows=[];
     if(A){rows.push(['Distanz',trkFmtD(A.dist||0)],['Aufstieg',(A.up||0)+' m'],['Abstieg',(A.down||0)+' m'],['In Bewegung',trkFmtT(A.moving||0)]);
       if(A.maxA!=null)rows.push(['Höchster Punkt',Math.round(A.maxA)+' m']);}
     const sn=cd.snow;
-    if(sn){if(sn.kind)rows.push(['Schneeart',snowKindLabel(sn.kind)]);
+    if(typeof sn==='string'){const qt=QS_TYPES.find(x=>x.k===sn);if(qt)rows.push(['Schneeart',qt.l]);
+      const b=cd.depthBand;if(b)rows.push(['Tiefe',(b[1]==null?b[0]+'+':b[0]+'–'+b[1])+' cm']);
+      if(cd.aspect)rows.push(['Exposition',cd.aspect]);}
+    else if(sn){if(sn.kind)rows.push(['Schneeart',snowKindLabel(sn.kind)]);
       if(sn.kind==='powder'&&sn.depth)rows.push(['Pulvertiefe',snowCmLabel(sn.depth)+' cm']);
       if(sn.lightness)rows.push(['Konsistenz',lb(typeof SNOW_LIGHT!=='undefined'?SNOW_LIGHT:[],sn.lightness)]);
       if(sn.thickness)rows.push(['Deckel',lb(typeof SNOW_THICK!=='undefined'?SNOW_THICK:[],sn.thickness)]);
@@ -20514,8 +20822,30 @@ function feedSetScope(s){feedFocusId=null;if(s!=='tours')feedTour=null;if(s!=='u
   // Nähe: immediately use the current device location
   if(s==='near'&&(!feedAnchor||feedAnchor.src!=='me')){const nb=document.getElementById('feedNear');if(nb)nb.click();}
   feedFiltMark();feedTopRender();feedRender();haptic(5);}
-const FEED_CATS=['all','snow','avalanche','whumpf','wind_slab','other'];
-function feedSetFilter(f){feedFilter=f;document.querySelectorAll('.feed-filter button').forEach((b,i)=>{b.classList.toggle('active',FEED_CATS[i]===f);});feedFiltMark();feedTopRender();feedRender();feedFilterClose();}
+// The kinds of report the feed can be narrowed to, one chip each.
+var FEED_KINDS=[
+  {id:'all',l:'Alle'},
+  {id:'quick',l:'Schnellmeldungen',c:'#42a5f5'},
+  {id:'act',l:'Aktivitäten',c:'#8b5cf6'},
+  {id:'snow',l:'Schnee',c:'#1e88e5'},
+  {id:'avalanche',l:'Lawinen',c:'#e5484d'},
+  {id:'whumpf',l:'Wumm',c:'#f59e0b'},
+  {id:'wind_slab',l:'Triebschnee',c:'#0ea5a4'},
+  {id:'other',l:'Sonstiges',c:'#94a3b8'}];
+function feedKind(r){const cd=r.condition_data||{};
+  if(cd.activity)return 'act';
+  if(/^(Schnellmeldung|Quick Powder)/.test(r.subtype||r.sub||'')||(cd.quick&&typeof cd.snow==='string'))return 'quick';
+  return ['snow','avalanche','whumpf','wind_slab'].includes(r.cat)?r.cat:'other';}
+try{const k=localStorage.getItem('ssm_feed_kind');if(k&&FEED_KINDS.some(x=>x.id===k))feedFilter=k;}catch(e){}
+function feedSetFilter(f){feedFilter=f;try{localStorage.setItem('ssm_feed_kind',f);}catch(e){}
+  try{haptic(3);}catch(e){}feedFiltMark();feedRender();
+  const sc=document.querySelector('.feed-scroll'),k=document.getElementById('feedKinds');if(sc&&k&&sc.scrollTop>k.offsetTop)sc.scrollTop=Math.max(0,k.offsetTop-8);}
+function feedKindsRender(counts){const el=document.getElementById('feedKinds');if(!el)return;
+  const sel=el.querySelector('.on'),sl=el.scrollLeft;
+  el.innerHTML=FEED_KINDS.filter(k=>k.id==='all'||k.id===feedFilter||counts[k.id]).map(k=>
+    '<button type="button" role="tab" aria-selected="'+(feedFilter===k.id)+'" class="'+(feedFilter===k.id?'on':'')+'" onclick="feedSetFilter(\''+k.id+'\')">'
+    +(k.c?'<i style="background:'+k.c+'"></i>':'')+escapeHtml(k.l)+'<em>'+(counts[k.id]||0)+'</em></button>').join('');
+  el.scrollLeft=sl;}
 function feedSetAnchor(a){feedAnchor=a;
   document.getElementById('feedNear').classList.toggle('active',!!a&&a.src==='me');
   document.getElementById('feedPeakBtn').classList.toggle('active',!!a&&a.src==='peak');
@@ -20697,13 +21027,19 @@ function feedRender(){
     base=base.filter(r=>savedPosts.has(String(r.id)));
     if(!base.length){list.innerHTML='<div class="feed-empty">Noch nichts gespeichert. Tippe bei einem Report auf das Lesezeichen.</div>';return;}
   }
-  let filtered=feedFilter==='all'?base:base.filter(r=>r.cat===feedFilter);
-  if(['all','here','following'].includes(feedScope)){const n0=filtered.length;filtered=feedRegionFilter(filtered);
-    if(n0&&!filtered.length){list.innerHTML='<div class="feed-empty">In «'+escapeHtml((FEED_REGIONS.find(g=>g.id===feedRegion)||{}).label||'')+'» gibt es gerade keine Beiträge. Tippe die Region nochmals an, um alle zu sehen.</div>';return;}}
+  // the main feed: region, then the kind of report (a chip each, with its count)
+  const main=['all','here','following'].includes(feedScope);
+  let filtered=base;_feedLast=[];
+  if(main){const n0=filtered.length;filtered=feedRegionFilter(filtered);
+    const counts={all:filtered.length};filtered.forEach(r=>{const k=feedKind(r);counts[k]=(counts[k]||0)+1;});
+    feedKindsRender(counts);
+    if(n0&&!filtered.length){list.innerHTML='<div class="feed-empty">In «'+escapeHtml((FEED_REGIONS.find(g=>g.id===feedRegion)||{}).label||'')+'» gibt es gerade keine Beiträge. Wähle oben links «Überall», um alle zu sehen.</div>';return;}
+    if(feedFilter!=='all')filtered=filtered.filter(r=>feedKind(r)===feedFilter);}
   // posts without a picture stay out of the list unless the filter asks for
-  // them (a person's own page, the saved ones and an opened post show all)
+  // them (a chosen kind, a person's own page, the saved ones and an opened
+  // post show all)
   let txtHidden=0;
-  if(!feedTxtOn()&&!['user','saved','post'].includes(feedScope)){const n0=filtered.length;filtered=filtered.filter(r=>!feedNoPic(r));txtHidden=n0-filtered.length;}
+  if(!feedTxtOn()&&!(main&&feedFilter!=='all')&&!['user','saved','post'].includes(feedScope)){const n0=filtered.length;filtered=filtered.filter(r=>!feedNoPic(r));txtHidden=n0-filtered.length;}
   if(feedAnchor){filtered=filtered.map(r=>({r,km:haversineKm(feedAnchor.lat,feedAnchor.lng,r.lat,r.lng)})).sort((a,b)=>a.km-b.km).map(o=>{o.r._km=o.km;return o.r;});}
   else if(feedScope==='all'||feedScope==='post')filtered=feedRank(filtered);
   let focus=(feedScope==='user'||feedScope==='post')&&feedFocusId?filtered.find(r=>String(r.id)===feedFocusId):null;
@@ -20711,25 +21047,33 @@ function feedRender(){
   // map, someone else's activity): it is shown anyway, it was asked for
   if(!focus&&feedScope==='post'&&feedFocusId)focus=allReports.find(r=>String(r.id)===feedFocusId)||null;
   if(focus)filtered=[focus].concat(filtered.filter(r=>r!==focus));
+  // what you have already seen goes below a line, dimmed -- as of opening the
+  // feed, so nothing jumps while you scroll
+  let seenFrom=-1;
+  if(main&&!focus){const S=feedSeenSnap(),a=[],b=[];filtered.forEach(r=>(S.has(String(r.id))?b:a).push(r));
+    if(b.length)seenFrom=a.length;filtered=a.concat(b);}
+  _feedLast=filtered;
   if(!filtered.length&&txtHidden){list.innerHTML='<div class="feed-empty">Nur Beiträge ohne Bild hier.</div><button type="button" class="feed-txt-more" onclick="feedTxtSet(true)">'+txtHidden+' Beitr'+(txtHidden===1?'ag':'äge')+' ohne Bild einblenden</button>';return;}
-  if(!filtered.length){list.innerHTML='<div class="feed-empty">'+(feedFilter==='all'?'Noch keine Beiträge hier. Sei die erste Person – tippe unten auf «Melden».':'Noch keine Beiträge in dieser Kategorie.')+'</div>';return;}
+  if(!filtered.length){list.innerHTML='<div class="feed-empty">'+(!main||feedFilter==='all'?'Noch keine Beiträge hier. Sei die erste Person – tippe unten auf «Melden».':'Noch keine «'+escapeHtml((FEED_KINDS.find(k=>k.id===feedFilter)||{}).l||'')+'» hier.')+'</div>';return;}
   // Building four hundred cards to show six is most of what made opening the
   // feed feel slow. Nobody scrolls past the first page before it re-renders.
   const FEED_PAGE=40;
   const shown=filtered.slice(0,FEED_PAGE),more=filtered.length-shown.length;
-  list.innerHTML=shown.map(r=>{
+  list.innerHTML=shown.map((r,ix)=>{
     const col=CAT_COLORS[r.cat]||'#666';
+    const seenHd=ix===seenFrom?(ix===0?'<div class="feed-uptodate">Du bist auf dem neuesten Stand</div>':'')+'<div class="feed-seen-hd"><span>Bereits gesehen</span></div>':'';
+    const seen=seenFrom>=0&&ix>=seenFrom;
     const bg=CAT_BG[r.cat]||'linear-gradient(135deg,#f0f0f0,#e0e0e0)';
     const distTag=((feedAnchor||feedScope==='all')&&r._km!=null)?`<span class="feed-card-dist">${r._km<1?Math.round(r._km*1000)+' m':r._km.toFixed(r._km<10?1:0)+' km'}</span>`:'';
     const canFollow=r.dbRow&&r.userId&&(!sbUser||r.userId!==sbUser.id);
     const followBtn=canFollow?`<button class="feed-follow ${myFollowing.has(r.userId)?'following':''}" onclick="toggleFollow('${r.userId}',event)">${myFollowing.has(r.userId)?'Folge ich':'Folgen'}</button>`:'';
     const endBtn=r.dbRow?`<button class="endorse-btn ${r.liked?'endorsed':''}" onclick="toggleEndorse('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> ${r.likes||0}<span class="endorse-lbl">${r.liked?'Bestätigt':'Bestätigen'}</span></button>`:'';
     const isF=focus&&r===focus;
-    return`<div class="feed-card${r.img?' photo':' text'}${isF?' focus':''}" id="feedcard-${r.id}">
+    return`${seenHd}<div class="feed-card${r.img?' photo':' text'}${isF?' focus':''}${seen?' seen':''}" id="feedcard-${r.id}">
       <div class="feed-card-head">
         <div class="feed-card-avatar" style="${r.avatar?`background-image:${cssUrl(r.avatar)}`:''}"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['\"<>]/g,'')}')"`:''}>${r.avatar?'':escapeHtml((r.user||'U')[0].toUpperCase())}</div>
         <div class="feed-card-info">
-          <span class="feed-card-user"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['"<>]/g,'')}')"`:''}>${escapeHtml(r.user)}${r.userId?trustBadge(progTrustOf(r.userId),true):''}</span>
+          <span class="feed-card-user"${r.userId?` onclick="event.stopPropagation();viewUser('${r.userId}','${(r.user||'').replace(/['"<>]/g,'')}')"`:''}>${escapeHtml(r.user)}${r.userId?trustBadge(progTrustOf(r.userId),true)+cohortBadge(r.userId):''}</span>
           <span class="feed-card-loc">${escapeHtml(r.time||'')} · ${escapeHtml(rptPlace(r))}${distTag?' · ':''}${distTag}</span>
         </div>
         ${followBtn}
@@ -20741,8 +21085,8 @@ function feedRender(){
         ${r.img&&r.caption?`<div class="feed-card-caption">${escapeHtml(r.caption)}</div>`:''}
       </div>
       <div class="feed-card-read">
-        ${(r.condition_data&&r.condition_data.zones&&r.condition_data.zones.length)?rptVizHTML(r.condition_data.zones,36):
-          (r.measurement?`<span class="fc-depth" title="${escapeHtml(r.measurement)}">${escapeHtml(r.measurement)}</span>`:'')}
+        ${feedFactsHTML(r)||((r.condition_data&&r.condition_data.zones&&r.condition_data.zones.length)?rptVizHTML(r.condition_data.zones,36):
+          (r.measurement?`<span class="fc-depth" title="${escapeHtml(r.measurement)}">${escapeHtml(r.measurement)}</span>`:''))}
         ${r.stars?`<span class="fc-stars"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z" fill="currentColor" stroke="none"/></svg>${r.stars}/5</span>`:''}
       </div>
       ${isF?feedDetailsHTML(r):''}
@@ -20762,9 +21106,58 @@ function feedRender(){
     </div>${isF&&filtered.length>1?`<div class="feed-more-hd">${feedScope==='post'?'Neueste Beiträge':'Weitere Beiträge'+(feedUserName?' von '+escapeHtml(feedUserName):'')}</div>`:''}`;
   }).join('')+(more>0?('<div class="feed-more">'+more+' weitere</div>'):'')
     +(txtHidden?'<button type="button" class="feed-txt-more" onclick="feedTxtSet(true)">'+txtHidden+' Beitr'+(txtHidden===1?'ag':'äge')+' ohne Bild einblenden</button>':'');
-  feedAnimateCards();feedWireCarousels();
+  feedAnimateCards();feedWireCarousels();feedSeenWatch();
   try{feedHighlight(shown.map(r=>r.id));}catch(e){}
 }
+// ── seen posts ──────────────────────────────────────────────────────────
+// A card counts as seen once at least 40 % of it was on screen for a second.
+// The next time the feed opens it sits below the «Bereits gesehen» line.
+var FEED_SEEN_KEY="ssm_seen",_feedSeen=null,_feedSeenSnap=null,_seenIO=null,_seenT=new Map();
+function feedSeenLoad(){if(!_feedSeen){try{_feedSeen=JSON.parse(localStorage.getItem(FEED_SEEN_KEY)||'{}')||{};}catch(e){_feedSeen={};}}return _feedSeen;}
+function feedSeenSave(){try{let e=Object.entries(_feedSeen);
+  if(e.length>900){e.sort((a,b)=>b[1]-a[1]);_feedSeen=Object.fromEntries(e.slice(0,700));}
+  localStorage.setItem(FEED_SEEN_KEY,JSON.stringify(_feedSeen));}catch(e){}}
+function feedSeenSnap(){if(!_feedSeenSnap)_feedSeenSnap=new Set(Object.keys(feedSeenLoad()));return _feedSeenSnap;}
+function feedSeenReset(){_feedSeenSnap=null;}
+function feedSeenWatch(){if(!('IntersectionObserver'in window))return;
+  if(_seenIO)_seenIO.disconnect();_seenT.forEach(t=>clearTimeout(t));_seenT.clear();
+  _seenIO=new IntersectionObserver(ents=>{ents.forEach(e=>{const id=e.target.id.replace('feedcard-','');
+    if(e.isIntersecting){if(!_seenT.has(id))_seenT.set(id,setTimeout(()=>{_seenT.delete(id);const S=feedSeenLoad();if(!S[id]){S[id]=Date.now();feedSeenSave();}},1000));}
+    else{clearTimeout(_seenT.get(id));_seenT.delete(id);}});},{root:document.querySelector('.feed-scroll'),threshold:.4});
+  document.querySelectorAll('#feedList .feed-card').forEach(c=>_seenIO.observe(c));}
+// ── the feed on the map ─────────────────────────────────────────────────
+// Every post the feed is listing (same kind, region and order) as a marker;
+// a tap shows it, «Beitrag öffnen» opens it. Back to the list with the
+// Community tab or «Liste».
+var _feedLast=[],feedMapLayer=null,_feedMapRep=false;
+function feedMapOpen(){
+  const list=_feedLast.filter(r=>r.lat!=null&&r.lng!=null&&isFinite(r.lat)&&isFinite(r.lng));
+  if(!list.length){toast('Keine Beiträge mit Ort in dieser Auswahl','err');return;}
+  feedMapClear();feedMapLayer=L.layerGroup();const pts=[];
+  list.forEach(r=>{const k=feedKind(r),kc=(FEED_KINDS.find(x=>x.id===k)||{}).c||'#64748b',cd=r.condition_data||{},A=cd.activity;
+    if(A&&A.track&&A.track.length>1)L.polyline(A.track.map(p=>[p[0],p[1]]),{color:kc,weight:3,opacity:.75,interactive:false}).addTo(feedMapLayer);
+    const im=cd.thumb||r.img,w=im?50:34;
+    const html=im?'<div class="rpt-photo fm-m" style="--cc:'+kc+'"><img src="'+escapeHtml(im)+'" loading="lazy" alt=""/></div>'
+      :'<div class="rpt-pin fm-m" style="--cc:'+kc+'">'+(CAT_SVG[r.cat]||'')+'</div>';
+    const m=L.marker([r.lat,r.lng],{icon:L.divIcon({className:'',html,iconSize:[w,w],iconAnchor:[w/2,w/2]}),zIndexOffset:900}).addTo(feedMapLayer);
+    m.bindPopup(reportPopupHTML(r)+'<button type="button" class="fm-open" onclick="feedOpenAt(\''+escapeHtml(String(r.id))+'\')">Beitrag öffnen ›</button>',{maxWidth:236,className:'rpt-pop',closeButton:true});
+    pts.push([r.lat,r.lng]);});
+  feedMapLayer.addTo(map);
+  _feedMapRep=map.hasLayer(reportMarkers);if(_feedMapRep)map.removeLayer(reportMarkers);
+  document.body.classList.add('feed-map');
+  let chip=document.getElementById('feedMapChip');
+  if(!chip){chip=document.createElement('div');chip.id='feedMapChip';chip.className='feed-map-chip';document.body.appendChild(chip);}
+  const kl=feedFilter!=='all'?(FEED_KINDS.find(x=>x.id===feedFilter)||{}).l:'Beiträge';
+  chip.innerHTML='<span><b>'+list.length+'</b> '+escapeHtml(kl)+' aus dem Feed</span><button type="button" onclick="navGo(\'feed\')">Liste</button>'
+    +'<button type="button" class="x" onclick="feedMapClear()" aria-label="Karte ohne Feed">×</button>';
+  chip.hidden=false;
+  navGo('map');
+  setTimeout(()=>{try{map.invalidateSize({animate:false});
+    // clear of the chip on top, the side rail on the right and the timeline below
+    if(pts.length===1)map.setView(pts[0],13);else map.fitBounds(L.latLngBounds(pts),{paddingTopLeft:[40,130],paddingBottomRight:[110,230],maxZoom:13});}catch(e){}},380);}
+function feedMapClear(){if(feedMapLayer){try{map.removeLayer(feedMapLayer);}catch(e){}feedMapLayer=null;}
+  if(_feedMapRep){try{reportMarkers.addTo(map);}catch(e){}_feedMapRep=false;}
+  document.body.classList.remove('feed-map');const c=document.getElementById('feedMapChip');if(c)c.hidden=true;}
 // First-appearance card entrance (skips re-animating on like/flag re-renders).
 const feedSeen=new Set();
 let _feedIO=null;
