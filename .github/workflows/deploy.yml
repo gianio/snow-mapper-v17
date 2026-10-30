@@ -26,7 +26,7 @@ jobs:
   build:
     # after a Cloudflare tiles / Variant A run, only when it succeeded
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     # The critical step alone (shell + live data at res 3000) runs ~27 min, and
     # the optional demo build may add up to 13 more. At 30 the job was being
     # killed part-way through the demo step, which SKIPS everything after it --
@@ -240,12 +240,34 @@ jobs:
             exit 1
           fi
 
+      # Cloudflare Pages: free, also from a private repository. On when the
+      # repository variable CF_PAGES_PROJECT names the Pages project; the
+      # token and account are the ones the tiles workflow uses. Pages takes
+      # at most 20 000 files and 25 MiB per file -- checked first.
+      - name: Deploy to Cloudflare Pages
+        if: vars.CF_PAGES_PROJECT != ''
+        continue-on-error: ${{ vars.GH_PAGES != 'off' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          N=$(find dist -type f | wc -l)
+          BIG=$(find dist -type f -size +25M)
+          echo "dist: $N files"
+          if [ "$N" -gt 20000 ]; then echo "::error::Cloudflare Pages takes at most 20000 files ($N)"; exit 1; fi
+          if [ -n "$BIG" ]; then echo "::error::Cloudflare Pages takes files up to 25 MiB:"; echo "$BIG"; exit 1; fi
+          npx --yes wrangler@3 pages deploy dist --project-name "${{ vars.CF_PAGES_PROJECT }}" --branch main --commit-dirty=true
+
+      # GitHub Pages, unless the repository variable GH_PAGES is 'off' (a
+      # private repository needs GitHub Pro for it)
       - uses: actions/upload-pages-artifact@v5
+        if: vars.GH_PAGES != 'off'
         with:
           path: ./dist
 
   deploy:
     needs: build
+    if: vars.GH_PAGES != 'off'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

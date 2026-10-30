@@ -41,7 +41,7 @@ env:
 
 jobs:
   replay:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 350
     steps:
       - uses: actions/checkout@v5
@@ -56,7 +56,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: snowpack-build/install
-          key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
+          key: snowpack-${{ runner.os }}${{ runner.arch != 'X64' && format('-{0}', runner.arch) || '' }}-${{ env.SNOWPACK_REF }}-v1
 
       - name: Build MeteoIO + SNOWPACK
         if: steps.spcache.outputs.cache-hit != 'true'
@@ -78,7 +78,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: snowpack-build/install
-          key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
+          key: snowpack-${{ runner.os }}${{ runner.arch != 'X64' && format('-{0}', runner.arch) || '' }}-${{ env.SNOWPACK_REF }}-v1
 
       - run: pip install -r requirements.txt
 

@@ -16552,6 +16552,8 @@ async function deployWatch(){clearTimeout(_depT);
   if(Date.now()<_depBack){_depT=setTimeout(deployWatch,_depBack-Date.now());return;}
   try{const r=await fetch(DEPLOY_API,{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
     if(r.status===403||r.status===429){_depBack=Date.now()+30*60e3;}
+    // a private repository answers 404 to anyone without a key: ask again tomorrow
+    else if(r.status===404){_depBack=Date.now()+24*3600e3;}
     else if(r.ok){const j=await r.json(),run=(j.workflow_runs||[])[0];
       if(run&&run.status!=='completed'){_depRun=run;deployBanner(run);}
       else if(_depRun){deployBanner(null,true);_depRun=null;}}}catch(e){}

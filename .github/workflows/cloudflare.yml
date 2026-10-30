@@ -73,7 +73,7 @@ concurrency:
 jobs:
   worker:
     if: inputs.deploy_worker
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -123,7 +123,7 @@ jobs:
     # called from the live cycle: a tile failure must not fail that run (the
     # site deploy follows it only on success, and would hold the forecast)
     continue-on-error: ${{ inputs.same_run == true }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 150
     steps:
       - uses: actions/checkout@v5
