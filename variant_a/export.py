@@ -35,6 +35,20 @@ def _rgba_from_labels(lab, table):
     return im
 
 
+def _thin_hatch(rgba, lab, thin_cm):
+    """Thin cover (ski6 class 10) in the powder colour of its depth, crossed
+    by thin red dashes -- the same look the app's device engine draws."""
+    t = lab == 10
+    if thin_cm is None or not t.any():
+        return rgba
+    band = np.clip(np.searchsorted(classify.POWDER_BOUNDS, thin_cm, side="right"), 1, 6)
+    for k in range(1, 7):
+        rgba[t & (band == k)] = classify.POWDER_RGBA[k]
+    r, c = np.indices(lab.shape)
+    rgba[t & ((r + c) % 4 == 0) & ((r - c) % 8 < 5)] = (214, 40, 40, 235)
+    return rgba
+
+
 def _dim_forest(rgba, forest):
     """Fade the class colours where the cell is forest: the virtual slopes
     are open terrain, so under canopy the class is shown, but quietly."""
@@ -444,7 +458,8 @@ def export_matrix(grid: NationalGrid, frames, wps, runs, results, prof_ts,
         tag = dt.strftime("%Y-%m-%dT%H%M")
         for key, rgba, nearest in (
             ("ski18", _dim_forest(_rgba_from_labels(g["ski18"], classify.SKI_RGBA), forest), True),
-            ("ski6", _dim_forest(_rgba_from_labels(g["ski6"], classify.SKI6_RGBA), forest), True),
+            ("ski6", _dim_forest(_thin_hatch(_rgba_from_labels(g["ski6"], classify.SKI6_RGBA), g["ski6"],
+                                             g.get("thin_cm")), forest), True),
             ("wind", _dim_forest(_rgba_from_labels(g["wind"], classify.WIND_RGBA), forest), True),
             *((("powder", _dim_forest(_rgba_from_labels(g["powder"], classify.POWDER_RGBA), forest), True),)
               if "powder" in g else ()),

@@ -979,7 +979,9 @@ SKI6_DE = ["kein / wenig Schnee", "durchgehend hart", "Kruste", "Pulver 0–10 c
 SKI6_RGBA = {0: (0, 0, 0, 0), 1: (156, 168, 184, 185), 2: (214, 108, 98, 215),
              3: (149, 207, 153, 250), 4: (102, 187, 106, 240), 5: (66, 165, 245, 235),
              6: (226, 170, 72, 220), 7: (150, 104, 74, 225),
-             8: (30, 136, 229, 235), 9: (21, 101, 192, 240), 10: (208, 214, 224, 170),
+             # thin cover: the frames colour it by depth and hatch it red
+             # (export._thin_hatch); this is the plain fallback
+             8: (30, 136, 229, 235), 9: (21, 101, 192, 240), 10: (194, 229, 196, 235),
              # loose but old (facets, depth hoar, surface hoar): a dusty
              # lavender -- loose like powder, but not the fresh-powder colours
              11: (176, 162, 212, 225)}
