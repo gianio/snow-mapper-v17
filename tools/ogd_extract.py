@@ -168,6 +168,57 @@ def save_t2m_field(field_dir, model, coll, vals, lead, ref_dt, lat, lon, hsurf=N
           f"{' + HSURF' if kw else ''} -> {f.name}", flush=True)
 
 
+# Low, mid and high cloud cover on every ICON cell over Switzerland, hourly:
+# the app's cloud layer at the model's own grid (1 km CH1, 2 km CH2) instead
+# of a spline between weather points 20 km apart -- pipeline/ogd_clouds.py
+# lays it onto the map grid.
+CLOUD_VARS = ("CLCL", "CLCM", "CLCH")
+
+
+def save_cloud_field(field_dir, model, fields, lead, ref_dt, lat, lon):
+    la0, lo0, la1, lo1 = CH_BOX
+    m = (lat >= la0) & (lat <= la1) & (lon >= lo0) & (lon <= lo1) & np.isfinite(lat)
+    out = {}
+    for name, var in zip(("low", "mid", "high"), CLOUD_VARS):
+        a = np.asarray(fields[var], float)[:, m]
+        if np.nanmax(a) <= 1.01:                      # some encodings give a fraction
+            a = a * 100.0
+        out[name] = np.clip(np.nan_to_num(a, nan=0.0), 0, 100).round().astype(np.uint8)
+    f = Path(field_dir) / f"clouds_{model}.npz"
+    np.savez_compressed(f, lat=lat[m].astype(np.float32), lon=lon[m].astype(np.float32),
+                        lead=np.asarray(lead, np.float32), ref=np.array(ref_dt.strftime("%Y-%m-%dT%H:%M")), **out)
+    print(f"  {model} clouds: {int(m.sum())} cells x {len(lead)} leads -> {f.name}", flush=True)
+
+
+def extract_clouds(model, hours, field_dir):
+    coll = COLL[model]
+    try:
+        have, _ = available(coll)
+    except Exception:
+        have = {}
+    if have and not all(v in have for v in CLOUD_VARS):
+        print(f"  {model} clouds: not offered ({', '.join(v for v in CLOUD_VARS if v not in have)} missing)", flush=True)
+        return False
+    hrs = list(range(0, hours + 1))
+    got, geo = {}, None
+    for var in CLOUD_VARS:
+        for attempt in range(2):
+            try:
+                _, da, sec = _fetch_var(coll, var, hrs)
+                vals, lead, ref_dt = _series(da)
+                if geo is None:
+                    geo = (lead, ref_dt, *_latlon(da))
+                got[var] = vals
+                print(f"  {model} {var}: {vals.shape[0]} lead times in {sec:.0f}s", flush=True)
+                break
+            except Exception as e:
+                print(f"  {model} {var}: attempt {attempt + 1} failed: {type(e).__name__}: {e}", flush=True)
+    if len(got) < len(CLOUD_VARS):
+        return False
+    save_cloud_field(field_dir, model, got, *geo)
+    return True
+
+
 # first name that exists wins; RH can be derived from the dew point
 ALTS = {"RELHUM_2M": ["RELHUM_2M", "TD_2M"], "ASWDIR_S": ["ASWDIR_S", "ASOB_S", "GLOB"],
         "ASWDIFD_S": ["ASWDIFD_S", None]}
@@ -300,6 +351,8 @@ def main():
     ap.add_argument("points"); ap.add_argument("out")
     ap.add_argument("--models", default="ch1,ch2")
     ap.add_argument("--hours", default="33,120")
+    ap.add_argument("--cloud-hours", default="33,72",
+                    help="hours of cloud cover per model for the map (0 = none)")
     a = ap.parse_args()
     pts = json.loads(Path(a.points).read_text())
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
@@ -331,6 +384,13 @@ def main():
             (out / f"{pid}.json").write_text(json.dumps(d))
             n += 1
     print(f"OGD: {n}/{len(pts)} points written to {out}")
+    # the cloud fields are for the map only: best effort, after the points
+    for model, ch in zip(a.models.split(","), [int(x) for x in a.cloud_hours.split(",")]):
+        if ch > 0:
+            try:
+                extract_clouds(model, ch, out)
+            except Exception as e:
+                print(f"  {model} clouds: FAILED {type(e).__name__}: {e}")
     return 0 if n else 1
 
 

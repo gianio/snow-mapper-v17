@@ -190,6 +190,17 @@ jobs:
           python run_variant_a.py $ARGS
           TQDM_DISABLE=1 .ogd/bin/python -u tools/ogd_extract.py points.json ogd
 
+      # ICON-CH1/CH2 low, mid and high cloud on every model cell: the site
+      # build lays them onto the map (pipeline/ogd_clouds.py)
+      - name: Upload the cloud fields
+        if: always() && hashFiles('ogd/clouds_*.npz') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ogd-clouds
+          path: ogd/clouds_*.npz
+          retention-days: 2
+          compression-level: 0
+
       - name: Run the cycle
         id: cycle
         env:

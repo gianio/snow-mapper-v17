@@ -69,6 +69,22 @@ jobs:
             echo "tools/cache/ not present — skipping powder regression."
           fi
 
+      # The clouds of the newest live cycle at MeteoSwiss resolution (ICON-CH1
+      # 1 km, CH2 2 km). Without them the build keeps Open-Meteo's clouds.
+      - name: MeteoSwiss cloud fields (newest live cycle)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RID=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=ogd-clouds&per_page=20" \
+                --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_repository_id == .workflow_run.repository_id)] | sort_by(.created_at) | last | .workflow_run.id // empty')
+          if [ -n "$RID" ]; then
+            gh run download "$RID" -n ogd-clouds -D ogd_clouds && ls -la ogd_clouds
+            echo "SNOWMAPPER_OGD_CLOUDS=$PWD/ogd_clouds" >> "$GITHUB_ENV"
+          else
+            echo "no cloud fields yet -- clouds from Open-Meteo"
+          fi
+
       - name: Generate app shell + live data blob
         # Split build: small stable shell (index.html + app.js) + a separate
         # data/ blob behind latest.json, so daily data updates don't rebuild the
