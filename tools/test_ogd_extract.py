@@ -43,5 +43,15 @@ check("terrain = lowest half level of HHL", o._terrain_from_hhl(hhl).tolist() ==
 check("terrain from HHL with extra leading dims", o._terrain_from_hhl(hhl[None]).tolist() == [1210., 1840., 455.])
 check("constants asset suffix per collection", o._CONST_SUFFIX[o.COLL["ch1"]] == "icon-ch1-eps"
       and o._CONST_SUFFIX[o.COLL["ch2"]] == "icon-ch2-eps")
+import tempfile
+with tempfile.TemporaryDirectory() as td:
+    clat = np.array([46.0, 47.0, 49.5]); clon = np.array([8.0, 9.0, 8.0])          # the last one lies outside CH
+    fr = {"CLCL": np.array([[0.5, 1.0, 0.2]]), "CLCM": np.zeros((1, 3)), "CLCH": np.array([[0.0, 0.25, 1.0]])}
+    o.save_cloud_field(td, "ch1", fr, [1], dt.datetime(2026, 9, 28, 12), clat, clon)
+    z = np.load(Path(td) / "clouds_ch1.npz")
+    check("cloud fields: fractions -> percent", z["low"].tolist() == [[50, 100]] and z["high"].tolist() == [[0, 25]],
+          str(z["low"].tolist()))
+    check("cloud fields: cells outside Switzerland dropped", len(z["lat"]) == 2)
+    check("cloud fields: reference time kept", str(z["ref"]) == "2026-09-28T12:00")
 print("\n" + ("OGD EXTRACT OK" if not fails else f"FAILED: {fails}"))
 sys.exit(1 if fails else 0)

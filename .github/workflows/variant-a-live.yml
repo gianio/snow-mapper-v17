@@ -98,7 +98,7 @@ jobs:
   cycle:
     needs: guard
     if: needs.guard.outputs.run == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}   # the repository variable RUNNER (e.g. self-hosted), else GitHub's
     timeout-minutes: 300
     outputs:
       daily_tiles: ${{ steps.daily.outputs.go }}
@@ -115,7 +115,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: snowpack-build/install
-          key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
+          key: snowpack-${{ runner.os }}${{ runner.arch != 'X64' && format('-{0}', runner.arch) || '' }}-${{ env.SNOWPACK_REF }}-v1
 
       - name: Build MeteoIO + SNOWPACK
         if: steps.spcache.outputs.cache-hit != 'true'
@@ -137,7 +137,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: snowpack-build/install
-          key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
+          key: snowpack-${{ runner.os }}${{ runner.arch != 'X64' && format('-{0}', runner.arch) || '' }}-${{ env.SNOWPACK_REF }}-v1
 
       - run: pip install -r requirements.txt
 
@@ -189,6 +189,17 @@ jobs:
           [ -n "${{ inputs.limit }}" ] && ARGS="$ARGS --limit ${{ inputs.limit }}"
           python run_variant_a.py $ARGS
           TQDM_DISABLE=1 .ogd/bin/python -u tools/ogd_extract.py points.json ogd
+
+      # ICON-CH1/CH2 low, mid and high cloud on every model cell: the site
+      # build lays them onto the map (pipeline/ogd_clouds.py)
+      - name: Upload the cloud fields
+        if: always() && hashFiles('ogd/clouds_*.npz') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ogd-clouds
+          path: ogd/clouds_*.npz
+          retention-days: 2
+          compression-level: 0
 
       - name: Run the cycle
         id: cycle

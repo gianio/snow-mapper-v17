@@ -518,6 +518,16 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     print(f"[INT] Hoehenwind: {', '.join(lvl_m) if lvl_m else 'nein'}.")
     print(f"[INT] Bewoelkung: {'ja' if cloud_m is not None else 'nein (Quelle liefert keine)'}"
           f"{', nach Hoehe' if clv_m is not None else ''}.")
+    # MeteoSwiss ICON cloud fields (1 km CH1, 2 km CH2) where the live cycle
+    # left them: those hours take the model's own grid instead of the spline
+    ogd_fields = None
+    if os.environ.get("SNOWMAPPER_OGD_CLOUDS"):
+        try:
+            from pipeline import ogd_clouds
+            ogd_fields = ogd_clouds.load(os.environ["SNOWMAPPER_OGD_CLOUDS"]) or None
+            print(f"[INT] Wolken MeteoSchweiz: {', '.join(f['model'] for f in ogd_fields) if ogd_fields else 'keine Felder'}.")
+        except Exception as e:
+            print(f"[INT] Wolken MeteoSchweiz nicht lesbar: {type(e).__name__}: {e}")
     idx, w = _idw_weights(pts, targets)
     ref_elev = _apply(elev_pt, idx, w).reshape(shape)
     cloud_at = None
@@ -538,7 +548,8 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     dst_t, dw, dh = calculate_default_transform(
         aoi.crs, "EPSG:4326", shape[1], shape[0], *bounds)
     QZ = _quantisers()
-    FIELDS = ("snow", "ablation", "temp", "sun", "wind_grid", "prec") + (("cloud",) if cloud_m is not None else ()) + (("clv",) if clv_m is not None else ()) + tuple(lvl_m)
+    has_cloud, has_clv = cloud_m is not None or bool(ogd_fields), clv_m is not None or bool(ogd_fields)
+    FIELDS = ("snow", "ablation", "temp", "sun", "wind_grid", "prec") + (("cloud",) if has_cloud else ()) + (("clv",) if has_clv else ()) + tuple(lvl_m)
     cubes = {k: np.zeros((T, dh, dw), "uint8") for k in FIELDS}
 
     def _store(key, t, frame_lv95):
@@ -560,6 +571,12 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     _tf_ll = Transformer.from_crs(aoi.crs, "EPSG:4326", always_xy=True)
     _lon_g, _lat_g = _tf_ll.transform(grid_x.ravel(), grid_y.ravel())
     lat_grid = np.asarray(_lat_g, dtype="float64").reshape(shape)
+    cloud_fr = None
+    if ogd_fields:
+        try:
+            cloud_fr = ogd_clouds.CloudFrames(ogd_fields, lat_grid, np.asarray(_lon_g, dtype="float64").reshape(shape))
+        except Exception as e:
+            print(f"[INT] Wolken MeteoSchweiz nicht verwendbar: {type(e).__name__}: {e}")
     slope_r = np.nan_to_num(terrain.slope_rad, nan=0.0).astype("float64")
     aspect_r = np.radians(np.nan_to_num(terrain.aspect_deg, nan=0.0)).astype("float64")
     depth_cm = np.zeros(shape, "float64")
@@ -603,12 +620,18 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         _store("sun", t, sun_t)
         _store("wind_grid", t, ws_g)
         _store("prec", t, prec_g)
-        if cloud_m is not None:
-            _store("cloud", t, cloud_at(cloud_m[:, t]))
-        if clv_m is not None:
-            # each height reprojected on its own, packed only afterwards
-            lv = [_reproj_frame(np.clip(cloud_at(m_[:, t]), 0, 100), dem.transform, aoi.crs, dst_t, dh, dw) for m_ in clv_m]
+        ogd_t = cloud_fr.at(times[t]) if cloud_fr else None
+        if ogd_t is not None:
+            _store("cloud", t, ogd_clouds.total(*ogd_t))
+            lv = [_reproj_frame(np.clip(m_, 0, 100), dem.transform, aoi.crs, dst_t, dh, dw) for m_ in ogd_t]
             cubes["clv"][t] = _pack_clv(*lv).astype("uint8")
+        else:
+            if cloud_m is not None:
+                _store("cloud", t, cloud_at(cloud_m[:, t]))
+            if clv_m is not None:
+                # each height reprojected on its own, packed only afterwards
+                lv = [_reproj_frame(np.clip(cloud_at(m_[:, t]), 0, 100), dem.transform, aoi.crs, dst_t, dh, dw) for m_ in clv_m]
+                cubes["clv"][t] = _pack_clv(*lv).astype("uint8")
         for k, m_ in lvl_m.items():
             # free-air wind: smooth over the region, no terrain modulation
             _store(k, t, np.clip(cloud_at(m_[:, t]) if cloud_at else _apply(m_[:, t], idx, w).reshape(shape), 0, None))
@@ -616,6 +639,9 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         p_dir[t] = np.degrees(np.arctan2(_apply(sin_d[:, t], p_idx, p_w),
                                          _apply(cos_d[:, t], p_idx, p_w))) % 360
 
+    cloud_src = cloud_fr.source() if cloud_fr else None
+    if cloud_fr:
+        print(f"[INT] Wolken: {sum(cloud_fr.used.values())}/{T} Stunden aus {cloud_src}.")
     aspect_main = _reproj_frame(terrain.aspect_deg.astype("float32"),
                                 dem.transform, aoi.crs, dst_t, dh, dw,
                                 rs=Resampling.nearest)
@@ -644,7 +670,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         "snow": cubes["snow"], "ablation": cubes["ablation"],
         "temp": cubes["temp"], "sun": cubes["sun"],
         "wind_grid": cubes["wind_grid"], "prec": cubes["prec"],
-        "cloud": cubes.get("cloud"), "clv": cubes.get("clv"),
+        "cloud": cubes.get("cloud"), "clv": cubes.get("clv"), "cloud_src": cloud_src,
         "wind850": cubes.get("wind850"), "wind700": cubes.get("wind700"),
         "main_aspect": aspect_main, "main_slope": slope_main,
         "main_elev": elev_main,
@@ -950,6 +976,7 @@ def _build_meta_blobs(data):
         "spd_mul": _SPD_MUL, "dir_div": _DIR_DIV, "sun_mul": _SUN_MUL, "prec_mul": _PREC_MUL,
         "cloud_mul": _CLOUD_MUL if data.get("cloud") is not None else None,
         "cloud_lv": list(_CLV_N) if data.get("clv") is not None else None,
+        "cloud_src": data.get("cloud_src"),
         "wind_levels": [k for k in ("wind850", "wind700") if data.get(k) is not None],
         "elev_scale": _ELEV_SCALE, "nsp": data.get("nsp"),
         "slf_bounds": SLF_BOUNDS, "slf_colors": SLF_COLORS,
@@ -6222,6 +6249,39 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .inv-c small{font:500 11.5px/1.3 var(--font);color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .inv-code button{flex:none;height:30px;padding:0 12px;border:0;border-radius:8px;background:var(--fill);color:var(--fg);font:700 12.5px var(--font);cursor:pointer}
  .inv-code button.x{width:30px;padding:0;font-size:16px;color:var(--fg2)}
+ /* the drawing bar: what it says, the snow kind, the depth, the tool */
+ #drawCats,#drawPens,#drawPanRow,#drawDepthV{display:none!important}
+ body.draw-on #drawBrushV{display:none}
+ body.draw-on.draw-brush #drawBrushV{display:flex}
+ #drawBrushV{top:calc(50% - 150px)!important}
+ #drawHint{background:var(--fg)!important;color:var(--card)!important}
+ #drawBar{padding-top:10px!important}
+ .dsum{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;min-height:22px;margin:0 2px 8px;font:600 12.5px/1.35 var(--font);color:var(--fg2)}
+ .dsum span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+ .dsum span i{width:10px;height:10px;border-radius:3px;flex:none}
+ .dsum b{color:var(--fg);font-weight:750}
+ .dsum em{font-style:normal;color:var(--fg2)}
+ .dsum .dsum-tour{color:var(--accent);font-weight:700}
+ .dsum .dsum-empty{white-space:normal}
+ .dtypes{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -12px 8px;padding:0 12px}
+ .dtypes::-webkit-scrollbar{display:none}
+ .dtypes button{flex:none;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;border:1.5px solid transparent;background:var(--fill);color:var(--fg);font:650 13px var(--font);cursor:pointer;white-space:nowrap}
+ .dtypes button i{width:12px;height:12px;border-radius:4px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+ .dtypes button.on{border-color:var(--fg);background:var(--card)}
+ .ddepth{margin:0 2px 6px}
+ .ddepth[hidden]{display:none}
+ .ddepth .qs-lbl{margin:0 0 2px}
+ .dtools{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:2px -12px 10px;padding:0 12px}
+ .dtools::-webkit-scrollbar{display:none}
+ .dtools button{flex:1 0 auto;min-width:58px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px 5px;border-radius:12px;border:0;background:none;color:var(--fg2);font:650 10.5px var(--font);cursor:pointer;white-space:nowrap}
+ .dtools button svg{width:22px;height:22px}
+ .dtools button.on{background:var(--fill);color:var(--fg)}
+ #drawCamBtn{background-size:cover;background-position:center}
+ #drawCamBtn.has svg{opacity:0}
+ /* one typeface: what used to be set in a typewriter font (times, counts,
+    measurements, codes) takes the app's own, with digits of equal width */
+ :root{--mono:var(--font,'Helvetica Neue',Helvetica,Arial,sans-serif)}
+ body{font-variant-numeric:tabular-nums}
  /* over a screen (profile, feed) the tab bar is solid: the 20 % glass is for the map */
  :root body:has(#profModal[style*="flex"]) #tabBar,:root body:has(#userViewModal[style*="flex"]) #tabBar,:root body[data-screen=feed] #tabBar{background:var(--card)!important}
  .fc-depth{font:650 14px/1.3 var(--font)!important;font-variant-numeric:tabular-nums}
@@ -6503,7 +6563,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <div id="drawWrap">
   <canvas id="drawCanvas"></canvas>
   <button id="drawClose" onclick="drawClose()" aria-label="Schliessen">✕</button>
-  <div id="drawHint">Male die Zonen — mit zwei Fingern bewegst du die Karte</div>
+  <div id="drawHint">Tippe auf einen Hang – gleiche Exposition und Höhe werden eingefärbt</div>
   <div id="drawBrushV" aria-label="Pinselgrösse">
     <span class="dbv-cap">Pinsel</span>
     <input type="range" min="12" max="80" step="2" value="34" orient="vertical" aria-label="Pinselgrösse"/>
@@ -6516,15 +6576,23 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     <b id="drawDepthVVal">30</b><span class="ddv-unit">cm</span>
   </div>
   <div id="drawBar">
+    <div id="drawSum" class="dsum" aria-live="polite"></div>
+    <div id="drawTypes" class="dtypes" role="radiogroup" aria-label="Schneeart"></div>
+    <div id="drawDepth" class="ddepth"><div class="qs-lbl">Tiefe <b id="drawDepthTxt"></b></div>
+      <input type="range" class="qs-range" id="drawDepthR" min="0" max="5" step="1" value="2" oninput="drawDepthPick(+this.value)" aria-label="Tiefe">
+      <div class="qs-ticks" id="drawDepthTicks"></div></div>
     <div id="drawBrush"></div>
     <div id="drawSlider"></div>
+    <div id="drawTools" class="dtools" role="radiogroup" aria-label="Werkzeug"></div>
     <div id="drawPanRow"><span id="drawPanHint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>1 Finger zeichnet · 2 Finger bewegen · Pinch/Mausrad zoomt</span></div>
     <div id="drawCats"></div>
     <div id="drawPens"></div>
     <div id="drawActions">
       <button class="db" onclick="drawUndo()" title="Rückgängig" aria-label="Rückgängig"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
       <button class="db" onclick="drawClear()" title="Löschen" aria-label="Löschen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-      <button id="drawPostBtn" onclick="drawOpenFinish()">Posten</button>
+      <label class="db" id="drawCamBtn" title="Foto" aria-label="Foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/></svg><input type="file" accept="image/*" hidden onchange="drawPhotoPick(this)"></label>
+      <button class="db" onclick="drawOpenFinish()" title="Text und Tour" aria-label="Text und Tour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg></button>
+      <button id="drawPostBtn" onclick="drawQuickPost()">Posten</button>
     </div>
   </div>
   <div id="drawFinish">
@@ -7859,7 +7927,24 @@ const I18N_DICT={
 "Anzahl":["Number", "Nombre", "Numero"],
 "Personen pro Code":["People per code", "Personnes par code", "Persone per codice"],
 "Codes erstellen":["Create codes", "Créer des codes", "Crea codici"],
-"Alle Codes":["All codes", "Tous les codes", "Tutti i codici"]
+"Alle Codes":["All codes", "Tous les codes", "Tutti i codici"],
+"Hang füllen":["Fill slope", "Remplir la pente", "Riempi pendio"],
+"Malen":["Paint", "Peindre", "Dipingi"],
+"Höhengrenze":["Height line", "Limite d'altitude", "Limite di quota"],
+"Spur":["Track", "Trace", "Traccia"],
+"Abfahrt einfärben":["Colour the descent", "Colorer la descente", "Colora la discesa"],
+"Schnee entlang deiner Spur markieren":["Mark the snow along your track", "Marquer la neige le long de ta trace", "Segna la neve lungo la traccia"],
+"Schnee entlang der Spur einfärben":["Colour the snow along the track", "Colorer la neige le long de la trace", "Colora la neve lungo la traccia"],
+"Kantig (lockerer Altschnee)":["Faceted (loose old snow)", "À faces planes (vieille neige meuble)", "Sfaccettata (neve vecchia sciolta)"],
+"Tippe auf einen Hang oder male eine Zone":["Tap a slope or paint an area", "Touche une pente ou peins une zone", "Tocca un pendio o dipingi una zona"],
+"Fahr mit dem Finger der Spur entlang":["Run your finger along the track", "Glisse le doigt le long de la trace", "Fai scorrere il dito lungo la traccia"],
+"Text und Tour":["Text and tour", "Texte et course", "Testo e gita"],
+"Tippe auf einen Hang – gleiche Exposition und Höhe werden eingefärbt. Ziehen verschiebt die Karte.":["Tap a slope – the same aspect and height get coloured. Dragging moves the map.", "Touche une pente – même exposition et altitude sont colorées. Glisser déplace la carte.", "Tocca un pendio – stessa esposizione e quota vengono colorate. Trascinare sposta la mappa."],
+"Zieh einen Strich quer über den Hang – dann oberhalb und unterhalb getrennt antippen":["Draw a line across the slope – then tap above and below it separately", "Trace un trait en travers de la pente – puis touche au-dessus et au-dessous", "Traccia una linea attraverso il pendio – poi tocca sopra e sotto"],
+"Fahr mit dem Finger der Spur entlang – der Abschnitt bekommt die gewählte Schneeart":["Run your finger along the track – that section gets the chosen snow", "Glisse le doigt le long de la trace – ce tronçon prend la neige choisie", "Fai scorrere il dito lungo la traccia – il tratto prende la neve scelta"],
+"Zeichne deine Route – Auf- und Abstieg erkennt die App am Gelände":["Draw your route – the app tells ascent from descent by the terrain", "Dessine ton itinéraire – l'app distingue montée et descente", "Disegna il percorso – salita e discesa le riconosce l'app"],
+"Male, wo es schon verspurt ist":["Paint where it is already tracked out", "Peins là où c'est déjà tracé", "Dipingi dove è già tracciato"],
+"Radiere gemalte Zonen weg":["Erase painted areas", "Efface les zones peintes", "Cancella le zone dipinte"]
 };
 
 // ── Sprachen ──────────────────────────────────────────────────────────────
@@ -12033,7 +12118,7 @@ async function trkRender(){
       +'<div class="tour-pick" id="trkTourPick"></div>'
       +'<div class="trk-lbl">Verspurung</div><div class="trk-chips">'+TRK_TRACKS.map(([k,l])=>'<button type="button" class="trk-chip'+(d.tracks===k?' on':'')+'" onclick="trkKeepFields();trkDraft.tracks=trkDraft.tracks===\''+k+'\'?null:\''+k+'\';trkRender()">'+l+'</button>').join('')+'</div>'
       +'<div class="trk-stars">'+[1,2,3,4,5].map(n=>'<button type="button" class="'+(d.stars>=n?'on':'')+'" onclick="trkKeepFields();trkDraft.stars='+n+';trkRender()" aria-label="'+n+' Sterne">★</button>').join('')+'<span>Abfahrt</span></div>'
-      +'<div class="trk-more"><button type="button" class="pri" onclick="trkThen(\'draw\')">Powder entlang der Spur einzeichnen</button><button type="button" onclick="trkThen(\'obs\')">Beobachtung melden</button></div>'
+      +'<div class="trk-more"><button type="button" class="pri" onclick="trkThen(\'draw\')">Schnee entlang der Spur einfärben</button><button type="button" onclick="trkThen(\'obs\')">Beobachtung melden</button></div>'
       +'<div class="trk-lbl">Fotos</div><div class="trk-photos">'+(d.photos||[]).map((b,i)=>'<div class="trk-ph"><img src="'+URL.createObjectURL(b)+'" alt=""><button onclick="trkKeepFields();trkDraft.photos.splice('+i+',1);trkRender()" aria-label="Foto entfernen">×</button></div>').join('')
       +'<label class="trk-ph add"><input type="file" accept="image/*" multiple hidden onchange="trkAddPhotos(this.files)"><span>+</span></label></div>'
       +'<div class="trk-lbl">Sichtbar für</div><div class="trk-vis"><button type="button" class="'+(priv?'':'on')+'" onclick="trkKeepFields();trkDraft.vis=\'followers\';trkRender()"><b>Follower</b><span>erscheint im Feed deiner Follower</span></button>'
@@ -12228,14 +12313,12 @@ function trkShowOnMap(ll,rough){
 function actDraw(id){const r=(allReports||[]).find(x=>String(x.id)===String(id));const A=r&&r.condition_data&&r.condition_data.activity;
   if(!A||!A.track)return;
   try{feedClose();}catch(e){}try{navGo('map');}catch(e){}
-  setTimeout(()=>{trkShowOnMap(A.track,A.rough);trkLinkAct={post:String(r.id),name:A.name||''};drawOpen();
-    try{drawSelectCat('snow');}catch(e){}
-    toastOnce('actdraw','Mal mit dem Finger, wo Powder lag – dann «Posten»');},380);}
+  setTimeout(()=>{trkShowOnMap(A.track,A.rough);trkLinkAct={post:String(r.id),name:A.name||''};drawOpen();},380);}
 // «+» on your own activity: powder on the map, photos, the text
 function actPlus(id){let el=document.getElementById('actPlusW');if(!el){el=document.createElement('div');el.id='actPlusW';document.body.appendChild(el);}
   const ic=d=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
   el.innerHTML='<div class="ap-in" role="menu" aria-label="Aktivität ergänzen"><b>Aktivität ergänzen</b>'
-    +'<button type="button" onclick="actPlusClose();actDraw(\''+id+'\')">'+ic('<path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/>')+'<span>Powder einzeichnen<small>Wo lag Schnee? Mit dem Finger malen</small></span></button>'
+    +'<button type="button" onclick="actPlusClose();actDraw(\''+id+'\')">'+ic('<path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/>')+'<span>Abfahrt einfärben<small>Schnee entlang deiner Spur markieren</small></span></button>'
     +'<button type="button" onclick="actPlusClose();actAddPhotos(\''+id+'\')">'+ic('<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.2"/><path d="M8 5l1.5-2h5L16 5"/>')+'<span>Fotos hinzufügen<small>Bilder von der Tour</small></span></button>'
     +'<button type="button" onclick="actPlusClose();postEdit(\''+id+'\')">'+ic('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>')+'<span>Beschreibung bearbeiten<small>Text zum Beitrag</small></span></button>'
     +'<button type="button" class="ap-x" onclick="actPlusClose()">Abbrechen</button></div>';
@@ -12940,7 +13023,8 @@ let _progField=null,_progConf=null,_progType=null,_progModel=null,_progDiff=null
 let _progFindSel=null,_progFindOth=null;
 // the reported snow types in the Skiqualität colours (as the drawing pens)
 const PROG_COL={powder:VA_PALETTE.ski6[4].slice(0,3),drift:VA_PALETTE.wind[3].slice(0,3),wet:VA_PALETTE.ski6[7].slice(0,3),suncrust:VA_PALETTE.ski6[2].slice(0,3),
-  windpressed:VA_PALETTE.ski6[1].slice(0,3),firn:VA_PALETTE.ski6[6].slice(0,3),scoured:VA_PALETTE.wind[1].slice(0,3)};
+  windpressed:VA_PALETTE.ski6[1].slice(0,3),firn:VA_PALETTE.ski6[6].slice(0,3),scoured:VA_PALETTE.wind[1].slice(0,3),
+  facet:VA_PALETTE.ski6[11].slice(0,3),thin:VA_PALETTE.ski6[10].slice(0,3)};
 // Colourful, perceptually ordered ramp for the 0-100% confidence map.
 const PROG_CONF_STOPS=[[0.00,48,18,59],[0.15,62,73,204],[0.30,33,144,231],[0.45,26,196,171],
                        [0.60,96,214,79],[0.72,212,225,53],[0.85,249,152,42],[1.00,231,49,38]];
@@ -12952,7 +13036,7 @@ function progConfColor(t){
       return [Math.round(a[1]+(b[1]-a[1])*f),Math.round(a[2]+(b[2]-a[2])*f),Math.round(a[3]+(b[3]-a[3])*f)];}}
   const l=PROG_CONF_STOPS[PROG_CONF_STOPS.length-1];return [l[1],l[2],l[3]];
 }
-const PROG_LABEL={powder:'Powder',drift:'Triebschnee',wet:'Nassschnee',suncrust:'Sonnendeckel',windpressed:'Windgepresst',firn:'Firn',scoured:'Abgeweht'};
+const PROG_LABEL={powder:'Powder',drift:'Triebschnee',wet:'Nassschnee',suncrust:'Sonnendeckel',windpressed:'Windgepresst',firn:'Firn',scoured:'Abgeweht',facet:'Kantig',thin:'Dünn'};
 // The area the grid is built over: the current view, clamped to the data, with
 // a little margin so a small pan does not immediately show an empty edge.
 function progViewBounds(){
@@ -14210,10 +14294,10 @@ function legSpec(l){
     return {t:nm,u:'°C',rows,long:l==='temp'?'Mittlere Temperatur im gewählten Zeitfenster; herangezoomt auf der Höhe des Geländes (nicht der 1-km-Zelle)':'Mittlere Temperatur im gewählten Zeitfenster'};}
   if(l==='cloud'&&_clvData){const nm=['Tiefe Wolken, Nebel – dicht','Mittelhohe Wolken','Hohe Wolken, Cirren – dünn'];
     const rows=[0,1,2].map(k=>{const c=CLV_COL[k];return {k,c:'rgba('+c[0]+','+c[1]+','+c[2]+','+Math.max(.6,c[3]).toFixed(2)+')',s:['Tief','Mittel','Hoch'][k],n:nm[k]};}).reverse();
-    return {t:'Bewölkung',u:'Höhe',rows,long:'Wolken nach Höhe zur gewählten Stunde: tief (unter ~2000 m, Stratus und Nebel – dicht, keine Sicht), mittel (~2000–6000 m) und hoch (über ~6000 m, Cirren – dünn, die Sonne scheint oft durch). Je kräftiger die Farbe, desto mehr Bedeckung.'};}
+    return {t:'Bewölkung',u:'Höhe',rows,long:'Wolken nach Höhe zur gewählten Stunde: tief (unter ~2000 m, Stratus und Nebel – dicht, keine Sicht), mittel (~2000–6000 m) und hoch (über ~6000 m, Cirren – dünn, die Sonne scheint oft durch). Je kräftiger die Farbe, desto mehr Bedeckung.'+(M.cloud_src?' Quelle: '+M.cloud_src+' (1 km), wo verfügbar.':'')};}
   if(l==='cloud'){const C3=[[10,40,'wenig'],[40,70,'teils'],[70,101,'bedeckt']];
     const rows=C3.map((x,k)=>{const c=cloudCol(((x[0]+x[1])/2-10)/90);return {k,lo:x[0],hi:x[1],c:'rgba('+c[0]+','+c[1]+','+c[2]+','+Math.max(.55,c[3]/255).toFixed(2)+')',s:x[2],n:x[0]+'–'+Math.min(100,x[1])+' % · '+x[2]};}).reverse();
-    return {t:'Bewölkung',u:'%',rows,long:'Gesamtbewölkung zur gewählten Stunde (wie ein Satellitenbild)'};}
+    return {t:'Bewölkung',u:'%',rows,long:'Gesamtbewölkung zur gewählten Stunde (wie ein Satellitenbild)'+(M.cloud_src?'. Quelle: '+M.cloud_src+' (1 km), wo verfügbar.':'')};}
   if(l==='powfind')return {t:'Gemeldetes Powder',u:'cm',rows:[[100],[60,100],[30,60],[10,30]].map(([cm,hi])=>{const c=snowCol(cm)||[150,150,150];return {c:rgb(c),s:cm+(hi?'–'+hi:'+'),n:cm+(hi?'–'+hi:'+')+' cm'};})};
   return null;
 }
@@ -16552,6 +16636,8 @@ async function deployWatch(){clearTimeout(_depT);
   if(Date.now()<_depBack){_depT=setTimeout(deployWatch,_depBack-Date.now());return;}
   try{const r=await fetch(DEPLOY_API,{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
     if(r.status===403||r.status===429){_depBack=Date.now()+30*60e3;}
+    // a private repository answers 404 to anyone without a key: ask again tomorrow
+    else if(r.status===404){_depBack=Date.now()+24*3600e3;}
     else if(r.ok){const j=await r.json(),run=(j.workflow_runs||[])[0];
       if(run&&run.status!=='completed'){_depRun=run;deployBanner(run);}
       else if(_depRun){deployBanner(null,true);_depRun=null;}}}catch(e){}
@@ -19294,6 +19380,8 @@ const DRAW_PENS={
  drift:{id:'drift',label:'Triebschnee',color:_wind(3),kind:'zone',slider:{label:'Mächtigkeit',min:5,max:SNOW_CM_MAX,step:5,unit:' cm',val:20}},
  scoured:{id:'scoured',label:'Abgeweht',color:_wind(1),kind:'zone',dash:[24,20]},
  compact:{id:'compact',label:'Kompakt',color:'#8aa0c8',kind:'zone'},
+ facet:{id:'facet',label:'Kantig (lockerer Altschnee)',color:_ski6(11),kind:'zone',slider:{label:'Tiefe',min:1,max:SNOW_CM_MAX,step:1,unit:' cm',val:15}},
+ thin:{id:'thin',label:'Dünn – Steine',color:_ski6(10),kind:'zone'},
  nosnow:{id:'nosnow',label:'Kein Schnee',color:'#e0483c',kind:'zone',dash:[9,16]},
  // One route pen: each segment is coloured from the DEM, so the app decides
  // uphill (dark orange) vs downhill (bright orange) instead of the user.
@@ -19308,6 +19396,10 @@ const DRAW_CATS=[
  {id:'eraser',label:'Radierer',icon:_SVG_ERASER,pens:['eraser']}
 ];
 let drawCtx=null,drawPen=DRAW_PENS.powder,drawCat='snow';
+// the tool (fill a slope, paint, boundary, along the track, route, tracks,
+// eraser), the snow kind and its depth band
+let drawTool='fill',drawLastZoneTool='fill',drawTypeI=0,drawDepthI=2;
+let drawBounds=[],_drawBoundCur=null,_drawTap=null,_drawTrkLast=null,_drawTrkPts=null;
 let drawZoneCanvas=null,drawZoneW=0,drawZoneH=0,drawDpr=1,drawRefBounds=null;
 let drawRoutes=[],drawTracks=[],drawZoneUsed=new Set(),drawHistory=[];
 let _drawPainting=false,_drawLastPt=null,_drawCurRoute=null,_drawCurTrack=null,_drawDashAcc=0;
@@ -19372,9 +19464,22 @@ function drawOpen(){
   // this tool's own listener instead of Leaflet's, so it works without
   // needing a mode switch at all.
   try{map.dragging.disable();map.touchZoom.disable();map.doubleClickZoom.disable();map.scrollWheelZoom.disable();}catch(e){}
+  // start where the report is about: an activity's route is framed already,
+  // a tour picked on its sheet, else your position when the map is far out
+  try{if(!trkShown){
+    const tl=rptTourLock&&rptTourSel?tourList().find(t=>String(t.id)===String(rptTourSel.id)):null;
+    if(tl&&tl.coords&&tl.coords.length>1)map.fitBounds(L.latLngBounds(tl.coords.map(c=>[c[1],c[0]])),{paddingTopLeft:[30,80],paddingBottomRight:[30,300],maxZoom:15,animate:false});
+    else if(map.getZoom()<12){
+      if(myLoc)map.setView(myLoc,14,{animate:false});
+      else if(navigator.geolocation)navigator.geolocation.getCurrentPosition(pp=>{
+        if(!document.body.classList.contains('draw-on')||drawHasContent()||map.getZoom()>=12)return;
+        myLoc=[pp.coords.latitude,pp.coords.longitude];map.setView(myLoc,14,{animate:false});drawReanchor();},()=>{},{timeout:7000,maximumAge:600000});}}}catch(e){}
+  drawBounds=[];_drawBoundCur=null;_drawTap=null;_drawTrkLast=null;_drawTrkPts=null;drawPhotoFile=null;
+  const cb=document.getElementById('drawCamBtn');if(cb){cb.classList.remove('has');cb.style.backgroundImage='';}
   drawSetupCanvas();drawRenderCats();drawSelectCat('snow');drawShowBrush();
+  drawRenderTypes();drawRenderTools();drawToolPick(trkShown?'trackpaint':'fill',true);drawTypePick(drawTypeI);
   try{haptic(8);}catch(e){}
-  const h=document.getElementById('drawHint');h.classList.add('show');setTimeout(()=>h.classList.remove('show'),3200);
+  drawHintShow((DRAW_TOOLS.find(t=>t.id===drawTool)||{}).hint||'');drawSumUpdate();
 }
 function drawClose(){
   if(drawHasContent()&&!confirm('Zeichnung verwerfen?'))return;
@@ -19448,13 +19553,15 @@ function drawSetupCanvas(){
       _drawActivePointers.add(e.pointerId);
       _drawPointerPos.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(_drawActivePointers.size>=2){
-        if(_drawPainting){drawUndo();_drawPainting=false;_drawCurRoute=null;_drawCurTrack=null;_drawLastPt=null;}
+        _drawTap=null;
+        if(_drawPainting){drawUndo();_drawPainting=false;_drawCurRoute=null;_drawCurTrack=null;_drawLastPt=null;_drawBoundCur=null;}
         if(_drawCapturedId!=null){try{cv.releasePointerCapture(_drawCapturedId);}catch(_e){}_drawCapturedId=null;}
         if(!_drawGesturePan){_drawGesturePan=true;document.body.classList.add('draw-gesture-pan');}
         const g=_drawGestureRead();if(g){_drawGestureC=g.c;_drawGestureD=g.d;}
         return;
       }
       try{cv.setPointerCapture(e.pointerId);_drawCapturedId=e.pointerId;}catch(_){}
+      if(drawTool==='fill'){_drawTap={x:e.clientX,y:e.clientY,p:pt(e),moved:false};return;}
       _drawPainting=true;drawPushHistory();drawStrokeBegin(pt(e),e.pressure);drawRepaint();try{haptic(4);}catch(_){}});
     cv.addEventListener('pointermove',e=>{
       e.preventDefault();
@@ -19464,6 +19571,10 @@ function drawSetupCanvas(){
         if(_drawGestureRAF==null)_drawGestureRAF=requestAnimationFrame(_drawGestureApply);
         return;
       }
+      if(_drawTap){const dx=e.clientX-_drawTap.x,dy=e.clientY-_drawTap.y;
+        if(_drawTap.moved||Math.hypot(dx,dy)>8){_drawTap.moved=true;_drawTap.x=e.clientX;_drawTap.y=e.clientY;
+          try{map.panBy([-dx,-dy],{animate:false,duration:0});}catch(_e){}drawRepaint();}
+        return;}
       if(!_drawPainting)return;drawStrokeExtend(pt(e),e.pressure);drawRepaint();});
     const end=e=>{
       if(e&&e.pointerId!=null){_drawActivePointers.delete(e.pointerId);_drawPointerPos.delete(e.pointerId);if(_drawCapturedId===e.pointerId)_drawCapturedId=null;}
@@ -19473,7 +19584,10 @@ function drawSetupCanvas(){
           drawReanchor();}
         else{const g=_drawGestureRead();if(g){_drawGestureC=g.c;_drawGestureD=g.d;}}
       }
-      if(!_drawPainting)return;_drawPainting=false;_drawCurRoute=null;_drawCurTrack=null;_drawLastPt=null;};
+      if(_drawTap){const t=_drawTap;_drawTap=null;
+        if(t.moved)drawReanchor();else if(e&&e.type==='pointerup')drawFillAt(t.p);
+        return;}
+      if(!_drawPainting)return;_drawPainting=false;drawStrokeEnd();_drawCurRoute=null;_drawCurTrack=null;_drawLastPt=null;};
     cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);cv.addEventListener('pointerleave',end);
     // Scroll wheel and trackpad pinch-to-zoom both fire as 'wheel' -- the
     // canvas has to keep pointer-events:auto for single-finger drawing, which
@@ -19511,6 +19625,8 @@ function drawReanchor(){
   drawRepaint();
 }
 function drawStrokeBegin(p,pressure){
+  if(drawTool==='bound'){try{_drawBoundCur=[map.containerPointToLatLng(p)];}catch(e){}return;}
+  if(drawTool==='trackpaint'){_drawTrkLast=null;drawTrkPaintAt(p);return;}
   const k=drawPen.kind;
   if(k==='zone'||k==='eraser'){_drawDashAcc=0;_drawLastPt=drawC2O(p[0],p[1]);
     drawBrushEff=drawBrushSize*drawPressureScale(pressure);
@@ -19520,6 +19636,8 @@ function drawStrokeBegin(p,pressure){
   else if(k==='tracks'){_drawLastTrackC=p;drawTrackAt(p[0],p[1]);}
 }
 function drawStrokeExtend(p,pressure){
+  if(drawTool==='bound'){try{if(_drawBoundCur)_drawBoundCur.push(map.containerPointToLatLng(p));}catch(e){}return;}
+  if(drawTool==='trackpaint'){drawTrkPaintAt(p);return;}
   const k=drawPen.kind;
   if(k==='zone'||k==='eraser'){const o=drawC2O(p[0],p[1]);
     drawBrushEff=drawBrushSize*drawPressureScale(pressure);
@@ -19581,8 +19699,8 @@ function drawSampleAt(p){let ll;try{ll=map.containerPointToLatLng(p);}catch(e){r
   // The depth slider's value at THIS instant, not read again later at export
   // time -- painting 10cm here and then dragging the slider to 25cm before
   // painting elsewhere must not silently relabel the first stroke too.
-  const cm=(drawPen&&drawPen.slider&&(drawPen.id==='powder'||drawPen.id==='drift'))?drawPen.slider.val:null;
-  drawRecordSample(drawPen.id,ll.lat,ll.lng,cm);}
+  drawRecordSample(drawPen.id,ll.lat,ll.lng,drawDepthCm());}
+function drawDepthCm(){const sl=drawPen&&drawPen.slider;return sl&&sl.unit===' cm'?sl.val:null;}
 function drawRecordSample(type,lat,lng,cm){if(!type)return;const a=(drawZoneSamples[type]=drawZoneSamples[type]||[]);if(a.length<600)a.push([lat,lng,cm]);}
 function drawDemFull(lat,lon){const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
   const fe=fineElev(lat,lon),fa=fineAspectDeg(lat,lon);
@@ -19591,6 +19709,7 @@ function drawDemFull(lat,lon){const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1
   return{elev:el,aspectDeg:ad,slope:(fs!=null?fs:(cs!=null?cs:0))};}
 function drawZoneLabel(zones){if(!zones||!zones.length)return '';
   return zones.map(z=>{const t=(typeof DRAW_PENS!=='undefined'&&DRAW_PENS[z.type]&&DRAW_PENS[z.type].label)||z.type;const parts=[t];
+    if(z.cm!=null)parts.push(drawCmBand(z.cm));
     if(z.elevMin!=null&&z.elevMax!=null)parts.push(z.elevMin+'\u2013'+z.elevMax+' m');
     const a=asp8(z.aspectDeg);if(a)parts.push(a);return parts.join(' \u00b7 ');}).join(' / ');}
 function drawComputeZones(){
@@ -19601,7 +19720,7 @@ function drawComputeZones(){
     // CONFLICTS with the powder painted on the same slope.
     if(!DRAW_PENS[type]||DRAW_PENS[type].kind!=='zone')continue;
     const _pen=DRAW_PENS[type];
-    const hasDepth=!!(_pen&&_pen.slider&&(type==='powder'||type==='drift'));
+    const hasDepth=!!(_pen&&_pen.slider&&_pen.slider.unit===' cm');
     // A depth-bearing pen painted at two different settings is two different
     // colour segments, not one area to average over -- group by the depth
     // captured per sample (drawSampleAt), one zone per distinct value, so
@@ -19638,15 +19757,11 @@ function drawCommitSeg(a,b){
   const scale=drawOScale(),isEr=drawPen.kind==='eraser';
   if(isEr){octx.globalCompositeOperation='destination-out';octx.lineCap='round';octx.setLineDash([]);
     octx.strokeStyle='rgba(0,0,0,1)';octx.lineWidth=drawBrushEff*scale;
-  }else{octx.globalCompositeOperation='destination-over'; // no overpainting: new paint stays under existing
+  }else{octx.globalCompositeOperation='source-over'; // paints over: a filled slope is refined with the brush
     // Powder is the one type that paints as a solid colour (the SLF depth
     // scale); every other snow type paints as its texture, so the drawing is
     // readable without colour.
-    let col;
-    if(drawPen.slfDepth)col='rgb('+drawPowCol(drawPen.slider.val).join(',')+')';
-    else if(SNOW_PATTERNS[drawPen.id])col=drawPenPattern(octx,drawPen.id);
-    else col=drawPen.color;
-    octx.strokeStyle=col;octx.lineWidth=drawBrushEff*scale;
+    octx.strokeStyle=drawPenStyle(octx);octx.lineWidth=drawBrushEff*scale;
     if(drawPen.dash){octx.lineCap='butt';octx.setLineDash(drawPen.dash.map(d=>d*scale));octx.lineDashOffset=-_drawDashAcc;}
     else{octx.lineCap='round';octx.setLineDash([]);octx.lineDashOffset=0;}
   }
@@ -19655,6 +19770,19 @@ function drawCommitSeg(a,b){
   octx.globalCompositeOperation='source-over';octx.setLineDash([]);octx.lineDashOffset=0;
   if(!isEr)drawZoneUsed.add(drawPen.id);
 }
+// What the current pen paints with: powder in its depth colour, the textured
+// types as their texture, «dünn» green with red dashes, the rest flat.
+function drawPenStyle(ctx){
+  if(drawPen.slfDepth)return 'rgb('+drawPowCol(drawPen.slider.val).join(',')+')';
+  if(drawPen.id==='thin')return drawThinPattern(ctx);
+  if(SNOW_PATTERNS[drawPen.id])return drawPenPattern(ctx,drawPen.id);
+  return drawPen.color;}
+function drawThinPattern(ctx){let m=_drawPatCache.get(ctx);if(!m){m={};_drawPatCache.set(ctx,m);}
+  if(!m.thin){const c=document.createElement('canvas');c.width=c.height=12;const x=c.getContext('2d');
+    x.fillStyle='rgb('+VA_PALETTE.ski6[10].slice(0,3).join(',')+')';x.fillRect(0,0,12,12);
+    x.strokeStyle='#d62828';x.lineWidth=1.6;x.beginPath();x.moveTo(0,12);x.lineTo(5,7);x.moveTo(7,5);x.lineTo(12,0);x.stroke();
+    m.thin=ctx.createPattern(c,'repeat');}
+  return m.thin;}
 // Canvas patterns are per-context, so they are cached per context+type.
 const _drawPatCache=new WeakMap();
 function drawPenPattern(ctx,type){
@@ -19674,6 +19802,7 @@ function drawRepaint(expAlpha){
     ctx.drawImage(drawZoneCanvas,0,0,drawZoneW,drawZoneH,r.x,r.y,r.w,r.h);ctx.globalAlpha=1;}
   drawPaintTrack(ctx);
   drawRoutes.forEach(rt=>drawPaintRoute(ctx,rt));
+  drawBounds.forEach(b=>drawPaintBound(ctx,b));if(_drawBoundCur)drawPaintBound(ctx,{pts:_drawBoundCur});
 }
 function drawPaintRoute(ctx,rt){
   let pts;try{pts=rt.pts.map(ll=>map.latLngToContainerPoint(ll));}catch(e){return;}
@@ -19740,7 +19869,8 @@ function drawPaintTrack(ctx){
 function drawPushHistory(){
   if(!drawZoneCanvas)return;const c=document.createElement('canvas');c.width=drawZoneW;c.height=drawZoneH;
   c.getContext('2d').drawImage(drawZoneCanvas,0,0);
-  drawHistory.push({zone:c,nR:drawRoutes.length,nT:drawTracks.length,used:[...drawZoneUsed]});
+  const smp={};for(const k in drawZoneSamples)smp[k]=drawZoneSamples[k].length;
+  drawHistory.push({zone:c,nR:drawRoutes.length,nT:drawTracks.length,used:[...drawZoneUsed],nB:drawBounds.length,smp});
   if(drawHistory.length>18)drawHistory.shift();
 }
 function drawUndo(){
@@ -19748,11 +19878,14 @@ function drawUndo(){
   const octx=drawZoneCanvas.getContext('2d');octx.setTransform(1,0,0,1,0,0);
   octx.clearRect(0,0,drawZoneW,drawZoneH);octx.drawImage(h.zone,0,0);
   drawRoutes.length=h.nR;drawTracks.length=h.nT;drawZoneUsed=new Set(h.used);drawRebuildTrackGrid();
-  drawRepaint();try{haptic(5);}catch(e){}
+  drawBounds.length=Math.min(drawBounds.length,h.nB||0);
+  if(h.smp){for(const k in drawZoneSamples){if(h.smp[k]==null)delete drawZoneSamples[k];else drawZoneSamples[k].length=h.smp[k];}}
+  drawRepaint();drawSumUpdate();try{haptic(5);}catch(e){}
 }
 function drawClearSilent(){
   if(drawZoneCanvas)drawZoneCanvas.getContext('2d').clearRect(0,0,drawZoneW,drawZoneH);
-  drawRoutes=[];drawTracks=[];drawZoneUsed.clear();drawHistory=[];_drawTrackGrid=new Set();drawZoneSamples={};
+  drawRoutes=[];drawTracks=[];drawZoneUsed.clear();drawHistory=[];_drawTrackGrid=new Set();drawZoneSamples={};drawBounds=[];_drawBoundCur=null;
+  drawSumUpdate();
 }
 function drawClear(){if(!drawHasContent())return;if(!confirm('Ganze Zeichnung löschen?'))return;drawClearSilent();drawRepaint();}
 function drawRenderCats(){
@@ -19844,6 +19977,162 @@ function drawSummary(){
   if(drawTracks.length){const lv=drawTracks[drawTracks.length-1].level;out.push('Verspurt: '+TRACK_LABELS[lv-1]);}
   return out;
 }
+
+// ── The drawing bar: the same snow kinds and depth as the quick report ──
+const DRAW_TYPES=[{pen:'powder',qs:'pulver'},{pen:'facet',qs:'kantig'},{pen:'firn',qs:'sulz'},{pen:'wet',qs:'nass'},
+  {pen:'suncrust',qs:'kruste'},{pen:'windpressed',qs:'hart'},{pen:'thin',qs:'duenn'},{pen:'drift'},{pen:'scoured'},{pen:'icy'}];
+const DRAW_DEPTH_CM=[3,8,15,25,40,60];   // the middle of each quick-report depth band
+function drawTypeMeta(t){const q=t.qs&&QS_TYPES.find(x=>x.k===t.qs),p=DRAW_PENS[t.pen];
+  return {l:q?q.l:p.label,c:q?q.c:p.color,depth:!!(p.slider&&p.slider.unit===' cm')};}
+function drawCmBand(cm){const b=QS_DEPTH.find(d=>cm>=d[0]&&(d[1]==null||cm<d[1]))||QS_DEPTH[QS_DEPTH.length-1];
+  return (b[1]==null?b[0]+'+':b[0]+'–'+b[1])+' cm';}
+function drawRenderTypes(){const el=document.getElementById('drawTypes');if(!el)return;
+  el.innerHTML=DRAW_TYPES.map((t,i)=>{const m=drawTypeMeta(t);
+    return '<button type="button" role="radio" data-i="'+i+'" onclick="drawTypePick('+i+')"><i style="background:'+m.c+'"></i>'+escapeHtml(m.l.replace(/ \(.*\)$/,''))+'</button>';}).join('');
+  const dg=QS_DEPTH.map(d=>d[2]),stops=dg.map((c,i)=>c+' '+(i/dg.length*100).toFixed(2)+'% '+((i+1)/dg.length*100).toFixed(2)+'%').join(',');
+  const r=document.getElementById('drawDepthR');if(r)r.style.setProperty('--qs-track','linear-gradient(90deg,'+stops+')');
+  const tk=document.getElementById('drawDepthTicks');if(tk)tk.innerHTML=QS_DEPTH.map(d=>'<span>'+(d[1]==null?d[0]+'+':d[0]+'–'+d[1])+'</span>').join('');}
+function drawTypesSync(){const t=DRAW_TYPES[drawTypeI],m=drawTypeMeta(t),zone=!['route','tracks','eraser'].includes(drawTool);
+  document.querySelectorAll('#drawTypes button').forEach(b=>{const on=+b.dataset.i===drawTypeI&&zone;b.classList.toggle('on',on);b.setAttribute('aria-checked',on);});
+  const d=document.getElementById('drawDepth');if(d)d.hidden=!(m.depth&&zone);
+  const r=document.getElementById('drawDepthR');if(r){r.value=drawDepthI;r.style.setProperty('--qs-thumb',QS_DEPTH[drawDepthI][2]);}
+  const tx=document.getElementById('drawDepthTxt');if(tx){const b=QS_DEPTH[drawDepthI];tx.textContent=(b[1]==null?b[0]+'+':b[0]+'–'+b[1])+' cm';}}
+function drawApplyDepth(){const sl=drawPen&&drawPen.slider;if(sl&&sl.unit===' cm')sl.val=DRAW_DEPTH_CM[drawDepthI];}
+function drawTypePick(i){drawTypeI=i;
+  if(['route','tracks','eraser','bound'].includes(drawTool))drawToolPick(drawLastZoneTool,true);
+  else{drawSelectPen(DRAW_TYPES[i].pen);drawApplyDepth();}
+  drawTypesSync();try{haptic(3);}catch(e){}}
+function drawDepthPick(i){drawDepthI=i;drawApplyDepth();drawTypesSync();try{haptic(3);}catch(e){}}
+const _DI=d=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
+const DRAW_TOOLS=[
+  {id:'fill',l:'Hang füllen',ic:_DI('<path d="M3 20l6-11 4 6 2-3 6 8z" fill="currentColor" fill-opacity=".25"/><path d="M3 20l6-11 4 6 2-3 6 8z"/>'),
+    hint:'Tippe auf einen Hang – gleiche Exposition und Höhe werden eingefärbt. Ziehen verschiebt die Karte.'},
+  {id:'paint',l:'Malen',ic:_DI('<path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/>'),
+    hint:'Mal mit dem Finger – mit zwei Fingern bewegst du die Karte'},
+  {id:'bound',l:'Höhengrenze',ic:_DI('<path d="M3 19l6-10 4 6 2-3 6 7"/><path d="M2 12h20" stroke-dasharray="3 3"/>'),
+    hint:'Zieh einen Strich quer über den Hang – dann oberhalb und unterhalb getrennt antippen'},
+  {id:'trackpaint',l:'Spur',ic:_DI('<path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/>'),need:()=>!!trkShown,
+    hint:'Fahr mit dem Finger der Spur entlang – der Abschnitt bekommt die gewählte Schneeart'},
+  {id:'route',l:'Route',ic:_SVG_ROUTE,hint:'Zeichne deine Route – Auf- und Abstieg erkennt die App am Gelände'},
+  {id:'tracks',l:'Spuren',ic:_SVG_TRACKS,hint:'Male, wo es schon verspurt ist'},
+  {id:'eraser',l:'Radierer',ic:_SVG_ERASER,hint:'Radiere gemalte Zonen weg'}];
+function drawRenderTools(){const el=document.getElementById('drawTools');if(!el)return;
+  el.innerHTML=DRAW_TOOLS.filter(t=>!t.need||t.need()).map(t=>'<button type="button" role="radio" data-t="'+t.id+'" onclick="drawToolPick(\''+t.id+'\')">'+t.ic+'<span>'+escapeHtml(t.l)+'</span></button>').join('');}
+function drawToolPick(id,quiet){drawTool=id;
+  if(id==='route'||id==='tracks'||id==='eraser')drawSelectPen(id);
+  else{if(id!=='bound')drawLastZoneTool=id;drawSelectPen(DRAW_TYPES[drawTypeI].pen);drawApplyDepth();}
+  document.body.classList.toggle('draw-brush',['paint','eraser','tracks'].includes(id));
+  document.querySelectorAll('#drawTools button').forEach(b=>{const on=b.dataset.t===id;b.classList.toggle('on',on);b.setAttribute('aria-checked',on);});
+  drawTypesSync();if(!quiet){const t=DRAW_TOOLS.find(x=>x.id===id);if(t)drawHintShow(t.hint);}try{haptic(3);}catch(e){}}
+let _drawHintT=0;
+function drawHintShow(t){const h=document.getElementById('drawHint');if(!h)return;h.textContent=t;h.classList.add('show');
+  clearTimeout(_drawHintT);_drawHintT=setTimeout(()=>h.classList.remove('show'),3600);}
+// ── Fill a slope with one tap ───────────────────────────────────────────
+// From the tapped point outwards over the ~25 m terrain: the cells that face
+// the same way (within 40°), lie within a height band of it and are not cut
+// off by a drawn boundary. Flat ground fills the flat ground around it.
+const DRAW_FILL_ASP=40,DRAW_FILL_DZ=220,DRAW_FILL_MAX=14000;
+async function drawTerrPreload(){try{const b=map.getBounds(),z=TERR_FZ;
+  const a=terrXY(b.getNorth(),b.getWest(),z),c=terrXY(b.getSouth(),b.getEast(),z),keys=[];
+  for(let x=Math.floor(a[0]);x<=Math.floor(c[0]);x++)for(let y=Math.floor(a[1]);y<=Math.floor(c[1]);y++)keys.push(z+'/'+x+'/'+y);
+  if(keys.length>16)return;    // far out: the coarse terrain does
+  await Promise.all(keys.map(k=>terrFineLoad(k).catch(()=>null)));}catch(e){}}
+async function drawFillAt(p){
+  const sz=map.getSize();let c0;try{c0=map.containerPointToLatLng(p);}catch(e){return;}
+  const mpp=156543.03392*Math.cos(c0.lat*Math.PI/180)/Math.pow(2,map.getZoom());
+  const g=Math.max(4,Math.min(16,Math.round(25/mpp))),cols=Math.ceil(sz.x/g),rows=Math.ceil(sz.y/g);
+  await drawTerrPreload();
+  const T=new Array(cols*rows);
+  const at=(i,j)=>{const k=j*cols+i;if(T[k]!==undefined)return T[k];let t=null,ll=null;
+    try{ll=map.containerPointToLatLng([i*g+g/2,j*g+g/2]);t=fineTerrain(ll.lat,ll.lng);}catch(e){}
+    if(!t&&ll){const d=drawDemFull(ll.lat,ll.lng);if(d)t={elev:d.elev,slope:d.slope,aspect:d.aspectDeg};}
+    return T[k]=t&&t.elev!=null?{t,ll}:null;};
+  const si=Math.min(cols-1,Math.floor(p[0]/g)),sj=Math.min(rows-1,Math.floor(p[1]/g)),s=at(si,sj);
+  if(!s){toast('Hier kenne ich das Gelände nicht – mal stattdessen','err');return;}
+  const B=drawBounds.length?drawBounds[drawBounds.length-1]:null,side=B?s.t.elev>=B.elev:null;
+  const flat=s.t.slope<10,dz=B?450:DRAW_FILL_DZ;
+  const ok=c=>{if(!c)return false;const t=c.t;if(Math.abs(t.elev-s.t.elev)>dz)return false;
+    if(B&&(t.elev>=B.elev)!==side)return false;
+    if(flat)return t.slope<14;
+    if(t.slope<8||t.aspect==null)return false;
+    let d=Math.abs(t.aspect-s.t.aspect)%360;if(d>180)d=360-d;return d<=DRAW_FILL_ASP;};
+  const seen=new Uint8Array(cols*rows),acc=[],q=[si,sj];seen[sj*cols+si]=1;
+  while(q.length&&acc.length<DRAW_FILL_MAX){const j=q.pop(),i=q.pop(),c=at(i,j);
+    if(!(i===si&&j===sj)&&!ok(c))continue;acc.push([i,j,c?c.ll:null]);
+    [[1,0],[-1,0],[0,1],[0,-1]].forEach(([di,dj])=>{const ni=i+di,nj=j+dj;
+      if(ni<0||nj<0||ni>=cols||nj>=rows||seen[nj*cols+ni])return;seen[nj*cols+ni]=1;q.push(ni,nj);});}
+  if(acc.length<4){toast('Zu klein zum Füllen – mal die Stelle lieber','err');return;}
+  drawPushHistory();
+  const octx=drawZoneCanvas.getContext('2d'),sc=drawOScale(),r=g*0.78*sc;
+  octx.globalCompositeOperation='source-over';octx.fillStyle=drawPenStyle(octx);octx.beginPath();
+  acc.forEach(a=>{const o=drawC2O(a[0]*g+g/2,a[1]*g+g/2);octx.moveTo(o[0]+r,o[1]);octx.arc(o[0],o[1],r,0,6.2832);});
+  octx.fill();drawZoneUsed.add(drawPen.id);
+  const step=Math.max(1,Math.floor(acc.length/300)),cm=drawDepthCm();
+  for(let k=0;k<acc.length;k+=step){const ll=acc[k][2];if(ll)drawRecordSample(drawPen.id,ll.lat,ll.lng,cm);}
+  drawRepaint();drawSumUpdate();try{haptic(10);}catch(e){}}
+// ── A height boundary: a stroke across the slope; fills keep to one side ──
+function drawStrokeEnd(){
+  if(drawTool==='bound'){const pts=_drawBoundCur;_drawBoundCur=null;
+    if(!pts||pts.length<2){drawRepaint();return;}
+    const el=pts.map(routeElevAt).filter(v=>v!=null).sort((a,b)=>a-b);
+    if(!el.length){toast('Hier kenne ich die Höhe nicht','err');drawRepaint();return;}
+    const e=Math.round(el[Math.floor(el.length/2)]/10)*10;drawBounds.push({pts,elev:e});
+    drawToolPick('fill',true);drawHintShow('Grenze bei '+e+' m – jetzt oberhalb und unterhalb auf den Hang tippen');}
+  drawRepaint();drawSumUpdate();}
+function drawPaintBound(ctx,b){let pts;try{pts=b.pts.map(ll=>map.latLngToContainerPoint(ll));}catch(e){return;}
+  if(pts.length<2)return;ctx.save();ctx.globalAlpha=1;ctx.lineCap='round';ctx.lineJoin='round';ctx.setLineDash([10,7]);
+  ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y));
+  ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=6;ctx.stroke();ctx.strokeStyle='#1f2937';ctx.lineWidth=2.4;ctx.stroke();ctx.setLineDash([]);
+  if(b.elev!=null){const q=pts[pts.length-1],t=b.elev+' m';ctx.font='800 12px Helvetica Neue,Helvetica,Arial,sans-serif';
+    const w=ctx.measureText(t).width+14;ctx.fillStyle='#1f2937';
+    if(ctx.roundRect){ctx.beginPath();ctx.roundRect(q.x+6,q.y-11,w,22,8);ctx.fill();}else ctx.fillRect(q.x+6,q.y-11,w,22);
+    ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(t,q.x+13,q.y);}
+  ctx.restore();}
+// ── Along a recorded track: the finger slides along it, the section takes the kind ──
+function drawTrkLL(){if(!trkShown)return null;const out=[];
+  const add=l=>{const a=l.getLatLngs?l.getLatLngs():[];(Array.isArray(a[0])?a.flat():a).forEach(x=>out.push(x));};
+  try{if(trkShown.eachLayer)trkShown.eachLayer(add);else add(trkShown);}catch(e){}
+  return out.length>1?out:null;}
+function drawTrkPaintAt(p){const pts=_drawTrkPts||(_drawTrkPts=drawTrkLL());if(!pts)return;
+  let bi=-1,bd=38*38;
+  for(let i=0;i<pts.length;i++){const q=map.latLngToContainerPoint(pts[i]),d=(q.x-p[0])*(q.x-p[0])+(q.y-p[1])*(q.y-p[1]);if(d<bd){bd=d;bi=i;}}
+  if(bi<0)return;
+  const a=_drawTrkLast==null?bi:_drawTrkLast,lo=Math.min(a,bi),hi=Math.max(a,bi),cm=drawDepthCm();
+  drawBrushEff=Math.max(20,drawBrushSize*0.8);
+  for(let i=lo;i<=hi;i++){const A=map.latLngToContainerPoint(pts[Math.max(lo,i-1)]),Bp=map.latLngToContainerPoint(pts[i]);
+    drawCommitSeg(drawC2O(A.x,A.y),drawC2O(Bp.x,Bp.y));drawRecordSample(drawPen.id,pts[i].lat,pts[i].lng,cm);}
+  _drawTrkLast=bi;}
+// ── What the drawing says, live, in one line per kind ──
+function drawSumUpdate(){const el=document.getElementById('drawSum');if(!el)return;
+  let zs=[];try{zs=drawComputeZones();}catch(e){}
+  const parts=zs.slice(0,3).map(z=>{const t=DRAW_TYPES.find(x=>x.pen===z.type),p=DRAW_PENS[z.type]||{},m=Object.assign({},t?drawTypeMeta(t):{l:p.label||z.type,c:p.color||'#999'});
+    if(z.type==='powder'&&z.cm!=null)m.c='rgb('+drawPowCol(z.cm).join(',')+')';   // the colour it is painted in
+    const bits=[];if(z.cm!=null)bits.push(drawCmBand(z.cm));
+    if(z.elevMin!=null&&z.elevMax!=null)bits.push(z.elevMin===z.elevMax?z.elevMin+' m':z.elevMin+'–'+z.elevMax+' m');
+    const a=asp8(z.aspectDeg);if(a&&z.aspectConc>0.35)bits.push(a);
+    return '<span><i style="background:'+m.c+'"></i><b>'+escapeHtml(m.l.replace(/ \(.*\)$/,''))+'</b>'+(bits.length?' '+escapeHtml(bits.join(' · ')):'')+'</span>';});
+  if(zs.length>3)parts.push('<em>+'+(zs.length-3)+'</em>');
+  drawRoutes.length&&parts.push('<span><b>'+escapeHtml([...new Set(drawRoutes.map(routeSummary))].join(', '))+'</b></span>');
+  if(drawTracks.length)parts.push('<span><b>Verspurt</b></span>');
+  let tour='';try{if(zs.length&&tourList().length){const c=drawZonesCentre(zs,null),o=c&&tourNearPoint(c.lat,c.lng,600,1)[0];if(o)tour=o.t.name||'';}}catch(e){}
+  if(rptTourLock&&rptTourSel)tour=rptTourSel.name;
+  el.innerHTML=parts.length?parts.join('')+(tour?'<span class="dsum-tour">Tour '+escapeHtml(tour)+'</span>':'')
+    :'<span class="dsum-empty">'+(drawTool==='trackpaint'?'Fahr mit dem Finger der Spur entlang':'Tippe auf einen Hang oder male eine Zone')+'</span>';}
+// ── Post straight from the bar: tour and summit found by themselves ──
+async function drawQuickPost(){
+  if(!drawHasContent()){toast('Tippe zuerst auf einen Hang oder male eine Zone.','err');return;}
+  if(sb&&!sbUser){authShow();return;}
+  const btn=document.getElementById('drawPostBtn');btn.disabled=true;btn.textContent='Postet…';
+  try{drawFinNames=drawSummary();
+    try{const vb=drawViewBounds();drawFinBnds=[[vb.getSouth(),vb.getWest()],[vb.getNorth(),vb.getEast()]];const cc=vb.getCenter();drawFinCen={lat:cc.lat,lng:cc.lng};}catch(e){drawFinCen={lat:46.8,lng:8.2};drawFinBnds=null;}
+    try{drawFinCen=drawZonesCentre(drawComputeZones(),drawFinCen);}catch(e){}
+    try{drawFinPeak=nearestPeak(drawFinCen.lat,drawFinCen.lng)||null;}catch(e){drawFinPeak=null;}
+    if(!(rptTourLock&&rptTourSel)){try{await toursEnsure();const o=tourNearPoint(drawFinCen.lat,drawFinCen.lng,600,1)[0];
+      rptTourSel=o?{id:String(o.t.id),name:o.t.name||'Skitour',auto:true}:null;}catch(e){}}
+    drawPaintData=drawPaintingPNG();drawSnapData=null;
+    try{drawSnapData=await drawMapSnapshot();}catch(e){}
+    await drawPublish(btn,null);
+  }finally{btn.disabled=false;btn.textContent='Posten';}}
 let drawPhotoFile=null,drawSnapData=null,drawPaintData=null,drawFinCen=null,drawFinBnds=null,drawFinNames=null,drawFinPeak=null;
 function drawPaintingPNG(){try{drawRepaint(1);const png=document.getElementById('drawCanvas').toDataURL('image/png');drawRepaint();return png;}catch(e){return null;}}
 // Composite the map behind the drawing. Base tiles are re-loaded through fresh
@@ -19886,16 +20175,16 @@ async function drawOpenFinish(){
   drawFinNames=drawSummary();
   try{const vb=drawViewBounds();drawFinBnds=[[vb.getSouth(),vb.getWest()],[vb.getNorth(),vb.getEast()]];const cc=vb.getCenter();drawFinCen={lat:cc.lat,lng:cc.lng};}catch(e){drawFinCen={lat:46.8,lng:8.2};drawFinBnds=null;}
   try{drawFinCen=drawZonesCentre(drawComputeZones(),drawFinCen);}catch(e){}
-  drawPhotoFile=null;
   drawPaintData=drawPaintingPNG();drawSnapData=null;
   const img=document.getElementById('drawSnapImg');if(img)img.src=drawPaintData||'';
-  const pv=document.getElementById('drawPhotoPrev');if(pv){pv.style.display='none';pv.src='';}
+  const pv=document.getElementById('drawPhotoPrev');
+  if(pv){if(drawPhotoFile){try{pv.src=URL.createObjectURL(drawPhotoFile);}catch(e){}pv.style.display='block';}else{pv.style.display='none';pv.src='';}}
   drawFinPeak=null;const ta=document.getElementById('drawCaption');
   if(ta){ta.value='';const op=ta.getAttribute('placeholder');
     try{const pk=nearestPeak(drawFinCen.lat,drawFinCen.lng);if(pk){drawFinPeak=pk;ta.value=pk+' — ';}}catch(e){}
     const auto=ta.value;ta.setAttribute('placeholder','Berg wird von der Karte erkannt …');
     ocrPeakFromMap().then(nm=>{try{ta.setAttribute('placeholder',op||'');if(nm&&(ta.value===auto||ta.value==='')){ta.value=nm+' — ';drawFinPeak=nm;}}catch(e){}}).catch(()=>{try{ta.setAttribute('placeholder',op||'');}catch(e){}});}
-  const pb=document.getElementById('drawPhotoBtn');if(pb)pb.style.display='';
+  const pb=document.getElementById('drawPhotoBtn');if(pb)pb.style.display=drawPhotoFile?'none':'';
   tourPickReset();
   toursEnsure().then(()=>tourPickRender('drawTourPick',drawFinCen.lat,drawFinCen.lng)).catch(()=>{});
   document.getElementById('drawFinish').style.display='flex';
@@ -19905,9 +20194,12 @@ async function drawOpenFinish(){
 function drawFinishClose(){document.getElementById('drawFinish').style.display='none';}
 function drawPhotoPick(inp){if(!inp.files||!inp.files[0])return;drawPhotoFile=inp.files[0];inp.value='';
   const pv=document.getElementById('drawPhotoPrev');if(pv){try{pv.src=URL.createObjectURL(drawPhotoFile);}catch(e){}pv.style.display='block';}
-  const pb=document.getElementById('drawPhotoBtn');if(pb)pb.style.display='none';try{haptic(6);}catch(e){}}
-async function drawPublish(){
-  const cap=(document.getElementById('drawCaption').value||'').trim()||null;
+  const pb=document.getElementById('drawPhotoBtn');if(pb)pb.style.display='none';
+  const cb=document.getElementById('drawCamBtn');if(cb){cb.classList.add('has');try{cb.style.backgroundImage='url('+JSON.stringify(URL.createObjectURL(drawPhotoFile))+')';}catch(e){}}
+  try{haptic(6);}catch(e){}}
+async function drawPublish(barBtn,barCap){
+  const fromBar=!!barBtn;
+  const cap=fromBar?(barCap||null):((document.getElementById('drawCaption').value||'').trim()||null);
   const names=drawFinNames||drawSummary(),cen=drawFinCen||{lat:46.8,lng:8.2};
   const zns=drawComputeZones();const zlabel=drawZoneLabel(zns)||names.join(', ');
   const cd={draw:true,bounds:drawFinBnds,types:names,measurement:zlabel,snapshot:drawSnapData||null,drawImage:drawPaintData||null,zones:zns,peak:drawFinPeak||null};
@@ -19924,7 +20216,7 @@ async function drawPublish(){
     loadReportMarkers();drawFinishClose();drawClearSilent();drawClose();toast('Schnee-Karte gespeichert (nur lokal).','ok');return;
   }
   if(!sbUser){authShow();return;}
-  const btn=document.getElementById('drawPublishBtn');btn.disabled=true;btn.textContent='Postet…';
+  const btn=barBtn||document.getElementById('drawPublishBtn');btn.disabled=true;btn.textContent='Postet…';
   try{
     async function up(src,ext,ct){try{const blob=typeof src==='string'?await (await fetch(src)).blob():src;
       const path=sbUser.id+'/draw'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.'+ext;
@@ -19943,7 +20235,7 @@ async function drawPublish(){
     const{error}=await sb.from('reports').insert(row);if(error)throw error;
     toast('Schnee-Karte gepostet — danke!','ok');try{haptic(12);}catch(e){}drawFinishClose();drawClearSilent();drawClose();loadDbReports();
   }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e),'err');}
-  btn.disabled=false;btn.textContent='Veröffentlichen';
+  btn.disabled=false;btn.textContent=fromBar?'Posten':'Veröffentlichen';
 }
 function obsStart(type){obsState=obsNewState(type);obsOpenCards=new Set();
   if(obsDeviceFix){obsApplyLoc(obsDeviceFix.lat,obsDeviceFix.lon,'device');}

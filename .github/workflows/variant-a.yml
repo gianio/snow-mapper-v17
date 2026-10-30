@@ -65,7 +65,7 @@ env:
 
 jobs:
   run:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     # Generous on purpose: the per-point SNOWPACK cost is the one number that
     # was never measured, and a timeout that kills the run teaches nothing.
     # The job limit is 6 h; this leaves room to find out.
@@ -88,7 +88,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: snowpack-build/install
-          key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
+          key: snowpack-${{ runner.os }}${{ runner.arch != 'X64' && format('-{0}', runner.arch) || '' }}-${{ env.SNOWPACK_REF }}-v1
 
       - name: Build MeteoIO + SNOWPACK
         if: steps.spcache.outputs.cache-hit != 'true'
@@ -113,7 +113,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: snowpack-build/install
-          key: snowpack-${{ runner.os }}-${{ env.SNOWPACK_REF }}-v1
+          key: snowpack-${{ runner.os }}${{ runner.arch != 'X64' && format('-{0}', runner.arch) || '' }}-${{ env.SNOWPACK_REF }}-v1
 
       - name: Verify the binary
         run: |

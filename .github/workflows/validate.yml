@@ -64,6 +64,8 @@ jobs:
         run: python tools/test_variant_a_forcing.py
       - name: Community reports vs SNOWPACK (offline)
         run: python tools/test_community.py
+      - name: MeteoSwiss cloud fields on the map grid
+        run: python tools/test_ogd_clouds.py
 
       # Upstream shape check. The agent build environment cannot reach
       # aws.slf.ch or data.geo.admin.ch (egress policy, 403 at the proxy), so
