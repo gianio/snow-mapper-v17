@@ -3705,6 +3705,15 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .legal-view iframe[hidden],.legal-body[hidden]{display:none}
  .legal-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 16px calc(28px + env(safe-area-inset-bottom));max-width:680px;width:100%;margin:0 auto}
  .auth-legal{font-size:12px;color:var(--mut);text-align:center;margin:4px 0 0;line-height:1.5}
+ .pro-list{margin:6px 0 14px;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+ .pro-list li{position:relative;padding-left:24px;font:600 14px/1.4 var(--font,inherit);color:var(--fg)}
+ .pro-list li::before{content:"";position:absolute;left:0;top:3px;width:15px;height:15px;border-radius:50%;background:var(--accent,#2F8FDB);-webkit-mask:radial-gradient(circle,#000 62%,transparent 64%)}
+ .pro-list li.on{color:var(--accent,#2F8FDB)}
+ .set-pro:empty{display:none}
+ .set-pro{display:contents}
+ .pro-row{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:14px;background:var(--fill)}
+ .pro-row b{font:800 14px var(--font,inherit);color:var(--fg)}
+ .pro-row span{font:600 12.5px var(--font,inherit);color:var(--mut)}
  .auth-legal a{color:inherit;text-decoration:underline}
  .prof-input{width:100%;box-sizing:border-box;background:var(--ink-050);border:1px solid var(--ink-100);
    border-radius:var(--r-1);min-height:var(--tap);padding:0 var(--sp3);font-family:inherit;font-size:15px;
@@ -6553,6 +6562,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
       <button id="setLock" hidden onclick="lockToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9v1.5M15 9v1.5M12 9v4h-1M9.5 16a3.5 3.5 0 0 0 5 0"/></svg>Mit Face ID anmelden<span class="set-val" id="setLockSt">Aus</span></button>
       <button onclick="_setCameFromProfile=false;setClose();onbOpen(true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z"/></svg>Einführung erneut zeigen</button>
       <button id="setAccount" onclick="_setCameFromProfile=false;setClose();accountTap()">Anmelden</button>
+      <div id="setPro" class="set-pro"></div>
       <button data-dm hidden onclick="_setCameFromProfile=false;setClose();dmOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 4l-1.4 4.1A8.5 8.5 0 0 1 21 11.5z"/></svg>Nachrichten</button>
     </div>
     <span class="lbl-micro">Rechtliches</span>
@@ -9015,6 +9025,7 @@ function ovBuild(k){
 }
 function ovToggle(k,auto){
   if(!ovAvailable(k))return;
+  if(k==='variantA'&&!auto&&!ovOn[k]&&!isPro()){proSheet('ski');return;}
   const l=ovBuild(k);if(!l)return;
   ovOn[k]=!ovOn[k];
   if(k==='skitourVec'&&!auto){try{localStorage.setItem('ssm_tours',ovOn[k]?'1':'0');}catch(e){}}
@@ -15399,6 +15410,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape')rvClose();});
 setTimeout(rvSync,0);
 function setOpen(fromProfile){
   const sh=document.getElementById('setSheet');if(!sh)return;
+  try{proRowRender();}catch(e){}
   const pm=document.getElementById('profModal');
   _setCameFromProfile=!!fromProfile&&!!pm&&pm.style.display!=='none';
   if(_setCameFromProfile)pm.style.display='none';
@@ -18042,7 +18054,8 @@ function contactMissing(){const m=(sbUser&&sbUser.user_metadata)||{};return !!sb
 // code to the number, then verifyOtp). Needs an SMS provider in Supabase
 // (Authentication › Providers › Phone, e.g. Twilio Verify); until that is
 // set up the request fails and the app says so instead of blocking anyone.
-function phoneUnverified(){const m=(sbUser&&sbUser.user_metadata)||{};if(!sbUser||!m.phone)return false;
+const SMS_VERIFY=false;   // on once an SMS provider is set up in Supabase (docs: Twilio / Send SMS hook)
+function phoneUnverified(){if(!SMS_VERIFY)return false;const m=(sbUser&&sbUser.user_metadata)||{};if(!sbUser||!m.phone)return false;
   const want=String(m.phone).replace(/\D/g,''),have=String(sbUser.phone||'').replace(/\D/g,'');
   return !(sbUser.phone_confirmed_at&&want===have);}
 function smsLater(){try{return !!sessionStorage.getItem('ssm_sms_later');}catch(e){return false;}}
@@ -18140,6 +18153,62 @@ function invCohortShow(id,co){const el=document.getElementById(id);if(!el)return
 (function(){try{const u=new URL(location.href),c=u.searchParams.get('code');
   if(c){localStorage.setItem('ssm_invite',c.trim().toUpperCase());u.searchParams.delete('code');history.replaceState(null,'',u.toString());}}catch(e){}})();
 function invPending(){try{return localStorage.getItem('ssm_invite')||'';}catch(e){return '';}}
+// ── Snowmapper Pro ──────────────────────────────────────────────────────
+// pro_state() (supabase/migrations/20261101000000_entitlements.sql) says
+// whether this person has Pro (a purchase, a gift, an invite code while the
+// test phase runs, the owner) and whether the paywall is on at all. With the
+// paywall off -- the default -- every gate below just opens. Purchases: Stripe
+// Checkout on the web (edge function stripe-checkout); the iOS app will use
+// Apple's in-app purchase (docs/paywall.md).
+let proS={pro:false,paywall:'off'};
+try{const c=JSON.parse(localStorage.getItem('ssm_pro')||'null');if(c)proS=c;}catch(e){}
+const PRO_PRICES={season:'CHF 29 / Saison',month:'CHF 4 / Monat'};
+const PRO_FEATURES={ski:'Skiqualität (SNOWPACK) mit 5-Tage-Vorschau',push:'Neuschnee-Push für deine Favoriten',offline:'Kartenausschnitte offline speichern',tours:'Powder-Score für alle Touren'};
+function isPro(){return proS.paywall!=='on'||!!proS.pro;}
+function proNative(){try{return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());}catch(e){return false;}}
+async function proLoad(){if(!sb)return;
+  try{const{data,error}=await sb.rpc('pro_state');if(!error&&data){proS=data;try{localStorage.setItem('ssm_pro',JSON.stringify(proS));}catch(e){}}}catch(e){}
+  try{proRowRender();}catch(e){}
+  // paywall on and no Pro: the Skiqualität layer goes off (it is a Pro layer)
+  try{if(!isPro()&&ovOn.variantA)ovToggle('variantA',true);}catch(e){}}
+function proGate(feature,fn){if(isPro())return fn();proSheet(feature);}
+function proSheet(feature){if(document.getElementById('proAsk'))return;
+  const d=document.createElement('div');d.id='proAsk';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='5002';
+  d.onclick=e=>{if(e.target===d)d.remove();};
+  const feats=Object.keys(PRO_FEATURES).map(k=>'<li'+(k===feature?' class="on"':'')+'>'+escapeHtml(PRO_FEATURES[k])+'</li>').join('');
+  const buy=proNative()
+    ?'<p class="auth-note" style="text-align:center">Pro ist in der App bald erhältlich.</p>'
+    :'<button class="auth-btn primary" onclick="proBuy(\'season\')">Saisonpass · '+PRO_PRICES.season+'</button>'
+      +'<button class="auth-btn" style="margin-top:8px" onclick="proBuy(\'month\')">Monatlich · '+PRO_PRICES.month+'</button>';
+  d.innerHTML='<div class="auth-modal pro-modal" role="dialog" aria-modal="true" aria-labelledby="proT"><h2 id="proT">Snowmapper Pro</h2>'
+    +'<p class="auth-sub">'+(feature&&PRO_FEATURES[feature]?escapeHtml(PRO_FEATURES[feature])+' gehört zu Pro.':'Mehr Schnee-Wissen für deine Touren.')+'</p>'
+    +'<ul class="pro-list">'+feats+'</ul>'+buy
+    +'<div class="auth-err" id="proErr" role="alert" aria-live="polite"></div>'
+    +'<p class="auth-legal">Mit Einladungscode (Family &amp; Friends, Tester) ist Pro in der Testphase gratis. Es gelten die <a href="#" onclick="legalOpen(\'agb\');return false">Nutzungsbedingungen</a>.</p>'
+    +'<div class="auth-switch"><button onclick="document.getElementById(\'proAsk\').remove()">Später</button></div></div>';
+  document.body.appendChild(d);}
+async function proBuy(product){if(!sb||!sbUser){const a=document.getElementById('proAsk');if(a)a.remove();authShow();return;}
+  const er=document.getElementById('proErr');if(er)er.textContent='Einen Moment…';
+  try{const{data,error}=await sb.functions.invoke('stripe-checkout',{body:{product}});
+    if(error||!data||!data.url)throw new Error((data&&data.error)||(error&&error.message)||'');
+    location.href=data.url;}
+  catch(e){if(er)er.textContent=/not configured|503|Failed to send/i.test(e.message||'')?'Die Bezahlung ist noch nicht eingerichtet – bald.':'Ging nicht: '+(e.message||e);}}
+// back from Stripe: the webhook unlocks within seconds
+(function(){try{const u=new URL(location.href),r=u.searchParams.get('pro');if(!r)return;
+  u.searchParams.delete('pro');history.replaceState(null,'',u.toString());
+  if(r==='ok'){setTimeout(()=>toast('Danke! Pro wird freigeschaltet …','ok'),1200);[4000,10000,20000].forEach(ms=>setTimeout(proLoad,ms));}}catch(e){}})();
+function proRowRender(){const el=document.getElementById('setPro');if(!el)return;
+  if(!sbUser){el.innerHTML='';return;}
+  const until=proS.until?new Date(proS.until).toLocaleDateString('de-CH'):'';
+  const src={tester:'Testphase (Einladungscode)',admin:'Team',stripe:proS.product==='month'?'Monatsabo':'Saisonpass',apple:'App Store',gift:'Geschenkt'}[proS.source]||'';
+  el.innerHTML=(proS.pro
+      ?'<div class="pro-row on"><b>Pro aktiv</b><span>'+escapeHtml(src)+(until?' · bis '+until:'')+'</span></div>'
+      :'<button onclick="proSheet()">'+(proS.paywall==='on'?'Snowmapper Pro holen':'Snowmapper Pro (bald)')+'</button>')
+    +(myRole==='admin'?'<button onclick="proPaywallToggle()">Paywall: <b>'+(proS.paywall==='on'?'an':'aus')+'</b> – umschalten</button>':'');}
+async function proPaywallToggle(){const m=proS.paywall==='on'?'off':'on';
+  if(m==='on'&&!confirm('Paywall einschalten? Wer kein Pro hat (und keinen Einladungscode), sieht dann bei Skiqualität, Neuschnee-Push und Offline das Pro-Angebot.'))return;
+  try{const{error}=await sb.rpc('paywall_set',{mode:m});if(error)throw error;await proLoad();toast('Paywall '+(m==='on'?'eingeschaltet':'ausgeschaltet'),'ok');}
+  catch(e){toast('Ging nicht: '+(e.message||e),'err');}}
 async function invLoad(){if(!sb)return;
   try{const{data,error}=await sb.from('app_settings').select('value').eq('key','access').maybeSingle();
     if(!error){invAccess=(data&&data.value)||'open';try{localStorage.setItem('ssm_access',invAccess);}catch(e){}}}catch(e){}
@@ -18148,6 +18217,7 @@ async function invLoad(){if(!sb)return;
       if(!error&&data){myCohort=data.cohort||null;myRole=data.role||null;COHORT_OF[sbUser.id]=myCohort;}}catch(e){}
     const p=invPending();if(p&&!myCohort)await invRedeem(p,true);}
   _invReady=true;invGateSync();invCohortShow('profCoh',myCohort);
+  proLoad();
   const b=document.getElementById('setInvBtn');if(b)b.hidden=myRole!=='admin';}
 async function invRedeem(code,auto){code=String(code||'').trim().toUpperCase();if(!code)return false;
   if(!sb||!sbUser){try{localStorage.setItem('ssm_invite',code);}catch(e){}authShow();return false;}
@@ -18561,7 +18631,7 @@ async function favNudge(){
   toast((await favPushState())?'Gemerkt – Push, sobald 20 cm Neuschnee erwartet werden'
     :'Gemerkt. Für den Neuschnee-Push: Einstellungen → Favoriten → Push einschalten','ok');}
 // the same steps as the profile's switch, from the favourites list
-async function favPushOn(){
+async function favPushOn(){if(!isPro()){proSheet('push');return;}
   if(!sb||!sbUser){authShow();return;}
   if(pushIosNeedsHome()){alert('Auf dem iPhone kommen Benachrichtigungen nur in der App auf dem Home-Bildschirm: im Safari «Teilen» → «Zum Home-Bildschirm», dann dort einschalten (ab iOS 16.4).');return;}
   if(!pushSupported()){alert('Dieser Browser kann keine Benachrichtigungen empfangen.');return;}
@@ -18877,7 +18947,7 @@ async function offlineVaUrls(){const out=[];
   for(let i=i0;i<Math.min(ts.length,i0+25);i++)out.push(vaV(VA_BASE+'/'+vaPk.file.replace('{tag}',vaMan.tags[i])));
   return out;}
 let _offBusy=false;
-async function offlineSave(){
+async function offlineSave(){if(!isPro()){proSheet('offline');return;}
   if(_offBusy)return;
   if(!('caches' in window)){toast('Dieser Browser kann nichts offline speichern','err');return;}
   if(navigator.onLine===false){toast('Zum Speichern braucht es Netz','err');return;}
