@@ -1670,6 +1670,15 @@ def _write_legal_pages(out_dir: Path) -> None:
     src = Path(__file__).resolve().parent.parent / "legal"
     for f in sorted(src.glob("*.html")) + sorted(src.glob("*.css")):
         (out_dir / f.name).write_bytes(f.read_bytes())
+    # source logos for «Datenquellen & Lizenzen»: logos/<id>.svg|png and an
+    # index the app reads (an empty index keeps the coloured monograms)
+    logos, found = src / "logos", {}
+    (out_dir / "logos").mkdir(exist_ok=True)
+    for f in sorted(logos.glob("*")) if logos.is_dir() else []:
+        if f.suffix.lower() in (".svg", ".png", ".webp") and f.stem not in found:
+            (out_dir / "logos" / f.name).write_bytes(f.read_bytes())
+            found[f.stem] = f.name
+    (out_dir / "logos" / "index.json").write_text(json.dumps(found), encoding="utf-8")
 
 
 _SERVICE_WORKER = r"""// Snowmapper — service worker (installable + offline last-data).
@@ -3667,7 +3676,12 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .prof-back{border:none;background:none;color:var(--fg2);font-size:14px;font-weight:750;font-family:inherit;cursor:pointer;padding:8px 0 2px;margin-left:-2px;display:block}
  .prof-hint{font-size:12px;color:var(--mut);margin-top:12px;line-height:1.55}
  .src-list{background:var(--card);border-radius:16px;padding:0 14px;box-shadow:0 1px 2px rgba(18,21,26,.05)}
- .src-it{padding:11px 0;border-bottom:1px solid var(--hair)}
+ .src-it{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--hair)}
+ .src-tx{flex:1;min-width:0}
+ .src-lg{flex:none;width:38px;height:38px;margin-top:1px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+   background:var(--lc);color:#fff;font:800 11.5px/1 Helvetica Neue,Helvetica,Arial,sans-serif;letter-spacing:-.01em;overflow:hidden}
+ .src-lg.img{background:#fff;box-shadow:inset 0 0 0 1px var(--hair)}
+ .src-lg img{max-width:30px;max-height:30px;object-fit:contain}
  .src-it:last-child{border-bottom:0}
  .src-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:14px;color:var(--fg)}
  .src-h a{flex:none;font-size:12px;font-weight:700;color:var(--accent,var(--fg2));text-decoration:none}
@@ -4635,6 +4649,13 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .pv-btns button{flex:1;height:36px;border-radius:10px;border:0;background:var(--fill);color:var(--fg);font:700 13px Helvetica Neue,Helvetica,Arial,sans-serif;cursor:pointer}
  .pv-btns button.pri{background:var(--accent);color:#fff}
  .pv-btns .pv-more{flex:0 0 40px;font-size:18px}
+ .pv-btns .pv-more-wrap{flex:0 0 40px}
+ .pv-btns .pv-more-wrap .pv-more{width:100%}
+ .pv-btns .pv-more-wrap .fc-menu{left:auto;right:0;transform:translateY(6px)}
+ .pv-btns .pv-more-wrap.open .fc-menu{transform:none}
+ .pv-btns .fc-menu button{flex:none!important;height:auto!important;background:none!important;overflow:visible;padding:9px 10px!important;font:600 14px var(--font,inherit)!important}
+ .pv-btns .fc-menu button:hover{background:var(--fill)!important}
+ .pv-btns .fc-menu .del-btn,.pv-btns .fc-menu .del-btn span{color:#e5484d!important}
  .pv-hls{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 12px;scrollbar-width:none}
  .pv-hls::-webkit-scrollbar{display:none}
  .pv-hl{flex:0 0 68px;display:flex;flex-direction:column;align-items:center;gap:5px;border:0;background:none;cursor:pointer;padding:0}
@@ -12539,7 +12560,9 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
         +'<button class="pv-ic" aria-label="Teilen" title="Teilen" onclick="pvShare(\''+S.uid+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>'
       :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
         +'<button data-dm onclick="userViewClose();dmWith(\''+S.uid+'\',document.getElementById(\'uvName\').textContent)">Nachricht</button>'
-        +'<button class="pv-more" onclick="uvReportUser()" aria-label="Nutzer melden">⋯</button>')+'</div>'
+        +'<span class="fc-more-wrap pv-more-wrap"><button class="pv-more" onclick="fcMore(this,event)" aria-label="Mehr" aria-haspopup="menu">⋯</button>'
+        +'<span class="fc-menu" role="menu"><button role="menuitem" onclick="uvReportUser()">'+'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/></svg>'+'Melden</button>'
+        +'<button role="menuitem" class="del-btn" onclick="uvBlockToggle()">'+'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg>'+'<span>'+(myBlocked.has(S.uid)?'Blockierung aufheben':'Blockieren')+'</span></button></span></span>')+'</div>'
     +(()=>{const L=trustLevel(S.trust);return '<button class="pv-trust tr-l'+L.i+'" onclick="trustInfo('+L.n+')"><span class="pv-tr-ic">'+trustIco(L.i,24,'#fff')+'</span>'
       +'<span class="pv-tr-t"><b>'+escapeHtml(L.name)+'</b><small>'+escapeHtml(L.sub)+'</small></span><span class="pv-tr-q">›</span></button>';})()
     +'<div class="pv-week"><div class="pv-wk-h"><b>Diese Woche</b><span>12 Wochen</span></div>'
@@ -17444,6 +17467,7 @@ async function loadSocial(){
     if(sbUser){
       const{data:f}=await sb.from('follows').select('following_id').eq('follower_id',sbUser.id);
       myFollowing=new Set((f||[]).map(x=>x.following_id));
+      blocksLoad();
       // people who follow you back make "friends" (Snowps)
       try{const{data:g}=await sb.from('follows').select('follower_id').eq('following_id',sbUser.id);
         myFollowers=new Set((g||[]).map(x=>x.follower_id));}catch(e){}
@@ -17488,8 +17512,10 @@ async function loadDbReports(opts){
   try{
     let q=sb.from('reports').select('*').order('created_at',{ascending:false});
     q=opts.uid?q.eq('user_id',opts.uid).limit(90):q.limit(60);
-    const{data}=await q;
-    if(!data||!data.length){return;}
+    const{data:raw}=await q;
+    // blocked people stay out of the map, the feed and the heat layers
+    const data=(raw||[]).filter(r=>!isBlocked(r.user_id));
+    if(!data.length){return;}
     const feedSeenAt=+(localStorage.getItem('ssm_feed_seen')||0);
     if(!opts.uid)try{dbQpr=data.filter(r=>r.condition_data&&r.condition_data.quick).map(r=>{const ll=parseGeo(r.location);const cd=r.condition_data;
         return ll?[ll[0],ll[1],+cd.powderAmountCm||0,+cd.powderQuality||0]:null;}).filter(Boolean);
@@ -18799,33 +18825,39 @@ function profShowLegal(){profClose();const el=document.getElementById('disc');if
 // OVERLAYS[].attr). [name, what for, licence / credit, link]
 const SRC_GROUPS=[
   ['Karten & Gelände',[
-    ['swisstopo','Landeskarte Winter, Hangneigung ab 30°, Skitourenrouten, Ortssuche, Höhenmodell swissALTIregio','Open Government Data · Quelle: Bundesamt für Landestopografie swisstopo','https://www.swisstopo.admin.ch/de/nutzungsbedingungen-kostenlose-geodaten-und-geodienste'],
-    ['BAFU','Wildruhezonen','Open Government Data · Quelle: Bundesamt für Umwelt BAFU','https://www.geo.admin.ch/de/nutzungsbedingungen'],
-    ['OpenStreetMap','Pisten und Lifte','© OpenStreetMap-Mitwirkende · Open Database License (ODbL)','https://www.openstreetmap.org/copyright'],
-    ['Copernicus DEM (GLO-30)','Gelände für das Schneemodell','© DLR e.V. 2010–2014 und © Airbus Defence and Space GmbH 2014–2018, bereitgestellt unter COPERNICUS von der Europäischen Union und der ESA','https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM'],
-    ['ESA WorldCover','Wald und Bodenbedeckung für das Schneemodell','© ESA WorldCover project 2021 / enthält veränderte Copernicus-Sentinel-Daten (2021) · CC BY 4.0','https://esa-worldcover.org/'],
-    ['Terrain Tiles (AWS Open Data)','Höhenkacheln auf dem Gerät (Hang antippen, 3D)','Mapzen/Tilezen und Quellen, u. a. EU-DEM (Copernicus), SRTM (NASA/USGS)','https://github.com/tilezen/joerd/blob/master/docs/attribution.md']]],
+    ['swisstopo','st','#d52b1e','swisstopo','Landeskarte Winter, Hangneigung ab 30°, Skitourenrouten, Ortssuche, Höhenmodell swissALTIregio','Open Government Data · Quelle: Bundesamt für Landestopografie swisstopo','https://www.swisstopo.admin.ch/de/nutzungsbedingungen-kostenlose-geodaten-und-geodienste'],
+    ['bafu','BAFU','#4a7a2c','BAFU','Wildruhezonen','Open Government Data · Quelle: Bundesamt für Umwelt BAFU','https://www.geo.admin.ch/de/nutzungsbedingungen'],
+    ['osm','OSM','#7ebc6f','OpenStreetMap','Pisten und Lifte','© OpenStreetMap-Mitwirkende · Open Database License (ODbL)','https://www.openstreetmap.org/copyright'],
+    ['copernicus','C','#0b3d91','Copernicus DEM (GLO-30)','Gelände für das Schneemodell','© DLR e.V. 2010–2014 und © Airbus Defence and Space GmbH 2014–2018, bereitgestellt unter COPERNICUS von der Europäischen Union und der ESA','https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM'],
+    ['worldcover','ESA','#003247','ESA WorldCover','Wald und Bodenbedeckung für das Schneemodell','© ESA WorldCover project 2021 / enthält veränderte Copernicus-Sentinel-Daten (2021) · CC BY 4.0','https://esa-worldcover.org/'],
+    ['terrain','TT','#ff9900','Terrain Tiles (AWS Open Data)','Höhenkacheln auf dem Gerät (Hang antippen, 3D)','Mapzen/Tilezen und Quellen, u. a. EU-DEM (Copernicus), SRTM (NASA/USGS)','https://github.com/tilezen/joerd/blob/master/docs/attribution.md']]],
   ['Wetter & Schnee',[
-    ['MeteoSchweiz','Messstationen, Wettermodell ICON-CH (Bewölkung)','Open Government Data · Quelle: MeteoSchweiz','https://opendata.swiss/de/organization/bundesamt-fur-meteorologie-und-klimatologie-meteoschweiz'],
-    ['Open-Meteo','Wetterprognosen (Temperatur, Wind, Niederschlag) und Archivwetter','Weather data by Open-Meteo.com · CC BY 4.0','https://open-meteo.com/en/license'],
-    ['SLF','Lawinenbulletin, IMIS-Messstationen','WSL-Institut für Schnee- und Lawinenforschung SLF · CC BY 4.0','https://www.slf.ch/'],
-    ['SNOWPACK / MeteoIO','Schneedeckenmodell für die Skiqualität (läuft auf unseren Servern)','SLF · GNU LGPL 3.0','https://www.slf.ch/en/services-and-products/snowpack/']]],
+    ['meteoswiss','MS','#d52b1e','MeteoSchweiz','Messstationen, Wettermodell ICON-CH (Bewölkung)','Open Government Data · Quelle: MeteoSchweiz','https://opendata.swiss/de/organization/bundesamt-fur-meteorologie-und-klimatologie-meteoschweiz'],
+    ['openmeteo','OM','#ff8800','Open-Meteo','Wetterprognosen (Temperatur, Wind, Niederschlag) und Archivwetter','Weather data by Open-Meteo.com · CC BY 4.0','https://open-meteo.com/en/license'],
+    ['slf','SLF','#0067b1','SLF','Lawinenbulletin, IMIS-Messstationen','WSL-Institut für Schnee- und Lawinenforschung SLF · CC BY 4.0','https://www.slf.ch/'],
+    ['snowpack','SP','#3b6ea8','SNOWPACK / MeteoIO','Schneedeckenmodell für die Skiqualität (läuft auf unseren Servern)','SLF · GNU LGPL 3.0','https://www.slf.ch/en/services-and-products/snowpack/']]],
   ['Orte & Webcams',[
-    ['GeoNames','Gipfel- und Ortsnamen der Touren','CC BY 4.0','https://www.geonames.org/'],
-    ['windy.com','Webcams','Bilder © windy.com und die Betreiber der Webcams','https://www.windy.com/webcams']]],
+    ['geonames','GN','#2e7d32','GeoNames','Gipfel- und Ortsnamen der Touren','CC BY 4.0','https://www.geonames.org/'],
+    ['windy','W','#9d0300','windy.com','Webcams','Bilder © windy.com und die Betreiber der Webcams','https://www.windy.com/webcams']]],
   ['Open-Source-Software',[
-    ['Leaflet 1.9.4','Karte','BSD-2-Clause · © Volodymyr Agafonkin, CloudMade','vendor/leaflet/LICENSE.txt'],
-    ['MapLibre GL JS 4.1.2','3D-Ansicht','BSD-3-Clause · © MapLibre contributors, Mapbox','vendor/maplibre/LICENSE.txt'],
-    ['supabase-js 2.118','Konto, Feed, Nachrichten','MIT · © Supabase','vendor/supabase/LICENSE.txt'],
-    ['PMTiles 4.5','Kartenkacheln aus einer Datei','BSD-3-Clause · © Protomaps','https://github.com/protomaps/PMTiles/blob/main/LICENSE'],
-    ['Capacitor','iOS-App','MIT · © Ionic','https://github.com/ionic-team/capacitor/blob/main/LICENSE']]]];
+    ['leaflet','L','#199900','Leaflet 1.9.4','Karte','BSD-2-Clause · © Volodymyr Agafonkin, CloudMade','vendor/leaflet/LICENSE.txt'],
+    ['maplibre','ML','#295daa','MapLibre GL JS 4.1.2','3D-Ansicht','BSD-3-Clause · © MapLibre contributors, Mapbox','vendor/maplibre/LICENSE.txt'],
+    ['supabase','sb','#3ecf8e','supabase-js 2.118','Konto, Feed, Nachrichten','MIT · © Supabase','vendor/supabase/LICENSE.txt'],
+    ['pmtiles','PM','#c2185b','PMTiles 4.5','Kartenkacheln aus einer Datei','BSD-3-Clause · © Protomaps','https://github.com/protomaps/PMTiles/blob/main/LICENSE'],
+    ['capacitor','Ca','#119eff','Capacitor','iOS-App','MIT · © Ionic','https://github.com/ionic-team/capacitor/blob/main/LICENSE']]]];
+let _srcLogos=null;
+function srcLogosLoad(){return _srcLogos||(_srcLogos=fetch('logos/index.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));}
 function srcRender(){const el=document.getElementById('legalBody');if(!el||el.dataset.done)return;
-  const row=([n,u,l,h])=>'<div class="src-it"><div class="src-h"><b>'+n+'</b>'+(h?'<a href="'+h+'" target="_blank" rel="noopener">'+(/^vendor\//.test(h)?'Lizenztext':'Lizenz')+' ↗</a>':'')+'</div>'
-    +'<div class="src-d">'+u+'</div><div class="src-l">'+l+'</div></div>';
+  const row=([id,mono,col,n,u,l,h])=>'<div class="src-it"><span class="src-lg" data-id="'+id+'" style="--lc:'+col+'" aria-hidden="true">'+mono+'</span><div class="src-tx">'
+    +'<div class="src-h"><b>'+n+'</b>'+(h?'<a href="'+h+'" target="_blank" rel="noopener">'+(/^vendor\//.test(h)?'Lizenztext':'Lizenz')+' ↗</a>':'')+'</div>'
+    +'<div class="src-d">'+u+'</div><div class="src-l">'+l+'</div></div></div>';
   el.innerHTML='<div class="prof-hint" style="margin-top:4px">Snowmapper baut auf offenen Daten von Bund, Forschung und Community auf. Danke an alle, die sie bereitstellen.</div>'
     +SRC_GROUPS.map(([t,items])=>'<div class="prof-sec-title">'+t+'</div><div class="src-list">'+items.map(row).join('')+'</div>').join('')
     +'<div class="prof-hint">Fehlt eine Quelle oder ist eine Angabe falsch? Schreib uns über «Feedback senden».</div>';
-  el.dataset.done='1';}
+  el.dataset.done='1';
+  // the logos the build found in legal/logos (logos/index.json: {id: file})
+  srcLogosLoad().then(L=>{el.querySelectorAll('.src-lg').forEach(s=>{const f=L&&L[s.dataset.id];if(!f)return;
+    const im=new Image();im.alt='';im.decoding='async';im.onload=()=>{s.textContent='';s.classList.add('img');s.appendChild(im);};im.src='logos/'+f;});});}
 // Datenschutzerklärung, Nutzungsbedingungen, Impressum: static pages next to
 // the app (legal/ in the repo), shown in a full-screen frame so they open
 // inside the installed app and the iOS shell alike.
@@ -18911,7 +18943,7 @@ async function dmList(){
   body.innerHTML='<div class="dm-empty">Lade…</div>';
   try{
     const{data:th}=await sb.from('dm_threads').select('*').order('last_at',{ascending:false}).limit(50);
-    dmThreads=th||[];
+    dmThreads=(th||[]).filter(t=>!isBlocked(t.user_a===sbUser.id?t.user_b:t.user_a));
     if(!dmThreads.length){body.innerHTML='<div class="dm-empty">Noch keine Nachrichten. Öffne ein Profil und tippe auf das Nachrichten-Symbol.</div>';return;}
     const others=dmThreads.map(t=>t.user_a===sbUser.id?t.user_b:t.user_a);
     const names={};
@@ -18958,6 +18990,7 @@ function dmFilter(q){q=(q||'').trim().toLowerCase();document.querySelectorAll('#
 async function dmWith(uid,name){
   if(!sb||!sbUser){authShow();return;}
   if(uid===sbUser.id)return;
+  if(isBlocked(uid)){toast('Du hast diese Person blockiert. Hebe die Blockierung in ihrem Profil auf, um ihr zu schreiben.','err');return;}
   if(!await dmAvailable()){toast('Nachrichten sind noch nicht eingerichtet.','err');return;}
   document.getElementById('dmModal').style.display='flex';
   document.getElementById('dmBody').innerHTML='<div class="dm-empty">Lade…</div>';
@@ -19051,6 +19084,37 @@ async function uvReportUser(){if(!sb||!sbUser){authShow();return;}if(!uvUid)retu
   const reason=prompt('Warum möchtest du diesen Nutzer melden?');if(reason===null)return;
   try{await sb.from('user_flags').insert({user_id:uvUid,reporter_id:sbUser.id,reason:(reason||'').slice(0,300)});toast('Danke — wir prüfen das.','ok');}
   catch(e){toast('Meldung fehlgeschlagen'+(e.message?': '+e.message:''),'err');}}
+// Blocking (App Store 1.2). The database does the real work once
+// user_blocks exists (supabase/migrations/20261031000000_user_blocks.sql):
+// both sides stop seeing each other's posts and comments, messages and
+// follows end. The app hides the person at once as well, so the block shows
+// before the next reload -- and without the table the menu still hides them
+// on this device.
+let myBlocked=new Set();
+function blocksLocal(){try{return JSON.parse(localStorage.getItem('ssm_blocked')||'[]');}catch(e){return [];}}
+function blocksSaveLocal(){try{localStorage.setItem('ssm_blocked',JSON.stringify([...myBlocked]));}catch(e){}}
+async function blocksLoad(){myBlocked=new Set(blocksLocal());if(!sb||!sbUser)return;
+  try{const{data,error}=await sb.from('user_blocks').select('blocked').eq('blocker',sbUser.id);
+    if(!error){myBlocked=new Set((data||[]).map(x=>x.blocked));blocksSaveLocal();}}catch(e){}}
+function isBlocked(uid){return !!uid&&myBlocked.has(uid);}
+async function uvBlockToggle(){if(!sb||!sbUser){authShow();return;}const uid=uvUid;if(!uid||uid===sbUser.id)return;
+  document.querySelectorAll('.fc-more-wrap.open').forEach(x=>x.classList.remove('open'));
+  const name=(document.getElementById('uvName')||{}).textContent||'diese Person';
+  if(myBlocked.has(uid)){
+    if(!confirm(name+' nicht mehr blockieren?'))return;
+    myBlocked.delete(uid);blocksSaveLocal();
+    try{await sb.from('user_blocks').delete().eq('blocker',sbUser.id).eq('blocked',uid);}catch(e){}
+    toast(name+' ist nicht mehr blockiert.','ok');
+  }else{
+    if(!confirm(name+' blockieren?\n\nIhr seht gegenseitig keine Beiträge und Kommentare mehr und könnt euch keine Nachrichten schreiben. '+name+' erfährt nichts davon. Du kannst das jederzeit rückgängig machen.'))return;
+    myBlocked.add(uid);blocksSaveLocal();myFollowing.delete(uid);myFollowers.delete(uid);
+    try{const{error}=await sb.from('user_blocks').insert({blocker:sbUser.id,blocked:uid});if(error&&!/duplicate/i.test(error.message||''))throw error;}
+    catch(e){console.warn('block',e);}
+    toast(name+' ist blockiert.','ok');
+  }
+  userViewClose();
+  try{feedRender();}catch(e){}
+  try{loadDbReports();}catch(e){}}
 async function uvToggleFollow(){if(!sb||!sbUser){authShow();return;}await toggleFollow(uvUid);
   const fb=document.getElementById('uvFollow');fb.textContent=myFollowing.has(uvUid)?'Folge ich':'Folgen';fb.classList.toggle('following',myFollowing.has(uvUid));}
 // --- Report categories ---
@@ -20613,6 +20677,7 @@ function feedInWindow(r){return true;}
 // yesterday's in the valley over, and a friend's lifts it by about a day
 // or a valley. Distance from your position, else from the map centre.
 function feedRank(list){
+  list=list.filter(r=>!isBlocked(r.user_id));
   let o=null;try{o=myLoc?{lat:myLoc[0],lng:myLoc[1]}:map.getCenter();}catch(e){}
   const now=Date.now();
   return list.map(r=>{
@@ -20973,7 +21038,8 @@ function commentsClose(){document.getElementById('cmtModal').style.display='none
 async function loadComments(id){
   if(!sb){document.getElementById('cmtList').innerHTML='<div class="cmt-empty">Nicht verfügbar.</div>';return;}
   try{
-    const{data}=await sb.from('report_comments').select('*').eq('report_id',id).order('created_at',{ascending:true});
+    const{data:all}=await sb.from('report_comments').select('*').eq('report_id',id).order('created_at',{ascending:true});
+    const data=(all||[]).filter(c=>!isBlocked(c.user_id));
     let names={};const uids=[...new Set((data||[]).map(c=>c.user_id).filter(Boolean))];
     if(uids.length){try{const[{data:pr},co]=await Promise.all([sb.from('profiles').select('id,username,avatar_url').in('id',uids),
         Promise.resolve(sb.from('profiles').select('id,cohort').in('id',uids)).then(r=>(r&&r.data)||[],()=>[])]);
