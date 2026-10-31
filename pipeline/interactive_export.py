@@ -6604,6 +6604,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <div class="auth-row2" id="authNameRow" style="display:none"><input type="text" id="authFirst" placeholder="Vorname" autocomplete="given-name" maxlength="60"/><input type="text" id="authLast" placeholder="Nachname" autocomplete="family-name" maxlength="60"/></div>
 <input type="tel" id="authPhone" placeholder="Telefonnummer (z. B. 079 123 45 67)" autocomplete="tel" inputmode="tel" maxlength="24" style="display:none"/>
 <input type="email" id="authEmail" name="email" placeholder="E-Mail" autocomplete="username email" required/>
+<input type="email" id="authEmail2" placeholder="E-Mail wiederholen" autocomplete="off" autocapitalize="off" spellcheck="false" style="display:none"/>
 <input type="password" id="authPass" placeholder="Passwort" autocomplete="current-password" required minlength="8"/>
 <input type="password" id="authPass2" placeholder="Passwort wiederholen" autocomplete="new-password" minlength="8" style="display:none"/>
 <input type="text" id="authInvite" placeholder="Einladungscode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" style="display:none"/>
@@ -17863,6 +17864,7 @@ function authRender(){
   $('authSub').textContent=isReg?'Erstelle ein Konto für die Community':'Anmelden für Community & Meldungen';
   $('authUser').style.display=isReg?'':'none';
   $('authNameRow').style.display=isReg?'':'none';
+  $('authEmail2').style.display=isReg?'':'none';
   $('authPhone').style.display=isReg?'':'none';
   $('authSubmitBtn').textContent=isReg?'Registrieren':'Anmelden';
   $('authSwitch').innerHTML=isReg?'Schon registriert? <button onclick="authToggle()">Anmelden</button>':'Kein Account? <button onclick="authToggle()">Registrieren</button>';
@@ -17886,6 +17888,9 @@ async function authSubmit(e){
       const username=document.getElementById('authUser').value.trim();
       const pass2=document.getElementById('authPass2').value;
       if(!username){errEl.textContent='Benutzername erforderlich';return;}
+      // a typo in the address means no code and no account: type it twice
+      const email2=document.getElementById('authEmail2').value.trim();
+      if(email2.toLowerCase()!==email.toLowerCase()){errEl.textContent=email2?'Die E-Mail-Adressen stimmen nicht überein.':'Bitte die E-Mail-Adresse wiederholen.';return;}
       if(username.length<3){errEl.textContent='Benutzername: mindestens 3 Zeichen.';return;}
       if(pass.length<8){errEl.textContent='Passwort: mindestens 8 Zeichen.';return;}
       if(pass!==pass2){errEl.textContent='Die Passwörter stimmen nicht überein.';return;}
