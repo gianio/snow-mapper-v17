@@ -3030,6 +3030,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .auth-forgot{display:block;width:100%;margin-top:4px;border:none;background:none;color:var(--mut);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;padding:6px}
  .auth-forgot:hover{color:var(--fg2);text-decoration:underline}
  .auth-modal input[type="text"],.auth-modal input[type="email"],.auth-modal input[type="password"]{width:100%;padding:13px 16px;border:1.5px solid var(--ink-100);border-radius:var(--r);font-size:15px;font-family:inherit;color:var(--fg);background:var(--fill);outline:none;box-sizing:border-box;transition:border-color .15s,box-shadow .15s}
+ .auth-modal input[type="tel"]{width:100%;padding:13px 16px;border:1.5px solid var(--ink-100);border-radius:var(--r);font-size:15px;font-family:inherit;color:var(--fg);background:var(--fill);outline:none;box-sizing:border-box;transition:border-color .15s,box-shadow .15s}
+ .auth-row2{display:flex;gap:8px}
+ .auth-row2 input{flex:1;min-width:0}
  .auth-modal input:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--glow);background:var(--card)}
  .auth-err{color:#d03030;font-size:13px;padding:8px 12px;background:rgba(220,60,60,.06);border-radius:10px;min-height:0}
  .auth-err:empty{display:none}
@@ -6254,6 +6257,13 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .feed-map-chip{position:fixed;z-index:1200;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 62px);display:flex;align-items:center;gap:8px;
    max-width:calc(100vw - 24px);padding:5px 5px 5px 14px;border-radius:999px;background:var(--card);color:var(--fg);box-shadow:0 6px 18px rgba(0,0,0,.18);font:600 13px var(--font);white-space:nowrap}
  .feed-map-chip[hidden],body[data-screen=feed] .feed-map-chip{display:none}
+ #feedHereBtn{position:fixed;z-index:1150;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 62px);display:flex;align-items:center;gap:8px;
+   max-width:calc(100vw - 32px);height:38px;padding:0 14px 0 12px;border:0;border-radius:999px;background:var(--card);color:var(--fg);box-shadow:var(--elev3,0 4px 14px rgba(0,0,0,.18));
+   font:700 13.5px var(--font,inherit);white-space:nowrap;cursor:pointer}
+ #feedHereBtn svg{width:18px;height:18px;flex:none;color:var(--accent-report,var(--fg2))}
+ #feedHereBtn span{overflow:hidden;text-overflow:ellipsis}
+ #feedHereBtn b{font-size:17px;color:var(--mut);margin-left:2px}
+ #feedHereBtn[hidden],body[data-screen=feed] #feedHereBtn,body.feed-map #feedHereBtn,body.draw-on #feedHereBtn,body.tour-open #feedHereBtn,body.ts-open #feedHereBtn{display:none}
  .feed-map-chip span{overflow:hidden;text-overflow:ellipsis}
  .feed-map-chip button{height:30px;padding:0 12px;border-radius:999px;border:0;background:var(--fill);color:var(--fg);font:700 13px var(--font);cursor:pointer}
  .feed-map-chip button.x{width:30px;padding:0;font-size:17px}
@@ -6591,6 +6601,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <p class="auth-note" id="authNote">Karte &amp; Prognosen funktionieren ohne Konto — du brauchst es nur zum Melden, für den Feed und dein Profil.</p>
 <form id="authForm" onsubmit="authSubmit(event)" novalidate>
 <input type="text" id="authUser" placeholder="Benutzername" autocomplete="username" style="display:none"/>
+<div class="auth-row2" id="authNameRow" style="display:none"><input type="text" id="authFirst" placeholder="Vorname" autocomplete="given-name" maxlength="60"/><input type="text" id="authLast" placeholder="Nachname" autocomplete="family-name" maxlength="60"/></div>
+<input type="tel" id="authPhone" placeholder="Telefonnummer (z. B. 079 123 45 67)" autocomplete="tel" inputmode="tel" maxlength="24" style="display:none"/>
 <input type="email" id="authEmail" name="email" placeholder="E-Mail" autocomplete="username email" required/>
 <input type="password" id="authPass" placeholder="Passwort" autocomplete="current-password" required minlength="8"/>
 <input type="password" id="authPass2" placeholder="Passwort wiederholen" autocomplete="new-password" minlength="8" style="display:none"/>
@@ -6837,6 +6849,15 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
         <input class="prof-input" id="profDisplay" maxlength="32" placeholder="Wie du im Feed erscheinst" oninput="profDirty()"/>
         <label class="prof-lbl">Über dich <span class="prof-cnt" id="profBioCnt">0/200</span></label>
         <textarea class="prof-bio" id="profBio" maxlength="1400" placeholder="Kurze Beschreibung (max. 200 Wörter, keine Links)…" oninput="profBioInput()"></textarea>
+
+        <div class="prof-sec-title">Persönliche Angaben (privat)</div>
+        <label class="prof-lbl">Vorname</label>
+        <input class="prof-input" id="profFirst" maxlength="60" autocomplete="given-name" oninput="profDirty()"/>
+        <label class="prof-lbl">Nachname</label>
+        <input class="prof-input" id="profLast" maxlength="60" autocomplete="family-name" oninput="profDirty()"/>
+        <label class="prof-lbl">Telefonnummer</label>
+        <input class="prof-input" id="profPhone" type="tel" inputmode="tel" maxlength="24" autocomplete="tel" oninput="profDirty()"/>
+        <div class="prof-hint">Nur für das Snowmapper-Team, nicht öffentlich sichtbar.</div>
 
         <div class="prof-sec-title">Start &amp; Karte</div>
         <label class="prof-lbl">Startansicht</label>
@@ -8975,7 +8996,7 @@ function ovToggle(k,auto){
   const l=ovBuild(k);if(!l)return;
   ovOn[k]=!ovOn[k];
   if(k==='skitourVec'&&!auto){try{localStorage.setItem('ssm_tours',ovOn[k]?'1':'0');}catch(e){}}
-  if(k==='reports'){try{localStorage.setItem('ssm_reports',ovOn[k]?'1':'0');}catch(e){}}
+  if(k==='reports'){try{localStorage.setItem('ssm_reports',ovOn[k]?'1':'0');}catch(e){}try{feedHereSync();}catch(e){}}
   if(k==='myacts'){try{localStorage.setItem('ssm_myacts',ovOn[k]?'1':'0');}catch(e){}if(ovOn[k])trkActsRefresh();try{loadReportMarkers();}catch(e){}}
   if(ovOn[k])map.addLayer(l);else map.removeLayer(l);
   // switching your own tracks or the community off clears a shown route too
@@ -9005,6 +9026,7 @@ function ovSyncUI(){
     b.classList.toggle('na',!ovAvailable(k));
     b.setAttribute(b.getAttribute('role')==='switch'?'aria-checked':'aria-pressed',ovOn[k]?'true':'false');
   });
+  try{feedHereSync();}catch(e){}
 }
 
 // --- Avalanche bulletin ---------------------------------------------------
@@ -11419,6 +11441,7 @@ async function wcPreview(id,mk){
 const _toastSeen=new Set();
 function toastOnce(k,msg){if(_toastSeen.has(k))return;_toastSeen.add(k);try{toast(msg,'info');}catch(e){}}
 map.on('moveend',()=>{if(!ovOn.webcams)return;clearTimeout(wcT);wcT=setTimeout(wcRefresh,400);});
+map.on('moveend',()=>{try{feedHereSync();}catch(e){}});
 // ── Webcam screen: favourites as tiles, Webcam-TV, cameras near me ──
 // Favourites live on the device. Each tile plays Windy's 24-hour timelapse
 // (all at once), or shows the latest picture. TV runs through the
@@ -17379,6 +17402,7 @@ let _rptWinKey='';
 function rptWindowSync(){const W=rptWindow();const k=W?Math.round(W.lo/36e5)+':'+Math.round(W.hi/36e5):'';
   if(k===_rptWinKey)return;_rptWinKey=k;clearTimeout(rptWindowSync._t);rptWindowSync._t=setTimeout(()=>{try{loadReportMarkers();}catch(e){}},250);}
 function loadReportMarkers(){
+  try{feedHereSync();}catch(e){}
   reportMarkers.clearLayers();
   if(!allReports||!allReports.length)return;
   // No count bubbles any more: every report is its own marker, a dot when
@@ -17432,7 +17456,7 @@ function authUpdateUI(user){
   if((user&&user.id)!==window._invFor){window._invFor=user&&user.id;setTimeout(invLoad,300);}
   if(user&&window._pushFor!==user.id){window._pushFor=user.id;setTimeout(pushSync,3000);}
   // favourites (the stars) and the push state belong to the person
-  if((user&&user.id)!==window._favFor){window._favFor=user&&user.id;favs=null;_favPush=null;if(user)setTimeout(()=>favLoad(true),2500);}
+  if((user&&user.id)!==window._favFor){window._favFor=user&&user.id;favs=null;_favPush=null;if(user){setTimeout(()=>favLoad(true),2500);setTimeout(contactCheck,3500);}}
   const btn=document.getElementById('btnLogin');
   const feedB=document.getElementById('mapFeedFab'),banner=document.getElementById('emailBanner');
   if(user){
@@ -17838,6 +17862,8 @@ function authRender(){
   $('authTitle').textContent=isReg?'Account erstellen':'Anmelden';
   $('authSub').textContent=isReg?'Erstelle ein Konto für die Community':'Anmelden für Community & Meldungen';
   $('authUser').style.display=isReg?'':'none';
+  $('authNameRow').style.display=isReg?'':'none';
+  $('authPhone').style.display=isReg?'':'none';
   $('authSubmitBtn').textContent=isReg?'Registrieren':'Anmelden';
   $('authSwitch').innerHTML=isReg?'Schon registriert? <button onclick="authToggle()">Anmelden</button>':'Kein Account? <button onclick="authToggle()">Registrieren</button>';
 }
@@ -17863,13 +17889,17 @@ async function authSubmit(e){
       if(username.length<3){errEl.textContent='Benutzername: mindestens 3 Zeichen.';return;}
       if(pass.length<8){errEl.textContent='Passwort: mindestens 8 Zeichen.';return;}
       if(pass!==pass2){errEl.textContent='Die Passwörter stimmen nicht überein.';return;}
+      const first=document.getElementById('authFirst').value.trim(),last=document.getElementById('authLast').value.trim();
+      const phone=phoneNorm(document.getElementById('authPhone').value);
+      if(!first||!last){errEl.textContent='Bitte Vor- und Nachname eingeben.';return;}
+      if(!phone){errEl.textContent='Bitte eine gültige Telefonnummer eingeben (z. B. 079 123 45 67 oder +41 79 123 45 67).';return;}
       const invite=document.getElementById('authInvite').value.replace(/\s+/g,'').toUpperCase();
       if(invAccess==='invite'&&!invite){errEl.textContent='Snowmapper ist im Moment nur mit Einladung offen: bitte deinen Einladungscode eingeben.';return;}
       _authBusy=true;btn.disabled=true;btn.textContent='Registriere…';
       // the database checks and uses up the code as the account is created
       // (handle_new_user); kept locally too, so the badge follows after login
       if(invite){try{localStorage.setItem('ssm_invite',invite);}catch(e){}}
-      const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:invite?{username,invite}:{username},emailRedirectTo:AUTH_REDIRECT}});
+      const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:Object.assign({username,first_name:first,last_name:last,phone},invite?{invite}:{}),emailRedirectTo:AUTH_REDIRECT}});
       if(error)throw error;
       // With e-mail enumeration protection Supabase answers an existing,
       // confirmed address with a user that has no identities instead of an error.
@@ -17957,6 +17987,36 @@ function authOfferFaceId(){
     +'<button class="auth-btn primary" onclick="lockEnable().then(()=>document.getElementById(\'faceIdOffer\').remove())">Face ID verwenden</button>'
     +'<div class="auth-switch"><button onclick="document.getElementById(\'faceIdOffer\').remove()">Später</button></div></div>';
   document.body.appendChild(d);}
+// Vorname, Nachname, Telefon: private (auth user_metadata, mirrored into
+// profile_private for the owner -- never in the public profiles row). Asked
+// at sign-up; an account from before that is asked once per session.
+function phoneNorm(s){let d=String(s||'').replace(/\(0\)/g,'').replace(/[\s().\/-]/g,'');
+  if(d.startsWith('00'))d='+'+d.slice(2);
+  if(/^\+410\d{9}$/.test(d))d='+41'+d.slice(4);         // +41 079 …
+  if(/^0\d{9}$/.test(d))d='+41'+d.slice(1);           // Swiss national format
+  return /^\+[1-9]\d{7,14}$/.test(d)?d:null;}
+function contactMissing(){const m=(sbUser&&sbUser.user_metadata)||{};return !!sbUser&&!(m.first_name&&m.last_name&&m.phone);}
+function contactCheck(){if(!contactMissing()||document.getElementById('contactAsk'))return;
+  try{if(sessionStorage.getItem('ssm_contact_later'))return;}catch(e){}
+  const m=sbUser.user_metadata||{};
+  const d=document.createElement('div');d.id='contactAsk';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='5001';
+  d.innerHTML='<div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="contactT"><h2 id="contactT">Noch kurz zu dir</h2>'
+    +'<p class="auth-sub">Vor- und Nachname und deine Telefonnummer – nur für uns, nicht öffentlich sichtbar.</p>'
+    +'<div class="auth-row2"><input type="text" id="cFirst" placeholder="Vorname" autocomplete="given-name" maxlength="60" value="'+escapeHtml(m.first_name||'')+'"/>'
+    +'<input type="text" id="cLast" placeholder="Nachname" autocomplete="family-name" maxlength="60" value="'+escapeHtml(m.last_name||'')+'"/></div>'
+    +'<input type="tel" id="cPhone" placeholder="Telefonnummer" autocomplete="tel" inputmode="tel" maxlength="24" value="'+escapeHtml(m.phone||'')+'" style="margin-top:8px"/>'
+    +'<div class="auth-err" id="cErr" role="alert" aria-live="polite"></div>'
+    +'<button class="auth-btn primary" id="cSave" style="margin-top:12px" onclick="contactSave()">Speichern</button>'
+    +'<div class="auth-switch"><button onclick="try{sessionStorage.setItem(\'ssm_contact_later\',\'1\')}catch(e){};document.getElementById(\'contactAsk\').remove()">Später</button></div></div>';
+  document.body.appendChild(d);}
+async function contactSave(){const v=id=>(document.getElementById(id)||{}).value||'';
+  const first=v('cFirst').trim(),last=v('cLast').trim(),phone=phoneNorm(v('cPhone')),er=document.getElementById('cErr');
+  if(!first||!last){er.textContent='Bitte Vor- und Nachname eingeben.';return;}
+  if(!phone){er.textContent='Bitte eine gültige Telefonnummer eingeben (z. B. 079 123 45 67).';return;}
+  const b=document.getElementById('cSave');b.disabled=true;b.textContent='Speichert…';
+  try{const{data,error}=await sb.auth.updateUser({data:{first_name:first,last_name:last,phone}});if(error)throw error;
+    if(data&&data.user)sbUser=data.user;document.getElementById('contactAsk').remove();toast('Danke!','ok');}
+  catch(e){er.textContent='Speichern ging nicht: '+(e.message||e);b.disabled=false;b.textContent='Speichern';}}
 async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email,options:{emailRedirectTo:AUTH_REDIRECT}});const b=document.getElementById('emailBanner').querySelector('button');if(b)b.textContent='Gesendet!';}
 function authMenu(){openProfile();}
 // --- Personal preferences ---------------------------------------------------
@@ -18186,6 +18246,7 @@ async function openProfile(){
   ['profStatReports','profStatFollowers'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='–';});
   profAvatarFile=null;profLoadPosts();profRenderPrefs();
   try{const d=document.getElementById('profDisplay');if(d)d.value=name;}catch(e){}
+  try{const md=sbUser.user_metadata||{};[['profFirst','first_name'],['profLast','last_name'],['profPhone','phone']].forEach(([id,k])=>{const el=document.getElementById(id);if(el)el.value=md[k]||'';});}catch(e){}
   try{
     const{data}=await sb.from('profiles').select('bio,avatar_url,push_enabled').eq('id',sbUser.id).single();
     myProfile=data||{};
@@ -18742,6 +18803,11 @@ async function profSave(){
   try{const d=document.getElementById('profDisplay');
     const home=document.getElementById('profHome'),lay=document.getElementById('profLayer');
     if(home)prefs.home=home.value;if(lay)prefs.layer=lay.value;prefsSave();
+    // the private details ride along with the same metadata update
+    const pv=id=>((document.getElementById(id)||{}).value||'').trim(),md=(sbUser&&sbUser.user_metadata)||{};
+    const priv={};if(pv('profFirst'))priv.first_name=pv('profFirst');if(pv('profLast'))priv.last_name=pv('profLast');
+    if(pv('profPhone')){const ph=phoneNorm(pv('profPhone'));if(ph)priv.phone=ph;else toast('Telefonnummer ungültig – nicht gespeichert.','err');}
+    if(sb&&sbUser&&Object.keys(priv).some(k=>priv[k]!==md[k])){const{data:ud}=await sb.auth.updateUser({data:priv});if(ud&&ud.user)sbUser=ud.user;}
     if(d&&d.value.trim()&&sb&&sbUser){await sb.auth.updateUser({data:{username:d.value.trim()}});
       await sb.from('profiles').update({username:d.value.trim()}).eq('id',sbUser.id);
       document.getElementById('profName').textContent=d.value.trim();}
@@ -20652,13 +20718,27 @@ const FEED_REGIONS=[
   {id:'vd',label:'Waadt / Freiburg',b:[46.25,6.60,46.75,7.35]},
   {id:'os',label:'Ostschweiz',b:[46.95,8.90,47.60,9.75]}];
 let feedRegion='';try{feedRegion=localStorage.getItem('ssm_feed_region')||'';}catch(e){}
+// Two regions that are not a canton: the map view a person came from
+// («Beiträge hier im Feed» on the map, a snapshot of its bounds) and their
+// favourite areas and tours (posts within FEED_FAV_KM of any / of one).
+let feedViewB=null;if(feedRegion==='view')feedRegion='';
+const FEED_FAV_KM=8;
+function feedRegionLabel(id){id=id||feedRegion;if(id==='view')return 'Kartenausschnitt';if(id==='fav')return 'Meine Favoriten';
+  if(id&&id.indexOf('fav:')===0){const f=(favs||[]).find(x=>'fav:'+x.id===id);return f?f.name:'Favorit';}
+  return (FEED_REGIONS.find(g=>g.id===id)||{}).label||'';}
 function feedRegionOf(r){for(const g of FEED_REGIONS){if(!g.b)continue;const b=g.b;
   if(r.lat>=b[0]&&r.lat<=b[2]&&r.lng>=b[1]&&r.lng<=b[3])return g.id;}return '';}
 function feedRegionSet(id,keep){feedRegion=(feedRegion===id&&!keep)?'':id;try{localStorage.setItem('ssm_feed_region',feedRegion);}catch(e){}
+  if(feedRegion==='fav'||feedRegion.indexOf('fav:')===0){if(!sbUser){authShow();return;}
+    if(!favs){favLoad().then(()=>{try{feedRegionsRender();feedTopRender();}catch(e){}feedRender();});}}
   try{feedRegionsRender();}catch(e){}
   if(feedRegion==='near'&&!myLoc){try{geoLocate(p=>{myLoc=[p.coords.latitude,p.coords.longitude];feedRender();},()=>{});}catch(e){}}
   try{haptic(3);}catch(e){}try{feedTopRender();}catch(e){}feedRender();}
 function feedRegionFilter(list){if(!feedRegion)return list;
+  if(feedRegion==='view'){const b=feedViewB;if(!b)return list;return list.filter(r=>r.lat>=b[0]&&r.lat<=b[2]&&r.lng>=b[1]&&r.lng<=b[3]);}
+  if(feedRegion==='fav'||feedRegion.indexOf('fav:')===0){
+    const F=(favs||[]).filter(f=>feedRegion==='fav'||'fav:'+f.id===feedRegion);if(!F.length)return [];
+    return list.filter(r=>F.some(f=>haversineKm(f.lat,f.lon,r.lat,r.lng)<=FEED_FAV_KM));}
   if(feedRegion==='near'){if(!myLoc)return list;return list.filter(r=>haversineKm(myLoc[0],myLoc[1],r.lat,r.lng)<=40);}
   return list.filter(r=>feedRegionOf(r)===feedRegion);}
 // The selected window, as real dates, so a report can be tested against it.
@@ -20677,7 +20757,7 @@ function feedInWindow(r){return true;}
 // yesterday's in the valley over, and a friend's lifts it by about a day
 // or a valley. Distance from your position, else from the map centre.
 function feedRank(list){
-  list=list.filter(r=>!isBlocked(r.user_id));
+  list=list.filter(r=>!isBlocked(r.userId||r.user_id));
   let o=null;try{o=myLoc?{lat:myLoc[0],lng:myLoc[1]}:map.getCenter();}catch(e){}
   const now=Date.now();
   return list.map(r=>{
@@ -20806,8 +20886,30 @@ function feedFiltMark(){
   b.classList.toggle('on',!!feedRegion||feedTxtOn());
 }
 function feedRegionsRender(){const el=document.getElementById('feedFilter');if(!el)return;
+  const chip=(id,label)=>'<button class="'+(feedRegion===id?'active':'')+'" onclick="feedRegionSet(\''+id+'\',true);feedFilterClose()">'+label+'</button>';
+  const F=favs||[];
   el.innerHTML='<button class="'+(feedRegion?'':'active')+'" onclick="feedRegionSet(\'\');feedFilterClose()">Überall</button>'
-    +FEED_REGIONS.map(g=>'<button class="'+(feedRegion===g.id?'active':'')+'" onclick="feedRegionSet(\''+g.id+'\',true);feedFilterClose()">'+escapeHtml(g.label)+'</button>').join('');}
+    +(feedViewB?chip('view','▢ Kartenausschnitt'):'')
+    +(sbUser?(F.length?chip('fav','★ Meine Favoriten')+F.slice(0,12).map(f=>chip('fav:'+f.id,'★ '+escapeHtml(f.name))).join('')
+       :'<button onclick="toast(\'Noch keine Favoriten: Tippe bei einer Tour oder auf der Karte (langes Drücken) auf ☆.\',\'info\')">★ Favoriten</button>'):'')
+    +FEED_REGIONS.map(g=>chip(g.id,escapeHtml(g.label))).join('');
+  if(sbUser&&!favs)favLoad().then(()=>{if(favs&&favs.length)feedRegionsRender();});}
+// «Beiträge hier im Feed»: with the community reports on the map, a pill
+// opens the feed on exactly the posts of the map view.
+function feedOpenView(){const b=map.getBounds();feedViewB=[b.getSouth(),b.getWest(),b.getNorth(),b.getEast()];
+  feedRegion='view';try{localStorage.setItem('ssm_feed_region','');}catch(e){}
+  try{if(feedScope!=='all')feedSetScope('all');}catch(e){}
+  navGo('feed');setTimeout(()=>{try{feedRegionsRender();feedTopRender();}catch(e){}feedRender();},0);}
+let _fhRaf=0;
+function feedHereSync(){if(_fhRaf)return;_fhRaf=requestAnimationFrame(()=>{_fhRaf=0;
+  let el=document.getElementById('feedHereBtn');
+  const on=!!(typeof ovOn!=='undefined'&&ovOn.reports);
+  let n=0;if(on){try{const b=map.getBounds();n=allReports.filter(r=>!_rptIsDraw(r)&&!isBlocked(r.userId)&&b.contains([r.lat,r.lng])).length;}catch(e){}}
+  if(!on||!n){if(el)el.hidden=true;return;}
+  if(!el){el=document.createElement('button');el.id='feedHereBtn';el.type='button';el.onclick=feedOpenView;document.body.appendChild(el);}
+  el.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="14" y2="13"/></svg><span>'
+    +n+' '+(n===1?'Beitrag':'Beiträge')+' hier im Feed</span><b>›</b>';
+  el.hidden=false;});}
 // Posts without a picture (text only): off in the feed by default, small when on.
 function feedNoPic(r){const cd=r.condition_data||{};
   return !r.img&&!(cd.activity&&cd.activity.track)&&!(cd.images&&cd.images.length)&&!cd.drawImage&&!cd.snapshot;}
@@ -21143,7 +21245,7 @@ async function addComment(){
 // and on a desk your posts and messages. "Gemerkt" lives in your profile,
 // tour reports on the tour, a person's posts behind their name.
 function feedTopRender(){const el=document.getElementById('feedTop');if(!el)return;
-  const reg=feedRegion?(FEED_REGIONS.find(g=>g.id===feedRegion)||{}).label:'';
+  const reg=feedRegion?feedRegionLabel():'';
   const ic=d=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
   const main=['all','here','following'].includes(feedScope);
   el.innerHTML='<div class="ft-row"><button type="button" class="ft-cat'+(reg?' on':'')+'" onclick="feedFilterOpen()">'+ic('<path d="M4 6h16M7 12h10M10 18h4"/>')+'<span>'+escapeHtml(reg||'Überall')+'</span></button>'
@@ -21454,7 +21556,9 @@ function feedRender(){
   if(main){const n0=filtered.length;filtered=feedRegionFilter(filtered);
     const counts={all:filtered.length};filtered.forEach(r=>{const k=feedKind(r);counts[k]=(counts[k]||0)+1;});
     feedKindsRender(counts);
-    if(n0&&!filtered.length){list.innerHTML='<div class="feed-empty">In «'+escapeHtml((FEED_REGIONS.find(g=>g.id===feedRegion)||{}).label||'')+'» gibt es gerade keine Beiträge. Wähle oben links «Überall», um alle zu sehen.</div>';return;}
+    if(n0&&!filtered.length){list.innerHTML='<div class="feed-empty">'+((feedRegion==='fav'||feedRegion.indexOf('fav:')===0)&&!(favs&&favs.length)
+        ?'Du hast noch keine Favoriten. Tippe bei einer Tour oder auf der Karte (langes Drücken) auf ☆ – dann siehst du hier die Beiträge rund um deine Gebiete.'
+        :'In «'+escapeHtml(feedRegionLabel())+'» gibt es gerade keine Beiträge. Wähle oben links «Überall», um alle zu sehen.')+'</div>';return;}
     if(feedFilter!=='all')filtered=filtered.filter(r=>feedKind(r)===feedFilter);}
   // posts without a picture stay out of the list unless the filter asks for
   // them (a chosen kind, a person's own page, the saved ones and an opened
