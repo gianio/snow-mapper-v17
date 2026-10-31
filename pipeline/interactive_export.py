@@ -2964,7 +2964,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #disc{position:fixed;inset:0;z-index:9800;display:none;align-items:flex-end;justify-content:center;background:rgba(6,14,26,.55);}
  #disc.show{display:flex;animation:discBg .3s ease}
  @keyframes discBg{from{opacity:0}to{opacity:1}}
- #disc .sheet{width:100%;max-width:520px;background:var(--glass2);border:1px solid var(--ink-100);border-radius:var(--r-xl) var(--r-xl) 0 0;box-shadow:var(--elev3);padding:24px 22px calc(env(safe-area-inset-bottom,0px) + 22px);animation:discUp .4s var(--ease-spring)}
+ #disc .sheet{width:100%;max-width:520px;max-height:calc(100dvh - env(safe-area-inset-top,0px) - 8px);overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;background:var(--glass2);border:1px solid var(--ink-100);border-radius:var(--r-xl) var(--r-xl) 0 0;box-shadow:var(--elev3);padding:24px 22px calc(env(safe-area-inset-bottom,0px) + 22px);animation:discUp .4s var(--ease-spring)}
  @media(min-width:560px){#disc{align-items:center}#disc .sheet{border-radius:var(--r-xl)}}
  @keyframes discUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
  #disc .ic{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--danger-tint);color:var(--danger);margin-bottom:14px}
@@ -2981,7 +2981,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  /* --- Add-to-Home-Screen sheet --- */
  #a2hs{position:fixed;inset:0;z-index:9700;display:none;align-items:flex-end;justify-content:center;background:rgba(10,9,26,.5);}
  #a2hs.show{display:flex;animation:discBg .3s ease}
- #a2hs .sheet{width:100%;max-width:480px;background:var(--glass2);border:1px solid var(--ink-100);border-radius:var(--r-xl) var(--r-xl) 0 0;box-shadow:var(--elev3);padding:22px 22px calc(env(safe-area-inset-bottom, 0px) + 20px)}
+ #a2hs .sheet{width:100%;max-width:480px;max-height:calc(100dvh - env(safe-area-inset-top,0px) - 8px);overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;background:var(--glass2);border:1px solid var(--ink-100);border-radius:var(--r-xl) var(--r-xl) 0 0;box-shadow:var(--elev3);padding:22px 22px calc(env(safe-area-inset-bottom, 0px) + 20px)}
  @media(min-width:560px){#a2hs{align-items:center}#a2hs .sheet{border-radius:var(--r-xl)}}
  #a2hs .sheet{animation:discUp .4s var(--ease-spring)}
  .a2hs-ic{width:52px;height:52px;border-radius:15px;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,#0c0c0f,#26262c);color:#fff;margin-bottom:12px;box-shadow:var(--elev2)}
@@ -3040,7 +3040,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .user-pill{display:flex;align-items:center;gap:8px;min-height:40px;padding:5px 14px 5px 5px;border-radius:999px;border:1.5px solid var(--ink-100);background:var(--paper);cursor:pointer;box-shadow:0 1px 4px var(--ink-100)}
  .user-avatar{border-radius:28%!important;width:26px;height:26px;border-radius:50%;background:var(--fg);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;letter-spacing:.02em}
  .user-name{font-size:13px;font-weight:600;color:var(--fg2);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
- .auth-overlay{position:fixed;inset:0;z-index:5000;background:rgba(14,17,22,.32);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom))}
+ .auth-overlay{position:fixed;inset:0;z-index:7000;background:rgba(14,17,22,.32);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom))}
  .auth-modal{position:relative;background:var(--glass2);border-radius:var(--r-xl);padding:36px 28px 28px;width:100%;max-width:360px;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;box-shadow:var(--elev3),0 1px 0 rgba(255,255,255,.5) inset}
  .auth-modal h2{margin:0 0 4px;font-size:24px;font-weight:800;color:var(--fg);letter-spacing:-.03em}
  .auth-note{font-size:12px;color:var(--mut);margin:4px 0 10px;line-height:1.5}
@@ -3064,7 +3064,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .auth-paste{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:1.5px dashed rgba(20,20,25,.3);border-radius:12px;background:rgba(20,20,25,.05);color:var(--acc2);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px}
  .auth-paste svg{width:17px;height:17px}
  .auth-paste:hover{background:rgba(20,20,25,.1)}
- .auth-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;color:var(--mut);cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+ .auth-close{position:sticky;top:0;z-index:3;margin:-20px -12px -12px auto;background:var(--glass2);border:none;font-size:20px;color:var(--mut);cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none}
  .auth-close:hover{background:rgba(0,0,0,.05)}
  .auth-show{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut);margin:2px 0 6px;cursor:pointer;user-select:none}
  .auth-show input{width:18px;height:18px;margin:0;accent-color:var(--accent,#2563eb)}
@@ -4121,7 +4121,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .rpt-pin .rp-dot{position:absolute;top:-2px;right:-2px;width:11px;height:11px;border-radius:50%;background:var(--cc);border:2px solid #fff}
  /* clean report preview popup */
  .leaflet-popup.rpt-pop .leaflet-popup-content-wrapper{border-radius:18px;padding:0;overflow:hidden;box-shadow:0 18px 46px rgba(22,21,46,.30)}
- .leaflet-popup.rpt-pop .leaflet-popup-content{margin:0!important;width:234px!important}
+ .leaflet-popup.rpt-pop .leaflet-popup-content{margin:0!important;width:234px!important;max-width:calc(100vw - 104px)}
  .rpop-img{position:relative;height:134px;cursor:pointer;background:var(--fill)}
  .rpop-img>img{width:100%;height:100%;object-fit:cover;display:block}
  .rpop-cat{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;color:#fff;font-size:11.5px;font-weight:800}
@@ -4627,10 +4627,10 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  /* trust ladder + leaderboard sheet */
  #trSheet{position:fixed;inset:0;z-index:6000;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,15,25,0);pointer-events:none;transition:background .25s}
  #trSheet.on{background:rgba(10,15,25,.38);pointer-events:auto}
- #trSheet .trs-in{position:relative;width:100%;max-width:480px;max-height:86vh;overflow-y:auto;background:var(--card);border-radius:22px 22px 0 0;
+ #trSheet .trs-in{position:relative;width:100%;max-width:480px;max-height:86vh;max-height:min(86vh,calc(100dvh - env(safe-area-inset-top,0px) - 8px));overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;background:var(--card);border-radius:22px 22px 0 0;
    padding:18px 18px calc(env(safe-area-inset-bottom,0px) + 20px);box-shadow:var(--elev3);transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
  #trSheet.on .trs-in{transform:none}
- .trs-x{position:absolute;top:12px;right:12px;width:32px;height:32px;border:0;border-radius:50%;background:var(--fill);color:var(--fg2);font:600 19px/1 system-ui;cursor:pointer}
+ .trs-x{position:sticky;top:0;z-index:3;display:block;margin:-6px -6px -26px auto;width:32px;height:32px;border:0;border-radius:50%;background:var(--fill);color:var(--fg2);font:600 19px/1 system-ui;cursor:pointer}
  .trs-hd{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;padding:6px 30px 8px}
  .trs-emo{font-size:40px;line-height:1.1}
  .tg{width:min(300px,86vw);height:auto;overflow:visible;margin:4px 0 2px}
@@ -5165,7 +5165,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
    box-shadow:0 0 0 2px #fff,0 4px 10px rgba(0,0,0,.3)}
  .wc-pin svg{width:16px;height:16px}
  .wc-popup .leaflet-popup-content-wrapper{border-radius:18px;padding:0;overflow:hidden}
- .wc-popup .leaflet-popup-content{margin:0;width:280px!important}
+ .wc-popup .leaflet-popup-content{margin:0;width:280px!important;max-width:calc(100vw - 104px)}
  .wc-pop{display:flex;flex-direction:column;gap:3px;padding-bottom:10px}
  .wc-pop img,.wc-pop .wc-img{width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--fill);display:block;margin-bottom:6px}
  .wc-pop b,.wc-pop span,.wc-pop a,.wc-pop em{padding:0 12px}
@@ -5256,7 +5256,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  /* legend and the button bar under it: one column, exactly the same width */
  #mapFabs .mfab-grp{align-self:stretch;box-sizing:border-box}
  #mapFabs #miniLegend::-webkit-scrollbar{display:none}
- body.nav-vis .leg-info{bottom:calc(var(--nav-h) + var(--btm-h,80px) + 150px)}
+ body.nav-vis .leg-info{bottom:calc(var(--nav-h) + var(--btm-h,80px) + 150px);max-height:min(60vh,calc(100dvh - var(--nav-h) - var(--btm-h,80px) - 150px - env(safe-area-inset-top,0px) - 12px))}
+ @media (max-height:600px){.leg-info,body.nav-vis .leg-info{bottom:calc(env(safe-area-inset-bottom,0px) + 10px);max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 20px)}
+   body.nav-vis .leg-info{bottom:calc(var(--nav-h) + 10px);max-height:calc(100dvh - var(--nav-h) - env(safe-area-inset-top,0px) - 20px)}}
  body.nav-vis .feed-page.open:not(.side){bottom:var(--nav-h)}
  @media (max-width:899px){
    body.nav-vis .feed-page.open{bottom:var(--nav-h)}
@@ -6638,7 +6640,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <div class="radial-wrap" id="radialWrap"><div class="radial-bg"></div><div class="radial-ring" id="radialRing"></div><div class="radial-center" id="radialCenter">✕</div></div>
 <div class="auth-overlay" id="authOverlay" style="display:none" onclick="authHide()">
 <div class="auth-modal" onclick="event.stopPropagation()">
-<button class="auth-close" id="authClose" onclick="authHide()">&times;</button>
+<button class="auth-close" id="authClose" aria-label="Schliessen" onclick="authHide()">&times;</button>
 <h2 id="authTitle">Anmelden</h2>
 <p class="auth-sub" id="authSub">Anmelden für Community &amp; Meldungen</p>
 <p class="auth-note" id="authNote">Karte &amp; Prognosen funktionieren ohne Konto — du brauchst es nur zum Melden, für den Feed und dein Profil.</p>
@@ -8779,6 +8781,27 @@ const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
 // A real mouse wheel still works: its notches are large, so it crosses the
 // threshold in one or two clicks.
 const _trackpad=_desktop&&/Mac/.test(navigator.platform||navigator.userAgent||'');
+// Map popups on every screen: they keep clear of the chrome (top buttons,
+// the right rail, timeline and tab bar) when the map pans them into view, are
+// never wider than the room left of the rail, and never taller than the room
+// between top and bottom -- longer content scrolls inside the popup.
+function mapChromePad(m){const c=m.getContainer().getBoundingClientRect(),W=c.width,H=c.height;
+  const vis=id=>{const e=document.getElementById(id);if(!e)return null;const R=e.getBoundingClientRect();if(R.width<2||R.height<2)return null;
+    const st=getComputedStyle(e);return st.visibility==='hidden'||st.display==='none'||+st.opacity<.1?null:R;};
+  let t=8,b=8,l=8,r=8;
+  for(const id of ['appBar','rvFab']){const R=vis(id);if(R&&R.top-c.top<H/3)t=Math.max(t,R.bottom-c.top+8);}
+  for(const id of ['bottomPanel','tabBar']){const R=vis(id);if(R&&R.bottom-c.top>H*2/3)b=Math.max(b,c.bottom-R.top+8);}
+  const f=vis('mapFabs');if(f&&f.left-c.left>W/2)r=Math.max(r,c.right-f.left+8);
+  return {t:Math.min(t,H/3),b:Math.min(b,H/2),l,r:Math.min(r,W/3),W,H};}
+if(window.L&&L.Popup&&!L.Popup.prototype._smFit){const P=L.Popup.prototype,ul=P._updateLayout,ap=P._adjustPan;P._smFit=1;
+  P._updateLayout=function(){try{if(this._map){const c=mapChromePad(this._map),o=this.options;
+      if(!this._o0)this._o0={w:o.maxWidth,h:o.maxHeight};
+      o.maxWidth=Math.max(160,Math.min(this._o0.w||300,c.W-c.l-c.r-16));
+      o.maxHeight=Math.max(140,Math.min(this._o0.h||1e4,c.H-c.t-c.b-34));}}catch(e){}
+    return ul.apply(this,arguments);};
+  if(ap)P._adjustPan=function(){try{if(this._map){const c=mapChromePad(this._map);
+      this.options.autoPanPaddingTopLeft=L.point(c.l,c.t);this.options.autoPanPaddingBottomRight=L.point(c.r,c.b);}}catch(e){}
+    return ap.apply(this,arguments);};}
 const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,doubleClickZoom:false,
   wheelPxPerZoomLevel:_trackpad?120:(_desktop?38:90),
   wheelDebounceTime:_trackpad?34:(_desktop?12:40),
@@ -18047,7 +18070,7 @@ async function authAfterLogin(isNew){
 }
 function authOfferFaceId(){
   if(document.getElementById('faceIdOffer'))return;
-  const d=document.createElement('div');d.id='faceIdOffer';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='5001';
+  const d=document.createElement('div');d.id='faceIdOffer';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='7001';
   d.innerHTML='<div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="faceIdT"><h2 id="faceIdT">Mit Face ID anmelden?</h2>'
     +'<p class="auth-sub">Du bleibst angemeldet und öffnest Snowmapper mit einem Blick — ohne Passwort. Jederzeit in den Einstellungen änderbar.</p>'
     +'<button class="auth-btn primary" onclick="lockEnable().then(()=>document.getElementById(\'faceIdOffer\').remove())">Face ID verwenden</button>'
@@ -18075,7 +18098,7 @@ function contactCheck(){if(document.getElementById('contactAsk')||document.getEl
   if(!contactMissing()){if(phoneUnverified()&&!smsLater())smsAsk();return;}
   try{if(sessionStorage.getItem('ssm_contact_later'))return;}catch(e){}
   const m=sbUser.user_metadata||{};
-  const d=document.createElement('div');d.id='contactAsk';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='5001';
+  const d=document.createElement('div');d.id='contactAsk';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='7001';
   d.innerHTML='<div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="contactT"><h2 id="contactT">Noch kurz zu dir</h2>'
     +'<p class="auth-sub">Vor- und Nachname und deine Telefonnummer – nur für uns, nicht öffentlich sichtbar.</p>'
     +'<div class="auth-row2"><input type="text" id="cFirst" placeholder="Vorname" autocomplete="given-name" maxlength="60" value="'+escapeHtml(m.first_name||'')+'"/>'
@@ -18096,7 +18119,7 @@ async function contactSave(){const v=id=>(document.getElementById(id)||{}).value
   catch(e){er.textContent='Speichern ging nicht: '+(e.message||e);b.disabled=false;b.textContent='Speichern';}}
 function smsAsk(){if(!sbUser||document.getElementById('smsAsk'))return;
   const ph=(sbUser.user_metadata||{}).phone||'';
-  const d=document.createElement('div');d.id='smsAsk';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='5001';
+  const d=document.createElement('div');d.id='smsAsk';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='7001';
   d.innerHTML='<div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="smsT"><h2 id="smsT">Telefonnummer bestätigen</h2>'
     +'<p class="auth-sub">Wir schicken dir einen 6-stelligen Code per SMS an <b>'+escapeHtml(ph)+'</b>.</p>'
     +'<button class="auth-btn primary" id="smsSend" onclick="smsSend()">Code per SMS senden</button>'
@@ -18185,14 +18208,14 @@ async function proLoad(){if(!sb)return;
   try{if(!isPro()&&ovOn.variantA)ovToggle('variantA',true);}catch(e){}}
 function proGate(feature,fn){if(isPro())return fn();proSheet(feature);}
 function proSheet(feature){if(document.getElementById('proAsk'))return;
-  const d=document.createElement('div');d.id='proAsk';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='5002';
+  const d=document.createElement('div');d.id='proAsk';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='7002';
   d.onclick=e=>{if(e.target===d)d.remove();};
   const feats=Object.keys(PRO_FEATURES).map(k=>'<li'+(k===feature?' class="on"':'')+'>'+escapeHtml(PRO_FEATURES[k])+'</li>').join('');
   const buy=proNative()
     ?'<p class="auth-note" style="text-align:center">Pro ist in der App bald erhältlich.</p>'
     :'<button class="auth-btn primary" onclick="proBuy(\'season\')">Saisonpass · '+PRO_PRICES.season+'</button>'
       +'<button class="auth-btn" style="margin-top:8px" onclick="proBuy(\'month\')">Monatlich · '+PRO_PRICES.month+'</button>';
-  d.innerHTML='<div class="auth-modal pro-modal" role="dialog" aria-modal="true" aria-labelledby="proT"><h2 id="proT">Snowmapper Pro</h2>'
+  d.innerHTML='<div class="auth-modal pro-modal" role="dialog" aria-modal="true" aria-labelledby="proT"><button class="auth-close" aria-label="Schliessen" onclick="document.getElementById(\'proAsk\').remove()">&times;</button><h2 id="proT">Snowmapper Pro</h2>'
     +'<p class="auth-sub">'+(feature&&PRO_FEATURES[feature]?escapeHtml(PRO_FEATURES[feature])+' gehört zu Pro.':'Mehr Schnee-Wissen für deine Touren.')+'</p>'
     +'<ul class="pro-list">'+feats+'</ul>'+buy
     +'<div class="auth-err" id="proErr" role="alert" aria-live="polite"></div>'
