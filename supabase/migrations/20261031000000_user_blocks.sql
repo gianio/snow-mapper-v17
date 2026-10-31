@@ -70,7 +70,9 @@ create or replace function public.comment_block_guard() returns trigger
   language plpgsql security definer set search_path = public, pg_temp
 as $$
 begin
-  if public.is_api_role() and exists (
+  -- a signed-in person writing through the API (the function runs with
+  -- definer rights, so current_user is not the caller: ask the JWT instead)
+  if auth.uid() is not null and exists (
        select 1 from public.reports r join public.user_blocks b
          on (b.blocker = r.user_id and b.blocked = new.user_id)
          or (b.blocker = new.user_id and b.blocked = r.user_id)
@@ -89,7 +91,7 @@ create or replace function public.dm_block_guard() returns trigger
 as $$
 declare a uuid; b uuid;
 begin
-  if not public.is_api_role() then return new; end if;
+  if auth.uid() is null then return new; end if;     -- not a signed-in API call
   if tg_table_name = 'dm_threads' then
     a := new.user_a; b := new.user_b;
   else
