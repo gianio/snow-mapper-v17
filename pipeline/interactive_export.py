@@ -2406,14 +2406,20 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .cap{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
  .ck{display:flex;align-items:center;gap:9px;margin-top:12px;font-size:13px;cursor:pointer;color:var(--fg2)}
  .ck input{width:18px;height:18px;accent-color:var(--acc)}
- #three-wrap{position:absolute;inset:0;z-index:2000;display:none;background:#e8eef4}
+ #three-wrap{position:absolute;inset:0;z-index:850;display:none;background:#e8eef4}
+ /* the side buttons, the legend, the timeline and the tab bar stay on top of
+    the 3D view; the side «3D/2D» button goes back, layers come from the
+    normal layer panel */
+ #btn3dClose,#overlay3d,body.three-open #feedHereBtn{display:none!important}
+ #three-wrap .maplibregl-ctrl-top-left{top:calc(env(safe-area-inset-top,0px) + 176px)}
+ #three-wrap .ctrl3d button,#three-wrap .ctrl3d label{font-size:14px!important;min-height:40px!important;padding:8px 12px!important}
  #three-wrap .maplibregl-canvas{outline:none}
  #three-wrap .maplibregl-map{width:100%;height:100%}
  #btn3dClose{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;z-index:2001;padding:10px 18px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg);cursor:pointer;font-size:16px;font-weight:600;}
- #three-wrap .ctrl3d{position:absolute;bottom:calc(30px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:2001;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px)}
+ #three-wrap .ctrl3d{position:absolute;top:calc(env(safe-area-inset-top,0px) + 68px);left:12px;z-index:2001;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start;max-width:calc(100vw - 110px)}
  #three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 16px;border-radius:14px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);cursor:pointer;font-size:16px;min-height:46px;touch-action:manipulation}
  #three-wrap .ctrl3d button:hover{border-color:var(--acc);color:var(--fg)}
- @media (max-width:560px){#three-wrap .ctrl3d{bottom:calc(16px + env(safe-area-inset-bottom,0px));gap:5px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 14px;font-size:15px;min-height:46px;border-radius:12px}#btn3dClose{top:calc(8px + env(safe-area-inset-top,0px));right:8px;padding:10px 18px;font-size:16px;border-radius:14px}}
+ @media (max-width:560px){#three-wrap .ctrl3d{gap:5px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 14px;font-size:15px;min-height:46px;border-radius:12px}#btn3dClose{top:calc(8px + env(safe-area-inset-top,0px));right:8px;padding:10px 18px;font-size:16px;border-radius:14px}}
  .sub{font-size:12px;color:var(--mut)}
  /* The classed/banded layers (Neuschnee, Schneehöhe, Temp, Wind, ...) are
     already discrete colour steps under the hood (setRaster() looks each
@@ -2629,8 +2635,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  #legendBtn:hover,#legendBtn.active{color:var(--acc);background:var(--paper)}
  .legend i{display:inline-block;width:12px;height:12px;margin-right:5px;vertical-align:-2px;border-radius:2px}
  .stn{background:var(--paper);border:1.5px solid var(--acc);border-radius:999px;padding:2px 8px;font-size:12px;font-weight:700;color:var(--acc2);text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.12);white-space:nowrap}
- .stn-dot{width:12px;height:12px;border-radius:50%;background:var(--acc);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25);cursor:pointer;transition:transform .12s}
- .stn-dot:hover{transform:scale(1.35)}
+ /* measuring stations are diamonds, community reports are round dots */
+ .stn-dot{width:10px;height:10px;margin:1px;border-radius:2px;background:#2b3442;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);cursor:pointer;transform:rotate(45deg);transition:transform .12s}
+ .stn-dot:hover{transform:rotate(45deg) scale(1.35)}
  .rpt-dot{width:14px;height:14px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;transition:transform .12s}
  .rpt-dot:hover{transform:scale(1.35)}
  .scl{position:relative;width:110px;height:56px;font-size:11px;font-weight:700;text-align:center;pointer-events:none}
@@ -4127,6 +4134,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
    backdrop-filter:none;-webkit-backdrop-filter:none;
    border:1px solid var(--hair);box-shadow:var(--elev3)}
  .mfab-grp .mfab{background:transparent;border:0;box-shadow:none;border-radius:16px;color:var(--ink-900)}
+ .mfab .fab-txt{font:800 15.5px/1 var(--font,inherit);letter-spacing:-.02em;color:currentColor}
  .mfab-grp .mfab:active{background:var(--fill);transform:scale(.94)}
  .mfab-grp .mfab+.mfab::before{content:'';position:absolute;top:-1px;left:10px;right:10px;height:1px;background:var(--hair)}
  .mfab-grp .mfab svg{width:21px;height:21px}
@@ -6111,7 +6119,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .qs-loc small{font:600 11.5px/1.3 var(--font);color:var(--mut)}
  .qs-lbl{font:800 11px/1 var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:4px 0 6px}
  .qs-lbl b{color:var(--fg);letter-spacing:0;text-transform:none;font-size:13px;margin-left:6px}
- .qs-wheel-w{position:relative;height:132px;border-radius:14px;background:var(--fill);overflow:hidden}
+ .qs-wheel-w{position:relative;height:132px;border-radius:14px;background:var(--fill);overflow:hidden;width:min(300px,70%);margin:0 auto}
  .qs-wheel{height:100%;overflow-y:auto;scroll-snap-type:y mandatory;padding:44px 0;box-sizing:border-box;scrollbar-width:none;overscroll-behavior:contain;
    -webkit-mask-image:linear-gradient(180deg,transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(180deg,transparent,#000 30%,#000 70%,transparent)}
  .qs-wheel::-webkit-scrollbar{display:none}
@@ -6475,7 +6483,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
-    <button class="mfab" id="threeFab" onclick="document.getElementById('btn3dFloat').click()" title="3D-Ansicht" aria-label="3D-Ansicht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></button>
+    <button class="mfab" id="threeFab" onclick="document.getElementById('btn3dFloat').click()" title="3D-Ansicht" aria-label="3D-Ansicht"><b class="fab-txt" id="threeFabTxt">3D</b></button>
   </div>
 <div id="miniLegend" role="button" tabindex="0" aria-label="Legende – Details" onclick="legInfoToggle(event)">
   <div id="mlName"></div>
@@ -14505,6 +14513,7 @@ function layerOpacitySet(pct){
   try{vaSyncOpacity();}catch(e){}
 }
 function showOverlay(){
+  try{if(typeof is3d!=='undefined'&&is3d)upd3dSoon();}catch(e){}
   [slopeWMTS,reliefWMTS,aspectGrid,roughImg,radOverlay,qprOverlay,prognosisOverlay].forEach(x=>map.removeLayer(x));
   const grid=(layer=="snow"||layer=="depth"||layer=="temp"||layer=="sun"||layer=="wind"||layer=="powder"||layer=="tsurf"||layer=="skiable"||layer=="cloud");
   const radg=(layer=="rad"||layer=="radsun");
@@ -15559,7 +15568,7 @@ function navSync(){if(_navRaf)return;_navRaf=requestAnimationFrame(()=>{_navRaf=
   const f=document.getElementById('feedPage'),feed=!!f&&f.classList.contains('open');
   // full-screen tasks (recording, drawing, a report, a conversation) get the
   // whole screen, like any other app
-  const hide=['trk-open','snp-open','draw-on','ly-open','insp-open','tn-open','tour-open','qs-open','three-open'].some(c=>B.contains(c))
+  const hide=['trk-open','snp-open','draw-on','ly-open','insp-open','tn-open','tour-open','qs-open'].some(c=>B.contains(c))
     ||vis('reportOverlay')||vis('dmModal')||vis('authOverlay');
   const tab=B.contains('rep-open')?'report':vis('profModal')?'you':feed?'feed':(B.contains('ts-open')||B.contains('tour-open'))?'tours':'map';
   B.toggle('nav-vis',!hide);B.toggle('nav-screen',tab!=='map');
@@ -16414,10 +16423,14 @@ function make3dOverlay(mode){
   ox.putImageData(oi,0,0);return oc.toDataURL();}
 // the 3D view opens with the layer that is on the 2D map
 function sync3dLayer(){const sel=document.getElementById('overlay3d');if(!sel)return;
-  if(layer==='snowpack'&&typeof vaOv!=='undefined'&&vaOv){
+  if((layer==='snowpack'||(typeof ovOn!=='undefined'&&ovOn.variantA))&&typeof vaOv!=='undefined'&&vaOv){
     if(!sel.querySelector('option[value="va"]')){const o=document.createElement('option');o.value='va';o.textContent='Skiqualität';sel.appendChild(o);}
     sel.value='va';return;}
-  if(sel.querySelector('option[value="'+layer+'"]'))sel.value=layer;}
+  sel.value=sel.querySelector('option[value="'+layer+'"]')?layer:'none';}
+// a layer switched in the panel, the time moved on the timeline: the 3D view
+// follows (debounced -- the 3D overlay is drawn in one go)
+let _u3t=0;
+function upd3dSoon(){if(!is3d)return;clearTimeout(_u3t);_u3t=setTimeout(()=>{try{sync3dLayer();update3dOverlay();}catch(e){}},220);}
 function update3dOverlay(){if(!map3d||!is3d)return;const sel=document.getElementById('overlay3d').value;
   if(sel==='none'){if(map3d.getLayer('data-overlay'))map3d.setLayoutProperty('data-overlay','visibility','none');return;}
   if(sel==='va'&&typeof vaOv!=='undefined'&&vaOv&&vaOv._url){const bb=vaOv.getBounds(),q=[[bb.getWest(),bb.getNorth()],[bb.getEast(),bb.getNorth()],[bb.getEast(),bb.getSouth()],[bb.getWest(),bb.getSouth()]];
@@ -16450,10 +16463,15 @@ let _tilt3d=false;
   el.addEventListener('touchend',()=>{y0=null;},{passive:true});})();
 function init3D(){
   if(!window.maplibregl){toast('3D wird geladen …','ok');ensureMaplibre(()=>init3D());return;}
-  const wrap=document.getElementById('three-wrap');wrap.style.display='block';is3d=true;
-  // the 3D view takes the whole screen: the tab bar steps aside (its
-  // controls sat on top of it)
+  const wrap=document.getElementById('three-wrap');
+  // in the map's own pane, right above the 2D map and below its buttons,
+  // legend, timeline and the tab bar -- everything stays where it is
+  const ps=document.getElementById('paneSearch'),m2=document.getElementById('map');
+  if(ps&&m2&&wrap.parentElement!==ps)ps.insertBefore(wrap,m2.nextSibling);
+  wrap.style.display='block';is3d=true;
   document.body.classList.add('three-open');try{navSync();}catch(e){}
+  const tx=document.getElementById('threeFabTxt');if(tx)tx.textContent='2D';
+  const tf=document.getElementById('threeFab');if(tf){tf.title='Zurück zur 2D-Karte';tf.setAttribute('aria-label','Zurück zur 2D-Karte');}
   const lc=map.getCenter(),lz=map.getZoom();
   map3d=new maplibregl.Map({container:'map3d',
     style:{version:8,
@@ -16469,7 +16487,6 @@ function init3D(){
     maxBounds:[[loMinW-0.1,laMinW-0.05],[loMaxW+0.1,laMaxW+0.05]],
     touchZoomRotate:true,touchPitch:true,dragRotate:true});
   map3d.addControl(new maplibregl.NavigationControl({visualizePitch:true,showCompass:true}),'top-left');
-  map3d.addControl(new maplibregl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:false}),'top-left');
   map3d.scrollZoom.setWheelZoomRate(1/100);
   map3d.keyboard.enable();
   document.getElementById('btn3dFloat').classList.add('active');
@@ -16494,6 +16511,8 @@ function close3D(){
   is3d=false;if(map3d){map3d.remove();map3d=null;}
   document.getElementById('three-wrap').style.display='none';
   document.body.classList.remove('three-open');try{navSync();}catch(e){}
+  const tx=document.getElementById('threeFabTxt');if(tx)tx.textContent='3D';
+  const tf=document.getElementById('threeFab');if(tf){tf.title='3D-Ansicht';tf.setAttribute('aria-label','3D-Ansicht');}
   document.getElementById('btn3dFloat').classList.remove('active');}
 document.getElementById('btn3dFloat').onclick=e=>{e.stopPropagation();if(is3d)close3D();else init3D();};
 document.getElementById('btn3dClose').onclick=()=>close3D();
@@ -18601,6 +18620,9 @@ const QS_ROW=44;
 let qs=null,qsMarker=null,_qsWT=0;
 function qsOpen(){
   if(!sb||!sbUser){authShow();return;}
+  // always on the map screen, centred on where you are (GPS below)
+  try{if(document.body.getAttribute('data-screen')!=='search')navGo('map');}catch(e){}
+  try{if(typeof is3d!=='undefined'&&is3d)close3D();}catch(e){}
   qs={type:0,depth:2,ll:null,acc:null,moved:false,photo:null,busy:false,crust:null,tracks:null};
   // opened from a tour («Melden» on its sheet): the point starts on its summit
   // and the report is tagged with it; GPS takes over only when you are on it
@@ -18685,6 +18707,7 @@ function qsPlace(lat,lon,acc,noGps){if(!qs)return;
   qs.ll=[lat,lon];qs.acc=acc;qs.noGps=!!noGps;
   // the point goes under the crosshair: centre on it, then shift by the
   // distance between the map's middle and the cross
+  try{map.invalidateSize({animate:false});}catch(e){}
   const r=map.getContainer().getBoundingClientRect();
   map.setView([lat,lon],Math.max(map.getZoom(),14),{animate:false});
   map.panBy([0,Math.round(r.height/2-qsCrossY())],{animate:false});
