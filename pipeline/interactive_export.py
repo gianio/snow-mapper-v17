@@ -6093,6 +6093,11 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .rs-it.rs-one b{color:var(--accent)}
  .qs-sheet{position:fixed;left:0;right:0;bottom:0;z-index:3200;transform:translateY(105%);transition:transform .26s var(--ease);pointer-events:none}
  .qs-sheet.open{transform:none;pointer-events:auto}
+ /* the map keeps the upper ~40 % for placing the point under the crosshair */
+ .qs-sheet .qs-in{max-height:60vh;max-height:60dvh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+ body.qs-open #feedHereBtn{display:none}
+ /* «Posten» stays in reach while the sheet scrolls */
+ .qs-sheet .qs-acts{position:sticky;bottom:calc(-14px - env(safe-area-inset-bottom,0px));margin:12px -16px calc(-14px - env(safe-area-inset-bottom,0px));padding:10px 16px calc(14px + env(safe-area-inset-bottom,0px));background:var(--frost-sheet,var(--card));box-shadow:0 -8px 14px -10px rgba(10,30,60,.25);z-index:2}
  .qs-in{max-width:520px;margin:0 auto;background:var(--frost-sheet,var(--card));border-radius:18px 18px 0 0;box-shadow:var(--ice-edge),0 -10px 30px rgba(10,30,60,.18);
    padding:6px 16px calc(14px + env(safe-area-inset-bottom,0px))}
  .qs-grab{width:38px;height:5px;border-radius:3px;background:var(--hair);margin:2px auto 8px}
@@ -6117,6 +6122,14 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .qs-wheel-sel{position:absolute;left:8px;right:8px;top:44px;height:44px;border-radius:10px;border:1.5px solid var(--accent);pointer-events:none}
  .qs-dep{margin-top:12px;transition:opacity .2s}
  .qs-dep.off{opacity:.35;pointer-events:none}
+ .qs-crust,.qs-trk{margin-top:12px}
+ .qs-crust[hidden]{display:none}
+ .qs-seg{display:flex;gap:6px;flex-wrap:wrap}
+ .qs-seg button{flex:1 1 auto;min-height:38px;padding:0 10px;border-radius:12px;border:1px solid var(--hair);background:var(--card);color:var(--fg);font:650 13px var(--font,inherit);cursor:pointer}
+ .qs-seg button.on{background:var(--fg);color:var(--card);border-color:var(--fg)}
+ #qsCross{position:fixed;z-index:1300;width:48px;height:48px;margin:-24px 0 0 -24px;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+ #qsCross[hidden]{display:none}
+ #qsCross svg{width:48px;height:48px}
  .qs-range{-webkit-appearance:none;appearance:none;width:100%;height:30px;background:transparent;margin:2px 0 0}
  .qs-range::-webkit-slider-runnable-track{height:12px;border-radius:6px;background:var(--qs-track)}
  .qs-range::-moz-range-track{height:12px;border-radius:6px;background:var(--qs-track)}
@@ -7690,7 +7703,7 @@ const I18N_DICT={
 "An":["On", "Activé", "Attivo"],
 "Aus":["Off", "Désactivé", "Disattivo"],
 "Niedrig":["Low","Bas","Basso"],"Mittel":["Medium","Moyen","Medio"],"Schnee entlang der Route":["Snow along the route","Neige le long de l'itinéraire","Neve lungo il percorso"],
-"Verspurung":["Tracks","Traces","Tracce"],"Unverspurt":["Untracked","Vierge","Intatto"],"Wenig verspurt":["Few tracks","Peu tracé","Poco tracciato"],"Stark verspurt":["Heavily tracked","Très tracé","Molto tracciato"],
+"Verspurung":["Tracks","Traces","Tracce"],"1–3 Personen":["1–3 people","1–3 personnes","1–3 persone"],"5–10 Personen":["5–10 people","5–10 personnes","5–10 persone"],"Verspurt":["Tracked out","Tracé","Tracciato"],"Unverspurt":["Untracked","Vierge","Intatto"],"Wenig verspurt":["Few tracks","Peu tracé","Poco tracciato"],"Stark verspurt":["Heavily tracked","Très tracé","Molto tracciato"],
 "Punkt entfernen":["Remove point","Supprimer le point","Rimuovi punto"],"Kein Schnee":["No snow","Pas de neige","Niente neve"],"Mächtigkeit":["Thickness","Épaisseur","Spessore"],
 "Tippe auf das Höhenprofil, um an dieser Stelle den Schnee zu melden. Mehrere Punkte möglich.":["Tap the elevation profile to report the snow at that spot. Several points are possible.","Touche le profil d'altitude pour signaler la neige à cet endroit. Plusieurs points possibles.","Tocca il profilo altimetrico per segnalare la neve in quel punto. Più punti possibili."],
 "Aufzeichnen gibt es auf dem Smartphone":["Recording is available on your phone","L'enregistrement est disponible sur smartphone","La registrazione è disponibile sullo smartphone"],
@@ -11590,7 +11603,7 @@ const TRK_PT={
  wet:{l:'Nass',zone:'wet',cm:false,col:'#f59e0b'},
  icy:{l:'Eisig',zone:'icy',cm:false,col:'#38bdf8'},
  nosnow:{l:'Kein Schnee',zone:'nosnow',cm:false,col:'#e0483c'}};
-const TRK_TRACKS=[['none','Unverspurt'],['few','Wenig verspurt'],['some','Mittel'],['many','Stark verspurt']];
+const TRK_TRACKS=[['none','Unverspurt'],['few','1–3 Personen'],['some','5–10 Personen'],['many','Verspurt']];
 function trkCol(){try{return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#2A8FD8';}catch(e){return '#2A8FD8';}}
 let trkLinkAct=null,trkGuide=null,trkGuideLine=null,_trkOff=false;
 // Start recording on a tour from the finder or the tour sheet: the route is
@@ -17297,7 +17310,7 @@ function _rptMarker(r,mode){
   else if(mode==='photo'&&r.img){html='<div class="rpt-photo" style="--cc:'+col+'"><img src="'+((r.condition_data&&r.condition_data.thumb)||r.img)+'" loading="lazy" alt=""/><i class="rp-cat" style="background:'+(CAT_COLORS[r.cat]||'#333')+'">'+(CAT_SVG[r.cat]||'')+'</i></div>';w=h=58;}
   else if(mode==='chip'){const cm=_rptDepth(r);const lab=(cm!=null)?(cm+' cm'):_rptShort(r);html='<div class="rpt-chip" style="--cc:'+col+'">'+(CAT_SVG[r.cat]||'')+'<b>'+escapeHtml(lab)+'</b></div>';w=Math.round(30+lab.length*8.6);h=30;}
   else if(mode==='dot'){html='<div class="rpt-tiny" style="--cc:'+col+'"></div>';w=h=12;}
-  else{html='<div class="rpt-pin" style="--cc:'+col+'">'+(CAT_SVG[r.cat]||'')+(r.img?'<i class="rp-dot"></i>':'')+'</div>';w=h=38;}
+  else{html='<div class="rpt-pin" style="--cc:'+col+'">'+(CAT_SVG[r.cat]||'')+'</div>';w=h=38;}
   const m=_rptAdd(r.lat,r.lng,html,w,h,null,700,[r.id]);
   m.bindPopup(reportPopupHTML(r),{maxWidth:236,className:'rpt-pop',closeButton:true});}
 // Several drawings of the same slope are one statement about that slope, not
@@ -17402,13 +17415,16 @@ function rptInWindow(r,W){if(!W)return true;if(sbUser&&r.userId===sbUser.id&&Dat
 let _rptWinKey='';
 function rptWindowSync(){const W=rptWindow();const k=W?Math.round(W.lo/36e5)+':'+Math.round(W.hi/36e5):'';
   if(k===_rptWinKey)return;_rptWinKey=k;clearTimeout(rptWindowSync._t);rptWindowSync._t=setTimeout(()=>{try{loadReportMarkers();}catch(e){}},250);}
+// The reports that have a marker on the map right now -- what «N Beiträge
+// hier im Feed» counts and what the feed then lists, so the two agree.
+let _rptShown=[];
 function loadReportMarkers(){
-  try{feedHereSync();}catch(e){}
+  _rptShown=[];
   reportMarkers.clearLayers();
-  if(!allReports||!allReports.length)return;
-  // No count bubbles any more: every report is its own marker, a dot when
-  // zoomed far out, a pin in between, the photo or chip up close.
-  const z=map.getZoom(),cellPx=66,tiny=z<9.5,clusterOn=false,rich=z>=12.5;
+  if(!allReports||!allReports.length){try{feedHereSync();}catch(e){}return;}
+  // Every report is its own marker: a dot, and the report's symbol once
+  // zoomed in close -- no photo or map-snapshot bubbles on the map.
+  const z=map.getZoom(),cellPx=66,tiny=z<12,clusterOn=false,rich=!tiny;
   // Drawn snow-maps are model input for Reported Powder, not posts -- they
   // feed progZones() straight out of allReports but never get a marker, an
   // overlay snapshot, or a feed/profile entry of their own.
@@ -17424,6 +17440,8 @@ function loadReportMarkers(){
     if(mine?!ovOn.myacts:!fr)return;const k=r.userId||r.id;if(!lastAct[k]||rptTimeMs(r)>rptTimeMs(lastAct[k]))lastAct[k]=r;});
   Object.values(lastAct).forEach(r=>_rptActivity(r,tiny));
   const rest=rest0.filter(r=>!isAct(r));
+  _rptShown=rest.concat(Object.values(lastAct));
+  try{feedHereSync();}catch(e){}
   if(tiny){rest.forEach(r=>_rptMarker(r,'dot'));return;}
   const cells={};
   rest.forEach(r=>{let key;
@@ -17433,7 +17451,7 @@ function loadReportMarkers(){
   if(!Object.keys(cells).length)return;
   Object.keys(cells).forEach(k=>{const g=cells[k];
     if(clusterOn&&g.length>=2){_rptCluster(g,z);return;}
-    g.forEach(r=>{ if(rich)_rptMarker(r,r.img?'photo':'chip'); else _rptMarker(r,'pin'); });});
+    g.forEach(r=>_rptMarker(r,'pin'));});
   try{applyFeedHighlight();}catch(e){}
 }
 function _rptActivity(r,tiny){const A=r.condition_data.activity,ll=A.track.map(p=>[p[0],p[1]]),open=()=>feedOpenPost(r.id,r.userId);
@@ -18001,7 +18019,16 @@ function phoneNorm(s){let d=String(s||'').replace(/\(0\)/g,'').replace(/[\s().\/
   if(/^0\d{9}$/.test(d))d='+41'+d.slice(1);           // Swiss national format
   return /^\+[1-9]\d{7,14}$/.test(d)?d:null;}
 function contactMissing(){const m=(sbUser&&sbUser.user_metadata)||{};return !!sbUser&&!(m.first_name&&m.last_name&&m.phone);}
-function contactCheck(){if(!contactMissing()||document.getElementById('contactAsk'))return;
+// The phone number is confirmed by SMS (Supabase phone change: a 6-digit
+// code to the number, then verifyOtp). Needs an SMS provider in Supabase
+// (Authentication › Providers › Phone, e.g. Twilio Verify); until that is
+// set up the request fails and the app says so instead of blocking anyone.
+function phoneUnverified(){const m=(sbUser&&sbUser.user_metadata)||{};if(!sbUser||!m.phone)return false;
+  const want=String(m.phone).replace(/\D/g,''),have=String(sbUser.phone||'').replace(/\D/g,'');
+  return !(sbUser.phone_confirmed_at&&want===have);}
+function smsLater(){try{return !!sessionStorage.getItem('ssm_sms_later');}catch(e){return false;}}
+function contactCheck(){if(document.getElementById('contactAsk')||document.getElementById('smsAsk'))return;
+  if(!contactMissing()){if(phoneUnverified()&&!smsLater())smsAsk();return;}
   try{if(sessionStorage.getItem('ssm_contact_later'))return;}catch(e){}
   const m=sbUser.user_metadata||{};
   const d=document.createElement('div');d.id='contactAsk';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='5001';
@@ -18020,8 +18047,36 @@ async function contactSave(){const v=id=>(document.getElementById(id)||{}).value
   if(!phone){er.textContent='Bitte eine gültige Telefonnummer eingeben (z. B. 079 123 45 67).';return;}
   const b=document.getElementById('cSave');b.disabled=true;b.textContent='Speichert…';
   try{const{data,error}=await sb.auth.updateUser({data:{first_name:first,last_name:last,phone}});if(error)throw error;
-    if(data&&data.user)sbUser=data.user;document.getElementById('contactAsk').remove();toast('Danke!','ok');}
+    if(data&&data.user)sbUser=data.user;document.getElementById('contactAsk').remove();
+    if(phoneUnverified())smsAsk();else toast('Danke!','ok');}
   catch(e){er.textContent='Speichern ging nicht: '+(e.message||e);b.disabled=false;b.textContent='Speichern';}}
+function smsAsk(){if(!sbUser||document.getElementById('smsAsk'))return;
+  const ph=(sbUser.user_metadata||{}).phone||'';
+  const d=document.createElement('div');d.id='smsAsk';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='5001';
+  d.innerHTML='<div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="smsT"><h2 id="smsT">Telefonnummer bestätigen</h2>'
+    +'<p class="auth-sub">Wir schicken dir einen 6-stelligen Code per SMS an <b>'+escapeHtml(ph)+'</b>.</p>'
+    +'<button class="auth-btn primary" id="smsSend" onclick="smsSend()">Code per SMS senden</button>'
+    +'<div id="smsCodeBox" hidden style="margin-top:12px"><input type="text" id="smsCode" class="auth-code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="––––––" oninput="if(this.value.replace(/\\D/g,\'\').length>=6)smsVerify()"/>'
+    +'<button class="auth-btn primary" id="smsOk" style="margin-top:10px" onclick="smsVerify()">Bestätigen</button></div>'
+    +'<div class="auth-err" id="smsErr" role="alert" aria-live="polite"></div>'
+    +'<div class="auth-switch"><button onclick="document.getElementById(\'smsAsk\').remove();openProfile();setTimeout(function(){profNav(\'pers\')},300)">Nummer ändern</button> · '
+    +'<button onclick="try{sessionStorage.setItem(\'ssm_sms_later\',\'1\')}catch(e){};document.getElementById(\'smsAsk\').remove()">Später</button></div></div>';
+  document.body.appendChild(d);}
+async function smsSend(){const ph=(sbUser&&sbUser.user_metadata||{}).phone,er=document.getElementById('smsErr'),b=document.getElementById('smsSend');
+  if(!sb||!ph)return;er.textContent='';b.disabled=true;b.textContent='Sendet…';
+  try{const{error}=await sb.auth.updateUser({phone:ph});if(error)throw error;
+    document.getElementById('smsCodeBox').hidden=false;b.textContent='Code erneut senden';
+    setTimeout(()=>{b.disabled=false;},30000);setTimeout(()=>{const c=document.getElementById('smsCode');if(c)c.focus();},100);}
+  catch(e){const m=(e&&e.message)||'';b.disabled=false;b.textContent='Code per SMS senden';
+    er.textContent=/provider|disabled|unsupported|sms|twilio/i.test(m)?'Die SMS-Bestätigung ist noch nicht eingerichtet – wir holen sie nach. Du kannst die App normal nutzen.'
+      :/rate|too many|security purposes/i.test(m)?'Zu viele Versuche – bitte in ein paar Minuten nochmals.'
+      :/already|registered|exists/i.test(m)?'Diese Nummer gehört schon zu einem anderen Konto.':'SMS ging nicht: '+m;}}
+async function smsVerify(){const ph=(sbUser&&sbUser.user_metadata||{}).phone,c=document.getElementById('smsCode'),er=document.getElementById('smsErr'),b=document.getElementById('smsOk');
+  const tok=(c&&c.value||'').replace(/\D/g,'');if(!sb||!ph||tok.length<6||b.disabled)return;
+  b.disabled=true;b.textContent='Prüft…';er.textContent='';
+  try{const{data,error}=await sb.auth.verifyOtp({phone:ph,token:tok,type:'phone_change'});if(error)throw error;
+    if(data&&data.user)sbUser=data.user;document.getElementById('smsAsk').remove();toast('Telefonnummer bestätigt – danke!','ok');try{haptic(10);}catch(e){}}
+  catch(e){er.textContent='Code ungültig oder abgelaufen. Nimm den neusten Code aus der SMS.';b.disabled=false;b.textContent='Bestätigen';}}
 async function authResend(){if(!sb||!sbUser)return;await sb.auth.resend({type:'signup',email:sbUser.email,options:{emailRedirectTo:AUTH_REDIRECT}});const b=document.getElementById('emailBanner').querySelector('button');if(b)b.textContent='Gesendet!';}
 function authMenu(){openProfile();}
 // --- Personal preferences ---------------------------------------------------
@@ -18526,8 +18581,9 @@ async function favOpen(id){
   map.setView([f.lat,f.lon],13);setTimeout(()=>{try{inspOpen(f.lat,f.lon);}catch(e){}},400);}
 
 // ── Schnellmeldung ──────────────────────────────────────────────────────
-// A sheet over the lower half, the map above it with your position as a
-// point you drag to where you actually were. The snow type turns like a
+// A sheet over the lower half, the map above it with a crosshair: your
+// position is put under it, and you move the map until the cross sits where
+// you actually were. The snow type turns like a
 // wheel (the Skiqualität types), the depth is a slider in the map's own
 // powder colours, in its bands. A photo is optional. Nothing is posted
 // until "Posten".
@@ -18545,7 +18601,7 @@ const QS_ROW=44;
 let qs=null,qsMarker=null,_qsWT=0;
 function qsOpen(){
   if(!sb||!sbUser){authShow();return;}
-  qs={type:0,depth:2,ll:null,acc:null,moved:false,photo:null,busy:false};
+  qs={type:0,depth:2,ll:null,acc:null,moved:false,photo:null,busy:false,crust:null,tracks:null};
   // opened from a tour («Melden» on its sheet): the point starts on its summit
   // and the report is tagged with it; GPS takes over only when you are on it
   const tl=rptTourLock&&rptTourSel?tourList().find(t=>String(t.id)===String(rptTourSel.id)):null;
@@ -18564,11 +18620,16 @@ function qsOpen(){
     +'<div class="qs-dep" id="qsDep"><div class="qs-lbl">Tiefe <b id="qsDepV"></b></div>'
     +'<input type="range" class="qs-range" id="qsRange" min="0" max="'+(QS_DEPTH.length-1)+'" step="1" value="2" oninput="qsDepth(+this.value)" style="--qs-track:linear-gradient(90deg,'+stops+')" aria-label="Tiefe">'
     +'<div class="qs-ticks">'+QS_DEPTH.map(d=>'<span>'+(d[1]==null?d[0]+'+':d[0]+'–'+d[1])+'</span>').join('')+'</div></div>'
+    // a crust: how firm (the same «Deckel» choice as the full snow report)
+    +'<div class="qs-crust" id="qsCrust" hidden><div class="qs-lbl">Deckel</div><div class="qs-seg">'
+    +SNOW_THICK.map(([k,l])=>'<button type="button" data-k="'+k+'" onclick="qsSet(\'crust\',\''+k+'\',this)">'+escapeHtml(l)+'</button>').join('')+'</div></div>'
+    +'<div class="qs-trk"><div class="qs-lbl">Spuren</div><div class="qs-seg">'
+    +TRK_TRACKS.map(([k,l])=>'<button type="button" data-k="'+k+'" onclick="qsSet(\'tracks\',\''+k+'\',this)">'+escapeHtml(l)+'</button>').join('')+'</div></div>'
     +'<div class="qs-acts"><label class="qs-ph" id="qsPh" aria-label="Foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/></svg>'
     +'<span>Foto</span><input type="file" accept="image/*" hidden onchange="qsPhoto(this)"></label>'
     +'<button type="button" class="qs-post" id="qsPost" onclick="qsPost()" disabled>Posten</button></div></div>';
   el.classList.add('open');document.body.classList.add('qs-open');try{navSync();}catch(e){}
-  qsDepth(2);
+  qsDepth(2);qsCrossOn();
   const fall=()=>{if(qs&&!qs.ll){const c=map.getCenter();qsPlace(c.lat,c.lng,null,true);}};
   if(qs.tourPt)qsPlace(qs.tourPt[0],qs.tourPt[1],null,true);
   // the first fix is often the coarse one: keep listening for ~20 s and move
@@ -18576,8 +18637,7 @@ function qsOpen(){
   if(navigator.geolocation){try{
     qs.watch=navigator.geolocation.watchPosition(p=>{if(!qs)return;const a=p.coords.accuracy;gpsCoarseCheck(a);
       if(qs.tour&&!qsOnTour(p.coords.latitude,p.coords.longitude))return;
-      if(!qs.ll||qs.noGps||(!qs.moved&&a<(qs.acc||1e9))){if(!qs.ll||qs.noGps)qsPlace(p.coords.latitude,p.coords.longitude,a,false);
-        else{qs.ll=[p.coords.latitude,p.coords.longitude];qs.acc=a;if(qsMarker)qsMarker.setLatLng(qs.ll);qsLocText();}}
+      if(!qs.moved&&(!qs.ll||qs.noGps||a<(qs.acc||1e9)))qsPlace(p.coords.latitude,p.coords.longitude,a,false);
       if(a<=10)qsGpsStop();},e=>{if(e.code===1)fall();},{enableHighAccuracy:true,timeout:20000,maximumAge:0});}catch(e){}
     setTimeout(fall,9000);setTimeout(qsGpsStop,20000);}
   else fall();
@@ -18586,18 +18646,49 @@ function qsOnTour(lat,lon){const t=qs&&qs.tour;if(!t||!t.coords)return true;
   for(let i=0;i<t.coords.length;i+=2){if(tourDistM(lon,lat,t.coords[i][0],t.coords[i][1])<=1500)return true;}return false;}
 function qsGpsStop(){if(qs&&qs.watch!=null){try{navigator.geolocation.clearWatch(qs.watch);}catch(e){}qs.watch=null;}}
 function qsClose(){qsGpsStop();if(qs&&!qs.posted){rptTourSel=null;rptTourLock=false;rptTourQ='';}const el=document.getElementById('qsSheet');if(el)el.classList.remove('open');
-  document.body.classList.remove('qs-open');if(qsMarker){try{map.removeLayer(qsMarker);}catch(e){}qsMarker=null;}qs=null;try{navSync();}catch(e){}}
+  document.body.classList.remove('qs-open');if(qsMarker){try{map.removeLayer(qsMarker);}catch(e){}qsMarker=null;}qsCrossOff();qs=null;try{navSync();}catch(e){}}
+// The crosshair sits in the middle of the map that is still visible above
+// the sheet. Moving the map (by hand) moves the report's point.
+function qsCrossY(){const sh=document.getElementById('qsSheet'),r=map.getContainer().getBoundingClientRect();
+  const h=sh&&sh.classList.contains('open')?sh.offsetHeight:0;return Math.max(80,Math.round((innerHeight-h)/2-r.top));}
+function qsCrossPos(){const c=document.getElementById('qsCross');if(!c)return;const r=map.getContainer().getBoundingClientRect();
+  c.style.top=(r.top+qsCrossY())+'px';c.style.left=(r.left+r.width/2)+'px';}
+function qsCrossLL(){const r=map.getContainer().getBoundingClientRect();return map.containerPointToLatLng([r.width/2,qsCrossY()]);}
+function _qsDrag(){if(!qs)return;qs.moved=true;qsGpsStop();}
+let _qsTT=0;
+function _qsMoveEnd(){if(!qs||!qs.moved)return;const p=qsCrossLL();qs.ll=[p.lat,p.lng];qsLocText();
+  clearTimeout(_qsTT);_qsTT=setTimeout(qsTourSync,400);const b=document.getElementById('qsPost');if(b)b.disabled=false;}
+function qsCrossOn(){let c=document.getElementById('qsCross');
+  if(!c){c=document.createElement('div');c.id='qsCross';c.setAttribute('aria-hidden','true');
+    c.innerHTML='<svg viewBox="0 0 48 48" fill="none" stroke-linecap="round"><circle cx="24" cy="24" r="9" stroke="#fff" stroke-width="5"/><circle cx="24" cy="24" r="9" stroke="#e0245e" stroke-width="2.4"/>'
+      +'<path d="M24 2v12M24 34v12M2 24h12M34 24h12" stroke="#fff" stroke-width="5"/><path d="M24 2v12M24 34v12M2 24h12M34 24h12" stroke="#e0245e" stroke-width="2.4"/><circle cx="24" cy="24" r="1.8" fill="#e0245e"/></svg>';
+    document.body.appendChild(c);}
+  c.hidden=false;qsCrossPos();map.on('dragstart',_qsDrag);map.on('moveend',_qsMoveEnd);addEventListener('resize',_qsReflow);
+  _qsY=qsCrossY();
+  const sh=document.getElementById('qsSheet');
+  if(sh&&'ResizeObserver'in window){_qsRO=new ResizeObserver(_qsReflow);_qsRO.observe(sh);}}
+// the sheet grew or shrank (a section shown, the keyboard, rotation): the
+// cross moves with the free map, and the map moves with it, so the chosen
+// point stays under the cross
+let _qsY=null,_qsRO=null;
+function _qsReflow(){if(!qs)return;const y=qsCrossY();
+  if(_qsY!=null&&y!==_qsY&&qs.ll){try{map.panBy([0,_qsY-y],{animate:false});}catch(e){}}
+  _qsY=y;qsCrossPos();}
+function qsCrossOff(){const c=document.getElementById('qsCross');if(c)c.hidden=true;
+  map.off('dragstart',_qsDrag);map.off('moveend',_qsMoveEnd);removeEventListener('resize',_qsReflow);
+  if(_qsRO){try{_qsRO.disconnect();}catch(e){}_qsRO=null;}_qsY=null;}
+// crust and tracks: tap to choose, tap again to clear
+function qsSet(k,v,b){if(!qs)return;qs[k]=qs[k]===v?null:v;
+  b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.k===qs[k]));try{haptic(3);}catch(e){}}
 // your position as a point on the map, dragged to where you really were
 function qsPlace(lat,lon,acc,noGps){if(!qs)return;
   qs.ll=[lat,lon];qs.acc=acc;qs.noGps=!!noGps;
-  if(qsMarker)map.removeLayer(qsMarker);
-  qsMarker=L.marker([lat,lon],{draggable:true,autoPan:true,zIndexOffset:3000,
-    icon:L.divIcon({className:'',html:'<div class="qs-pin"><i></i></div>',iconSize:[34,34],iconAnchor:[17,17]})}).addTo(map);
-  qsMarker.on('dragend',()=>{const p=qsMarker.getLatLng();qs.ll=[p.lat,p.lng];qs.moved=true;qsGpsStop();qsLocText();qsTourSync();try{haptic(4);}catch(e){}});
-  const sh=document.getElementById('qsSheet');
+  // the point goes under the crosshair: centre on it, then shift by the
+  // distance between the map's middle and the cross
+  const r=map.getContainer().getBoundingClientRect();
   map.setView([lat,lon],Math.max(map.getZoom(),14),{animate:false});
-  if(sh)map.panBy([0,Math.round(sh.offsetHeight/2)],{animate:false});
-  qsLocText();qsTourSync();const b=document.getElementById('qsPost');if(b)b.disabled=false;}
+  map.panBy([0,Math.round(r.height/2-qsCrossY())],{animate:false});
+  _qsY=qsCrossY();qsCrossPos();qsLocText();qsTourSync();const b=document.getElementById('qsPost');if(b)b.disabled=false;}
 function qsTourSync(){if(!qs||!qs.ll)return;const ll=qs.ll;
   toursEnsure().then(()=>{if(qs)tourPickRender('qsTour',ll[0],ll[1]);}).catch(()=>{});}
 function qsLocText(){const el=document.getElementById('qsLoc');if(!el||!qs||!qs.ll)return;
@@ -18605,13 +18696,14 @@ function qsLocText(){const el=document.getElementById('qsLoc');if(!el||!qs||!qs.
   el.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>'
     +'<span><b>'+(d.elev!=null?d.elev+' m':'–')+(d.aspect?' · '+escapeHtml(d.aspect):'')+'</b>'
     +'<small>'+(qs.moved?'<span>Punkt verschoben</span>':(qs.tourPt&&qs.noGps)?'<span>Gipfel der Tour – Punkt auf die Stelle ziehen</span>':qs.noGps?'<span>Kein GPS – Punkt auf die Stelle ziehen</span>':'<span>Dein Standort</span>'+(qs.acc?' ±'+Math.round(qs.acc)+' m':''))
-    +' · <span>auf der Karte verschiebbar</span></small></span>';}
+    +' · <span>Karte verschieben, bis das Kreuz auf der Stelle liegt</span></small></span>';}
 // the wheel: the item in the middle is the one chosen
 function qsWheelScroll(){clearTimeout(_qsWT);_qsWT=setTimeout(()=>{const w=document.getElementById('qsWheel');if(!w||!qs)return;
   const i=Math.max(0,Math.min(QS_TYPES.length-1,Math.round(w.scrollTop/QS_ROW)));if(i!==qs.type){qs.type=i;qsSync();try{haptic(3);}catch(e){}}},70);}
 function qsPick(i){const w=document.getElementById('qsWheel');if(w)w.scrollTo({top:i*QS_ROW,behavior:'smooth'});if(qs){qs.type=i;qsSync();}}
 function qsSync(){if(!qs)return;document.querySelectorAll('#qsWheel .qs-it').forEach((b,i)=>b.classList.toggle('on',i===qs.type));
-  const d=document.getElementById('qsDep');if(d)d.classList.toggle('off',!QS_TYPES[qs.type].depth);}
+  const d=document.getElementById('qsDep');if(d)d.classList.toggle('off',!QS_TYPES[qs.type].depth);
+  const c=document.getElementById('qsCrust');if(c)c.hidden=QS_TYPES[qs.type].k!=='kruste';}
 function qsDepth(i){if(!qs)return;qs.depth=i;const d=QS_DEPTH[i],v=document.getElementById('qsDepV');
   if(v)v.textContent=(d[1]==null?d[0]+'+':d[0]+'–'+d[1])+' cm';
   const r=document.getElementById('qsRange');if(r){r.value=i;r.style.setProperty('--qs-thumb',d[2]);}}
@@ -18626,6 +18718,8 @@ async function qsPost(){if(!qs||qs.busy||!qs.ll)return;
     const cd={snow:t.k,measurement:t.l+(dp?' '+(dp[1]==null?dp[0]+'+':dp[0]+'–'+dp[1])+' cm':''),
       aspect:d.aspect||null,altitudeM:d.elev!=null?d.elev:null,gpsAcc:qs.acc?Math.round(qs.acc):null,moved:qs.moved||undefined};
     if(dp)cd.depthBand=[dp[0],dp[1]];
+    if(t.k==='kruste'&&qs.crust){cd.crust=qs.crust;cd.measurement+=' · Deckel '+lbOf(SNOW_THICK,qs.crust);}
+    if(qs.tracks){cd.tracks=qs.tracks;cd.measurement+=' · '+lbOf(TRK_TRACKS,qs.tracks);}
     const tour=tourPickTake();if(tour)cd.tour=tour;
     // what feeds the reported-powder model (thin cover says nothing about the surface)
     if(t.q!=null){cd.quick=true;cd.powderQuality=t.q;cd.powderAmountCm=cm;cd.powder=t.k==='pulver';}
@@ -18812,7 +18906,8 @@ async function profSave(){
     const pv=id=>((document.getElementById(id)||{}).value||'').trim(),md=(sbUser&&sbUser.user_metadata)||{};
     const priv={};if(pv('profFirst'))priv.first_name=pv('profFirst');if(pv('profLast'))priv.last_name=pv('profLast');
     if(pv('profPhone')){const ph=phoneNorm(pv('profPhone'));if(ph)priv.phone=ph;else toast('Telefonnummer ungültig – nicht gespeichert.','err');}
-    if(sb&&sbUser&&Object.keys(priv).some(k=>priv[k]!==md[k])){const{data:ud}=await sb.auth.updateUser({data:priv});if(ud&&ud.user)sbUser=ud.user;}
+    if(sb&&sbUser&&Object.keys(priv).some(k=>priv[k]!==md[k])){const{data:ud}=await sb.auth.updateUser({data:priv});if(ud&&ud.user)sbUser=ud.user;
+      if(priv.phone&&priv.phone!==md.phone)setTimeout(()=>{try{sessionStorage.removeItem('ssm_sms_later');}catch(e){}if(phoneUnverified())smsAsk();},600);}
     if(d&&d.value.trim()&&sb&&sbUser){await sb.auth.updateUser({data:{username:d.value.trim()}});
       await sb.from('profiles').update({username:d.value.trim()}).eq('id',sbUser.id);
       document.getElementById('profName').textContent=d.value.trim();}
@@ -20740,7 +20835,9 @@ function feedRegionSet(id,keep){feedRegion=(feedRegion===id&&!keep)?'':id;try{lo
   if(feedRegion==='near'&&!myLoc){try{geoLocate(p=>{myLoc=[p.coords.latitude,p.coords.longitude];feedRender();},()=>{});}catch(e){}}
   try{haptic(3);}catch(e){}try{feedTopRender();}catch(e){}feedRender();}
 function feedRegionFilter(list){if(!feedRegion)return list;
-  if(feedRegion==='view'){const b=feedViewB;if(!b)return list;return list.filter(r=>r.lat>=b[0]&&r.lat<=b[2]&&r.lng>=b[1]&&r.lng<=b[3]);}
+  if(feedRegion==='view'){const b=feedViewB;if(!b)return list;
+    if(feedViewIds)return list.filter(r=>feedViewIds.has(String(r.id)));
+    return list.filter(r=>r.lat>=b[0]&&r.lat<=b[2]&&r.lng>=b[1]&&r.lng<=b[3]);}
   if(feedRegion==='fav'||feedRegion.indexOf('fav:')===0){
     const F=(favs||[]).filter(f=>feedRegion==='fav'||'fav:'+f.id===feedRegion);if(!F.length)return [];
     return list.filter(r=>F.some(f=>haversineKm(f.lat,f.lon,r.lat,r.lng)<=FEED_FAV_KM));}
@@ -20901,7 +20998,10 @@ function feedRegionsRender(){const el=document.getElementById('feedFilter');if(!
   if(sbUser&&!favs)favLoad().then(()=>{if(favs&&favs.length)feedRegionsRender();});}
 // «Beiträge hier im Feed»: with the community reports on the map, a pill
 // opens the feed on exactly the posts of the map view.
+let feedViewIds=null;
 function feedOpenView(){const b=map.getBounds();feedViewB=[b.getSouth(),b.getWest(),b.getNorth(),b.getEast()];
+  feedViewIds=new Set(_rptShown.filter(r=>b.contains([r.lat,r.lng])).map(r=>String(r.id)));
+  _feedFromMap={c:map.getCenter(),z:map.getZoom()};
   feedRegion='view';try{localStorage.setItem('ssm_feed_region','');}catch(e){}
   try{if(feedScope!=='all')feedSetScope('all');}catch(e){}
   navGo('feed');setTimeout(()=>{try{feedRegionsRender();feedTopRender();}catch(e){}feedRender();},0);}
@@ -20909,7 +21009,7 @@ let _fhRaf=0;
 function feedHereSync(){if(_fhRaf)return;_fhRaf=requestAnimationFrame(()=>{_fhRaf=0;
   let el=document.getElementById('feedHereBtn');
   const on=!!(typeof ovOn!=='undefined'&&ovOn.reports);
-  let n=0;if(on){try{const b=map.getBounds();n=allReports.filter(r=>!_rptIsDraw(r)&&!isBlocked(r.userId)&&b.contains([r.lat,r.lng])).length;}catch(e){}}
+  let n=0;if(on){try{const b=map.getBounds();n=_rptShown.filter(r=>!isBlocked(r.userId)&&b.contains([r.lat,r.lng])).length;}catch(e){}}
   if(!on||!n){if(el)el.hidden=true;return;}
   if(!el){el=document.createElement('button');el.id='feedHereBtn';el.type='button';el.onclick=feedOpenView;document.body.appendChild(el);}
   el.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="14" y2="13"/></svg><span>'
@@ -21254,7 +21354,7 @@ function feedTopRender(){const el=document.getElementById('feedTop');if(!el)retu
   const ic=d=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
   const main=['all','here','following'].includes(feedScope);
   el.innerHTML='<div class="ft-row"><button type="button" class="ft-cat'+(reg?' on':'')+'" onclick="feedFilterOpen()">'+ic('<path d="M4 6h16M7 12h10M10 18h4"/>')+'<span>'+escapeHtml(reg||'Überall')+'</span></button>'
-    +(main?'<button type="button" class="ft-ic ft-map" onclick="feedMapOpen()" aria-label="Auf der Karte" title="Alle Beiträge auf der Karte">'+ic('<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>')+'</button>':'')
+    +(main?'<button type="button" class="ft-ic ft-map" onclick="feedMapTap()" aria-label="Auf der Karte" title="Auf der Karte">'+ic('<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>')+'</button>':'')
     +'<span class="ft-sp"></span>'
     +'<button type="button" class="ft-ic" onclick="usOpen()" aria-label="Leute finden" title="Leute finden">'+ic('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')+'</button>'
     +'<button type="button" class="ft-ic pt-acc ft-me" onclick="accountTap()" aria-label="Mein Profil" title="Mein Profil">'+ic('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>')+'<span class="pt-ini"></span></button>'
@@ -21287,12 +21387,15 @@ async function feedOpenUser(uid,name,postId){if(!uid)return;
   try{await loadDbReports({uid});}catch(e){}
   feedRender();feedTourBar();
   setTimeout(()=>{const sc=document.querySelector('.feed-scroll');if(sc)sc.scrollTop=0;},60);}
+function lbOf(arr,k){const f=(arr||[]).find(x=>x[0]===k);return f?f[1]:k;}
 // What a quick report says, in one line: the snow in its colour, how deep, where.
 function feedFactsHTML(r){const cd=r.condition_data||{},qt=typeof cd.snow==='string'&&QS_TYPES.find(x=>x.k===cd.snow);if(!qt)return '';
   const b=cd.depthBand,dep=b?(b[1]==null?b[0]+'+':b[0]+'–'+b[1])+' cm':'';
   const where=[cd.altitudeM?cd.altitudeM+' m':'',cd.aspect||''].filter(Boolean).join(' · ');
+  const extra=[cd.crust?'Deckel '+lbOf(SNOW_THICK,cd.crust):'',cd.tracks?lbOf(TRK_TRACKS,cd.tracks):''].filter(Boolean).join(' · ');
   return '<div class="fc-facts"><span class="fc-snow"><i style="background:'+qt.c+'"></i>'+escapeHtml(qt.l)+'</span>'
-    +(dep?'<b>'+dep+'</b>':'')+(where?'<span class="fc-where">'+escapeHtml(where)+'</span>':'')+'</div>';}
+    +(dep?'<b>'+dep+'</b>':'')+(where?'<span class="fc-where">'+escapeHtml(where)+'</span>':'')
+    +(extra?'<span class="fc-where">'+escapeHtml(extra)+'</span>':'')+'</div>';}
 // Everything a report says, as label/value rows (only what is there).
 function feedDetailsHTML(r){const cd=r.condition_data||{},rows=[];
   const lb=(arr,k)=>{try{const f=(arr||[]).find(x=>x[0]===k);return f?f[1]:k;}catch(e){return k;}};
@@ -21303,6 +21406,7 @@ function feedDetailsHTML(r){const cd=r.condition_data||{},rows=[];
     const sn=cd.snow;
     if(typeof sn==='string'){const qt=QS_TYPES.find(x=>x.k===sn);if(qt)rows.push(['Schneeart',qt.l]);
       const b=cd.depthBand;if(b)rows.push(['Tiefe',(b[1]==null?b[0]+'+':b[0]+'–'+b[1])+' cm']);
+      if(cd.crust)rows.push(['Deckel',lbOf(SNOW_THICK,cd.crust)]);
       if(cd.aspect)rows.push(['Exposition',cd.aspect]);}
     else if(sn){if(sn.kind)rows.push(['Schneeart',snowKindLabel(sn.kind)]);
       if(sn.kind==='powder'&&sn.depth)rows.push(['Pulvertiefe',snowCmLabel(sn.depth)+' cm']);
@@ -21569,7 +21673,7 @@ function feedRender(){
   // them (a chosen kind, a person's own page, the saved ones and an opened
   // post show all)
   let txtHidden=0;
-  if(!feedTxtOn()&&!(main&&feedFilter!=='all')&&!['user','saved','post'].includes(feedScope)){const n0=filtered.length;filtered=filtered.filter(r=>!feedNoPic(r));txtHidden=n0-filtered.length;}
+  if(!feedTxtOn()&&!(main&&feedFilter!=='all')&&!(main&&feedRegion==='view')&&!['user','saved','post'].includes(feedScope)){const n0=filtered.length;filtered=filtered.filter(r=>!feedNoPic(r));txtHidden=n0-filtered.length;}
   if(feedAnchor){filtered=filtered.map(r=>({r,km:haversineKm(feedAnchor.lat,feedAnchor.lng,r.lat,r.lng)})).sort((a,b)=>a.km-b.km).map(o=>{o.r._km=o.km;return o.r;});}
   else if(feedScope==='all'||feedScope==='post')filtered=feedRank(filtered);
   let focus=(feedScope==='user'||feedScope==='post')&&feedFocusId?filtered.find(r=>String(r.id)===feedFocusId):null;
@@ -21659,16 +21763,23 @@ function feedSeenWatch(){if(!('IntersectionObserver'in window))return;
 // Every post the feed is listing (same kind, region and order) as a marker;
 // a tap shows it, «Beitrag öffnen» opens it. Back to the list with the
 // Community tab or «Liste».
-var _feedLast=[],feedMapLayer=null,_feedMapRep=false;
+var _feedLast=[],feedMapLayer=null,_feedMapRep=false,_feedFromMap=null;
+// Opened from the map («N Beiträge hier im Feed»): the map icon goes straight
+// back to that map view, where the same reports are already on. Otherwise it
+// shows the feed's posts on the map.
+function feedMapTap(){
+  if(feedRegion==='view'&&_feedFromMap){const v=_feedFromMap;navGo('map');
+    try{if(!ovOn.reports)ovToggle('reports');}catch(e){}
+    setTimeout(()=>{try{map.invalidateSize({animate:false});map.setView(v.c,v.z,{animate:false});}catch(e){}},300);return;}
+  feedMapOpen();}
 function feedMapOpen(){
   const list=_feedLast.filter(r=>r.lat!=null&&r.lng!=null&&isFinite(r.lat)&&isFinite(r.lng));
   if(!list.length){toast('Keine Beiträge mit Ort in dieser Auswahl','err');return;}
   feedMapClear();feedMapLayer=L.layerGroup();const pts=[];
   list.forEach(r=>{const k=feedKind(r),kc=(FEED_KINDS.find(x=>x.id===k)||{}).c||'#64748b',cd=r.condition_data||{},A=cd.activity;
     if(A&&A.track&&A.track.length>1)L.polyline(A.track.map(p=>[p[0],p[1]]),{color:kc,weight:3,opacity:.75,interactive:false}).addTo(feedMapLayer);
-    const im=cd.thumb||r.img,w=im?50:34;
-    const html=im?'<div class="rpt-photo fm-m" style="--cc:'+kc+'"><img src="'+escapeHtml(im)+'" loading="lazy" alt=""/></div>'
-      :'<div class="rpt-pin fm-m" style="--cc:'+kc+'">'+(CAT_SVG[r.cat]||'')+'</div>';
+    // the report's symbol, no photo or map-snapshot bubble
+    const w=34,html='<div class="rpt-pin fm-m" style="--cc:'+kc+'">'+(CAT_SVG[r.cat]||'')+'</div>';
     const m=L.marker([r.lat,r.lng],{icon:L.divIcon({className:'',html,iconSize:[w,w],iconAnchor:[w/2,w/2]}),zIndexOffset:900}).addTo(feedMapLayer);
     m.bindPopup(reportPopupHTML(r)+'<button type="button" class="fm-open" onclick="feedOpenAt(\''+escapeHtml(String(r.id))+'\')">Beitrag öffnen ›</button>',{maxWidth:236,className:'rpt-pop',closeButton:true});
     pts.push([r.lat,r.lng]);});
