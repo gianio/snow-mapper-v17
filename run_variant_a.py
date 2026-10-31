@@ -130,6 +130,9 @@ def main():
     ap.add_argument("--ogd-dir", default=None,
                     help="MeteoSwiss OGD point series (tools/ogd_extract.py) to put "
                          "over the Open-Meteo forecast hours")
+    ap.add_argument("--archive-dir", default=None,
+                    help="our own MeteoSwiss archive (pipeline/wx_archive.py) to put "
+                         "over the Open-Meteo hours of the past days")
     ap.add_argument("--advance-only", action="store_true",
                     help="live: only integrate the carried state to --date 00:00 "
                          "and save it -- no window run, no export. The season "
@@ -381,7 +384,7 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
                                         (adv_to, adv_to) if args.advance_only else win,
                                         since=since,
                                         precip_factor=factors, ogd_dir=args.ogd_dir,
-                                        band_temps=band_t)
+                                        archive_dir=args.archive_dir, band_temps=band_t)
     _t["forcing"] = _time.time() - _ts
     wps = [w for w in wps if w["id"] in used]
     keep = {w["id"] for w in wps}

@@ -487,12 +487,15 @@ def _lapsed(hourly, dz, precip_factor=1.0, z_ref=None, band_t=None):
 
 def build_forcing_matrix(wps, runs, target_date, win, meteo_dir: Path | None = None,
                          spinup_days=None, lead_days=None, workers=None, since=None,
-                         precip_factor=None, ogd_dir=None, band_temps=None):
+                         precip_factor=None, ogd_dir=None, band_temps=None,
+                         archive_dir=None):
     """One fetch per weather point, one lapse-rated .smet per run.
 
     `since`: earliest instant any run starts integrating (live mode: the
     carried state's time). Defaults to the spin-up start before the window.
     `precip_factor`: {weather_point_id: factor} from the IMIS correction.
+    `archive_dir`: our MeteoSwiss archive (pipeline/wx_archive.py); its hours
+    replace the Open-Meteo ones of the past days, height-corrected like OGD.
     `band_temps`: {weather_point_id: {band_elev: {time: (T, dz)}}} -- ICON-CH1
     2 m temperature from cells at the band's own height (elevtemp.py, live).
 
@@ -521,6 +524,20 @@ def build_forcing_matrix(wps, runs, target_date, win, meteo_dir: Path | None = N
             except Exception:
                 pass
         h, m, notes = fetch_weather(w["lat"], w["lon"], w["ref_elev"], start, end)
+        # Our own MeteoSwiss archive over the past days (pipeline/wx_archive.py):
+        # ICON-CH short forecasts filed by earlier cycles. Open-Meteo stays
+        # underneath for every hour the archive does not have yet.
+        if h and archive_dir:
+            try:
+                from pipeline import wx_archive
+                ah = wx_archive.series(Path(archive_dir), w["id"], start, end)
+                if ah:
+                    h, n_a, dT_a = _overlay_ogd(h, ah)
+                    if n_a:
+                        notes.append(f"archive {n_a} h, dT {dT_a:+.1f} K")
+                        m = f"archive+{m}"
+            except Exception as e:                      # noqa: BLE001
+                notes.append(f"archive unreadable: {e}")
         # MeteoSwiss OGD forecast hours on top (tools/ogd_extract.py), when
         # the workflow produced them.
         of = Path(ogd_dir) / f"{w['id']}.json" if ogd_dir else None

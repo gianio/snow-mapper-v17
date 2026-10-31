@@ -68,6 +68,8 @@ jobs:
         run: python tools/test_ogd_clouds.py
       - name: OpenStreetMap pistes (packing)
         run: python tools/test_osm_pistes.py
+      - name: Weather archive (MeteoSwiss hours, overlay)
+        run: python tools/test_wx_archive.py
 
       # Upstream shape check. The agent build environment cannot reach
       # aws.slf.ch or data.geo.admin.ch (egress policy, 403 at the proxy), so
