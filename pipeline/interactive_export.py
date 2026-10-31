@@ -510,6 +510,17 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
 
     times, temp_m, prec_m, snow_m, wspd_m, wdir_m, sun_m, elev_pt = _hourly(fc, horizon)
     T = len(times)
+    # MeteoSwiss over Open-Meteo where it has the hours (pipeline/ogd_site.py):
+    # the archive for the past days, the newest ICON-CH run ahead
+    wx_src = None
+    if not use_synthetic and (os.environ.get("SNOWMAPPER_OGD_SITE") or os.environ.get("SNOWMAPPER_WX_ARCHIVE")):
+        try:
+            from pipeline import ogd_site
+            wx_src = ogd_site.overlay(os.environ.get("SNOWMAPPER_OGD_SITE"), os.environ.get("SNOWMAPPER_WX_ARCHIVE"),
+                                      lats, lons, times, temp_m, prec_m, snow_m, wspd_m, wdir_m, sun_m)
+            print(f"[INT] Wetter: {wx_src or 'MeteoSchweiz nicht verfuegbar -- Open-Meteo'}.")
+        except Exception as e:                      # noqa: BLE001
+            print(f"[INT] MeteoSchweiz nicht verwendbar: {type(e).__name__}: {e}")
     cloud_m = _cloud(fc, T)
     clv_m = [_level_wind(fc, T, "cloud_cover_" + k) for k in ("low", "mid", "high")]
     clv_m = clv_m if all(m is not None for m in clv_m) else None
@@ -670,7 +681,7 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         "snow": cubes["snow"], "ablation": cubes["ablation"],
         "temp": cubes["temp"], "sun": cubes["sun"],
         "wind_grid": cubes["wind_grid"], "prec": cubes["prec"],
-        "cloud": cubes.get("cloud"), "clv": cubes.get("clv"), "cloud_src": cloud_src,
+        "cloud": cubes.get("cloud"), "clv": cubes.get("clv"), "cloud_src": cloud_src, "wx_src": wx_src,
         "wind850": cubes.get("wind850"), "wind700": cubes.get("wind700"),
         "main_aspect": aspect_main, "main_slope": slope_main,
         "main_elev": elev_main,
@@ -977,6 +988,7 @@ def _build_meta_blobs(data):
         "cloud_mul": _CLOUD_MUL if data.get("cloud") is not None else None,
         "cloud_lv": list(_CLV_N) if data.get("clv") is not None else None,
         "cloud_src": data.get("cloud_src"),
+        "wx_src": data.get("wx_src"),
         "wind_levels": [k for k in ("wind850", "wind700") if data.get(k) is not None],
         "elev_scale": _ELEV_SCALE, "nsp": data.get("nsp"),
         "slf_bounds": SLF_BOUNDS, "slf_colors": SLF_COLORS,
@@ -19091,8 +19103,8 @@ const SRC_GROUPS=[
     ['worldcover','ESA','#003247','ESA WorldCover','Wald und Bodenbedeckung für das Schneemodell','© ESA WorldCover project 2021 / enthält veränderte Copernicus-Sentinel-Daten (2021) · CC BY 4.0','https://esa-worldcover.org/'],
     ['terrain','TT','#ff9900','Terrain Tiles (AWS Open Data)','Höhenkacheln auf dem Gerät (Hang antippen, 3D)','Mapzen/Tilezen und Quellen, u. a. EU-DEM (Copernicus), SRTM (NASA/USGS)','https://github.com/tilezen/joerd/blob/master/docs/attribution.md']]],
   ['Wetter & Schnee',[
-    ['meteoswiss','MS','#d52b1e','MeteoSchweiz','Messstationen, Wettermodell ICON-CH (Bewölkung)','Open Government Data · Quelle: MeteoSchweiz','https://opendata.swiss/de/organization/bundesamt-fur-meteorologie-und-klimatologie-meteoschweiz'],
-    ['openmeteo','OM','#ff8800','Open-Meteo','Wetterprognosen (Temperatur, Wind, Niederschlag) und Archivwetter','Weather data by Open-Meteo.com · CC BY 4.0','https://open-meteo.com/en/license'],
+    ['meteoswiss','MS','#d52b1e','MeteoSchweiz','Wetterprognose und eigenes Wetterarchiv aus dem Modell ICON-CH (Temperatur, Wind, Niederschlag, Neuschnee, Sonne, Bewölkung), Messstationen','Open Government Data · Quelle: MeteoSchweiz','https://opendata.swiss/de/organization/bundesamt-fur-meteorologie-und-klimatologie-meteoschweiz'],
+    ['openmeteo','OM','#ff8800','Open-Meteo','Höhenwind und Lücken, die MeteoSchweiz noch nicht abdeckt','Weather data by Open-Meteo.com · CC BY 4.0','https://open-meteo.com/en/license'],
     ['slf','SLF','#0067b1','SLF','Lawinenbulletin, IMIS-Messstationen','WSL-Institut für Schnee- und Lawinenforschung SLF · CC BY 4.0','https://www.slf.ch/'],
     ['snowpack','SP','#3b6ea8','SNOWPACK / MeteoIO','Schneedeckenmodell für die Skiqualität (läuft auf unseren Servern)','SLF · GNU LGPL 3.0','https://www.slf.ch/en/services-and-products/snowpack/']]],
   ['Orte & Webcams',[

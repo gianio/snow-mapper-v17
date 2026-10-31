@@ -68,8 +68,10 @@ keine Kaufknöpfe, sondern «bald erhältlich». So geht es weiter:
 ## Vor dem Einschalten der Paywall
 
 - **Datenquellen kommerziell**:
-  - Open-Meteo: kostenpflichtiger Plan oder ganz auf MeteoSchweiz umstellen
-    (siehe `docs/wetterarchiv-meteoschweiz.md`)
+  - Open-Meteo: Die Wetter-Ebenen kommen jetzt von MeteoSchweiz. Open-Meteo
+    füllt nur noch Höhenwind und Lücken. Vor dem Einschalten diese Reste
+    ablösen oder den Open-Meteo-Plan buchen (siehe
+    `docs/wetterarchiv-meteoschweiz.md`)
   - Skitourenrouten: Zusage des SAC (`docs/mail-sac-skitourenrouten.md`)
   - Windy-Webcams: kostenpflichtiger Tarif oder die Ebene weglassen
 - **Daten schützen**: Die Skiqualitäts-Kacheln sind heute öffentlich. Für eine
