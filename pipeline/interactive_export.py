@@ -1312,6 +1312,14 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     boot = _BOOT_SPLIT.replace("__REMOTE_DATA_BASE__", os.environ.get("SNOW_REMOTE_DATA_BASE", ""))
     shell = _HTML.split('<script id="appjs">', 1)[0].replace("<!--__BOOT__-->", boot) + "</body></html>"
     (out_dir / "index.html").write_text(shell, encoding="utf-8")
+    # Leaflet & Co. from the site itself, not from public CDNs (pipeline/vendor.py)
+    try:
+        from config.settings import DATA_DIR
+        from pipeline.vendor import vendorize
+        vendorize(out_dir, Path(DATA_DIR) / "vendor_cache")
+    except Exception as e:                      # noqa: BLE001
+        print(f"[VENDOR] skipped: {type(e).__name__}: {e}")
+    _write_legal_pages(out_dir)
     _write_pwa_assets(out_dir)
     if os.environ.get("SNOW_MINIFY") == "1":
         minify_shell(out_dir)
@@ -1654,6 +1662,14 @@ def _write_pwa_assets(out_dir: Path) -> None:
     }
     (out_dir / "manifest.webmanifest").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     (out_dir / "sw.js").write_text(_SERVICE_WORKER, encoding="utf-8")
+
+
+def _write_legal_pages(out_dir: Path) -> None:
+    """Datenschutzerklärung, Nutzungsbedingungen and Impressum (legal/ in the
+    repo) next to index.html; the app shows them in a full-screen frame."""
+    src = Path(__file__).resolve().parent.parent / "legal"
+    for f in sorted(src.glob("*.html")) + sorted(src.glob("*.css")):
+        (out_dir / f.name).write_bytes(f.read_bytes())
 
 
 _SERVICE_WORKER = r"""// Snowmapper — service worker (installable + offline last-data).
@@ -3650,6 +3666,22 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .prof-item .chev{margin-left:auto;color:var(--mut);font-size:17px;font-weight:600}
  .prof-back{border:none;background:none;color:var(--fg2);font-size:14px;font-weight:750;font-family:inherit;cursor:pointer;padding:8px 0 2px;margin-left:-2px;display:block}
  .prof-hint{font-size:12px;color:var(--mut);margin-top:12px;line-height:1.55}
+ .src-list{background:var(--card);border-radius:16px;padding:0 14px;box-shadow:0 1px 2px rgba(18,21,26,.05)}
+ .src-it{padding:11px 0;border-bottom:1px solid var(--hair)}
+ .src-it:last-child{border-bottom:0}
+ .src-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:14px;color:var(--fg)}
+ .src-h a{flex:none;font-size:12px;font-weight:700;color:var(--accent,var(--fg2));text-decoration:none}
+ .src-d{font-size:12.5px;color:var(--fg2);margin-top:2px;line-height:1.45}
+ .src-l{font-size:11.5px;color:var(--mut);margin-top:3px;line-height:1.45}
+ .legal-view{position:fixed;inset:0;z-index:12000;background:var(--paper);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+ .legal-view[hidden]{display:none}
+ .legal-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px 6px 16px;border-bottom:1px solid var(--hair);font-size:15px;color:var(--fg)}
+ .legal-bar button{width:44px;height:44px;border:0;background:none;color:var(--fg);font-size:18px;cursor:pointer}
+ .legal-view iframe{flex:1;width:100%;border:0;background:var(--paper)}
+ .legal-view iframe[hidden],.legal-body[hidden]{display:none}
+ .legal-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 16px calc(28px + env(safe-area-inset-bottom));max-width:680px;width:100%;margin:0 auto}
+ .auth-legal{font-size:12px;color:var(--mut);text-align:center;margin:4px 0 0;line-height:1.5}
+ .auth-legal a{color:inherit;text-decoration:underline}
  .prof-input{width:100%;box-sizing:border-box;background:var(--ink-050);border:1px solid var(--ink-100);
    border-radius:var(--r-1);min-height:var(--tap);padding:0 var(--sp3);font-family:inherit;font-size:15px;
    color:var(--ink-900);margin-bottom:var(--sp2)}
@@ -6319,7 +6351,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
   <button data-tab="feed" id="mapFeedFab" onclick="navGo('feed')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Community</span><span class="feed-dot"></span></button>
   <button data-tab="report" id="tbReport" onclick="repSheetToggle()" aria-label="Melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><path d="M12 7.8v8.4M7.8 12h8.4"/></svg><span>Melden</span></button>
 </nav>
-<div id="disc"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="discH"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><h2 id="discH">Bevor du startest</h2><p><b>Experimentelle Modelldaten.</b> Diese App zeigt modellierte Schnee-, Pulver- und Skitauglichkeits-Sch&auml;tzungen. Sie ist <b>kein Lawinenbulletin</b> und ersetzt nicht die offizielle Beurteilung des <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation.html" target="_blank" rel="noopener">SLF</a> bzw. <a href="https://whiterisk.ch" target="_blank" rel="noopener">White Risk</a>. Entscheidungen im Gel&auml;nde triffst du auf <b>eigenes Risiko</b>.</p><p class="fine">Datenschutz: F&uuml;r Konto, Meldungen und Fotos werden E-Mail, Standort und Bilddaten bei Supabase (EU) gespeichert. Du kannst Konto und Beitr&auml;ge jederzeit l&ouml;schen.</p><label class="chk"><input type="checkbox" id="discChk" onchange="var b=document.getElementById('discBtn');if(b)b.disabled=!this.checked"><span>Ich habe verstanden, dass dies experimentelle Daten sind und kein Lawinenbulletin ersetzt.</span></label><button class="accept" id="discBtn" disabled onclick="acceptDisc()">Verstanden &ndash; loslegen</button></div></div>
+<div id="disc"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="discH"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><h2 id="discH">Bevor du startest</h2><p><b>Experimentelle Modelldaten.</b> Diese App zeigt modellierte Schnee-, Pulver- und Skitauglichkeits-Sch&auml;tzungen. Sie ist <b>kein Lawinenbulletin</b> und ersetzt nicht die offizielle Beurteilung des <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation.html" target="_blank" rel="noopener">SLF</a> bzw. <a href="https://whiterisk.ch" target="_blank" rel="noopener">White Risk</a>. Entscheidungen im Gel&auml;nde triffst du auf <b>eigenes Risiko</b>.</p><p class="fine">Datenschutz: F&uuml;r Konto, Meldungen und Fotos werden E-Mail, Standort und Bilddaten bei Supabase (EU) gespeichert. Du kannst Konto und Beitr&auml;ge jederzeit l&ouml;schen. <a href="#" onclick="legalOpen('datenschutz');return false">Datenschutzerkl&auml;rung</a> &middot; <a href="#" onclick="legalOpen('agb');return false">Nutzungsbedingungen</a></p><label class="chk"><input type="checkbox" id="discChk" onchange="var b=document.getElementById('discBtn');if(b)b.disabled=!this.checked"><span>Ich habe verstanden, dass dies experimentelle Daten sind und kein Lawinenbulletin ersetzt.</span></label><button class="accept" id="discBtn" disabled onclick="acceptDisc()">Verstanden &ndash; loslegen</button></div></div>
 <div id="a2hs" onclick="if(event.target===this)a2hsLater()"><div class="sheet" role="dialog" aria-modal="true">
   <div class="a2hs-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="4.2" y1="7.5" x2="19.8" y2="16.5"/><line x1="4.2" y1="16.5" x2="19.8" y2="7.5"/></svg></div>
   <h2>Snowmapper aufs Home-Screen</h2>
@@ -6471,6 +6503,13 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
       <button id="setAccount" onclick="_setCameFromProfile=false;setClose();accountTap()">Anmelden</button>
       <button data-dm hidden onclick="_setCameFromProfile=false;setClose();dmOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 4l-1.4 4.1A8.5 8.5 0 0 1 21 11.5z"/></svg>Nachrichten</button>
     </div>
+    <span class="lbl-micro">Rechtliches</span>
+    <div class="set-rows">
+      <button onclick="srcOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Datenquellen &amp; Lizenzen</button>
+      <button onclick="legalOpen('datenschutz')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Datenschutzerklärung</button>
+      <button onclick="legalOpen('agb')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Nutzungsbedingungen</button>
+      <button onclick="legalOpen('impressum')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Impressum</button>
+    </div>
   </div>
 </div>
 <div class="map-fade top" aria-hidden="true"></div><div class="map-fade bot" aria-hidden="true"></div>
@@ -6534,9 +6573,11 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <input type="email" id="authEmail" name="email" placeholder="E-Mail" autocomplete="username email" required/>
 <input type="password" id="authPass" placeholder="Passwort" autocomplete="current-password" required minlength="8"/>
 <input type="password" id="authPass2" placeholder="Passwort wiederholen" autocomplete="new-password" minlength="8" style="display:none"/>
+<input type="text" id="authInvite" placeholder="Einladungscode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" style="display:none"/>
 <label class="auth-show" id="authShowWrap"><input type="checkbox" id="authShowPw" onchange="window.authPwShow(this.checked)"/> Passwort anzeigen</label>
 <div class="auth-err" id="authErr" role="alert" aria-live="polite"></div>
 <button class="auth-btn primary" type="submit" id="authSubmitBtn">Anmelden</button>
+<p class="auth-legal" id="authLegal" style="display:none">Mit der Registrierung akzeptierst du die <a href="#" onclick="legalOpen('agb');return false">Nutzungsbedingungen</a> und die <a href="#" onclick="legalOpen('datenschutz');return false">Datenschutzerklärung</a>.</p>
 <button class="auth-forgot" type="button" id="authForgotBtn" onclick="authForgot()">Passwort vergessen?</button>
 </form>
 <div id="authCodeBox" style="display:none">
@@ -6821,11 +6862,20 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
         <button class="prof-back" onclick="profNav('main')">‹ Zurück</button>
         <div class="prof-sec-title">App &amp; Rechtliches</div>
         <button class="prof-item" id="profInstall" onclick="profClose();a2hsShow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="7" x2="12" y2="13"/><polyline points="9.5 10.5 12 13 14.5 10.5"/><line x1="9" y1="17" x2="15" y2="17"/></svg>App installieren</button>
-        <button class="prof-item" onclick="profShowLegal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Datenschutz &amp; Haftung anzeigen</button>
+        <button class="prof-item nav" onclick="srcOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Datenquellen &amp; Lizenzen<span class="chev">›</span></button>
+        <button class="prof-item" onclick="legalOpen('datenschutz')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Datenschutzerklärung</button>
+        <button class="prof-item" onclick="legalOpen('agb')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>Nutzungsbedingungen (AGB)</button>
+        <button class="prof-item" onclick="legalOpen('impressum')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Impressum</button>
+        <button class="prof-item" onclick="profShowLegal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Haftungshinweis anzeigen</button>
         <button class="prof-item" onclick="sendFeedback()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>Feedback senden</button>
       </div>
     </div>
   </div>
+</div>
+<div class="legal-view" id="legalView" hidden role="dialog" aria-modal="true" aria-labelledby="legalTitle">
+  <div class="legal-bar"><b id="legalTitle"></b><button onclick="legalClose()" aria-label="Schliessen">✕</button></div>
+  <iframe id="legalFrame" title="Rechtliches"></iframe>
+  <div class="legal-body" id="legalBody" hidden></div>
 </div>
 <div class="dm-wrap" id="dmModal" style="display:none" onclick="if(event.target===this)dmClose()">
   <div class="dm-sheet" role="dialog" aria-modal="true" aria-label="Nachrichten">
@@ -7009,6 +7059,12 @@ const I18N_DICT={
 "Anteil im aktuellen Kartenausschnitt":["Share in the current map view","Part dans la vue actuelle","Quota nella vista attuale"],
 "Anzeigename":["Display name","Nom affiché","Nome visualizzato"],
 "App & Rechtliches":["App & legal","App & mentions légales","App & note legali"],
+"Datenquellen & Lizenzen":["Data sources & licences","Sources de données & licences","Fonti dei dati & licenze"],
+"Datenschutzerklärung":["Privacy policy","Politique de confidentialité","Informativa sulla privacy"],
+"Nutzungsbedingungen (AGB)":["Terms of use","Conditions d'utilisation","Condizioni d'uso"],
+"Nutzungsbedingungen":["Terms of use","Conditions d'utilisation","Condizioni d'uso"],
+"Impressum":["Legal notice","Mentions légales","Note legali"],
+"Haftungshinweis anzeigen":["Show disclaimer","Afficher l'avertissement","Mostra avvertenza"],
 "App installieren":["Install app","Installer l'app","Installa l'app"],
 "App installiert!":["App installed!","App installée !","App installata!"],
 "Pfeile zeigen die Windrichtung":["Arrows show the wind direction", "Les flèches indiquent la direction du vent", "Le frecce indicano la direzione del vento"],
@@ -7886,9 +7942,7 @@ const I18N_DICT={
 "Route ausblenden":["Hide route", "Masquer l'itinéraire", "Nascondi percorso"],
 "Skigebiete (Pisten & Lifte)":["Ski areas (pistes & lifts)", "Domaines skiables (pistes et remontées)", "Comprensori (piste e impianti)"],
 "Route auf der Karte – oben «Route ausblenden»":["Route on the map – «Hide route» at the top", "Itinéraire sur la carte – «Masquer l'itinéraire» en haut", "Percorso sulla mappa – «Nascondi percorso» in alto"],
-"Regenradar (jetzt)":["Rain radar (now)", "Radar de pluie (maintenant)", "Radar pioggia (ora)"],
 "Bild von":["image of", "image de", "immagine delle"],
-"Regenradar gerade nicht erreichbar":["Rain radar not reachable right now", "Radar de pluie momentanément indisponible", "Radar pioggia non raggiungibile"],
 "ab Saisonbeginn (SLF)":["from the start of the season (SLF)", "dès le début de la saison (SLF)", "da inizio stagione (SLF)"],
 "Das SLF gibt ausserhalb der Lawinensaison keine Gefahrenstufen heraus":["SLF publishes no danger levels outside the avalanche season", "Le SLF ne publie pas de degrés de danger hors saison", "L'SLF non pubblica gradi di pericolo fuori stagione"],
 "Schnellmeldungen & ohne Foto":["Quick reports & without photo", "Signalements rapides & sans photo", "Segnalazioni rapide & senza foto"],
@@ -8227,59 +8281,6 @@ function aspectQ(deg){const a=((deg%360)+360)%360;if(a>=315||a<45)return'N';if(a
 function asp8(deg){if(deg==null||isNaN(deg))return null;return ['N','NO','O','SO','S','SW','W','NW'][Math.round(((deg%360)+360)%360/45)%8];}
 const SWISS_PEAKS=[[45.976,7.658,'Matterhorn'],[45.937,7.867,'Dufourspitze'],[46.094,7.858,'Dom'],[46.101,7.717,'Weisshorn'],[46.033,7.612,'Dent Blanche'],[45.937,7.299,'Grand Combin'],[46.049,7.899,'Allalinhorn'],[46.057,7.861,'Alphubel'],[46.018,7.833,'Rimpfischhorn'],[45.941,7.719,'Breithorn'],[46.393,7.862,'Bietschhorn'],[46.161,8.028,'Fletschhorn'],[46.156,8.001,'Lagginhorn'],[46.128,8.011,'Weissmies'],[46.577,8.005,'Eiger'],[46.558,7.999,'Mönch'],[46.536,7.962,'Jungfrau'],[46.537,8.116,'Finsteraarhorn'],[46.463,8.021,'Aletschhorn'],[46.588,8.117,'Schreckhorn'],[46.651,8.107,'Wetterhorn'],[46.492,7.752,'Blüemlisalp'],[46.391,7.531,'Wildstrubel'],[46.358,7.371,'Wildhorn'],[46.474,7.720,'Doldenhorn'],[46.646,7.652,'Niesen'],[46.772,8.437,'Titlis'],[46.808,8.918,'Tödi'],[46.826,8.859,'Clariden'],[46.702,8.454,'Sustenhorn'],[46.642,8.421,'Dammastock'],[46.979,8.252,'Pilatus'],[47.048,8.485,'Rigi'],[47.249,9.343,'Säntis'],[47.158,9.311,'Churfirsten'],[46.995,9.000,'Glärnisch'],[46.900,9.267,'Ringelspitz'],[46.383,9.908,'Piz Bernina'],[46.377,9.965,'Piz Palü'],[46.616,9.874,'Piz Kesch'],[46.833,9.807,'Weissfluhgipfel'],[46.773,9.855,'Jakobshorn'],[46.842,10.119,'Piz Buin'],[46.845,10.062,'Piz Linard'],[46.472,9.720,'Piz Julier'],[46.408,9.820,'Piz Corvatsch'],[46.512,9.828,'Piz Nair'],[46.550,9.660,'Piz d\'Err'],[46.550,9.700,'Piz Ela'],[46.622,9.031,'Rheinwaldhorn'],[46.417,8.478,'Basòdino'],[46.421,8.720,'Campo Tencia'],[46.331,7.208,'Les Diablerets'],[46.161,6.920,'Dents du Midi'],[46.243,7.148,'Grand Muveran'],[46.548,7.020,'Moléson'],[46.512,7.150,'Vanil Noir'],[46.925,8.548,'Uri Rotstock'],[46.780,8.680,'Bristen'],[46.930,9.180,'Piz Sardona'],[46.749,9.949,'Flüela Wisshorn'],[46.575,9.671,'Tinzenhorn'],[47.192,9.271,'Alvier'],[46.803,9.930,'Piz Vadret'],[46.360,8.000,'Nufenen'],[46.557,8.561,'Titlis-Region']];
 function nearestPeak(lat,lng){let best=null,bd=1e9;for(const pk of SWISS_PEAKS){const dLat=(lat-pk[0])*111,dLo=(lng-pk[1])*111*Math.cos(lat*Math.PI/180),d=Math.hypot(dLat,dLo);if(d<bd){bd=d;best=pk;}}return(best&&bd<7)?best[2]:null;}
-// --- OCR-basierte Gipfelerkennung: liest den Bergnamen direkt von der Karte ---
-let _ocrLoad=null,_ocrWorker=null,_ocrWorkerP=null;
-function ensureTesseract(){
-  if(window.Tesseract)return Promise.resolve(true);
-  if(_ocrLoad)return _ocrLoad;
-  _ocrLoad=new Promise(res=>{try{const sc=document.createElement('script');
-    sc.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';sc.async=true;
-    sc.onload=()=>res(!!window.Tesseract);sc.onerror=()=>res(false);
-    setTimeout(()=>res(!!window.Tesseract),12000);document.head.appendChild(sc);}catch(e){res(false);}});
-  return _ocrLoad;
-}
-async function ocrGetWorker(){
-  if(_ocrWorker)return _ocrWorker;
-  if(_ocrWorkerP)return _ocrWorkerP;
-  _ocrWorkerP=(async()=>{const ok=await ensureTesseract();if(!ok||!window.Tesseract)return null;
-    try{_ocrWorker=await Tesseract.createWorker('deu');}catch(e){try{_ocrWorker=await Tesseract.createWorker('eng');}catch(_){_ocrWorker=null;}}
-    return _ocrWorker;})();
-  return _ocrWorkerP;
-}
-async function ocrMapCrop(){
-  let c;try{c=map.latLngToContainerPoint(map.getCenter());}catch(e){return null;}
-  const CW=340,CH=250,SC=2.4,x0=c.x-CW/2,y0=c.y-CH/2;
-  const cv=document.createElement('canvas');cv.width=Math.round(CW*SC);cv.height=Math.round(CH*SC);
-  const g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);
-  const mc=map.getContainer(),mr=mc.getBoundingClientRect();
-  const tiles=[...mc.querySelectorAll('.leaflet-tile-pane img')].filter(im=>im.complete&&im.naturalWidth&&im.src&&im.src.indexOf('data:')!==0)
-    .map(im=>{const r=im.getBoundingClientRect();return {src:im.src,x:r.left-mr.left,y:r.top-mr.top,w:r.width,h:r.height};});
-  const loaded=await Promise.all(tiles.map(t=>new Promise(res=>{const ni=new Image();let to;const done=v=>{clearTimeout(to);res(v);};
-    ni.crossOrigin='anonymous';ni.onload=()=>done(Object.assign(t,{img:ni}));ni.onerror=()=>done(null);to=setTimeout(()=>done(null),3000);ni.src=t.src;})));
-  let drew=0;loaded.forEach(t=>{if(t&&t.img){try{g.drawImage(t.img,(t.x-x0)*SC,(t.y-y0)*SC,t.w*SC,t.h*SC);drew++;}catch(e){}}});
-  if(!drew)return null;
-  try{const id=g.getImageData(0,0,cv.width,cv.height),d=id.data;
-    for(let i=0;i<d.length;i+=4){let v=0.3*d[i]+0.59*d[i+1]+0.11*d[i+2];v=(v-128)*1.55+128;v=v<0?0:v>255?255:v;d[i]=d[i+1]=d[i+2]=v;}
-    g.putImageData(id,0,0);}catch(e){return null;}
-  return cv;
-}
-async function ocrPeakFromMap(){
-  try{const cv=await ocrMapCrop();if(!cv)return null;
-    const w=await ocrGetWorker();if(!w)return null;
-    const{data}=await w.recognize(cv);
-    const cxc=cv.width/2,cyc=cv.height/2;let best=null,bs=-1e9;
-    const bad=/^(Bergstation|Talstation|Hütte|Huette|Restaurant|Parkplatz|See|Stausee|Gletscher|Pass|Alp|Camping|Bahnhof)$/i;
-    (data.lines||[]).forEach(ln=>{const txt=(ln.text||'').replace(/\s+/g,' ').trim();
-      const m=txt.match(/([A-Za-zÀ-ſ][A-Za-zÀ-ſ'’.\- ]{2,}?)\s+(\d{3,4})(?!\d)/);
-      if(!m)return;const nm=m[1].trim(),el=+m[2];
-      if(el<700||el>4700||nm.length<3||bad.test(nm))return;
-      const bb=ln.bbox||{x0:0,y0:0,x1:cv.width,y1:cv.height},bx=(bb.x0+bb.x1)/2,by=(bb.y0+bb.y1)/2;
-      const dist=Math.hypot(bx-cxc,by-cyc)/cv.width;
-      const score=((ln.confidence||50)/100)-dist*1.15;
-      if(score>bs){bs=score;best=nm;}});
-    return best;
-  }catch(e){return null;}
-}
 const ASPC={N:[0x4A,0x90,0xD9],E:[0x66,0xBB,0x6A],S:[0xEF,0x53,0x50],W:[0xFF,0xC1,0x07],F:[0x9E,0x9E,0x9E]};
 function aspCol(p){const s=mslpv(p);if(s<5)return ASPC.F;const q=aspectQ(maspv(p));return ASPC[q];}
 function isLee(cellAsp,windFrom){const lee=(windFrom+180)%360;let d=Math.abs(cellAsp-lee);if(d>180)d=360-d;return d<90;}
@@ -8751,7 +8752,9 @@ map.setMaxBounds([[laMin-_padLa,loMin-_padLo],[laMax+_padLa,loMax+_padLo]]);
 // now supplies the "outside Switzerland" context on its own.
 function swissTile(id,ext){return "https://wmts.geo.admin.ch/1.0.0/"+id+"/default/current/3857/{z}/{x}/{y}."+(ext||"jpeg");}
 const BASE_TILE='ch.swisstopo.pixelkarte-farbe-winter';
-const BASE_ATTR="© swisstopo / MeteoSwiss / SLF / Copernicus";
+// The short credit on every map; the full list with licences is in
+// Profil › App & Rechtliches › Datenquellen & Lizenzen (SRC_GROUPS).
+const BASE_ATTR='© swisstopo · Wetter: MeteoSchweiz, <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · SLF · Copernicus · <a href="#" onclick="srcOpen();return false">Quellen</a>';
 // keepBuffer is the whole trick: two rings of tiles either side of the
 // viewport stay in the DOM, so a pan back over ground you have just seen is a
 // transform rather than a network round trip. updateWhenIdle stops us asking
@@ -8883,13 +8886,9 @@ const OVERLAYS={
   // the one map a tourer reads with every other
   slope:{label:'Hangneigung ab 30°',wmts:'ch.swisstopo.hangneigung-ueber_30',op:.55,
          attr:'Hangneigung © swisstopo'},
-  // the latest rain/snow radar picture (RainViewer: MeteoSchweiz and the
-  // neighbours' radars), refreshed while on -- now, not a forecast
-  radar:{label:'Regenradar (jetzt)',vector:true,
-         attr:'Radar © <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a>'},
-  // pistes and lifts (OpenSnowMap, from OpenStreetMap) with the resort names
+  // pistes and lifts from OpenStreetMap (our own build) with the resort names
   skiareas:{label:'Skigebiete (Pisten & Lifte)',vector:true,
-            attr:'Pisten © <a href="https://www.opensnowmap.org/" target="_blank" rel="noopener">OpenSnowMap</a> / OpenStreetMap'},
+            attr:'Pisten © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende (ODbL)'},
   avalanche:{label:'Lawinenbulletin',vector:true,
              attr:'Lawinenbulletin © SLF (CC BY 4.0)'},
   // Its three views are picked inside the panel rather than as separate
@@ -8900,28 +8899,36 @@ const OVERLAYS={
 };
 const ovOn={};
 const ovLayer={};
-// Ski areas: the pistes and lifts as a transparent tile layer once zoomed in,
+// Ski areas: the pistes and lifts drawn from data/pistes.json once zoomed in,
 // the resort names as small labels (a tap zooms to the area).
 const SKI_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="15" cy="4.2" r="1.9" fill="#fff" stroke="none"/><path d="M5.5 9.5l5.2 1.4 2.4-2.4 2.6 3.2-3.6 2.6"/><path d="M12.1 14.3l-1.9 3.6"/><path d="M3 17.5l17.5 3.8"/></svg>';
+// Pistes and lifts from OpenStreetMap (ODbL), fetched by the build about once
+// a week (data/pistes.json, data_connectors/osm_pistes.py) and drawn here --
+// no third-party tile server. One line group per colour, from zoom 11.
+const PISTE_COL=['#3c9b43','#1f6fd1','#d62828','#16181c','#e08a00'];   // novice easy intermediate advanced freeride
+let _pistesP=null;
+function pistesLoad(){return _pistesP||(_pistesP=fetch('data/pistes.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null));}
+function pisteLL(c){const out=[];let x=0,y=0;for(let i=0;i<c.length;i+=2){x+=c[i];y+=c[i+1];out.push([y/1e5,x/1e5]);}return out;}
+function pistesLines(d){const rd=L.canvas({padding:.3}),g=L.layerGroup(),grp={};
+  const add=(key,ll)=>{(grp[key]=grp[key]||[]).push(ll);};
+  d.p.forEach(([k,df,c])=>add(k===1?'n':'p'+(df==null?'u':df),pisteLL(c)));
+  d.l.forEach(([k,nm,c])=>add('l'+k,pisteLL(c)));
+  const o={renderer:rd,interactive:false,lineCap:'round',lineJoin:'round'};
+  // white casing under everything, then the colours
+  Object.keys(grp).forEach(k=>{if(k==='n')return;L.polyline(grp[k],Object.assign({},o,{color:'#fff',weight:k==='l0'?6:5,opacity:.75})).addTo(g);});
+  Object.keys(grp).forEach(k=>{const lines=grp[k];
+    if(k==='n')L.polyline(lines,Object.assign({},o,{color:'#0d9488',weight:2,opacity:.85,dashArray:'4 4'})).addTo(g);
+    else if(k[0]==='l')L.polyline(lines,Object.assign({},o,{color:'#1f2328',weight:k==='l0'?3:2,opacity:.95,dashArray:k==='l2'?'2 4':null})).addTo(g);
+    else{const df=k.slice(1);L.polyline(lines,Object.assign({},o,{color:df==='u'?'#6b7280':PISTE_COL[+df],weight:3,opacity:.95,dashArray:df==='4'?'7 5':null})).addTo(g);}});
+  return g;}
 function skiBuildLayer(){const g=L.layerGroup();
-  L.tileLayer('https://tiles.opensnowmap.org/pistes/{z}/{x}/{y}.png',{minZoom:8,maxZoom:19,maxNativeZoom:18,opacity:.95,pane:'overlayPane'}).addTo(g);
+  pistesLoad().then(d=>{if(!d)return;const lines=pistesLines(d);
+    const sync=()=>{const on=map.hasLayer(g)&&map.getZoom()>=11;if(on&&!map.hasLayer(lines))lines.addTo(map);else if(!on&&map.hasLayer(lines))map.removeLayer(lines);};
+    map.on('zoomend',sync);g.on('add remove',()=>setTimeout(sync,0));sync();});
   CH_RESORTS.forEach(r=>{const m=L.marker([r.lat,r.lng],{keyboard:false,zIndexOffset:400,
       icon:L.divIcon({className:'ski-lbl',html:'<i>'+SKI_ICON+'</i><span>'+escapeHtml(r.name)+'</span>',iconSize:null,iconAnchor:[10,10]})});
     m.on('click',ev=>{L.DomEvent.stopPropagation(ev);map.setView([r.lat,r.lng],Math.max(map.getZoom(),13));});m.addTo(g);});
   return g;}
-// Regenradar: the newest composite frame as tiles (RainViewer's free API;
-// its tiles stop at zoom 7, which is about the radar's own ~1 km), a fresh
-// frame every 10 minutes while the layer is on. Its time goes on the row.
-let _radarT=0,_radarAt=0;
-function radarBuildLayer(){const g=L.layerGroup();radarRefresh(g);return g;}
-async function radarRefresh(g){clearTimeout(_radarT);
-  try{const r=await fetch('https://api.rainviewer.com/public/weather-maps.json',{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);
-    const j=await r.json(),f=((j.radar&&j.radar.past)||[]).slice(-1)[0];if(!f||!j.host)throw new Error('no frame');
-    g.clearLayers();
-    L.tileLayer(j.host+f.path+'/256/{z}/{x}/{y}/2/1_1.png',{opacity:.78,maxNativeZoom:7,maxZoom:19,pane:'overlayPane'}).addTo(g);
-    _radarAt=f.time*1000;try{ovRender();}catch(e){}}
-  catch(e){toastOnce('radarfail','Regenradar gerade nicht erreichbar');}
-  _radarT=setTimeout(()=>{if(ovOn.radar)radarRefresh(g);},600000);}
 function ovAvailable(k){
   if(k==='avalanche'){const a=M.avalanche;return !!(a&&a.regions&&a.regions.some(r=>r.geometry));}
   if(k==='skitourVec')return tourList().length>0;
@@ -8940,7 +8947,6 @@ function ovBuild(k){
   else if(k==='reports'){ovLayer[k]=reportMarkers;}
   else if(k==='myacts'){ovLayer[k]=trkActsLayer();}
   else if(k==='skiareas'){ovLayer[k]=skiBuildLayer();}
-  else if(k==='radar'){ovLayer[k]=radarBuildLayer();}
   return ovLayer[k];
 }
 function ovToggle(k,auto){
@@ -14839,7 +14845,6 @@ const OV_ICON={
   wildlife:'<path d="M7 4c0 3 2 4 5 4s5-1 5-4"/><path d="M12 8v4"/><ellipse cx="12" cy="16" rx="5" ry="4"/>',
   slope:'<path d="M3 20h18L3 6z"/><path d="M8 20a5 5 0 0 0-2-4"/>',
   avalanche:'<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>',
-  radar:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6-6"/><circle cx="12" cy="12" r="1"/>',
   skiareas:'<circle cx="15" cy="4.2" r="1.6"/><path d="M5.5 9.5l5.2 1.4 2.4-2.4 2.6 3.2-3.6 2.6"/><path d="M12.1 14.3l-1.9 3.6"/><path d="M3 17.5l17.5 3.8"/>'};
 function ovRowHTML(k){
   const o=OVERLAYS[k],na=!ovAvailable(k);
@@ -14863,7 +14868,7 @@ function ovRowHTML(k){
     +' onclick="ovToggle(\''+k+'\')" title="'
     +escapeHtml(na?(k==='avalanche'?'Das SLF gibt ausserhalb der Lawinensaison keine Gefahrenstufen heraus':o.label+' – keine Daten'):o.attr)+'">'
     +'<span class="ly-ov-ic">'+ic+'</span><span class="ly-ov-t">'+escapeHtml(o.label)+(na&&k==='avalanche'?'<small>ab Saisonbeginn (SLF)</small>':'')
-    +(k==='radar'&&ovOn.radar&&_radarAt?'<small><span>Bild von</span> '+new Date(_radarAt).toLocaleTimeString(LOCALE(),{hour:'2-digit',minute:'2-digit'})+'</small>':'')+'</span><span class="ly-sw" aria-hidden="true"></span></button>'+extra;
++'</span><span class="ly-sw" aria-hidden="true"></span></button>'+extra;
 }
 // the community's own pins live under its shelf, not with the map extras
 const OV_COMMUNITY=['reports','myacts'];
@@ -14873,8 +14878,8 @@ function ovRender(){
   if(cm)cm.innerHTML=OV_COMMUNITY.filter(k=>OVERLAYS[k]).map(ovRowHTML).join('');
   // what the stations measured, right with the weather it is compared to
   const wx=document.getElementById('lyWxOv'),stnRow=lyExtraRow('stn','Messstationen (SLF) · gemessen',typeof showStn!=='undefined'&&showStn,'<line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0"/>','toggleStations();ovRender()');
-  if(wx)wx.innerHTML=stnRow+(OVERLAYS.radar?ovRowHTML('radar'):'');
-  g.innerHTML=Object.keys(OVERLAYS).filter(k=>k!=='variantA'&&!(cm&&OV_COMMUNITY.includes(k))&&!(wx&&k==='radar')).map(ovRowHTML).join('')
+  if(wx)wx.innerHTML=stnRow;
+  g.innerHTML=Object.keys(OVERLAYS).filter(k=>k!=='variantA'&&!(cm&&OV_COMMUNITY.includes(k))).map(ovRowHTML).join('')
   // map extras that used to live in the settings
   +(wx?'':stnRow)
   +(window._wcOk?lyExtraRow('wc','Webcam-Galerie (Bilder & Live)',false,'<path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/>','lyPanelClose();wcvOpen()'):'')
@@ -17720,6 +17725,8 @@ function authErrMsg(e,fallback){const m=(e&&(e.message||e.error_description))||'
   if(/rate limit|security purposes|too many/i.test(m))return 'Zu viele Anfragen. Bitte kurz warten und erneut versuchen.';
   if(/valid email|invalid email|Unable to validate email/i.test(m))return 'Bitte eine gültige E-Mail-Adresse eingeben.';
   if(/same password|different from the old/i.test(m))return 'Das neue Passwort muss sich vom alten unterscheiden.';
+  // handle_new_user refuses the account: in the closed phase that means the code
+  if(/Database error saving new user|invite_required/i.test(m))return 'Dieser Einladungscode ist ungültig oder schon aufgebraucht. Prüfe ihn oder frag nach einem neuen.';
   return fallback||m||'Etwas ist schiefgelaufen. Bitte erneut versuchen.';}
 const _authEmailRe=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -17783,6 +17790,12 @@ function authRender(){
   $('authPass').autocomplete=isReg?'new-password':'current-password';
   $('authPass2').style.display=isReg?'':'none';
   $('authPass2').required=isReg;
+  // the invite code: needed in the closed phase, optional otherwise (it still
+  // gives the F&F / tester badge); a ?code= link fills it in
+  const inv=$('authInvite');inv.style.display=isReg?'':'none';
+  inv.placeholder=invAccess==='invite'?'Einladungscode':'Einladungscode (falls vorhanden)';
+  if(isReg&&!inv.value)inv.value=invPending();
+  $('authLegal').style.display=isReg?'':'none';
   $('authShowWrap').style.display=isForgot?'none':'';
   $('authForgotBtn').style.display=(isReg||isForgot)?'none':'block';
   if(isNew){$('authTitle').textContent='Neues Passwort';$('authSub').style.display='none';return;}
@@ -17824,8 +17837,13 @@ async function authSubmit(e){
       if(username.length<3){errEl.textContent='Benutzername: mindestens 3 Zeichen.';return;}
       if(pass.length<8){errEl.textContent='Passwort: mindestens 8 Zeichen.';return;}
       if(pass!==pass2){errEl.textContent='Die Passwörter stimmen nicht überein.';return;}
+      const invite=document.getElementById('authInvite').value.replace(/\s+/g,'').toUpperCase();
+      if(invAccess==='invite'&&!invite){errEl.textContent='Snowmapper ist im Moment nur mit Einladung offen: bitte deinen Einladungscode eingeben.';return;}
       _authBusy=true;btn.disabled=true;btn.textContent='Registriere…';
-      const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username},emailRedirectTo:AUTH_REDIRECT}});
+      // the database checks and uses up the code as the account is created
+      // (handle_new_user); kept locally too, so the badge follows after login
+      if(invite){try{localStorage.setItem('ssm_invite',invite);}catch(e){}}
+      const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:invite?{username,invite}:{username},emailRedirectTo:AUTH_REDIRECT}});
       if(error)throw error;
       // With e-mail enumeration protection Supabase answers an existing,
       // confirmed address with a user that has no identities instead of an error.
@@ -18635,7 +18653,7 @@ function offlineUrls(){
   if(D&&D.lj){const p=D.pre+'data/';other.add(p+'latest.json');other.add(p+'tours.json');other.add(p+'config.json');
     ['bin','x'].forEach(k=>{if(D.lj[k])other.add(p+D.lj[k]);});}
   document.querySelectorAll('script[src],link[rel=stylesheet][href]').forEach(el=>{const u=el.src||el.href;
-    if(/^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net)\//.test(u))other.add(u);});
+    if(/^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net)\//.test(u)||/\/vendor\//.test(u))other.add(u);});
   return {tiles,other:[...other],bounds:[s,w,n,e]};}
 // the SNOWPACK pack and the frames of the next 24 h, loaded the app's way
 async function offlineVaUrls(){const out=[];
@@ -18775,6 +18793,53 @@ async function profExportData(btn){if(!sb||!sbUser)return;
 function profShowLegal(){profClose();const el=document.getElementById('disc');if(el)el.classList.add('show');
   const chk=document.getElementById('discChk'),bt=document.getElementById('discBtn');
   if(chk){chk.checked=true;}if(bt){bt.disabled=false;bt.textContent='Schliessen';}}
+// «Datenquellen & Lizenzen»: every outside source the app shows or is built
+// from, with the credit its licence asks for. A new data source or library
+// gets a line here, next to its short credit on the map (BASE_ATTR,
+// OVERLAYS[].attr). [name, what for, licence / credit, link]
+const SRC_GROUPS=[
+  ['Karten & Gelände',[
+    ['swisstopo','Landeskarte Winter, Hangneigung ab 30°, Skitourenrouten, Ortssuche, Höhenmodell swissALTIregio','Open Government Data · Quelle: Bundesamt für Landestopografie swisstopo','https://www.swisstopo.admin.ch/de/nutzungsbedingungen-kostenlose-geodaten-und-geodienste'],
+    ['BAFU','Wildruhezonen','Open Government Data · Quelle: Bundesamt für Umwelt BAFU','https://www.geo.admin.ch/de/nutzungsbedingungen'],
+    ['OpenStreetMap','Pisten und Lifte','© OpenStreetMap-Mitwirkende · Open Database License (ODbL)','https://www.openstreetmap.org/copyright'],
+    ['Copernicus DEM (GLO-30)','Gelände für das Schneemodell','© DLR e.V. 2010–2014 und © Airbus Defence and Space GmbH 2014–2018, bereitgestellt unter COPERNICUS von der Europäischen Union und der ESA','https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM'],
+    ['ESA WorldCover','Wald und Bodenbedeckung für das Schneemodell','© ESA WorldCover project 2021 / enthält veränderte Copernicus-Sentinel-Daten (2021) · CC BY 4.0','https://esa-worldcover.org/'],
+    ['Terrain Tiles (AWS Open Data)','Höhenkacheln auf dem Gerät (Hang antippen, 3D)','Mapzen/Tilezen und Quellen, u. a. EU-DEM (Copernicus), SRTM (NASA/USGS)','https://github.com/tilezen/joerd/blob/master/docs/attribution.md']]],
+  ['Wetter & Schnee',[
+    ['MeteoSchweiz','Messstationen, Wettermodell ICON-CH (Bewölkung)','Open Government Data · Quelle: MeteoSchweiz','https://opendata.swiss/de/organization/bundesamt-fur-meteorologie-und-klimatologie-meteoschweiz'],
+    ['Open-Meteo','Wetterprognosen (Temperatur, Wind, Niederschlag) und Archivwetter','Weather data by Open-Meteo.com · CC BY 4.0','https://open-meteo.com/en/license'],
+    ['SLF','Lawinenbulletin, IMIS-Messstationen','WSL-Institut für Schnee- und Lawinenforschung SLF · CC BY 4.0','https://www.slf.ch/'],
+    ['SNOWPACK / MeteoIO','Schneedeckenmodell für die Skiqualität (läuft auf unseren Servern)','SLF · GNU LGPL 3.0','https://www.slf.ch/en/services-and-products/snowpack/']]],
+  ['Orte & Webcams',[
+    ['GeoNames','Gipfel- und Ortsnamen der Touren','CC BY 4.0','https://www.geonames.org/'],
+    ['windy.com','Webcams','Bilder © windy.com und die Betreiber der Webcams','https://www.windy.com/webcams']]],
+  ['Open-Source-Software',[
+    ['Leaflet 1.9.4','Karte','BSD-2-Clause · © Volodymyr Agafonkin, CloudMade','vendor/leaflet/LICENSE.txt'],
+    ['MapLibre GL JS 4.1.2','3D-Ansicht','BSD-3-Clause · © MapLibre contributors, Mapbox','vendor/maplibre/LICENSE.txt'],
+    ['supabase-js 2.118','Konto, Feed, Nachrichten','MIT · © Supabase','vendor/supabase/LICENSE.txt'],
+    ['PMTiles 4.5','Kartenkacheln aus einer Datei','BSD-3-Clause · © Protomaps','https://github.com/protomaps/PMTiles/blob/main/LICENSE'],
+    ['Capacitor','iOS-App','MIT · © Ionic','https://github.com/ionic-team/capacitor/blob/main/LICENSE']]]];
+function srcRender(){const el=document.getElementById('legalBody');if(!el||el.dataset.done)return;
+  const row=([n,u,l,h])=>'<div class="src-it"><div class="src-h"><b>'+n+'</b>'+(h?'<a href="'+h+'" target="_blank" rel="noopener">'+(/^vendor\//.test(h)?'Lizenztext':'Lizenz')+' ↗</a>':'')+'</div>'
+    +'<div class="src-d">'+u+'</div><div class="src-l">'+l+'</div></div>';
+  el.innerHTML='<div class="prof-hint" style="margin-top:4px">Snowmapper baut auf offenen Daten von Bund, Forschung und Community auf. Danke an alle, die sie bereitstellen.</div>'
+    +SRC_GROUPS.map(([t,items])=>'<div class="prof-sec-title">'+t+'</div><div class="src-list">'+items.map(row).join('')+'</div>').join('')
+    +'<div class="prof-hint">Fehlt eine Quelle oder ist eine Angabe falsch? Schreib uns über «Feedback senden».</div>';
+  el.dataset.done='1';}
+// Datenschutzerklärung, Nutzungsbedingungen, Impressum: static pages next to
+// the app (legal/ in the repo), shown in a full-screen frame so they open
+// inside the installed app and the iOS shell alike.
+const LEGAL_T={datenschutz:'Datenschutzerklärung',agb:'Nutzungsbedingungen',impressum:'Impressum'};
+function legalOpen(k){const v=document.getElementById('legalView'),f=document.getElementById('legalFrame');if(!v||!f||!LEGAL_T[k])return;
+  document.getElementById('legalTitle').textContent=tr(LEGAL_T[k]);f.src=k+'.html';f.hidden=false;
+  document.getElementById('legalBody').hidden=true;v.hidden=false;try{haptic(4);}catch(e){}}
+// the sources list opens the same way -- from the settings and from the
+// «Quellen» link on the map, signed in or not
+function srcOpen(){const v=document.getElementById('legalView');if(!v)return;srcRender();
+  document.getElementById('legalTitle').textContent=tr('Datenquellen & Lizenzen');
+  document.getElementById('legalFrame').hidden=true;document.getElementById('legalBody').hidden=false;v.hidden=false;try{haptic(4);}catch(e){}}
+function legalClose(){const v=document.getElementById('legalView');if(v)v.hidden=true;}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const v=document.getElementById('legalView');if(v&&!v.hidden){legalClose();e.stopPropagation();}}},true);
 // Deleting the account for real needs the service role: the client owns its
 // content rows under RLS but can never remove its own auth.users row, so
 // deleting only the profile left the login alive — the email stayed registered
@@ -20181,9 +20246,7 @@ async function drawOpenFinish(){
   if(pv){if(drawPhotoFile){try{pv.src=URL.createObjectURL(drawPhotoFile);}catch(e){}pv.style.display='block';}else{pv.style.display='none';pv.src='';}}
   drawFinPeak=null;const ta=document.getElementById('drawCaption');
   if(ta){ta.value='';const op=ta.getAttribute('placeholder');
-    try{const pk=nearestPeak(drawFinCen.lat,drawFinCen.lng);if(pk){drawFinPeak=pk;ta.value=pk+' — ';}}catch(e){}
-    const auto=ta.value;ta.setAttribute('placeholder','Berg wird von der Karte erkannt …');
-    ocrPeakFromMap().then(nm=>{try{ta.setAttribute('placeholder',op||'');if(nm&&(ta.value===auto||ta.value==='')){ta.value=nm+' — ';drawFinPeak=nm;}}catch(e){}}).catch(()=>{try{ta.setAttribute('placeholder',op||'');}catch(e){}});}
+    try{const pk=nearestPeak(drawFinCen.lat,drawFinCen.lng);if(pk){drawFinPeak=pk;ta.value=pk+' — ';}}catch(e){}}
   const pb=document.getElementById('drawPhotoBtn');if(pb)pb.style.display=drawPhotoFile?'none':'';
   tourPickReset();
   toursEnsure().then(()=>tourPickRender('drawTourPick',drawFinCen.lat,drawFinCen.lng)).catch(()=>{});
