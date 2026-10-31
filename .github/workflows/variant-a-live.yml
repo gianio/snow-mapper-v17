@@ -177,6 +177,26 @@ jobs:
             echo "::notice::no carried state -- cold start"
           fi
 
+      # Our own weather archive (pipeline/wx_archive.py): every cycle files the
+      # MeteoSwiss hours it gets, so the past days of the window no longer
+      # come from Open-Meteo. Kept in Cloudflare R2 when the R2 secrets are
+      # set (the lasting copy) and in the Actions cache (rolling, 45 days).
+      - name: Restore the weather archive (cache)
+        uses: actions/cache/restore@v4
+        with:
+          path: wx_archive
+          key: wx-archive-${{ github.run_id }}
+          restore-keys: wx-archive-
+      - name: Weather archive from R2
+        continue-on-error: true
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_ARCHIVE_BUCKET: ${{ vars.R2_ARCHIVE_BUCKET }}
+        run: python tools/wx_archive.py pull wx_archive --days 21
+
       # MeteoSwiss open data for the forecast hours, in its own venv
       # (meteodata-lab pins numpy < 2.4). Best effort: without it the cycle
       # runs on Open-Meteo alone, which serves the same ICON-CH models.
@@ -189,6 +209,13 @@ jobs:
           [ -n "${{ inputs.limit }}" ] && ARGS="$ARGS --limit ${{ inputs.limit }}"
           python run_variant_a.py $ARGS
           TQDM_DISABLE=1 .ogd/bin/python -u tools/ogd_extract.py points.json ogd
+
+      - name: File the MeteoSwiss hours in the archive
+        if: hashFiles('ogd/*.json') != ''
+        continue-on-error: true
+        run: |
+          python tools/wx_archive.py add wx_archive ogd
+          python tools/wx_archive.py prune wx_archive --keep 45
 
       # ICON-CH1/CH2 low, mid and high cloud on every model cell: the site
       # build lays them onto the map (pipeline/ogd_clouds.py)
@@ -213,6 +240,7 @@ jobs:
           set -o pipefail
           ARGS="--live --state-dir state --state-out state_new --step-h 2"
           [ -d ogd ] && ARGS="$ARGS --ogd-dir ogd"
+          [ -d wx_archive/ogd ] && ARGS="$ARGS --archive-dir wx_archive"
           [ -n "${{ inputs.limit }}" ] && ARGS="$ARGS --limit ${{ inputs.limit }}"
           echo "run_variant_a.py $ARGS"
           set +e
@@ -222,6 +250,26 @@ jobs:
           echo "rc=$RC" >> "$GITHUB_OUTPUT"
           # 3 = ran fine, gates failed: keep the state, do not publish
           if [ "$RC" != "0" ] && [ "$RC" != "3" ]; then exit "$RC"; fi
+
+      - name: Weather archive to R2
+        if: always() && hashFiles('wx_archive/ogd/**') != ''
+        continue-on-error: true
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_ARCHIVE_BUCKET: ${{ vars.R2_ARCHIVE_BUCKET }}
+        run: |
+          python tools/wx_archive.py push wx_archive
+          { echo "### Wetterarchiv (MeteoSchweiz, letzte 7 Tage)"; python tools/wx_archive.py summary wx_archive --days 7; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Save the weather archive (cache)
+        if: always() && hashFiles('wx_archive/ogd/**') != ''
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: wx_archive
+          key: wx-archive-${{ github.run_id }}
 
       # Model vs the SLF IMIS stations over the whole season (drift.py):
       # verdict in the job summary, a warning/error annotation when the

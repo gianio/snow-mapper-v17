@@ -61,3 +61,6 @@ data/dem_cache/*_2[0-9][0-9].tif
 data/dem_cache/*_1[0-9][0-9].tif
 data/dem_cache/*_[1-9][0-9].tif
 data/dem_cache/*_[1-9].tif
+
+# npm tarballs of the self-hosted libraries (pipeline/vendor.py)
+data/vendor_cache/

@@ -85,6 +85,14 @@ jobs:
             echo "no cloud fields yet -- clouds from Open-Meteo"
           fi
 
+      # Leaflet, supabase-js, MapLibre and PMTiles are served from the site
+      # (pipeline/vendor.py): the pinned npm tarballs are kept between runs.
+      - name: Restore the library tarballs
+        uses: actions/cache/restore@v4
+        with:
+          path: data/vendor_cache
+          key: vendor-${{ hashFiles('pipeline/vendor.py') }}
+
       - name: Generate app shell + live data blob
         # Split build: small stable shell (index.html + app.js) + a separate
         # data/ blob behind latest.json, so daily data updates don't rebuild the
@@ -97,6 +105,39 @@ jobs:
           mkdir -p dist
           python run_interactive.py --split --res 1000 --gz-only --out-dir dist
           touch dist/.nojekyll
+          test -f dist/vendor/leaflet/leaflet.js || echo "::warning::libraries still from the CDN (npm registry not reachable)"
+
+      - name: Save the library tarballs
+        if: hashFiles('data/vendor_cache/*.tgz') != ''
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: data/vendor_cache
+          key: vendor-${{ hashFiles('pipeline/vendor.py') }}
+
+      # Pistes and lifts from OpenStreetMap for the app's own piste layer:
+      # Overpass is asked about once a week (the cache key is the ISO week).
+      - name: Week for the piste cache
+        id: week
+        run: echo "w=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      - name: Restore pistes (OpenStreetMap)
+        uses: actions/cache/restore@v4
+        with:
+          path: cache/pistes.json
+          key: osm-pistes-${{ steps.week.outputs.w }}
+          restore-keys: osm-pistes-
+      - name: Pistes (OpenStreetMap)
+        id: pistes
+        continue-on-error: true
+        run: |
+          python tools/build_pistes.py dist --cache cache/pistes.json --max-age-days 7
+      - name: Save pistes
+        if: steps.pistes.outcome == 'success' && hashFiles('cache/pistes.json') != ''
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: cache/pistes.json
+          key: osm-pistes-${{ steps.week.outputs.w }}
 
       # The 1 April 2026 demo dataset is HISTORICAL and never changes, so we
       # build it once (real ERA5 archive weather) and cache it. Re-fetching

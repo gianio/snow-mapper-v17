@@ -39,6 +39,12 @@
 <key>NSPhotoLibraryAddUsageDescription</key>
 <string>Erlaubt der App, aufgenommene Fotos in deiner Mediathek zu speichern.</string>
 
+<!-- Export compliance: the app only uses the encryption built into iOS
+     (HTTPS). With this key App Store Connect stops asking at every upload,
+     and TestFlight builds are available right after processing. -->
+<key>ITSAppUsesNonExemptEncryption</key>
+<false/>
+
 <!-- App display name (optional; overrides appName for the home screen). -->
 <key>CFBundleDisplayName</key>
 <string>Snowmapper</string>
