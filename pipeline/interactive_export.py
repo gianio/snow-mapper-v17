@@ -2422,13 +2422,13 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  /* the side buttons, the legend, the timeline and the tab bar stay on top of
     the 3D view; the side «3D/2D» button goes back, layers come from the
     normal layer panel */
- #btn3dClose,#overlay3d,body.three-open #feedHereBtn{display:none!important}
- #three-wrap .maplibregl-ctrl-top-left{top:calc(env(safe-area-inset-top,0px) + 176px)}
+ #btn3dClose,#overlay3d,body.three-open #feedHereBtn,body.three-open #rvFab,body.three-open #infoFab{display:none!important}
+ #three-wrap .maplibregl-ctrl-top-left{top:calc(env(safe-area-inset-top,0px) + 118px)}
  #three-wrap .ctrl3d button,#three-wrap .ctrl3d label{font-size:14px!important;min-height:40px!important;padding:8px 12px!important}
  #three-wrap .maplibregl-canvas{outline:none}
  #three-wrap .maplibregl-map{width:100%;height:100%}
  #btn3dClose{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;z-index:2001;padding:10px 18px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg);cursor:pointer;font-size:16px;font-weight:600;}
- #three-wrap .ctrl3d{position:absolute;top:calc(env(safe-area-inset-top,0px) + 68px);left:12px;z-index:2001;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start;max-width:calc(100vw - 110px)}
+ #three-wrap .ctrl3d{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;z-index:2001;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start;max-width:calc(100vw - 110px)}
  #three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 16px;border-radius:14px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);cursor:pointer;font-size:16px;min-height:46px;touch-action:manipulation}
  #three-wrap .ctrl3d button:hover{border-color:var(--acc);color:var(--fg)}
  @media (max-width:560px){#three-wrap .ctrl3d{gap:5px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 14px;font-size:15px;min-height:46px;border-radius:12px}#btn3dClose{top:calc(8px + env(safe-area-inset-top,0px));right:8px;padding:10px 18px;font-size:16px;border-radius:14px}}
@@ -6761,6 +6761,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     <div class="feed-scope" id="feedScope" hidden></div>
     <span class="lbl-micro">Region</span>
     <div class="feed-filter" id="feedFilter"></div>
+    <label class="feed-txt-sw"><span>Nur Freunde</span><input type="checkbox" id="feedFrSw" onchange="feedFriendsSet(this.checked)"><i></i></label>
     <label class="feed-txt-sw"><span>Beiträge ohne Bild zeigen</span><input type="checkbox" id="feedTxtSw" onchange="feedTxtSet(this.checked)"><i></i></label>
     <button class="feed-sheet-x" onclick="feedFilterClose()">Fertig</button>
   </div>
@@ -7334,6 +7335,8 @@ const I18N_DICT={
 "Fotos & Videos":["Photos & videos","Photos & vidéos","Foto & video"],
 "Freeride":["Freeride","Freeride","Freeride"],
 "Freunde":["Friends","Amis","Amici"],
+"Nur Freunde":["Friends only","Amis seulement","Solo amici"],
+"Alle Beiträge zeigen":["Show all posts","Afficher toutes les publications","Mostra tutti i post"],
 "Für Webcams näher heranzoomen":["Zoom in for webcams","Zoome pour voir les webcams","Ingrandisci per le webcam"],
 "GPS ±# m":["GPS ±# m","GPS ±# m","GPS ±# m"],
 "GPS wird gesucht…":["Searching for GPS…","Recherche du GPS…","Ricerca GPS…"],
@@ -9087,6 +9090,7 @@ function ovToggle(k,auto){
   if(k==='reports'){try{localStorage.setItem('ssm_reports',ovOn[k]?'1':'0');}catch(e){}try{feedHereSync();}catch(e){}}
   if(k==='myacts'){try{localStorage.setItem('ssm_myacts',ovOn[k]?'1':'0');}catch(e){}if(ovOn[k])trkActsRefresh();try{loadReportMarkers();}catch(e){}}
   if(ovOn[k])map.addLayer(l);else map.removeLayer(l);
+  try{if(typeof is3d!=='undefined'&&is3d)upd3dSoon();}catch(e){}
   // switching your own tracks or the community off clears a shown route too
   if((k==='myacts'||k==='reports')&&!ovOn[k])trkShownClear();
   if(k==='skiareas'){try{localStorage.setItem('ssm_skiareas',ovOn[k]?'1':'0');}catch(e){}}
@@ -16498,16 +16502,23 @@ function sync3dLayer(){const sel=document.getElementById('overlay3d');if(!sel)re
 // follows (debounced -- the 3D overlay is drawn in one go)
 let _u3t=0;
 function upd3dSoon(){if(!is3d)return;clearTimeout(_u3t);_u3t=setTimeout(()=>{try{sync3dLayer();update3dOverlay();}catch(e){}},220);}
-function update3dOverlay(){if(!map3d||!is3d)return;const sel=document.getElementById('overlay3d').value;
+// In 3D the data layer lies on the relief half see-through, so slopes,
+// ridges and gullies stay readable under the colours.
+const OP3D=0.5;
+// slope classes and ski routes follow the 2D map's overlay switches
+function sync3dOverlays(){if(!map3d||!is3d||!map3d.getLayer||!map3d.getLayer('slope-3d'))return;
+  map3d.setLayoutProperty('slope-3d','visibility',ovOn.slope?'visible':'none');
+  map3d.setLayoutProperty('skitour-3d','visibility',(ovOn.skitour||ovOn.skitourVec)?'visible':'none');}
+function update3dOverlay(){if(!map3d||!is3d)return;try{sync3dOverlays();}catch(e){}const sel=document.getElementById('overlay3d').value;
   if(sel==='none'){if(map3d.getLayer('data-overlay'))map3d.setLayoutProperty('data-overlay','visibility','none');return;}
   if(sel==='va'&&typeof vaOv!=='undefined'&&vaOv&&vaOv._url){const bb=vaOv.getBounds(),q=[[bb.getWest(),bb.getNorth()],[bb.getEast(),bb.getNorth()],[bb.getEast(),bb.getSouth()],[bb.getWest(),bb.getSouth()]];
     if(map3d.getLayer('data-overlay')){map3d.removeLayer('data-overlay');map3d.removeSource('data-src');}
     map3d.addSource('data-src',{type:'image',url:vaOv._url,coordinates:q});
-    map3d.addLayer({id:'data-overlay',type:'raster',source:'data-src',paint:{'raster-opacity':0.8,'raster-fade-duration':0}});return;}
+    map3d.addLayer({id:'data-overlay',type:'raster',source:'data-src',paint:{'raster-opacity':OP3D,'raster-fade-duration':0}},map3d.getLayer('slope-3d')?'slope-3d':undefined);return;}
   const url=make3dOverlay(sel);
   if(map3d.getSource('data-src')){map3d.getSource('data-src').updateImage({url:url,coordinates:[[loMin,laMax],[loMax,laMax],[loMax,laMin],[loMin,laMin]]});}
   else{map3d.addSource('data-src',{type:'image',url:url,coordinates:[[loMin,laMax],[loMax,laMax],[loMax,laMin],[loMin,laMin]]});
-    map3d.addLayer({id:'data-overlay',type:'raster',source:'data-src',paint:{'raster-opacity':0.75,'raster-fade-duration':0}});}
+    map3d.addLayer({id:'data-overlay',type:'raster',source:'data-src',paint:{'raster-opacity':OP3D,'raster-fade-duration':0}},map3d.getLayer('slope-3d')?'slope-3d':undefined);}
   if(map3d.getLayer('data-overlay'))map3d.setLayoutProperty('data-overlay','visibility','visible');}
 let _ml=null;
 function ensureMaplibre(cb){
@@ -16545,10 +16556,15 @@ function init3D(){
       sources:{
         'swisstopo':{type:'raster',tiles:[swissTile(BASE_TILE)],tileSize:256,attribution:BASE_ATTR},
         'hillshade-tiles':{type:'raster',tiles:[swissTile('ch.swisstopo.swissalti3d-reliefschattierung_monodirektional','png')],tileSize:256},
-        'terrain-dem':{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',maxzoom:15}},
+        'terrain-dem':{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',maxzoom:15},
+        'slope-src':{type:'raster',tiles:[swissTile('ch.swisstopo.hangneigung-ueber_30','png')],tileSize:256},
+        'skitour-src':{type:'raster',tiles:[swissTile('ch.swisstopo-karto.skitouren','png')],tileSize:256}},
       layers:[
         {id:'swisstopo-base',type:'raster',source:'swisstopo',paint:{'raster-opacity':0.3}},
-        {id:'hillshade',type:'raster',source:'hillshade-tiles',paint:{'raster-opacity':0.7}}],
+        {id:'hillshade',type:'raster',source:'hillshade-tiles',paint:{'raster-opacity':0.7}},
+        // the 2D map's overlays, draped on the relief like everything else
+        {id:'slope-3d',type:'raster',source:'slope-src',layout:{visibility:ovOn.slope?'visible':'none'},paint:{'raster-opacity':0.5,'raster-fade-duration':0}},
+        {id:'skitour-3d',type:'raster',source:'skitour-src',layout:{visibility:(ovOn.skitour||ovOn.skitourVec)?'visible':'none'},paint:{'raster-opacity':0.9,'raster-fade-duration':0}}],
       terrain:{source:'terrain-dem',exaggeration:exag3d}},
     center:[lc.lng,lc.lat],zoom:lz,pitch:_tilt3d?0:60,bearing:_tilt3d?0:-20,maxPitch:85,
     maxBounds:[[loMinW-0.1,laMinW-0.05],[loMaxW+0.1,laMaxW+0.05]],
@@ -21137,8 +21153,9 @@ function feedRefresh(){
 // feed.
 function feedFiltMark(){
   const sw=document.getElementById('feedTxtSw');if(sw)sw.checked=feedTxtOn();
+  const fr=document.getElementById('feedFrSw');if(fr)fr.checked=feedFriendsOn();
   const b=document.getElementById('feedFiltFab');if(!b)return;
-  b.classList.toggle('on',!!feedRegion||feedTxtOn());
+  b.classList.toggle('on',!!feedRegion||feedTxtOn()||feedFriendsOn());
 }
 function feedRegionsRender(){const el=document.getElementById('feedFilter');if(!el)return;
   const chip=(id,label)=>'<button class="'+(feedRegion===id?'active':'')+'" onclick="feedRegionSet(\''+id+'\',true);feedFilterClose()">'+label+'</button>';
@@ -21173,6 +21190,12 @@ function feedNoPic(r){const cd=r.condition_data||{};
   return !r.img&&!(cd.activity&&cd.activity.track)&&!(cd.images&&cd.images.length)&&!cd.drawImage&&!cd.snapshot;}
 function feedTxtOn(){try{return localStorage.getItem('ssm_feed_text')==='1';}catch(e){return false;}}
 function feedTxtSet(on){try{localStorage.setItem('ssm_feed_text',on?'1':'0');}catch(e){}feedFiltMark();feedTopRender();feedRender();}
+// «Nur Freunde»: only the posts of people you follow who follow you back
+// (the app's meaning of friends, as for activities and post visibility)
+function feedFriendsOn(){try{return !!sbUser&&localStorage.getItem('ssm_feed_friends')==='1';}catch(e){return false;}}
+function feedFriendsSet(on){if(on&&!sbUser){feedFiltMark();authShow();return;}
+  try{localStorage.setItem('ssm_feed_friends',on?'1':'0');}catch(e){}feedFiltMark();feedTopRender();feedRender();}
+function feedIsFriend(r){const u=r&&r.userId;return !!(u&&myFollowing&&myFollowing.has(u)&&myFollowers&&myFollowers.has(u));}
 // "Hier & jetzt" is a live question: panning the map or moving the window
 // changes the answer, so the list follows them while it is open.
 let _feedLiveT=null;
@@ -21814,8 +21837,13 @@ function feedRender(){
   }
   // the main feed: region, then the kind of report (a chip each, with its count)
   const main=['all','here','following'].includes(feedScope);
-  let filtered=base;_feedLast=[];
+  let filtered=base;_feedLast=[];_feedMapAll=[];
   if(main){const n0=filtered.length;filtered=feedRegionFilter(filtered);
+    if(feedFriendsOn()){filtered=filtered.filter(feedIsFriend);
+      if(!filtered.length){_feedMapAll=[];feedKindsRender({all:0});
+        list.innerHTML='<div class="feed-empty">Von deinen Freunden gibt es '+(feedRegion?'in «'+escapeHtml(feedRegionLabel())+'» ':'')
+          +'gerade keine Beiträge. Freunde sind Leute, denen du folgst und die dir folgen.</div>'
+          +'<button type="button" class="feed-txt-more" onclick="feedFriendsSet(false)">Alle Beiträge zeigen</button>';return;}}
     const counts={all:filtered.length};filtered.forEach(r=>{const k=feedKind(r);counts[k]=(counts[k]||0)+1;});
     feedKindsRender(counts);
     if(n0&&!filtered.length){list.innerHTML='<div class="feed-empty">'+((feedRegion==='fav'||feedRegion.indexOf('fav:')===0)&&!(favs&&favs.length)
@@ -21825,6 +21853,7 @@ function feedRender(){
   // posts without a picture stay out of the list unless the filter asks for
   // them (a chosen kind, a person's own page, the saved ones and an opened
   // post show all)
+  _feedMapAll=filtered;
   let txtHidden=0;
   if(!feedTxtOn()&&!(main&&feedFilter!=='all')&&!(main&&feedRegion==='view')&&!['user','saved','post'].includes(feedScope)){const n0=filtered.length;filtered=filtered.filter(r=>!feedNoPic(r));txtHidden=n0-filtered.length;}
   if(feedAnchor){filtered=filtered.map(r=>({r,km:haversineKm(feedAnchor.lat,feedAnchor.lng,r.lat,r.lng)})).sort((a,b)=>a.km-b.km).map(o=>{o.r._km=o.km;return o.r;});}
@@ -21916,7 +21945,7 @@ function feedSeenWatch(){if(!('IntersectionObserver'in window))return;
 // Every post the feed is listing (same kind, region and order) as a marker;
 // a tap shows it, «Beitrag öffnen» opens it. Back to the list with the
 // Community tab or «Liste».
-var _feedLast=[],feedMapLayer=null,_feedMapRep=false,_feedFromMap=null;
+var _feedLast=[],_feedMapAll=[],feedMapLayer=null,_feedMapRep=false,_feedFromMap=null;
 // Opened from the map («N Beiträge hier im Feed»): the map icon goes straight
 // back to that map view, where the same reports are already on. Otherwise it
 // shows the feed's posts on the map.
@@ -21926,7 +21955,10 @@ function feedMapTap(){
     setTimeout(()=>{try{map.invalidateSize({animate:false});map.setView(v.c,v.z,{animate:false});}catch(e){}},300);return;}
   feedMapOpen();}
 function feedMapOpen(){
-  const list=_feedLast.filter(r=>r.lat!=null&&r.lng!=null&&isFinite(r.lat)&&isFinite(r.lng));
+  // every post of the feed's selection, also those without a picture that
+  // the list folds away
+  const src=_feedMapAll&&_feedMapAll.length?_feedMapAll:_feedLast;
+  const list=src.filter(r=>r.lat!=null&&r.lng!=null&&isFinite(r.lat)&&isFinite(r.lng));
   if(!list.length){toast('Keine Beiträge mit Ort in dieser Auswahl','err');return;}
   feedMapClear();feedMapLayer=L.layerGroup();const pts=[];
   list.forEach(r=>{const k=feedKind(r),kc=(FEED_KINDS.find(x=>x.id===k)||{}).c||'#64748b',cd=r.condition_data||{},A=cd.activity;
