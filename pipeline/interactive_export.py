@@ -2422,13 +2422,13 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  /* the side buttons, the legend, the timeline and the tab bar stay on top of
     the 3D view; the side «3D/2D» button goes back, layers come from the
     normal layer panel */
- #btn3dClose,#overlay3d,body.three-open #feedHereBtn{display:none!important}
- #three-wrap .maplibregl-ctrl-top-left{top:calc(env(safe-area-inset-top,0px) + 176px)}
+ #btn3dClose,#overlay3d,body.three-open #feedHereBtn,body.three-open #rvFab,body.three-open #infoFab{display:none!important}
+ #three-wrap .maplibregl-ctrl-top-left{top:calc(env(safe-area-inset-top,0px) + 118px)}
  #three-wrap .ctrl3d button,#three-wrap .ctrl3d label{font-size:14px!important;min-height:40px!important;padding:8px 12px!important}
  #three-wrap .maplibregl-canvas{outline:none}
  #three-wrap .maplibregl-map{width:100%;height:100%}
  #btn3dClose{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;z-index:2001;padding:10px 18px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg);cursor:pointer;font-size:16px;font-weight:600;}
- #three-wrap .ctrl3d{position:absolute;top:calc(env(safe-area-inset-top,0px) + 68px);left:12px;z-index:2001;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start;max-width:calc(100vw - 110px)}
+ #three-wrap .ctrl3d{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;z-index:2001;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start;max-width:calc(100vw - 110px)}
  #three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 16px;border-radius:14px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);cursor:pointer;font-size:16px;min-height:46px;touch-action:manipulation}
  #three-wrap .ctrl3d button:hover{border-color:var(--acc);color:var(--fg)}
  @media (max-width:560px){#three-wrap .ctrl3d{gap:5px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 14px;font-size:15px;min-height:46px;border-radius:12px}#btn3dClose{top:calc(8px + env(safe-area-inset-top,0px));right:8px;padding:10px 18px;font-size:16px;border-radius:14px}}
@@ -4288,6 +4288,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .ly-g3 .ly-subs::before{top:-6px;width:12px;height:12px;border-radius:2px;transform:translateX(-50%) rotate(45deg);background:var(--fill)}
  .ly-g3 .ly-sub{min-height:32px;border-radius:10px;border:none;box-shadow:0 1px 2px rgba(15,23,42,.06)}
  .ly-ovs{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--hair);border-radius:16px;overflow:hidden}
+/* the stations row under the weather tiles: a little air between the two */
+#lyWxOv{margin-top:12px}
  .ly-ov{display:flex;align-items:center;gap:12px;width:100%;padding:10px 14px;border:0;background:none;font:600 13.5px Helvetica Neue,Helvetica,Arial,sans-serif;letter-spacing:0;color:var(--fg);cursor:pointer;text-align:left}
  .ly-ov+.ly-ov{border-top:1px solid var(--hair)}
  .ly-ov-ic{width:32px;height:32px;border-radius:10px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--fg2);flex:none;transition:.15s}
@@ -4513,6 +4515,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .trk-acc button span{font:500 12px Helvetica Neue,Helvetica,Arial,sans-serif;color:var(--fg2)}
  .trk-acc button.on{border-color:var(--accent);background:var(--accent-soft)}
  .trk-note{font-size:11.5px;line-height:1.45;color:var(--fg2);margin:12px 2px 4px}
+.trk-how{font-size:12px;line-height:1.45;color:var(--fg2);margin:2px 2px 10px}.trk-how b{color:var(--fg)}
  .trk-go{align-self:center;width:112px;height:112px;border-radius:50%;border:0;margin:14px 0 6px;color:#fff;cursor:pointer;
    background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--accent) 70%,#fff),var(--accent) 60%,color-mix(in srgb,var(--accent) 70%,#000));
    box-shadow:0 14px 34px color-mix(in srgb,var(--accent) 45%,transparent),0 0 0 10px var(--accent-soft);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
@@ -6188,6 +6191,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .ski-lbl i{width:20px;height:20px;border-radius:6px;flex:none;background:#E0245E;box-shadow:0 0 0 2px #fff;display:grid;place-items:center}
  .ski-lbl i svg{width:15px;height:15px}
  .ski-lbl span{font:800 11.5px/1 var(--font);color:#16152e;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff}
+.ski-lbl.ski-sm span{font-size:10.5px;font-weight:700}.ski-lbl.ski-sm i{transform:scale(.85)}
  /* the save sheet's buttons: one row, one size -- "Posten" differs only in colour */
  .trk-actions{align-items:stretch!important}
  .trk-actions .trk-a{height:48px!important;margin:0!important;transform:none!important;box-shadow:none!important;align-self:stretch!important}
@@ -6761,6 +6765,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     <div class="feed-scope" id="feedScope" hidden></div>
     <span class="lbl-micro">Region</span>
     <div class="feed-filter" id="feedFilter"></div>
+    <label class="feed-txt-sw"><span>Nur Freunde</span><input type="checkbox" id="feedFrSw" onchange="feedFriendsSet(this.checked)"><i></i></label>
     <label class="feed-txt-sw"><span>Beiträge ohne Bild zeigen</span><input type="checkbox" id="feedTxtSw" onchange="feedTxtSet(this.checked)"><i></i></label>
     <button class="feed-sheet-x" onclick="feedFilterClose()">Fertig</button>
   </div>
@@ -7334,6 +7339,8 @@ const I18N_DICT={
 "Fotos & Videos":["Photos & videos","Photos & vidéos","Foto & video"],
 "Freeride":["Freeride","Freeride","Freeride"],
 "Freunde":["Friends","Amis","Amici"],
+"Nur Freunde":["Friends only","Amis seulement","Solo amici"],
+"Alle Beiträge zeigen":["Show all posts","Afficher toutes les publications","Mostra tutti i post"],
 "Für Webcams näher heranzoomen":["Zoom in for webcams","Zoome pour voir les webcams","Ingrandisci per le webcam"],
 "GPS ±# m":["GPS ±# m","GPS ±# m","GPS ±# m"],
 "GPS wird gesucht…":["Searching for GPS…","Recherche du GPS…","Ricerca GPS…"],
@@ -8781,6 +8788,26 @@ const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
 // A real mouse wheel still works: its notches are large, so it crosses the
 // threshold in one or two clicks.
 const _trackpad=_desktop&&/Mac/.test(navigator.platform||navigator.userAgent||'');
+// A tap on the map while a menu floats over it (Zeitraum, layers, legend,
+// the report menu, the + menu, a tour pick list ...) only closes the menu:
+// nothing on the map reacts -- no point card, no popup, no tour. The next tap
+// works as usual. Each menu closes itself on pointerdown, so whether one was
+// open is read first (this listener is registered before theirs), and the
+// click that follows is kept from the map.
+let _menuTapAt=0;
+function anyMenuOpen(){const B=document.body.classList;
+  if(['leg-open','ly-open','fab-open','rep-open'].some(c=>B.contains(c)))return true;
+  const tp=document.getElementById('tlPresets');if(tp&&!tp.hidden)return true;
+  const pk=document.getElementById('tourPick');if(pk&&pk.classList.contains('on'))return true;
+  for(const m of document.querySelectorAll('[role=menu]'))if(!m.closest('[hidden]')&&m.getClientRects().length)return true;
+  return false;}
+function menusClose(){const tp=document.getElementById('tlPresets');if(tp)tp.hidden=true;
+  for(const f of [()=>legInfoClose(),()=>lyPanelClose(),()=>fabMenu(false),()=>repSheetToggle(false),()=>tourPickHide()])try{f();}catch(e){}}
+addEventListener('pointerdown',e=>{_menuTapAt=anyMenuOpen()?Date.now():0;},true);
+addEventListener('click',e=>{
+  if(!_menuTapAt||Date.now()-_menuTapAt>1500)return;
+  const t=e.target;if(!t||!t.closest||!t.closest('#map')||t.closest('.leaflet-popup,.leaflet-control'))return;
+  _menuTapAt=0;e.stopPropagation();e.preventDefault();menusClose();},true);
 // Map popups on every screen: they keep clear of the chrome (top buttons,
 // the right rail, timeline and tab bar) when the map pans them into view, are
 // never wider than the room left of the rail, and never taller than the room
@@ -8889,7 +8916,7 @@ const CH_CANTONS_ENC="459397,78496,-205,-59,-47,-125,159,-992,-47,-257,406,-633,
 const CH_CANTONS=CH_CANTONS_ENC.split(";").map(function(r){
   const v=r.split(",");const out=[];let la=0,lo=0;
   for(let i=0;i<v.length;i+=2){la+=+v[i];lo+=+v[i+1];out.push([la/1e4,lo/1e4]);}return out;});
-const CH_RESORTS=("Zermatt~460200~77486|Davos~468043~98372|St. Moritz~464994~98433|Verbier~461002~72265|Arosa~467779~96762|Grindelwald~466240~80360|Saas-Fee~461080~79274|Crans-Montana~463132~74791|Engelberg~468211~84013|Andermatt~466356~85939|Laax~468045~92579|Flims~468370~92846|Adelboden~464914~75603|Lenzerheide~467221~95590|Scuol~467967~102980|Gstaad~464721~72869|Champéry~461754~68690|Grächen~461953~78374|Pontresina~464955~99013|Disentis~467034~88509|Meiringen~467271~81872|Kandersteg~464947~76733|Leukerbad~463794~76269|Villars-sur-Ollon~462983~70563|Leysin~463418~70115|Airolo~465286~86119|Zweisimmen~465554~73730|Lauterbrunnen~465931~79094|Zuoz~466021~99596|Celerina~465122~98579|Amden~471489~91423|Saanen~464894~72600|Fiesch~463998~81353|Evolène~461142~74941|Beckenried~469665~84757|Wildhaus~472058~93540|Klosters Serneus~468892~98383|Charmey~466196~71649").split("|").map(function(e){
+const CH_RESORTS=("Zermatt~460200~77486|Davos~468043~98372|St. Moritz~464994~98433|Verbier~461002~72265|Arosa~467779~96762|Grindelwald~466240~80360|Saas-Fee~461080~79274|Crans-Montana~463132~74791|Engelberg~468211~84013|Andermatt~466356~85939|Laax~468045~92579|Flims~468370~92846|Adelboden~464914~75603|Lenzerheide~467221~95590|Scuol~467967~102980|Gstaad~464721~72869|Champéry~461754~68690|Grächen~461953~78374|Pontresina~464955~99013|Disentis~467034~88509|Meiringen~467271~81872|Kandersteg~464947~76733|Leukerbad~463794~76269|Villars-sur-Ollon~462983~70563|Leysin~463418~70115|Airolo~465286~86119|Zweisimmen~465554~73730|Lauterbrunnen~465931~79094|Zuoz~466021~99596|Celerina~465122~98579|Amden~471489~91423|Saanen~464894~72600|Fiesch~463998~81353|Evolène~461142~74941|Arolla~460256~74831|Beckenried~469665~84757|Wildhaus~472058~93540|Klosters Serneus~468892~98383|Charmey~466196~71649").split("|").map(function(e){
   const q=e.split("~");return {name:q[0],lat:+q[1]/1e4,lng:+q[2]/1e4};});
 map.createPane('abstractPane');
 map.getPane('abstractPane').style.zIndex=150;          // below tilePane (200)
@@ -9030,13 +9057,22 @@ function pistesLines(d){const rd=L.canvas({padding:.3}),g=L.layerGroup(),grp={};
     else if(k[0]==='l')L.polyline(lines,Object.assign({},o,{color:'#1f2328',weight:k==='l0'?3:2,opacity:.95,dashArray:k==='l2'?'2 4':null})).addTo(g);
     else{const df=k.slice(1);L.polyline(lines,Object.assign({},o,{color:df==='u'?'#6b7280':PISTE_COL[+df],weight:3,opacity:.95,dashArray:df==='4'?'7 5':null})).addTo(g);}});
   return g;}
+function skiLabel(name,lat,lng,small){const m=L.marker([lat,lng],{keyboard:false,zIndexOffset:small?380:400,
+    icon:L.divIcon({className:'ski-lbl'+(small?' ski-sm':''),html:'<i>'+SKI_ICON+'</i><span>'+escapeHtml(name)+'</span>',iconSize:null,iconAnchor:[10,10]})});
+  m.on('click',ev=>{L.DomEvent.stopPropagation(ev);map.setView([lat,lng],Math.max(map.getZoom(),13));});return m;}
+// The big resorts (CH_RESORTS) are named at every zoom; the other named ski
+// areas from OpenStreetMap (Arolla, Bettmeralp, Elm ...) join from zoom 10,
+// with the pistes from zoom 11.
 function skiBuildLayer(){const g=L.layerGroup();
   pistesLoad().then(d=>{if(!d)return;const lines=pistesLines(d);
-    const sync=()=>{const on=map.hasLayer(g)&&map.getZoom()>=11;if(on&&!map.hasLayer(lines))lines.addTo(map);else if(!on&&map.hasLayer(lines))map.removeLayer(lines);};
+    const small=L.layerGroup();(d.r||[]).forEach(([n,la,lo])=>{
+      if(CH_RESORTS.some(r=>r.name.toLowerCase()===String(n).toLowerCase()||haversineKm(r.lat,r.lng,la,lo)<2.5))return;
+      skiLabel(n,la,lo,true).addTo(small);});
+    const sync=()=>{const z=map.getZoom(),on=map.hasLayer(g);
+      if(on&&z>=11&&!map.hasLayer(lines))lines.addTo(map);else if((!on||z<11)&&map.hasLayer(lines))map.removeLayer(lines);
+      if(on&&z>=10&&!map.hasLayer(small))small.addTo(map);else if((!on||z<10)&&map.hasLayer(small))map.removeLayer(small);};
     map.on('zoomend',sync);g.on('add remove',()=>setTimeout(sync,0));sync();});
-  CH_RESORTS.forEach(r=>{const m=L.marker([r.lat,r.lng],{keyboard:false,zIndexOffset:400,
-      icon:L.divIcon({className:'ski-lbl',html:'<i>'+SKI_ICON+'</i><span>'+escapeHtml(r.name)+'</span>',iconSize:null,iconAnchor:[10,10]})});
-    m.on('click',ev=>{L.DomEvent.stopPropagation(ev);map.setView([r.lat,r.lng],Math.max(map.getZoom(),13));});m.addTo(g);});
+  CH_RESORTS.forEach(r=>skiLabel(r.name,r.lat,r.lng,false).addTo(g));
   return g;}
 function ovAvailable(k){
   if(k==='avalanche'){const a=M.avalanche;return !!(a&&a.regions&&a.regions.some(r=>r.geometry));}
@@ -9067,6 +9103,7 @@ function ovToggle(k,auto){
   if(k==='reports'){try{localStorage.setItem('ssm_reports',ovOn[k]?'1':'0');}catch(e){}try{feedHereSync();}catch(e){}}
   if(k==='myacts'){try{localStorage.setItem('ssm_myacts',ovOn[k]?'1':'0');}catch(e){}if(ovOn[k])trkActsRefresh();try{loadReportMarkers();}catch(e){}}
   if(ovOn[k])map.addLayer(l);else map.removeLayer(l);
+  try{if(typeof is3d!=='undefined'&&is3d)upd3dSoon();}catch(e){}
   // switching your own tracks or the community off clears a shown route too
   if((k==='myacts'||k==='reports')&&!ovOn[k])trkShownClear();
   if(k==='skiareas'){try{localStorage.setItem('ssm_skiareas',ovOn[k]?'1':'0');}catch(e){}}
@@ -11680,6 +11717,9 @@ function trkGuideClear(){trkGuide=null;if(trkGuideLine){map.removeLayer(trkGuide
 let trkRec=null,trkWatch=null,trkNative=null,trkLock=null,trkTick=0,trkView='setup',trkFix=null,trkLine=null,trkMe=null,trkDraft=null,trkCur=null;
 const trkPrefs={acc:'std',type:'skitour'};
 try{Object.assign(trkPrefs,JSON.parse(localStorage.getItem('ssm_trk_prefs')||'{}'));}catch(e){}
+// «Mittel» is the default for everyone (once; a later choice is kept)
+if(trkPrefs.v!==2){trkPrefs.acc='std';trkPrefs.v=2;try{localStorage.setItem('ssm_trk_prefs',JSON.stringify(trkPrefs));}catch(e){}}
+if(!TRK_ACC[trkPrefs.acc])trkPrefs.acc='std';
 if(!TRK_TYPES.some(x=>x[0]===trkPrefs.type))trkPrefs.type='skitour';
 
 // -- storage ------------------------------------------------------------------
@@ -11692,7 +11732,17 @@ async function trkPut(a){const db=await trkDb();return new Promise((res,rej)=>{c
 async function trkAll(){const db=await trkDb();return new Promise((res,rej)=>{const q=db.transaction('acts').objectStore('acts').getAll();q.onsuccess=()=>res((q.result||[]).sort((x,y)=>y.start-x.start));q.onerror=()=>rej(q.error);});}
 async function trkGet(id){const db=await trkDb();return new Promise((res,rej)=>{const q=db.transaction('acts').objectStore('acts').get(id);q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej(q.error);});}
 async function trkDel(id){const db=await trkDb();return new Promise((res,rej)=>{const tx=db.transaction('acts','readwrite');tx.objectStore('acts').delete(id);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);});}
-function trkSaveRec(){try{if(trkRec)localStorage.setItem('ssm_rec',JSON.stringify(trkRec));else localStorage.removeItem('ssm_rec');}catch(e){}}
+// The running recording lives in localStorage so a reload or a closed tab
+// picks it up again. Saved every few points, at least every 10 s, and when
+// the page is hidden or closed. A full storage thins the per-second
+// roughness before giving up on it.
+let _trkSavedAt=0;
+function trkSaveRec(){try{if(!trkRec){localStorage.removeItem('ssm_rec');return;}
+  trkRec._savedAt=Date.now();_trkSavedAt=trkRec._savedAt;
+  try{localStorage.setItem('ssm_rec',JSON.stringify(trkRec));}
+  catch(e){const R=trkRec.rough;if(R&&R.length>600)trkRec.rough=R.filter((x,i)=>i%2===0||i>=R.length-300);
+    try{localStorage.setItem('ssm_rec',JSON.stringify(trkRec));}
+    catch(e2){toastOnce('trkfull','Speicher fast voll – die laufende Aufzeichnung wird nicht mehr vollständig gesichert.');}}}catch(e){}}
 
 // -- maths --------------------------------------------------------------------
 function trkHav(a,b){const R=6371000,r=Math.PI/180,dl=(b[1]-a[1])*r,dn=(b[2]-a[2])*r;
@@ -11746,7 +11796,7 @@ function trkOnPos(p){
   if(trkRec&&!trkRec.paused){const P=TRK_ACC[trkRec.acc]||TRK_ACC.std,seg=trkRec.segs[trkRec.segs.length-1],last=seg[seg.length-1];
     if(pt[4]<=P.maxAcc&&(!last||(pt[0]-last[0]>=P.minDt&&trkHav(last,pt)>=P.minD))){
       seg.push(pt);if(trkLine)trkLine.addLatLng([pt[1],pt[2]]);
-      if(seg.length%5===0)trkSaveRec();}}
+      if(seg.length%5===0||Date.now()-_trkSavedAt>10000)trkSaveRec();}}
   // a coarse fix right after good ones does not move the dot (it jumped)
   const good=_trkGood&&pt[0]-_trkGood.t<20000&&pt[4]>Math.max(80,3*_trkGood.acc);
   if(!good&&pt[4]<=60)_trkGood={t:pt[0],acc:pt[4]};
@@ -11809,9 +11859,24 @@ async function trkWake(on){
 }
 document.addEventListener('visibilitychange',()=>{
   if(!trkRec)return;
-  if(document.visibilityState==='visible'){if(!trkRec.paused){trkWake(true);if(trkWatch==null&&trkNative==null)trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);}trkPaint();}
+  if(document.visibilityState==='visible'){if(!trkRec.paused){trkWake(true);
+      // iOS keeps the watch but often stops feeding it after the screen was
+      // locked: a fix older than 15 s means start it afresh
+      if(trkNative==null&&(trkWatch==null||!trkFix||Date.now()-trkFix[0]>15000))trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);
+      if(!trkMot)trkMotion(true);}
+    trkPaint();}
   else trkSaveRec();
 });
+addEventListener('pagehide',()=>{if(trkRec)trkSaveRec();});
+document.addEventListener('freeze',()=>{if(trkRec)trkSaveRec();});
+// desktop and Android ask before the tab is closed while recording (iOS
+// Safari does not show this; the recording resumes when the page is opened)
+addEventListener('beforeunload',e=>{if(!trkRec)return;trkSaveRec();if(!trkRec.paused){e.preventDefault();e.returnValue='';}});
+// watchdog: no fix for 45 s while the page is in front -> restart the GPS
+let _trkWd=0;
+setInterval(()=>{try{if(!trkRec||trkRec.paused||trkNative!=null||document.visibilityState!=='visible')return;
+  const age=Date.now()-(trkFix?trkFix[0]:trkRec.start);
+  if(age>45000&&Date.now()-_trkWd>45000){_trkWd=Date.now();trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);}}catch(e){}},15000);
 
 // -- recording control ----------------------------------------------------------
 function trkLayerEnsure(){
@@ -12202,6 +12267,7 @@ async function trkRender(){
   if(trkView==='setup'){
     el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkClose()" aria-label="Schliessen">'+TRK_X+'</button><b>Aufzeichnen</b>'
       +'<button class="trk-accp" onclick="trkAccCycle()" title="GPS-Genauigkeit – tippen zum Wechseln">'+trkAccPill()+'</button></div>'
+      +'<p class="trk-how"><b>Schnee aus der Erschütterung:</b> In der Abfahrt misst das Handy, wie stark es rüttelt – ruhig heisst eher Pulver oder Sulz, ruppig eher Harsch, Buckel oder hart. Am besten am Körper tragen, Bildschirm an.</p>'
       +'<div class="trk-gps-row"><span id="trkGps">'+trkGpsHTML()+'</span><button class="trk-link" onclick="trkView=\'list\';trkRender()">Meine Aktivitäten</button></div>'
       +(trkGuide?'<div class="trk-guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg><span>Spur folgen<b>'+escapeHtml(trkGuide.name)+' · '+(trkGuide.len/1000).toFixed(1)+' km</b></span><button onclick="trkGuideClear()" aria-label="Spur entfernen">×</button></div>':'')
       +'<div class="trk-lbl">Sportart</div><div class="trk-types">'+TRK_TYPES.map(([k,l])=>'<button type="button" class="trk-type'+(trkPrefs.type===k?' on':'')+'" onclick="trkPref(\'type\',\''+k+'\')"><i>'+(TRK_TYPE_IC[k]||'')+'</i><span>'+l+'</span></button>').join('')+'</div>'
@@ -12717,9 +12783,17 @@ async function trkProfRender(){const el=document.getElementById('profActs');if(!
     :'<div class="prof-hint">Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.</div>';}
 // a recording that was running when the page went away picks up again
 (function(){try{const s=JSON.parse(localStorage.getItem('ssm_rec')||'null');if(!s||!s.segs)return;
-  trkRec=s;if(!trkRec.paused){trkRec.segs.push([]);trkRec.resumedAt=Date.now();}
-  setTimeout(()=>{try{trkLineFromRec();if(!trkRec.paused){trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);}
-    clearInterval(trkTick);trkTick=setInterval(trkPaint,1000);trkPill();toast('Aufzeichnung läuft weiter','info');}catch(e){}},1500);}catch(e){}})();
+  trkRec=s;const fl=trkFlat(s.segs),last=fl[fl.length-1],lastT=Math.max(s._savedAt||0,last?last[0]:0,s.start||0),gap=Date.now()-lastT;
+  let note='Aufzeichnung läuft weiter';
+  if(!trkRec.paused){
+    if(gap>3*3600e3){trkRec.movingMs=(trkRec.movingMs||0)+Math.max(0,lastT-(trkRec.resumedAt||lastT));trkRec.paused=true;trkRec.resumedAt=null;
+      note='Aufzeichnung pausiert – seit '+Math.round(gap/3600e3)+' h keine Position. Weiter oder beenden?';}
+    else{if(!trkRec.resumedAt)trkRec.resumedAt=lastT;
+      if(gap>60e3){(trkRec.gaps||(trkRec.gaps=[])).push([lastT,Date.now()]);
+        note='Aufzeichnung läuft weiter – '+Math.round(gap/60e3)+' min ohne GPS, als gerade Linie ergänzt';}}}
+  trkSaveRec();
+  setTimeout(()=>{try{trkLineFromRec();if(!trkRec.paused){trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);trkMotion(true);}
+    clearInterval(trkTick);trkTick=setInterval(trkPaint,1000);trkPill();toast(note,'info');}catch(e){}},1500);}catch(e){}})();
 
 // Snowp (two-camera posts for friends) was retired. Old Snowp posts stay
 // private: they are no longer shown anywhere.
@@ -14997,8 +15071,8 @@ function ovRender(){
   g.innerHTML=Object.keys(OVERLAYS).filter(k=>k!=='variantA'&&!(cm&&OV_COMMUNITY.includes(k))).map(ovRowHTML).join('')
   // map extras that used to live in the settings
   +(wx?'':stnRow)
-  +(window._wcOk?lyExtraRow('wc','Webcam-Galerie (Bilder & Live)',false,'<path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/>','lyPanelClose();wcvOpen()'):'')
-  +lyExtraRow('3d','3D-Ansicht',typeof is3d!=='undefined'&&is3d,'<path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/>','lyPanelClose();document.getElementById(\'btn3dFloat\').click()');
+  // (3D is switched with its own button on the map's side rail)
+  +(window._wcOk?lyExtraRow('wc','Webcam-Galerie (Bilder & Live)',false,'<path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/>','lyPanelClose();wcvOpen()'):'');
 }
 function lyExtraRow(k,label,on,ic,act){
   return '<button type="button" id="ov_x'+k+'" class="ly-ov'+(on?' on':'')+'" role="switch" aria-checked="'+(on?'true':'false')+'" onclick="'+act+'">'
@@ -16478,16 +16552,23 @@ function sync3dLayer(){const sel=document.getElementById('overlay3d');if(!sel)re
 // follows (debounced -- the 3D overlay is drawn in one go)
 let _u3t=0;
 function upd3dSoon(){if(!is3d)return;clearTimeout(_u3t);_u3t=setTimeout(()=>{try{sync3dLayer();update3dOverlay();}catch(e){}},220);}
-function update3dOverlay(){if(!map3d||!is3d)return;const sel=document.getElementById('overlay3d').value;
+// In 3D the data layer lies on the relief half see-through, so slopes,
+// ridges and gullies stay readable under the colours.
+const OP3D=0.5;
+// slope classes and ski routes follow the 2D map's overlay switches
+function sync3dOverlays(){if(!map3d||!is3d||!map3d.getLayer||!map3d.getLayer('slope-3d'))return;
+  map3d.setLayoutProperty('slope-3d','visibility',ovOn.slope?'visible':'none');
+  map3d.setLayoutProperty('skitour-3d','visibility',(ovOn.skitour||ovOn.skitourVec)?'visible':'none');}
+function update3dOverlay(){if(!map3d||!is3d)return;try{sync3dOverlays();}catch(e){}const sel=document.getElementById('overlay3d').value;
   if(sel==='none'){if(map3d.getLayer('data-overlay'))map3d.setLayoutProperty('data-overlay','visibility','none');return;}
   if(sel==='va'&&typeof vaOv!=='undefined'&&vaOv&&vaOv._url){const bb=vaOv.getBounds(),q=[[bb.getWest(),bb.getNorth()],[bb.getEast(),bb.getNorth()],[bb.getEast(),bb.getSouth()],[bb.getWest(),bb.getSouth()]];
     if(map3d.getLayer('data-overlay')){map3d.removeLayer('data-overlay');map3d.removeSource('data-src');}
     map3d.addSource('data-src',{type:'image',url:vaOv._url,coordinates:q});
-    map3d.addLayer({id:'data-overlay',type:'raster',source:'data-src',paint:{'raster-opacity':0.8,'raster-fade-duration':0}});return;}
+    map3d.addLayer({id:'data-overlay',type:'raster',source:'data-src',paint:{'raster-opacity':OP3D,'raster-fade-duration':0}},map3d.getLayer('slope-3d')?'slope-3d':undefined);return;}
   const url=make3dOverlay(sel);
   if(map3d.getSource('data-src')){map3d.getSource('data-src').updateImage({url:url,coordinates:[[loMin,laMax],[loMax,laMax],[loMax,laMin],[loMin,laMin]]});}
   else{map3d.addSource('data-src',{type:'image',url:url,coordinates:[[loMin,laMax],[loMax,laMax],[loMax,laMin],[loMin,laMin]]});
-    map3d.addLayer({id:'data-overlay',type:'raster',source:'data-src',paint:{'raster-opacity':0.75,'raster-fade-duration':0}});}
+    map3d.addLayer({id:'data-overlay',type:'raster',source:'data-src',paint:{'raster-opacity':OP3D,'raster-fade-duration':0}},map3d.getLayer('slope-3d')?'slope-3d':undefined);}
   if(map3d.getLayer('data-overlay'))map3d.setLayoutProperty('data-overlay','visibility','visible');}
 let _ml=null;
 function ensureMaplibre(cb){
@@ -16525,10 +16606,15 @@ function init3D(){
       sources:{
         'swisstopo':{type:'raster',tiles:[swissTile(BASE_TILE)],tileSize:256,attribution:BASE_ATTR},
         'hillshade-tiles':{type:'raster',tiles:[swissTile('ch.swisstopo.swissalti3d-reliefschattierung_monodirektional','png')],tileSize:256},
-        'terrain-dem':{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',maxzoom:15}},
+        'terrain-dem':{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',maxzoom:15},
+        'slope-src':{type:'raster',tiles:[swissTile('ch.swisstopo.hangneigung-ueber_30','png')],tileSize:256},
+        'skitour-src':{type:'raster',tiles:[swissTile('ch.swisstopo-karto.skitouren','png')],tileSize:256}},
       layers:[
         {id:'swisstopo-base',type:'raster',source:'swisstopo',paint:{'raster-opacity':0.3}},
-        {id:'hillshade',type:'raster',source:'hillshade-tiles',paint:{'raster-opacity':0.7}}],
+        {id:'hillshade',type:'raster',source:'hillshade-tiles',paint:{'raster-opacity':0.7}},
+        // the 2D map's overlays, draped on the relief like everything else
+        {id:'slope-3d',type:'raster',source:'slope-src',layout:{visibility:ovOn.slope?'visible':'none'},paint:{'raster-opacity':0.5,'raster-fade-duration':0}},
+        {id:'skitour-3d',type:'raster',source:'skitour-src',layout:{visibility:(ovOn.skitour||ovOn.skitourVec)?'visible':'none'},paint:{'raster-opacity':0.9,'raster-fade-duration':0}}],
       terrain:{source:'terrain-dem',exaggeration:exag3d}},
     center:[lc.lng,lc.lat],zoom:lz,pitch:_tilt3d?0:60,bearing:_tilt3d?0:-20,maxPitch:85,
     maxBounds:[[loMinW-0.1,laMinW-0.05],[loMaxW+0.1,laMaxW+0.05]],
@@ -21117,8 +21203,9 @@ function feedRefresh(){
 // feed.
 function feedFiltMark(){
   const sw=document.getElementById('feedTxtSw');if(sw)sw.checked=feedTxtOn();
+  const fr=document.getElementById('feedFrSw');if(fr)fr.checked=feedFriendsOn();
   const b=document.getElementById('feedFiltFab');if(!b)return;
-  b.classList.toggle('on',!!feedRegion||feedTxtOn());
+  b.classList.toggle('on',!!feedRegion||feedTxtOn()||feedFriendsOn());
 }
 function feedRegionsRender(){const el=document.getElementById('feedFilter');if(!el)return;
   const chip=(id,label)=>'<button class="'+(feedRegion===id?'active':'')+'" onclick="feedRegionSet(\''+id+'\',true);feedFilterClose()">'+label+'</button>';
@@ -21153,6 +21240,12 @@ function feedNoPic(r){const cd=r.condition_data||{};
   return !r.img&&!(cd.activity&&cd.activity.track)&&!(cd.images&&cd.images.length)&&!cd.drawImage&&!cd.snapshot;}
 function feedTxtOn(){try{return localStorage.getItem('ssm_feed_text')==='1';}catch(e){return false;}}
 function feedTxtSet(on){try{localStorage.setItem('ssm_feed_text',on?'1':'0');}catch(e){}feedFiltMark();feedTopRender();feedRender();}
+// «Nur Freunde»: only the posts of people you follow who follow you back
+// (the app's meaning of friends, as for activities and post visibility)
+function feedFriendsOn(){try{return !!sbUser&&localStorage.getItem('ssm_feed_friends')==='1';}catch(e){return false;}}
+function feedFriendsSet(on){if(on&&!sbUser){feedFiltMark();authShow();return;}
+  try{localStorage.setItem('ssm_feed_friends',on?'1':'0');}catch(e){}feedFiltMark();feedTopRender();feedRender();}
+function feedIsFriend(r){const u=r&&r.userId;return !!(u&&myFollowing&&myFollowing.has(u)&&myFollowers&&myFollowers.has(u));}
 // "Hier & jetzt" is a live question: panning the map or moving the window
 // changes the answer, so the list follows them while it is open.
 let _feedLiveT=null;
@@ -21794,8 +21887,13 @@ function feedRender(){
   }
   // the main feed: region, then the kind of report (a chip each, with its count)
   const main=['all','here','following'].includes(feedScope);
-  let filtered=base;_feedLast=[];
+  let filtered=base;_feedLast=[];_feedMapAll=[];
   if(main){const n0=filtered.length;filtered=feedRegionFilter(filtered);
+    if(feedFriendsOn()){filtered=filtered.filter(feedIsFriend);
+      if(!filtered.length){_feedMapAll=[];feedKindsRender({all:0});
+        list.innerHTML='<div class="feed-empty">Von deinen Freunden gibt es '+(feedRegion?'in «'+escapeHtml(feedRegionLabel())+'» ':'')
+          +'gerade keine Beiträge. Freunde sind Leute, denen du folgst und die dir folgen.</div>'
+          +'<button type="button" class="feed-txt-more" onclick="feedFriendsSet(false)">Alle Beiträge zeigen</button>';return;}}
     const counts={all:filtered.length};filtered.forEach(r=>{const k=feedKind(r);counts[k]=(counts[k]||0)+1;});
     feedKindsRender(counts);
     if(n0&&!filtered.length){list.innerHTML='<div class="feed-empty">'+((feedRegion==='fav'||feedRegion.indexOf('fav:')===0)&&!(favs&&favs.length)
@@ -21805,6 +21903,7 @@ function feedRender(){
   // posts without a picture stay out of the list unless the filter asks for
   // them (a chosen kind, a person's own page, the saved ones and an opened
   // post show all)
+  _feedMapAll=filtered;
   let txtHidden=0;
   if(!feedTxtOn()&&!(main&&feedFilter!=='all')&&!(main&&feedRegion==='view')&&!['user','saved','post'].includes(feedScope)){const n0=filtered.length;filtered=filtered.filter(r=>!feedNoPic(r));txtHidden=n0-filtered.length;}
   if(feedAnchor){filtered=filtered.map(r=>({r,km:haversineKm(feedAnchor.lat,feedAnchor.lng,r.lat,r.lng)})).sort((a,b)=>a.km-b.km).map(o=>{o.r._km=o.km;return o.r;});}
@@ -21896,7 +21995,7 @@ function feedSeenWatch(){if(!('IntersectionObserver'in window))return;
 // Every post the feed is listing (same kind, region and order) as a marker;
 // a tap shows it, «Beitrag öffnen» opens it. Back to the list with the
 // Community tab or «Liste».
-var _feedLast=[],feedMapLayer=null,_feedMapRep=false,_feedFromMap=null;
+var _feedLast=[],_feedMapAll=[],feedMapLayer=null,_feedMapRep=false,_feedFromMap=null;
 // Opened from the map («N Beiträge hier im Feed»): the map icon goes straight
 // back to that map view, where the same reports are already on. Otherwise it
 // shows the feed's posts on the map.
@@ -21906,7 +22005,10 @@ function feedMapTap(){
     setTimeout(()=>{try{map.invalidateSize({animate:false});map.setView(v.c,v.z,{animate:false});}catch(e){}},300);return;}
   feedMapOpen();}
 function feedMapOpen(){
-  const list=_feedLast.filter(r=>r.lat!=null&&r.lng!=null&&isFinite(r.lat)&&isFinite(r.lng));
+  // every post of the feed's selection, also those without a picture that
+  // the list folds away
+  const src=_feedMapAll&&_feedMapAll.length?_feedMapAll:_feedLast;
+  const list=src.filter(r=>r.lat!=null&&r.lng!=null&&isFinite(r.lat)&&isFinite(r.lng));
   if(!list.length){toast('Keine Beiträge mit Ort in dieser Auswahl','err');return;}
   feedMapClear();feedMapLayer=L.layerGroup();const pts=[];
   list.forEach(r=>{const k=feedKind(r),kc=(FEED_KINDS.find(x=>x.id===k)||{}).c||'#64748b',cd=r.condition_data||{},A=cd.activity;
