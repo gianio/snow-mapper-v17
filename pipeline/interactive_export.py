@@ -4288,6 +4288,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .ly-g3 .ly-subs::before{top:-6px;width:12px;height:12px;border-radius:2px;transform:translateX(-50%) rotate(45deg);background:var(--fill)}
  .ly-g3 .ly-sub{min-height:32px;border-radius:10px;border:none;box-shadow:0 1px 2px rgba(15,23,42,.06)}
  .ly-ovs{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--hair);border-radius:16px;overflow:hidden}
+/* the stations row under the weather tiles: a little air between the two */
+#lyWxOv{margin-top:12px}
  .ly-ov{display:flex;align-items:center;gap:12px;width:100%;padding:10px 14px;border:0;background:none;font:600 13.5px Helvetica Neue,Helvetica,Arial,sans-serif;letter-spacing:0;color:var(--fg);cursor:pointer;text-align:left}
  .ly-ov+.ly-ov{border-top:1px solid var(--hair)}
  .ly-ov-ic{width:32px;height:32px;border-radius:10px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--fg2);flex:none;transition:.15s}
@@ -4513,6 +4515,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .trk-acc button span{font:500 12px Helvetica Neue,Helvetica,Arial,sans-serif;color:var(--fg2)}
  .trk-acc button.on{border-color:var(--accent);background:var(--accent-soft)}
  .trk-note{font-size:11.5px;line-height:1.45;color:var(--fg2);margin:12px 2px 4px}
+.trk-how{font-size:12px;line-height:1.45;color:var(--fg2);margin:2px 2px 10px}.trk-how b{color:var(--fg)}
  .trk-go{align-self:center;width:112px;height:112px;border-radius:50%;border:0;margin:14px 0 6px;color:#fff;cursor:pointer;
    background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--accent) 70%,#fff),var(--accent) 60%,color-mix(in srgb,var(--accent) 70%,#000));
    box-shadow:0 14px 34px color-mix(in srgb,var(--accent) 45%,transparent),0 0 0 10px var(--accent-soft);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
@@ -6188,6 +6191,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .ski-lbl i{width:20px;height:20px;border-radius:6px;flex:none;background:#E0245E;box-shadow:0 0 0 2px #fff;display:grid;place-items:center}
  .ski-lbl i svg{width:15px;height:15px}
  .ski-lbl span{font:800 11.5px/1 var(--font);color:#16152e;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff}
+.ski-lbl.ski-sm span{font-size:10.5px;font-weight:700}.ski-lbl.ski-sm i{transform:scale(.85)}
  /* the save sheet's buttons: one row, one size -- "Posten" differs only in colour */
  .trk-actions{align-items:stretch!important}
  .trk-actions .trk-a{height:48px!important;margin:0!important;transform:none!important;box-shadow:none!important;align-self:stretch!important}
@@ -8912,7 +8916,7 @@ const CH_CANTONS_ENC="459397,78496,-205,-59,-47,-125,159,-992,-47,-257,406,-633,
 const CH_CANTONS=CH_CANTONS_ENC.split(";").map(function(r){
   const v=r.split(",");const out=[];let la=0,lo=0;
   for(let i=0;i<v.length;i+=2){la+=+v[i];lo+=+v[i+1];out.push([la/1e4,lo/1e4]);}return out;});
-const CH_RESORTS=("Zermatt~460200~77486|Davos~468043~98372|St. Moritz~464994~98433|Verbier~461002~72265|Arosa~467779~96762|Grindelwald~466240~80360|Saas-Fee~461080~79274|Crans-Montana~463132~74791|Engelberg~468211~84013|Andermatt~466356~85939|Laax~468045~92579|Flims~468370~92846|Adelboden~464914~75603|Lenzerheide~467221~95590|Scuol~467967~102980|Gstaad~464721~72869|Champéry~461754~68690|Grächen~461953~78374|Pontresina~464955~99013|Disentis~467034~88509|Meiringen~467271~81872|Kandersteg~464947~76733|Leukerbad~463794~76269|Villars-sur-Ollon~462983~70563|Leysin~463418~70115|Airolo~465286~86119|Zweisimmen~465554~73730|Lauterbrunnen~465931~79094|Zuoz~466021~99596|Celerina~465122~98579|Amden~471489~91423|Saanen~464894~72600|Fiesch~463998~81353|Evolène~461142~74941|Beckenried~469665~84757|Wildhaus~472058~93540|Klosters Serneus~468892~98383|Charmey~466196~71649").split("|").map(function(e){
+const CH_RESORTS=("Zermatt~460200~77486|Davos~468043~98372|St. Moritz~464994~98433|Verbier~461002~72265|Arosa~467779~96762|Grindelwald~466240~80360|Saas-Fee~461080~79274|Crans-Montana~463132~74791|Engelberg~468211~84013|Andermatt~466356~85939|Laax~468045~92579|Flims~468370~92846|Adelboden~464914~75603|Lenzerheide~467221~95590|Scuol~467967~102980|Gstaad~464721~72869|Champéry~461754~68690|Grächen~461953~78374|Pontresina~464955~99013|Disentis~467034~88509|Meiringen~467271~81872|Kandersteg~464947~76733|Leukerbad~463794~76269|Villars-sur-Ollon~462983~70563|Leysin~463418~70115|Airolo~465286~86119|Zweisimmen~465554~73730|Lauterbrunnen~465931~79094|Zuoz~466021~99596|Celerina~465122~98579|Amden~471489~91423|Saanen~464894~72600|Fiesch~463998~81353|Evolène~461142~74941|Arolla~460256~74831|Beckenried~469665~84757|Wildhaus~472058~93540|Klosters Serneus~468892~98383|Charmey~466196~71649").split("|").map(function(e){
   const q=e.split("~");return {name:q[0],lat:+q[1]/1e4,lng:+q[2]/1e4};});
 map.createPane('abstractPane');
 map.getPane('abstractPane').style.zIndex=150;          // below tilePane (200)
@@ -9053,13 +9057,22 @@ function pistesLines(d){const rd=L.canvas({padding:.3}),g=L.layerGroup(),grp={};
     else if(k[0]==='l')L.polyline(lines,Object.assign({},o,{color:'#1f2328',weight:k==='l0'?3:2,opacity:.95,dashArray:k==='l2'?'2 4':null})).addTo(g);
     else{const df=k.slice(1);L.polyline(lines,Object.assign({},o,{color:df==='u'?'#6b7280':PISTE_COL[+df],weight:3,opacity:.95,dashArray:df==='4'?'7 5':null})).addTo(g);}});
   return g;}
+function skiLabel(name,lat,lng,small){const m=L.marker([lat,lng],{keyboard:false,zIndexOffset:small?380:400,
+    icon:L.divIcon({className:'ski-lbl'+(small?' ski-sm':''),html:'<i>'+SKI_ICON+'</i><span>'+escapeHtml(name)+'</span>',iconSize:null,iconAnchor:[10,10]})});
+  m.on('click',ev=>{L.DomEvent.stopPropagation(ev);map.setView([lat,lng],Math.max(map.getZoom(),13));});return m;}
+// The big resorts (CH_RESORTS) are named at every zoom; the other named ski
+// areas from OpenStreetMap (Arolla, Bettmeralp, Elm ...) join from zoom 10,
+// with the pistes from zoom 11.
 function skiBuildLayer(){const g=L.layerGroup();
   pistesLoad().then(d=>{if(!d)return;const lines=pistesLines(d);
-    const sync=()=>{const on=map.hasLayer(g)&&map.getZoom()>=11;if(on&&!map.hasLayer(lines))lines.addTo(map);else if(!on&&map.hasLayer(lines))map.removeLayer(lines);};
+    const small=L.layerGroup();(d.r||[]).forEach(([n,la,lo])=>{
+      if(CH_RESORTS.some(r=>r.name.toLowerCase()===String(n).toLowerCase()||haversineKm(r.lat,r.lng,la,lo)<2.5))return;
+      skiLabel(n,la,lo,true).addTo(small);});
+    const sync=()=>{const z=map.getZoom(),on=map.hasLayer(g);
+      if(on&&z>=11&&!map.hasLayer(lines))lines.addTo(map);else if((!on||z<11)&&map.hasLayer(lines))map.removeLayer(lines);
+      if(on&&z>=10&&!map.hasLayer(small))small.addTo(map);else if((!on||z<10)&&map.hasLayer(small))map.removeLayer(small);};
     map.on('zoomend',sync);g.on('add remove',()=>setTimeout(sync,0));sync();});
-  CH_RESORTS.forEach(r=>{const m=L.marker([r.lat,r.lng],{keyboard:false,zIndexOffset:400,
-      icon:L.divIcon({className:'ski-lbl',html:'<i>'+SKI_ICON+'</i><span>'+escapeHtml(r.name)+'</span>',iconSize:null,iconAnchor:[10,10]})});
-    m.on('click',ev=>{L.DomEvent.stopPropagation(ev);map.setView([r.lat,r.lng],Math.max(map.getZoom(),13));});m.addTo(g);});
+  CH_RESORTS.forEach(r=>skiLabel(r.name,r.lat,r.lng,false).addTo(g));
   return g;}
 function ovAvailable(k){
   if(k==='avalanche'){const a=M.avalanche;return !!(a&&a.regions&&a.regions.some(r=>r.geometry));}
@@ -11704,6 +11717,9 @@ function trkGuideClear(){trkGuide=null;if(trkGuideLine){map.removeLayer(trkGuide
 let trkRec=null,trkWatch=null,trkNative=null,trkLock=null,trkTick=0,trkView='setup',trkFix=null,trkLine=null,trkMe=null,trkDraft=null,trkCur=null;
 const trkPrefs={acc:'std',type:'skitour'};
 try{Object.assign(trkPrefs,JSON.parse(localStorage.getItem('ssm_trk_prefs')||'{}'));}catch(e){}
+// «Mittel» is the default for everyone (once; a later choice is kept)
+if(trkPrefs.v!==2){trkPrefs.acc='std';trkPrefs.v=2;try{localStorage.setItem('ssm_trk_prefs',JSON.stringify(trkPrefs));}catch(e){}}
+if(!TRK_ACC[trkPrefs.acc])trkPrefs.acc='std';
 if(!TRK_TYPES.some(x=>x[0]===trkPrefs.type))trkPrefs.type='skitour';
 
 // -- storage ------------------------------------------------------------------
@@ -11716,7 +11732,17 @@ async function trkPut(a){const db=await trkDb();return new Promise((res,rej)=>{c
 async function trkAll(){const db=await trkDb();return new Promise((res,rej)=>{const q=db.transaction('acts').objectStore('acts').getAll();q.onsuccess=()=>res((q.result||[]).sort((x,y)=>y.start-x.start));q.onerror=()=>rej(q.error);});}
 async function trkGet(id){const db=await trkDb();return new Promise((res,rej)=>{const q=db.transaction('acts').objectStore('acts').get(id);q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej(q.error);});}
 async function trkDel(id){const db=await trkDb();return new Promise((res,rej)=>{const tx=db.transaction('acts','readwrite');tx.objectStore('acts').delete(id);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);});}
-function trkSaveRec(){try{if(trkRec)localStorage.setItem('ssm_rec',JSON.stringify(trkRec));else localStorage.removeItem('ssm_rec');}catch(e){}}
+// The running recording lives in localStorage so a reload or a closed tab
+// picks it up again. Saved every few points, at least every 10 s, and when
+// the page is hidden or closed. A full storage thins the per-second
+// roughness before giving up on it.
+let _trkSavedAt=0;
+function trkSaveRec(){try{if(!trkRec){localStorage.removeItem('ssm_rec');return;}
+  trkRec._savedAt=Date.now();_trkSavedAt=trkRec._savedAt;
+  try{localStorage.setItem('ssm_rec',JSON.stringify(trkRec));}
+  catch(e){const R=trkRec.rough;if(R&&R.length>600)trkRec.rough=R.filter((x,i)=>i%2===0||i>=R.length-300);
+    try{localStorage.setItem('ssm_rec',JSON.stringify(trkRec));}
+    catch(e2){toastOnce('trkfull','Speicher fast voll – die laufende Aufzeichnung wird nicht mehr vollständig gesichert.');}}}catch(e){}}
 
 // -- maths --------------------------------------------------------------------
 function trkHav(a,b){const R=6371000,r=Math.PI/180,dl=(b[1]-a[1])*r,dn=(b[2]-a[2])*r;
@@ -11770,7 +11796,7 @@ function trkOnPos(p){
   if(trkRec&&!trkRec.paused){const P=TRK_ACC[trkRec.acc]||TRK_ACC.std,seg=trkRec.segs[trkRec.segs.length-1],last=seg[seg.length-1];
     if(pt[4]<=P.maxAcc&&(!last||(pt[0]-last[0]>=P.minDt&&trkHav(last,pt)>=P.minD))){
       seg.push(pt);if(trkLine)trkLine.addLatLng([pt[1],pt[2]]);
-      if(seg.length%5===0)trkSaveRec();}}
+      if(seg.length%5===0||Date.now()-_trkSavedAt>10000)trkSaveRec();}}
   // a coarse fix right after good ones does not move the dot (it jumped)
   const good=_trkGood&&pt[0]-_trkGood.t<20000&&pt[4]>Math.max(80,3*_trkGood.acc);
   if(!good&&pt[4]<=60)_trkGood={t:pt[0],acc:pt[4]};
@@ -11833,9 +11859,24 @@ async function trkWake(on){
 }
 document.addEventListener('visibilitychange',()=>{
   if(!trkRec)return;
-  if(document.visibilityState==='visible'){if(!trkRec.paused){trkWake(true);if(trkWatch==null&&trkNative==null)trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);}trkPaint();}
+  if(document.visibilityState==='visible'){if(!trkRec.paused){trkWake(true);
+      // iOS keeps the watch but often stops feeding it after the screen was
+      // locked: a fix older than 15 s means start it afresh
+      if(trkNative==null&&(trkWatch==null||!trkFix||Date.now()-trkFix[0]>15000))trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);
+      if(!trkMot)trkMotion(true);}
+    trkPaint();}
   else trkSaveRec();
 });
+addEventListener('pagehide',()=>{if(trkRec)trkSaveRec();});
+document.addEventListener('freeze',()=>{if(trkRec)trkSaveRec();});
+// desktop and Android ask before the tab is closed while recording (iOS
+// Safari does not show this; the recording resumes when the page is opened)
+addEventListener('beforeunload',e=>{if(!trkRec)return;trkSaveRec();if(!trkRec.paused){e.preventDefault();e.returnValue='';}});
+// watchdog: no fix for 45 s while the page is in front -> restart the GPS
+let _trkWd=0;
+setInterval(()=>{try{if(!trkRec||trkRec.paused||trkNative!=null||document.visibilityState!=='visible')return;
+  const age=Date.now()-(trkFix?trkFix[0]:trkRec.start);
+  if(age>45000&&Date.now()-_trkWd>45000){_trkWd=Date.now();trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);}}catch(e){}},15000);
 
 // -- recording control ----------------------------------------------------------
 function trkLayerEnsure(){
@@ -12226,6 +12267,7 @@ async function trkRender(){
   if(trkView==='setup'){
     el.innerHTML='<div class="trk-hd"><button class="trk-ic" onclick="trkClose()" aria-label="Schliessen">'+TRK_X+'</button><b>Aufzeichnen</b>'
       +'<button class="trk-accp" onclick="trkAccCycle()" title="GPS-Genauigkeit – tippen zum Wechseln">'+trkAccPill()+'</button></div>'
+      +'<p class="trk-how"><b>Schnee aus der Erschütterung:</b> In der Abfahrt misst das Handy, wie stark es rüttelt – ruhig heisst eher Pulver oder Sulz, ruppig eher Harsch, Buckel oder hart. Am besten am Körper tragen, Bildschirm an.</p>'
       +'<div class="trk-gps-row"><span id="trkGps">'+trkGpsHTML()+'</span><button class="trk-link" onclick="trkView=\'list\';trkRender()">Meine Aktivitäten</button></div>'
       +(trkGuide?'<div class="trk-guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/></svg><span>Spur folgen<b>'+escapeHtml(trkGuide.name)+' · '+(trkGuide.len/1000).toFixed(1)+' km</b></span><button onclick="trkGuideClear()" aria-label="Spur entfernen">×</button></div>':'')
       +'<div class="trk-lbl">Sportart</div><div class="trk-types">'+TRK_TYPES.map(([k,l])=>'<button type="button" class="trk-type'+(trkPrefs.type===k?' on':'')+'" onclick="trkPref(\'type\',\''+k+'\')"><i>'+(TRK_TYPE_IC[k]||'')+'</i><span>'+l+'</span></button>').join('')+'</div>'
@@ -12741,9 +12783,17 @@ async function trkProfRender(){const el=document.getElementById('profActs');if(!
     :'<div class="prof-hint">Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.</div>';}
 // a recording that was running when the page went away picks up again
 (function(){try{const s=JSON.parse(localStorage.getItem('ssm_rec')||'null');if(!s||!s.segs)return;
-  trkRec=s;if(!trkRec.paused){trkRec.segs.push([]);trkRec.resumedAt=Date.now();}
-  setTimeout(()=>{try{trkLineFromRec();if(!trkRec.paused){trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);}
-    clearInterval(trkTick);trkTick=setInterval(trkPaint,1000);trkPill();toast('Aufzeichnung läuft weiter','info');}catch(e){}},1500);}catch(e){}})();
+  trkRec=s;const fl=trkFlat(s.segs),last=fl[fl.length-1],lastT=Math.max(s._savedAt||0,last?last[0]:0,s.start||0),gap=Date.now()-lastT;
+  let note='Aufzeichnung läuft weiter';
+  if(!trkRec.paused){
+    if(gap>3*3600e3){trkRec.movingMs=(trkRec.movingMs||0)+Math.max(0,lastT-(trkRec.resumedAt||lastT));trkRec.paused=true;trkRec.resumedAt=null;
+      note='Aufzeichnung pausiert – seit '+Math.round(gap/3600e3)+' h keine Position. Weiter oder beenden?';}
+    else{if(!trkRec.resumedAt)trkRec.resumedAt=lastT;
+      if(gap>60e3){(trkRec.gaps||(trkRec.gaps=[])).push([lastT,Date.now()]);
+        note='Aufzeichnung läuft weiter – '+Math.round(gap/60e3)+' min ohne GPS, als gerade Linie ergänzt';}}}
+  trkSaveRec();
+  setTimeout(()=>{try{trkLineFromRec();if(!trkRec.paused){trkGpsStart(TRK_ACC[trkRec.acc].hiAcc);trkWake(true);trkMotion(true);}
+    clearInterval(trkTick);trkTick=setInterval(trkPaint,1000);trkPill();toast(note,'info');}catch(e){}},1500);}catch(e){}})();
 
 // Snowp (two-camera posts for friends) was retired. Old Snowp posts stay
 // private: they are no longer shown anywhere.
@@ -15021,8 +15071,8 @@ function ovRender(){
   g.innerHTML=Object.keys(OVERLAYS).filter(k=>k!=='variantA'&&!(cm&&OV_COMMUNITY.includes(k))).map(ovRowHTML).join('')
   // map extras that used to live in the settings
   +(wx?'':stnRow)
-  +(window._wcOk?lyExtraRow('wc','Webcam-Galerie (Bilder & Live)',false,'<path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/>','lyPanelClose();wcvOpen()'):'')
-  +lyExtraRow('3d','3D-Ansicht',typeof is3d!=='undefined'&&is3d,'<path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/>','lyPanelClose();document.getElementById(\'btn3dFloat\').click()');
+  // (3D is switched with its own button on the map's side rail)
+  +(window._wcOk?lyExtraRow('wc','Webcam-Galerie (Bilder & Live)',false,'<path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/>','lyPanelClose();wcvOpen()'):'');
 }
 function lyExtraRow(k,label,on,ic,act){
   return '<button type="button" id="ov_x'+k+'" class="ly-ov'+(on?' on':'')+'" role="switch" aria-checked="'+(on?'true':'false')+'" onclick="'+act+'">'

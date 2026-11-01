@@ -7,7 +7,12 @@ Data (c) OpenStreetMap contributors, ODbL: the app credits it on the layer
 and in «Datenquellen & Lizenzen».
 
     data = fetch(cache_path=Path("cache/pistes.json"))
-    -> {"v": 1, "attr": ..., "p": [[kind, diff, coords], ...], "l": [[kind, name, coords], ...]}
+    -> {"v": 2, "attr": ..., "p": [[kind, diff, coords], ...], "l": [[kind, name, coords], ...],
+        "r": [[name, lat, lon], ...]}
+
+"r" are the named ski areas (landuse=winter_sports, site=piste) with their
+centre -- also the small ones (Arolla, Bettmeralp, Elm ...) that the app's
+own short resort list leaves out.
 
 coords: flat integer list [lon0, lat0, dlon1, dlat1, ...] in 1e-5 degrees,
 delta encoded after the first point (small numbers compress well).
@@ -29,7 +34,13 @@ area["ISO3166-1"="CH"][admin_level=2]->.ch;
   way["piste:type"~"^(downhill|nordic)$"](area.ch);
   way["aerialway"~"^(cable_car|gondola|mixed_lift|chair_lift|drag_lift|t-bar|j-bar|platter|rope_tow|magic_carpet|zip_line)$"](area.ch);
 );
-out tags geom;"""
+out tags geom;
+(
+  way["landuse"="winter_sports"]["name"](area.ch);
+  relation["landuse"="winter_sports"]["name"](area.ch);
+  relation["site"="piste"]["name"](area.ch);
+);
+out tags center;"""
 
 # piste:difficulty -> 0 novice (green), 1 easy (blue), 2 intermediate (red),
 # 3 advanced/expert (black), 4 freeride (yellow skiroute); None unknown
@@ -87,15 +98,26 @@ def _encode(pts: List[tuple]) -> List[int]:
 
 def pack(payload: Dict[str, Any], tol_m: float = 8.0) -> Dict[str, Any]:
     """Overpass JSON -> the compact form the app reads."""
-    p, l = [], []
+    p, l, r = [], [], []
+    seen = []
     for el in payload.get("elements", []):
+        tags = el.get("tags") or {}
+        c = el.get("center")
+        if c and tags.get("name") and (tags.get("landuse") == "winter_sports" or tags.get("site") == "piste"):
+            name = tags["name"].strip()[:60]
+            la, lo = round(c["lat"], 4), round(c["lon"], 4)
+            # one label per area: same name, or another name within ~2 km
+            if not any(n.casefold() == name.casefold() or
+                       ((la - a) ** 2 + ((lo - b) * 0.69) ** 2) ** 0.5 < 0.018 for n, a, b in seen):
+                seen.append((name, la, lo))
+                r.append([name, la, lo])
+            continue
         if el.get("type") != "way":
             continue
         geom = el.get("geometry") or []
         pts = [(g["lon"], g["lat"]) for g in geom if "lon" in g and "lat" in g]
         if len(pts) < 2:
             continue
-        tags = el.get("tags") or {}
         pts = _simplify(pts, tol_m)
         if "aerialway" in tags:
             k = LIFT_KIND.get(tags["aerialway"])
@@ -106,7 +128,7 @@ def pack(payload: Dict[str, Any], tol_m: float = 8.0) -> Dict[str, Any]:
             if k is not None:
                 d = DIFF.get(tags.get("piste:difficulty", ""))
                 p.append([k, d, _encode(pts)])
-    return {"v": 1, "attr": ATTRIBUTION, "p": p, "l": l}
+    return {"v": 2, "attr": ATTRIBUTION, "p": p, "l": l, "r": r}
 
 
 def fetch(cache_path: Optional[Path] = None, timeout: float = 300.0) -> Optional[Dict[str, Any]]:
@@ -124,7 +146,7 @@ def fetch(cache_path: Optional[Path] = None, timeout: float = 300.0) -> Optional
             if cache_path:
                 cache_path.parent.mkdir(parents=True, exist_ok=True)
                 cache_path.write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")
-            print(f"[OSM] {len(data['p'])} pistes, {len(data['l'])} lifts from {url}")
+            print(f"[OSM] {len(data['p'])} pistes, {len(data['l'])} lifts, {len(data['r'])} ski areas from {url}")
             return data
         except Exception as e:                      # noqa: BLE001
             print(f"[OSM] {url} failed: {e!r}")

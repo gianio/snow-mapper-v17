@@ -35,5 +35,18 @@ check("then deltas", c[2] == 490 and c[3] == 0, str(c[2:]))
 w = op.pack({"elements": [{"type": "way", "tags": {"piste:type": "downhill"}, "geometry": line(20, wiggle=0.001)}]})
 check("a zig-zag of ~110 m keeps its corners", len(w["p"][0][2]) > 10, str(len(w["p"][0][2])))
 
+a = op.pack({"elements": [
+    {"type": "way", "tags": {"landuse": "winter_sports", "name": "Arolla"}, "center": {"lat": 46.02561, "lon": 7.48312}},
+    {"type": "relation", "tags": {"site": "piste", "name": "arolla"}, "center": {"lat": 46.03, "lon": 7.49}},
+    {"type": "relation", "tags": {"landuse": "winter_sports", "name": "Pistes d'Arolla"}, "center": {"lat": 46.027, "lon": 7.484}},
+    {"type": "relation", "tags": {"landuse": "winter_sports", "name": "Bettmeralp"}, "center": {"lat": 46.39, "lon": 8.06}},
+    {"type": "way", "tags": {"landuse": "winter_sports"}, "center": {"lat": 46.5, "lon": 8.5}},
+    {"type": "way", "tags": {"piste:type": "downhill"}, "geometry": line(5)},
+]})
+check("v2 with ski areas", a["v"] == 2 and isinstance(a.get("r"), list))
+check("named ski areas with centre", [x[0] for x in a["r"]] == ["Arolla", "Bettmeralp"], str(a["r"]))
+check("centre rounded to 1e-4", a["r"][0][1:] == [46.0256, 7.4831], str(a["r"][0]))
+check("pistes still packed next to them", len(a["p"]) == 1)
+
 print("\nFAILED: " + ", ".join(fails) if fails else "\nOSM PISTES OK")
 sys.exit(1 if fails else 0)

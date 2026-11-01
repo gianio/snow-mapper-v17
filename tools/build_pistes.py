@@ -26,14 +26,19 @@ def main():
     a = ap.parse_args()
     cache = Path(a.cache)
     fresh = cache.exists() and time.time() - cache.stat().st_mtime < a.max_age_days * 86400
-    data = json.loads(cache.read_text(encoding="utf-8")) if fresh else fetch(cache_path=cache)
+    data = json.loads(cache.read_text(encoding="utf-8")) if fresh else None
+    # a cache from before the ski-area names (v1) is refreshed at once
+    if data is not None and data.get("v", 1) < 2:
+        data = None
+    if data is None:
+        data = fetch(cache_path=cache)
     if not data:
         print("pistes: none (no network, no cache)")
         return 0
     out = Path(a.out) / "data" / "pistes.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")
-    print(f"pistes: {len(data['p'])} pistes, {len(data['l'])} lifts -> {out} ({out.stat().st_size // 1024} KB)")
+    print(f"pistes: {len(data['p'])} pistes, {len(data['l'])} lifts, {len(data.get('r') or [])} ski areas -> {out} ({out.stat().st_size // 1024} KB)")
     return 0
 
 
