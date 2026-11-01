@@ -8781,6 +8781,26 @@ const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
 // A real mouse wheel still works: its notches are large, so it crosses the
 // threshold in one or two clicks.
 const _trackpad=_desktop&&/Mac/.test(navigator.platform||navigator.userAgent||'');
+// A tap on the map while a menu floats over it (Zeitraum, layers, legend,
+// the report menu, the + menu, a tour pick list ...) only closes the menu:
+// nothing on the map reacts -- no point card, no popup, no tour. The next tap
+// works as usual. Each menu closes itself on pointerdown, so whether one was
+// open is read first (this listener is registered before theirs), and the
+// click that follows is kept from the map.
+let _menuTapAt=0;
+function anyMenuOpen(){const B=document.body.classList;
+  if(['leg-open','ly-open','fab-open','rep-open'].some(c=>B.contains(c)))return true;
+  const tp=document.getElementById('tlPresets');if(tp&&!tp.hidden)return true;
+  const pk=document.getElementById('tourPick');if(pk&&pk.classList.contains('on'))return true;
+  for(const m of document.querySelectorAll('[role=menu]'))if(!m.closest('[hidden]')&&m.getClientRects().length)return true;
+  return false;}
+function menusClose(){const tp=document.getElementById('tlPresets');if(tp)tp.hidden=true;
+  for(const f of [()=>legInfoClose(),()=>lyPanelClose(),()=>fabMenu(false),()=>repSheetToggle(false),()=>tourPickHide()])try{f();}catch(e){}}
+addEventListener('pointerdown',e=>{_menuTapAt=anyMenuOpen()?Date.now():0;},true);
+addEventListener('click',e=>{
+  if(!_menuTapAt||Date.now()-_menuTapAt>1500)return;
+  const t=e.target;if(!t||!t.closest||!t.closest('#map')||t.closest('.leaflet-popup,.leaflet-control'))return;
+  _menuTapAt=0;e.stopPropagation();e.preventDefault();menusClose();},true);
 // Map popups on every screen: they keep clear of the chrome (top buttons,
 // the right rail, timeline and tab bar) when the map pans them into view, are
 // never wider than the room left of the rail, and never taller than the room
