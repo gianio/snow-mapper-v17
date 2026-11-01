@@ -81,9 +81,36 @@ jobs:
           if [ -n "$RID" ]; then
             gh run download "$RID" -n ogd-clouds -D ogd_clouds && ls -la ogd_clouds
             echo "SNOWMAPPER_OGD_CLOUDS=$PWD/ogd_clouds" >> "$GITHUB_ENV"
+            # the web app's weather points from the same cycle (pipeline/ogd_site.py)
+            if gh run download "$RID" -n ogd-site -D ogd_site 2>/dev/null; then
+              echo "SNOWMAPPER_OGD_SITE=$PWD/ogd_site" >> "$GITHUB_ENV"; ls ogd_site | wc -l
+            else
+              echo "no site points in that cycle -- weather from Open-Meteo"
+            fi
           else
             echo "no cloud fields yet -- clouds from Open-Meteo"
           fi
+
+      # Our MeteoSwiss archive (pipeline/wx_archive.py, kept by the live cycle):
+      # the past days of the web app's weather come from it as well.
+      - name: Restore the weather archive (cache)
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          path: wx_archive
+          key: wx-archive-deploy-${{ github.run_id }}
+          restore-keys: wx-archive-
+      - name: Weather archive from R2
+        continue-on-error: true
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_ARCHIVE_BUCKET: ${{ vars.R2_ARCHIVE_BUCKET }}
+        run: |
+          python tools/wx_archive.py pull wx_archive --days 12
+          [ -d wx_archive/ogd ] && echo "SNOWMAPPER_WX_ARCHIVE=$PWD/wx_archive" >> "$GITHUB_ENV" || echo "no archive yet"
 
       # Leaflet, supabase-js, MapLibre and PMTiles are served from the site
       # (pipeline/vendor.py): the pinned npm tarballs are kept between runs.

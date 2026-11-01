@@ -208,7 +208,12 @@ jobs:
           ARGS="--live --write-points points.json"
           [ -n "${{ inputs.limit }}" ] && ARGS="$ARGS --limit ${{ inputs.limit }}"
           python run_variant_a.py $ARGS
-          TQDM_DISABLE=1 .ogd/bin/python -u tools/ogd_extract.py points.json ogd
+          # the web app's 300 weather points ride along (ids s0000 …): the site
+          # build lays their MeteoSwiss hours over Open-Meteo (pipeline/ogd_site.py)
+          python tools/site_points.py site_points.json
+          python -c "import json;json.dump(json.load(open('points.json'))+json.load(open('site_points.json')),open('points_all.json','w'))"
+          TQDM_DISABLE=1 .ogd/bin/python -u tools/ogd_extract.py points_all.json ogd
+          cp site_points.json ogd/site_points.json
 
       - name: File the MeteoSwiss hours in the archive
         if: hashFiles('ogd/*.json') != ''
@@ -227,6 +232,14 @@ jobs:
           path: ogd/clouds_*.npz
           retention-days: 2
           compression-level: 0
+
+      - name: Upload the site weather points (MeteoSwiss)
+        if: always() && hashFiles('ogd/site_points.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ogd-site
+          path: ogd/s*.json
+          retention-days: 2
 
       - name: Run the cycle
         id: cycle
