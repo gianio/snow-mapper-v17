@@ -6576,7 +6576,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
       <button id="setLock" hidden onclick="lockToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9v1.5M15 9v1.5M12 9v4h-1M9.5 16a3.5 3.5 0 0 0 5 0"/></svg>Mit Face ID anmelden<span class="set-val" id="setLockSt">Aus</span></button>
       <button onclick="_setCameFromProfile=false;setClose();onbOpen(true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z"/></svg>Einführung erneut zeigen</button>
       <button id="setAccount" onclick="_setCameFromProfile=false;setClose();accountTap()">Anmelden</button>
-      <div id="setPro" class="set-pro"></div>
+      <div id="setPro" class="set-pro" hidden></div>
       <button data-dm hidden onclick="_setCameFromProfile=false;setClose();dmOpen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 4l-1.4 4.1A8.5 8.5 0 0 1 21 11.5z"/></svg>Nachrichten</button>
     </div>
     <span class="lbl-micro">Rechtliches</span>
@@ -18195,26 +18195,30 @@ function invPending(){try{return localStorage.getItem('ssm_invite')||'';}catch(e
 // paywall off -- the default -- every gate below just opens. Purchases: Stripe
 // Checkout on the web (edge function stripe-checkout); the iOS app will use
 // Apple's in-app purchase (docs/paywall.md).
+//
+// PRO_UI=false: for now nothing of Pro is shown at all -- no offer, no
+// prices, no settings row, no admin switch -- and every feature is open,
+// whatever the server's paywall setting says. Prices live only in Stripe.
+const PRO_UI=false;
 let proS={pro:false,paywall:'off'};
 try{const c=JSON.parse(localStorage.getItem('ssm_pro')||'null');if(c)proS=c;}catch(e){}
-const PRO_PRICES={season:'CHF 29 / Saison',month:'CHF 4 / Monat'};
 const PRO_FEATURES={ski:'Skiqualität (SNOWPACK) mit 5-Tage-Vorschau',push:'Neuschnee-Push für deine Favoriten',offline:'Kartenausschnitte offline speichern',tours:'Powder-Score für alle Touren'};
-function isPro(){return proS.paywall!=='on'||!!proS.pro;}
+function isPro(){return !PRO_UI||proS.paywall!=='on'||!!proS.pro;}
 function proNative(){try{return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());}catch(e){return false;}}
-async function proLoad(){if(!sb)return;
+async function proLoad(){if(!sb||!PRO_UI)return;
   try{const{data,error}=await sb.rpc('pro_state');if(!error&&data){proS=data;try{localStorage.setItem('ssm_pro',JSON.stringify(proS));}catch(e){}}}catch(e){}
   try{proRowRender();}catch(e){}
   // paywall on and no Pro: the Skiqualität layer goes off (it is a Pro layer)
   try{if(!isPro()&&ovOn.variantA)ovToggle('variantA',true);}catch(e){}}
 function proGate(feature,fn){if(isPro())return fn();proSheet(feature);}
-function proSheet(feature){if(document.getElementById('proAsk'))return;
+function proSheet(feature){if(!PRO_UI||document.getElementById('proAsk'))return;
   const d=document.createElement('div');d.id='proAsk';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='7002';
   d.onclick=e=>{if(e.target===d)d.remove();};
   const feats=Object.keys(PRO_FEATURES).map(k=>'<li'+(k===feature?' class="on"':'')+'>'+escapeHtml(PRO_FEATURES[k])+'</li>').join('');
   const buy=proNative()
     ?'<p class="auth-note" style="text-align:center">Pro ist in der App bald erhältlich.</p>'
-    :'<button class="auth-btn primary" onclick="proBuy(\'season\')">Saisonpass · '+PRO_PRICES.season+'</button>'
-      +'<button class="auth-btn" style="margin-top:8px" onclick="proBuy(\'month\')">Monatlich · '+PRO_PRICES.month+'</button>';
+    :'<button class="auth-btn primary" onclick="proBuy(\'season\')">Saisonpass</button>'
+      +'<button class="auth-btn" style="margin-top:8px" onclick="proBuy(\'month\')">Monatlich</button>';
   d.innerHTML='<div class="auth-modal pro-modal" role="dialog" aria-modal="true" aria-labelledby="proT"><button class="auth-close" aria-label="Schliessen" onclick="document.getElementById(\'proAsk\').remove()">&times;</button><h2 id="proT">Snowmapper Pro</h2>'
     +'<p class="auth-sub">'+(feature&&PRO_FEATURES[feature]?escapeHtml(PRO_FEATURES[feature])+' gehört zu Pro.':'Mehr Schnee-Wissen für deine Touren.')+'</p>'
     +'<ul class="pro-list">'+feats+'</ul>'+buy
@@ -18222,25 +18226,26 @@ function proSheet(feature){if(document.getElementById('proAsk'))return;
     +'<p class="auth-legal">Mit Einladungscode (Family &amp; Friends, Tester) ist Pro in der Testphase gratis. Es gelten die <a href="#" onclick="legalOpen(\'agb\');return false">Nutzungsbedingungen</a>.</p>'
     +'<div class="auth-switch"><button onclick="document.getElementById(\'proAsk\').remove()">Später</button></div></div>';
   document.body.appendChild(d);}
-async function proBuy(product){if(!sb||!sbUser){const a=document.getElementById('proAsk');if(a)a.remove();authShow();return;}
+async function proBuy(product){if(!PRO_UI)return;if(!sb||!sbUser){const a=document.getElementById('proAsk');if(a)a.remove();authShow();return;}
   const er=document.getElementById('proErr');if(er)er.textContent='Einen Moment…';
   try{const{data,error}=await sb.functions.invoke('stripe-checkout',{body:{product}});
     if(error||!data||!data.url)throw new Error((data&&data.error)||(error&&error.message)||'');
     location.href=data.url;}
   catch(e){if(er)er.textContent=/not configured|503|Failed to send/i.test(e.message||'')?'Die Bezahlung ist noch nicht eingerichtet – bald.':'Ging nicht: '+(e.message||e);}}
 // back from Stripe: the webhook unlocks within seconds
-(function(){try{const u=new URL(location.href),r=u.searchParams.get('pro');if(!r)return;
+(function(){try{const u=new URL(location.href),r=u.searchParams.get('pro');if(!r||!PRO_UI)return;
   u.searchParams.delete('pro');history.replaceState(null,'',u.toString());
   if(r==='ok'){setTimeout(()=>toast('Danke! Pro wird freigeschaltet …','ok'),1200);[4000,10000,20000].forEach(ms=>setTimeout(proLoad,ms));}}catch(e){}})();
 function proRowRender(){const el=document.getElementById('setPro');if(!el)return;
-  if(!sbUser){el.innerHTML='';return;}
+  if(!PRO_UI||!sbUser){el.innerHTML='';el.hidden=true;return;}
+  el.hidden=false;
   const until=proS.until?new Date(proS.until).toLocaleDateString('de-CH'):'';
   const src={tester:'Testphase (Einladungscode)',admin:'Team',stripe:proS.product==='month'?'Monatsabo':'Saisonpass',apple:'App Store',gift:'Geschenkt'}[proS.source]||'';
   el.innerHTML=(proS.pro
       ?'<div class="pro-row on"><b>Pro aktiv</b><span>'+escapeHtml(src)+(until?' · bis '+until:'')+'</span></div>'
       :'<button onclick="proSheet()">'+(proS.paywall==='on'?'Snowmapper Pro holen':'Snowmapper Pro (bald)')+'</button>')
     +(myRole==='admin'?'<button onclick="proPaywallToggle()">Paywall: <b>'+(proS.paywall==='on'?'an':'aus')+'</b> – umschalten</button>':'');}
-async function proPaywallToggle(){const m=proS.paywall==='on'?'off':'on';
+async function proPaywallToggle(){if(!PRO_UI)return;const m=proS.paywall==='on'?'off':'on';
   if(m==='on'&&!confirm('Paywall einschalten? Wer kein Pro hat (und keinen Einladungscode), sieht dann bei Skiqualität, Neuschnee-Push und Offline das Pro-Angebot.'))return;
   try{const{error}=await sb.rpc('paywall_set',{mode:m});if(error)throw error;await proLoad();toast('Paywall '+(m==='on'?'eingeschaltet':'ausgeschaltet'),'ok');}
   catch(e){toast('Ging nicht: '+(e.message||e),'err');}}

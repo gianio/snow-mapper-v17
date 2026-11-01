@@ -1,8 +1,18 @@
 # Snowmapper Pro – Paywall
 
-Das Grundgerüst ist gebaut und **standardmässig aus**: Solange die Paywall aus
-ist, ändert sich für niemanden etwas. Du schaltest sie in der App ein
-(Einstellungen › Konto › «Paywall: aus – umschalten», nur für dich als Admin).
+Das Grundgerüst ist gebaut, aber **in der App zurzeit ganz ausgeblendet**:
+`PRO_UI = false` in `pipeline/interactive_export.py`. Niemand sieht ein
+Pro-Angebot, einen Preis, eine Pro-Zeile in den Einstellungen oder den
+Admin-Schalter. Alle Funktionen sind offen, egal was `app_settings.paywall`
+in der Datenbank sagt. Im App-Code stehen keine Preise; die gibt es nur in
+Stripe.
+
+Zum Einschalten später:
+
+1. `PRO_UI = true` setzen und deployen. Danach erscheint unter Einstellungen ›
+   Konto «Snowmapper Pro (bald)» und für dich als Admin der Schalter
+   «Paywall: aus – umschalten».
+2. Die Paywall selbst bleibt aus, bis du sie dort einschaltest.
 
 ## Was Pro ist
 
@@ -13,9 +23,10 @@ ist, ändert sich für niemanden etwas. Du schaltest sie in der App ein
 | Offline-Kartenausschnitt | «Kartenausschnitt offline speichern» (`offlineSave`) |
 | Powder-Score der Touren | in der Liste genannt, noch nicht gesperrt |
 
-Preise im Angebot: **Saisonpass CHF 29** (gilt bis 31. Mai) und **monatlich
-CHF 4**. Text und Preise: `PRO_PRICES` / `PRO_FEATURES` in
-`pipeline/interactive_export.py`. Die echten Preise legst du in Stripe fest.
+Angebot: **Saisonpass** (gilt bis 31. Mai) und **monatlich**. Die App zeigt
+nur diese Namen, die Preise zeigt Stripe beim Bezahlen. Die Preise legst du in
+Stripe fest (Vorschlag: CHF 29 pro Saison, CHF 4 pro Monat). Texte der
+Funktionen: `PRO_FEATURES` in `pipeline/interactive_export.py`.
 
 ## Wer Pro hat
 
