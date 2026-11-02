@@ -6163,8 +6163,10 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .qs-wheel-sel{position:absolute;left:8px;right:8px;top:44px;height:44px;border-radius:10px;border:1.5px solid var(--accent);pointer-events:none}
  .qs-dep{margin-top:12px;transition:opacity .2s}
  .qs-dep.off{opacity:.35;pointer-events:none}
- .qs-crust,.qs-trk{margin-top:12px}
- .qs-crust[hidden]{display:none}
+ .qs-crust,.qs-trk,.qs-qual{margin-top:12px}
+ .qs-crust[hidden],.qs-qual[hidden]{display:none}
+ #qsQualV.unset{color:var(--mut);font-weight:600}
+ #qsQualTk span{font-size:10.5px;line-height:1.2}
  .qs-seg{display:flex;gap:6px;flex-wrap:wrap}
  .qs-seg button{flex:1 1 auto;min-height:38px;padding:0 10px;border-radius:12px;border:1px solid var(--hair);background:var(--card);color:var(--fg);font:650 13px var(--font,inherit);cursor:pointer}
  .qs-seg button.on{background:var(--fg);color:var(--card);border-color:var(--fg)}
@@ -18857,6 +18859,15 @@ const QS_TYPES=[
   {k:'kruste',l:'Kruste',c:'rgb(214,108,98)',q:30},
   {k:'hart',l:'Hart',c:'rgb(156,168,184)',q:10},
   {k:'duenn',l:'Dünn – Steine',c:QS_HATCH,q:null}];
+// How it was, for the snow types that come in more than one state: one
+// slider each. t: the question, l: the full words, s: short tick labels,
+// c: the colour of each step; crust maps onto the full report's «Deckel»,
+// q (optional) refines what the report says to the reported-powder model.
+const QS_QUAL={
+  hart:{t:'Griffigkeit',l:['griffig – guter Halt','fest','eisig'],s:['griffig','fest','eisig'],c:['#9cc29a','#9ca8b8','#6fb0e0'],q:[16,10,4]},
+  kruste:{t:'Deckel',l:['sehr dünn','dünn','bricht durch','trägt'],s:['sehr dünn','dünn','bricht','trägt'],c:['#f2c7c2','#e08c84','#c4574e','#8e2f28'],crust:['thin','thin','breaks','carries']},
+  nass:{t:'Wie nass?',l:['dünne Sulzschicht','weich','faul','sehr faul – Ski sinkt ein'],s:['dünn sulzig','weich','faul','sinkt ein'],c:['#e9cf9e','#cfa26e','#a8754c','#6e4a30'],q:[52,46,38,28]},
+  kantig:{t:'Wie ist er?',l:['noch fluffig','schon gesetzt','zügig – schnell'],s:['fluffig','gesetzt','zügig'],c:['#ddd3f2','#b0a2d4','#8a78b8'],q:[70,60,50]}};
 const QS_DEPTH=[[1,5,'#c2e5c4'],[5,10,'#95cf99'],[10,20,'#66bb6a'],[20,30,'#42a5f5'],[30,50,'#1e88e5'],[50,null,'#1565c0']];
 const QS_ROW=44;
 let qs=null,qsMarker=null,_qsWT=0;
@@ -18865,7 +18876,7 @@ function qsOpen(){
   // always on the map screen, centred on where you are (GPS below)
   try{if(document.body.getAttribute('data-screen')!=='search')navGo('map');}catch(e){}
   try{if(typeof is3d!=='undefined'&&is3d)close3D();}catch(e){}
-  qs={type:0,depth:2,ll:null,acc:null,moved:false,photo:null,busy:false,crust:null,tracks:null};
+  qs={type:0,depth:2,ll:null,acc:null,moved:false,photo:null,busy:false,tracks:null,qual:{},qualSet:{}};
   // opened from a tour («Melden» on its sheet): the point starts on its summit
   // and the report is tagged with it; GPS takes over only when you are on it
   const tl=rptTourLock&&rptTourSel?tourList().find(t=>String(t.id)===String(rptTourSel.id)):null;
@@ -18884,9 +18895,10 @@ function qsOpen(){
     +'<div class="qs-dep" id="qsDep"><div class="qs-lbl">Tiefe <b id="qsDepV"></b></div>'
     +'<input type="range" class="qs-range" id="qsRange" min="0" max="'+(QS_DEPTH.length-1)+'" step="1" value="2" oninput="qsDepth(+this.value)" style="--qs-track:linear-gradient(90deg,'+stops+')" aria-label="Tiefe">'
     +'<div class="qs-ticks">'+QS_DEPTH.map(d=>'<span>'+(d[1]==null?d[0]+'+':d[0]+'–'+d[1])+'</span>').join('')+'</div></div>'
-    // a crust: how firm (the same «Deckel» choice as the full snow report)
-    +'<div class="qs-crust" id="qsCrust" hidden><div class="qs-lbl">Deckel</div><div class="qs-seg">'
-    +SNOW_THICK.map(([k,l])=>'<button type="button" data-k="'+k+'" onclick="qsSet(\'crust\',\''+k+'\',this)">'+escapeHtml(l)+'</button>').join('')+'</div></div>'
+    // hard, crust, wet, old powder: how it was, on a slider
+    +'<div class="qs-qual" id="qsQual" hidden><div class="qs-lbl"><span id="qsQualT"></span> <b id="qsQualV"></b></div>'
+    +'<input type="range" class="qs-range" id="qsQualR" min="0" max="2" step="1" value="1" oninput="qsQualSet(+this.value)" aria-label="Zustand">'
+    +'<div class="qs-ticks" id="qsQualTk"></div></div>'
     +'<div class="qs-trk"><div class="qs-lbl">Spuren</div><div class="qs-seg">'
     +TRK_TRACKS.map(([k,l])=>'<button type="button" data-k="'+k+'" onclick="qsSet(\'tracks\',\''+k+'\',this)">'+escapeHtml(l)+'</button>').join('')+'</div></div>'
     +'<div class="qs-acts"><label class="qs-ph" id="qsPh" aria-label="Foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/></svg>'
@@ -18968,7 +18980,15 @@ function qsWheelScroll(){clearTimeout(_qsWT);_qsWT=setTimeout(()=>{const w=docum
 function qsPick(i){const w=document.getElementById('qsWheel');if(w)w.scrollTo({top:i*QS_ROW,behavior:'smooth'});if(qs){qs.type=i;qsSync();}}
 function qsSync(){if(!qs)return;document.querySelectorAll('#qsWheel .qs-it').forEach((b,i)=>b.classList.toggle('on',i===qs.type));
   const d=document.getElementById('qsDep');if(d)d.classList.toggle('off',!QS_TYPES[qs.type].depth);
-  const c=document.getElementById('qsCrust');if(c)c.hidden=QS_TYPES[qs.type].k!=='kruste';}
+  qsQualSync();}
+function qsQualSync(){if(!qs)return;const k=QS_TYPES[qs.type].k,Q=QS_QUAL[k],box=document.getElementById('qsQual');if(!box)return;
+  box.hidden=!Q;if(!Q)return;const n=Q.l.length,i=qs.qual[k]!=null?qs.qual[k]:Math.floor((n-1)/2),r=document.getElementById('qsQualR');
+  document.getElementById('qsQualT').textContent=Q.t;
+  const st=Q.c.map((c,j)=>c+' '+(j/n*100).toFixed(1)+'% '+((j+1)/n*100).toFixed(1)+'%').join(',');
+  if(r){r.max=n-1;r.value=i;r.style.setProperty('--qs-track','linear-gradient(90deg,'+st+')');r.style.setProperty('--qs-thumb',Q.c[i]);}
+  const tk=document.getElementById('qsQualTk');if(tk){tk.style.gridTemplateColumns='repeat('+n+',1fr)';tk.innerHTML=Q.s.map(x=>'<span>'+escapeHtml(x)+'</span>').join('');}
+  const v=document.getElementById('qsQualV');if(v){v.textContent=qs.qualSet[k]?Q.l[i]:'– schieben';v.classList.toggle('unset',!qs.qualSet[k]);}}
+function qsQualSet(i){if(!qs)return;const k=QS_TYPES[qs.type].k;if(!QS_QUAL[k])return;qs.qual[k]=i;qs.qualSet[k]=true;qsQualSync();try{haptic(3);}catch(e){}}
 function qsDepth(i){if(!qs)return;qs.depth=i;const d=QS_DEPTH[i],v=document.getElementById('qsDepV');
   if(v)v.textContent=(d[1]==null?d[0]+'+':d[0]+'–'+d[1])+' cm';
   const r=document.getElementById('qsRange');if(r){r.value=i;r.style.setProperty('--qs-thumb',d[2]);}}
@@ -18983,11 +19003,13 @@ async function qsPost(){if(!qs||qs.busy||!qs.ll)return;
     const cd={snow:t.k,measurement:t.l+(dp?' '+(dp[1]==null?dp[0]+'+':dp[0]+'–'+dp[1])+' cm':''),
       aspect:d.aspect||null,altitudeM:d.elev!=null?d.elev:null,gpsAcc:qs.acc?Math.round(qs.acc):null,moved:qs.moved||undefined};
     if(dp)cd.depthBand=[dp[0],dp[1]];
-    if(t.k==='kruste'&&qs.crust){cd.crust=qs.crust;cd.measurement+=' · Deckel '+lbOf(SNOW_THICK,qs.crust);}
+    const Q=QS_QUAL[t.k];let qv=null;
+    if(Q&&qs.qualSet[t.k]){qv=qs.qual[t.k];cd.qual={t:Q.t,v:qv,l:Q.l[qv]};cd.measurement+=' · '+(Q.crust?'Deckel ':'')+Q.l[qv];
+      if(Q.crust)cd.crust=Q.crust[qv];}
     if(qs.tracks){cd.tracks=qs.tracks;cd.measurement+=' · '+lbOf(TRK_TRACKS,qs.tracks);}
     const tour=tourPickTake();if(tour)cd.tour=tour;
     // what feeds the reported-powder model (thin cover says nothing about the surface)
-    if(t.q!=null){cd.quick=true;cd.powderQuality=t.q;cd.powderAmountCm=cm;cd.powder=t.k==='pulver';}
+    if(t.q!=null){cd.quick=true;cd.powderQuality=(qv!=null&&Q.q)?Q.q[qv]:t.q;cd.powderAmountCm=cm;cd.powder=t.k==='pulver';}
     const row={user_id:sbUser.id,location:'POINT('+lon+' '+lat+')',elevation_m:cd.altitudeM,primary_categories:['snow'],subtype:'Schnellmeldung',
       condition_data:cd,caption:null,completion_score:qs.photo?60:40,captured_at:new Date().toISOString()};
     if(qs.photo){const up=await downscaleImage(qs.photo),path=sbUser.id+'/'+Date.now()+'.jpg';
@@ -21664,7 +21686,7 @@ function lbOf(arr,k){const f=(arr||[]).find(x=>x[0]===k);return f?f[1]:k;}
 function feedFactsHTML(r){const cd=r.condition_data||{},qt=typeof cd.snow==='string'&&QS_TYPES.find(x=>x.k===cd.snow);if(!qt)return '';
   const b=cd.depthBand,dep=b?(b[1]==null?b[0]+'+':b[0]+'–'+b[1])+' cm':'';
   const where=[cd.altitudeM?cd.altitudeM+' m':'',cd.aspect||''].filter(Boolean).join(' · ');
-  const extra=[cd.crust?'Deckel '+lbOf(SNOW_THICK,cd.crust):'',cd.tracks?lbOf(TRK_TRACKS,cd.tracks):''].filter(Boolean).join(' · ');
+  const extra=[cd.qual&&cd.qual.l?(cd.qual.t==='Deckel'?'Deckel ':'')+cd.qual.l:cd.crust?'Deckel '+lbOf(SNOW_THICK,cd.crust):'',cd.tracks?lbOf(TRK_TRACKS,cd.tracks):''].filter(Boolean).join(' · ');
   return '<div class="fc-facts"><span class="fc-snow"><i style="background:'+qt.c+'"></i>'+escapeHtml(qt.l)+'</span>'
     +(dep?'<b>'+dep+'</b>':'')+(where?'<span class="fc-where">'+escapeHtml(where)+'</span>':'')
     +(extra?'<span class="fc-where">'+escapeHtml(extra)+'</span>':'')+'</div>';}
@@ -21678,7 +21700,7 @@ function feedDetailsHTML(r){const cd=r.condition_data||{},rows=[];
     const sn=cd.snow;
     if(typeof sn==='string'){const qt=QS_TYPES.find(x=>x.k===sn);if(qt)rows.push(['Schneeart',qt.l]);
       const b=cd.depthBand;if(b)rows.push(['Tiefe',(b[1]==null?b[0]+'+':b[0]+'–'+b[1])+' cm']);
-      if(cd.crust)rows.push(['Deckel',lbOf(SNOW_THICK,cd.crust)]);
+      if(cd.qual&&cd.qual.l)rows.push([cd.qual.t||'Zustand',cd.qual.l]);else if(cd.crust)rows.push(['Deckel',lbOf(SNOW_THICK,cd.crust)]);
       if(cd.aspect)rows.push(['Exposition',cd.aspect]);}
     else if(sn){if(sn.kind)rows.push(['Schneeart',snowKindLabel(sn.kind)]);
       if(sn.kind==='powder'&&sn.depth)rows.push(['Pulvertiefe',snowCmLabel(sn.depth)+' cm']);
