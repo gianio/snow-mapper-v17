@@ -152,3 +152,94 @@ def overlay(site_dir, archive_dir, lats: List[float], lons: List[float], times: 
         return None
     return (f"MeteoSchweiz {n_pts}/{len(lats)} Punkte, {n_hours // max(1, n_pts)} h je Punkt, "
             f"Hoehenkorrektur Ø {np.mean(shifts):+.1f} K")
+
+
+def forecast(site_dir, archive_dir, lats: List[float], lons: List[float], elevs: List[float],
+             start: dt.datetime, end: dt.datetime, min_hours: int = 48):
+    """The point series from MeteoSwiss alone -- for a build when Open-Meteo is
+    unreachable and no earlier answer is stored.
+
+    The time axis runs over the hours at least half the points have (archive
+    for the past, newest ICON-CH run ahead), within [start, end]; it is not
+    padded with invented days. Inside it, a point's missing hours are filled
+    from its neighbours in time (temperature, wind), or set to zero
+    (precipitation, sunshine); a point with no hours at all takes the series
+    of the nearest point that has them. Temperature stays at the model cell's
+    height, the elevation is the terrain at the point (`elevs`).
+    Returns a list of PointForecast, or None when there is not enough."""
+    from data_connectors.open_meteo_client import PointForecast
+    pts = _load_points(site_dir)
+    ids = list(pts)
+    P = np.array([[pts[i]["lat"], pts[i]["lon"]] for i in ids]) \
+        if pts and all(pts[i]["lat"] is not None for i in ids) else None
+    s, e = start.strftime(_FMT), end.strftime(_FMT)
+    series = []
+    for k, (la, lo) in enumerate(zip(lats, lons)):
+        pid = None
+        if P is not None:
+            d = (P[:, 0] - la) ** 2 + ((P[:, 1] - lo) * math.cos(math.radians(la))) ** 2
+            j = int(np.argmin(d))
+            if d[j] <= (0.01 ** 2):
+                pid = ids[j]
+        if pid is None:
+            pid = f"s{k:04d}"
+        rows = _series_for(pts.get(pid, {}), archive_dir, pid, s, e)
+        series.append({t: r for t, r in rows.items() if s <= t <= e and r and r[0] is not None})
+    have = [i for i, r in enumerate(series) if r]
+    if len(have) < max(1, len(lats) // 2):
+        return None
+    count: Dict[str, int] = {}
+    for i in have:
+        for t in series[i]:
+            count[t] = count.get(t, 0) + 1
+    ok = sorted(t for t, c in count.items() if c >= len(lats) / 2)
+    if not ok:
+        return None
+    t0 = dt.datetime.strptime(ok[0], _FMT)
+    t1 = dt.datetime.strptime(ok[-1], _FMT)
+    n = int((t1 - t0).total_seconds() // 3600) + 1
+    if n < min_hours:
+        return None
+    axis = [(t0 + dt.timedelta(hours=h)).strftime(_FMT) for h in range(n)]
+    lat_a, lon_a = np.asarray(lats, float), np.asarray(lons, float)
+
+    def nearest_with_data(k):
+        hv = np.array(have)
+        d = (lat_a[hv] - lat_a[k]) ** 2 + ((lon_a[hv] - lon_a[k]) * math.cos(math.radians(lat_a[k]))) ** 2
+        return int(hv[int(np.argmin(d))])
+
+    def filled(vals, zero=False):
+        v = np.array([np.nan if x is None else float(x) for x in vals])
+        good = np.isfinite(v)
+        if zero or not good.any():
+            return np.where(good, v, 0.0)
+        idx = np.arange(len(v))
+        return np.interp(idx, idx[good], v[good])
+
+    out = []
+    for k, (la, lo) in enumerate(zip(lats, lons)):
+        r = series[k] or series[nearest_with_data(k)]
+        col = lambda j: [r[t][j] if t in r else None for t in axis]   # noqa: E731
+        T = filled(col(0))
+        Pr = np.maximum(filled(col(2), zero=True), 0.0)
+        ws = filled(col(3))
+        wd_raw = col(4)
+        wd = np.array([x if x is not None else np.nan for x in wd_raw], float)
+        if np.isfinite(wd).any():                       # direction: nearest known, no averaging across north
+            good = np.where(np.isfinite(wd))[0]
+            wd = np.array([wd[good[np.argmin(np.abs(good - i))]] for i in range(len(wd))])
+        else:
+            wd = np.zeros(len(axis))
+        sw = col(5)
+        sun = [_sun_seconds(x, la, lo, dt.datetime.strptime(t, _FMT)) if x is not None else 0.0
+               for x, t in zip(sw, axis)]
+        frac = np.clip((2.0 - T) / 1.5, 0.0, 1.0)
+        snow = Pr * frac * SNOW_CM_PER_MM
+        out.append(PointForecast(latitude=float(la), longitude=float(lo), elevation=float(elevs[k]),
+                                 time=list(axis), temperature_2m=[round(float(x), 2) for x in T],
+                                 precipitation=[round(float(x), 3) for x in Pr],
+                                 snowfall=[round(float(x), 3) for x in snow],
+                                 wind_speed_10m=[round(float(x), 2) for x in ws],
+                                 wind_direction_10m=[round(float(x), 1) for x in wd],
+                                 sunshine_duration=[round(float(x), 1) for x in sun]))
+    return out

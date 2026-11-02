@@ -122,5 +122,50 @@ with tempfile.TemporaryDirectory() as tmp:
     check("empty archive: None", ogd_site.overlay(None, empty, LATS, LONS, TIMES,
                                                  temp, prec, snow, ws, wd, sun) is None)
 
+# 7. MeteoSwiss alone (Open-Meteo unreachable): archive + forecast on the hours they cover
+with tempfile.TemporaryDirectory() as tmp:
+    tmp = Path(tmp)
+    site = tmp / "site"
+    site.mkdir()
+    (site / "site_points.json").write_text(json.dumps([{"id": "s0000", "lat": 46.8, "lon": 9.8},
+                                                      {"id": "s0001", "lat": 46.8, "lon": 10.0}]))
+    arc = tmp / "archive"
+    run = tmp / "run"
+    run.mkdir()
+    for pid in ("s0000", "s0001"):      # archive: hours 1..24 of a run at T0
+        (run / f"{pid}.json").write_text(json.dumps({"model": "ogd-icon-ch1", "ref_time": TIMES[0],
+                                                     "hourly": hourly(range(1, 25), -4.0, prec=0.5)}))
+    wx_archive.add_run(arc, run)
+    # forecast from hour 30 on (a 5 h gap after the archive), s0001 has none of it
+    (site / "s0000.json").write_text(json.dumps({"hourly": hourly(range(30, 80), -6.0, prec=1.0, sw=600.0)}))
+    lats3, lons3 = [46.8, 46.8, 46.6], [9.8, 10.0, 8.0]
+    start = T0 - dt.timedelta(days=2)
+    end = T0 + dt.timedelta(hours=200)
+    check("fewer than 48 covered hours: None",
+          ogd_site.forecast(site, arc, lats3, lons3, [2000.0, 2100.0, 1500.0], start, end) is None)
+    fc = ogd_site.forecast(site, arc, lats3, lons3, [2000.0, 2100.0, 1500.0], start, end, min_hours=12)
+    check("MeteoSwiss alone: a series per point", fc is not None and len(fc) == 3, "" if fc else "None")
+    if fc:
+        f0 = fc[0]
+        check("axis from the first covered hour", f0.time[0] == TIMES[1], f0.time[0])
+        check("no invented days at the start", dt.datetime.strptime(f0.time[0], "%Y-%m-%dT%H:%M") > start)
+        check("axis to the last hour half the points have", len(f0.time) == 24, str(len(f0.time)))
+        check("elevation from the terrain", fc[1].elevation == 2100.0)
+        check("point without any hours takes its neighbour's", fc[2].temperature_2m == fc[0].temperature_2m
+              or fc[2].temperature_2m == fc[1].temperature_2m)
+        check("cold precipitation -> snow", abs(f0.snowfall[3] - 0.5 * 0.7) < 1e-6, str(f0.snowfall[3]))
+        check("shapes match", all(len(x) == len(f0.time) for x in (f0.temperature_2m, f0.precipitation,
+              f0.snowfall, f0.wind_speed_10m, f0.wind_direction_10m, f0.sunshine_duration)))
+    # gap inside the axis: once both points also have the forecast hours
+    (site / "s0001.json").write_text(json.dumps({"hourly": hourly(range(30, 80), -6.0, prec=1.0)}))
+    fc = ogd_site.forecast(site, arc, lats3, lons3, [2000.0, 2100.0, 1500.0], start, end)
+    if fc:
+        f0 = fc[0]
+        i25 = f0.time.index((T0 + dt.timedelta(hours=26)).strftime("%Y-%m-%dT%H:%M"))
+        check("gap: temperature interpolated", -6.0 < f0.temperature_2m[i25] < -4.0, str(f0.temperature_2m[i25]))
+        check("gap: no precipitation invented", f0.precipitation[i25] == 0.0)
+        check("whole span archive + forecast", f0.time[-1] == (T0 + dt.timedelta(hours=79)).strftime("%Y-%m-%dT%H:%M"), f0.time[-1])
+    check("too little: None", ogd_site.forecast(tmp / "nothing", None, lats3, lons3, [0, 0, 0], start, end) is None)
+
 print(f"\n{'OK' if not fails else 'FAILED: ' + ', '.join(fails)}")
 sys.exit(1 if fails else 0)
