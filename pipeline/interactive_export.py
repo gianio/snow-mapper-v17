@@ -1425,8 +1425,8 @@ _MAINT_CSS = r"""
 @keyframes mtWag{from{transform:rotate(-14deg)}to{transform:rotate(18deg)}}
 @keyframes mtPuff{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(1.6) translateY(-10px)}}
 @keyframes mtSniff{0%,100%{transform:rotate(0)}50%{transform:rotate(4deg)}}
-@media (prefers-color-scheme:dark){#maint{background:linear-gradient(180deg,#0d1626,#111c30);color:#e8eef8}
-  #maint p{color:#b6c2d6}#maint .mt-n{color:#8a97ad}}
+@media (prefers-color-scheme:dark){html[data-theme="dark"] #maint{background:linear-gradient(180deg,#0d1626,#111c30);color:#e8eef8}
+  html[data-theme="dark"] #maint p{color:#b6c2d6}html[data-theme="dark"] #maint .mt-n{color:#8a97ad}}
 @media (prefers-reduced-motion:reduce){#maint .fl,#maint .tail,#maint .puff,#maint .head{animation:none}}
 """
 _MAINT_SVG = (
@@ -1487,7 +1487,7 @@ _BOOT_SPLIT = r"""<script>
   var SRC=[['Wetter','MeteoSchweiz ICON-CH1/CH2: Temperatur, Niederschlag, Wind und Sonne – stündlich, auf etwa 1 km genau.'],
     ['Höhenwind','Der Wind über den Graten aus dem Höhenprofil des Wettermodells – er verfrachtet den Schnee in die Leehänge.'],
     ['Gelände','Höhe, Steilheit und Exposition jedes Hangs aus dem Höhenmodell – samt Schatten der Nachbargipfel.'],
-    ['Schneedecke','SNOWPACK, das Schneedeckenmodell des SLF, rechnet jeden Hang Schicht für Schicht – seit dem 1. September.'],
+    ['Schneedecke','Unser Schneedeckenmodell rechnet jeden Hang Schicht für Schicht – seit dem 1. September.'],
     ['Messstationen','Über 120 IMIS-Stationen messen die Schneehöhe – das Modell wird laufend mit ihnen abgeglichen.'],
     ['Eure Meldungen','Pulver, Harsch, Lawinen: was ihr meldet, prüft das Modell und zeigt, wo es daneben liegt.']];
   var sentI=Math.floor(Math.random()*SRC.length),sentT=null;
@@ -2270,6 +2270,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .set-in.dragging{animation:none;transition:none}
  .set-in.snap{transition:transform .22s cubic-bezier(.32,.72,.42,1)}
  .set-in .lbl-micro{display:block;margin:0 0 10px}
+ .set-in [hidden]{display:none!important}
  .set-in .prof-seg+.lbl-micro,.set-rows+.lbl-micro{margin-top:22px}
  .set-rows{display:flex;flex-direction:column;gap:8px}
  .set-rows button{display:flex;align-items:center;gap:10px;min-height:var(--tap);
@@ -2541,6 +2542,19 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .va-prof-ax{display:flex;flex-direction:column;justify-content:space-between;
    font-size:10.5px;color:var(--fg2);height:118px}
  .va-grain-leg{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;font-size:11.5px;color:var(--fg)}
+ .va-mix{margin-top:8px}
+ .va-mix-bar{display:flex;height:14px;border-radius:7px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+ .va-mix-bar i{min-width:2px}
+ .va-mix-ends{display:flex;justify-content:space-between;font:600 10px var(--font);color:var(--mut);margin-top:3px}
+ .va-mix-t{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;font:600 13px/1.3 var(--font);color:var(--fg2)}
+ .va-mix-t span{display:inline-flex;align-items:center;gap:5px}
+ .va-mix-t i{width:10px;height:10px;border-radius:3px;flex:none}
+ .va-mix-t b{color:var(--fg);font-weight:800}
+ .va-grain-more{margin-top:8px}
+ .va-grain-more summary{cursor:pointer;font:600 11.5px var(--font);color:var(--mut);list-style:none}
+ .va-grain-more summary::-webkit-details-marker{display:none}
+ .va-grain-more summary::before{content:'› ';display:inline-block;transition:transform .15s}
+ .va-grain-more[open] summary::before{transform:rotate(90deg)}
  /* The model date. SNOWPACK runs as an offline batch over a fixed window, so
     the layer can legitimately be older than the forecast the timeline shows.
     That gets stated, not hidden -- and when it is more than a week out it is
@@ -2820,6 +2834,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .mg-leg span{display:inline-flex;align-items:center;gap:6px}
  .mg-leg i.tc-air{display:inline-block;width:22px;border-top:3px solid #D7262B;border-radius:2px}
  .mg-leg i.tc-srf{display:inline-block;width:22px;border-top:2.5px dashed #C9821F}
+ .mg-win{display:inline-block;width:14px;height:11px;border-radius:3px;background:rgba(42,143,216,.18);box-shadow:inset 0 0 0 1.2px rgba(42,143,216,.6)}
  .mg-sw{display:inline-block;width:14px;height:11px;border-radius:2px;background:linear-gradient(0deg,#A99BB8 0 25%,#3F63E0 25% 50%,#2F9A4C 50% 75%,#7ED957 75%)}
  .tc-leg i.tc-snow{width:12px;height:10px;border:0;border-radius:2px;background:rgba(42,143,216,.5)}
  .insp-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
@@ -4199,6 +4214,11 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .rpop-meta b{font-size:14px;color:var(--fg);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .rpop-meta span{font-size:11.5px;color:var(--mut)}
  .rpop-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+ .rpop-chips:empty{display:none}
+ .rpop-what{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:2px 0 10px;font:600 13px/1.3 var(--font);color:var(--fg2)}
+ .rpop-what i{width:13px;height:13px;border-radius:4px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+ .rpop-what b{font-weight:800;color:var(--fg)}
+ .rpop-what span{padding:2px 8px;border-radius:999px;background:var(--fill)}
  .rpop-viz{margin:-2px 0 9px}
  .rpop-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;background:var(--fill);border:1px solid var(--hair);font-size:12px;font-weight:800;color:var(--fg2)}
  .rpop-chip.dep{background:color-mix(in srgb,var(--cc) 15%,#fff);border-color:color-mix(in srgb,var(--cc) 32%,#fff);color:var(--cc)}
@@ -4367,6 +4387,21 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .ly-ov.on .ly-sw::after{transform:translateX(16px)}
  .ly-ov.na{opacity:.4;pointer-events:none}
  .ly-ov:active{background:var(--fill)}
+ /* the switches as compact tiles, two per row: the whole list fits at a glance */
+ .ly-ovs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;background:none;border:0;border-radius:0;overflow:visible}
+ .ly-ovs>.ly-ov:only-child{grid-column:1/-1}
+ .ly-ovs .ly-ov{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"ic . sw" "t t t";align-items:center;gap:6px 8px;min-height:0;padding:9px 10px 10px;
+   border:1px solid var(--hair);border-radius:13px;background:var(--card);font-size:12.5px;line-height:1.25}
+ .ly-ovs .ly-ov .ly-ov-ic{grid-area:ic}.ly-ovs .ly-ov .ly-sw{grid-area:sw}.ly-ovs .ly-ov .ly-ov-t{grid-area:t;align-self:start}
+ .ly-ovs .ly-ov+.ly-ov{border-top:1px solid var(--hair)}
+ .ly-ovs .ly-ov.on{border-color:color-mix(in srgb,var(--accent) 45%,var(--hair));background:color-mix(in srgb,var(--accent) 7%,var(--card))}
+ .ly-ovs .ly-ov-ic{width:26px;height:26px;border-radius:8px}
+ .ly-ovs .ly-ov-ic svg{width:16px;height:16px}
+ .ly-ovs .ly-ov-t{overflow-wrap:break-word;hyphens:auto}
+ .ly-ovs>.ly-ov:only-child{grid-template-columns:auto 1fr auto;grid-template-areas:"ic t sw"}
+ .ly-ovs .ly-sw{width:30px;height:18px;border-radius:9px}
+ .ly-ovs .ly-sw::after{top:2px;left:2px;width:14px;height:14px}
+ .ly-ovs .ly-ov.on .ly-sw::after{transform:translateX(12px)}
  .ly-info{margin-top:-6px}
  .ly-sec-ov{margin-top:22px}
  .li-lvl{display:flex;flex-direction:column;gap:6px;margin:-2px 0 12px}
@@ -4721,6 +4756,15 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .trl-nx{font-weight:700!important;color:var(--accent,#2563eb)!important}
  .trl-n{display:flex;flex-direction:column;align-items:flex-end;flex:none}.trl-n b{font:800 14px var(--mono,inherit);color:var(--fg)}.trl-n small{font:600 11px var(--font,inherit);color:var(--fg2)}
  .trs-tip{margin:12px 2px 0;font:500 12px/1.45 var(--font,inherit);color:var(--fg2)}
+ .trs-how{margin:4px 0 12px;padding:12px;border-radius:16px;background:color-mix(in srgb,var(--accent,#2563eb) 7%,var(--card));border:1px solid color-mix(in srgb,var(--accent,#2563eb) 22%,transparent)}
+ .trs-how>b{display:block;font:800 14px var(--font,inherit);color:var(--fg);margin:0 2px 8px}
+ .trs-st{display:flex;align-items:center;gap:10px;padding:8px 0}
+ .trs-st+.trs-st{border-top:1px solid var(--hair)}
+ .trs-st>i{flex:none;width:24px;height:24px;border-radius:50%;background:var(--accent,#2563eb);color:#fff;font:800 12.5px/24px var(--font,inherit);font-style:normal;text-align:center}
+ .trs-st>span{flex:1;min-width:0}
+ .trs-st>span b{display:block;font:700 13.5px/1.3 var(--font,inherit);color:var(--fg)}
+ .trs-st>span small{display:block;font:500 12px/1.4 var(--font,inherit);color:var(--fg2);margin-top:2px}
+ .trs-st>button{flex:none;padding:8px 12px;border-radius:11px;border:1px solid var(--hair);background:var(--card);color:var(--fg);font:700 12.5px var(--font,inherit);cursor:pointer}
  .trb-list{display:flex;flex-direction:column;gap:4px;margin-top:6px}.trb-load{padding:24px;text-align:center;color:var(--fg2);font:500 13.5px var(--font,inherit)}
  .trb-row{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:14px;background:none;text-align:left;cursor:pointer;color:var(--fg);font:inherit}
  .trb-row:nth-child(-n+3){background:var(--fill)}.trb-row.me{box-shadow:inset 0 0 0 1.5px var(--accent,#2563eb)}
@@ -6156,6 +6200,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
    .feed-page:not(.side):not(.open){visibility:hidden;transition:transform .26s cubic-bezier(.32,.72,.42,1),visibility 0s .26s!important}}
  /* Skiqualität legend: powder depths, a hairline, then the surfaces */
  .ml-sep{border:0;border-top:1px solid var(--bd);margin:3px 0;height:0}
+ .ml-cls span.ml-long{font-size:8px;letter-spacing:-.04em;text-overflow:clip}
  /* the side legend folds to its icon */
  #mlFold{display:flex;align-items:center;justify-content:center;width:100%;height:20px;margin:5px 0 -5px;padding:0;border:0;
    border-top:1px solid var(--bd);background:none;color:var(--fg2);cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -6226,9 +6271,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .qs-it.on{color:var(--fg);font-weight:800;font-size:16.5px}
  .qs-wheel-sel{position:absolute;left:8px;right:8px;top:44px;height:44px;border-radius:10px;border:1.5px solid var(--accent);pointer-events:none}
  .qs-dep{margin-top:12px;transition:opacity .2s}
- .qs-dep.off{opacity:.35;pointer-events:none}
+ .qs-dep[hidden]{display:none}
  .qs-crust,.qs-trk,.qs-qual{margin-top:12px}
- .qs-crust[hidden],.qs-qual[hidden]{display:none}
+ .qs-crust[hidden],.qs-qual[hidden],.qs-trk[hidden]{display:none}
  #qsQualV.unset{color:var(--mut);font-weight:600}
  #qsQualTk span{font-size:10.5px;line-height:1.2}
  .qs-seg{display:flex;gap:6px;flex-wrap:wrap}
@@ -6257,8 +6302,21 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 .qs-th{position:relative;flex:none;width:64px;height:64px;border-radius:12px;background-size:cover;background-position:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
 .qs-th button{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font:700 14px/1 system-ui;cursor:pointer}
 .qs-danger{margin-top:14px;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,#A83A2E 8%,var(--card));border:1px solid color-mix(in srgb,#A83A2E 25%,transparent)}
-.qs-danger>span{display:block;font:700 13px var(--font);color:#A83A2E;margin-bottom:8px}
-.qs-dg-b{display:flex;gap:6px;flex-wrap:wrap}
+.qs-danger{padding:0}
+.qs-dg-h{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:44px;padding:8px 12px;border:0;background:none;cursor:pointer;text-align:left}
+.qs-dg-h>span{font:700 13px var(--font);color:#A83A2E}
+.qs-sw{position:relative;flex:none;width:38px;height:22px;border-radius:11px;background:color-mix(in srgb,#A83A2E 22%,var(--fill));transition:background .2s}
+.qs-sw::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.qs-danger.on .qs-sw{background:#A83A2E}.qs-danger.on .qs-sw::after{transform:translateX(16px)}
+.qs-dg-b{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 10px}
+.qs-dg-b[hidden]{display:none}
+.qs-dg-b small{flex:1 0 100%;font:600 11.5px/1.3 var(--font);color:var(--mut);margin-bottom:2px}
+#qsCross .qs-hint{position:absolute;left:50%;bottom:54px;transform:translateX(-50%);white-space:nowrap;padding:6px 11px;border-radius:999px;background:#e0245e;color:#fff;
+  font:800 12.5px/1 var(--font);box-shadow:0 4px 14px rgba(0,0,0,.25);animation:qsHint 1.6s ease-in-out infinite}
+#qsCross .qs-hint::after{content:'';position:absolute;left:50%;bottom:-5px;margin-left:-5px;border:5px solid transparent;border-bottom:0;border-top-color:#e0245e}
+#qsCross.moved .qs-hint{display:none}
+@keyframes qsHint{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){#qsCross .qs-hint{animation:none}}
 .qs-dg-b button{flex:1;min-width:84px;height:36px;border-radius:10px;border:1px solid color-mix(in srgb,#A83A2E 30%,transparent);background:var(--card);color:var(--fg);font:700 13px var(--font);cursor:pointer}
  .qs-post:disabled{opacity:.5}
  .qs-pin{width:34px;height:34px;border-radius:50%;background:rgba(224,36,94,.22);display:grid;place-items:center;cursor:grab}
@@ -6479,17 +6537,23 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  body{font-variant-numeric:tabular-nums}
  /* over a screen (profile, feed) the tab bar is solid: the 20 % glass is for the map */
  :root body:has(#profModal[style*="flex"]) #tabBar,:root body:has(#userViewModal[style*="flex"]) #tabBar,:root body[data-screen=feed] #tabBar{background:var(--card)!important}
+ /* the control bar over the map (timeline + tabs): light frosted glass, the
+    terrain shows through; over a screen (feed, profile) it stays solid above */
+ :root[data-theme="light"] #tabBar,:root[data-theme="light"] #bottomPanel{
+   background:rgba(255,255,255,.66)!important;background-image:none!important;
+   -webkit-backdrop-filter:blur(20px) saturate(175%)!important;backdrop-filter:blur(20px) saturate(175%)!important;
+   border-color:rgba(255,255,255,.6)!important}
+ :root[data-theme="light"] body:not(.desk) #bottomPanel{box-shadow:0 -6px 18px rgba(18,21,26,.06),inset 0 1px 0 rgba(255,255,255,.8)!important}
  .fc-depth{font:650 14px/1.3 var(--font)!important;font-variant-numeric:tabular-nums}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
    than any of the work below. "system" resolves once here and then follows
    the OS while it stays on system. */
+// Light only for now (per request): no dark palette, whatever the phone
+// says or was chosen before. The dark tokens stay in the CSS, unused.
 (function(){try{
-  var k='ssm_theme',v=localStorage.getItem(k)||'system';
-  var dark=v==='dark'||(v==='system'&&window.matchMedia&&
-    window.matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.setAttribute('data-theme',dark?'dark':'light');
+  document.documentElement.setAttribute('data-theme','light');
 }catch(e){}})();
 </script>
 </head><body>
@@ -6634,8 +6698,8 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <div class="set-sheet" id="setSheet" onclick="if(event.target===this)setClose()">
   <div class="set-in" role="dialog" aria-modal="true" aria-label="Einstellungen">
     <div class="set-head"><b>Einstellungen</b><button onclick="setClose()" aria-label="Schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>
-    <span class="lbl-micro">Darstellung</span>
-    <div class="prof-seg" id="setTheme">
+    <span class="lbl-micro" hidden>Darstellung</span>
+    <div class="prof-seg" id="setTheme" hidden>
       <button data-v="system" onclick="themeSet('system')">System</button>
       <button data-v="light" onclick="themeSet('light')">Hell</button>
       <button data-v="dark" onclick="themeSet('dark')">Dunkel</button>
@@ -7213,7 +7277,7 @@ const I18N_DICT={
 "bedeckt":["overcast", "couvert", "coperto"],
 "Mittlerer Wind im gewählten Zeitfenster":["Mean wind in the selected time window", "Vent moyen dans la fenêtre choisie", "Vento medio nella finestra scelta"],
 "Mittlere Temperatur im gewählten Zeitfenster":["Mean temperature in the selected time window", "Température moyenne dans la fenêtre choisie", "Temperatura media nella finestra scelta"],
-"Triebschnee aus SNOWPACK":["Wind slab from SNOWPACK", "Neige soufflée selon SNOWPACK", "Neve ventata da SNOWPACK"],
+"Triebschnee aus dem Modell":["Wind slab from the model", "Neige soufflée selon le modèle", "Neve ventata dal modello"],
 "Wo der Wind Schnee abgelagert (violett) oder gepresst hat, aus der simulierten Schneedecke. Triebschnee fährt sich oft gut, ist aber das typische Lawinenproblem – Lawinenbulletin des SLF beachten.":["Where wind has deposited (violet) or packed snow, from the simulated snowpack. Wind slab often skis well but is the typical avalanche problem – check the SLF avalanche bulletin.", "Où le vent a déposé (violet) ou tassé la neige, selon le manteau simulé. La neige soufflée se skie souvent bien mais c'est le problème avalancheux typique – consulte le bulletin du SLF.", "Dove il vento ha depositato (viola) o compattato la neve, dal manto simulato. La neve ventata spesso si scia bene ma è il tipico problema valanghivo – consulta il bollettino SLF."],
 "#+ cm":["#+ cm", "#+ cm", "#+ cm"],
 "Zeichnen":["Draw", "Dessiner", "Disegna"],
@@ -7232,7 +7296,7 @@ const I18N_DICT={
 "Anmelden für Community & Meldungen":["Sign in for community & reports","Se connecter pour la communauté & les observations","Accedi per community e segnalazioni"],
 "Ansicht":["View","Vue","Vista"],
 "Anteil":["Share","Part","Quota"],
-"Anteil der Abfahrt (#–#°) mit Pulver bzw. Sulz im SNOWPACK-Modell – keine Lawinenbeurteilung, Bulletin des SLF beachten.":["Share of the descent (#–#°) with powder or corn snow in the SNOWPACK model – not an avalanche assessment, check the SLF bulletin.","Part de la descente (#–#°) en poudreuse ou neige de printemps dans le modèle SNOWPACK – pas une évaluation d'avalanche, consulte le bulletin du SLF.","Quota della discesa (#–#°) con polvere o firn nel modello SNOWPACK – non è una valutazione valanghe, consulta il bollettino SLF."],
+"Anteil der Abfahrt (#–#°) mit Pulver bzw. Sulz im Modell – keine Lawinenbeurteilung, Bulletin des SLF beachten.":["Share of the descent (#–#°) with powder or corn snow in the model – not an avalanche assessment, check the SLF bulletin.","Part de la descente (#–#°) en poudreuse ou neige de printemps dans le modèle – pas une évaluation d'avalanche, consulte le bulletin du SLF.","Quota della discesa (#–#°) con polvere o firn nel modello – non è una valutazione valanghe, consulta il bollettino SLF."],
 "Anteil im aktuellen Kartenausschnitt":["Share in the current map view","Part dans la vue actuelle","Quota nella vista attuale"],
 "Anzeigename":["Display name","Nom affiché","Nome visualizzato"],
 "App & Rechtliches":["App & legal","App & mentions légales","App & note legali"],
@@ -7397,7 +7461,7 @@ const I18N_DICT={
 "Export fehlgeschlagen:":["Export failed:","Échec de l'export :","Esportazione non riuscita:"],
 "Export und Löschung entsprechen deinen Rechten nach DSG/DSGVO. Das Löschen des Kontos entfernt alle Inhalte unwiderruflich.":["Export and deletion reflect your rights under the Swiss FADP/GDPR. Deleting the account removes all content permanently.","L'export et la suppression correspondent à tes droits selon la LPD/RGPD. Supprimer le compte efface tout le contenu définitivement.","Esportazione e cancellazione corrispondono ai tuoi diritti secondo LPD/GDPR. Eliminare l'account rimuove tutti i contenuti in modo definitivo."],
 "Extrem gross":["Extremely large","Extrêmement grande","Estremamente grande"],
-"Farbe = Anteil der Abfahrt mit Pulver im SNOWPACK-Modell zur gewählten Zeit. Tour antippen für den Verlauf.":["Colour = share of the descent in powder in the SNOWPACK model at the selected time. Tap a tour for details along the route.","Couleur = part de la descente en poudreuse dans le modèle SNOWPACK à l'heure choisie. Touche un itinéraire pour le détail.","Colore = quota della discesa in polvere nel modello SNOWPACK all'ora scelta. Tocca una gita per il dettaglio."],
+"Farbe = Anteil der Abfahrt mit Pulver im Modell zur gewählten Zeit. Tour antippen für den Verlauf.":["Colour = share of the descent in powder in the model at the selected time. Tap a tour for details along the route.","Couleur = part de la descente en poudreuse dans le modèle à l'heure choisie. Touche un itinéraire pour le détail.","Colore = quota della discesa in polvere nel modello all'ora scelta. Tocca una gita per il dettaglio."],
 "Farbe = Neuschnee, Deckkraft =":["Colour = new snow, opacity =","Couleur = neige fraîche, opacité =","Colore = neve fresca, opacità ="],
 "Farbe = Schneehöhe (SLF-Skala), gemittelt über die nahen Zeichnen-Reports pro Exposition und Höhenband.":["Colour = snow depth (SLF scale), averaged over nearby drawn reports per aspect and elevation band.","Couleur = hauteur de neige (échelle SLF), moyenne des cartes dessinées proches par exposition et tranche d'altitude.","Colore = altezza neve (scala SLF), media dei report disegnati vicini per esposizione e fascia altimetrica."],
 "Feed":["Feed","Fil","Feed"],
@@ -7694,11 +7758,11 @@ const I18N_DICT={
 "Senden":["Send","Envoyer","Invia"],
 "Setzungsgeräusche deuten auf Schwachschichten hin.":["Settling noises point to weak layers.","Les bruits de tassement indiquent des couches fragiles.","I rumori di assestamento indicano strati deboli."],
 "Sichtbarkeit:":["Visibility:","Visibilité :","Visibilità:"],
-"Simulierte Schneedecke (SNOWPACK, SLF) an # Wetterpunkten in jeder Höhe, Exposition und Neigung, auf das Gelände übertragen. Hell- bis dunkelblau = Pulver nach Tiefe, grau = hart, korall = Kruste, honiggelb = Sulz (tragende, über Nacht gefrorene Basis, oben 1–5 cm aufgeweicht), braun = nass / faul. Ein Modell, keine Messung – kein Lawinenbulletin.":["Simulated snowpack (SNOWPACK, SLF) at # weather points for every elevation, aspect and slope, transferred to the terrain. Light to dark blue = powder by depth, grey = hard, coral = crust, honey = wet / corn. A model, not a measurement – not an avalanche bulletin.","Manteau neigeux simulé (SNOWPACK, SLF) à # points météo pour chaque altitude, exposition et pente, transposé au terrain. Bleu clair à foncé = poudreuse par profondeur, gris = dure, corail = croûte, miel = mouillée / printemps. Un modèle, pas une mesure – pas un bulletin d'avalanches.","Manto nevoso simulato (SNOWPACK, SLF) in # punti meteo per ogni quota, esposizione e pendenza, trasferito al terreno. Da azzurro a blu scuro = polvere per profondità, grigio = dura, corallo = crosta, miele = bagnata / firn. Un modello, non una misura – non un bollettino valanghe."],
+"Simulierte Schneedecke an # Wetterpunkten in jeder Höhe, Exposition und Neigung, auf das Gelände übertragen. Hell- bis dunkelblau = Pulver nach Tiefe, grau = hart, korall = Kruste, honiggelb = Sulz (tragende, über Nacht gefrorene Basis, oben 1–5 cm aufgeweicht), braun = nass / faul. Ein Modell, keine Messung – kein Lawinenbulletin.":["Simulated snowpack at # weather points for every elevation, aspect and slope, transferred to the terrain. Light to dark blue = powder by depth, grey = hard, coral = crust, honey = wet / corn. A model, not a measurement – not an avalanche bulletin.","Manteau neigeux simulé à # points météo pour chaque altitude, exposition et pente, transposé au terrain. Bleu clair à foncé = poudreuse par profondeur, gris = dure, corail = croûte, miel = mouillée / printemps. Un modèle, pas une mesure – pas un bulletin d'avalanches.","Manto nevoso simulato in # punti meteo per ogni quota, esposizione e pendenza, trasferito al terreno. Da azzurro a blu scuro = polvere per profondità, grigio = dura, corallo = crosta, miele = bagnata / firn. Un modello, non una misura – non un bollettino valanghe."],
 "Skala #–#":["Scale #–#","Échelle #–#","Scala #–#"],
 "Skiqualität":["Ski quality","Qualité de ski","Qualità sciistica"],
-"Skiqualität (SNOWPACK)":["Ski quality (SNOWPACK)","Qualité de ski (SNOWPACK)","Qualità sciistica (SNOWPACK)"],
-"Skiqualität aus SNOWPACK":["Ski quality from SNOWPACK","Qualité de ski selon SNOWPACK","Qualità sciistica da SNOWPACK"],
+"Skiqualität":["Ski quality","Qualité de ski","Qualità sciistica"],
+"Skiqualität aus dem Modell":["Ski quality from the model","Qualité de ski selon le modèle","Qualità sciistica dal modello"],
 "Skitour":["Ski tour","Randonnée à ski","Scialpinismo"],
 "Skitour · Pausiert":["Ski tour · Paused","Randonnée à ski · En pause","Scialpinismo · In pausa"],
 "Skitouren":["Ski tours","Randonnées à ski","Gite scialpinistiche"],
@@ -7787,7 +7851,7 @@ const I18N_DICT={
 "Info zur Ebene":["Layer info", "Info sur le calque", "Info sul livello"],
 "3D-Ansicht":["3D view", "Vue 3D", "Vista 3D"],
 "Willkommen bei Snowmapper":["Welcome to Snowmapper", "Bienvenue sur Snowmapper", "Benvenuto su Snowmapper"],
-"Pulver, Schnee und Verhältnisse in der Schweiz – aus dem SNOWPACK-Modell und von der Community.":["Powder, snow and conditions in Switzerland – from the SNOWPACK model and the community.", "Poudreuse, neige et conditions en Suisse – du modèle SNOWPACK et de la communauté.", "Polvere, neve e condizioni in Svizzera – dal modello SNOWPACK e dalla community."],
+"Pulver, Schnee und Verhältnisse in der Schweiz – aus unserem Schneemodell und von der Community.":["Powder, snow and conditions in Switzerland – from our snow model and the community.", "Poudreuse, neige et conditions en Suisse – de notre modèle de neige et de la communauté.", "Polvere, neve e condizioni in Svizzera – dal nostro modello della neve e dalla community."],
 "Los geht's":["Let's go", "C'est parti", "Andiamo"],
 "Schnee auf der Karte":["Snow on the map", "La neige sur la carte", "Neve sulla mappa"],"Warum Snowmapper?":["Why Snowmapper?","Pourquoi Snowmapper ?","Perché Snowmapper?"],"Wetter":["Weather","Météo","Meteo"],"Gelände":["Terrain","Terrain","Terreno"],"Schneedecke":["Snowpack","Manteau neigeux","Manto nevoso"],"Meldungen":["Reports","Signalements","Segnalazioni"],
 "Skiqualität, Pulver, Neuschnee, Wind und mehr – über das Ebenen-Symbol rechts. Die Legende zeigt, was die Farben bedeuten.":["Ski quality, powder, new snow, wind and more – via the layers icon on the right. The legend explains the colours.", "Qualité de ski, poudreuse, neige fraîche, vent et plus – via l'icône des calques à droite. La légende explique les couleurs.", "Qualità sciistica, polvere, neve fresca, vento e altro – tramite l'icona dei livelli a destra. La legenda spiega i colori."],
@@ -7796,7 +7860,7 @@ const I18N_DICT={
 "Im Tab Touren: Umkreis, Höhenmeter und Steilheit wählen – sortiert nach Pulver- oder Sulz-Anteil aus dem Modell.":["In the Tours tab: choose radius, elevation gain and steepness – sorted by the model's powder or corn share.", "Dans l'onglet Itinéraires : rayon, dénivelé et raideur – triés selon la part de poudreuse ou de neige de printemps du modèle.", "Nella scheda Gite: raggio, dislivello e pendenza – ordinati per quota di polvere o firn del modello."],
 "Melden & zeichnen":["Report & draw", "Signaler & dessiner", "Segnala & disegna"],
 "Mit Plus malst du eine Schnee-Karte oder meldest eine Beobachtung.":["With plus you paint a snow map or report an observation.","Avec plus, tu peins une carte de neige ou signales une observation.","Con più dipingi una mappa della neve o segnali un'osservazione."],
-"Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil. Der Bewegungssensor misst dabei, wie ruppig die Abfahrt war.":["Record your tour and report the snow right along the route in the elevation profile. The motion sensor measures how rough the descent was.","Enregistre ta sortie et signale la neige le long de l'itinéraire dans le profil d'altitude. Le capteur de mouvement mesure à quel point la descente était cahoteuse.","Registra la tua gita e segnala la neve lungo il percorso nel profilo altimetrico. Il sensore di movimento misura quanto è stata irregolare la discesa."],"Snowmapper rechnet für jeden Hang die Schneedecke mit SNOWPACK, dem Modell des SLF – aus MeteoSchweiz-Wetter, Gelände, Messstationen und euren Meldungen. So siehst du, wie viel Schnee liegt und wie er ist.":["Snowmapper models the snowpack on every slope with SNOWPACK, the SLF model – from MeteoSwiss weather, terrain, weather stations and your reports. So you see how much snow there is and what it is like.", "Snowmapper calcule le manteau neigeux de chaque pente avec SNOWPACK, le modèle du SLF – à partir de la météo de MétéoSuisse, du terrain, des stations et de vos observations. Tu vois combien de neige il y a et comment elle est.", "Snowmapper calcola il manto nevoso di ogni pendio con SNOWPACK, il modello dell'SLF – dal meteo di MeteoSvizzera, dal terreno, dalle stazioni e dalle vostre segnalazioni. Così vedi quanta neve c'è e com'è."],"Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil.":["Record your tour and report the snow right along the route in the elevation profile.", "Enregistre ta sortie et signale la neige le long de l'itinéraire dans le profil d'altitude.", "Registra la tua gita e segnala la neve lungo il percorso nel profilo altimetrico."],
+"Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil. Der Bewegungssensor misst dabei, wie ruppig die Abfahrt war.":["Record your tour and report the snow right along the route in the elevation profile. The motion sensor measures how rough the descent was.","Enregistre ta sortie et signale la neige le long de l'itinéraire dans le profil d'altitude. Le capteur de mouvement mesure à quel point la descente était cahoteuse.","Registra la tua gita e segnala la neve lungo il percorso nel profilo altimetrico. Il sensore di movimento misura quanto è stata irregolare la discesa."],"Snowmapper rechnet für jeden Hang die Schneedecke – aus MeteoSchweiz-Wetter, Gelände, Messstationen und euren Meldungen. So siehst du, wie viel Schnee liegt und wie er ist.":["Snowmapper models the snowpack on every slope – from MeteoSwiss weather, terrain, weather stations and your reports. So you see how much snow there is and what it is like.", "Snowmapper calcule le manteau neigeux de chaque pente – à partir de la météo de MétéoSuisse, du terrain, des stations et de vos observations. Tu vois combien de neige il y a et comment elle est.", "Snowmapper calcola il manto nevoso di ogni pendio – dal meteo di MeteoSvizzera, dal terreno, dalle stazioni e dalle vostre segnalazioni. Così vedi quanta neve c'è e com'è."],"Zeichne deine Tour auf und melde den Schnee direkt entlang der Route im Höhenprofil.":["Record your tour and report the snow right along the route in the elevation profile.", "Enregistre ta sortie et signale la neige le long de l'itinéraire dans le profil d'altitude.", "Registra la tua gita e segnala la neve lungo il percorso nel profilo altimetrico."],
 "Folge Leuten aus deinem Gebiet, bestätige gute Meldungen und baue Vertrauen auf. Deine Meldungen verbessern das Modell.":["Follow people from your area, confirm good reports and build trust. Your reports improve the model.", "Suis des gens de ta région, confirme les bons signalements et gagne en confiance. Tes signalements améliorent le modèle.", "Segui persone della tua zona, conferma le buone segnalazioni e costruisci fiducia. Le tue segnalazioni migliorano il modello."],
 "Tour überspringen":["Skip tour", "Passer la visite", "Salta il tour"],
 "Haftungsausschluss":["Disclaimer", "Clause de non-responsabilité", "Esclusione di responsabilità"],
@@ -8105,9 +8169,9 @@ const I18N_DICT={
 "nur bereits geladene Gebiete":["only areas already loaded", "seulement les zones déjà chargées", "solo le aree già caricate"],
 "Speichert… # %":["Saving… # %", "Enregistrement… # %", "Salvataggio… # %"],
 "Offline gespeichert · # MB":["Saved offline · # MB", "Enregistré hors ligne · # Mo", "Salvato offline · # MB"],
-"Lockerer Altschnee (kantig)":["Loose old snow (faceted)", "Vieille neige meuble (anguleuse)", "Neve vecchia sciolta (angolosa)"],
+"Altpulver":["Old powder", "Vieille poudreuse", "Polvere vecchia"],
 "kantig":["faceted", "anguleuse", "angolosa"],
-"kantiger Altschnee":["faceted old snow", "vieille neige anguleuse", "neve vecchia angolosa"],
+"locker, aber nicht mehr frisch":["loose, but no longer fresh", "meuble, mais plus fraîche", "sciolta, ma non più fresca"],
 "locker, aber alt":["loose, but old", "meuble, mais vieille", "sciolta, ma vecchia"],
 "Schnellmeldung":["Quick report", "Signalement rapide", "Segnalazione rapida"],
 "Schneeart, Tiefe, Standort – in Sekunden":["Snow type, depth, position – in seconds", "Type de neige, profondeur, position – en secondes", "Tipo di neve, profondità, posizione – in pochi secondi"],
@@ -8170,7 +8234,6 @@ const I18N_DICT={
 "Abfahrt einfärben":["Colour the descent", "Colorer la descente", "Colora la discesa"],
 "Schnee entlang deiner Spur markieren":["Mark the snow along your track", "Marquer la neige le long de ta trace", "Segna la neve lungo la traccia"],
 "Schnee entlang der Spur einfärben":["Colour the snow along the track", "Colorer la neige le long de la trace", "Colora la neve lungo la traccia"],
-"Kantig (lockerer Altschnee)":["Faceted (loose old snow)", "À faces planes (vieille neige meuble)", "Sfaccettata (neve vecchia sciolta)"],
 "Tippe auf einen Hang oder male eine Zone":["Tap a slope or paint an area", "Touche une pente ou peins une zone", "Tocca un pendio o dipingi una zona"],
 "Fahr mit dem Finger der Spur entlang":["Run your finger along the track", "Glisse le doigt le long de la trace", "Fai scorrere il dito lungo la traccia"],
 "Text und Tour":["Text and tour", "Texte et course", "Testo e gita"],
@@ -8885,8 +8948,17 @@ function anyMenuOpen(){const B=document.body.classList;
   if(['leg-open','ly-open','fab-open','rep-open'].some(c=>B.contains(c)))return true;
   const tp=document.getElementById('tlPresets');if(tp&&!tp.hidden)return true;
   const pk=document.getElementById('tourPick');if(pk&&pk.classList.contains('on'))return true;
-  for(const m of document.querySelectorAll('[role=menu]'))if(!m.closest('[hidden]')&&m.getClientRects().length)return true;
+  // a menu counts only when it can be seen: the feed cards' «⋯» menus stay in
+  // the page, folded to opacity 0 -- counted, they made every first tap on
+  // the map (a post, a point) only "close a menu" once the feed had been open
+  for(const m of document.querySelectorAll('[role=menu]'))if(_menuSeen(m))return true;
   return false;}
+function _menuSeen(m){if(m.closest('[hidden]')||!m.getClientRects().length)return false;
+  const r=m.getBoundingClientRect();if(r.width<2||r.height<2||r.bottom<=0||r.top>=innerHeight||r.right<=0||r.left>=innerWidth)return false;
+  for(let e=m;e&&e.nodeType===1;e=e.parentElement){const st=getComputedStyle(e);
+    if(st.display==='none'||st.visibility==='hidden'||+st.opacity<.05)return false;
+    if(e===m&&st.pointerEvents==='none')return false;}
+  return true;}
 function menusClose(){const tp=document.getElementById('tlPresets');if(tp)tp.hidden=true;
   for(const f of [()=>legInfoClose(),()=>lyPanelClose(),()=>fabMenu(false),()=>repSheetToggle(false),()=>tourPickHide()])try{f();}catch(e){}}
 addEventListener('pointerdown',e=>{_menuTapAt=anyMenuOpen()?Date.now():0;},true);
@@ -9116,8 +9188,8 @@ const OVERLAYS={
   // Its three views are picked inside the panel rather than as separate
   // toggles: they are one product and only one can be on top at a time.
   // Offered in demo and live alike; vaDataNote() carries the model date.
-  variantA:{label:'Skiqualität (SNOWPACK)',vector:true,
-            attr:'Skiqualität: SNOWPACK / SLF-Modellkette'}
+  variantA:{label:'Skiqualität',vector:true,
+            attr:'Skiqualität: Snowmapper-Modell'}
 };
 const ovOn={};
 const ovLayer={};
@@ -9301,7 +9373,7 @@ const VA_PALETTE={
 // Nur Pulver on an export without its own powder layer: the three ski6 powder
 // classes, coloured like the nearest SLF snow-depth bands.
 const VA_VPAL={powder:{3:[149,207,153,250],4:[102,187,106,235],5:[66,165,245,230],8:[30,136,229,230],9:[21,101,192,235]}};
-const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver 20–30 cm',6:'Sulz (aufgefirnt)',7:'nass / faul',8:'Pulver 30–40 cm',9:'Pulver > 40 cm',10:'dünne Schneedecke (< 20 cm)',11:'Lockerer Altschnee (kantig)'};
+const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver 20–30 cm',6:'Sulz (aufgefirnt)',7:'nass / faul',8:'Pulver 30–40 cm',9:'Pulver > 40 cm',10:'dünne Schneedecke (< 20 cm)',11:'Altpulver'};
 // An export without the simple six classes still has "simple" (15 kinds of
 // surface): the six are folded from it, so Skiqualität always opens simple.
 // 12 (wet / spring) goes to "nass": the simple view cannot tell good corn
@@ -10268,7 +10340,7 @@ function vaPtsLayer(){
   if(!map.getPane('vaPtsPane')){map.createPane('vaPtsPane');map.getPane('vaPtsPane').style.zIndex=455;}
   const g=L.layerGroup();
   wps.forEach(w=>{
-    const bands=(w.bands||[]),txt='SNOWPACK-Wetterpunkt '+w.id+'<br>Referenz '+Math.round(w.ref_elev||0)+' m'
+    const bands=(w.bands||[]),txt='Modell-Wetterpunkt '+w.id+'<br>Referenz '+Math.round(w.ref_elev||0)+' m'
       +(bands.length?' · Höhenstufen '+bands[0]+'–'+bands[bands.length-1]+' m':'');
     L.circleMarker([w.lat,w.lon],{pane:'vaPtsPane',radius:4,weight:1.6,color:'#1d1d1f',fillColor:'#ffffff',
       fillOpacity:1,opacity:.9,interactive:true,bubblingMouseEvents:true})
@@ -10855,8 +10927,30 @@ function vaProfileHTML(pf){
   return '<div class="insp-sec va-prof"><h4'+(src?' title="'+escapeHtml(src)+'"':'')+'>Schneeprofil <em>Modell · HS '+hsShow+' cm</em></h4>'
     +(dn&&dn.stale?vaNoteHTML():'')
     +'<svg class="va-prof-svg" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Schneeprofil: Dichte und Kornform nach Tiefe">'+g+'</svg>'
-    +'<div class="va-grain-leg">'+chips+'</div></div>';
+    +vaMixHTML(pf,gl)
+    +'<details class="va-grain-more"><summary>Kornformen (Fachbegriffe)</summary><div class="va-grain-leg">'+chips+'</div></details></div>';
 }
+// What the snow cover is made of, in skier's words and shares of its height:
+// a bar from the surface (left) to the ground (right) and «40 % Pulver ·
+// 35 % Altpulver …» under it -- the grain codes stay one tap away.
+const VA_MIX=[{k:'pulver',l:'Pulver',c:'#42a5f5',g:['PP','DF']},
+  {k:'alt',l:'Altpulver',c:'rgb(176,162,212)',g:['FC','DH','SH','FCxr']},
+  {k:'gesetzt',l:'gesetzter Altschnee',c:'#9ca8b8',g:['RG']},
+  {k:'kruste',l:'Kruste / Harsch',c:'rgb(214,108,98)',g:['MF','MFcr']},
+  {k:'eis',l:'Eis',c:'#6fb0e0',g:['IF']}];
+function vaMixHTML(pf,gl){try{const nb=pf.grain.length;if(!nb)return '';
+  const catOf=c=>{const e=gl[c]||gl[String(c)],code=e?e[0]:null;return code?VA_MIX.find(m=>m.g.includes(code))||null:null;};
+  const segs=[],tot={};let n=0;
+  for(let j=0;j<nb;j++){const m=catOf(pf.grain[j]);if(!m)continue;n++;tot[m.k]=(tot[m.k]||0)+1;
+    if(segs.length&&segs[segs.length-1].m===m)segs[segs.length-1].n++;else segs.push({m,n:1});}
+  if(!n)return '';
+  const order=[];segs.forEach(sg=>{if(!order.includes(sg.m))order.push(sg.m);});
+  const pct=m=>Math.round(tot[m.k]/n*100);
+  return '<div class="va-mix"><div class="va-mix-bar" role="img" aria-label="Aufbau von oben nach unten">'
+    +segs.map(sg=>'<i style="flex:'+sg.n+';background:'+sg.m.c+'"></i>').join('')+'</div>'
+    +'<div class="va-mix-ends"><span>Oberfläche</span><span>Boden</span></div>'
+    +'<div class="va-mix-t">'+order.filter(m=>pct(m)>=1).map(m=>'<span><i style="background:'+m.c+'"></i><b>'+pct(m)+' %</b> '+escapeHtml(m.l)+'</span>').join('')+'</div></div>';
+}catch(e){return '';}}
 
 // --- Ski tours: clickable routes with a powder score ----------------------
 // The WMTS overlay above is a picture; these are the same routes as VECTORS,
@@ -11086,7 +11180,7 @@ function tourVaScoreOne(t,E0){
   const powder=tot?Math.round(powC/tot*100):0,sulz=tot?Math.round(sulC/tot*100):0,hsMean=hsW?hsS/hsW:null;
   const clamped=g.core>=TOUR_CLAMP_SHARE,caveats=[];
   if(clamped)caveats.push(Math.round(g.core*100)+' % der Route liegt in der Kernzone des Lawinenbulletins.');
-  if(g.len&&known<g.len*0.6)caveats.push('Nur '+Math.round(known/Math.max(1,g.len)*100)+' % der Route liegen im SNOWPACK-Modellgebiet.');
+  if(g.len&&known<g.len*0.6)caveats.push('Nur '+Math.round(known/Math.max(1,g.len)*100)+' % der Route liegen im Modellgebiet.');
   if(!useD)caveats.push('Wenig Abfahrtsgelände ('+TOUR_MIN_SLOPE+'–'+TOUR_MAX_SLOPE+'°) – ganze Route bewertet.');
   {const cn=tourCoverNote(hsMean);if(cn)caveats.push(cn);}
   caveats.push('Modellierte Schneeoberfläche, keine Lawinenbeurteilung. Das Bulletin des SLF bleibt massgebend.');
@@ -11342,7 +11436,7 @@ function tourProfileSVG(t,r){_tpLast=[t,r];
 // The tour in one line: what the descent is like up high and further down,
 // and which way it faces -- "Oben Pulver 15 cm, unten Kruste · Abfahrt N".
 // From the same per-stretch SNOWPACK classes the score is made of.
-const TV_WORD={0:'kein Schnee',1:'hart',2:'Kruste',6:'Sulz',7:'nass',10:'dünn',11:'kantiger Altschnee'};
+const TV_WORD={0:'kein Schnee',1:'hart',2:'Kruste',6:'Sulz',7:'nass',10:'dünn',11:'Altpulver'};
 function tourVerdict(t,r){
   if(!r||!r.cls)return '';
   const segs=tourGeo(t).segs,n=Math.min(segs.length,r.cls.length);if(n<3)return '';
@@ -11397,7 +11491,7 @@ function tourSheetRender(t,r){
     +'<button type="button" onclick="trkFromTour()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg>Aufzeichnen</button>'
     +'</div>'+warn
     +'<div class="tour-sulz" id="tourSulzWin"></div>'
-    +'<div class="tour-when">'+(va?'Pulver-Anteil der Abfahrt · SNOWPACK '+escapeHtml(r.when||''):'Powder-Modell im Zeitfenster')+' · Modell, kein Lawinenbulletin</div>'+sheetAttr()
+    +'<div class="tour-when">'+(va?'Pulver-Anteil der Abfahrt · Modell '+escapeHtml(r.when||''):'Powder-Modell im Zeitfenster')+' · Modell, kein Lawinenbulletin</div>'+sheetAttr()
     +'</div>';
   tourSheetDragWire(el);
   if(va)setTimeout(()=>{try{tourSulzFill(t);}catch(e){}},50);
@@ -11435,11 +11529,17 @@ function tourGpx(){
 // The current reports of this tour, in the community feed with the tour as
 // its filter.
 let feedTour=null;
+// The tour's reports: the tour sheet steps aside (the tab bar comes back),
+// the feed shows them under a bar «Meldungen zu <Tour>», and «Zurück» opens
+// the tour again.
 function tourShowReports(){
-  const t=tourIso;if(!t)return;
+  const t=tourIso;if(!t)return;const back=tourFromSearch;
   feedTour={id:String(t.id),name:t.name||'Skitour'};
+  tourFromSearch=false;try{tourClose();}catch(e){}
   feedScope='tours';
+  _feedReturn=()=>{setTimeout(()=>{try{tourOpen(t,back);}catch(e){}},200);};
   try{feedOpen();const fp=document.getElementById('feedPage');if(fp&&fp.classList.contains('side'))feedToggleWide();}catch(e){}
+  try{navSync();}catch(e){}
 }
 function tourClose(){
   const back=tourFromSearch;
@@ -12815,8 +12915,8 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
         +'<span class="fc-more-wrap pv-more-wrap"><button class="pv-more" onclick="fcMore(this,event)" aria-label="Mehr" aria-haspopup="menu">⋯</button>'
         +'<span class="fc-menu" role="menu"><button role="menuitem" onclick="uvReportUser()">'+'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/></svg>'+'Melden</button>'
         +'<button role="menuitem" class="del-btn" onclick="uvBlockToggle()">'+'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg>'+'<span>'+(myBlocked.has(S.uid)?'Blockierung aufheben':'Blockieren')+'</span></button></span></span>')+'</div>'
-    +(()=>{const L=trustLevel(S.trust);return '<button class="pv-trust tr-l'+L.i+'" onclick="trustInfo('+L.n+')"><span class="pv-tr-ic">'+trustIco(L.i,24,'#fff')+'</span>'
-      +'<span class="pv-tr-t"><b>'+escapeHtml(L.name)+'</b><small>'+escapeHtml(L.sub)+'</small></span><span class="pv-tr-q">›</span></button>';})()
+    +(()=>{const L=trustLevel(S.trust),own=!!(sbUser&&S.uid===sbUser.id);return '<button class="pv-trust tr-l'+L.i+'" onclick="trustInfo('+L.n+','+own+')"><span class="pv-tr-ic">'+trustIco(L.i,24,'#fff')+'</span>'
+      +'<span class="pv-tr-t"><b>'+escapeHtml(L.name)+'</b><small>'+(own&&L.next!=null?'Noch '+(L.next-L.n)+' Bestätigung'+(L.next-L.n===1?'':'en')+' bis «'+escapeHtml(TRUST_LV[L.i+1][1])+'» – so geht’s ›':escapeHtml(L.sub))+'</small></span><span class="pv-tr-q">›</span></button>';})()
     +'<div class="pv-week"><div class="pv-wk-h"><b>Diese Woche</b><span>12 Wochen</span></div>'
     +'<div class="pv-wk"><div><b>'+(cw.d?(cw.d/1000).toFixed(1):'0')+'<em>km</em></b><small>Distanz</small></div><div><b>'+trkFmtT(cw.mv)+'<em>h</em></b><small>Zeit</small></div><div><b>'+Math.round(cw.up).toLocaleString('de-CH')+'<em>hm</em></b><small>Aufstieg</small></div></div>'+chart+'</div>'
     // the profile: this week's numbers and the posts -- the activities are
@@ -13049,12 +13149,12 @@ function tsRender(onlyMap){
   const keepS=el.scrollTop;
   tsDragWire(el);
   el.innerHTML='<div class="ts-grab" data-drag></div><div class="tn-hd" data-drag><div><b>Touren finden</b><span>'
-    +(va?'SNOWPACK · '+escapeHtml(tourVa.when):'Powder-Modell im Zeitfenster')+'</span></div>'
+    +(va?'Modell · '+escapeHtml(tourVa.when):'Powder-Modell im Zeitfenster')+'</span></div>'
     +'<span class="ts-hd-b"><button type="button" class="ts-x" onclick="event.stopPropagation();tsClose()" aria-label="Schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>'
     +ctrls+'<div class="ts-res"><span class="ts-count">'+list.length+' Touren</span><span>nach '+(tsF.focus==='sulz'?'Sulz':'Pulver')+'-Anteil'
     +(nf?' · <button type="button" class="ts-reset" onclick="tsSet(\'reset\')">Filter zurücksetzen</button>':'')+'</span></div>'
     +'<div class="ts-list tn-list">'+(rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>')+'</div>'+sheetAttr()
-    +'<div class="tn-foot">Anteil der Abfahrt (22–50°) mit Pulver bzw. Sulz im SNOWPACK-Modell – keine Lawinenbeurteilung, Bulletin des SLF beachten.</div>';
+    +'<div class="tn-foot">Anteil der Abfahrt (22–50°) mit Pulver bzw. Sulz im Modell – keine Lawinenbeurteilung, Bulletin des SLF beachten.</div>';
   el.scrollTop=keepS;tsSliderSync();
 }
 // The finder moves like the tour sheet: pull down to fold it to its title
@@ -13350,7 +13450,7 @@ function progConfColor(t){
       return [Math.round(a[1]+(b[1]-a[1])*f),Math.round(a[2]+(b[2]-a[2])*f),Math.round(a[3]+(b[3]-a[3])*f)];}}
   const l=PROG_CONF_STOPS[PROG_CONF_STOPS.length-1];return [l[1],l[2],l[3]];
 }
-const PROG_LABEL={powder:'Powder',drift:'Triebschnee',wet:'Nassschnee',suncrust:'Sonnendeckel',windpressed:'Windgepresst',firn:'Firn',scoured:'Abgeweht',facet:'Kantig',thin:'Dünn'};
+const PROG_LABEL={powder:'Powder',drift:'Triebschnee',wet:'Nassschnee',suncrust:'Sonnendeckel',windpressed:'Windgepresst',firn:'Firn',scoured:'Abgeweht',facet:'Altpulver',thin:'Dünn'};
 // The area the grid is built over: the current view, clamped to the data, with
 // a little margin so a small pan does not immediately show an empty edge.
 function progViewBounds(){
@@ -13526,12 +13626,20 @@ function trSheet(html){let o=document.getElementById('trSheet');
   requestAnimationFrame(()=>o.classList.add('on'));}
 function trSheetClose(){const o=document.getElementById('trSheet');if(o)o.classList.remove('on');}
 // The ladder: every level, what it takes, what it does -- and where you are.
-function trustInfo(n){if(n==null)n=sbUser?progTrustOf(sbUser.id):0;const L=trustLevel(n);
+function trustInfo(n,own){if(n==null){n=sbUser?progTrustOf(sbUser.id):0;own=!!sbUser;}const L=trustLevel(n);
+  // your own ladder says what to do next: two steps, each with its button
+  const left=L.next!=null?L.next-n:0;
+  const how=own&&L.next!=null?'<div class="trs-how"><b>So steigst du zu «'+escapeHtml(TRUST_LV[L.i+1][1])+'» auf</b>'
+    +'<div class="trs-st"><i>1</i><span><b>Melde mit Foto, Höhe und Exposition</b><small>Solche Meldungen werden am häufigsten bestätigt – eine Schnellmeldung dauert 20 Sekunden.</small></span>'
+    +'<button type="button" onclick="trSheetClose();qsOpen()">Melden</button></div>'
+    +'<div class="trs-st"><i>2</i><span><b>Hol dir noch '+left+' Bestätigung'+(left===1?'':'en')+'</b><small>Melde auf bekannten Touren – dort lesen mehr Leute mit und bestätigen, was stimmt.</small></span>'
+    +'<button type="button" onclick="trSheetClose();navGo(\'tours\')">Touren</button></div></div>':'';
   const rows=TRUST_LV.map((v,i)=>{const cur=i===L.i,done=i<L.i,w=trustWeight(v[0]);
     return '<div class="trl'+(cur?' cur':done?' done':'')+'"><span class="trl-e">'+trustIco(i,26)+'</span><span class="trl-t"><b>'+escapeHtml(v[1])+(cur?' <em>Du</em>':'')+'</b><small>'+escapeHtml(v[2])+'</small>'
       +(cur&&L.next!=null?'<i class="trl-bar"><i style="width:'+L.pct+'%"></i></i><small class="trl-nx">noch '+(L.next-n)+' bis «'+escapeHtml(TRUST_LV[i+1][1])+'»</small>':'')+'</span>'
       +'<span class="trl-n"><b>'+v[0]+'+</b><small>×'+w.toFixed(2)+'</small></span></div>';}).reverse().join('');
   trSheet('<div class="trs-hd">'+trustGauge(n)+'<b>'+L.emo+' '+escapeHtml(L.name)+'</b><small>'+escapeHtml(L.sub)+(L.next!=null?' · noch '+(L.next-n)+' bis «'+escapeHtml(TRUST_LV[L.i+1][1])+'»':'')+'</small></div>'
+    +how
     +'<p class="trs-p">Jede Bestätigung, die <b>andere</b> deinen Meldungen geben, ist <b>+1 Punkt</b>. Je höher deine Stufe, desto stärker zählen deine Meldungen in «Gemeldetes Powder» (×-Faktor rechts).</p>'
     +'<button type="button" class="trs-board" onclick="trustBoard()">🏆 Rangliste ansehen</button>'
     +'<div class="trl-list">'+rows+'</div>'
@@ -14502,7 +14610,7 @@ function legend(l){
   // The full legend follows whatever is actually drawn: with SNOWPACK up
   // that is the SNOWPACK layer, not the (hidden) base layer under it.
   document.getElementById('legend').innerHTML=vaLegendUp()
-    ?'<b>Skiqualität (SNOWPACK)</b>'+vaLegendHTML():legendFor(l||layer);
+    ?'<b>Skiqualität</b>'+vaLegendHTML():legendFor(l||layer);
   try{miniLegendRender(l||layer);}catch(e){}}
 // A compact, always-on version of the full legend above: just the current
 // layer's name, a horizontal strip of its colours, and a couple of numbers
@@ -14535,8 +14643,8 @@ function miniLegendRender(l){
       document.getElementById('mlUnit').textContent='Anteil';}
     const sw=legSwitchable(l||layer)&&rows.every(r=>r.k!=null),vis=sw?legVisSet(l||layer):null;
     h='<div class="ml-cls">'+rows.map(r=>sw
-      ?'<button type="button" class="'+(vis.has(r.k)?'on':'off')+'" aria-pressed="'+vis.has(r.k)+'" aria-label="'+escapeHtml(r.n||r.s)+'" onclick="legToggle('+r.k+',event)"><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.s)+'</span></button>'
-      :(r.sep?'<hr class="ml-sep">':'')+'<div><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.s)+'</span></div>').join('')+'</div>'
+      ?'<button type="button" class="'+(vis.has(r.k)?'on':'off')+'" aria-pressed="'+vis.has(r.k)+'" aria-label="'+escapeHtml(r.n||r.s)+'" onclick="legToggle('+r.k+',event)"><i style="background:'+r.c+'"></i><span'+(String(r.s).length>7?' class="ml-long"':'')+'>'+escapeHtml(r.s)+'</span></button>'
+      :(r.sep?'<hr class="ml-sep">':'')+'<div><i style="background:'+r.c+'"></i><span'+(String(r.s).length>7?' class="ml-long"':'')+'>'+escapeHtml(r.s)+'</span></div>').join('')+'</div>'
       +(sw&&!legIsDefault(l||layer)?'<button type="button" class="ml-reset" onclick="legReset(event)" aria-label="Standard wiederherstellen">↺</button>':'');
   }
   document.getElementById('mlScale').innerHTML=h;
@@ -14567,7 +14675,7 @@ function legSpec(l){
     const ORD=realPow?Object.keys(leg).map(Number).filter(k=>k>0).sort((a,b)=>b-a)
       :({ski6:[9,8,5,4,3,11,6,7,2,1,10],powder:[9,8,5,4,3],wind:[3,2,1]}[vaKey]||Object.keys(leg).map(Number).filter(k=>k>0));
     const SH=realPow?Object.fromEntries(ORD.map(k=>[k,String((leg[k]&&leg[k][2])||'').replace(/^Pulver\s*/,'').replace(/\s*cm$/,'').replace(/^>\s*/,'>')]))
-      :({ski6:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10',11:'kantig',1:'hart',2:'Kruste',6:'Sulz',7:'faul',10:'dünn'},powder:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
+      :({ski6:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10',11:'Altpulver',1:'hart',2:'Kruste',6:'Sulz',7:'faul',10:'dünn'},powder:{9:'>40',8:'30–40',5:leg[8]?'20–30':'>20',4:'10–20',3:'0–10'},wind:{3:'stark',2:'leicht',1:'gepresst'}}[vaKey]||{});
     // Skiqualität: the powder depths, then the other surfaces by name --
     // never shares of the view. Zoomed in the map draws powder in the SLF
     // bands (device engine); the coarse frames in the five powder classes.
@@ -14577,7 +14685,7 @@ function legSpec(l){
       else [[9,'40+'],[8,'30–40'],[5,leg[8]?'20–30':'20+'],[4,'10–20'],[3,'2–10']].forEach(([k,sv])=>{if(k===8&&!leg[8])return;
         rows.push({k,c:rgb(VA_PALETTE.ski6[k]),s:sv,n:'Pulver '+sv+' cm'});});
       // loose old snow (facets) only once the export knows the class
-      (leg[11]?[[11,'kantig']]:[]).concat([[6,'Sulz'],[7,'nass'],[2,'Kruste'],[1,'hart'],[10,'dünn']]).forEach(([k,sv],i)=>{
+      (leg[11]?[[11,'Altpulver']]:[]).concat([[6,'Sulz'],[7,'nass'],[2,'Kruste'],[1,'hart'],[10,'dünn']]).forEach(([k,sv],i)=>{
         // thin cover: the powder colour with the red dashes the map draws
         rows.push({k,c:k===10?'repeating-linear-gradient(135deg,#d62828 0 1.4px,transparent 1.4px 4.5px),'+rgb(VA_PALETTE.ski6[k]):rgb(VA_PALETTE.ski6[k]),
           s:sv,n:(leg[k]&&leg[k][2])||VA_SKI6_DE[k]||sv,sep:!i});});
@@ -15066,10 +15174,10 @@ const LY_TEXT={
   cloud:{t:'Bewölkung',
     d:'Gesamtbewölkung aus dem Wettermodell zur gewählten Stunde – wie ein Satellitenbild, kein Mittel. Hellblau = wenige Wolken, tiefblau = bedeckt. Wichtig für Sicht, Sonneneinstrahlung und ob die Oberfläche in der Nacht abkühlt.',
     u:'%'},
-  snowpack:{t:'Skiqualität aus SNOWPACK',
-    d:'Simulierte Schneedecke (SNOWPACK, SLF) an 135 Wetterpunkten in jeder Höhe, Exposition und Neigung, auf das Gelände übertragen. Hell- bis dunkelblau = Pulver nach Tiefe, grau = hart, korall = Kruste, honiggelb = nass / Sulz. Ein Modell, keine Messung – kein Lawinenbulletin.',
+  snowpack:{t:'Skiqualität aus dem Modell',
+    d:'Simulierte Schneedecke an 135 Wetterpunkten in jeder Höhe, Exposition und Neigung, auf das Gelände übertragen. Hell- bis dunkelblau = Pulver nach Tiefe, grau = hart, korall = Kruste, honiggelb = nass / Sulz. Ein Modell, keine Messung – kein Lawinenbulletin.',
     u:'Klasse'},
-  vadrift:{t:'Triebschnee aus SNOWPACK',
+  vadrift:{t:'Triebschnee aus dem Modell',
     d:'Wo der Wind Schnee abgelagert (violett) oder gepresst hat, aus der simulierten Schneedecke. Triebschnee fährt sich oft gut, ist aber das typische Lawinenproblem – Lawinenbulletin des SLF beachten.',
     u:'Klasse'},
   temp:{t:'Temperatur auf 2 m',
@@ -15526,7 +15634,9 @@ addEventListener('pointerdown',e=>{
 // Three states, because "follow the phone" is the one most people want and
 // neither of the other two can express it.
 function themePref(){try{return localStorage.getItem('ssm_theme')||'system';}catch(e){return 'system';}}
+const THEME_DARK_OK=false;   // light only for now
 function themeIsDark(v){
+  if(!THEME_DARK_OK)return false;
   v=v||themePref();
   if(v==='dark')return true;
   if(v==='light')return false;
@@ -16088,7 +16198,7 @@ function inspVerdict(o){
       else if(pw>=10){rate='gut fahrbar';tone='good';}
       else rate='fahrbar';}
     else if(k===6){what='Sulz';rate='zur richtigen Zeit gut';tone='good';}
-    else if(k===11){what='Lockerer Altschnee (kantig)';rate='locker, aber alt';}
+    else if(k===11){what='Altpulver';rate='locker, aber nicht mehr frisch';}
     else if(k===1){what='Hart';rate='griffig bis eisig';tone='bad';}
     else if(k===2){what='Kruste';rate='anspruchsvoll';tone='bad';}
     else if(k===7){what='Nass / faul';rate='schwer, eher meiden';tone='bad';}
@@ -16247,14 +16357,14 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
 // past is greyed.
 // new snow cm/h in classes (stacked as in a meteogram), with their colours
 const MG_SNOW=[[0,.5,'#A99BB8'],[.5,1,'#3F63E0'],[1,2,'#2F9A4C'],[2,3,'#7ED957'],[3,99,'#E8E24A']];
-const MG_PX=7,MG_L=40,MG_R=40;
+const MG_PX=7,MG_L=40,MG_R=14;
 let _mgScroll=null,_mgKey=null;
-function mgPanels(){return [{k:'snow',h:176,t:'Neuschnee & Temperatur'},{k:'depth',h:74,t:'Schneehöhe'},
+function mgPanels(){return [{k:'snow',h:96,t:'Neuschnee'},{k:'temp',h:128,t:'Temperatur'},{k:'depth',h:74,t:'Schneehöhe'},
   _clvData?{k:'cloud',h:66,t:'Bewölkung'}:null,{k:'sun',h:66,t:'Sonne'},{k:'wind',h:112,t:'Wind'}].filter(Boolean);}
 function mgHTML(){const H=mgPanels().reduce((s,q)=>s+q.h+30,0)+20;
-  return '<div class="insp-sec insp-mg"><div class="mg-leg"><span><i class="mg-sw"></i>Neuschnee cm/h</span><span><i class="tc-air"></i>Luft</span><span><i class="tc-srf"></i>Schneeoberfläche</span></div>'
+  return '<div class="insp-sec insp-mg"><div class="mg-leg"><span><i class="mg-sw"></i>Neuschnee cm/h</span><span><i class="tc-air"></i>Luft</span><span><i class="tc-srf"></i>Schneeoberfläche</span><span><i class="mg-win"></i>gewählter Zeitraum</span></div>'
     +'<div class="mg" style="height:'+H+'px"><div class="mg-sc" id="mgSc"><canvas id="mgCv"></canvas></div><canvas class="mg-ax" id="mgAx"></canvas></div>'
-    +'<div class="insp-hint">← wischen →  alle Diagramme laufen mit · hell = gewähltes Zeitfenster</div></div>';}
+    +'<div class="insp-hint">← wischen → alle Diagramme laufen mit · blau = gewählter Zeitraum (in der Zeitleiste ändern)</div></div>';}
 // smooth curve through the points (Catmull-Rom as Béziers); null breaks it
 function mgSmooth(c,pts,move){let first=true;
   for(let i=0;i<pts.length;i++){const p=pts[i];if(!p){first=true;continue;}
@@ -16287,7 +16397,14 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
   const yTop=TOP,yBot=H-6;
   // past softly veiled, the chosen window lit
   for(const r of rows){c.fillStyle=dark?'rgba(0,0,0,.16)':'rgba(30,41,66,.045)';icRR(c,X(0)-4,r.top-8,Math.max(0,X(Math.min(nowIdx,T))-X(0)+4),r.base-r.top+14,14);c.fill();
-    c.fillStyle=dark?'rgba(91,155,255,.10)':'rgba(42,143,216,.08)';icRR(c,X(a),r.top-8,X(b)-X(a),r.base-r.top+14,8);c.fill();}
+    c.fillStyle=dark?'rgba(91,155,255,.14)':'rgba(42,143,216,.12)';icRR(c,X(a),r.top-8,X(b)-X(a),r.base-r.top+14,8);c.fill();
+    c.strokeStyle='rgba(42,143,216,.55)';c.lineWidth=1.2;c.setLineDash([]);
+    for(const xx of [X(a),X(b)]){c.beginPath();c.moveTo(xx,r.top-8);c.lineTo(xx,r.base+6);c.stroke();}}
+  // «Zeitraum Di 14h – Mi 14h» over the lit band, in the day row
+  {const kt=t=>{const d=zLocal(tMs(Math.max(0,Math.min(T-1,t))));return WD()[d.getUTCDay()]+' '+String(d.getUTCHours()).padStart(2,'0')+'h';};
+   const txt='Zeitraum '+kt(a)+' – '+kt(Math.max(a,b-1)),cx=(X(a)+X(b))/2;
+   c.font='800 10px Helvetica Neue,Helvetica,Arial,sans-serif';const w=c.measureText(txt).width+14;
+   c.fillStyle='#2A8FD8';icRR(c,cx-w/2,TOP-2,w,16,8);c.fill();c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(txt,cx,TOP+6);c.textBaseline='alphabetic';}
   if(nowIdx>=0&&nowIdx<T){const x=X(nowIdx);
     for(const r of rows){c.strokeStyle='rgba(224,36,94,.55)';c.lineWidth=1.5;c.setLineDash([2,4]);c.lineCap='round';c.beginPath();c.moveTo(x,r.top-8);c.lineTo(x,r.base+6);c.stroke();c.setLineDash([]);}
     const ly=rows[0].top+4;c.font='800 10px Helvetica Neue,Helvetica,Arial,sans-serif';c.textBaseline='middle';
@@ -16312,28 +16429,32 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
   const hline=(y)=>{c.strokeStyle=grid;c.lineWidth=1;c.beginPath();c.moveTo(X(0),y);c.lineTo(X(T),y);c.stroke();};
   for(const r of rows){const q=r.q,hgt=r.base-r.top;
     if(q.k==='snow'){
-      const air=[],srf=[],sn=[];let mn=1e9,mx=-1e9,smx=0;
-      for(let t=0;t<T;t++){air[t]=tvI(t,p);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);sn[t]=SNOW[t*NP+p]*M.snow_scale;
-        for(const v of [air[t],srf[t]])if(v==v&&v!=null){if(v<mn)mn=v;if(v>mx)mx=v;}if(sn[t]>smx)smx=sn[t];}
+      // new snow cm/h: soft rounded bars in the colour of their class, one axis
+      const sn=[];let smx=0;for(let t=0;t<T;t++){sn[t]=SNOW[t*NP+p]*M.snow_scale;if(sn[t]>smx)smx=sn[t];}
+      const top=Math.max(1,[1,2,3,5,8,10].find(v=>v>=smx*1.05)||Math.ceil(smx)),yS=v=>r.base-v/top*hgt,bw=MG_PX-1.6;
+      for(const v of [top/2,top])hline(yS(v));
+      for(const v of [0,top/2,top])lab((v%1?v.toFixed(1):String(v)),MG_L-6,yS(v),'right');
+      for(let t=0;t<T;t++){const v=sn[t];if(v<0.01)continue;const cls=MG_SNOW.find(s=>v<s[1])||MG_SNOW[MG_SNOW.length-1],y=yS(Math.min(v,top));
+        c.fillStyle=vgrad(y,r.base,cls[2],cls[2]+'99');icRR(c,X(t)+.8,y,bw,r.base-y,Math.min(3,bw/2));c.fill();}
+      if(smx<0.05){c.font='600 11px Helvetica Neue,Helvetica,Arial,sans-serif';c.fillStyle=mut;c.textAlign='center';c.textBaseline='middle';
+        c.fillText('kein Neuschnee',(X(a)+X(b))/2,(r.top+r.base)/2);c.textBaseline='alphabetic';}
+      unit(r,'cm/h',false);hours(r);title(r,q.t);}
+    else if(q.k==='temp'){
+      // air and snow surface, one °C axis; 0 °C marked
+      const air=[],srf=[];let mn=1e9,mx=-1e9;
+      for(let t=0;t<T;t++){air[t]=tvI(t,p);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);
+        for(const v of [air[t],srf[t]])if(v==v&&v!=null){if(v<mn)mn=v;if(v>mx)mx=v;}}
       const raw=Math.max(1,mx-mn),st=raw<=5?1:raw<=12?2:raw<=28?5:10;mn=Math.floor(mn/st)*st;mx=Math.ceil(mx/st)*st;if(mx===mn)mx+=st;
       const yT=v=>r.base-(v-mn)/(mx-mn)*hgt;
       for(let v=mn;v<=mx+1e-9;v+=st){const y=yT(v);if(v!==0)hline(y);lab(v+'°',MG_L-6,y,'right',v===0?'#D23F3F':mut);}
       if(mn<0&&mx>0){c.strokeStyle='rgba(210,63,63,.35)';c.setLineDash([3,4]);c.beginPath();c.moveTo(X(0),yT(0));c.lineTo(X(T),yT(0));c.stroke();c.setLineDash([]);}
-      // new snow: soft rounded bars in the colour of their class
-      const top=Math.max(1,[1,2,3,5,8,10].find(v=>v>=smx*1.05)||Math.ceil(smx)),yS=v=>r.base-v/top*hgt,bw=MG_PX-1.6;
-      for(let t=0;t<T;t++){const v=sn[t];if(v<0.01)continue;const cls=MG_SNOW.find(s=>v<s[1])||MG_SNOW[MG_SNOW.length-1],y=yS(Math.min(v,top));
-        c.fillStyle=vgrad(y,r.base,cls[2],cls[2]+'99');icRR(c,X(t)+.8,y,bw,r.base-y,Math.min(3,bw/2));c.fill();}
-      const sx=vw-13;for(const [lo,hi,col] of MG_SNOW){if(lo>=top)break;const y1=yS(Math.min(hi,top)),y2=yS(lo);g.fillStyle=col;icRR(g,sx,y1,7,Math.max(1,y2-y1-1),2);g.fill();}
-      for(const v of [0,top/2,top]){lab((v%1?v.toFixed(1):String(v)),sx-4,yS(v),'right','#2A6FB0');}
-      unit(r,'cm/h',true,'#2A6FB0');unit(r,'°C',false);
-      // temperatures: smooth lines, the air one warm above 0 °C and cool below
       const pS=mgSoft(srf).map((v,t)=>v==null||v!==v?null:[XC(t),yT(v)]),pA=mgSoft(air).map((v,t)=>v==null||v!==v?null:[XC(t),yT(v)]);
       c.lineCap='round';c.lineJoin='round';
       c.beginPath();mgSmooth(c,pS);c.strokeStyle='rgba(214,140,40,.85)';c.lineWidth=1.8;c.setLineDash([1,4]);c.stroke();c.setLineDash([]);
       const z=yT(0),tg=c.createLinearGradient(0,r.top,0,r.base),zf=Math.max(0,Math.min(1,(z-r.top)/hgt));
       tg.addColorStop(0,'#F0564A');tg.addColorStop(Math.max(0,zf-.001),'#F0564A');tg.addColorStop(Math.min(1,zf+.001),'#3D8BF0');tg.addColorStop(1,'#3D8BF0');
       c.beginPath();mgSmooth(c,pA);c.strokeStyle=tg;c.lineWidth=3;c.stroke();
-      hours(r);title(r,q.t);}
+      unit(r,'°C',false);hours(r);title(r,q.t);}
     else if(q.k==='depth'){let mx=1;const v=[];for(let t=0;t<T;t++){v[t]=cum[t*NP+p];if(v[t]>mx)mx=v[t];}
       mx=Math.ceil(mx/10)*10;const yD=x=>r.base-x/mx*hgt,pts=v.map((x,t)=>[XC(t),yD(x)]);
       for(const s of [mx/2,mx])hline(yD(s));for(const s of [0,mx/2,mx])lab(Math.round(s)+'',MG_L-6,yD(s),'right');
@@ -16368,10 +16489,13 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
       c.textBaseline='alphabetic';unit(r,'km/h',false);hours(r);title(r,q.t);}}
   // where it was, else the window near the left edge
   const key=p+':'+a+':'+b;
-  if(_mgScroll!=null&&_mgKey&&_mgKey.split(':')[0]===String(p))sc.scrollLeft=_mgScroll;
-  else sc.scrollLeft=Math.max(0,Math.min(X(a),X(nowIdx))-vw*0.35);
+  if(_mgScroll!=null&&_mgKey===key)sc.scrollLeft=_mgScroll;
+  else{const plot=vw-MG_L-MG_R,ww=X(b)-X(a);
+    sc.scrollLeft=Math.max(0,ww<=plot?(X(a)+X(b))/2-MG_L-plot/2:X(a)-MG_L-24);_mgScroll=sc.scrollLeft;}
   _mgKey=key;
-  sc.onscroll=()=>{_mgScroll=sc.scrollLeft;};}
+  // a scroll event still queued for a scroller the card has just replaced
+  // reads 0 from the detached element -- it must not reset the position
+  sc.onscroll=()=>{if(sc.isConnected)_mgScroll=sc.scrollLeft;};}
 // Three bands like a meteogram: high (cirrus) on top, mid, low (stratus/fog)
 // at the bottom; the darker a cell, the more of that layer covers the sky.
 function icCloud(cv,p){if(!cv)return;const{ctx,w,h}=icSetup(cv,104);
@@ -16728,11 +16852,16 @@ function init3D(){
   map3d=new maplibregl.Map({container:'map3d',
     style:{version:8,
       sources:{
-        'swisstopo':{type:'raster',tiles:[swissTile(BASE_TILE)],tileSize:256,attribution:BASE_ATTR},
-        'hillshade-tiles':{type:'raster',tiles:[swissTile('ch.swisstopo.swissalti3d-reliefschattierung_monodirektional','png')],tileSize:256},
-        'terrain-dem':{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',maxzoom:15},
-        'slope-src':{type:'raster',tiles:[swissTile('ch.swisstopo.hangneigung-ueber_30','png')],tileSize:256},
-        'skitour-src':{type:'raster',tiles:[swissTile('ch.swisstopo-karto.skitouren','png')],tileSize:256}},
+        // Less data: every source stops at the zoom that still adds detail
+        // and is stretched beyond it. Tipped, the near ground asks for tiles
+        // a zoom or two finer than the map's zoom -- the slope classes and
+        // the routes have none that fine, which left them blank close up.
+        // The relief mesh needs far less than the pictures draped on it.
+        'swisstopo':{type:'raster',tiles:[swissTile(BASE_TILE)],tileSize:256,maxzoom:17,attribution:BASE_ATTR},
+        'hillshade-tiles':{type:'raster',tiles:[swissTile('ch.swisstopo.swissalti3d-reliefschattierung_monodirektional','png')],tileSize:256,maxzoom:16},
+        'terrain-dem':{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',maxzoom:13},
+        'slope-src':{type:'raster',tiles:[swissTile('ch.swisstopo.hangneigung-ueber_30','png')],tileSize:256,minzoom:8,maxzoom:16},
+        'skitour-src':{type:'raster',tiles:[swissTile('ch.swisstopo-karto.skitouren','png')],tileSize:256,minzoom:8,maxzoom:16}},
       layers:[
         {id:'swisstopo-base',type:'raster',source:'swisstopo',paint:{'raster-opacity':0.3}},
         {id:'hillshade',type:'raster',source:'hillshade-tiles',paint:{'raster-opacity':0.7}},
@@ -16740,7 +16869,7 @@ function init3D(){
         {id:'slope-3d',type:'raster',source:'slope-src',layout:{visibility:ovOn.slope?'visible':'none'},paint:{'raster-opacity':0.5,'raster-fade-duration':0}},
         {id:'skitour-3d',type:'raster',source:'skitour-src',layout:{visibility:(ovOn.skitour||ovOn.skitourVec)?'visible':'none'},paint:{'raster-opacity':0.9,'raster-fade-duration':0}}],
       terrain:{source:'terrain-dem',exaggeration:exag3d}},
-    center:[lc.lng,lc.lat],zoom:lz,pitch:_tilt3d?0:60,bearing:_tilt3d?0:-20,maxPitch:85,
+    center:[lc.lng,lc.lat],zoom:lz,pitch:_tilt3d?0:60,bearing:_tilt3d?0:-20,maxPitch:72,maxZoom:17.5,
     maxBounds:[[loMinW-0.1,laMinW-0.05],[loMaxW+0.1,laMaxW+0.05]],
     touchZoomRotate:true,touchPitch:true,dragRotate:true});
   map3d.addControl(new maplibregl.NavigationControl({visualizePitch:true,showCompass:true}),'top-left');
@@ -16755,7 +16884,7 @@ function init3D(){
   // Desktop keyboard controls for 3D
   document.addEventListener('keydown',function(e){
     if(!is3d||!map3d)return;const s=0.002;
-    if(e.key==='ArrowUp'||e.key==='w'){map3d.setPitch(Math.min(85,map3d.getPitch()+5));e.preventDefault();}
+    if(e.key==='ArrowUp'||e.key==='w'){map3d.setPitch(Math.min(72,map3d.getPitch()+5));e.preventDefault();}
     else if(e.key==='ArrowDown'||e.key==='s'){map3d.setPitch(Math.max(0,map3d.getPitch()-5));e.preventDefault();}
     else if(e.key==='ArrowLeft'||e.key==='a'){map3d.setBearing(map3d.getBearing()-5);e.preventDefault();}
     else if(e.key==='ArrowRight'||e.key==='d'){map3d.setBearing(map3d.getBearing()+5);e.preventDefault();}
@@ -16776,6 +16905,9 @@ document.getElementById('btn3dClose').onclick=()=>close3D();
 document.getElementById('mapOpac3d').oninput=function(){if(!map3d)return;const v=this.value/100;
   map3d.setPaintProperty('swisstopo-base','raster-opacity',v);
   map3d.setPaintProperty('hillshade','raster-opacity',1-v);
+  // a picture at 0 % is not fetched at all
+  map3d.setLayoutProperty('swisstopo-base','visibility',v<0.02?'none':'visible');
+  map3d.setLayoutProperty('hillshade','visibility',v>0.98?'none':'visible');
   document.getElementById('mapOpacLbl').textContent=this.value+'%';};
 document.getElementById('overlay3d').onchange=()=>update3dOverlay();
 // --- 3D Exaggeration ---
@@ -17077,7 +17209,7 @@ function toast(msg,kind){msg=trMsg(msg);const w=document.getElementById('toastWr
 // Language, a short tour of the five places, the disclaimer (must be
 // accepted), Face ID as an app lock, location. Re-runnable from settings.
 const ONB_SLIDES=[
- ['','Warum Snowmapper?','Snowmapper rechnet für jeden Hang die Schneedecke mit SNOWPACK, dem Modell des SLF – aus MeteoSchweiz-Wetter, Gelände, Messstationen und euren Meldungen. So siehst du, wie viel Schnee liegt und wie er ist.','<svg class="onb-ill" viewBox="0 0 300 172" aria-hidden="true"><path d="M62 36 C110 36 120 84 150 84" class="onb-flow" style="animation-delay:0s"/><path d="M62 132 C110 132 120 84 150 84" class="onb-flow" style="animation-delay:0.4s"/><path d="M238 36 C190 36 180 84 150 84" class="onb-flow" style="animation-delay:0.8s"/><path d="M238 132 C190 132 180 84 150 84" class="onb-flow" style="animation-delay:1.2s"/><circle cx="150" cy="84" r="30" class="onb-ring"/><circle cx="150" cy="84" r="30" class="onb-core"/><g transform="translate(150 84)"><path d="M-14 9-4-9 3 2 7-4 15 9Z" fill="#fff"/><circle cx="8" cy="-10" r="3.2" fill="#9fd0ff"/></g><g class="onb-node" transform="translate(40 36)"><circle r="22"/><path d="M-9 5h15a5 5 0 0 0 0-10 7 7 0 0 0-13-2 5 5 0 0 0-2 12z" class="w"/></g><g class="onb-node" transform="translate(40 132)"><circle r="22"/><path d="M-12 8-3-7 2 1 5-3 12 8Z" class="w"/></g><g class="onb-node" transform="translate(260 36)"><circle r="22"/><rect x="-11" y="-9" width="22" height="5" rx="2" class="l1"/><rect x="-11" y="-2" width="22" height="5" rx="2" class="l2"/><rect x="-11" y="5" width="22" height="5" rx="2" class="l3"/></g><g class="onb-node" transform="translate(260 132)"><circle r="22"/><circle cx="-5" cy="-4" r="4" class="w"/><circle cx="6" cy="-4" r="4" class="w"/><path d="M-12 9a7 7 0 0 1 14 0M-1 9a7 7 0 0 1 14 0" class="w"/></g><text x="40" y="71" class="onb-lb">Wetter</text><text x="40" y="168" class="onb-lb">Gelände</text><text x="260" y="71" class="onb-lb">Schneedecke</text><text x="260" y="168" class="onb-lb">Meldungen</text></svg>'],
+ ['','Warum Snowmapper?','Snowmapper rechnet für jeden Hang die Schneedecke – aus MeteoSchweiz-Wetter, Gelände, Messstationen und euren Meldungen. So siehst du, wie viel Schnee liegt und wie er ist.','<svg class="onb-ill" viewBox="0 0 300 172" aria-hidden="true"><path d="M62 36 C110 36 120 84 150 84" class="onb-flow" style="animation-delay:0s"/><path d="M62 132 C110 132 120 84 150 84" class="onb-flow" style="animation-delay:0.4s"/><path d="M238 36 C190 36 180 84 150 84" class="onb-flow" style="animation-delay:0.8s"/><path d="M238 132 C190 132 180 84 150 84" class="onb-flow" style="animation-delay:1.2s"/><circle cx="150" cy="84" r="30" class="onb-ring"/><circle cx="150" cy="84" r="30" class="onb-core"/><g transform="translate(150 84)"><path d="M-14 9-4-9 3 2 7-4 15 9Z" fill="#fff"/><circle cx="8" cy="-10" r="3.2" fill="#9fd0ff"/></g><g class="onb-node" transform="translate(40 36)"><circle r="22"/><path d="M-9 5h15a5 5 0 0 0 0-10 7 7 0 0 0-13-2 5 5 0 0 0-2 12z" class="w"/></g><g class="onb-node" transform="translate(40 132)"><circle r="22"/><path d="M-12 8-3-7 2 1 5-3 12 8Z" class="w"/></g><g class="onb-node" transform="translate(260 36)"><circle r="22"/><rect x="-11" y="-9" width="22" height="5" rx="2" class="l1"/><rect x="-11" y="-2" width="22" height="5" rx="2" class="l2"/><rect x="-11" y="5" width="22" height="5" rx="2" class="l3"/></g><g class="onb-node" transform="translate(260 132)"><circle r="22"/><circle cx="-5" cy="-4" r="4" class="w"/><circle cx="6" cy="-4" r="4" class="w"/><path d="M-12 9a7 7 0 0 1 14 0M-1 9a7 7 0 0 1 14 0" class="w"/></g><text x="40" y="71" class="onb-lb">Wetter</text><text x="40" y="168" class="onb-lb">Gelände</text><text x="260" y="71" class="onb-lb">Schneedecke</text><text x="260" y="168" class="onb-lb">Meldungen</text></svg>'],
  ['','Schnee auf der Karte','Skiqualität, Neuschnee, Wind und mehr – über das Ebenen-Symbol rechts. Tippe in der Legende auf eine Farbe, um sie ein- oder auszublenden: Skiqualität startet mit «nur Pulver».','<svg class="onb-ill" viewBox="0 0 300 150" aria-hidden="true"><rect x="10" y="8" width="230" height="134" rx="16" class="onb-mapbg"/><path d="M20 110c40-20 60-60 100-55s60 40 110 20M20 80c50-25 70-50 110-45s60 30 100 10M20 130c40-10 80-30 120-25s60 15 90 5" class="onb-cont"/><ellipse cx="70" cy="70" rx="34" ry="18" fill="#93c5f0" class="onb-blob" style="animation-delay:0s"/><ellipse cx="140" cy="52" rx="26" ry="14" fill="#3b7dd6" class="onb-blob" style="animation-delay:0.4s"/><ellipse cx="170" cy="100" rx="32" ry="16" fill="#2454b2" class="onb-blob" style="animation-delay:0.8s"/><ellipse cx="95" cy="108" rx="22" ry="12" fill="#3b7dd6" class="onb-blob" style="animation-delay:1.2s"/><ellipse cx="200" cy="62" rx="18" ry="10" fill="#182e78" class="onb-blob" style="animation-delay:1.6s"/><g transform="translate(252 22)"><rect y="0" width="38" height="20" rx="6" fill="#182e78" class="onb-chip"/><rect y="26" width="38" height="20" rx="6" fill="#2454b2" class="onb-chip"/><rect y="52" width="38" height="20" rx="6" fill="#3b7dd6" class="onb-chip t"/><rect y="78" width="38" height="20" rx="6" fill="#93c5f0" class="onb-chip"/></g></svg>'],
  ['','Zeit wählen','Unten die Zeitleiste: vergangene Tage und Prognose. Die Karte rechnet sofort neu.',
   // a small timeline that shows the main gesture (the handle being dragged),
@@ -17128,7 +17260,7 @@ function onbRender(){const el=document.getElementById('onbCard');if(!el)return;c
   let h='';
   if(k==='lang'){
     h='<div class="onb-logo"><img src="icon-192.png?v=2" alt=""></div>'
-      +'<h1>Willkommen bei Snowmapper</h1><p>Pulver, Schnee und Verhältnisse in der Schweiz – aus dem SNOWPACK-Modell und von der Community.</p>'
+      +'<h1>Willkommen bei Snowmapper</h1><p>Pulver, Schnee und Verhältnisse in der Schweiz – aus unserem Schneemodell und von der Community.</p>'
       +'<div class="onb-lbl">Sprache</div><div class="onb-langs" data-noi18n>'+Object.keys(LANGS).map(v=>'<button class="'+(LANG===v?'on':'')+'" onclick="langSet(\''+v+'\');onbRender()">'+LANGS[v]+'</button>').join('')+'</div>'
       +'<button class="onb-pri" onclick="onbNext()">Los geht\'s</button>';}
   else if(k==='tour'){const sl=ONB_SLIDES.filter(x=>!(x[1]==='Aufzeichnen'&&(document.body.classList.contains('desk')||!trkEnabled()))),S=sl[onb.slide];
@@ -17483,6 +17615,10 @@ const DEMO_REPORTS=(FEATURES.demoOther?DEMO_DEFS:[]).map((d,i2)=>({id:'d'+(i2+1)
     const el=document.getElementById(id);if(el)el.hidden=!on;});
 }catch(e){}})();
 let reportMarkers=L.layerGroup().addTo(map);
+// ski tours and the community's posts are on by default: once (v2), a «off»
+// remembered from before goes; switched off by hand after this, it stays off
+try{if(!localStorage.getItem('ssm_ly_def2')){['ssm_tours','ssm_reports'].forEach(k=>{if(localStorage.getItem(k)==='0')localStorage.removeItem(k);});
+  localStorage.setItem('ssm_ly_def2','1');}}catch(e){}
 ovOn.reports=true;
 try{if(localStorage.getItem('ssm_reports')==='0'){ovOn.reports=false;map.removeLayer(reportMarkers);}}catch(e){}
 // «Meine Aufzeichnungen» stays as you left it (it is off unless you turned it on)
@@ -17547,7 +17683,16 @@ function reportPopupHTML(r){
   // for the rare report with a measurement string but no zones data at all.
   const zones=(r.condition_data&&r.condition_data.zones&&r.condition_data.zones.length)?r.condition_data.zones:null;
   const vizHtml=zones?rptVizHTML(zones,34):'';
-  const other=(!zones&&r.measurement&&!/\d+\s*cm/.test(r.measurement))?'<span class="rpop-chip">'+escapeHtml(r.measurement)+'</span>':'';
+  // a quick report says what it was: the snow type in its colour, the depth
+  // band and how it was (crust carries, wet sinks in ...)
+  const cdq=r.condition_data||{};let what='';
+  try{const qt=cdq.snow&&QS_TYPES.find(t=>t.k===cdq.snow);
+    if(qt){const db=cdq.depthBand;
+      what='<div class="rpop-what"><i style="background:'+qt.c+'"></i><b>'+escapeHtml(qt.l)+'</b>'
+        +(db&&db[0]!=null?'<span>'+(db[1]==null?db[0]+'+':db[0]+'–'+db[1])+' cm</span>':'')
+        +(cdq.qual&&cdq.qual.l?'<span>'+escapeHtml(cdq.qual.l)+'</span>':'')
+        +(cdq.tracks?'<span>'+escapeHtml(lbOf(TRK_TRACKS,cdq.tracks))+'</span>':'')+'</div>';}}catch(e){}
+  const other=(!what&&!zones&&r.measurement&&!/\d+\s*cm/.test(r.measurement))?'<span class="rpop-chip">'+escapeHtml(r.measurement)+'</span>':'';
   return '<div class="rpop">'
     +(r.img?('<div class="rpop-img" onclick="feedOpenAt(\''+r.id+'\')"><img src="'+((r.condition_data&&(r.condition_data.mid||r.condition_data.thumb))||r.img)+'" loading="lazy" alt=""/>'+catBadge+'</div>'):'')
     +'<div class="rpop-body"><div class="rpop-head">'
@@ -17555,9 +17700,9 @@ function reportPopupHTML(r){
       +'<div class="rpop-meta"><b>'+escapeHtml(r.user||'User')+'</b><span>'+escapeHtml(r.time||'')+'</span></div>'
       +(r.img?'':catBadge)
     +'</div>'
-    +(vizHtml?('<div class="rpop-viz">'+vizHtml+'</div>'):'')
+    +(vizHtml?('<div class="rpop-viz">'+vizHtml+'</div>'):'')+what
     +'<div class="rpop-chips">'
-      +(cm!=null?('<span class="rpop-chip dep" style="--cc:'+col+'">'+cm+' cm</span>'):'')
+      +(cm!=null&&!what?('<span class="rpop-chip dep" style="--cc:'+col+'">'+cm+' cm</span>'):'')
       +other+stars
     +'</div>'
     +(r.caption?('<p class="rpop-cap">'+escapeHtml(r.caption)+'</p>'):'')
@@ -18414,7 +18559,7 @@ function invPending(){try{return localStorage.getItem('ssm_invite')||'';}catch(e
 const PRO_UI=false;
 let proS={pro:false,paywall:'off'};
 try{const c=JSON.parse(localStorage.getItem('ssm_pro')||'null');if(c)proS=c;}catch(e){}
-const PRO_FEATURES={ski:'Skiqualität (SNOWPACK) mit 5-Tage-Vorschau',push:'Neuschnee-Push für deine Favoriten',offline:'Kartenausschnitte offline speichern',tours:'Powder-Score für alle Touren'};
+const PRO_FEATURES={ski:'Skiqualität mit 5-Tage-Vorschau',push:'Neuschnee-Push für deine Favoriten',offline:'Kartenausschnitte offline speichern',tours:'Powder-Score für alle Touren'};
 function isPro(){return !PRO_UI||proS.paywall!=='on'||!!proS.pro;}
 function proNative(){try{return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());}catch(e){return false;}}
 async function proLoad(){if(!sb||!PRO_UI)return;
@@ -18931,7 +19076,7 @@ async function favOpen(id){
 const QS_HATCH='repeating-linear-gradient(135deg,#d62828 0 1.4px,transparent 1.4px 4.5px),#c2e5c4';
 const QS_TYPES=[
   {k:'pulver',l:'Pulver',c:'#42a5f5',q:85,depth:true},
-  {k:'kantig',l:'Lockerer Altschnee (kantig)',c:'rgb(176,162,212)',q:62,depth:true},
+  {k:'kantig',l:'Altpulver',c:'rgb(176,162,212)',q:62,depth:true},
   {k:'trieb',l:'Triebschnee',c:'#0d9488',q:30,depth:true,cat:'wind_slab'},
   {k:'sulz',l:'Sulz',c:'rgb(226,170,72)',q:55},
   {k:'nass',l:'Nass / faul',c:'rgb(150,104,74)',q:45},
@@ -18979,14 +19124,17 @@ function qsOpen(){
     +'<div class="qs-qual" id="qsQual" hidden><div class="qs-lbl"><span id="qsQualT"></span> <b id="qsQualV"></b></div>'
     +'<input type="range" class="qs-range" id="qsQualR" min="0" max="2" step="1" value="1" oninput="qsQualSet(+this.value)" aria-label="Zustand">'
     +'<div class="qs-ticks" id="qsQualTk"></div></div>'
-    +'<div class="qs-trk"><div class="qs-lbl">Spuren</div><div class="qs-seg">'
+    +'<div class="qs-trk" id="qsTrk"><div class="qs-lbl">Spuren</div><div class="qs-seg">'
     +TRK_TRACKS.map(([k,l])=>'<button type="button" data-k="'+k+'" onclick="qsSet(\'tracks\',\''+k+'\',this)">'+escapeHtml(l)+'</button>').join('')+'</div></div>'
     // a comment, if there is more to say
     +'<div class="qs-cmt" id="qsCmtBox" hidden><textarea id="qsCmt" rows="2" maxlength="1000" placeholder="Was war los? Hang, Gruppe, Verhältnisse …" oninput="if(qs)qs.comment=this.value"></textarea></div>'
     +'<div class="qs-thumbs" id="qsThumbs" hidden></div>'
     // danger signs and avalanches have their own, fuller report
-    +'<div class="qs-danger"><span>Lawine oder Gefahrenzeichen gesehen?</span><div class="qs-dg-b">'
-    +'<button type="button" onclick="qsToObs(\'avalanche\')">Lawine</button><button type="button" onclick="qsToObs(\'whumpf\')">Wumm / Risse</button><button type="button" onclick="qsToObs(\'wind_slab\')">Triebschnee</button></div></div>'
+    // folded: a switch opens the two choices and closes them again
+    +'<div class="qs-danger" id="qsDanger"><button type="button" class="qs-dg-h" onclick="qsDangerToggle()" aria-expanded="false" aria-controls="qsDgB">'
+    +'<span>Lawine oder Gefahrenzeichen gesehen?</span><i class="qs-sw" aria-hidden="true"></i></button>'
+    +'<div class="qs-dg-b" id="qsDgB" hidden><small>Dafür gibt es die ausführliche Meldung – am selben Ort:</small>'
+    +'<button type="button" onclick="qsToObs(\'avalanche\')">Lawine</button><button type="button" onclick="qsToObs(\'whumpf\')">Wumm / Risse</button></div></div>'
     +'<div class="qs-acts"><label class="qs-ph" id="qsPh" aria-label="Fotos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/></svg>'
     +'<span id="qsPhN">Foto</span><input type="file" accept="image/*" multiple hidden onchange="qsPhoto(this)"></label>'
     +'<button type="button" class="qs-cm" id="qsCm" onclick="qsCmtToggle()" aria-label="Kommentar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span>Text</span></button>'
@@ -19017,16 +19165,17 @@ function qsCrossY(){const sh=document.getElementById('qsSheet'),r=map.getContain
 function qsCrossPos(){const c=document.getElementById('qsCross');if(!c)return;const r=map.getContainer().getBoundingClientRect();
   c.style.top=(r.top+qsCrossY())+'px';c.style.left=(r.left+r.width/2)+'px';}
 function qsCrossLL(){const r=map.getContainer().getBoundingClientRect();return map.containerPointToLatLng([r.width/2,qsCrossY()]);}
-function _qsDrag(){if(!qs)return;qs.moved=true;qsGpsStop();}
+function _qsDrag(){if(!qs)return;qs.moved=true;qsGpsStop();const c=document.getElementById('qsCross');if(c)c.classList.add('moved');}
 let _qsTT=0;
 function _qsMoveEnd(){if(!qs||!qs.moved)return;const p=qsCrossLL();qs.ll=[p.lat,p.lng];qsLocText();
   clearTimeout(_qsTT);_qsTT=setTimeout(qsTourSync,400);const b=document.getElementById('qsPost');if(b)b.disabled=false;}
 function qsCrossOn(){let c=document.getElementById('qsCross');
   if(!c){c=document.createElement('div');c.id='qsCross';c.setAttribute('aria-hidden','true');
     c.innerHTML='<svg viewBox="0 0 48 48" fill="none" stroke-linecap="round"><circle cx="24" cy="24" r="9" stroke="#fff" stroke-width="5"/><circle cx="24" cy="24" r="9" stroke="#e0245e" stroke-width="2.4"/>'
-      +'<path d="M24 2v12M24 34v12M2 24h12M34 24h12" stroke="#fff" stroke-width="5"/><path d="M24 2v12M24 34v12M2 24h12M34 24h12" stroke="#e0245e" stroke-width="2.4"/><circle cx="24" cy="24" r="1.8" fill="#e0245e"/></svg>';
+      +'<path d="M24 2v12M24 34v12M2 24h12M34 24h12" stroke="#fff" stroke-width="5"/><path d="M24 2v12M24 34v12M2 24h12M34 24h12" stroke="#e0245e" stroke-width="2.4"/><circle cx="24" cy="24" r="1.8" fill="#e0245e"/></svg>'
+      +'<span class="qs-hint">Stimmt der Ort? Karte verschieben</span>';
     document.body.appendChild(c);}
-  c.hidden=false;qsCrossPos();map.on('dragstart',_qsDrag);map.on('moveend',_qsMoveEnd);addEventListener('resize',_qsReflow);
+  c.classList.remove('moved');c.hidden=false;qsCrossPos();map.on('dragstart',_qsDrag);map.on('moveend',_qsMoveEnd);addEventListener('resize',_qsReflow);
   _qsY=qsCrossY();
   const sh=document.getElementById('qsSheet');
   if(sh&&'ResizeObserver'in window){_qsRO=new ResizeObserver(_qsReflow);_qsRO.observe(sh);}}
@@ -19066,7 +19215,10 @@ function qsWheelScroll(){clearTimeout(_qsWT);_qsWT=setTimeout(()=>{const w=docum
   const i=Math.max(0,Math.min(QS_TYPES.length-1,Math.round(w.scrollTop/QS_ROW)));if(i!==qs.type){qs.type=i;qsSync();try{haptic(3);}catch(e){}}},70);}
 function qsPick(i){const w=document.getElementById('qsWheel');if(w)w.scrollTo({top:i*QS_ROW,behavior:'smooth'});if(qs){qs.type=i;qsSync();}}
 function qsSync(){if(!qs)return;document.querySelectorAll('#qsWheel .qs-it').forEach((b,i)=>b.classList.toggle('on',i===qs.type));
-  const d=document.getElementById('qsDep');if(d)d.classList.toggle('off',!QS_TYPES[qs.type].depth);
+  // one snow type per report: only what belongs to it is shown (depth and
+  // tracks for the loose snow, a state slider for the others)
+  const d=document.getElementById('qsDep');if(d)d.hidden=!QS_TYPES[qs.type].depth;
+  const tr=document.getElementById('qsTrk');if(tr)tr.hidden=!QS_TYPES[qs.type].depth;
   qsQualSync();}
 function qsQualSync(){if(!qs)return;const k=QS_TYPES[qs.type].k,Q=QS_QUAL[k],box=document.getElementById('qsQual');if(!box)return;
   box.hidden=!Q;if(!Q)return;const n=Q.l.length,i=qs.qual[k]!=null?qs.qual[k]:Math.floor((n-1)/2),r=document.getElementById('qsQualR');
@@ -19089,6 +19241,8 @@ function qsThumbs(){if(!qs)return;const box=document.getElementById('qsThumbs'),
     return '<span class="qs-th" style="background-image:url(\''+f._u+'\')"><button type="button" onclick="qsPhotoDel('+i+')" aria-label="Foto entfernen">×</button></span>';}).join('');}
   if(n)n.textContent=qs.photos.length?'+ Foto':'Foto';if(ph)ph.classList.toggle('more',!!qs.photos.length);}
 function qsPhotoDel(i){if(!qs)return;const f=qs.photos.splice(i,1)[0];try{if(f&&f._u)URL.revokeObjectURL(f._u);}catch(e){}qsThumbs();}
+function qsDangerToggle(){const w=document.getElementById('qsDanger'),b=document.getElementById('qsDgB');if(!w||!b)return;
+  b.hidden=!b.hidden;w.classList.toggle('on',!b.hidden);const h=w.querySelector('.qs-dg-h');if(h)h.setAttribute('aria-expanded',String(!b.hidden));try{haptic(3);}catch(e){}}
 function qsCmtToggle(){const b=document.getElementById('qsCmtBox');if(!b)return;b.hidden=!b.hidden;
   const c=document.getElementById('qsCm');if(c)c.classList.toggle('on',!b.hidden);
   if(!b.hidden){const t=document.getElementById('qsCmt');if(t)setTimeout(()=>t.focus(),50);}}
@@ -19106,7 +19260,7 @@ async function qsPost(){if(!qs||qs.busy||!qs.ll)return;
     const Q=QS_QUAL[t.k];let qv=null;
     if(Q&&qs.qualSet[t.k]){qv=qs.qual[t.k];cd.qual={t:Q.t,v:qv,l:Q.l[qv]};cd.measurement+=' · '+(Q.crust?'Deckel ':'')+Q.l[qv];
       if(Q.crust)cd.crust=Q.crust[qv];}
-    if(qs.tracks){cd.tracks=qs.tracks;cd.measurement+=' · '+lbOf(TRK_TRACKS,qs.tracks);}
+    if(qs.tracks&&t.depth){cd.tracks=qs.tracks;cd.measurement+=' · '+lbOf(TRK_TRACKS,qs.tracks);}
     const tour=tourPickTake();if(tour)cd.tour=tour;
     // what feeds the reported-powder model (thin cover says nothing about the surface)
     if(t.q!=null){cd.quick=true;cd.powderQuality=(qv!=null&&Q.q)?Q.q[qv]:t.q;cd.powderAmountCm=cm;cd.powder=t.k==='pulver';}
@@ -19391,8 +19545,7 @@ const SRC_GROUPS=[
   ['Wetter & Schnee',[
     ['meteoswiss','MS','#d52b1e','MeteoSchweiz','Wetterprognose und eigenes Wetterarchiv aus dem Modell ICON-CH (Temperatur, Wind, Niederschlag, Neuschnee, Sonne, Bewölkung), Messstationen','Open Government Data · Quelle: MeteoSchweiz','https://opendata.swiss/de/organization/bundesamt-fur-meteorologie-und-klimatologie-meteoschweiz'],
     ['openmeteo','OM','#ff8800','Open-Meteo','Höhenwind und Lücken, die MeteoSchweiz noch nicht abdeckt','Weather data by Open-Meteo.com · CC BY 4.0','https://open-meteo.com/en/license'],
-    ['slf','SLF','#0067b1','SLF','Lawinenbulletin, IMIS-Messstationen','WSL-Institut für Schnee- und Lawinenforschung SLF · CC BY 4.0','https://www.slf.ch/'],
-    ['snowpack','SP','#3b6ea8','SNOWPACK / MeteoIO','Schneedeckenmodell für die Skiqualität (läuft auf unseren Servern)','SLF · GNU LGPL 3.0','https://www.slf.ch/en/services-and-products/snowpack/']]],
+    ['slf','SLF','#0067b1','SLF','Lawinenbulletin, IMIS-Messstationen','WSL-Institut für Schnee- und Lawinenforschung SLF · CC BY 4.0','https://www.slf.ch/']]],
   ['Orte & Webcams',[
     ['geonames','GN','#2e7d32','GeoNames','Gipfel- und Ortsnamen der Touren','CC BY 4.0','https://www.geonames.org/'],
     ['windy','W','#9d0300','windy.com','Webcams','Bilder © windy.com und die Betreiber der Webcams','https://www.windy.com/webcams']]],
@@ -20066,7 +20219,7 @@ const DRAW_PENS={
  drift:{id:'drift',label:'Triebschnee',color:_wind(3),kind:'zone',slider:{label:'Mächtigkeit',min:5,max:SNOW_CM_MAX,step:5,unit:' cm',val:20}},
  scoured:{id:'scoured',label:'Abgeweht',color:_wind(1),kind:'zone',dash:[24,20]},
  compact:{id:'compact',label:'Kompakt',color:'#8aa0c8',kind:'zone'},
- facet:{id:'facet',label:'Kantig (lockerer Altschnee)',color:_ski6(11),kind:'zone',slider:{label:'Tiefe',min:1,max:SNOW_CM_MAX,step:1,unit:' cm',val:15}},
+ facet:{id:'facet',label:'Altpulver',color:_ski6(11),kind:'zone',slider:{label:'Tiefe',min:1,max:SNOW_CM_MAX,step:1,unit:' cm',val:15}},
  thin:{id:'thin',label:'Dünn – Steine',color:_ski6(10),kind:'zone'},
  nosnow:{id:'nosnow',label:'Kein Schnee',color:'#e0483c',kind:'zone',dash:[9,16]},
  // One route pen: each segment is coloured from the DEM, so the app decides
@@ -21395,6 +21548,8 @@ function feedOpenView(){const b=map.getBounds();feedViewB=[b.getSouth(),b.getWes
   feedViewIds=new Set(_rptShown.filter(r=>b.contains([r.lat,r.lng])).map(r=>String(r.id)));
   _feedFromMap={c:map.getCenter(),z:map.getZoom()};
   feedRegion='view';try{localStorage.setItem('ssm_feed_region','');}catch(e){}
+  // every kind: the pill counted them all
+  feedFilter='all';
   try{if(feedScope!=='all')feedSetScope('all');}catch(e){}
   navGo('feed');setTimeout(()=>{try{feedRegionsRender();feedTopRender();}catch(e){}feedRender();},0);}
 let _fhRaf=0;
@@ -21831,6 +21986,9 @@ function feedDetailsHTML(r){const cd=r.condition_data||{},rows=[];
   if(!rows.length)return '';
   return '<div class="fc-det">'+rows.map(x=>'<div><span>'+escapeHtml(x[0])+'</span><b>'+escapeHtml(String(x[1]))+'</b></div>').join('')+'</div>';}
 function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)return;
+  // inside the list, right under the header: always in view (above it, the
+  // iPhone's status bar could cover it)
+  try{const sc=document.querySelector('#feedPage .feed-scroll');if(sc&&b.parentElement!==sc)sc.insertBefore(b,sc.firstChild);}catch(e){}
   if(feedScope==='user'&&feedUserId){b.style.display='flex';
     b.innerHTML='<span class="fab-tour fab-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.8"/><path d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0"/></svg>'+escapeHtml(feedUserName||'Beiträge')+'</span>'
       +'<button type="button" onclick="feedSetScope(\'all\')" aria-label="Alle Beiträge">×</button>';return;}
@@ -21842,7 +22000,8 @@ function feedTourBar(){const b=document.getElementById('feedAnchorBar');if(!b)re
       +'<button type="button" onclick="feedBack()" aria-label="Zurück">×</button>';return;}
   if(b.querySelector('.fab-user')){b.style.display='none';b.innerHTML='';}
   if(feedScope==='tours'&&feedTour){b.style.display='flex';
-    b.innerHTML='<span class="fab-tour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-10 4 6 2-3 4 7z"/></svg>'+escapeHtml(feedTour.name)+'</span><button type="button" onclick="feedTour=null;feedTourBar();feedRender()">✕ alle Touren</button>';}
+    b.innerHTML='<span class="fab-tour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-10 4 6 2-3 4 7z"/></svg>Meldungen zu '+escapeHtml(feedTour.name)+'</span>'
+      +(_feedReturn?'<button type="button" onclick="feedBack()">‹ Zurück zur Tour</button>':'<button type="button" onclick="feedTour=null;feedTourBar();feedRender()">✕ alle Touren</button>');}
   else if(b.querySelector('.fab-tour')){b.style.display='none';b.innerHTML='';}}
 function feedSetScope(s){feedFocusId=null;if(s!=='tours')feedTour=null;if(s!=='user')feedUserId=null;feedScope=s;feedTourBar();if(s==='all')try{feedRender();}catch(e){}
   document.querySelectorAll('#feedScope button').forEach(b=>b.classList.toggle('active',b.dataset.s===s));
@@ -22033,6 +22192,10 @@ function feedRender(){
   const _merged=actMergedIds();
   let base=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r)&&!_merged.has(String(r.id)));
   if(!prefs.showMyReports&&sbUser)base=base.filter(r=>r.userId!==sbUser.id);
+  // «N Beiträge hier im Feed»: exactly the posts the map showed -- your own
+  // too (the map shows them; the setting above only thins the general feed)
+  const _view=feedScope==='all'&&feedRegion==='view'&&!!feedViewIds;
+  if(_view)base=allReports.filter(r=>feedViewIds.has(String(r.id))&&!_rptIsDraw(r)&&!_merged.has(String(r.id)));
   // someone's profile, opened from a post: every post of theirs, drawn maps too
   if(feedScope==='user')base=allReports.filter(r=>r.userId===feedUserId&&actVisible(r)&&!_merged.has(String(r.id)));
   if(feedScope==='here'){
@@ -22061,7 +22224,7 @@ function feedRender(){
   const main=['all','here','following'].includes(feedScope);
   let filtered=base;_feedLast=[];_feedMapAll=[];
   if(main){const n0=filtered.length;filtered=feedRegionFilter(filtered);
-    if(feedFriendsOn()){filtered=filtered.filter(feedIsFriend);
+    if(feedFriendsOn()&&!_view){filtered=filtered.filter(feedIsFriend);
       if(!filtered.length){_feedMapAll=[];feedKindsRender({all:0});
         list.innerHTML='<div class="feed-empty">Von deinen Freunden gibt es '+(feedRegion?'in «'+escapeHtml(feedRegionLabel())+'» ':'')
           +'gerade keine Beiträge. Freunde sind Leute, denen du folgst und die dir folgen.</div>'
