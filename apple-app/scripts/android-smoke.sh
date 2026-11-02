@@ -20,7 +20,9 @@ a() {  # adb with one reconnect-and-retry
   adb "$@" && return 0
   adb get-state 2>/dev/null | grep -q device && return 1
   echo "(adb lost the device -- reconnecting)"
-  device_back && adb "$@"
+  # bounded: a device that never comes back must end the run with the
+  # "emulator is gone" message below, not hang until the job times out
+  device_back && timeout 120 adb "$@"
 }
 
 adb wait-for-device
