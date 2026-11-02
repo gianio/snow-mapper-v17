@@ -549,10 +549,28 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
                           end_date=(c + timedelta(days=days_each_side)).isoformat())
             print(f"[INT] Open-Meteo {'Archiv' if arch else 'Forecast'}, {len(lats)} Punkte.")
         else:
-            cl = OpenMeteoClient(OPEN_METEO_URL, model=OPEN_METEO_MODEL)
-            fc = _om_fetch_cached(lambda: cl.fetch(lats, lons, past_days=days_each_side,
-                                                   forecast_days=days_each_side + 1), lats, lons)
-            print(f"[INT] Open-Meteo Forecast (heute +/-{days_each_side}d), {len(lats)} Punkte.")
+            # a longer pause between the 15-point blocks: the free API's
+            # per-minute limit is what a 300-point build runs into
+            cl = OpenMeteoClient(OPEN_METEO_URL, model=OPEN_METEO_MODEL, pause_between_chunks_s=3.0)
+            try:
+                fc = _om_fetch_cached(lambda: cl.fetch(lats, lons, past_days=days_each_side,
+                                                       forecast_days=days_each_side + 1), lats, lons)
+                print(f"[INT] Open-Meteo Forecast (heute +/-{days_each_side}d), {len(lats)} Punkte.")
+            except Exception as e:                  # noqa: BLE001
+                # Open-Meteo unreachable and nothing stored: MeteoSwiss alone
+                # (its archive and newest run), on the hours it really covers
+                fc = None
+                try:
+                    from pipeline import ogd_site
+                    d0 = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days_each_side)
+                    fc = ogd_site.forecast(os.environ.get("SNOWMAPPER_OGD_SITE"), os.environ.get("SNOWMAPPER_WX_ARCHIVE"),
+                                           lats, lons, _sample(dem, pts, shape), d0, d0 + timedelta(hours=horizon - 1))
+                except Exception as e2:             # noqa: BLE001
+                    print(f"[INT] MeteoSchweiz-Rueckfall nicht moeglich: {type(e2).__name__}: {e2}")
+                if not fc:
+                    raise e
+                print(f"[INT] Open-Meteo nicht erreichbar ({type(e).__name__}) -- Wetter nur von MeteoSchweiz: "
+                      f"{fc[0].time[0]} bis {fc[0].time[-1]} ({len(fc[0].time)} h), {len(fc)} Punkte.")
 
     times, temp_m, prec_m, snow_m, wspd_m, wdir_m, sun_m, elev_pt = _hourly(fc, horizon)
     T = len(times)
