@@ -6185,6 +6185,17 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .qs-ph svg{width:20px;height:20px}
  .qs-ph.has{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
  .qs-post{flex:1;height:46px;border:0;border-radius:13px;background:var(--accent);color:#fff;font:800 15px var(--font);cursor:pointer}
+.qs-cm{display:flex;align-items:center;gap:6px;height:46px;padding:0 14px;border:1px solid var(--hair);border-radius:13px;background:var(--fill);color:var(--fg);font:700 13px var(--font);cursor:pointer}
+.qs-cm svg{width:18px;height:18px}.qs-cm.on{border-color:var(--accent);color:var(--accent)}
+.qs-cmt{margin-top:12px}.qs-cmt[hidden],.qs-thumbs[hidden]{display:none}
+.qs-cmt textarea{width:100%;box-sizing:border-box;border:1px solid var(--hair);border-radius:12px;padding:10px 12px;font:500 15px var(--font);background:var(--card);color:var(--fg);resize:vertical}
+.qs-thumbs{display:flex;gap:8px;overflow-x:auto;margin-top:12px;padding-bottom:2px}
+.qs-th{position:relative;flex:none;width:64px;height:64px;border-radius:12px;background-size:cover;background-position:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.qs-th button{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font:700 14px/1 system-ui;cursor:pointer}
+.qs-danger{margin-top:14px;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,#A83A2E 8%,var(--card));border:1px solid color-mix(in srgb,#A83A2E 25%,transparent)}
+.qs-danger>span{display:block;font:700 13px var(--font);color:#A83A2E;margin-bottom:8px}
+.qs-dg-b{display:flex;gap:6px;flex-wrap:wrap}
+.qs-dg-b button{flex:1;min-width:84px;height:36px;border-radius:10px;border:1px solid color-mix(in srgb,#A83A2E 30%,transparent);background:var(--card);color:var(--fg);font:700 13px var(--font);cursor:pointer}
  .qs-post:disabled{opacity:.5}
  .qs-pin{width:34px;height:34px;border-radius:50%;background:rgba(224,36,94,.22);display:grid;place-items:center;cursor:grab}
  .qs-pin i{width:16px;height:16px;border-radius:50%;background:#E0245E;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
@@ -13504,6 +13515,7 @@ function progZones(){
       const q=cd.powderQuality,cm=cd.powderAmountCm==null?null:cd.powderAmountCm;
       let ty='powder';
       if(q!=null){ty=q<20?'windpressed':(q<40?'suncrust':(q<60?'wet':'powder'));}
+      if(cd.snow==='trieb')ty='drift';
       const z=progZoneFromPoint(r,ty,cm,0.4);z.w=w;out.push(z);return;}
     if(useRep){
       const ty=progTypeFromText((r.sub||'')+' '+(r.measurement||'')+' '+(r.caption||''));
@@ -17192,6 +17204,8 @@ const CAT_SVG={
   tour:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l7-10 4 5 7-11"/><circle cx="17" cy="4" r="2"/><path d="M14 20l3-4 4 4"/></svg>',
   info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r=".5" fill="currentColor" stroke="none"/></svg>'
 };
+CAT_SVG.wind_slab=CAT_SVG.wind_slab||'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h10a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3 13h14a2.5 2.5 0 1 1-2.5 2.5"/><path d="M4 20c3-2.5 6-3 9-1.5s5 .5 7-1"/></svg>';
+CAT_SVG.avalanche=CAT_SVG.avalanche||CAT_SVG.danger;CAT_SVG.whumpf=CAT_SVG.whumpf||CAT_SVG.danger;
 const CAT_COLORS={snow:'#3E7C8C',route:'#4A7A3F',danger:'#A83A2E',tour:'#7A4E86',info:'#C08A2E',avalanche:'#A83A2E',whumpf:'#B4552A',wind_slab:'#2A8FD8',other:'#0F3E80'};
 const CAT_BG={snow:'linear-gradient(135deg,#e3f2fd,#bbdefb)',route:'linear-gradient(135deg,#e8f5e9,#c8e6c9)',danger:'linear-gradient(135deg,#fce4ec,#f8bbd0)',tour:'linear-gradient(135deg,#f3e5f5,#e1bee7)',info:'linear-gradient(135deg,#fff3e0,#ffe0b2)',avalanche:'linear-gradient(135deg,#fce4ec,#f8bbd0)',whumpf:'linear-gradient(135deg,#fff3e0,#ffe0b2)',wind_slab:'linear-gradient(135deg,#e0f2f1,#b2dfdb)',other:'linear-gradient(135deg,#e3f2fd,#bbdefb)'};
 // new SLF report-type icons reuse existing glyphs
@@ -18854,6 +18868,7 @@ const QS_HATCH='repeating-linear-gradient(135deg,#d62828 0 1.4px,transparent 1.4
 const QS_TYPES=[
   {k:'pulver',l:'Pulver',c:'#42a5f5',q:85,depth:true},
   {k:'kantig',l:'Lockerer Altschnee (kantig)',c:'rgb(176,162,212)',q:62,depth:true},
+  {k:'trieb',l:'Triebschnee',c:'#0d9488',q:30,depth:true,cat:'wind_slab'},
   {k:'sulz',l:'Sulz',c:'rgb(226,170,72)',q:55},
   {k:'nass',l:'Nass / faul',c:'rgb(150,104,74)',q:45},
   {k:'kruste',l:'Kruste',c:'rgb(214,108,98)',q:30},
@@ -18867,7 +18882,8 @@ const QS_QUAL={
   hart:{t:'Griffigkeit',l:['griffig – guter Halt','fest','eisig'],s:['griffig','fest','eisig'],c:['#9cc29a','#9ca8b8','#6fb0e0'],q:[16,10,4]},
   kruste:{t:'Deckel',l:['sehr dünn','dünn','bricht durch','trägt'],s:['sehr dünn','dünn','bricht','trägt'],c:['#f2c7c2','#e08c84','#c4574e','#8e2f28'],crust:['thin','thin','breaks','carries']},
   nass:{t:'Wie nass?',l:['dünne Sulzschicht','weich','faul','sehr faul – Ski sinkt ein'],s:['dünn sulzig','weich','faul','sinkt ein'],c:['#e9cf9e','#cfa26e','#a8754c','#6e4a30'],q:[52,46,38,28]},
-  kantig:{t:'Wie ist er?',l:['noch fluffig','schon gesetzt','zügig – schnell'],s:['fluffig','gesetzt','zügig'],c:['#ddd3f2','#b0a2d4','#8a78b8'],q:[70,60,50]}};
+  kantig:{t:'Wie ist er?',l:['noch fluffig','schon gesetzt','zügig – schnell'],s:['fluffig','gesetzt','zügig'],c:['#ddd3f2','#b0a2d4','#8a78b8'],q:[70,60,50]},
+  trieb:{t:'Wie ist er?',l:['weich, frisch verfrachtet','gebunden','hart gepresst'],s:['weich','gebunden','hart'],c:['#9fdcd4','#3fb0a3','#0b6f65'],q:[40,30,18]}};
 const QS_DEPTH=[[1,5,'#c2e5c4'],[5,10,'#95cf99'],[10,20,'#66bb6a'],[20,30,'#42a5f5'],[30,50,'#1e88e5'],[50,null,'#1565c0']];
 const QS_ROW=44;
 let qs=null,qsMarker=null,_qsWT=0;
@@ -18876,7 +18892,7 @@ function qsOpen(){
   // always on the map screen, centred on where you are (GPS below)
   try{if(document.body.getAttribute('data-screen')!=='search')navGo('map');}catch(e){}
   try{if(typeof is3d!=='undefined'&&is3d)close3D();}catch(e){}
-  qs={type:0,depth:2,ll:null,acc:null,moved:false,photo:null,busy:false,tracks:null,qual:{},qualSet:{}};
+  qs={type:0,depth:2,ll:null,acc:null,moved:false,photos:[],comment:'',busy:false,tracks:null,qual:{},qualSet:{}};
   // opened from a tour («Melden» on its sheet): the point starts on its summit
   // and the report is tagged with it; GPS takes over only when you are on it
   const tl=rptTourLock&&rptTourSel?tourList().find(t=>String(t.id)===String(rptTourSel.id)):null;
@@ -18901,8 +18917,15 @@ function qsOpen(){
     +'<div class="qs-ticks" id="qsQualTk"></div></div>'
     +'<div class="qs-trk"><div class="qs-lbl">Spuren</div><div class="qs-seg">'
     +TRK_TRACKS.map(([k,l])=>'<button type="button" data-k="'+k+'" onclick="qsSet(\'tracks\',\''+k+'\',this)">'+escapeHtml(l)+'</button>').join('')+'</div></div>'
-    +'<div class="qs-acts"><label class="qs-ph" id="qsPh" aria-label="Foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/></svg>'
-    +'<span>Foto</span><input type="file" accept="image/*" hidden onchange="qsPhoto(this)"></label>'
+    // a comment, if there is more to say
+    +'<div class="qs-cmt" id="qsCmtBox" hidden><textarea id="qsCmt" rows="2" maxlength="1000" placeholder="Was war los? Hang, Gruppe, Verhältnisse …" oninput="if(qs)qs.comment=this.value"></textarea></div>'
+    +'<div class="qs-thumbs" id="qsThumbs" hidden></div>'
+    // danger signs and avalanches have their own, fuller report
+    +'<div class="qs-danger"><span>Lawine oder Gefahrenzeichen gesehen?</span><div class="qs-dg-b">'
+    +'<button type="button" onclick="qsToObs(\'avalanche\')">Lawine</button><button type="button" onclick="qsToObs(\'whumpf\')">Wumm / Risse</button><button type="button" onclick="qsToObs(\'wind_slab\')">Triebschnee</button></div></div>'
+    +'<div class="qs-acts"><label class="qs-ph" id="qsPh" aria-label="Fotos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/></svg>'
+    +'<span id="qsPhN">Foto</span><input type="file" accept="image/*" multiple hidden onchange="qsPhoto(this)"></label>'
+    +'<button type="button" class="qs-cm" id="qsCm" onclick="qsCmtToggle()" aria-label="Kommentar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span>Text</span></button>'
     +'<button type="button" class="qs-post" id="qsPost" onclick="qsPost()" disabled>Posten</button></div></div>';
   el.classList.add('open');document.body.classList.add('qs-open');try{navSync();}catch(e){}
   qsDepth(2);qsCrossOn();
@@ -18992,9 +19015,22 @@ function qsQualSet(i){if(!qs)return;const k=QS_TYPES[qs.type].k;if(!QS_QUAL[k])r
 function qsDepth(i){if(!qs)return;qs.depth=i;const d=QS_DEPTH[i],v=document.getElementById('qsDepV');
   if(v)v.textContent=(d[1]==null?d[0]+'+':d[0]+'–'+d[1])+' cm';
   const r=document.getElementById('qsRange');if(r){r.value=i;r.style.setProperty('--qs-thumb',d[2]);}}
-function qsPhoto(inp){if(!qs||!inp.files||!inp.files[0])return;qs.photo=inp.files[0];inp.value='';
-  const ph=document.getElementById('qsPh');if(ph){ph.classList.add('has');ph.style.backgroundImage='url('+JSON.stringify(URL.createObjectURL(qs.photo))+')';}
-  try{haptic(4);}catch(e){}}
+// photos: several, each with an × to take it out again (up to 6)
+function qsPhoto(inp){if(!qs||!inp.files||!inp.files.length)return;
+  [...inp.files].forEach(f=>{if(qs.photos.length<6&&/^image\//.test(f.type||'image/'))qs.photos.push(f);});inp.value='';
+  if(inp.files&&inp.files.length&&qs.photos.length>=6)toastOnce('qs6','Bis zu 6 Fotos pro Meldung.');
+  qsThumbs();try{haptic(4);}catch(e){}}
+function qsThumbs(){if(!qs)return;const box=document.getElementById('qsThumbs'),ph=document.getElementById('qsPh'),n=document.getElementById('qsPhN');
+  if(box){box.hidden=!qs.photos.length;box.innerHTML=qs.photos.map((f,i)=>{if(!f._u)f._u=URL.createObjectURL(f);
+    return '<span class="qs-th" style="background-image:url(\''+f._u+'\')"><button type="button" onclick="qsPhotoDel('+i+')" aria-label="Foto entfernen">×</button></span>';}).join('');}
+  if(n)n.textContent=qs.photos.length?'+ Foto':'Foto';if(ph)ph.classList.toggle('more',!!qs.photos.length);}
+function qsPhotoDel(i){if(!qs)return;const f=qs.photos.splice(i,1)[0];try{if(f&&f._u)URL.revokeObjectURL(f._u);}catch(e){}qsThumbs();}
+function qsCmtToggle(){const b=document.getElementById('qsCmtBox');if(!b)return;b.hidden=!b.hidden;
+  const c=document.getElementById('qsCm');if(c)c.classList.toggle('on',!b.hidden);
+  if(!b.hidden){const t=document.getElementById('qsCmt');if(t)setTimeout(()=>t.focus(),50);}}
+// to the full report for an avalanche or a danger sign, at the same point
+function qsToObs(type){const ll=qs&&qs.ll?qs.ll.slice():null,cm=qs?qs.comment:'';qsClose();
+  try{obsOpen();obsStart(type);if(ll&&obsState){obsApplyLoc(ll[0],ll[1],'map');if(cm)obsState.comment=cm;obsRender();}}catch(e){}}
 async function qsPost(){if(!qs||qs.busy||!qs.ll)return;
   qs.busy=true;const btn=document.getElementById('qsPost');if(btn){btn.disabled=true;btn.textContent='Postet…';}
   try{
@@ -19010,12 +19046,16 @@ async function qsPost(){if(!qs||qs.busy||!qs.ll)return;
     const tour=tourPickTake();if(tour)cd.tour=tour;
     // what feeds the reported-powder model (thin cover says nothing about the surface)
     if(t.q!=null){cd.quick=true;cd.powderQuality=(qv!=null&&Q.q)?Q.q[qv]:t.q;cd.powderAmountCm=cm;cd.powder=t.k==='pulver';}
-    const row={user_id:sbUser.id,location:'POINT('+lon+' '+lat+')',elevation_m:cd.altitudeM,primary_categories:['snow'],subtype:'Schnellmeldung',
-      condition_data:cd,caption:null,completion_score:qs.photo?60:40,captured_at:new Date().toISOString()};
-    if(qs.photo){const up=await downscaleImage(qs.photo),path=sbUser.id+'/'+Date.now()+'.jpg';
-      const{error:upErr}=await sb.storage.from('report-images').upload(path,up,{cacheControl:'31536000',contentType:up.type||'image/jpeg'});
-      if(upErr)throw upErr;
-      const{data:ud}=sb.storage.from('report-images').getPublicUrl(path);row.image_url=ud&&ud.publicUrl||null;await withThumb(row,qs.photo);}
+    const cmt=(qs.comment||'').trim().slice(0,1000);
+    const row={user_id:sbUser.id,location:'POINT('+lon+' '+lat+')',elevation_m:cd.altitudeM,primary_categories:[t.cat||'snow'],subtype:'Schnellmeldung',
+      condition_data:cd,caption:cmt||null,completion_score:qs.photos.length?60:40,captured_at:new Date().toISOString()};
+    // every photo goes up; the first is the post's picture, all of them its slider
+    if(qs.photos.length){const urls=[];
+      for(let i=0;i<qs.photos.length;i++){const f=qs.photos[i],up=await downscaleImage(f),path=sbUser.id+'/'+Date.now()+'_'+i+'.jpg';
+        const{error:upErr}=await sb.storage.from('report-images').upload(path,up,{cacheControl:'31536000',contentType:up.type||'image/jpeg'});
+        if(upErr){if(!urls.length)throw upErr;continue;}
+        const{data:ud}=sb.storage.from('report-images').getPublicUrl(path);if(ud&&ud.publicUrl)urls.push(ud.publicUrl);}
+      row.image_url=urls[0]||null;if(urls.length>1)cd.images=urls;await withThumb(row,qs.photos[0]);}
     const{error}=await sb.from('reports').insert(row);if(error){if(tour){rptTourSel=tour;rptTourLock=true;}throw error;}
     qs.posted=true;toast('Schnellmeldung gepostet – danke!','ok');try{haptic(12);}catch(e){}qsClose();loadDbReports();
   }catch(e){toast('Posten fehlgeschlagen: '+(e.message||e),'err');if(qs){qs.busy=false;if(btn){btn.disabled=false;btn.textContent='Posten';}}}}
