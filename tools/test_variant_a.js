@@ -26,10 +26,12 @@ function grab(name) {
 function grabConst(name) {
   const i = src.indexOf('const ' + name + '=');
   if (i < 0) throw new Error(name + ' not found in app.js');
+  // an object or an array literal, whichever opens it
+  const k0 = i + ('const ' + name + '=').length, open = src[k0], close = open === '[' ? ']' : '}';
   let d = 0;
-  for (let k = src.indexOf('{', i); k < src.length; k++) {
-    if (src[k] === '{') d++;
-    else if (src[k] === '}') { d--; if (!d) return src.slice(i, k + 1) + ';'; }
+  for (let k = open === '[' ? k0 : src.indexOf('{', i); k < src.length; k++) {
+    if (src[k] === open) d++;
+    else if (src[k] === close) { d--; if (!d) return src.slice(i, k + 1) + ';'; }
   }
   throw new Error(name + ' unbalanced');
 }
@@ -90,6 +92,7 @@ const fn = new Function(...Object.keys(sandbox),
   grab('vaProfileAt') + '\n' + grab('vaProfileHTML') + '\n'
   + grab('vaDataNote') + '\n' + grab('vaNoteHTML') + '\n'
   + grabConst('VA_GRAIN_ICON') + '\n' + grabConst('VA_GRAIN_DE') + '\n' + grab('vaGrainIcon') + '\n'
+  + grabConst('VA_MIX') + '\n' + grab('vaMixHTML') + '\n'
   + grab('vaProfIndex') + '\n' + grab('vaWpNearest') + '\n'
   + grab('vaWpLoad') + '\n' + grab('vaMatrixAt') + '\n'
   + 'function __setIdx(x){vaIdx=x;}'
@@ -202,6 +205,12 @@ console.log('\ngrain pictograms');
   const html = vaProfileHTML(vaProfileAt(46.80, 9.83, 2400, 0));
   check('the profile legend shows pictogram and code together',
         /<svg class="va-gi"[\s\S]*?<\/svg>RG/.test(html));
+  // under it, the cover in skier's words: shares of its height, summing to ~100
+  const pcts = [...html.matchAll(/<b>(\d+) %<\/b>/g)].map(m => +m[1]);
+  check('the profile says what the cover is made of in shares', pcts.length >= 1, pcts.join('+'));
+  const sum = pcts.reduce((x, y) => x + y, 0);
+  check('the shares add up to the whole cover', sum >= 97 && sum <= 103, String(sum));
+  check('the grain codes are folded away', /<details class="va-grain-more">/.test(html));
 }
 
 console.log('\nmodel-run date stamp');
