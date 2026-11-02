@@ -120,6 +120,17 @@ jobs:
           path: data/vendor_cache
           key: vendor-${{ hashFiles('pipeline/vendor.py') }}
 
+      # The last good Open-Meteo answer: when the free API turns the build
+      # server away (429, timeouts), the build uses it instead of failing
+      # (pipeline/interactive_export.py, _om_fetch_cached; at most 48 h old).
+      - name: Restore the last Open-Meteo answer
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          path: om_cache
+          key: om-cache-${{ github.run_id }}
+          restore-keys: om-cache-
+
       - name: Generate app shell + live data blob
         # Split build: small stable shell (index.html + app.js) + a separate
         # data/ blob behind latest.json, so daily data updates don't rebuild the
@@ -128,11 +139,20 @@ jobs:
         env:
           # optional: Windy Webcams API key for the webcam layer (public client key)
           WINDY_WEBCAMS_KEY: ${{ secrets.WINDY_WEBCAMS_KEY }}
+          SNOWMAPPER_OM_CACHE: ${{ github.workspace }}/om_cache/openmeteo.json.gz
         run: |
           mkdir -p dist
           python run_interactive.py --split --res 1000 --gz-only --out-dir dist
           touch dist/.nojekyll
           test -f dist/vendor/leaflet/leaflet.js || echo "::warning::libraries still from the CDN (npm registry not reachable)"
+
+      - name: Save the Open-Meteo answer
+        if: always() && hashFiles('om_cache/openmeteo.json.gz') != ''
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: om_cache
+          key: om-cache-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Save the library tarballs
         if: hashFiles('data/vendor_cache/*.tgz') != ''

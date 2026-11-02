@@ -144,6 +144,51 @@ def _grid_spline(lats, lons, shape, crs, grid_x, grid_y):
     return at
 
 
+def _om_fetch_cached(fetch, lats, lons, max_age_h: float = 48.0):
+    """Open-Meteo with the last good answer as a fallback.
+
+    The free API answers a busy build server with 429 / timeouts now and
+    then, and the whole deploy used to fail with it. With SNOWMAPPER_OM_CACHE
+    set (deploy.yml keeps it in the Actions cache), every good answer is
+    stored there; when the fetch fails, an answer up to `max_age_h` old for
+    the same points is used instead -- the MeteoSwiss hours laid over it
+    afterwards (pipeline/ogd_site.py) keep the recent and coming hours fresh.
+    Without the variable, or without a usable stored answer, the error stands."""
+    import dataclasses
+    import gzip
+    import time as _time
+    from data_connectors.open_meteo_client import PointForecast
+    path = os.environ.get("SNOWMAPPER_OM_CACHE")
+    try:
+        fc = fetch()
+    except Exception as e:                          # noqa: BLE001
+        p = Path(path) if path else None
+        if not p or not p.exists():
+            raise
+        try:
+            d = json.loads(gzip.decompress(p.read_bytes()))
+            age_h = (_time.time() - float(d["saved"])) / 3600.0
+            pts = d["points"]
+            same = (len(pts) == len(lats) and
+                    all(abs(q["latitude"] - la) < 0.05 and abs(q["longitude"] - lo) < 0.05
+                        for q, la, lo in zip(pts, lats, lons)))
+        except Exception:                           # noqa: BLE001
+            raise e
+        if age_h > max_age_h or not same:
+            raise
+        print(f"[INT] Open-Meteo nicht erreichbar ({type(e).__name__}: {str(e)[:80]}) -- "
+              f"letzte gute Antwort von vor {age_h:.1f} h verwendet.")
+        return [PointForecast(**q) for q in pts]
+    if path:
+        try:
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
+            Path(path).write_bytes(gzip.compress(json.dumps(
+                {"saved": _time.time(), "points": [dataclasses.asdict(f) for f in fc]}).encode()))
+        except Exception as e:                      # noqa: BLE001
+            print(f"[INT] Open-Meteo-Cache nicht geschrieben: {e}")
+    return fc
+
+
 def _hourly(fc, hours):
     T = min(hours, min(len(f.time) for f in fc))
     g = lambda a: np.array([getattr(f, a)[:T] for f in fc], dtype="float64")
@@ -505,7 +550,8 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
             print(f"[INT] Open-Meteo {'Archiv' if arch else 'Forecast'}, {len(lats)} Punkte.")
         else:
             cl = OpenMeteoClient(OPEN_METEO_URL, model=OPEN_METEO_MODEL)
-            fc = cl.fetch(lats, lons, past_days=days_each_side, forecast_days=days_each_side + 1)
+            fc = _om_fetch_cached(lambda: cl.fetch(lats, lons, past_days=days_each_side,
+                                                   forecast_days=days_each_side + 1), lats, lons)
             print(f"[INT] Open-Meteo Forecast (heute +/-{days_each_side}d), {len(lats)} Punkte.")
 
     times, temp_m, prec_m, snow_m, wspd_m, wdir_m, sun_m, elev_pt = _hourly(fc, horizon)
