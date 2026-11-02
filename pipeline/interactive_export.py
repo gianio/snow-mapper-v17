@@ -19508,8 +19508,18 @@ async function viewUser(uid,username){
   // them here as well doubled every query of the profile view.
 }
 // --- Swiss/DSG data rights: export + delete + legal re-show ---
+// Everything stored about you, as one file (Art. 25/28 DSG): the database
+// assembles it (my_data_export, supabase/migrations/20261102000000_privacy.sql)
+// -- profile, private details, posts, comments, messages, favourites, blocks,
+// feedback. Without that function the app gathers what it can read itself.
 async function profExportData(btn){if(!sb||!sbUser)return;
   const orig=btn?btn.textContent:'';if(btn){btn.disabled=true;}
+  const save=out=>{const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+    const a2=document.createElement('a');a2.href=URL.createObjectURL(blob);
+    a2.download='snowmapper-meine-daten-'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a2);a2.click();a2.remove();setTimeout(()=>{try{URL.revokeObjectURL(a2.href);}catch(e){}},4000);};
+  try{const{data,error}=await sb.rpc('my_data_export');
+    if(!error&&data){save(data);toast('Deine Daten sind heruntergeladen.','ok');if(btn){btn.disabled=false;btn.textContent=orig;}return;}}catch(e){}
   try{
     const uid=sbUser.id,out={exported_at:new Date().toISOString(),user_id:uid,email:sbUser.email};
     const grab=async(tbl,col)=>{try{const{data}=await sb.from(tbl).select('*').eq(col||'user_id',uid);return data||[];}catch(e){return [];}};
@@ -19520,11 +19530,14 @@ async function profExportData(btn){if(!sb||!sbUser)return;
     out.condition_ratings=await grab('report_conditions');
     out.flags=await grab('report_flags');
     try{const{data:f}=await sb.from('follows').select('*').eq('follower_id',uid);out.follows=f||[];}catch(e){out.follows=[];}
-    const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
-    const a2=document.createElement('a');a2.href=URL.createObjectURL(blob);
-    a2.download='firn-daten-'+new Date().toISOString().slice(0,10)+'.json';
-    document.body.appendChild(a2);a2.click();a2.remove();
-    toast('Datenexport erstellt.','ok');
+    out.private=(await grab('profile_private','id'))[0]||null;
+    out.registration=sbUser.user_metadata||null;
+    out.favorites=await grab('favorites');
+    out.feedback=await grab('feedback');
+    try{const{data:t}=await sb.from('dm_threads').select('*').or('user_a.eq.'+uid+',user_b.eq.'+uid);out.message_threads=t||[];
+      const ids=(t||[]).map(x=>x.id);if(ids.length){const{data:m}=await sb.from('dm_messages').select('*').in('thread_id',ids);out.messages=m||[];}}catch(e){}
+    save(out);
+    toast('Deine Daten sind heruntergeladen.','ok');
   }catch(e){toast('Export fehlgeschlagen: '+(e.message||e),'err');}
   if(btn){btn.disabled=false;btn.textContent=orig;}}
 function profShowLegal(){profClose();const el=document.getElementById('disc');if(el)el.classList.add('show');
@@ -19604,13 +19617,30 @@ async function profDeleteAccount(btn){if(!sb||!sbUser)return;
       else fnMsg=(error&&error.message)||(data&&data.error)||'';
     }catch(e){fnMsg=e.message||String(e);}
     if(fnOk){done('Dein Konto und alle Inhalte wurden gelöscht.');return;}
-    // Fallback: remove everything the client is allowed to remove. The login
-    // row survives, so do not pretend otherwise.
+    // Without the function: your photos through the Storage API (each person
+    // may delete their own files), then the login itself in the database
+    // (delete_my_account, supabase/migrations/20261102000000_privacy.sql) --
+    // that removes profile, posts, comments, messages and the private details.
+    try{await profDeleteMyFiles();}catch(e){}
+    try{const{error:dErr}=await sb.rpc('delete_my_account');
+      if(!dErr){done('Dein Konto und alle Inhalte wurden gelöscht.');return;}
+      fnMsg+=' / '+(dErr.message||'');}catch(e){fnMsg+=' / '+(e.message||e);}
+    // Last resort: remove everything the client is allowed to remove. The
+    // login row survives, so do not pretend otherwise.
     const{error}=await sb.from('profiles').delete().eq('id',sbUser.id);
     if(error)throw error;
     console.warn('delete-account function unavailable:',fnMsg);
     done('Deine Inhalte wurden gelöscht. Die Löschung des Logins ist angefordert.');
   }catch(e){toast('Löschen fehlgeschlagen: '+(e.message||e),'err');if(btn)btn.disabled=false;}}
+// your own photos: under <uid>/… and avatars/<uid>_… in report-images
+async function profDeleteMyFiles(){const uid=sbUser&&sbUser.id;if(!uid)return 0;
+  const B=sb.storage.from('report-images'),paths=[];
+  const walk=async(prefix,depth)=>{if(depth>3)return;const{data,error}=await B.list(prefix,{limit:1000});if(error||!data)return;
+    for(const e of data){const full=prefix+'/'+e.name;if(e.id==null)await walk(full,depth+1);else paths.push(full);}};
+  await walk(uid,0);
+  try{const{data}=await B.list('avatars',{limit:1000,search:uid+'_'});(data||[]).forEach(a=>{if(a.name.indexOf(uid+'_')===0)paths.push('avatars/'+a.name);});}catch(e){}
+  for(let i=0;i<paths.length;i+=100){try{await B.remove(paths.slice(i,i+100));}catch(e){}}
+  return paths.length;}
 function userViewClose(){document.getElementById('userViewModal').style.display='none';}
 let _usT=null;
 // --- Direct messages -----------------------------------------------------
