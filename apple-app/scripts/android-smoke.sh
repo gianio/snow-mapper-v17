@@ -16,8 +16,8 @@ device_back() {
   adb reconnect offline >/dev/null 2>&1
   timeout 90 adb wait-for-device >/dev/null 2>&1
 }
-a() {  # adb with one reconnect-and-retry
-  adb "$@" && return 0
+a() {  # adb with one reconnect-and-retry; never waits forever for a lost device
+  timeout 180 adb "$@" && return 0
   adb get-state 2>/dev/null | grep -q device && return 1
   echo "(adb lost the device -- reconnecting)"
   # bounded: a device that never comes back must end the run with the

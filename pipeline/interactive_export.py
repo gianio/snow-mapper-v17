@@ -6543,6 +6543,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
    background:rgba(255,255,255,.66)!important;background-image:none!important;
    -webkit-backdrop-filter:blur(20px) saturate(175%)!important;backdrop-filter:blur(20px) saturate(175%)!important;
    border-color:rgba(255,255,255,.6)!important}
+ /* Android app (WebView): see-through, but without the blur */
+ :root.and-wv[data-theme="light"] #tabBar,:root.and-wv[data-theme="light"] #bottomPanel{
+   background:rgba(255,255,255,.86)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
  :root[data-theme="light"] body:not(.desk) #bottomPanel{box-shadow:0 -6px 18px rgba(18,21,26,.06),inset 0 1px 0 rgba(255,255,255,.8)!important}
  .fc-depth{font:650 14px/1.3 var(--font)!important;font-variant-numeric:tabular-nums}
 </style>
@@ -6554,6 +6557,10 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 // says or was chosen before. The dark tokens stay in the CSS, unused.
 (function(){try{
   document.documentElement.setAttribute('data-theme','light');
+  // the Android app's WebView: no GPU blur behind the bars (the CI emulator
+  // died twice right after launch once the frosted bars were on)
+  var ua=navigator.userAgent||'';
+  if(/Android/.test(ua)&&/; wv\)/.test(ua))document.documentElement.classList.add('and-wv');
 }catch(e){}})();
 </script>
 </head><body>
