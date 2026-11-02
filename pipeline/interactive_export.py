@@ -4356,7 +4356,11 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .ts-lbl{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--fg2);margin-bottom:6px}
  .ts-lbl b{font:700 12.5px var(--mono);color:var(--fg)}
  .ts-range{width:100%;accent-color:var(--accent)}
- .ts-loc{margin-top:6px;border:1px solid var(--hair);background:var(--card);border-radius:999px;padding:6px 12px;font:700 12px Helvetica Neue,Helvetica,Arial,sans-serif;color:var(--accent);cursor:pointer}
+ .ts-pin i{display:block;width:30px;height:30px;border-radius:50%;background:var(--accent,#2A8FD8);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);box-sizing:border-box;cursor:grab}
+.ts-pin i::after{content:'';position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#fff}
+.ts-rh i{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#fff;border:2px solid var(--accent,#2A8FD8);color:var(--accent,#2A8FD8);font:800 14px/1 system-ui;box-shadow:0 2px 8px rgba(0,0,0,.3);box-sizing:border-box;cursor:ew-resize;font-style:normal}
+.ts-hint{font-size:11px;color:var(--fg2);margin-top:4px}
+.ts-loc{margin-top:6px;border:1px solid var(--hair);background:var(--card);border-radius:999px;padding:6px 12px;font:700 12px Helvetica Neue,Helvetica,Arial,sans-serif;color:var(--accent);cursor:pointer}
  .ts-dual{position:relative;height:26px}
  .ts-dual::before{content:'';position:absolute;left:0;right:0;top:11px;height:4px;border-radius:2px;background:var(--fill2)}
  .ts-dual i{position:absolute;top:11px;height:4px;border-radius:2px;background:var(--accent)}
@@ -5310,6 +5314,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  body.desk{--nav-h:0px}
  body.desk #tabBar{display:none!important}
  body.desk .tb-rec,body.desk [onclick*="trkOpen"],body.desk #trkPill,body.desk .trk-pill{display:none!important}
+ /* recording paused in the web app (TRK_WEB): no tab, no entry points */
+ body.no-trk .tb-rec,body.no-trk [onclick*="trkFromTour"]{display:none!important}
+ body.no-trk #tabBar{grid-template-columns:repeat(4,1fr)!important}
  body.desk #appBar{height:calc(var(--bar-h) + 6px);padding:0 18px 0 20px;gap:28px}
  body.desk .ab-tabs{display:flex;align-items:stretch;gap:4px;height:100%;margin-left:12px}
  .ab-tabs button{--tc:var(--c-blue);position:relative;border:0;background:none;padding:0 16px;cursor:pointer;color:var(--fg2);
@@ -7831,6 +7838,8 @@ const I18N_DICT={
 "Schnee-Karte zur Spur zeichnen":["Draw snow map for this track","Dessiner une carte de neige pour la trace","Disegna mappa neve per la traccia"],
 "Gilt für den markierten Punkt der Spur – tippe auf die Karte, um ihn zu verschieben.":["Applies to the marked point on the track – tap the map to move it.","S'applique au point marqué sur la trace – touche la carte pour le déplacer.","Vale per il punto segnato sulla traccia – tocca la mappa per spostarlo."],
 "Meine Aktivitäten":["My activities","Mes activités","Le mie attività"],
+"Noch keine Aufzeichnung.":["No recording yet.","Pas encore d'enregistrement.","Ancora nessuna registrazione."],
+"Aufzeichnen kommt mit der iPhone-App":["Recording comes with the iPhone app","L'enregistrement arrive avec l'app iPhone","La registrazione arriva con l'app per iPhone"],
 "Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.":["No recording yet – start one via «+» › Record.","Pas encore d'enregistrement – lance-en un via «+» › Enregistrer.","Ancora nessuna registrazione – avviane una con «+» › Registra."],
 "Neues Profilbild":["New profile picture","Nouvelle photo de profil","Nuova foto profilo"],
 "Profilbild gespeichert":["Profile picture saved","Photo de profil enregistrée","Foto profilo salvata"],
@@ -10892,7 +10901,8 @@ function tourScoreOld(t){
 // the SNOWPACK frame the timeline is on. The score is simply the share of
 // the descent (22-50°) that lies in powder -- or, with the Sulz focus, in
 // wet/Sulz snow. The colour on the map is that share.
-const TOUR_VA_STEP_M=200,TOUR_GREY=[156,168,184];
+// routes are dark blue (more powder: a brighter blue and a glow), with a thin white edge
+const TOUR_VA_STEP_M=200,TOUR_GREY=[24,52,128];
 // Powder on top is only skiable when there is enough snow under it: below
 // TOUR_HS_MIN cm of total snow the ground comes through and a stretch counts
 // nothing, from TOUR_HS_FULL cm on it counts fully, linearly in between.
@@ -10908,7 +10918,7 @@ function _lerpC(stops,v){v=Math.max(0,Math.min(100,v));
   return stops[stops.length-1][1];}
 function tourRamp(v,focus){const P=VA_PALETTE.ski6;
   const st=(focus||tourFocus)==='sulz'?[[0,TOUR_GREY],[8,[238,214,166]],[50,P[6]],[100,[166,106,24]]]
-                                     :[[0,TOUR_GREY],[10,[120,160,225]],[40,[40,90,200]],[75,[16,52,150]],[100,[8,28,96]]];
+                                     :[[0,TOUR_GREY],[40,[29,78,216]],[75,[37,99,235]],[100,[59,130,246]]];
   const c=_lerpC(st,v);return 'rgb('+c[0]+','+c[1]+','+c[2]+')';}
 function tourVal(r){return r?(tourFocus==='sulz'?r.sulz:r.powder):-1;}
 function tourColor(r){if(!r)return 'rgb('+TOUR_GREY.join(',')+')';return tourRamp(tourVal(r));}
@@ -11061,8 +11071,8 @@ function tourPaintScores(){
     const r=tourVa.eng?tourVa.scores.get(t.id):t._old;
     const vis=zok&&tourVisible(t),iso=tourIso&&tourIso!==t;
     const col=tourColor(r),v=r?tourVal(r):0;
-    t._line.setStyle({color:col,opacity:!vis?0:(iso?.12:.78)});
-    if(t._casing)t._casing.setStyle({opacity:!vis||iso?0:.55});
+    t._line.setStyle({color:col,opacity:!vis?0:(iso?.12:.9)});
+    if(t._casing)t._casing.setStyle({opacity:!vis||iso?0:.9});
     if(t._glow)t._glow.setStyle({color:'#5B9BFF',opacity:!vis||iso?0:(v>=40?.14:0)});});
 }
 let tourLayerGroup=null,tourRenderer=null;
@@ -11083,7 +11093,7 @@ function tourBuildLayer(){
     // a soft halo in the tour's own colour under everything: the good
     // ones glow
     const glow=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+6,opacity:0,interactive:false,lineCap:'round',lineJoin:'round'});
-    const casing=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+2,opacity:.55,interactive:false,lineCap:'round',lineJoin:'round'});
+    const casing=L.polyline(latlngs,{renderer:tourRenderer,color:'#fff',weight:w+2,opacity:.9,interactive:false,lineCap:'round',lineJoin:'round'});
     const line=L.polyline(latlngs,{renderer:tourRenderer,color:'rgb('+TOUR_GREY.join(',')+')',weight:w,opacity:.95,interactive:true,lineCap:'round',lineJoin:'round'});
     line.on('click',e=>{if(!tourZoomOk()||!tourVisible(t)||(tourIso&&tourIso!==t))return;
       try{if(e&&e.originalEvent)L.DomEvent.stopPropagation(e);}catch(_){}try{haptic(4);}catch(e2){}
@@ -11669,6 +11679,13 @@ function vt(fn){
 // kept awake while recording (Wake Lock), the running track survives a
 // reload, and a gap is simply a straight line. In the native app shell a
 // BackgroundGeolocation plugin is used when it is installed.
+// Recording is paused in the web app: a browser stops the GPS as soon as the
+// screen locks or the page is left, so a tour comes out in pieces. It stays
+// on in the iOS app (background location) -- set TRK_WEB=true to bring it
+// back in the browser. Recordings already made can still be opened.
+const TRK_WEB=false;
+function trkEnabled(){try{return TRK_WEB||!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());}catch(e){return TRK_WEB;}}
+try{if(!trkEnabled())document.body.classList.add('no-trk');}catch(e){}
 const TRK_ACC={
   hi:{label:'Hoch',sub:'jede Sekunde · genaueste Spur, mehr Akku',minDt:1000,minD:3,maxAcc:30,hiAcc:true},
   std:{label:'Normal',sub:'alle 5 s · empfohlen',minDt:5000,minD:8,maxAcc:40,hiAcc:true},
@@ -12213,6 +12230,7 @@ function trkLL(segs){return trkFlat(segs).map(p=>[p[1],p[2],p[3]]);}
 
 // -- UI ---------------------------------------------------------------------------
 function trkOpen(){
+  if(!trkEnabled()&&!trkRec&&!(trkView==='detail'&&trkCur)&&trkView!=='list'){toast('Aufzeichnen kommt mit der iPhone-App','info');return;}
   if(document.body.classList.contains('desk')){toast('Aufzeichnen gibt es auf dem Smartphone','');return;}
   try{fabMenu(false);}catch(e){}
   if(trkRec){trkView='rec';}else if(trkView!=='list'&&trkView!=='detail')trkView='setup';
@@ -12710,7 +12728,7 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
   // activities as circles, the same as the row above the tabs: the route
   // and the name are enough here, the numbers are one tap away
   const list=S.acts.length?'<div class="pv-hls pv-hls-all">'+S.acts.map((a,i)=>'<button class="pv-hl" onclick="pvOpenAct(\''+boxId+'\','+i+')"><span class="pv-hl-m" data-pvmap="'+a.id+'">'+pvMapImg(a)+'</span><span>'+escapeHtml(a.name)+'</span></button>').join('')+'</div>'
-    :'<div class="prof-hint">'+(me?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aktivitäten.')+'</div>';
+    :'<div class="prof-hint">'+(me?(trkEnabled()?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aufzeichnung.'):'Noch keine Aktivitäten.')+'</div>';
   box.innerHTML='<div class="pv-stats"><div><b>'+n(S.posts.length)+'</b><span>Beiträge</span></div><div><b>'+n(S.fol)+'</b><span>Follower</span></div><div><b>'+n(S.ing)+'</b><span>Folge ich</span></div><div><b>'+n(S.acts.length)+'</b><span>Aktivitäten</span></div><div><b>'+n(S.fb||0)+'</b><span>Feedbacks</span></div></div>'
     +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button class="pv-dm'+(_dmN>0?' unread':'')+'" data-dm onclick="profClose();dmOpen()">Nachrichten'+(_dmN>0?'<b>'+(_dmN>9?'9+':_dmN)+'</b>':'')+'</button>'
         +'<button class="pv-ic" aria-label="Gemerkt" title="Gemerkt" onclick="_feedReturn=openProfile;profClose();navGo(\'feed\');feedSetScope(\'saved\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>'
@@ -12780,7 +12798,7 @@ async function trkProfRender(){const el=document.getElementById('profActs');if(!
   el.innerHTML=list.length?list.slice(0,30).map(a=>{const s=a.stats||{};
     return '<button class="pa-card" onclick="profClose();trkCur=\''+a.id+'\';trkView=\'detail\';trkOpen()">'+trkThumb(trkLL(a.segs),160,100,'',a.rep)
       +'<b>'+escapeHtml(a.name)+'</b><small>'+new Date(a.start).toLocaleDateString(LOCALE(),{day:'numeric',month:'short'})+' · '+trkFmtD(s.dist||0)+' · ↑'+(s.up||0)+' m'+(a.vis==='private'?' · 🔒':'')+'</small></button>';}).join('')
-    :'<div class="prof-hint">Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.</div>';}
+    :'<div class="prof-hint">'+(trkEnabled()?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aufzeichnung.')+'</div>';}
 // a recording that was running when the page went away picks up again
 (function(){try{const s=JSON.parse(localStorage.getItem('ssm_rec')||'null');if(!s||!s.segs)return;
   trkRec=s;const fl=trkFlat(s.segs),last=fl[fl.length-1],lastT=Math.max(s._savedAt||0,last?last[0]:0,s.start||0),gap=Date.now()-lastT;
@@ -12802,11 +12820,12 @@ async function trkProfRender(){const el=document.getElementById('profActs');if(!
 // the routes that pass the filters. Distance is measured to the route's
 // lowest point -- where the tour starts.
 const tsF={focus:'powder',radius:25,gainMin:0,gainMax:2500,slope:new Set()};
+const TS_RMAX=200;
 // the filters stay as last set, from one visit to the next
 const TSF_KEY='ssm_tsf';
 try{const o=JSON.parse(localStorage.getItem(TSF_KEY)||'null');
   if(o){if(o.focus==='powder'||o.focus==='sulz')tsF.focus=o.focus;
-    if(o.radius>=5&&o.radius<=100)tsF.radius=+o.radius;
+    if(o.radius>=5&&o.radius<=TS_RMAX)tsF.radius=+o.radius;
     if(o.gainMin>=0&&o.gainMin<=2500)tsF.gainMin=+o.gainMin;
     if(o.gainMax>=100&&o.gainMax<=2500&&o.gainMax>tsF.gainMin)tsF.gainMax=+o.gainMax;
     if(Array.isArray(o.slope))o.slope.forEach(x=>tsF.slope.add(String(x)));}}catch(e){}
@@ -12816,9 +12835,32 @@ function tsSave(){try{localStorage.setItem(TSF_KEY,JSON.stringify({focus:tsF.foc
 const TS_SLOPE=[['lt30','< 30°',0,30],['30','30–35°',30,35],['35','35–40°',35,40],['40','40°+',40,99]];
 function tsIn(set,B,v){if(!set.size)return true;if(v==null)return true;
   return B.some(b=>set.has(b[0])&&v>=b[2]&&v<b[3]);}
-let tsCircle=null;
+let tsCircle=null,tsPinM=null,tsHandle=null,tsPin=null,_tsHDrag=false;
 function tsOpen(){return document.body.classList.contains('ts-open');}
-function tsCenter(){if(myLoc)return {lat:myLoc[0],lon:myLoc[1],me:true};const c=map.getCenter();return {lat:c.lat,lon:c.lng,me:false};}
+// The search starts at a point you can move: drag the pin, and pull the
+// handle on the circle's edge to make it larger or smaller.
+function tsCenter(){if(tsPin)return {lat:tsPin[0],lon:tsPin[1],me:false,pin:true};
+  if(myLoc)return {lat:myLoc[0],lon:myLoc[1],me:true};const c=map.getCenter();return {lat:c.lat,lon:c.lng,me:false};}
+function tsEdge(c,km){return [c.lat,c.lon+km/(111.32*Math.cos(c.lat*Math.PI/180))];}
+function tsDrawCircle(c){
+  if(!tsCircle)tsCircle=L.circle([c.lat,c.lon],{radius:tsF.radius*1000,color:'var(--accent)',weight:1.5,opacity:.7,fillOpacity:.05,interactive:false,dashArray:'4 6'}).addTo(map);
+  else{tsCircle.setLatLng([c.lat,c.lon]);tsCircle.setRadius(tsF.radius*1000);}
+  if(!tsPinM){tsPinM=L.marker([c.lat,c.lon],{draggable:true,zIndexOffset:2100,keyboard:false,title:'Punkt verschieben',
+      icon:L.divIcon({className:'ts-pin',html:'<i></i>',iconSize:[30,30],iconAnchor:[15,15]})}).addTo(map);
+    tsPinM.on('drag',e=>{const ll=e.target.getLatLng();tsCircle.setLatLng(ll);tsHandle.setLatLng(tsEdge({lat:ll.lat,lon:ll.lng},tsF.radius));});
+    tsPinM.on('dragend',e=>{const ll=e.target.getLatLng();tsPin=[ll.lat,ll.lng];try{haptic(6);}catch(_){}tsRender();});}
+  else tsPinM.setLatLng([c.lat,c.lon]);
+  if(!tsHandle){tsHandle=L.marker(tsEdge(c,tsF.radius),{draggable:true,zIndexOffset:2100,keyboard:false,title:'Umkreis ziehen',
+      icon:L.divIcon({className:'ts-rh',html:'<i>↔</i>',iconSize:[30,30],iconAnchor:[15,15]})}).addTo(map);
+    tsHandle.on('dragstart',()=>{_tsHDrag=true;});
+    tsHandle.on('drag',e=>{const ll=e.target.getLatLng(),cc=tsCircle.getLatLng();
+      const km=Math.max(5,Math.min(TS_RMAX,Math.round(map.distance(cc,ll)/1000)));
+      tsF.radius=km;tsCircle.setRadius(km*1000);tsSliderSync();});
+    tsHandle.on('dragend',()=>{_tsHDrag=false;const cc=tsCircle.getLatLng();tsHandle.setLatLng(tsEdge({lat:cc.lat,lon:cc.lng},tsF.radius));
+      const sl=document.getElementById('tsSR');if(sl)sl.value=tsF.radius;tsSave();try{haptic(6);}catch(_){}tsRender(true);});}
+  else tsHandle.setLatLng(tsEdge(c,tsF.radius));}
+function tsUndraw(){[tsCircle,tsPinM,tsHandle].forEach(l=>{if(l)try{map.removeLayer(l);}catch(e){}});tsCircle=tsPinM=tsHandle=null;}
+function tsPinReset(){tsPin=null;if(myLoc)tsRender();else tsLocate();}
 function tourVisible(t){
   if(!tsOpen()&&!(tourFromSearch&&tourIso))return true;
   return !!(t._ts&&t._ts.ok);
@@ -12846,7 +12888,7 @@ async function tsOpenUI(){
   tsRender();try{haptic(4);}catch(e){}
 }
 function tsMapDragged(){if(document.body.classList.contains('ts-open'))tsMinToggle(true);}
-function tsCloseQuiet(){document.body.classList.remove('ts-open');if(tsCircle){map.removeLayer(tsCircle);tsCircle=null;}}
+function tsCloseQuiet(){document.body.classList.remove('ts-open');tsUndraw();}
 function tsClose(){tsCloseQuiet();tourList().forEach(t=>{t._ts=null;});tourPaintScores();}
 function tsSet(k,v){
   if(k==='slope'){const S=tsF[k];S.has(v)?S.delete(v):S.add(v);}
@@ -12866,7 +12908,8 @@ function tsSliderSync(){
   const r=document.getElementById('tsVR');if(r)r.textContent=tsF.radius+' km';
   const g=document.getElementById('tsVG');if(g)g.textContent=tsGainTxt();
   const bar=document.getElementById('tsGB');if(bar){bar.style.left=(tsF.gainMin/25)+'%';bar.style.right=(100-tsF.gainMax/25)+'%';}
-  const sr=document.getElementById('tsSR');if(sr)sr.style.setProperty('--p',((tsF.radius-5)/95*100)+'%');
+  const sr=document.getElementById('tsSR');if(sr)sr.style.setProperty('--p',((tsF.radius-5)/(TS_RMAX-5)*100)+'%');
+  if(tsHandle&&tsCircle&&!_tsHDrag){const cc=tsCircle.getLatLng();tsCircle.setRadius(tsF.radius*1000);tsHandle.setLatLng(tsEdge({lat:cc.lat,lon:cc.lng},tsF.radius));}
 }
 function tsLocate(){
   geoLocate(p=>{myLoc=[p.coords.latitude,p.coords.longitude];
@@ -12887,8 +12930,7 @@ function tsFilter(){
 function tsRender(onlyMap){
   const el=document.getElementById('tourSearch');if(!el||!tsOpen())return;
   const {c,list}=tsFilter();
-  if(tsCircle)map.removeLayer(tsCircle);
-  tsCircle=L.circle([c.lat,c.lon],{radius:tsF.radius*1000,color:'var(--accent)',weight:1.5,opacity:.6,fillOpacity:.04,interactive:false,dashArray:'4 6'}).addTo(map);
+  tsDrawCircle(c);
   list.forEach(o=>{o.r=tourScore(o.t);o.v=o.r?tourVal(o.r):-1;});
   list.sort((x,y)=>(y.v-x.v)||(x.d-y.d));
   // one row per summit: its best variant, with how many there are
@@ -12908,9 +12950,10 @@ function tsRender(onlyMap){
   const ctrls='<div class="ts-seg"><button type="button" class="'+(tsF.focus==='powder'?'on':'')+'" onclick="tsSet(\'focus\',\'powder\')">❄︎ Pulver</button>'
     +'<button type="button" class="'+(tsF.focus==='sulz'?'on':'')+'" onclick="tsSet(\'focus\',\'sulz\')">☀︎ Sulz</button></div>'
     +'<div class="ts-filters">'
-    +sgrp(IC_R,'Umkreis '+(c.me?'ab Standort':'ab Kartenmitte'),'<b class="ts-v" id="tsVR">'+tsF.radius+' km</b>'
-      +(c.me?'':'<button type="button" class="ts-me2" onclick="tsLocate()" aria-label="Meinen Standort verwenden"><svg viewBox="0 0 24 24"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="6"/></svg></button>'),
-      '<input class="ts-sl" id="tsSR" type="range" min="5" max="100" step="5" value="'+tsF.radius+'" oninput="tsSet(\'radius\',+this.value)" aria-label="Umkreis">')
+    +sgrp(IC_R,'Umkreis '+(c.pin?'ab Punkt':c.me?'ab Standort':'ab Kartenmitte'),'<b class="ts-v" id="tsVR">'+tsF.radius+' km</b>'
+      +(c.me?'':'<button type="button" class="ts-me2" onclick="tsPinReset()" aria-label="Meinen Standort verwenden"><svg viewBox="0 0 24 24"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="6"/></svg></button>'),
+      '<input class="ts-sl" id="tsSR" type="range" min="5" max="'+TS_RMAX+'" step="5" value="'+tsF.radius+'" oninput="tsSet(\'radius\',+this.value)" aria-label="Umkreis">'
+      +'<div class="ts-hint">Punkt und Rand auf der Karte ziehen</div>')
     +sgrp(IC_G,'Höhenmeter','<b class="ts-v" id="tsVG">'+tsGainTxt()+'</b>',
       '<div class="ts-dual2"><i id="tsGB"></i><input type="range" min="0" max="2500" step="50" value="'+tsF.gainMin+'" oninput="tsSet(\'gainMin\',+this.value)" aria-label="Höhenmeter min">'
       +'<input type="range" min="0" max="2500" step="50" value="'+tsF.gainMax+'" oninput="tsSet(\'gainMax\',+this.value)" aria-label="Höhenmeter max"></div>')
@@ -14747,7 +14790,8 @@ function tlPresetsToggle(e,open){if(e)e.stopPropagation();
   const r=document.getElementById('tlTomorrowBtn').getBoundingClientRect();
   el.style.right=Math.max(8,window.innerWidth-r.right)+'px';el.style.bottom=(window.innerHeight-r.top+6)+'px';
   el.hidden=false;try{haptic(3);}catch(_){}
-  setTimeout(()=>document.addEventListener('click',function off(ev){if(!el.contains(ev.target)){el.hidden=true;}document.removeEventListener('click',off,true);},true),0);}
+  // a tap outside closes it; a tap on the button itself is the toggle (closes it too)
+  setTimeout(()=>document.addEventListener('click',function off(ev){const btn=document.getElementById('tlTomorrowBtn');if(!el.contains(ev.target)&&!(btn&&btn.contains(ev.target))){el.hidden=true;}document.removeEventListener('click',off,true);},true),0);}
 function tlPresetPick(i,e){if(e)e.stopPropagation();
   const p=tlPresetList()[i];document.getElementById('tlPresets').hidden=true;if(!p)return;
   if(p.pt){const t=Math.max(0,Math.min(T-1,p.pt()));b=t+1;a=Math.max(0,b-windowSize);
@@ -15626,7 +15670,9 @@ function flyToMe(){haptic(8);
     try{
       if(meMarker)map.removeLayer(meMarker);
       meMarker=L.marker(ll,{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1900}).addTo(map);
-      map.flyTo(ll,14,{duration:1.2});
+      // close in on your position (16); tapped again when already close, one step more
+      const z0=map.getZoom(),z=z0>=15.5?Math.min(17,Math.round(z0)+1):16;
+      map.flyTo(ll,z,{duration:1.2});
     }catch(e){}
     myLoc=ll;});}
 // ===================== Screen router =====================================
@@ -16985,7 +17031,7 @@ function onbIntro(){onbOpen(true);onb.step=1;onb.slide=0;onbRender();}
   requestAnimationFrame(f);addEventListener('resize',f);setTimeout(f,1500);})();
 function onbClose(){document.getElementById('onb').hidden=true;document.body.classList.remove('onb-open');}
 function onbNext(){const st=onbSteps();
-  if(st[onb.step]==='tour'){const n=ONB_SLIDES.filter(x=>!(x[1]==='Aufzeichnen'&&document.body.classList.contains('desk'))).length;
+  if(st[onb.step]==='tour'){const n=ONB_SLIDES.filter(x=>!(x[1]==='Aufzeichnen'&&(document.body.classList.contains('desk')||!trkEnabled()))).length;
     if(onb.slide<n-1){onb.slide++;onbRender();return;}}
   if(onb.step>=st.length-1){onbFinish();return;}
   onb.step++;onbRender();try{haptic(4);}catch(e){}}
@@ -17007,7 +17053,7 @@ function onbRender(){const el=document.getElementById('onbCard');if(!el)return;c
       +'<h1>Willkommen bei Snowmapper</h1><p>Pulver, Schnee und Verhältnisse in der Schweiz – aus dem SNOWPACK-Modell und von der Community.</p>'
       +'<div class="onb-lbl">Sprache</div><div class="onb-langs" data-noi18n>'+Object.keys(LANGS).map(v=>'<button class="'+(LANG===v?'on':'')+'" onclick="langSet(\''+v+'\');onbRender()">'+LANGS[v]+'</button>').join('')+'</div>'
       +'<button class="onb-pri" onclick="onbNext()">Los geht\'s</button>';}
-  else if(k==='tour'){const sl=ONB_SLIDES.filter(x=>!(x[1]==='Aufzeichnen'&&document.body.classList.contains('desk'))),S=sl[onb.slide];
+  else if(k==='tour'){const sl=ONB_SLIDES.filter(x=>!(x[1]==='Aufzeichnen'&&(document.body.classList.contains('desk')||!trkEnabled()))),S=sl[onb.slide];
     h=(S[0]?'<div class="onb-hero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+S[0]+'</svg></div>':'')
       +'<h1>'+S[1]+'</h1><p>'+S[2]+'</p>'+(S[3]||'')+onbDots(sl.length,onb.slide)
       +'<button class="onb-pri" onclick="onbNext()">Weiter</button>'
@@ -18381,7 +18427,7 @@ function invWelcome(co){const c=COHORTS[co];if(!c)return;
   let w=document.getElementById('invWelcome');
   if(!w){w=document.createElement('div');w.id='invWelcome';w.className='inv-gate';w.setAttribute('role','dialog');document.body.appendChild(w);}
   w.innerHTML='<div class="inv-card"><span class="coh-b big" style="--cc:'+c.c+'">'+escapeHtml(c.s)+'</span><h2>'+T[0]+'</h2><p>'+T[1]+'</p>'
-    +'<ul class="inv-list"><li><b>Tippe auf die Karte</b> – Skiqualität und Pulver an jedem Punkt</li><li><b>Melden › Schnellmeldung</b> – in zehn Sekunden sagen, wie der Schnee ist</li><li><b>Aufzeichnen</b> – deine Tour mit Spur und Höhenmetern</li></ul>'
+    +'<ul class="inv-list"><li><b>Tippe auf die Karte</b> – Skiqualität und Pulver an jedem Punkt</li><li><b>Melden › Schnellmeldung</b> – in zehn Sekunden sagen, wie der Schnee ist</li>'+(trkEnabled()?'<li><b>Aufzeichnen</b> – deine Tour mit Spur und Höhenmetern</li>':'')+'</ul>'
     +'<p class="inv-fb">Was dir auffällt, zählt: <b>Profil › Feedback senden</b>.</p>'
     +'<button type="button" class="inv-pri" onclick="document.getElementById(\'invWelcome\').hidden=true">Los geht\'s</button></div>';
   w.hidden=false;try{haptic(12);}catch(e){}}
