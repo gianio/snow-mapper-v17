@@ -15,14 +15,17 @@
 #             pass; the deploy picks the newest one, so a bad cycle simply
 #             leaves the previous good one online.
 name: Variant A live
-# a cycle meant as one of the four a day -- GitHub's cron or the Cloudflare
+# a cycle meant as one of the two a day -- GitHub's cron or the Cloudflare
 # cron (input "cron") -- carries this title; the guard looks for it
 run-name: ${{ (github.event_name == 'schedule' || inputs.cron) && 'Variant A live · scheduled' || 'Variant A live' }}
 
 on:
   schedule:
-    # ~40 min after the 00/06/12/18 UTC ICON-CH2 runs appear upstream.
-    - cron: "40 2,8,14,20 * * *"
+    # Twice a day: 06:00 and 15:00 UTC = 07:00 and 16:00 Swiss winter time
+    # (08:00 / 17:00 in summer; cron has no time zone). The morning cycle
+    # takes the 00 UTC (or 03 UTC) ICON run, the afternoon one the 12 UTC run.
+    # Keep in step with tiles/worker/wrangler.toml.
+    - cron: "0 6,15 * * *"
   workflow_dispatch:
     inputs:
       limit:

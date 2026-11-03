@@ -17,9 +17,11 @@ field is smooth R is ~1 and nothing changes.
 Where the field comes from: tools/ogd_extract.py saves TOT_PREC of the latest
 ICON-CH1 run (`precip_ch1.npz`, cells inside the Swiss box). OGD has no
 archive, so the past part is built up cycle by cycle: each live cycle keeps
-the first 6 h of its run in the carried state (`precip_hist.npz`), and the
-next cycles sum those. The forecast part comes from the current run. Without
-a field (demo, archive dates, OGD down) R is simply not used.
+its first hours (up to HIST_WIN_H, in 3 h steps) in the carried state
+(`precip_hist.npz`); the next cycles sum those, each cycle's steps cut off
+where the following cycle's run starts, so the cycle spacing (6 h, or two
+cycles a day, 9 h and 15 h apart) does not matter: no gaps, no double count.
+The forecast part comes from the current run. Without a field (demo, archive dates, OGD down) R is simply not used.
 """
 from __future__ import annotations
 from datetime import datetime, timedelta
@@ -30,7 +32,8 @@ import numpy as np
 FIELD_FILE = "precip_ch1.npz"
 HIST_FILE = "precip_hist.npz"
 HIST_DAYS = 5              # past snowfall that still shapes the top of the pack
-CYCLE_H = 6                # live cycles run every 6 h
+HIST_STEP_H = 3            # one stored increment per 3 h of a run
+HIST_WIN_H = 18            # longest gap between two cycles' runs it has to bridge
 MIN_MM = 3.0               # less than this at the weather points: no ratio
 R_MIN, R_MAX = 0.5, 2.0
 SMOOTH_CELLS = 5           # box filter on the 250 m grid (~1.25 km)
@@ -88,44 +91,60 @@ def load_history(state_dir):
         return None
     try:
         z = np.load(f, allow_pickle=False)
-        return {"times": [datetime.strptime(str(t), ISO) for t in z["times"]],
-                "inc": z["inc"].astype(np.float32), "n": int(z["inc"].shape[1])}
+        times = [datetime.strptime(str(t), ISO) for t in z["times"]]
+        # an older file has one 6 h row per cycle and no "cyc": each row is its own cycle
+        cyc = [datetime.strptime(str(t), ISO) for t in z["cyc"]] if "cyc" in z.files else list(times)
+        return {"times": times, "cyc": cyc, "inc": z["inc"].astype(np.float32), "n": int(z["inc"].shape[1])}
     except Exception:
         return None
 
 
+def _cut(hist, fld):
+    """Per stored row: where its cycle's share ends = the start of the next
+    cycle's run (the current run for the newest cycle)."""
+    cyc = hist["cyc"]
+    later = sorted(set(cyc) | {fld["ref"]})
+    nxt = {c: min(x for x in later if x > c) if any(x > c for x in later) else fld["ref"] for c in set(cyc)}
+    return [nxt[c] for c in cyc]
+
+
 def past_sum(hist, fld, since):
-    """mm per cell from earlier cycles' first hours, between `since` and the
-    current run's start. Zeros (and a note) when there is no usable history."""
+    """mm per cell from earlier cycles' runs, between `since` and the current
+    run's start. Zeros (and a note) when there is no usable history."""
     n = len(fld["lat"])
     if not hist or hist["n"] != n:
         return np.zeros(n, np.float32), 0
-    keep = [i for i, t in enumerate(hist["times"]) if since <= t < fld["ref"]]
+    cut = _cut(hist, fld)
+    keep = [i for i, t in enumerate(hist["times"]) if since <= t < min(cut[i], fld["ref"])]
     if not keep:
         return np.zeros(n, np.float32), 0
     return hist["inc"][keep].sum(axis=0).astype(np.float32), len(keep)
 
 
 def update_history(hist, fld):
-    """Add this run's first CYCLE_H hours; drop what is older than HIST_DAYS."""
+    """Add this run's first HIST_WIN_H hours; drop what is older than HIST_DAYS."""
     n = len(fld["lat"])
-    inc = forecast_sum(fld, fld["ref"], fld["ref"] + timedelta(hours=CYCLE_H))
-    times, rows = [], []
+    ref = fld["ref"]
+    times, cyc, rows = [], [], []
     if hist and hist["n"] == n:
-        for t, r in zip(hist["times"], hist["inc"]):
-            if fld["ref"] - t <= timedelta(days=HIST_DAYS) and t != fld["ref"]:
-                times.append(t); rows.append(r)
-    times.append(fld["ref"]); rows.append(inc)
-    return {"times": times, "inc": np.stack(rows).astype(np.float32), "n": n}
+        for t, c, r in zip(hist["times"], hist["cyc"], hist["inc"]):
+            if ref - t <= timedelta(days=HIST_DAYS) and c != ref:
+                times.append(t); cyc.append(c); rows.append(r)
+    for h in range(0, HIST_WIN_H, HIST_STEP_H):
+        t0 = ref + timedelta(hours=h)
+        times.append(t0); cyc.append(ref)
+        rows.append(forecast_sum(fld, t0, t0 + timedelta(hours=HIST_STEP_H)))
+    return {"times": times, "cyc": cyc, "inc": np.stack(rows).astype(np.float32), "n": n}
 
 
 def save_history(state_dir, hist):
     if not state_dir or not hist:
         return
     Path(state_dir).mkdir(parents=True, exist_ok=True)
-    # float16 keeps a week of 6-hourly 1 km fields at a few MB in the state
+    # float16 keeps five days of 3-hourly 1 km fields at a few MB in the state
     np.savez_compressed(Path(state_dir) / HIST_FILE,
                         times=np.array([t.strftime(ISO) for t in hist["times"]]),
+                        cyc=np.array([t.strftime(ISO) for t in hist["cyc"]]),
                         inc=hist["inc"].astype(np.float16))
 
 

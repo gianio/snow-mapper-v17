@@ -1,7 +1,7 @@
 name: Build and deploy snow model
 
 # Rebuilt after a merge to main, by hand, after a (hand-started) Cloudflare
-# tiles run, and after every successful Variant A live cycle (4x a day): that
+# tiles run, and after every successful Variant A live cycle (2x a day): that
 # is what brings fresh weather and the new SNOWPACK run onto the site --
 # without it the forecast stayed as old as the last merge.
 on:
