@@ -19,8 +19,8 @@ ICON-CH1 run (`precip_ch1.npz`, cells inside the Swiss box). OGD has no
 archive, so the past part is built up cycle by cycle: each live cycle keeps
 its first hours (up to HIST_WIN_H, in 3 h steps) in the carried state
 (`precip_hist.npz`); the next cycles sum those, each cycle's steps cut off
-where the following cycle's run starts, so the cycle spacing (6 h, or two
-cycles a day, 9 h and 15 h apart) does not matter: no gaps, no double count.
+where the following cycle's run starts, so the cycle spacing (6 h, or one
+cycle a day) does not matter: no gaps, no double count.
 The forecast part comes from the current run. Without a field (demo, archive dates, OGD down) R is simply not used.
 """
 from __future__ import annotations
@@ -33,7 +33,7 @@ FIELD_FILE = "precip_ch1.npz"
 HIST_FILE = "precip_hist.npz"
 HIST_DAYS = 5              # past snowfall that still shapes the top of the pack
 HIST_STEP_H = 3            # one stored increment per 3 h of a run
-HIST_WIN_H = 18            # longest gap between two cycles' runs it has to bridge
+HIST_WIN_H = 30            # longest gap between two cycles' runs it has to bridge (ICON-CH1 reaches 33 h)
 MIN_MM = 3.0               # less than this at the weather points: no ratio
 R_MIN, R_MAX = 0.5, 2.0
 SMOOTH_CELLS = 5           # box filter on the 250 m grid (~1.25 km)

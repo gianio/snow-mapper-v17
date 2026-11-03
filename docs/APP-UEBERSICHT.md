@@ -44,7 +44,7 @@ voraus.
  ┌─────────────────────────────────────────────────────────────────────┐
  │ deploy.yml           nach Merge / von Hand: App-Shell + Datenblob   │
  │                      (Wetter, Gelände, Stationen, Bulletin, Routen) │
- │ variant-a-live.yml   2× täglich (07/16 Uhr): SNOWPACK-Matrix → Frames + Packs     │
+ │ variant-a-live.yml   1× täglich (04 Uhr): SNOWPACK-Matrix → Frames + Packs     │
  │                      Zustand (Schneedecke) als Artefakt weitergeben │
  │ variant-a.yml        Demo-/Testläufe (fixes Datum)                  │
  │ cloudflare.yml       nur von Hand: Worker-Deploy + Kacheln nach R2  │
