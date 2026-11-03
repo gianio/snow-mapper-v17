@@ -8184,6 +8184,14 @@ const I18N_DICT={
 "Schneeart, Tiefe, Standort – in Sekunden":["Snow type, depth, position – in seconds", "Type de neige, profondeur, position – en secondes", "Tipo di neve, profondità, posizione – in pochi secondi"],
 "Tiefe":["Depth", "Profondeur", "Profondità"],
 "Dünn – Steine":["Thin – rocks", "Mince – cailloux", "Sottile – sassi"],
+"Sharky – steinig":["Sharky – rocky", "Caillouteux", "Sassoso"],
+"Sulz (Firn)":["Corn snow", "Neige de printemps", "Neve primaverile"],
+"Race-Powder – schnell":["Race powder – fast", "Poudreuse rapide", "Polvere veloce"],
+"Gut aufgesulzt ab":["Nicely softened from", "Bien transformée dès", "Ben trasformata da"],
+"Wie steinig?":["How rocky?", "Combien de cailloux ?", "Quanti sassi?"],
+"einzelne Steine":["a few rocks", "quelques cailloux", "qualche sasso"],
+"viele Steine":["many rocks", "beaucoup de cailloux", "molti sassi"],
+"Schneeflecken suchen":["hunting for snow patches", "chercher les plaques de neige", "cercare chiazze di neve"],
 "Punkt verschoben":["Point moved", "Point déplacé", "Punto spostato"],
 "Dein Standort":["Your position", "Ta position", "La tua posizione"],
 "Kein GPS – Punkt auf die Stelle ziehen":["No GPS – drag the point to the spot", "Pas de GPS – fais glisser le point", "Nessun GPS – trascina il punto sul luogo"],
@@ -19085,11 +19093,11 @@ const QS_TYPES=[
   {k:'pulver',l:'Pulver',c:'#42a5f5',q:85,depth:true},
   {k:'kantig',l:'Altpulver',c:'rgb(176,162,212)',q:62,depth:true},
   {k:'trieb',l:'Triebschnee',c:'#0d9488',q:30,depth:true,cat:'wind_slab'},
-  {k:'sulz',l:'Sulz',c:'rgb(226,170,72)',q:55},
+  {k:'sulz',l:'Sulz (Firn)',c:'rgb(226,170,72)',q:55},
   {k:'nass',l:'Nass / faul',c:'rgb(150,104,74)',q:45},
   {k:'kruste',l:'Kruste',c:'rgb(214,108,98)',q:30},
   {k:'hart',l:'Hart',c:'rgb(156,168,184)',q:10},
-  {k:'duenn',l:'Dünn – Steine',c:QS_HATCH,q:null}];
+  {k:'duenn',l:'Sharky – steinig',c:QS_HATCH,q:null}];
 // How it was, for the snow types that come in more than one state: one
 // slider each. t: the question, l: the full words, s: short tick labels,
 // c: the colour of each step; crust maps onto the full report's «Deckel»,
@@ -19098,7 +19106,11 @@ const QS_QUAL={
   hart:{t:'Griffigkeit',l:['griffig – guter Halt','fest','eisig'],s:['griffig','fest','eisig'],c:['#9cc29a','#9ca8b8','#6fb0e0'],q:[16,10,4]},
   kruste:{t:'Deckel',l:['sehr dünn','dünn','bricht durch','trägt'],s:['sehr dünn','dünn','bricht','trägt'],c:['#f2c7c2','#e08c84','#c4574e','#8e2f28'],crust:['thin','thin','breaks','carries']},
   nass:{t:'Wie nass?',l:['dünne Sulzschicht','weich','faul','sehr faul – Ski sinkt ein'],s:['dünn sulzig','weich','faul','sinkt ein'],c:['#e9cf9e','#cfa26e','#a8754c','#6e4a30'],q:[52,46,38,28]},
-  kantig:{t:'Wie ist er?',l:['noch fluffig','schon gesetzt','zügig – schnell'],s:['fluffig','gesetzt','zügig'],c:['#ddd3f2','#b0a2d4','#8a78b8'],q:[70,60,50]},
+  kantig:{t:'Wie ist er?',l:['Race-Powder – schnell','gesetzt','kompakt'],s:['Race','gesetzt','kompakt'],c:['#ddd3f2','#b0a2d4','#8a78b8'],q:[70,60,50]},
+  // corn snow: when it was nicely softened (late morning to early afternoon)
+  sulz:{t:'Gut aufgesulzt ab',m:'aufgesulzt ab ',l:['ca. 10 Uhr','ca. 11 Uhr','ca. 12 Uhr','ca. 13 Uhr','ca. 14 Uhr oder später'],s:['10','11','12','13','14+'],c:['#f6dfa8','#efcb7e','#e2aa48','#c98a2c','#a86d1c']},
+  // sharky: how much rock is showing
+  duenn:{t:'Wie steinig?',l:['einzelne Steine','viele Steine','Schneeflecken suchen'],s:['einzelne','viele','Flecken'],c:['#c2e5c4','#d9a39b','#b0453a']},
   trieb:{t:'Wie ist er?',l:['weich, frisch verfrachtet','gebunden','hart gepresst'],s:['weich','gebunden','hart'],c:['#9fdcd4','#3fb0a3','#0b6f65'],q:[40,30,18]}};
 const QS_DEPTH=[[1,5,'#c2e5c4'],[5,10,'#95cf99'],[10,20,'#66bb6a'],[20,30,'#42a5f5'],[30,50,'#1e88e5'],[50,null,'#1565c0']];
 const QS_ROW=44;
@@ -19265,7 +19277,7 @@ async function qsPost(){if(!qs||qs.busy||!qs.ll)return;
       aspect:d.aspect||null,altitudeM:d.elev!=null?d.elev:null,gpsAcc:qs.acc?Math.round(qs.acc):null,moved:qs.moved||undefined};
     if(dp)cd.depthBand=[dp[0],dp[1]];
     const Q=QS_QUAL[t.k];let qv=null;
-    if(Q&&qs.qualSet[t.k]){qv=qs.qual[t.k];cd.qual={t:Q.t,v:qv,l:Q.l[qv]};cd.measurement+=' · '+(Q.crust?'Deckel ':'')+Q.l[qv];
+    if(Q&&qs.qualSet[t.k]){qv=qs.qual[t.k];cd.qual={t:Q.t,v:qv,l:Q.l[qv]};cd.measurement+=' · '+(Q.crust?'Deckel ':'')+(Q.m||'')+Q.l[qv];
       if(Q.crust)cd.crust=Q.crust[qv];}
     if(qs.tracks&&t.depth){cd.tracks=qs.tracks;cd.measurement+=' · '+lbOf(TRK_TRACKS,qs.tracks);}
     const tour=tourPickTake();if(tour)cd.tour=tour;
