@@ -2488,9 +2488,21 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     the 3D view; the side «3D/2D» button goes back, layers come from the
     normal layer panel */
  #btn3dClose,#overlay3d,body.three-open #feedHereBtn,body.three-open #rvFab,body.three-open #infoFab{display:none!important}
- #three-wrap .maplibregl-ctrl-top-left{top:calc(env(safe-area-inset-top,0px) + 118px)}
+ #three-wrap .maplibregl-ctrl-top-left{display:none}
  #three-wrap .ctrl3d button,#three-wrap .ctrl3d label{font-size:14px!important;min-height:40px!important;padding:8px 12px!important}
  #three-wrap .maplibregl-canvas{outline:none}
+ /* desktop: plus/minus and arrows, with a hint -- phones use their fingers */
+ .pad3d{display:none;position:absolute;left:16px;bottom:calc(var(--btm-h,130px) + 28px);z-index:2001;width:132px;
+   grid-template-columns:repeat(3,38px);grid-template-areas:"zi up zo" "lf dn rt";gap:5px;justify-content:start}
+ body.desk .pad3d{display:grid}
+ .pad3d button{width:38px;height:38px;border:1px solid var(--hair);border-radius:11px;background:var(--card);color:var(--fg);
+   font:700 20px/1 var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 8px rgba(18,21,26,.12)}
+ .pad3d button svg{width:20px;height:20px}
+ .pad3d button:hover{border-color:var(--accent)}.pad3d button:active{background:var(--fill)}
+ .pad3d .p-zi{grid-area:zi}.pad3d .p-up{grid-area:up}.pad3d .p-zo{grid-area:zo}.pad3d .p-lf{grid-area:lf}.pad3d .p-dn{grid-area:dn}.pad3d .p-rt{grid-area:rt}
+ .pad3d .p-hint{grid-column:1/-1;margin-top:3px;padding:5px 9px;border-radius:9px;background:var(--card);border:1px solid var(--hair);
+   font:600 11.5px/1.3 var(--font);color:var(--fg2);width:max-content;max-width:220px}
+ .pad3d .p-hint b{color:var(--fg)}
  #three-wrap .maplibregl-map{width:100%;height:100%}
  #btn3dClose{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;z-index:2001;padding:10px 18px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg);cursor:pointer;font-size:16px;font-weight:600;}
  #three-wrap .ctrl3d{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;z-index:2001;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start;max-width:calc(100vw - 110px)}
@@ -2892,7 +2904,11 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .leaflet-popup-close-button:hover{color:var(--fg)!important}
  /* Attribution: tiny, faint, unobtrusive (expand on hover) */
  .leaflet-control-attribution{background:rgba(247,244,238,.45)!important;color:rgba(115,108,97,.6)!important;font-size:10.5px!important;padding:1px 6px!important;border-radius:6px 0 0 0!important;box-shadow:none!important;max-width:22px;overflow:hidden;white-space:nowrap;transition:max-width .3s,background .3s}
- .leaflet-control-attribution:hover{max-width:80vw;background:var(--paper)!important;color:var(--mut)!important}
+ .leaflet-control-attribution{max-width:none!important;cursor:pointer;color:var(--fg2)!important;background:rgba(255,255,255,.72)!important;font-weight:600}
+ .leaflet-control-attribution .at-m{display:none}
+ .leaflet-control-attribution.open,.leaflet-control-attribution:hover{white-space:normal!important;max-width:min(86vw,520px)!important;background:var(--paper)!important}
+ .leaflet-control-attribution.open .at-m,.leaflet-control-attribution:hover .at-m{display:inline}
+ #three-wrap .maplibregl-ctrl-attrib{max-width:70vw;font-weight:600}
  .leaflet-control-attribution a{color:inherit!important}
  .leaflet-control-scale-line{background:var(--glass2)!important;border-color:var(--hair)!important;color:var(--fg2)!important;font-family:var(--mono)!important;font-size:11px!important;font-weight:600!important;}
  /* the right-hand corner belongs to the FABs, so the scale bar is pinned to
@@ -3145,6 +3161,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .auth-paste:hover{background:rgba(20,20,25,.1)}
  .auth-close{position:sticky;top:0;z-index:3;margin:-20px -12px -12px auto;background:var(--glass2);border:none;font-size:20px;color:var(--mut);cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none}
  .auth-close:hover{background:rgba(0,0,0,.05)}
+ /* the app is not a page of text: no selecting labels while dragging a pin or a slider */
+ html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+ input,textarea,[contenteditable],.sel-ok,.sel-ok *{-webkit-user-select:text;user-select:text}
  .auth-show{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut);margin:2px 0 6px;cursor:pointer;user-select:none}
  .auth-show input{width:18px;height:18px;margin:0;accent-color:var(--accent,#2563eb)}
  .auth-inline{border:none;background:none;padding:0;font:inherit;font-weight:700;color:inherit;text-decoration:underline;cursor:pointer}
@@ -4459,6 +4478,19 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 .ts-pin i::after{content:'';position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#fff}
 .ts-rh i{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#fff;border:2px solid var(--accent,#2A8FD8);color:var(--accent,#2A8FD8);font:800 14px/1 system-ui;box-shadow:0 2px 8px rgba(0,0,0,.3);box-sizing:border-box;cursor:ew-resize;font-style:normal}
 .ts-hint{font-size:11px;color:var(--fg2);margin-top:4px}
+.ts-radbtn{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:0 14px;border:1px solid var(--hair);border-radius:13px;background:var(--card);color:var(--fg);font:700 14px var(--font);cursor:pointer;text-align:left}
+.ts-radbtn svg{width:22px;height:22px;flex:none;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ts-radbtn span{flex:1}.ts-radbtn b{color:var(--accent);font-weight:800}
+/* radius mode: the finder is out of the way, a bar says the radius */
+body.ts-radius .ts-sheet{transform:translateY(112%)!important;opacity:0!important;pointer-events:none!important}
+#tsRadBar{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-h,58px) + 14px + env(safe-area-inset-bottom,0px));z-index:5400;max-width:480px;margin:0 auto;display:flex;align-items:center;gap:12px;
+  padding:12px 12px 12px 16px;border-radius:18px;background:var(--card);border:1px solid var(--hair);box-shadow:0 8px 26px rgba(18,21,26,.2)}
+body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+#tsRadBar .trb-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+#tsRadBar small{font:800 10.5px var(--font);letter-spacing:.07em;text-transform:uppercase;color:var(--mut)}
+#tsRadBar b{font:800 24px/1.1 var(--font);color:var(--fg)}
+#tsRadBar span{font:600 11.5px var(--font);color:var(--mut)}
+#tsRadBar .trb-ok{height:46px;padding:0 22px;border:0;border-radius:13px;background:var(--accent);color:#fff;font:800 15px var(--font);cursor:pointer}
 .ts-loc{margin-top:6px;border:1px solid var(--hair);background:var(--card);border-radius:999px;padding:6px 12px;font:700 12px Helvetica Neue,Helvetica,Arial,sans-serif;color:var(--accent);cursor:pointer}
  .ts-dual{position:relative;height:26px}
  .ts-dual::before{content:'';position:absolute;left:0;right:0;top:11px;height:4px;border-radius:2px;background:var(--fill2)}
@@ -6128,6 +6160,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .pv-dm.unread{border-color:#E5233F!important;color:#E5233F!important}
  /* a public profile: the close button above the overlapping body */
  .uv-close,.uv-msg{z-index:10!important}
+ /* a clear close button: big, solid, dark cross */
+ .uv-close{width:40px!important;height:40px!important;right:12px!important;top:calc(env(safe-area-inset-top,0px) + 8px)!important;border-radius:50%!important;
+   background:#fff!important;color:#16152e!important;font-size:18px!important;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.25)!important;display:flex;align-items:center;justify-content:center}
  /* the profile reaches under the tab bar: room at the end */
  #profModal .prof-body,#userViewModal .uv-body{padding-bottom:calc(var(--nav-h,58px) + 16px)!important}
  /* feed: the status-bar gap belongs to the first header, not the scroller --
@@ -6290,6 +6325,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .qs-range::-moz-range-track{height:12px;border-radius:6px;background:var(--qs-track)}
  .qs-range::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-8px;border-radius:50%;background:var(--qs-thumb,#66bb6a);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
  .qs-range::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--qs-thumb,#66bb6a);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+ .qs-ticks-cm{grid-template-columns:repeat(8,1fr)!important}
  .qs-ticks{display:grid;grid-template-columns:repeat(6,1fr);text-align:center;font:700 11px var(--font);color:var(--mut);margin-top:2px}
  .qs-acts{display:flex;gap:10px;margin-top:14px}
  .qs-ph{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:0 14px;height:46px;border-radius:13px;background:var(--fill);color:var(--fg2);font:700 14px var(--font);cursor:pointer;
@@ -6554,6 +6590,16 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  :root.and-wv[data-theme="light"] #tabBar,:root.and-wv[data-theme="light"] #bottomPanel{
    background:rgba(255,255,255,.74)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
  :root[data-theme="light"] body:not(.desk) #bottomPanel{box-shadow:0 -6px 18px rgba(18,21,26,.06),inset 0 1px 0 rgba(255,255,255,.8)!important}
+ /* no sheet or popup is taller than the room between the top bar and the
+    control bar: what does not fit scrolls inside it (a tour with many start
+    points, a long pick list ...) */
+ .tour-sheet{max-height:calc(var(--app-h,100dvh) - var(--bar-h,56px) - 20px)!important;overflow-y:auto!important;overscroll-behavior:contain;touch-action:pan-y!important}
+ .tour-sheet .tsh-grab,.tour-sheet .tour-hd[data-drag]{touch-action:none}
+ .ts-sheet{max-height:calc(var(--app-h,100dvh) - var(--bar-h,56px) - var(--nav-h,58px) - 16px)!important}
+ #tourPick{max-height:min(46vh,calc(var(--app-h,100dvh) - var(--bar-h,56px) - var(--nav-h,58px) - 28px))!important}
+ #tourPick .tpk-list{overflow-y:auto;overscroll-behavior:contain}
+ .qs-sheet .qs-in{max-height:min(60dvh,calc(var(--app-h,100dvh) - var(--bar-h,56px) - 12px))!important}
+ .set-in,.trs-in,.rs-in,.ap-in,.feed-sheet .fs-in,.pro-in{max-height:calc(var(--app-h,100dvh) - var(--bar-h,56px) - var(--nav-h,58px) - 16px);overflow-y:auto;overscroll-behavior:contain}
  .fc-depth{font:650 14px/1.3 var(--font)!important;font-variant-numeric:tabular-nums}
 </style>
 <script>
@@ -6794,7 +6840,16 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     </div>
   </div>
 </div>
-<div id="three-wrap"><div id="map3d" style="width:100%;height:100%"></div><button id="btn3dClose">✕ 2D</button>
+<div id="three-wrap"><div id="map3d" style="width:100%;height:100%"></div>
+<div id="pad3d" class="pad3d" role="group" aria-label="Navigation 3D">
+  <button type="button" class="p-zi" onclick="pad3d('zin')" aria-label="Hineinzoomen">+</button>
+  <button type="button" class="p-up" onclick="pad3d('up')" aria-label="Nach oben"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
+  <button type="button" class="p-zo" onclick="pad3d('zout')" aria-label="Herauszoomen">−</button>
+  <button type="button" class="p-lf" onclick="pad3d('left')" aria-label="Nach links"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <button type="button" class="p-dn" onclick="pad3d('down')" aria-label="Nach unten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+  <button type="button" class="p-rt" onclick="pad3d('right')" aria-label="Nach rechts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+  <small class="p-hint">Drehen &amp; kippen: <b>Strg</b> + Maus ziehen</small>
+</div><button id="btn3dClose">✕ 2D</button>
 <div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="30" style="width:100px;accent-color:var(--acc)"> Map <span id="mapOpacLbl">30%</span></label>
 <button id="btn3dExag">×1.5</button>
 <select id="overlay3d" style="padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:16px;min-height:46px"><option value="none">Keine Ebene</option><option value="snow">Neuschnee</option><option value="temp">Temperatur</option><option value="wind">Wind</option><option value="depth">Schneehöhe</option><option value="powder">Powder</option></select>
@@ -6865,7 +6920,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     <div id="drawSum" class="dsum" aria-live="polite"></div>
     <div id="drawTypes" class="dtypes" role="radiogroup" aria-label="Schneeart"></div>
     <div id="drawDepth" class="ddepth"><div class="qs-lbl">Tiefe <b id="drawDepthTxt"></b></div>
-      <input type="range" class="qs-range" id="drawDepthR" min="0" max="5" step="1" value="2" oninput="drawDepthPick(+this.value)" aria-label="Tiefe">
+      <input type="range" class="qs-range" id="drawDepthR" min="1" max="70" step="1" value="15" oninput="drawDepthPick(+this.value)" aria-label="Tiefe">
       <div class="qs-ticks" id="drawDepthTicks"></div></div>
     <div id="drawBrush"></div>
     <div id="drawSlider"></div>
@@ -8192,6 +8247,11 @@ const I18N_DICT={
 "Tiefe":["Depth", "Profondeur", "Profondità"],
 "Dünn – Steine":["Thin – rocks", "Mince – cailloux", "Sottile – sassi"],
 "Sharky – steinig":["Sharky – rocky", "Caillouteux", "Sassoso"],
+"Abgeblasen":["Wind-scoured", "Soufflé", "Spazzato dal vento"],
+"Wie stark?":["How much?", "À quel point ?", "Quanto?"],
+"stellenweise":["in places", "par endroits", "a tratti"],
+"grossflächig":["widespread", "sur de grandes surfaces", "su ampie aree"],
+"bis auf den Boden":["down to the ground", "jusqu'au sol", "fino al suolo"],
 "Sulz (Firn)":["Corn snow", "Neige de printemps", "Neve primaverile"],
 "Race-Powder – schnell":["Race powder – fast", "Poudreuse rapide", "Polvere veloce"],
 "Gut aufgesulzt ab":["Nicely softened from", "Bien transformée dès", "Ben trasformata da"],
@@ -9302,7 +9362,11 @@ function sheetAttr(){const el=document.querySelector('.leaflet-control-attributi
 function ovAttrSync(){
   const extra=Object.keys(OVERLAYS).filter(k=>ovOn[k]&&OVERLAYS[k].attr).map(k=>OVERLAYS[k].attr);
   const el=document.querySelector('.leaflet-control-attribution');
-  if(el)el.innerHTML=BASE_ATTR+(extra.length?' · '+extra.join(' · '):'');
+  // «© swisstopo» always stands on the map (swisstopo's condition); the other
+  // credits open with a tap on it (or on hover)
+  if(el){const more=BASE_ATTR.replace(/^©\s*swisstopo\s*·\s*/,'')+(extra.length?' · '+extra.join(' · '):'');
+    el.innerHTML='<span class="at-c">© swisstopo</span><span class="at-i" aria-hidden="true"> ⓘ</span><span class="at-m"> · '+more+'</span>';
+    if(!el._atTap){el._atTap=1;el.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('a'))return;el.classList.toggle('open');});}}
 }
 function ovSyncUI(){
   Object.keys(OVERLAYS).forEach(k=>{
@@ -11344,6 +11408,9 @@ function tourOpen(t,fromSearch){
   try{document.getElementById('tourSheet').classList.remove('min');}catch(e){}
   tourIsoRefresh();
   try{const ll=t.coords.map(c=>[c[1],c[0]]);map.flyToBounds(L.latLngBounds(ll),{padding:[50,50],paddingBottomRight:[50,330],duration:.8,maxZoom:14});}catch(e){}
+  // in 3D the tour is shown on the 3D map: fly there
+  try{if(typeof is3d!=='undefined'&&is3d&&map3d){const b=new maplibregl.LngLatBounds();t.coords.forEach(c=>b.extend([c[0],c[1]]));
+    map3d.fitBounds(b,{padding:{top:70,left:50,right:50,bottom:330},duration:800,maxZoom:14.5});}}catch(e){}
   tourPaintScores();
 }
 async function tourIsoRefresh(){
@@ -13087,7 +13154,19 @@ async function tsOpenUI(){
   tsRender();try{haptic(4);}catch(e){}
 }
 function tsMapDragged(){if(document.body.classList.contains('ts-open'))tsMinToggle(true);}
-function tsCloseQuiet(){document.body.classList.remove('ts-open');tsUndraw();}
+function tsCloseQuiet(){document.body.classList.remove('ts-open','ts-radius');const rb=document.getElementById('tsRadBar');if(rb)rb.remove();tsUndraw();}
+// «Radius anpassen»: the finder steps aside, the map shows the circle with its
+// edge handle and the radius in a bar; «Fertig» comes back to the finder
+function tsRadiusEdit(){if(!tsCircle)return;
+  document.body.classList.add('ts-radius');
+  let b=document.getElementById('tsRadBar');
+  if(!b){b=document.createElement('div');b.id='tsRadBar';document.body.appendChild(b);}
+  b.innerHTML='<div class="trb-t"><small>Radius</small><b id="tsRadLive">'+tsF.radius+' km</b><span>Rand des Kreises ziehen</span></div>'
+    +'<button type="button" class="trb-ok" onclick="tsRadiusDone()">Fertig</button>';
+  try{map.fitBounds(tsCircle.getBounds(),{paddingTopLeft:[40,90],paddingBottomRight:[40,150],animate:true});}catch(e){}
+  try{haptic(4);}catch(e){}}
+function tsRadiusDone(){document.body.classList.remove('ts-radius');const b=document.getElementById('tsRadBar');if(b)b.remove();
+  tsSave();try{tsRender(true);}catch(e){}try{haptic(6);}catch(e){}}
 function tsClose(){tsCloseQuiet();tourList().forEach(t=>{t._ts=null;});tourPaintScores();}
 function tsSet(k,v){
   if(k==='slope'){const S=tsF[k];S.has(v)?S.delete(v):S.add(v);}
@@ -13105,6 +13184,8 @@ function tsSet(k,v){
 function tsGainTxt(){return tsF.gainMin+'–'+(tsF.gainMax>=2500?'2500+':tsF.gainMax)+' Hm';}
 function tsSliderSync(){
   const r=document.getElementById('tsVR');if(r)r.textContent=tsF.radius+' km';
+  const rb=document.getElementById('tsRadV');if(rb)rb.textContent=tsF.radius+' km';
+  const rl=document.getElementById('tsRadLive');if(rl)rl.textContent=tsF.radius+' km';
   const g=document.getElementById('tsVG');if(g)g.textContent=tsGainTxt();
   const bar=document.getElementById('tsGB');if(bar){bar.style.left=(tsF.gainMin/25)+'%';bar.style.right=(100-tsF.gainMax/25)+'%';}
   const sr=document.getElementById('tsSR');if(sr)sr.style.setProperty('--p',((tsF.radius-5)/(TS_RMAX-5)*100)+'%');
@@ -13151,8 +13232,9 @@ function tsRender(onlyMap){
     +'<div class="ts-filters">'
     +sgrp(IC_R,'Umkreis '+(c.pin?'ab Punkt':c.me?'ab Standort':'ab Kartenmitte'),'<b class="ts-v" id="tsVR">'+tsF.radius+' km</b>'
       +(c.me?'':'<button type="button" class="ts-me2" onclick="tsPinReset()" aria-label="Meinen Standort verwenden"><svg viewBox="0 0 24 24"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="6"/></svg></button>'),
-      '<input class="ts-sl" id="tsSR" type="range" min="5" max="'+TS_RMAX+'" step="5" value="'+tsF.radius+'" oninput="tsSet(\'radius\',+this.value)" aria-label="Umkreis">'
-      +'<div class="ts-hint">Punkt und Rand auf der Karte ziehen</div>')
+      '<button type="button" class="ts-radbtn" onclick="tsRadiusEdit()"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/><path d="M12 12h8M17 9l3 3-3 3"/></svg>'
+      +'<span>Radius anpassen</span><b id="tsRadV">'+tsF.radius+' km</b></button>'
+      +'<div class="ts-hint">Du kommst kurz auf die Karte und ziehst den Rand des Kreises.</div>')
     +sgrp(IC_G,'Höhenmeter','<b class="ts-v" id="tsVG">'+tsGainTxt()+'</b>',
       '<div class="ts-dual2"><i id="tsGB"></i><input type="range" min="0" max="2500" step="50" value="'+tsF.gainMin+'" oninput="tsSet(\'gainMin\',+this.value)" aria-label="Höhenmeter min">'
       +'<input type="range" min="0" max="2500" step="50" value="'+tsF.gainMax+'" oninput="tsSet(\'gainMax\',+this.value)" aria-label="Höhenmeter max"></div>')
@@ -15319,12 +15401,13 @@ function ovRender(){
   if(cm)cm.innerHTML=OV_COMMUNITY.filter(k=>OVERLAYS[k]).map(ovRowHTML).join('');
   // what the stations measured, right with the weather it is compared to
   const wx=document.getElementById('lyWxOv'),stnRow=lyExtraRow('stn','Messstationen (SLF) · gemessen',typeof showStn!=='undefined'&&showStn,'<line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0"/>','toggleStations();ovRender()');
-  if(wx)wx.innerHTML=stnRow;
+  // the stations switch sits at the end of «Auf der Karte»
+  if(wx)wx.innerHTML='';
   g.innerHTML=Object.keys(OVERLAYS).filter(k=>k!=='variantA'&&!(cm&&OV_COMMUNITY.includes(k))).map(ovRowHTML).join('')
   // map extras that used to live in the settings
-  +(wx?'':stnRow)
   // (3D is switched with its own button on the map's side rail)
-  +(window._wcOk?lyExtraRow('wc','Webcam-Galerie (Bilder & Live)',false,'<path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/>','lyPanelClose();wcvOpen()'):'');
+  +(window._wcOk?lyExtraRow('wc','Webcam-Galerie (Bilder & Live)',false,'<path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/>','lyPanelClose();wcvOpen()'):'')
+  +stnRow;
 }
 function lyExtraRow(k,label,on,ic,act){
   return '<button type="button" id="ov_x'+k+'" class="ly-ov'+(on?' on':'')+'" role="switch" aria-checked="'+(on?'true':'false')+'" onclick="'+act+'">'
@@ -15900,6 +15983,8 @@ function navClose(keep){
   if(keep!=='tours'){if(document.body.classList.contains('ts-open'))try{tsClose();}catch(e){}
     if(document.body.classList.contains('tour-open'))try{tourClose();}catch(e){}}
   if(keep!=='you'&&vis('profModal'))try{profClose();}catch(e){}
+  // somebody else's profile gives way to any tab as well
+  if(vis('userViewModal'))try{userViewClose();}catch(e){}
   if(keep!=='rec'&&document.body.classList.contains('trk-open'))try{trkClose();}catch(e){}
   if(document.body.classList.contains('ly-open'))try{lyPanelClose();}catch(e){}
   try{fabMenu(false);}catch(e){}
@@ -16119,8 +16204,15 @@ map.on('click',function(e){
   if(document.body.classList.contains('feed-side')){feedClose();return;}
   if(document.body.classList.contains('insp-open')){inspClose();return;}
   if(Date.now()-_popClosedAt<450)return;
+  // in a working mode (tour finder, report, drawing, recording ...) a tap on
+  // the map belongs to that mode: no point card
+  if(mapModeBusy())return;
   inspOpen(e.latlng.lat,e.latlng.lng);
 });
+function mapModeBusy(){const B=document.body.classList;
+  return ['ts-open','tn-open','qs-open','draw-on','rep-open','trk-open','snp-open'].some(c=>B.contains(c))
+    ||!!(typeof obsState!=='undefined'&&obsState&&document.getElementById('reportOverlay')&&document.getElementById('reportOverlay').style.display!=='none')
+    ||!!document.querySelector('.rs-open,.fb-open');}
 // Marker popups (reports, stations) open through Leaflet's own click
 // handling rather than the map's 'click' event above, so they need the
 // same guard: while the feed is open beside the map, a tap closes the
@@ -16828,7 +16920,9 @@ const OP3D=0.5;
 // slope classes and ski routes follow the 2D map's overlay switches
 function sync3dOverlays(){if(!map3d||!is3d||!map3d.getLayer||!map3d.getLayer('slope-3d'))return;
   map3d.setLayoutProperty('slope-3d','visibility',ovOn.slope?'visible':'none');
-  map3d.setLayoutProperty('skitour-3d','visibility',(ovOn.skitour||ovOn.skitourVec)?'visible':'none');}
+  // the picture layer only for «Skitouren (Karte)»; the tappable vector routes for «Skitouren · Powder-Score»
+  map3d.setLayoutProperty('skitour-3d','visibility',ovOn.skitour?'visible':'none');
+  try{tours3dSync();}catch(e){}}
 function update3dOverlay(){if(!map3d||!is3d)return;try{sync3dOverlays();}catch(e){}const sel=document.getElementById('overlay3d').value;
   if(sel==='none'){if(map3d.getLayer('data-overlay'))map3d.setLayoutProperty('data-overlay','visibility','none');return;}
   if(sel==='va'&&typeof vaOv!=='undefined'&&vaOv&&vaOv._url){const bb=vaOv.getBounds(),q=[[bb.getWest(),bb.getNorth()],[bb.getEast(),bb.getNorth()],[bb.getEast(),bb.getSouth()],[bb.getWest(),bb.getSouth()]];
@@ -16889,7 +16983,7 @@ function init3D(){
         {id:'hillshade',type:'raster',source:'hillshade-tiles',paint:{'raster-opacity':0.7}},
         // the 2D map's overlays, draped on the relief like everything else
         {id:'slope-3d',type:'raster',source:'slope-src',layout:{visibility:ovOn.slope?'visible':'none'},paint:{'raster-opacity':0.5,'raster-fade-duration':0}},
-        {id:'skitour-3d',type:'raster',source:'skitour-src',layout:{visibility:(ovOn.skitour||ovOn.skitourVec)?'visible':'none'},paint:{'raster-opacity':0.9,'raster-fade-duration':0}}],
+        {id:'skitour-3d',type:'raster',source:'skitour-src',layout:{visibility:ovOn.skitour?'visible':'none'},paint:{'raster-opacity':0.9,'raster-fade-duration':0}}],
       terrain:{source:'terrain-dem',exaggeration:exag3d}},
     center:[lc.lng,lc.lat],zoom:lz,pitch:_tilt3d?0:60,bearing:_tilt3d?0:-20,maxPitch:72,maxZoom:17.5,
     maxBounds:[[loMinW-0.1,laMinW-0.05],[loMaxW+0.1,laMaxW+0.05]],
@@ -16903,6 +16997,9 @@ function init3D(){
     // from the two-finger gesture: the flat map tips over into 3D
     if(_tilt3d){_tilt3d=false;map3d.easeTo({pitch:60,bearing:-15,duration:1100});}});
   map3d.on('moveend',sync3dTo2d);
+  rot3dInstall(map3d);
+  map3d.once('idle',()=>{try{tours3dSync();}catch(e){}});
+  try{toursEnsure().then(()=>{try{tours3dSync();}catch(e){}});}catch(e){}
   // Desktop keyboard controls for 3D
   document.addEventListener('keydown',function(e){
     if(!is3d||!map3d)return;const s=0.002;
@@ -16914,6 +17011,43 @@ function init3D(){
     else if(e.key==='-'){map3d.zoomOut();e.preventDefault();}
     else if(e.key==='r'){map3d.easeTo({pitch:60,bearing:-20,duration:500});e.preventDefault();}
   });}
+// the pad: + / − zoom, the arrows move the view
+function pad3d(a){if(!map3d)return;const st=Math.round(Math.min(innerWidth,innerHeight)*0.22);
+  if(a==='zin')map3d.zoomIn({duration:250});else if(a==='zout')map3d.zoomOut({duration:250});
+  else map3d.panBy(a==='left'?[-st,0]:a==='right'?[st,0]:a==='up'?[0,-st]:[0,st],{duration:300});}
+// turning and tilting: Ctrl + drag (or the right button). MapLibre's own
+// handler turns the wrong way round for this app's taste, so it is replaced by
+// a mirrored one: drag right turns the view right, drag down tilts it down.
+function rot3dInstall(m){
+  try{m.dragRotate.disable();}catch(e){}
+  const el=m.getCanvasContainer();let st=null;
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+  el.addEventListener('mousedown',e=>{if(!(e.button===2||(e.button===0&&(e.ctrlKey||e.metaKey))))return;
+    st={x:e.clientX,y:e.clientY,b:m.getBearing(),p:m.getPitch()};e.preventDefault();e.stopPropagation();
+    try{m.dragPan.disable();}catch(x){}},true);
+  addEventListener('mousemove',e=>{if(!st||!m)return;
+    m.jumpTo({bearing:st.b+(e.clientX-st.x)*0.5,pitch:Math.max(0,Math.min(72,st.p+(e.clientY-st.y)*0.4))});});
+  addEventListener('mouseup',()=>{if(!st)return;st=null;try{m.dragPan.enable();}catch(x){}});}
+// ski tours in 3D: the vector routes, tappable (a wide invisible line takes the tap)
+function tours3dSync(){const m=map3d;if(!m||!is3d||!m.getStyle)return;
+  const ts=tourList();if(!ts.length||!m.isStyleLoaded&&false)return;
+  const vis=ovOn.skitourVec?'visible':'none';
+  if(!m.getSource('tours-3d')){
+    const f=ts.filter(t=>t.coords&&t.coords.length>1).map(t=>{const c=t.coords,out=[];for(let i=0;i<c.length;i+=2)out.push(c[i]);if(out[out.length-1]!==c[c.length-1])out.push(c[c.length-1]);
+      return {type:'Feature',properties:{id:String(t.id)},geometry:{type:'LineString',coordinates:out}};});
+    m.addSource('tours-3d',{type:'geojson',data:{type:'FeatureCollection',features:f}});
+    const ln=(id,paint)=>m.addLayer({id,type:'line',source:'tours-3d',layout:{'line-cap':'round','line-join':'round',visibility:vis},paint});
+    ln('tours-3d-casing',{'line-color':'#fff','line-width':4.6,'line-opacity':.9});
+    ln('tours-3d-line',{'line-color':'rgb('+TOUR_GREY.join(',')+')','line-width':2.6,'line-opacity':.95});
+    ln('tours-3d-hit',{'line-color':'#000','line-width':22,'line-opacity':0});
+    m.on('mouseenter','tours-3d-hit',()=>{m.getCanvas().style.cursor='pointer';});
+    m.on('mouseleave','tours-3d-hit',()=>{m.getCanvas().style.cursor='';});
+    m.on('click','tours-3d-hit',e=>{if(mapModeBusy()&&!tsOpen())return;
+      const ids=[...new Set(m.queryRenderedFeatures(e.point,{layers:['tours-3d-hit']}).map(x=>x.properties.id))];
+      const hits=ids.map(id=>tourList().find(t=>String(t.id)===id)).filter(Boolean);
+      if(!hits.length)return;try{haptic(4);}catch(x){}
+      if(hits.length>1)tourPickShow(hits);else tourOpen(hits[0],tsOpen());});}
+  ['tours-3d-casing','tours-3d-line','tours-3d-hit'].forEach(id=>{if(m.getLayer(id))m.setLayoutProperty(id,'visibility',vis);});}
 function close3D(){
   if(map3d){const c=map3d.getCenter(),z=map3d.getZoom();map.setView([c.lat,c.lng],z,{animate:false});}
   is3d=false;if(map3d){map3d.remove();map3d=null;}
@@ -19104,6 +19238,7 @@ const QS_TYPES=[
   {k:'nass',l:'Nass / faul',c:'rgb(150,104,74)',q:45},
   {k:'kruste',l:'Kruste',c:'rgb(214,108,98)',q:30},
   {k:'hart',l:'Hart',c:'rgb(156,168,184)',q:10},
+  {k:'abgeblasen',l:'Abgeblasen',c:'#8ea0b4',q:null},
   {k:'duenn',l:'Sharky – steinig',c:QS_HATCH,q:null}];
 // How it was, for the snow types that come in more than one state: one
 // slider each. t: the question, l: the full words, s: short tick labels,
@@ -19116,9 +19251,18 @@ const QS_QUAL={
   kantig:{t:'Wie ist er?',l:['Race-Powder – schnell','gesetzt','kompakt'],s:['Race','gesetzt','kompakt'],c:['#ddd3f2','#b0a2d4','#8a78b8'],q:[70,60,50]},
   // corn snow: when it was nicely softened (late morning to early afternoon)
   sulz:{t:'Gut aufgesulzt ab',m:'aufgesulzt ab ',l:['ca. 10 Uhr','ca. 11 Uhr','ca. 12 Uhr','ca. 13 Uhr','ca. 14 Uhr oder später'],s:['10','11','12','13','14+'],c:['#f6dfa8','#efcb7e','#e2aa48','#c98a2c','#a86d1c']},
+  // scoured by wind: how bare it is
+  abgeblasen:{t:'Wie stark?',m:'abgeblasen: ',l:['stellenweise','grossflächig','bis auf den Boden'],s:['stellenweise','grossflächig','bis zum Boden'],c:['#dbe3ec','#a9b8c8','#6f8196']},
   // sharky: how much rock is showing
   duenn:{t:'Wie steinig?',l:['einzelne Steine','viele Steine','Schneeflecken suchen'],s:['einzelne','viele','Flecken'],c:['#c2e5c4','#d9a39b','#b0453a']},
   trieb:{t:'Wie ist er?',l:['weich, frisch verfrachtet','gebunden','hart gepresst'],s:['weich','gebunden','hart'],c:['#9fdcd4','#3fb0a3','#0b6f65'],q:[40,30,18]}};
+// depth: a continuous scale in the powder colours (1 cm … 70+ cm), the track
+// shading smoothly from band to band
+const QS_CM_MIN=1,QS_CM_MAX=70;
+function qsCmBand(cm){return QS_DEPTH.find(d=>cm>=d[0]&&(d[1]==null||cm<d[1]))||QS_DEPTH[QS_DEPTH.length-1];}
+function qsCmTrack(){const pos=cm=>((Math.min(QS_CM_MAX,cm)-QS_CM_MIN)/(QS_CM_MAX-QS_CM_MIN)*100).toFixed(1);
+  return 'linear-gradient(90deg,'+QS_DEPTH.map(d=>d[2]+' '+pos((d[0]+(d[1]==null?QS_CM_MAX:d[1]))/2)+'%').join(',')+')';}
+function qsCmText(cm){return (cm>=QS_CM_MAX?QS_CM_MAX+'+':Math.round(cm))+' cm';}
 const QS_DEPTH=[[1,5,'#c2e5c4'],[5,10,'#95cf99'],[10,20,'#66bb6a'],[20,30,'#42a5f5'],[30,50,'#1e88e5'],[50,null,'#1565c0']];
 const QS_ROW=44;
 let qs=null,qsMarker=null,_qsWT=0;
@@ -19127,7 +19271,7 @@ function qsOpen(){
   // always on the map screen, centred on where you are (GPS below)
   try{if(document.body.getAttribute('data-screen')!=='search')navGo('map');}catch(e){}
   try{if(typeof is3d!=='undefined'&&is3d)close3D();}catch(e){}
-  qs={type:0,depth:2,ll:null,acc:null,moved:false,photos:[],comment:'',busy:false,tracks:null,qual:{},qualSet:{}};
+  qs={type:0,cm:15,ll:null,acc:null,moved:false,photos:[],comment:'',busy:false,tracks:null,qual:{},qualSet:{}};
   // opened from a tour («Melden» on its sheet): the point starts on its summit
   // and the report is tagged with it; GPS takes over only when you are on it
   const tl=rptTourLock&&rptTourSel?tourList().find(t=>String(t.id)===String(rptTourSel.id)):null;
@@ -19146,11 +19290,11 @@ function qsOpen(){
     +QS_TYPES.map((t,i)=>'<button type="button" class="qs-it'+(i===0?' on':'')+'" onclick="qsPick('+i+')"><i style="background:'+t.c+'"></i><span>'+escapeHtml(t.l)+'</span></button>').join('')
     +'</div><div class="qs-wheel-sel" aria-hidden="true"></div></div>'
     +'<div class="qs-dep" id="qsDep"><div class="qs-lbl">Tiefe <b id="qsDepV"></b></div>'
-    +'<input type="range" class="qs-range" id="qsRange" min="0" max="'+(QS_DEPTH.length-1)+'" step="1" value="2" oninput="qsDepth(+this.value)" style="--qs-track:linear-gradient(90deg,'+stops+')" aria-label="Tiefe">'
-    +'<div class="qs-ticks">'+QS_DEPTH.map(d=>'<span>'+(d[1]==null?d[0]+'+':d[0]+'–'+d[1])+'</span>').join('')+'</div></div>'
+    +'<input type="range" class="qs-range" id="qsRange" min="'+QS_CM_MIN+'" max="'+QS_CM_MAX+'" step="1" value="15" oninput="qsDepth(+this.value)" style="--qs-track:'+qsCmTrack()+'" aria-label="Tiefe">'
+    +'<div class="qs-ticks qs-ticks-cm"><span>1</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span><span>70+</span></div></div>'
     // hard, crust, wet, old powder: how it was, on a slider
     +'<div class="qs-qual" id="qsQual" hidden><div class="qs-lbl"><span id="qsQualT"></span> <b id="qsQualV"></b></div>'
-    +'<input type="range" class="qs-range" id="qsQualR" min="0" max="2" step="1" value="1" oninput="qsQualSet(+this.value)" aria-label="Zustand">'
+    +'<input type="range" class="qs-range" id="qsQualR" min="0" max="2" step="0.05" value="1" oninput="qsQualSet(+this.value)" aria-label="Zustand">'
     +'<div class="qs-ticks" id="qsQualTk"></div></div>'
     +'<div class="qs-trk" id="qsTrk"><div class="qs-lbl">Spuren</div><div class="qs-seg">'
     +TRK_TRACKS.map(([k,l])=>'<button type="button" data-k="'+k+'" onclick="qsSet(\'tracks\',\''+k+'\',this)">'+escapeHtml(l)+'</button>').join('')+'</div></div>'
@@ -19168,7 +19312,7 @@ function qsOpen(){
     +'<button type="button" class="qs-cm" id="qsCm" onclick="qsCmtToggle()" aria-label="Kommentar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span>Text</span></button>'
     +'<button type="button" class="qs-post" id="qsPost" onclick="qsPost()" disabled>Posten</button></div></div>';
   el.classList.add('open');document.body.classList.add('qs-open');try{navSync();}catch(e){}
-  qsDepth(2);qsCrossOn();qsWhenInit();
+  qsDepth(15);qsCrossOn();qsWhenInit();
   {const qi=el.querySelector('.qs-in');if(qi)qi.addEventListener('scroll',()=>qi.classList.toggle('scrolled',qi.scrollTop>4),{passive:true});}
   const fall=()=>{if(qs&&!qs.ll){const c=map.getCenter();qsPlace(c.lat,c.lng,null,true);}};
   if(qs.tourPt)qsPlace(qs.tourPt[0],qs.tourPt[1],null,true);
@@ -19253,13 +19397,16 @@ function qsQualSync(){if(!qs)return;const k=QS_TYPES[qs.type].k,Q=QS_QUAL[k],box
   box.hidden=!Q;if(!Q)return;const n=Q.l.length,i=qs.qual[k]!=null?qs.qual[k]:Math.floor((n-1)/2),r=document.getElementById('qsQualR');
   document.getElementById('qsQualT').textContent=Q.t;
   const st=Q.c.map((c,j)=>c+' '+(j/n*100).toFixed(1)+'% '+((j+1)/n*100).toFixed(1)+'%').join(',');
-  if(r){r.max=n-1;r.value=i;r.style.setProperty('--qs-track','linear-gradient(90deg,'+st+')');r.style.setProperty('--qs-thumb',Q.c[i]);}
+  if(r){r.max=n-1;r.value=(qs.qualF&&qs.qualF[k]!=null)?qs.qualF[k]:i;r.style.setProperty('--qs-track','linear-gradient(90deg,'+st+')');r.style.setProperty('--qs-thumb',Q.c[i]);}
   const tk=document.getElementById('qsQualTk');if(tk){tk.style.gridTemplateColumns='repeat('+n+',1fr)';tk.innerHTML=Q.s.map(x=>'<span>'+escapeHtml(x)+'</span>').join('');}
   const v=document.getElementById('qsQualV');if(v){v.textContent=qs.qualSet[k]?Q.l[i]:'– schieben';v.classList.toggle('unset',!qs.qualSet[k]);}}
-function qsQualSet(i){if(!qs)return;const k=QS_TYPES[qs.type].k;if(!QS_QUAL[k])return;qs.qual[k]=i;qs.qualSet[k]=true;qsQualSync();try{haptic(3);}catch(e){}}
-function qsDepth(i){if(!qs)return;qs.depth=i;const d=QS_DEPTH[i],v=document.getElementById('qsDepV');
-  if(v)v.textContent=(d[1]==null?d[0]+'+':d[0]+'–'+d[1])+' cm';
-  const r=document.getElementById('qsRange');if(r){r.value=i;r.style.setProperty('--qs-thumb',d[2]);}}
+// continuous: the slider moves freely, the words follow the nearest step
+function qsQualSet(v){if(!qs)return;const k=QS_TYPES[qs.type].k,Q=QS_QUAL[k];if(!Q)return;
+  v=Math.max(0,Math.min(Q.l.length-1,+v||0));const i=Math.round(v),was=qs.qual[k];
+  (qs.qualF||(qs.qualF={}))[k]=v;qs.qual[k]=i;qs.qualSet[k]=true;qsQualSync();if(i!==was){try{haptic(3);}catch(e){}}}
+function qsDepth(cm){if(!qs)return;cm=Math.max(QS_CM_MIN,Math.min(QS_CM_MAX,+cm||QS_CM_MIN));qs.cm=cm;const d=qsCmBand(cm),v=document.getElementById('qsDepV');
+  if(v)v.textContent=qsCmText(cm);
+  const r=document.getElementById('qsRange');if(r){r.value=cm;r.style.setProperty('--qs-thumb',d[2]);}}
 // photos: several, each with an × to take it out again (up to 6)
 function qsPhoto(inp){if(!qs||!inp.files||!inp.files.length)return;
   [...inp.files].forEach(f=>{if(qs.photos.length<6&&/^image\//.test(f.type||'image/'))qs.photos.push(f);});inp.value='';
@@ -19289,9 +19436,9 @@ function qsToObs(type){const ll=qs&&qs.ll?qs.ll.slice():null,cm=qs?qs.comment:''
 async function qsPost(){if(!qs||qs.busy||!qs.ll)return;
   qs.busy=true;const btn=document.getElementById('qsPost');if(btn){btn.disabled=true;btn.textContent='Postet…';}
   try{
-    const t=QS_TYPES[qs.type],dp=t.depth?QS_DEPTH[qs.depth]:null,[lat,lon]=qs.ll,d=obsDEM(lat,lon);
-    const cm=dp?(dp[1]==null?dp[0]:Math.round((dp[0]+dp[1])/2)):0;
-    const cd={snow:t.k,measurement:t.l+(dp?' '+(dp[1]==null?dp[0]+'+':dp[0]+'–'+dp[1])+' cm':''),
+    const t=QS_TYPES[qs.type],dp=t.depth?qsCmBand(qs.cm):null,[lat,lon]=qs.ll,d=obsDEM(lat,lon);
+    const cm=t.depth?Math.round(qs.cm):0;
+    const cd={snow:t.k,measurement:t.l+(t.depth?' '+qsCmText(qs.cm):''),
       aspect:d.aspect||null,altitudeM:d.elev!=null?d.elev:null,gpsAcc:qs.acc?Math.round(qs.acc):null,moved:qs.moved||undefined};
     if(dp)cd.depthBand=[dp[0],dp[1]];
     const Q=QS_QUAL[t.k];let qv=null;
@@ -19585,6 +19732,10 @@ function profShowLegal(){profClose();const el=document.getElementById('disc');if
 // gets a line here, next to its short credit on the map (BASE_ATTR,
 // OVERLAYS[].attr). [name, what for, licence / credit, link]
 const SRC_GROUPS=[
+  ['Partner',[
+    ['meteoswiss','MS','#d52b1e','MeteoSchweiz','Partner für Wetter: Prognose (ICON-CH) und Messwerte','Bundesamt für Meteorologie und Klimatologie MeteoSchweiz','https://www.meteoschweiz.admin.ch/'],
+    ['slf','SLF','#0067b1','SLF','Partner für Schnee und Lawinen: Lawinenbulletin und IMIS-Messstationen','WSL-Institut für Schnee- und Lawinenforschung SLF','https://www.slf.ch/'],
+    ['swisstopo','st','#d52b1e','swisstopo','Partner für Karten: Landeskarte, Hangneigung und Skitourenrouten','© swisstopo','https://www.swisstopo.admin.ch/']]],
   ['Karten & Gelände',[
     ['swisstopo','st','#d52b1e','swisstopo','Landeskarte Winter, Hangneigung ab 30°, Skitourenrouten, Ortssuche, Höhenmodell swissALTIregio','Open Government Data · Quelle: Bundesamt für Landestopografie swisstopo','https://www.swisstopo.admin.ch/de/nutzungsbedingungen-kostenlose-geodaten-und-geodienste'],
     ['bafu','BAFU','#4a7a2c','BAFU','Wildruhezonen','Open Government Data · Quelle: Bundesamt für Umwelt BAFU','https://www.geo.admin.ch/de/nutzungsbedingungen'],
@@ -20277,13 +20428,13 @@ const _ski6=k=>'rgb('+VA_PALETTE.ski6[k].slice(0,3).join(',')+')',_wind=k=>'rgb(
 // powder coloured by its depth class: 0–10, 10–20, 20–30, 30–40, > 40 cm
 function drawPowCol(cm){const k=cm<10?3:cm<20?4:cm<30?5:cm<40?8:9;return VA_PALETTE.ski6[k].slice(0,3);}
 const DRAW_PENS={
- powder:{id:'powder',label:'Pulver',color:_ski6(4),kind:'zone',slfDepth:true,slider:{label:'Tiefe',min:5,max:SNOW_CM_MAX,step:5,unit:' cm',val:30}},
+ powder:{id:'powder',label:'Pulver',color:_ski6(4),kind:'zone',slfDepth:true,slider:{label:'Tiefe',min:1,max:SNOW_CM_MAX,step:1,unit:' cm',val:30}},
  firn:{id:'firn',label:'Sulz (aufgefirnt)',color:_ski6(6),kind:'zone'},
  wet:{id:'wet',label:'nass / faul',color:_ski6(7),kind:'zone',slider:{label:'Nässe',min:1,max:5,step:1,unit:'/5',val:3}},
  suncrust:{id:'suncrust',label:'Kruste',color:_ski6(2),kind:'zone',slider:{label:'Deckel',min:1,max:3,step:1,val:2,labels:_CRUST_LABELS}},
  windpressed:{id:'windpressed',label:'hart / windgepresst',color:_ski6(1),kind:'zone',slider:{label:'Deckel',min:1,max:3,step:1,val:2,labels:_CRUST_LABELS}},
  icy:{id:'icy',label:'Eisig',color:_ski6(1),kind:'zone',dash:[24,20]},
- drift:{id:'drift',label:'Triebschnee',color:_wind(3),kind:'zone',slider:{label:'Mächtigkeit',min:5,max:SNOW_CM_MAX,step:5,unit:' cm',val:20}},
+ drift:{id:'drift',label:'Triebschnee',color:_wind(3),kind:'zone',slider:{label:'Mächtigkeit',min:1,max:SNOW_CM_MAX,step:1,unit:' cm',val:20}},
  scoured:{id:'scoured',label:'Abgeweht',color:_wind(1),kind:'zone',dash:[24,20]},
  compact:{id:'compact',label:'Kompakt',color:'#8aa0c8',kind:'zone'},
  facet:{id:'facet',label:'Altpulver',color:_ski6(11),kind:'zone',slider:{label:'Tiefe',min:1,max:SNOW_CM_MAX,step:1,unit:' cm',val:15}},
@@ -20304,7 +20455,7 @@ const DRAW_CATS=[
 let drawCtx=null,drawPen=DRAW_PENS.powder,drawCat='snow';
 // the tool (fill a slope, paint, boundary, along the track, route, tracks,
 // eraser), the snow kind and its depth band
-let drawTool='fill',drawLastZoneTool='fill',drawTypeI=0,drawDepthI=2;
+let drawTool='fill',drawLastZoneTool='fill',drawTypeI=0,drawDepthI=15;
 let drawBounds=[],_drawBoundCur=null,_drawTap=null,_drawTrkLast=null,_drawTrkPts=null;
 let drawZoneCanvas=null,drawZoneW=0,drawZoneH=0,drawDpr=1,drawRefBounds=null;
 let drawRoutes=[],drawTracks=[],drawZoneUsed=new Set(),drawHistory=[];
@@ -20890,20 +21041,18 @@ const DRAW_TYPES=[{pen:'powder',qs:'pulver'},{pen:'facet',qs:'kantig'},{pen:'fir
 const DRAW_DEPTH_CM=[3,8,15,25,40,60];   // the middle of each quick-report depth band
 function drawTypeMeta(t){const q=t.qs&&QS_TYPES.find(x=>x.k===t.qs),p=DRAW_PENS[t.pen];
   return {l:q?q.l:p.label,c:q?q.c:p.color,depth:!!(p.slider&&p.slider.unit===' cm')};}
-function drawCmBand(cm){const b=QS_DEPTH.find(d=>cm>=d[0]&&(d[1]==null||cm<d[1]))||QS_DEPTH[QS_DEPTH.length-1];
-  return (b[1]==null?b[0]+'+':b[0]+'–'+b[1])+' cm';}
+function drawCmBand(cm){return qsCmText(cm);}
 function drawRenderTypes(){const el=document.getElementById('drawTypes');if(!el)return;
   el.innerHTML=DRAW_TYPES.map((t,i)=>{const m=drawTypeMeta(t);
     return '<button type="button" role="radio" data-i="'+i+'" onclick="drawTypePick('+i+')"><i style="background:'+m.c+'"></i>'+escapeHtml(m.l.replace(/ \(.*\)$/,''))+'</button>';}).join('');
-  const dg=QS_DEPTH.map(d=>d[2]),stops=dg.map((c,i)=>c+' '+(i/dg.length*100).toFixed(2)+'% '+((i+1)/dg.length*100).toFixed(2)+'%').join(',');
-  const r=document.getElementById('drawDepthR');if(r)r.style.setProperty('--qs-track','linear-gradient(90deg,'+stops+')');
-  const tk=document.getElementById('drawDepthTicks');if(tk)tk.innerHTML=QS_DEPTH.map(d=>'<span>'+(d[1]==null?d[0]+'+':d[0]+'–'+d[1])+'</span>').join('');}
+  const r=document.getElementById('drawDepthR');if(r)r.style.setProperty('--qs-track',qsCmTrack());
+  const tk=document.getElementById('drawDepthTicks');if(tk){tk.classList.add('qs-ticks-cm');tk.innerHTML=['1','10','20','30','40','50','60','70+'].map(x=>'<span>'+x+'</span>').join('');}}
 function drawTypesSync(){const t=DRAW_TYPES[drawTypeI],m=drawTypeMeta(t),zone=!['route','tracks','eraser'].includes(drawTool);
   document.querySelectorAll('#drawTypes button').forEach(b=>{const on=+b.dataset.i===drawTypeI&&zone;b.classList.toggle('on',on);b.setAttribute('aria-checked',on);});
   const d=document.getElementById('drawDepth');if(d)d.hidden=!(m.depth&&zone);
-  const r=document.getElementById('drawDepthR');if(r){r.value=drawDepthI;r.style.setProperty('--qs-thumb',QS_DEPTH[drawDepthI][2]);}
-  const tx=document.getElementById('drawDepthTxt');if(tx){const b=QS_DEPTH[drawDepthI];tx.textContent=(b[1]==null?b[0]+'+':b[0]+'–'+b[1])+' cm';}}
-function drawApplyDepth(){const sl=drawPen&&drawPen.slider;if(sl&&sl.unit===' cm')sl.val=DRAW_DEPTH_CM[drawDepthI];}
+  const r=document.getElementById('drawDepthR');if(r){r.value=drawDepthI;r.style.setProperty('--qs-thumb',qsCmBand(drawDepthI)[2]);}
+  const tx=document.getElementById('drawDepthTxt');if(tx)tx.textContent=qsCmText(drawDepthI);}
+function drawApplyDepth(){const sl=drawPen&&drawPen.slider;if(sl&&sl.unit===' cm')sl.val=Math.round(drawDepthI);}
 function drawTypePick(i){drawTypeI=i;
   if(['route','tracks','eraser','bound'].includes(drawTool))drawToolPick(drawLastZoneTool,true);
   else{drawSelectPen(DRAW_TYPES[i].pen);drawApplyDepth();}
@@ -20915,8 +21064,6 @@ const DRAW_TOOLS=[
     hint:'Tippe auf einen Hang – gleiche Exposition und Höhe werden eingefärbt. Ziehen verschiebt die Karte.'},
   {id:'paint',l:'Malen',ic:_DI('<path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/>'),
     hint:'Mal mit dem Finger – mit zwei Fingern bewegst du die Karte'},
-  {id:'bound',l:'Höhengrenze',ic:_DI('<path d="M3 19l6-10 4 6 2-3 6 7"/><path d="M2 12h20" stroke-dasharray="3 3"/>'),
-    hint:'Zieh einen Strich quer über den Hang – dann oberhalb und unterhalb getrennt antippen'},
   {id:'trackpaint',l:'Spur',ic:_DI('<path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/>'),need:()=>!!trkShown,
     hint:'Fahr mit dem Finger der Spur entlang – der Abschnitt bekommt die gewählte Schneeart'},
   {id:'route',l:'Route',ic:_SVG_ROUTE,hint:'Zeichne deine Route – Auf- und Abstieg erkennt die App am Gelände'},
