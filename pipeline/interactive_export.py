@@ -6252,6 +6252,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
    padding:6px 16px calc(14px + env(safe-area-inset-bottom,0px))}
  .qs-grab{width:38px;height:5px;border-radius:3px;background:var(--hair);margin:2px auto 8px}
  .qs-hd{display:flex;align-items:center;justify-content:space-between}
+ /* title and × stay in view however far the sheet is scrolled */
+ .qs-sheet .qs-hd{position:sticky;top:-6px;z-index:5;margin:0 -16px;padding:12px 16px 8px;background:var(--card);border-bottom:1px solid transparent}
+ .qs-sheet .qs-in.scrolled .qs-hd{border-bottom-color:var(--hair);box-shadow:0 4px 10px -8px rgba(10,30,60,.25)}
  .qs-hd b{font:800 17px/1.2 var(--font);color:var(--fg)}
  .qs-x{border:0;background:var(--fill);color:var(--fg2);width:30px;height:30px;border-radius:9px;font-size:18px;cursor:pointer}
  .qs-loc{display:flex;align-items:center;gap:8px;margin:8px 0 10px;padding:8px 10px;border-radius:12px;background:var(--fill);color:var(--fg2);font:600 12.5px/1.3 var(--font)}
@@ -6310,6 +6313,10 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 .qs-danger.on .qs-sw{background:#A83A2E}.qs-danger.on .qs-sw::after{transform:translateX(16px)}
 .qs-dg-b{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 10px}
 .qs-dg-b[hidden]{display:none}
+.qs-when{display:flex;align-items:center;gap:10px;margin:2px 0 10px}
+.qs-when .qs-lbl{margin:0}
+.qs-when input{flex:1;min-width:0;height:38px;padding:0 10px;border:1px solid var(--hair);border-radius:11px;background:var(--card);color:var(--fg);font:600 14px var(--font)}
+.qs-when b{font:700 12px var(--font);color:var(--mut);min-width:0}
 .qs-dg-b small{flex:1 0 100%;font:600 11.5px/1.3 var(--font);color:var(--mut);margin-bottom:2px}
 #qsCross .qs-hint{position:absolute;left:50%;bottom:54px;transform:translateX(-50%);white-space:nowrap;padding:6px 11px;border-radius:999px;background:#e0245e;color:#fff;
   font:800 12.5px/1 var(--font);box-shadow:0 4px 14px rgba(0,0,0,.25);animation:qsHint 1.6s ease-in-out infinite}
@@ -6540,12 +6547,12 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  /* the control bar over the map (timeline + tabs): light frosted glass, the
     terrain shows through; over a screen (feed, profile) it stays solid above */
  :root[data-theme="light"] #tabBar,:root[data-theme="light"] #bottomPanel{
-   background:rgba(255,255,255,.66)!important;background-image:none!important;
+   background:rgba(255,255,255,.42)!important;background-image:none!important;
    -webkit-backdrop-filter:blur(20px) saturate(175%)!important;backdrop-filter:blur(20px) saturate(175%)!important;
    border-color:rgba(255,255,255,.6)!important}
  /* Android app (WebView): see-through, but without the blur */
  :root.and-wv[data-theme="light"] #tabBar,:root.and-wv[data-theme="light"] #bottomPanel{
-   background:rgba(255,255,255,.86)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+   background:rgba(255,255,255,.74)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
  :root[data-theme="light"] body:not(.desk) #bottomPanel{box-shadow:0 -6px 18px rgba(18,21,26,.06),inset 0 1px 0 rgba(255,255,255,.8)!important}
  .fc-depth{font:650 14px/1.3 var(--font)!important;font-variant-numeric:tabular-nums}
 </style>
@@ -19132,6 +19139,8 @@ function qsOpen(){
     +'<div class="qs-hd"><b>Schnellmeldung</b><button type="button" class="qs-x" onclick="qsClose()" aria-label="Schliessen">×</button></div>'
     +'<div class="qs-loc" id="qsLoc"><span>Standort wird bestimmt…</span></div>'
     +'<div class="qs-tour" id="qsTour"></div>'
+    // when it was: now by default, back up to 7 days (a report written later)
+    +'<label class="qs-when"><span class="qs-lbl">Wann</span><input type="datetime-local" id="qsWhen" oninput="qsWhenSync()" aria-label="Datum und Zeit der Beobachtung"><b id="qsWhenV">jetzt</b></label>'
     +'<div class="qs-lbl">Schneeart</div>'
     +'<div class="qs-wheel-w"><div class="qs-wheel" id="qsWheel" data-nopull onscroll="qsWheelScroll()">'
     +QS_TYPES.map((t,i)=>'<button type="button" class="qs-it'+(i===0?' on':'')+'" onclick="qsPick('+i+')"><i style="background:'+t.c+'"></i><span>'+escapeHtml(t.l)+'</span></button>').join('')
@@ -19159,7 +19168,8 @@ function qsOpen(){
     +'<button type="button" class="qs-cm" id="qsCm" onclick="qsCmtToggle()" aria-label="Kommentar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span>Text</span></button>'
     +'<button type="button" class="qs-post" id="qsPost" onclick="qsPost()" disabled>Posten</button></div></div>';
   el.classList.add('open');document.body.classList.add('qs-open');try{navSync();}catch(e){}
-  qsDepth(2);qsCrossOn();
+  qsDepth(2);qsCrossOn();qsWhenInit();
+  {const qi=el.querySelector('.qs-in');if(qi)qi.addEventListener('scroll',()=>qi.classList.toggle('scrolled',qi.scrollTop>4),{passive:true});}
   const fall=()=>{if(qs&&!qs.ll){const c=map.getCenter();qsPlace(c.lat,c.lng,null,true);}};
   if(qs.tourPt)qsPlace(qs.tourPt[0],qs.tourPt[1],null,true);
   // the first fix is often the coarse one: keep listening for ~20 s and move
@@ -19260,6 +19270,14 @@ function qsThumbs(){if(!qs)return;const box=document.getElementById('qsThumbs'),
     return '<span class="qs-th" style="background-image:url(\''+f._u+'\')"><button type="button" onclick="qsPhotoDel('+i+')" aria-label="Foto entfernen">×</button></span>';}).join('');}
   if(n)n.textContent=qs.photos.length?'+ Foto':'Foto';if(ph)ph.classList.toggle('more',!!qs.photos.length);}
 function qsPhotoDel(i){if(!qs)return;const f=qs.photos.splice(i,1)[0];try{if(f&&f._u)URL.revokeObjectURL(f._u);}catch(e){}qsThumbs();}
+// the time of the observation: a local date-time, not in the future, at most 7 days back
+function qsLocalIso(d){const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,16);}
+function qsWhenInit(){const el=document.getElementById('qsWhen');if(!el)return;const now=new Date();
+  el.max=qsLocalIso(now);el.min=qsLocalIso(new Date(now.getTime()-7*864e5));el.value=qsLocalIso(now);qsWhenSync();}
+function qsWhenMs(){const el=document.getElementById('qsWhen');const t=el&&el.value?new Date(el.value).getTime():NaN;
+  const now=Date.now();return isFinite(t)?Math.max(now-7*864e5,Math.min(now,t)):now;}
+function qsWhenSync(){const v=document.getElementById('qsWhenV');if(!v)return;const ms=qsWhenMs(),ago=Date.now()-ms;
+  v.textContent=ago<10*6e4?'jetzt':ago<36e5?'vor '+Math.round(ago/6e4)+' min':ago<864e5&&new Date(ms).getDate()===new Date().getDate()?'heute':(WD()[new Date(ms).getDay()]||'');}
 function qsDangerToggle(){const w=document.getElementById('qsDanger'),b=document.getElementById('qsDgB');if(!w||!b)return;
   b.hidden=!b.hidden;w.classList.toggle('on',!b.hidden);const h=w.querySelector('.qs-dg-h');if(h)h.setAttribute('aria-expanded',String(!b.hidden));try{haptic(3);}catch(e){}}
 function qsCmtToggle(){const b=document.getElementById('qsCmtBox');if(!b)return;b.hidden=!b.hidden;
@@ -19285,7 +19303,7 @@ async function qsPost(){if(!qs||qs.busy||!qs.ll)return;
     if(t.q!=null){cd.quick=true;cd.powderQuality=(qv!=null&&Q.q)?Q.q[qv]:t.q;cd.powderAmountCm=cm;cd.powder=t.k==='pulver';}
     const cmt=(qs.comment||'').trim().slice(0,1000);
     const row={user_id:sbUser.id,location:'POINT('+lon+' '+lat+')',elevation_m:cd.altitudeM,primary_categories:[t.cat||'snow'],subtype:'Schnellmeldung',
-      condition_data:cd,caption:cmt||null,completion_score:qs.photos.length?60:40,captured_at:new Date().toISOString()};
+      condition_data:cd,caption:cmt||null,completion_score:qs.photos.length?60:40,captured_at:new Date(qsWhenMs()).toISOString()};
     // every photo goes up; the first is the post's picture, all of them its slider
     if(qs.photos.length){const urls=[];
       for(let i=0;i<qs.photos.length;i++){const f=qs.photos[i],up=await downscaleImage(f),path=sbUser.id+'/'+Date.now()+'_'+i+'.jpg';
