@@ -9,6 +9,25 @@ name: iOS build (TestFlight)
 # `upload: false` it runs without any of them and just proves the build works.
 
 on:
+  # Every merge to main that changes the app goes to TestFlight by itself
+  # (signed, uploaded, with live data); by hand it still runs with the inputs.
+  push:
+    branches: ["main"]
+    paths:
+      - "apple-app/**"
+      - "pipeline/**"
+      - "run_interactive.py"
+      - ".github/workflows/ios-testflight.yml"
+  # a pull request that touches the native shell is compiled (unsigned, no
+  # upload), so a Swift or config mistake shows before the merge
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "apple-app/ios-config/**"
+      - "apple-app/scripts/**"
+      - "apple-app/package.json"
+      - "apple-app/capacitor.config.ts"
+      - ".github/workflows/ios-testflight.yml"
   workflow_dispatch:
     inputs:
       upload:
@@ -41,6 +60,16 @@ on:
 # The team id and the profile name are read from the profile itself; the
 # build number is the run number. Step by step: docs/testflight-anleitung.md
 
+# one upload at a time; a newer merge replaces a queued one
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
+
+env:
+  # a push (merge) behaves like a manual run with upload on and the defaults
+  UPLOAD: ${{ github.event_name == 'push' || inputs.upload }}
+  APP_VERSION: ${{ inputs.version || '1.0.0' }}
+
 jobs:
   build:
     runs-on: macos-latest
@@ -70,8 +99,9 @@ jobs:
       - name: Build web assets into apple-app/www
         working-directory: apple-app
         env:
-          SNOW_OFFLINE: ${{ inputs.offline && '1' || '0' }}
-          SNOW_REMOTE_DATA_BASE: ${{ inputs.remote_data_base }}
+          SNOW_OFFLINE: ${{ (github.event_name == 'pull_request' || (github.event_name != 'push' && inputs.offline)) && '1' || '0' }}
+          SNOW_REMOTE_DATA_BASE: ${{ inputs.remote_data_base || 'https://gianio.github.io/snow-mapper-v17' }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           npm install
           npm run build:web
@@ -107,7 +137,7 @@ jobs:
       # your Apple ID as the team and run it on your own iPhone -- no paid
       # developer account, nothing else to install. docs/iphone-ohne-lizenz.md
       - name: Pack the Xcode project for a local install
-        if: ${{ !inputs.upload }}
+        if: env.UPLOAD != 'true'
         working-directory: apple-app
         run: |
           # The Pods point at the plugins in ../../node_modules (Podfile
@@ -123,14 +153,14 @@ jobs:
           tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/snowmapper-xcode.tar.gz" snowmapper
           ls -lh "$RUNNER_TEMP/snowmapper-xcode.tar.gz"
       - name: Keep the Xcode project
-        if: ${{ !inputs.upload }}
+        if: env.UPLOAD != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: snowmapper-xcode-projekt
           path: ${{ runner.temp }}/snowmapper-xcode.tar.gz
           retention-days: 14
       - name: Build unsigned (smoke test)
-        if: ${{ !inputs.upload }}
+        if: env.UPLOAD != 'true'
         working-directory: apple-app/ios/App
         run: |
           xcodebuild -workspace App.xcworkspace -scheme App \
@@ -139,7 +169,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO build
 
       - name: Import signing assets
-        if: ${{ inputs.upload }}
+        if: env.UPLOAD == 'true'
         env:
           P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
           P12_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -192,7 +222,7 @@ jobs:
           echo "Signing with profile '$NAME' ($UUID), team $TEAM"
 
       - name: Configure signing, version and build number
-        if: ${{ inputs.upload }}
+        if: env.UPLOAD == 'true'
         working-directory: apple-app
         run: |
           BUILD="${{ inputs.build_number }}"
@@ -209,10 +239,10 @@ jobs:
             ENT="App/App.entitlements"
           fi
           python3 scripts/ci-signing.py --team "$TEAM_ID" --profile "$PROFILE_NAME" \
-            --version "${{ inputs.version }}" --build "$BUILD" --entitlements "$ENT"
+            --version "$APP_VERSION" --build "$BUILD" --entitlements "$ENT"
 
       - name: Archive and export
-        if: ${{ inputs.upload }}
+        if: env.UPLOAD == 'true'
         working-directory: apple-app/ios/App
         run: |
           xcodebuild -workspace App.xcworkspace -scheme App \
@@ -240,7 +270,7 @@ jobs:
       # The signed .ipa is kept as a download too: if the upload below ever
       # fails, it can go up by hand with Apple's Transporter app.
       - name: Keep the signed .ipa
-        if: ${{ inputs.upload }}
+        if: env.UPLOAD == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: snowmapper-ipa
@@ -248,7 +278,7 @@ jobs:
           retention-days: 14
 
       - name: Upload to TestFlight
-        if: ${{ inputs.upload }}
+        if: env.UPLOAD == 'true'
         env:
           API_KEY_JSON: ${{ secrets.APPSTORE_API_KEY_JSON }}
         run: |
@@ -262,7 +292,7 @@ jobs:
             --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
           rm -rf "$HOME/private_keys"
           echo "### Uploaded to App Store Connect" >> "$GITHUB_STEP_SUMMARY"
-          echo "Version ${{ inputs.version }} – the build appears under TestFlight after Apple's processing (usually 10–30 min)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Version $APP_VERSION – the build appears under TestFlight after Apple's processing (usually 10–30 min)." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload build artifacts
         if: always()

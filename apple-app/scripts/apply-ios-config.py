@@ -42,6 +42,28 @@ PUSH_HOOKS = """
     }
 """
 
+# Quick actions on the app icon (UIApplicationShortcutItems in Info.plist) and
+# the app-icon badge. A quick action becomes snowmapper://action/<name>, which
+# the App plugin hands to the web app (appUrlOpen, or getLaunchUrl on a cold
+# start). The badge (unread messages, set by push) clears when the app opens.
+SHORTCUT_HOOKS = """
+    // Quick actions and badge. Added by scripts/apply-ios-config.py.
+    func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
+        let name = shortcutItem.type.components(separatedBy: ".").last ?? ""
+        guard let url = URL(string: "snowmapper://action/" + name) else { completionHandler(false); return }
+        completionHandler(ApplicationDelegateProxy.shared.application(application, open: url, options: [:]))
+    }
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        if #available(iOS 16.0, *) {
+            UNUserNotificationCenter.current().setBadgeCount(0) { _ in }
+        } else {
+            application.applicationIconBadgeNumber = 0
+        }
+    }
+"""
+
+
 
 def parse_additions(text: str) -> dict:
     """Read the <key>/<value> fragment file into a dict.
@@ -216,6 +238,32 @@ def add_push_hooks() -> None:
     print("AppDelegate: added the push-notification hooks")
 
 
+def add_shortcut_hooks() -> None:
+    if not APP_DELEGATE.exists():
+        return
+    src = APP_DELEGATE.read_text(encoding="utf-8")
+    if "performActionFor shortcutItem" in src:
+        print("AppDelegate: quick-action hooks already present")
+        return
+    # the template already has an (empty) applicationDidBecomeActive: drop it
+    src = re.sub(r"\n\s*func applicationDidBecomeActive\(_ application: UIApplication\) \{(?:[^{}]|\{[^{}]*\})*\}\n",
+                 "\n", src, count=1)
+    if "import UserNotifications" not in src:
+        src = src.replace("import UIKit", "import UIKit\nimport UserNotifications", 1)
+    hooks = SHORTCUT_HOOKS
+    if "func applicationDidBecomeActive" in src:
+        # a template we could not clean: keep its method, skip the badge reset
+        # rather than define it twice (that would not compile)
+        hooks = hooks.split("    func applicationDidBecomeActive")[0].rstrip() + "\n"
+        print("  note: kept the template's applicationDidBecomeActive; badge is not reset on open")
+    m = re.search(r"class AppDelegate\b[^{]*\{\n", src)
+    if not m:
+        print("  WARNING: no AppDelegate class found — quick actions not wired")
+        return
+    APP_DELEGATE.write_text(src[:m.end()] + hooks + src[m.end():], encoding="utf-8")
+    print("AppDelegate: added quick actions and badge reset")
+
+
 def main() -> int:
     if not INFO_PLIST.exists():
         print(f"error: {INFO_PLIST} not found — run `npx cap add ios` first.", file=sys.stderr)
@@ -228,6 +276,7 @@ def main() -> int:
     install_privacy_manifest()
     ensure_shared_scheme()
     add_push_hooks()
+    add_shortcut_hooks()
     print("iOS config applied.")
     return 0
 

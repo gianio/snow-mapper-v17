@@ -21,7 +21,7 @@ const cut = (s: unknown, n: number) => {
   return t.length > n ? t.slice(0, n - 1) + '…' : t;
 };
 
-type Msg = { to: string; title: string; body: string; url: string; tag: string; once?: string };
+type Msg = { to: string; title: string; body: string; url: string; tag: string; once?: string; badge?: number };
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method' }, 405);
@@ -47,6 +47,15 @@ Deno.serve(async (req) => {
     return data?.username ? '@' + data.username : 'Jemand';
   };
   const fresh = (t: string) => Date.now() - Date.parse(t) < 5 * 60 * 1000;
+  // unread direct messages of a person: the number on the iPhone app icon
+  const unread = async (uid: string) => {
+    const { data: th } = await admin.from('dm_threads').select('id').or(`user_a.eq.${uid},user_b.eq.${uid}`);
+    const ids = (th || []).map((t) => t.id);
+    if (!ids.length) return 0;
+    const { count } = await admin.from('dm_messages').select('id', { count: 'exact', head: true })
+      .in('thread_id', ids).neq('sender_id', uid).is('read_at', null);
+    return count || 0;
+  };
   let m: Msg | null = null;
 
   if (table === 'report_comments') {
@@ -80,7 +89,7 @@ Deno.serve(async (req) => {
         const body = /[?&]post=/.test(d.body || '') ? 'hat dir einen Beitrag geschickt' : cut(d.body, 160);
         m = { to, title: `✉️ ${who}`, body,
               url: APP + '?dm=' + d.sender_id + '&n=' + encodeURIComponent(who.replace(/^@/, '')),
-              tag: 'dm-' + d.thread_id };
+              tag: 'dm-' + d.thread_id, badge: await unread(to) };
       }
     }
   } else if (table === 'test') {
@@ -115,7 +124,7 @@ Deno.serve(async (req) => {
   const errs: number[] = [];
   await Promise.all(subs.map(async (s) => {
     if (isApns(s)) {
-      const st = await sendApns(s.endpoint, s.auth, { title: m!.title, body: m!.body, url: m!.url, tag: m!.tag, ttlSec: 60 * 60 * 24 });
+      const st = await sendApns(s.endpoint, s.auth, { title: m!.title, body: m!.body, url: m!.url, tag: m!.tag, ttlSec: 60 * 60 * 24, badge: m!.badge });
       if (st === 200) sent++;
       else { errs.push(st); if (st === 410) await admin.from('push_subscriptions').delete().eq('endpoint', s.endpoint); }
       return;

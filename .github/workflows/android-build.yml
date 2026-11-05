@@ -58,6 +58,7 @@ jobs:
       # A PR build has no inputs: offline data, live-data origin as default.
       SNOW_OFFLINE: ${{ (github.event_name == 'pull_request' || inputs.offline) && '1' || '0' }}
       SNOW_REMOTE_DATA_BASE: ${{ inputs.remote_data_base || 'https://gianio.github.io/snow-mapper-v17' }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     steps:
       - uses: actions/checkout@v5
 
