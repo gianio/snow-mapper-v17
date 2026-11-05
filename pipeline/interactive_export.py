@@ -6633,6 +6633,7 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
  body.kb-up .qs-sheet .qs-in{max-height:calc(var(--app-h,100dvh) - var(--kb,0px) - env(safe-area-inset-top,0px) - 24px)!important}
  /* menus and small popups are kept inside the screen by fitInView() */
  .fc-menu{max-width:calc(100vw - 16px)}
+ html.cap-native .web-only{display:none!important}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -7197,7 +7198,7 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
         <button class="prof-back" onclick="profNav('main')">‹ Zurück</button>
         <div class="prof-sec-title">Benachrichtigungen</div>
         <div class="prof-row"><span>Push-Benachrichtigungen</span><button class="prof-toggle" id="profPush" onclick="profTogglePush()"><span></span></button></div>
-        <div class="prof-hint">Du bekommst eine Mitteilung bei Kommentaren und Likes zu deinen Beiträgen, bei neuen Nachrichten und neuen Follower:innen. Auf dem iPhone nur in der App auf dem Home-Bildschirm (ab iOS 16.4).</div>
+        <div class="prof-hint">Du bekommst eine Mitteilung bei Kommentaren und Likes zu deinen Beiträgen, bei neuen Nachrichten und neuen Follower:innen.<span class="web-only"> Auf dem iPhone nur in der App auf dem Home-Bildschirm (ab iOS 16.4).</span></div>
         <button class="prof-item" id="profPushTest" onclick="profPushTest(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Test-Benachrichtigung senden</button>
       </div>
       <div class="prof-view" id="profViewApp" style="display:none">
@@ -8454,7 +8455,7 @@ async function dataFetch(path,opts){const R=dataRemote();
   return fetch(path,opts);}
 function _capPlugin(n){return (_CAP&&_CAP.Plugins&&_CAP.Plugins[n])?_CAP.Plugins[n]:null;}
 function nativeShare(text,url){const S=_capPlugin('Share');if(S){try{S.share({text:text||'',url:url||''});return true;}catch(e){}}return false;}
-if(_isNative){try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'DARK'});SB.setOverlaysWebView({overlay:true});}}catch(e){}
+if(_isNative){try{document.documentElement.classList.add('cap-native');}catch(e){}try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'DARK'});SB.setOverlaysWebView({overlay:true});}}catch(e){}
   try{const SP=_capPlugin('SplashScreen');if(SP)setTimeout(()=>{try{SP.hide();}catch(e){}},450);}catch(e){}
   // Android hardware/gesture back. Every sheet and modal already closes on
   // Escape, so back replays Escape; if nothing on screen changed (no overlay
@@ -17565,6 +17566,10 @@ async function lockAvailable(){const N=_bioNative();
 const _rnd=n=>crypto.getRandomValues(new Uint8Array(n));
 const _b64=b=>btoa(String.fromCharCode.apply(null,new Uint8Array(b))),_unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function lockEnable(){const N=_bioNative();
+  // the app: ask the device first, so a missing Face ID / passcode is named
+  if(N){try{const c=await N.checkBiometry();
+      if(c&&!c.isAvailable&&!c.deviceIsSecure){toast(c.code==='passcodeNotSet'?'Lege zuerst einen iPhone-Code fest (Einstellungen → Face ID & Code)':'Face ID ist nicht eingerichtet: '+(c.reason||c.code||'unbekannt'),'err');return false;}}catch(e){}}
+  else if(_isNative){toast('Face ID ist in dieser App-Version nicht verfügbar','err');return false;}
   try{
     if(N){await _bioAuth(N,{reason:'Snowmapper mit Face ID schützen',cancelTitle:'Abbrechen',iosFallbackTitle:'Code eingeben',allowDeviceCredential:true});
       localStorage.setItem(LOCK_KEY,JSON.stringify({on:true,native:true}));}
@@ -17573,7 +17578,7 @@ async function lockEnable(){const N=_bioNative();
         authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},timeout:60000,attestation:'none'}});
       localStorage.setItem(LOCK_KEY,JSON.stringify({on:true,id:_b64(c.rawId)}));}
     toast('Face ID ist eingerichtet','ok');lockRender();return true;
-  }catch(e){if(!_bioCancelled(e))toast('Face ID konnte nicht eingerichtet werden','err');try{console.warn('faceid',e&&(e.code||e.message));}catch(_){}return false;}}
+  }catch(e){if(!_bioCancelled(e))toast('Face ID konnte nicht eingerichtet werden'+(e&&(e.message||e.code)?': '+(e.message||e.code):''),'err');try{console.warn('faceid',e&&(e.code||e.message));}catch(_){}return false;}}
 function lockShow(){const el=document.getElementById('appLock');if(!el)return;el.hidden=false;document.body.classList.add('locked');}
 async function lockVerify(){const L=lockGet();if(!L||!L.on)return true;const N=_bioNative();
   try{
@@ -19219,10 +19224,11 @@ async function pushRequest(){if(_pushNative()){try{const r=await _capPlugin('Pus
 let _apnsTok=null,_apnsWait=null;
 function _apnsListen(){if(_apnsWait)return;const PN=_capPlugin('PushNotifications');if(!PN)return;_apnsWait=[];
   try{PN.addListener('registration',t=>{_apnsTok=t&&t.value;const w=_apnsWait.splice(0);w.forEach(f=>f[0](_apnsTok));});
-    PN.addListener('registrationError',e=>{const w=_apnsWait.splice(0);w.forEach(f=>f[1](new Error((e&&e.error)||'APNs')));});
+    PN.addListener('registrationError',e=>{const w=_apnsWait.splice(0);w.forEach(f=>f[1](new Error(_apnsFriendly((e&&e.error)||'APNs'))));});
     // a tapped notification opens the post / message / profile it is about
     PN.addListener('pushNotificationActionPerformed',a=>{try{const d=a&&a.notification&&a.notification.data;if(d&&d.url)pushRoute(d.url);}catch(e){}});
   }catch(e){}}
+function _apnsFriendly(m){m=String(m||'');return /aps-environment/i.test(m)?'diese App-Version hat noch keine Push-Berechtigung von Apple (kommt mit einem der nächsten TestFlight-Builds)':m;}
 function _apnsToken(){_apnsListen();if(_apnsTok)return Promise.resolve(_apnsTok);
   return new Promise((ok,no)=>{_apnsWait.push([ok,no]);try{_capPlugin('PushNotifications').register();}catch(e){no(e);}
     setTimeout(()=>no(new Error('keine Antwort von Apple (Push)')),20000);});}
