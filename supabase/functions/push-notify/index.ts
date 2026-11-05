@@ -11,6 +11,7 @@
 // DEPLOY: supabase functions deploy push-notify --no-verify-jwt
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
+import { isApns, sendApns } from '../_shared/apns.ts';
 
 const APP = 'https://gianio.github.io/snow-mapper-v17/';
 const json = (body: unknown, status = 200) =>
@@ -113,6 +114,12 @@ Deno.serve(async (req) => {
   let sent = 0;
   const errs: number[] = [];
   await Promise.all(subs.map(async (s) => {
+    if (isApns(s)) {
+      const st = await sendApns(s.endpoint, s.auth, { title: m!.title, body: m!.body, url: m!.url, tag: m!.tag, ttlSec: 60 * 60 * 24 });
+      if (st === 200) sent++;
+      else { errs.push(st); if (st === 410) await admin.from('push_subscriptions').delete().eq('endpoint', s.endpoint); }
+      return;
+    }
     try {
       await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         payload, { TTL: 60 * 60 * 24, urgency: 'normal' });

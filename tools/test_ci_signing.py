@@ -64,6 +64,10 @@ first = out.split("504EC3171FED79650016851F")[0]
 check("project-level config untouched", "DEVELOPMENT_TEAM" not in first)
 out2, _ = cs.patch_pbxproj(out, "ABCDE12345", "Snowmapper AppStore", "1.0.0", "43")
 check("idempotent (no duplicate keys on a second run)", out2.count("DEVELOPMENT_TEAM") == 2 and "= 43;" in out2)
+check("no entitlements unless asked (push off keeps the old build)", "CODE_SIGN_ENTITLEMENTS" not in out2)
+out3, _ = cs.patch_pbxproj(out2, "ABCDE12345", "Snowmapper AppStore", "1.0.0", "44", "App/App.entitlements")
+check("push on: the entitlements file in both app configurations",
+      out3.count("CODE_SIGN_ENTITLEMENTS = App/App.entitlements;") == 2)
 
 with tempfile.TemporaryDirectory() as d:
     ip = Path(d) / "Info.plist"

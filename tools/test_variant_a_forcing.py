@@ -1129,11 +1129,24 @@ def test_precip_pattern():
     for k in range(30):                                          # 7.5 days of 6-hourly cycles
         f2 = dict(fld, ref=ref + timedelta(hours=6 * k))
         h = precip.update_history(h, f2)
-    check("history keeps only the last HIST_DAYS", len(h["times"]) == precip.HIST_DAYS * 4 + 1,
+    check("history keeps only the last HIST_DAYS",
+          max(t - ref for t in h["times"]) > timedelta(days=7) and
+          all(h["cyc"][-1] - c <= timedelta(days=precip.HIST_DAYS, hours=precip.HIST_WIN_H) for c in h["cyc"]),
           str(len(h["times"])))
     f_now = dict(fld, ref=ref + timedelta(hours=6 * 30))
     past, n = precip.past_sum(h, f_now, f_now["ref"] - timedelta(days=2))
-    check("past sum adds the cycles since `since`", n == 8 and np.allclose(past, 48.0), f"{n} {past[0]}")
+    check("6-hourly cycles: every hour counted once (2 days x 24 mm)", np.allclose(past, 48.0), f"{n} {past[0]}")
+    # one cycle a day, or 9 h / 15 h apart: still no gap and no double count
+    lead24 = np.arange(0, 34, 3, dtype=float)                    # the real run covers 33 h
+    fld24 = dict(fld, lead=lead24, acc=np.outer(lead24, np.ones(4)).astype(np.float32))
+    h2c, t = None, ref
+    for gap in [9, 15, 24, 24]:
+        h2c = precip.update_history(h2c, dict(fld24, ref=t))
+        t = t + timedelta(hours=gap)
+    f_end = dict(fld24, ref=t)
+    past2, _ = precip.past_sum(h2c, f_end, ref)
+    check("irregular cycle spacing (9 h / 15 h / 24 h): the whole span counted once",
+          np.allclose(past2, (t - ref).total_seconds() / 3600.0), f"{past2[0]} vs {(t - ref).total_seconds() / 3600.0}")
     check("a different mesh resets the history",
           precip.past_sum(h, dict(f_now, lat=np.zeros(5)), ref)[1] == 0)
     with tempfile.TemporaryDirectory() as td:

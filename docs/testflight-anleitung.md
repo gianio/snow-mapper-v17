@@ -159,3 +159,41 @@ Testinformationen, Feedback-E-Mail, Datenschutz-URL und ein Demo-Konto.
 - Hintergrund-Standort: Die App zeichnet Touren auch bei gesperrtem Bildschirm auf.
   Apple fragt bei der Prüfung danach, deshalb in den Review-Notizen erklären
   (Aufzeichnen einer Skitour, blaue Standortanzeige sichtbar).
+
+---
+
+## 9. Push-Mitteilungen in der iPhone-App (einmalig, ca. 20 Min.)
+
+Die App fragt nach der Anmeldung einmal, ob sie Mitteilungen schicken darf, und meldet
+ihr Gerät bei Supabase an. Damit Apple die Mitteilungen auch zustellt, braucht es drei
+Dinge, die nur du in deinen Konten machen kannst. Bis dahin baut der Workflow die App
+genau wie bisher (ohne Push) – nichts geht kaputt.
+
+1. **Push für die App-ID einschalten:** developer.apple.com → Identifiers →
+   `ch.snowmapper.app` → Haken bei **Push Notifications** → Save.
+2. **Profil neu erzeugen** (das alte kennt Push noch nicht): Profiles → das App-Store-Profil
+   → Edit → Save → Download. Dann das GitHub-Secret `APPLE_PROVISIONING_PROFILE` mit dem
+   neuen Base64-Text ersetzen (wie in Schritt 6). Im nächsten Lauf steht im Log
+   «Push: the profile allows aps-environment=production».
+3. **APNs-Schlüssel** für den Versand: developer.apple.com → **Keys** → **+** → Name
+   `Snowmapper Push`, Haken bei **Apple Push Notifications service (APNs)** → Continue →
+   Register → **Download** (`AuthKey_XXXXXXXXXX.p8`, nur einmal möglich).
+   Dann in Supabase → Edge Functions → **Secrets**:
+
+   | Name | Wert |
+   |---|---|
+   | `APNS_KEY_P8` | ganzer Inhalt der `.p8`-Datei (mit BEGIN/END-Zeilen) |
+   | `APNS_KEY_ID` | Key ID des Schlüssels (10 Zeichen) |
+   | `APNS_TEAM_ID` | deine Team-ID (oben rechts im Developer-Portal) |
+
+4. Die Funktionen **`push-notify`** und **`fav-alerts`** neu deployen (sie verschicken jetzt
+   auch an iPhones): `supabase functions deploy push-notify --no-verify-jwt` und
+   `supabase functions deploy fav-alerts --no-verify-jwt`.
+5. Neuen TestFlight-Build hochladen, App öffnen, anmelden, «Erlauben» tippen. Im Profil
+   unter Benachrichtigungen schickt «Test» eine Probe-Mitteilung.
+
+| Problem | Ursache |
+|---|---|
+| Kein Fragefenster | iOS fragt nur einmal; sonst Einstellungen → Mitteilungen → Snowmapper |
+| «keine Antwort von Apple (Push)» | Profil ohne Push (Schritt 1–2), Log zeigt «Push off» |
+| Test kommt nicht an | APNs-Secrets fehlen oder Funktionen nicht neu deployt (Schritt 3–4) |

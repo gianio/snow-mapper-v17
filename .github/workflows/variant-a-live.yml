@@ -15,14 +15,16 @@
 #             pass; the deploy picks the newest one, so a bad cycle simply
 #             leaves the previous good one online.
 name: Variant A live
-# a cycle meant as one of the four a day -- GitHub's cron or the Cloudflare
+# a cycle meant as the one a day -- GitHub's cron or the Cloudflare
 # cron (input "cron") -- carries this title; the guard looks for it
 run-name: ${{ (github.event_name == 'schedule' || inputs.cron) && 'Variant A live · scheduled' || 'Variant A live' }}
 
 on:
   schedule:
-    # ~40 min after the 00/06/12/18 UTC ICON-CH2 runs appear upstream.
-    - cron: "40 2,8,14,20 * * *"
+    # Once a day, 03:00 UTC (04:00 Swiss winter time, 05:00 in summer; cron has
+    # no time zone): on the 00 UTC ICON run, ready before the skiers are up.
+    # Keep in step with tiles/worker/wrangler.toml.
+    - cron: "0 3 * * *"
   workflow_dispatch:
     inputs:
       limit:
@@ -325,7 +327,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           H=$(date -u +%H); GO=false
-          if [ "$((10#$H))" -ge 14 ] && [ "$((10#$H))" -lt 20 ]; then
+          if [ "$((10#$H))" -ge 3 ] && [ "$((10#$H))" -lt 12 ]; then
             GO=true
             for R in $(gh api -X GET "repos/${{ github.repository }}/actions/workflows/variant-a-live.yml/runs" \
                          -f created=">=$(date -u +%F)" -f per_page=20 \

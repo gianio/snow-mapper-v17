@@ -122,9 +122,11 @@ Ordered by payoff. Each is independent; none requires a big-bang rewrite.
 1. **PencilKit draw tool.** Drawing snow zones is the core input mechanism and
    the code already reaches for pressure (`drawBrushSize`). Native gives real
    pressure, tilt, palm rejection and predictive stroke smoothing. Biggest win.
-2. **Push notifications (APNs).** `profTogglePush()` is currently a stub that
-   flips a CSS class — the hint text admits it. "Fresh powder reported near your
-   home area" is the notification that makes the app sticky.
+2. **Push notifications (APNs).** ✅ Done (Nov 2026): `@capacitor/push-notifications`,
+   one-time prompt after sign-in, device token in `push_subscriptions`, sent by
+   `push-notify` / `fav-alerts` through `supabase/functions/_shared/apns.ts`.
+   Needs Push on the App ID, a new profile and the APNs key — see
+   `docs/testflight-anleitung.md` §9. Android push needs Firebase (not set up).
 3. **Native map layer.** MapKit or Mapbox rendering the raster overlay, with
    UIKit gesture recognizers. We spent a whole round fixing two-finger pan lag
    in the draw tool with rAF throttling — that was the webview ceiling, not a bug.
