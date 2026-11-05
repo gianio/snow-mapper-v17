@@ -1607,6 +1607,9 @@ _BOOT_SPLIT = r"""<script>
   // `bases` is [''] and the sequence below is exactly what it always was.
   var NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
   var REMOTE='__REMOTE_DATA_BASE__'.replace(/\/+$/,'');
+  // the app's other data files (ski quality, pistes, tours, config) come from
+  // the same host in the native app -- see dataFetch()
+  window.__smRemote=(NATIVE&&REMOTE)?REMOTE:'';
   // The pointer and the blob it names have to come from the SAME base: a remote
   // latest.json names a remote filename, which the bundled copy does not have.
   // So a base is tried as a whole and only falls back as a whole.
@@ -6601,6 +6604,35 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
  .qs-sheet .qs-in{max-height:min(60dvh,calc(var(--app-h,100dvh) - var(--bar-h,56px) - 12px))!important}
  .set-in,.trs-in,.rs-in,.ap-in,.feed-sheet .fs-in,.pro-in{max-height:calc(var(--app-h,100dvh) - var(--bar-h,56px) - var(--nav-h,58px) - 16px);overflow-y:auto;overscroll-behavior:contain}
  .fc-depth{font:650 14px/1.3 var(--font)!important;font-variant-numeric:tabular-nums}
+ /* ── native-app round: glass bars, no bounce, popups in bounds ── */
+ /* top: a thin frosted strip behind the status bar instead of solid white */
+ :root[data-theme="light"] #statusScrim{background:rgba(255,255,255,.28)!important;
+   -webkit-backdrop-filter:blur(14px) saturate(170%)!important;backdrop-filter:blur(14px) saturate(170%)!important}
+ :root[data-theme="light"] #statusScrimB{background:transparent!important}
+ /* bottom: tab bar and the time panel, more see-through */
+ :root[data-theme="light"] #tabBar,:root[data-theme="light"] #bottomPanel{
+   background:rgba(255,255,255,.26)!important;
+   -webkit-backdrop-filter:blur(24px) saturate(185%)!important;backdrop-filter:blur(24px) saturate(185%)!important;
+   border-color:rgba(255,255,255,.55)!important}
+ :root.and-wv[data-theme="light"] #tabBar,:root.and-wv[data-theme="light"] #bottomPanel{background:rgba(255,255,255,.7)!important}
+ :root[data-theme="light"] body[data-screen=feed] #tabBar{background:rgba(255,255,255,.72)!important}
+ /* the feed stops at its top: no pulling it down into an empty band */
+ .feed-scroll,.feed-page .feed-scroll{overscroll-behavior-y:none!important}
+ /* search at the top, results below it */
+ #searchWrap.top{position:fixed!important;z-index:1300;height:44px}
+ #searchWrap.top input{height:44px;border-radius:999px!important;background:rgba(255,255,255,.9)!important;
+   box-shadow:var(--lg-edge),var(--lg-shadow)!important;border:0!important;font-size:16px!important}
+ #searchWrap.top .icn{top:22px}
+ #searchWrap.top #searchRes{top:100%!important;bottom:auto!important;margin:8px 0 0!important;border-radius:16px;max-height:none;
+   overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+ #searchRes .sr-h{padding:8px 14px 4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+ #searchRes .sr-tour>div:first-child::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;
+   background:var(--c-mint,#1FA97A);vertical-align:1px}
+ /* the keyboard (web): bottom sheets ride on top of it */
+ body.kb-up .qs-sheet{bottom:var(--kb,0px)}
+ body.kb-up .qs-sheet .qs-in{max-height:calc(var(--app-h,100dvh) - var(--kb,0px) - env(safe-area-inset-top,0px) - 24px)!important}
+ /* menus and small popups are kept inside the screen by fitInView() */
+ .fc-menu{max-width:calc(100vw - 16px)}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -6704,7 +6736,7 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
   </div>
 </header>
 <button id="brandMark" class="pt-home lg float" onclick="scrGo('search')" aria-label="Snowmapper"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg><span>Snowmapper</span></button>
-<div id="searchWrap" class="hid"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="text" placeholder="Ort suchen…" autocomplete="off"/><div id="searchRes"></div></div>
+<div id="searchWrap" class="hid"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="search" enterkeyhint="search" placeholder="Ort oder Skitour suchen…" autocomplete="off"/><div id="searchRes"></div></div>
 <div id="ctrlRail" hidden>
   <button class="rail-btn feed-accent" id="feedBtn" onclick="feedOpen()" title="Community-Feed" aria-label="Community-Feed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="feed-dot"></span></button>
   <button class="rail-btn" id="railToggles" onclick="toggleStations()" title="Messstationen ein/aus" aria-label="Messstationen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0M9 7a4 4 0 0 1 6 0" stroke-dasharray="0"/></svg></button>
@@ -7763,6 +7795,12 @@ const I18N_DICT={
 "Optional, max. # Zeichen":["Optional, max. # characters","Facultatif, max. # caractères","Facoltativo, max. # caratteri"],
 "Ort suchen":["Search place","Chercher un lieu","Cerca luogo"],
 "Ort suchen…":["Search place…","Chercher un lieu…","Cerca luogo…"],
+"Ort oder Skitour suchen…":["Search place or ski tour…","Chercher un lieu ou une course…","Cerca luogo o gita…"],
+"Skitouren":["Ski tours","Courses à ski","Gite sci-alpinistiche"],
+"Orte":["Places","Lieux","Luoghi"],
+"Mitteilungen erlauben?":["Allow notifications?","Autoriser les notifications ?","Consentire le notifiche?"],
+"Erlauben":["Allow","Autoriser","Consenti"],
+"Mitteilungen sind eingeschaltet":["Notifications are on","Notifications activées","Notifiche attivate"],
 "Passwort":["Password","Mot de passe","Password"],
 "Passwort geändert — du bist angemeldet.":["Password changed — you are signed in.","Mot de passe modifié — tu es connecté.","Password cambiata — hai effettuato l'accesso."],
 "Passwort speichern":["Save password","Enregistrer le mot de passe","Salva password"],
@@ -8406,6 +8444,14 @@ function langRender(){document.querySelectorAll('#setLang button').forEach(b=>b.
 try{const _al=window.alert.bind(window),_cf=window.confirm.bind(window),_pr=window.prompt.bind(window);
   window.alert=m=>_al(trMsg(m));window.confirm=m=>_cf(trMsg(m));window.prompt=(m,d)=>_pr(trMsg(m),d);}catch(e){}
 
+// Data files beside the app. On the website they sit next to index.html. The
+// native app bundles only a seed copy taken at build time, so it asks the
+// hosted site first (fresh ski quality, pistes, tours) and falls back to the
+// bundled file when offline.
+function dataRemote(){try{return window.__smRemote||'';}catch(e){return '';}}
+async function dataFetch(path,opts){const R=dataRemote();
+  if(R){try{const r=await fetch(R+'/'+path,opts);if(r.ok)return r;}catch(e){}}
+  return fetch(path,opts);}
 function _capPlugin(n){return (_CAP&&_CAP.Plugins&&_CAP.Plugins[n])?_CAP.Plugins[n]:null;}
 function nativeShare(text,url){const S=_capPlugin('Share');if(S){try{S.share({text:text||'',url:url||''});return true;}catch(e){}}return false;}
 if(_isNative){try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'DARK'});SB.setOverlaysWebView({overlay:true});}}catch(e){}
@@ -9283,7 +9329,7 @@ const SKI_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width=
 // no third-party tile server. One line group per colour, from zoom 11.
 const PISTE_COL=['#3c9b43','#1f6fd1','#d62828','#16181c','#e08a00'];   // novice easy intermediate advanced freeride
 let _pistesP=null;
-function pistesLoad(){return _pistesP||(_pistesP=fetch('data/pistes.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null));}
+function pistesLoad(){return _pistesP||(_pistesP=dataFetch('data/pistes.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null));}
 function pisteLL(c){const out=[];let x=0,y=0;for(let i=0;i<c.length;i+=2){x+=c[i];y+=c[i+1];out.push([y/1e5,x/1e5]);}return out;}
 function pistesLines(d){const rd=L.canvas({padding:.3}),g=L.layerGroup(),grp={};
   const add=(key,ll)=>{(grp[key]=grp[key]||[]).push(ll);};
@@ -9520,8 +9566,12 @@ async function vaLoad(){
   try{
     let r=null;
     if(typeof demoActive==='function'&&!demoActive()){
-      try{r=await fetch('data/variant_a_live/manifest.json',{cache:'no-cache'});
-        if(r.ok)VA_BASE='data/variant_a_live';else r=null;}catch(e){r=null;}
+      // the native app: the hosted live cycle first (the bundle has none)
+      const R=dataRemote();
+      if(R){try{r=await fetch(R+'/data/variant_a_live/manifest.json',{cache:'no-cache'});
+        if(r.ok)VA_BASE=R+'/data/variant_a_live';else r=null;}catch(e){r=null;}}
+      if(!r){try{r=await fetch('data/variant_a_live/manifest.json',{cache:'no-cache'});
+        if(r.ok)VA_BASE='data/variant_a_live';else r=null;}catch(e){r=null;}}
     }
     // The manifest is the only file that changes name-less between exports,
     // so it is always revalidated; everything it points to is fetched with
@@ -11071,7 +11121,7 @@ function tourVariants(t){return t&&t.group?tourList().filter(x=>x.group===t.grou
 async function toursEnsure(){
   if(toursExtTried)return tourList().length>0;
   toursExtTried=true;
-  try{const r=await fetch('data/tours.json',{cache:'no-cache'});
+  try{const r=await dataFetch('data/tours.json',{cache:'no-cache'});
     if(r.ok){const j=await r.json();if(j&&Array.isArray(j.tours)&&j.tours.length)TOURS_EXT=j.tours;}}catch(e){}
   try{ovSyncUI();ovRender();}catch(e){}
   return tourList().length>0;
@@ -11773,7 +11823,7 @@ function rptPlace(r){
 // visible credit with a link, which the popup and the attribution carry.
 var WEBCAM_KEY=null,wcLayer=null,wcSeen=new Map(),wcT=0,wcBusy=false;   // var: the layer list asks before this line has run
 const WC_API='https://api.windy.com/webcams/api/v3/webcams';
-fetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
+dataFetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
   if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}
     window._wcOk=true;try{ovRender();}catch(e){}}}).catch(()=>{});
 async function wcFetch(params){
@@ -15691,23 +15741,56 @@ function legVisToggle(on,quiet){on=on===undefined?!document.body.classList.conta
   if(!on){try{document.body.classList.remove('leg-open');}catch(e){}}if(!quiet)try{haptic(4);}catch(e){}}
 // The legend is always on the map (its own button was dropped).
 legVisToggle(true,true);
-// The search field opens right beside its button on the map's side rail.
-function searchPlace(){const w=document.getElementById('searchWrap'),b=document.getElementById('searchFab');if(!w||!b)return;
-  const r=b.getBoundingClientRect();if(!r.width){w.classList.remove('side');w.style.cssText='';return;}
-  w.classList.add('side');const wd=Math.min(300,r.left-20);
-  w.style.cssText='left:'+Math.max(12,r.left-wd-8)+'px;right:auto;width:'+wd+'px;top:'+(r.top+r.height/2-22)+'px';}
-// The phone keyboard covers the lower half where the button sits: while it
-// is up the field rides on top of it, full width, results above it.
-function searchKbPlace(){const w=document.getElementById('searchWrap'),vv=window.visualViewport;
-  if(!w||w.classList.contains('hid')||!vv||!w.classList.contains('side'))return;
-  const kb=innerHeight-vv.height-vv.offsetTop;
-  if(kb<80){searchPlace();return;}
-  w.style.cssText='left:12px;right:auto;width:'+(vv.width-24)+'px;top:'+Math.round(vv.offsetTop+vv.height-44-10)+'px';}
+// The search field opens at the top of the screen, full width, with the
+// results right below it -- never under the keyboard, never off screen.
+function searchPlace(){const w=document.getElementById('searchWrap');if(!w)return;
+  w.classList.remove('side');w.classList.add('top');
+  const vv=window.visualViewport,W=vv?vv.width:innerWidth,wd=Math.min(560,W-24);
+  let top=12;try{top=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat'))||0;}catch(e){}
+  w.style.cssText='left:'+Math.round((W-wd)/2)+'px;right:auto;width:'+wd+'px;top:calc(env(safe-area-inset-top,0px) + 10px)';
+  searchKbPlace();}
+// the result list ends above the keyboard (or the tab bar)
+function searchKbPlace(){const w=document.getElementById('searchWrap'),res=document.getElementById('searchRes'),vv=window.visualViewport;
+  if(!w||w.classList.contains('hid')||!res)return;
+  const bottom=vv?(vv.offsetTop+vv.height):innerHeight,top=w.getBoundingClientRect().bottom+6;
+  res.style.maxHeight=Math.max(120,bottom-top-12)+'px';}
 try{if(window.visualViewport){visualViewport.addEventListener('resize',searchKbPlace);visualViewport.addEventListener('scroll',searchKbPlace);}}catch(e){}
+// The keyboard. In the native app the web view itself shrinks (Keyboard
+// resize 'native'); in a browser it slides over the page, so its height goes
+// into --kb and bottom sheets ride on top of it. Either way the field being
+// typed in is brought to the middle of what is still visible -- nobody has to
+// scroll to find it.
+(function(){
+  function kbH(){const vv=window.visualViewport;return vv?Math.max(0,Math.round(innerHeight-vv.height-vv.offsetTop)):0;}
+  function upd(){const k=kbH();document.documentElement.style.setProperty('--kb',k+'px');document.body.classList.toggle('kb-up',k>80);}
+  try{if(window.visualViewport){visualViewport.addEventListener('resize',upd);visualViewport.addEventListener('scroll',upd);}}catch(e){}
+  const TYP='textarea,input:not([type]),input[type=text],input[type=search],input[type=email],input[type=tel],input[type=number],input[type=password],[contenteditable=true]';
+  let cur=null;
+  function show(){const t=cur;if(!t||document.activeElement!==t||t.id==='searchIn')return;
+    try{t.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){try{t.scrollIntoView();}catch(_){}}}
+  document.addEventListener('focusin',e=>{const t=e.target;if(!t||!t.matches||!t.matches(TYP))return;cur=t;
+    setTimeout(()=>{upd();show();},320);setTimeout(show,650);});
+  try{const K=_capPlugin('Keyboard');if(K){K.addListener('keyboardDidShow',()=>{upd();show();});K.addListener('keyboardDidHide',upd);}}catch(e){}
+})();
+// Menus and small popups never leave the screen: after anything opens one,
+// it is nudged back inside (and given a scroll bar if it is taller).
+const FIT_SEL='.fc-more-wrap.open .fc-menu,.pv-more-wrap.open .fc-menu,#searchRes';
+function fitInView(el){if(!el||!el.getBoundingClientRect)return;el.style.translate='';
+  const r=el.getBoundingClientRect();if(!r.width||!r.height)return;
+  const vv=window.visualViewport,W=vv?vv.width:innerWidth,H=vv?(vv.height+vv.offsetTop):innerHeight,m=8;
+  let top0=m;try{top0+=parseFloat(getComputedStyle(document.getElementById('statusScrim')).height)||0;}catch(e){}
+  if(r.height>H-top0-m){el.style.maxHeight=(H-top0-m)+'px';el.style.overflowY='auto';}
+  const r2=el.getBoundingClientRect();let dx=0,dy=0;
+  if(r2.right>W-m)dx=W-m-r2.right;if(r2.left+dx<m)dx=m-r2.left;
+  if(r2.bottom>H-m)dy=H-m-r2.bottom;if(r2.top+dy<top0)dy=top0-r2.top;
+  if(dx||dy)el.style.translate=Math.round(dx)+'px '+Math.round(dy)+'px';}
+function fitAll(){try{document.querySelectorAll(FIT_SEL).forEach(el=>{if(el.offsetParent!==null)fitInView(el);});}catch(e){}}
+addEventListener('click',()=>{requestAnimationFrame(()=>requestAnimationFrame(fitAll));setTimeout(fitAll,280);});
+addEventListener('resize',()=>setTimeout(fitAll,120));
 function searchFieldOpen(){
   const w=document.getElementById('searchWrap'),i=document.getElementById('searchIn');
   if(!w||!i)return;
-  searchPlace();w.classList.remove('hid');
+  searchPlace();w.classList.remove('hid');try{toursEnsure();}catch(e){}
   try{i.focus({preventScroll:true});i.select();}catch(e){i.focus();}
   setTimeout(searchKbPlace,350);setTimeout(searchKbPlace,700);
   try{haptic(4);}catch(e){}
@@ -17075,21 +17158,36 @@ document.getElementById('btn3dExag').onclick=()=>{
 // --- Location Search (GeoAdmin API) ---
 (function(){const inp=document.getElementById('searchIn'),res=document.getElementById('searchRes');
   let debT=null,selIdx=-1,items=[];
+  // ski tours by name (summit, variant) first, then places from swisstopo
+  const _nrm=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]+/g,' ');
+  function tourHits(q){const n=_nrm(q).trim();if(n.length<2)return [];const ws=n.split(/\s+/);
+    const out=[];for(const t of tourList()){const h=_nrm((t.name||'')+' '+(t.pname||''));
+      if(ws.every(w=>h.indexOf(w)>=0)){out.push({tour:t,sc:(h.indexOf(ws[0])===0?0:1)+(t.nvar>1?.1:0)});if(out.length>40)break;}}
+    return out.sort((a,b)=>a.sc-b.sc).slice(0,5);}
+  function render(){selIdx=-1;if(!items.length){searchNote('Keine Treffer');return;}
+    let lastT=null;res.innerHTML=items.map((it,i)=>{
+      if(it.tour){const t=it.tour,h=(lastT!=='t'?'<div class="sr-h">Skitouren</div>':'');lastT='t';
+        const sub=[t.nvar>1?'':(t.lo&&t.lo[2]!=null?'ab '+Math.round(t.lo[2])+' m':''),t.peak&&t.peak[2]?'Gipfel '+Math.round(t.peak[2])+' m':''].filter(Boolean).join(' · ');
+        return h+`<div class="sr sr-tour" data-i="${i}"><div>${escapeHtml(t.name||'Skitour')}</div><div class="sub">${escapeHtml(sub)}</div></div>`;}
+      const a=it.attrs,h=(lastT==='t'?'<div class="sr-h">Orte</div>':'');lastT='p';
+      return h+`<div class="sr" data-i="${i}"><div>${a.label.replace(/<[^>]+>/g,'')}</div><div class="sub">${a.detail||''}</div></div>`;}).join('');
+    res.style.display='block';try{searchKbPlace();}catch(e){}
+    res.querySelectorAll('.sr[data-i]').forEach(el=>el.onclick=()=>pickResult(parseInt(el.dataset.i)));}
   inp.addEventListener('input',()=>{clearTimeout(debT);const q=inp.value.trim();if(q.length<2){res.style.display='none';items=[];return;}
+    const th=tourHits(q);if(th.length){items=th;render();}
     debT=setTimeout(()=>{fetch('https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText='+encodeURIComponent(q)+'&limit=6&sr=4326')
-      .then(r=>r.json()).then(d=>{items=d.results||[];selIdx=-1;if(!items.length){searchNote('Keine Treffer');return;}
-        res.innerHTML=items.map((it,i)=>{const a=it.attrs;return`<div class="sr" data-i="${i}"><div>${a.label.replace(/<[^>]+>/g,'')}</div><div class="sub">${a.detail||''}</div></div>`;}).join('');
-        res.style.display='block';
-        res.querySelectorAll('.sr').forEach(el=>el.onclick=()=>pickResult(parseInt(el.dataset.i)));
-      }).catch(()=>{items=[];searchNote('Suche nicht erreichbar – Verbindung prüfen');});},250);});
+      .then(r=>r.json()).then(d=>{if(inp.value.trim()!==q)return;items=tourHits(q).concat(d.results||[]);render();
+      }).catch(()=>{items=tourHits(q);if(items.length)render();else{items=[];searchNote('Suche nicht erreichbar – Verbindung prüfen');}});},250);});
   function searchNote(t){res.innerHTML='<div class="sr sr-note">'+tr(t)+'</div>';res.style.display='block';}
   inp.addEventListener('keydown',e=>{if(!items.length)return;
     if(e.key==='ArrowDown'){e.preventDefault();selIdx=Math.min(items.length-1,selIdx+1);hlSel();}
     else if(e.key==='ArrowUp'){e.preventDefault();selIdx=Math.max(0,selIdx-1);hlSel();}
     else if(e.key==='Enter'&&selIdx>=0){e.preventDefault();pickResult(selIdx);}
     else if(e.key==='Escape'){res.style.display='none';}});
-  function hlSel(){res.querySelectorAll('.sr').forEach((el,i)=>el.classList.toggle('sel',i===selIdx));}
-  function pickResult(i){const a=items[i].attrs;res.style.display='none';
+  function hlSel(){res.querySelectorAll('.sr[data-i]').forEach(el=>el.classList.toggle('sel',+el.dataset.i===selIdx));}
+  function pickResult(i){const it=items[i];if(!it)return;res.style.display='none';
+    if(it.tour){inp.value=it.tour.name||'';try{searchFieldUsed();}catch(e){}tourOpenById(it.tour.id);return;}
+    const a=it.attrs;
     const lon=a.lon||a.x,lat=a.lat||a.y;
     inp.value=a.label.replace(/<[^>]+>/g,'');
     map.flyTo([lat,lon],14,{duration:1.8});
@@ -17147,7 +17245,7 @@ function maybeA2HS(){
 // Never on top of something the user is in the middle of (login, the
 // welcome flow, the Face ID lock, a report): wait until it is closed.
 function _userBusyOverlay(){const open=id=>{const e=document.getElementById(id);return !!e&&!e.hidden&&getComputedStyle(e).display!=='none';};
-  return open('authOverlay')||open('faceIdOffer')||open('appLock')||open('onb')||open('repSheet')||document.body.classList.contains('locked');}
+  return open('authOverlay')||open('faceIdOffer')||open('pushOffer')||open('appLock')||open('onb')||open('repSheet')||document.body.classList.contains('locked');}
 function a2hsShow(){
   const el=document.getElementById('a2hs');if(!el)return;
   if(_userBusyOverlay()){setTimeout(a2hsShow,15000);return;}
@@ -17456,6 +17554,11 @@ function onbRender(){const el=document.getElementById('onbCard');if(!el)return;c
 const LOCK_KEY='ssm_lock';
 function lockGet(){try{return JSON.parse(localStorage.getItem(LOCK_KEY)||'null');}catch(e){return null;}}
 function _bioNative(){return _capPlugin('BiometricAuthNative')||_capPlugin('BiometricAuth');}
+// The plugin's native side only knows checkBiometry() and internalAuthenticate();
+// authenticate() exists only in its npm wrapper, which a plain page does not
+// load -- calling it is what made "Face ID konnte nicht eingerichtet werden".
+function _bioAuth(N,o){const f=(typeof N.internalAuthenticate==='function')?N.internalAuthenticate:N.authenticate;return f.call(N,o);}
+function _bioCancelled(e){const c=e&&(e.code||e.name||'');return /userCancel|appCancel|systemCancel|userFallback|NotAllowedError/.test(String(c));}
 async function lockAvailable(){const N=_bioNative();
   if(N){try{const r=await N.checkBiometry();if(r&&r.isAvailable)return true;}catch(e){}}
   try{return !!(window.PublicKeyCredential&&PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());}catch(e){return false;}}
@@ -17463,18 +17566,18 @@ const _rnd=n=>crypto.getRandomValues(new Uint8Array(n));
 const _b64=b=>btoa(String.fromCharCode.apply(null,new Uint8Array(b))),_unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function lockEnable(){const N=_bioNative();
   try{
-    if(N){await N.authenticate({reason:'Snowmapper mit Face ID schützen',cancelTitle:'Abbrechen',allowDeviceCredential:true});
+    if(N){await _bioAuth(N,{reason:'Snowmapper mit Face ID schützen',cancelTitle:'Abbrechen',iosFallbackTitle:'Code eingeben',allowDeviceCredential:true});
       localStorage.setItem(LOCK_KEY,JSON.stringify({on:true,native:true}));}
     else{const c=await navigator.credentials.create({publicKey:{challenge:_rnd(32),rp:{name:'Snowmapper'},
         user:{id:_rnd(16),name:'Snowmapper',displayName:'Snowmapper'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
         authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},timeout:60000,attestation:'none'}});
       localStorage.setItem(LOCK_KEY,JSON.stringify({on:true,id:_b64(c.rawId)}));}
     toast('Face ID ist eingerichtet','ok');lockRender();return true;
-  }catch(e){if(!e||e.name!=='NotAllowedError')toast('Face ID konnte nicht eingerichtet werden','err');return false;}}
+  }catch(e){if(!_bioCancelled(e))toast('Face ID konnte nicht eingerichtet werden','err');try{console.warn('faceid',e&&(e.code||e.message));}catch(_){}return false;}}
 function lockShow(){const el=document.getElementById('appLock');if(!el)return;el.hidden=false;document.body.classList.add('locked');}
 async function lockVerify(){const L=lockGet();if(!L||!L.on)return true;const N=_bioNative();
   try{
-    if(L.native&&N)await N.authenticate({reason:'Bei Snowmapper anmelden',cancelTitle:'Abbrechen',allowDeviceCredential:true});
+    if(L.native&&N)await _bioAuth(N,{reason:'Bei Snowmapper anmelden',cancelTitle:'Abbrechen',iosFallbackTitle:'Code eingeben',allowDeviceCredential:true});
     else await navigator.credentials.get({publicKey:{challenge:_rnd(32),allowCredentials:L.id?[{type:'public-key',id:_unb64(L.id),transports:['internal']}]:[],userVerification:'required',timeout:60000}});
     try{haptic(10);}catch(e){}return true;
   }catch(e){return false;}}
@@ -19078,7 +19181,7 @@ async function profTogglePush(){
   if(willOn){
     if(pushIosNeedsHome()){alert('Auf dem iPhone kommen Benachrichtigungen nur in der App auf dem Home-Bildschirm: im Safari «Teilen» → «Zum Home-Bildschirm», dann dort einschalten (ab iOS 16.4).');return;}
     if(!pushSupported()){alert('Dieser Browser kann keine Benachrichtigungen empfangen.');return;}
-    try{const perm=await Notification.requestPermission();if(perm!=='granted'){alert('Benachrichtigungen wurden nicht erlaubt. Bitte in den Browser-Einstellungen für diese Seite erlauben.');return;}}catch(e){}
+    try{const perm=await pushRequest();if(perm!=='granted'){alert(_pushNative()?'Mitteilungen sind für Snowmapper ausgeschaltet. Bitte in den iPhone-Einstellungen → Mitteilungen → Snowmapper erlauben.':'Benachrichtigungen wurden nicht erlaubt. Bitte in den Browser-Einstellungen für diese Seite erlauben.');return;}}catch(e){}
     try{if(!await pushSubscribe())throw new Error('kein Abo');}
     catch(e){toast('Benachrichtigungen konnten nicht eingerichtet werden: '+(e.message||e),'err');return;}
   }
@@ -19090,7 +19193,7 @@ async function profPushTest(btn){
   if(!sb||!sbUser){authShow();return;}
   if(pushIosNeedsHome()){alert('Auf dem iPhone kommen Benachrichtigungen nur in der App auf dem Home-Bildschirm.');return;}
   if(!pushSupported()){alert('Dieser Browser kann keine Benachrichtigungen empfangen.');return;}
-  if(Notification.permission!=='granted'){toast('Schalte zuerst die Push-Benachrichtigungen ein.','err');return;}
+  if((await pushPerm())!=='granted'){toast('Schalte zuerst die Push-Benachrichtigungen ein.','err');return;}
   btn.disabled=true;
   try{await pushSubscribe();const{error}=await sb.rpc('push_test');if(error)throw error;
     toast('Gesendet – die Mitteilung sollte in wenigen Sekunden erscheinen.','ok');}
@@ -19103,12 +19206,39 @@ async function profPushTest(btn){
 // followers are pushed by the push-notify function while push_enabled is on.
 // iOS only delivers to the app on the home screen (16.4+); the iOS shell
 // (WKWebView) has no PushManager and is left out.
-function pushSupported(){return'serviceWorker'in navigator&&'PushManager'in window&&'Notification'in window&&location.protocol==='https:';}
-function pushIosNeedsHome(){return/iPhone|iPad|iPod/.test(navigator.userAgent||'')&&!(navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches));}
+// The iPhone app has no PushManager: there the PushNotifications plugin hands
+// out an APNs device token, kept in the same push_subscriptions table as
+// endpoint https://api.push.apple.com/3/device/<token> (p256dh 'apns'); the
+// edge functions send those through APNs. Android has no Firebase set up yet,
+// so it stays without push for now.
+function _pushNative(){try{return _isNative&&_CAP.getPlatform&&_CAP.getPlatform()==='ios'&&!!_capPlugin('PushNotifications');}catch(e){return false;}}
+async function pushPerm(){if(_pushNative()){try{const r=await _capPlugin('PushNotifications').checkPermissions();return r&&r.receive==='granted'?'granted':(r&&r.receive==='denied'?'denied':'prompt');}catch(e){return 'prompt';}}
+  try{return Notification.permission==='default'?'prompt':Notification.permission;}catch(e){return 'denied';}}
+async function pushRequest(){if(_pushNative()){try{const r=await _capPlugin('PushNotifications').requestPermissions();return r&&r.receive==='granted'?'granted':'denied';}catch(e){return 'denied';}}
+  return await Notification.requestPermission();}
+let _apnsTok=null,_apnsWait=null;
+function _apnsListen(){if(_apnsWait)return;const PN=_capPlugin('PushNotifications');if(!PN)return;_apnsWait=[];
+  try{PN.addListener('registration',t=>{_apnsTok=t&&t.value;const w=_apnsWait.splice(0);w.forEach(f=>f[0](_apnsTok));});
+    PN.addListener('registrationError',e=>{const w=_apnsWait.splice(0);w.forEach(f=>f[1](new Error((e&&e.error)||'APNs')));});
+    // a tapped notification opens the post / message / profile it is about
+    PN.addListener('pushNotificationActionPerformed',a=>{try{const d=a&&a.notification&&a.notification.data;if(d&&d.url)pushRoute(d.url);}catch(e){}});
+  }catch(e){}}
+function _apnsToken(){_apnsListen();if(_apnsTok)return Promise.resolve(_apnsTok);
+  return new Promise((ok,no)=>{_apnsWait.push([ok,no]);try{_capPlugin('PushNotifications').register();}catch(e){no(e);}
+    setTimeout(()=>no(new Error('keine Antwort von Apple (Push)')),20000);});}
+if(_pushNative())setTimeout(_apnsListen,0);
+function pushSupported(){if(_pushNative())return true;return'serviceWorker'in navigator&&'PushManager'in window&&'Notification'in window&&location.protocol==='https:';}
+function pushIosNeedsHome(){if(_isNative)return false;return/iPhone|iPad|iPod/.test(navigator.userAgent||'')&&!(navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches));}
 function _b64u(s){const b=atob((s+'='.repeat((4-s.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0));}
 function _swReady(){return Promise.race([navigator.serviceWorker.ready,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Service Worker fehlt')),8000))]);}
 async function pushSubscribe(){
   if(!pushSupported()||!sb||!sbUser)return false;
+  if(_pushNative()){const tok=await _apnsToken();if(!tok)return false;
+    const ep='https://api.push.apple.com/3/device/'+tok,mark=sbUser.id+'|'+ep;
+    let last='';try{last=localStorage.getItem('ssm_push_sub')||'';}catch(e){}
+    if(last!==mark){const{error}=await sb.rpc('push_subscribe',{p_endpoint:ep,p_p256dh:'apns',p_auth:'production',p_ua:'Snowmapper iOS app'});
+      if(error)throw error;try{localStorage.setItem('ssm_push_sub',mark);}catch(e){}}
+    return true;}
   const reg=await _swReady();
   let sub=await reg.pushManager.getSubscription();
   if(!sub){const{data:k,error}=await sb.rpc('push_public_key');if(error||!k)return false;
@@ -19123,16 +19253,37 @@ async function pushSubscribe(){
 }
 // signing out: this device stops getting the person's notifications
 async function pushUnsubscribe(){try{
-  if(!pushSupported())return;
+  if(_pushNative()){if(_apnsTok&&sb&&sbUser)await sb.from('push_subscriptions').delete().eq('endpoint','https://api.push.apple.com/3/device/'+_apnsTok);}
+  if(!pushSupported()||_pushNative())return;
   const sub=await(await _swReady()).pushManager.getSubscription();
   if(sub){if(sb&&sbUser)await sb.from('push_subscriptions').delete().eq('endpoint',sub.endpoint);await sub.unsubscribe();}
   }catch(e){}
   try{localStorage.removeItem('ssm_push_sub');}catch(e){}}
 // after sign-in: keep this device's subscription with the signed-in person
 async function pushSync(){try{
-  if(!pushSupported()||!sb||!sbUser||Notification.permission!=='granted')return;
+  // the iPhone app asks once, after sign-in, with a word on what comes
+  if(_pushNative()&&sb&&sbUser&&(await pushPerm())==='prompt'){let asked=false;try{asked=!!localStorage.getItem('ssm_push_ask_v1');}catch(e){}
+    if(!asked){pushOffer();return;}}
+  if(!pushSupported()||!sb||!sbUser||(await pushPerm())!=='granted')return;
   const{data}=await sb.from('profiles').select('push_enabled').eq('id',sbUser.id).single();
   if(data&&data.push_enabled)await pushSubscribe();}catch(e){}}
+// the one-time question in the iPhone app (iOS itself then asks once more)
+function pushOffer(){if(document.getElementById('pushOffer'))return;
+  if((typeof _userBusyOverlay==='function'&&_userBusyOverlay())||(typeof anyMenuOpen==='function'&&anyMenuOpen())){setTimeout(pushOffer,4000);return;}
+  try{localStorage.setItem('ssm_push_ask_v1','1');}catch(e){}
+  const d=document.createElement('div');d.id='pushOffer';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='7001';
+  d.innerHTML='<div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="pushOfT"><h2 id="pushOfT">Mitteilungen erlauben?</h2>'
+    +'<p class="auth-sub">Neuschnee an deinen Favoriten, Kommentare, Likes, neue Follower und Nachrichten – sofort aufs iPhone. Jederzeit im Profil abschaltbar.</p>'
+    +'<button class="auth-btn primary" onclick="pushOfferYes()">Erlauben</button>'
+    +'<div class="auth-switch"><button onclick="document.getElementById(\'pushOffer\').remove()">Später</button></div></div>';
+  document.body.appendChild(d);}
+async function pushOfferYes(){const d=document.getElementById('pushOffer');if(d)d.remove();
+  if((await pushRequest())!=='granted'){toast('Mitteilungen sind aus – im Profil kannst du sie später einschalten','info');return;}
+  try{if(!await pushSubscribe())throw new Error('kein Abo');}
+  catch(e){toast('Mitteilungen konnten nicht eingerichtet werden: '+(e.message||e),'err');return;}
+  try{if(sb&&sbUser)await sb.from('profiles').update({push_enabled:true}).eq('id',sbUser.id);}catch(e){}
+  _favPush=true;const t=document.getElementById('profPush');if(t)t.classList.add('on');
+  try{haptic(10);}catch(e){}toast('Mitteilungen sind eingeschaltet','ok');}
 // a tapped notification: ?post= / ?dm= / ?user= / ?fav=
 function pushRoute(url){try{const q=new URL(url,location.href).searchParams;
   if(q.get('fav'))favOpen(q.get('fav'));
@@ -19176,7 +19327,7 @@ async function favTap(k){const a=_favArgs[k];if(!a)return;
   favSetRender();}
 async function favPushState(){
   if(_favPush!=null)return _favPush;
-  try{if(!pushSupported()||Notification.permission!=='granted')return (_favPush=false);
+  try{if(!pushSupported()||(await pushPerm())!=='granted')return (_favPush=false);
     const{data}=await sb.from('profiles').select('push_enabled').eq('id',sbUser.id).single();_favPush=!!(data&&data.push_enabled);}
   catch(e){_favPush=false;}
   return _favPush;}
@@ -19188,7 +19339,7 @@ async function favPushOn(){if(!isPro()){proSheet('push');return;}
   if(!sb||!sbUser){authShow();return;}
   if(pushIosNeedsHome()){alert('Auf dem iPhone kommen Benachrichtigungen nur in der App auf dem Home-Bildschirm: im Safari «Teilen» → «Zum Home-Bildschirm», dann dort einschalten (ab iOS 16.4).');return;}
   if(!pushSupported()){alert('Dieser Browser kann keine Benachrichtigungen empfangen.');return;}
-  try{const perm=await Notification.requestPermission();if(perm!=='granted'){alert('Benachrichtigungen wurden nicht erlaubt. Bitte in den Browser-Einstellungen für diese Seite erlauben.');return;}}catch(e){}
+  try{const perm=await pushRequest();if(perm!=='granted'){alert(_pushNative()?'Mitteilungen sind für Snowmapper ausgeschaltet. Bitte in den iPhone-Einstellungen → Mitteilungen → Snowmapper erlauben.':'Benachrichtigungen wurden nicht erlaubt. Bitte in den Browser-Einstellungen für diese Seite erlauben.');return;}}catch(e){}
   try{if(!await pushSubscribe())throw new Error('kein Abo');}
   catch(e){toast('Benachrichtigungen konnten nicht eingerichtet werden: '+(e.message||e),'err');return;}
   try{await sb.from('profiles').update({push_enabled:true}).eq('id',sbUser.id);}catch(e){}

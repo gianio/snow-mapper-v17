@@ -37,7 +37,8 @@ def q(v: str) -> str:
     return v if re.fullmatch(r"[A-Za-z0-9_.$/]+", v) else '"' + v.replace('"', '\\"') + '"'
 
 
-def patch_pbxproj(text: str, team: str, profile: str, version: str, build: str) -> tuple:
+def patch_pbxproj(text: str, team: str, profile: str, version: str, build: str,
+                  entitlements: str = "") -> tuple:
     want = {
         "CODE_SIGN_STYLE": "Manual",
         "DEVELOPMENT_TEAM": team,
@@ -48,6 +49,10 @@ def patch_pbxproj(text: str, team: str, profile: str, version: str, build: str) 
         "MARKETING_VERSION": version,
         "TARGETED_DEVICE_FAMILY": "1",
     }
+    # push notifications: only when the profile carries aps-environment (the
+    # workflow checks), otherwise the export would fail on a missing capability
+    if entitlements:
+        want["CODE_SIGN_ENTITLEMENTS"] = entitlements
     n = 0
 
     def fix(block: str) -> str:
@@ -88,16 +93,20 @@ def main(argv=None) -> int:
     ap.add_argument("--build", required=True)
     ap.add_argument("--pbxproj", default=str(PBXPROJ))
     ap.add_argument("--info", default=str(INFO_PLIST))
+    ap.add_argument("--entitlements", default="",
+                    help="path of an .entitlements file relative to ios/App (e.g. App/App.entitlements)")
     a = ap.parse_args(argv)
     pbx = Path(a.pbxproj)
-    text, n = patch_pbxproj(pbx.read_text(encoding="utf-8"), a.team, a.profile, a.version, a.build)
+    text, n = patch_pbxproj(pbx.read_text(encoding="utf-8"), a.team, a.profile, a.version, a.build,
+                            a.entitlements)
     if not n:
         print("::error::no build configuration with the app's bundle id found in project.pbxproj")
         return 1
     pbx.write_text(text, encoding="utf-8")
     patch_info_plist(Path(a.info), a.version, a.build)
     print(f"signing: manual, team {a.team}, profile '{a.profile}' in {n} configuration(s); "
-          f"version {a.version} ({a.build}); iPhone only")
+          f"version {a.version} ({a.build}); iPhone only"
+          + (f"; entitlements {a.entitlements}" if a.entitlements else ""))
     return 0
 
 

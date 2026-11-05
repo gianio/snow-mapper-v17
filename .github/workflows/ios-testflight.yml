@@ -178,6 +178,17 @@ jobs:
           done
           echo "PROFILE_NAME=$NAME" >> "$GITHUB_ENV"
           echo "TEAM_ID=$TEAM" >> "$GITHUB_ENV"
+          # Push notifications: only if the App ID has the capability and the
+          # profile was made after that (it then carries aps-environment).
+          # Without it the app is built exactly as before and simply never
+          # gets a device token.
+          APS="$(/usr/libexec/PlistBuddy -c 'Print Entitlements:aps-environment' "$RUNNER_TEMP/profile.plist" 2>/dev/null || true)"
+          if [ -n "$APS" ]; then
+            echo "APS_ENV=$APS" >> "$GITHUB_ENV"
+            echo "Push: the profile allows aps-environment=$APS"
+          else
+            echo "::notice::Push off: the provisioning profile has no aps-environment. Enable Push Notifications on the App ID ch.snowmapper.app, regenerate the profile and update APPLE_PROVISIONING_PROFILE."
+          fi
           echo "Signing with profile '$NAME' ($UUID), team $TEAM"
 
       - name: Configure signing, version and build number
@@ -186,8 +197,19 @@ jobs:
         run: |
           BUILD="${{ inputs.build_number }}"
           [ -n "$BUILD" ] || BUILD="${{ github.run_number }}"
+          ENT=""
+          if [ -n "${APS_ENV:-}" ]; then
+            cat > ios/App/App/App.entitlements <<ENTX
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>aps-environment</key><string>${APS_ENV}</string>
+          </dict></plist>
+          ENTX
+            ENT="App/App.entitlements"
+          fi
           python3 scripts/ci-signing.py --team "$TEAM_ID" --profile "$PROFILE_NAME" \
-            --version "${{ inputs.version }}" --build "$BUILD"
+            --version "${{ inputs.version }}" --build "$BUILD" --entitlements "$ENT"
 
       - name: Archive and export
         if: ${{ inputs.upload }}

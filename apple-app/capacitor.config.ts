@@ -25,6 +25,10 @@ const config: CapacitorConfig = {
     backgroundColor: '#ffffff',
     // Allow the WKWebView to load Supabase / tile CDNs over https.
     limitsNavigationsToAppBoundDomains: false,
+    // The page never scrolls as a whole (only its sheets and lists do), so the
+    // web view itself must not rubber-band: that was the empty band you could
+    // pull down above the feed.
+    scrollEnabled: false,
   },
   android: {
     backgroundColor: '#ffffff',

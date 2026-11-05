@@ -10,6 +10,7 @@
 // DEPLOY: supabase functions deploy fav-alerts --no-verify-jwt
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
+import { isApns, sendApns } from '../_shared/apns.ts';
 
 const APP = 'https://gianio.github.io/snow-mapper-v17/';
 const AGAIN_H = 36, STALE_H = 18;
@@ -79,6 +80,12 @@ Deno.serve(async (req) => {
     const { data: subs } = await admin.from('push_subscriptions').select('*').eq('user_id', uid);
     let okOne = false;
     for (const s of subs || []) {
+      if (isApns(s)) {
+        const st = await sendApns(s.endpoint, s.auth, { title, body, url, tag: 'fav-snow', ttlSec: 60 * 60 * 12 });
+        if (st === 200) { sent++; okOne = true; }
+        else if (st === 410) await admin.from('push_subscriptions').delete().eq('endpoint', s.endpoint);
+        continue;
+      }
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
           JSON.stringify({ title, body, url, tag: 'fav-snow' }), { TTL: 60 * 60 * 12, urgency: 'normal' });
