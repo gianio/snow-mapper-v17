@@ -1387,6 +1387,11 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     # hosted data origin — GitHub Pages today, the model host once that exists.
     boot = _BOOT_SPLIT.replace("__REMOTE_DATA_BASE__", os.environ.get("SNOW_REMOTE_DATA_BASE", ""))
     shell = _HTML.split('<script id="appjs">', 1)[0].replace("<!--__BOOT__-->", boot) + "</body></html>"
+    # Crash reports (Sentry): the DSN comes from the build (secret SENTRY_DSN);
+    # empty = off, as before.
+    dsn = os.environ.get("SENTRY_DSN", "").strip()
+    if dsn:
+        shell = shell.replace("window.SENTRY_DSN='';", "window.SENTRY_DSN=" + json.dumps(dsn) + ";", 1)
     (out_dir / "index.html").write_text(shell, encoding="utf-8")
     # Leaflet & Co. from the site itself, not from public CDNs (pipeline/vendor.py)
     try:
@@ -1907,7 +1912,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
   setTimeout(function(){if(!window.__APP_OK)stuck('Der Start dauert ungewöhnlich lange — Verbindung prüfen.');},45000);
 })();
 </script>
-<script>window.SENTRY_DSN='';(function(){if(!window.SENTRY_DSN)return;var s=document.createElement('script');s.src='https://browser.sentry-cdn.com/7.120.0/bundle.tracing.min.js';s.crossOrigin='anonymous';s.onload=function(){try{window.Sentry.init({dsn:window.SENTRY_DSN,tracesSampleRate:0,release:'firn'});}catch(e){}};document.head.appendChild(s);window.addEventListener('error',function(e){try{if(window.Sentry&&e.error)window.Sentry.captureException(e.error);}catch(_){}});window.addEventListener('unhandledrejection',function(e){try{if(window.Sentry)window.Sentry.captureException(e.reason);}catch(_){}});})();</script>
+<script>window.SENTRY_DSN='';(function(){if(!window.SENTRY_DSN)return;var s=document.createElement('script');s.src='https://browser.sentry-cdn.com/7.120.0/bundle.tracing.min.js';s.crossOrigin='anonymous';s.onload=function(){try{window.Sentry.init({dsn:window.SENTRY_DSN,tracesSampleRate:0,release:'firn',environment:(window.Capacitor&&window.Capacitor.getPlatform?window.Capacitor.getPlatform():'web')});}catch(e){}};document.head.appendChild(s);window.addEventListener('error',function(e){try{if(window.Sentry&&e.error)window.Sentry.captureException(e.error);}catch(_){}});window.addEventListener('unhandledrejection',function(e){try{if(window.Sentry)window.Sentry.captureException(e.reason);}catch(_){}});})();</script>
 <!-- The map tiles are the first thing a user waits for: do the DNS + TLS
      handshake with the tile host while the scripts are still parsing. -->
 <link rel="preconnect" href="https://wmts.geo.admin.ch" crossorigin>
@@ -6633,6 +6638,7 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
  body.kb-up .qs-sheet .qs-in{max-height:calc(var(--app-h,100dvh) - var(--kb,0px) - env(safe-area-inset-top,0px) - 24px)!important}
  /* menus and small popups are kept inside the screen by fitInView() */
  .fc-menu{max-width:calc(100vw - 16px)}
+ html.cap-native .web-only{display:none!important}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -7197,7 +7203,7 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
         <button class="prof-back" onclick="profNav('main')">‹ Zurück</button>
         <div class="prof-sec-title">Benachrichtigungen</div>
         <div class="prof-row"><span>Push-Benachrichtigungen</span><button class="prof-toggle" id="profPush" onclick="profTogglePush()"><span></span></button></div>
-        <div class="prof-hint">Du bekommst eine Mitteilung bei Kommentaren und Likes zu deinen Beiträgen, bei neuen Nachrichten und neuen Follower:innen. Auf dem iPhone nur in der App auf dem Home-Bildschirm (ab iOS 16.4).</div>
+        <div class="prof-hint">Du bekommst eine Mitteilung bei Kommentaren und Likes zu deinen Beiträgen, bei neuen Nachrichten und neuen Follower:innen.<span class="web-only"> Auf dem iPhone nur in der App auf dem Home-Bildschirm (ab iOS 16.4).</span></div>
         <button class="prof-item" id="profPushTest" onclick="profPushTest(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Test-Benachrichtigung senden</button>
       </div>
       <div class="prof-view" id="profViewApp" style="display:none">
@@ -8454,7 +8460,7 @@ async function dataFetch(path,opts){const R=dataRemote();
   return fetch(path,opts);}
 function _capPlugin(n){return (_CAP&&_CAP.Plugins&&_CAP.Plugins[n])?_CAP.Plugins[n]:null;}
 function nativeShare(text,url){const S=_capPlugin('Share');if(S){try{S.share({text:text||'',url:url||''});return true;}catch(e){}}return false;}
-if(_isNative){try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'DARK'});SB.setOverlaysWebView({overlay:true});}}catch(e){}
+if(_isNative){try{document.documentElement.classList.add('cap-native');}catch(e){}try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'DARK'});SB.setOverlaysWebView({overlay:true});}}catch(e){}
   try{const SP=_capPlugin('SplashScreen');if(SP)setTimeout(()=>{try{SP.hide();}catch(e){}},450);}catch(e){}
   // Android hardware/gesture back. Every sheet and modal already closes on
   // Escape, so back replays Escape; if nothing on screen changed (no overlay
@@ -17565,6 +17571,10 @@ async function lockAvailable(){const N=_bioNative();
 const _rnd=n=>crypto.getRandomValues(new Uint8Array(n));
 const _b64=b=>btoa(String.fromCharCode.apply(null,new Uint8Array(b))),_unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function lockEnable(){const N=_bioNative();
+  // the app: ask the device first, so a missing Face ID / passcode is named
+  if(N){try{const c=await N.checkBiometry();
+      if(c&&!c.isAvailable&&!c.deviceIsSecure){toast(c.code==='passcodeNotSet'?'Lege zuerst einen iPhone-Code fest (Einstellungen → Face ID & Code)':'Face ID ist nicht eingerichtet: '+(c.reason||c.code||'unbekannt'),'err');return false;}}catch(e){}}
+  else if(_isNative){toast('Face ID ist in dieser App-Version nicht verfügbar','err');return false;}
   try{
     if(N){await _bioAuth(N,{reason:'Snowmapper mit Face ID schützen',cancelTitle:'Abbrechen',iosFallbackTitle:'Code eingeben',allowDeviceCredential:true});
       localStorage.setItem(LOCK_KEY,JSON.stringify({on:true,native:true}));}
@@ -17573,7 +17583,7 @@ async function lockEnable(){const N=_bioNative();
         authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},timeout:60000,attestation:'none'}});
       localStorage.setItem(LOCK_KEY,JSON.stringify({on:true,id:_b64(c.rawId)}));}
     toast('Face ID ist eingerichtet','ok');lockRender();return true;
-  }catch(e){if(!_bioCancelled(e))toast('Face ID konnte nicht eingerichtet werden','err');try{console.warn('faceid',e&&(e.code||e.message));}catch(_){}return false;}}
+  }catch(e){if(!_bioCancelled(e))toast('Face ID konnte nicht eingerichtet werden'+(e&&(e.message||e.code)?': '+(e.message||e.code):''),'err');try{console.warn('faceid',e&&(e.code||e.message));}catch(_){}return false;}}
 function lockShow(){const el=document.getElementById('appLock');if(!el)return;el.hidden=false;document.body.classList.add('locked');}
 async function lockVerify(){const L=lockGet();if(!L||!L.on)return true;const N=_bioNative();
   try{
@@ -19219,10 +19229,11 @@ async function pushRequest(){if(_pushNative()){try{const r=await _capPlugin('Pus
 let _apnsTok=null,_apnsWait=null;
 function _apnsListen(){if(_apnsWait)return;const PN=_capPlugin('PushNotifications');if(!PN)return;_apnsWait=[];
   try{PN.addListener('registration',t=>{_apnsTok=t&&t.value;const w=_apnsWait.splice(0);w.forEach(f=>f[0](_apnsTok));});
-    PN.addListener('registrationError',e=>{const w=_apnsWait.splice(0);w.forEach(f=>f[1](new Error((e&&e.error)||'APNs')));});
+    PN.addListener('registrationError',e=>{const w=_apnsWait.splice(0);w.forEach(f=>f[1](new Error(_apnsFriendly((e&&e.error)||'APNs'))));});
     // a tapped notification opens the post / message / profile it is about
     PN.addListener('pushNotificationActionPerformed',a=>{try{const d=a&&a.notification&&a.notification.data;if(d&&d.url)pushRoute(d.url);}catch(e){}});
   }catch(e){}}
+function _apnsFriendly(m){m=String(m||'');return /aps-environment/i.test(m)?'diese App-Version hat noch keine Push-Berechtigung von Apple (kommt mit einem der nächsten TestFlight-Builds)':m;}
 function _apnsToken(){_apnsListen();if(_apnsTok)return Promise.resolve(_apnsTok);
   return new Promise((ok,no)=>{_apnsWait.push([ok,no]);try{_capPlugin('PushNotifications').register();}catch(e){no(e);}
     setTimeout(()=>no(new Error('keine Antwort von Apple (Push)')),20000);});}
@@ -19284,6 +19295,28 @@ async function pushOfferYes(){const d=document.getElementById('pushOffer');if(d)
   try{if(sb&&sbUser)await sb.from('profiles').update({push_enabled:true}).eq('id',sbUser.id);}catch(e){}
   _favPush=true;const t=document.getElementById('profPush');if(t)t.classList.add('on');
   try{haptic(10);}catch(e){}toast('Mitteilungen sind eingeschaltet','ok');}
+// snowmapper://… in the native app: quick actions on the app icon
+// (action/report, action/record, action/tours) and links to a post, a person
+// or a favourite (post/<id>, user/<id>, fav/<id>; or any link with ?post= …).
+function deepLink(url){try{const u=String(url||'');if(!u)return;
+    const m=u.match(/^snowmapper:\/\/([^/?#]+)\/?([^?#]*)/i);
+    if(!m){if(/[?&](post|dm|user|fav)=/.test(u))pushRoute(u);return;}
+    const k=m[1].toLowerCase(),v=decodeURIComponent(m[2]||'');
+    const go=()=>{try{
+      if(k==='action'){
+        if(v==='report'){if(!sb||!sbUser){authShow();return;}qsOpen();}
+        else if(v==='record')navGo('rec');
+        else if(v==='tours')navGo('tours');
+        else if(v==='search'){navGo('map');searchFieldOpen();}}
+      else if(k==='post'&&v)feedOpenAt(v);
+      else if(k==='user'&&v)viewUser(v,'');
+      else if(k==='fav'&&v)favOpen(v);
+      else if(/[?&](post|dm|user|fav)=/.test(u))pushRoute(u.replace(/^snowmapper:/i,'https:'));}catch(e){}};
+    // on a cold start the app is still booting: wait until the map is up
+    if(document.getElementById('boot')&&getComputedStyle(document.getElementById('boot')).display!=='none')setTimeout(go,1800);else go();
+  }catch(e){}}
+try{const A=_isNative&&_capPlugin('App');if(A){A.addListener('appUrlOpen',e=>deepLink(e&&e.url));
+  if(A.getLaunchUrl)A.getLaunchUrl().then(r=>{if(r&&r.url)setTimeout(()=>deepLink(r.url),1500);}).catch(()=>{});}}catch(e){}
 // a tapped notification: ?post= / ?dm= / ?user= / ?fav=
 function pushRoute(url){try{const q=new URL(url,location.href).searchParams;
   if(q.get('fav'))favOpen(q.get('fav'));
@@ -19760,6 +19793,20 @@ async function offlineSave(){if(!isPro()){proSheet('offline');return;}
     toast(fail>all.length*0.1?'Teilweise gespeichert ('+fail+' fehlten)':'Offline gespeichert · '+Math.round(bytes/1e6)+' MB','ok');
   }catch(e){toast('Offline-Speichern fehlgeschlagen: '+(e.message||e),'err');}
   _offBusy=false;offRender();}
+// Without a service worker (the iPhone/Android app) nothing serves the saved
+// area by itself: a map tile that fails to load (no signal) is taken from
+// the offline cache instead. On the website the worker does it first.
+const _offObj=new Map();
+async function offTileFallback(img,url){try{if(!url||!offInfo()||!('caches' in window))return;
+    if(_offObj.has(url)){img.src=_offObj.get(url);return;}
+    const c=await caches.open(OFF_CACHE),r=await c.match(url);if(!r)return;
+    const b=await r.blob();if(!b||!b.size)return;
+    const o=URL.createObjectURL(b);_offObj.set(url,o);img.src=o;}catch(e){}}
+function _offHook(l){if(!l||l._offHook)return;l._offHook=1;
+  l.on('tileerror',e=>{const t=e&&e.tile;if(!t||t._offTried)return;t._offTried=1;
+    offTileFallback(t,t.getAttribute('src')||(e.coords&&l.getTileUrl(e.coords)));});}
+try{L.TileLayer.addInitHook(function(){_offHook(this);});map.eachLayer(l=>{if(l instanceof L.TileLayer)_offHook(l);});
+  map.on('layeradd',e=>{if(e.layer instanceof L.TileLayer)_offHook(e.layer);});}catch(e){}
 async function offlineDrop(){try{await caches.delete(OFF_CACHE);}catch(e){}
   try{localStorage.removeItem(OFF_KEY);}catch(e){}toast('Offline-Daten gelöscht','info');offRender();}
 function offWhen(ms){try{return new Date(ms).toLocaleString(LOCALE(),{weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return '';}}
@@ -21275,7 +21322,30 @@ async function drawFillAt(p){
   for(let k=0;k<acc.length;k+=step){const ll=acc[k][2];if(ll)drawRecordSample(drawPen.id,ll.lat,ll.lng,cm);}
   drawRepaint();drawSumUpdate();try{haptic(10);}catch(e){}}
 // ── A height boundary: a stroke across the slope; fills keep to one side ──
+// A drawn ascent/descent that follows a known ski tour is laid onto that
+// tour's own line (from where the stroke starts to where it ends): a rough
+// finger line becomes the exact route, and nobody has to trace it.
+function routeSnapToTour(rt){try{
+  if(!rt||!rt.pts||rt.pts.length<6||typeof tourList!=='function')return null;
+  const a=rt.pts[0],b=rt.pts[rt.pts.length-1];
+  const cand=tourNearPoint(a.lat,a.lng,300,6);if(!cand.length)return null;
+  const step=Math.max(1,Math.floor(rt.pts.length/40));let best=null;
+  for(const {t} of cand){const C=t.coords;let near=0,n=0;
+    for(let i=0;i<rt.pts.length;i+=step){const p=rt.pts[i];let d=1e12;
+      for(let k=0;k<C.length;k++){const dd=tourDistM(p.lng,p.lat,C[k][0],C[k][1]);if(dd<d)d=dd;}
+      n++;if(d<=150)near++;}
+    const f=near/n;if(f>=0.8&&(!best||f>best.f))best={t,f};}
+  if(!best)return null;
+  const C=best.t.coords,ix=p=>{let bi=0,bd=1e12;for(let k=0;k<C.length;k++){const d=tourDistM(p.lng,p.lat,C[k][0],C[k][1]);if(d<bd){bd=d;bi=k;}}return bi;};
+  let i0=ix(a),i1=ix(b);const seg=(i0<=i1?C.slice(i0,i1+1):C.slice(i1,i0+1).reverse());
+  if(seg.length<3)return null;
+  const ll=seg.map(c=>L.latLng(c[1],c[0]));
+  rt.pts=[ll[0]];rt.elev=[routeElevAt(ll[0])];rt.dir=[0];
+  for(let k=1;k<ll.length;k++)routeAddPoint(rt,ll[k]);
+  rt.tour=String(best.t.id);return best.t;}catch(e){return null;}}
 function drawStrokeEnd(){
+  if(drawPen&&drawPen.kind==='route'&&_drawCurRoute){const t=routeSnapToTour(_drawCurRoute);
+    if(t){try{haptic(8);}catch(e){}drawHintShow('Auf die Tour «'+(t.name||'Skitour')+'» gelegt');}}
   if(drawTool==='bound'){const pts=_drawBoundCur;_drawBoundCur=null;
     if(!pts||pts.length<2){drawRepaint();return;}
     const el=pts.map(routeElevAt).filter(v=>v!=null).sort((a,b)=>a-b);
@@ -21829,6 +21899,7 @@ function sharePost(id,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
     +'<a class="sh-act" href="https://wa.me/?text='+enc(txt+'\n'+url)+'" target="_blank" rel="noopener" onclick="setTimeout(shareClose,300)"><span style="--c:#25D366">'+ic('<path d="M3.5 20.5l1.3-4A8.5 8.5 0 1 1 8 19.3z"/><path d="M9 8.5c0 3.5 3 6.5 6.5 6.5l1-1.5-2-1-1 .8a5 5 0 0 1-2.8-2.8l.8-1-1-2z"/>')+'</span>WhatsApp</a>'
     +'<a class="sh-act" href="mailto:?subject='+enc('Snowmapper: '+(r&&r.sub||'Schnee-Report'))+'&body='+enc(txt+'\n\n'+url)+'" onclick="setTimeout(shareClose,300)"><span style="--c:#2563eb">'+ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>')+'</span>E-Mail</a>'
     +'<button class="sh-act" onclick="shareNative()"><span style="--c:#475569">'+ic('<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>')+'</span>Teilen …</button>'
+    +'<button class="sh-act" onclick="shareImage()"><span style="--c:#7c3aed">'+ic('<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>')+'</span>Als Bild</button>'
     +'<button class="sh-act" onclick="shareCopy()"><span style="--c:#0f766e">'+ic('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>')+'</span>Link kopieren</button>'
     +'</div></div></div>';
   el.style.display='flex';
@@ -21839,6 +21910,43 @@ function shareNative(){const r=allReports.find(x=>String(x.id)===_shId),url=post
   if(typeof nativeShare==='function'&&nativeShare(txt,url)){shareClose();return;}
   if(navigator.share){navigator.share({title:'Snowmapper',text:txt,url}).then(shareClose,()=>{});return;}
   shareCopy();}
+// A post as a picture (1080 x 1350, Instagram/WhatsApp-sized): the photo,
+// the snow, who and where, and the Snowmapper mark. Native: written to the
+// app cache and handed to the share sheet; browser: Web Share with a file,
+// else downloaded.
+function _shImg(src){return new Promise(ok=>{if(!src)return ok(null);const i=new Image();i.crossOrigin='anonymous';
+  i.onload=()=>ok(i);i.onerror=()=>ok(null);i.src=src;setTimeout(()=>ok(null),8000);});}
+async function shareCard(r){const W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  g.fillStyle='#0f1b2d';g.fillRect(0,0,W,H);
+  const im=await _shImg(r&&r.img),ph=im?980:0;
+  if(im){const k=Math.max(W/im.width,ph/im.height),w=im.width*k,h=im.height*k;g.drawImage(im,(W-w)/2,(ph-h)/2,w,h);
+    const gr=g.createLinearGradient(0,ph-260,0,ph);gr.addColorStop(0,'rgba(15,27,45,0)');gr.addColorStop(1,'rgba(15,27,45,1)');g.fillStyle=gr;g.fillRect(0,ph-260,W,260);}
+  else{const gr=g.createLinearGradient(0,0,W,H);gr.addColorStop(0,'#3F8AD6');gr.addColorStop(1,'#0f1b2d');g.fillStyle=gr;g.fillRect(0,0,W,H);}
+  const F='600 ',fam=" -apple-system,'Helvetica Neue',Arial,sans-serif";
+  const wrap=(t,x,y,mw,lh,max)=>{const ws=String(t||'').split(/\s+/);let ln='',n=0;
+    for(const w of ws){const tt=ln?ln+' '+w:w;if(g.measureText(tt).width>mw&&ln){g.fillText(ln,x,y);y+=lh;ln=w;if(++n>=max-1){ln+=' …';break;}}else ln=tt;}
+    if(ln){g.fillText(ln,x,y);y+=lh;}return y;};
+  let y=im?ph-40:420;g.fillStyle='#fff';
+  g.font='800 64px'+fam;y=wrap((r&&r.sub)||'Schnee-Report',64,y,W-128,74,2);
+  g.font='500 40px'+fam;g.fillStyle='rgba(255,255,255,.88)';
+  const cap=(r&&r.caption)||'';if(cap)y=wrap(cap,64,y+8,W-128,52,3);
+  const meta=[r&&r.user?'@'+String(r.user).replace(/^@/,''):'',(r&&typeof rptPlace==='function'?(()=>{try{return rptPlace(r);}catch(e){return '';}})():''),r&&r.time||''].filter(Boolean).join(' · ');
+  g.font='500 34px'+fam;g.fillStyle='rgba(255,255,255,.7)';if(meta)wrap(meta,64,Math.min(y+12,H-150),W-128,44,2);
+  g.fillStyle='rgba(255,255,255,.12)';g.fillRect(0,H-110,W,110);
+  g.fillStyle='#fff';g.font='800 40px'+fam;g.fillText('❄ Snowmapper',64,H-42);
+  g.font='500 30px'+fam;g.fillStyle='rgba(255,255,255,.75)';g.textAlign='right';g.fillText('Schnee in der Schweiz, live',W-64,H-46);g.textAlign='left';
+  return await new Promise(ok=>c.toBlob(ok,'image/jpeg',.88));}
+async function shareImage(){const r=allReports.find(x=>String(x.id)===_shId),url=postUrl(_shId),txt=postShareText(r);
+  let blob=null;try{blob=await shareCard(r);}catch(e){}
+  if(!blob){toast('Bild konnte nicht erstellt werden','err');return;}
+  const FS=_isNative&&_capPlugin('Filesystem'),S=_capPlugin('Share');
+  if(FS&&S){try{const b64=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result).split(',')[1]);fr.readAsDataURL(blob);});
+      const w=await FS.writeFile({path:'snowmapper-'+_shId+'.jpg',data:b64,directory:'CACHE'});
+      await S.share({title:'Snowmapper',text:txt+'\n'+url,files:[w.uri]});shareClose();return;}catch(e){if(!/cancel/i.test(String(e&&e.message)))toast('Teilen fehlgeschlagen','err');return;}}
+  const f=new File([blob],'snowmapper.jpg',{type:'image/jpeg'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],text:txt+'\n'+url}).then(shareClose,()=>{});return;}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='snowmapper.jpg';document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);toast('Bild gespeichert','ok');}
 function shareCopy(){const url=postUrl(_shId);
   try{navigator.clipboard.writeText(url).then(()=>{toast('Link kopiert!','ok');shareClose();},()=>toast(url,'ok'));}catch(e){toast(url,'ok');}}
 // People to send to: your conversations first, then everyone you follow.

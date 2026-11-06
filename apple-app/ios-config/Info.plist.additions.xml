@@ -54,3 +54,33 @@
 <array>
   <string>UIInterfaceOrientationPortrait</string>
 </array>
+
+<!-- Links snowmapper://… open the app (quick actions, shared links later). -->
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLName</key><string>ch.snowmapper.app</string>
+    <key>CFBundleURLSchemes</key><array><string>snowmapper</string></array>
+  </dict>
+</array>
+
+<!-- Quick actions: press and hold the app icon. Handled in AppDelegate.swift
+     (added by apply-ios-config.py), which turns them into snowmapper://action/… -->
+<key>UIApplicationShortcutItems</key>
+<array>
+  <dict>
+    <key>UIApplicationShortcutItemType</key><string>ch.snowmapper.app.report</string>
+    <key>UIApplicationShortcutItemTitle</key><string>Schnellmeldung</string>
+    <key>UIApplicationShortcutItemIconSymbolName</key><string>snowflake</string>
+  </dict>
+  <dict>
+    <key>UIApplicationShortcutItemType</key><string>ch.snowmapper.app.record</string>
+    <key>UIApplicationShortcutItemTitle</key><string>Aufzeichnen</string>
+    <key>UIApplicationShortcutItemIconSymbolName</key><string>record.circle</string>
+  </dict>
+  <dict>
+    <key>UIApplicationShortcutItemType</key><string>ch.snowmapper.app.tours</string>
+    <key>UIApplicationShortcutItemTitle</key><string>Touren finden</string>
+    <key>UIApplicationShortcutItemIconSymbolName</key><string>mountain.2</string>
+  </dict>
+</array>

@@ -27,7 +27,8 @@ async function bearer(): Promise<string | null> {
   return token;
 }
 
-export type ApnsMsg = { title: string; body: string; url: string; tag: string; ttlSec: number };
+// badge: the number on the app icon (unread messages); left out = unchanged
+export type ApnsMsg = { title: string; body: string; url: string; tag: string; ttlSec: number; badge?: number };
 
 // -> HTTP status (200 ok; 410 / 400 BadDeviceToken: drop the token), 0 = not configured
 export async function sendApns(endpoint: string, env: string, m: ApnsMsg): Promise<number> {
@@ -56,7 +57,8 @@ async function sendOnce(endpoint: string, env: string, m: ApnsMsg): Promise<numb
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      aps: { alert: { title: m.title, body: m.body }, sound: 'default', 'thread-id': m.tag },
+      aps: { alert: { title: m.title, body: m.body }, sound: 'default', 'thread-id': m.tag,
+             ...(m.badge != null ? { badge: m.badge } : {}) },
       url: m.url,
     }),
   });

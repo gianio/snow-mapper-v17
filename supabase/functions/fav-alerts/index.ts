@@ -13,7 +13,8 @@ import webpush from 'npm:web-push@3.6.7';
 import { isApns, sendApns } from '../_shared/apns.ts';
 
 const APP = 'https://gianio.github.io/snow-mapper-v17/';
-const AGAIN_H = 36, STALE_H = 18;
+// one live cycle a day: the forecast is up to ~30 h old before the next one
+const AGAIN_H = 36, STALE_H = 30;
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const b64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
