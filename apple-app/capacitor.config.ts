@@ -60,7 +60,9 @@ const config: CapacitorConfig = {
     },
     StatusBar: {
       overlaysWebView: true,
-      style: 'DARK',
+      // LIGHT = dark text and icons, for the app's light top strip (DARK
+      // made them white on white)
+      style: 'LIGHT',
     },
     Keyboard: {
       resize: 'native',

@@ -18,7 +18,7 @@ Stand: 2. November 2026. Interne Unterlage für den Betreiber. Die öffentliche 
 | Web-Push | Apple / Google / Mozilla | jeweils eigene | Push-Inhalt + Abo-Adresse | eigenständig |
 | App Store / TestFlight / Play | Apple, Google | jeweils eigene | nach deren Bedingungen | eigenständig |
 
-Nicht im Einsatz: Analyse- oder Werbe-Tools, Tracking-Cookies, Sentry (DSN leer), SMS-Anbieter
+Nicht im Einsatz: Analyse- oder Werbe-Tools, Tracking-Cookies, Sentry (nur mit Secret `SENTRY_DSN`, dann in der Erklärung aufgeführt), SMS-Anbieter
 (SMS-Bestätigung aus: `SMS_VERIFY=false`), Stripe (Paywall aus: `PRO_UI=false`). Bibliotheken
 (Leaflet, MapLibre, supabase-js, PMTiles) liefert die eigene Seite aus, nicht unpkg/jsDelivr.
 
@@ -43,16 +43,13 @@ Nicht im Einsatz: Analyse- oder Werbe-Tools, Tracking-Cookies, Sentry (DSN leer)
 
 ## 3. Was du noch selbst erledigen musst
 
-1. **Platzhalter füllen**: Name, Adresse und E-Mail in `legal/datenschutz.html` und `legal/impressum.html`
-   (Pflichtangaben nach Art. 19 DSG). Die Frist für Sicherungskopien `[30]` nach Supabase-Plan anpassen.
+1. ✅ **Kontakt eingetragen** (Giani Morf, Grüsch) in Datenschutz, AGB und Impressum (6.11.2026). Frist für Sicherungskopien: 30 Tage, bei einem Wechsel des Supabase-Plans prüfen.
 2. **Auftragsbearbeitungsverträge (AVV/DPA)** abschliessen bzw. bestätigen:
    - Supabase: Dashboard › Organization › Legal Documents › DPA anfordern und unterschreiben.
    - Resend: DPA unter resend.com/legal/dpa akzeptieren.
    - Cloudflare und GitHub: DPA gilt mit den Nutzungsbedingungen; einmal herunterladen und ablegen.
 3. **Zwei-Faktor-Anmeldung** für Supabase, GitHub, Cloudflare, Resend und das Gmail-Konto einschalten.
-4. **Edge Function `delete-account` deployen** (Supabase › Edge Functions › Deploy, Code aus
-   `supabase/functions/delete-account/index.ts`). Ohne sie löscht die App über `delete_my_account()`
-   ebenfalls vollständig.
+4. ✅ **Edge Function `delete-account`** ist deployt (5.11.2026).
 5. **Telefonnummer**: Ist sie wirklich nötig? Das DSG verlangt, nur so viele Daten zu erheben wie für den
    Zweck nötig. Wenn sie nur für Rückfragen dient, besser freiwillig machen.
 6. Vor dem öffentlichen Start: Erklärung von einer Fachperson prüfen lassen.

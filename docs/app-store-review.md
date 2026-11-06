@@ -13,7 +13,7 @@ fertig formuliert. Was nur du tun kannst, ist mit ☐ markiert.
 | Verschlüsselung (`ITSAppUsesNonExemptEncryption = NO`) | ✅ |
 | Melden und Blockieren von Personen und Beiträgen (Regel 1.2) | ✅ in der App |
 | Push nur mit Einwilligung, nie Werbung | ✅ |
-| Datenschutzerklärung, AGB, Impressum | ✅ als Seiten, ☐ Platzhalter füllen |
+| Datenschutzerklärung, AGB, Impressum | ✅ vollständig (angelehnt an Skitourenguru und White Risk) |
 | Automatischer TestFlight-Build nach jedem Merge | ✅ |
 
 ## 1. Datenschutz-URL (keine eigene Website nötig)
@@ -24,8 +24,7 @@ Die Seiten werden mit der Web-App veröffentlicht:
 - Nutzungsbedingungen: `https://gianio.github.io/snow-mapper-v17/legal/agb.html`
 - Impressum / Support: `https://gianio.github.io/snow-mapper-v17/legal/impressum.html`
 
-☐ Vorher in `legal/datenschutz.html` und `legal/impressum.html` Name, Adresse und
-E-Mail eintragen (oder mir schicken, ich trage sie ein). Mit einer eigenen .ch-Domain
+✅ Name, Adresse und E-Mail sind eingetragen (6.11.2026). Mit einer eigenen .ch-Domain
 später einfach die URLs austauschen.
 
 ## 2. TestFlight → Testinformationen (für externe Tester)
@@ -42,7 +41,7 @@ später einfach die URLs austauschen.
 > Skitouren, Teilen eines Beitrags als Bild, Schnellaktionen auf dem App-Symbol.
 > Feedback direkt in der App (Sprechblase oben links) oder per Screenshot in TestFlight.
 
-**Feedback-E-Mail:** ☐ deine Adresse
+**Feedback-E-Mail:** giani.morf@bluewin.ch
 **Marketing-URL:** optional
 **Datenschutz-URL:** siehe 1.
 
