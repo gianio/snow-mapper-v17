@@ -6638,6 +6638,40 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
  body.kb-up .qs-sheet .qs-in{max-height:calc(var(--app-h,100dvh) - var(--kb,0px) - env(safe-area-inset-top,0px) - 24px)!important}
  /* menus and small popups are kept inside the screen by fitInView() */
  .fc-menu{max-width:calc(100vw - 16px)}
+ .draw-exp-tag{display:inline-block;margin-bottom:10px;padding:4px 10px;border-radius:999px;background:#fff2cc;color:#6b4e00;font:800 11.5px var(--font,inherit);letter-spacing:.06em;text-transform:uppercase}
+ /* the heart: «Gefällt mir» beside «Bestätigen» */
+ .heart-btn{display:inline-flex;align-items:center;gap:5px;min-height:34px;padding:6px 10px;border:0;background:none;color:var(--fg2,#5b6474);font:700 13px var(--font,inherit);cursor:pointer;order:8;margin-left:auto}
+ .heart-btn svg{width:21px;height:21px;fill:none;transition:transform .15s}
+ .heart-btn.on{color:#e5233f}
+ .heart-btn.on svg{fill:currentColor}
+ .heart-btn:active svg{transform:scale(.85)}
+ .heart-btn b{min-width:6px}
+ /* post editor */
+ .pe-sec{margin:12px 0 0}
+ .pe-l{display:block;font:700 12px var(--font,inherit);color:var(--mut);text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
+ .pe-l b{display:inline;font-size:12px;margin:0;text-transform:none;letter-spacing:0;color:var(--fg)}
+ .pe-ph{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+ .pe-th{position:relative;flex:none;width:76px;height:76px;border-radius:12px;background:#dfe5ee center/cover no-repeat}
+ .pe-th.cover{outline:2px solid var(--brand,#2563eb);outline-offset:-2px}
+ .pe-th em{position:absolute;left:4px;bottom:4px;font:700 9.5px var(--font,inherit);font-style:normal;color:#fff;background:rgba(0,0,0,.5);padding:2px 5px;border-radius:6px}
+ .pe-th button{position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:12px;cursor:pointer}
+ .pe-add{flex:none;width:76px;height:76px;border-radius:12px;border:1.5px dashed var(--hair);display:grid;place-items:center;font:600 28px var(--font,inherit);color:var(--mut);cursor:pointer}
+ .pe-types{display:flex;flex-wrap:wrap;gap:6px}
+ .pe-types button,.pe-vis button{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 11px;border-radius:999px;border:1px solid var(--hair);background:var(--card);color:var(--fg);font:600 13px var(--font,inherit);cursor:pointer}
+ .pe-types button i{width:10px;height:10px;border-radius:50%}
+ .pe-types button.on,.pe-vis button.on{border-color:var(--brand,#2563eb);background:color-mix(in srgb,var(--brand,#2563eb) 12%,var(--card));font-weight:800}
+ .pe-vis{display:flex;flex-wrap:wrap;gap:6px}
+ .pe-dep{margin-top:10px}
+ /* quick report: snow type and its slider side by side */
+ .qs-pair{display:flex;gap:14px;align-items:stretch}
+ .qs-pair-l{flex:0 0 46%;min-width:0;display:flex;flex-direction:column}
+ .qs-pair-l .qs-wheel-w{flex:1}
+ .qs-pair-r{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+ .qs-pair-r .qs-dep,.qs-pair-r .qs-qual{margin-top:0}
+ .qs-pair-r .qs-ticks{font-size:9.5px}
+ .qs-pair-r .qs-ticks-cm span:nth-child(even){visibility:hidden}
+ .qs-none{font-size:12.5px;color:var(--mut);line-height:1.4}
+ .qs-pair-r:has(#qsDep:not([hidden]),#qsQual:not([hidden])) .qs-none{display:none}
  html.cap-native .web-only{display:none!important}
 </style>
 <script>
@@ -8460,7 +8494,7 @@ async function dataFetch(path,opts){const R=dataRemote();
   return fetch(path,opts);}
 function _capPlugin(n){return (_CAP&&_CAP.Plugins&&_CAP.Plugins[n])?_CAP.Plugins[n]:null;}
 function nativeShare(text,url){const S=_capPlugin('Share');if(S){try{S.share({text:text||'',url:url||''});return true;}catch(e){}}return false;}
-if(_isNative){try{document.documentElement.classList.add('cap-native');}catch(e){}try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'DARK'});SB.setOverlaysWebView({overlay:true});}}catch(e){}
+if(_isNative){try{document.documentElement.classList.add('cap-native');}catch(e){}try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'LIGHT'});SB.setOverlaysWebView({overlay:true});}}catch(e){}
   try{const SP=_capPlugin('SplashScreen');if(SP)setTimeout(()=>{try{SP.hide();}catch(e){}},450);}catch(e){}
   // Android hardware/gesture back. Every sheet and modal already closes on
   // Escape, so back replays Escape; if nothing on screen changed (no overlay
@@ -12934,7 +12968,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape')actSheetClose();});
 // a posted activity is for the people who follow you (and yourself)
 function actVisible(r){if(r&&r.condition_data&&r.condition_data.snowp)return false;
   const A=r&&r.condition_data&&r.condition_data.activity;if(!A)return true;
-  if(sbUser&&r.userId===sbUser.id)return true;return !!(r.userId&&myFollowing&&myFollowing.has(r.userId));}
+  return true;}   // who may see an activity is the post's own visibility (checked by the database)
 // A route's tap target: invisible, wide enough for a finger
 function actHitLine(ll,fn,pane){const o={color:'#000',weight:26,opacity:0,lineCap:'round',lineJoin:'round',className:'act-hit'};if(pane)o.pane=pane;
   const h=L.polyline(ll,o);h.on('click',e=>{L.DomEvent.stopPropagation(e);fn();});return h;}
@@ -18260,7 +18294,7 @@ async function loadDbReports(opts){
     const _q=pr=>Promise.resolve(pr).then(r=>(r&&r.data)||[],()=>[]);
     const [pr,rx,cc,cnd]=await Promise.all([
       _q(sb.from('profiles').select('id,username,avatar_url').in('id',uids)),
-      _q(sb.from('report_reactions').select('report_id,user_id').eq('type','like').in('report_id',ids)),
+      _q(sb.from('report_reactions').select('report_id,user_id,type').in('type',['like','helpful']).in('report_id',ids)),
       // created_at too, so the notification badge can tell a comment that
       // arrived since the feed was last opened from an old one
       _q(sb.from('report_comments').select('report_id,created_at').in('report_id',ids)),
@@ -18271,8 +18305,10 @@ async function loadDbReports(opts){
     // usernames
     let nameMap={},avatarMap={};try{pr.forEach(p=>{nameMap[p.id]=p.username;if(p.avatar_url){avatarMap[p.id]=p.avatar_url;avatarPut(p.id,p.avatar_url);}});}catch(e){}
     // likes (reuse report_reactions type=like)
-    let likeCount={},likedByMe={};try{
-      rx.forEach(x=>{likeCount[x.report_id]=(likeCount[x.report_id]||0)+1;if(sbUser&&x.user_id===sbUser.id)likedByMe[x.report_id]=true;});}catch(e){}
+    // 'like' = «Bestätigen» (counts for trust), 'helpful' = the heart («Gefällt mir»)
+    let likeCount={},likedByMe={},heartCount={},heartByMe={};try{
+      rx.forEach(x=>{if(x.type==='helpful'){heartCount[x.report_id]=(heartCount[x.report_id]||0)+1;if(sbUser&&x.user_id===sbUser.id)heartByMe[x.report_id]=true;return;}
+        likeCount[x.report_id]=(likeCount[x.report_id]||0)+1;if(sbUser&&x.user_id===sbUser.id)likedByMe[x.report_id]=true;});}catch(e){}
     let cmtCount={},cmtNew={};try{
       cc.forEach(x=>{cmtCount[x.report_id]=(cmtCount[x.report_id]||0)+1;
         if(new Date(x.created_at).getTime()>feedSeenAt)cmtNew[x.report_id]=(cmtNew[x.report_id]||0)+1;});}catch(e){}
@@ -18282,8 +18318,8 @@ async function loadDbReports(opts){
       if(r.flagged)return null; // hide community-flagged reports
       const ll=parseGeo(r.location);if(!ll||(ll[0]===0&&ll[1]===0))return null;const lat=ll[0],lng=ll[1];
       const catId=r.primary_categories?.[0]||'info';const catObj=RP_CATS.find(c=>c.id===catId);
-      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||ic('pin'),sub:subDe(r.subtype),measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,condition_data:r.condition_data||null,createdAt:r.created_at,capturedAt:r.captured_at||null,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],comments:cmtCount[r.id]||0,
-        condN:condAgg[r.id]?condAgg[r.id].n:0,condAvg:condAgg[r.id]?condAgg[r.id].sum/condAgg[r.id].n:0,condPow:condAgg[r.id]?condAgg[r.id].pow:0,myCond:myCond[r.id]||null,dbRow:true};
+      return{id:r.id,user:nameMap[r.user_id]||(r.user_id?.substring(0,8))||'User',userId:r.user_id,avatar:avatarMap[r.user_id]||null,cat:catId,icon:catObj?.icon||ic('pin'),sub:subDe(r.subtype),measurement:r.condition_data?.measurement||null,stars:r.condition_data?.stars||0,peak:r.condition_data?.peak||null,dest:r.condition_data?.dest||null,caption:r.caption,lat,lng,time:timeAgo(r.created_at),img:r.image_url,condition_data:r.condition_data||null,createdAt:r.created_at,capturedAt:r.captured_at||null,likes:likeCount[r.id]||0,liked:!!likedByMe[r.id],hearts:heartCount[r.id]||0,hearted:!!heartByMe[r.id],comments:cmtCount[r.id]||0,
+        condN:condAgg[r.id]?condAgg[r.id].n:0,condAvg:condAgg[r.id]?condAgg[r.id].sum/condAgg[r.id].n:0,condPow:condAgg[r.id]?condAgg[r.id].pow:0,myCond:myCond[r.id]||null,dbRow:true,visibility:r.visibility||'all'};
     }).filter(Boolean);
     if(opts.uid){const have=new Set(allReports.map(x=>String(x.id)));
       allReports=allReports.map(x=>dbR.find(y=>String(y.id)===String(x.id))||x).concat(dbR.filter(x=>!have.has(String(x.id))));return;}
@@ -18316,19 +18352,72 @@ function storagePathFromUrl(u){
   try{const m=String(u||'').match(/\/report-images\/(.+)$/);
     return m?decodeURIComponent(m[1].split('?')[0]):null;}catch(e){return null;}
 }
+// Editing a post: the text, the photos (remove, add, first one is the
+// cover), who sees it and -- for a quick report -- the snow type and depth.
+let _pe=null;
+const PE_VIS=[['all','Alle'],['followers','Follower'],['friends','Freunde'],['me','Nur ich']];
 function postEdit(id,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();
   document.querySelectorAll('.fc-more-wrap.open').forEach(x=>x.classList.remove('open'));
   const r=allReports.find(x=>String(x.id)===String(id));if(!r)return;
+  const cd=r.condition_data||{};
+  const imgs=(cd.images&&cd.images.length?cd.images.slice():(r.img?[r.img]:[]));
+  const ti=typeof cd.snow==='string'?QS_TYPES.findIndex(t=>t.k===cd.snow):-1;
+  const cm0=cd.powderAmountCm!=null?cd.powderAmountCm:(cd.depthBand?Math.round((cd.depthBand[0]+cd.depthBand[1])/2):15);
+  _pe={id:String(id),r,cd,imgs,removed:[],add:[],type:ti,cm:Math.max(QS_CM_MIN,Math.min(QS_CM_MAX,cm0||15)),
+    vis:r.visibility||'all'};
   let el=document.getElementById('postEditW');if(!el){el=document.createElement('div');el.id='postEditW';document.body.appendChild(el);}
   el.innerHTML='<div class="pe-in" role="dialog" aria-modal="true" aria-label="Beitrag bearbeiten"><b>Beitrag bearbeiten</b>'
-    +'<textarea id="peText" rows="5" maxlength="1000" placeholder="Beschreibung">'+escapeHtml(r.caption||'')+'</textarea>'
-    +'<div class="pe-b"><button onclick="document.getElementById(\'postEditW\').remove()">Abbrechen</button><button class="pri" onclick="postEditSave(\''+id+'\')">Speichern</button></div></div>';
-  el.onclick=e=>{if(e.target===el)el.remove();};setTimeout(()=>{const t=document.getElementById('peText');if(t)t.focus();},60);}
-async function postEditSave(id){const t=document.getElementById('peText');if(!t||!sb||!sbUser)return;const cap=t.value.trim()||null;
-  const{error}=await sb.from('reports').update({caption:cap}).eq('id',id).eq('user_id',sbUser.id);
-  if(error){toast('Speichern fehlgeschlagen: '+error.message,'err');return;}
-  const r=allReports.find(x=>String(x.id)===String(id));if(r)r.caption=cap;
-  const w=document.getElementById('postEditW');if(w)w.remove();toast('Beitrag aktualisiert','ok');try{feedRender();}catch(e){}}
+    +'<div class="pe-sec"><span class="pe-l">Fotos</span><div class="pe-ph" id="pePh"></div></div>'
+    +(ti>=0?'<div class="pe-sec"><span class="pe-l">Schneeart</span><div class="pe-types" id="peTypes">'
+      +QS_TYPES.map((t,i)=>'<button type="button" data-i="'+i+'" onclick="peType('+i+')"><i style="background:'+t.c+'"></i>'+escapeHtml(t.l)+'</button>').join('')+'</div>'
+      +'<div class="pe-dep" id="peDep"><span class="pe-l">Tiefe <b id="peDepV"></b></span><input type="range" class="qs-range" min="'+QS_CM_MIN+'" max="'+QS_CM_MAX+'" step="1" value="'+_pe.cm+'" oninput="peDepth(+this.value)" style="--qs-track:'+qsCmTrack()+'" aria-label="Tiefe"></div></div>':'')
+    +'<div class="pe-sec"><span class="pe-l">Beschreibung</span><textarea id="peText" rows="4" maxlength="1000" placeholder="Beschreibung">'+escapeHtml(r.caption||'')+'</textarea></div>'
+    +'<div class="pe-sec"><span class="pe-l">Sichtbar für</span><div class="pe-vis" id="peVis">'
+      +PE_VIS.map(([k,l])=>'<button type="button" data-k="'+k+'" onclick="peVis(\''+k+'\')">'+l+'</button>').join('')+'</div></div>'
+    +'<div class="pe-b"><button onclick="document.getElementById(\'postEditW\').remove()">Abbrechen</button><button class="pri" id="peSave" onclick="postEditSave(\''+id+'\')">Speichern</button></div></div>';
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  pePhRender();if(ti>=0){peType(ti,true);peDepth(_pe.cm);}peVis(_pe.vis);}
+function pePhRender(){const box=document.getElementById('pePh');if(!box||!_pe)return;
+  const all=_pe.imgs.map((u,i)=>({u,i,old:true})).concat(_pe.add.map((f,i)=>({u:f._url||(f._url=URL.createObjectURL(f)),i,old:false})));
+  box.innerHTML=all.map((x,k)=>'<div class="pe-th'+(k===0?' cover':'')+'" style="background-image:url(&quot;'+escapeHtml(x.u)+'&quot;)">'
+      +(k===0?'<em>Titelbild</em>':'')+'<button type="button" aria-label="Foto entfernen" onclick="peDel('+(x.old?'0':'1')+','+x.i+')">✕</button></div>').join('')
+    +(all.length<8?'<label class="pe-add" aria-label="Foto hinzufügen">+<input type="file" accept="image/*" multiple hidden onchange="peAddPh(this)"></label>':'');}
+function peDel(isNew,i){if(!_pe)return;if(isNew)_pe.add.splice(i,1);else _pe.removed.push(_pe.imgs.splice(i,1)[0]);pePhRender();try{haptic(4);}catch(e){}}
+function peAddPh(inp){if(!_pe)return;[...(inp.files||[])].slice(0,8).forEach(f=>_pe.add.push(f));inp.value='';pePhRender();}
+function peType(i,quiet){if(!_pe)return;_pe.type=i;document.querySelectorAll('#peTypes button').forEach(b=>b.classList.toggle('on',+b.dataset.i===i));
+  const d=document.getElementById('peDep');if(d)d.hidden=!QS_TYPES[i].depth;if(!quiet)try{haptic(3);}catch(e){}}
+function peDepth(v){if(!_pe)return;_pe.cm=v;const b=document.getElementById('peDepV');if(b)b.textContent=qsCmText(v);}
+function peVis(k){if(!_pe)return;_pe.vis=k;document.querySelectorAll('#peVis button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));}
+async function postEditSave(id){if(!_pe||!sb||!sbUser)return;const t=document.getElementById('peText'),btn=document.getElementById('peSave');
+  if(btn){btn.disabled=true;btn.textContent='Speichert…';}
+  try{
+    const cap=(t&&t.value.trim())||null,cd=Object.assign({},_pe.cd);
+    // new photos up first, so nothing is lost if the update fails
+    const urls=_pe.imgs.slice();
+    for(let i=0;i<_pe.add.length;i++){const up=await downscaleImage(_pe.add[i]),path=sbUser.id+'/'+Date.now()+'_e'+i+'.jpg';
+      const{error:e}=await sb.storage.from('report-images').upload(path,up,{cacheControl:'31536000',contentType:up.type||'image/jpeg'});if(e)throw e;
+      const{data:ud}=sb.storage.from('report-images').getPublicUrl(path);if(ud&&ud.publicUrl)urls.push(ud.publicUrl);}
+    if(urls.length>1)cd.images=urls;else delete cd.images;
+    if(_pe.removed.length||_pe.add.length){delete cd.thumb;delete cd.mid;}
+    // a quick report: its snow type and depth, as qsPost writes them
+    if(_pe.type>=0){const ty=QS_TYPES[_pe.type],Q=QS_QUAL[ty.k];
+      cd.snow=ty.k;cd.measurement=ty.l+(ty.depth?' '+qsCmText(_pe.cm):'');
+      if(ty.depth){const dp=qsCmBand(_pe.cm);cd.depthBand=[dp[0],dp[1]];}else{delete cd.depthBand;delete cd.tracks;}
+      if(cd.qual&&!(Q&&cd.qual.t===Q.t)){delete cd.qual;delete cd.crust;}
+      if(cd.qual)cd.measurement+=' · '+(Q&&Q.crust?'Deckel ':'')+((Q&&Q.m)||'')+cd.qual.l;
+      if(ty.q!=null){cd.quick=true;cd.powderQuality=ty.q;cd.powderAmountCm=ty.depth?Math.round(_pe.cm):0;cd.powder=ty.k==='pulver';}
+      else{delete cd.powderQuality;delete cd.powderAmountCm;delete cd.powder;}}
+    const upd={caption:cap,condition_data:cd,image_url:urls[0]||null,visibility:_pe.vis};
+    if(_pe.type>=0)upd.primary_categories=[QS_TYPES[_pe.type].cat||'snow'];
+    const{error}=await sb.from('reports').update(upd).eq('id',id).eq('user_id',sbUser.id);if(error)throw error;
+    // removed photos: best effort, the post is already right
+    const gone=_pe.removed.map(storagePathFromUrl).filter(Boolean);
+    if(gone.length){try{await sb.storage.from('report-images').remove(gone);}catch(e){}}
+    if(_pe.add.length){try{const row={condition_data:cd};await withThumb(row,_pe.add[0]);
+      if(row.condition_data.thumb)await sb.from('reports').update({condition_data:row.condition_data}).eq('id',id).eq('user_id',sbUser.id);}catch(e){}}
+    const w=document.getElementById('postEditW');if(w)w.remove();_pe=null;
+    toast('Beitrag aktualisiert','ok');try{haptic(8);}catch(e){}loadDbReports();
+  }catch(e){toast('Speichern fehlgeschlagen: '+(e.message||e),'err');if(btn){btn.disabled=false;btn.textContent='Speichern';}}}
 async function deleteReport(id,ev){
   if(ev){ev.stopPropagation();ev.preventDefault();}
   if(!sb||!sbUser){authShow();return;}
@@ -18363,6 +18452,20 @@ async function toggleEndorse(id,ev){if(ev){ev.stopPropagation();}
     else await sb.from('report_reactions').delete().match({report_id:id,user_id:sbUser.id,type:'like'});
   }catch(e){r.liked=!willEndorse;r.likes+=(willEndorse?-1:1);feedRender();}
 }
+// the heart: a plain «Gefällt mir», for every post and activity (own ones too)
+async function toggleHeart(id,ev){if(ev){ev.stopPropagation();}
+  if(!sb||!sbUser){authShow();return;}
+  const r=allReports.find(x=>String(x.id)===String(id));if(!r||!r.dbRow)return;
+  const on=!r.hearted;r.hearted=on;r.hearts=Math.max(0,(r.hearts||0)+(on?1:-1));try{haptic(on?10:4);}catch(e){}heartPaint(r);
+  try{const q=on?sb.from('report_reactions').insert({report_id:r.id,user_id:sbUser.id,type:'helpful'})
+      :sb.from('report_reactions').delete().match({report_id:r.id,user_id:sbUser.id,type:'helpful'});
+    const{error}=await q;if(error)throw error;}
+  catch(e){r.hearted=!on;r.hearts=Math.max(0,r.hearts+(on?-1:1));heartPaint(r);}}
+function heartPaint(r){document.querySelectorAll('.heart-btn[data-id="'+r.id+'"]').forEach(b=>{b.classList.toggle('on',!!r.hearted);
+  b.setAttribute('aria-pressed',r.hearted?'true':'false');const n=b.querySelector('b');if(n)n.textContent=r.hearts||'';});}
+function heartBtnHTML(r){if(!r||!r.dbRow)return '';
+  return '<button type="button" class="heart-btn'+(r.hearted?' on':'')+'" data-id="'+r.id+'" aria-pressed="'+(r.hearted?'true':'false')+'" aria-label="Gefällt mir" onclick="toggleHeart(\''+r.id+'\',event)">'
+    +'<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg><b>'+(r.hearts||'')+'</b></button>';}
 // --- Report moderation: flag/melden ---
 async function reportFlag(id,ev){if(ev){ev.stopPropagation();}
   if(!sb||!sbUser){authShow();return;}
@@ -19423,7 +19526,9 @@ const QS_TYPES=[
   {k:'kruste',l:'Kruste',c:'rgb(214,108,98)',q:30},
   {k:'hart',l:'Hart',c:'rgb(156,168,184)',q:10},
   {k:'abgeblasen',l:'Abgeblasen',c:'#8ea0b4',q:null},
-  {k:'duenn',l:'Sharky – steinig',c:QS_HATCH,q:null}];
+  {k:'duenn',l:'Sharky – steinig',c:QS_HATCH,q:null},
+  // dry: no snow at all here (aper) -- as useful to know as powder
+  {k:'aper',l:'Kein Schnee (aper)',c:'#b9a27c',q:null}];
 // How it was, for the snow types that come in more than one state: one
 // slider each. t: the question, l: the full words, s: short tick labels,
 // c: the colour of each step; crust maps onto the full report's «Deckel»,
@@ -19469,10 +19574,11 @@ function qsOpen(){
     +'<div class="qs-tour" id="qsTour"></div>'
     // when it was: now by default, back up to 7 days (a report written later)
     +'<label class="qs-when"><span class="qs-lbl">Wann</span><input type="datetime-local" id="qsWhen" oninput="qsWhenSync()" aria-label="Datum und Zeit der Beobachtung"><b id="qsWhenV">jetzt</b></label>'
-    +'<div class="qs-lbl">Schneeart</div>'
+    // snow type and its slider side by side
+    +'<div class="qs-pair"><div class="qs-pair-l"><div class="qs-lbl">Schneeart</div>'
     +'<div class="qs-wheel-w"><div class="qs-wheel" id="qsWheel" data-nopull onscroll="qsWheelScroll()">'
     +QS_TYPES.map((t,i)=>'<button type="button" class="qs-it'+(i===0?' on':'')+'" onclick="qsPick('+i+')"><i style="background:'+t.c+'"></i><span>'+escapeHtml(t.l)+'</span></button>').join('')
-    +'</div><div class="qs-wheel-sel" aria-hidden="true"></div></div>'
+    +'</div><div class="qs-wheel-sel" aria-hidden="true"></div></div></div><div class="qs-pair-r">'
     +'<div class="qs-dep" id="qsDep"><div class="qs-lbl">Tiefe <b id="qsDepV"></b></div>'
     +'<input type="range" class="qs-range" id="qsRange" min="'+QS_CM_MIN+'" max="'+QS_CM_MAX+'" step="1" value="15" oninput="qsDepth(+this.value)" style="--qs-track:'+qsCmTrack()+'" aria-label="Tiefe">'
     +'<div class="qs-ticks qs-ticks-cm"><span>1</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span><span>70+</span></div></div>'
@@ -19480,6 +19586,7 @@ function qsOpen(){
     +'<div class="qs-qual" id="qsQual" hidden><div class="qs-lbl"><span id="qsQualT"></span> <b id="qsQualV"></b></div>'
     +'<input type="range" class="qs-range" id="qsQualR" min="0" max="2" step="0.05" value="1" oninput="qsQualSet(+this.value)" aria-label="Zustand">'
     +'<div class="qs-ticks" id="qsQualTk"></div></div>'
+    +'<div class="qs-none" id="qsNone">Keine Menge – nur die Art zählt.</div></div></div>'
     +'<div class="qs-trk" id="qsTrk"><div class="qs-lbl">Spuren</div><div class="qs-seg">'
     +TRK_TRACKS.map(([k,l])=>'<button type="button" data-k="'+k+'" onclick="qsSet(\'tracks\',\''+k+'\',this)">'+escapeHtml(l)+'</button>').join('')+'</div></div>'
     // a comment, if there is more to say
@@ -20699,7 +20806,23 @@ function drawRefRect(){
 function drawC2O(cx,cy){const r=drawRefRect();return [(cx-r.x)/r.w*drawZoneW,(cy-r.y)/r.h*drawZoneH];}
 function drawOScale(){const r=drawRefRect();return drawZoneW/r.w;}
 
+// The drawn report is still an experiment: say so when it opens (a sheet the
+// first two times, then a short note).
+function drawExpNote(go){let n=0;try{n=+localStorage.getItem('ssm_draw_exp')||0;localStorage.setItem('ssm_draw_exp',String(n+1));}catch(e){}
+  if(n>=2){toast('Experimentell: Zeichnen ist noch in Erprobung','info');go();return;}
+  const d=document.createElement('div');d.id='drawExp';d.className='auth-overlay';d.style.display='flex';d.style.zIndex='7001';
+  d.innerHTML='<div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="drawExpT"><span class="draw-exp-tag">Experimentell</span>'
+    +'<h2 id="drawExpT">Schnee einzeichnen</h2>'
+    +'<p class="auth-sub">Diese Funktion ist noch in Erprobung. Bedienung, Darstellung und Auswertung können sich ändern, und Fehler sind möglich. '
+    +'Für eine einfache Meldung ist die <b>Schnellmeldung</b> der verlässlichere Weg.</p>'
+    +'<button class="auth-btn primary" id="drawExpGo">Verstanden, zeichnen</button>'
+    +'<div class="auth-switch"><button id="drawExpQs">Lieber Schnellmeldung</button></div></div>';
+  document.body.appendChild(d);
+  d.querySelector('#drawExpGo').onclick=()=>{d.remove();go();};
+  d.querySelector('#drawExpQs').onclick=()=>{d.remove();try{qsOpen();}catch(e){}};}
+let _drawExpOk=false;
 function drawOpen(){
+  if(!_drawExpOk){drawExpNote(()=>{_drawExpOk=true;drawOpen();_drawExpOk=false;});return;}
   // You draw ON the map, so the map screen has to be the one underneath before
   // the canvas goes over it -- otherwise the pen lands on a blank pane.
   if(typeof scrCurrent==='function'&&scrCurrent()!=='search'){
@@ -22003,7 +22126,7 @@ function feedFiltMark(){
   const sw=document.getElementById('feedTxtSw');if(sw)sw.checked=feedTxtOn();
   const fr=document.getElementById('feedFrSw');if(fr)fr.checked=feedFriendsOn();
   const b=document.getElementById('feedFiltFab');if(!b)return;
-  b.classList.toggle('on',!!feedRegion||feedTxtOn()||feedFriendsOn());
+  b.classList.toggle('on',!!feedRegion||!feedTxtOn()||feedFriendsOn());
 }
 function feedRegionsRender(){const el=document.getElementById('feedFilter');if(!el)return;
   const chip=(id,label)=>'<button class="'+(feedRegion===id?'active':'')+'" onclick="feedRegionSet(\''+id+'\',true);feedFilterClose()">'+label+'</button>';
@@ -22026,9 +22149,13 @@ function feedOpenView(){const b=map.getBounds();feedViewB=[b.getSouth(),b.getWes
   try{if(feedScope!=='all')feedSetScope('all');}catch(e){}
   navGo('feed');setTimeout(()=>{try{feedRegionsRender();feedTopRender();}catch(e){}feedRender();},0);}
 let _fhRaf=0;
+setInterval(()=>{const el=document.getElementById('feedHereBtn');if(el)feedHereSync();},450);
 function feedHereSync(){if(_fhRaf)return;_fhRaf=requestAnimationFrame(()=>{_fhRaf=0;
   let el=document.getElementById('feedHereBtn');
-  const on=!!(typeof ovOn!=='undefined'&&ovOn.reports);
+  // only on the bare map: not over the layer panel, a sheet, a screen or a mode
+  const bare=document.body.getAttribute('data-screen')!=='feed'&&!(typeof anyMenuOpen==='function'&&anyMenuOpen())
+    &&!(typeof mapModeBusy==='function'&&mapModeBusy())&&!document.querySelector('.prof-modal[style*="flex"],.tour-sheet.open,.qs-sheet.open,#onb:not([hidden])');
+  const on=bare&&!!(typeof ovOn!=='undefined'&&ovOn.reports);
   let n=0;if(on){try{const b=map.getBounds();n=_rptShown.filter(r=>!isBlocked(r.userId)&&b.contains([r.lat,r.lng])).length;}catch(e){}}
   if(!on||!n){if(el)el.hidden=true;return;}
   if(!el){el=document.createElement('button');el.id='feedHereBtn';el.type='button';el.onclick=feedOpenView;document.body.appendChild(el);}
@@ -22038,13 +22165,13 @@ function feedHereSync(){if(_fhRaf)return;_fhRaf=requestAnimationFrame(()=>{_fhRa
 // Posts without a picture (text only): off in the feed by default, small when on.
 function feedNoPic(r){const cd=r.condition_data||{};
   return !r.img&&!(cd.activity&&cd.activity.track)&&!(cd.images&&cd.images.length)&&!cd.drawImage&&!cd.snapshot;}
-function feedTxtOn(){try{return localStorage.getItem('ssm_feed_text')==='1';}catch(e){return false;}}
+function feedTxtOn(){try{return localStorage.getItem('ssm_feed_text')!=='0';}catch(e){return true;}}
 function feedTxtSet(on){try{localStorage.setItem('ssm_feed_text',on?'1':'0');}catch(e){}feedFiltMark();feedTopRender();feedRender();}
 // «Nur Freunde»: only the posts of people you follow who follow you back
 // (the app's meaning of friends, as for activities and post visibility)
-function feedFriendsOn(){try{return !!sbUser&&localStorage.getItem('ssm_feed_friends')==='1';}catch(e){return false;}}
+function feedFriendsOn(){try{return !!sbUser&&localStorage.getItem('ssm_feed_friends_v2')==='1';}catch(e){return false;}}
 function feedFriendsSet(on){if(on&&!sbUser){feedFiltMark();authShow();return;}
-  try{localStorage.setItem('ssm_feed_friends',on?'1':'0');}catch(e){}feedFiltMark();feedTopRender();feedRender();}
+  try{localStorage.setItem('ssm_feed_friends_v2',on?'1':'0');}catch(e){}feedFiltMark();feedTopRender();feedRender();}
 function feedIsFriend(r){const u=r&&r.userId;return !!(u&&myFollowing&&myFollowing.has(u)&&myFollowers&&myFollowers.has(u));}
 // "Hier & jetzt" is a live question: panning the map or moving the window
 // changes the answer, so the list follows them while it is open.
@@ -22663,12 +22790,12 @@ function feedRender(){
   // allReports directly), but they are not posts -- nobody drew them to be
   // read, so they never show up as feed cards.
   const _merged=actMergedIds();
-  let base=allReports.filter(r=>!_rptIsDraw(r)&&actVisible(r)&&!_merged.has(String(r.id)));
+  let base=allReports.filter(r=>actVisible(r)&&!_merged.has(String(r.id)));
   if(!prefs.showMyReports&&sbUser)base=base.filter(r=>r.userId!==sbUser.id);
   // «N Beiträge hier im Feed»: exactly the posts the map showed -- your own
   // too (the map shows them; the setting above only thins the general feed)
   const _view=feedScope==='all'&&feedRegion==='view'&&!!feedViewIds;
-  if(_view)base=allReports.filter(r=>feedViewIds.has(String(r.id))&&!_rptIsDraw(r)&&!_merged.has(String(r.id)));
+  if(_view)base=allReports.filter(r=>feedViewIds.has(String(r.id))&&!_merged.has(String(r.id)));
   // someone's profile, opened from a post: every post of theirs, drawn maps too
   if(feedScope==='user')base=allReports.filter(r=>r.userId===feedUserId&&actVisible(r)&&!_merged.has(String(r.id)));
   if(feedScope==='here'){
@@ -22775,7 +22902,7 @@ function feedRender(){
           ${r.dbRow&&sbUser&&r.userId===sbUser.id?`<button class="edit-btn" title="Bearbeiten" aria-label="Beitrag bearbeiten" onclick="postEdit('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Bearbeiten</span></button>`:''}
           ${r.dbRow&&sbUser&&r.userId===sbUser.id?`<button class="del-btn" title="Löschen" aria-label="Beitrag löschen" onclick="deleteReport('${r.id}',event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg><span>Löschen</span></button>`:''}
         </span></span>
-        ${endBtn}
+        ${heartBtnHTML(r)}${endBtn}
       </div>
     </div>${isF&&filtered.length>1?`<div class="feed-more-hd">${feedScope==='post'?'Neueste Beiträge':'Weitere Beiträge'+(feedUserName?' von '+escapeHtml(feedUserName):'')}</div>`:''}`;
   }).join('')+(more>0?('<div class="feed-more">'+more+' weitere</div>'):'')
