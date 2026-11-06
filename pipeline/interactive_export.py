@@ -1791,7 +1791,7 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
   // look at a valley -- and an offline one -- costs nothing.
   // Terrarium elevation tiles (device-side Variant A rendering) never change
   // either, and go through the same capped tile cache.
-  if(url.host==='wmts.geo.admin.ch'||(url.host==='s3.amazonaws.com'&&url.pathname.indexOf('/elevation-tiles-prod/')===0)){
+  if(url.host==='wmts.geo.admin.ch'||/(^|\.)tile\.opentopomap\.org$/.test(url.host)||(url.host==='s3.amazonaws.com'&&url.pathname.indexOf('/elevation-tiles-prod/')===0)){
     e.respondWith(offMatch(r).then(o=>o||caches.open(T).then(c=>c.match(r).then(m=>m||fetch(r).then(resp=>{
       if(resp&&resp.status===200){const cp=resp.clone();
         c.put(r,cp).then(()=>tileTrim(c)).catch(()=>{});}
@@ -9301,6 +9301,7 @@ function updateBaseFade(force){
   // comes in as you zoom
   const op=0.16+0.84*_ramp(z,8.4,10.8);
   base.setOpacity(op);
+  try{osmTopo.setOpacity(op);}catch(e){}
   try{reliefBase.setOpacity(0.9-0.9*_ramp(z,9.2,13));}catch(e){}
   document.documentElement.style.setProperty('--base-gray',(1-_ramp(z,11.6,13)).toFixed(3));
   if(!force&&Math.abs(op-_lastFadeOp)<_FADE_EPS)return;
@@ -9314,6 +9315,29 @@ function updateBaseFade(force){
     _applyVectorFade(op2,t2);
   });
 }
+// --- Outside Switzerland: OpenTopoMap (OSM with contour lines) -------------
+// The swisstopo map stops at or a little past the border (then white), so the
+// neighbouring countries get OpenTopoMap instead. It sits ABOVE the swisstopo
+// tiles in its own pane and is clipped to "everything except Switzerland", so
+// inside the border the national map always wins. The clip is in layer
+// coordinates (the pane moves with the map), so it is only rebuilt on zoom.
+map.createPane('osmPane');
+map.getPane('osmPane').style.zIndex=205;               // just above tilePane (200)
+map.getPane('osmPane').style.pointerEvents='none';
+const osmTopo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+  {pane:'osmPane',subdomains:'abc',maxZoom:17,maxNativeZoom:17,crossOrigin:true,keepBuffer:2,
+   updateWhenZooming:false,className:'base-tiles osm-tiles',
+   attribution:'Ausland: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, SRTM · <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)'}).addTo(map);
+function osmClip(){const pn=map.getPane('osmPane');if(!pn)return;
+  try{const sz=map.getSize(),o=map.containerPointToLayerPoint([0,0]),M=4*Math.max(sz.x,sz.y);
+    const x0=Math.round(o.x-M),y0=Math.round(o.y-M),x1=Math.round(o.x+sz.x+M),y1=Math.round(o.y+sz.y+M);
+    let d='M'+x0+' '+y0+'H'+x1+'V'+y1+'H'+x0+'Z M';
+    d+=CH_BORDER.map(q=>{const pt=map.latLngToLayerPoint(q);return Math.round(pt.x)+' '+Math.round(pt.y);}).join(' L')+'Z';
+    pn.style.clipPath="path(evenodd,'"+d+"')";pn.style.webkitClipPath=pn.style.clipPath;}catch(e){}}
+// hidden while a zoom animates (the clip would lag a frame behind the tiles)
+map.on('zoomstart',()=>{const pn=map.getPane('osmPane');if(pn)pn.style.visibility='hidden';});
+map.on('zoomend viewreset moveend resize',()=>{osmClip();const pn=map.getPane('osmPane');if(pn)pn.style.visibility='';});
+osmClip();
 map.on('zoom',updateBaseFade);
 // zoomend always restyles, so the final state is exact rather than within EPS.
 map.on('zoomend',function(){updateBaseFade(true);});
@@ -14428,6 +14452,7 @@ const _kmPerRow=((laMax-laMin)*110.574)/Math.max(1,H-1);
 const _kmPerCol=((loMax-loMin)*111.320*Math.cos((laMin+laMax)/2*Math.PI/180))/Math.max(1,W-1);
 const EDGE_ROWS=Math.min(Math.floor((H-1)/2),Math.ceil(EDGE_KM/Math.max(1e-6,_kmPerRow)));
 const EDGE_COLS=Math.min(Math.floor((W-1)/2),Math.ceil(EDGE_KM/Math.max(1e-6,_kmPerCol)));
+const LG_ABROAD="<div style='margin-top:5px;opacity:.75;font-size:11px'>Grenznahes Ausland (AT, IT, FR): nur Modell, ohne Messstationen.</div>";
 function inDomainEdge(p){const y=(p/W)|0,x=p-y*W;
   return x<EDGE_COLS||x>=W-EDGE_COLS||y<EDGE_ROWS||y>=H-EDGE_ROWS;}
 // Only Switzerland: the model grid is a rectangle, and outside the border
@@ -14454,7 +14479,12 @@ function setRaster(get,border){_isoV=null;isoHiHide();_tmpV=null;tempHiHide();if
 // in-between colours) and every band edge gets a faint line, so the steps
 // read as snow levels. val(p) gives the cell value or null.
 function snowBand(v){if(v==null||v<SB[0])return -1;let j=0;while(j+1<SB.length&&v>=SB[j+1])j++;return Math.min(j,SB.length-2,RGB.length-1);}
-function setRasterIso(val,alpha,k){_tmpV=null;if(tempHi&&map.hasLayer(tempHi))map.removeLayer(tempHi);const chm=chMask(),V=new Float32Array(NP);
+// Neuschnee and Schneehöhe need nothing but weather and terrain, which the
+// model has for its whole rectangle, so they also show in the bordering parts
+// of Austria, Italy and France (all other layers stay Swiss).
+let _allMask=null;
+function domMask(){return _allMask||(_allMask=new Uint8Array(NP).fill(1));}
+function setRasterIso(val,alpha,k){_tmpV=null;if(tempHi&&map.hasLayer(tempHi))map.removeLayer(tempHi);const chm=domMask(),V=new Float32Array(NP);
   for(let p=0;p<NP;p++){const v=(inDomainEdge(p)||!chm[p])?null:val(p);V[p]=v==null?NaN:v;}
   const w=W*k,h=H*k;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
   const img=cx.createImageData(w,h),d=img.data,B=new Int8Array(w*h);
@@ -14493,7 +14523,7 @@ function isoHiRender(){const V=_isoV;
   if(!isoHiCv)isoHiCv=document.createElement('canvas');
   if(isoHiCv.width!==w||isoHiCv.height!==h){isoHiCv.width=w;isoHiCv.height=h;}
   const g=isoHiCv.getContext('2d'),img=g.createImageData(w,h),d=img.data,B=new Int8Array(w*h);
-  if(terr){const NV=_nsV,hid=_nsHid,chm=chMask(),ME=_tmpME||(_tmpME=(()=>{const e=new Float32Array(NP);for(let p=0;p<NP;p++)e[p]=melevv(p);return e;})());
+  if(terr){const NV=_nsV,hid=_nsHid,chm=domMask(),ME=_tmpME||(_tmpME=(()=>{const e=new Float32Array(NP);for(let p=0;p<NP;p++)e[p]=melevv(p);return e;})());
     const out=p=>inDomainEdge(p)||!chm[p];
     // a pixel's latitude depends on its row only, its longitude on its column
     const lat=new Float64Array(h),lng=new Float64Array(w);
@@ -14759,8 +14789,8 @@ map.on('zoomend',()=>{if(document.body.classList.contains('draw-on'))return;try{
 function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");const wd=WD()[d.getUTCDay()];return wd+' '+d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'., '+d.getUTCHours()+':00';}
 function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString(LOCALE(),{day:'2-digit',month:'short'});}
 function legendFor(l){const sn={avg:'Mittel',max:'Max',min:'Min',sub0:'immer <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
-  if(l=="snow"){let h="<b>Neuschnee [cm] (SLF-Skala)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (antippen für Details)</div>";}
-  if(l=="depth"){let h="<b>Schneehöhe [cm] (SLF-Skala)</b><br>";for(let i=0;i<DEPTH_BOUNDS.length-1;i++)h+=`<div><i style="background:${SC[Math.min(i,SC.length-1)]}"></i>${DEPTH_BOUNDS[i]}${i===DEPTH_BOUNDS.length-2?'+':'–'+DEPTH_BOUNDS[i+1]}</div>`;return h;}
+  if(l=="snow"){let h="<b>Neuschnee [cm] (SLF-Skala)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (antippen für Details)</div>"+LG_ABROAD;}
+  if(l=="depth"){let h="<b>Schneehöhe [cm] (SLF-Skala)</b><br>";for(let i=0;i<DEPTH_BOUNDS.length-1;i++)h+=`<div><i style="background:${SC[Math.min(i,SC.length-1)]}"></i>${DEPTH_BOUNDS[i]}${i===DEPTH_BOUNDS.length-2?'+':'–'+DEPTH_BOUNDS[i+1]}</div>`;return h+LG_ABROAD;}
   if(l=="temp"){let extra="blau = kalt · rot = warm";if(stat=="sub0")extra="nur Zellen, die im ganzen Fenster unter 0°C bleiben";if(stat=="max05")extra="nur Zellen mit Höchstwert 0–5°C";return `<b>Temp 2 m [°C] (${sn})</b><br>${extra}`;}
   if(l=="wind"){const wl=WIND_LVLS[windLvl][1];if(stat=="lt10")return "<b>Wind "+wl+" ("+sn+")</b><br>grün = Höchstwind bleibt unter 10 km/h";return '<b>Wind '+wl+' (km/h, '+sn+')</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(30,120,255),rgb(30,240,135),rgb(255,240,0),rgb(255,40,0));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:11px"><span>0</span><span>25</span><span>50</span><span>70+</span></div><div style="margin-top:4px;font-size:12px">Pfeile zeigen die Windrichtung</div>';}
   if(l=="cloud")return "<b>Bewölkung [%]</b><br>zur gewählten Stunde · hellblau = wenig, tiefblau = bedeckt";
@@ -20044,7 +20074,7 @@ const SRC_GROUPS=[
   ['Karten & Gelände',[
     ['swisstopo','st','#d52b1e','swisstopo','Landeskarte Winter, Hangneigung ab 30°, Skitourenrouten, Ortssuche, Höhenmodell swissALTIregio','Open Government Data · Quelle: Bundesamt für Landestopografie swisstopo','https://www.swisstopo.admin.ch/de/nutzungsbedingungen-kostenlose-geodaten-und-geodienste'],
     ['bafu','BAFU','#4a7a2c','BAFU','Wildruhezonen','Open Government Data · Quelle: Bundesamt für Umwelt BAFU','https://www.geo.admin.ch/de/nutzungsbedingungen'],
-    ['osm','OSM','#7ebc6f','OpenStreetMap','Pisten und Lifte','© OpenStreetMap-Mitwirkende · Open Database License (ODbL)','https://www.openstreetmap.org/copyright'],
+    ['osm','OSM','#7ebc6f','OpenStreetMap','Pisten und Lifte, Karte ausserhalb der Schweiz (OpenTopoMap)','© OpenStreetMap-Mitwirkende · Open Database License (ODbL)','https://www.openstreetmap.org/copyright'],
     ['copernicus','C','#0b3d91','Copernicus DEM (GLO-30)','Gelände für das Schneemodell','© DLR e.V. 2010–2014 und © Airbus Defence and Space GmbH 2014–2018, bereitgestellt unter COPERNICUS von der Europäischen Union und der ESA','https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM'],
     ['worldcover','ESA','#003247','ESA WorldCover','Wald und Bodenbedeckung für das Schneemodell','© ESA WorldCover project 2021 / enthält veränderte Copernicus-Sentinel-Daten (2021) · CC BY 4.0','https://esa-worldcover.org/'],
     ['terrain','TT','#ff9900','Terrain Tiles (AWS Open Data)','Höhenkacheln auf dem Gerät (Hang antippen, 3D)','Mapzen/Tilezen und Quellen, u. a. EU-DEM (Copernicus), SRTM (NASA/USGS)','https://github.com/tilezen/joerd/blob/master/docs/attribution.md']]],
