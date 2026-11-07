@@ -32,8 +32,8 @@ jobs:
     # killed part-way through the demo step, which SKIPS everything after it --
     # including upload-pages-artifact -- so the site silently stopped
     # redeploying while every run still reported "cancelled" rather than failed.
-    # +12 for the optional Alps Neuschnee step
-    timeout-minutes: 75
+    # +20 for the optional Alps Neuschnee step
+    timeout-minutes: 85
     steps:
       - uses: actions/checkout@v5
 
@@ -154,7 +154,7 @@ jobs:
       # reachable the app simply shows the Swiss rectangle alone.
       - name: Neuschnee Alpenraum
         continue-on-error: true
-        timeout-minutes: 12
+        timeout-minutes: 20
         run: python -u -m pipeline.alps_newsnow --out-dir dist
 
       - name: Save the Open-Meteo answer
