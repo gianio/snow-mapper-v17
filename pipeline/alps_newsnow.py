@@ -36,7 +36,8 @@ from pipeline.interactive import (
 # Westalpen (Nizza/Ecrins) bis Ostalpen (Wien/Graz), Jura bis Apennin-Rand
 ALPS_BBOX = {"lon_min": 5.0, "lat_min": 43.6, "lon_max": 16.4, "lat_max": 48.4}
 GRID_DEG = 0.03          # ~3 km
-WEATHER_DEG = 0.3        # Wetterpunkte (~25 km) -- haelt Open-Meteo im Limit
+WEATHER_DEG = 0.4        # Wetterpunkte (~35 km, ~390 Punkte): 0.3 deg (~660) lief
+                         # im Deploy ins 12-min-Limit (Open-Meteo-Drosselung)
 STEP_H = 6
 SCALE = 0.5              # cm pro Einheit, uint8 -> bis 127 cm je 6 h
 
@@ -52,6 +53,7 @@ def build(out_dir: Path, past_days: int = 2, forecast_days: int = 5,
     ny, nx = glon.shape
     print(f"[ALPS] Raster {nx} x {ny} ({GRID_DEG} deg)")
 
+    print("[ALPS] DEM ...", flush=True)
     elev = _elevation_on_grid(glon, glat, synthetic)
     elev = np.where(np.isfinite(elev), elev, 0.0)   # Meer/Luecken: Tiefland
     terrain = compute_terrain_features(elev, GRID_DEG * 111320.0 * 0.7)
@@ -65,7 +67,8 @@ def build(out_dir: Path, past_days: int = 2, forecast_days: int = 5,
                                 hours=(past_days + forecast_days) * 24)
     else:
         from data_connectors.open_meteo_client import OpenMeteoClient
-        cl = OpenMeteoClient(OPEN_METEO_URL, model=OPEN_METEO_MODEL, pause_between_chunks_s=3.0)
+        cl = OpenMeteoClient(OPEN_METEO_URL, model=OPEN_METEO_MODEL, pause_between_chunks_s=2.0)
+        print(f"[ALPS] Open-Meteo: {len(wlats)} Punkte ...", flush=True)
         fc = cl.fetch(wlats, wlons, past_days=past_days, forecast_days=forecast_days)
     print(f"[ALPS] Wetter: {len(fc)} Punkte")
 
