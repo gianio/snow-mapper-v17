@@ -9457,6 +9457,7 @@ function ovToggle(k,auto){
   // switching your own tracks or the community off clears a shown route too
   if((k==='myacts'||k==='reports')&&!ovOn[k])trkShownClear();
   if(k==='skiareas'){try{localStorage.setItem('ssm_skiareas',ovOn[k]?'1':'0');}catch(e){}}
+  if(k==='webcams'&&!auto){_wcAuto=false;try{localStorage.setItem('ssm_webcams',ovOn[k]?'1':'0');}catch(e){}}
   if(k==='skitourVec'){if(ovOn[k])tourRecolor();else tourClose();}
   if(k==='variantA'&&ovOn[k])vaRefresh();
   if(k==='variantA'){try{showOverlay();legend();}catch(e){}}
@@ -11889,7 +11890,12 @@ var WEBCAM_KEY=null,wcLayer=null,wcSeen=new Map(),wcT=0,wcBusy=false;   // var: 
 const WC_API='https://api.windy.com/webcams/api/v3/webcams';
 dataFetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
   if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}
-    window._wcOk=true;try{ovRender();}catch(e){}}}).catch(()=>{});
+    window._wcOk=true;try{ovRender();}catch(e){}
+    // on by default: the camera icons appear once you zoom in (switched off
+    // in Ebenen it stays off)
+    let off=false;try{off=localStorage.getItem('ssm_webcams')==='0';}catch(e){}
+    if(!off&&!ovOn.webcams){_wcAuto=true;try{ovToggle('webcams',true);}catch(e){}}}}).catch(()=>{});
+let _wcAuto=false;
 async function wcFetch(params){
   // Windy checks a domain-limited key against the Referer: always send it
   const r=await fetch(WC_API+'?'+params,{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
@@ -11906,7 +11912,7 @@ function wcIcon(){return L.divIcon({className:'',iconSize:[30,30],iconAnchor:[15
 function wcBuildLayer(){wcLayer=L.layerGroup();setTimeout(wcRefresh,0);return wcLayer;}
 async function wcRefresh(){
   if(!WEBCAM_KEY||!ovOn.webcams||!wcLayer||wcBusy)return;
-  if(map.getZoom()<7.5){toastOnce('wc-zoom','Für Webcams näher heranzoomen');return;}
+  if(map.getZoom()<(_wcAuto?9:7.5)){if(!_wcAuto)toastOnce('wc-zoom','Für Webcams näher heranzoomen');return;}
   wcBusy=true;
   try{const c=map.getCenter(),b=map.getBounds();
     const rad=Math.min(250,Math.max(5,Math.round(tourDistM(c.lng,c.lat,b.getEast(),b.getNorth())/1000)));
@@ -11929,6 +11935,7 @@ async function wcPreview(id,mk){
     mk.setPopupContent('<div class="wc-pop">'+(src?'<img src="'+escapeHtml(src)+'" alt="">':'<div class="wc-img"></div>')
       +'<b>'+escapeHtml(w.title||'Webcam')+'</b><span>'+escapeHtml([loc.city,loc.region].filter(Boolean).join(', '))+(when?' · '+when:'')+'</span>'
       +'<button class="wc-fav'+(wcFavHas(id)?' on':'')+'" onclick="wcFavToggle(\''+escapeHtml(id)+'\',this)" data-t="'+escapeHtml(w.title||'Webcam')+'" data-lat="'+(loc.latitude||'')+'" data-lon="'+(loc.longitude||'')+'">'+(wcFavHas(id)?'★ Gemerkt':'☆ Merken')+'</button>'
+      +'<button class="wc-fav wc-tvb" onclick="wcTvFrom(\''+escapeHtml(id)+'\')">▶ Webcam-TV</button>'
       +'<a href="'+escapeHtml(link)+'" target="_blank" rel="noopener">Live auf windy.com ›</a>'
       +'<em>Webcams bereitgestellt von <a href="https://www.windy.com/" target="_blank" rel="noopener">windy.com</a></em></div>');
   }catch(e){mk.setPopupContent('<div class="wc-pop"><b>Vorschau nicht verfügbar</b></div>');}
@@ -11968,7 +11975,11 @@ function wcMedia(c,kind){const src=kind==='live'?(c.live||c.player):(kind===true
 function wcCap(c){return '<div class="wcv-cap"><span>'+escapeHtml(c.t)+'</span>'+(c.alt!=null?'<em>'+c.alt+' m</em>':'')+'</div>';}
 // without favourites the screen starts with the cameras around you
 function wcvOpen(){document.getElementById('wcv').hidden=false;document.body.classList.add('wcv-open');wcvMode(WCV.mode||(wcFavs().length?'fav':'near'));}
-function wcvClose(){clearTimeout(WCV.tvT);clearTimeout(WCV.viewT);WCV.view=-1;document.getElementById('wcv').hidden=true;document.body.classList.remove('wcv-open');
+// from a map popup: Webcam-TV starting at this camera. A camera that is not
+// a favourite plays first and then the favourites follow.
+function wcTvFrom(id){id=String(id);try{map.closePopup();}catch(e){}WCV.extra=wcFavHas(id)?null:id;WCV.start=id;WCV.tv=0;
+  document.getElementById('wcv').hidden=false;document.body.classList.add('wcv-open');wcvMode('tv');}
+function wcvClose(){WCV.extra=null;WCV.start=null;clearTimeout(WCV.tvT);clearTimeout(WCV.viewT);WCV.view=-1;document.getElementById('wcv').hidden=true;document.body.classList.remove('wcv-open');
   document.getElementById('wcvBody').innerHTML='';}
 function wcvMode(m){WCV.mode=m;WCV.view=-1;clearTimeout(WCV.tvT);clearTimeout(WCV.viewT);
   document.querySelectorAll('#wcv .wcv-seg button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));wcvRender();}
@@ -11976,12 +11987,13 @@ async function wcvRender(){const el=document.getElementById('wcvBody');if(!el)re
   if(!WEBCAM_KEY){el.innerHTML='<div class="wcv-empty">Webcams sind noch nicht freigeschaltet.<br>Es fehlt der Windy-Schlüssel (GitHub-Secret <b>WINDY_WEBCAMS_KEY</b>). Sobald er hinterlegt ist, erscheinen hier deine Favoriten, das Webcam-TV und die Kameras in deiner Nähe.</div>';return;}
   const ap='<div class="wcv-empty" style="font-size:12px;margin:6px auto 0;padding:0">Webcams bereitgestellt von <a href="https://www.windy.com/" target="_blank" rel="noopener" style="color:#9cc9f5">windy.com</a></div>';
   if(WCV.mode==='near')return wcvNear(el,ap);
-  const favs=wcFavs();
+  const favs=wcFavs().slice();
+  if(WCV.extra&&WCV.mode!=='fav')favs.unshift({id:WCV.extra});
   if(!favs.length){el.innerHTML='<div class="wcv-empty">Noch keine Favoriten.<br>So findest du Webcams: <b>In der Nähe</b> (oben) zeigt die Kameras rund um dich. Oder auf der Karte unter <b>Ebenen → Auf der Karte → Webcams</b> einschalten, nah heranzoomen, eine Kamera antippen und <b>☆ Merken</b>.</div>';return;}
   el.innerHTML='<div class="wcv-empty">Lade Webcams …</div>';
   let cams;try{cams=await wcDetails(favs.map(f=>f.id));}catch(e){el.innerHTML='<div class="wcv-empty">'+escapeHtml(tr(wcErrTxt(e)))+'</div>';return;}
   if(WCV.mode==='fav'){WCV.tvList=cams;wcvGrid(el,cams,cams.length+' Favoriten',ap);}
-  else wcvTv(el,cams,ap,'Favoriten');}
+  else{if(WCV.start){const i=cams.findIndex(c=>c.id===WCV.start);if(i>=0)WCV.tv=i;WCV.start=null;}wcvTv(el,cams,ap,'Favoriten');}}
 // Picture | timelapse | live: the same switch on the grid, the viewer and TV
 function wcvKindBar(){return '<div class="wcv-kind">'+[['img','Live-Bild'],['day','Zeitraffer 24 h'],['live','Live-Video']]
   .map(k=>'<button class="'+(WCV.kind===k[0]?'on':'')+'" onclick="wcvKind(\''+k[0]+'\')">'+k[1]+'</button>').join('')+'</div>';}
@@ -14452,7 +14464,7 @@ const _kmPerRow=((laMax-laMin)*110.574)/Math.max(1,H-1);
 const _kmPerCol=((loMax-loMin)*111.320*Math.cos((laMin+laMax)/2*Math.PI/180))/Math.max(1,W-1);
 const EDGE_ROWS=Math.min(Math.floor((H-1)/2),Math.ceil(EDGE_KM/Math.max(1e-6,_kmPerRow)));
 const EDGE_COLS=Math.min(Math.floor((W-1)/2),Math.ceil(EDGE_KM/Math.max(1e-6,_kmPerCol)));
-const LG_ABROAD="<div style='margin-top:5px;opacity:.75;font-size:11px'>Grenznahes Ausland (AT, IT, FR): nur Modell, ohne Messstationen.</div>";
+const LG_ABROAD="<div style='margin-top:5px;opacity:.75;font-size:11px'>Ausserhalb der Schweiz (AT, IT, FR, DE): nur Modell, ohne Messstationen; im übrigen Alpenraum gröber (≈3 km).</div>";
 function inDomainEdge(p){const y=(p/W)|0,x=p-y*W;
   return x<EDGE_COLS||x>=W-EDGE_COLS||y<EDGE_ROWS||y>=H-EDGE_ROWS;}
 // Only Switzerland: the model grid is a rectangle, and outside the border
@@ -14665,6 +14677,50 @@ function nsAtHeight(p,v,dz){
   const m=_nsProf[o+k0]*(1-f)+_nsProf[o+k0+1]*f,m0=_nsProf[o+NS_MID];
   return m0>=0.5?v*Math.min(3,m/m0):v+Math.max(0,m-m0);}
 function aggT(p,m){let mn=1e9,mx=-1e9,su=0,c=0,cold=0;for(let t=a;t<b;t++){const v=tv(t,p);mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;if(v<0)cold++;}return m=="max"?mx:m=="min"?mn:m=="sub0"?cold:m=="max05"?mx:su/Math.max(1,c);}
+// ── Alpenraum: Neuschnee ausserhalb des Schweizer Rechtecks ────────────────
+// data/alps_ns.json (pipeline/alps_newsnow.py): the same new-snow model on a
+// coarse grid over the whole Alps, in 6-hour steps. Only Neuschnee, and only
+// outside the rectangle the full model covers; drawn with the same bands.
+let ALPS=null,alpsCv=null,alpsOv=null;
+dataFetch('data/alps_ns.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(async j=>{
+  if(!j||!j.gz||!window.DecompressionStream)return;
+  const bin=Uint8Array.from(atob(j.gz),c=>c.charCodeAt(0));
+  const buf=await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+  if(buf.byteLength<j.n*j.nx*j.ny)return;
+  delete j.gz;ALPS=Object.assign(j,{d:new Uint8Array(buf),t0ms:Date.parse(j.t0+'Z')});
+  // the map may now be panned over the whole Alps
+  try{const B=j.bounds;map.setMaxBounds([[Math.min(B[0],laMin)-.3,Math.min(B[1],loMin)-.3],[Math.max(B[2],laMax)+.3,Math.max(B[3],loMax)+.3]]);}catch(e){}
+  try{alpsRender();}catch(e){}}).catch(()=>{});
+function alpsRender(){
+  if(!ALPS)return;
+  if(layer!=='snow'||!map.hasLayer(raster)){if(alpsOv&&map.hasLayer(alpsOv))map.removeLayer(alpsOv);return;}
+  const key=a+'|'+b+'|'+JSON.stringify([...legVisSet('snow')]);
+  if(key===alpsRender._k&&alpsOv){if(!map.hasLayer(alpsOv))alpsOv.addTo(map);return;}alpsRender._k=key;
+  const A=ALPS,nx=A.nx,ny=A.ny,NN=nx*ny,sh=A.step_h*36e5,V=new Float32Array(NN);
+  const ta=Date.parse(M.times[Math.max(0,Math.min(T-1,a))]+'Z'),tb=ta+Math.max(1,b-a)*36e5;
+  for(let k=0;k<A.n;k++){const s0=A.t0ms+k*sh,f=(Math.min(s0+sh,tb)-Math.max(s0,ta))/sh;if(f<=0)continue;
+    const o=k*NN,w=f*A.scale;for(let p=0;p<NN;p++){const v=A.d[o+p];if(v)V[p]+=v*w;}}
+  // cells inside the full model's rectangle (less its fading edge) stay empty
+  const B=A.bounds,dLa=(B[2]-B[0])/ny,dLo=(B[3]-B[1])/nx;
+  const iLa0=laMin+EDGE_ROWS*(laMax-laMin)/H,iLa1=laMax-EDGE_ROWS*(laMax-laMin)/H,iLo0=loMin+EDGE_COLS*(loMax-loMin)/W,iLo1=loMax-EDGE_COLS*(loMax-loMin)/W;
+  const hid=legHideFn('snow'),k=2,w=nx*k,h=ny*k;
+  if(!alpsCv){alpsCv=document.createElement('canvas');}
+  if(alpsCv.width!==w||alpsCv.height!==h){alpsCv.width=w;alpsCv.height=h;}
+  const g=alpsCv.getContext('2d'),img=g.createImageData(w,h),d=img.data,Bd=new Int8Array(w*h);
+  for(let Y=0;Y<h;Y++){const fy=Math.min(ny-1,Math.max(0,(Y+.5)/k-.5)),y0=fy|0,y1=Math.min(ny-1,y0+1),ty=fy-y0,lat=B[2]-(Y+.5)/k*dLa;
+    for(let X=0;X<w;X++){const q=Y*w+X,lon=B[1]+(X+.5)/k*dLo;
+      if(lat>iLa0&&lat<iLa1&&lon>iLo0&&lon<iLo1){Bd[q]=-1;continue;}
+      const fx=Math.min(nx-1,Math.max(0,(X+.5)/k-.5)),x0=fx|0,x1=Math.min(nx-1,x0+1),tx=fx-x0;
+      const v=V[y0*nx+x0]*(1-tx)*(1-ty)+V[y0*nx+x1]*tx*(1-ty)+V[y1*nx+x0]*(1-tx)*ty+V[y1*nx+x1]*tx*ty;
+      Bd[q]=(hid&&hid(v))?-1:snowBand(v);}}
+  for(let q=0;q<w*h;q++){const bq=Bd[q];if(bq<0)continue;const o=q*4,c=RGB[bq],X=q%w;
+    const edge=(X<w-1&&Bd[q+1]>=0&&Bd[q+1]!==bq)||(q+w<w*h&&Bd[q+w]>=0&&Bd[q+w]!==bq);
+    const f=edge?.8:1,al=bq<2?Math.min(255,NS_ALPHA+30):NS_ALPHA;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=edge?Math.min(255,al+30):al;}
+  g.putImageData(img,0,0);
+  const url=alpsCv.toDataURL('image/png'),bb=[[B[0],B[1]],[B[2],B[3]]];
+  if(!alpsOv)alpsOv=L.imageOverlay(url,bb,{opacity:.94,className:'raster-smooth',interactive:false});else alpsOv.setUrl(url);
+  if(!map.hasLayer(alpsOv))alpsOv.addTo(map);
+}
 function renderRaster(){
   const _hid=legHideFn(layer);
   // 3x finer bands on a coarse grid, 2x on the national one (scrub speed)
@@ -15112,7 +15168,7 @@ function showOverlay(){
 // second; the work is worth doing once per frame.
 let _raf=0;
 function renderSoon(){if(_raf)return;_raf=requestAnimationFrame(()=>{_raf=0;renderAll();});}
-function renderAll(){try{vaLayerSync();}catch(e){}showOverlay();renderRaster();renderStations();inspAutoRefresh();
+function renderAll(){try{vaLayerSync();}catch(e){}showOverlay();renderRaster();try{alpsRender();}catch(e){}renderStations();inspAutoRefresh();
   // The tour score is window-dependent, so it has to follow the timeline.
   // That is exactly why scoring runs client-side instead of being baked in
   // at build time.
