@@ -32,7 +32,8 @@ jobs:
     # killed part-way through the demo step, which SKIPS everything after it --
     # including upload-pages-artifact -- so the site silently stopped
     # redeploying while every run still reported "cancelled" rather than failed.
-    timeout-minutes: 60
+    # +12 for the optional Alps Neuschnee step
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v5
 
@@ -146,6 +147,15 @@ jobs:
           python run_interactive.py --split --res 1000 --gz-only --out-dir dist
           touch dist/.nojekyll
           test -f dist/vendor/leaflet/leaflet.js || echo "::warning::libraries still from the CDN (npm registry not reachable)"
+
+      # Neuschnee for the whole Alps (AT, IT, FR, DE, SI) outside the Swiss
+      # rectangle: the same new-snow model, coarse (~3 km, 6-h steps), into
+      # dist/data/alps_ns.json. Optional: when Open-Meteo or the DEM is not
+      # reachable the app simply shows the Swiss rectangle alone.
+      - name: Neuschnee Alpenraum
+        continue-on-error: true
+        timeout-minutes: 12
+        run: python -u -m pipeline.alps_newsnow --out-dir dist
 
       - name: Save the Open-Meteo answer
         if: always() && hashFiles('om_cache/openmeteo.json.gz') != ''
