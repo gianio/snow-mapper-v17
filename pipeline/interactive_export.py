@@ -9317,27 +9317,37 @@ function updateBaseFade(force){
 }
 // --- Outside Switzerland: OpenTopoMap (OSM with contour lines) -------------
 // The swisstopo map stops at or a little past the border (then white), so the
-// neighbouring countries get OpenTopoMap instead. It sits ABOVE the swisstopo
-// tiles in its own pane and is clipped to "everything except Switzerland", so
-// inside the border the national map always wins. The clip is in layer
-// coordinates (the pane moves with the map), so it is only rebuilt on zoom.
+// neighbouring countries get OpenTopoMap instead, ABOVE the swisstopo tiles.
+// Each tile is cut to "everything except Switzerland" on its own 256-px
+// canvas (the Swiss outline punched out), so inside the border the national
+// map always wins. Tiles wholly inside Switzerland are never fetched.
+// (A CSS clip-path over the whole pane did the same but made the browser keep
+// a mask the size of several screens -- enough to take down the Android
+// emulator's GPU, and wasteful on phones.)
 map.createPane('osmPane');
 map.getPane('osmPane').style.zIndex=205;               // just above tilePane (200)
 map.getPane('osmPane').style.pointerEvents='none';
-const osmTopo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-  {pane:'osmPane',subdomains:'abc',maxZoom:17,maxNativeZoom:17,crossOrigin:true,keepBuffer:2,
-   updateWhenZooming:false,className:'base-tiles osm-tiles',
+const OSM_URL='https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
+function _inPoly(lat,lng,P){let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],b=P[j];
+  if((a[0]>lat)!==(b[0]>lat)&&lng<(b[1]-a[1])*(lat-a[0])/(b[0]-a[0])+a[1])c=!c;}return c;}
+const OsmTopo=L.GridLayer.extend({
+  createTile(c,done){const t=document.createElement('canvas');t.width=t.height=256;const m=this._map,z=c.z;
+    const nw=m.unproject([c.x*256,c.y*256],z),se=m.unproject([(c.x+1)*256,(c.y+1)*256],z);
+    // wholly Swiss: all four corners inside and no border vertex in the tile
+    const corners=[[nw.lat,nw.lng],[nw.lat,se.lng],[se.lat,nw.lng],[se.lat,se.lng]];
+    if(corners.every(q=>_inPoly(q[0],q[1],CH_BORDER))&&!CH_BORDER.some(q=>q[0]<=nw.lat&&q[0]>=se.lat&&q[1]>=nw.lng&&q[1]<=se.lng)){
+      setTimeout(()=>done(null,t),0);return t;}
+    const img=new Image();img.crossOrigin='anonymous';
+    img.onload=()=>{try{const g=t.getContext('2d');g.drawImage(img,0,0,256,256);
+        g.globalCompositeOperation='destination-out';g.beginPath();
+        CH_BORDER.forEach((q,i)=>{const p=m.project(q,z),x=p.x-c.x*256,y=p.y-c.y*256;if(i)g.lineTo(x,y);else g.moveTo(x,y);});
+        g.closePath();g.fill();}catch(e){}done(null,t);};
+    img.onerror=()=>done(null,t);
+    img.src=L.Util.template(OSM_URL,{s:'abc'[Math.abs(c.x+c.y)%3],z:z,x:c.x,y:c.y});
+    return t;}});
+const osmTopo=new OsmTopo({pane:'osmPane',maxZoom:18,maxNativeZoom:17,keepBuffer:2,updateWhenZooming:false,
+   className:'base-tiles osm-tiles',
    attribution:'Ausland: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, SRTM · <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)'}).addTo(map);
-function osmClip(){const pn=map.getPane('osmPane');if(!pn)return;
-  try{const sz=map.getSize(),o=map.containerPointToLayerPoint([0,0]),M=4*Math.max(sz.x,sz.y);
-    const x0=Math.round(o.x-M),y0=Math.round(o.y-M),x1=Math.round(o.x+sz.x+M),y1=Math.round(o.y+sz.y+M);
-    let d='M'+x0+' '+y0+'H'+x1+'V'+y1+'H'+x0+'Z M';
-    d+=CH_BORDER.map(q=>{const pt=map.latLngToLayerPoint(q);return Math.round(pt.x)+' '+Math.round(pt.y);}).join(' L')+'Z';
-    pn.style.clipPath="path(evenodd,'"+d+"')";pn.style.webkitClipPath=pn.style.clipPath;}catch(e){}}
-// hidden while a zoom animates (the clip would lag a frame behind the tiles)
-map.on('zoomstart',()=>{const pn=map.getPane('osmPane');if(pn)pn.style.visibility='hidden';});
-map.on('zoomend viewreset moveend resize',()=>{osmClip();const pn=map.getPane('osmPane');if(pn)pn.style.visibility='';});
-osmClip();
 map.on('zoom',updateBaseFade);
 // zoomend always restyles, so the final state is exact rather than within EPS.
 map.on('zoomend',function(){updateBaseFade(true);});
