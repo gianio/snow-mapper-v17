@@ -19,6 +19,33 @@ CALC_STEP_MIN = 30
 PROF_DAYS_BETWEEN = 0.25
 
 
+# Ground heat under the snow. With SOIL_FLUX = FALSE SNOWPACK holds the snow
+# base at min(TSG, 0 degC) -- with TSG = 0 degC that is exactly zero heat from
+# below, so the first autumn snowfalls never melt from the ground up and thin
+# covers survived for weeks (the IMIS check, Nov 2026: stations at 1 cm, the
+# model at 10-20). Real autumn ground is still warm: a flux of ~10 W/m2 at the
+# season start that settles to the 1-3 W/m2 of mid-winter. SOIL_FLUX = TRUE
+# makes the base a Neumann boundary with this GEO_HEAT, written per cycle.
+GROUND_HEAT_BASE = 2.0     # W/m2, mid-winter
+GROUND_HEAT_AUTUMN = 10.0  # W/m2 extra at 1 October, fading
+GROUND_HEAT_TAU_D = 30.0   # e-folding time [days]
+
+
+def ground_heat(day):
+    """Ground heat flux [W/m2] for a run starting on `day` (date/datetime/ISO)."""
+    from datetime import date as _date, datetime as _dt
+    import math
+    if isinstance(day, str):
+        day = _dt.strptime(day[:10], "%Y-%m-%d").date()
+    elif isinstance(day, _dt):
+        day = day.date()
+    if not isinstance(day, _date):
+        return GROUND_HEAT_BASE
+    oct1 = _date(day.year if day.month >= 7 else day.year - 1, 10, 1)
+    d = max(0, (day - oct1).days)
+    return round(GROUND_HEAT_BASE + GROUND_HEAT_AUTUMN * math.exp(-d / GROUND_HEAT_TAU_D), 2)
+
+
 def _init_snow(elev):
     hs = max(float(np.interp(elev, config.INIT_ELEV, config.INIT_HS)), 0.05)
     rho = float(np.interp(elev, config.INIT_ELEV, config.INIT_RHO))
@@ -87,7 +114,7 @@ def write_sno(p, sno_dir: Path, start_date, bare=False):
 
 def write_ini(p, ini_dir: Path, sno_dir: Path, meteo_dir: Path, runs_dir: Path,
               prof_start_days=0.0, step_h=None, snow_out: Path | None = None,
-              prof_write=True, name=None):
+              prof_write=True, name=None, day=None):
     """prof_start_days = how long into the run to START writing profiles.
 
     The spin-up is the point of the long run, but none of it needs to be
@@ -149,8 +176,8 @@ ROUGHNESS_LENGTH = 0.003
 MEAS_TSS = FALSE
 ENFORCE_MEASURED_SNOW_HEIGHTS = FALSE
 SNP_SOIL = FALSE
-SOIL_FLUX = FALSE
-GEO_HEAT = 0.06
+SOIL_FLUX = TRUE
+GEO_HEAT = {ground_heat(day)}
 CANOPY = FALSE
 CHANGE_BC = FALSE
 [FILTERS]
@@ -241,7 +268,7 @@ def run_points(points, target_date, spinup_days=None, workers=None,
         d.mkdir(parents=True, exist_ok=True)
     for p in points:
         write_sno(p, sno_dir, start)
-        write_ini(p, ini_dir, sno_dir, meteo_dir, runs_dir, prof_start, step_h)
+        write_ini(p, ini_dir, sno_dir, meteo_dir, runs_dir, prof_start, step_h, day=start)
     inis = [str(ini_dir / f"{p['id']}.ini") for p in points]
     # Integrate to the end of the OUTPUT window. Stopping at the target date
     # is what left the second half of the app's slider with no frames at all.

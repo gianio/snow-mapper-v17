@@ -34,6 +34,11 @@ done
 
 a install -r -g "$APK" || { echo "::error::adb install failed"; exit 1; }
 a logcat -c
+# stream the log to a file from the start: when the emulator itself dies (it
+# has, about a minute after launch), `logcat -d` afterwards gets nothing, and
+# this file is the only record of what the app and the GPU were doing
+( adb logcat -v time > "$OUT/logcat-stream.txt" 2>&1 & echo $! > "$OUT/.logcat.pid" )
+( while sleep 5; do adb shell dumpsys meminfo "$PKG" 2>/dev/null | grep -E "TOTAL|Graphics|GL mtrack" | head -3 | sed "s/^/[$(date +%T)] /"; done > "$OUT/meminfo.txt" 2>&1 & echo $! > "$OUT/.mem.pid" )
 a shell am start -W -n "$PKG/.MainActivity" || { echo "::error::app did not start"; exit 1; }
 
 # The first launch unpacks the bundled forecast and builds the map; give it time.
@@ -49,6 +54,10 @@ a logcat -d > "$OUT/logcat-after-back.txt"
 
 if ! adb get-state 2>/dev/null | grep -q device; then
   echo "::error::the emulator is gone (adb: device offline) -- an infrastructure failure, not an app result"
+  echo "--- last lines streamed before it went (logcat-stream.txt) ---"
+  tail -n 60 "$OUT/logcat-stream.txt" 2>/dev/null | grep -vE "^\s*$" | tail -n 60
+  echo "--- app memory (meminfo.txt) ---"; tail -n 12 "$OUT/meminfo.txt" 2>/dev/null
+  for f in "$OUT/.logcat.pid" "$OUT/.mem.pid"; do kill "$(cat "$f" 2>/dev/null)" 2>/dev/null; rm -f "$f"; done
   exit 1
 fi
 
@@ -73,5 +82,7 @@ fi
 echo "--- JS console errors (informational) ---"
 grep -E "E Capacitor/Console|Uncaught" "$OUT/logcat.txt" | head -30 || true
 
+for f in "$OUT/.logcat.pid" "$OUT/.mem.pid"; do kill "$(cat "$f" 2>/dev/null)" 2>/dev/null; rm -f "$f"; done
+echo "--- app memory (meminfo.txt) ---"; tail -n 6 "$OUT/meminfo.txt" 2>/dev/null || true
 [ "$fail" = 0 ] && echo "smoke test passed: installed, launched, survived back"
 exit "$fail"

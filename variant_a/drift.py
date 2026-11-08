@@ -66,8 +66,10 @@ MIN_STATIONS = {"independent": 6, "all": 8}
 REL_FLOOR_CM = 20.0
 AGREE_MIN_CM = 5.0
 
-DRIFT = {"bias": 20.0, "rel": 0.25, "agree": 0.60, "trend": 1.5, "trend_bias": 10.0}
-WATCH = {"bias": 10.0, "rel": 0.10, "agree": 0.55, "trend": 0.75, "trend_bias": 5.0}
+# Early in the season a few cm decide whether there is snow at all: +8 cm on
+# 4 cm measured (Nov 2026) was still "OK" with a 10 cm WATCH bar.
+DRIFT = {"bias": 12.0, "rel": 0.25, "agree": 0.60, "trend": 1.5, "trend_bias": 10.0}
+WATCH = {"bias": 5.0, "rel": 0.10, "agree": 0.55, "trend": 0.75, "trend_bias": 5.0}
 ORDER = {"NODATA": 0, "OK": 1, "WATCH": 2, "DRIFT": 3}
 
 

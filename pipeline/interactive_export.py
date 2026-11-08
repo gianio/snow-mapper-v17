@@ -6331,8 +6331,8 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
  .qs-range{-webkit-appearance:none;appearance:none;width:100%;height:30px;background:transparent;margin:2px 0 0}
  .qs-range::-webkit-slider-runnable-track{height:12px;border-radius:6px;background:var(--qs-track)}
  .qs-range::-moz-range-track{height:12px;border-radius:6px;background:var(--qs-track)}
- .qs-range::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-8px;border-radius:50%;background:var(--qs-thumb,#66bb6a);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
- .qs-range::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--qs-thumb,#66bb6a);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+ .qs-range::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-8px;border-radius:50%;background:var(--qs-thumb,#3d8ef0);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+ .qs-range::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--qs-thumb,#3d8ef0);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
  .qs-ticks-cm{grid-template-columns:repeat(8,1fr)!important}
  .qs-ticks{display:grid;grid-template-columns:repeat(6,1fr);text-align:center;font:700 11px var(--font);color:var(--mut);margin-top:2px}
  .qs-acts{display:flex;gap:10px;margin-top:14px}
@@ -7892,7 +7892,7 @@ const I18N_DICT={
 "Schneeart":["Snow type","Type de neige","Tipo di neve"],
 "Schneebrett":["Slab avalanche","Plaque","Lastrone"],
 "Schneehöhe":["Snow depth","Hauteur de neige","Altezza neve"],
-"Schneehöhe [cm] (SLF-Skala)":["Snow depth [cm] (SLF scale)","Hauteur de neige [cm] (échelle SLF)","Altezza neve [cm] (scala SLF)"],
+"Schneehöhe [cm]":["Snow depth [cm] (SLF scale)","Hauteur de neige [cm] (échelle SLF)","Altezza neve [cm] (scala SLF)"],
 "Schneehöhe aus den Zeichnen-Reports in der Nähe, gemittelt pro Exposition und Höhenband — keine Modellschätzung, sondern was Leute tatsächlich vorgefunden haben.":["Snow depth from nearby drawn reports, averaged per aspect and elevation band — not a model estimate but what people actually found.","Hauteur de neige des cartes dessinées proches, moyenne par exposition et tranche d'altitude — pas une estimation, mais ce que les gens ont vraiment trouvé.","Altezza neve dai report disegnati vicini, media per esposizione e fascia altimetrica — non una stima ma ciò che le persone hanno davvero trovato."],
 "Schneehöhe in cm":["Snow depth in cm","Hauteur de neige en cm","Altezza neve in cm"],
 "Schneeoberfläche":["Snow surface","Surface de la neige","Superficie della neve"],
@@ -8609,7 +8609,9 @@ function clvCol(l,m,h){let r=0,g=0,b=0,a=0;
   if(a<0.06)return null;return [Math.round(r/a),Math.round(g/a),Math.round(b/a),Math.round(Math.min(.9,a)*255)];}
 // The two lightest SLF bands a shade stronger than the printed scale: on the
 // light map 1–5 cm (near white) and 5–10 cm all but vanished
-const SB=M.slf_bounds,SC=(M.slf_colors||[]).map((c,i)=>['#c2e5c4','#95cf99'][i]||c),RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
+// One snow-amount scale everywhere (maps, legends, reports, profiles), fixed in
+// the app so an older data blob with the old colours draws the same.
+const SB=[1,5,10,15,20,30,40,50,75,100,300],SC=['#66eef2','#4fc3f2','#3d8ef0','#5a6fd6','#9370d8','#c45be0','#e08c6c','#f0a434','#ee6b1e','#e2382b'],RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
 function snowCol(v){if(v<SB[0])return null;for(let i=SB.length-1;i>=1;i--)if(v>=SB[i-1])return RGB[Math.min(i-1,RGB.length-1)];return RGB[0];}
 // The stepped legend above is right for the model layers (an official
 // SLF-style band scale), but a field built by blending overlapping reports
@@ -9977,18 +9979,18 @@ function vaHiEngine(){
       // powder in the SLF bands and colours of Neuschnee / Schneehöhe (50+ in one)
       // thin cover (10) too: coloured by what lies there -- the powder, else
       // the whole thin pack -- and hatched red in render(): rocks possible
-      if(L===3||L===4||L===5||L===8||L===9||L===10){var pw6=m[E.mi.powder_depth_cm],B6=E.pk.powder_bounds||[1,5,10,20,30,50,75,100,150],j6=0;
+      if(L===3||L===4||L===5||L===8||L===9||L===10){var pw6=m[E.mi.powder_depth_cm],B6=E.pk.powder_bounds||[1,5,10,15,20,30,40,50,75,100],j6=0;
         if(L===10&&!(pw6>=E.pk.thresholds.SK_POWDER_MIN))pw6=m[E.mi.total_hs_cm];
         while(j6<B6.length&&pw6>=B6[j6])j6++;j6=Math.max(1,Math.min(6,j6));
-        var P6=[[0,0,0,0],[194,229,196,250],[149,207,153,250],[102,187,106,235],[66,165,245,230],[30,136,229,230],[21,101,192,235]][j6];
+        var P6=[[0,0,0,0],[102,238,242,250],[79,195,242,250],[61,142,240,235],[90,111,214,235],[147,112,216,235],[196,91,224,235]][j6];
         E.cls=L;out[0]=P6[0];out[1]=P6[1];out[2]=P6[2];out[3]=P6[3];return;}}
     else if(layer==='powder'){
       // dry powder depth in the SLF snow-depth bands (classify_powder)
       var T=E.pk.thresholds,x=E.mi,hs=m[x.total_hs_cm],pw=m[x.powder_depth_cm],lw=m[x.surface_lw];
       if(!(hs>=Math.min(T.THIN_COVER_HS,T.SK_THIN_POWDER_HS!=null?T.SK_THIN_POWDER_HS:3))||!(pw>=T.SK_POWDER_MIN)||lw>T.SK_WET_LWC){out[0]=out[1]=out[2]=out[3]=0;return;}
-      var B=E.pk.powder_bounds||[1,5,10,20,30,50,75,100,150],i=0;while(i<B.length&&pw>=B[i])i++;
+      var B=E.pk.powder_bounds||[1,5,10,15,20,30,40,50,75,100],i=0;while(i<B.length&&pw>=B[i])i++;
       var PT=(E.pk.rgba&&E.pk.rgba.powder&&E.pk.rgba.powder.length>9)?E.pk.rgba.powder
-        :[[0,0,0,0],[194,229,196,250],[149,207,153,250],[102,187,106,235],[66,165,245,230],[30,136,229,230],[21,101,192,235],[123,31,162,235],[233,30,99,235],[183,28,28,235]];
+        :[[0,0,0,0],[102,238,242,250],[79,195,242,250],[61,142,240,235],[90,111,214,235],[147,112,216,235],[196,91,224,235],[224,140,108,235],[240,164,52,235],[238,107,30,235],[226,56,43,235]];
       E.cls=i;var pc=PT[Math.max(1,Math.min(PT.length-1,i))];out[0]=pc[0];out[1]=pc[1];out[2]=pc[2];out[3]=pc[3];return;}
     else if(layer==='wind'){L=E.clsWind(m);key='wind';}
     else if(layer==='simple'){L=E.clsSimple(m);key='simple';}
@@ -10781,7 +10783,9 @@ function vaPointHTML(lat,lon,elev,slope,aspect){vaPointHTML.hs=null;vaPointHTML.
   // colour the map draws at this very spot (same engine, terrain and frame)
   const T=vaEng.pk&&vaEng.pk.thresholds||{},k6=vaEng.clsSki6(m),c6=[150,160,175,0];vaEng.color('ski6',m,c6);
   // loose old (faceted) snow is not counted as powder
-  const hs=Math.round(m[x.total_hs_cm]),pw=k6===11?0:Math.round(m[x.powder_depth_cm]||0);vaPointHTML.hs=m[x.total_hs_cm];
+  // loose old snow and a thin / no cover are not "powder" either (the popup
+  // used to say "Dünne Schneedecke – Steine" next to "Pulver 5 cm")
+  const hs=Math.round(m[x.total_hs_cm]),pw=(k6===11||k6===10||k6===0)?0:Math.round(m[x.powder_depth_cm]||0);vaPointHTML.hs=m[x.total_hs_cm];
   const isPow=[3,4,5,8,9].includes(k6),thinC=m[x.total_hs_cm]<(T.THIN_COVER_HS||20);
   const lbl=k6===0?'kein / wenig Schnee':k6===10?'Dünne Schneedecke – Steine, kaum fahrbar'
     :isPow?(thinC?'Pulver auf dünner Unterlage – Steine möglich':'Pulver, trocken'):(VA_SKI6_DE[k6]||nm('simple',sim)||'');
@@ -14855,8 +14859,8 @@ map.on('zoomend',()=>{if(document.body.classList.contains('draw-on'))return;try{
 function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");const wd=WD()[d.getUTCDay()];return wd+' '+d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'., '+d.getUTCHours()+':00';}
 function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString(LOCALE(),{day:'2-digit',month:'short'});}
 function legendFor(l){const sn={avg:'Mittel',max:'Max',min:'Min',sub0:'immer <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
-  if(l=="snow"){let h="<b>Neuschnee [cm] (SLF-Skala)</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}–${SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (antippen für Details)</div>"+LG_ABROAD;}
-  if(l=="depth"){let h="<b>Schneehöhe [cm] (SLF-Skala)</b><br>";for(let i=0;i<DEPTH_BOUNDS.length-1;i++)h+=`<div><i style="background:${SC[Math.min(i,SC.length-1)]}"></i>${DEPTH_BOUNDS[i]}${i===DEPTH_BOUNDS.length-2?'+':'–'+DEPTH_BOUNDS[i+1]}</div>`;return h+LG_ABROAD;}
+  if(l=="snow"){let h="<b>Neuschnee [cm]</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}${i===SB.length-2?'+':'–'+SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (antippen für Details)</div>"+LG_ABROAD;}
+  if(l=="depth"){let h="<b>Schneehöhe [cm]</b><br>";for(let i=0;i<DEPTH_BOUNDS.length-1;i++)h+=`<div><i style="background:${SC[Math.min(i,SC.length-1)]}"></i>${DEPTH_BOUNDS[i]}${i===DEPTH_BOUNDS.length-2?'+':'–'+DEPTH_BOUNDS[i+1]}</div>`;return h+LG_ABROAD;}
   if(l=="temp"){let extra="blau = kalt · rot = warm";if(stat=="sub0")extra="nur Zellen, die im ganzen Fenster unter 0°C bleiben";if(stat=="max05")extra="nur Zellen mit Höchstwert 0–5°C";return `<b>Temp 2 m [°C] (${sn})</b><br>${extra}`;}
   if(l=="wind"){const wl=WIND_LVLS[windLvl][1];if(stat=="lt10")return "<b>Wind "+wl+" ("+sn+")</b><br>grün = Höchstwind bleibt unter 10 km/h";return '<b>Wind '+wl+' (km/h, '+sn+')</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(30,120,255),rgb(30,240,135),rgb(255,240,0),rgb(255,40,0));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:11px"><span>0</span><span>25</span><span>50</span><span>70+</span></div><div style="margin-top:4px;font-size:12px">Pfeile zeigen die Windrichtung</div>';}
   if(l=="cloud")return "<b>Bewölkung [%]</b><br>zur gewählten Stunde · hellblau = wenig, tiefblau = bedeckt";
@@ -14957,7 +14961,7 @@ function legSpec(l){
         ticks:[r[1],Math.round((r[0]+r[1])/2),r[0]],long:'Dichte der obersten Schneeschicht'};}
     // Nur Pulver: always the SLF snow-depth bands -- the sharp map is drawn
     // in them even when the export is an older one without its own layer
-    if(vaKey==='powder'){const B=[1,5,10,20,30,50,75,100,150],C=['#c2e5c4','#95cf99','#66bb6a','#42a5f5','#1e88e5','#1565c0','#7b1fa2','#e91e63','#b71c1c'];
+    if(vaKey==='powder'){const B=SB.slice(0,-1),C=SC;
       const rows=[];for(let i=B.length-1;i>=0;i--)rows.push({k:i+1,c:C[i],s:i===B.length-1?'>'+B[i]:B[i]+'–'+B[i+1],n:'Pulver '+(i===B.length-1?'> '+B[i]:B[i]+'–'+B[i+1])+' cm'});
       return {t:name,u:'Pulver cm',va:true,rows,long:'Trockener Pulver in den Schneehöhen-Klassen des SLF'};}
     const leg=L.legend||{};
@@ -14970,7 +14974,7 @@ function legSpec(l){
     // never shares of the view. Zoomed in the map draws powder in the SLF
     // bands (device engine); the coarse frames in the five powder classes.
     if(vaKey==='ski6'){const rows=[];
-      if(vaEng){const B=[1,5,10,20,30,50],C=['#c2e5c4','#95cf99','#66bb6a','#42a5f5','#1e88e5','#1565c0'];
+      if(vaEng){const B=SB.slice(0,6),C=SC.slice(0,6);
         for(let i=B.length-1;i>=0;i--)rows.push({k:100+i,c:C[i],s:B[i]+(i===B.length-1?'+':'–'+B[i+1]),n:'Pulver '+B[i]+(i===B.length-1?'+ cm':'–'+B[i+1]+' cm')});}
       else [[9,'40+'],[8,'30–40'],[5,leg[8]?'20–30':'20+'],[4,'10–20'],[3,'2–10']].forEach(([k,sv])=>{if(k===8&&!leg[8])return;
         rows.push({k,c:rgb(VA_PALETTE.ski6[k]),s:sv,n:'Pulver '+sv+' cm'});});
@@ -19612,7 +19616,7 @@ async function favOpen(id){
 // wheel (the Skiqualität types), the depth is a slider in the map's own
 // powder colours, in its bands. A photo is optional. Nothing is posted
 // until "Posten".
-const QS_HATCH='repeating-linear-gradient(135deg,#d62828 0 1.4px,transparent 1.4px 4.5px),#c2e5c4';
+const QS_HATCH='repeating-linear-gradient(135deg,#d62828 0 1.4px,transparent 1.4px 4.5px),#66eef2';
 const QS_TYPES=[
   {k:'pulver',l:'Pulver',c:'#42a5f5',q:85,depth:true},
   {k:'kantig',l:'Altpulver',c:'rgb(176,162,212)',q:62,depth:true},
@@ -19648,7 +19652,7 @@ function qsCmBand(cm){return QS_DEPTH.find(d=>cm>=d[0]&&(d[1]==null||cm<d[1]))||
 function qsCmTrack(){const pos=cm=>((Math.min(QS_CM_MAX,cm)-QS_CM_MIN)/(QS_CM_MAX-QS_CM_MIN)*100).toFixed(1);
   return 'linear-gradient(90deg,'+QS_DEPTH.map(d=>d[2]+' '+pos((d[0]+(d[1]==null?QS_CM_MAX:d[1]))/2)+'%').join(',')+')';}
 function qsCmText(cm){return (cm>=QS_CM_MAX?QS_CM_MAX+'+':Math.round(cm))+' cm';}
-const QS_DEPTH=[[1,5,'#c2e5c4'],[5,10,'#95cf99'],[10,20,'#66bb6a'],[20,30,'#42a5f5'],[30,50,'#1e88e5'],[50,null,'#1565c0']];
+const QS_DEPTH=SB.slice(0,-1).map((lo,i,a)=>[lo,i<a.length-1?a[i+1]:null,SC[i]]);
 const QS_ROW=44;
 let qs=null,qsMarker=null,_qsWT=0;
 function qsOpen(){

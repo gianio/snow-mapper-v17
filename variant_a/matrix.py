@@ -311,7 +311,7 @@ def run_matrix(runs, target_date, win, step_h, prof_step_h, workers=None, spinup
             snowpack_runner.write_sno(r, sno_dir, sim_start)
             prof_start = float(spinup_days)
         snowpack_runner.write_ini(r, ini_dir, sno_dir, meteo_dir, runs_dir,
-                                  prof_start, step_h)
+                                  prof_start, step_h, day=win[0])
     if sno_src:
         print(f"  {n_state}/{len(runs)} runs continue from the carried state, "
               f"{len(runs) - n_state} cold-start")
@@ -372,7 +372,7 @@ def advance_state(runs, carried, st_sno, st_time, to_time, out_dir: Path,
             snowpack_runner.write_sno(r, sno_dir, cold_start, bare=bare)
             n_cold += 1
         snowpack_runner.write_ini(r, ini_dir, sno_dir, meteo_dir, runs_dir, 0.0, 24,
-                                  snow_out=raw, prof_write=False)
+                                  snow_out=raw, prof_write=False, day=to_time)
         jobs.append((str(ini_dir / f"{r['id']}.ini"), to_time.strftime("%Y-%m-%dT%H:%M"),
                      str(raw / f"{r['id']}_va.sno")))
     print(f"  state advance to {to_time:%Y-%m-%d %H:%M}: {len(jobs) - n_cold} carried, "
