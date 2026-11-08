@@ -902,6 +902,13 @@ def test_drift():
                 drift.update(h, col)
         return h
 
+    thin = drift.evaluate(hist_with(lambda i, k: 8.0 + (k % 3), meas=4.0))
+    check("phantom snow early in the season (+8 cm on 4 cm) is at least WATCH",
+          thin["status"] in ("WATCH", "DRIFT"), f"{thin['status']} {thin['all'].get('reasons')}")
+    from variant_a import snowpack_runner as SR
+    check("ground heat: ~12 W/m2 at the season start, ~2 in mid-winter",
+          SR.ground_heat("2026-10-01") >= 11.5 and 1.9 <= SR.ground_heat("2027-01-20") <= 2.6
+          and SR.ground_heat("2026-11-08") > SR.ground_heat("2026-12-15"))
     ok = drift.evaluate(hist_with(lambda i, k: (-1) ** k * 6.0))
     check("scatter without a common sign is OK", ok["status"] == "OK", str(ok["all"].get("reasons")))
     bias = drift.evaluate(hist_with(lambda i, k: 35.0 + (k % 3)))
@@ -1232,7 +1239,7 @@ def test_ski6_and_wind_classes():
                           np.array([1, 3, 7, 25, 60, 200, 2, 25, 8]),
                           np.array([0, 0, 0, 0, 0, 0, 0, 2.0, 0]))
     check("powder: SLF bands, blank under 2 cm / under 3 cm in all / wet; thin cover keeps powder",
-          p.tolist() == [0, 1, 2, 4, 6, 9, 0, 0, 2], str(p.tolist()))
+          p.tolist() == [0, 1, 2, 5, 8, 10, 0, 0, 2], str(p.tolist()))
     # corn: (soft top, frozen base, refrozen) -> Sulz only on a supportive base after a cold night
     S = lambda lw, so, ba, rf: int(C.classify_ski6(np.array([100]), np.array([0]), np.array([0]), np.array([350]),
                                                    np.array([lw]), np.array([so]), np.array([ba]), np.array([rf]))[0])
@@ -1249,7 +1256,7 @@ def test_ski6_and_wind_classes():
     th = _np.array([5, 5, 5, 2, 1], float); lwv = _np.array([0, 0, 0, 1.0, 1.2]); gr = _np.array([700, 700, 700, 700, 700])
     so, ba = C._corn_layers(th, lwv, gr, _np.full(5, 350.0), _np.zeros(5))
     check("corn layers: 3 cm softened top over 15 cm frozen MF", (so, ba) == (3.0, 15.0), str((so, ba)))
-    check("powder: one colour per SLF band", len(C.POWDER_RGBA) == len(C.POWDER_LABELS) == len(C.POWDER_DE) == 10)
+    check("powder: one colour per SLF band", len(C.POWDER_RGBA) == len(C.POWDER_LABELS) == len(C.POWDER_DE) == 11)
     # loose old snow: powder made mostly of facets / depth hoar / surface hoar
     F = lambda hs, pw, fa, lw=0: int(C.classify_ski6(np.array([hs]), np.array([pw]), np.array([0]), np.array([150]),
                                                      np.array([lw]), facet=np.array([fa]))[0])

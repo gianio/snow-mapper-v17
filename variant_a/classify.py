@@ -1059,16 +1059,16 @@ def refrozen_series(times, surface_lw, hours=15.0):
 # (pipeline/overlay_export.py SLF_BOUNDS / SLF_COLORS), so a powder map can be
 # read against the SLF new-snow map directly. Wet or thin cover, and loose
 # snow under SK_POWDER_MIN, are left blank.
-POWDER_BOUNDS = [1, 5, 10, 20, 30, 50, 75, 100, 150]
-POWDER_LABELS = ["none"] + [f"powder_{a}_{b}" for a, b in zip(POWDER_BOUNDS[:-1], POWDER_BOUNDS[1:])] + ["powder_gt_150"]
-POWDER_DE = ["–"] + [f"Pulver {a}–{b} cm" for a, b in zip(POWDER_BOUNDS[:-1], POWDER_BOUNDS[1:])] + ["Pulver > 150 cm"]
-_SLF_HEX = ["#c2e5c4", "#95cf99", "#66bb6a", "#42a5f5", "#1e88e5", "#1565c0", "#7b1fa2", "#e91e63", "#b71c1c"]
+POWDER_BOUNDS = [1, 5, 10, 15, 20, 30, 40, 50, 75, 100]
+POWDER_LABELS = ["none"] + [f"powder_{a}_{b}" for a, b in zip(POWDER_BOUNDS[:-1], POWDER_BOUNDS[1:])] + ["powder_gt_100"]
+POWDER_DE = ["–"] + [f"Pulver {a}–{b} cm" for a, b in zip(POWDER_BOUNDS[:-1], POWDER_BOUNDS[1:])] + ["Pulver > 100 cm"]
+_SLF_HEX = ["#66eef2", "#4fc3f2", "#3d8ef0", "#5a6fd6", "#9370d8", "#c45be0", "#e08c6c", "#f0a434", "#ee6b1e", "#e2382b"]
 POWDER_RGBA = {0: (0, 0, 0, 0), **{i + 1: (int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16), 250 if i < 2 else 235)
                                     for i, h in enumerate(_SLF_HEX)}}
 
 
 def classify_powder(hs, powder, slw):
-    """Vectorised powder class (uint8): 0 none, 1..9 the SLF depth bands."""
+    """Vectorised powder class (uint8): 0 none, 1..10 the snow-amount bands."""
     hs = np.asarray(hs, float); pw = np.asarray(powder, float); lw = np.asarray(slw, float)
     lab = np.zeros(hs.shape, np.uint8)
     ok = (hs >= min(THIN_COVER_HS, SK_THIN_POWDER_HS)) & (pw >= SK_POWDER_MIN) & ~(lw > SK_WET_LWC)
