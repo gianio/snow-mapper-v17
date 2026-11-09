@@ -371,8 +371,13 @@ def advance_state(runs, carried, st_sno, st_time, to_time, out_dir: Path,
         else:
             snowpack_runner.write_sno(r, sno_dir, cold_start, bare=bare)
             n_cold += 1
+        # the ground heat follows the season: take it at the middle of what
+        # this run integrates (a 30-day replay step at its end date would
+        # give the whole of October the value of 31 October)
+        t_from = st_time if (r["id"] in carried and st_sno is not None) else datetime.fromisoformat(cold_start)
+        mid = t_from + (to_time - t_from) / 2
         snowpack_runner.write_ini(r, ini_dir, sno_dir, meteo_dir, runs_dir, 0.0, 24,
-                                  snow_out=raw, prof_write=False, day=to_time)
+                                  snow_out=raw, prof_write=False, day=mid)
         jobs.append((str(ini_dir / f"{r['id']}.ini"), to_time.strftime("%Y-%m-%dT%H:%M"),
                      str(raw / f"{r['id']}_va.sno")))
     print(f"  state advance to {to_time:%Y-%m-%d %H:%M}: {len(jobs) - n_cold} carried, "
