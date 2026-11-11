@@ -14735,7 +14735,8 @@ function alpsRender(){
   if(!alpsOv)alpsOv=L.imageOverlay(url,bb,{opacity:.94,className:'raster-smooth',interactive:false});else alpsOv.setUrl(url);
   if(!map.hasLayer(alpsOv))alpsOv.addTo(map);
 }
-function renderRaster(){
+function renderRaster(){_renderRaster();try{alpsRender();}catch(e){}}
+function _renderRaster(){
   const _hid=legHideFn(layer);
   // 3x finer bands on a coarse grid, 2x on the national one (scrub speed)
   if(layer=="snow"){const R=winRaw(SNOW,'snow'),sc=M.snow_scale,nv=_nsV||(_nsV=new Float32Array(NP));
@@ -15182,7 +15183,7 @@ function showOverlay(){
 // second; the work is worth doing once per frame.
 let _raf=0;
 function renderSoon(){if(_raf)return;_raf=requestAnimationFrame(()=>{_raf=0;renderAll();});}
-function renderAll(){try{vaLayerSync();}catch(e){}showOverlay();renderRaster();try{alpsRender();}catch(e){}renderStations();inspAutoRefresh();
+function renderAll(){try{vaLayerSync();}catch(e){}showOverlay();renderRaster();renderStations();inspAutoRefresh();
   // The tour score is window-dependent, so it has to follow the timeline.
   // That is exactly why scoring runs client-side instead of being baked in
   // at build time.

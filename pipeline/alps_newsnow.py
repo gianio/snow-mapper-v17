@@ -42,7 +42,7 @@ STEP_H = 6
 SCALE = 0.5              # cm pro Einheit, uint8 -> bis 127 cm je 6 h
 
 
-def build(out_dir: Path, past_days: int = 2, forecast_days: int = 5,
+def build(out_dir: Path, past_days: int = 5, forecast_days: int = 5,
           synthetic: bool = False) -> Path:
     params = load_model_params()
     b = ALPS_BBOX
@@ -115,7 +115,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out-dir", default="dist")
     ap.add_argument("--synthetic", action="store_true")
-    ap.add_argument("--past-days", type=int, default=2)
+    ap.add_argument("--past-days", type=int, default=5)
     ap.add_argument("--forecast-days", type=int, default=5)
     a = ap.parse_args()
     build(Path(a.out_dir), a.past_days, a.forecast_days, a.synthetic)
