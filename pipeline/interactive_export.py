@@ -6638,6 +6638,7 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
  body.kb-up .qs-sheet .qs-in{max-height:calc(var(--app-h,100dvh) - var(--kb,0px) - env(safe-area-inset-top,0px) - 24px)!important}
  /* menus and small popups are kept inside the screen by fitInView() */
  .fc-menu{max-width:calc(100vw - 16px)}
+ .sl-lab{background:rgba(255,255,255,.88);color:#c2185b;font:800 10.5px Helvetica Neue,Helvetica,Arial,sans-serif;padding:1px 5px;border-radius:6px;white-space:nowrap;border:1px solid rgba(194,24,91,.35);transform:translate(-50%,-50%)}
  .draw-exp-tag{display:inline-block;margin-bottom:10px;padding:4px 10px;border-radius:999px;background:#fff2cc;color:#6b4e00;font:800 11.5px var(--font,inherit);letter-spacing:.06em;text-transform:uppercase}
  /* the heart: «Gefällt mir» beside «Bestätigen» */
  .heart-btn{display:inline-flex;align-items:center;gap:5px;min-height:34px;padding:6px 10px;border:0;background:none;color:var(--fg2,#5b6474);font:700 13px var(--font,inherit);cursor:pointer;order:8;margin-left:auto}
@@ -8974,6 +8975,8 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   const labH=pxH>=26?3:pxH>=12?6:pxH>=6?12:0;                  // hour labels (0 = none)
   const dayEvery=pxH*24>=40?1:2;                               // day labels
   let _lastHrX=-1e9,_dayN=0;
+  // today's Swiss date (the labels name today and tomorrow, the rest weekdays)
+  const _tn=zLocal(Date.now()),_tlToday=Date.UTC(_tn.getUTCFullYear(),_tn.getUTCMonth(),_tn.getUTCDate());
   for(let t=Math.max(0,Math.floor(tv0));t<Math.min(T,Math.ceil(tv1)+1);t++){
     const d=zLocal(tMs(t)),hr=d.getUTCHours(),day=hr===0;
     if(!(day||hr%tickH===0))continue;
@@ -8982,9 +8985,11 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     ctx2.strokeStyle=day?_P.hair:_P.fill;ctx2.lineWidth=day?1.4:1;ctx2.beginPath();
     ctx2.moveTo(x,day?2:topPad);ctx2.lineTo(x,day?ch-2:baseY);ctx2.stroke();
     if(compact)continue;
-    if(day){const lab=WD()[d.getUTCDay()]+' '+d.getUTCDate()+'.';
-      if((_dayN++%dayEvery)===0&&x-_lastLabX>=34){ctx2.fillStyle=_P.mut;ctx2.font='700 11.5px Helvetica Neue,Helvetica,Arial,sans-serif';
-        ctx2.fillText(pxH*24<52?String(d.getUTCDate())+'.':lab,x+4,ch-5);_lastLabX=x;_lastHrX=x+ctx2.measureText(lab).width;}}
+    if(day){const dd=Math.round((Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-_tlToday)/864e5);
+      const rel=dd===0?'Heute':dd===1?'Morgen':null,wd=WD()[d.getUTCDay()];
+      const lab=rel||(wd+' '+d.getUTCDate()+'.'),narrow=rel||wd;
+      if((_dayN++%dayEvery)===0&&x-_lastLabX>=34){ctx2.fillStyle=rel?_P.ink:_P.mut;ctx2.font='700 11.5px Helvetica Neue,Helvetica,Arial,sans-serif';
+        const L=pxH*24<52?narrow:lab;ctx2.fillText(L,x+4,ch-5);_lastLabX=x;_lastHrX=x+ctx2.measureText(L).width;}}
     else if(labH&&hr%labH===0&&x-_lastHrX>=22){ctx2.fillStyle=_P.mut;ctx2.globalAlpha=.75;ctx2.font='600 10px Helvetica Neue,Helvetica,Arial,sans-serif';
       ctx2.textAlign='center';ctx2.fillText(String(hr).padStart(2,'0'),x,ch-5);ctx2.textAlign='left';ctx2.globalAlpha=1;_lastHrX=x+8;}}
   // baseline
@@ -9385,6 +9390,8 @@ const OVERLAYS={
   slope:{label:'Hangneigung ab 30°',wmts:'ch.swisstopo.hangneigung-ueber_30',op:.55,
          attr:'Hangneigung © swisstopo'},
   // pistes and lifts from OpenStreetMap (our own build) with the resort names
+  // the highest snowfall line of the selected window, drawn on the terrain
+  snowline:{label:'Schneefallgrenze (höchste im Zeitraum)',vector:true,attr:''},
   skiareas:{label:'Skigebiete (Pisten & Lifte)',vector:true,
             attr:'Pisten © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende (ODbL)'},
   avalanche:{label:'Lawinenbulletin',vector:true,
@@ -9454,6 +9461,7 @@ function ovBuild(k){
   else if(k==='reports'){ovLayer[k]=reportMarkers;}
   else if(k==='myacts'){ovLayer[k]=trkActsLayer();}
   else if(k==='skiareas'){ovLayer[k]=skiBuildLayer();}
+  else if(k==='snowline'){ovLayer[k]=L.layerGroup();setTimeout(snowlineRefresh,0);}
   return ovLayer[k];
 }
 function ovToggle(k,auto){
@@ -9469,6 +9477,7 @@ function ovToggle(k,auto){
   // switching your own tracks or the community off clears a shown route too
   if((k==='myacts'||k==='reports')&&!ovOn[k])trkShownClear();
   if(k==='skiareas'){try{localStorage.setItem('ssm_skiareas',ovOn[k]?'1':'0');}catch(e){}}
+  if(k==='snowline'){try{localStorage.setItem('ssm_snowline',ovOn[k]?'1':'0');}catch(e){}if(ovOn[k])snowlineRefresh();}
   if(k==='webcams'&&!auto){_wcAuto=false;try{localStorage.setItem('ssm_webcams',ovOn[k]?'1':'0');}catch(e){}}
   if(k==='skitourVec'){if(ovOn[k])tourRecolor();else tourClose();}
   if(k==='variantA'&&ovOn[k])vaRefresh();
@@ -14521,10 +14530,14 @@ function setRasterIso(val,alpha,k){_tmpV=null;if(tempHi&&map.hasLayer(tempHi))ma
       let su=0,sw=0;const add=(p,wt)=>{const v=V[p];if(!isNaN(v)&&wt>0){su+=v*wt;sw+=wt;}};
       add(y0*W+x0,(1-tx)*(1-ty));add(y0*W+x1,tx*(1-ty));add(y1*W+x0,(1-tx)*ty);add(y1*W+x1,tx*ty);
       B[q]=sw?snowBand(su/sw):-1;}}
+  // with the Alps layer beyond, the last SEAM_CELLS before the edge fade out
+  // while the Alps layer fades in over the same band: no hard rectangle
+  const fe=(typeof ALPS!=='undefined'&&ALPS&&layer==='snow')?SEAM_CELLS:0;
   for(let q=0;q<w*h;q++){const bq=B[q];if(bq<0)continue;const o=q*4,c=RGB[bq],X=q%w;
     const edge=(X<w-1&&B[q+1]!==bq)||(q+w<w*h&&B[q+w]!==bq);
+    let fa=1;if(fe){const cx=(X+.5)/k,cy=((q/w)|0)+.5;const dc=Math.min(cx-EDGE_COLS,W-EDGE_COLS-cx,cy/k-EDGE_ROWS,H-EDGE_ROWS-cy/k);fa=Math.max(0,Math.min(1,dc/fe));}
     // the line is a darker shade of the band itself: present, but faint
-    const f=edge?.8:1,al=bq<2?Math.min(255,alpha+30):alpha;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=edge?Math.min(255,al+30):al;}
+    const f=edge?.8:1,al=bq<2?Math.min(255,alpha+30):alpha;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=(edge?Math.min(255,al+30):al)*fa;}
   cx.putImageData(img,0,0);
   _isoV=V;_isoA=alpha;isoHiSoon();}
 // The coarse picture above covers the whole country; zoomed in, a 1 km cell
@@ -14571,10 +14584,13 @@ function isoHiRender(){const V=_isoV;
       v=V[yb*W+xa];wt=(1-tx)*ty;if(v===v&&wt>0){su+=v*wt;sw+=wt;}
       v=V[yb*W+xb];wt=tx*ty;if(v===v&&wt>0){su+=v*wt;sw+=wt;}
       B[qq]=sw?snowBand(su/sw):-1;}}
-  const al=_isoA;
+  const al=_isoA,fe=(typeof ALPS!=='undefined'&&ALPS&&layer==='snow')?SEAM_CELLS:0;
   for(let qq=0;qq<w*h;qq++){const bq=B[qq];if(bq<0)continue;const o=qq*4,c=RGB[bq],X=qq%w;
     const edge=(X<w-1&&B[qq+1]!==bq)||(qq+w<w*h&&B[qq+w]!==bq);
-    const f=edge?.72:1,ab=bq<2?Math.min(255,al+30):al;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=edge?Math.min(255,ab+40):ab;}
+    // the same cross-fade towards the Alps layer as the coarse picture
+    let fa=1;if(fe){const cx=((x0+(X+.5)/q)-p0.x)/sx*W,cy=((y0+(((qq/w)|0)+.5)/q)-p0.y)/sy*H;
+      fa=Math.max(0,Math.min(1,Math.min(cx-EDGE_COLS,W-EDGE_COLS-cx,cy-EDGE_ROWS,H-EDGE_ROWS-cy)/fe));}
+    const f=edge?.72:1,ab=bq<2?Math.min(255,al+30):al;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=(edge?Math.min(255,ab+40):ab)*fa;}
   g.putImageData(img,0,0);
   const bounds=L.latLngBounds(map.containerPointToLatLng([x0,y1]),map.containerPointToLatLng([x1,y0]));
   if(!isoHi)isoHi=L.svgOverlay(isoHiCv,bounds,{opacity:raster.options.opacity,interactive:false});
@@ -14696,6 +14712,7 @@ function aggT(p,m){let mn=1e9,mx=-1e9,su=0,c=0,cold=0;for(let t=a;t<b;t++){const
 // coarse grid over the whole Alps, in 6-hour steps. Only Neuschnee, and only
 // outside the rectangle the full model covers; drawn with the same bands.
 let ALPS=null,alpsCv=null,alpsOv=null;
+const SEAM_CELLS=4;   // width of the cross-fade at the Swiss rectangle's edge [cells]
 dataFetch('data/alps_ns.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(async j=>{
   if(!j||!j.gz||!window.DecompressionStream)return;
   const bin=Uint8Array.from(atob(j.gz),c=>c.charCodeAt(0));
@@ -14717,25 +14734,61 @@ function alpsRender(){
   // cells inside the full model's rectangle (less its fading edge) stay empty
   const B=A.bounds,dLa=(B[2]-B[0])/ny,dLo=(B[3]-B[1])/nx;
   const iLa0=laMin+EDGE_ROWS*(laMax-laMin)/H,iLa1=laMax-EDGE_ROWS*(laMax-laMin)/H,iLo0=loMin+EDGE_COLS*(loMax-loMin)/W,iLo1=loMax-EDGE_COLS*(loMax-loMin)/W;
-  const hid=legHideFn('snow'),k=2,w=nx*k,h=ny*k;
+  const hid=legHideFn('snow'),k=2,w=nx*k,h=ny*k,cLa=(laMax-laMin)/H,cLo=(loMax-loMin)/W,FA=new Float32Array(w*h).fill(1);
   if(!alpsCv){alpsCv=document.createElement('canvas');}
   if(alpsCv.width!==w||alpsCv.height!==h){alpsCv.width=w;alpsCv.height=h;}
   const g=alpsCv.getContext('2d'),img=g.createImageData(w,h),d=img.data,Bd=new Int8Array(w*h);
   for(let Y=0;Y<h;Y++){const fy=Math.min(ny-1,Math.max(0,(Y+.5)/k-.5)),y0=fy|0,y1=Math.min(ny-1,y0+1),ty=fy-y0,lat=B[2]-(Y+.5)/k*dLa;
     for(let X=0;X<w;X++){const q=Y*w+X,lon=B[1]+(X+.5)/k*dLo;
-      if(lat>iLa0&&lat<iLa1&&lon>iLo0&&lon<iLo1){Bd[q]=-1;continue;}
+      if(lat>iLa0&&lat<iLa1&&lon>iLo0&&lon<iLo1){
+        const dc=Math.min((lat-iLa0)/cLa,(iLa1-lat)/cLa,(lon-iLo0)/cLo,(iLo1-lon)/cLo);
+        if(dc>=SEAM_CELLS){Bd[q]=-1;continue;}FA[q]=1-dc/SEAM_CELLS;}
       const fx=Math.min(nx-1,Math.max(0,(X+.5)/k-.5)),x0=fx|0,x1=Math.min(nx-1,x0+1),tx=fx-x0;
       const v=V[y0*nx+x0]*(1-tx)*(1-ty)+V[y0*nx+x1]*tx*(1-ty)+V[y1*nx+x0]*(1-tx)*ty+V[y1*nx+x1]*tx*ty;
       Bd[q]=(hid&&hid(v))?-1:snowBand(v);}}
   for(let q=0;q<w*h;q++){const bq=Bd[q];if(bq<0)continue;const o=q*4,c=RGB[bq],X=q%w;
     const edge=(X<w-1&&Bd[q+1]>=0&&Bd[q+1]!==bq)||(q+w<w*h&&Bd[q+w]>=0&&Bd[q+w]!==bq);
-    const f=edge?.8:1,al=bq<2?Math.min(255,NS_ALPHA+30):NS_ALPHA;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=edge?Math.min(255,al+30):al;}
+    const f=edge?.8:1,al=bq<2?Math.min(255,NS_ALPHA+30):NS_ALPHA;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=(edge?Math.min(255,al+30):al)*FA[q];}
   g.putImageData(img,0,0);
   const url=alpsCv.toDataURL('image/png'),bb=[[B[0],B[1]],[B[2],B[3]]];
   if(!alpsOv)alpsOv=L.imageOverlay(url,bb,{opacity:.94,className:'raster-smooth',interactive:false});else alpsOv.setUrl(url);
   if(!map.hasLayer(alpsOv))alpsOv.addTo(map);
 }
-function renderRaster(){_renderRaster();try{alpsRender();}catch(e){}}
+function renderRaster(){_renderRaster();try{alpsRender();}catch(e){}try{if(ovOn.snowline)snowlineRefresh();}catch(e){}}
+// ── Schneefallgrenze: the highest snowfall line of the window ─────────────
+// For every hour with precipitation the snowfall line sits where the air is
+// about +1 degC: the cell's temperature carried up or down its own height at
+// 0.65 degC per 100 m. The highest of these over the window is the line
+// that matters (below it, at least some of it fell as rain); it is drawn
+// where the terrain crosses it, with its height written along the line.
+const SL_T=1.0,SL_LAPSE=0.0065,SL_PREC=0.2;
+let _slKey='';
+function snowlineRefresh(){
+  const g=ovLayer.snowline;if(!g||!ovOn.snowline)return;
+  const key=a+'|'+b;if(key===_slKey&&g.getLayers().length)return;_slKey=key;
+  g.clearLayers();
+  const Z=new Float32Array(NP).fill(NaN);
+  for(let p=0;p<NP;p++){if(inDomainEdge(p))continue;const el=melevv(p);let best=NaN;
+    for(let t=a;t<b;t++){if(PREC[t*NP+p]/M.prec_mul<SL_PREC)continue;const z=el+(tv(t,p)-SL_T)/SL_LAPSE;if(!(z<=best))best=z;}
+    Z[p]=best;}
+  // smooth the line height (3x3 mean): it is a property of the air mass, not of one cell
+  const ZS=new Float32Array(NP).fill(NaN);
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){let s2=0,n=0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const v=Z[(y+dy)*W+x+dx];if(v===v){s2+=v;n++;}}if(n>=5)ZS[y*W+x]=s2/n;}
+  // F = terrain - line: the contour F = 0 is where the terrain meets the line
+  const F=p=>{const z=ZS[p];return z===z?melevv(p)-z:NaN;};
+  const ll=(x,y)=>[laMax-(y+.5)*(laMax-laMin)/H,loMin+(x+.5)*(loMax-loMin)/W];
+  const segs=[],labels=[];
+  for(let y=0;y<H-1;y++)for(let x=0;x<W-1;x++){
+    const p=y*W+x,v=[F(p),F(p+1),F(p+W+1),F(p+W)];if(v.some(q=>q!==q))continue;
+    const c=[[x,y],[x+1,y],[x+1,y+1],[x,y+1]],pts=[];
+    for(let i=0;i<4;i++){const j=(i+1)%4;if((v[i]<0)!==(v[j]<0)){const f=v[i]/(v[i]-v[j]);pts.push(ll(c[i][0]+(c[j][0]-c[i][0])*f,c[i][1]+(c[j][1]-c[i][1])*f));}}
+    if(pts.length>=2){segs.push([pts[0],pts[1]]);if(pts.length===4)segs.push([pts[2],pts[3]]);
+      if((x*7+y*13)%97===0)labels.push([pts[0],ZS[p]]);}}
+  if(!segs.length){toastOnce('sl-none','Kein Niederschlag im gewählten Zeitraum – keine Schneefallgrenze');return;}
+  g.addLayer(L.polyline(segs,{color:'#c2185b',weight:2.2,opacity:.9,dashArray:'6 5',interactive:false,smoothFactor:1}));
+  labels.slice(0,40).forEach(([pt,z])=>g.addLayer(L.marker(pt,{interactive:false,keyboard:false,
+    icon:L.divIcon({className:'sl-lab',html:Math.round(z/50)*50+' m',iconSize:null})})));
+}
 function _renderRaster(){
   const _hid=legHideFn(layer);
   // 3x finer bands on a coarse grid, 2x on the national one (scrub speed)
@@ -15559,6 +15612,7 @@ const OV_ICON={
   wildlife:'<path d="M7 4c0 3 2 4 5 4s5-1 5-4"/><path d="M12 8v4"/><ellipse cx="12" cy="16" rx="5" ry="4"/>',
   slope:'<path d="M3 20h18L3 6z"/><path d="M8 20a5 5 0 0 0-2-4"/>',
   avalanche:'<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>',
+  snowline:'<path d="M2 19l6-9 4 5 3-4 7 8"/><path d="M3 11h3M9 11h3M15 11h3M21 11h1" stroke-dasharray="0"/>',
   skiareas:'<circle cx="15" cy="4.2" r="1.6"/><path d="M5.5 9.5l5.2 1.4 2.4-2.4 2.6 3.2-3.6 2.6"/><path d="M12.1 14.3l-1.9 3.6"/><path d="M3 17.5l17.5 3.8"/>'};
 function ovRowHTML(k){
   const o=OVERLAYS[k],na=!ovAvailable(k);
@@ -18028,6 +18082,7 @@ try{if(localStorage.getItem('ssm_reports')==='0'){ovOn.reports=false;map.removeL
 // «Meine Aufzeichnungen» stays as you left it (it is off unless you turned it on)
 try{if(localStorage.getItem('ssm_myacts')==='1')setTimeout(()=>{try{if(!ovOn.myacts)ovToggle('myacts',true);}catch(e){}},0);}catch(e){}
 try{if(localStorage.getItem('ssm_skiareas')==='1')setTimeout(()=>{try{if(!ovOn.skiareas)ovToggle('skiareas',true);}catch(e){}},0);}catch(e){}
+try{if(localStorage.getItem('ssm_snowline')==='1')setTimeout(()=>{try{if(!ovOn.snowline)ovToggle('snowline',true);}catch(e){}},0);}catch(e){}
 // Default is the 1 April 2026 demo dataset; live/current weather is an
 // explicit opt-in, remembered in localStorage so it survives a fresh load
 // with no URL params (the ?demo/?live params still work as one-off overrides
