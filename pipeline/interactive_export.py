@@ -9532,9 +9532,11 @@ function avBuildLayer(){
         ? ((p.elev_lo!=null?p.elev_lo+' m':'')+'–'+(p.elev_hi!=null?p.elev_hi+' m':''))
         : 'alle Höhen';
       lyr.bindPopup(
-        '<b>Stufe '+p.danger+' – '+(AV_LABELS[p.danger]||'')+'</b>'
-        +'<br>Kernzone: '+band+', '+asp
-        +(p.problems&&p.problems.length?'<br>Problem: '+p.problems.join(', '):'')
+        '<b>Stufe '+p.danger+(p.sub&&p.sub!=='='?p.sub:'')+' – '+(AV_LABELS[p.danger]||'')+'</b>'
+        +'<br>'+(p.core?escapeHtml(p.core):'Kernzone: '+band+', '+asp)
+        +(p.problems&&p.problems.length?'<br>Problem: '+escapeHtml(p.problems.join(', ')):'')
+        +(p.regions&&p.regions.length?'<div style="margin-top:4px;font-size:12px;opacity:.8">'+escapeHtml(p.regions.slice(0,6).join(', '))+(p.regions.length>6?' u. a.':'')+'</div>':'')
+        +(p.until?'<div style="font-size:12px;opacity:.7">gültig bis '+new Date(p.until).toLocaleString('de-CH',{weekday:'short',hour:'2-digit',minute:'2-digit'})+'</div>':'')
         +'<div style="margin-top:6px;font-size:12px;opacity:.75">Quelle: SLF ·'
         +' <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation/"'
         +' target="_blank" rel="noopener">Bulletin öffnen</a></div>');

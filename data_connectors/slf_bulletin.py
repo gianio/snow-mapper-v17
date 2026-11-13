@@ -69,12 +69,37 @@ def _first(d: dict, *names, default=None):
     return default
 
 
+# The live API (checked 13 Nov 2026) writes the level as an EAWS word.
+_LEVEL_WORDS = {"low": 1, "moderate": 2, "considerable": 3, "high": 4, "very_high": 5,
+                "veryhigh": 5}
+PROBLEM_DE = {"new_snow": "Neuschnee", "wind_slab": "Triebschnee",
+              "persistent_weak_layers": "Altschnee", "wet_snow": "Nassschnee",
+              "gliding_snow": "Gleitschnee", "favourable_situation": "günstige Situation",
+              "no_distinct_avalanche_problem": "kein ausgeprägtes Problem"}
+
+
 def _as_int(v) -> Optional[int]:
+    if isinstance(v, str) and v.strip().lower().replace(" ", "_") in _LEVEL_WORDS:
+        return _LEVEL_WORDS[v.strip().lower().replace(" ", "_")]
     try:
         i = int(v)
     except (TypeError, ValueError):
         return None
     return i if 1 <= i <= 5 else None
+
+
+def _round_geom(g, nd=4):
+    """Coordinates to ~10 m: the region outlines are drawn, not measured."""
+    if not isinstance(g, dict):
+        return g
+    def r(c):
+        if isinstance(c, (int, float)):
+            return round(c, nd)
+        return [r(x) for x in c]
+    out = dict(g)
+    if "coordinates" in g:
+        out["coordinates"] = r(g["coordinates"])
+    return out
 
 
 def _norm_aspects(raw) -> List[str]:
@@ -161,8 +186,62 @@ def parse_bulletin(payload: Any) -> List[Dict[str, Any]]:
     return out
 
 
+def _bulletin_entry(b: dict) -> Optional[Dict[str, Any]]:
+    """One CAAML bulletin -> one entry covering all its regions."""
+    ratings = _first(b, "dangerRatings", "danger_ratings", default=[]) or []
+    levels, sub = [], ""
+    for r in ratings:
+        if not isinstance(r, dict):
+            continue
+        lv = _as_int(_first(r, "mainValue", "main_value", "value"))
+        if lv is None:
+            continue
+        levels.append(lv)
+        sd = (((r.get("customData") or {}).get("CH") or {}).get("subdivision") or "")
+        if lv == max(levels) and sd:
+            sub = {"plus": "+", "minus": "-", "neutral": "="}.get(sd, "")
+    if not levels:
+        return None
+    problems = _first(b, "avalancheProblems", "avalanche_problems", default=[]) or []
+    aspects, elev_lo, elev_hi, kinds, core = [], None, None, [], ""
+    for pr in problems:
+        if not isinstance(pr, dict):
+            continue
+        kind = _first(pr, "problemType", "problem_type", "type")
+        if isinstance(kind, str):
+            kinds.append(PROBLEM_DE.get(kind, kind))
+        aspects += _norm_aspects(_first(pr, "aspects", "aspect"))
+        el = _first(pr, "elevation", default={}) or {}
+        lo = _first(el, "lowerBound", "lower_bound")
+        hi = _first(el, "upperBound", "upper_bound")
+        lo = int(lo) if isinstance(lo, (int, float)) or (isinstance(lo, str) and lo.isdigit()) else None
+        hi = int(hi) if isinstance(hi, (int, float)) or (isinstance(hi, str) and hi.isdigit()) else None
+        if lo is not None:
+            elev_lo = lo if elev_lo is None else min(elev_lo, lo)
+        if hi is not None:
+            elev_hi = hi if elev_hi is None else max(elev_hi, hi)
+        ct = (((pr.get("customData") or {}).get("CH") or {}).get("coreZoneText") or "")
+        if ct and not core:
+            core = ct
+    regs = [r for r in (_first(b, "regions", "region", default=[]) or []) if isinstance(r, dict)]
+    return {
+        "id": _first(b, "bulletinID", "bulletinId", default=None)
+              or ",".join(str(r.get("regionID")) for r in regs),
+        "danger": max(levels), "danger_lo": min(levels), "sub": sub,
+        "aspects": [a for a in _ASPECT_ORDER if a in aspects],
+        "elev_lo": elev_lo, "elev_hi": elev_hi,
+        "problems": list(dict.fromkeys(kinds)), "core": core,
+        "regions": [r.get("name") for r in regs if r.get("name")],
+        "valid": _first(_first(b, "validTime", "validity_time", default={}) or {},
+                        "startTime", "start_time"),
+        "until": _first(_first(b, "validTime", "validity_time", default={}) or {},
+                        "endTime", "end_time"),
+    }
+
+
 def _parse_geojson(fc: dict) -> List[Dict[str, Any]]:
-    """GeoJSON-Variante: Gefahrenstufe steckt in den Feature-Properties."""
+    """GeoJSON: one feature per bulletin -- CAAML properties (dangerRatings,
+    avalancheProblems, regions) and the merged outline of its regions."""
     feats = fc.get("features")
     if not isinstance(feats, list):
         return []
@@ -171,6 +250,12 @@ def _parse_geojson(fc: dict) -> List[Dict[str, Any]]:
         if not isinstance(f, dict):
             continue
         p = f.get("properties") or {}
+        if p.get("dangerRatings") is not None:
+            ent = _bulletin_entry(p)
+            if ent is not None:
+                ent["geometry"] = _round_geom(f.get("geometry"))
+                out.append(ent)
+            continue
         lvl = _as_int(_first(p, "danger_level", "dangerLevel", "danger", "max_danger"))
         rid = _first(p, "region_id", "regionID", "id")
         if lvl is None or not isinstance(rid, str):
