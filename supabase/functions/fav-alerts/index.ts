@@ -19,7 +19,9 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const b64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
-type Fav = { id: string; user_id: string; name: string; lat: number; lon: number; threshold_cm: number; last_alert_at: string | null };
+type Fav = { id: string; user_id: string; kind: string; name: string; lat: number; lon: number; threshold_cm: number; last_alert_at: string | null };
+// a starred area is a region: the cells within this radius count, not one cell
+const REGION_KM = 6;
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method' }, 405);
@@ -41,22 +43,37 @@ Deno.serve(async (req) => {
     const y = Math.round((laMax - lat) / (laMax - laMin) * (g.h - 1));
     return x < 0 || y < 0 || x >= g.w || y >= g.h ? -1 : y * g.w + x;
   };
+  const kmY = (laMax - laMin) * 111 / Math.max(1, g.h - 1);
+  // a region's number: the 75th percentile of its cells (a single snowy cell
+  // is not "the region", the median would hide the snowy slopes)
+  const regional = (f: Fav, a: Uint8Array) => {
+    const p0 = cell(f.lat, f.lon); if (p0 < 0) return -1;
+    if (f.kind !== 'area') return a[p0];
+    const kmX = (loMax - loMin) * 111 * Math.cos(f.lat * Math.PI / 180) / Math.max(1, g.w - 1);
+    const x0 = p0 % g.w, y0 = Math.floor(p0 / g.w), rx = Math.ceil(REGION_KM / kmX), ry = Math.ceil(REGION_KM / kmY);
+    const v: number[] = [];
+    for (let y = Math.max(0, y0 - ry); y <= Math.min(g.h - 1, y0 + ry); y++)
+      for (let x = Math.max(0, x0 - rx); x <= Math.min(g.w - 1, x0 + rx); x++)
+        if (Math.hypot((x - x0) * kmX, (y - y0) * kmY) <= REGION_KM) v.push(a[y * g.w + x]);
+    if (!v.length) return a[p0];
+    v.sort((p, q) => p - q);
+    return v[Math.min(v.length - 1, Math.floor(v.length * 0.75))];
+  };
   // until when the 48 h reach, in words: "bis Do 14 Uhr"
   const end = new Date(Date.parse(String(g.from) + ':00Z') + Math.max(1, g.hours || 48) * 3.6e6);
   const until = isNaN(+end) ? '' : 'bis ' + new Intl.DateTimeFormat('de-CH', { timeZone: 'Europe/Zurich', weekday: 'short', hour: '2-digit' })
     .format(end).replace(/\.?,?\s*(\d+)$/, ' $1 Uhr');
 
   const { data: favs, error } = await admin.from('favorites')
-    .select('id,user_id,name,lat,lon,threshold_cm,last_alert_at').eq('notify', true);
+    .select('id,user_id,kind,name,lat,lon,threshold_cm,last_alert_at').eq('notify', true);
   if (error) return json({ error: error.message }, 500);
   const cut = Date.now() - AGAIN_H * 3.6e6;
   const hits = new Map<string, { f: Fav; cm: number; cm24: number }[]>();
   for (const f of (favs || []) as Fav[]) {
     if (f.last_alert_at && Date.parse(f.last_alert_at) > cut) continue;
-    const p = cell(f.lat, f.lon); if (p < 0) continue;
-    const cm = ns48[p];
+    const cm = regional(f, ns48); if (cm < 0) continue;
     if (cm < f.threshold_cm) continue;
-    const l = hits.get(f.user_id) || []; l.push({ f, cm, cm24: ns24[p] }); hits.set(f.user_id, l);
+    const l = hits.get(f.user_id) || []; l.push({ f, cm, cm24: regional(f, ns24) }); hits.set(f.user_id, l);
   }
   if (!hits.size) return json({ sent: 0, favs: favs?.length || 0 });
 
