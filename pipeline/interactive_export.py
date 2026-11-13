@@ -888,6 +888,13 @@ def _tour_routes(max_routes=4000, tol_m=60.0, min_len_m=1500.0, min_gain_m=250.0
         n0 = len(out)
         # only tours that lead to a summit; several to one summit = variants
         out = name_tours(out, peaks, places)
+        # fewer, clearer variants: different starts, hut -> summit, hut approach
+        if dem is not None:
+            from pipeline.tour_variants import huts_from_places, prune_variants
+            n1 = len(out)
+            out = prune_variants(out, lambda lon, lat: _elev_at_lonlat(dem, lon, lat),
+                                 huts_from_places(places))
+            print(f"[INT] Varianten ausgeduennt: {n1} -> {len(out)} (inkl. Huetten)")
         nv = sum(1 for r in out if r.get("nvar", 1) > 1)
         print(f"[INT] {len(out)} von {n0} Touren fuehren auf einen Gipfel "
               f"({nv} davon Varianten eines Gipfels).")
@@ -6756,6 +6763,12 @@ body.draw-on #thrFloat,body.ts-open #thrFloat,body.tour-open #thrFloat,body.trk-
 /* the clickup's star says what it does: «Region merken» */
 .insp-fav{width:auto!important;display:inline-flex!important;align-items:center;gap:5px;padding:0 10px 0 8px!important;border-radius:16px!important;white-space:nowrap}
 .insp-fav .fav-lbl{font:750 12px/1 var(--font)}
+
+/* tour finder: star that keeps the filter setting */
+.ts-star{width:auto!important;display:inline-flex!important;align-items:center;gap:4px;padding:0 10px 0 8px!important;height:32px;border-radius:16px!important;margin-right:6px;white-space:nowrap}
+.ts-star svg{width:15px;height:15px}
+.ts-star .fav-lbl{font:750 12px/1 var(--font)}
+.ts-hd-b{display:inline-flex;align-items:center}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -13325,9 +13338,26 @@ async function trkProfRender(){const el=document.getElementById('profActs');if(!
 const tsF={focus:'powder',radius:25,gainMin:0,gainMax:2500,slope:new Set()};
 const TS_RMAX=200;
 // the filters stay as last set, from one visit to the next
-const TSF_KEY='ssm_tsf';
-try{const o=JSON.parse(localStorage.getItem(TSF_KEY)||'null');
-  if(o){if(o.focus==='powder'||o.focus==='sulz')tsF.focus=o.focus;
+const TSF_KEY='ssm_tsf',TSF_STAR='ssm_tsf_star';
+// the starred setting: applied at every start, until changed in that visit
+function tsStarGet(){try{return JSON.parse(localStorage.getItem(TSF_STAR)||'null');}catch(e){return null;}}
+function tsSnap(){return {focus:tsF.focus,radius:tsF.radius,gainMin:tsF.gainMin,gainMax:tsF.gainMax,slope:[...tsF.slope].sort()};}
+function tsApply(o){if(!o)return;if(o.focus==='powder'||o.focus==='sulz')tsF.focus=o.focus;
+    if(o.radius>=5&&o.radius<=TS_RMAX)tsF.radius=+o.radius;
+    if(o.gainMin>=0&&o.gainMin<=2500)tsF.gainMin=+o.gainMin;
+    if(o.gainMax>=100&&o.gainMax<=2500&&o.gainMax>tsF.gainMin)tsF.gainMax=+o.gainMax;
+    if(Array.isArray(o.slope)){tsF.slope.clear();o.slope.forEach(x=>tsF.slope.add(String(x)));}}
+function tsIsStar(){const st=tsStarGet();return !!st&&JSON.stringify(Object.assign({},st,{slope:[...(st.slope||[])].sort()}))===JSON.stringify(tsSnap());}
+function tsStarTap(ev){if(ev)ev.stopPropagation();
+  if(tsIsStar()){try{localStorage.removeItem(TSF_STAR);}catch(e){}toast('Gemerkte Einstellung entfernt','info');}
+  else{try{localStorage.setItem(TSF_STAR,JSON.stringify(tsSnap()));}catch(e){}toast('Filter gemerkt – gilt ab jetzt bei jedem Start','ok');}
+  try{haptic(6);}catch(e){}tsStarSync();}
+function tsStarSync(){const b=document.getElementById('tsStar');if(!b)return;const on=tsIsStar();
+  b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);b.title=on?'Gemerkte Einstellung – tippen zum Entfernen':'Diese Filter merken';
+  const l=b.querySelector('.fav-lbl');if(l)l.textContent=on?'Gemerkt':'Merken';}
+try{const st=tsStarGet(),o=st||JSON.parse(localStorage.getItem(TSF_KEY)||'null');
+  if(st){tsApply(st);}
+  else if(o){if(o.focus==='powder'||o.focus==='sulz')tsF.focus=o.focus;
     if(o.radius>=5&&o.radius<=TS_RMAX)tsF.radius=+o.radius;
     if(o.gainMin>=0&&o.gainMin<=2500)tsF.gainMin=+o.gainMin;
     if(o.gainMax>=100&&o.gainMax<=2500&&o.gainMax>tsF.gainMin)tsF.gainMax=+o.gainMax;
@@ -13407,11 +13437,11 @@ function tsRadiusDone(){document.body.classList.remove('ts-radius');const b=docu
 function tsClose(){tsCloseQuiet();tourList().forEach(t=>{t._ts=null;});tourPaintScores();}
 function tsSet(k,v){
   if(k==='slope'){const S=tsF[k];S.has(v)?S.delete(v):S.add(v);}
-  else if(k==='reset'){tsF.slope.clear();tsF.radius=25;tsF.gainMin=0;tsF.gainMax=2500;}
+  else if(k==='reset'){tsF.slope.clear();tsF.radius=25;tsF.gainMin=0;tsF.gainMax=2500;tsApply(tsStarGet());}
   else tsF[k]=v;
   if(k==='gainMin'&&tsF.gainMin>tsF.gainMax-100)tsF.gainMin=tsF.gainMax-100;
   if(k==='gainMax'&&tsF.gainMax<tsF.gainMin+100)tsF.gainMax=tsF.gainMin+100;
-  tsSave();
+  tsSave();try{tsStarSync();}catch(e){}
   // sliders only update labels and the list while dragging; rebuilding the
   // whole sheet would drop the thumb out from under the finger
   if(k==='radius'||k==='gainMin'||k==='gainMax'){clearTimeout(tsSet._t);tsSet._t=setTimeout(()=>tsRender(true),60);tsSliderSync();return;}
@@ -13491,7 +13521,8 @@ function tsRender(onlyMap){
   tsDragWire(el);
   el.innerHTML='<div class="ts-grab" data-drag></div><div class="tn-hd" data-drag><div><b>Touren finden</b><span>'
     +(va?'Modell · '+escapeHtml(tourVa.when):'Powder-Modell im Zeitfenster')+'</span></div>'
-    +'<span class="ts-hd-b"><button type="button" class="ts-x" onclick="event.stopPropagation();tsClose()" aria-label="Schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>'
+    +'<span class="ts-hd-b"><button type="button" id="tsStar" class="fav-btn ts-star'+(tsIsStar()?' on':'')+'" onclick="tsStarTap(event)" aria-label="Filter merken">'+FAV_STAR+'<span class="fav-lbl">'+(tsIsStar()?'Gemerkt':'Merken')+'</span></button>'
+    +'<button type="button" class="ts-x" onclick="event.stopPropagation();tsClose()" aria-label="Schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>'
     +ctrls+'<div class="ts-res"><span class="ts-count">'+list.length+' Touren</span><span>nach '+(tsF.focus==='sulz'?'Sulz':'Pulver')+'-Anteil'
     +(nf?' · <button type="button" class="ts-reset" onclick="tsSet(\'reset\')">Filter zurücksetzen</button>':'')+'</span></div>'
     +'<div class="ts-list tn-list">'+(rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>')+'</div>'+sheetAttr()
