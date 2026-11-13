@@ -11649,7 +11649,7 @@ function tourOpen(t,fromSearch){
   try{const ll=t.coords.map(c=>[c[1],c[0]]);map.flyToBounds(L.latLngBounds(ll),{padding:[50,50],paddingBottomRight:[50,330],duration:.8,maxZoom:14});}catch(e){}
   // in 3D the tour is shown on the 3D map: fly there
   try{if(typeof is3d!=='undefined'&&is3d&&map3d){const b=new maplibregl.LngLatBounds();t.coords.forEach(c=>b.extend([c[0],c[1]]));
-    map3d.fitBounds(b,{padding:{top:70,left:50,right:50,bottom:330},duration:800,maxZoom:14.5});}}catch(e){}
+    map3d.fitBounds(b,{padding:{top:70,left:50,right:50,bottom:330},duration:800,maxZoom:14.5,pitch:45});tours3dSel();}}catch(e){}
   tourPaintScores();
 }
 async function tourIsoRefresh(){
@@ -11871,7 +11871,7 @@ function tourShowReports(){
 }
 function tourClose(){
   const back=tourFromSearch;
-  tourIso=null;tourFromSearch=false;
+  tourIso=null;tourFromSearch=false;try{tours3dSel();}catch(e){}
   try{tpTrack();}catch(e){}
   if(tourIsoLayer){map.removeLayer(tourIsoLayer);tourIsoLayer=null;}
   document.body.classList.remove('tour-open');
@@ -17416,6 +17416,14 @@ let _tilt3d=false;
   el.addEventListener('touchmove',e=>{if(y0==null||e.touches.length!==2||is3d)return;
     if(y0-mid(e.touches)>70&&Math.abs(dist(e.touches)-d0)<d0*.22){y0=null;_tilt3d=true;try{haptic(10);}catch(x){}init3D();}},{passive:true});
   el.addEventListener('touchend',()=>{y0=null;},{passive:true});})();
+// the highest model cell within r km of a point: the mountain the 3D view flies to
+function peak3dNear(lat,lon,rKm){let best=null;
+  try{const dy=(laMax-laMin)/H,dx=(loMax-loMin)/W,ry=Math.ceil(rKm/111/dy),rx=Math.ceil(rKm/(111*Math.cos(lat*Math.PI/180))/dx);
+    const x0=Math.floor((lon-loMin)/dx),y0=Math.floor((laMax-lat)/dy);
+    for(let y=Math.max(0,y0-ry);y<=Math.min(H-1,y0+ry);y++)for(let x=Math.max(0,x0-rx);x<=Math.min(W-1,x0+rx);x++){
+      const e=melevv(y*W+x);if(e===e&&(!best||e>best.e))best={e,lat:laMax-(y+.5)*dy,lon:loMin+(x+.5)*dx};}}catch(e){}
+  return best;}
+let _fly3d=false;
 function init3D(){
   if(!window.maplibregl){toast('3D wird geladen …','ok');ensureMaplibre(()=>init3D());return;}
   const wrap=document.getElementById('three-wrap');
@@ -17428,6 +17436,12 @@ function init3D(){
   const tx=document.getElementById('threeFabTxt');if(tx)tx.textContent='2D';
   const tf=document.getElementById('threeFab');if(tf){tf.title='Zurück zur 2D-Karte';tf.setAttribute('aria-label','Zurück zur 2D-Karte');}
   const lc=map.getCenter(),lz=map.getZoom();
+  // From the 3D button: a short flight in from outside -- start high and
+  // off to the north-west, then glide to the mountain nearest the centre
+  // and end on a 45 degree view. (The two-finger tilt keeps its own move.)
+  _fly3d=!_tilt3d&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+  try{if(!ovOn.skitourVec)ovToggle('skitourVec',true);}catch(e){}
+  const st3=_fly3d?{c:[Math.max(loMinW,lc.lng-1.2),Math.min(laMaxW,lc.lat+0.8)],z:Math.min(6.8,lz)}:{c:[lc.lng,lc.lat],z:lz};
   map3d=new maplibregl.Map({container:'map3d',
     style:{version:8,
       sources:{
@@ -17448,7 +17462,7 @@ function init3D(){
         {id:'slope-3d',type:'raster',source:'slope-src',layout:{visibility:ovOn.slope?'visible':'none'},paint:{'raster-opacity':0.5,'raster-fade-duration':0}},
         {id:'skitour-3d',type:'raster',source:'skitour-src',layout:{visibility:ovOn.skitour?'visible':'none'},paint:{'raster-opacity':0.9,'raster-fade-duration':0}}],
       terrain:{source:'terrain-dem',exaggeration:exag3d}},
-    center:[lc.lng,lc.lat],zoom:lz,pitch:_tilt3d?0:60,bearing:_tilt3d?0:-20,maxPitch:72,maxZoom:17.5,
+    center:st3.c,zoom:st3.z,pitch:_tilt3d||_fly3d?0:60,bearing:_tilt3d?0:_fly3d?0:-20,maxPitch:72,maxZoom:17.5,
     maxBounds:[[loMinW-0.1,laMinW-0.05],[loMaxW+0.1,laMaxW+0.05]],
     touchZoomRotate:true,touchPitch:true,dragRotate:true});
   map3d.addControl(new maplibregl.NavigationControl({visualizePitch:true,showCompass:true}),'top-left');
@@ -17458,7 +17472,18 @@ function init3D(){
   if(!isMobile)document.getElementById('keys3d').style.display='inline';
   map3d.on('load',()=>{try{sync3dLayer();}catch(e){}update3dOverlay();
     // from the two-finger gesture: the flat map tips over into 3D
-    if(_tilt3d){_tilt3d=false;map3d.easeTo({pitch:60,bearing:-15,duration:1100});}});
+    if(_tilt3d){_tilt3d=false;map3d.easeTo({pitch:60,bearing:-15,duration:1100});}
+    else fly3dIn();
+    try{tours3dSel();}catch(e){}});
+  function fly3dIn(){if(!_fly3d||!map3d)return;{_fly3d=false;const pk=peak3dNear(lc.lat,lc.lng,6)||{lat:lc.lat,lon:lc.lng};
+      // a selected tour wins over the mountain: fly to it
+      const tsel=(typeof tourIso!=='undefined'&&tourIso&&tourIso.coords)?tourIso:null;
+      if(tsel){const b=new maplibregl.LngLatBounds();tsel.coords.forEach(c=>b.extend([c[0],c[1]]));
+        const cam=map3d.cameraForBounds(b,{padding:{top:70,left:50,right:50,bottom:330},maxZoom:14.5})||{};
+        map3d.flyTo({center:cam.center||b.getCenter(),zoom:cam.zoom||13,pitch:45,bearing:-20,duration:3200,curve:1.5,essential:true});}
+      else map3d.flyTo({center:[pk.lon,pk.lat],zoom:Math.max(12.3,Math.min(13.5,lz+1)),pitch:45,bearing:-20,duration:3200,curve:1.5,essential:true});}}
+  // slow tiles must not keep the camera parked far out
+  if(_fly3d)setTimeout(fly3dIn,1200);
   map3d.on('moveend',sync3dTo2d);
   rot3dInstall(map3d);
   map3d.once('idle',()=>{try{tours3dSync();}catch(e){}});
@@ -17510,7 +17535,14 @@ function tours3dSync(){const m=map3d;if(!m||!is3d||!m.getStyle)return;
       const hits=ids.map(id=>tourList().find(t=>String(t.id)===id)).filter(Boolean);
       if(!hits.length)return;try{haptic(4);}catch(x){}
       if(hits.length>1)tourPickShow(hits);else tourOpen(hits[0],tsOpen());});}
-  ['tours-3d-casing','tours-3d-line','tours-3d-hit'].forEach(id=>{if(m.getLayer(id))m.setLayoutProperty(id,'visibility',vis);});}
+  ['tours-3d-casing','tours-3d-line','tours-3d-hit'].forEach(id=>{if(m.getLayer(id))m.setLayoutProperty(id,'visibility',vis);});
+  tours3dSel();}
+// the tour that is open (from the map, the search or the finder) stands out in 3D
+function tours3dSel(){const m=map3d;if(!m||!is3d||!m.getSource||!m.getSource('tours-3d'))return;
+  const id=(typeof tourIso!=='undefined'&&tourIso)?String(tourIso.id):'';
+  if(!m.getLayer('tours-3d-sel'))m.addLayer({id:'tours-3d-sel',type:'line',source:'tours-3d',filter:['==',['get','id'],id],
+    layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#e5233f','line-width':4.2,'line-opacity':1}});
+  else m.setFilter('tours-3d-sel',['==',['get','id'],id]);}
 function close3D(){
   if(map3d){const c=map3d.getCenter(),z=map3d.getZoom();map.setView([c.lat,c.lng],z,{animate:false});}
   is3d=false;if(map3d){map3d.remove();map3d=null;}
