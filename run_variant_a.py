@@ -476,6 +476,17 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
               f"{drift_res['independent'].get('bias_cm', '')}, all {drift_res['all'].get('status')} "
               f"{drift_res['all'].get('bias_cm', '')}")
 
+    # What the app shows: broken single-band spikes out, and the snow the
+    # IMIS stations do not see taken off (assim.py). The carried state and
+    # the drift check above stay on the raw model.
+    from variant_a import assim
+    spikes = assim.mask_band_outliers(runs, results, METS)
+    for rid in spikes:
+        results.pop(rid, None)
+    assim_summ = assim.apply(rows, runs, results, METS) if args.live else {"used": False}
+    assim_summ["spikes_removed"] = len(spikes)
+    print(f"ASSIM: {assim_summ}")
+
     # 1 km precipitation pattern (ICON-CH1 via OGD): new snow per cell
     # scaled by how much more/less fell there than at its weather points.
     from variant_a import precip as precip_mod
@@ -494,6 +505,7 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
                        "community": comm_summary, "community_rows": comm_rows[:500]},
         "precip_pattern": p_summ,
         "temperature_at_height": band_summ,
+        "assimilation": assim_summ,
     }
     if drift_res is not None:
         extra["drift"] = {k: drift_res[k] for k in ("status", "season", "full_season")}
