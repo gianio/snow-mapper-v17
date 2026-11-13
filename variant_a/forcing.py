@@ -449,6 +449,10 @@ def _profile_dT(hourly, i, z_ref, z):
     return min(LAPSE_MAX, max(LAPSE_MIN, g)) * (z - z_ref)
 
 
+PRECIP_MIX_MM = 0.1   # mm/h: an hour counts as precipitating
+PRECIP_MIX_K = 1.5    # K a band may sit below the column profile while it precipitates
+
+
 def _lapsed(hourly, dz, precip_factor=1.0, z_ref=None, band_t=None):
     """Same weather, temperature moved `dz` metres up or down, precipitation
     scaled by `precip_factor` (the IMIS snow-height correction, imis.py).
@@ -460,23 +464,35 @@ def _lapsed(hourly, dz, precip_factor=1.0, z_ref=None, band_t=None):
     profile only bridging the few metres between cell and band."""
     t_in = hourly.get("temperature_2m", [])
     times = hourly.get("time", [])
+    precip = hourly.get("precipitation", []) or []
     out = dict(hourly)
     ta, n_prof = [], 0
     for i, v in enumerate(t_in):
         if v is None:
             ta.append(None); continue
         bt = band_t.get(times[i]) if band_t and i < len(times) else None
+        d = _profile_dT(hourly, i, z_ref, z_ref + dz) if z_ref is not None else None
+        prof = d is not None
+        t_prof = v + (d if prof else config.TA_LAPSE_K_PER_M * dz)
         if bt is not None:
             tc, dzc = bt
-            d = _profile_dT(hourly, i, 0.0, dzc) if z_ref is not None else None
-            ta.append(tc + (d if d is not None else config.TA_LAPSE_K_PER_M * dzc)); n_prof += 1
+            dd = _profile_dT(hourly, i, 0.0, dzc) if z_ref is not None else None
+            t_band = tc + (dd if dd is not None else config.TA_LAPSE_K_PER_M * dzc)
+            # While it precipitates the air is mixed: a valley cell's cold
+            # pool (ICON 2 m temperature on a valley floor) must not turn
+            # rain into snow on the slopes at that height. So during
+            # precipitation the band may be at most PRECIP_MIX_K colder than
+            # the column's own profile says -- otherwise snow piled up below
+            # the snowfall line, and low bands gained snow the bands above
+            # them did not.
+            pr = precip[i] if i < len(precip) else None
+            if pr is not None and pr >= PRECIP_MIX_MM:
+                t_band = max(t_band, t_prof - PRECIP_MIX_K)
+            ta.append(t_band); n_prof += 1
             continue
-        d = _profile_dT(hourly, i, z_ref, z_ref + dz) if z_ref is not None else None
-        if d is None:
-            d = config.TA_LAPSE_K_PER_M * dz
-        else:
+        if prof:
             n_prof += 1
-        ta.append(v + d)
+        ta.append(t_prof)
     out["temperature_2m"] = ta
     out["_profile_hours"] = n_prof
     if precip_factor != 1.0:

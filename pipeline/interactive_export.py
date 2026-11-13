@@ -888,6 +888,13 @@ def _tour_routes(max_routes=4000, tol_m=60.0, min_len_m=1500.0, min_gain_m=250.0
         n0 = len(out)
         # only tours that lead to a summit; several to one summit = variants
         out = name_tours(out, peaks, places)
+        # fewer, clearer variants: different starts, hut -> summit, hut approach
+        if dem is not None:
+            from pipeline.tour_variants import huts_from_places, prune_variants
+            n1 = len(out)
+            out = prune_variants(out, lambda lon, lat: _elev_at_lonlat(dem, lon, lat),
+                                 huts_from_places(places))
+            print(f"[INT] Varianten ausgeduennt: {n1} -> {len(out)} (inkl. Huetten)")
         nv = sum(1 for r in out if r.get("nvar", 1) > 1)
         print(f"[INT] {len(out)} von {n0} Touren fuehren auf einen Gipfel "
               f"({nv} davon Varianten eines Gipfels).")
@@ -4427,6 +4434,15 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .ly-ovs .ly-ov-t{overflow-wrap:break-word;hyphens:auto}
  .ly-ovs>.ly-ov:only-child{grid-template-columns:auto 1fr auto;grid-template-areas:"ic t sw"}
  .ly-ovs .ly-sw{width:30px;height:18px;border-radius:9px}
+ /* compact: one line per tile (icon, name, switch), no subtitles, tight gaps */
+ .ly-ovs{gap:5px}
+ .ly-ovs .ly-ov{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"ic t sw";gap:6px;padding:6px 8px;border-radius:11px;font-size:12px;min-height:38px}
+ .ly-ovs .ly-ov .ly-ov-t{align-self:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;hyphens:none}
+ .ly-ovs .ly-ov-t small{display:none}
+ .ly-ovs>:not(.ly-ov){grid-column:1/-1}
+ .ly-ovs .ov-slope{padding:2px 8px 6px}
+ .ly-ovs .ly-ov-ic{width:22px;height:22px;border-radius:7px}
+ .ly-ovs .ly-ov-ic svg{width:14px;height:14px}
  .ly-ovs .ly-sw::after{top:2px;left:2px;width:14px;height:14px}
  .ly-ovs .ly-ov.on .ly-sw::after{transform:translateX(12px)}
  .ly-info{margin-top:-6px}
@@ -6674,6 +6690,85 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
  .qs-none{font-size:12.5px;color:var(--mut);line-height:1.4}
  .qs-pair-r:has(#qsDep:not([hidden]),#qsQual:not([hidden])) .qs-none{display:none}
  html.cap-native .web-only{display:none!important}
+
+/* ── time panel: floats free above the tab bar, no frame, folds to a pill ── */
+#tlFold{position:absolute;z-index:3;top:4px;left:50%;transform:translateX(-50%);width:44px;height:16px;padding:0;border:0;border-radius:8px;
+  background:transparent;color:var(--mut);display:flex;align-items:center;justify-content:center;cursor:pointer}
+#tlFold svg{width:14px;height:14px}
+#tlFold:hover{color:var(--fg)}
+#tlMini{display:none;align-items:center;gap:7px;height:36px;padding:0 12px;border:0;background:none;color:var(--fg);font:800 13px/1 var(--font);cursor:pointer;font-variant-numeric:tabular-nums}
+#tlMini svg{width:16px;height:16px;color:var(--accent)}#tlMini svg.up{width:12px;height:12px;color:var(--mut)}
+#bottomPanel.tl-min{padding:0!important;left:50%!important;right:auto!important;transform:translateX(-50%);width:auto!important;border-radius:18px!important}
+#bottomPanel.tl-min #btmMain,#bottomPanel.tl-min #tlFold,#bottomPanel.tl-min #layerBar{display:none!important}
+#bottomPanel.tl-min #tlMini{display:flex}
+@media (max-width:899px){
+  body:not(.desk) #bottomPanel{left:10px!important;right:10px!important;bottom:calc(env(safe-area-inset-bottom,0px) + 10px)!important;
+    border-radius:20px!important;border:0!important;padding-top:10px!important;padding-bottom:6px!important;
+    box-shadow:0 8px 26px rgba(18,21,26,.14)!important}
+  body.nav-vis:not(.desk) #bottomPanel{bottom:calc(var(--nav-h) + 8px)!important;padding-bottom:6px!important}
+  body:not(.desk) #bottomPanel.tl-min{left:50%!important;right:auto!important}
+  body.nav-vis:not(.desk) #mapFabs{bottom:calc(var(--nav-h) + var(--btm-h,120px) + 20px)!important}
+  /* the tab bar: 60 % see-through, only the icons stay solid */
+  #tabBar,:root[data-theme="light"] #tabBar,:root.and-wv[data-theme="light"] #tabBar{background:rgba(255,255,255,.4)!important;
+    -webkit-backdrop-filter:blur(14px) saturate(160%)!important;backdrop-filter:blur(14px) saturate(160%)!important;border-color:transparent!important}
+  :root[data-theme="dark"] #tabBar{background:rgba(22,26,32,.4)!important}
+  #tabBar button svg{opacity:1!important}
+}
+:root[data-theme="light"] #bottomPanel,:root[data-theme="dark"] #bottomPanel{border-color:transparent!important}
+:root[data-theme="light"] body:not(.desk) #bottomPanel{box-shadow:0 8px 26px rgba(18,21,26,.14)!important}
+
+/* filter slider for temperature / wind: one slim see-through row on the
+   map, left of the button column and the legend, above the time panel */
+#thrFloat{position:absolute;z-index:1001;left:12px;width:min(320px,calc(100% - 140px));box-sizing:border-box;
+  bottom:calc(env(safe-area-inset-bottom,0px) + var(--btm-h,100px) + 18px);padding:5px 10px 3px;border-radius:14px;
+  background:color-mix(in srgb,var(--card) 30%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  box-shadow:0 2px 10px rgba(18,21,26,.10);color:var(--fg);pointer-events:auto}
+body.nav-vis:not(.desk) #thrFloat{bottom:calc(var(--nav-h) + var(--btm-h,100px) + 14px)}
+#thrFloat[hidden]{display:none}
+#thrFloat .thr-h{display:flex;align-items:center;gap:6px;font:700 11.5px/1.2 var(--font)}
+#thrFloat .thr-h svg{width:14px;height:14px;flex:none;color:var(--accent)}
+#thrFloat .thr-h span{flex:1;min-width:0;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 0 3px color-mix(in srgb,var(--card) 80%,transparent)}
+#thrFloat .thr-h b{font:800 11.5px var(--font);padding:2px 7px;border-radius:8px;background:var(--accent);color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+#thrFloat.all .thr-h b{background:var(--fill2);color:var(--fg2)}
+#thrFloat input{width:100%;margin:1px 0 0;height:18px;accent-color:var(--accent);display:block}
+#thrFloat .thr-s{display:flex;justify-content:space-between;font:700 9.5px var(--font);color:var(--fg2);margin-top:-1px}
+body.draw-on #thrFloat,body.ts-open #thrFloat,body.tour-open #thrFloat,body.trk-open #thrFloat,body.feed-side #thrFloat,body.qs-open #thrFloat,body.tn-open #thrFloat,body.insp-open #thrFloat,body.ly-open #thrFloat{display:none}
+
+/* quick report: pictograms on the type colours, thicker sliders */
+.qs-ic{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.qs-ic svg{width:17px;height:17px;filter:drop-shadow(0 0 1px rgba(0,0,0,.35))}
+.qs-ic.sm{width:22px;height:22px}.qs-ic.sm svg{width:13px;height:13px}
+.qs-it{justify-content:flex-start!important;gap:8px!important;padding:0 6px 0 8px!important;text-align:left;font-size:13.5px!important;line-height:1.1}
+.qs-it.on{font-size:14.5px!important}
+.qs-it .qs-ic{width:24px;height:24px;border-radius:50%}.qs-it .qs-ic svg{width:14px;height:14px}
+.qs-it span{min-width:0;overflow-wrap:anywhere}
+.qs-wheel-w{width:min(300px,86%)!important}
+.qs-lic{display:inline-flex;vertical-align:middle;margin-right:6px}
+.qs-lic>svg{width:16px;height:16px;color:var(--accent)}
+.qs-range{height:40px!important}
+.qs-range::-webkit-slider-runnable-track{height:18px!important;border-radius:9px!important;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.qs-range::-moz-range-track{height:18px!important;border-radius:9px!important}
+.qs-range::-webkit-slider-thumb{width:36px!important;height:36px!important;margin-top:-9px!important;border-width:4px!important;box-shadow:0 3px 10px rgba(0,0,0,.3)!important}
+.qs-range::-moz-range-thumb{width:30px!important;height:30px!important;border-width:4px!important}
+#qsQualTk span{display:flex;flex-direction:column;align-items:center;gap:3px}
+#qsQualTk span i{width:8px;height:8px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+#qsQualTk span.on{color:var(--fg);font-weight:800}
+
+/* Neuschnee place labels: cm chip + name */
+.ns-lab{display:flex!important;align-items:center;gap:4px;transform:translate(-14px,-12px);pointer-events:none;white-space:nowrap}
+.ns-lab b{min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;border-radius:11px;display:flex;align-items:center;justify-content:center;font:800 12px/1 var(--font);box-shadow:0 1px 4px rgba(0,0,0,.3);border:1.5px solid #fff}
+.ns-lab span{font:700 11.5px/1 var(--font);color:#0b1b2e;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff}
+:root[data-theme="dark"] .ns-lab span{color:#fff;text-shadow:0 0 3px #000,0 0 3px #000}
+
+/* the clickup's star says what it does: «Region merken» */
+.insp-fav{width:auto!important;display:inline-flex!important;align-items:center;gap:5px;padding:0 10px 0 8px!important;border-radius:16px!important;white-space:nowrap}
+.insp-fav .fav-lbl{font:750 12px/1 var(--font)}
+
+/* tour finder: star that keeps the filter setting */
+.ts-star{width:auto!important;display:inline-flex!important;align-items:center;gap:4px;padding:0 10px 0 8px!important;height:32px;border-radius:16px!important;margin-right:6px;white-space:nowrap}
+.ts-star svg{width:15px;height:15px}
+.ts-star .fav-lbl{font:750 12px/1 var(--font)}
+.ts-hd-b{display:inline-flex;align-items:center}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -6811,6 +6906,8 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
   <div id="layerBar">
     <div id="progBar"></div>
   </div>
+  <button type="button" id="tlFold" onclick="tlFoldToggle()" aria-label="Zeitleiste einklappen" title="Zeitleiste ein-/ausklappen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+  <button type="button" id="tlMini" onclick="tlFoldToggle()" aria-label="Zeitleiste öffnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><b id="tlMiniT">Zeit</b><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
   <div id="btmMain">
     <div id="tlDetail">
       <button class="tl-corner tl-corner-l tl-play" id="tlPlayBtn" hidden onclick="tlPlayToggle()" aria-label="Animation abspielen"><svg viewBox="0 0 24 24"><path class="pl" d="M8 5.5v13l11-6.5z"/><path class="pa" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>
@@ -9068,7 +9165,8 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
      const cx=left?7:cw-7,cy=compact?ch/2:(ch-botPad)/2+topPad/2;
      ctx2.strokeStyle=_P.mut;ctx2.lineWidth=1.8;ctx2.lineCap='round';ctx2.beginPath();
      ctx2.moveTo(cx+(left?3:-3),cy-5);ctx2.lineTo(cx+(left?-1:1),cy);ctx2.lineTo(cx+(left?3:-3),cy+5);ctx2.stroke();};
-   if(tv0>0.5)edge(true);if(tv1<T-0.5)edge(false);
+   // (no edge fade/chevron any more: the panel has no frame to fade into)
+   void edge;
    const st=single?b-1:a;
    if(st<tv0||st>tv1){const left=st<tv0;ctx2.fillStyle=tlSel;
      rr(left?0:cw-4,4,4,ch-8,2);ctx2.fill();}}
@@ -9078,6 +9176,7 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   ctx2.strokeStyle=TL_NOW_COLOR;ctx2.globalAlpha=.85;ctx2.lineWidth=1.5;ctx2.setLineDash([3,3]);
   ctx2.beginPath();ctx2.moveTo(nx,0);ctx2.lineTo(nx,ch);ctx2.stroke();
   ctx2.setLineDash([]);ctx2.globalAlpha=1;
+  try{tlMiniSet(single?fmtTime(b-1):(b-a)+' h bis '+fmtTime(b-1));}catch(_){}
   if(compact)return;
   if(single){
     // one time label, centred on the point, nudged inward so it never
@@ -9532,9 +9631,11 @@ function avBuildLayer(){
         ? ((p.elev_lo!=null?p.elev_lo+' m':'')+'–'+(p.elev_hi!=null?p.elev_hi+' m':''))
         : 'alle Höhen';
       lyr.bindPopup(
-        '<b>Stufe '+p.danger+' – '+(AV_LABELS[p.danger]||'')+'</b>'
-        +'<br>Kernzone: '+band+', '+asp
-        +(p.problems&&p.problems.length?'<br>Problem: '+p.problems.join(', '):'')
+        '<b>Stufe '+p.danger+(p.sub&&p.sub!=='='?p.sub:'')+' – '+(AV_LABELS[p.danger]||'')+'</b>'
+        +'<br>'+(p.core?escapeHtml(p.core):'Kernzone: '+band+', '+asp)
+        +(p.problems&&p.problems.length?'<br>Problem: '+escapeHtml(p.problems.join(', ')):'')
+        +(p.regions&&p.regions.length?'<div style="margin-top:4px;font-size:12px;opacity:.8">'+escapeHtml(p.regions.slice(0,6).join(', '))+(p.regions.length>6?' u. a.':'')+'</div>':'')
+        +(p.until?'<div style="font-size:12px;opacity:.7">gültig bis '+new Date(p.until).toLocaleString('de-CH',{weekday:'short',hour:'2-digit',minute:'2-digit'})+'</div>':'')
         +'<div style="margin-top:6px;font-size:12px;opacity:.75">Quelle: SLF ·'
         +' <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation/"'
         +' target="_blank" rel="noopener">Bulletin öffnen</a></div>');
@@ -10936,7 +11037,7 @@ function vaMiniLegendHTML(){
   if(!ks.length)return h+'<div class="ml-va-u">kein Schnee im Ausschnitt</div>';
   return h+ks.slice(0,8).map(k=>{const e=leg[k];
     return '<div class="ml-va-r"><i style="background:'+col(k)+'"></i><span>'
-      +escapeHtml(e[2]||String(e[0]).replace(/_/g,' '))+'</span><b>'+Math.round(sh.cnt[k]/sh.tot*100)+'%</b></div>';}).join('');
+      +escapeHtml(e[2]||String(e[0]).replace(/_/g,' '))+'</span></div>';}).join('');
 }
 function vaLegendUp(){return !!(typeof ovOn!=='undefined'&&ovOn.variantA&&vaAvailable());}
 
@@ -11548,7 +11649,7 @@ function tourOpen(t,fromSearch){
   try{const ll=t.coords.map(c=>[c[1],c[0]]);map.flyToBounds(L.latLngBounds(ll),{padding:[50,50],paddingBottomRight:[50,330],duration:.8,maxZoom:14});}catch(e){}
   // in 3D the tour is shown on the 3D map: fly there
   try{if(typeof is3d!=='undefined'&&is3d&&map3d){const b=new maplibregl.LngLatBounds();t.coords.forEach(c=>b.extend([c[0],c[1]]));
-    map3d.fitBounds(b,{padding:{top:70,left:50,right:50,bottom:330},duration:800,maxZoom:14.5});}}catch(e){}
+    map3d.fitBounds(b,{padding:{top:70,left:50,right:50,bottom:330},duration:800,maxZoom:14.5,pitch:45});tours3dSel();}}catch(e){}
   tourPaintScores();
 }
 async function tourIsoRefresh(){
@@ -11770,7 +11871,7 @@ function tourShowReports(){
 }
 function tourClose(){
   const back=tourFromSearch;
-  tourIso=null;tourFromSearch=false;
+  tourIso=null;tourFromSearch=false;try{tours3dSel();}catch(e){}
   try{tpTrack();}catch(e){}
   if(tourIsoLayer){map.removeLayer(tourIsoLayer);tourIsoLayer=null;}
   document.body.classList.remove('tour-open');
@@ -13237,9 +13338,26 @@ async function trkProfRender(){const el=document.getElementById('profActs');if(!
 const tsF={focus:'powder',radius:25,gainMin:0,gainMax:2500,slope:new Set()};
 const TS_RMAX=200;
 // the filters stay as last set, from one visit to the next
-const TSF_KEY='ssm_tsf';
-try{const o=JSON.parse(localStorage.getItem(TSF_KEY)||'null');
-  if(o){if(o.focus==='powder'||o.focus==='sulz')tsF.focus=o.focus;
+const TSF_KEY='ssm_tsf',TSF_STAR='ssm_tsf_star';
+// the starred setting: applied at every start, until changed in that visit
+function tsStarGet(){try{return JSON.parse(localStorage.getItem(TSF_STAR)||'null');}catch(e){return null;}}
+function tsSnap(){return {focus:tsF.focus,radius:tsF.radius,gainMin:tsF.gainMin,gainMax:tsF.gainMax,slope:[...tsF.slope].sort()};}
+function tsApply(o){if(!o)return;if(o.focus==='powder'||o.focus==='sulz')tsF.focus=o.focus;
+    if(o.radius>=5&&o.radius<=TS_RMAX)tsF.radius=+o.radius;
+    if(o.gainMin>=0&&o.gainMin<=2500)tsF.gainMin=+o.gainMin;
+    if(o.gainMax>=100&&o.gainMax<=2500&&o.gainMax>tsF.gainMin)tsF.gainMax=+o.gainMax;
+    if(Array.isArray(o.slope)){tsF.slope.clear();o.slope.forEach(x=>tsF.slope.add(String(x)));}}
+function tsIsStar(){const st=tsStarGet();return !!st&&JSON.stringify(Object.assign({},st,{slope:[...(st.slope||[])].sort()}))===JSON.stringify(tsSnap());}
+function tsStarTap(ev){if(ev)ev.stopPropagation();
+  if(tsIsStar()){try{localStorage.removeItem(TSF_STAR);}catch(e){}toast('Gemerkte Einstellung entfernt','info');}
+  else{try{localStorage.setItem(TSF_STAR,JSON.stringify(tsSnap()));}catch(e){}toast('Filter gemerkt – gilt ab jetzt bei jedem Start','ok');}
+  try{haptic(6);}catch(e){}tsStarSync();}
+function tsStarSync(){const b=document.getElementById('tsStar');if(!b)return;const on=tsIsStar();
+  b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);b.title=on?'Gemerkte Einstellung – tippen zum Entfernen':'Diese Filter merken';
+  const l=b.querySelector('.fav-lbl');if(l)l.textContent=on?'Gemerkt':'Merken';}
+try{const st=tsStarGet(),o=st||JSON.parse(localStorage.getItem(TSF_KEY)||'null');
+  if(st){tsApply(st);}
+  else if(o){if(o.focus==='powder'||o.focus==='sulz')tsF.focus=o.focus;
     if(o.radius>=5&&o.radius<=TS_RMAX)tsF.radius=+o.radius;
     if(o.gainMin>=0&&o.gainMin<=2500)tsF.gainMin=+o.gainMin;
     if(o.gainMax>=100&&o.gainMax<=2500&&o.gainMax>tsF.gainMin)tsF.gainMax=+o.gainMax;
@@ -13319,11 +13437,11 @@ function tsRadiusDone(){document.body.classList.remove('ts-radius');const b=docu
 function tsClose(){tsCloseQuiet();tourList().forEach(t=>{t._ts=null;});tourPaintScores();}
 function tsSet(k,v){
   if(k==='slope'){const S=tsF[k];S.has(v)?S.delete(v):S.add(v);}
-  else if(k==='reset'){tsF.slope.clear();tsF.radius=25;tsF.gainMin=0;tsF.gainMax=2500;}
+  else if(k==='reset'){tsF.slope.clear();tsF.radius=25;tsF.gainMin=0;tsF.gainMax=2500;tsApply(tsStarGet());}
   else tsF[k]=v;
   if(k==='gainMin'&&tsF.gainMin>tsF.gainMax-100)tsF.gainMin=tsF.gainMax-100;
   if(k==='gainMax'&&tsF.gainMax<tsF.gainMin+100)tsF.gainMax=tsF.gainMin+100;
-  tsSave();
+  tsSave();try{tsStarSync();}catch(e){}
   // sliders only update labels and the list while dragging; rebuilding the
   // whole sheet would drop the thumb out from under the finger
   if(k==='radius'||k==='gainMin'||k==='gainMax'){clearTimeout(tsSet._t);tsSet._t=setTimeout(()=>tsRender(true),60);tsSliderSync();return;}
@@ -13403,7 +13521,8 @@ function tsRender(onlyMap){
   tsDragWire(el);
   el.innerHTML='<div class="ts-grab" data-drag></div><div class="tn-hd" data-drag><div><b>Touren finden</b><span>'
     +(va?'Modell · '+escapeHtml(tourVa.when):'Powder-Modell im Zeitfenster')+'</span></div>'
-    +'<span class="ts-hd-b"><button type="button" class="ts-x" onclick="event.stopPropagation();tsClose()" aria-label="Schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>'
+    +'<span class="ts-hd-b"><button type="button" id="tsStar" class="fav-btn ts-star'+(tsIsStar()?' on':'')+'" onclick="tsStarTap(event)" aria-label="Filter merken">'+FAV_STAR+'<span class="fav-lbl">'+(tsIsStar()?'Gemerkt':'Merken')+'</span></button>'
+    +'<button type="button" class="ts-x" onclick="event.stopPropagation();tsClose()" aria-label="Schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>'
     +ctrls+'<div class="ts-res"><span class="ts-count">'+list.length+' Touren</span><span>nach '+(tsF.focus==='sulz'?'Sulz':'Pulver')+'-Anteil'
     +(nf?' · <button type="button" class="ts-reset" onclick="tsSet(\'reset\')">Filter zurücksetzen</button>':'')+'</span></div>'
     +'<div class="ts-list tn-list">'+(rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>')+'</div>'+sheetAttr()
@@ -14750,11 +14869,50 @@ function alpsRender(){
     const edge=(X<w-1&&Bd[q+1]>=0&&Bd[q+1]!==bq)||(q+w<w*h&&Bd[q+w]>=0&&Bd[q+w]!==bq);
     const f=edge?.8:1,al=bq<2?Math.min(255,NS_ALPHA+30):NS_ALPHA;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=(edge?Math.min(255,al+30):al)*FA[q];}
   g.putImageData(img,0,0);
+  alpsRender._V=V;
   const url=alpsCv.toDataURL('image/png'),bb=[[B[0],B[1]],[B[2],B[3]]];
   if(!alpsOv)alpsOv=L.imageOverlay(url,bb,{opacity:.94,className:'raster-smooth',interactive:false});else alpsOv.setUrl(url);
   if(!map.hasLayer(alpsOv))alpsOv.addTo(map);
 }
-function renderRaster(){_renderRaster();try{alpsRender();}catch(e){}try{if(ovOn.snowline)snowlineRefresh();}catch(e){}}
+function renderRaster(){_renderRaster();try{alpsRender();}catch(e){}try{if(ovOn.snowline)snowlineRefresh();}catch(e){}try{nsLabRefresh();}catch(e){}}
+// ── Neuschnee: place names with the window's centimetres ──────────────────
+// Like a TV snow map: well-known resorts and valleys across the Alps carry
+// a chip with the new snow of the chosen window (same colours as the layer).
+// tier 1 from the start, tier 2 once zoomed in a bit; nothing under 1 cm.
+const NS_PLACES=[
+ ['Zermatt',46.020,7.749,1],['Saas-Fee',46.108,7.928,2],['Verbier',46.096,7.228,1],['Crans-Montana',46.312,7.481,2],['Leukerbad',46.379,7.627,2],
+ ['Engelberg',46.820,8.407,1],['Andermatt',46.636,8.594,1],['Grindelwald',46.624,8.041,1],['Mürren',46.559,7.892,2],['Adelboden',46.492,7.560,2],
+ ['Gstaad',46.475,7.286,2],['Les Diablerets',46.349,7.159,2],['Davos',46.802,9.836,1],['Klosters',46.869,9.881,2],['Arosa',46.778,9.679,2],
+ ['Laax',46.807,9.258,1],['Disentis',46.703,8.853,2],['St. Moritz',46.498,9.839,1],['Pontresina',46.492,9.902,2],['Samnaun',46.944,10.361,2],
+ ['Scuol',46.797,10.298,2],['Splügen',46.551,9.322,2],['Airolo',46.528,8.611,2],['Bosco Gurin',46.317,8.492,2],['Elm',46.918,9.170,2],
+ ['Hoch-Ybrig',47.030,8.795,2],['Toggenburg',47.200,9.300,2],['Melchsee-Frutt',46.774,8.270,2],['Lenk',46.457,7.443,2],['Champéry',46.177,6.870,2],
+ ['Chamonix',45.924,6.870,1],['Val d’Isère',45.448,6.980,1],['Les Arcs',45.572,6.829,2],['Courchevel',45.415,6.635,2],['Alpe d’Huez',45.092,6.069,2],
+ ['Serre Chevalier',44.946,6.560,2],['Cervinia',45.934,7.631,1],['Courmayeur',45.792,6.972,2],['Livigno',46.538,10.135,1],['Bormio',46.467,10.371,2],
+ ['Madesimo',46.437,9.357,2],['Cortina',46.540,12.136,1],['Val Gardena',46.557,11.676,2],['Sölden',46.966,11.007,1],['St. Anton',47.129,10.268,1],
+ ['Lech',47.208,10.141,2],['Ischgl',47.012,10.292,2],['Kitzbühel',47.446,12.392,1],['Innsbruck',47.263,11.395,2],['Mayrhofen',47.167,11.865,2],
+ ['Obergurgl',46.870,11.027,2],['Bad Gastein',47.115,13.134,2],['Schladming',47.394,13.687,2],['Garmisch',47.492,11.095,1],['Oberstdorf',47.410,10.279,2],
+ ['Montafon',47.060,9.950,2],['Damüls',47.282,9.892,2]];
+let nsLabG=null,_nsLabK='';
+function nsCmAt(lat,lon){
+  // inside the Swiss rectangle: the full model's cell, outside: the Alps grid
+  if(_nsV&&lat>laMin&&lat<laMax&&lon>loMin&&lon<loMax){const x=Math.floor((lon-loMin)/(loMax-loMin)*W),y=Math.floor((laMax-lat)/(laMax-laMin)*H);
+    const p=y*W+x;if(p>=0&&p<NP&&!inDomainEdge(p))return _nsV[p];}
+  const A=ALPS,V=alpsRender._V;if(!A||!V)return NaN;const B=A.bounds;
+  const x=Math.floor((lon-B[1])/(B[3]-B[1])*A.nx),y=Math.floor((B[2]-lat)/(B[2]-B[0])*A.ny);
+  if(x<0||y<0||x>=A.nx||y>=A.ny)return NaN;
+  // a 3x3 max: a resort sits on the snowy side of its coarse cell
+  let m=0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<A.nx&&yy<A.ny)m=Math.max(m,V[yy*A.nx+xx]);}return m;}
+function nsLabRefresh(){
+  const on=layer==='snow'&&typeof raster!=='undefined'&&map.hasLayer(raster)&&!(typeof is3d!=='undefined'&&is3d);
+  if(!nsLabG){nsLabG=L.layerGroup();map.on('zoomend',()=>{try{nsLabRefresh();}catch(e){}});}
+  if(!on){if(map.hasLayer(nsLabG))map.removeLayer(nsLabG);_nsLabK='';return;}
+  const z=map.getZoom(),tier=z>=9?2:1,k=a+'|'+b+'|'+tier+'|'+(ALPS?1:0);
+  if(!map.hasLayer(nsLabG))nsLabG.addTo(map);if(k===_nsLabK)return;_nsLabK=k;
+  nsLabG.clearLayers();
+  NS_PLACES.forEach(([n,la,lo,t])=>{if(t>tier)return;const v=nsCmAt(la,lo);if(!(v>=1))return;
+    const cm=Math.round(v),c=RGB[snowBand(v)]||[120,160,220],dark=(c[0]*.3+c[1]*.59+c[2]*.11)<150;
+    nsLabG.addLayer(L.marker([la,lo],{interactive:false,keyboard:false,
+      icon:L.divIcon({className:'ns-lab',iconSize:null,html:'<b style="background:rgb('+c[0]+','+c[1]+','+c[2]+');color:'+(dark?'#fff':'#0b1b2e')+'">'+cm+'</b><span>'+escapeHtml(n)+'</span>'})}));});}
 // ── Schneefallgrenze: the highest snowfall line of the window ─────────────
 // For every hour with precipitation the snowfall line sits where the air is
 // about +1 degC: the cell's temperature carried up or down its own height at
@@ -14965,7 +15123,7 @@ function legend(l){
 // -- built by reading the SAME markup legendFor() already produces (off-DOM,
 // never inserted) rather than hand-duplicating every layer's colour table a
 // second time, so it can never drift out of sync with the real legend.
-function miniLegendRender(l){
+function miniLegendRender(l){try{thrFloatSync();}catch(_){}
   const box=document.getElementById('miniLegend');if(!box)return;
   const sp=legSpec(l||layer);
   if(!sp){box.classList.remove('show');return;}
@@ -14986,9 +15144,8 @@ function miniLegendRender(l){
     if(sp.va&&!sp.noShare&&rows.length>7){const sh=vaViewShares();
       if(sh&&sh.tot>0){rows=rows.filter(r=>(sh.cnt[r.k]||0)/sh.tot>=0.01)
         .sort((x,y)=>(sh.cnt[y.k]||0)-(sh.cnt[x.k]||0)).slice(0,7)
-        .map(r=>Object.assign({},r,{s:Math.round((sh.cnt[r.k]||0)/sh.tot*100)+'%'}));}
-      else rows=rows.slice(0,7);
-      document.getElementById('mlUnit').textContent='Anteil';}
+        ;}
+      else rows=rows.slice(0,7);}
     const sw=legSwitchable(l||layer)&&rows.every(r=>r.k!=null),vis=sw?legVisSet(l||layer):null;
     h='<div class="ml-cls">'+rows.map(r=>sw
       ?'<button type="button" class="'+(vis.has(r.k)?'on':'off')+'" aria-pressed="'+vis.has(r.k)+'" aria-label="'+escapeHtml(r.n||r.s)+'" onclick="legToggle('+r.k+',event)"><i style="background:'+r.c+'"></i><span'+(String(r.s).length>7?' class="ml-long"':'')+'>'+escapeHtml(r.s)+'</span></button>'
@@ -15102,7 +15259,24 @@ function thrHTML(){const k=thrKey();if(!k)return '';const c=THR[k],x=thrVal[k];
     +'<input type="range" min="'+c.min+'" max="'+c.max+'" step="'+c.step+'" value="'+x+'" aria-label="'+escapeHtml(tr(c.lbl))+'" '
     +'oninput="thrSet(\''+k+'\',+this.value,true)" onchange="thrSet(\''+k+'\',+this.value)"></div>';}
 let _thrRaf=0;
+// The filter slider lives on the map, right above the time panel, while a
+// temperature or wind layer is shown: what it filters, the value it is set
+// to, and both ends of the scale are written next to it.
+function thrFloatSync(){let el=document.getElementById('thrFloat');const k=thrKey();
+  if(!k){if(el)el.hidden=true;document.body.classList.remove('thr-on');return;}
+  if(!el){el=document.createElement('div');el.id='thrFloat';(document.getElementById('mapWrap')||document.body).appendChild(el);}
+  const c=THR[k],x=thrVal[k],ic=k==='temp'?'<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/>':'<path d="M3 8h11a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h7"/>';
+  if(el.dataset.k!==k){el.dataset.k=k;
+    el.innerHTML='<div class="thr-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+ic+'</svg>'
+      +'<span>'+escapeHtml(tr(c.lbl))+'</span><b id="thrV"></b></div>'
+      +'<input type="range" min="'+c.min+'" max="'+c.max+'" step="'+c.step+'" aria-label="'+escapeHtml(tr(c.lbl))+'" '
+      +'oninput="thrSet(\''+k+'\',+this.value,true)" onchange="thrSet(\''+k+'\',+this.value)">'
+      +'<div class="thr-s"><span>'+c.min+' '+c.u+'</span><span>'+escapeHtml(tr('alle'))+'</span></div>';}
+  const inp=el.querySelector('input');if(inp&&+inp.value!==x)inp.value=x;
+  const v=document.getElementById('thrV');if(v)v.textContent=thrTxt(k);
+  el.classList.toggle('all',x>=c.all);el.hidden=false;document.body.classList.add('thr-on');}
 function thrSet(k,v,live){thrVal[k]=v;const e=document.getElementById('thrV');if(e)e.textContent=thrTxt(k);
+  {const f=document.getElementById('thrFloat');if(f)f.classList.toggle('all',v>=THR[k].all);}
   if(!live){try{localStorage.setItem('ssm_thr_'+k,String(v));}catch(x){}}
   if(_thrRaf)return;_thrRaf=requestAnimationFrame(()=>{_thrRaf=0;try{renderRaster();}catch(x){}try{miniLegendRender();}catch(x){}});}
 // the snow-quality views always show every class: a map with holes in it
@@ -15593,7 +15767,7 @@ function lyRender(){
     const subsHtml=((chips||many)&&pos>=0)?('<div class="ly-subs'+(chips?' ly-legsw'+(legRows()?'':' ly-legfix'):'')+'" id="lySubs" role="group" aria-label="'+(chips?'Klassen':'Unterebene')+'" '+
       'style="--notch:'+(((pos%LY_COLS)+0.5)/LY_COLS*100)+'%">'+
       (many?'<div class="ly-varrow">'+vars.map((v,n)=>'<button type="button" class="ly-sub'+(n===curVar?' on':'')+'" '+
-        'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join('')+'</div>':'')+thrHTML()+(chips||'')+'</div>'):'';
+        'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join('')+'</div>':'')+(chips||'')+'</div>'):'';
     return '<div class="ly-sec"><span class="lbl-micro">'+name+'</span>'+(rows.length?'<div class="ly-grid ly-g3">':'<div hidden>')+
       rows.map(([[g,k,item],n],p)=>{const hi=false;
         return '<button type="button" class="ly-tile'+(n===i?' on':'')+(hi?' ly-hi':'')+'" onclick="lyPick('+n+')"'+
@@ -16406,6 +16580,15 @@ addEventListener('keydown',e=>{
 });
 // --- Bottom panel: one height, measured so the map and the buttons clear it ---
 let panelRestore=null,panelCollapsed=false;
+// The time panel folds down to a small pill (time + chevron); remembered.
+function tlMiniSet(t){const e=document.getElementById('tlMiniT');if(e&&e.textContent!==t)e.textContent=t;}
+function tlFoldToggle(force){const bp=document.getElementById('bottomPanel');if(!bp)return;
+  const min=force!=null?!!force:!bp.classList.contains('tl-min');
+  bp.classList.toggle('tl-min',min);document.body.classList.toggle('tl-folded',min);
+  try{localStorage.setItem('sm_tl_min',min?'1':'0');}catch(_){}
+  const f=document.getElementById('tlFold');if(f)f.setAttribute('aria-expanded',min?'false':'true');
+  requestAnimationFrame(()=>{try{panelRestore&&panelRestore();}catch(_){}});}
+try{if(localStorage.getItem('sm_tl_min')==='1')requestAnimationFrame(()=>tlFoldToggle(true));}catch(_){}
 (function(){const bp=document.getElementById('bottomPanel');
   function updH(){document.documentElement.style.setProperty('--btm-h',bp.offsetHeight+'px');}
   function apply(){bp.style.height='';updH();
@@ -16722,7 +16905,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
      (layer==='snowpack'&&vaSec?'':kpi)+
    '</div>'+(function(){const nm=(function(){try{const n=tourNearPoint(lat,lon,1500,1);if(n.length)return 'bei '+(n[0].t.pname||n[0].t.name||'Skitour');}catch(e){}
        return lat.toFixed(3)+'°N '+lon.toFixed(3)+'°E';})();
-     return favBtnHTML('area',lat.toFixed(3)+','+lon.toFixed(3),nm,lat,lon,elevD,'insp-fav');})()
+     return favBtnHTML('area',lat.toFixed(3)+','+lon.toFixed(3),'Region '+nm,lat,lon,elevD,'insp-fav');})()
    +'<button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
    '<div class="insp-body">'+inspOrder({va:vaSec,prog:progSec,
      prof:profSec,
@@ -16751,8 +16934,10 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
 const MG_SNOW=[[0,.5,'#A99BB8'],[.5,1,'#3F63E0'],[1,2,'#2F9A4C'],[2,3,'#7ED957'],[3,99,'#E8E24A']];
 const MG_PX=7,MG_L=40,MG_R=14;
 let _mgScroll=null,_mgKey=null;
-function mgPanels(){return [{k:'snow',h:96,t:'Neuschnee'},{k:'temp',h:128,t:'Temperatur'},{k:'depth',h:74,t:'Schneehöhe'},
-  _clvData?{k:'cloud',h:66,t:'Bewölkung'}:null,{k:'sun',h:66,t:'Sonne'},{k:'wind',h:112,t:'Wind'}].filter(Boolean);}
+// the point card's charts: Neuschnee, Temperatur, Sonne, Wind (Schneehöhe
+// and Bewölkung were dropped -- the KPI tiles above carry the snow height)
+function mgPanels(){return [{k:'snow',h:96,t:'Neuschnee'},{k:'temp',h:128,t:'Temperatur'},
+  {k:'sun',h:66,t:'Sonne'},{k:'wind',h:112,t:'Wind'}];}
 function mgHTML(){const H=mgPanels().reduce((s,q)=>s+q.h+30,0)+20;
   return '<div class="insp-sec insp-mg"><div class="mg-leg"><span><i class="mg-sw"></i>Neuschnee cm/h</span><span><i class="tc-air"></i>Luft</span><span><i class="tc-srf"></i>Schneeoberfläche</span><span><i class="mg-win"></i>gewählter Zeitraum</span></div>'
     +'<div class="mg" style="height:'+H+'px"><div class="mg-sc" id="mgSc"><canvas id="mgCv"></canvas></div><canvas class="mg-ax" id="mgAx"></canvas></div>'
@@ -17231,6 +17416,14 @@ let _tilt3d=false;
   el.addEventListener('touchmove',e=>{if(y0==null||e.touches.length!==2||is3d)return;
     if(y0-mid(e.touches)>70&&Math.abs(dist(e.touches)-d0)<d0*.22){y0=null;_tilt3d=true;try{haptic(10);}catch(x){}init3D();}},{passive:true});
   el.addEventListener('touchend',()=>{y0=null;},{passive:true});})();
+// the highest model cell within r km of a point: the mountain the 3D view flies to
+function peak3dNear(lat,lon,rKm){let best=null;
+  try{const dy=(laMax-laMin)/H,dx=(loMax-loMin)/W,ry=Math.ceil(rKm/111/dy),rx=Math.ceil(rKm/(111*Math.cos(lat*Math.PI/180))/dx);
+    const x0=Math.floor((lon-loMin)/dx),y0=Math.floor((laMax-lat)/dy);
+    for(let y=Math.max(0,y0-ry);y<=Math.min(H-1,y0+ry);y++)for(let x=Math.max(0,x0-rx);x<=Math.min(W-1,x0+rx);x++){
+      const e=melevv(y*W+x);if(e===e&&(!best||e>best.e))best={e,lat:laMax-(y+.5)*dy,lon:loMin+(x+.5)*dx};}}catch(e){}
+  return best;}
+let _fly3d=false;
 function init3D(){
   if(!window.maplibregl){toast('3D wird geladen …','ok');ensureMaplibre(()=>init3D());return;}
   const wrap=document.getElementById('three-wrap');
@@ -17243,6 +17436,12 @@ function init3D(){
   const tx=document.getElementById('threeFabTxt');if(tx)tx.textContent='2D';
   const tf=document.getElementById('threeFab');if(tf){tf.title='Zurück zur 2D-Karte';tf.setAttribute('aria-label','Zurück zur 2D-Karte');}
   const lc=map.getCenter(),lz=map.getZoom();
+  // From the 3D button: a short flight in from outside -- start high and
+  // off to the north-west, then glide to the mountain nearest the centre
+  // and end on a 45 degree view. (The two-finger tilt keeps its own move.)
+  _fly3d=!_tilt3d&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+  try{if(!ovOn.skitourVec)ovToggle('skitourVec',true);}catch(e){}
+  const st3=_fly3d?{c:[Math.max(loMinW,lc.lng-1.2),Math.min(laMaxW,lc.lat+0.8)],z:Math.min(6.8,lz)}:{c:[lc.lng,lc.lat],z:lz};
   map3d=new maplibregl.Map({container:'map3d',
     style:{version:8,
       sources:{
@@ -17263,7 +17462,7 @@ function init3D(){
         {id:'slope-3d',type:'raster',source:'slope-src',layout:{visibility:ovOn.slope?'visible':'none'},paint:{'raster-opacity':0.5,'raster-fade-duration':0}},
         {id:'skitour-3d',type:'raster',source:'skitour-src',layout:{visibility:ovOn.skitour?'visible':'none'},paint:{'raster-opacity':0.9,'raster-fade-duration':0}}],
       terrain:{source:'terrain-dem',exaggeration:exag3d}},
-    center:[lc.lng,lc.lat],zoom:lz,pitch:_tilt3d?0:60,bearing:_tilt3d?0:-20,maxPitch:72,maxZoom:17.5,
+    center:st3.c,zoom:st3.z,pitch:_tilt3d||_fly3d?0:60,bearing:_tilt3d?0:_fly3d?0:-20,maxPitch:72,maxZoom:17.5,
     maxBounds:[[loMinW-0.1,laMinW-0.05],[loMaxW+0.1,laMaxW+0.05]],
     touchZoomRotate:true,touchPitch:true,dragRotate:true});
   map3d.addControl(new maplibregl.NavigationControl({visualizePitch:true,showCompass:true}),'top-left');
@@ -17273,7 +17472,18 @@ function init3D(){
   if(!isMobile)document.getElementById('keys3d').style.display='inline';
   map3d.on('load',()=>{try{sync3dLayer();}catch(e){}update3dOverlay();
     // from the two-finger gesture: the flat map tips over into 3D
-    if(_tilt3d){_tilt3d=false;map3d.easeTo({pitch:60,bearing:-15,duration:1100});}});
+    if(_tilt3d){_tilt3d=false;map3d.easeTo({pitch:60,bearing:-15,duration:1100});}
+    else fly3dIn();
+    try{tours3dSel();}catch(e){}});
+  function fly3dIn(){if(!_fly3d||!map3d)return;{_fly3d=false;const pk=peak3dNear(lc.lat,lc.lng,6)||{lat:lc.lat,lon:lc.lng};
+      // a selected tour wins over the mountain: fly to it
+      const tsel=(typeof tourIso!=='undefined'&&tourIso&&tourIso.coords)?tourIso:null;
+      if(tsel){const b=new maplibregl.LngLatBounds();tsel.coords.forEach(c=>b.extend([c[0],c[1]]));
+        const cam=map3d.cameraForBounds(b,{padding:{top:70,left:50,right:50,bottom:330},maxZoom:14.5})||{};
+        map3d.flyTo({center:cam.center||b.getCenter(),zoom:cam.zoom||13,pitch:45,bearing:-20,duration:3200,curve:1.5,essential:true});}
+      else map3d.flyTo({center:[pk.lon,pk.lat],zoom:Math.max(12.3,Math.min(13.5,lz+1)),pitch:45,bearing:-20,duration:3200,curve:1.5,essential:true});}}
+  // slow tiles must not keep the camera parked far out
+  if(_fly3d)setTimeout(fly3dIn,1200);
   map3d.on('moveend',sync3dTo2d);
   rot3dInstall(map3d);
   map3d.once('idle',()=>{try{tours3dSync();}catch(e){}});
@@ -17325,7 +17535,14 @@ function tours3dSync(){const m=map3d;if(!m||!is3d||!m.getStyle)return;
       const hits=ids.map(id=>tourList().find(t=>String(t.id)===id)).filter(Boolean);
       if(!hits.length)return;try{haptic(4);}catch(x){}
       if(hits.length>1)tourPickShow(hits);else tourOpen(hits[0],tsOpen());});}
-  ['tours-3d-casing','tours-3d-line','tours-3d-hit'].forEach(id=>{if(m.getLayer(id))m.setLayoutProperty(id,'visibility',vis);});}
+  ['tours-3d-casing','tours-3d-line','tours-3d-hit'].forEach(id=>{if(m.getLayer(id))m.setLayoutProperty(id,'visibility',vis);});
+  tours3dSel();}
+// the tour that is open (from the map, the search or the finder) stands out in 3D
+function tours3dSel(){const m=map3d;if(!m||!is3d||!m.getSource||!m.getSource('tours-3d'))return;
+  const id=(typeof tourIso!=='undefined'&&tourIso)?String(tourIso.id):'';
+  if(!m.getLayer('tours-3d-sel'))m.addLayer({id:'tours-3d-sel',type:'line',source:'tours-3d',filter:['==',['get','id'],id],
+    layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#e5233f','line-width':4.2,'line-opacity':1}});
+  else m.setFilter('tours-3d-sel',['==',['get','id'],id]);}
 function close3D(){
   if(map3d){const c=map3d.getCenter(),z=map3d.getZoom();map.setView([c.lat,c.lng],z,{animate:false});}
   is3d=false;if(map3d){map3d.remove();map3d=null;}
@@ -19601,7 +19818,8 @@ function favOf(kind,ref){return (favs||[]).find(f=>f.kind===kind&&String(f.ref)=
 function favBtnHTML(kind,ref,name,lat,lon,elev,cls){
   const k=_favArgs.push([kind,String(ref),name,lat,lon,elev])-1,on=!!favOf(kind,ref);
   return '<button type="button" class="fav-btn'+(cls?' '+cls:'')+(on?' on':'')+'" data-fav="'+k+'" aria-pressed="'+on+'" onclick="favTap('+k+')"'
-    +' title="'+(on?'Gemerkt – nochmals tippen zum Entfernen':'Merken – Push bei Neuschnee')+'" aria-label="Merken">'+FAV_STAR+'</button>';}
+    +' title="'+(kind==='area'?(on?'Region gemerkt – nochmals tippen zum Entfernen':'Region merken – Push, wenn im Umkreis von 6 km Neuschnee erwartet wird'):(on?'Gemerkt – nochmals tippen zum Entfernen':'Merken – Push bei Neuschnee'))+'" aria-label="'+(kind==='area'?'Region merken':'Merken')+'">'+FAV_STAR
+    +(kind==='area'?'<span class="fav-lbl">'+(on?'Region gemerkt':'Region merken')+'</span>':'')+'</button>';}
 async function favTap(k){const a=_favArgs[k];if(!a)return;
   if(!sb||!sbUser){authShow();toast('Zum Merken anmelden','info');return;}
   await favLoad();const [kind,ref,name,lat,lon,elev]=a,f=favOf(kind,ref);
@@ -19615,7 +19833,8 @@ async function favTap(k){const a=_favArgs[k];if(!a)return;
     favs.push(data);favNudge();}
   const on=!f;
   document.querySelectorAll('.fav-btn[data-fav]').forEach(b=>{const x=_favArgs[+b.dataset.fav];
-    if(x&&x[0]===kind&&x[1]===ref){b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);}});
+    if(x&&x[0]===kind&&x[1]===ref){b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);
+      const l=b.querySelector('.fav-lbl');if(l)l.textContent=on?'Region gemerkt':'Region merken';}});
   favSetRender();}
 async function favPushState(){
   if(_favPush!=null)return _favPush;
@@ -19624,7 +19843,7 @@ async function favPushState(){
   catch(e){_favPush=false;}
   return _favPush;}
 async function favNudge(){
-  toast((await favPushState())?'Gemerkt – Push, sobald 20 cm Neuschnee erwartet werden'
+  toast((await favPushState())?'Gemerkt – Push, sobald in der Region 20 cm Neuschnee erwartet werden'
     :'Gemerkt. Für den Neuschnee-Push: Einstellungen → Favoriten → Push einschalten','ok');}
 // the same steps as the profile's switch, from the favourites list
 async function favPushOn(){if(!isPro()){proSheet('push');return;}
@@ -19685,6 +19904,19 @@ const QS_TYPES=[
   {k:'duenn',l:'Sharky – steinig',c:QS_HATCH,q:null},
   // dry: no snow at all here (aper) -- as useful to know as powder
   {k:'aper',l:'Kein Schnee (aper)',c:'#b9a27c',q:null}];
+// a small white pictogram per snow type, drawn on the type's legend colour
+const QS_ICON={
+  pulver:'<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/><path d="M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/>',
+  kantig:'<path d="M12 4l2 3.5-2 3.5-2-3.5zM6 12l2-1.5L10 12l-2 1.5zM14 12l2-1.5 2 1.5-2 1.5zM12 13l2 3.5-2 3.5-2-3.5z"/>',
+  trieb:'<path d="M3 8h10a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h7"/>',
+  sulz:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/>',
+  nass:'<path d="M12 3.5s6 6.6 6 10.5a6 6 0 0 1-12 0c0-3.9 6-10.5 6-10.5z"/>',
+  kruste:'<path d="M3 9h18M3 13l3-2 3 2 3-2 3 2 3-2 3 2M3 18h18"/>',
+  hart:'<path d="M12 3l7 9-7 9-7-9z"/><path d="M5 12h14"/>',
+  abgeblasen:'<path d="M3 19l6-9 4 5 3-3 5 7z"/><path d="M14 4h5M12 7h8"/>',
+  duenn:'<path d="M3 19l4-6 3 3 4-7 7 10z"/><circle cx="8" cy="7" r="1.6"/>',
+  aper:'<path d="M12 20V10M12 14c-3 0-5-2-5-5 3 0 5 2 5 5zM12 12c0-3 2-5 5-5 0 3-2 5-5 5z"/><path d="M5 20h14"/>'};
+function qsIc(k,col,cls){return '<i class="qs-ic'+(cls?' '+cls:'')+'" style="background:'+col+'"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(QS_ICON[k]||'')+'</svg></i>';}
 // How it was, for the snow types that come in more than one state: one
 // slider each. t: the question, l: the full words, s: short tick labels,
 // c: the colour of each step; crust maps onto the full report's «Deckel»,
@@ -19733,13 +19965,13 @@ function qsOpen(){
     // snow type and its slider side by side
     +'<div class="qs-pair"><div class="qs-pair-l"><div class="qs-lbl">Schneeart</div>'
     +'<div class="qs-wheel-w"><div class="qs-wheel" id="qsWheel" data-nopull onscroll="qsWheelScroll()">'
-    +QS_TYPES.map((t,i)=>'<button type="button" class="qs-it'+(i===0?' on':'')+'" onclick="qsPick('+i+')"><i style="background:'+t.c+'"></i><span>'+escapeHtml(t.l)+'</span></button>').join('')
+    +QS_TYPES.map((t,i)=>'<button type="button" class="qs-it'+(i===0?' on':'')+'" onclick="qsPick('+i+')">'+qsIc(t.k,t.c)+'<span>'+escapeHtml(t.l)+'</span></button>').join('')
     +'</div><div class="qs-wheel-sel" aria-hidden="true"></div></div></div><div class="qs-pair-r">'
-    +'<div class="qs-dep" id="qsDep"><div class="qs-lbl">Tiefe <b id="qsDepV"></b></div>'
+    +'<div class="qs-dep" id="qsDep"><div class="qs-lbl"><span class="qs-lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v14M7 12l5 5 5-5M5 21h14"/></svg></span>Tiefe <b id="qsDepV"></b></div>'
     +'<input type="range" class="qs-range" id="qsRange" min="'+QS_CM_MIN+'" max="'+QS_CM_MAX+'" step="1" value="15" oninput="qsDepth(+this.value)" style="--qs-track:'+qsCmTrack()+'" aria-label="Tiefe">'
     +'<div class="qs-ticks qs-ticks-cm"><span>1</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span><span>70+</span></div></div>'
     // hard, crust, wet, old powder: how it was, on a slider
-    +'<div class="qs-qual" id="qsQual" hidden><div class="qs-lbl"><span id="qsQualT"></span> <b id="qsQualV"></b></div>'
+    +'<div class="qs-qual" id="qsQual" hidden><div class="qs-lbl"><span class="qs-lic" id="qsQualIc"></span><span id="qsQualT"></span> <b id="qsQualV"></b></div>'
     +'<input type="range" class="qs-range" id="qsQualR" min="0" max="2" step="0.05" value="1" oninput="qsQualSet(+this.value)" aria-label="Zustand">'
     +'<div class="qs-ticks" id="qsQualTk"></div></div>'
     +'<div class="qs-none" id="qsNone">Keine Menge – nur die Art zählt.</div></div></div>'
@@ -19843,9 +20075,10 @@ function qsSync(){if(!qs)return;document.querySelectorAll('#qsWheel .qs-it').for
 function qsQualSync(){if(!qs)return;const k=QS_TYPES[qs.type].k,Q=QS_QUAL[k],box=document.getElementById('qsQual');if(!box)return;
   box.hidden=!Q;if(!Q)return;const n=Q.l.length,i=qs.qual[k]!=null?qs.qual[k]:Math.floor((n-1)/2),r=document.getElementById('qsQualR');
   document.getElementById('qsQualT').textContent=Q.t;
+  {const ic=document.getElementById('qsQualIc');if(ic)ic.innerHTML=qsIc(k,QS_TYPES[qs.type].c,'sm');}
   const st=Q.c.map((c,j)=>c+' '+(j/n*100).toFixed(1)+'% '+((j+1)/n*100).toFixed(1)+'%').join(',');
   if(r){r.max=n-1;r.value=(qs.qualF&&qs.qualF[k]!=null)?qs.qualF[k]:i;r.style.setProperty('--qs-track','linear-gradient(90deg,'+st+')');r.style.setProperty('--qs-thumb',Q.c[i]);}
-  const tk=document.getElementById('qsQualTk');if(tk){tk.style.gridTemplateColumns='repeat('+n+',1fr)';tk.innerHTML=Q.s.map(x=>'<span>'+escapeHtml(x)+'</span>').join('');}
+  const tk=document.getElementById('qsQualTk');if(tk){tk.style.gridTemplateColumns='repeat('+n+',1fr)';tk.innerHTML=Q.s.map((x,j)=>'<span class="'+(qs.qualSet[k]&&j===i?'on':'')+'"><i style="background:'+Q.c[j]+'"></i>'+escapeHtml(x)+'</span>').join('');}
   const v=document.getElementById('qsQualV');if(v){v.textContent=qs.qualSet[k]?Q.l[i]:'– schieben';v.classList.toggle('unset',!qs.qualSet[k]);}}
 // continuous: the slider moves freely, the words follow the nearest step
 function qsQualSet(v){if(!qs)return;const k=QS_TYPES[qs.type].k,Q=QS_QUAL[k];if(!Q)return;
@@ -22306,12 +22539,14 @@ function feedOpenView(){const b=map.getBounds();feedViewB=[b.getSouth(),b.getWes
   navGo('feed');setTimeout(()=>{try{feedRegionsRender();feedTopRender();}catch(e){}feedRender();},0);}
 let _fhRaf=0;
 setInterval(()=>{const el=document.getElementById('feedHereBtn');if(el)feedHereSync();},450);
+var FEED_HERE_ZOOM=10;
 function feedHereSync(){if(_fhRaf)return;_fhRaf=requestAnimationFrame(()=>{_fhRaf=0;
   let el=document.getElementById('feedHereBtn');
   // only on the bare map: not over the layer panel, a sheet, a screen or a mode
   const bare=document.body.getAttribute('data-screen')!=='feed'&&!(typeof anyMenuOpen==='function'&&anyMenuOpen())
     &&!(typeof mapModeBusy==='function'&&mapModeBusy())&&!document.querySelector('.prof-modal[style*="flex"],.tour-sheet.open,.qs-sheet.open,#onb:not([hidden])');
-  const on=bare&&!!(typeof ovOn!=='undefined'&&ovOn.reports);
+  // only once zoomed in to a region: at the country view it is noise
+  const on=bare&&!!(typeof ovOn!=='undefined'&&ovOn.reports)&&map.getZoom()>=FEED_HERE_ZOOM;
   let n=0;if(on){try{const b=map.getBounds();n=_rptShown.filter(r=>!isBlocked(r.userId)&&b.contains([r.lat,r.lng])).length;}catch(e){}}
   if(!on||!n){if(el)el.hidden=true;return;}
   if(!el){el=document.createElement('button');el.id='feedHereBtn';el.type='button';el.onclick=feedOpenView;document.body.appendChild(el);}

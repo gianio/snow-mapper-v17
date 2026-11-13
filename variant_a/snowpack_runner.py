@@ -221,6 +221,30 @@ def _run_one(args):
     env["LD_LIBRARY_PATH"] = config.SNOWPACK_LIBS + ":" + env.get("LD_LIBRARY_PATH", "")
     p = subprocess.run([config.SNOWPACK_BIN, "-c", ini, "-e", end],
                        capture_output=True, text=True, env=env, cwd=os.path.dirname(ini))
+    # SOIL_FLUX (the autumn ground heat) made ~5% of the runs crash where
+    # 0.8% did before -- typically a thin pack melting out from below. A
+    # crashed run is retried once without it: a run with no ground heat is
+    # far better than no run (the app then interpolates over a hole and the
+    # state has to cold-start from the season start).
+    if p.returncode != 0:
+        try:
+            txt = open(ini).read()
+        except OSError:
+            txt = ""
+        if "SOIL_FLUX = TRUE" in txt:
+            alt = ini[:-4] + "_nogh.ini" if ini.endswith(".ini") else ini + ".nogh"
+            # a crashed run may have left a half-written profile behind
+            _ro = os.path.join(os.path.dirname(os.path.dirname(ini)), "runs",
+                               os.path.splitext(os.path.basename(ini))[0])
+            for _f in glob.glob(os.path.join(_ro, "*.pro")):
+                try:
+                    os.remove(_f)
+                except OSError:
+                    pass
+            with open(alt, "w") as f:
+                f.write(txt.replace("SOIL_FLUX = TRUE", "SOIL_FLUX = FALSE"))
+            p = subprocess.run([config.SNOWPACK_BIN, "-c", alt, "-e", end],
+                               capture_output=True, text=True, env=env, cwd=os.path.dirname(ini))
     # "Exited 0 having done nothing" is a real failure mode and it used to be
     # invisible: stderr was discarded whenever the return code was 0. In CI
     # that showed up as "SNOWPACK 8/8 (8 ok) in 0.1s" followed by "0 points

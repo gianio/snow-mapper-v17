@@ -906,6 +906,27 @@ def test_drift():
     check("phantom snow early in the season (+8 cm on 4 cm) is at least WATCH",
           thin["status"] in ("WATCH", "DRIFT"), f"{thin['status']} {thin['all'].get('reasons')}")
     from variant_a import snowpack_runner as SR
+    # band temperature: a valley cold pool may not turn rain into snow while it precipitates
+    hb = {"time": ["2026-11-10T00:00", "2026-11-10T01:00"], "temperature_2m": [3.0, 3.0],
+          "precipitation": [2.0, 0.0]}
+    btc = {"2026-11-10T00:00": (-2.0, 0.0), "2026-11-10T01:00": (-2.0, 0.0)}
+    lb = forcing._lapsed(hb, 0.0, band_t=btc)["temperature_2m"]
+    check("precipitating hour: band at most 1.5 K below the profile", abs(lb[0] - 1.5) < 1e-6, str(lb))
+    check("dry hour: the band's own (cold-pool) temperature is kept", abs(lb[1] + 2.0) < 1e-6, str(lb))
+    from variant_a import assim
+    A_runs = [{"id": f"w0_{z}", "wp": "w0", "elev": z, "slope": 0, "slope_c": 0, "aspect_k": -1}
+              for z in (1800, 2100, 2400)]
+    A_mets = ["total_hs_cm", "powder_depth_cm"]
+    A_res = {r["id"]: (np.array([[hs, pw], [hs + 10, pw + 10]], float), None)
+             for r, hs, pw in zip(A_runs, (6, 104, 26), (4, 50, 10))}
+    check("a lone band spike is caught", assim.mask_band_outliers(A_runs, A_res, A_mets) == {"w0_2100"})
+    rowsA = [{"wp": "w0", "elev": 2400, "last_model": 26, "last_meas": 1, "holdout": False},
+             {"wp": "w0", "elev": 2400, "last_model": 26, "last_meas": 26, "holdout": True}]
+    sA = assim.apply(rowsA, A_runs, A_res, A_mets)
+    v24 = A_res["w0_2400"][0]
+    check("IMIS excess removed at the station height, new snow kept on top",
+          v24[0, 0] == 1 and v24[1, 0] == 11 and v24[0, 1] <= v24[0, 0], str(v24.tolist()) + str(sA))
+    check("held-out stations do not correct", len(assim.offsets(rowsA)["w0"]) == 1)
     check("ground heat: ~12 W/m2 at the season start, ~2 in mid-winter",
           SR.ground_heat("2026-10-01") >= 11.5 and 1.9 <= SR.ground_heat("2027-01-20") <= 2.6
           and SR.ground_heat("2026-11-08") > SR.ground_heat("2026-12-15"))

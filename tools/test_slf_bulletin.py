@@ -111,5 +111,19 @@ if missing.exists():
 got = mod.fetch_bulletin(timeout=0.01, cache_path=missing)
 check("unreachable API returns None, does not raise", got is None, f"got {type(got)}")
 
+# the live API's GeoJSON (Nov 2026): one feature per bulletin, level as an EAWS word
+live = {"type": "FeatureCollection", "features": [{"type": "Feature",
+    "geometry": {"type": "MultiPolygon", "coordinates": [[[[7.123456, 46.0], [7.2, 46.0], [7.2, 46.1], [7.123456, 46.0]]]]},
+    "properties": {"bulletinID": "abc", "validTime": {"startTime": "2026-11-12T16:00:00Z", "endTime": "2026-11-13T16:00:00Z"},
+                   "regions": [{"regionID": "CH-4222", "name": "Zermatt"}, {"regionID": "CH-4223", "name": "Saas Fee"}],
+                   "dangerRatings": [{"mainValue": "moderate", "customData": {"CH": {"subdivision": "plus"}}}],
+                   "avalancheProblems": [{"problemType": "persistent_weak_layers", "elevation": {"lowerBound": 2400},
+                                          "aspects": ["N", "NE", "W"], "customData": {"CH": {"coreZoneText": "über 2400 m"}}}]}}]}
+lr = mod.parse_bulletin(live)
+check("live GeoJSON: one entry per bulletin with its outline", len(lr) == 1 and lr[0].get("geometry"))
+check("live GeoJSON: 'moderate' plus -> 2+", lr and lr[0]["danger"] == 2 and lr[0]["sub"] == "+", str(lr[:1]))
+check("live GeoJSON: core zone, problem in German, region names",
+      lr and lr[0]["elev_lo"] == 2400 and lr[0]["problems"] == ["Altschnee"] and lr[0]["regions"] == ["Zermatt", "Saas Fee"])
+
 print("\n" + ("SLF BULLETIN OK" if not fails else f"FAILED: {fails}"))
 sys.exit(1 if fails else 0)
