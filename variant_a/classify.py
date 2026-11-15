@@ -1062,7 +1062,7 @@ def refrozen_series(times, surface_lw, hours=15.0):
 POWDER_BOUNDS = [1, 5, 10, 15, 20, 30, 40, 50, 75, 100]
 POWDER_LABELS = ["none"] + [f"powder_{a}_{b}" for a, b in zip(POWDER_BOUNDS[:-1], POWDER_BOUNDS[1:])] + ["powder_gt_100"]
 POWDER_DE = ["–"] + [f"Pulver {a}–{b} cm" for a, b in zip(POWDER_BOUNDS[:-1], POWDER_BOUNDS[1:])] + ["Pulver > 100 cm"]
-_SLF_HEX = ["#66eef2", "#4fc3f2", "#3d8ef0", "#5a6fd6", "#9370d8", "#c45be0", "#e08c6c", "#f0a434", "#ee6b1e", "#e2382b"]
+_SLF_HEX = ["#93DFF0", "#62C8EE", "#3BA8E8", "#2A86DE", "#3563CF", "#5446BC", "#6631A3", "#741F86", "#761565", "#640C44"]
 POWDER_RGBA = {0: (0, 0, 0, 0), **{i + 1: (int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16), 250 if i < 2 else 235)
                                     for i, h in enumerate(_SLF_HEX)}}
 
