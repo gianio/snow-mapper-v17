@@ -7016,6 +7016,16 @@ body.desk #toastWrap{bottom:24px!important;left:auto!important;right:24px!import
 .ml-steps>i b{flex:1}
 .ml-steps>div{position:relative;width:30px}
 .ml-steps>div span{position:absolute;left:0;transform:translateY(50%);font:600 11px/1 var(--font);color:var(--md-on-surface);font-variant-numeric:tabular-nums}
+.ml-sub{margin:6px 0 3px;padding-top:6px;border-top:1px solid var(--bd);font:600 11px/1 var(--font);color:var(--md-on-surface-var);text-align:left}
+.ml-more{display:flex;flex-direction:column;gap:3px}
+.ml-more>div,.ml-more>button{display:flex!important;align-items:center;gap:5px;min-height:20px;padding:0!important;border:0;background:none;font:600 11px/1.1 var(--font)!important;color:var(--md-on-surface)!important;text-align:left;cursor:pointer}
+.ml-more i{width:12px;height:12px;border-radius:3px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.ml-more button.off{opacity:.4}
+.ml-more button.off span{text-decoration:line-through}
+.ml-steps+.ml-sub{margin-top:2px}
+#miniLegend:has(.ml-more){width:auto!important;max-width:none!important;padding-left:10px!important;padding-right:10px!important}
+#miniLegend:has(.ml-more) #mlName{max-width:none}
+.ml-more span{white-space:nowrap;overflow:visible!important}
 #mlUnit{text-transform:none!important;letter-spacing:0!important;font:600 11px/1.2 var(--font)!important;color:var(--md-on-surface-var)!important}
 
 /* ---- icons: one stroke weight across the chrome ---- */
@@ -7272,7 +7282,7 @@ body.desk #toastWrap{bottom:24px!important;left:auto!important;right:24px!import
   <small class="p-hint">Drehen &amp; kippen: <b>Strg</b> + Maus ziehen</small>
 </div><button id="btn3dClose">✕ 2D</button>
 <div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="30" style="width:100px;accent-color:var(--acc)"> Map <span id="mapOpacLbl">30%</span></label>
-<button id="btn3dExag">×1.5</button>
+<button id="btn3dExag" title="Überhöhung (1.0 = wahre Höhen)">×1.0</button>
 <select id="overlay3d" style="padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:16px;min-height:46px"><option value="none">Keine Ebene</option><option value="snow">Neuschnee</option><option value="temp">Temperatur</option><option value="wind">Wind</option><option value="depth">Schneehöhe</option><option value="powder">Powder</option></select>
 <span id="keys3d" style="font-size:12px;color:var(--mut);opacity:.7;padding:6px 10px;display:none">WASD/Pfeile: drehen · +/-: zoomen · R: zurücksetzen</span></div>
 </div>
@@ -15253,11 +15263,25 @@ function _renderRaster(){
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[200,140-(x*80|0),255-(x*200|0),235];}
       const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(thrHides('tsurf',v))return null;const col=tempCol(v);return[col[0],col[1],col[2],205];});}
   else if(layer=="skiable"){const ca2=a*NP,cb2=b*NP;setRaster(p=>{const slp=mslpv(p);if(slp>55)return[80,0,0,150];const snow=cum[cb2+p]-cum[ca2+p];if(snow<1)return null;const need=minSnowNeeded(p);const r=snow/Math.max(1,need);if(r>=1.5)return[100,220,100,190];if(r>=1.0)return[160,220,100,180];if(r>=.7)return[255,220,50,180];if(r>=.4)return[255,140,40,170];return[255,60,40,160];});}
-  else if(layer=="powder"){setRaster(p=>{const r=computePowder(p,a,b);if(!r.powdered)return null;
+  else if(layer=="powder"){const cb2=b*NP;setRaster(p=>{const r=computePowder(p,a,b);
+    if(!r.powdered){if(cum[cb2+p]<5)return null;const k=powderSurf(r);if(k==null)return null;const c=PD_SURF_COL[k];return[c[0],c[1],c[2],k===0?105:160];}
     const c=powderColLerp(r.newSnow);const alpha=r.quality==='reduced'?128:172;
     return[c[0]|0,c[1]|0,c[2]|0,alpha];});}
   else setRaster(_=>null);
 }
+// where it is not powder, what it is instead -- from the engine's own reasons,
+// in the colours of the Skiqualität layer so both maps read the same:
+// 2 crust (rain or melt-freeze), 7 wet, 6 sun-softened, 1 wind-pressed/hard,
+// 0 old snow (nothing new for days)
+const PD_SURF_COL={2:[214,108,98],7:[150,104,74],6:[226,170,72],1:[156,168,184],0:[196,203,212]};
+const PD_SURF_ROWS=[[2,'Kruste','Regen- oder Schmelzkruste'],[1,'Hart','vom Wind gepresst'],[6,'Sulz','von der Sonne aufgeweicht'],[7,'Nass','nasser Schnee am Nachmittag'],[0,'Altschnee','seit Tagen nichts Neues']];
+function powderSurf(r){const f=r.reason_flags||[];
+  if(f.includes('D1_rain')||f.includes('D2_freeze_thaw'))return 2;
+  if(f.includes('G2_wet_afternoon'))return 7;
+  if(f.includes('D3_solar_melt'))return 6;
+  if(f.includes('R3_wind_redistribution'))return 1;
+  if(f.includes('D0_no_recent_snow'))return 0;
+  return null;}
 function windStat(k){let mn=1e9,mx=-1e9,su=0,c=0,ss=0,sc=0;
   for(let t=a;t<b;t++){const v=SPD[t*P+k]/M.spd_mul,dd=WDIR[t*P+k]*M.dir_div*Math.PI/180;
     mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;ss+=Math.sin(dd);sc+=Math.cos(dd);}
@@ -15413,6 +15437,15 @@ function miniLegendRender(l){try{thrFloatSync();}catch(_){}
   }else if(sp.grad){
     h='<div class="ml-grad"><i style="background:'+sp.grad+'"></i><div>'
       +sp.ticks.map(t=>'<span>'+escapeHtml(String(t))+'</span>').join('')+'</div></div>';
+  }
+  if(sp.steps||sp.grad){
+    // Skiqualität: under the powder steps the other surfaces by name, each a
+    // switch like the rest of the legend
+    if(sp.more&&sp.more.length){const sw=legSwitchable(l||layer)&&!!legRows(l||layer),vis=sw?legVisSet(l||layer):null;
+      h+='<div class="ml-sub">'+escapeHtml(sp.moreT||'')+'</div><div class="ml-cls ml-more">'+sp.more.map(r=>sw
+        ?'<button type="button" class="'+(vis.has(r.k)?'on':'off')+'" aria-pressed="'+vis.has(r.k)+'" aria-label="'+escapeHtml(r.n||r.s)+'" onclick="legToggle('+r.k+',event)"><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.s)+'</span></button>'
+        :'<div><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.s)+'</span></div>').join('')+'</div>'
+        +(sw&&!legIsDefault(l||layer)?'<button type="button" class="ml-reset" onclick="legReset(event)" aria-label="Standard wiederherstellen">↺</button>':'');}
   }else{
     let rows=sp.rows;
     // A detailed view has ~20 classes: the card lists the ones in view,
@@ -15469,11 +15502,16 @@ function legSpec(l){
       else [[9,'40+'],[8,'30–40'],[5,leg[8]?'20–30':'20+'],[4,'10–20'],[3,'2–10']].forEach(([k,sv])=>{if(k===8&&!leg[8])return;
         rows.push({k,c:rgb(VA_PALETTE.ski6[k]),s:sv,n:'Pulver '+sv+' cm'});});
       // loose old snow (facets) only once the export knows the class
-      (leg[11]?[[11,'Altpulver']]:[]).concat([[6,'Sulz'],[7,'nass'],[2,'Kruste'],[1,'hart'],[10,'dünn']]).forEach(([k,sv],i)=>{
+      (leg[11]?[[11,'Altpulver']]:[]).concat([[2,'Kruste'],[1,'Hart'],[6,'Sulz'],[7,'Nass'],[10,'Dünn']]).forEach(([k,sv],i)=>{
         // thin cover: the powder colour with the red dashes the map draws
         rows.push({k,c:k===10?'repeating-linear-gradient(135deg,#d62828 0 1.4px,transparent 1.4px 4.5px),'+rgb(VA_PALETTE.ski6[k]):rgb(VA_PALETTE.ski6[k]),
           s:sv,n:(leg[k]&&leg[k][2])||VA_SKI6_DE[k]||sv,sep:!i});});
-      return {t:name,u:'Pulver cm',va:true,noShare:true,rows};}
+      // the card on the map: the powder depths as a stepped bar with a few
+      // numbers, then the other surfaces (crust, hard, wet ...) by name
+      const pw=rows.filter(r=>r.k>=100||[3,4,5,8,9].includes(r.k)),sf=rows.filter(r=>pw.indexOf(r)<0).map(r=>Object.assign({},r,{sep:false}));
+      const up=pw.slice().reverse(),ticks=[];
+      up.forEach((r,i)=>{const lo=parseInt(String(r.s),10);if(i>0&&[10,20,30,40].includes(lo))ticks.push([i,String(lo)]);});
+      return {t:name,u:'Pulver cm',va:true,noShare:true,rows,steps:{cols:up.map(r=>r.c),ticks},more:sf,moreT:'sonst'};}
     const rows=ORD.filter(k=>leg[k]&&leg[k][1]).map(k=>{const e=leg[k],nm=e[2]||String(e[0]).replace(/_/g,' ');
       return {k,c:rgb(e[1]),s:SH[k]||nm.split(/[\s/(]/)[0].slice(0,7),n:nm};});
     return {t:name,u:(vaKey==='ski6'||vaKey==='powder')?'Pulver cm':vaKey==='wind'?'Wind':'Klasse',va:true,rows};
@@ -15487,8 +15525,9 @@ function legSpec(l){
       rows.push({k:i,lo:DEPTH_BOUNDS[i],hi:top?Infinity:DEPTH_BOUNDS[i+1],c:SC[Math.min(i,SC.length-1)],s:DEPTH_BOUNDS[i]+(top?'+':'–'+DEPTH_BOUNDS[i+1]),
       n:DEPTH_BOUNDS[i]+(top?'+':'–'+DEPTH_BOUNDS[i+1])+' cm'});}
     return {t:'Schneehöhe',u:'cm',rows,steps:snowSteps()};}
-  if(l==='powder')return {t:'Powder',u:'cm',grad:'linear-gradient(0deg,rgb(93,181,255),rgb(10,71,209))',
-    ticks:[PD_STRONG_BLUE_CM+'+',PD_STRONG_BLUE_CM/2,0],long:'Neuschnee, der als Pulver liegen bleibt; Deckkraft = wie sicher'};
+  if(l==='powder')return {t:'Powder',u:'Pulver cm',grad:'linear-gradient(0deg,rgb(93,181,255),rgb(10,71,209))',
+    ticks:[PD_STRONG_BLUE_CM+'+',PD_STRONG_BLUE_CM/2,0],moreT:'sonst',
+    more:PD_SURF_ROWS.map(([k,sv,n])=>({k,c:'rgb('+PD_SURF_COL[k].join(',')+')',s:sv,n:sv+' – '+n})),long:'Neuschnee, der als Pulver liegen bleibt; Deckkraft = wie sicher'};
   if(l==='wind'){
     const wl=WIND_LVLS[windLvl][1];
     const W4=[[0,10,'<10','ruhig'],[10,25,'10–25','mässig'],[25,50,'25–50','stark – Schnee wird verfrachtet'],[50,Infinity,'50+','stürmisch']];
@@ -17647,7 +17686,7 @@ function miniMapTools(mapObj,wrapEl){if(!wrapEl||wrapEl.querySelector('.mm-tools
       ()=>toast('Standort nicht verfügbar.','err'),{enableHighAccuracy:true,timeout:8000});};
   wrapEl.appendChild(d);}
 // --- 3D Terrain Viewer (MapLibre GL) ---
-let map3d=null,is3d=false,exag3d=1.5;
+let map3d=null,is3d=false,exag3d=1.0;   // true scale: the DEM carries the real heights
 function make3dOverlay(mode){
   const oc=document.createElement('canvas');oc.width=W;oc.height=H;
   const ox=oc.getContext('2d'),oi=ox.createImageData(W,H),od=oi.data;
@@ -17854,7 +17893,7 @@ document.getElementById('mapOpac3d').oninput=function(){if(!map3d)return;const v
   document.getElementById('mapOpacLbl').textContent=this.value+'%';};
 document.getElementById('overlay3d').onchange=()=>update3dOverlay();
 // --- 3D Exaggeration ---
-const EXAG_VALS=[1.0,1.5,2.0,3.0];let exagIdx=1;
+const EXAG_VALS=[1.0,1.5,2.0];let exagIdx=0;
 document.getElementById('btn3dExag').onclick=()=>{
   exagIdx=(exagIdx+1)%EXAG_VALS.length;exag3d=EXAG_VALS[exagIdx];
   document.getElementById('btn3dExag').textContent='×'+exag3d;
