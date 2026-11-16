@@ -205,11 +205,9 @@ console.log('\ngrain pictograms');
   const html = vaProfileHTML(vaProfileAt(46.80, 9.83, 2400, 0));
   check('the profile legend shows pictogram and code together',
         /<svg class="va-gi"[\s\S]*?<\/svg>RG/.test(html));
-  // under it, the cover in skier's words: shares of its height, summing to ~100
-  const pcts = [...html.matchAll(/<b>(\d+) %<\/b>/g)].map(m => +m[1]);
-  check('the profile says what the cover is made of in shares', pcts.length >= 1, pcts.join('+'));
-  const sum = pcts.reduce((x, y) => x + y, 0);
-  check('the shares add up to the whole cover', sum >= 97 && sum <= 103, String(sum));
+  // the shares bar (40 % Pulver · 35 % Altpulver ...) was taken out of the
+  // point card on request: the profile itself carries the layers
+  check('no shares bar under the profile', !/class="va-mix"/.test(html));
   check('the grain codes are folded away', /<details class="va-grain-more">/.test(html));
 }
 
