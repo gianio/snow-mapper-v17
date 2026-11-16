@@ -7042,6 +7042,24 @@ body.desk #toastWrap{bottom:24px!important;left:auto!important;right:24px!import
 #tabBar button[aria-current=page] svg{background:linear-gradient(140deg,#D3E4FB,#C2DAFB)!important}
 .av-chip{background:var(--md-surface-c)!important}
 
+/* the timeline needs no play button */
+#tlPlayBtn{display:none!important}
+/* the side buttons: a slim column, not as wide as the legend under them */
+#mapFabs{align-items:flex-end!important}
+#mapFabs .mfab-grp{align-self:flex-end!important;width:auto!important;padding:3px!important}
+.mfab-grp .mfab{width:42px!important;height:44px!important}
+.mfab-grp .mfab svg{width:20px!important;height:20px!important}
+.mfab .fab-txt{font-size:14px!important}
+.mfab-grp .mfab+.mfab::before{left:8px!important;right:8px!important}
+/* navigation bar (phone): the label only under the chosen tab, a lower bar;
+   it slides away while the map is moved and comes back after */
+@media (max-width:899px){
+  :root{--nav-h:calc(env(safe-area-inset-bottom,0px) + 54px)!important}
+  #tabBar{height:calc(env(safe-area-inset-bottom,0px) + 54px)!important;transition:transform var(--md-dur-m) var(--md-ease)!important}
+  #tabBar button:not([aria-current=page]):not([aria-expanded=true])>span:not(.feed-dot):not(.tb-av){display:none!important}
+  #tabBar button{gap:2px!important}
+  body.nav-hide:not(.desk){--nav-h:0px!important}
+  body.nav-hide:not(.desk) #tabBar{transform:translateY(105%)!important}}
 /* Höhenmeter: the chosen range over the middle of the slider */
 .ts-dual2{margin-top:22px!important}
 .ts-gmid{position:absolute;top:-22px;transform:translateX(-50%);white-space:nowrap;padding:2px 10px;border-radius:var(--md-shape-full);
@@ -9788,6 +9806,13 @@ const osmTopo=new OsmTopo({pane:'osmPane',maxZoom:18,maxNativeZoom:17,keepBuffer
    className:'base-tiles osm-tiles',
    attribution:'Ausland: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, SRTM · <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)'}).addTo(map);
 map.on('zoom',updateBaseFade);
+// The navigation bar steps aside while the map is dragged (more map under
+// the thumb) and comes back a moment after it stops.
+(function(){let t=0;
+  const onMap=()=>!document.body.classList.contains('desk')&&!(document.body.dataset.screen&&document.body.dataset.screen!=='map');
+  map.on('dragstart',()=>{if(!onMap())return;clearTimeout(t);document.body.classList.add('nav-hide');});
+  map.on('moveend',()=>{clearTimeout(t);t=setTimeout(()=>document.body.classList.remove('nav-hide'),900);});
+  document.addEventListener('click',e=>{if(document.body.classList.contains('nav-hide')&&!e.target.closest('#map')){clearTimeout(t);document.body.classList.remove('nav-hide');}},true);})();
 // zoomend always restyles, so the final state is exact rather than within EPS.
 map.on('zoomend',function(){updateBaseFade(true);});
 updateBaseFade(true);
