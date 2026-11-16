@@ -1798,7 +1798,8 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
   // look at a valley -- and an offline one -- costs nothing.
   // Terrarium elevation tiles (device-side Variant A rendering) never change
   // either, and go through the same capped tile cache.
-  if(url.host==='wmts.geo.admin.ch'||/(^|\.)tile\.opentopomap\.org$/.test(url.host)||(url.host==='s3.amazonaws.com'&&url.pathname.indexOf('/elevation-tiles-prod/')===0)){
+  // (and swisstopo's 3D terrain mesh tiles, versioned by their path)
+  if(url.host==='wmts.geo.admin.ch'||(url.host==='3d.geo.admin.ch'&&/\.terrain$/.test(url.pathname))||/(^|\.)tile\.opentopomap\.org$/.test(url.host)||(url.host==='s3.amazonaws.com'&&url.pathname.indexOf('/elevation-tiles-prod/')===0)){
     e.respondWith(offMatch(r).then(o=>o||caches.open(T).then(c=>c.match(r).then(m=>m||fetch(r).then(resp=>{
       if(resp&&resp.status===200){const cp=resp.clone();
         c.put(r,cp).then(()=>tileTrim(c)).catch(()=>{});}
@@ -17856,8 +17857,81 @@ function peak3dNear(lat,lon,rKm){let best=null;
       const e=melevv(y*W+x);if(e===e&&(!best||e>best.e))best={e,lat:laMax-(y+.5)*dy,lon:loMin+(x+.5)*dx};}}catch(e){}
   return best;}
 let _fly3d=false;
+// ── swisstopo 3D terrain ────────────────────────────────────────────────────
+// swisstopo serves its terrain (swissALTI3D, Open Government Data -- free,
+// also commercially, with the source named) as Cesium quantized-mesh: a
+// triangle mesh per tile, in geographic (EPSG:4326, TMS) tiles. MapLibre wants
+// web-mercator height images, so each tile it asks for is drawn here: the
+// covering swisstopo tiles are decoded, their triangles rasterised into a
+// 256 px height grid, and that grid encoded as a terrarium PNG. Where swisstopo
+// has nothing (a 404, a gap) the global terrarium tile fills in.
+const SW3D_BASE='https://3d.geo.admin.ch/ch.swisstopo.terrain.3d/v1/';
+const AWS_DEM='https://s3.amazonaws.com/elevation-tiles-prod/terrarium/';
+let _sw3dTpl=null,_sw3dOk=false;
+function sw3dReady(){return _sw3dOk;}
+async function sw3dInit(){if(_sw3dOk||!window.maplibregl||!maplibregl.addProtocol)return _sw3dOk;
+  try{const r=await fetch(SW3D_BASE+'layer.json',{cache:'force-cache'});const j=await r.json();
+    _sw3dTpl=SW3D_BASE+String(j.tiles[0]).replace('{version}',j.version||'');
+    maplibregl.addProtocol('swtopo',(params,ac)=>sw3dTile(params.url,ac));_sw3dOk=true;}catch(e){console.warn('swisstopo terrain',e);}
+  return _sw3dOk;}
+const _sw3dCache=new Map();
+function sw3dGet(z,x,y,ac){const k=z+'/'+x+'/'+y;
+  if(_sw3dCache.has(k))return _sw3dCache.get(k);
+  const p=fetch(_sw3dTpl.replace('{z}',z).replace('{x}',x).replace('{y}',y),{signal:ac&&ac.signal})
+    .then(r=>r.ok?r.arrayBuffer():null).then(b=>b?sw3dDecode(b):null).catch(()=>null);
+  _sw3dCache.set(k,p);if(_sw3dCache.size>300)_sw3dCache.delete(_sw3dCache.keys().next().value);
+  return p;}
+// quantized-mesh-1.0: header, zig-zag delta coded u/v/height, high-water-mark indices
+function sw3dDecode(buf){const dv=new DataView(buf);let o=88;
+  const hMin=dv.getFloat32(24,true),hMax=dv.getFloat32(28,true),n=dv.getUint32(o,true);o+=4;
+  const u=new Uint16Array(n),v=new Uint16Array(n),h=new Float32Array(n);
+  const zz=x=>(x>>1)^(-(x&1));
+  let a=0;for(let i=0;i<n;i++){a+=zz(dv.getUint16(o+i*2,true));u[i]=a;}o+=n*2;
+  a=0;for(let i=0;i<n;i++){a+=zz(dv.getUint16(o+i*2,true));v[i]=a;}o+=n*2;
+  a=0;for(let i=0;i<n;i++){a+=zz(dv.getUint16(o+i*2,true));h[i]=hMin+a/32767*(hMax-hMin);}o+=n*2;
+  const big=n>65536;if(big){if(o%4)o+=4-o%4;}else if(o%2)o++;
+  const tc=dv.getUint32(o,true);o+=4;const idx=big?new Uint32Array(tc*3):new Uint16Array(tc*3);
+  let hi=0;for(let i=0;i<tc*3;i++){const c=big?dv.getUint32(o+i*4,true):dv.getUint16(o+i*2,true);idx[i]=hi-c;if(c===0)hi++;}
+  return {u,v,h,idx};}
+const _mercY=lat=>{const s=Math.sin(lat*Math.PI/180);return .5-Math.log((1+s)/(1-s))/(4*Math.PI);};
+async function sw3dTile(url,ac){
+  const m=url.match(/swtopo:\/\/(\d+)\/(\d+)\/(\d+)/),z=+m[1],x=+m[2],y=+m[3],N=256,n2=Math.pow(2,z);
+  const lon0=x/n2*360-180,lon1=(x+1)/n2*360-180;
+  const latOf=yy=>Math.atan(Math.sinh(Math.PI*(1-2*yy/n2)))*180/Math.PI,latN=latOf(y),latS=latOf(y+1);
+  const aws=async()=>{const r=await fetch(AWS_DEM+z+'/'+x+'/'+y+'.png',{signal:ac&&ac.signal});return r.arrayBuffer();};
+  // only Switzerland and its rim carry swisstopo's fine mesh; elsewhere the global tile
+  if(z<8||lat1Out(latS,latN,lon0,lon1))return {data:await aws()};
+  const L=Math.min(16,Math.max(0,z-1)),w=180/Math.pow(2,L);
+  const gx0=Math.floor((lon0+180)/w),gx1=Math.floor((lon1+180-1e-9)/w),gy0=Math.floor((latS+90)/w),gy1=Math.floor((latN+90-1e-9)/w);
+  const jobs=[];for(let gx=gx0;gx<=gx1;gx++)for(let gy=gy0;gy<=gy1;gy++)jobs.push(sw3dGet(L,gx,gy,ac).then(t=>t&&{t,gx,gy}));
+  const tiles=(await Promise.all(jobs)).filter(Boolean);
+  if(!tiles.length)return {data:await aws()};
+  const H=new Float32Array(N*N).fill(NaN),my0=_mercY(latN),my1=_mercY(latS);
+  for(const {t,gx,gy} of tiles){const W0=gx*w-180,S0=gy*w-90,nv=t.u.length,px=new Float32Array(nv),py=new Float32Array(nv);
+    for(let i=0;i<nv;i++){const lo=W0+t.u[i]/32767*w,la=S0+t.v[i]/32767*w;px[i]=(lo-lon0)/(lon1-lon0)*N;py[i]=(_mercY(la)-my0)/(my1-my0)*N;}
+    const I=t.idx;for(let k=0;k<I.length;k+=3){const a=I[k],b=I[k+1],c=I[k+2];
+      const ax=px[a],ay=py[a],bx=px[b],by=py[b],cx=px[c],cy=py[c];
+      const xa=Math.max(0,Math.floor(Math.min(ax,bx,cx))),xb=Math.min(N-1,Math.ceil(Math.max(ax,bx,cx)));
+      const ya=Math.max(0,Math.floor(Math.min(ay,by,cy))),yb=Math.min(N-1,Math.ceil(Math.max(ay,by,cy)));
+      if(xa>xb||ya>yb)continue;const d=(by-cy)*(ax-cx)+(cx-bx)*(ay-cy);if(!d)continue;
+      for(let yy=ya;yy<=yb;yy++){const qy=yy+.5;for(let xx=xa;xx<=xb;xx++){const qx=xx+.5;
+        const l1=((by-cy)*(qx-cx)+(cx-bx)*(qy-cy))/d,l2=((cy-ay)*(qx-cx)+(ax-cx)*(qy-cy))/d,l3=1-l1-l2;
+        if(l1<-1e-4||l2<-1e-4||l3<-1e-4)continue;H[yy*N+xx]=l1*t.h[a]+l2*t.h[b]+l3*t.h[c];}}}}
+  // gaps from the global tile
+  let gaps=0;for(let i=0;i<N*N;i++)if(H[i]!==H[i])gaps++;
+  if(gaps){try{const bmp=await createImageBitmap(new Blob([await aws()]));const c=new OffscreenCanvas(N,N),g=c.getContext('2d');g.drawImage(bmp,0,0,N,N);
+      const d=g.getImageData(0,0,N,N).data;for(let i=0;i<N*N;i++)if(H[i]!==H[i])H[i]=d[i*4]*256+d[i*4+1]+d[i*4+2]/256-32768;}
+    catch(e){for(let i=0;i<N*N;i++)if(H[i]!==H[i])H[i]=0;}}
+  const c=new OffscreenCanvas(N,N),g=c.getContext('2d'),img=g.createImageData(N,N),D=img.data;
+  for(let i=0;i<N*N;i++){const v=Math.max(0,H[i]+32768);D[i*4]=Math.floor(v/256);D[i*4+1]=Math.floor(v)%256;D[i*4+2]=Math.floor((v%1)*256);D[i*4+3]=255;}
+  g.putImageData(img,0,0);const blob=await c.convertToBlob({type:'image/png'});
+  return {data:await blob.arrayBuffer()};}
+// a web-mercator tile wholly outside Switzerland and its rim
+function lat1Out(latS,latN,lon0,lon1){return latN<45.6||latS>48.0||lon1<5.7||lon0>10.8;}
 function init3D(){
   if(!window.maplibregl){toast('3D wird geladen …','ok');ensureMaplibre(()=>init3D());return;}
+  // the swisstopo terrain once, before the first 3D map is built
+  if(!_sw3dOk&&!init3D._swTried){init3D._swTried=true;sw3dInit().then(()=>init3D());return;}
   const wrap=document.getElementById('three-wrap');
   // in the map's own pane, right above the 2D map and below its buttons,
   // legend, timeline and the tab bar -- everything stays where it is
@@ -17884,7 +17958,10 @@ function init3D(){
         // The relief mesh needs far less than the pictures draped on it.
         'swisstopo':{type:'raster',tiles:[swissTile(BASE_TILE)],tileSize:256,maxzoom:17,attribution:BASE_ATTR},
         'hillshade-tiles':{type:'raster',tiles:[swissTile('ch.swisstopo.swissalti3d-reliefschattierung_monodirektional','png')],tileSize:256,maxzoom:16},
-        'terrain-dem':{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',maxzoom:13},
+        // swisstopo's 3D terrain (swissALTI3D), turned into terrarium tiles on
+        // the device -- see sw3dProtocol(); the global tiles fill in abroad
+        'terrain-dem':{type:'raster-dem',tiles:[sw3dReady()?'swtopo://{z}/{x}/{y}':'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',maxzoom:14,
+          attribution:'Gelände © swisstopo'},
         'slope-src':{type:'raster',tiles:[swissTile('ch.swisstopo.hangneigung-ueber_30','png')],tileSize:256,minzoom:8,maxzoom:16},
         'skitour-src':{type:'raster',tiles:[swissTile('ch.swisstopo-karto.skitouren','png')],tileSize:256,minzoom:8,maxzoom:16}},
       layers:[
