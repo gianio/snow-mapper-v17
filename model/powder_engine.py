@@ -53,6 +53,12 @@ PD_WET_PM_DROP_S_C = 6.0       # I3: ab hier S-Expositionen raus
 PD_PERSIST_CHECK_H = 72        # I4: Kalt-Persistenz-Pruefung (h)
 PD_PERSIST_WARM_C = 0.5        # I4: "warm" ab dieser Temperatur
 PD_PERSIST_WARM_SHARE = 0.35   # I4: >35% warme Stunden -> kein alter Powder
+# D4: warme Luft ohne Sonne naesst die Oberflaeche auch (Warmluft, Bewoelkung):
+# Gradstunden ueber +0.5 degC seit dem letzten Schneefall (max. 48 h)
+PD_WARM_BASE_C = 0.5
+PD_WARM_DH_DESTROY = 6.0       # ab hier kein Pulver mehr (nass bzw. Kruste)
+PD_WARM_DH_DEGRADE = 2.0       # ab hier gesetzt / reduziert
+PD_WARM_LOOKBACK_H = 48
 
 _QCEN = {"N": 0.0, "E": 90.0, "S": 180.0, "W": 270.0}
 _ALL = ["N", "E", "S", "W"]
@@ -83,6 +89,7 @@ class PowderResult:
     valid_aspects: list = field(default_factory=list)
     reason_flags: list = field(default_factory=list)
     quality: str = "stable"
+    warm_dh: float = 0.0
 
 
 def compute_powder(
@@ -167,6 +174,14 @@ def compute_powder(
         res.reason_flags.append("D2_freeze_thaw")
         return res
 
+    # D4: warme Luft seit dem letzten Schneefall
+    w0 = max(last_snow_glob + 1, tb - PD_WARM_LOOKBACK_H, 0)
+    warm_dh = sum(max(0.0, temp_c[t] - PD_WARM_BASE_C) for t in range(w0, tb))
+    res.warm_dh = warm_dh
+    if warm_dh >= PD_WARM_DH_DESTROY:
+        res.reason_flags.append("D4_warm_wet" if temp_c[tb - 1] > 0 else "D4_warm_refrozen")
+        return res
+
     tmax = max(temp_c[ta:tb])
 
     # D3: Solareintrag (I2: kalte Schneedecke vertraegt mehr)
@@ -222,7 +237,7 @@ def compute_powder(
     if not valid:
         return res
 
-    if ftc >= PD_FT_DEGRADE or aged:
+    if ftc >= PD_FT_DEGRADE or aged or warm_dh >= PD_WARM_DH_DEGRADE:
         res.quality = "reduced"
     res.powdered = True
     return res

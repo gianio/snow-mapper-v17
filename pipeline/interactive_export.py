@@ -9378,6 +9378,7 @@ const PD_WET_PM_DROP_S_C=6;       // I3: ab hier S raus
 const PD_PERSIST_CHECK_H=72;      // I4: Kalt-Persistenz alter Powder
 const PD_PERSIST_WARM_C=0.5;      // I4
 const PD_PERSIST_WARM_SHARE=0.35; // I4
+const PD_WARM_BASE_C=0.5,PD_WARM_DH_DESTROY=6,PD_WARM_DH_DEGRADE=2,PD_WARM_LOOKBACK_H=48; // D4: warme Luft
 const precv=(t,p)=>PREC[t*NP+p]/M.prec_mul;
 const maspv=p=>MASPECT[p]*M.dir_div;
 const mslpv=p=>MSLOPE[p];
@@ -9427,6 +9428,11 @@ function computePowder(p,ta,tb){
   for(let t=lastSnow+1;t<tb;t++){const b2=tv(t,p)<0;if(b2!==bel){ftc+=0.5;bel=b2;}}
   ftc=Math.floor(ftc);
   if(ftc>PD_FT_DESTROY){res.reason_flags.push('D2_freeze_thaw');return res;}
+  // D4: warme Luft seit dem letzten Schneefall naesst die Oberflaeche auch
+  // ohne Sonne (Warmluft, Bewoelkung): nass, oder wieder gefroren = Kruste
+  let warmDh=0;for(let t=Math.max(lastSnowG+1,tb-PD_WARM_LOOKBACK_H,0);t<tb;t++){const v=tv(t,p)-PD_WARM_BASE_C;if(v>0)warmDh+=v;}
+  res.warmDh=warmDh;
+  if(warmDh>=PD_WARM_DH_DESTROY){res.reason_flags.push(tv(tb-1,p)>0?'D4_warm_wet':'D4_warm_refrozen');return res;}
   // D3: Solar melt (I2: kalte Decke vertraegt mehr Sonne)
   const doy=bandDoy();if(doy!==radDoy){radCS=computeRad(doy);radDoy=doy;}
   const rp=main2rad[p];const solar=rp>=0?radCS[rp]:0;
@@ -9462,7 +9468,7 @@ function computePowder(p,ta,tb){
   res.valid_aspects=[...valid];
   if(!valid.has(quad))return res;
   // Degradation
-  if(ftc>=PD_FT_DEGRADE||aged)res.quality='reduced';
+  if(ftc>=PD_FT_DEGRADE||aged||warmDh>=PD_WARM_DH_DEGRADE)res.quality='reduced';
   res.powdered=true;return res;
 }
 // colour ramps by stops [x, '#hex'], linear in between
@@ -15698,7 +15704,8 @@ const PD_SURF_COL={2:[214,108,98],8:[84,120,156],7:[150,104,74],6:[226,170,72],1
 const PD_SURF_ROWS=[[8,'Eingeregnet','vom Regen durchnässt'],[2,'Kruste','Schmelzkruste (aufgetaut und wieder gefroren)'],[1,'Hart','vom Wind gepresst'],[6,'Sulz','von der Sonne aufgeweicht'],[7,'Nass','nasser Schnee am Nachmittag'],[0,'Altschnee','seit Tagen nichts Neues']];
 function powderSurf(r){const f=r.reason_flags||[];
   if(f.includes('D1_rain'))return 8;
-  if(f.includes('D2_freeze_thaw'))return 2;
+  if(f.includes('D2_freeze_thaw')||f.includes('D4_warm_refrozen'))return 2;
+  if(f.includes('D4_warm_wet'))return 7;
   if(f.includes('G2_wet_afternoon'))return 7;
   if(f.includes('D3_solar_melt'))return 6;
   if(f.includes('R3_wind_redistribution'))return 1;
