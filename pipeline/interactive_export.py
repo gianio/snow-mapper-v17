@@ -6701,13 +6701,25 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
 #tlMini svg{width:16px;height:16px;color:var(--accent)}#tlMini svg.up{width:12px;height:12px;color:var(--mut)}
 #bottomPanel.tl-min{padding:0!important;left:50%!important;right:auto!important;transform:translateX(-50%);width:auto!important;border-radius:18px!important}
 #bottomPanel.tl-min #btmMain,#bottomPanel.tl-min #tlFold,#bottomPanel.tl-min #layerBar{display:none!important}
-#bottomPanel.tl-min #tlMini{display:flex}
+#bottomPanel.tl-min #tlMini{display:none}
+/* the default, minimal time control: one row of chips (-3d … Jetzt … +3d) */
+#tlChipsW{display:none;align-items:center;gap:2px;padding:5px 4px 5px 6px}
+#bottomPanel.tl-min #tlChipsW{display:flex}
+#tlChips{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 8px,#000 calc(100% - 8px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 8px,#000 calc(100% - 8px),transparent 100%);padding:0 4px}
+#tlChips::-webkit-scrollbar{display:none}
+#tlChips button{flex:none;height:32px;padding:0 11px;border:0;border-radius:16px;background:transparent;color:var(--fg2,var(--fg));font:600 13px/1 var(--font);letter-spacing:.01em;font-variant-numeric:tabular-nums;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
+#tlChips button.now{color:var(--fg);font-weight:700}
+#tlChips button.on{background:var(--accent);color:#fff;box-shadow:0 1px 3px rgba(10,40,90,.25)}
+#tlChips button.cust{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);font-weight:700;box-shadow:none}
+#tlChips i.sep{flex:none;width:1px;align-self:stretch;margin:7px 2px;background:var(--hair)}
+#tlChipsOpen{flex:none;width:30px;height:32px;border:0;background:none;color:var(--mut);display:grid;place-items:center;cursor:pointer;border-radius:16px}
+#tlChipsOpen svg{width:15px;height:15px}
 @media (max-width:899px){
   body:not(.desk) #bottomPanel{left:10px!important;right:10px!important;bottom:calc(env(safe-area-inset-bottom,0px) + 10px)!important;
     border-radius:20px!important;border:0!important;padding-top:10px!important;padding-bottom:6px!important;
     box-shadow:0 8px 26px rgba(18,21,26,.14)!important}
   body.nav-vis:not(.desk) #bottomPanel{bottom:calc(var(--nav-h) + 8px)!important;padding-bottom:6px!important}
-  body:not(.desk) #bottomPanel.tl-min{left:50%!important;right:auto!important}
+  body:not(.desk) #bottomPanel.tl-min{left:10px!important;right:10px!important;transform:none;width:auto!important;padding-top:0!important;padding-bottom:0!important;border-radius:22px!important}
   body.nav-vis:not(.desk) #mapFabs{bottom:calc(var(--nav-h) + var(--btm-h,120px) + 20px)!important}
   /* the tab bar: 60 % see-through, only the icons stay solid */
   #tabBar,:root[data-theme="light"] #tabBar,:root.and-wv[data-theme="light"] #tabBar{background:rgba(255,255,255,.4)!important;
@@ -7098,6 +7110,120 @@ body.ly-none .ly-tile.on{background:var(--card)!important;color:var(--fg)!import
 
 /* ---- icons: one stroke weight across the chrome ---- */
 .set-rows svg,.ab-ic svg,#rvFab svg,#infoFab svg,.ly-tile svg,.rail-btn svg,.prof-item svg,#actPlusW .ap-in button svg{stroke-width:1.75}
+
+/* =====================================================================
+   v2 polish (Nov 2026) — comes last on purpose.
+   ===================================================================== */
+/* side rail: slim, like the profile button (40 px, hairline icons) */
+#mapFabs .mfab-grp{padding:2px!important;gap:0!important;border-radius:20px!important;background:color-mix(in srgb,var(--card) 82%,transparent)!important;-webkit-backdrop-filter:blur(12px) saturate(150%);backdrop-filter:blur(12px) saturate(150%);box-shadow:0 2px 10px rgba(18,21,26,.12)!important}
+#mapFabs .mfab-grp .mfab{width:38px!important;height:38px!important;border-radius:19px!important}
+#mapFabs .mfab-grp .mfab svg{width:18px!important;height:18px!important;stroke-width:1.6!important}
+#mapFabs .mfab-grp .mfab .fab-txt{font:600 12.5px/1 var(--font)!important;letter-spacing:0}
+#mapFabs .mfab-grp .mfab+.mfab::before{left:9px!important;right:9px!important}
+/* the side legend: colour scale only; the class list lives behind (i) */
+#miniLegend .ml-sub,#miniLegend .ml-more,#miniLegend .ml-reset{display:none!important}
+#miniLegend:has(.ml-more){width:60px!important;padding-left:5px!important;padding-right:5px!important}
+/* avalanche danger legend, shown while the SLF layer is on */
+#avLegend{position:absolute;z-index:1000;left:14px;top:calc(env(safe-area-inset-top,0px) + 54px);display:none;align-items:center;gap:8px;padding:6px 10px 6px 12px;border-radius:var(--md-shape-lg,16px);
+  background:color-mix(in srgb,var(--card) 88%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 2px 10px rgba(18,21,26,.14);color:var(--md-on-surface);text-decoration:none}
+body.av-on #avLegend{display:flex}
+body.insp-open #avLegend,body.draw-on #avLegend,body.trk-open #avLegend,body.plan-on #avLegend{display:none!important}
+#avLegend b{font:500 12px/1.2 var(--font);letter-spacing:.01em;color:var(--md-on-surface-var)}
+#avLegend span{display:flex;gap:3px}
+#avLegend i{width:20px;height:20px;border-radius:5px;display:grid;place-items:center;font:700 11px/1 var(--font);font-style:normal;color:#1d1d1d;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+#avLegend i.d{color:#fff}
+/* point card: a bit taller on a phone */
+@media (max-width:700px){body .insp-panel{max-height:min(600px,calc(var(--app-h,100dvh) - var(--bar-h,44px) - 110px))!important}}
+/* Material 3 type in the point card: Title Large head, Title Small section heads, Label chips */
+.insp-panel .insp-t>b{font:500 20px/1.25 var(--font)!important;letter-spacing:0!important;color:var(--md-on-surface)!important}
+.insp-panel .insp-sec>h4,.insp-panel .insp-kpis>div>span{font:500 14px/1.3 var(--font)!important;letter-spacing:.01em!important;text-transform:none!important;color:var(--md-on-surface-var)!important}
+.insp-panel .insp-chip{font:500 13px/1 var(--font)!important;letter-spacing:.01em;border-radius:var(--md-shape-sm,8px)!important}
+.insp-panel .insp-sec{border-color:var(--md-outline-var)!important}
+.insp-panel .insp-kpis>*{border-radius:var(--md-shape-md,12px)!important}
+
+/* Schnellmeldung: snow type above its slider (full width each), compact «Wann» */
+.qs-pair{flex-direction:column!important;gap:12px!important}
+.qs-pair-l{flex:none!important}
+.qs-pair-l .qs-wheel-w{width:100%!important;height:132px!important;flex:none!important}
+.qs-pair-r .qs-ticks-cm span:nth-child(even){visibility:visible!important}
+.qs-when{gap:8px!important;margin:0 0 10px!important;flex-wrap:wrap}
+.qs-whenseg{display:flex;gap:6px}
+.qs-whenseg button{height:30px;padding:0 12px;border-radius:var(--md-shape-sm,8px);border:1px solid var(--md-outline-var,var(--hair));background:transparent;color:var(--md-on-surface-var);font:500 13px/1 var(--font);cursor:pointer;font-variant-numeric:tabular-nums;white-space:nowrap}
+.qs-whenseg button.on{background:var(--md-secondary-container);border-color:transparent;color:var(--md-on-secondary-container);font-weight:600}
+.qs-whenseg button.on::before{content:'✓';margin-right:5px}
+.qs-when input#qsWhen{flex:1 1 100%!important;height:34px!important;font:500 13px var(--font)!important;padding:0 8px!important;border-radius:var(--md-shape-sm,8px)!important}
+.qs-when input#qsWhen[hidden]{display:none!important}
+/* favourites: a star in the rail, and a sheet that lines them up to compare */
+#favFab .n{position:absolute;top:3px;right:3px;min-width:14px;height:14px;padding:0 3px;border-radius:7px;background:var(--md-primary);color:#fff;font:700 9px/14px var(--font);text-align:center}
+#favFab .n:empty{display:none}
+.fc-sheet{position:fixed;inset:0;z-index:3300;display:flex;align-items:flex-end;justify-content:center;background:var(--md-scrim,rgba(0,0,0,.32))}
+.fc-sheet[hidden]{display:none}
+.fc-in{width:100%;max-width:560px;max-height:82dvh;overflow:auto;background:var(--md-surface,#fff);border-radius:var(--md-shape-xl,28px) var(--md-shape-xl,28px) 0 0;padding:8px 16px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 30px rgba(10,30,60,.2)}
+.fc-grab{width:32px;height:4px;border-radius:2px;background:var(--md-outline-var);margin:6px auto 10px}
+.fc-hd{display:flex;align-items:center;gap:8px}
+.fc-hd h2{flex:1;margin:0;font:400 22px/1.27 var(--font);color:var(--md-on-surface)}
+.fc-hd button{border:0;background:none;color:var(--md-primary);font:500 14px var(--font);padding:8px 10px;border-radius:20px;cursor:pointer}
+.fc-hd .fc-x{width:40px;height:40px;color:var(--md-on-surface-var);font-size:20px}
+.fc-sub{margin:2px 0 12px;font:400 14px/1.4 var(--font);color:var(--md-on-surface-var)}
+.fc-seg{display:flex;border:1px solid var(--md-outline);border-radius:20px;overflow:hidden;margin-bottom:12px}
+.fc-seg button{flex:1;height:36px;border:0;background:transparent;color:var(--md-on-surface);font:500 13px var(--font);cursor:pointer}
+.fc-seg button+button{border-left:1px solid var(--md-outline)}
+.fc-seg button.on{background:var(--md-secondary-container);color:var(--md-on-secondary-container)}
+.fc-row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;width:100%;text-align:left;padding:12px;margin:0 0 8px;border:0;border-radius:var(--md-shape-md,12px);background:var(--md-surface-low);color:var(--md-on-surface);cursor:pointer}
+.fc-row b{font:500 15px/1.3 var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc-row small{font:400 12px/1.3 var(--font);color:var(--md-on-surface-var)}
+.fc-row .v{grid-row:1/3;grid-column:2;text-align:right;font:500 22px/1 var(--font);color:var(--md-primary);font-variant-numeric:tabular-nums}
+.fc-row .v small{display:block;margin-top:3px}
+.fc-row .bar{grid-column:1/3;height:6px;border-radius:3px;background:var(--md-surface-highest);overflow:hidden;margin-top:6px}
+.fc-row .bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#7FC4FF,#1D5FD6)}
+.fc-row.best{outline:2px solid var(--md-primary);outline-offset:-2px}
+.fc-empty{padding:18px 6px;text-align:center;font:400 14px/1.5 var(--font);color:var(--md-on-surface-var)}
+.insp-panel .insp-kpis>div>em{font:400 12px/1.3 var(--font)!important;font-style:normal!important;color:var(--md-on-surface-var)!important}
+.insp-panel .insp-kpis>div>b{font-weight:500!important}
+
+/* ── Tour planen: the map full screen, points tapped on it ── */
+body.plan-on #ctrlRail,body.plan-on #mapFabs,body.plan-on #bottomPanel,body.plan-on #miniLegend,body.plan-on #mapQr,body.plan-on #mapDraw,
+body.plan-on #rvFab,body.plan-on #infoFab,body.plan-on #mapAcc,body.plan-on #brandMark,body.plan-on #searchWrap,body.plan-on #tabBar{display:none!important}
+#planBar{position:fixed;z-index:3100;left:10px;right:10px;top:calc(env(safe-area-inset-top,0px) + 8px);display:flex;flex-direction:column;gap:6px;pointer-events:none}
+#planBar[hidden],#planCard[hidden]{display:none!important}
+.pl-top{pointer-events:auto;display:flex;align-items:center;gap:6px;height:48px;padding:0 6px;border-radius:24px;background:color-mix(in srgb,var(--md-surface,#fff) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 2px 12px rgba(18,21,26,.16)}
+.pl-top b{flex:1;font:500 17px/1 var(--font);color:var(--md-on-surface);padding-left:2px}
+.pl-top button{height:36px;min-width:36px;padding:0 12px;border:0;border-radius:18px;background:transparent;color:var(--md-primary);font:500 14px var(--font);cursor:pointer}
+.pl-top .pl-x{padding:0;color:var(--md-on-surface-var);font-size:22px;line-height:1}
+.pl-hint{pointer-events:none;align-self:center;padding:7px 14px;border-radius:16px;background:var(--md-inverse-surface,#2E3135);color:var(--md-inverse-on-surface,#fff);font:500 13px/1.3 var(--font);box-shadow:0 2px 8px rgba(0,0,0,.2);transition:opacity .2s}
+.pl-hint:empty{opacity:0}
+#planCard{position:fixed;z-index:3100;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);max-width:560px;margin:0 auto;padding:12px 14px 12px;border-radius:var(--md-shape-xl,28px);
+  background:color-mix(in srgb,var(--md-surface,#fff) 94%,transparent);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:0 8px 30px rgba(18,21,26,.22);max-height:62dvh;overflow:auto}
+.pl-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center}
+.pl-stats div{display:flex;flex-direction:column;gap:3px}
+.pl-stats b{font:500 17px/1.1 var(--font);color:var(--md-on-surface);font-variant-numeric:tabular-nums}
+.pl-stats small{font:400 11.5px/1.2 var(--font);color:var(--md-on-surface-var)}
+.pl-prof{margin:10px 0 2px}
+.pl-prof svg{display:block;width:100%;height:74px}
+.pl-key{display:flex;flex-wrap:wrap;gap:4px 10px;margin:4px 0 2px;font:400 11px/1.2 var(--font);color:var(--md-on-surface-var)}
+.pl-key i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.pl-acts{display:flex;gap:8px;margin-top:10px}
+.pl-acts button{flex:1;height:44px;border-radius:22px;border:1px solid var(--md-outline);background:transparent;color:var(--md-primary);font:500 14px var(--font);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.pl-acts button:disabled{opacity:.38}
+.pl-acts button svg{width:18px;height:18px}
+.pl-acts .pl-end{background:var(--md-primary);border-color:var(--md-primary);color:var(--md-on-primary,#fff)}
+.pl-name{width:100%;height:48px;box-sizing:border-box;margin:10px 0 0;padding:0 14px;border:1px solid var(--md-outline);border-radius:var(--md-shape-xs,4px);background:transparent;color:var(--md-on-surface);font:400 16px var(--font)}
+.pl-h{margin:2px 0 8px;font:500 16px/1.3 var(--font);color:var(--md-on-surface)}
+.pl-li{display:flex;align-items:center;gap:8px;padding:10px 4px;border-bottom:1px solid var(--md-outline-var)}
+.pl-li>button:first-child{flex:1;text-align:left;border:0;background:none;padding:0;color:var(--md-on-surface);cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.pl-li b{font:500 15px/1.3 var(--font)}
+.pl-li small{font:400 12px/1.3 var(--font);color:var(--md-on-surface-var)}
+.pl-li .pl-del{width:36px;height:36px;border:0;border-radius:18px;background:none;color:var(--md-on-surface-var);font-size:20px;cursor:pointer}
+.pl-empty{padding:14px 4px;font:400 14px/1.5 var(--font);color:var(--md-on-surface-var)}
+.pl-pt{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--md-primary,#0B63B5);box-shadow:0 1px 4px rgba(0,0,0,.35);box-sizing:border-box}
+.pl-pt.s{width:26px;height:26px;background:#1E8E3E;border-color:#fff;color:#fff;font:700 12px/20px var(--font);text-align:center}
+.pl-pt.e{width:26px;height:26px;background:#C5221F;border-color:#fff;color:#fff;font:700 12px/20px var(--font);text-align:center}
+/* recorder: top speed and descent speed in the summary */
+.trk-sum.spd{grid-template-columns:repeat(2,1fr)!important;margin-top:6px}
+.leg-info .li-sub{margin:12px 0 6px;padding-top:10px;border-top:1px solid var(--md-outline-var);font:500 14px/1.3 var(--font);color:var(--md-on-surface-var)}
+/* favourite / compare: always labelled, never a bare star */
+.insp-fav{border-radius:var(--md-shape-full,999px)!important}
+.insp-fav.on{background:var(--md-secondary-container)!important;color:var(--md-on-secondary-container)!important}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -7127,7 +7253,7 @@ body.ly-none .ly-tile.on{background:var(--card)!important;color:var(--fg)!import
 <div id="wcv" class="wcv" hidden role="dialog" aria-label="Webcams"><div class="wcv-top"><button class="wcv-x" onclick="wcvClose()" aria-label="Schliessen">×</button><b>Webcams</b>
 <div class="wcv-seg" role="tablist"><button data-m="fav" onclick="wcvMode('fav')">Favoriten</button><button data-m="tv" onclick="wcvMode('tv')">Webcam-TV</button><button data-m="near" onclick="wcvMode('near')">In der Nähe</button></div></div>
 <div class="wcv-body" id="wcvBody"></div></div>
-<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it rs-one" onclick="repSheetToggle(false);qsOpen()"><i style="--rc:linear-gradient(150deg,#8FD9FF,#2F8FDB)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg></i><span><b>Schnellmeldung</b><small>Schneeart, Tiefe, Standort – in Sekunden</small></span></button><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:linear-gradient(150deg,#6FB4F0,#3F8AD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg></i><span><b>Powder melden</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:linear-gradient(150deg,#4A86C8,#2D5A8C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button></div></div>
+<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it rs-one" onclick="repSheetToggle(false);qsOpen()"><i style="--rc:linear-gradient(150deg,#8FD9FF,#2F8FDB)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg></i><span><b>Schnellmeldung</b><small>Schneeart, Tiefe, Standort – in Sekunden</small></span></button><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:linear-gradient(150deg,#6FB4F0,#3F8AD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg></i><span><b>Powder melden</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:linear-gradient(150deg,#4A86C8,#2D5A8C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button><button class="rs-it" onclick="repSheetToggle(false);planOpen()"><i style="--rc:linear-gradient(150deg,#55C27F,#1E8E3E)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="6" r="2.2"/><path d="M7 17c4-1 2-6 6-7s3-2 4-2.5"/><path d="M15 15l4 4M19 15l-4 4" stroke-width="1.6"/></svg></i><span><b>Tour planen</b><small>Eigene Route zeichnen – Höhe, Steilheit, Zeit</small></span></button></div></div>
 <nav id="tabBar" aria-label="Navigation">
   <button data-tab="map" onclick="navGo('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg><span>Karte</span></button>
   <button data-tab="tours" id="tourFab" onclick="navGo('tours')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/></svg><span>Touren</span></button>
@@ -7215,6 +7341,7 @@ body.ly-none .ly-tile.on{background:var(--card)!important;color:var(--fg)!import
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
+    <button class="mfab" id="favFab" onclick="favCmpOpen()" title="Favoriten vergleichen" aria-label="Favoriten vergleichen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></svg><span class="n" id="favFabN"></span></button>
     <button class="mfab" id="threeFab" onclick="document.getElementById('btn3dFloat').click()" title="3D-Ansicht" aria-label="3D-Ansicht"><b class="fab-txt" id="threeFabTxt">3D</b></button>
   </div>
 <div id="miniLegend" role="button" tabindex="0" aria-label="Legende – Details" onclick="legInfoToggle(event)">
@@ -7237,6 +7364,7 @@ body.ly-none .ly-tile.on{background:var(--card)!important;color:var(--fg)!import
   </div>
   <button type="button" id="tlFold" onclick="tlFoldToggle()" aria-label="Zeitleiste einklappen" title="Zeitleiste ein-/ausklappen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
   <button type="button" id="tlMini" onclick="tlPresetsToggle(event,null,'tlMini')" aria-label="Zeitraum wählen oder Zeitleiste öffnen" aria-haspopup="menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><b id="tlMiniT">Zeit</b><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
+  <div id="tlChipsW"><div id="tlChips" role="toolbar" aria-label="Zeitpunkt wählen"></div><button type="button" id="tlChipsOpen" onclick="tlFoldToggle(false)" aria-label="Zeitleiste aufklappen" title="Zeitleiste aufklappen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button></div>
   <div id="btmMain">
     <div id="tlDetail">
       <button class="tl-corner tl-corner-l tl-play" id="tlPlayBtn" hidden onclick="tlPlayToggle()" aria-label="Animation abspielen"><svg viewBox="0 0 24 24"><path class="pl" d="M8 5.5v13l11-6.5z"/><path class="pa" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>
@@ -7322,6 +7450,9 @@ body.ly-none .ly-tile.on{background:var(--card)!important;color:var(--fg)!import
 </div>
 <button id="legendBtn" title="Legende" aria-label="Legende"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg></button><div class="legend" id="legend"></div>
 <div id="legInfo" class="leg-info" role="dialog" aria-label="Legende"></div>
+<div id="planBar" hidden><div class="pl-top"><button type="button" class="pl-x" onclick="planClose()" aria-label="Schliessen">×</button><b>Tour planen</b><button type="button" onclick="planListOpen()">Meine Pläne</button></div><div class="pl-hint" id="planHint"></div></div>
+<div id="planCard" hidden role="region" aria-label="Geplante Tour"></div>
+<a id="avLegend" href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation/" target="_blank" rel="noopener" aria-label="Lawinengefahr – Legende, Bulletin öffnen"><b>Lawinengefahr</b><span><i style="background:#CCFF66" title="1 gering">1</i><i style="background:#FFFF00" title="2 mässig">2</i><i style="background:#FF9900" title="3 erheblich">3</i><i class="d" style="background:#FF0000" title="4 gross">4</i><i class="d" style="background:#800000" title="5 sehr gross">5</i></span></a>
 </section>
 <!-- Melden: a sheet, not a screen. The two ways in live on the plus. -->
 <div class="set-sheet" id="rpSheet" onclick="if(event.target===this)rpClose()">
@@ -8094,7 +8225,29 @@ const I18N_DICT={
 "Ich habe verstanden, dass dies experimentelle Daten sind und kein Lawinenbulletin ersetzt.":["I understand that this is experimental data and does not replace an avalanche bulletin.","J'ai compris qu'il s'agit de données expérimentales qui ne remplacent pas un bulletin d'avalanches.","Ho capito che si tratta di dati sperimentali che non sostituiscono un bollettino valanghe."],
 "In der Nähe":["Nearby","À proximité","Nelle vicinanze"],
 "Ja":["Yes","Oui","Sì"],
-"Jetzt":["Now","Maintenant","Adesso"],
+"Jetzt":["Now","Maintenant","Adesso"],"Bis morgen":["Till tomorrow","Jusqu'à demain","Fino a domani"],
+"Tour planen":["Plan a tour","Planifier une course","Pianifica gita"],
+"Meine Pläne":["My plans","Mes plans","I miei piani"],
+"Eigene Route zeichnen – Höhe, Steilheit, Zeit":["Draw your own route – height, steepness, time","Dessine ton itinéraire – altitude, pente, temps","Disegna il tuo percorso – quota, pendenza, tempo"],
+"Ende":["Finish","Terminer","Fine"],
+"Zeit (SAC)":["Time (SAC)","Temps (CAS)","Tempo (CAS)"],
+"Plan speichern":["Save plan","Enregistrer le plan","Salva piano"],
+"Weiter zeichnen":["Keep drawing","Continuer à dessiner","Continua a disegnare"],
+"Neuer Plan":["New plan","Nouveau plan","Nuovo piano"],
+"Plan gespeichert":["Plan saved","Plan enregistré","Piano salvato"],
+"Tippe auf die Karte: Start setzen":["Tap the map to set the start","Touche la carte pour placer le départ","Tocca la mappa per il punto di partenza"],
+"Weiter tippen: nächster Punkt":["Keep tapping: next point","Continue : point suivant","Continua: punto successivo"],
+"Weiter tippen · Punkte ziehen zum Verschieben":["Keep tapping · drag points to move them","Continue · glisse les points pour les déplacer","Continua · trascina i punti per spostarli"],
+"Noch keine Pläne. Tippe Punkte auf die Karte und dann auf «Ende».":["No plans yet. Tap points on the map, then «Finish».","Pas encore de plans. Touche des points sur la carte, puis «Terminer».","Nessun piano. Tocca dei punti sulla mappa, poi «Fine»."],
+"Favoriten vergleichen":["Compare favourites","Comparer les favoris","Confronta preferiti"],
+"Verwalten":["Manage","Gérer","Gestisci"],
+"Früher …":["Earlier …","Plus tôt …","Prima …"],
+"Max. Tempo":["Top speed","Vitesse max.","Velocità max."],
+"Ø Abfahrt":["Ø descent","Ø descente","Ø discesa"],
+"Präzis":["Precise","Précis","Preciso"],
+"cm neu":["cm new","cm frais","cm nuovi"],
+"unter 30°":["below 30°","moins de 30°","sotto 30°"],
+"über 40°":["over 40°","plus de 40°","oltre 40°"],"Zeitpunkt wählen":["Choose time","Choisir le moment","Scegli il momento"],
 "Karte":["Map","Carte","Mappa"],
 "Karte & Ebenen":["Map & layers","Carte & couches","Mappa & livelli"],
 "Karte & Prognosen funktionieren ohne Konto — du brauchst es nur zum Melden, für den Feed und dein Profil.":["Map & forecasts work without an account — you only need one to report, for the feed and your profile.","La carte et les prévisions fonctionnent sans compte — il n'est nécessaire que pour signaler, le fil et ton profil.","Mappa e previsioni funzionano senza account — serve solo per segnalare, per il feed e il profilo."],
@@ -9810,7 +9963,8 @@ map.on('zoom',updateBaseFade);
 // the thumb) and comes back a moment after it stops.
 (function(){let t=0;
   const onMap=()=>!document.body.classList.contains('desk')&&!(document.body.dataset.screen&&document.body.dataset.screen!=='map');
-  map.on('dragstart',()=>{if(!onMap())return;clearTimeout(t);document.body.classList.add('nav-hide');});
+  // (it used to slide away on every drag; now only a tap on the map — the point card — takes the screen)
+  void onMap;
   map.on('moveend',()=>{clearTimeout(t);t=setTimeout(()=>document.body.classList.remove('nav-hide'),900);});
   document.addEventListener('click',e=>{if(document.body.classList.contains('nav-hide')&&!e.target.closest('#map')){clearTimeout(t);document.body.classList.remove('nav-hide');}},true);})();
 // zoomend always restyles, so the final state is exact rather than within EPS.
@@ -9935,6 +10089,7 @@ function ovToggle(k,auto){
   if((k==='myacts'||k==='reports')&&!ovOn[k])trkShownClear();
   if(k==='skiareas'){try{localStorage.setItem('ssm_skiareas',ovOn[k]?'1':'0');}catch(e){}}
   if(k==='snowline'){try{localStorage.setItem('ssm_snowline',ovOn[k]?'1':'0');}catch(e){}if(ovOn[k])snowlineRefresh();}
+  if(k==='avalanche')document.body.classList.toggle('av-on',!!ovOn[k]);
   if(k==='webcams'&&!auto){_wcAuto=false;try{localStorage.setItem('ssm_webcams',ovOn[k]?'1':'0');}catch(e){}}
   if(k==='skitourVec'){if(ovOn[k])tourRecolor();else tourClose();}
   if(k==='variantA'&&ovOn[k])vaRefresh();
@@ -12566,13 +12721,14 @@ const TRK_WEB=false;
 function trkEnabled(){try{return TRK_WEB||!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());}catch(e){return TRK_WEB;}}
 try{if(!trkEnabled())document.body.classList.add('no-trk');}catch(e){}
 const TRK_ACC={
+  auto:{label:'Präzis',sub:'1 s in der Abfahrt, sparsam im Aufstieg · misst das Tempo',minDt:1000,minD:2,maxAcc:25,hiAcc:true,auto:true},
   hi:{label:'Hoch',sub:'jede Sekunde · genaueste Spur, mehr Akku',minDt:1000,minD:3,maxAcc:30,hiAcc:true},
   std:{label:'Normal',sub:'alle 5 s · empfohlen',minDt:5000,minD:8,maxAcc:40,hiAcc:true},
   eco:{label:'Akku sparen',sub:'alle 15 s · gröbere Spur',minDt:15000,minD:20,maxAcc:80,hiAcc:false}};
 const TRK_TYPES=[['skitour','Skitour'],['splitboard','Splitboard'],['freeski','Freeride Ski'],['freesnowboard','Freeride Snowboard'],['skimo','Skimo']];
 const TRK_SNOW=['Pulver','Windgepresst','Bruchharsch','Sulz','Nass','Hart'];
 // GPS accuracy as one pill in the header: tap cycles low -> medium -> high
-const TRK_ACC_ORDER=['eco','std','hi'],TRK_ACC_SHORT={eco:'Niedrig',std:'Mittel',hi:'Hoch'};
+const TRK_ACC_ORDER=['eco','std','auto','hi'],TRK_ACC_SHORT={eco:'Niedrig',std:'Mittel',auto:'Präzis',hi:'Hoch'};
 const _TI=p=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
 const TRK_TYPE_IC={
  skitour:_TI('<path d="M3 20l6-9 3 4 2-3 4 6"/><path d="M14 4l2.5 2.5L19 4"/><path d="M16.5 6.5V11"/>'),
@@ -12614,8 +12770,8 @@ let trkRec=null,trkWatch=null,trkNative=null,trkLock=null,trkTick=0,trkView='set
 const trkPrefs={acc:'std',type:'skitour'};
 try{Object.assign(trkPrefs,JSON.parse(localStorage.getItem('ssm_trk_prefs')||'{}'));}catch(e){}
 // «Mittel» is the default for everyone (once; a later choice is kept)
-if(trkPrefs.v!==2){trkPrefs.acc='std';trkPrefs.v=2;try{localStorage.setItem('ssm_trk_prefs',JSON.stringify(trkPrefs));}catch(e){}}
-if(!TRK_ACC[trkPrefs.acc])trkPrefs.acc='std';
+if(trkPrefs.v!==3){trkPrefs.acc='auto';trkPrefs.v=3;try{localStorage.setItem('ssm_trk_prefs',JSON.stringify(trkPrefs));}catch(e){}}
+if(!TRK_ACC[trkPrefs.acc])trkPrefs.acc='auto';
 if(!TRK_TYPES.some(x=>x[0]===trkPrefs.type))trkPrefs.type='skitour';
 
 // -- storage ------------------------------------------------------------------
@@ -12656,6 +12812,19 @@ function trkStats(segs,movingMs){
   return {dist,up:Math.round(up),down:Math.round(down),maxA:maxA>-1e9?Math.round(maxA):null,minA:minA<1e9?Math.round(minA):null,
     moving:movingMs||0,n};
 }
+
+// speeds along a track: Doppler speed from the GPS where it came with the fix,
+// else distance over >=3 s. The top speed must hold for two samples in a row
+// (one wild fix is not a top speed); «Ø Abfahrt» = moving downhill only.
+function trkSpeedStats(segs){let vmax=0,dD=0,tD=0;
+  (segs||[]).forEach(s=>{let prev=0;
+    for(let i=1;i<s.length;i++){const p=s[i];let k=i-1;while(k>0&&p[0]-s[k][0]<3000)k--;
+      const q=s[k],dt=(p[0]-q[0])/1000;let v=p[5]!=null?p[5]:(dt>0?trkHav(q,p)/dt:0);
+      if(!(v>=0)||v>45)v=0;
+      const m=Math.min(v,prev);if(m>vmax)vmax=m;prev=v;
+      const a=s[i-1],dt1=(p[0]-a[0])/1000;
+      if(dt1>0&&dt1<20&&p[3]!=null&&a[3]!=null&&a[3]-p[3]>0.3&&v>2){dD+=trkHav(a,p);tD+=dt1;}}});
+  return {vmax:Math.round(vmax*3.6),vdown:tD>20?Math.round(dD/tD*3.6):null};}
 function trkMoving(r){return (r.movingMs||0)+(r.paused||!r.resumedAt?0:Date.now()-r.resumedAt);}
 function trkFmtT(ms){const s=Math.max(0,Math.floor(ms/1000)),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
   return (h?h+':':'')+String(m).padStart(h?2:1,'0')+':'+String(x).padStart(2,'0');}
@@ -12686,11 +12855,20 @@ function gpsCoarseCheck(acc){if(!(acc>0))return;
   if(acc<300){_gpsCoarseN=0;return;}
   if(++_gpsCoarseN===4)toastOnce('gpscoarse','Position nur auf ±'+Math.round(acc)+' m: «Genauer Standort» ist aus – Einstellungen › Datenschutz › Ortungsdienste › Safari-Websites (bzw. Snowmapper) › Genauer Standort');}
 function trkOnPos(p){
-  const c=p.coords,pt=[p.timestamp||Date.now(),+c.latitude.toFixed(6),+c.longitude.toFixed(6),
+  const c=p.coords,sp=c.speed!=null&&isFinite(c.speed)&&c.speed>=0?Math.round(c.speed*10)/10:null,
+    pt=[p.timestamp||Date.now(),+c.latitude.toFixed(6),+c.longitude.toFixed(6),
     c.altitude!=null&&isFinite(c.altitude)?Math.round(c.altitude*10)/10:null,Math.round(c.accuracy||999)];
+  if(sp!=null)pt[5]=sp;
   trkFix=pt;gpsCoarseCheck(pt[4]);
   if(trkRec&&!trkRec.paused){const P=TRK_ACC[trkRec.acc]||TRK_ACC.std,seg=trkRec.segs[trkRec.segs.length-1],last=seg[seg.length-1];
-    if(pt[4]<=P.maxAcc&&(!last||(pt[0]-last[0]>=P.minDt&&trkHav(last,pt)>=P.minD))){
+    // «Präzis»: every second while it goes fast (the descent, for the speed),
+    // every few seconds on the climb, rarely while standing; a fix that
+    // implies more than 160 km/h is a jump, not skiing
+    let mDt=P.minDt,mD=P.minD;
+    if(P.auto&&last){const dt=(pt[0]-last[0])/1000,v=sp!=null?sp:(dt>0?trkHav(last,pt)/dt:0);
+      if(dt>0&&trkHav(last,pt)/dt>45){mDt=1e12;}
+      else if(v>=2.5){mDt=1000;mD=2;}else if(v>=0.6){mDt=4000;mD=5;}else{mDt=30000;mD=4;}}
+    if(pt[4]<=P.maxAcc&&(!last||(pt[0]-last[0]>=mDt&&trkHav(last,pt)>=mD))){
       seg.push(pt);if(trkLine)trkLine.addLatLng([pt[1],pt[2]]);
       if(seg.length%5===0||Date.now()-_trkSavedAt>10000)trkSaveRec();}}
   // a coarse fix right after good ones does not move the dot (it jumped)
@@ -12710,8 +12888,8 @@ try{map.on('dragstart',trkUnfollow);map.getContainer().addEventListener('touchst
 function trkGpsStart(hi){
   trkGpsStop();
   const BG=typeof _capPlugin==='function'?_capPlugin('BackgroundGeolocation'):null;
-  if(BG&&trkRec){try{BG.addWatcher({backgroundMessage:'Aktivität wird aufgezeichnet',backgroundTitle:'Snowmapper',requestPermissions:true,stale:false,distanceFilter:3},
-      (loc,err)=>{if(loc)trkOnPos({timestamp:loc.time||Date.now(),coords:{latitude:loc.latitude,longitude:loc.longitude,altitude:loc.altitude,accuracy:loc.accuracy}});})
+  if(BG&&trkRec){try{BG.addWatcher({backgroundMessage:'Aktivität wird aufgezeichnet',backgroundTitle:'Snowmapper',requestPermissions:true,stale:false,distanceFilter:(TRK_ACC[trkRec.acc]||{}).minD||3},
+      (loc,err)=>{if(loc)trkOnPos({timestamp:loc.time||Date.now(),coords:{latitude:loc.latitude,longitude:loc.longitude,altitude:loc.altitude,accuracy:loc.accuracy,speed:loc.speed}});})
       .then(id=>{trkNative=id;});return;}catch(e){}}
   if(!navigator.geolocation){toast('GPS nicht verfügbar','err');return;}
   let fails=0;
@@ -12889,7 +13067,7 @@ function trkFinish(){if(!trkRec)return;
   if(!trkRec.paused)trkPause();trkMotion(false);
   const segs=trkRec.segs.filter(s=>s.length);
   clearInterval(trkTick);trkTick=0;
-  const st=trkStats(segs,trkRec.movingMs);
+  const st=Object.assign(trkStats(segs,trkRec.movingMs),trkSpeedStats(segs));
   trkDraft={id:trkRec.id,type:trkRec.type,acc:trkRec.acc,start:trkRec.start,end:Date.now(),segs,stats:st,
     name:trkRec.guide?trkRec.guide.name:trkDefaultName(trkRec.type,trkRec.start),guide:trkRec.guide||null,desc:'',snow:null,depth:0,stars:0,photos:[],postedId:null,snowPts:[],sel:null,tracks:null,rough:trkRec.rough||null};
   trkView='save';trkRender();
@@ -13141,7 +13319,8 @@ function trkPaint(){
   set('trkT',trkFmtT(trkMoving(trkRec)));set('trkD',(st.dist/1000).toFixed(2));set('trkUp',String(st.up));
   set('trkAlt',trkFix&&trkFix[3]!=null?String(Math.round(trkFix[3])):'–');
   const seg=trkRec.segs[trkRec.segs.length-1],n=seg.length;
-  let v=0;if(n>1&&!trkRec.paused&&Date.now()-seg[n-1][0]<20000){let k=n-1;while(k>0&&seg[n-1][0]-seg[k-1][0]<=30000)k--;const a=seg[k],b=seg[n-1];const dt=(b[0]-a[0])/1000;if(dt>0)v=trkHav(a,b)/dt*3.6;}
+  let v=0;if(trkFix&&trkFix[5]!=null&&Date.now()-trkFix[0]<5000&&!trkRec.paused)v=trkFix[5]*3.6;
+  else if(n>1&&!trkRec.paused&&Date.now()-seg[n-1][0]<20000){let k=n-1;while(k>0&&seg[n-1][0]-seg[k-1][0]<=10000)k--;const a=seg[k],b=seg[n-1];const dt=(b[0]-a[0])/1000;if(dt>0)v=trkHav(a,b)/dt*3.6;}
   set('trkV',v.toFixed(1));
   trkLRPaint();
   const gs=trkGuideState();
@@ -13229,6 +13408,7 @@ async function trkRender(){
       +'<div class="trk-scroll"><div class="trk-meta">'+new Date(a.start).toLocaleString(LOCALE(),{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+' · '+trkTypeLbl(a.type)+'</div>'
       +(a.desc?'<p class="trk-desc">'+escapeHtml(a.desc)+'</p>':'')
       +'<div class="trk-sum four"><div><b>'+trkFmtD(s.dist||0)+'</b><small>Distanz</small></div><div><b>'+(s.up||0)+' m</b><small>Aufstieg</small></div><div><b>'+trkFmtT(s.moving||0)+'</b><small>Bewegung</small></div><div><b>'+(s.maxA!=null?s.maxA+' m':'–')+'</b><small>Höchster Punkt</small></div></div>'
+      +(()=>{const v=s.vmax!=null?s:trkSpeedStats(a.segs);return v.vmax?'<div class="trk-sum spd"><div><b>'+v.vmax+' km/h</b><small>Max. Tempo</small></div><div><b>'+(v.vdown!=null?v.vdown+' km/h':'–')+'</b><small>Ø Abfahrt</small></div></div>':'';})()
       +((a.snowPts||[]).length?'':'<div class="trk-profw">'+trkProfile(ll,340,80)+'</div>')
       +((a.snowPts||[]).length?'<div class="trk-profw">'+trkSnowProfileSVG(a,ll,false)+'</div><div class="trk-sp-list">'+a.snowPts.map(p=>trkPtTxt(p,ll)).map(t=>'<span>'+t+'</span>').join('')+'</div>':'')
       +trkRoughHTML(ll,trkRoughAlong(trkFlat(a.segs),a.rough))+trkRoughTimeHTML(a.rough)
@@ -15283,7 +15463,7 @@ function nsLabRefresh(){
 // 0.65 degC per 100 m. The highest of these over the window is the line
 // that matters (below it, at least some of it fell as rain); it is drawn
 // where the terrain crosses it, with its height written along the line.
-const SL_T=1.0,SL_LAPSE=0.0065,SL_PREC=0.2;
+const SL_T=1.0,SL_LAPSE=0.0065,SL_PREC=0.2,SL_SUB=4,SL_BAND=700;
 let _slKey='';
 function snowlineRefresh(){
   const g=ovLayer.snowline;if(!g||!ovOn.snowline)return;
@@ -15296,22 +15476,41 @@ function snowlineRefresh(){
   // smooth the line height (3x3 mean): it is a property of the air mass, not of one cell
   const ZS=new Float32Array(NP).fill(NaN);
   for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){let s2=0,n=0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const v=Z[(y+dy)*W+x+dx];if(v===v){s2+=v;n++;}}if(n>=5)ZS[y*W+x]=s2/n;}
-  // F = terrain - line: the contour F = 0 is where the terrain meets the line
-  const F=p=>{const z=ZS[p];return z===z?melevv(p)-z:NaN;};
+  // F = terrain - line: the contour F = 0 is where the terrain meets the line.
+  // The line height is a smooth air-mass property (coarse grid, bilinear), but
+  // the terrain it meets is read from the fine DEM on a grid SL_SUB times
+  // finer -- so the line follows the actual valleys and ridges instead of
+  // the coarse cell blobs. Only cells near the line are refined.
+  const S=SL_SUB,FW=(W-1)*S+1,FH=(H-1)*S+1;
   const ll=(x,y)=>[laMax-(y+.5)*(laMax-laMin)/H,loMin+(x+.5)*(loMax-loMin)/W];
-  const segs=[],labels=[];
-  for(let y=0;y<H-1;y++)for(let x=0;x<W-1;x++){
-    const p=y*W+x,v=[F(p),F(p+1),F(p+W+1),F(p+W)];if(v.some(q=>q!==q))continue;
-    const c=[[x,y],[x+1,y],[x+1,y+1],[x,y+1]],pts=[];
-    for(let i=0;i<4;i++){const j=(i+1)%4;if((v[i]<0)!==(v[j]<0)){const f=v[i]/(v[i]-v[j]);pts.push(ll(c[i][0]+(c[j][0]-c[i][0])*f,c[i][1]+(c[j][1]-c[i][1])*f));}}
-    if(pts.length>=2){segs.push([pts[0],pts[1]]);if(pts.length===4)segs.push([pts[2],pts[3]]);
-      if((x*7+y*13)%97===0)labels.push([pts[0],ZS[p]]);}}
+  const Fc=p=>{const z=ZS[p];return z===z?melevv(p)-z:NaN;};
+  const near=new Uint8Array(NP);
+  for(let y=0;y<H-1;y++)for(let x=0;x<W-1;x++){const p=y*W+x,v=[Fc(p),Fc(p+1),Fc(p+W+1),Fc(p+W)];
+    if(v.some(q=>q!==q))continue;let mn=1e9,mx=-1e9;for(const q of v){if(q<mn)mn=q;if(q>mx)mx=q;}
+    if(mn<SL_BAND&&mx>-SL_BAND)near[p]=1;}
+  const FF=new Float32Array(FW*FH).fill(NaN),done=new Uint8Array(FW*FH);
+  const fAt=(gx,gy)=>{const i=gy*FW+gx;if(done[i])return FF[i];done[i]=1;
+    const x=gx/S,y=gy/S,x0=Math.min(W-2,x|0),y0=Math.min(H-2,y|0),fx=x-x0,fy=y-y0,p=y0*W+x0;
+    const z00=ZS[p],z10=ZS[p+1],z01=ZS[p+W],z11=ZS[p+W+1];
+    if(z00!==z00||z10!==z10||z01!==z01||z11!==z11)return NaN;
+    const z=(z00*(1-fx)+z10*fx)*(1-fy)+(z01*(1-fx)+z11*fx)*fy;
+    const q=ll(x,y);let e=null;try{e=fineElev(q[0],q[1]);}catch(_){}
+    if(e==null){const e00=melevv(p),e10=melevv(p+1),e01=melevv(p+W),e11=melevv(p+W+1);e=(e00*(1-fx)+e10*fx)*(1-fy)+(e01*(1-fx)+e11*fx)*fy;}
+    return (FF[i]=e-z);};
+  const segs=[],labels=[],labCell=new Set();
+  for(let y=0;y<H-1;y++)for(let x=0;x<W-1;x++){if(!near[y*W+x])continue;
+    for(let sy=0;sy<S;sy++)for(let sx=0;sx<S;sx++){const gx=x*S+sx,gy=y*S+sy;
+      const v=[fAt(gx,gy),fAt(gx+1,gy),fAt(gx+1,gy+1),fAt(gx,gy+1)];if(v.some(q=>q!==q))continue;
+      const c=[[gx,gy],[gx+1,gy],[gx+1,gy+1],[gx,gy+1]],pts=[];
+      for(let i=0;i<4;i++){const j=(i+1)%4;if((v[i]<0)!==(v[j]<0)){const f=v[i]/(v[i]-v[j]);pts.push(ll((c[i][0]+(c[j][0]-c[i][0])*f)/S,(c[i][1]+(c[j][1]-c[i][1])*f)/S));}}
+      if(pts.length>=2){segs.push([pts[0],pts[1]]);if(pts.length===4)segs.push([pts[2],pts[3]]);
+        const p=y*W+x;if((x*7+y*13)%97===0&&!labCell.has(p)){labCell.add(p);labels.push([pts[0],ZS[p]]);}}}}
   if(!segs.length){toastOnce('sl-none','Kein Niederschlag im gewählten Zeitraum – keine Schneefallgrenze');return;}
   // the cell-by-cell pieces joined into lines and rounded (Chaikin), drawn as
   // one clear red line on a white halo
   const lines=slSmooth(slStitch(segs));
-  g.addLayer(L.polyline(lines,{color:'#fff',weight:5.5,opacity:.85,interactive:false,smoothFactor:1.5,lineCap:'round',lineJoin:'round'}));
-  g.addLayer(L.polyline(lines,{color:'#E0242B',weight:2.6,opacity:1,interactive:false,smoothFactor:1.5,lineCap:'round',lineJoin:'round'}));
+  g.addLayer(L.polyline(lines,{color:'#fff',weight:4.5,opacity:.85,interactive:false,smoothFactor:.8,lineCap:'round',lineJoin:'round'}));
+  g.addLayer(L.polyline(lines,{color:'#E0242B',weight:2.2,opacity:1,interactive:false,smoothFactor:.8,lineCap:'round',lineJoin:'round'}));
   labels.slice(0,40).forEach(([pt,z])=>g.addLayer(L.marker(pt,{interactive:false,keyboard:false,
     icon:L.divIcon({className:'sl-lab',html:Math.round(z/50)*50+' m',iconSize:null})})));
 }
@@ -15326,7 +15525,7 @@ function slStitch(segs){const key=p=>p[0].toFixed(5)+','+p[1].toFixed(5),ends=ne
     if(line.length>=3)out.push(line);}
   return out;}
 // two rounds of Chaikin corner cutting: smooth curves instead of cell steps
-function slSmooth(lines){return lines.map(L0=>{let L1=L0;for(let r=0;r<2;r++){const n=[L1[0]];
+function slSmooth(lines){return lines.map(L0=>{let L1=L0;for(let r=0;r<1;r++){const n=[L1[0]];
   for(let i=0;i<L1.length-1;i++){const a=L1[i],b=L1[i+1];n.push([a[0]*.75+b[0]*.25,a[1]*.75+b[1]*.25],[a[0]*.25+b[0]*.75,a[1]*.25+b[1]*.75]);}
   n.push(L1[L1.length-1]);L1=n;}return L1;});}
 function _renderRaster(){
@@ -15758,6 +15957,10 @@ function legFold(e,v){if(e)e.stopPropagation();const ml=document.getElementById(
   const b=document.getElementById('mlFold');if(b)b.setAttribute('aria-label',f?'Legende aufklappen':'Legende einklappen');
   try{localStorage.setItem('ssm_leg_fold',f?'1':'0');}catch(_){}try{haptic(3);}catch(_){}}
 try{if(localStorage.getItem('ssm_leg_fold')==='1')legFold(null,true);}catch(e){}
+// the other surfaces (Eingeregnet, Kruste …): in the info card, not on the side legend
+function legMoreHTML(sp){if(!(sp&&sp.more&&sp.more.length))return '';const sw=legSwitchable(layer)&&!!legRows(layer),vis=sw?legVisSet(layer):null;
+  return '<div class="li-sub">'+escapeHtml(sp.moreT||'')+'</div><div class="li-rows">'+sp.more.map(r=>{const on=sw?vis.has(r.k):true;
+    return '<div class="'+(sw?'sw ':'')+(on?'':'off')+'"'+(sw?' role="button" aria-pressed="'+on+'" onclick="legToggle('+r.k+',event)"':'')+'><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.n||r.s)+'</span></div>';}).join('')+'</div>';}
 function legInfoRender(){
   const el=document.getElementById('legInfo');if(!el)return;
   const sp=legSpec(layer);if(!sp){el.innerHTML='';return;}
@@ -15767,7 +15970,7 @@ function legInfoRender(){
     const gh=sp.grad.replace('0deg','90deg');
     body='<div class="li-ramp" style="background:'+gh+'"></div><div class="li-ticks">'
       +sp.ticks.slice().reverse().map(t=>'<span>'+escapeHtml(String(t))+'</span>').join('')+'</div>'
-      +(sp.long?'<p class="li-note">'+escapeHtml(sp.long)+'</p>':'');
+      +(sp.long?'<p class="li-note">'+escapeHtml(sp.long)+'</p>':'')+legMoreHTML(sp);
   }else{
     const sh=sp.va?vaViewShares():null;
     const rows=(sh&&sh.tot>0&&sp.rows.length>7)?sp.rows.slice().sort((x,y)=>(sh.cnt[y.k]||0)-(sh.cnt[x.k]||0)):sp.rows;
@@ -15776,6 +15979,7 @@ function legInfoRender(){
       const sw=r.k!=null&&legRows(),on=sw?!legHiddenK(layer,r.k):true;
       return '<div class="'+(pc===0?'z ':'')+(sw?'sw ':'')+(on?'':'off')+'"'+(sw?' role="button" aria-pressed="'+on+'" onclick="legToggle('+r.k+',event)"':'')+'><i style="background:'+r.c+'"></i><span>'+escapeHtml(r.n||r.s)+'</span>'
         +(pc!=null?'<b>'+pc+' %</b>':'')+'</div>';}).join('')+'</div>'
+      +legMoreHTML(sp)
       +(legRows()?'<p class="li-note">Antippen blendet eine Klasse auf der Karte ein und aus.</p>':'')
       +(sh&&sh.tot>0?'<p class="li-note">Anteil im aktuellen Kartenausschnitt</p>':'');
   }
@@ -15847,7 +16051,7 @@ function renderAll(){try{vaLayerSync();}catch(e){}showOverlay();renderRaster();r
   if(tlMode==='detail')drawTimeline();
   if(layer=="rad"||layer=="radsun")renderRadiation();
   if(layer=="wind"){buildFlow();if(wtimer)clearTimeout(wtimer);wtimer=setTimeout(renderWind,120);}
-  syncTl();legend();}
+  syncTl();legend();try{tlChipsRender();}catch(e){}}
 // --- Simple / Detailed timeline mode (detailed = default) ---
 let tlMode='detail',sliderActive=false;
 function syncTl(){const wv=b-a;
@@ -16934,7 +17138,7 @@ function navSync(){if(_navRaf)return;_navRaf=requestAnimationFrame(()=>{_navRaf=
   const f=document.getElementById('feedPage'),feed=!!f&&f.classList.contains('open');
   // full-screen tasks (recording, drawing, a report, a conversation) get the
   // whole screen, like any other app
-  const hide=['trk-open','snp-open','draw-on','ly-open','insp-open','tn-open','tour-open','qs-open'].some(c=>B.contains(c))
+  const hide=['trk-open','snp-open','draw-on','ly-open','insp-open','tn-open','tour-open','qs-open','plan-on','fc-open'].some(c=>B.contains(c))
     ||vis('reportOverlay')||vis('dmModal')||vis('authOverlay');
   const tab=B.contains('rep-open')?'report':vis('profModal')?'you':feed?'feed':(B.contains('ts-open')||B.contains('tour-open'))?'tours':'map';
   B.toggle('nav-vis',!hide);B.toggle('nav-screen',tab!=='map');
@@ -17037,10 +17241,37 @@ function tlMiniSet(t){const e=document.getElementById('tlMiniT');if(e&&e.textCon
 function tlFoldToggle(force){const bp=document.getElementById('bottomPanel');if(!bp)return;
   const min=force!=null?!!force:!bp.classList.contains('tl-min');
   bp.classList.toggle('tl-min',min);document.body.classList.toggle('tl-folded',min);
-  try{localStorage.setItem('sm_tl_min',min?'1':'0');}catch(_){}
+  try{localStorage.setItem('sm_tl_v2',min?'chips':'full');}catch(_){}
+  if(min)try{tlChipsRender();}catch(_){}
   const f=document.getElementById('tlFold');if(f)f.setAttribute('aria-expanded',min?'false':'true');
   requestAnimationFrame(()=>{try{panelRestore&&panelRestore();}catch(_){}});}
-try{if(localStorage.getItem('sm_tl_min')==='1')requestAnimationFrame(()=>tlFoldToggle(true));}catch(_){}
+// the chip strip is the default; the full timeline only when it was opened on purpose
+try{if(localStorage.getItem('sm_tl_v2')!=='full')requestAnimationFrame(()=>tlFoldToggle(true));}catch(_){requestAnimationFrame(()=>tlFoldToggle(true));}
+// -3d … Jetzt … +3d: points in time for the state layers (Schneehöhe, SNOWPACK …),
+// windows ending/starting now for the layers that add up (Neuschnee, Wind …)
+const TL_CHIPS=[['−3d',-3],['−2d',-2],['−1d',-1],['Jetzt',0],['Bis morgen','tm'],['+1d',1],['+2d',2],['+3d',3]];
+function tlChipRange(k){const n=nowIdx,s=tlSingleMode();
+  if(k==='tm')return s?[tlIdxAt(1,8)]:[n,tlIdxAt(1,8)];
+  if(k===0)return s?[n]:[Math.max(0,n-5),n+1];
+  if(k<0)return s?[n+24*k]:[n+24*k+1,n+1];
+  return s?[n+24*k]:[n,n+24*k];}
+function tlChipOk(r){return r.length===1?(r[0]>=0&&r[0]<T):(r[0]>=0&&r[1]<=T&&r[1]>r[0]);}
+function tlChipsRender(){const el=document.getElementById('tlChips');if(!el)return;
+  const s=tlSingleMode();let hit=-1,html='';
+  TL_CHIPS.forEach((c,i)=>{const r=tlChipRange(c[1]);if(!tlChipOk(r))return;
+    const on=s?(b-1===r[0]):(a===r[0]&&b===r[1]);if(on)hit=i;
+    if(c[1]===0&&html)html+='<i class="sep"></i>';
+    html+='<button type="button" data-i="'+i+'" class="'+(on?'on ':'')+(c[1]===0?'now':'')+'" onclick="tlChipPick('+i+')">'+escapeHtml(c[0])+'</button>';
+    if(c[1]===0)html+='<i class="sep"></i>';});
+  // a time picked on the full timeline: shown as its own chip, in front
+  if(hit<0){const t=s?tlWhen(b-1):tlWhen(a)+' – '+tlWhen(b-1);html='<button type="button" class="cust on" onclick="tlFoldToggle(false)">'+escapeHtml(t)+'</button>'+html;}
+  if(el._h!==html){el._h=html;el.innerHTML=html;
+    const on=el.querySelector('.on');if(on)requestAnimationFrame(()=>{try{el.scrollLeft=Math.max(0,on.offsetLeft-el.clientWidth/2+on.offsetWidth/2);}catch(_){}});}}
+function tlChipPick(i){const c=TL_CHIPS[i];if(!c)return;const r=tlChipRange(c[1]);if(!tlChipOk(r))return;
+  if(r.length===1){b=r[0]+1;a=Math.max(0,b-windowSize);}
+  else{a=r[0];b=Math.min(T,r[1]);windowSize=b-a;}
+  if(typeof vaFollowTimeline==='function')try{vaFollowTimeline();}catch(_){}
+  tvFollow();renderAll();try{haptic(3);}catch(_){}}
 (function(){const bp=document.getElementById('bottomPanel');
   function updH(){document.documentElement.style.setProperty('--btm-h',bp.offsetHeight+'px');}
   function apply(){bp.style.height='';updH();
@@ -17114,6 +17345,7 @@ let _popClosedAt=0;
 map.on('popupclose',function(){_popClosedAt=Date.now();});
 // A tap opens the point card (a tap beside an open one closes it first).
 map.on('click',function(e){
+  if(document.body.classList.contains('plan-on')){planAdd(e.latlng);return;}
   if(document.body.classList.contains('feed-side')){feedClose();return;}
   if(document.body.classList.contains('insp-open')){inspClose();return;}
   if(Date.now()-_popClosedAt<450)return;
@@ -17123,7 +17355,7 @@ map.on('click',function(e){
   inspOpen(e.latlng.lat,e.latlng.lng);
 });
 function mapModeBusy(){const B=document.body.classList;
-  return ['ts-open','tn-open','qs-open','draw-on','rep-open','trk-open','snp-open'].some(c=>B.contains(c))
+  return ['ts-open','tn-open','qs-open','draw-on','rep-open','trk-open','snp-open','plan-on'].some(c=>B.contains(c))
     ||!!(typeof obsState!=='undefined'&&obsState&&document.getElementById('reportOverlay')&&document.getElementById('reportOverlay').style.display!=='none')
     ||!!document.querySelector('.rs-open,.fb-open');}
 // Marker popups (reports, stations) open through Leaflet's own click
@@ -17384,17 +17616,17 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
 // past is greyed.
 // new snow cm/h in classes (stacked as in a meteogram), with their colours
 const MG_SNOW=[[0,.5,'#A99BB8'],[.5,1,'#3F63E0'],[1,2,'#2F9A4C'],[2,3,'#7ED957'],[3,99,'#E8E24A']];
-const MG_PX=7,MG_L=40,MG_R=14;
+const MG_PX=7,MG_L=40,MG_R=14,MG_GAP=22;
 let _mgScroll=null,_mgKey=null;
 // the point card's charts: Neuschnee, Temperatur, Sonne, Wind (Schneehöhe
 // and Bewölkung were dropped -- the KPI tiles above carry the snow height)
-function mgPanels(){return [{k:'snow',h:96,t:'Neuschnee'},{k:'temp',h:128,t:'Temperatur'},
-  {k:'sun',h:66,t:'Sonne'},{k:'wind',h:112,t:'Wind'}];}
-function mgHTML(){const H=mgPanels().reduce((s,q)=>s+q.h+30,0)+20;
+function mgPanels(){return [{k:'snow',h:80,t:'Neuschnee'},{k:'temp',h:100,t:'Temperatur'},
+  {k:'sun',h:54,t:'Sonne'},{k:'wind',h:90,t:'Wind'}];}
+function mgHTML(){const H=mgPanels().reduce((s,q)=>s+q.h+MG_GAP,0)+20;
   // no key row: every chart names itself and labels its lines in place
   return '<div class="insp-sec insp-mg">'
     +'<div class="mg" style="height:'+H+'px"><div class="mg-sc" id="mgSc"><canvas id="mgCv"></canvas></div><canvas class="mg-ax" id="mgAx"></canvas></div>'
-    +'<div class="insp-hint">← wischen → · hellblau = gewählter Zeitraum (in der Zeitleiste ändern)</div></div>';}
+    +'</div>';}
 // smooth curve through the points (Catmull-Rom as Béziers); null breaks it
 function mgSmooth(c,pts,move){let first=true;
   for(let i=0;i<pts.length;i++){const p=pts[i];if(!p){first=true;continue;}
@@ -17406,7 +17638,7 @@ function mgSmooth(c,pts,move){let first=true;
 function mgSoft(v){return v.map((x,i)=>{if(x==null||x!==x)return x;const l=v[i-1],r=v[i+1];
   return (l==null||l!==l||r==null||r!==r)?x:(l+2*x+r)/4;});}
 function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getElementById('mgCv'),ax=document.getElementById('mgAx');if(!sc||!cv||!ax)return;
-  const vw=sc.clientWidth||320,panels=mgPanels(),TOP=20,GAP=30,H=TOP+panels.reduce((s,q)=>s+q.h+GAP,0);
+  const vw=sc.clientWidth||320,panels=mgPanels(),TOP=20,GAP=MG_GAP,H=TOP+panels.reduce((s,q)=>s+q.h+GAP,0);
   const W=MG_L+T*MG_PX+MG_R,dpr=Math.min(2,window.devicePixelRatio||1);
   cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.width=W+'px';cv.style.height=H+'px';
   ax.width=Math.round(vw*dpr);ax.height=Math.round(H*dpr);ax.style.width=vw+'px';ax.style.height=H+'px';
@@ -17430,10 +17662,8 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
     c.strokeStyle='rgba(42,143,216,.55)';c.lineWidth=1.2;c.setLineDash([]);
     for(const xx of [X(a),X(b)]){c.beginPath();c.moveTo(xx,r.top-8);c.lineTo(xx,r.base+6);c.stroke();}}
   // «Zeitraum Di 14h – Mi 14h» over the lit band, in the day row
-  {const kt=t=>{const d=zLocal(tMs(Math.max(0,Math.min(T-1,t))));return WD()[d.getUTCDay()]+' '+String(d.getUTCHours()).padStart(2,'0')+'h';};
-   const txt='Zeitraum '+kt(a)+' – '+kt(Math.max(a,b-1)),cx=(X(a)+X(b))/2;
-   c.font='700 11px Helvetica Neue,Helvetica,Arial,sans-serif';const w=c.measureText(txt).width+14;
-   c.fillStyle=brand;icRR(c,cx-w/2,TOP-2,w,16,8);c.fill();c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(txt,cx,TOP+6);c.textBaseline='alphabetic';}
+  // (the lit band speaks for itself: no «Zeitraum …» label over it)
+  void brand;
   if(nowIdx>=0&&nowIdx<T){const x=X(nowIdx);
     for(const r of rows){c.strokeStyle=dark?'rgba(255,255,255,.4)':'rgba(25,28,32,.4)';c.lineWidth=1.5;c.setLineDash([2,4]);c.lineCap='round';c.beginPath();c.moveTo(x,r.top-8);c.lineTo(x,r.base+6);c.stroke();c.setLineDash([]);}
     const ly=rows[0].top+4;c.font='700 11px Helvetica Neue,Helvetica,Arial,sans-serif';c.textBaseline='middle';
@@ -20351,6 +20581,7 @@ async function favLoad(force){
   if(!sb||!sbUser){favs=[];return favs;}
   if(favs&&!force)return favs;
   try{const{data,error}=await sb.from('favorites').select('*').order('created_at');favs=error?(favs||[]):(data||[]);}catch(e){favs=favs||[];}
+  try{favFabSync();}catch(_){}
   return favs;}
 function favOf(kind,ref){return (favs||[]).find(f=>f.kind===kind&&String(f.ref)===String(ref))||null;}
 // the star: what it stands for is kept here, not in the onclick string
@@ -20374,7 +20605,7 @@ async function favTap(k){const a=_favArgs[k];if(!a)return;
   document.querySelectorAll('.fav-btn[data-fav]').forEach(b=>{const x=_favArgs[+b.dataset.fav];
     if(x&&x[0]===kind&&x[1]===ref){b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);
       const l=b.querySelector('.fav-lbl');if(l)l.textContent=on?'Region gemerkt':'Region merken';}});
-  favSetRender();}
+  favSetRender();favFabSync();}
 async function favPushState(){
   if(_favPush!=null)return _favPush;
   try{if(!pushSupported()||(await pushPerm())!=='granted')return (_favPush=false);
@@ -20414,8 +20645,165 @@ async function favSetRender(){const el=document.getElementById('setFavs');if(!el
       +'<button type="button" class="fav-bell'+(f.notify?' on':'')+'" onclick="favSet(\''+f.id+'\',{notify:'+(!f.notify)+'})" aria-pressed="'+!!f.notify+'" aria-label="Push für diesen Favoriten">'+FAV_BELL+'</button>'
       +'<button type="button" class="fav-del" onclick="favDel(\''+f.id+'\')" aria-label="Entfernen">×</button></div>').join('')
     :'<div class="fav-empty">Noch keine Favoriten. Tippe im Punkt-Popup oder bei einer Tour auf den Stern.</div>')
+    +(favs.length>1?'<button type="button" class="fav-push" onclick="setClose();favCmpOpen()">'+FAV_STAR+'<span>Favoriten vergleichen</span></button>':'')
     +(favs.length&&!push?'<button type="button" class="fav-push" onclick="favPushOn()">'+FAV_BELL+'<span>Push für Neuschnee einschalten</span></button>':'')
     +(favs.length?'<div class="fav-note">Push, wenn in den nächsten 48 h so viel Neuschnee erwartet wird (Modell) – höchstens einmal in 36 h je Favorit.</div>':'');}
+
+// ── Tour planen: draw your own route ─────────────────────────────────────
+// Tap the map to set points (start, waypoints, end), drag them to move,
+// tap a middle one to remove it. Length, climb, descent, time and the slope
+// along the line come from the terrain model; plans live on this device and
+// can be exported as GPX or used as the guide line of a recording.
+const PLAN_STEP=20,PLAN_KEY='ssm_plans';
+let plan=null,planG=null,planView='edit';
+function planAll(){try{return JSON.parse(localStorage.getItem(PLAN_KEY)||'[]')||[];}catch(_){return [];}}
+function planSaveAll(L){try{localStorage.setItem(PLAN_KEY,JSON.stringify(L));return true;}catch(_){toast('Speichern fehlgeschlagen – Speicher voll?','err');return false;}}
+function planOpen(p){
+  try{repSheetToggle(false);}catch(_){}try{fabMenu(false);}catch(_){}
+  try{if(document.body.classList.contains('insp-open'))inspClose();}catch(_){}
+  try{if(typeof is3d!=='undefined'&&is3d)close3D();}catch(_){}
+  try{navGo('map');}catch(_){}
+  plan=p?JSON.parse(JSON.stringify(p)):{id:'p'+Date.now().toString(36),name:'',pts:[]};planView='edit';
+  if(!planG)planG=L.layerGroup();if(!map.hasLayer(planG))planG.addTo(map);
+  document.body.classList.add('plan-on');
+  document.getElementById('planBar').hidden=false;document.getElementById('planCard').hidden=false;
+  try{navSync();}catch(_){}
+  if(plan.pts.length>1){try{map.fitBounds(L.latLngBounds(plan.pts),{padding:[60,60],maxZoom:15});}catch(_){}}
+  else if(map.getZoom()<12){try{const c=myLoc?L.latLng(myLoc[0],myLoc[1]):map.getCenter();map.setView(c,13);}catch(_){}}
+  planDraw();try{haptic(4);}catch(_){}}
+function planClose(){if(plan&&plan.pts.length>1&&plan._dirty&&!confirm('Plan verwerfen? Nicht gespeicherte Punkte gehen verloren.'))return;
+  plan=null;if(planG){planG.clearLayers();map.removeLayer(planG);}
+  document.body.classList.remove('plan-on');
+  document.getElementById('planBar').hidden=true;document.getElementById('planCard').hidden=true;try{navSync();}catch(_){}}
+function planAdd(ll){if(!plan||planView!=='edit')return;plan.pts.push([+ll.lat.toFixed(6),+ll.lng.toFixed(6)]);plan._dirty=true;try{haptic(3);}catch(_){}planDraw();}
+function planUndo(){if(!plan||!plan.pts.length)return;plan.pts.pop();plan._dirty=true;planDraw();}
+function planClear(){if(!plan||!plan.pts.length)return;if(plan.pts.length>2&&!confirm('Alle Punkte löschen?'))return;plan.pts=[];plan._dirty=true;planDraw();}
+// samples along the line with height and slope from the terrain model
+function planGeo(pts){const S=tourResample(pts.map(p=>[p[1],p[0]]),PLAN_STEP);
+  let up=0,down=0,upD=0,maxS=0,s30=0,ref=null,hi=null,lo=null;
+  for(let i=0;i<S.length;i++){const s=S[i];s.el=fineElev(s.lat,s.lon);s.sl=fineSlope(s.lat,s.lon);
+    if(s.sl!=null&&s.sl<=60){if(s.sl>maxS)maxS=s.sl;if(i&&s.sl>=30)s30+=s.dist-S[i-1].dist;}
+    if(s.el!=null){if(hi==null||s.el>hi)hi=s.el;if(lo==null||s.el<lo)lo=s.el;
+      if(ref==null)ref=s.el;else if(s.el-ref>=2){up+=s.el-ref;if(i)upD+=s.dist-S[i-1].dist;ref=s.el;}else if(ref-s.el>=2){down+=ref-s.el;ref=s.el;}}}
+  const len=S.length?S[S.length-1].dist:0;
+  // SAC rule for ski tours: 4 km/h on the flat, 400 m/h of climb; the larger
+  // of the two plus half the smaller; down at ~1500 m/h
+  const hU=up/400,hD=upD/1000/4,hours=Math.max(hU,hD)+Math.min(hU,hD)/2+down/1500;
+  return {S,len,up:Math.round(up),down:Math.round(down),maxS:Math.round(maxS),s30:Math.round(s30),hi:hi==null?null:Math.round(hi),lo:lo==null?null:Math.round(lo),hours};}
+const PLAN_SL=[[0,30,'#5B8DEF','unter 30°'],[30,35,'#F2C94C','30–35°'],[35,40,'#F2994A','35–40°'],[40,91,'#D63B3B','über 40°']];
+function planSlCol(sl){if(sl==null)return '#9AA3AE';for(const c of PLAN_SL)if(sl>=c[0]&&sl<c[1])return c[2];return '#D63B3B';}
+function planFmtH(h){if(!(h>0))return '–';const m=Math.round(h*60/5)*5;return Math.floor(m/60)+':'+String(m%60).padStart(2,'0');}
+function planProfile(g){const S=g.S.filter(s=>s.el!=null);if(S.length<2)return '';
+  const W0=340,H0=74,lo=g.lo,hi=g.hi,rg=Math.max(50,hi-lo),len=g.len||1;
+  const X=d=>(d/len*W0).toFixed(1),Y=e=>(H0-4-(e-lo)/rg*(H0-14)).toFixed(1);
+  let polys='';for(let i=1;i<S.length;i++){const a=S[i-1],b=S[i];
+    polys+='<path d="M'+X(a.dist)+' '+H0+'L'+X(a.dist)+' '+Y(a.el)+'L'+X(b.dist)+' '+Y(b.el)+'L'+X(b.dist)+' '+H0+'Z" fill="'+planSlCol(b.sl)+'" fill-opacity=".85"/>';}
+  const line='M'+S.map(s=>X(s.dist)+' '+Y(s.el)).join('L');
+  return '<svg viewBox="0 0 '+W0+' '+H0+'" preserveAspectRatio="none" aria-label="Höhenprofil, eingefärbt nach Hangneigung">'+polys
+    +'<path d="'+line+'" fill="none" stroke="var(--md-on-surface,#191C20)" stroke-width="1.4" vector-effect="non-scaling-stroke"/>'
+    +'<text x="3" y="11" font-size="10" fill="var(--md-on-surface-var,#42474E)">'+hi+' m</text><text x="3" y="'+(H0-6)+'" font-size="10" fill="#fff">'+lo+' m</text></svg>'
+    +'<div class="pl-key">'+PLAN_SL.map(c=>'<span><i style="background:'+c[2]+'"></i>'+c[3]+'</span>').join('')+'</div>';}
+function planIcon(cls,txt){return L.divIcon({className:'',html:'<div class="pl-pt '+cls+'">'+(txt||'')+'</div>',iconSize:cls?[26,26]:[16,16],iconAnchor:cls?[13,13]:[8,8]});}
+function planDraw(){if(!plan||!planG)return;planG.clearLayers();
+  const P=plan.pts,n=P.length,g=n>1?planGeo(P):null;plan._g=g;
+  // the line, coloured by the slope under it, on a white halo
+  if(g){planG.addLayer(L.polyline(P,{color:'#fff',weight:8,opacity:.9,interactive:false,lineCap:'round',lineJoin:'round'}));
+    let run=[[g.S[0].lat,g.S[0].lon]],col=planSlCol(g.S[1]&&g.S[1].sl);
+    for(let i=1;i<g.S.length;i++){const s=g.S[i],c=planSlCol(s.sl);run.push([s.lat,s.lon]);
+      if(c!==col||i===g.S.length-1){planG.addLayer(L.polyline(run,{color:col,weight:4.5,opacity:1,interactive:false,lineCap:'round',lineJoin:'round'}));run=[[s.lat,s.lon]];col=c;}}}
+  P.forEach((p,i)=>{const cls=i===0?'s':(i===n-1&&n>1?'e':''),m=L.marker(p,{icon:planIcon(cls,i===0?'S':(cls==='e'?'Z':'')),draggable:planView==='edit',zIndexOffset:i===0||i===n-1?2100:2000,keyboard:false});
+    m.on('dragend',ev=>{const q=ev.target.getLatLng();plan.pts[i]=[+q.lat.toFixed(6),+q.lng.toFixed(6)];plan._dirty=true;planDraw();});
+    m.on('click',ev=>{L.DomEvent.stopPropagation(ev);if(planView!=='edit')return;
+      if(i>0&&i<n-1){plan.pts.splice(i,1);plan._dirty=true;try{haptic(3);}catch(_){}planDraw();}
+      else toastOnce('pl-mv','Punkt ziehen zum Verschieben · Zwischenpunkt antippen zum Entfernen');});
+    planG.addLayer(m);});
+  const h=document.getElementById('planHint');
+  if(h)h.textContent=planView!=='edit'?'':n===0?'Tippe auf die Karte: Start setzen':n===1?'Weiter tippen: nächster Punkt':'Weiter tippen · Punkte ziehen zum Verschieben';
+  planCard();}
+function planStatsHTML(g){return '<div class="pl-stats"><div><b>'+(g?(g.len/1000).toFixed(g.len<10000?2:1)+' km':'–')+'</b><small>Distanz</small></div>'
+  +'<div><b>'+(g?'↑ '+g.up+' m':'–')+'</b><small>Aufstieg</small></div><div><b>'+(g?'↓ '+g.down+' m':'–')+'</b><small>Abfahrt</small></div>'
+  +'<div><b>'+(g?planFmtH(g.hours):'–')+'</b><small>Zeit (SAC)</small></div></div>';}
+function planCard(){const el=document.getElementById('planCard');if(!el||!plan)return;const g=plan._g,n=plan.pts.length;
+  const UNDO='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>';
+  if(planView==='edit'){
+    el.innerHTML=planStatsHTML(g)
+      +(g?'<div class="pl-prof">'+planProfile(g)+'</div>'+(g.maxS?'<div class="pl-key">Steilste Stelle '+g.maxS+'° · '+g.s30+' m über 30° – Lawinenbulletin beachten</div>':''):'')
+      +'<div class="pl-acts"><button type="button" onclick="planUndo()"'+(n?'':' disabled')+'>'+UNDO+'Zurück</button>'
+      +'<button type="button" onclick="planClear()"'+(n?'':' disabled')+'>Löschen</button>'
+      +'<button type="button" class="pl-end" onclick="planFinish()"'+(n>1?'':' disabled')+'>Ende</button></div>';}
+  else if(planView==='save'){
+    el.innerHTML='<div class="pl-h">Plan speichern</div>'+planStatsHTML(g)
+      +'<input class="pl-name" id="planName" maxlength="80" placeholder="Name, z. B. Piz Sesvenna über Fuorcla" value="'+escapeHtml(plan.name||'')+'">'
+      +'<div class="pl-acts"><button type="button" onclick="planView=\'edit\';planDraw()">Weiter zeichnen</button><button type="button" class="pl-end" onclick="planSave()">Speichern</button></div>';
+    setTimeout(()=>{try{document.getElementById('planName').focus();}catch(_){}},50);}
+  else if(planView==='done'){
+    el.innerHTML='<div class="pl-h">'+escapeHtml(plan.name||'Geplante Tour')+'</div>'+planStatsHTML(g)+(g?'<div class="pl-prof">'+planProfile(g)+'</div>':'')
+      +'<div class="pl-acts"><button type="button" onclick="planView=\'edit\';planDraw()">Bearbeiten</button><button type="button" onclick="planGpx()">GPX</button>'
+      +(trkEnabled()?'<button type="button" class="pl-end" onclick="planRecord()">Aufzeichnen</button>':'<button type="button" class="pl-end" onclick="planClose()">Fertig</button>')+'</div>';}
+  else if(planView==='list'){const L0=planAll();
+    el.innerHTML='<div class="pl-h">Meine Pläne</div>'+(L0.length?L0.map(p=>'<div class="pl-li"><button type="button" onclick="planLoad(\''+p.id+'\')"><b>'+escapeHtml(p.name||'Geplante Tour')+'</b><small>'
+        +(p.st?(p.st.len/1000).toFixed(1)+' km · ↑ '+p.st.up+' m · ↓ '+p.st.down+' m · ':'')+new Date(p.created||Date.now()).toLocaleDateString(LOCALE())+'</small></button>'
+        +'<button type="button" class="pl-del" onclick="planDel(\''+p.id+'\')" aria-label="Löschen">×</button></div>').join('')
+      :'<div class="pl-empty">Noch keine Pläne. Tippe Punkte auf die Karte und dann auf «Ende».</div>')
+      +'<div class="pl-acts"><button type="button" class="pl-end" onclick="planView=\'edit\';planDraw()">Neuer Plan</button></div>';}}
+function planFinish(){if(!plan||plan.pts.length<2)return;planView='save';planDraw();}
+function planSave(){if(!plan)return;const nm=document.getElementById('planName');plan.name=(nm&&nm.value.trim())||'Geplante Tour';
+  const g=plan._g,L0=planAll().filter(p=>p.id!==plan.id);
+  L0.unshift({id:plan.id,name:plan.name,pts:plan.pts,created:plan.created||Date.now(),st:g?{len:Math.round(g.len),up:g.up,down:g.down,maxS:g.maxS}:null});
+  if(!planSaveAll(L0.slice(0,100)))return;plan._dirty=false;planView='done';planDraw();toast('Plan gespeichert','ok');}
+function planListOpen(){if(!plan)planOpen();planView='list';planDraw();}
+function planLoad(id){const p=planAll().find(x=>x.id===id);if(!p)return;plan=JSON.parse(JSON.stringify(p));planView='done';
+  try{map.fitBounds(L.latLngBounds(plan.pts),{padding:[70,70],maxZoom:15});}catch(_){}planDraw();}
+function planDel(id){if(!confirm('Plan löschen?'))return;planSaveAll(planAll().filter(p=>p.id!==id));planCard();}
+function planGpx(){if(!plan)return;const g=plan._g||planGeo(plan.pts),esc=s=>String(s||'').replace(/[<&>"]/g,c=>({'<':'&lt;','&':'&amp;','>':'&gt;','"':'&quot;'}[c]));
+  let x='<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Snowmapper" xmlns="http://www.topografix.com/GPX/1/1">\n<rte><name>'+esc(plan.name)+'</name>\n';
+  plan.pts.forEach(p=>{x+='<rtept lat="'+p[0]+'" lon="'+p[1]+'"/>\n';});x+='</rte>\n<trk><name>'+esc(plan.name)+'</name><trkseg>\n';
+  g.S.forEach(s=>{x+='<trkpt lat="'+s.lat.toFixed(6)+'" lon="'+s.lon.toFixed(6)+'">'+(s.el!=null?'<ele>'+Math.round(s.el)+'</ele>':'')+'</trkpt>\n';});
+  x+='</trkseg></trk>\n</gpx>\n';
+  const blob=new Blob([x],{type:'application/gpx+xml'}),fn=(plan.name||'plan').replace(/[^\wäöüÄÖÜ-]+/g,'_')+'.gpx';
+  (async()=>{try{const f=new File([blob],fn,{type:'application/gpx+xml'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:plan.name});return;}}catch(e){if(e&&e.name==='AbortError')return;}
+    const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);})();}
+// a plan as the dashed guide line of a recording (like a swisstopo tour)
+function planRecord(){if(!plan)return;const g=plan._g||planGeo(plan.pts);
+  trkGuide={id:'plan-'+plan.id,name:plan.name||'Geplante Tour',pts:g.S.map(s=>[s.lat,s.lon,s.dist]),len:g.len||1};
+  plan._dirty=false;planClose();trkView='setup';trkOpen();}
+// ── Favoriten vergleichen: all of them stacked, one number each ──────────
+let _fcWin='n48';try{_fcWin=localStorage.getItem('ssm_fc_win')||'n48';}catch(_){}
+const FC_WINS=[['p48','−48 h'],['n24','+24 h'],['n48','+48 h'],['n72','+72 h']];
+function favFabSync(){const n=document.getElementById('favFabN');if(n)n.textContent=favs&&favs.length?String(favs.length):'';}
+function favCmpCell(lat,lon){const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
+  return (cx<0||cx>=W||cy<0||cy>=H)?-1:cy*W+cx;}
+function favCmpVal(f,win){const p=favCmpCell(+f.lat,+f.lon);if(p<0)return null;const n=nowIdx;
+  const r=win==='p48'?[Math.max(0,n-47),n+1]:[n,Math.min(T,n+(win==='n24'?24:win==='n48'?48:72))];
+  let fz=null;try{fz=fineElev(+f.lat,+f.lon);}catch(_){}
+  const z=f.elev!=null?+f.elev:fz;
+  const ns=nsAtHeight(p,nsAt(p,r[0],r[1]),z==null?NaN:z-melevv(p));
+  const hs=cum[Math.min(T,n+1)*NP+p];
+  return {ns:Math.max(0,ns||0),hs:hs||0};}
+async function favCmpOpen(){
+  if(!sb||!sbUser){authShow();toast('Zum Merken anmelden','info');return;}
+  let el=document.getElementById('favCmp');
+  if(!el){el=document.createElement('div');el.id='favCmp';el.className='fc-sheet';el.setAttribute('role','dialog');el.setAttribute('aria-label','Favoriten vergleichen');
+    el.addEventListener('click',e=>{if(e.target===el)favCmpClose();});document.body.appendChild(el);}
+  el.hidden=false;document.body.classList.add('fc-open');try{haptic(4);}catch(_){}
+  el.innerHTML='<div class="fc-in"><div class="fc-grab"></div><div class="fc-empty">Lade Favoriten …</div></div>';
+  await favLoad(true);favFabSync();favCmpRender();}
+function favCmpClose(){const el=document.getElementById('favCmp');if(el)el.hidden=true;document.body.classList.remove('fc-open');}
+function favCmpWin(w){_fcWin=w;try{localStorage.setItem('ssm_fc_win',w);}catch(_){}try{haptic(3);}catch(_){}favCmpRender();}
+function favCmpRender(){const el=document.getElementById('favCmp');if(!el||el.hidden)return;
+  const L0=(favs||[]).map(f=>({f,v:favCmpVal(f,_fcWin)})).filter(x=>x.v);
+  L0.sort((x,y)=>y.v.ns-x.v.ns);
+  const mx=Math.max(1,...L0.map(x=>x.v.ns));
+  el.innerHTML='<div class="fc-in"><div class="fc-grab"></div>'
+    +'<div class="fc-hd"><h2>Favoriten</h2><button type="button" onclick="favCmpClose();setOpen()">Verwalten</button><button type="button" class="fc-x" onclick="favCmpClose()" aria-label="Schliessen">×</button></div>'
+    +'<p class="fc-sub">Neuschnee im Vergleich (Modell, auf der Höhe des Favoriten) – letzte 48 h oder die nächsten Stunden. Antippen öffnet den Ort.</p>'
+    +'<div class="fc-seg" role="tablist">'+FC_WINS.map(w=>'<button type="button" role="tab" class="'+(w[0]===_fcWin?'on':'')+'" aria-selected="'+(w[0]===_fcWin)+'" onclick="favCmpWin(\''+w[0]+'\')">'+escapeHtml(w[1])+'</button>').join('')+'</div>'
+    +(L0.length?L0.map((x,i)=>'<button type="button" class="fc-row'+(i===0&&x.v.ns>=1?' best':'')+'" onclick="favCmpClose();favOpen(\''+x.f.id+'\')">'
+        +'<b>'+escapeHtml(x.f.name||'Ort')+'</b><span class="v">'+(x.v.ns<10?x.v.ns.toFixed(1):Math.round(x.v.ns))+'<small>cm neu</small></span>'
+        +'<small>'+(x.f.kind==='tour'?'Tour':'Ort')+(x.f.elev?' · '+x.f.elev+' m':'')+' · Schneehöhe '+Math.round(x.v.hs)+' cm</small>'
+        +'<span class="bar"><i style="width:'+Math.max(2,x.v.ns/mx*100).toFixed(1)+'%"></i></span></button>').join('')
+      :'<div class="fc-empty">Noch keine Favoriten.<br>Tippe auf der Karte auf einen Punkt und dann auf <b>☆ Region merken</b> – oder bei einer Tour auf den Stern. Hier siehst du sie dann alle untereinander im Vergleich.</div>')
+    +'</div>';}
 async function favOpen(id){
   if(!sb||!sbUser){authShow();return;}
   await favLoad();const f=(favs||[]).find(x=>x.id===id);if(!f){toast('Favorit nicht gefunden','err');return;}
@@ -20503,7 +20891,7 @@ function qsOpen(){
     +'<div class="qs-loc" id="qsLoc"><span>Standort wird bestimmt…</span></div>'
     +'<div class="qs-tour" id="qsTour"></div>'
     // when it was: now by default, back up to 7 days (a report written later)
-    +'<label class="qs-when"><span class="qs-lbl">Wann</span><input type="datetime-local" id="qsWhen" oninput="qsWhenSync()" aria-label="Datum und Zeit der Beobachtung"><b id="qsWhenV">jetzt</b></label>'
+    +'<div class="qs-when"><span class="qs-lbl">Wann</span><div class="qs-whenseg"><button type="button" id="qsWhenNow" class="on" onclick="qsWhenNowSet()">Jetzt</button><button type="button" id="qsWhenOther" onclick="qsWhenPick()">Früher …</button></div><input type="datetime-local" id="qsWhen" hidden oninput="qsWhenSync()" aria-label="Datum und Zeit der Beobachtung"><b id="qsWhenV" hidden>jetzt</b></div>'
     // snow type and its slider side by side
     +'<div class="qs-pair"><div class="qs-pair-l"><div class="qs-lbl">Schneeart</div>'
     +'<div class="qs-wheel-w"><div class="qs-wheel" id="qsWheel" data-nopull onscroll="qsWheelScroll()">'
@@ -20645,7 +21033,14 @@ function qsWhenInit(){const el=document.getElementById('qsWhen');if(!el)return;c
   el.max=qsLocalIso(now);el.min=qsLocalIso(new Date(now.getTime()-7*864e5));el.value=qsLocalIso(now);qsWhenSync();}
 function qsWhenMs(){const el=document.getElementById('qsWhen');const t=el&&el.value?new Date(el.value).getTime():NaN;
   const now=Date.now();return isFinite(t)?Math.max(now-7*864e5,Math.min(now,t)):now;}
+function qsWhenNowSet(){const el=document.getElementById('qsWhen');if(!el)return;el.value=qsLocalIso(new Date());el.hidden=true;qsWhenSync();try{haptic(3);}catch(_){}}
+function qsWhenPick(){const el=document.getElementById('qsWhen');if(!el)return;el.hidden=false;
+  try{el.focus();if(el.showPicker)el.showPicker();}catch(_){}}
 function qsWhenSync(){const v=document.getElementById('qsWhenV');if(!v)return;const ms=qsWhenMs(),ago=Date.now()-ms;
+  {const now=ago<10*6e4,bn=document.getElementById('qsWhenNow'),bo=document.getElementById('qsWhenOther');
+   if(bn)bn.classList.toggle('on',now);
+   if(bo){bo.classList.toggle('on',!now);const d=new Date(ms);
+     bo.textContent=now?'Früher …':(d.getDate()===new Date().getDate()&&ago<864e5?'Heute':(WD()[d.getDay()]||'')+' '+d.getDate()+'.'+(d.getMonth()+1)+'.')+', '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}}
   v.textContent=ago<10*6e4?'jetzt':ago<36e5?'vor '+Math.round(ago/6e4)+' min':ago<864e5&&new Date(ms).getDate()===new Date().getDate()?'heute':(WD()[new Date(ms).getDay()]||'');}
 function qsDangerToggle(){const w=document.getElementById('qsDanger'),b=document.getElementById('qsDgB');if(!w||!b)return;
   b.hidden=!b.hidden;w.classList.toggle('on',!b.hidden);const h=w.querySelector('.qs-dg-h');if(h)h.setAttribute('aria-expanded',String(!b.hidden));try{haptic(3);}catch(e){}}
