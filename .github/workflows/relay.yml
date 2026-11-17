@@ -1,0 +1,67 @@
+# Hands pushes and pull requests to the public runner repository (vars.RUN_REPO),
+# where the heavy workflows run on free minutes (tools/runner_repo/). It applies
+# each workflow's own `paths` filter here and sends the list of workflows to run
+# plus the commit; the runner reports pull-request results back as statuses.
+# Off while vars.RUN_REPO is empty: then everything runs here as before.
+name: Relay to runner
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  relay:
+    if: vars.RUN_REPO != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Which workflows, for which commit
+        id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import fnmatch, json, os, subprocess, yaml
+          from pathlib import Path
+          ev, base, sha = os.environ["EVENT"], os.environ["BASE"], os.environ["SHA"]
+          try:
+              files = subprocess.run(["git", "diff", "--name-only", base, sha], capture_output=True, text=True, check=True).stdout.split()
+          except Exception:
+              files = None  # unknown (new branch, forced push): run everything
+          spec = json.load(open("tools/runner_repo/moved.json"))
+          wf = []
+          for f in spec:
+              src = next(p for p in (Path("tools/runner_repo/workflows", f), Path(".github/workflows", f)) if p.exists())
+              d = yaml.safe_load(src.read_text())
+              on = d.get(True, d.get("on")) or {}
+              t = on.get(ev) if isinstance(on, dict) else None
+              if not isinstance(on, dict) or ev not in on:
+                  continue
+              paths = (t or {}).get("paths") if isinstance(t, dict) else None
+              if not paths or files is None or any(fnmatch.fnmatch(x, p.replace("**", "*")) for x in files for p in paths):
+                  wf.append(f)
+          print("wf=" + json.dumps(wf))
+          print("sha=" + sha)
+          PY
+      - name: Dispatch
+        if: steps.pick.outputs.wf != '[]'
+        env:
+          GH_TOKEN: ${{ secrets.RUNNER_TOKEN }}
+          WF: ${{ steps.pick.outputs.wf }}
+          SHA: ${{ steps.pick.outputs.sha }}
+          PR: ${{ github.event.pull_request.number || '' }}
+        run: |
+          jq -n --argjson wf "$WF" --arg sha "$SHA" --arg pr "$PR" --arg ev "${{ github.event_name }}" \
+            '{event_type:"code", client_payload:{wf:$wf, sha:$sha, pr:$pr, event:$ev}}' \
+          | gh api -X POST "repos/${{ vars.RUN_REPO }}/dispatches" --input -
+          echo "sent $WF @ $SHA to ${{ vars.RUN_REPO }}"

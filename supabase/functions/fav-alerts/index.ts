@@ -12,7 +12,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
 import { isApns, sendApns } from '../_shared/apns.ts';
 
-const APP = 'https://gianio.github.io/snow-mapper-v17/';
+const APP = Deno.env.get('APP_URL') ?? 'https://gianio.github.io/snow-mapper-v17/';
 // one live cycle a day: the forecast is up to ~30 h old before the next one
 const AGAIN_H = 36, STALE_H = 30;
 const json = (body: unknown, status = 200) =>

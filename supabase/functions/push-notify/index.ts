@@ -13,7 +13,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
 import { isApns, sendApns } from '../_shared/apns.ts';
 
-const APP = 'https://gianio.github.io/snow-mapper-v17/';
+const APP = Deno.env.get('APP_URL') ?? 'https://gianio.github.io/snow-mapper-v17/';
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const cut = (s: unknown, n: number) => {

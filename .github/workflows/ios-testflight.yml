@@ -100,7 +100,7 @@ jobs:
         working-directory: apple-app
         env:
           SNOW_OFFLINE: ${{ (github.event_name == 'pull_request' || (github.event_name != 'push' && inputs.offline)) && '1' || '0' }}
-          SNOW_REMOTE_DATA_BASE: ${{ inputs.remote_data_base || 'https://gianio.github.io/snow-mapper-v17' }}
+          SNOW_REMOTE_DATA_BASE: ${{ inputs.remote_data_base || vars.APP_URL || 'https://gianio.github.io/snow-mapper-v17' }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           npm install
