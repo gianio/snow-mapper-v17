@@ -7373,6 +7373,37 @@ body.desk #inspPanel .insp-head>button[aria-label="Schliessen"]{right:16px!impor
 .ipd-note{margin:14px 0 0;font:500 12px/1.4 var(--font);color:var(--md-on-surface-var)}
 body.insp-open .pt-chip-wrap{display:none}
 
+/* ==== Profil: M3, mit Luft ==== */
+#profModal .prof-sheet{background:var(--md-surface-container-low,#F2F4F8)!important}
+#profModal .prof-head{padding:calc(env(safe-area-inset-top,0px) + 14px) 20px 10px!important;background:transparent!important;border:0!important}
+#profModal .prof-body{padding:4px 16px calc(env(safe-area-inset-bottom,0px) + 96px)!important;display:flex;flex-direction:column;gap:16px}
+#profModal .prof-top{flex-direction:column!important;align-items:center!important;text-align:center;gap:12px!important;padding:24px 16px 8px!important;
+  background:transparent!important;margin:0!important}
+#profModal .prof-av{width:96px!important;height:96px!important;box-shadow:none!important;border:3px solid var(--md-primary-container,#D6E3FF)!important}
+#profModal .prof-av span{font-size:38px!important}
+#profModal .prof-meta{align-items:center!important;gap:6px!important}
+#profModal .prof-name{font:600 24px/1.2 var(--font)!important}
+#profModal .prof-endo{display:inline-flex;gap:5px;padding:4px 12px;border-radius:999px;background:color-mix(in srgb,#2E9E5B 14%,transparent);font:600 13px var(--font)!important}
+#profModal .prof-view{margin-top:0}
+#profModal .pv{display:flex;flex-direction:column;gap:16px}
+#profModal .pv-stats{background:var(--md-surface,#fff);border-radius:24px;padding:18px 8px!important;margin:0!important;display:grid!important;grid-template-columns:repeat(5,1fr);gap:4px}
+#profModal .pv-stats>div{display:flex;flex-direction:column;align-items:center;gap:4px}
+#profModal .pv-stats b{font:600 22px/1 var(--font)!important}
+#profModal .pv-stats span{font:500 12px/1.2 var(--font)!important;color:var(--md-on-surface-var)!important}
+#profModal .pv-btns{gap:10px!important;margin:0!important;padding:0 4px}
+#profModal .pv-btns button{height:44px!important;border-radius:999px!important;font:600 14px var(--font)!important}
+#profModal .pv-btns button:first-child{background:var(--md-primary)!important;color:var(--md-on-primary,#fff)!important}
+#profModal .pv-btns .pv-ic{width:44px!important;flex:none!important}
+#profModal .pv-btns button:not(.pv-ic){flex:1 1 0!important;min-width:0;padding:0 12px!important;white-space:nowrap}
+#profModal .pv-trust,#profModal .pv-week,#profModal .prof-feedback{background:var(--md-surface,#fff)!important;border:0!important;border-radius:24px!important;
+  padding:18px 20px!important;margin:0!important;box-shadow:none!important}
+#profModal .pv-trust .pv-tr-t b{font:600 16px var(--font)!important}
+#profModal .pv-week .pv-wk-h{margin-bottom:14px}
+#profModal .pv-week .pv-wk-h b{font:600 17px var(--font)!important}
+#profModal .pv-wk{gap:12px!important}
+#profModal .pv-chart{margin-top:18px!important}
+#profModal hr,#profModal .pv-sep{display:none!important}
+
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -13958,7 +13989,7 @@ function pvRender(boxId){const S=pvState[boxId],box=document.getElementById(boxI
   const list=S.acts.length?'<div class="pv-hls pv-hls-all">'+S.acts.map((a,i)=>'<button class="pv-hl" onclick="pvOpenAct(\''+boxId+'\','+i+')"><span class="pv-hl-m" data-pvmap="'+a.id+'">'+pvMapImg(a)+'</span><span>'+escapeHtml(a.name)+'</span></button>').join('')+'</div>'
     :'<div class="prof-hint">'+(me?(trkEnabled()?'Noch keine Aufzeichnung – starte eine über «+» › Aufzeichnen.':'Noch keine Aufzeichnung.'):'Noch keine Aktivitäten.')+'</div>';
   box.innerHTML='<div class="pv-stats"><div><b>'+n(S.posts.length)+'</b><span>Beiträge</span></div><div><b>'+n(S.fol)+'</b><span>Follower</span></div><div><b>'+n(S.ing)+'</b><span>Folge ich</span></div><div><b>'+n(S.acts.length)+'</b><span>Aktivitäten</span></div><div><b>'+n(S.fb||0)+'</b><span>Feedbacks</span></div></div>'
-    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')">Profil bearbeiten</button><button class="pv-dm'+(_dmN>0?' unread':'')+'" data-dm onclick="profClose();dmOpen()">Nachrichten'+(_dmN>0?'<b>'+(_dmN>9?'9+':_dmN)+'</b>':'')+'</button>'
+    +'<div class="pv-btns">'+(me?'<button onclick="profNav(\'pers\')" aria-label="Profil bearbeiten">Bearbeiten</button><button class="pv-dm'+(_dmN>0?' unread':'')+'" data-dm onclick="profClose();dmOpen()">Nachrichten'+(_dmN>0?'<b>'+(_dmN>9?'9+':_dmN)+'</b>':'')+'</button>'
         +'<button class="pv-ic" aria-label="Gemerkt" title="Gemerkt" onclick="_feedReturn=openProfile;profClose();navGo(\'feed\');feedSetScope(\'saved\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>'
         +'<button class="pv-ic" aria-label="Teilen" title="Teilen" onclick="pvShare(\''+S.uid+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>'
       :'<button class="'+(foll?'':'pri')+'" onclick="pvFollow(\''+boxId+'\')">'+(foll?'Folge ich':'Folgen')+'</button>'
