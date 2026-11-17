@@ -15685,7 +15685,8 @@ function _renderRaster(){
   else if(layer=="skiable"){const ca2=a*NP,cb2=b*NP;setRaster(p=>{const slp=mslpv(p);if(slp>55)return[80,0,0,150];const snow=cum[cb2+p]-cum[ca2+p];if(snow<1)return null;const need=minSnowNeeded(p);const r=snow/Math.max(1,need);if(r>=1.5)return[100,220,100,190];if(r>=1.0)return[160,220,100,180];if(r>=.7)return[255,220,50,180];if(r>=.4)return[255,140,40,170];return[255,60,40,160];});}
   else if(layer=="powder"){const cb2=b*NP;setRaster(p=>{const r=computePowder(p,a,b);
     if(!r.powdered){if(cum[cb2+p]<5)return null;const k=powderSurf(r);if(k==null)return null;const c=PD_SURF_COL[k];return[c[0],c[1],c[2],k===0?105:160];}
-    const c=powderColLerp(r.newSnow);const alpha=r.quality==='reduced'?128:172;
+    // in the bands of the new-snow scale, as on the Neuschnee map
+    const c=snowCol(Math.max(SB[0],r.newSnow||0))||RGB[0];const alpha=r.quality==='reduced'?128:172;
     return[c[0]|0,c[1]|0,c[2]|0,alpha];});}
   else setRaster(_=>null);
 }
@@ -15946,8 +15947,10 @@ function legSpec(l){
       rows.push({k:i,lo:DEPTH_BOUNDS[i],hi:top?Infinity:DEPTH_BOUNDS[i+1],c:SC[Math.min(i,SC.length-1)],s:DEPTH_BOUNDS[i]+(top?'+':'–'+DEPTH_BOUNDS[i+1]),
       n:DEPTH_BOUNDS[i]+(top?'+':'–'+DEPTH_BOUNDS[i+1])+' cm'});}
     return {t:'Schneehöhe',u:'cm',rows,steps:snowSteps()};}
-  if(l==='powder')return {t:'Powder',u:'Pulver cm',grad:'linear-gradient(0deg,rgb(93,181,255),rgb(10,71,209))',
-    ticks:[PD_STRONG_BLUE_CM+'+',PD_STRONG_BLUE_CM/2,0],moreT:'sonst',
+  if(l==='powder')return {t:'Powder',u:'Pulver cm',
+    rows:(()=>{const rows=[];for(let i=SB.length-2;i>=0;i--){const top=i===SB.length-2;
+      rows.push({c:SC[Math.min(i,SC.length-1)],s:(i?SB[i]:'<'+SB[1])+(top?'+':i?'–'+SB[i+1]:''),n:(i?SB[i]:'<'+SB[1])+(top?'+':i?'–'+SB[i+1]:'')+' cm Pulver'});}return rows;})(),
+    steps:snowSteps(),moreT:'sonst',
     more:PD_SURF_ROWS.map(([k,sv,n])=>({k,c:'rgb('+PD_SURF_COL[k].join(',')+')',s:sv,n:sv+' – '+n})),long:'Neuschnee, der als Pulver liegen bleibt; Deckkraft = wie sicher'};
   if(l==='wind'){
     const wl=WIND_LVLS[windLvl][1];
