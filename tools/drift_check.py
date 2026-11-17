@@ -18,7 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from variant_a import drift  # noqa: E402
 
-PAGE = "https://gianio.github.io/snow-mapper-v17/data/variant_a_live/drift.html"
+PAGE = os.environ.get("APP_URL", "https://gianio.github.io/snow-mapper-v17/").rstrip("/") + "/data/variant_a_live/drift.html"
 
 
 def main(argv):

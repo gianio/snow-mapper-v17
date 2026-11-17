@@ -1409,6 +1409,12 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
     shell = _HTML.split('<script id="appjs">', 1)[0].replace("<!--__BOOT__-->", boot) + "</body></html>"
     # Crash reports (Sentry): the DSN comes from the build (secret SENTRY_DSN);
     # empty = off, as before.
+    # The public address and the repository whose Actions run the deploys
+    # (vars APP_URL / RUN_REPO): empty = the old GitHub Pages defaults in app.js.
+    for k in ("APP_URL", "RUN_REPO"):
+        v = os.environ.get(k, "").strip()
+        if v:
+            shell = shell.replace("window." + k + "='';", "window." + k + "=" + json.dumps(v) + ";", 1)
     dsn = os.environ.get("SENTRY_DSN", "").strip()
     if dsn:
         shell = shell.replace("window.SENTRY_DSN='';", "window.SENTRY_DSN=" + json.dumps(dsn) + ";", 1)
@@ -1933,7 +1939,7 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
   setTimeout(function(){if(!window.__APP_OK)stuck('Der Start dauert ungewöhnlich lange — Verbindung prüfen.');},45000);
 })();
 </script>
-<script>window.SENTRY_DSN='';(function(){if(!window.SENTRY_DSN)return;var s=document.createElement('script');s.src='https://browser.sentry-cdn.com/7.120.0/bundle.tracing.min.js';s.crossOrigin='anonymous';s.onload=function(){try{window.Sentry.init({dsn:window.SENTRY_DSN,tracesSampleRate:0,release:'firn',environment:(window.Capacitor&&window.Capacitor.getPlatform?window.Capacitor.getPlatform():'web')});}catch(e){}};document.head.appendChild(s);window.addEventListener('error',function(e){try{if(window.Sentry&&e.error)window.Sentry.captureException(e.error);}catch(_){}});window.addEventListener('unhandledrejection',function(e){try{if(window.Sentry)window.Sentry.captureException(e.reason);}catch(_){}});})();</script>
+<script>window.APP_URL='';window.RUN_REPO='';window.SENTRY_DSN='';(function(){if(!window.SENTRY_DSN)return;var s=document.createElement('script');s.src='https://browser.sentry-cdn.com/7.120.0/bundle.tracing.min.js';s.crossOrigin='anonymous';s.onload=function(){try{window.Sentry.init({dsn:window.SENTRY_DSN,tracesSampleRate:0,release:'firn',environment:(window.Capacitor&&window.Capacitor.getPlatform?window.Capacitor.getPlatform():'web')});}catch(e){}};document.head.appendChild(s);window.addEventListener('error',function(e){try{if(window.Sentry&&e.error)window.Sentry.captureException(e.error);}catch(_){}});window.addEventListener('unhandledrejection',function(e){try{if(window.Sentry)window.Sentry.captureException(e.reason);}catch(_){}});})();</script>
 <!-- The map tiles are the first thing a user waits for: do the DNS + TLS
      handshake with the tile host while the scripts are still parsing. -->
 <link rel="preconnect" href="https://wmts.geo.admin.ch" crossorigin>
@@ -18587,7 +18593,9 @@ requestAnimationFrame(()=>{try{prefsApplyStartup();}catch(e){}
 // public repository: no key, 60 requests an hour per address -- one every
 // three minutes, only while the app is in front). Scheduled data refreshes
 // do not count; only merges show the banner. When it is done: reload.
-const DEPLOY_API='https://api.github.com/repos/gianio/snow-mapper-v17/actions/workflows/deploy.yml/runs?per_page=1&event=push&status=in_progress';
+// the public web address and the repository whose Actions deploy (set by the build)
+const APP_URL=(window.APP_URL||'https://gianio.github.io/snow-mapper-v17/').replace(/\/?$/,'/');
+const DEPLOY_API='https://api.github.com/repos/'+(window.RUN_REPO||'gianio/snow-mapper-v17')+'/actions/workflows/deploy.yml/runs?per_page=1&status=in_progress&event='+(window.RUN_REPO?'repository_dispatch':'push');
 let _depRun=null,_depT=0,_depBack=0;
 async function deployWatch(){clearTimeout(_depT);
   if(document.visibilityState!=='visible'||!navigator.onLine){_depT=setTimeout(deployWatch,60e3);return;}
@@ -19692,7 +19700,7 @@ function timeAgo(ts){const d=Date.now()-new Date(ts).getTime(),h=d/36e5;if(h<1)r
 // Where the confirmation link in the mail leads back to: this page on the
 // web, the public site from the app (the link opens in the browser there).
 const AUTH_REDIRECT=(/^https?:$/.test(location.protocol)&&!/^(localhost|127\.|capacitor)/.test(location.hostname))
-  ?location.origin+location.pathname:'https://gianio.github.io/snow-mapper-v17/';
+  ?location.origin+location.pathname:APP_URL;
 // The mail may carry a link instead of (or besides) the 6-digit code. Opening
 // it signs the account in -- in this tab, or in another one (the session is
 // shared through storage) -- so a waiting code step finishes by itself.
@@ -23470,7 +23478,7 @@ let _shId=null;
 // The public web address, also from inside the iOS app (whose own origin is
 // capacitor://localhost and opens nowhere else).
 function postUrl(id){const base=/^https?:/.test(location.protocol)&&!/localhost/.test(location.hostname)
-    ?location.origin+location.pathname:'https://gianio.github.io/snow-mapper-v17/';
+    ?location.origin+location.pathname:APP_URL;
   return base+'?post='+encodeURIComponent(id);}
 function postShareText(r){return r?((r.caption||r.sub||'Schnee-Report')+(r.user?' – '+r.user:'')):'Schnee-Report';}
 function sharePost(id,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();

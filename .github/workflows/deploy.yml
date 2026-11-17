@@ -141,6 +141,8 @@ jobs:
           # optional: Windy Webcams API key for the webcam layer (public client key)
           WINDY_WEBCAMS_KEY: ${{ secrets.WINDY_WEBCAMS_KEY }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          APP_URL: ${{ vars.APP_URL }}
+          RUN_REPO: ${{ vars.RUN_REPO }}
           SNOWMAPPER_OM_CACHE: ${{ github.workspace }}/om_cache/openmeteo.json.gz
         run: |
           mkdir -p dist
