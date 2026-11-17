@@ -56,20 +56,26 @@ def get(url, **kw):
 
 
 # ── Snowmapper ──────────────────────────────────────────────────────────────
-def load_snowmapper(site=SITE):
-    lj = get(site + "data/latest.json", params={"t": int(dt.datetime.now().timestamp())}).json()
-    raw = gzip.decompress(get(site + "data/" + lj["gz"]).content)
+def load_snowmapper(site=SITE, path=None):
+    if path:  # a downloaded snowdata-<version>.json.gz
+        lj = {"version": Path(path).stem.split("-")[-1].split(".")[0], "generated": None}
+        raw = gzip.decompress(Path(path).read_bytes())
+    else:
+        lj = get(site + "data/latest.json", params={"t": int(dt.datetime.now().timestamp())}).json()
+        raw = gzip.decompress(get(site + "data/" + lj["gz"]).content)
     j = json.loads(raw)
     m, b = j["meta"], j["b"]
     W, H, T = m["width"], m["height"], m["T"]
-    snow = np.frombuffer(base64.b64decode(b["SNOW"]), np.uint8)[:T * W * H].reshape(T, H, W).astype(np.float32) * m["snow_scale"]
+    # what the app shows: the snowfall after a day of settling (meta.ns_settle)
+    settle = float(m.get("ns_settle") or 1.0)
+    snow = np.frombuffer(base64.b64decode(b["SNOW"]), np.uint8)[:T * W * H].reshape(T, H, W).astype(np.float32) * m["snow_scale"] * settle
     elev = np.frombuffer(base64.b64decode(b["MELEV"]), np.uint8)[:W * H].reshape(H, W).astype(np.float32) * m.get("elev_scale", 20)
     times = [dt.datetime.fromisoformat(t).replace(tzinfo=dt.timezone.utc) for t in m["times"]]
     la0, lo0, la1, lo1 = m["bounds"]
     lat = la1 - (np.arange(H) + .5) * (la1 - la0) / H
     lon = lo0 + (np.arange(W) + .5) * (lo1 - lo0) / W
     return {"snow": snow, "elev": elev, "times": times, "lat": lat, "lon": lon, "version": lj.get("version"),
-            "generated": lj.get("generated")}
+            "generated": lj.get("generated"), "settle": settle}
 
 
 def sm_window(sm, t0, t1):
@@ -295,18 +301,76 @@ def maps_png(path, panels, lat, lon):
     fig.savefig(path, dpi=110)
 
 
+PG_MAP = ("https://map.powderguide.com/en/?b=&c%5Blng%5D=8.2&c%5Blat%5D=46.7&date={run}&day={day}"
+          "&maskStr=nomask&model=&p=0&poi=cReports&poiTime=30days&t=&varName=snow_gsp__lsfwe&z=7")
+WR_MAP = "https://whiterisk.ch/de/conditions/snow-maps/new_snow"
+HIST_COLS = ["date", "source", "window_start", "window_end", "n", "mean_ref", "mean_sm", "bias", "mae", "rmse",
+             "pearson_10km", "csi1", "csi5", "csi10", "fbias5", "sm_version", "ns_settle"]
+
+
+def hist_rows(date, name, res, window, sm):
+    c, b = res["cells"], res["blocks_10km"]
+    if c.get("n", 0) < 10:
+        return []
+    d = c["detect"]
+    return [[date, name, window[0], window[1], c["n"], *(round(c[k], 2) for k in ("mean_ref", "mean_sm", "bias", "mae", "rmse")),
+             round(b["pearson"], 3) if b.get("pearson") is not None else "",
+             *(round(d[t]["csi"], 3) if d[t]["csi"] is not None else "" for t in (1, 5, 10)),
+             round(d[5]["fbias"], 2) if d[5]["fbias"] is not None else "", sm["version"], sm["settle"]]]
+
+
+def hist_update(path, rows):
+    """Append today's rows (replacing any earlier rows of the same date and
+    source), return all rows for the running summary."""
+    import csv
+    p = Path(path)
+    old = []
+    if p.exists():
+        with p.open(newline="") as f:
+            old = [r for r in csv.reader(f)][1:]
+    keys = {(r[0], r[1]) for r in rows}
+    allr = [r for r in old if (r[0], r[1]) not in keys] + [[str(x) for x in r] for r in rows]
+    allr.sort(key=lambda r: (r[0], r[1]))
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(HIST_COLS)
+        w.writerows(allr)
+    return allr
+
+
+def hist_section(allr):
+    L = ["## Verlauf (alle bisherigen Tage)", "",
+         "| Quelle | Tage | Ø Quelle [cm] | Ø Snowmapper [cm] | Ø Bias | Ø MAE | Ø r (10 km) | Ø CSI ≥1 | Ø CSI ≥5 | Ø Freq.-Bias ≥5 |",
+         "|---|---|---|---|---|---|---|---|---|---|"]
+    i = {c: k for k, c in enumerate(HIST_COLS)}
+    for src in sorted({r[1] for r in allr}):
+        R = [r for r in allr if r[1] == src]
+        def avg(col):
+            v = [float(r[i[col]]) for r in R if r[i[col]] not in ("", "None")]
+            return sum(v) / len(v) if v else None
+        L.append(f"| {src} | {len(R)} | {fmt(avg('mean_ref'))} | {fmt(avg('mean_sm'))} | {fmt(avg('bias'))} | {fmt(avg('mae'))} | "
+                 f"{fmt(avg('pearson_10km'), 2)} | {fmt(avg('csi1'), 2)} | {fmt(avg('csi5'), 2)} | {fmt(avg('fbias5'), 2)} |")
+    L += ["", "Ein Tag ist Zufall; erst über viele Tage (verschiedene Wetterlagen) wird der Bias belastbar genug, "
+          "um das Modell zu kalibrieren (SLR, Höhenzuschlag, Faktor auf den Niederschlag).", ""]
+    return L
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", default="compare_out")
     ap.add_argument("--site", default=SITE)
+    ap.add_argument("--sm-file", help="read Snowmapper from a local snowdata-*.json.gz instead of the site")
     ap.add_argument("--pg-run", help="PowderGuide run date YYYYMMDD (default: the newest)")
-    ap.add_argument("--pg-day", default="DAY048", help="PowderGuide 24 h field (DAY048 = day after the run day)")
+    ap.add_argument("--pg-day", default="auto",
+                    help="PowderGuide 24 h field, e.g. DAY048 (= day after the run day); auto = tomorrow (UTC) from the chosen run")
     ap.add_argument("--hn-date", help="SLF HN1D map date YYYY-MM-DD (default: today)")
+    ap.add_argument("--history", help="CSV to append the day's key numbers to (and summarise in the report)")
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    sm = load_snowmapper(a.site)
+    sm = load_snowmapper(a.site, a.sm_file)
     lat, lon = sm["lat"], sm["lon"]
     report = {"snowmapper": {"version": sm["version"], "generated": sm["generated"]}}
 
@@ -324,6 +388,10 @@ def main():
     # PowderGuide forecast for the next day
     plots = get(PG_TILES + "plots_snow_gsp__lsfwe.json").json()["plots"]
     run = a.pg_run or max(p["date"] for p in plots if p["region"] == "eur")
+    if a.pg_day == "auto":
+        r_d = dt.datetime.strptime(run, "%Y%m%d").date()
+        lead = ((dt.datetime.now(dt.timezone.utc).date() + dt.timedelta(days=2)) - r_d).days * 24
+        a.pg_day = f"DAY{min(120, max(48, lead)):03d}"
     plot = pg_plot(run, a.pg_day)
     lead = int("".join(ch for ch in a.pg_day if ch.isdigit()))
     r0 = dt.datetime.strptime(run, "%Y%m%d").replace(tzinfo=dt.timezone.utc)
@@ -351,6 +419,18 @@ def main():
                  f"(Rot = Wert auf der Skala 1–100 cm, Blau = Daten vorhanden). Snowmapper: Summe {t0:%d.%m. %H}–{t1:%d.%m. %H} UTC "
                  "(Rückblick = MeteoSchweiz-Archiv, kein Vorhersagetest).",
                  res_slf, "SLF")
+    L += ["## So siehst du dasselbe bei den Quellen", "",
+          f"- **PowderGuide:** [Karte öffnen]({PG_MAP.format(run=run, day=a.pg_day)}) – Variable «Neuschnee» (`snow_gsp__lsfwe`), "
+          f"Modell ICON-EU, Lauf {r0:%d.%m.%Y}, Zeitraum `{a.pg_day}` = 24 h bis {p1:%d.%m. %H} UTC, keine Maske. "
+          f"Falls die Seite den Zeitraum nicht übernimmt: im Zeitregler den {p0:%d.%m.} mit «24 h» wählen.",
+          f"- **WhiteRisk:** [{WR_MAP}]({WR_MAP}) – Neuschnee, Zeitraum «1 Tag», Datum {t1:%d.%m.%Y} "
+          f"(gemessen bis {t1:%H:%M} UTC). Das ausgewertete Bild: {SLF_HN.format(period='HN1D', date=hn_date)}",
+          f"- **Snowmapper:** Ebene Neuschnee, Zeitraum wie oben; Werte nach 24 h Setzung (Faktor {sm['settle']:.3f}).",
+          ""]
+    if a.history:
+        rows = hist_rows(hn_date, "PowderGuide", res_pg, (p0.isoformat(), p1.isoformat()), sm) \
+            + hist_rows(hn_date, "SLF", res_slf, (t0.isoformat(), t1.isoformat()), sm)
+        L += hist_section(hist_update(a.history, rows))
     L += ["## Hinweise zur Deutung", "",
           "- Bias > 0: Snowmapper zeigt mehr Neuschnee als die Quelle.",
           "- PowderGuide rechnet 1 mm = 1 cm (10:1); Snowmapper rechnet mit einer temperaturabhängigen Neuschneedichte "

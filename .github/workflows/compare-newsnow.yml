@@ -1,0 +1,72 @@
+# Daily check of Snowmapper's new snow against two outside sources:
+#   - PowderGuide (ICON-EU), forecast for tomorrow
+#   - SLF / WhiteRisk HN1D, measured over the last 24 h
+# tools/compare_newsnow.py writes report.md / report.json / maps.png. The
+# day's key numbers are appended to history.csv on the branch
+# «compare-history» (kept off main, so it never triggers a deploy), and the
+# report shows the running averages over all days so far.
+name: Compare new snow
+
+on:
+  schedule:
+    - cron: "41 8 * * *"   # after the SLF 06 UTC map and the night's runs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: compare-newsnow
+  cancel-in-progress: false
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install requests numpy pillow matplotlib
+
+      - name: History so far
+        run: |
+          mkdir -p out
+          if git fetch --depth 1 origin compare-history 2>/dev/null; then
+            git show FETCH_HEAD:history.csv > out/history.csv 2>/dev/null || true
+          fi
+
+      - name: Compare
+        run: python tools/compare_newsnow.py --out out --history out/history.csv
+
+      - name: Summary
+        if: always()
+        run: test -f out/report.md && cat out/report.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compare-newsnow-${{ github.run_id }}
+          path: out/
+          retention-days: 30
+
+      - name: Store history
+        run: |
+          d=$(date -u +%F)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -rf hist && mkdir hist && cd hist && git init -q
+          git remote add origin "$(git -C .. remote get-url origin)"
+          git config http.https://github.com/.extraheader "$(git -C .. config --get http.https://github.com/.extraheader)"
+          if git fetch -q --depth 1 origin compare-history 2>/dev/null; then git checkout -q -b compare-history FETCH_HEAD; else git checkout -q --orphan compare-history; fi
+          cp ../out/history.csv history.csv
+          mkdir -p "reports/$d" && cp ../out/report.md ../out/maps.png "reports/$d/"
+          cp ../out/report.md latest.md
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -q -m "compare-newsnow $d"
+          git push -q origin HEAD:compare-history
