@@ -7113,6 +7113,7 @@ body.nav-screen #favFab,body.fp-open #favFab,body.insp-open #favFab,body.ly-open
 .fp-key span{display:inline-flex;align-items:center;gap:6px}
 .fp-key u{display:block;width:16px;height:6px;border-radius:3px}
 .fp-key small{flex-basis:100%;font-size:12px}
+.fp-scale{gap:2px!important}.fp-scale u{width:18px!important}
 /* Höhenmeter: the chosen range over the middle of the slider */
 .ts-dual2{margin-top:22px!important}
 .ts-gmid{position:absolute;top:-22px;transform:translateX(-50%);white-space:nowrap;padding:2px 10px;border-radius:var(--md-shape-full);
@@ -20493,6 +20494,8 @@ function fpHourly(f){const p=fpCell(f),h=new Float32Array(T);
 function fpBand(v){if(!(v>=1))return v>=.3?'<1':'0';let j=0;while(j+1<SB.length-1&&v>=SB[j+1])j++;
   return j>=SB.length-2?SB[j]+'+':SB[j]+'-'+SB[j+1];}
 // the snow at the end of a block: the Powder engine over the 48 h before it
+// a bar in the colour of the snow scale for its amount (as on the map)
+function fpSnowCol(v){if(!(v>=1))return v>=.2?SC[0]:'#D5DAE1';let j=0;while(j+1<SB.length-1&&v>=SB[j+1])j++;return SC[Math.min(j,SC.length-1)];}
 const FP_Q={pow:'#2E9E5B',red:'#E9B730',soft:'#EE8A3A',bad:'#D64545',none:'#C9D0DA'};
 function fpQual(p,tEnd){if(p<0)return 'none';try{const r=computePowder(p,Math.max(0,tEnd-48),tEnd);
   if(r.powdered)return r.quality==='reduced'?'red':'pow';
@@ -20518,17 +20521,15 @@ async function fpRender(){const el=document.getElementById('favPage');if(!el||el
   let bmx=5;rows.forEach(r=>r.blk.forEach(b=>b.forEach(v=>{if(v>bmx)bmx=v;})));
   list.forEach((f,fi)=>{const {h:hr,p,blk}=rows[fi];
     const cols=days.map((d,di)=>{let s2=0;for(let t=d.t0;t<d.t1;t++)s2+=hr[t];
-      const q=[d.t0+8,d.t0+16,d.t0+24].map(te=>fpQual(p,Math.min(d.t1,te)));
       return '<span class="fp-c"><b class="'+(s2>=10?'big':s2<1?'nil':'')+'">'+fpBand(s2)+'</b><i>'
-        +blk[di].map((v,k)=>'<u style="height:'+(v<.2?3:Math.max(5,Math.round(v/bmx*44)))+'px;background:'+FP_Q[q[k]]+'" title="'+['Nacht','Tag','Abend'][k]+': '+(v<10?v.toFixed(1):Math.round(v))+' cm"></u>').join('')+'</i></span>';}).join('');
+        +blk[di].map((v,k)=>'<u style="height:'+(v<.2?3:Math.max(5,Math.round(v/bmx*44)))+'px;background:'+fpSnowCol(v)+'" title="'+['Nacht','Tag','Abend'][k]+': '+(v<10?v.toFixed(1):Math.round(v))+' cm"></u>').join('')+'</i></span>';}).join('');
     h+='<div class="fp-card"><div class="fp-t"><button type="button" class="fp-name" onclick="fpClose();favOpen(\''+f.id+'\')"><b>'+escapeHtml(f.name)+'</b>'
       +'<small>'+(f.kind==='tour'?'Tour':'Ort')+(f.elev?' · '+f.elev+' m':'')+(p<0?' · Alpenraum (grob)':'')+'</small></button>'
       +'<button type="button" class="fp-bell'+(f.notify?' on':'')+'" onclick="fpBell(\''+f.id+'\')" aria-pressed="'+!!f.notify+'" title="Powder-Alarm: Push ab '+(f.threshold_cm||20)+' cm in 48 h">'
       +FAV_BELL+'<span>'+(f.notify?'ab '+(f.threshold_cm||20)+' cm':'Alarm')+'</span></button></div>'
       +'<div class="fp-sc fp-row"><div style="width:'+W0+'px">'+cols+'</div></div></div>';});
-  h+='</div><div class="fp-key"><span><u style="background:'+FP_Q.pow+'"></u>Pulver</span><span><u style="background:'+FP_Q.red+'"></u>Pulver, nachlassend</span>'
-    +'<span><u style="background:'+FP_Q.soft+'"></u>Sulz / hart / alt</span><span><u style="background:'+FP_Q.bad+'"></u>Kruste / nass / Regen</span>'
-    +'<small>Zahl = Neuschnee pro Tag in cm · Balken = Neuschnee in der Nacht, am Tag, am Abend (Höhe = Menge, Farbe = Schnee)</small></div>';
+  h+='</div><div class="fp-key"><span class="fp-scale">'+[1,5,10,20,30,50].map(v=>'<u style="background:'+fpSnowCol(v)+'"></u>').join('')+'</span><span>1 · 5 · 10 · 20 · 30 · 50+ cm</span>'
+    +'<small>Zahl = Neuschnee pro Tag · Balken = Neuschnee in der Nacht, am Tag, am Abend (Höhe und Farbe = Menge, wie auf der Karte)</small></div>';
   el.innerHTML=h;
   // every row scrolls with the others
   const sc=[...el.querySelectorAll('.fp-sc')];
