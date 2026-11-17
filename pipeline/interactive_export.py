@@ -7107,8 +7107,8 @@ body.nav-screen #favFab,body.fp-open #favFab,body.insp-open #favFab,body.ly-open
 .fp-c b{font:700 17px/1 var(--font);color:var(--md-on-surface);font-variant-numeric:tabular-nums;letter-spacing:-.2px}
 .fp-c b.big{color:var(--md-primary)}
 .fp-c b.nil{color:var(--md-on-surface-var);font-weight:500}
-.fp-c i{display:flex;gap:3px}
-.fp-c u{display:block;width:18px;height:6px;border-radius:3px;text-decoration:none}
+.fp-c i{display:flex;align-items:flex-end;gap:4px;height:46px;padding-bottom:2px;border-bottom:1px solid var(--md-outline-var)}
+.fp-c u{display:block;width:16px;border-radius:5px 5px 2px 2px;text-decoration:none}
 .fp-key{display:flex;flex-wrap:wrap;gap:6px 14px;padding:16px 20px 0;font:500 12px/1.3 var(--font);color:var(--md-on-surface-var)}
 .fp-key span{display:inline-flex;align-items:center;gap:6px}
 .fp-key u{display:block;width:16px;height:6px;border-radius:3px}
@@ -20512,22 +20512,23 @@ async function fpRender(){const el=document.getElementById('favPage');if(!el||el
       return '<span><small>'+escapeHtml(wd)+'</small><b>'+d.dn+'</b></span>';}).join('')+'</div></div>'
     +'<div class="fp-list">';
   if(!list.length)h+='<div class="fav-empty">'+((favs||[]).length?'Keine Favoriten in dieser Auswahl.':'Noch keine Favoriten. Tippe im Punkt-Popup («Region merken») oder bei einer Tour auf den Stern.')+'</div>';
-  list.forEach(f=>{const {h:hr,p}=fpHourly(f);
-    // the hourly curve behind the numbers, scaled to this favourite's own peak
-    let mx=0;days.forEach(d=>{for(let t=d.t0;t<d.t1;t++)mx=Math.max(mx,hr[t]);});const sc=Math.max(1.2,mx);
-    let path='M0 46';days.forEach((d,i)=>{const n=d.t1-d.t0;for(let t=d.t0;t<d.t1;t++){const x=i*FP_COL+(t-d.t0+.5)/n*FP_COL,y=46-Math.min(1,hr[t]/sc)*40;path+=' L'+x.toFixed(1)+' '+y.toFixed(1);}});
-    path+=' L'+W0+' 46 Z';
-    const cols=days.map(d=>{let s2=0;for(let t=d.t0;t<d.t1;t++)s2+=hr[t];
-      const b=[d.t0+8,d.t0+16,d.t0+24].map(te=>fpQual(p,Math.min(d.t1,te)));
-      return '<span class="fp-c"><b class="'+(s2>=10?'big':s2<1?'nil':'')+'">'+fpBand(s2)+'</b><i>'+b.map(q=>'<u style="background:'+FP_Q[q]+'"></u>').join('')+'</i></span>';}).join('');
+  // three bars a day (night, day, evening): height = new snow in those 8 h,
+  // one scale for every card so they compare, colour = the snow then
+  const rows=list.map(f=>{const r=fpHourly(f);r.blk=days.map(d=>[0,8,16].map(o=>{let v=0;for(let t=d.t0+o;t<Math.min(d.t1,d.t0+o+8);t++)v+=r.h[t];return v;}));return r;});
+  let bmx=5;rows.forEach(r=>r.blk.forEach(b=>b.forEach(v=>{if(v>bmx)bmx=v;})));
+  list.forEach((f,fi)=>{const {h:hr,p,blk}=rows[fi];
+    const cols=days.map((d,di)=>{let s2=0;for(let t=d.t0;t<d.t1;t++)s2+=hr[t];
+      const q=[d.t0+8,d.t0+16,d.t0+24].map(te=>fpQual(p,Math.min(d.t1,te)));
+      return '<span class="fp-c"><b class="'+(s2>=10?'big':s2<1?'nil':'')+'">'+fpBand(s2)+'</b><i>'
+        +blk[di].map((v,k)=>'<u style="height:'+(v<.2?3:Math.max(5,Math.round(v/bmx*44)))+'px;background:'+FP_Q[q[k]]+'" title="'+['Nacht','Tag','Abend'][k]+': '+(v<10?v.toFixed(1):Math.round(v))+' cm"></u>').join('')+'</i></span>';}).join('');
     h+='<div class="fp-card"><div class="fp-t"><button type="button" class="fp-name" onclick="fpClose();favOpen(\''+f.id+'\')"><b>'+escapeHtml(f.name)+'</b>'
       +'<small>'+(f.kind==='tour'?'Tour':'Ort')+(f.elev?' · '+f.elev+' m':'')+(p<0?' · Alpenraum (grob)':'')+'</small></button>'
       +'<button type="button" class="fp-bell'+(f.notify?' on':'')+'" onclick="fpBell(\''+f.id+'\')" aria-pressed="'+!!f.notify+'" title="Powder-Alarm: Push ab '+(f.threshold_cm||20)+' cm in 48 h">'
       +FAV_BELL+'<span>'+(f.notify?'ab '+(f.threshold_cm||20)+' cm':'Alarm')+'</span></button></div>'
-      +'<div class="fp-sc fp-row"><div style="width:'+W0+'px"><svg class="fp-curve" viewBox="0 0 '+W0+' 46" width="'+W0+'" height="46" preserveAspectRatio="none" aria-hidden="true"><path d="'+path+'"/></svg>'+cols+'</div></div></div>';});
+      +'<div class="fp-sc fp-row"><div style="width:'+W0+'px">'+cols+'</div></div></div>';});
   h+='</div><div class="fp-key"><span><u style="background:'+FP_Q.pow+'"></u>Pulver</span><span><u style="background:'+FP_Q.red+'"></u>Pulver, nachlassend</span>'
     +'<span><u style="background:'+FP_Q.soft+'"></u>Sulz / hart / alt</span><span><u style="background:'+FP_Q.bad+'"></u>Kruste / nass / Regen</span>'
-    +'<small>Zahl = Neuschnee pro Tag in cm · drei Balken = Nacht, Tag, Abend</small></div>';
+    +'<small>Zahl = Neuschnee pro Tag in cm · Balken = Neuschnee in der Nacht, am Tag, am Abend (Höhe = Menge, Farbe = Schnee)</small></div>';
   el.innerHTML=h;
   // every row scrolls with the others
   const sc=[...el.querySelectorAll('.fp-sc')];
