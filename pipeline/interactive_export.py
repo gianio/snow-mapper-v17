@@ -7283,6 +7283,50 @@ body.plan-on #rvFab,body.plan-on #infoFab,body.plan-on #mapAcc,body.plan-on #bra
 /* favourite / compare: always labelled, never a bare star */
 .insp-fav{border-radius:var(--md-shape-full,999px)!important}
 .insp-fav.on{background:var(--md-secondary-container)!important;color:var(--md-on-secondary-container)!important}
+/* ==== Runde 17.11. abends: Karte ruhiger ==== */
+/* a data layer on the map: the base map in grey, so only the data has colour */
+body:not(.ly-none) .base-tiles{filter:grayscale(1) contrast(1.08) brightness(1.03)!important}
+body:not(.ly-none) .osm-tiles{filter:grayscale(1) contrast(.85) brightness(1.12)!important}
+/* the side legend is just the chosen layer's icon; a tap opens the legend */
+#miniLegend,#mapFabs #miniLegend,body.desk #mapFabs #miniLegend{width:44px!important;height:44px!important;min-width:0!important;max-width:44px!important;min-height:0!important;padding:0!important;border-radius:50%!important;overflow:hidden!important;transform:none!important;align-self:flex-end}
+#miniLegend #mlUnit,#miniLegend #mlScale,#miniLegend #mlFold,#miniLegend #mlName span,#miniLegend .ml-sub,#miniLegend .ml-more,#miniLegend .ml-reset{display:none!important}
+#miniLegend #mlName{margin:0!important;padding:0!important;border:0!important;height:44px;justify-content:center;color:var(--md-primary)}
+#miniLegend #mlName svg{width:22px!important;height:22px!important}
+body.leg-open #miniLegend{background:var(--md-primary)!important}
+body.leg-open #miniLegend #mlName{color:var(--md-on-primary)}
+/* the legend itself: colours and words straight on the map, top left */
+.leg-info{position:fixed!important;left:12px!important;right:auto!important;bottom:auto!important;top:calc(env(safe-area-inset-top,0px) + 66px)!important;
+  width:auto!important;max-width:min(64vw,260px)!important;max-height:calc(100dvh - 260px)!important;overflow:auto;
+  background:transparent!important;box-shadow:none!important;border:0!important;padding:0!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  color:#111;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 6px #fff}
+.leg-info .li-desc,.leg-info .li-note,.leg-info .li-hd span,.leg-info .li-hd .tour-x,.leg-info .va-note,.leg-info .va-data-note{display:none!important}
+.leg-info{padding:4px 6px!important}.leg-info .li-hd{margin-bottom:4px}.leg-info .li-hd b{font:700 14px/1.2 var(--font)}
+.leg-info .li-rows{gap:3px}.leg-info .li-rows div{font:600 12.5px/1.25 var(--font);gap:7px}
+.leg-info .li-rows i{width:14px;height:14px;border-radius:4px;box-shadow:0 0 0 1.5px #fff}
+.leg-info .li-rows b{display:none}
+.leg-info .li-ramp{width:180px;box-shadow:0 0 0 1.5px #fff}.leg-info .li-ticks{width:180px;color:#111}
+.leg-info .li-sub{border:0!important;padding-top:4px!important;margin:8px 0 4px!important;color:#111!important;font-weight:700!important}
+/* overlays switched on: a round button each under the side buttons, tap = off */
+#ovChips{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:8px}
+#ovChips[hidden]{display:none}
+#ovChips .ov-chip{width:40px;height:40px;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer;
+  background:var(--md-secondary-container,#D6E3FF);color:var(--md-on-secondary-container,#0F1C2C);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+#ovChips .ov-chip svg{width:20px;height:20px}
+/* the brand, top left: the app icon and its name under it */
+#brandTop{position:fixed;z-index:1150;left:12px;top:calc(env(safe-area-inset-top,0px) + 6px);display:flex;flex-direction:column;align-items:center;gap:1px;pointer-events:none}
+#brandTop img{width:34px;height:34px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);object-fit:cover}
+#brandTop span{font:700 10.5px/1.1 var(--font);letter-spacing:-.01em;color:#16202c;text-shadow:0 0 3px #fff,0 0 3px #fff}
+body:not(.desk) #rvFab{left:76px!important}
+body:not(.desk) #infoFab{left:124px!important}
+body.desk #brandTop,body.nav-screen #brandTop,body.ly-open #brandTop,body.insp-open #brandTop,body.trk-open #brandTop,body.draw-on #brandTop,body.ts-open #brandTop,body.plan-on #brandTop,body.fp-open #brandTop,body.wcv-open #brandTop{display:none}
+body.leg-open:not(.desk) #rvFab,body.leg-open:not(.desk) #infoFab{visibility:hidden}
+/* scale bar and credits: one quiet row bottom left, above the timeline */
+.leaflet-control-scale{left:12px!important;bottom:calc(var(--nav-h,54px) + var(--btm-h,47px) + 12px)!important;z-index:850!important}
+.leaflet-control-scale-line{background:rgba(255,255,255,.75)!important;border:1.5px solid #333!important;border-top:0!important;color:#222!important;font:600 10.5px/1.3 var(--font)!important;padding:0 4px!important}
+.leaflet-control-attribution{left:104px!important;bottom:calc(var(--nav-h,54px) + var(--btm-h,47px) + 12px)!important;z-index:850!important;
+  background:rgba(255,255,255,.7)!important;font:600 10.5px/1.5 var(--font)!important;padding:0 6px!important;border-radius:4px!important;max-width:calc(100vw - 190px)!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.desk .leaflet-control-scale,body.desk .leaflet-control-attribution{bottom:calc(var(--btm-h,47px) + 26px)!important}
+
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -7385,6 +7429,7 @@ body.plan-on #rvFab,body.plan-on #infoFab,body.plan-on #mapAcc,body.plan-on #bra
     <button class="pt-acc" id="mapAcc" onclick="accountTap()" aria-label="Konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="pt-ini"></span></button>
   </div>
 </header>
+<div id="brandTop" aria-hidden="true"><img src="icon-192.png?v=2" alt="" width="34" height="34"><span>Snowmapper</span></div>
 <button id="brandMark" class="pt-home lg float" onclick="scrGo('search')" aria-label="Snowmapper"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,17 8,10 12,13 16,5 21,17"/></svg><span>Snowmapper</span></button>
 <div id="searchWrap" class="hid"><span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;display:block"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span><input id="searchIn" type="search" enterkeyhint="search" placeholder="Ort oder Skitour suchen…" autocomplete="off"/><div id="searchRes"></div></div>
 <div id="ctrlRail" hidden>
@@ -9834,6 +9879,8 @@ const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5,doubleClickZoom
 // visible in the corner. The data sources still get credited -- just
 // without Leaflet's own link riding along.
 if(map.attributionControl)map.attributionControl.setPrefix(false);
+// a metric scale bar, bottom-left above the timeline, next to the credits
+try{L.control.scale({metric:true,imperial:false,maxWidth:84,position:'bottomleft'}).addTo(map);}catch(e){}
 // Smooth wheel / trackpad zoom. Leaflet's own handler turns every burst of
 // wheel deltas into a separate animated zoom step, which on a trackpad is a
 // queue of little jumps. Instead the zoom follows a goal value frame by frame
@@ -10147,7 +10194,7 @@ function ovToggle(k,auto){
   // switching your own tracks or the community off clears a shown route too
   if((k==='myacts'||k==='reports')&&!ovOn[k])trkShownClear();
   if(k==='skiareas'){try{localStorage.setItem('ssm_skiareas',ovOn[k]?'1':'0');}catch(e){}}
-  if(k==='snowline'){try{localStorage.setItem('ssm_snowline',ovOn[k]?'1':'0');}catch(e){}if(ovOn[k])snowlineRefresh();}
+  if(k==='snowline'){try{localStorage.setItem('ssm_snowline2',ovOn[k]?'1':'0');}catch(e){}if(ovOn[k])snowlineRefresh();}
   if(k==='avalanche')document.body.classList.toggle('av-on',!!ovOn[k]);
   if(k==='webcams'&&!auto){_wcAuto=false;try{localStorage.setItem('ssm_webcams',ovOn[k]?'1':'0');}catch(e){}}
   if(k==='skitourVec'){if(ovOn[k])tourRecolor();else tourClose();}
@@ -10171,7 +10218,18 @@ function ovAttrSync(){
     el.innerHTML='<span class="at-c">© swisstopo</span><span class="at-i" aria-hidden="true"> ⓘ</span><span class="at-m"> · '+more+'</span>';
     if(!el._atTap){el._atTap=1;el.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('a'))return;el.classList.toggle('open');});}}
 }
-function ovSyncUI(){
+// Every overlay switched on in the panel also shows as a small round button
+// on the map, under the side buttons; a tap there switches it off again.
+function ovChipsSync(){let box=document.getElementById('ovChips');
+  if(!box){const f=document.getElementById('mapFabs');if(!f)return;box=document.createElement('div');box.id='ovChips';box.setAttribute('role','toolbar');box.setAttribute('aria-label','Eingeschaltete Karten-Extras');
+    const grp=f.querySelector('.mfab-grp');grp?grp.after(box):f.prepend(box);}
+  const ks=Object.keys(OVERLAYS).filter(k=>k!=='variantA'&&ovOn[k]);
+  const stn=typeof showStn!=='undefined'&&showStn;
+  const ic=p=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>';
+  box.innerHTML=ks.map(k=>'<button type="button" class="ov-chip" onclick="ovToggle(\''+k+'\');try{lyRender()}catch(e){}" title="'+escapeHtml(tr(OV_SHORT[k]||OVERLAYS[k].label))+' ausschalten" aria-label="'+escapeHtml(tr(OV_SHORT[k]||OVERLAYS[k].label))+' ausschalten">'+ic(OV_ICON[k]||'<circle cx="12" cy="12" r="6"/>')+'</button>').join('')
+    +(stn?'<button type="button" class="ov-chip" onclick="toggleStations();try{lyRender()}catch(e){}" title="Messstationen ausschalten" aria-label="Messstationen ausschalten">'+ic('<line x1="12" y1="21" x2="12" y2="10"/><path d="M8 21h8"/><circle cx="12" cy="7.5" r="2.5"/><path d="M7 4.5a7 7 0 0 1 10 0"/>')+'</button>':'');
+  box.hidden=!box.innerHTML;}
+function ovSyncUI(){try{ovChipsSync();}catch(e){}
   Object.keys(OVERLAYS).forEach(k=>{
     const b=document.getElementById('ov_'+k);if(!b)return;
     b.classList.toggle('on',!!ovOn[k]);
@@ -15570,8 +15628,8 @@ function snowlineRefresh(){
   // the cell-by-cell pieces joined into lines and rounded (Chaikin), drawn as
   // one clear red line on a white halo
   const lines=slSmooth(slStitch(segs));
-  g.addLayer(L.polyline(lines,{color:'#fff',weight:4.5,opacity:.85,interactive:false,smoothFactor:.8,lineCap:'round',lineJoin:'round'}));
-  g.addLayer(L.polyline(lines,{color:'#E0242B',weight:2.2,opacity:1,interactive:false,smoothFactor:.8,lineCap:'round',lineJoin:'round'}));
+  g.addLayer(L.polyline(lines,{color:'#fff',weight:4.5,opacity:.85,interactive:false,smoothFactor:.8,lineCap:'round',lineJoin:'round',dashArray:'8 6'}));
+  g.addLayer(L.polyline(lines,{color:'#E0242B',weight:2.2,opacity:1,interactive:false,smoothFactor:.8,lineCap:'butt',lineJoin:'round',dashArray:'8 6'}));
   labels.slice(0,40).forEach(([pt,z])=>g.addLayer(L.marker(pt,{interactive:false,keyboard:false,
     icon:L.divIcon({className:'sl-lab',html:Math.round(z/50)*50+' m',iconSize:null})})));
 }
@@ -16459,11 +16517,10 @@ function lyRender(){
   const rest=L.map((x,n)=>[x,n]).filter(([x])=>!seen.has(x[2].id));
   if(rest.length)secs.push(['Weitere',rest]);
   // «Keine Ebene»: only the map (and the overlays switched on below)
-  grid.innerHTML='<button type="button" class="ly-none-btn'+(lyNoneOn()?' on':'')+'" aria-pressed="'+lyNoneOn()+'" onclick="lyNoneSet(!lyNoneOn())">'
-    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4z"/><path d="M3 12l9 4 9-4"/><path d="M4 4l16 16"/></svg>'
-    +'<span>Keine Ebene – nur Karte</span></button>'
-    +secs.filter(s=>s[1].length||s[0]==='Community').map(([name,rows])=>{
-    const pos=rows.findIndex(r=>r[1]===i);
+  // (no «Keine Ebene» tile: tapping the chosen layer again switches it off)
+  const none=lyNoneOn();
+  grid.innerHTML=secs.filter(s=>s[1].length||s[0]==='Community').map(([name,rows])=>{
+    const pos=none?-1:rows.findIndex(r=>r[1]===i);
     // the sub-layers open under the row of the chosen tile, so they read as
     // belonging to it
     const after=pos<0?-1:Math.min(rows.length-1,Math.floor(pos/LY_COLS)*LY_COLS+LY_COLS-1);
@@ -16474,8 +16531,9 @@ function lyRender(){
         'onclick="lyPickVar('+n+')">'+escapeHtml(v.label)+'</button>').join('')+'</div>':'')+(chips||'')+'</div>'):'';
     return '<div class="ly-sec"><span class="lbl-micro">'+name+'</span>'+(rows.length?'<div class="ly-grid ly-g3">':'<div hidden>')+
       rows.map(([[g,k,item],n],p)=>{const hi=false;
-        return '<button type="button" class="ly-tile'+(n===i?' on':'')+(hi?' ly-hi':'')+'" onclick="lyPick('+n+')"'+
-        (n===i?' aria-current="true"':'')+' title="'+(hi?'Echte Meldungen, nicht modelliert':escapeHtml(item.label))+'">'+lyIconFor(item.id)+
+        const on=n===i&&!none;
+        return '<button type="button" class="ly-tile'+(on?' on':'')+(hi?' ly-hi':'')+'" onclick="lyPick('+n+')"'+
+        (on?' aria-current="true"':'')+' title="'+(hi?'Echte Meldungen, nicht modelliert':escapeHtml(item.label))+'">'+lyIconFor(item.id)+
         '<span>'+escapeHtml(item.label)+'</span></button>'+(p===after?subsHtml:'');}).join('')+'</div>'+
       (name==='Community'?'<div class="ly-ovs" id="lyCommOv"></div>':name==='Wetter'?'<div class="ly-ovs" id="lyWxOv"></div>':'')+'</div>';}).join('');
   ovRender();
@@ -16546,10 +16604,13 @@ function lyExtraRow(k,label,on,ic,act){
 // overlays (tours, reports ...) stay; picking any layer ends it
 let _lyNone=false;try{_lyNone=localStorage.getItem('ssm_lynone')==='1';}catch(e){}
 function lyNoneOn(){return _lyNone;}
-function lyNoneSet(v){_lyNone=!!v;try{localStorage.setItem('ssm_lynone',_lyNone?'1':'0');}catch(e){}
+function lyNoneSet(v){_lyNone=!!v;try{if(typeof is3d!=='undefined'&&is3d){close3D._picked=!_lyNone;upd3dSoon();}}catch(e){}try{localStorage.setItem('ssm_lynone',_lyNone?'1':'0');}catch(e){}
   document.body.classList.toggle('ly-none',_lyNone);try{lyRender();}catch(e){}try{haptic(3);}catch(e){}}
 try{if(_lyNone)document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('ly-none'));document.body&&_lyNone&&document.body.classList.add('ly-none');}catch(e){}
-function lyPick(n){const t=lyLayers()[n];if(!t)return;if(_lyNone)lyNoneSet(false);
+// a second tap on the chosen layer switches it off (only the map stays)
+function lyPick(n){const t=lyLayers()[n];if(!t)return;
+  if(!_lyNone&&n===lyIndex()){lyNoneSet(true);try{renderLayerStrip();}catch(e){}return;}
+  if(_lyNone)lyNoneSet(false);
   setTopic(t[0],t[1],0);try{haptic(3);}catch(e){}}
 function lyPickVar(n){if(n===curVar)return;
   setTopic(curTopic,curItem,n);try{haptic(3);}catch(e){}}
@@ -16795,7 +16856,7 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
 
 function toggleReportLayer(on){if(on)map.addLayer(reportMarkers);else map.removeLayer(reportMarkers);}
 // Marker-visibility popover on the control rail
-function toggleStations(){showStn=!showStn;renderStations();
+function toggleStations(){showStn=!showStn;renderStations();try{ovChipsSync();}catch(e){}
   try{localStorage.setItem('ssm_stn',showStn?'1':'0');}catch(e){}
   const btn=document.getElementById('railToggles');
   if(btn)btn.classList.toggle('active',showStn);
@@ -18121,7 +18182,7 @@ function sync3dLayer(){const sel=document.getElementById('overlay3d');if(!sel)re
   if((layer==='snowpack'||(typeof ovOn!=='undefined'&&ovOn.variantA))&&typeof vaOv!=='undefined'&&vaOv){
     if(!sel.querySelector('option[value="va"]')){const o=document.createElement('option');o.value='va';o.textContent='Skiqualität';sel.appendChild(o);}
     sel.value='va';return;}
-  sel.value=sel.querySelector('option[value="'+layer+'"]')?layer:'none';}
+  sel.value=!lyNoneOn()&&sel.querySelector('option[value="'+layer+'"]')?layer:'none';}
 // a layer switched in the panel, the time moved on the timeline: the 3D view
 // follows (debounced -- the 3D overlay is drawn in one go)
 let _u3t=0;
@@ -18254,6 +18315,8 @@ function init3D(){
   const ps=document.getElementById('paneSearch'),m2=document.getElementById('map');
   if(ps&&m2&&wrap.parentElement!==ps)ps.insertBefore(wrap,m2.nextSibling);
   wrap.style.display='block';is3d=true;
+  // 3D opens on the bare relief: no data layer until one is picked
+  if(init3D._was==null){init3D._was=lyNoneOn();if(!lyNoneOn())lyNoneSet(true);}
   document.body.classList.add('three-open');try{navSync();}catch(e){}
   const tx=document.getElementById('threeFabTxt');if(tx)tx.textContent='2D';
   const tf=document.getElementById('threeFab');if(tf){tf.title='Zurück zur 2D-Karte';tf.setAttribute('aria-label','Zurück zur 2D-Karte');}
@@ -18369,6 +18432,7 @@ function tours3dSel(){const m=map3d;if(!m||!is3d||!m.getSource||!m.getSource('to
     layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#e5233f','line-width':4.2,'line-opacity':1}});
   else m.setFilter('tours-3d-sel',['==',['get','id'],id]);}
 function close3D(){
+  if(init3D._was!=null){const w=init3D._was;init3D._was=null;if(lyNoneOn()!==w&&!w&&!close3D._picked)lyNoneSet(false);close3D._picked=false;}
   if(map3d){const c=map3d.getCenter(),z=map3d.getZoom();map.setView([c.lat,c.lng],z,{animate:false});}
   is3d=false;if(map3d){map3d.remove();map3d=null;}
   document.getElementById('three-wrap').style.display='none';
@@ -19131,7 +19195,7 @@ try{if(localStorage.getItem('ssm_reports')==='0'){ovOn.reports=false;map.removeL
 // «Meine Aufzeichnungen» stays as you left it (it is off unless you turned it on)
 try{if(localStorage.getItem('ssm_myacts')==='1')setTimeout(()=>{try{if(!ovOn.myacts)ovToggle('myacts',true);}catch(e){}},0);}catch(e){}
 try{if(localStorage.getItem('ssm_skiareas')==='1')setTimeout(()=>{try{if(!ovOn.skiareas)ovToggle('skiareas',true);}catch(e){}},0);}catch(e){}
-try{if(localStorage.getItem('ssm_snowline')==='1')setTimeout(()=>{try{if(!ovOn.snowline)ovToggle('snowline',true);}catch(e){}},0);}catch(e){}
+try{if(localStorage.getItem('ssm_snowline2')==='1')setTimeout(()=>{try{if(!ovOn.snowline)ovToggle('snowline',true);}catch(e){}},0);}catch(e){}
 // Default is the 1 April 2026 demo dataset; live/current weather is an
 // explicit opt-in, remembered in localStorage so it survives a fresh load
 // with no URL params (the ?demo/?live params still work as one-off overrides
