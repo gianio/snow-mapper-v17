@@ -27,9 +27,9 @@ altitude:
 # SLR = clip(slr_intercept + slr_slope * T, slr_min, slr_max)
 slr:
   slr_intercept: 10.0   # SLR bei 0 degC
-  # 17.11.: flacher und tiefer gedeckelt. Vergleich mit SLF HN1D und
-  # PowderGuide (tools/compare_newsnow.py) zeigte oben ~1.5x zu viel cm pro mm;
-  # in den Alpen setzt Wind kalten Neuschnee meist auf 80-120 kg/m3.
+  # 17.11.: flacher und tiefer gedeckelt -- ein Vergleich mit gemessenem
+  # Neuschnee zeigte oben ~1.5x zu viel cm pro mm; in den Alpen setzt Wind
+  # kalten Neuschnee meist auf 80-120 kg/m3.
   slr_slope: -0.5       # pro degC kaelter -> +0.5 SLR
   slr_min: 6.0
   slr_max: 15.0
