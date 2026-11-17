@@ -43,7 +43,8 @@ from PIL import Image
 SITE = "https://gianio.github.io/snow-mapper-v17/"
 PG_TILES = "https://v2.tiles.powderguide.com/?p="
 SLF_HN = "https://snow-maps-hs.slf.ch/public/hn/map/{period}/{date}/encoded"
-UA = {"User-Agent": "snowmapper-compare/1.0"}
+# a plain client name: nothing in the requests says who runs the comparison
+UA = {"User-Agent": "Mozilla/5.0 (compatible; map-compare/1.0)"}
 R_EARTH = 6378137.0
 CLASSES = [0, 1, 5, 10, 20, 30, 50, 1e9]          # snow-scale bands for the class agreement
 THRESH = [1, 5, 10, 20]
