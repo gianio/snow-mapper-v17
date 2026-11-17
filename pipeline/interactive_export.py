@@ -7072,6 +7072,63 @@ body.desk #toastWrap{bottom:24px!important;left:auto!important;right:24px!import
   #tabBar button{gap:2px!important}
   body.nav-hide:not(.desk){--nav-h:0px!important}
   body.nav-hide:not(.desk) #tabBar{transform:translateY(105%)!important}}
+/* ---- Favoriten-Übersicht ---- */
+#favPage{position:fixed;inset:0;z-index:5250;overflow-y:auto;overscroll-behavior:contain;background:var(--md-surface,#F7F9FC);
+  padding:calc(env(safe-area-inset-top,0px) + 8px) 0 calc(var(--nav-h,58px) + 24px)}
+#favPage[hidden]{display:none}
+.fp-hd{display:flex;align-items:center;justify-content:space-between;padding:8px 20px 6px}
+.fp-hd b{font:700 26px/1.2 var(--font);color:var(--md-on-surface)}
+.fp-x{width:44px;height:44px;border-radius:50%;border:1px solid var(--md-outline-var);background:var(--card);color:var(--md-on-surface);display:grid;place-items:center;cursor:pointer}
+.fp-x svg{width:20px;height:20px}
+.fp-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:8px 20px 4px}
+.fp-chips::-webkit-scrollbar{display:none}
+.fp-chips button{flex:none;height:40px;padding:0 18px;border-radius:var(--md-shape-full);border:0;background:var(--md-surface-c);color:var(--md-on-surface);font:600 14px/1 var(--font);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.fp-chips button.on{background:var(--md-primary);color:var(--md-on-primary)}
+.fp-chips em{font-style:normal;font-weight:500;opacity:.7}
+.fp-push{display:flex;align-items:center;gap:10px;margin:8px 20px 0;min-height:44px;padding:0 16px;border-radius:var(--md-shape-full);border:0;
+  background:var(--md-secondary-container);color:var(--md-on-secondary-container);font:600 14px/1 var(--font);cursor:pointer}
+.fp-push svg{width:18px;height:18px}
+.fp-sc{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.fp-sc::-webkit-scrollbar{display:none}
+.fp-sc>div{display:flex;position:relative}
+.fp-days{position:sticky;top:0;z-index:3;background:var(--md-surface,#F7F9FC);padding:14px 20px 8px;margin-top:4px}
+.fp-days span{flex:none;width:74px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.fp-days small{font:500 14px/1 var(--font);color:var(--md-on-surface-var)}
+.fp-days b{font:700 18px/1 var(--font);color:var(--md-on-surface)}
+.fp-list{display:flex;flex-direction:column;gap:12px;padding:4px 16px 0}
+.fp-card{background:var(--card);border-radius:var(--md-shape-xl);padding:16px 0 12px;box-shadow:0 1px 3px rgba(11,60,120,.08)}
+.fp-t{display:flex;align-items:center;gap:8px;padding:0 16px 8px 20px}
+.fp-name{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:0;background:none;padding:0;text-align:left;cursor:pointer;color:var(--md-on-surface)}
+.fp-name b{font:700 18px/1.25 var(--font);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fp-name small{font:500 12px/1.3 var(--font);color:var(--md-on-surface-var)}
+.fp-bell{flex:none;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px 0 10px;border-radius:var(--md-shape-full);border:1px solid var(--md-outline-var);
+  background:transparent;color:var(--md-on-surface-var);font:600 13px/1 var(--font);cursor:pointer;position:relative}
+.fp-bell::after{content:'';position:absolute;inset:-6px -2px}
+.fp-bell svg{width:17px;height:17px}
+.fp-bell.on{background:var(--md-primary);border-color:var(--md-primary);color:var(--md-on-primary)}
+.fp-row{padding:0 4px}
+.fp-curve{position:absolute;left:0;top:6px;pointer-events:none}
+.fp-curve path{fill:color-mix(in srgb,var(--md-primary) 16%,transparent);stroke:color-mix(in srgb,var(--md-primary) 35%,transparent);stroke-width:1}
+.fp-c{flex:none;width:74px;display:flex;flex-direction:column;align-items:center;gap:12px;position:relative;padding-top:14px}
+.fp-c b{font:700 17px/1 var(--font);color:var(--md-on-surface);font-variant-numeric:tabular-nums;letter-spacing:-.2px}
+.fp-c b.big{color:var(--md-primary)}
+.fp-c b.nil{color:var(--md-on-surface-var);font-weight:500}
+.fp-c i{display:flex;align-items:flex-end;gap:4px;height:46px;padding-bottom:2px;border-bottom:1px solid var(--md-outline-var)}
+.fp-c u{display:block;width:16px;border-radius:5px 5px 2px 2px;text-decoration:none}
+.fp-days span.past small,.fp-days span.past b{opacity:.55}
+.fp-c.past b,.fp-c.past i{opacity:.6}
+.fp-c.now0::before,.fp-days span.now0::before{content:'';position:absolute;left:0;top:6px;bottom:0;border-left:1.5px dashed var(--md-outline-var)}
+.fp-days span{position:relative}
+.fp-q{display:grid;grid-template-columns:repeat(4,12px);gap:2px;margin-top:-4px}
+.fp-q s{display:block;height:9px;border-radius:2px;text-decoration:none}
+.fp-q s.ch{box-shadow:0 0 0 1.5px var(--md-on-surface)}
+.fp-qk{display:inline-flex;align-items:center;gap:5px}
+.fp-qk s{display:block;width:12px;height:9px;border-radius:2px;text-decoration:none}
+.fp-key{display:flex;flex-wrap:wrap;gap:6px 14px;padding:16px 20px 0;font:500 12px/1.3 var(--font);color:var(--md-on-surface-var)}
+.fp-key span{display:inline-flex;align-items:center;gap:6px}
+.fp-key u{display:block;width:16px;height:6px;border-radius:3px}
+.fp-key small{flex-basis:100%;font-size:12px}
+.fp-scale{gap:2px!important}.fp-scale u{width:18px!important}
 /* Höhenmeter: the chosen range over the middle of the slider */
 .ts-dual2{margin-top:22px!important}
 .ts-gmid{position:absolute;top:-22px;transform:translateX(-50%);white-space:nowrap;padding:2px 10px;border-radius:var(--md-shape-full);
@@ -7153,31 +7210,9 @@ body.insp-open #avLegend,body.draw-on #avLegend,body.trk-open #avLegend,body.pla
 .qs-whenseg button.on::before{content:'✓';margin-right:5px}
 .qs-when input#qsWhen{flex:1 1 100%!important;height:34px!important;font:500 13px var(--font)!important;padding:0 8px!important;border-radius:var(--md-shape-sm,8px)!important}
 .qs-when input#qsWhen[hidden]{display:none!important}
-/* favourites: a star in the rail, and a sheet that lines them up to compare */
+/* favourites: a star in the rail opens the favourites page */
 #favFab .n{position:absolute;top:3px;right:3px;min-width:14px;height:14px;padding:0 3px;border-radius:7px;background:var(--md-primary);color:#fff;font:700 9px/14px var(--font);text-align:center}
 #favFab .n:empty{display:none}
-.fc-sheet{position:fixed;inset:0;z-index:3300;display:flex;align-items:flex-end;justify-content:center;background:var(--md-scrim,rgba(0,0,0,.32))}
-.fc-sheet[hidden]{display:none}
-.fc-in{width:100%;max-width:560px;max-height:82dvh;overflow:auto;background:var(--md-surface,#fff);border-radius:var(--md-shape-xl,28px) var(--md-shape-xl,28px) 0 0;padding:8px 16px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 30px rgba(10,30,60,.2)}
-.fc-grab{width:32px;height:4px;border-radius:2px;background:var(--md-outline-var);margin:6px auto 10px}
-.fc-hd{display:flex;align-items:center;gap:8px}
-.fc-hd h2{flex:1;margin:0;font:400 22px/1.27 var(--font);color:var(--md-on-surface)}
-.fc-hd button{border:0;background:none;color:var(--md-primary);font:500 14px var(--font);padding:8px 10px;border-radius:20px;cursor:pointer}
-.fc-hd .fc-x{width:40px;height:40px;color:var(--md-on-surface-var);font-size:20px}
-.fc-sub{margin:2px 0 12px;font:400 14px/1.4 var(--font);color:var(--md-on-surface-var)}
-.fc-seg{display:flex;border:1px solid var(--md-outline);border-radius:20px;overflow:hidden;margin-bottom:12px}
-.fc-seg button{flex:1;height:36px;border:0;background:transparent;color:var(--md-on-surface);font:500 13px var(--font);cursor:pointer}
-.fc-seg button+button{border-left:1px solid var(--md-outline)}
-.fc-seg button.on{background:var(--md-secondary-container);color:var(--md-on-secondary-container)}
-.fc-row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;width:100%;text-align:left;padding:12px;margin:0 0 8px;border:0;border-radius:var(--md-shape-md,12px);background:var(--md-surface-low);color:var(--md-on-surface);cursor:pointer}
-.fc-row b{font:500 15px/1.3 var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fc-row small{font:400 12px/1.3 var(--font);color:var(--md-on-surface-var)}
-.fc-row .v{grid-row:1/3;grid-column:2;text-align:right;font:500 22px/1 var(--font);color:var(--md-primary);font-variant-numeric:tabular-nums}
-.fc-row .v small{display:block;margin-top:3px}
-.fc-row .bar{grid-column:1/3;height:6px;border-radius:3px;background:var(--md-surface-highest);overflow:hidden;margin-top:6px}
-.fc-row .bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#7FC4FF,#1D5FD6)}
-.fc-row.best{outline:2px solid var(--md-primary);outline-offset:-2px}
-.fc-empty{padding:18px 6px;text-align:center;font:400 14px/1.5 var(--font);color:var(--md-on-surface-var)}
 .insp-panel .insp-kpis>div>em{font:400 12px/1.3 var(--font)!important;font-style:normal!important;color:var(--md-on-surface-var)!important}
 .insp-panel .insp-kpis>div>b{font-weight:500!important}
 
@@ -7341,7 +7376,7 @@ body.plan-on #rvFab,body.plan-on #infoFab,body.plan-on #mapAcc,body.plan-on #bra
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
     <button class="mfab" id="layersFab" onclick="lyPanelOpen()" title="Ebenen" aria-label="Ebenen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
-    <button class="mfab" id="favFab" onclick="favCmpOpen()" title="Favoriten vergleichen" aria-label="Favoriten vergleichen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></svg><span class="n" id="favFabN"></span></button>
+    <button class="mfab" id="favFab" onclick="fpOpen()" title="Favoriten: Prognose und Powder-Alarm" aria-label="Favoriten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></svg><span class="n" id="favFabN"></span></button>
     <button class="mfab" id="threeFab" onclick="document.getElementById('btn3dFloat').click()" title="3D-Ansicht" aria-label="3D-Ansicht"><b class="fab-txt" id="threeFabTxt">3D</b></button>
   </div>
 <div id="miniLegend" role="button" tabindex="0" aria-label="Legende – Details" onclick="legInfoToggle(event)">
@@ -17138,7 +17173,7 @@ function navSync(){if(_navRaf)return;_navRaf=requestAnimationFrame(()=>{_navRaf=
   const f=document.getElementById('feedPage'),feed=!!f&&f.classList.contains('open');
   // full-screen tasks (recording, drawing, a report, a conversation) get the
   // whole screen, like any other app
-  const hide=['trk-open','snp-open','draw-on','ly-open','insp-open','tn-open','tour-open','qs-open','plan-on','fc-open'].some(c=>B.contains(c))
+  const hide=['trk-open','snp-open','draw-on','ly-open','insp-open','tn-open','tour-open','qs-open','plan-on','fp-open'].some(c=>B.contains(c))
     ||vis('reportOverlay')||vis('dmModal')||vis('authOverlay');
   const tab=B.contains('rep-open')?'report':vis('profModal')?'you':feed?'feed':(B.contains('ts-open')||B.contains('tour-open'))?'tours':'map';
   B.toggle('nav-vis',!hide);B.toggle('nav-screen',tab!=='map');
@@ -20634,6 +20669,124 @@ async function favDel(id){const f=(favs||[]).find(x=>x.id===id);if(!f)return;
   const{error}=await sb.from('favorites').delete().eq('id',id);
   if(error){toast('Entfernen fehlgeschlagen: '+error.message,'err');return;}
   favs=favs.filter(x=>x!==f);favSetRender();}
+
+// ── Favoriten-Übersicht: the forecast for every favourite at a glance ──────
+// Like a surf forecast list: one row of days on top, one card per favourite
+// with the new snow of each day (as the band of the snow scale), the hourly
+// snowfall as a soft curve behind it, and under every day three bars --
+// night, day, evening -- coloured by what the snow is then: powder (green),
+// powder losing quality (yellow), sun-softened / hard / old (orange), crust,
+// rain or wet (red), nothing worth naming (grey). All rows scroll sideways
+// together. The bell switches the powder alert of that favourite.
+const FP_COL=74;
+let _fpKind='all',_fpSync=false;
+function fpOpen(){if(!sb||!sbUser){authShow();toast('Zum Merken anmelden','info');return;}
+  let el=document.getElementById('favPage');
+  if(!el){el=document.createElement('div');el.id='favPage';el.setAttribute('role','dialog');el.setAttribute('aria-label','Favoriten');document.body.appendChild(el);}
+  el.hidden=false;document.body.classList.add('fp-open');fpRender();try{haptic(3);}catch(e){}}
+function fpClose(){const el=document.getElementById('favPage');if(el)el.hidden=true;document.body.classList.remove('fp-open');}
+// the hours of each local day still in the forecast, today first
+// the last 3 days (model look-back) and the days still to come; rel = days from today
+function fpDays(){const out=[];let cur=null;const t00=Math.max(0,nowIdx-zLocal(tMs(Math.max(0,nowIdx))).getUTCHours());
+  for(let t=Math.max(0,t00-72);t<T;t++){const d=zLocal(tMs(t)),k=d.getUTCFullYear()*1e4+d.getUTCMonth()*100+d.getUTCDate();
+    if(!cur||cur.k!==k){if(out.length>=10)break;cur={k,t0:t,t1:t+1,wd:d.getUTCDay(),dn:d.getUTCDate()};out.push(cur);}else cur.t1=t+1;}
+  const o2=out.filter(x=>x.t1-x.t0>=6),i0=Math.max(0,o2.findIndex(x=>x.t1>nowIdx));o2.forEach((x,i)=>{x.rel=i-i0;});
+  return o2.slice(Math.max(0,i0-3));}
+function fpCell(f){if(!(f.lat>laMin&&f.lat<laMax&&f.lon>loMin&&f.lon<loMax))return -1;
+  const x=Math.floor((f.lon-loMin)/(loMax-loMin)*W),y=Math.floor((laMax-f.lat)/(laMax-laMin)*H),p=y*W+x;
+  return p>=0&&p<NP&&!inDomainEdge(p)?p:-1;}
+// hourly new snow at the favourite's own height (inside the model rectangle),
+// else the coarse Alps grid spread over its 6-hour steps
+function fpHourly(f){const p=fpCell(f),h=new Float32Array(T);
+  if(p>=0){const dz=f.elev!=null&&typeof melevv==='function'?f.elev-melevv(p):0;
+    for(let t=0;t<T;t++){const v=SNOW[t*NP+p]*M.snow_scale;h[t]=v>0&&dz&&_nsOk?nsAtHeight(p,v,dz):v;}return {h,p};}
+  const A=typeof ALPS!=='undefined'?ALPS:null;if(!A)return {h,p:-1};
+  const B=A.bounds,x=Math.floor((f.lon-B[1])/(B[3]-B[1])*A.nx),y=Math.floor((B[2]-f.lat)/(B[2]-B[0])*A.ny);
+  if(x<0||y<0||x>=A.nx||y>=A.ny)return {h,p:-1};const NN=A.nx*A.ny,sh=A.step_h;
+  for(let t=0;t<T;t++){const k=Math.floor((tMs(t)-A.t0ms)/(sh*36e5));if(k>=0&&k<A.n)h[t]=A.d[k*NN+y*A.nx+x]*A.scale/sh;}
+  return {h,p:-1};}
+function fpBand(v){if(!(v>=1))return v>=.3?'<1':'0';let j=0;while(j+1<SB.length-1&&v>=SB[j+1])j++;
+  return j>=SB.length-2?SB[j]+'+':SB[j]+'-'+SB[j+1];}
+// the snow at the end of a block: the Powder engine over the 48 h before it
+// a bar in the colour of the snow scale for its amount (as on the map)
+function fpSnowCol(v){if(!(v>=1))return v>=.2?SC[0]:'#D5DAE1';let j=0;while(j+1<SB.length-1&&v>=SB[j+1])j++;return SC[Math.min(j,SC.length-1)];}
+const FP_Q={pow:'#2E9E5B',red:'#E9B730',soft:'#EE8A3A',bad:'#D64545',none:'#C9D0DA'};
+function fpQual(p,tEnd){if(p<0)return 'none';try{const r=computePowder(p,Math.max(0,tEnd-48),tEnd);
+  if(r.powdered)return r.quality==='reduced'?'red':'pow';
+  if(cum[Math.min(T,tEnd)*NP+p]<5)return 'none';const k=powderSurf(r);
+  return k===2||k===8||k===7?'bad':k==null?'none':'soft';}catch(e){return 'none';}}
+// Snow quality around a favourite: the cells within ~4 km split into a high
+// and a low band (upper / lower third by height); for each band the Powder
+// engine on its middle cell, at 10 h each day, read per aspect N O S W
+const FP_Q2={pow:['#2E9E5B','Pulver'],red:['#9BC53D','Pulver, etwas gesetzt'],wind:['#0d9488','Wind / Triebschnee'],soft:['#E9B730','Sulz / feucht'],
+  bad:['#D64545','Kruste / hart'],none:['#C9D0DA','Altschnee / kein Neuschnee']};
+function fpBands(p){if(p<0)return [];const x0=p%W,y0=(p-x0)/W,c=[];
+  for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){const x=x0+dx,y=y0+dy;if(x<0||y<0||x>=W||y>=H||dx*dx+dy*dy>12)continue;
+    const q=y*W+x;if(!inDomainEdge(q))c.push([melevv(q),q]);}
+  if(c.length<3)return [{e:melevv(p),p}];c.sort((a,b)=>a[0]-b[0]);const n=c.length,hi=c[Math.floor(n*5/6)],lo=c[Math.floor(n/6)];
+  return hi[0]-lo[0]<250?[{e:melevv(p),p}]:[{e:hi[0],p:hi[1]},{e:lo[0],p:lo[1]}];}
+function fpQ4(p,tb){const out={N:'none',E:'none',S:'none',W:'none'};
+  try{tb=Math.min(T-1,Math.max(1,tb));const r=computePowder(p,Math.max(0,tb-48),tb),f=r.reason_flags||[];
+    const k=powderSurf(r);
+    if(f.includes('D0_no_recent_snow'))return out;
+    if(k===8||k===2){for(const a in out)out[a]='bad';return out;}
+    if(k===6){for(const a in out)out[a]='soft';return out;}
+    const v=new Set(r.valid_aspects||[]),good=r.quality==='reduced'||f.includes('I4_old_snow_persist')?'red':'pow';
+    for(const a in out)out[a]=v.has(a)?good:f.includes('R3_wind_redistribution')?'wind':v.size?'soft':(k===7?'soft':'none');
+  }catch(e){}return out;}
+async function fpRender(){const el=document.getElementById('favPage');if(!el||el.hidden)return;
+  await favLoad(true);const push=await favPushState(),days=fpDays();
+  const list=(favs||[]).filter(f=>_fpKind==='all'||(_fpKind==='alert'?f.notify:f.kind===_fpKind));
+  const chip=(k,l,n)=>'<button type="button" class="'+(_fpKind===k?'on':'')+'" onclick="_fpKind=\''+k+'\';fpRender()">'+l+(n!=null?'<em>'+n+'</em>':'')+'</button>';
+  const cnt=k=>(favs||[]).filter(f=>k==='alert'?f.notify:f.kind===k).length;
+  const W0=days.length*FP_COL;
+  let h='<div class="fp-hd"><b>Favoriten</b><button type="button" class="fp-x" onclick="fpClose()" aria-label="Schliessen">'
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>'
+    +'<div class="fp-chips">'+chip('all','Alle')+chip('area','Orte',cnt('area'))+chip('tour','Touren',cnt('tour'))+chip('alert','Alarm an',cnt('alert'))+'</div>'
+    +(!push&&(favs||[]).length?'<button type="button" class="fp-push" onclick="favPushOn()">'+FAV_BELL+'<span>Powder-Alarm per Push einschalten</span></button>':'')
+    +'<div class="fp-days fp-sc"><div style="width:'+W0+'px">'+days.map(d=>{const wd=d.rel===0?'Heute':d.rel===1?'Morgen':d.rel===-1?'Gestern':WD()[d.wd];
+      return '<span class="'+(d.rel<0?'past':d.rel===0?'now0':'')+'"><small>'+escapeHtml(wd)+'</small><b>'+d.dn+'</b></span>';}).join('')+'</div></div>'
+    +'<div class="fp-list">';
+  if(!list.length)h+='<div class="fav-empty">'+((favs||[]).length?'Keine Favoriten in dieser Auswahl.':'Noch keine Favoriten. Tippe im Punkt-Popup («Region merken») oder bei einer Tour auf den Stern.')+'</div>';
+  // three bars a day (night, day, evening): height = new snow in those 8 h,
+  // one scale for every card so they compare, colour = the snow then
+  const rows=list.map(f=>{const r=fpHourly(f);r.blk=days.map(d=>[0,8,16].map(o=>{let v=0;for(let t=d.t0+o;t<Math.min(d.t1,d.t0+o+8);t++)v+=r.h[t];return v;}));return r;});
+  let bmx=5;rows.forEach(r=>r.blk.forEach(b=>b.forEach(v=>{if(v>bmx)bmx=v;})));
+  const AS=['N','E','S','W'],ASL={N:'N',E:'O',S:'S',W:'W'};
+  list.forEach((f,fi)=>{const {h:hr,p,blk}=rows[fi];const bands=fpBands(p);let prev=null;
+    const cols=days.map((d,di)=>{let s2=0;for(let t=d.t0;t<d.t1;t++)s2+=hr[t];
+      // quality grid: one row per height band, a square per aspect; a ring marks a change from the day before
+      const qs=bands.map(b=>fpQ4(b.p,d.t0+10));
+      const grid=qs.length?'<em class="fp-q">'+qs.map((q,bi)=>AS.map(a=>{const ch=prev&&prev[bi]&&prev[bi][a]!==q[a];
+        return '<s class="'+(ch?'ch':'')+'" style="background:'+FP_Q2[q[a]][0]+'" title="'+(bands.length>1?(bi?'unten':'oben')+' ~'+Math.round(bands[bi].e/100)*100+' m, ':'')+ASL[a]+': '+FP_Q2[q[a]][1]+'"></s>';}).join('')).join('')+'</em>':'';
+      prev=qs;
+      return '<span class="fp-c'+(d.rel<0?' past':d.rel===0?' now0':'')+'"><b class="'+(s2>=10?'big':s2<1?'nil':'')+'">'+fpBand(s2)+'</b><i>'
+        +blk[di].map((v,k)=>'<u style="height:'+(v<.2?3:Math.max(5,Math.round(v/bmx*44)))+'px;background:'+fpSnowCol(v)+'" title="'+['Nacht','Tag','Abend'][k]+': '+(v<10?v.toFixed(1):Math.round(v))+' cm"></u>').join('')+'</i>'+grid+'</span>';}).join('');
+    h+='<div class="fp-card"><div class="fp-t"><button type="button" class="fp-name" onclick="fpClose();favOpen(\''+f.id+'\')"><b>'+escapeHtml(f.name)+'</b>'
+      +'<small>'+(f.kind==='tour'?'Tour':'Ort')+(f.elev?' · '+f.elev+' m':'')+(p<0?' · Alpenraum (grob)':'')
+      +(bands.length>1?' · Qualität oben ~'+Math.round(bands[0].e/100)*100+' / unten ~'+Math.round(bands[1].e/100)*100+' m':'')+'</small></button>'
+      +'<button type="button" class="fp-bell'+(f.notify?' on':'')+'" onclick="fpBell(\''+f.id+'\')" aria-pressed="'+!!f.notify+'" title="Powder-Alarm: Push ab '+(f.threshold_cm||20)+' cm in 48 h">'
+      +FAV_BELL+'<span>'+(f.notify?'ab '+(f.threshold_cm||20)+' cm':'Alarm')+'</span></button></div>'
+      +'<div class="fp-sc fp-row"><div style="width:'+W0+'px">'+cols+'</div></div></div>';});
+  h+='</div><div class="fp-key"><span class="fp-scale">'+[1,5,10,20,30,50].map(v=>'<u style="background:'+fpSnowCol(v)+'"></u>').join('')+'</span><span>1 · 5 · 10 · 20 · 30 · 50+ cm</span>'
+    +'<small>Zahl = Neuschnee pro Tag · Balken = Neuschnee in der Nacht, am Tag, am Abend (Höhe und Farbe = Menge, wie auf der Karte) · links der gestrichelten Linie: die letzten 3 Tage (Modell-Rückblick)</small>'
+    +Object.values(FP_Q2).map(q=>'<span class="fp-qk"><s style="background:'+q[0]+'"></s>'+q[1]+'</span>').join('')
+    +'<small>Kästchen = Schneequalität am Morgen je Hangrichtung N · O · S · W, obere Reihe hoch, untere Reihe tief um den Favoriten · Rahmen = anders als am Vortag</small></div>';
+  el.innerHTML=h;
+  // every row scrolls with the others
+  const sc=[...el.querySelectorAll('.fp-sc')];
+  // open at today; the past days are a swipe to the left
+  const past=days.filter(d=>d.rel<0).length;if(past){_fpSync=true;sc.forEach(b=>{b.scrollLeft=past*FP_COL;});requestAnimationFrame(()=>{_fpSync=false;});}
+  sc.forEach(a=>a.addEventListener('scroll',()=>{if(_fpSync)return;_fpSync=true;const x=a.scrollLeft;sc.forEach(b=>{if(b!==a)b.scrollLeft=x;});requestAnimationFrame(()=>{_fpSync=false;});},{passive:true}));}
+// the bell: on (asks for push first if it is off), then the threshold steps
+// 10 → 20 → 30 → 50 cm on further taps, and off again after 50
+async function fpBell(id){const f=(favs||[]).find(x=>x.id===id);if(!f)return;
+  if(!f.notify){if(!(await favPushState())){await favPushOn();if(!_favPush)return;}await favSet(id,{notify:true,threshold_cm:f.threshold_cm||20});
+    toast('Powder-Alarm an: Push ab '+(f.threshold_cm||20)+' cm in 48 h · nochmals tippen ändert die Schwelle','ok');}
+  else{const S=[10,20,30,50],i=S.indexOf(f.threshold_cm||20);
+    if(i<S.length-1){await favSet(id,{threshold_cm:S[i+1]});toast('Push ab '+S[i+1]+' cm','info');}
+    else{await favSet(id,{notify:false});toast('Powder-Alarm aus','info');}}
+  fpRender();}
 // the list in the settings: threshold, push on/off, remove
 async function favSetRender(){const el=document.getElementById('setFavs');if(!el)return;
   if(!sb||!sbUser){el.innerHTML='<div class="fav-empty">Melde dich an, um Gebiete und Touren zu merken. Dann kommt ein Push, sobald dort Neuschnee erwartet wird.</div>';return;}
@@ -20645,9 +20798,9 @@ async function favSetRender(){const el=document.getElementById('setFavs');if(!el
       +'<button type="button" class="fav-bell'+(f.notify?' on':'')+'" onclick="favSet(\''+f.id+'\',{notify:'+(!f.notify)+'})" aria-pressed="'+!!f.notify+'" aria-label="Push für diesen Favoriten">'+FAV_BELL+'</button>'
       +'<button type="button" class="fav-del" onclick="favDel(\''+f.id+'\')" aria-label="Entfernen">×</button></div>').join('')
     :'<div class="fav-empty">Noch keine Favoriten. Tippe im Punkt-Popup oder bei einer Tour auf den Stern.</div>')
-    +(favs.length>1?'<button type="button" class="fav-push" onclick="setClose();favCmpOpen()">'+FAV_STAR+'<span>Favoriten vergleichen</span></button>':'')
     +(favs.length&&!push?'<button type="button" class="fav-push" onclick="favPushOn()">'+FAV_BELL+'<span>Push für Neuschnee einschalten</span></button>':'')
-    +(favs.length?'<div class="fav-note">Push, wenn in den nächsten 48 h so viel Neuschnee erwartet wird (Modell) – höchstens einmal in 36 h je Favorit.</div>':'');}
+    +(favs.length?'<div class="fav-note">Push, wenn in den nächsten 48 h so viel Neuschnee erwartet wird (Modell) – höchstens einmal in 36 h je Favorit.</div>':'')
+    +(favs.length?'<button type="button" class="fav-push" onclick="setClose();fpOpen()">'+FAV_STAR+'<span>Prognose aller Favoriten</span></button>':'');}
 
 // ── Tour planen: draw your own route ─────────────────────────────────────
 // Tap the map to set points (start, waypoints, end), drag them to move,
@@ -20767,43 +20920,7 @@ function planGpx(){if(!plan)return;const g=plan._g||planGeo(plan.pts),esc=s=>Str
 function planRecord(){if(!plan)return;const g=plan._g||planGeo(plan.pts);
   trkGuide={id:'plan-'+plan.id,name:plan.name||'Geplante Tour',pts:g.S.map(s=>[s.lat,s.lon,s.dist]),len:g.len||1};
   plan._dirty=false;planClose();trkView='setup';trkOpen();}
-// ── Favoriten vergleichen: all of them stacked, one number each ──────────
-let _fcWin='n48';try{_fcWin=localStorage.getItem('ssm_fc_win')||'n48';}catch(_){}
-const FC_WINS=[['p48','−48 h'],['n24','+24 h'],['n48','+48 h'],['n72','+72 h']];
 function favFabSync(){const n=document.getElementById('favFabN');if(n)n.textContent=favs&&favs.length?String(favs.length):'';}
-function favCmpCell(lat,lon){const cx=Math.round((lon-loMin)/(loMax-loMin)*(W-1)),cy=Math.round((laMax-lat)/(laMax-laMin)*(H-1));
-  return (cx<0||cx>=W||cy<0||cy>=H)?-1:cy*W+cx;}
-function favCmpVal(f,win){const p=favCmpCell(+f.lat,+f.lon);if(p<0)return null;const n=nowIdx;
-  const r=win==='p48'?[Math.max(0,n-47),n+1]:[n,Math.min(T,n+(win==='n24'?24:win==='n48'?48:72))];
-  let fz=null;try{fz=fineElev(+f.lat,+f.lon);}catch(_){}
-  const z=f.elev!=null?+f.elev:fz;
-  const ns=nsAtHeight(p,nsAt(p,r[0],r[1]),z==null?NaN:z-melevv(p));
-  const hs=cum[Math.min(T,n+1)*NP+p];
-  return {ns:Math.max(0,ns||0),hs:hs||0};}
-async function favCmpOpen(){
-  if(!sb||!sbUser){authShow();toast('Zum Merken anmelden','info');return;}
-  let el=document.getElementById('favCmp');
-  if(!el){el=document.createElement('div');el.id='favCmp';el.className='fc-sheet';el.setAttribute('role','dialog');el.setAttribute('aria-label','Favoriten vergleichen');
-    el.addEventListener('click',e=>{if(e.target===el)favCmpClose();});document.body.appendChild(el);}
-  el.hidden=false;document.body.classList.add('fc-open');try{haptic(4);}catch(_){}
-  el.innerHTML='<div class="fc-in"><div class="fc-grab"></div><div class="fc-empty">Lade Favoriten …</div></div>';
-  await favLoad(true);favFabSync();favCmpRender();}
-function favCmpClose(){const el=document.getElementById('favCmp');if(el)el.hidden=true;document.body.classList.remove('fc-open');}
-function favCmpWin(w){_fcWin=w;try{localStorage.setItem('ssm_fc_win',w);}catch(_){}try{haptic(3);}catch(_){}favCmpRender();}
-function favCmpRender(){const el=document.getElementById('favCmp');if(!el||el.hidden)return;
-  const L0=(favs||[]).map(f=>({f,v:favCmpVal(f,_fcWin)})).filter(x=>x.v);
-  L0.sort((x,y)=>y.v.ns-x.v.ns);
-  const mx=Math.max(1,...L0.map(x=>x.v.ns));
-  el.innerHTML='<div class="fc-in"><div class="fc-grab"></div>'
-    +'<div class="fc-hd"><h2>Favoriten</h2><button type="button" onclick="favCmpClose();setOpen()">Verwalten</button><button type="button" class="fc-x" onclick="favCmpClose()" aria-label="Schliessen">×</button></div>'
-    +'<p class="fc-sub">Neuschnee im Vergleich (Modell, auf der Höhe des Favoriten) – letzte 48 h oder die nächsten Stunden. Antippen öffnet den Ort.</p>'
-    +'<div class="fc-seg" role="tablist">'+FC_WINS.map(w=>'<button type="button" role="tab" class="'+(w[0]===_fcWin?'on':'')+'" aria-selected="'+(w[0]===_fcWin)+'" onclick="favCmpWin(\''+w[0]+'\')">'+escapeHtml(w[1])+'</button>').join('')+'</div>'
-    +(L0.length?L0.map((x,i)=>'<button type="button" class="fc-row'+(i===0&&x.v.ns>=1?' best':'')+'" onclick="favCmpClose();favOpen(\''+x.f.id+'\')">'
-        +'<b>'+escapeHtml(x.f.name||'Ort')+'</b><span class="v">'+(x.v.ns<10?x.v.ns.toFixed(1):Math.round(x.v.ns))+'<small>cm neu</small></span>'
-        +'<small>'+(x.f.kind==='tour'?'Tour':'Ort')+(x.f.elev?' · '+x.f.elev+' m':'')+' · Schneehöhe '+Math.round(x.v.hs)+' cm</small>'
-        +'<span class="bar"><i style="width:'+Math.max(2,x.v.ns/mx*100).toFixed(1)+'%"></i></span></button>').join('')
-      :'<div class="fc-empty">Noch keine Favoriten.<br>Tippe auf der Karte auf einen Punkt und dann auf <b>☆ Region merken</b> – oder bei einer Tour auf den Stern. Hier siehst du sie dann alle untereinander im Vergleich.</div>')
-    +'</div>';}
 async function favOpen(id){
   if(!sb||!sbUser){authShow();return;}
   await favLoad();const f=(favs||[]).find(x=>x.id===id);if(!f){toast('Favorit nicht gefunden','err');return;}
