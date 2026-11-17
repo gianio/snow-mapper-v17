@@ -53,6 +53,19 @@ _SNOW_SCALE = 0.2
 _ABL_SCALE = 0.05         # cm Hoehenverlust je Schritt, uint8 -> max 12.75 cm/h
 
 
+def _ns_settle_24h():
+    """Share of a day's new snow left after 24 h of settling (the SLF reads
+    its new-snow boards once a day): the fresh-snow settling of the snowpack
+    model, rate s_old + (s_new - s_old)*exp(-t/tau), integrated over 24 h.
+    The app shows new-snow sums times this; the snow depth settles on its own."""
+    try:
+        p = load_model_params()["ablation"]
+        s1, s0, tau = float(p["settling_frac_per_h"]), float(p["settling_frac_min_per_h"]), max(1.0, float(p["settling_tau_h"]))
+        return round(float(np.exp(-(s0 * 24 + (s1 - s0) * tau * (1 - np.exp(-24 / tau))))), 3)
+    except Exception:
+        return 1.0
+
+
 def _quantisers():
     """uint8-Quantisierung je Feld -- EINE Definition fuer Pipeline und Blob.
 
@@ -1054,7 +1067,7 @@ def _build_meta_blobs(data):
     meta = {
         "T": data["T"], "width": data["width"], "height": data["height"],
         "bounds": data["bounds"], "times": data["times"], "today_index": data["today_index"],
-        "snow_scale": _SNOW_SCALE, "abl_scale": _ABL_SCALE, "temp_off": _TEMP_OFF, "temp_mul": _TEMP_MUL,
+        "snow_scale": _SNOW_SCALE, "ns_settle": _ns_settle_24h(), "abl_scale": _ABL_SCALE, "temp_off": _TEMP_OFF, "temp_mul": _TEMP_MUL,
         "spd_mul": _SPD_MUL, "dir_div": _DIR_DIV, "sun_mul": _SUN_MUL, "prec_mul": _PREC_MUL,
         "cloud_mul": _CLOUD_MUL if data.get("cloud") is not None else None,
         "cloud_lv": list(_CLV_N) if data.get("clv") is not None else None,
@@ -7119,9 +7132,14 @@ body.desk #toastWrap{bottom:24px!important;left:auto!important;right:24px!import
 .fp-c.past b,.fp-c.past i{opacity:.6}
 .fp-c.now0::before,.fp-days span.now0::before{content:'';position:absolute;left:0;top:6px;bottom:0;border-left:1.5px dashed var(--md-outline-var)}
 .fp-days span{position:relative}
-.fp-q{display:grid;grid-template-columns:repeat(4,12px);gap:2px;margin-top:-4px}
-.fp-q s{display:block;height:9px;border-radius:2px;text-decoration:none}
-.fp-q s.ch{box-shadow:0 0 0 1.5px var(--md-on-surface)}
+.fp-mode{display:flex;margin:12px 20px 0;border:1px solid var(--md-outline);border-radius:20px;overflow:hidden}
+.fp-mode button{flex:1;height:36px;border:0;background:transparent;color:var(--md-on-surface);font:500 14px var(--font);cursor:pointer}
+.fp-mode button+button{border-left:1px solid var(--md-outline)}
+.fp-mode button.on{background:var(--md-secondary-container,#D6E3FF);color:var(--md-on-secondary-container,#0F1C2C)}
+.fp-qc b{font-size:15px}
+.fp-c i.fp-ax{position:relative;width:14px;align-items:stretch;border-bottom:0;border-radius:7px;background:var(--md-surface-highest,#E2E6EC);padding:0;height:46px}
+.fp-c i.fp-ax u{position:absolute;left:0;width:14px;border-radius:7px}
+.fp-hm{font:500 11px/1 var(--font);color:var(--md-on-surface-var);font-variant-numeric:tabular-nums;margin-top:-4px;white-space:nowrap}
 .fp-qk{display:inline-flex;align-items:center;gap:5px}
 .fp-qk s{display:block;width:12px;height:9px;border-radius:2px;text-decoration:none}
 .fp-key{display:flex;flex-wrap:wrap;gap:6px 14px;padding:16px 20px 0;font:500 12px/1.3 var(--font);color:var(--md-on-surface-var)}
@@ -9451,7 +9469,7 @@ function tlSnowView(){
     if(x1>=x0&&y1>=y0&&!(x0===0&&y0===0&&x1===W-1&&y1===H-1)){
       const n=(x1-x0+1)*(y1-y0+1),st=Math.max(1,Math.ceil(Math.sqrt(n/4000))),cells=[];
       for(let y=y0;y<=y1;y+=st)for(let x=x0;x<=x1;x+=st)cells.push(y*W+x);
-      const sc=M.snow_scale,k=cells.length;v=new Float32Array(T);
+      const sc=M.snow_scale*(M.ns_settle||1),k=cells.length;v=new Float32Array(T);
       for(let t=0;t<T;t++){const o=t*NP;let sum=0;for(let i=0;i<k;i++)sum+=SNOW[o+cells[i]];v[t]=sum*sc/k;}}
     if(v===tlSnow)return false;
     const ev=[];let s0=-1;for(let t=0;t<T;t++){if(v[t]>SNOW_THRESH){if(s0<0)s0=t;}else if(s0>=0){ev.push([s0,t]);s0=-1;}}if(s0>=0)ev.push([s0,T]);
@@ -15368,7 +15386,9 @@ function winRaw(arr,key){const k=key+'|'+a+'|'+b;if(_ws.key===k)return _ws;
 // New snow in a window = what FELL in it: the hourly snowfall summed. The
 // mass balance (cum) also loses settling and melt, so its difference over a
 // longer window came out SMALLER than over a shorter one inside it.
-function nsAt(p,t0,t1){let s=0;for(let t=t0;t<t1;t++)s+=SNOW[t*NP+p];return s*M.snow_scale;}
+// shown new snow is the snowfall after a day of settling (as the SLF boards read)
+const NS_SC=M.snow_scale*(M.ns_settle||1);
+function nsAt(p,t0,t1){let s=0;for(let t=t0;t<t1;t++)s+=SNOW[t*NP+p];return s*NS_SC;}
 // ...and at the terrain's own height. A 1 km cell carries one value for its
 // mean height -- valley and summit at once -- so zoomed in the bands were
 // round blobs, and a peak 800 m above the cell got the valley's share of
@@ -15566,7 +15586,7 @@ function slSmooth(lines){return lines.map(L0=>{let L1=L0;for(let r=0;r<1;r++){co
 function _renderRaster(){
   const _hid=legHideFn(layer);
   // 3x finer bands on a coarse grid, 2x on the national one (scrub speed)
-  if(layer=="snow"){const R=winRaw(SNOW,'snow'),sc=M.snow_scale,nv=_nsV||(_nsV=new Float32Array(NP));
+  if(layer=="snow"){const R=winRaw(SNOW,'snow'),sc=NS_SC,nv=_nsV||(_nsV=new Float32Array(NP));
     for(let p=0;p<NP;p++)nv[p]=R.su[p]*sc;
     _nsHid=_hid;setRasterIso(p=>{const v=nv[p];return _hid&&_hid(v)?null:v;},NS_ALPHA,NP>50000?2:3);}
   else if(layer=="depth"){const cb2=b*NP;setRasterIso(p=>{const v=cum[cb2+p];return (v<1||(_hid&&_hid(v)))?null:v;},215,NP>50000?2:3);}
@@ -17729,7 +17749,7 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
   for(const r of rows){const q=r.q,hgt=r.base-r.top;
     if(q.k==='snow'){
       // new snow cm/h: soft rounded bars in the colour of their class, one axis
-      const sn=[];let smx=0;for(let t=0;t<T;t++){sn[t]=SNOW[t*NP+p]*M.snow_scale;if(sn[t]>smx)smx=sn[t];}
+      const sn=[];let smx=0;for(let t=0;t<T;t++){sn[t]=SNOW[t*NP+p]*NS_SC;if(sn[t]>smx)smx=sn[t];}
       const top=Math.max(1,[1,2,3,5,8,10].find(v=>v>=smx*1.05)||Math.ceil(smx)),yS=v=>r.base-v/top*hgt,bw=MG_PX-1.6;
       for(const v of [top/2,top])hline(yS(v));
       for(const v of [0,top/2,top])lab((v%1?v.toFixed(1):String(v)),MG_L-6,yS(v),'right');
@@ -17829,7 +17849,7 @@ function icPill(ctx,x,y,txt,col,w){ctx.font='700 11px Helvetica Neue,Helvetica,A
   ctx.strokeStyle='rgba(18,21,26,.12)';ctx.lineWidth=1;icRR(ctx,px,py,tw,hh,8.5);ctx.stroke();
   ctx.fillStyle=col;ctx.textAlign='center';ctx.fillText(txt,px+tw/2,py+12.5);}
 function icNewSnow(cv,p){const{ctx,w,h}=icSetup(cv,86);const t0=a,t1=b,n=Math.max(1,t1-t0);const LG=4,baseY=h-16,plotW=w-LG-4;
-  let mx=0,mi=0;const vals=[];for(let t=t0;t<t1;t++){const v=SNOW[t*NP+p]*M.snow_scale;vals.push(v);if(v>mx){mx=v;mi=t-t0;}}
+  let mx=0,mi=0;const vals=[];for(let t=t0;t<t1;t++){const v=SNOW[t*NP+p]*NS_SC;vals.push(v);if(v>mx){mx=v;mi=t-t0;}}
   const mxs=Math.max(0.05,mx);
   icDayGrid(ctx,LG,plotW,h,t0,t1,baseY);
   ctx.strokeStyle='rgba(18,21,26,.12)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(LG,baseY+.5);ctx.lineTo(w,baseY+.5);ctx.stroke();
@@ -17852,7 +17872,7 @@ function icTemp(cv,p){const t0=a,t1=Math.max(a+2,b),air=[],srf=[];
 // was cold enough for it to stay powder are read together. Bars = new snow
 // per hour on the right axis, lines = air and snow surface on the left.
 function icSnowTemp(cv,p){const t0=a,t1=Math.min(T,Math.max(a+2,b)),air=[],srf=[],sn=[];
-  for(let t=t0;t<t1;t++){air[t]=tvI(t,p);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);sn[t]=SNOW[t*NP+p]*M.snow_scale;}
+  for(let t=t0;t<t1;t++){air[t]=tvI(t,p);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);sn[t]=SNOW[t*NP+p]*NS_SC;}
   tempChart(cv,air,srf,t0,t1,sn);}
 // Temperature over time with real axes: °C ticks on the left, hours and days
 // along the bottom. Air is a solid line, the snow surface a dashed one -- the
@@ -20699,7 +20719,7 @@ function fpCell(f){if(!(f.lat>laMin&&f.lat<laMax&&f.lon>loMin&&f.lon<loMax))retu
 // else the coarse Alps grid spread over its 6-hour steps
 function fpHourly(f){const p=fpCell(f),h=new Float32Array(T);
   if(p>=0){const dz=f.elev!=null&&typeof melevv==='function'?f.elev-melevv(p):0;
-    for(let t=0;t<T;t++){const v=SNOW[t*NP+p]*M.snow_scale;h[t]=v>0&&dz&&_nsOk?nsAtHeight(p,v,dz):v;}return {h,p};}
+    for(let t=0;t<T;t++){const v=SNOW[t*NP+p]*NS_SC;h[t]=v>0&&dz&&_nsOk?nsAtHeight(p,v,dz):v;}return {h,p};}
   const A=typeof ALPS!=='undefined'?ALPS:null;if(!A)return {h,p:-1};
   const B=A.bounds,x=Math.floor((f.lon-B[1])/(B[3]-B[1])*A.nx),y=Math.floor((B[2]-f.lat)/(B[2]-B[0])*A.ny);
   if(x<0||y<0||x>=A.nx||y>=A.ny)return {h,p:-1};const NN=A.nx*A.ny,sh=A.step_h;
@@ -20715,25 +20735,22 @@ function fpQual(p,tEnd){if(p<0)return 'none';try{const r=computePowder(p,Math.ma
   if(r.powdered)return r.quality==='reduced'?'red':'pow';
   if(cum[Math.min(T,tEnd)*NP+p]<5)return 'none';const k=powderSurf(r);
   return k===2||k===8||k===7?'bad':k==null?'none':'soft';}catch(e){return 'none';}}
-// Snow quality around a favourite: the cells within ~4 km split into a high
-// and a low band (upper / lower third by height); for each band the Powder
-// engine on its middle cell, at 10 h each day, read per aspect N O S W
-const FP_Q2={pow:['#2E9E5B','Pulver'],red:['#9BC53D','Pulver, etwas gesetzt'],wind:['#0d9488','Wind / Triebschnee'],soft:['#E9B730','Sulz / feucht'],
-  bad:['#D64545','Kruste / hart'],none:['#C9D0DA','Altschnee / kein Neuschnee']};
-function fpBands(p){if(p<0)return [];const x0=p%W,y0=(p-x0)/W,c=[];
+// Skiqualität around a favourite: the Powder engine on every cell within
+// ~4 km at 10 h each day; where it still finds powder: on which aspects,
+// between which heights, and whether it is still good or already settled
+let _fpMode='ns';try{_fpMode=localStorage.getItem('ssm_fp_mode')||'ns';}catch(_){}
+function fpSetMode(m){_fpMode=m;try{localStorage.setItem('ssm_fp_mode',m);}catch(_){}try{haptic(3);}catch(_){}fpRender();}
+function fpArea(p){if(p<0)return null;const x0=p%W,y0=(p-x0)/W,c=[];let lo=1e9,hi=-1e9;
   for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){const x=x0+dx,y=y0+dy;if(x<0||y<0||x>=W||y>=H||dx*dx+dy*dy>12)continue;
-    const q=y*W+x;if(!inDomainEdge(q))c.push([melevv(q),q]);}
-  if(c.length<3)return [{e:melevv(p),p}];c.sort((a,b)=>a[0]-b[0]);const n=c.length,hi=c[Math.floor(n*5/6)],lo=c[Math.floor(n/6)];
-  return hi[0]-lo[0]<250?[{e:melevv(p),p}]:[{e:hi[0],p:hi[1]},{e:lo[0],p:lo[1]}];}
-function fpQ4(p,tb){const out={N:'none',E:'none',S:'none',W:'none'};
-  try{tb=Math.min(T-1,Math.max(1,tb));const r=computePowder(p,Math.max(0,tb-48),tb),f=r.reason_flags||[];
-    const k=powderSurf(r);
-    if(f.includes('D0_no_recent_snow'))return out;
-    if(k===8||k===2){for(const a in out)out[a]='bad';return out;}
-    if(k===6){for(const a in out)out[a]='soft';return out;}
-    const v=new Set(r.valid_aspects||[]),good=r.quality==='reduced'||f.includes('I4_old_snow_persist')?'red':'pow';
-    for(const a in out)out[a]=v.has(a)?good:f.includes('R3_wind_redistribution')?'wind':v.size?'soft':(k===7?'soft':'none');
-  }catch(e){}return out;}
+    const q=y*W+x;if(inDomainEdge(q))continue;const e=melevv(q);c.push(q);if(e<lo)lo=e;if(e>hi)hi=e;}
+  return c.length?{c,lo,hi}:null;}
+const FP_AS=['N','E','S','W'],FP_ASL={N:'N',E:'O',S:'S',W:'W'};
+function fpPowder(A,tb){if(!A)return null;tb=Math.min(T-1,Math.max(1,tb));let n=0,good=0,lo=1e9,hi=-1e9;const as={N:0,E:0,S:0,W:0};
+  for(const q of A.c){let r;try{r=computePowder(q,Math.max(0,tb-48),tb);}catch(e){continue;}
+    if(!r.powdered)continue;n++;if(r.quality!=='reduced')good++;const e=melevv(q);if(e<lo)lo=e;if(e>hi)hi=e;as[aspectQ(maspv(q))]++;}
+  if(!n)return {n:0};
+  const asp=FP_AS.filter(a=>as[a]>=Math.max(1,n*.15));
+  return {n,share:n/A.c.length,good:good>=n/2,asp,lo:Math.floor(lo/100)*100,hi:Math.ceil(hi/100)*100};}
 async function fpRender(){const el=document.getElementById('favPage');if(!el||el.hidden)return;
   await favLoad(true);const push=await favPushState(),days=fpDays();
   const list=(favs||[]).filter(f=>_fpKind==='all'||(_fpKind==='alert'?f.notify:f.kind===_fpKind));
@@ -20744,6 +20761,7 @@ async function fpRender(){const el=document.getElementById('favPage');if(!el||el
     +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>'
     +'<div class="fp-chips">'+chip('all','Alle')+chip('area','Orte',cnt('area'))+chip('tour','Touren',cnt('tour'))+chip('alert','Alarm an',cnt('alert'))+'</div>'
     +(!push&&(favs||[]).length?'<button type="button" class="fp-push" onclick="favPushOn()">'+FAV_BELL+'<span>Powder-Alarm per Push einschalten</span></button>':'')
+    +'<div class="fp-mode" role="tablist">'+[['ns','Neuschnee'],['q','Skiqualität']].map(m=>'<button type="button" role="tab" aria-selected="'+(_fpMode===m[0])+'" class="'+(_fpMode===m[0]?'on':'')+'" onclick="fpSetMode(\''+m[0]+'\')">'+m[1]+'</button>').join('')+'</div>'
     +'<div class="fp-days fp-sc"><div style="width:'+W0+'px">'+days.map(d=>{const wd=d.rel===0?'Heute':d.rel===1?'Morgen':d.rel===-1?'Gestern':WD()[d.wd];
       return '<span class="'+(d.rel<0?'past':d.rel===0?'now0':'')+'"><small>'+escapeHtml(wd)+'</small><b>'+d.dn+'</b></span>';}).join('')+'</div></div>'
     +'<div class="fp-list">';
@@ -20752,26 +20770,32 @@ async function fpRender(){const el=document.getElementById('favPage');if(!el||el
   // one scale for every card so they compare, colour = the snow then
   const rows=list.map(f=>{const r=fpHourly(f);r.blk=days.map(d=>[0,8,16].map(o=>{let v=0;for(let t=d.t0+o;t<Math.min(d.t1,d.t0+o+8);t++)v+=r.h[t];return v;}));return r;});
   let bmx=5;rows.forEach(r=>r.blk.forEach(b=>b.forEach(v=>{if(v>bmx)bmx=v;})));
-  const AS=['N','E','S','W'],ASL={N:'N',E:'O',S:'S',W:'W'};
-  list.forEach((f,fi)=>{const {h:hr,p,blk}=rows[fi];const bands=fpBands(p);let prev=null;
-    const cols=days.map((d,di)=>{let s2=0;for(let t=d.t0;t<d.t1;t++)s2+=hr[t];
-      // quality grid: one row per height band, a square per aspect; a ring marks a change from the day before
-      const qs=bands.map(b=>fpQ4(b.p,d.t0+10));
-      const grid=qs.length?'<em class="fp-q">'+qs.map((q,bi)=>AS.map(a=>{const ch=prev&&prev[bi]&&prev[bi][a]!==q[a];
-        return '<s class="'+(ch?'ch':'')+'" style="background:'+FP_Q2[q[a]][0]+'" title="'+(bands.length>1?(bi?'unten':'oben')+' ~'+Math.round(bands[bi].e/100)*100+' m, ':'')+ASL[a]+': '+FP_Q2[q[a]][1]+'"></s>';}).join('')).join('')+'</em>':'';
-      prev=qs;
+  const QM=_fpMode==='q';
+  list.forEach((f,fi)=>{const {h:hr,p,blk}=rows[fi];const A=QM?fpArea(p):null;
+    const cols=days.map((d,di)=>{
+      if(QM){// where the powder still is: aspects on top, its height band on the area's height axis
+        const r=A?fpPowder(A,d.t0+10):null,cls=' fp-qc'+(d.rel<0?' past':d.rel===0?' now0':'');
+        if(!r||!r.n)return '<span class="fp-c'+cls+'"><b class="nil">–</b><i class="fp-ax"></i><small class="fp-hm">'+(r?'kein Pulver':'')+'</small></span>';
+        const rg=Math.max(100,A.hi-A.lo),y0=Math.max(0,Math.min(1,(r.lo-A.lo)/rg)),y1=Math.max(y0+.08,Math.min(1,(r.hi-A.lo)/rg));
+        const col=r.good?'#2E9E5B':'#9BC53D';
+        return '<span class="fp-c'+cls+'" title="Pulver '+(r.good?'gut':'etwas gesetzt')+' · '+r.asp.map(a=>FP_ASL[a]).join(' ')+' · '+r.lo+'–'+r.hi+' m · '+Math.round(r.share*100)+' % der Fläche">'
+          +'<b style="color:'+col+'">'+(r.asp.length===4?'alle':r.asp.map(a=>FP_ASL[a]).join(' '))+'</b>'
+          +'<i class="fp-ax"><u style="bottom:'+(y0*44).toFixed(0)+'px;height:'+((y1-y0)*44).toFixed(0)+'px;background:'+col+'"></u></i>'
+          +'<small class="fp-hm">'+r.lo+'–'+r.hi+'</small></span>';}
+      let s2=0;for(let t=d.t0;t<d.t1;t++)s2+=hr[t];
       return '<span class="fp-c'+(d.rel<0?' past':d.rel===0?' now0':'')+'"><b class="'+(s2>=10?'big':s2<1?'nil':'')+'">'+fpBand(s2)+'</b><i>'
-        +blk[di].map((v,k)=>'<u style="height:'+(v<.2?3:Math.max(5,Math.round(v/bmx*44)))+'px;background:'+fpSnowCol(v)+'" title="'+['Nacht','Tag','Abend'][k]+': '+(v<10?v.toFixed(1):Math.round(v))+' cm"></u>').join('')+'</i>'+grid+'</span>';}).join('');
+        +blk[di].map((v,k)=>'<u style="height:'+(v<.2?3:Math.max(5,Math.round(v/bmx*44)))+'px;background:'+fpSnowCol(v)+'" title="'+['Nacht','Tag','Abend'][k]+': '+(v<10?v.toFixed(1):Math.round(v))+' cm"></u>').join('')+'</i></span>';}).join('');
     h+='<div class="fp-card"><div class="fp-t"><button type="button" class="fp-name" onclick="fpClose();favOpen(\''+f.id+'\')"><b>'+escapeHtml(f.name)+'</b>'
       +'<small>'+(f.kind==='tour'?'Tour':'Ort')+(f.elev?' · '+f.elev+' m':'')+(p<0?' · Alpenraum (grob)':'')
-      +(bands.length>1?' · Qualität oben ~'+Math.round(bands[0].e/100)*100+' / unten ~'+Math.round(bands[1].e/100)*100+' m':'')+'</small></button>'
+      +(QM&&A?' · Gebiet '+Math.round(A.lo/100)*100+'–'+Math.round(A.hi/100)*100+' m':'')+'</small></button>'
       +'<button type="button" class="fp-bell'+(f.notify?' on':'')+'" onclick="fpBell(\''+f.id+'\')" aria-pressed="'+!!f.notify+'" title="Powder-Alarm: Push ab '+(f.threshold_cm||20)+' cm in 48 h">'
       +FAV_BELL+'<span>'+(f.notify?'ab '+(f.threshold_cm||20)+' cm':'Alarm')+'</span></button></div>'
       +'<div class="fp-sc fp-row"><div style="width:'+W0+'px">'+cols+'</div></div></div>';});
-  h+='</div><div class="fp-key"><span class="fp-scale">'+[1,5,10,20,30,50].map(v=>'<u style="background:'+fpSnowCol(v)+'"></u>').join('')+'</span><span>1 · 5 · 10 · 20 · 30 · 50+ cm</span>'
-    +'<small>Zahl = Neuschnee pro Tag · Balken = Neuschnee in der Nacht, am Tag, am Abend (Höhe und Farbe = Menge, wie auf der Karte) · links der gestrichelten Linie: die letzten 3 Tage (Modell-Rückblick)</small>'
-    +Object.values(FP_Q2).map(q=>'<span class="fp-qk"><s style="background:'+q[0]+'"></s>'+q[1]+'</span>').join('')
-    +'<small>Kästchen = Schneequalität am Morgen je Hangrichtung N · O · S · W, obere Reihe hoch, untere Reihe tief um den Favoriten · Rahmen = anders als am Vortag</small></div>';
+  h+='</div><div class="fp-key">'+(QM
+      ?'<span class="fp-qk"><s style="background:#2E9E5B"></s>Pulver gut</span><span class="fp-qk"><s style="background:#9BC53D"></s>Pulver etwas gesetzt</span>'
+        +'<small>Skiqualität am Morgen im Gebiet um den Favoriten (~4 km): oben die Hangrichtungen mit Pulver (N · O · S · W), der Balken zeigt, zwischen welchen Höhen er liegt (Achse = tiefster bis höchster Punkt des Gebiets), unten die Höhen in m · links der gestrichelten Linie: die letzten 3 Tage</small>'
+      :'<span class="fp-scale">'+[1,5,10,20,30,50].map(v=>'<u style="background:'+fpSnowCol(v)+'"></u>').join('')+'</span><span>1 · 5 · 10 · 20 · 30 · 50+ cm</span>'
+        +'<small>Zahl = Neuschnee pro Tag · Balken = Neuschnee in der Nacht, am Tag, am Abend (Höhe und Farbe = Menge, wie auf der Karte) · links der gestrichelten Linie: die letzten 3 Tage (Modell-Rückblick)</small>')+'</div>';
   el.innerHTML=h;
   // every row scrolls with the others
   const sc=[...el.querySelectorAll('.fp-sc')];
