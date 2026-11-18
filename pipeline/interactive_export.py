@@ -7513,6 +7513,44 @@ body.insp-open .pt-chip-wrap{display:none}
 #profModal .pv-chart{margin-top:18px!important}
 #profModal hr,#profModal .pv-sep{display:none!important}
 
+/* ==== Punkt: eine Prognose-Folie ==== */
+#inspPanel .ipd h4 em{display:block;margin:2px 0 0!important}
+.ipd-rh{display:flex;align-items:center;gap:8px;margin:18px 0 6px;padding-top:14px;border-top:1px solid var(--md-outline-var,#E1E3E8)}
+.ipd-rh .ipd-ic{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--md-secondary-container,#D6E3FF);color:var(--md-on-secondary-container,#0F1C2C);flex:none}
+.ipd-rh .ipd-ic svg{width:17px;height:17px}
+.ipd-rh{flex-wrap:wrap;row-gap:2px}.ipd-rh b{font:600 15px/1.2 var(--font);color:var(--md-on-surface);white-space:nowrap}
+.ipd-rh em{font:500 12px/1.2 var(--font);color:var(--md-on-surface-var);font-style:normal}
+#inspPanel .ipd .fp-c{gap:8px;padding-top:4px}
+#inspPanel .ipd .fp-c b{font-size:16px}
+.ipd-c i{border-bottom:1px solid var(--md-outline-var)}
+.ipd-wd{display:grid!important;place-items:center;height:46px!important;border:0!important}
+.ipd-wd svg{width:26px;height:26px}
+#inspPanel .ipd .fp-days{padding-top:8px}
+
+/* ==== Navigation freistehend, Zeitleiste M3 ==== */
+@media (max-width:899px){
+  :root{--nav-h:calc(env(safe-area-inset-bottom,0px) + 76px)!important}
+  body.nav-hide:not(.desk){--nav-h:calc(env(safe-area-inset-bottom,0px) + 76px)!important}
+  #tabBar{left:12px!important;right:12px!important;width:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 10px)!important;
+    height:58px!important;padding:0 6px!important;border-radius:29px!important;border:0!important;
+    background:rgba(255,255,255,.52)!important;-webkit-backdrop-filter:blur(18px) saturate(1.6)!important;backdrop-filter:blur(18px) saturate(1.6)!important;
+    box-shadow:0 4px 18px rgba(16,24,40,.16),inset 0 0 0 1px rgba(255,255,255,.55)!important}
+  #tabBar button{border-radius:22px!important}
+  body.nav-hide:not(.desk) #tabBar{transform:none!important}
+}
+/* the timeline: the same glass, M3 filter chips */
+#bottomPanel{border-radius:24px!important;background:rgba(255,255,255,.52)!important;-webkit-backdrop-filter:blur(18px) saturate(1.6)!important;backdrop-filter:blur(18px) saturate(1.6)!important;
+  box-shadow:0 4px 18px rgba(16,24,40,.14),inset 0 0 0 1px rgba(255,255,255,.55)!important;border:0!important}
+#tlChips{gap:6px!important;align-items:center}
+#tlChips button{height:32px!important;min-width:0;padding:0 12px!important;border-radius:8px!important;border:1px solid var(--md-outline,#74777F)!important;
+  background:transparent!important;color:var(--md-on-surface-var,#44474E)!important;font:500 14px/1 var(--font)!important;letter-spacing:.1px;box-shadow:none!important}
+#tlChips button.on{background:var(--md-secondary-container,#D6E3FF)!important;color:var(--md-on-secondary-container,#0F1C2C)!important;border-color:transparent!important;font-weight:600!important}
+#tlChips button.on::before{content:'';display:inline-block;width:14px;height:14px;margin:0 6px -2px -2px;
+  background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/%3E%3C/svg%3E") center/contain no-repeat}
+#tlChips i.sep{width:1px!important;height:20px!important;background:var(--md-outline-var,#C4C6D0)!important;margin:0 2px!important}
+#tlFold,#tlMini{border-radius:16px!important}
+
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -17956,7 +17994,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
    +'<button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
    '<div class="insp-body">'+daysSec+inspOrder({va:vaSec,prog:progSec,
      prof:profSec,
-     snow:mgHTML(),
+     snow:'',
      depth:'',
      temp:'',
      wind:'',
@@ -17984,22 +18022,55 @@ function ptMiniMap(lat,lon){const el=document.getElementById('ipMini');if(!el)re
   el.onclick=()=>{inspClose();map.setView([lat,lon],Math.max(map.getZoom(),13));};}
 // the days at this point like on the favourites page: new snow per day with
 // bars for night / day / evening, and where powder lies around it
+// One slide for the point: a column per day, every row scrolls together --
+// new snow (bars night/day/evening), where powder lies, temperature, sun and
+// wind. Each row has the same head: a Material-style icon, a title, the unit.
+const IPD_IC={
+  snow:'<path d="M12 2v20M4.2 6.5l15.6 11M19.8 6.5L4.2 17.5"/><path d="M9.5 3.5L12 6l2.5-2.5M9.5 20.5L12 18l2.5 2.5"/>',
+  powder:'<path d="M3 20l6.5-11 4 6.5 2.5-4L21 20z"/><path d="M8 11.5l1.5-2.5 1.6 2.6" />',
+  temp:'<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M12 11v6"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
+  wind:'<path d="M3 8h10.5a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3 12h16.5a2.5 2.5 0 1 1-2.5 2.5"/><path d="M3 16h8"/>'};
+function ipdHead(k,t,u){return '<div class="ipd-rh"><span class="ipd-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+IPD_IC[k]+'</svg></span><b>'+t+'</b>'+(u?'<em>'+u+'</em>':'')+'</div>';}
 function ptDaysHTML(lat,lon,elev){const days=fpDays();if(!days.length)return '';
   const f={lat,lon,elev:Math.round(elev)},r=fpHourly(f),A=fpArea(r.p),W0=days.length*FP_COL;
+  const pc=ptCell(lat,lon),wk=pc>=0?mainToWind[pc]:-1;
+  const cls=d=>(d.rel<0?' past':d.rel===0?' now0':'');
+  const row=cells=>'<div class="fp-sc fp-row"><div style="width:'+W0+'px">'+cells+'</div></div>';
+  // new snow
   const blk=days.map(d=>[0,8,16].map(o=>{let v=0;for(let t=d.t0+o;t<Math.min(d.t1,d.t0+o+8);t++)v+=r.h[t];return v;}));
   let bmx=5;blk.forEach(q=>q.forEach(v=>{if(v>bmx)bmx=v;}));
   const head='<div class="fp-days fp-sc"><div style="width:'+W0+'px">'+days.map(d=>{const wd=d.rel===0?'Heute':d.rel===1?'Morgen':d.rel===-1?'Gestern':WD()[d.wd];
-    return '<span class="'+(d.rel<0?'past':d.rel===0?'now0':'')+'"><small>'+escapeHtml(wd)+'</small><b>'+d.dn+'</b></span>';}).join('')+'</div></div>';
+    return '<span class="'+cls(d).trim()+'"><small>'+escapeHtml(wd)+'</small><b>'+d.dn+'</b></span>';}).join('')+'</div></div>';
   const ns=days.map((d,di)=>{let s2=0;for(let t=d.t0;t<d.t1;t++)s2+=r.h[t];
-    return '<span class="fp-c'+(d.rel<0?' past':d.rel===0?' now0':'')+'"><b class="'+(s2>=10?'big':s2<1?'nil':'')+'">'+fpBand(s2)+'</b><i>'
+    return '<span class="fp-c'+cls(d)+'"><b class="'+(s2>=10?'big':s2<1?'nil':'')+'">'+fpBand(s2)+'</b><i>'
       +blk[di].map((v,k)=>'<u style="height:'+(v<.2?3:Math.max(5,Math.round(v/bmx*44)))+'px;background:'+fpSnowCol(v)+'" title="'+['Nacht','Tag','Abend'][k]+': '+(v<10?v.toFixed(1):Math.round(v))+' cm"></u>').join('')+'</i></span>';}).join('');
-  const q=A?days.map(d=>{const x=fpPowder(A,d.t0+10),cls=' fp-qc'+(d.rel<0?' past':d.rel===0?' now0':'');
-    if(!x||!x.n)return '<span class="fp-c'+cls+'"><b class="nil">–</b><i class="fp-ax"></i><small class="fp-hm">kein Pulver</small></span>';
+  // where powder lies around the point
+  const q=A?days.map(d=>{const x=fpPowder(A,d.t0+10);
+    if(!x||!x.n)return '<span class="fp-c fp-qc'+cls(d)+'"><b class="nil">–</b><i class="fp-ax"></i><small class="fp-hm">kein Pulver</small></span>';
     const rg=Math.max(100,A.hi-A.lo),y0=Math.max(0,Math.min(1,(x.lo-A.lo)/rg)),y1=Math.max(y0+.08,Math.min(1,(x.hi-A.lo)/rg)),col=x.good?'#2E9E5B':'#9BC53D';
-    return '<span class="fp-c'+cls+'"><b style="color:'+col+'">'+(x.asp.length===4?'alle':x.asp.map(a2=>FP_ASL[a2]).join(' '))+'</b><i class="fp-ax"><u style="bottom:'+(y0*44).toFixed(0)+'px;height:'+((y1-y0)*44).toFixed(0)+'px;background:'+col+'"></u></i><small class="fp-hm">'+x.lo+'–'+x.hi+'</small></span>';}).join(''):'';
-  return '<div class="insp-sec ipd"><h4>Neuschnee pro Tag</h4>'+head+'<div class="fp-sc fp-row"><div style="width:'+W0+'px">'+ns+'</div></div>'
-    +(q?'<h4 class="ipd-h2">Wo Pulver liegt <em>Umgebung ~4 km, am Morgen</em></h4><div class="fp-sc fp-row"><div style="width:'+W0+'px">'+q+'</div></div>':'')
-    +'<p class="ipd-note">Balken = Nacht · Tag · Abend · links der Linie die letzten 3 Tage · grün = Pulver gut, hellgrün = gesetzt</p></div>';}
+    return '<span class="fp-c fp-qc'+cls(d)+'"><b style="color:'+col+'">'+(x.asp.length===4?'alle':x.asp.map(a2=>FP_ASL[a2]).join(' '))+'</b><i class="fp-ax"><u style="bottom:'+(y0*44).toFixed(0)+'px;height:'+((y1-y0)*44).toFixed(0)+'px;background:'+col+'"></u></i><small class="fp-hm">'+x.lo+'–'+x.hi+'</small></span>';}).join(''):'';
+  // weather per day: temperature range, sun hours, wind
+  const wx=pc<0?null:days.map(d=>{let mn=1e9,mx=-1e9,sun=0,ws=0,wm=0,n=0,ss=0,sc=0;
+    for(let t=d.t0;t<d.t1;t++){const v=tvI(t,pc);if(v===v){if(v<mn)mn=v;if(v>mx)mx=v;}sun+=sunv(t,pc);
+      if(wk>=0){const sp=SPD[t*P+wk]/M.spd_mul*3.6,dd=WDIR[t*P+wk]*M.dir_div*Math.PI/180;ws+=sp;if(sp>wm)wm=sp;ss+=Math.sin(dd);sc+=Math.cos(dd);n++;}}
+    return {mn,mx,sun,wmean:n?ws/n:0,wmax:wm,dir:(Math.atan2(ss,sc)*180/Math.PI+360)%360};});
+  let tRow='',sRow='',wRow='';
+  if(wx){const tlo=Math.min(...wx.map(w=>w.mn)),thi=Math.max(...wx.map(w=>w.mx)),trg=Math.max(4,thi-tlo);
+    const tc=v=>v>=0?'#E5484D':v>-5?'#60A5FA':'#2563EB',fmt=v=>(v>0?'+':'')+Math.round(v)+'°';
+    tRow=days.map((d,i)=>{const w=wx[i],y0=(w.mn-tlo)/trg*44,y1=(w.mx-tlo)/trg*44;
+      return '<span class="fp-c ipd-c'+cls(d)+'"><b style="color:'+tc(w.mx)+'">'+fmt(w.mx)+'</b><i class="fp-ax"><u style="bottom:'+y0.toFixed(0)+'px;height:'+Math.max(4,y1-y0).toFixed(0)+'px;background:linear-gradient(0deg,'+tc(w.mn)+','+tc(w.mx)+')"></u></i><small class="fp-hm">'+fmt(w.mn)+'</small></span>';}).join('');
+    sRow=days.map((d,i)=>{const h=wx[i].sun;
+      return '<span class="fp-c ipd-c'+cls(d)+'"><b class="'+(h<.5?'nil':'')+'">'+(h<.5?'0':h.toFixed(h<10?1:0))+'</b><i><u style="width:26px;height:'+Math.max(3,Math.round(Math.min(1,h/10)*44))+'px;background:#F5B83D"></u></i></span>';}).join('');
+    if(wk>=0)wRow=days.map((d,i)=>{const w=wx[i],c=w.wmax>=50?'#B42318':w.wmax>=30?'#E5484D':w.wmax>=15?'#7C5CC4':'#64748B';
+      return '<span class="fp-c ipd-c'+cls(d)+'"><b style="color:'+c+'">'+Math.round(w.wmean)+'</b><i class="ipd-wd"><svg viewBox="0 0 24 24" style="transform:rotate('+Math.round(w.dir+180)+'deg)" aria-label="aus '+asp8(w.dir)+'"><path d="M12 3l5 9h-3.5v9h-3v-9H7z" fill="'+c+'"/></svg></i><small class="fp-hm">Böen '+Math.round(w.wmax*1.5)+'</small></span>';}).join('');}
+  return '<div class="insp-sec ipd"><h4>Prognose <em>links der Linie: die letzten 3 Tage</em></h4>'+head
+    +ipdHead('snow','Neuschnee','cm · Balken Nacht / Tag / Abend')+row(ns)
+    +(q?ipdHead('powder','Wo Pulver liegt','Hangrichtung · Höhe, ~4 km, morgens')+row(q):'')
+    +(tRow?ipdHead('temp','Temperatur','Max / Min °C')+row(tRow):'')
+    +(sRow?ipdHead('sun','Sonne','Stunden')+row(sRow):'')
+    +(wRow?ipdHead('wind','Wind','Mittel km/h · Richtung')+row(wRow):'')
+    +'<p class="ipd-note">Grün = Pulver gut, hellgrün = gesetzt · Pfeil = wohin der Wind weht</p></div>';}
 // ── Meteogram in the point card ─────────────────────────────────────────
 // One long time axis for every chart, like a weather app: the panels sit in
 // one horizontal scroller, so a swipe moves new snow, temperature, depth,
