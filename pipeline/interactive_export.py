@@ -7484,7 +7484,7 @@ body.insp-open .pt-chip-wrap{display:none}
 
 /* ==== Profil: M3, mit Luft ==== */
 #profModal .prof-sheet{background:var(--md-surface-container-low,#F2F4F8)!important}
-#profModal .prof-head{padding:calc(env(safe-area-inset-top,0px) + 14px) 20px 10px!important;background:transparent!important;border:0!important}
+#profModal .prof-head{padding:calc(env(safe-area-inset-top,0px) + 14px) 20px 10px!important;border:0!important;position:sticky!important;top:0!important;z-index:20!important;background:var(--md-surface-container-low,#F2F4F8)!important;box-shadow:0 1px 0 var(--md-outline-var,#E1E3E8)}
 #profModal .prof-body{padding:4px 16px calc(env(safe-area-inset-bottom,0px) + 96px)!important;display:flex;flex-direction:column;gap:16px}
 #profModal .prof-top{flex-direction:column!important;align-items:center!important;text-align:center;gap:12px!important;padding:24px 16px 8px!important;
   background:transparent!important;margin:0!important}
@@ -7550,6 +7550,33 @@ body.insp-open .pt-chip-wrap{display:none}
   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/%3E%3C/svg%3E") center/contain no-repeat}
 #tlChips i.sep{width:1px!important;height:20px!important;background:var(--md-outline-var,#C4C6D0)!important;margin:0 2px!important}
 #tlFold,#tlMini{border-radius:16px!important}
+
+/* ==== App: Karte bis ganz oben; Webcam-Favoriten ==== */
+body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #statusScrim{display:none!important}
+.map-fade.top{display:none!important}
+.wcf-list{display:flex;flex-direction:column;gap:12px;padding:4px 0 150px}
+.wcf-row{display:flex;gap:12px;align-items:stretch;background:rgba(255,255,255,.06);border-radius:20px;padding:8px}
+.wcf-img{position:relative;flex:0 0 46%;aspect-ratio:16/9;border:0;padding:0;border-radius:14px;overflow:hidden;background:#1a1f2a;cursor:pointer}
+.wcf-img img,.wcf-img iframe{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:0}
+.wcf-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;color:#fff;padding:2px 4px 2px 0}
+.wcf-info>b{font:600 14px/1.25 var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wcf-info>em{font:500 12px var(--font);font-style:normal;opacity:.7}
+.wcf-score{margin-top:auto}
+.wcs-top{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+.wcs-top b{font:700 18px/1 var(--font);font-variant-numeric:tabular-nums}
+.wcs-top span{display:inline-flex;align-items:center;gap:5px;font:500 12px var(--font);opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wcs-top i{width:10px;height:10px;border-radius:50%;flex:none}
+.wcs-bar{height:8px;border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden;margin:6px 0 3px}
+.wcs-bar u{display:block;height:100%;border-radius:4px;transition:width .2s}
+.wcf-score small{font:500 11px var(--font);opacity:.6}
+.wcf-ctl{position:sticky;bottom:0;margin:0 -4px;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 12px);border-radius:24px 24px 0 0;
+  background:rgba(20,26,36,.82);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);color:#fff}
+.wcf-tl{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
+.wcf-tl b{font:600 16px var(--font)}.wcf-tl small{font:500 11px var(--font);opacity:.65;text-align:right}
+.wcf-ctl input[type=range]{width:100%;accent-color:#9ECAFF}
+
+/* Schneetyp-Flächen: scharf, nicht nochmals weichgezeichnet */
+.raster-smooth.cls-crisp{image-rendering:auto}
 
 </style>
 <script>
@@ -12878,6 +12905,8 @@ function rptPlace(r){
 // visible credit with a link, which the popup and the attribution carry.
 var WEBCAM_KEY=null,wcLayer=null,wcSeen=new Map(),wcT=0,wcBusy=false;   // var: the layer list asks before this line has run
 const WC_API='https://api.windy.com/webcams/api/v3/webcams';
+// cameras from a view of about 50 x 50 km (a phone at zoom ~9.8)
+const WC_MIN_Z=9.8;
 dataFetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
   if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}
     window._wcOk=true;try{ovRender();}catch(e){}
@@ -12902,7 +12931,7 @@ function wcIcon(){return L.divIcon({className:'',iconSize:[30,30],iconAnchor:[15
 function wcBuildLayer(){wcLayer=L.layerGroup();setTimeout(wcRefresh,0);return wcLayer;}
 async function wcRefresh(){
   if(!WEBCAM_KEY||!ovOn.webcams||!wcLayer||wcBusy)return;
-  if(map.getZoom()<(_wcAuto?9:7.5)){if(!_wcAuto)toastOnce('wc-zoom','Für Webcams näher heranzoomen');return;}
+  if(map.getZoom()<WC_MIN_Z){if(!_wcAuto)toastOnce('wc-zoom','Für Webcams näher heranzoomen');return;}
   wcBusy=true;
   try{const c=map.getCenter(),b=map.getBounds();
     const rad=Math.min(250,Math.max(5,Math.round(tourDistM(c.lng,c.lat,b.getEast(),b.getNorth())/1000)));
@@ -12982,7 +13011,7 @@ async function wcvRender(){const el=document.getElementById('wcvBody');if(!el)re
   if(!favs.length){el.innerHTML='<div class="wcv-empty">Noch keine Favoriten.<br>So findest du Webcams: <b>In der Nähe</b> (oben) zeigt die Kameras rund um dich. Oder auf der Karte unter <b>Ebenen → Auf der Karte → Webcams</b> einschalten, nah heranzoomen, eine Kamera antippen und <b>☆ Merken</b>.</div>';return;}
   el.innerHTML='<div class="wcv-empty">Lade Webcams …</div>';
   let cams;try{cams=await wcDetails(favs.map(f=>f.id));}catch(e){el.innerHTML='<div class="wcv-empty">'+escapeHtml(tr(wcErrTxt(e)))+'</div>';return;}
-  if(WCV.mode==='fav'){WCV.tvList=cams;wcvGrid(el,cams,cams.length+' Favoriten',ap);}
+  if(WCV.mode==='fav'){WCV.tvList=cams;wcvFavList(el,cams,ap);}
   else{if(WCV.start){const i=cams.findIndex(c=>c.id===WCV.start);if(i>=0)WCV.tv=i;WCV.start=null;}wcvTv(el,cams,ap,'Favoriten');}}
 // Picture | timelapse | live: the same switch on the grid, the viewer and TV
 function wcvKindBar(){return '<div class="wcv-kind">'+[['img','Live-Bild'],['day','Zeitraffer 24 h'],['live','Live-Video']]
@@ -13013,7 +13042,7 @@ async function wcvView(i){const cams=WCV.tvList,c=cams[i];if(!c)return;WCV.view=
 // the camera pins on the map (Ebenen → Auf der Karte → Webcams), in one tap
 function wcvOnMap(){wcvClose();try{navGo('map');}catch(e){}
   if(!ovOn.webcams)try{ovToggle('webcams',true);}catch(e){}
-  if(map.getZoom()<9)map.setZoom(9);toast('Webcams auf der Karte – Kamera antippen für das Bild','info');}
+  if(map.getZoom()<WC_MIN_Z)map.setZoom(WC_MIN_Z+.2);toast('Webcams auf der Karte – Kamera antippen für das Bild','info');}
 function wcvBack(){clearTimeout(WCV.viewT);WCV.view=-1;const el=document.getElementById('wcvBody');if(!el)return;
   if(WCV.mode==='near')wcvNearShow(el);else wcvRender();}
 function wcvTv(el,cams,ap,what){WCV.tvList=cams;if(WCV.tv>=cams.length)WCV.tv=0;
@@ -13041,6 +13070,33 @@ function wcvNearShow(el,ap){const cams=(WCV.near||[]).filter(x=>x.alt==null||x.a
   if(!cams.length){el.innerHTML=bar+'<div class="wcv-empty">Keine Webcams über '+WCV.minAlt+' m im Umkreis von 40 km. Schieb den Regler nach links.</div>';return;}
   wcvGrid(el,cams,cams.length+' in der Nähe',{bar,ap:ap||''});}
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('wcv').hidden)wcvClose();});
+// Favourites one under the other: the picture, and beside it how the snow is
+// there at the time on the slider below -- one slider for all cameras. The
+// bar: new snow of the 24 h before that time at the camera's height, in the
+// map's colours; the word: the Powder engine's verdict there.
+function wcvFavScore(c,t){const p=ptCell(c.lat,c.lon);if(p<0)return null;
+  if(!c._h){try{c._h=fpHourly({lat:c.lat,lon:c.lon,elev:c.alt}).h;}catch(e){c._h=null;}}
+  let ns=0;if(c._h)for(let k=Math.max(0,t-24);k<t;k++)ns+=c._h[k];
+  let q='',qc='#C9D0DA';try{const r=computePowder(p,Math.max(0,t-48),t);
+    if(r.powdered){q=r.quality==='reduced'?'Pulver, gesetzt':'Pulver';qc=r.quality==='reduced'?'#9BC53D':'#2E9E5B';}
+    else{const k=powderSurf(r),row=PD_SURF_ROWS.find(x=>x[0]===k);q=row?row[1]:'kein Pulver';qc=k!=null&&PD_SURF_COL[k]?'rgb('+PD_SURF_COL[k].join(',')+')':qc;}}catch(e){}
+  return {ns,q,qc};}
+function wcvFavPaint(){const t=WCV.t;const lab=document.getElementById('wcvTL');
+  if(lab){const d=zLocal(tMs(t));lab.textContent=WD()[d.getUTCDay()]+' '+d.getUTCDate()+'. '+String(d.getUTCHours()).padStart(2,'0')+':00'+(Math.abs(t-nowIdx)<2?' · jetzt':t<nowIdx?' · vergangen':' · Prognose');}
+  (WCV.tvList||[]).forEach((c,i)=>{const el=document.getElementById('wcvS'+i);if(!el)return;const sc=wcvFavScore(c,t);
+    if(!sc){el.innerHTML='<small>ausserhalb des Modells</small>';return;}
+    const w=Math.max(3,Math.min(100,sc.ns/50*100));
+    el.innerHTML='<div class="wcs-top"><b>'+(sc.ns<1?'0':'+'+Math.round(sc.ns))+' cm</b><span><i style="background:'+sc.qc+'"></i>'+escapeHtml(sc.q)+'</span></div>'
+      +'<div class="wcs-bar"><u style="width:'+w.toFixed(0)+'%;background:'+fpSnowCol(sc.ns)+'"></u></div><small>Neuschnee 24 h bis dahin</small>';});}
+function wcvFavList(el,cams,ap){
+  if(WCV.t==null)WCV.t=Math.min(T-1,Math.max(0,nowIdx));
+  const t0=Math.max(0,nowIdx-72),t1=T-1;
+  el.innerHTML='<div class="wcv-bar"><span>'+cams.length+' Favoriten · antippen für Zeitraffer & Live</span><button onclick="wcvOnMap()">Auf der Karte</button></div>'
+    +'<div class="wcf-list">'+cams.map((c,i)=>'<div class="wcf-row"><button type="button" class="wcf-img" onclick="wcvView('+i+')">'+wcMedia(c,'img')+'</button>'
+      +'<div class="wcf-info"><b>'+escapeHtml(c.t)+'</b><em>'+(c.alt!=null?c.alt+' m':'')+'</em><div class="wcf-score" id="wcvS'+i+'"></div></div></div>').join('')+'</div>'
+    +'<div class="wcf-ctl"><div class="wcf-tl"><b id="wcvTL"></b><small>Bilder: aktuell · Balken: Modell zur gewählten Zeit</small></div>'
+    +'<input type="range" min="'+t0+'" max="'+t1+'" step="1" value="'+WCV.t+'" aria-label="Zeit für alle Webcams" oninput="WCV.t=+this.value;wcvFavPaint()"></div>'+(ap||'');
+  wcvFavPaint();}
 // ── View Transitions: screens cross-fade and slide instead of popping ──
 // Progressive: browsers without the API (or with reduced motion) just switch.
 function vt(fn){
@@ -15516,7 +15572,7 @@ function chMask(){if(_chMask)return _chMask;
     c.width=1;c.height=1;
   }catch(e){m.fill(1);}
   return (_chMask=m);}
-function setRaster(get,border){_isoV=null;isoHiHide();_tmpV=null;tempHiHide();if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;const chm=chMask();
+function setRaster(get,border){try{const e=raster.getElement();if(e)e.classList.remove('cls-crisp');}catch(e){}_isoV=null;isoHiHide();_tmpV=null;tempHiHide();if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;const chm=chMask();
   for(let p=0;p<NP;p++){const r=(inDomainEdge(p)||!chm[p])?null:get(p);const o=p*4;if(r){d[o]=r[0];d[o+1]=r[1];d[o+2]=r[2];d[o+3]=r[3]==null?210:r[3];if(cls)cls[p]=r[4];}else{d[o+3]=0;if(cls)cls[p]=-999;}}
   if(border){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=y*W+x;if(cls[p]==-999)continue;const rt=x<W-1?cls[p+1]:cls[p],bt=y<H-1?cls[p+W]:cls[p];if(rt!=cls[p]||bt!=cls[p]){const o=p*4;d[o]=20;d[o+1]=20;d[o+2]=30;d[o+3]=230;}}}
   cx.putImageData(img,0,0);}
@@ -15530,7 +15586,34 @@ function snowBand(v){if(v==null||v<SB[0])return -1;let j=0;while(j+1<SB.length&&
 // of Austria, Italy and France (all other layers stay Swiss).
 let _allMask=null;
 function domMask(){return _allMask||(_allMask=new Uint8Array(NP).fill(1));}
-function setRasterIso(val,alpha,k){_tmpV=null;if(tempHi&&map.hasLayer(tempHi))map.removeLayer(tempHi);const chm=domMask(),V=new Float32Array(NP);
+// Classes as rounded areas with a clear line between them: each cell's class
+// is spread bilinearly onto a k-times finer grid, every sub-pixel takes the
+// class with the largest share of its four cells (so edges round instead of
+// stepping), and where the class changes a dark line is drawn.
+// get(p) -> [r,g,b,a,classId] or null.
+function setRasterCls(get,k){_isoV=null;isoHiHide();_tmpV=null;tempHiHide();
+  const chm=chMask(),C=new Int16Array(NP).fill(-1),col=new Map();
+  for(let p=0;p<NP;p++){if(inDomainEdge(p)||!chm[p])continue;const r=get(p);if(!r)continue;C[p]=r[4];if(!col.has(r[4]))col.set(r[4],r);}
+  const w=W*k,h=H*k;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
+  const img=cx.createImageData(w,h),d=img.data,B=new Int16Array(w*h).fill(-1);
+  // cubic B-spline weights over the 4 x 4 cells around each sub-pixel: the
+  // class shares are smooth fields, so the areas come out rounded
+  const bs=t=>{t=Math.abs(t);return t<1?(4-6*t*t+3*t*t*t)/6:t<2?((2-t)*(2-t)*(2-t))/6:0;};
+  const acc=new Float32Array(1024),used=[];
+  for(let Y=0;Y<h;Y++){const fy=(Y+.5)/k-.5,iy=Math.floor(fy),wy=[bs(fy-iy+1),bs(fy-iy),bs(fy-iy-1),bs(fy-iy-2)];
+    for(let X=0;X<w;X++){const fx=(X+.5)/k-.5,ix=Math.floor(fx),wx=[bs(fx-ix+1),bs(fx-ix),bs(fx-ix-1),bs(fx-ix-2)];
+      let empty=0;used.length=0;
+      for(let j=0;j<4;j++){const yy=Math.min(H-1,Math.max(0,iy-1+j));for(let i=0;i<4;i++){const xx=Math.min(W-1,Math.max(0,ix-1+i)),wt=wx[i]*wy[j],c=C[yy*W+xx];
+        if(c<0){empty+=wt;continue;}if(acc[c]===0)used.push(c);acc[c]+=wt;}}
+      let best=-1,bw=0;for(const c of used){if(acc[c]>bw){bw=acc[c];best=c;}acc[c]=0;}
+      B[Y*w+X]=empty>bw?-1:best;}}
+  for(let q=0;q<w*h;q++){const bq=B[q];if(bq<0)continue;const o=q*4,X=q%w,c=col.get(bq);
+    const edge=(X<w-1&&B[q+1]!==bq)||(q+w<w*h&&B[q+w]!==bq);
+    if(edge){d[o]=28;d[o+1]=34;d[o+2]=46;d[o+3]=200;}else{d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=c[3]==null?200:c[3];}}
+  cx.putImageData(img,0,0);
+  // drawn fine enough already: the browser must not blur it again
+  try{const e=raster.getElement();if(e)e.classList.add('cls-crisp');}catch(e){}}
+function setRasterIso(val,alpha,k){try{const e=raster.getElement();if(e)e.classList.remove('cls-crisp');}catch(e){}_tmpV=null;if(tempHi&&map.hasLayer(tempHi))map.removeLayer(tempHi);const chm=domMask(),V=new Float32Array(NP);
   for(let p=0;p<NP;p++){const v=(inDomainEdge(p)||!chm[p])?null:val(p);V[p]=v==null?NaN:v;}
   const w=W*k,h=H*k;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
   const img=cx.createImageData(w,h),d=img.data,B=new Int8Array(w*h);
@@ -15914,11 +15997,11 @@ function _renderRaster(){
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[200,140-(x*80|0),255-(x*200|0),235];}
       const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(thrHides('tsurf',v))return null;const col=tempCol(v);return[col[0],col[1],col[2],205];});}
   else if(layer=="skiable"){const ca2=a*NP,cb2=b*NP;setRaster(p=>{const slp=mslpv(p);if(slp>55)return[80,0,0,150];const snow=cum[cb2+p]-cum[ca2+p];if(snow<1)return null;const need=minSnowNeeded(p);const r=snow/Math.max(1,need);if(r>=1.5)return[100,220,100,190];if(r>=1.0)return[160,220,100,180];if(r>=.7)return[255,220,50,180];if(r>=.4)return[255,140,40,170];return[255,60,40,160];});}
-  else if(layer=="powder"){const cb2=b*NP;setRaster(p=>{const r=computePowder(p,a,b);
-    if(!r.powdered){if(cum[cb2+p]<5)return null;const k=powderSurf(r);if(k==null)return null;const c=PD_SURF_COL[k];return[c[0],c[1],c[2],k===0?105:160];}
+  else if(layer=="powder"){const cb2=b*NP;setRasterCls(p=>{const r=computePowder(p,a,b);
+    if(!r.powdered){if(cum[cb2+p]<5)return null;const k=powderSurf(r);if(k==null)return null;const c=PD_SURF_COL[k];return[c[0],c[1],c[2],k===0?105:160,200+k];}
     // in the bands of the new-snow scale, as on the Neuschnee map
-    const c=snowCol(Math.max(SB[0],r.newSnow||0))||RGB[0];const alpha=r.quality==='reduced'?128:172;
-    return[c[0]|0,c[1]|0,c[2]|0,alpha];});}
+    const c=snowCol(Math.max(SB[0],r.newSnow||0))||RGB[0],red=r.quality==='reduced',alpha=red?128:172;
+    return[c[0]|0,c[1]|0,c[2]|0,alpha,Math.max(0,snowBand(Math.max(SB[0],r.newSnow||0)))*2+(red?1:0)];},NP>50000?5:8);}
   else setRaster(_=>null);
 }
 // where it is not powder, what it is instead -- from the engine's own reasons,

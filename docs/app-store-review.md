@@ -20,9 +20,9 @@ fertig formuliert. Was nur du tun kannst, ist mit ☐ markiert.
 
 Die Seiten werden mit der Web-App veröffentlicht:
 
-- Datenschutz: `https://gianio.github.io/snow-mapper-v17/legal/datenschutz.html`
-- Nutzungsbedingungen: `https://gianio.github.io/snow-mapper-v17/legal/agb.html`
-- Impressum / Support: `https://gianio.github.io/snow-mapper-v17/legal/impressum.html`
+- Datenschutz: `https://gianio.github.io/snow-mapper-v17/datenschutz.html`
+- Nutzungsbedingungen: `https://gianio.github.io/snow-mapper-v17/agb.html`
+- Impressum / Support: `https://gianio.github.io/snow-mapper-v17/impressum.html`
 
 ✅ Name, Adresse und E-Mail sind eingetragen (6.11.2026). Mit einer eigenen .ch-Domain
 später einfach die URLs austauschen.
