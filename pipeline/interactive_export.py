@@ -7551,6 +7551,30 @@ body.insp-open .pt-chip-wrap{display:none}
 #tlChips i.sep{width:1px!important;height:20px!important;background:var(--md-outline-var,#C4C6D0)!important;margin:0 2px!important}
 #tlFold,#tlMini{border-radius:16px!important}
 
+/* ==== App: Karte bis ganz oben; Webcam-Favoriten ==== */
+body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #statusScrim{display:none!important}
+.map-fade.top{display:none!important}
+.wcf-list{display:flex;flex-direction:column;gap:12px;padding:4px 0 150px}
+.wcf-row{display:flex;gap:12px;align-items:stretch;background:rgba(255,255,255,.06);border-radius:20px;padding:8px}
+.wcf-img{position:relative;flex:0 0 46%;aspect-ratio:16/9;border:0;padding:0;border-radius:14px;overflow:hidden;background:#1a1f2a;cursor:pointer}
+.wcf-img img,.wcf-img iframe{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:0}
+.wcf-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;color:#fff;padding:2px 4px 2px 0}
+.wcf-info>b{font:600 14px/1.25 var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wcf-info>em{font:500 12px var(--font);font-style:normal;opacity:.7}
+.wcf-score{margin-top:auto}
+.wcs-top{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+.wcs-top b{font:700 18px/1 var(--font);font-variant-numeric:tabular-nums}
+.wcs-top span{display:inline-flex;align-items:center;gap:5px;font:500 12px var(--font);opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wcs-top i{width:10px;height:10px;border-radius:50%;flex:none}
+.wcs-bar{height:8px;border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden;margin:6px 0 3px}
+.wcs-bar u{display:block;height:100%;border-radius:4px;transition:width .2s}
+.wcf-score small{font:500 11px var(--font);opacity:.6}
+.wcf-ctl{position:sticky;bottom:0;margin:0 -4px;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 12px);border-radius:24px 24px 0 0;
+  background:rgba(20,26,36,.82);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);color:#fff}
+.wcf-tl{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
+.wcf-tl b{font:600 16px var(--font)}.wcf-tl small{font:500 11px var(--font);opacity:.65;text-align:right}
+.wcf-ctl input[type=range]{width:100%;accent-color:#9ECAFF}
+
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -12878,6 +12902,8 @@ function rptPlace(r){
 // visible credit with a link, which the popup and the attribution carry.
 var WEBCAM_KEY=null,wcLayer=null,wcSeen=new Map(),wcT=0,wcBusy=false;   // var: the layer list asks before this line has run
 const WC_API='https://api.windy.com/webcams/api/v3/webcams';
+// cameras from a view of about 50 x 50 km (a phone at zoom ~9.8)
+const WC_MIN_Z=9.8;
 dataFetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
   if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}
     window._wcOk=true;try{ovRender();}catch(e){}
@@ -12902,7 +12928,7 @@ function wcIcon(){return L.divIcon({className:'',iconSize:[30,30],iconAnchor:[15
 function wcBuildLayer(){wcLayer=L.layerGroup();setTimeout(wcRefresh,0);return wcLayer;}
 async function wcRefresh(){
   if(!WEBCAM_KEY||!ovOn.webcams||!wcLayer||wcBusy)return;
-  if(map.getZoom()<(_wcAuto?9:7.5)){if(!_wcAuto)toastOnce('wc-zoom','Für Webcams näher heranzoomen');return;}
+  if(map.getZoom()<WC_MIN_Z){if(!_wcAuto)toastOnce('wc-zoom','Für Webcams näher heranzoomen');return;}
   wcBusy=true;
   try{const c=map.getCenter(),b=map.getBounds();
     const rad=Math.min(250,Math.max(5,Math.round(tourDistM(c.lng,c.lat,b.getEast(),b.getNorth())/1000)));
@@ -12982,7 +13008,7 @@ async function wcvRender(){const el=document.getElementById('wcvBody');if(!el)re
   if(!favs.length){el.innerHTML='<div class="wcv-empty">Noch keine Favoriten.<br>So findest du Webcams: <b>In der Nähe</b> (oben) zeigt die Kameras rund um dich. Oder auf der Karte unter <b>Ebenen → Auf der Karte → Webcams</b> einschalten, nah heranzoomen, eine Kamera antippen und <b>☆ Merken</b>.</div>';return;}
   el.innerHTML='<div class="wcv-empty">Lade Webcams …</div>';
   let cams;try{cams=await wcDetails(favs.map(f=>f.id));}catch(e){el.innerHTML='<div class="wcv-empty">'+escapeHtml(tr(wcErrTxt(e)))+'</div>';return;}
-  if(WCV.mode==='fav'){WCV.tvList=cams;wcvGrid(el,cams,cams.length+' Favoriten',ap);}
+  if(WCV.mode==='fav'){WCV.tvList=cams;wcvFavList(el,cams,ap);}
   else{if(WCV.start){const i=cams.findIndex(c=>c.id===WCV.start);if(i>=0)WCV.tv=i;WCV.start=null;}wcvTv(el,cams,ap,'Favoriten');}}
 // Picture | timelapse | live: the same switch on the grid, the viewer and TV
 function wcvKindBar(){return '<div class="wcv-kind">'+[['img','Live-Bild'],['day','Zeitraffer 24 h'],['live','Live-Video']]
@@ -13013,7 +13039,7 @@ async function wcvView(i){const cams=WCV.tvList,c=cams[i];if(!c)return;WCV.view=
 // the camera pins on the map (Ebenen → Auf der Karte → Webcams), in one tap
 function wcvOnMap(){wcvClose();try{navGo('map');}catch(e){}
   if(!ovOn.webcams)try{ovToggle('webcams',true);}catch(e){}
-  if(map.getZoom()<9)map.setZoom(9);toast('Webcams auf der Karte – Kamera antippen für das Bild','info');}
+  if(map.getZoom()<WC_MIN_Z)map.setZoom(WC_MIN_Z+.2);toast('Webcams auf der Karte – Kamera antippen für das Bild','info');}
 function wcvBack(){clearTimeout(WCV.viewT);WCV.view=-1;const el=document.getElementById('wcvBody');if(!el)return;
   if(WCV.mode==='near')wcvNearShow(el);else wcvRender();}
 function wcvTv(el,cams,ap,what){WCV.tvList=cams;if(WCV.tv>=cams.length)WCV.tv=0;
@@ -13041,6 +13067,33 @@ function wcvNearShow(el,ap){const cams=(WCV.near||[]).filter(x=>x.alt==null||x.a
   if(!cams.length){el.innerHTML=bar+'<div class="wcv-empty">Keine Webcams über '+WCV.minAlt+' m im Umkreis von 40 km. Schieb den Regler nach links.</div>';return;}
   wcvGrid(el,cams,cams.length+' in der Nähe',{bar,ap:ap||''});}
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('wcv').hidden)wcvClose();});
+// Favourites one under the other: the picture, and beside it how the snow is
+// there at the time on the slider below -- one slider for all cameras. The
+// bar: new snow of the 24 h before that time at the camera's height, in the
+// map's colours; the word: the Powder engine's verdict there.
+function wcvFavScore(c,t){const p=ptCell(c.lat,c.lon);if(p<0)return null;
+  if(!c._h){try{c._h=fpHourly({lat:c.lat,lon:c.lon,elev:c.alt}).h;}catch(e){c._h=null;}}
+  let ns=0;if(c._h)for(let k=Math.max(0,t-24);k<t;k++)ns+=c._h[k];
+  let q='',qc='#C9D0DA';try{const r=computePowder(p,Math.max(0,t-48),t);
+    if(r.powdered){q=r.quality==='reduced'?'Pulver, gesetzt':'Pulver';qc=r.quality==='reduced'?'#9BC53D':'#2E9E5B';}
+    else{const k=powderSurf(r),row=PD_SURF_ROWS.find(x=>x[0]===k);q=row?row[1]:'kein Pulver';qc=k!=null&&PD_SURF_COL[k]?'rgb('+PD_SURF_COL[k].join(',')+')':qc;}}catch(e){}
+  return {ns,q,qc};}
+function wcvFavPaint(){const t=WCV.t;const lab=document.getElementById('wcvTL');
+  if(lab){const d=zLocal(tMs(t));lab.textContent=WD()[d.getUTCDay()]+' '+d.getUTCDate()+'. '+String(d.getUTCHours()).padStart(2,'0')+':00'+(Math.abs(t-nowIdx)<2?' · jetzt':t<nowIdx?' · vergangen':' · Prognose');}
+  (WCV.tvList||[]).forEach((c,i)=>{const el=document.getElementById('wcvS'+i);if(!el)return;const sc=wcvFavScore(c,t);
+    if(!sc){el.innerHTML='<small>ausserhalb des Modells</small>';return;}
+    const w=Math.max(3,Math.min(100,sc.ns/50*100));
+    el.innerHTML='<div class="wcs-top"><b>'+(sc.ns<1?'0':'+'+Math.round(sc.ns))+' cm</b><span><i style="background:'+sc.qc+'"></i>'+escapeHtml(sc.q)+'</span></div>'
+      +'<div class="wcs-bar"><u style="width:'+w.toFixed(0)+'%;background:'+fpSnowCol(sc.ns)+'"></u></div><small>Neuschnee 24 h bis dahin</small>';});}
+function wcvFavList(el,cams,ap){
+  if(WCV.t==null)WCV.t=Math.min(T-1,Math.max(0,nowIdx));
+  const t0=Math.max(0,nowIdx-72),t1=T-1;
+  el.innerHTML='<div class="wcv-bar"><span>'+cams.length+' Favoriten · antippen für Zeitraffer & Live</span><button onclick="wcvOnMap()">Auf der Karte</button></div>'
+    +'<div class="wcf-list">'+cams.map((c,i)=>'<div class="wcf-row"><button type="button" class="wcf-img" onclick="wcvView('+i+')">'+wcMedia(c,'img')+'</button>'
+      +'<div class="wcf-info"><b>'+escapeHtml(c.t)+'</b><em>'+(c.alt!=null?c.alt+' m':'')+'</em><div class="wcf-score" id="wcvS'+i+'"></div></div></div>').join('')+'</div>'
+    +'<div class="wcf-ctl"><div class="wcf-tl"><b id="wcvTL"></b><small>Bilder: aktuell · Balken: Modell zur gewählten Zeit</small></div>'
+    +'<input type="range" min="'+t0+'" max="'+t1+'" step="1" value="'+WCV.t+'" aria-label="Zeit für alle Webcams" oninput="WCV.t=+this.value;wcvFavPaint()"></div>'+(ap||'');
+  wcvFavPaint();}
 // ── View Transitions: screens cross-fade and slide instead of popping ──
 // Progressive: browsers without the API (or with reduced motion) just switch.
 function vt(fn){
