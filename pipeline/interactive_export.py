@@ -7484,7 +7484,7 @@ body.insp-open .pt-chip-wrap{display:none}
 
 /* ==== Profil: M3, mit Luft ==== */
 #profModal .prof-sheet{background:var(--md-surface-container-low,#F2F4F8)!important}
-#profModal .prof-head{padding:calc(env(safe-area-inset-top,0px) + 14px) 20px 10px!important;background:transparent!important;border:0!important}
+#profModal .prof-head{padding:calc(env(safe-area-inset-top,0px) + 14px) 20px 10px!important;border:0!important;position:sticky!important;top:0!important;z-index:20!important;background:var(--md-surface-container-low,#F2F4F8)!important;box-shadow:0 1px 0 var(--md-outline-var,#E1E3E8)}
 #profModal .prof-body{padding:4px 16px calc(env(safe-area-inset-bottom,0px) + 96px)!important;display:flex;flex-direction:column;gap:16px}
 #profModal .prof-top{flex-direction:column!important;align-items:center!important;text-align:center;gap:12px!important;padding:24px 16px 8px!important;
   background:transparent!important;margin:0!important}
