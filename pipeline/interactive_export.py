@@ -7552,7 +7552,10 @@ body.insp-open .pt-chip-wrap{display:none}
 #tlFold,#tlMini{border-radius:16px!important}
 
 /* ==== App: Karte bis ganz oben; Webcam-Favoriten ==== */
-/* DIAGNOSE: statusScrim / map-fade wieder an (Emulator-Absturz im Smoke-Test eingrenzen) */
+/* Karte bis ganz oben: der Streifen hinter der Statusleiste bleibt im Layout
+   (display:none liess den Android-Emulator im Smoke-Test abstuerzen), wird auf
+   der Karte aber durchsichtig und ohne Unschaerfe. */
+body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #statusScrim{background:transparent!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 .wcf-list{display:flex;flex-direction:column;gap:12px;padding:4px 0 150px}
 .wcf-row{display:flex;gap:12px;align-items:stretch;background:rgba(255,255,255,.06);border-radius:20px;padding:8px}
 .wcf-img{position:relative;flex:0 0 46%;aspect-ratio:16/9;border:0;padding:0;border-radius:14px;overflow:hidden;background:#1a1f2a;cursor:pointer}
