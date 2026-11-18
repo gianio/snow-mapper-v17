@@ -2540,7 +2540,10 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
  .pad3d .p-hint b{color:var(--fg)}
  #three-wrap .maplibregl-map{width:100%;height:100%}
  #btn3dClose{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;z-index:2001;padding:10px 18px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg);cursor:pointer;font-size:16px;font-weight:600;}
- #three-wrap .ctrl3d{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;z-index:2001;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start;max-width:calc(100vw - 110px)}
+ /* the relief/map slider: bottom left, just above the timeline (and above the
+    scale bar and credits), not at the top under the brand */
+ #three-wrap .ctrl3d{position:absolute;top:auto;bottom:calc(var(--nav-h,54px) + var(--btm-h,47px) + 44px);left:12px;z-index:2001;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start;align-items:flex-end;max-width:calc(100vw - 90px)}
+ body.desk #three-wrap .ctrl3d{bottom:calc(var(--btm-h,130px) + 150px)}
  #three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 16px;border-radius:14px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);cursor:pointer;font-size:16px;min-height:46px;touch-action:manipulation}
  #three-wrap .ctrl3d button:hover{border-color:var(--acc);color:var(--fg)}
  @media (max-width:560px){#three-wrap .ctrl3d{gap:5px}#three-wrap .ctrl3d button,#three-wrap .ctrl3d label,#three-wrap .ctrl3d select{padding:10px 14px;font-size:15px;min-height:46px;border-radius:12px}#btn3dClose{top:calc(8px + env(safe-area-inset-top,0px));right:8px;padding:10px 18px;font-size:16px;border-radius:14px}}
@@ -2564,6 +2567,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
     Default browser scaling is bilinear, so this costs nothing and needs no
     extra data. To go back, restore image-rendering:pixelated here. */
  .raster-smooth{image-rendering:auto}
+ /* ...except Skiqualität (snow type): its colours are classes, and a blend
+    between two classes is a colour that means nothing -- hard borders there */
+ .raster-smooth.va-crisp,.va-hi canvas,.va-hi img,.va-srv img,.va-ovt img{image-rendering:pixelated;image-rendering:crisp-edges}
  /* Variant A: sub-layer picker, manifest-driven legend, snow profile. */
  .va-subs{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 4px;grid-column:1/-1}
  .va-leg{grid-column:1/-1;font-size:11px;line-height:1.5;color:var(--fg2);
@@ -7125,6 +7131,12 @@ body.desk #toastWrap{bottom:24px!important;left:auto!important;right:24px!import
 .fp-bell::after{content:'';position:absolute;inset:-6px -2px}
 .fp-bell svg{width:17px;height:17px}
 .fp-bell.on{background:var(--md-primary);border-color:var(--md-primary);color:var(--md-on-primary)}
+.fp-del{flex:none;width:36px;height:36px;display:grid;place-items:center;padding:0;border:0;border-radius:var(--md-shape-full);background:transparent;color:#E9B730;cursor:pointer;position:relative}
+.fp-del::after{content:'';position:absolute;inset:-6px}
+.fp-del svg{width:22px;height:22px}
+.fp-del:active{background:var(--fill)}
+.toast.fp-undo{pointer-events:auto;display:flex;align-items:center;gap:12px}
+.toast.fp-undo button{margin-left:auto;border:0;background:none;padding:6px 4px;font:700 14px/1 var(--font);color:var(--md-inverse-primary,#A8C8FF);cursor:pointer;white-space:nowrap}
 .fp-row{padding:0 4px}
 .fp-curve{position:absolute;left:0;top:6px;pointer-events:none}
 .fp-curve path{fill:color-mix(in srgb,var(--md-primary) 16%,transparent);stroke:color-mix(in srgb,var(--md-primary) 35%,transparent);stroke-width:1}
@@ -7297,15 +7309,16 @@ body.leg-open #miniLegend #mlName{color:var(--md-on-primary)}
 /* the legend itself: colours and words straight on the map, top left */
 .leg-info{position:fixed!important;left:12px!important;right:auto!important;bottom:auto!important;top:calc(env(safe-area-inset-top,0px) + 66px)!important;
   width:auto!important;max-width:min(64vw,260px)!important;max-height:calc(100dvh - 260px)!important;overflow:auto;
-  background:transparent!important;box-shadow:none!important;border:0!important;padding:0!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
-  color:#111;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 6px #fff}
+  background:color-mix(in srgb,var(--md-surface,#fff) 90%,transparent)!important;box-shadow:0 2px 12px rgba(18,21,26,.16)!important;border:0!important;
+  border-radius:var(--md-shape-lg,16px)!important;-webkit-backdrop-filter:blur(14px) saturate(140%)!important;backdrop-filter:blur(14px) saturate(140%)!important;
+  color:var(--md-on-surface,#111);text-shadow:none}
 .leg-info .li-desc,.leg-info .li-note,.leg-info .li-hd span,.leg-info .li-hd .tour-x,.leg-info .va-note,.leg-info .va-data-note{display:none!important}
-.leg-info{padding:4px 6px!important}.leg-info .li-hd{margin-bottom:4px}.leg-info .li-hd b{font:700 14px/1.2 var(--font)}
-.leg-info .li-rows{gap:3px}.leg-info .li-rows div{font:600 12.5px/1.25 var(--font);gap:7px}
-.leg-info .li-rows i{width:14px;height:14px;border-radius:4px;box-shadow:0 0 0 1.5px #fff}
+.leg-info{padding:10px 12px!important}.leg-info .li-hd{margin-bottom:6px}.leg-info .li-hd b{font:700 14px/1.2 var(--font);color:var(--md-on-surface,#111)}
+.leg-info .li-rows{gap:4px}.leg-info .li-rows div{font:600 12.5px/1.25 var(--font);gap:8px;color:var(--md-on-surface,#111)}
+.leg-info .li-rows i{width:14px;height:14px;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);opacity:1!important}
 .leg-info .li-rows b{display:none}
-.leg-info .li-ramp{width:180px;box-shadow:0 0 0 1.5px #fff}.leg-info .li-ticks{width:180px;color:#111}
-.leg-info .li-sub{border:0!important;padding-top:4px!important;margin:8px 0 4px!important;color:#111!important;font-weight:700!important}
+.leg-info .li-ramp{width:180px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}.leg-info .li-ticks{width:180px;color:var(--md-on-surface-var,#444)}
+.leg-info .li-sub{border:0!important;border-top:1px solid var(--md-outline-var,rgba(0,0,0,.12))!important;padding-top:8px!important;margin:8px 0 4px!important;color:var(--md-on-surface-var,#444)!important;font-weight:700!important}
 /* overlays switched on: a round button each under the side buttons, tap = off */
 #ovChips{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:8px}
 #ovChips[hidden]{display:none}
@@ -7320,6 +7333,102 @@ body:not(.desk) #rvFab{left:76px!important}
 body:not(.desk) #infoFab{left:124px!important}
 body.desk #brandTop,body.nav-screen #brandTop,body.ly-open #brandTop,body.insp-open #brandTop,body.trk-open #brandTop,body.draw-on #brandTop,body.ts-open #brandTop,body.plan-on #brandTop,body.fp-open #brandTop,body.wcv-open #brandTop{display:none}
 body.leg-open:not(.desk) #rvFab,body.leg-open:not(.desk) #infoFab{visibility:hidden}
+/* the powder pill at the top sits in the gap between the (i) button
+   (left 124 + 40) and the profile button on the right -- never over either */
+body:not(.desk) .nb{left:172px;right:58px;transform:none;max-width:none;top:calc(env(safe-area-inset-top,0px) + 9px)}
+body:not(.desk) .nb .nb-pill{max-width:100%}
+body:not(.desk) .nb.open .nb-card{position:fixed;left:12px;right:12px;width:auto;max-width:360px;margin:8px auto 0;top:calc(env(safe-area-inset-top,0px) + 52px)}
+@media (max-width:330px){body:not(.desk) .nb{display:none}}
+
+/* ==== Material 3: Einstellungen & Nachrichten (Nov 2026) ====
+   Both open full screen on a phone with an M3 top app bar (48 dp icon
+   buttons, Title Large), M3 lists (56/72 dp rows, 24 dp leading icons,
+   Body Large labels, section headers in primary) on surface containers,
+   and -- in the messages -- M3 chat bubbles and a filled input with a
+   filled send button. Colours only from the --md-* roles. */
+@media (max-width:560px){
+  #setSheet,#dmModal{align-items:stretch!important;background:var(--md-scrim)!important}
+  #setSheet .set-in,#dmModal .dm-sheet{max-height:none!important;height:100%!important;height:100dvh!important;border-radius:0!important}
+  #setSheet .set-in::before{display:none}
+}
+#setSheet .set-in,#dmModal .dm-sheet{background:var(--md-surface)!important;box-shadow:none!important;color:var(--md-on-surface)}
+/* top app bar */
+#setSheet .set-head,#dmModal .dm-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:4px;height:64px;box-sizing:content-box;
+  margin:0!important;padding:env(safe-area-inset-top,0px) 4px 0 16px!important;border:0!important;background:var(--md-surface)}
+#setSheet .set-head{margin:0 -16px 8px!important}
+#setSheet .set-head b,#dmModal .dm-head b{flex:1;font:400 22px/28px var(--font)!important;letter-spacing:0!important;color:var(--md-on-surface)!important}
+#setSheet .set-head button,#dmModal .dm-x,#dmModal .dm-back{width:48px!important;height:48px!important;border:0!important;border-radius:var(--md-shape-full)!important;
+  background:transparent!important;color:var(--md-on-surface-var)!important;box-shadow:none!important}
+#setSheet .set-head button svg,#dmModal .dm-x svg,#dmModal .dm-back svg{width:24px!important;height:24px!important}
+#dmModal .dm-back:not([hidden])~b{margin-left:0}
+#dmModal .dm-back:not([hidden]){margin-left:-12px}
+#dmModal .dm-ttl-ic{display:none}
+/* settings: section headers and lists */
+#setSheet .set-in{padding:0 16px calc(env(safe-area-inset-bottom,0px) + 24px)!important}
+#setSheet .lbl-micro{margin:20px 16px 8px!important;font:500 14px/20px var(--font)!important;letter-spacing:.1px!important;text-transform:none!important;color:var(--md-primary)!important}
+#setSheet .set-rows{gap:0!important;border-radius:var(--md-shape-lg);background:var(--md-surface-low);overflow:hidden;
+  /* every row draws a divider on top; the clip hides the first visible one */
+  clip-path:inset(1px 0 0 0 round var(--md-shape-lg))}
+#setSheet .set-rows>*{border-top:1px solid var(--md-outline-var)!important}
+#setSheet .set-rows:empty{display:none}
+#setSheet .set-rows>button,#setSheet .set-rows>.fav-row{min-height:56px!important;margin:0!important;padding:8px 16px!important;gap:16px!important;
+  border-style:solid!important;border-width:1px 0 0!important;border-color:var(--md-outline-var)!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;font:400 16px/24px var(--font)!important;color:var(--md-on-surface)!important}
+#setSheet .set-rows>button svg{width:24px!important;height:24px!important;color:var(--md-on-surface-var)!important;stroke-width:1.75}
+#setSheet .set-rows>button .st,#setSheet .set-rows>button .set-val{margin-left:auto;font:400 14px/20px var(--font)!important;color:var(--md-on-surface-var)!important}
+#setSheet .set-rows>button.on svg,#setSheet .set-rows>button.on .st{color:var(--md-primary)!important}
+#setSheet .set-rows .fav-push{justify-content:flex-start!important;color:var(--md-primary)!important}
+#setSheet .set-rows .fav-push svg{color:var(--md-primary)!important}
+#setSheet .fav-row .fav-go b{font:400 16px/24px var(--font)!important;color:var(--md-on-surface)!important}
+#setSheet .fav-row .fav-go small{font:400 14px/20px var(--font)!important;color:var(--md-on-surface-var)!important}
+#setSheet .set-rows .fav-row .fav-bell,#setSheet .set-rows .fav-row .fav-del{width:40px!important;height:40px!important;border-radius:var(--md-shape-full)!important;color:var(--md-on-surface-var)!important;font-size:22px!important}
+#setSheet .set-rows .fav-row .fav-bell svg{width:22px!important;height:22px!important}
+#setSheet .set-rows .fav-row .fav-bell.on{background:var(--md-secondary-container)!important;color:var(--md-on-secondary-container)!important}
+#setSheet .fav-empty,#setSheet .fav-note{padding:12px 16px!important;font:400 14px/20px var(--font)!important;color:var(--md-on-surface-var)!important}
+#setSheet .set-pro{margin:0;padding:12px 16px;border-top:1px solid var(--md-outline-var)}
+/* language: M3 segmented button (outlined, check on the selected one) */
+#setSheet .prof-seg[hidden]{display:none!important}
+#setSheet .prof-seg:not([hidden]){display:flex!important}
+#setSheet .prof-seg{gap:0!important;padding:0!important;margin:0 0 4px!important;border:1px solid var(--md-outline)!important;border-radius:var(--md-shape-full)!important;background:transparent!important;overflow:hidden}
+#setSheet .prof-seg button{flex:1;height:40px!important;min-height:40px!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;
+  font:500 14px/20px var(--font)!important;letter-spacing:.1px;color:var(--md-on-surface)!important;padding:0 8px!important}
+#setSheet .prof-seg button+button{border-left:1px solid var(--md-outline)!important}
+#setSheet .prof-seg button:is(.on,.active),#setSheet .prof-seg button[aria-pressed="true"]{background:var(--md-secondary-container)!important;color:var(--md-on-secondary-container)!important}
+#setSheet .prof-seg button:is(.on,.active)::before,#setSheet .prof-seg button[aria-pressed="true"]::before{content:'✓ '}
+/* messages: tabs, search, list */
+#dmModal .dm-tabs{display:flex!important;gap:0!important;margin:0!important;padding:0!important;border-radius:0!important;background:transparent!important;border-bottom:1px solid var(--md-outline-var)}
+#dmModal .dm-tabs button{flex:1;height:48px!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;position:relative;
+  font:500 14px/20px var(--font)!important;letter-spacing:.1px;color:var(--md-on-surface-var)!important}
+#dmModal .dm-tabs button.on{color:var(--md-primary)!important}
+#dmModal .dm-tabs button.on::after{content:'';position:absolute;left:25%;right:25%;bottom:0;height:3px;border-radius:3px 3px 0 0;background:var(--md-primary)}
+#dmModal .dm-tabs b{background:var(--md-primary)!important;color:var(--md-on-primary)!important;font:500 11px/16px var(--font)!important;padding:0 6px!important}
+#dmModal .dm-tools{padding:8px 16px!important;gap:8px!important}
+#dmModal .dm-search{height:56px!important;border-radius:28px!important;background-color:var(--md-surface-high)!important;color:var(--md-on-surface)!important;
+  font:400 16px/24px var(--font)!important;padding:0 16px 0 52px!important;background-position:18px center!important;background-size:20px!important}
+#dmModal .dm-new{width:56px!important;height:56px!important;border-radius:var(--md-shape-lg)!important;background:var(--md-primary-container)!important;color:var(--md-on-primary-container)!important;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+#dmModal .dm-new svg{width:24px!important;height:24px!important}
+#dmModal .dm-body{background:var(--md-surface)!important;padding:0 0 8px!important}
+#dmModal .dm-row{min-height:72px;padding:8px 24px 8px 16px!important;gap:16px!important;border-radius:0!important}
+#dmModal .dm-row:hover{background:color-mix(in srgb,var(--md-on-surface) 8%,transparent)!important}
+#dmModal .dm-row .av{width:40px!important;height:40px!important;box-shadow:none!important;background-color:var(--md-primary-container)!important;color:var(--md-on-primary-container)!important;font:500 16px/1 var(--font)!important}
+#dmModal .dm-row .tx b{font:400 16px/24px var(--font)!important;color:var(--md-on-surface)!important}
+#dmModal .dm-row .tx span{font:400 14px/20px var(--font)!important;color:var(--md-on-surface-var)!important}
+#dmModal .dm-row.new .tx b,#dmModal .dm-row.new .tx span{font-weight:600!important;color:var(--md-on-surface)!important}
+#dmModal .dm-row .when{font:500 12px/16px var(--font)!important;color:var(--md-on-surface-var)!important}
+#dmModal .dm-row .unread{width:8px!important;height:8px!important;background:var(--md-primary)!important;box-shadow:none!important}
+#dmModal .dm-req{margin:8px 16px!important;border-radius:var(--md-shape-md)!important;background:var(--md-surface-low)!important;box-shadow:none!important}
+#dmModal .dm-req-b button{height:40px!important;border-radius:var(--md-shape-full)!important;background:transparent!important;border:1px solid var(--md-outline)!important;color:var(--md-primary)!important;font:500 14px/20px var(--font)!important}
+#dmModal .dm-req-b button.pri{background:var(--md-primary)!important;border-color:var(--md-primary)!important;color:var(--md-on-primary)!important}
+#dmModal .dm-empty{font:400 14px/20px var(--font)!important;color:var(--md-on-surface-var)!important}
+/* the conversation: M3 bubbles */
+#dmModal .dm-msg{margin:2px 16px!important;padding:10px 14px!important;border:0!important;box-shadow:none!important;border-radius:20px!important;font:400 16px/22px var(--font)!important}
+#dmModal .dm-msg.me{margin-left:auto!important;background:var(--md-primary)!important;color:var(--md-on-primary)!important;border-bottom-right-radius:4px!important}
+#dmModal .dm-msg:not(.me){background:var(--md-surface-high)!important;color:var(--md-on-surface)!important;border-bottom-left-radius:4px!important}
+#dmModal .dm-msg.cont.me{border-top-right-radius:4px!important}#dmModal .dm-msg.cont:not(.me){border-top-left-radius:4px!important}
+#dmModal .dm-msg .t{font:400 11px/16px var(--font)!important;opacity:.75}
+#dmModal .dm-input{gap:8px!important;padding:8px 12px calc(env(safe-area-inset-bottom,0px) + 8px)!important;background:var(--md-surface)!important}
+#dmModal .dm-input input{height:48px!important;border-radius:24px!important;background:var(--md-surface-high)!important;box-shadow:none!important;color:var(--md-on-surface)!important;font:400 16px/24px var(--font)!important;padding:0 20px!important}
+#dmModal .dm-input button{width:48px!important;height:48px!important;flex:none;background:var(--md-primary)!important;color:var(--md-on-primary)!important;box-shadow:none!important}
 /* scale bar and credits: one quiet row bottom left, above the timeline */
 .leaflet-control-scale{left:12px!important;bottom:calc(var(--nav-h,54px) + var(--btm-h,47px) + 12px)!important;z-index:850!important}
 .leaflet-control-scale-line{background:rgba(255,255,255,.75)!important;border:1.5px solid #333!important;border-top:0!important;color:#222!important;font:600 10.5px/1.3 var(--font)!important;padding:0 4px!important}
@@ -7585,7 +7694,7 @@ body.insp-open .pt-chip-wrap{display:none}
     </div>
     <span class="lbl-micro">Offline im Gelände</span>
     <div class="set-rows" id="setOffline"></div>
-    <span class="lbl-micro">Favoriten · Neuschnee-Push</span>
+    <span class="lbl-micro">Favoriten · Alarme (ab 20 cm am Tag)</span>
     <div class="set-rows fav-list" id="setFavs"></div>
     <span class="lbl-micro">Melden</span>
     <div class="set-rows">
@@ -11122,7 +11231,8 @@ function vaHiFallback(t,c,S){
   if(sx+sw>W){const r=(sx+sw-W)/sw;dw-=r*dw;sw=W-sx;}
   if(sy+sh>H){const r=(sy+sh-H)/sh;dh-=r*dh;sh=H-sy;}
   if(sw<=0||sh<=0||dw<=0||dh<=0)return;
-  try{cx.imageSmoothingEnabled=true;cx.drawImage(im,sx,sy,sw,sh,dx,dy,dw,dh);}catch(e){}
+  // classes, not a field: no blending between them
+  try{cx.imageSmoothingEnabled=false;cx.drawImage(im,sx,sy,sw,sh,dx,dy,dw,dh);}catch(e){}
 }
 // Paint (or re-paint) one tile canvas. The old picture stays until the new
 // one is ready, and a stale render never overwrites a newer one.
@@ -11399,7 +11509,7 @@ function vaBuildLayer(){
   vaOvWant=vaFrameUrl(vaKey,vaTagIndex());
   const rc=vaMan.layers[vaKey]&&vaMan.layers[vaKey]._recolor;
   vaOv=L.imageOverlay(rc?'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==':vaOvWant,bnds,
-    {opacity:vaOpacity(),className:'raster-smooth',pane:'overlayPane'});
+    {opacity:vaOpacity(),className:'raster-smooth va-crisp',pane:'overlayPane'});
   if(rc){const u0=vaOvWant;setTimeout(()=>vaOvLoad(u0,false),0);}else vaOv._src=vaOvWant;
   vaGrp=L.layerGroup([vaOv]);
   vaPtsSync();
@@ -18339,6 +18449,8 @@ function make3dOverlay(mode){
   ox.putImageData(oi,0,0);return oc.toDataURL();}
 // the 3D view opens with the layer that is on the 2D map
 function sync3dLayer(){const sel=document.getElementById('overlay3d');if(!sel)return;
+  // «Keine Ebene» wins over every layer, Skiqualität included -- 3D opens bare
+  if(lyNoneOn()){sel.value='none';return;}
   if((layer==='snowpack'||(typeof ovOn!=='undefined'&&ovOn.variantA))&&typeof vaOv!=='undefined'&&vaOv){
     if(!sel.querySelector('option[value="va"]')){const o=document.createElement('option');o.value='va';o.textContent='Skiqualität';sel.appendChild(o);}
     sel.value='va';return;}
@@ -18361,12 +18473,14 @@ function update3dOverlay(){if(!map3d||!is3d)return;try{sync3dOverlays();}catch(e
   if(sel==='va'&&typeof vaOv!=='undefined'&&vaOv&&vaOv._url){const bb=vaOv.getBounds(),q=[[bb.getWest(),bb.getNorth()],[bb.getEast(),bb.getNorth()],[bb.getEast(),bb.getSouth()],[bb.getWest(),bb.getSouth()]];
     if(map3d.getLayer('data-overlay')){map3d.removeLayer('data-overlay');map3d.removeSource('data-src');}
     map3d.addSource('data-src',{type:'image',url:vaOv._url,coordinates:q});
-    map3d.addLayer({id:'data-overlay',type:'raster',source:'data-src',paint:{'raster-opacity':OP3D,'raster-fade-duration':0}},map3d.getLayer('slope-3d')?'slope-3d':undefined);return;}
+    // snow-type classes: nearest, so no blended colour between two classes
+    map3d.addLayer({id:'data-overlay',type:'raster',source:'data-src',paint:{'raster-opacity':OP3D,'raster-fade-duration':0,'raster-resampling':'nearest'}},map3d.getLayer('slope-3d')?'slope-3d':undefined);return;}
   const url=make3dOverlay(sel);
   if(map3d.getSource('data-src')){map3d.getSource('data-src').updateImage({url:url,coordinates:[[loMin,laMax],[loMax,laMax],[loMax,laMin],[loMin,laMin]]});}
   else{map3d.addSource('data-src',{type:'image',url:url,coordinates:[[loMin,laMax],[loMax,laMax],[loMax,laMin],[loMin,laMin]]});
     map3d.addLayer({id:'data-overlay',type:'raster',source:'data-src',paint:{'raster-opacity':OP3D,'raster-fade-duration':0}},map3d.getLayer('slope-3d')?'slope-3d':undefined);}
-  if(map3d.getLayer('data-overlay'))map3d.setLayoutProperty('data-overlay','visibility','visible');}
+  if(map3d.getLayer('data-overlay')){map3d.setLayoutProperty('data-overlay','visibility','visible');
+    try{map3d.setPaintProperty('data-overlay','raster-resampling','linear');}catch(e){}}}
 let _ml=null;
 function ensureMaplibre(cb){
   if(window.maplibregl){cb();return;}
@@ -20900,8 +21014,8 @@ async function favPushState(){
   catch(e){_favPush=false;}
   return _favPush;}
 async function favNudge(){
-  toast((await favPushState())?'Gemerkt – Push, sobald in der Region 20 cm Neuschnee erwartet werden'
-    :'Gemerkt. Für den Neuschnee-Push: Einstellungen → Favoriten → Push einschalten','ok');}
+  toast((await favPushState())?'Gemerkt · Alarm an: Push ab 20 cm Neuschnee an einem Tag (Glocke in den Favoriten = aus)'
+    :'Gemerkt. Für den Alarm (ab 20 cm an einem Tag): in den Favoriten Push einschalten','ok');}
 // the same steps as the profile's switch, from the favourites list
 async function favPushOn(){if(!isPro()){proSheet('push');return;}
   if(!sb||!sbUser){authShow();return;}
@@ -21020,8 +21134,9 @@ async function fpRender(){const el=document.getElementById('favPage');if(!el||el
     h+='<div class="fp-card"><div class="fp-t"><button type="button" class="fp-name" onclick="fpClose();favOpen(\''+f.id+'\')"><b>'+escapeHtml(f.name)+'</b>'
       +'<small>'+(f.kind==='tour'?'Tour':'Ort')+(f.elev?' · '+f.elev+' m':'')+(p<0?' · Alpenraum (grob)':'')
       +(QM&&A?' · Gebiet '+Math.round(A.lo/100)*100+'–'+Math.round(A.hi/100)*100+' m':'')+'</small></button>'
-      +'<button type="button" class="fp-bell'+(f.notify?' on':'')+'" onclick="fpBell(\''+f.id+'\')" aria-pressed="'+!!f.notify+'" title="Powder-Alarm: Push ab '+(f.threshold_cm||20)+' cm in 48 h">'
-      +FAV_BELL+'<span>'+(f.notify?'ab '+(f.threshold_cm||20)+' cm':'Alarm')+'</span></button></div>'
+      +'<button type="button" class="fp-bell'+(f.notify?' on':'')+'" onclick="fpBell(\''+f.id+'\')" aria-pressed="'+!!f.notify+'" title="Alarm: Push ab '+FAV_ALERT_CM+' cm Neuschnee an einem Tag">'
+      +FAV_BELL+'<span>'+(f.notify?'Alarm an':'Alarm')+'</span></button>'
+      +'<button type="button" class="fp-del" onclick="fpDel(\''+f.id+'\')" title="Aus den Favoriten entfernen" aria-label="Aus den Favoriten entfernen">'+FAV_STAR+'</button></div>'
       +'<div class="fp-sc fp-row"><div style="width:'+W0+'px">'+cols+'</div></div></div>';});
   h+='</div><div class="fp-key">'+(QM
       ?'<span class="fp-qk"><s style="background:#2E9E5B"></s>Pulver gut</span><span class="fp-qk"><s style="background:#9BC53D"></s>Pulver etwas gesetzt</span>'
@@ -21034,28 +21149,47 @@ async function fpRender(){const el=document.getElementById('favPage');if(!el||el
   // open at today; the past days are a swipe to the left
   const past=days.filter(d=>d.rel<0).length;if(past){_fpSync=true;sc.forEach(b=>{b.scrollLeft=past*FP_COL;});requestAnimationFrame(()=>{_fpSync=false;});}
   sc.forEach(a=>a.addEventListener('scroll',()=>{if(_fpSync)return;_fpSync=true;const x=a.scrollLeft;sc.forEach(b=>{if(b!==a)b.scrollLeft=x;});requestAnimationFrame(()=>{_fpSync=false;});},{passive:true}));}
+// the filled star on a card: one tap removes the favourite, the toast can
+// bring it back (same place, same alarm settings)
+async function fpDel(id){const f=(favs||[]).find(x=>x.id===id);if(!f)return;
+  try{haptic(6);}catch(e){}
+  const{error}=await sb.from('favorites').delete().eq('id',id);
+  if(error){toast('Entfernen fehlgeschlagen: '+error.message,'err');return;}
+  favs=favs.filter(x=>x!==f);try{favFabSync();}catch(e){}try{favSetRender();}catch(e){}fpRender();
+  const w=document.getElementById('toastWrap');if(!w){toast('Aus den Favoriten entfernt','info');return;}
+  const t=document.createElement('div');t.className='toast info fp-undo';
+  t.innerHTML='<span></span><button type="button">Rückgängig</button>';
+  t.querySelector('span').textContent='«'+(f.name||'Favorit')+'» entfernt';
+  const gone=()=>{t.classList.add('out');setTimeout(()=>t.remove(),260);};
+  t.querySelector('button').onclick=async()=>{gone();
+    const row={kind:f.kind,ref:f.ref,name:f.name,lat:f.lat,lon:f.lon,elev:f.elev};
+    if(f.notify!=null)row.notify=f.notify;if(f.threshold_cm!=null)row.threshold_cm=f.threshold_cm;
+    const{data,error:e2}=await sb.from('favorites').insert(row).select().single();
+    if(e2){toast('Wiederherstellen fehlgeschlagen: '+e2.message,'err');return;}
+    favs.push(data);try{favFabSync();}catch(e){}try{favSetRender();}catch(e){}fpRender();};
+  w.appendChild(t);setTimeout(gone,5000);}
 // the bell: on (asks for push first if it is off), then the threshold steps
 // 10 → 20 → 30 → 50 cm on further taps, and off again after 50
-async function fpBell(id){const f=(favs||[]).find(x=>x.id===id);if(!f)return;
-  if(!f.notify){if(!(await favPushState())){await favPushOn();if(!_favPush)return;}await favSet(id,{notify:true,threshold_cm:f.threshold_cm||20});
-    toast('Powder-Alarm an: Push ab '+(f.threshold_cm||20)+' cm in 48 h · nochmals tippen ändert die Schwelle','ok');}
-  else{const S=[10,20,30,50],i=S.indexOf(f.threshold_cm||20);
-    if(i<S.length-1){await favSet(id,{threshold_cm:S[i+1]});toast('Push ab '+S[i+1]+' cm','info');}
-    else{await favSet(id,{notify:false});toast('Powder-Alarm aus','info');}}
-  fpRender();}
+// The alarm is simply on or off: it rings from 20 cm new snow within a day.
+const FAV_ALERT_CM=20;
+async function favAlarm(id,on){const f=(favs||[]).find(x=>x.id===id);if(!f)return;
+  if(on==null)on=!f.notify;
+  if(on&&!(await favPushState())){await favPushOn();if(!_favPush)return;}
+  await favSet(id,{notify:on,threshold_cm:FAV_ALERT_CM});
+  toast(on?'Alarm an: Push, sobald '+FAV_ALERT_CM+' cm oder mehr Neuschnee an einem Tag erwartet werden':'Alarm aus',on?'ok':'info');
+  try{fpRender();}catch(e){}}
+async function fpBell(id){return favAlarm(id);}
 // the list in the settings: threshold, push on/off, remove
 async function favSetRender(){const el=document.getElementById('setFavs');if(!el)return;
   if(!sb||!sbUser){el.innerHTML='<div class="fav-empty">Melde dich an, um Gebiete und Touren zu merken. Dann kommt ein Push, sobald dort Neuschnee erwartet wird.</div>';return;}
   await favLoad();const push=await favPushState();
   el.innerHTML=(favs.length?favs.map(f=>'<div class="fav-row">'
       +'<button type="button" class="fav-go" onclick="favOpen(\''+f.id+'\')"><b>'+escapeHtml(f.name)+'</b><small>'+(f.kind==='tour'?'Tour':'Ort')+(f.elev?' · '+f.elev+' m':'')+'</small></button>'
-      +'<select class="fav-th" onchange="favSet(\''+f.id+'\',{threshold_cm:+this.value})" aria-label="Push ab">'
-      +[10,20,30,50].map(v=>'<option value="'+v+'"'+(f.threshold_cm===v?' selected':'')+'>ab '+v+' cm</option>').join('')+'</select>'
-      +'<button type="button" class="fav-bell'+(f.notify?' on':'')+'" onclick="favSet(\''+f.id+'\',{notify:'+(!f.notify)+'})" aria-pressed="'+!!f.notify+'" aria-label="Push für diesen Favoriten">'+FAV_BELL+'</button>'
+      +'<button type="button" class="fav-bell'+(f.notify?' on':'')+'" onclick="favAlarm(\''+f.id+'\')" aria-pressed="'+!!f.notify+'" aria-label="Alarm für diesen Favoriten" title="Alarm '+(f.notify?'an':'aus')+'">'+FAV_BELL+'</button>'
       +'<button type="button" class="fav-del" onclick="favDel(\''+f.id+'\')" aria-label="Entfernen">×</button></div>').join('')
     :'<div class="fav-empty">Noch keine Favoriten. Tippe im Punkt-Popup oder bei einer Tour auf den Stern.</div>')
     +(favs.length&&!push?'<button type="button" class="fav-push" onclick="favPushOn()">'+FAV_BELL+'<span>Push für Neuschnee einschalten</span></button>':'')
-    +(favs.length?'<div class="fav-note">Push, wenn in den nächsten 48 h so viel Neuschnee erwartet wird (Modell) – höchstens einmal in 36 h je Favorit.</div>':'')
+    +(favs.length?'<div class="fav-note">Glocke an = Alarm: Push, sobald an einem Tag '+FAV_ALERT_CM+' cm oder mehr Neuschnee erwartet werden (Modell) – höchstens einmal in 36 h je Favorit.</div>':'')
     +(favs.length?'<button type="button" class="fav-push" onclick="setClose();fpOpen()">'+FAV_STAR+'<span>Prognose aller Favoriten</span></button>':'');}
 
 // ── Tour planen: draw your own route ─────────────────────────────────────

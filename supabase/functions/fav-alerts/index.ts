@@ -15,6 +15,8 @@ import { isApns, sendApns } from '../_shared/apns.ts';
 const APP = Deno.env.get('APP_URL') ?? 'https://gianio.github.io/snow-mapper-v17/';
 // one live cycle a day: the forecast is up to ~30 h old before the next one
 const AGAIN_H = 36, STALE_H = 30;
+// the alarm: 20 cm or more of new snow within 24 h
+const ALERT_CM = 20;
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const b64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -69,11 +71,12 @@ Deno.serve(async (req) => {
   if (error) return json({ error: error.message }, 500);
   const cut = Date.now() - AGAIN_H * 3.6e6;
   const hits = new Map<string, { f: Fav; cm: number; cm24: number }[]>();
+  // One rule for everyone (Nov 2026): an alarm is on or off, and it rings when
+  // 20 cm or more are expected within a day. threshold_cm is no longer read.
   for (const f of (favs || []) as Fav[]) {
     if (f.last_alert_at && Date.parse(f.last_alert_at) > cut) continue;
-    const cm = regional(f, ns48); if (cm < 0) continue;
-    if (cm < f.threshold_cm) continue;
-    const l = hits.get(f.user_id) || []; l.push({ f, cm, cm24: regional(f, ns24) }); hits.set(f.user_id, l);
+    const cm24 = regional(f, ns24); if (cm24 < ALERT_CM) continue;
+    const l = hits.get(f.user_id) || []; l.push({ f, cm: Math.max(cm24, regional(f, ns48)), cm24 }); hits.set(f.user_id, l);
   }
   if (!hits.size) return json({ sent: 0, favs: favs?.length || 0 });
 
@@ -88,10 +91,10 @@ Deno.serve(async (req) => {
     if (!on.has(uid)) continue;
     l.sort((a, b) => b.cm - a.cm);
     const top = l[0];
-    const title = l.length === 1 ? `❄️ ${top.cm} cm Neuschnee · ${top.f.name}` : `❄️ Neuschnee an ${l.length} Favoriten`;
+    const title = l.length === 1 ? `❄️ ${top.cm24} cm Neuschnee in 24 h · ${top.f.name}` : `❄️ Neuschnee an ${l.length} Favoriten`;
     const body = l.length === 1
-      ? `${until ? until.charAt(0).toUpperCase() + until.slice(1) + ' erwartet' : 'In den nächsten 48 h erwartet'}${top.cm24 ? ` (${top.cm24} cm in 24 h)` : ''} · Modell, keine Garantie.`
-      : l.slice(0, 4).map((h) => `${h.f.name} ${h.cm} cm`).join(' · ') + (until ? ` – ${until}` : '');
+      ? `In den nächsten 24 h erwartet${top.cm > top.cm24 ? ` (${top.cm} cm ${until || 'in 48 h'})` : ''} · Modell, keine Garantie.`
+      : l.slice(0, 4).map((h) => `${h.f.name} ${h.cm24} cm`).join(' · ') + ' in 24 h';
     const url = APP + '?fav=' + top.f.id;
     out.push({ uid, title, body });
     if (dry) continue;
