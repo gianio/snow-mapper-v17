@@ -7555,6 +7555,11 @@ body.insp-open .pt-chip-wrap{display:none}
 /* Karte bis ganz oben (nur iOS-App): der Streifen hinter der Statusleiste bleibt
    im Layout, wird auf der Karte aber durchsichtig. Auf Android liess das den
    Emulator im Smoke-Test abstuerzen, dort bleibt er wie bisher. */
+/* Android-WebView: nirgends GPU-Unschaerfe hinter Glas-Elementen. backdrop-filter
+   ueber der laufend gezeichneten Karte bringt den CI-Emulator (swiftshader) zum
+   Absturz (siehe c7e1392); die freistehende Navigation und die Zeitleiste hatten
+   sie wieder. :is(*,#_#_#_) hebt die Spezifitaet ueber alle Einzelregeln. */
+html.and-wv :is(*,#_#_#_),html.and-wv :is(*,#_#_#_)::before,html.and-wv :is(*,#_#_#_)::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 html.cap-ios body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #statusScrim{background:transparent!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 .wcf-list{display:flex;flex-direction:column;gap:12px;padding:4px 0 150px}
 .wcf-row{display:flex;gap:12px;align-items:stretch;background:rgba(255,255,255,.06);border-radius:20px;padding:8px}
