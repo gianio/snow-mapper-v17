@@ -7575,6 +7575,9 @@ body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #statusScrim{d
 .wcf-tl b{font:600 16px var(--font)}.wcf-tl small{font:500 11px var(--font);opacity:.65;text-align:right}
 .wcf-ctl input[type=range]{width:100%;accent-color:#9ECAFF}
 
+/* Schneetyp-Flächen: scharf, nicht nochmals weichgezeichnet */
+.raster-smooth.cls-crisp{image-rendering:auto}
+
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -15569,7 +15572,7 @@ function chMask(){if(_chMask)return _chMask;
     c.width=1;c.height=1;
   }catch(e){m.fill(1);}
   return (_chMask=m);}
-function setRaster(get,border){_isoV=null;isoHiHide();_tmpV=null;tempHiHide();if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;const chm=chMask();
+function setRaster(get,border){try{const e=raster.getElement();if(e)e.classList.remove('cls-crisp');}catch(e){}_isoV=null;isoHiHide();_tmpV=null;tempHiHide();if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}const img=cx.createImageData(W,H),d=img.data;const cls=border?new Int16Array(NP):null;const chm=chMask();
   for(let p=0;p<NP;p++){const r=(inDomainEdge(p)||!chm[p])?null:get(p);const o=p*4;if(r){d[o]=r[0];d[o+1]=r[1];d[o+2]=r[2];d[o+3]=r[3]==null?210:r[3];if(cls)cls[p]=r[4];}else{d[o+3]=0;if(cls)cls[p]=-999;}}
   if(border){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=y*W+x;if(cls[p]==-999)continue;const rt=x<W-1?cls[p+1]:cls[p],bt=y<H-1?cls[p+W]:cls[p];if(rt!=cls[p]||bt!=cls[p]){const o=p*4;d[o]=20;d[o+1]=20;d[o+2]=30;d[o+3]=230;}}}
   cx.putImageData(img,0,0);}
@@ -15583,7 +15586,34 @@ function snowBand(v){if(v==null||v<SB[0])return -1;let j=0;while(j+1<SB.length&&
 // of Austria, Italy and France (all other layers stay Swiss).
 let _allMask=null;
 function domMask(){return _allMask||(_allMask=new Uint8Array(NP).fill(1));}
-function setRasterIso(val,alpha,k){_tmpV=null;if(tempHi&&map.hasLayer(tempHi))map.removeLayer(tempHi);const chm=domMask(),V=new Float32Array(NP);
+// Classes as rounded areas with a clear line between them: each cell's class
+// is spread bilinearly onto a k-times finer grid, every sub-pixel takes the
+// class with the largest share of its four cells (so edges round instead of
+// stepping), and where the class changes a dark line is drawn.
+// get(p) -> [r,g,b,a,classId] or null.
+function setRasterCls(get,k){_isoV=null;isoHiHide();_tmpV=null;tempHiHide();
+  const chm=chMask(),C=new Int16Array(NP).fill(-1),col=new Map();
+  for(let p=0;p<NP;p++){if(inDomainEdge(p)||!chm[p])continue;const r=get(p);if(!r)continue;C[p]=r[4];if(!col.has(r[4]))col.set(r[4],r);}
+  const w=W*k,h=H*k;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
+  const img=cx.createImageData(w,h),d=img.data,B=new Int16Array(w*h).fill(-1);
+  // cubic B-spline weights over the 4 x 4 cells around each sub-pixel: the
+  // class shares are smooth fields, so the areas come out rounded
+  const bs=t=>{t=Math.abs(t);return t<1?(4-6*t*t+3*t*t*t)/6:t<2?((2-t)*(2-t)*(2-t))/6:0;};
+  const acc=new Float32Array(1024),used=[];
+  for(let Y=0;Y<h;Y++){const fy=(Y+.5)/k-.5,iy=Math.floor(fy),wy=[bs(fy-iy+1),bs(fy-iy),bs(fy-iy-1),bs(fy-iy-2)];
+    for(let X=0;X<w;X++){const fx=(X+.5)/k-.5,ix=Math.floor(fx),wx=[bs(fx-ix+1),bs(fx-ix),bs(fx-ix-1),bs(fx-ix-2)];
+      let empty=0;used.length=0;
+      for(let j=0;j<4;j++){const yy=Math.min(H-1,Math.max(0,iy-1+j));for(let i=0;i<4;i++){const xx=Math.min(W-1,Math.max(0,ix-1+i)),wt=wx[i]*wy[j],c=C[yy*W+xx];
+        if(c<0){empty+=wt;continue;}if(acc[c]===0)used.push(c);acc[c]+=wt;}}
+      let best=-1,bw=0;for(const c of used){if(acc[c]>bw){bw=acc[c];best=c;}acc[c]=0;}
+      B[Y*w+X]=empty>bw?-1:best;}}
+  for(let q=0;q<w*h;q++){const bq=B[q];if(bq<0)continue;const o=q*4,X=q%w,c=col.get(bq);
+    const edge=(X<w-1&&B[q+1]!==bq)||(q+w<w*h&&B[q+w]!==bq);
+    if(edge){d[o]=28;d[o+1]=34;d[o+2]=46;d[o+3]=200;}else{d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=c[3]==null?200:c[3];}}
+  cx.putImageData(img,0,0);
+  // drawn fine enough already: the browser must not blur it again
+  try{const e=raster.getElement();if(e)e.classList.add('cls-crisp');}catch(e){}}
+function setRasterIso(val,alpha,k){try{const e=raster.getElement();if(e)e.classList.remove('cls-crisp');}catch(e){}_tmpV=null;if(tempHi&&map.hasLayer(tempHi))map.removeLayer(tempHi);const chm=domMask(),V=new Float32Array(NP);
   for(let p=0;p<NP;p++){const v=(inDomainEdge(p)||!chm[p])?null:val(p);V[p]=v==null?NaN:v;}
   const w=W*k,h=H*k;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
   const img=cx.createImageData(w,h),d=img.data,B=new Int8Array(w*h);
@@ -15967,11 +15997,11 @@ function _renderRaster(){
       if(stat=="max05"){if(mx<0||mx>5)return null;const x=mx/5;return[200,140-(x*80|0),255-(x*200|0),235];}
       const v=stat=="max"?mx:stat=="min"?mn:su/Math.max(1,c);if(thrHides('tsurf',v))return null;const col=tempCol(v);return[col[0],col[1],col[2],205];});}
   else if(layer=="skiable"){const ca2=a*NP,cb2=b*NP;setRaster(p=>{const slp=mslpv(p);if(slp>55)return[80,0,0,150];const snow=cum[cb2+p]-cum[ca2+p];if(snow<1)return null;const need=minSnowNeeded(p);const r=snow/Math.max(1,need);if(r>=1.5)return[100,220,100,190];if(r>=1.0)return[160,220,100,180];if(r>=.7)return[255,220,50,180];if(r>=.4)return[255,140,40,170];return[255,60,40,160];});}
-  else if(layer=="powder"){const cb2=b*NP;setRaster(p=>{const r=computePowder(p,a,b);
-    if(!r.powdered){if(cum[cb2+p]<5)return null;const k=powderSurf(r);if(k==null)return null;const c=PD_SURF_COL[k];return[c[0],c[1],c[2],k===0?105:160];}
+  else if(layer=="powder"){const cb2=b*NP;setRasterCls(p=>{const r=computePowder(p,a,b);
+    if(!r.powdered){if(cum[cb2+p]<5)return null;const k=powderSurf(r);if(k==null)return null;const c=PD_SURF_COL[k];return[c[0],c[1],c[2],k===0?105:160,200+k];}
     // in the bands of the new-snow scale, as on the Neuschnee map
-    const c=snowCol(Math.max(SB[0],r.newSnow||0))||RGB[0];const alpha=r.quality==='reduced'?128:172;
-    return[c[0]|0,c[1]|0,c[2]|0,alpha];});}
+    const c=snowCol(Math.max(SB[0],r.newSnow||0))||RGB[0],red=r.quality==='reduced',alpha=red?128:172;
+    return[c[0]|0,c[1]|0,c[2]|0,alpha,Math.max(0,snowBand(Math.max(SB[0],r.newSnow||0)))*2+(red?1:0)];},NP>50000?5:8);}
   else setRaster(_=>null);
 }
 // where it is not powder, what it is instead -- from the engine's own reasons,
