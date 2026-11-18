@@ -7527,6 +7527,30 @@ body.insp-open .pt-chip-wrap{display:none}
 .ipd-wd svg{width:26px;height:26px}
 #inspPanel .ipd .fp-days{padding-top:8px}
 
+/* ==== Navigation freistehend, Zeitleiste M3 ==== */
+@media (max-width:899px){
+  :root{--nav-h:calc(env(safe-area-inset-bottom,0px) + 76px)!important}
+  body.nav-hide:not(.desk){--nav-h:calc(env(safe-area-inset-bottom,0px) + 76px)!important}
+  #tabBar{left:12px!important;right:12px!important;width:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 10px)!important;
+    height:58px!important;padding:0 6px!important;border-radius:29px!important;border:0!important;
+    background:rgba(255,255,255,.52)!important;-webkit-backdrop-filter:blur(18px) saturate(1.6)!important;backdrop-filter:blur(18px) saturate(1.6)!important;
+    box-shadow:0 4px 18px rgba(16,24,40,.16),inset 0 0 0 1px rgba(255,255,255,.55)!important}
+  #tabBar button{border-radius:22px!important}
+  body.nav-hide:not(.desk) #tabBar{transform:none!important}
+}
+/* the timeline: the same glass, M3 filter chips */
+#bottomPanel{border-radius:24px!important;background:rgba(255,255,255,.52)!important;-webkit-backdrop-filter:blur(18px) saturate(1.6)!important;backdrop-filter:blur(18px) saturate(1.6)!important;
+  box-shadow:0 4px 18px rgba(16,24,40,.14),inset 0 0 0 1px rgba(255,255,255,.55)!important;border:0!important}
+#tlChips{gap:6px!important;align-items:center}
+#tlChips button{height:32px!important;min-width:0;padding:0 12px!important;border-radius:8px!important;border:1px solid var(--md-outline,#74777F)!important;
+  background:transparent!important;color:var(--md-on-surface-var,#44474E)!important;font:500 14px/1 var(--font)!important;letter-spacing:.1px;box-shadow:none!important}
+#tlChips button.on{background:var(--md-secondary-container,#D6E3FF)!important;color:var(--md-on-secondary-container,#0F1C2C)!important;border-color:transparent!important;font-weight:600!important}
+#tlChips button.on::before{content:'';display:inline-block;width:14px;height:14px;margin:0 6px -2px -2px;
+  background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/%3E%3C/svg%3E") center/contain no-repeat}
+#tlChips i.sep{width:1px!important;height:20px!important;background:var(--md-outline-var,#C4C6D0)!important;margin:0 2px!important}
+#tlFold,#tlMini{border-radius:16px!important}
+
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
