@@ -7552,8 +7552,15 @@ body.insp-open .pt-chip-wrap{display:none}
 #tlFold,#tlMini{border-radius:16px!important}
 
 /* ==== App: Karte bis ganz oben; Webcam-Favoriten ==== */
-body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #statusScrim{display:none!important}
-.map-fade.top{display:none!important}
+/* Karte bis ganz oben (nur iOS-App): der Streifen hinter der Statusleiste bleibt
+   im Layout, wird auf der Karte aber durchsichtig. Auf Android liess das den
+   Emulator im Smoke-Test abstuerzen, dort bleibt er wie bisher. */
+/* Android-WebView: nirgends GPU-Unschaerfe hinter Glas-Elementen. backdrop-filter
+   ueber der laufend gezeichneten Karte bringt den CI-Emulator (swiftshader) zum
+   Absturz (siehe c7e1392); die freistehende Navigation und die Zeitleiste hatten
+   sie wieder. :is(*,#_#_#_) hebt die Spezifitaet ueber alle Einzelregeln. */
+html.and-wv :is(*,#_#_#_),html.and-wv :is(*,#_#_#_)::before,html.and-wv :is(*,#_#_#_)::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html.cap-ios body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #statusScrim{background:transparent!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 .wcf-list{display:flex;flex-direction:column;gap:12px;padding:4px 0 150px}
 .wcf-row{display:flex;gap:12px;align-items:stretch;background:rgba(255,255,255,.06);border-radius:20px;padding:8px}
 .wcf-img{position:relative;flex:0 0 46%;aspect-ratio:16/9;border:0;padding:0;border-radius:14px;overflow:hidden;background:#1a1f2a;cursor:pointer}
@@ -9436,7 +9443,7 @@ async function dataFetch(path,opts){const R=dataRemote();
   return fetch(path,opts);}
 function _capPlugin(n){return (_CAP&&_CAP.Plugins&&_CAP.Plugins[n])?_CAP.Plugins[n]:null;}
 function nativeShare(text,url){const S=_capPlugin('Share');if(S){try{S.share({text:text||'',url:url||''});return true;}catch(e){}}return false;}
-if(_isNative){try{document.documentElement.classList.add('cap-native');}catch(e){}try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'LIGHT'});SB.setOverlaysWebView({overlay:true});}}catch(e){}
+if(_isNative){try{document.documentElement.classList.add('cap-native');if(_CAP.getPlatform&&_CAP.getPlatform()==='ios')document.documentElement.classList.add('cap-ios');}catch(e){}try{const SB=_capPlugin('StatusBar');if(SB){SB.setStyle({style:'LIGHT'});SB.setOverlaysWebView({overlay:true});}}catch(e){}
   try{const SP=_capPlugin('SplashScreen');if(SP)setTimeout(()=>{try{SP.hide();}catch(e){}},450);}catch(e){}
   // Android hardware/gesture back. Every sheet and modal already closes on
   // Escape, so back replays Escape; if nothing on screen changed (no overlay
