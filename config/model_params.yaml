@@ -12,13 +12,22 @@
 temperature:
   t_center_c: 1.0      # Wendepunkt [degC]; ~1 C wegen Nassschnee oberhalb 0 C
   k: 1.4               # Steilheit des Uebergangs [1/degC]
+  # Mit relativer Feuchte (Open-Meteo relative_humidity_2m) wird auf der
+  # Feuchtkugeltemperatur getrennt: in trockener Luft schneit es bis
+  # +2..+4 degC, in gesaettigter bleibt es wie oben. 50 % Schnee bei
+  # Tw ~ 1 degC (Ding et al. 2014, J. Hydrol. 513).
+  wetbulb_center_c: 1.0
+  wetbulb_k: 2.0
   # Referenz: Dai (2008), US Army Corps (1956) Regen/Schnee-Schwellen.
 
 # --- Hoehenabhaengige Niederschlagskorrektur ---------------------------------
 # Lapse-Rate fuer Temperatur und linearer Niederschlags-Enhancement-Faktor.
 altitude:
   temp_lapse_k_per_m: -0.0065   # Standard-Atmosphaere ~ -6.5 K/km
-  precip_gamma_per_m: 0.0004    # +4 % Niederschlag pro 100 m Hoehengewinn
+  # 19.11.: 0 statt +4 %/100 m. Das Wettermodell (ICON-CH, 1-2 km) hat das
+  # Relief schon; der Zuschlag zaehlte es doppelt und liess den Fehler mit der
+  # Hoehe wachsen (gegen SLF HN1D ueber 2500 m: 13.1 statt 4.6 cm, jetzt 5.0).
+  precip_gamma_per_m: 0.0
   precip_factor_min: 0.6
   precip_factor_max: 1.8        # Saettigung: kein unbegrenzter Stau-Zuschlag
 
@@ -26,6 +35,22 @@ altitude:
 # cm Schnee pro cm Schmelzwasseraequivalent; kaeltere Luft -> lockerer Schnee.
 # SLR = clip(slr_intercept + slr_slope * T, slr_min, slr_max)
 slr:
+  # 19.11.: Neuschneedichte aus Temperatur UND Wind in der Form des
+  # Schneedeckenmodells Crocus (Vionnet et al. 2012): rho = a + b*T + c*sqrt(U)
+  # [kg/m3], SLR = 1000/rho. a und c gegen die SLF-Neuschneekarte HN1D
+  # (15.-19.11., 1-km-Zellen, Leave-one-day-out) etwas hoeher als Crocus
+  # (109 / 26): die 10-m-Winde des Wettermodells sind in den Alpen zu schwach,
+  # HN1D ist 24 h alt. Ergebnis: Modell/SLF 2.76 -> 1.14, MAE (10 km) 4.1 -> 1.2 cm.
+  # Der Niederschlag selbst stimmt (Modell / SwissMetNet-Messer 1.1-1.3, die
+  # Messer fangen Schnee 10-40 % zu wenig) -- der Fehler sass in der Dichte.
+  # Bei -5 degC: windstill ~10:1, 3 m/s ~6.7:1, 10 m/s ~5:1.
+  # Die lineare Formel darunter bleibt als Rueckfall (method: linear).
+  method: crocus
+  rho_a: 125.0
+  rho_b: 6.0            # pro degC
+  rho_c: 35.0           # pro sqrt(m/s)
+  rho_min: 67.0         # hoechstens 15:1
+  rho_max: 220.0        # nasser Schnee ~4.5:1
   slr_intercept: 10.0   # SLR bei 0 degC
   # 17.11.: flacher und tiefer gedeckelt -- ein Vergleich mit gemessenem
   # Neuschnee zeigte oben ~1.5x zu viel cm pro mm; in den Alpen setzt Wind
@@ -51,6 +76,12 @@ wind_redistribution:
   wind_ref_ms: 8.0
   factor_min: 0.2
   factor_max: 2.5
+  # Luv/Lee x Wind zusammen werden auf ihr Mittel ueber diesen Radius normiert:
+  # Schnee wird verlagert, nicht erzeugt (vorher im Mittel einige % zu viel,
+  # weil Ablagerung staerker gewichtet war als Erosion).
+  conserve_radius_m: 1500.0
+  total_factor_min: 0.2
+  total_factor_max: 2.5
   # Vereinfachte Heuristik; ersetzt kein Saltations-/SnowTran-3D-Modell.
 
 # --- Ablation: Schmelze + Setzung -------------------------------------------

@@ -220,6 +220,16 @@ def _cloud(fc, T):
     return np.array([r[:T] for r in rows], dtype="float64")
 
 
+def _humidity(fc, T):
+    """Relative Feuchte [%] je Punkt und Stunde, oder None (aeltere Caches,
+    MeteoSchweiz-Rueckfall) -- dann trennt das Modell Regen/Schnee wie
+    bisher auf der Lufttemperatur."""
+    rows = [getattr(f, "relative_humidity_2m", None) or [] for f in fc]
+    if not rows or any(len(r) < T for r in rows):
+        return None
+    return np.clip(np.array([r[:T] for r in rows], dtype="float64"), 1.0, 100.0)
+
+
 def _level_wind(fc, T, key):
     """Wind speed [m/s] on a pressure level per point and hour, or None when
     the source does not deliver it."""
@@ -590,15 +600,24 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     # MeteoSwiss over Open-Meteo where it has the hours (pipeline/ogd_site.py):
     # the archive for the past days, the newest ICON-CH run ahead
     wx_src = None
+    # humidity: Open-Meteo's, MeteoSwiss' over it where it has the hours
+    rh_m = _humidity(fc, T)
+    if rh_m is None:
+        rh_m = np.full((len(fc), T), np.nan)
     if not use_synthetic and (os.environ.get("SNOWMAPPER_OGD_SITE") or os.environ.get("SNOWMAPPER_WX_ARCHIVE")):
         try:
             from pipeline import ogd_site
             wx_src = ogd_site.overlay(os.environ.get("SNOWMAPPER_OGD_SITE"), os.environ.get("SNOWMAPPER_WX_ARCHIVE"),
-                                      lats, lons, times, temp_m, prec_m, snow_m, wspd_m, wdir_m, sun_m)
+                                      lats, lons, times, temp_m, prec_m, snow_m, wspd_m, wdir_m, sun_m, rh_m)
             print(f"[INT] Wetter: {wx_src or 'MeteoSchweiz nicht verfuegbar -- Open-Meteo'}.")
         except Exception as e:                      # noqa: BLE001
             print(f"[INT] MeteoSchweiz nicht verwendbar: {type(e).__name__}: {e}")
+    if np.isnan(rh_m).all():
+        rh_m = None
+    else:                                           # gaps: saturated air = the split on the air temperature
+        rh_m = np.clip(np.nan_to_num(rh_m, nan=100.0), 1.0, 100.0)
     cloud_m = _cloud(fc, T)
+    print(f"[INT] Feuchte: {'ja (Regen/Schnee auf der Feuchtkugeltemperatur)' if rh_m is not None else 'nein (Lufttemperatur)'}.")
     clv_m = [_level_wind(fc, T, "cloud_cover_" + k) for k in ("low", "mid", "high")]
     clv_m = clv_m if all(m is not None for m in clv_m) else None
     lvl_m = {k: _level_wind(fc, T, "wind_speed_" + h) for k, h in (("wind850", "850hPa"), ("wind700", "700hPa"))}
@@ -687,7 +706,8 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
             temperature_c_ref=temp_g, ref_elevation=ref_elev,
             wind_speed_ms=ws_g,
             wind_direction_deg=(np.degrees(np.arctan2(
-                _apply(sin_d[:, t], idx, w), _apply(cos_d[:, t], idx, w))) % 360).reshape(shape))
+                _apply(sin_d[:, t], idx, w), _apply(cos_d[:, t], idx, w))) % 360).reshape(shape),
+            rel_humidity_pct=None if rh_m is None else _apply(rh_m[:, t], idx, w).reshape(shape))
         snow_t = compute_new_snow(terrain, wg, params)["new_snow_cm"]
         temp_t = temp_g + lapse * (terrain.elevation - ref_elev)
         sun_t = np.clip(_apply(sun_m[:, t], idx, w).reshape(shape) / 3600.0, 0, 1)
@@ -774,6 +794,10 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         "nsp": {"t_center": params["temperature"]["t_center_c"], "k": params["temperature"]["k"],
                 "slr_i": params["slr"]["slr_intercept"], "slr_s": params["slr"]["slr_slope"],
                 "slr_min": params["slr"]["slr_min"], "slr_max": params["slr"]["slr_max"],
+                # Crocus-Dichte und Feuchtkugel-Trennung (config/model_params.yaml)
+                "slr_m": params["slr"].get("method", "linear"),
+                "rho": [params["slr"].get(k) for k in ("rho_a", "rho_b", "rho_c", "rho_min", "rho_max")],
+                "tw_c": params["temperature"].get("wetbulb_center_c"), "tw_k": params["temperature"].get("wetbulb_k"),
                 "gamma": params["altitude"]["precip_gamma_per_m"],
                 "fmin": params["altitude"]["precip_factor_min"], "fmax": params["altitude"]["precip_factor_max"],
                 "lapse": params["altitude"]["temp_lapse_k_per_m"]},
@@ -15788,9 +15812,16 @@ const NS_ALPHA=175;                   // a little more see-through than 205: the
 let _nsV=null,_nsHid=null;            // window snowfall per cell, the legend's hide filter
 const _nsOk=PREC.length>=T*NP&&TEMP.length>=T*NP;
 let _nsProf=null,_nsHave=null,_nsKey='',_nsFS=null;
-function nsFS(){if(_nsFS)return _nsFS;const q=M.nsp||{},tc=q.t_center??1,k=q.k??1.4,si=q.slr_i??10,ss=q.slr_s??-0.8,s0=q.slr_min??6,s1=q.slr_max??25;
+function nsFS(){if(_nsFS)return _nsFS;const q=M.nsp||{},si=q.slr_i??10,ss=q.slr_s??-0.8,s0=q.slr_min??6,s1=q.slr_max??25;
+  // the pipeline splits rain/snow on the wet-bulb temperature when it has the
+  // humidity; here, where only the air temperature is at hand, the same curve
+  // on it (in precipitation the air is near saturation, Tw ~ T)
+  const tc=q.tw_c??q.t_center??1,k=q.tw_k??q.k??1.4,R=q.slr_m==='crocus'&&q.rho&&q.rho.every(x=>x!=null)?q.rho:null;
   _nsFS=new Float32Array(801);       // snow share x snow-to-liquid ratio, -50..+30 degC in 0.1 K
-  for(let i=0;i<=800;i++){const t=-50+i*0.1,f=1/(1+Math.exp(Math.max(-50,Math.min(50,k*(t-tc)))));_nsFS[i]=f*Math.max(s0,Math.min(s1,si+ss*t))/10;}
+  for(let i=0;i<=800;i++){const t=-50+i*0.1,f=1/(1+Math.exp(Math.max(-50,Math.min(50,k*(t-tc)))));
+    // Crocus density at a typical 3 m/s: only the ratio between heights is used
+    const slr=R?1000/Math.max(R[3],Math.min(R[4],R[0]+R[1]*t+R[2]*Math.sqrt(3))):Math.max(s0,Math.min(s1,si+ss*t));
+    _nsFS[i]=f*slr/10;}
   return _nsFS;}
 function nsProfile(p){
   const key=a+'|'+b;

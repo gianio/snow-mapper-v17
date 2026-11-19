@@ -19,7 +19,7 @@ the weather point's reference height. The shift is measured per point as the
 mean difference over the hours both have (as in variant_a/forcing.py).
 
     note = overlay(site_dir, archive_dir, lats, lons, times,
-                   temp, prec, snow, wind_speed, wind_dir, sun)   # arrays changed in place
+                   temp, prec, snow, wind_speed, wind_dir, sun, rh)   # arrays changed in place
 """
 from __future__ import annotations
 
@@ -94,7 +94,8 @@ def _series_for(point: dict, archive_dir, pid: str, start: str, end: str) -> Dic
 
 def overlay(site_dir, archive_dir, lats: List[float], lons: List[float], times: List[str],
             temp_m: np.ndarray, prec_m: np.ndarray, snow_m: np.ndarray,
-            wspd_m: np.ndarray, wdir_m: np.ndarray, sun_m: np.ndarray) -> Optional[str]:
+            wspd_m: np.ndarray, wdir_m: np.ndarray, sun_m: np.ndarray,
+            rh_m: Optional[np.ndarray] = None) -> Optional[str]:
     """Put MeteoSwiss hours over the point series, in place. Returns a short
     note for the log and the data source label, or None when nothing was laid."""
     pts = _load_points(site_dir)
@@ -130,8 +131,10 @@ def overlay(site_dir, archive_dir, lats: List[float], lons: List[float], times: 
             r = rows.get(s)
             if not r or r[0] is None:
                 continue
-            T, _rh, P_, ws, wd, sw = r
+            T, rh, P_, ws, wd, sw = r
             temp_m[k, t] = T + dT
+            if rh_m is not None and rh is not None:
+                rh_m[k, t] = rh
             if P_ is not None:
                 prec_m[k, t] = max(0.0, P_)
                 ft = temp_m[k, t]
