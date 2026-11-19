@@ -9661,6 +9661,8 @@ const PD_PERSIST_CHECK_H=72;      // I4: Kalt-Persistenz alter Powder
 const PD_PERSIST_WARM_C=0.5;      // I4
 const PD_PERSIST_WARM_SHARE=0.35; // I4
 const PD_WARM_BASE_C=0.5,PD_WARM_DH_DESTROY=6,PD_WARM_DH_DEGRADE=2,PD_WARM_LOOKBACK_H=48; // D4: warme Luft
+const PD_RIDGE_WIND_F=0.4;        // W1: 700-hPa-Wind x 0.4 als Kammwind
+const PD_SUN_DIFFUSE=0.25;        // S1: Anteil der Clear-Sky-Strahlung, der bei Bewoelkung bleibt
 const precv=(t,p)=>PREC[t*NP+p]/M.prec_mul;
 const maspv=p=>MASPECT[p]*M.dir_div;
 const mslpv=p=>MSLOPE[p];
@@ -9680,10 +9682,14 @@ function computePowder(p,ta,tb){
   const asp=maspv(p),slp=mslpv(p),quad=aspectQ(asp);
   const res={powdered:false,valid_aspects:[],reason_flags:[],quality:'stable'};
   // Dominant wind + mean wind from nearest wind point
-  const wk=mainToWind[p];let ss=0,sc2=0,ws=0,wc=0;
-  for(let t=ta;t<tb;t++){const d=WDIR[t*P+wk]*M.dir_div*Math.PI/180;ss+=Math.sin(d);sc2+=Math.cos(d);ws+=SPD[t*P+wk]/M.spd_mul*3.6;wc++;}
+  const wk=mainToWind[p];let ss=0,sc2=0,ws=0,wc=0,w7=0;
+  const has7=W700.length>=T*NP;
+  for(let t=ta;t<tb;t++){const d=WDIR[t*P+wk]*M.dir_div*Math.PI/180;ss+=Math.sin(d);sc2+=Math.cos(d);ws+=SPD[t*P+wk]/M.spd_mul*3.6;if(has7)w7+=W700[t*NP+p]/M.spd_mul*3.6;wc++;}
   const domW=(Math.atan2(ss,sc2)*180/Math.PI+360)%360;
-  const meanW=ws/Math.max(1,wc), gustW=meanW*PD_GUST_FACTOR;
+  // the 10 m wind of the weather model is weak in the mountains (19.11.: median
+  // 18 km/h where the SLF bulletin named wind slabs, 48 km/h at 700 hPa); snow
+  // is moved at ridge height -> the stronger of the two, ridge wind damped
+  const meanW=Math.max(ws/Math.max(1,wc),PD_RIDGE_WIND_F*w7/Math.max(1,wc)), gustW=meanW*PD_GUST_FACTOR;
   let tmax=-999;for(let t=ta;t<tb;t++){const v=tv(t,p);if(v>tmax)tmax=v;}
   // Letzter Schneefall ueber die ganze Serie (fuer D0'/D1')
   let lastSnowG=-1;for(let t=0;t<tb;t++){if(SNOW[t*NP+p]*M.snow_scale>0.1)lastSnowG=t;}
@@ -9717,26 +9723,32 @@ function computePowder(p,ta,tb){
   if(warmDh>=PD_WARM_DH_DESTROY){res.reason_flags.push(tv(tb-1,p)>0?'D4_warm_wet':'D4_warm_refrozen');return res;}
   // D3: Solar melt (I2: kalte Decke vertraegt mehr Sonne)
   const doy=bandDoy();if(doy!==radDoy){radCS=computeRad(doy);radDoy=doy;}
-  const rp=main2rad[p];const solar=rp>=0?radCS[rp]:0;
+  // radCS is the clear-sky day; scaled by the sunshine of the last 24 h (S1),
+  // otherwise a south slope lost its powder under a closed cloud deck too
+  const rp=main2rad[p];let sun24=0;for(let t=Math.max(0,tb-24);t<tb;t++)sun24+=sunv(t,p);
+  const sunFr=Math.min(1,sun24/Math.max(1,dayLenH(doy)));
+  const solar=rp>=0?radCS[rp]*(PD_SUN_DIFFUSE+(1-PD_SUN_DIFFUSE)*sunFr):0;
+  res.sunFr=sunFr;
   let destroyWh=PD_SOLAR_DESTROY_WH;
   if(tmax<PD_COLD_SOLAR_TMAX_C){destroyWh*=PD_COLD_SOLAR_FACTOR;res.reason_flags.push('I2_cold_solar_relax');}
   if(solar>=destroyWh){res.reason_flags.push('D3_solar_melt');return res;}
   // --- Preservation ---
+  // The wind decides which aspects keep their powder; cold only keeps its
+  // quality. (Before, R1 deep freeze opened every aspect whatever the wind:
+  // on 19.11. 45 of the 76 regions the SLF named wind slabs in showed powder
+  // all round. Cold dry snow drifts more easily, not less.)
   const ALL=['N','E','S','W'];const valid=new Set();
-  // R1
-  if(tmax<PD_DEEP_FREEZE_C){res.reason_flags.push('R1_deep_freeze');ALL.forEach(a=>valid.add(a));}
-  // R2
-  if(gustW<PD_GUST_CALM_KMH&&meanW<PD_WIND_CALM_KMH){res.reason_flags.push('R2_calm_wind');ALL.forEach(a=>valid.add(a));}
-  // R3
-  if(gustW>=PD_GUST_REDIST_MIN_KMH&&gustW<=PD_GUST_REDIST_MAX_KMH&&meanW<PD_WIND_REDIST_KMH){
-    res.reason_flags.push('R3_wind_redistribution');
-    for(const q of ALL){if(isLee(_QCEN[q],domW))valid.add(q);}
-  }
-  // R4
+  if(tmax<PD_DEEP_FREEZE_C)res.reason_flags.push('R1_deep_freeze');
   let clearNight=false;
   for(let t=ta;t<tb&&!clearNight;t++){if(sunv(t,p)<0.01&&tv(t,p)<0)clearNight=true;}
-  if(tmax>=PD_FREEZE_CLEAR_MIN_C&&tmax<PD_FREEZE_CLEAR_MAX_C&&clearNight){
-    res.reason_flags.push('R4_freeze_clear_night');valid.add('N');
+  if(tmax>=PD_FREEZE_CLEAR_MIN_C&&tmax<PD_FREEZE_CLEAR_MAX_C&&clearNight)res.reason_flags.push('R4_freeze_clear_night');
+  let storm=false;
+  if(gustW<PD_GUST_CALM_KMH&&meanW<PD_WIND_CALM_KMH){res.reason_flags.push('R2_calm_wind');ALL.forEach(a=>valid.add(a));}
+  else{
+    // R3 drift (W2: a storm too -- then the lee holds wind-packed powder, the rest is pressed)
+    storm=!(gustW<=PD_GUST_REDIST_MAX_KMH&&meanW<PD_WIND_REDIST_KMH);
+    res.reason_flags.push('R3_wind_redistribution');if(storm)res.reason_flags.push('W2_storm');
+    for(const q of ALL){if(isLee(_QCEN[q],domW))valid.add(q);}
   }
   if(valid.size===0)return res;
   // Solar moderation — nur wenn nicht tiefgefroren (I3b)
@@ -9750,7 +9762,7 @@ function computePowder(p,ta,tb){
   res.valid_aspects=[...valid];
   if(!valid.has(quad))return res;
   // Degradation
-  if(ftc>=PD_FT_DEGRADE||aged||warmDh>=PD_WARM_DH_DEGRADE)res.quality='reduced';
+  if(ftc>=PD_FT_DEGRADE||aged||warmDh>=PD_WARM_DH_DEGRADE||storm)res.quality='reduced';
   res.powdered=true;return res;
 }
 // colour ramps by stops [x, '#hex'], linear in between
@@ -14705,6 +14717,9 @@ const rad2cube=new Int32Array(RNP);
 (function(){for(let p=0;p<NP;p++){const y=(p/W)|0,x=p%W;const la=laMax-(laMax-laMin)*y/Math.max(1,H-1);const lo=loMin+(loMax-loMin)*x/Math.max(1,W-1);let bd=1e18,bk=0;for(let k=0;k<P;k++){const dl=la-M.wind.lat[k],dn=lo-M.wind.lon[k],d=dl*dl+dn*dn;if(d<bd){bd=d;bk=k;}}mainToWind[p]=bk;}})();
 (function(){for(let rp=0;rp<RNP;rp++)main2rad[rad2cube[rp]]=rp;})();
 let radCS=null,radDoy=-1;
+// hours from sunrise to sunset at 46.5 degN on day of year doy
+function dayLenH(doy){const d=23.45*Math.PI/180*Math.sin(2*Math.PI*(284+doy)/365),x=-Math.tan(46.5*Math.PI/180)*Math.tan(d);
+  return 24/Math.PI*Math.acos(Math.max(-1,Math.min(1,x)));}
 function computeRad(doy){const decl=23.45*Math.PI/180*Math.sin(2*Math.PI*(284+doy)/365);
   const I0=1361,tau=0.72,dt=0.5,out=new Float32Array(RNP);
   for(let p=0;p<RNP;p++){const ry=(p/RW)|0;const lat=(RbN-(RbN-RbS)*ry/(RH-1))*Math.PI/180;
