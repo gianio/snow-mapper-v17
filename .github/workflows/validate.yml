@@ -33,6 +33,9 @@ jobs:
       - name: Ablation unit test
         run: python tools/test_ablation.py
 
+      - name: New-snow model unit test
+        run: python tools/test_newsnow_model.py
+
       - name: SLF bulletin parser unit test
         run: python tools/test_slf_bulletin.py
 

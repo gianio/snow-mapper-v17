@@ -24,6 +24,7 @@ class TerrainFeatures:
     slope_rad: np.ndarray
     aspect_deg: np.ndarray
     curvature: np.ndarray  # normiert, dimensionslos
+    res: float = 0.0       # Rasterweite [m]; 0 = unbekannt
 
 
 def _horn_gradients(z: np.ndarray, res: float):
@@ -67,6 +68,7 @@ def compute_terrain_features(elevation: np.ndarray, res: float) -> TerrainFeatur
         slope_rad=slope_rad,
         aspect_deg=aspect_deg,
         curvature=curvature,
+        res=float(res),
     )
 
 

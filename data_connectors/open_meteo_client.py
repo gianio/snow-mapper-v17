@@ -27,6 +27,8 @@ HOURLY_VARIABLES: tuple[str, ...] = (
     "wind_direction_10m",
     "sunshine_duration",
     "cloud_cover",
+    # Feuchte: trennt Regen und Schnee auf der Feuchtkugeltemperatur
+    "relative_humidity_2m",
 )
 # Wind higher up, on pressure levels: 850 hPa is about 1500 m, 700 hPa about
 # 3000 m -- ridge height, where snow is moved. Asked for separately: an
@@ -56,6 +58,7 @@ class PointForecast:
     wind_direction_10m: List[float]  # [Grad, woher]
     sunshine_duration: List[float]   # [s] Sonnenscheindauer pro Stunde
     cloud_cover: List[float] = field(default_factory=list)  # [%] Gesamtbewoelkung
+    relative_humidity_2m: List[float] = field(default_factory=list)  # [%] 2 m
     wind_speed_850hPa: List[float] = field(default_factory=list)      # [m/s] ~1500 m
     wind_direction_850hPa: List[float] = field(default_factory=list)
     wind_speed_700hPa: List[float] = field(default_factory=list)      # [m/s] ~3000 m
@@ -225,6 +228,7 @@ class OpenMeteoClient:
             wind_direction_10m=_clean(hourly["wind_direction_10m"]),
             sunshine_duration=_clean(hourly.get("sunshine_duration", [])),
             cloud_cover=_clean(hourly.get("cloud_cover", [])),
+            relative_humidity_2m=_clean_opt(hourly.get("relative_humidity_2m")),
             **{k: _clean_opt(hourly.get(k)) for k in LEVEL_VARIABLES},
         )
 

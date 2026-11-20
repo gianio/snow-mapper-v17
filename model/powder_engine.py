@@ -11,11 +11,15 @@ Regeln (Destroy / Preserve / Degrade):
   D2  > 4 Frost-Tau-Wechsel seit letztem Schneefall    -> kein Powder
   D3  Solareintrag >= Schwelle                         -> kein Powder
       (Schwelle skaliert bei Kaelte hoch: tmax < -4°C  -> x1.5)         [NEU I2]
-  R1  tmax < -2°C                                      -> alle Expositionen
+  Wind entscheidet die Expositionen (19.11., gegen das SLF-Bulletin):
   R2  windstill (Gust<20, Mittel<10 km/h)              -> alle Expositionen
-  R3  Verfrachtung (Gust 20–60, Mittel<30)             -> Lee-Expositionen
-  R4  Frost + klare Nacht                              -> N
+  R3  sonst Verfrachtung                               -> Lee-Expositionen
+  W2  Sturm (Gust>60 oder Mittel>=30)                  -> Lee, quality='reduced'
+  W1  Wind = max(10 m, 0.4 x 700 hPa), wenn Kammwind vorliegt
+  R1  tmax < -2°C / R4 Frost + klare Nacht              -> nur noch Flags
+      (vorher oeffnete R1 alle Expositionen trotz Wind)
   Mod Solar 2000–5000 Wh                               -> S, W raus
+  S1  Clear-Sky-Solar x (0.25 + 0.75 x Sonnenanteil der letzten 24 h)
   G1  >= 2 Frost-Tau-Wechsel                           -> quality='reduced'
   G2  Nachmittags warm (tmax >= 3°C) + Sonne           -> quality='reduced';
       ab tmax >= 6°C zusaetzlich S raus                                 [NEU I3]
@@ -59,6 +63,8 @@ PD_WARM_BASE_C = 0.5
 PD_WARM_DH_DESTROY = 6.0       # ab hier kein Pulver mehr (nass bzw. Kruste)
 PD_WARM_DH_DEGRADE = 2.0       # ab hier gesetzt / reduziert
 PD_WARM_LOOKBACK_H = 48
+PD_RIDGE_WIND_F = 0.4          # W1
+PD_SUN_DIFFUSE = 0.25          # S1
 
 _QCEN = {"N": 0.0, "E": 90.0, "S": 180.0, "W": 270.0}
 _ALL = ["N", "E", "S", "W"]
@@ -104,6 +110,9 @@ def compute_powder(
     ta: int,               # Fensterstart (Index)
     tb: int,               # Fensterende (Index, exklusiv)
     aspect_deg: float | None = None,  # Zellen-Exposition; None = nur Aspekt-Liste
+    ridge_wind_kmh: list | None = None,  # W1: stuendlicher 700-hPa-Wind (km/h)
+    solar_clear_sky: bool = False,    # S1: solar_wh ist Clear-Sky -> mit Sonnenschein skalieren
+    day_len_h: float = 9.0,           # S1: Tageslaenge [h]
 ) -> PowderResult:
     res = PowderResult()
     n = len(temp_c)
@@ -125,6 +134,8 @@ def compute_powder(
         wc += 1
     dom_w = (math.degrees(math.atan2(ss, sc)) + 360.0) % 360.0
     mean_w = ws / max(1, wc)
+    if ridge_wind_kmh:
+        mean_w = max(mean_w, PD_RIDGE_WIND_F * sum(ridge_wind_kmh[ta:tb]) / max(1, wc))
     gust_w = mean_w * PD_GUST_FACTOR
 
     # Letzter Schneefall ueber die GANZE verfuegbare Serie (fuer D0/D1)
@@ -183,6 +194,9 @@ def compute_powder(
         return res
 
     tmax = max(temp_c[ta:tb])
+    if solar_clear_sky:
+        sun24 = sum(sun_h[max(0, tb - 24):tb])
+        solar_wh = solar_wh * (PD_SUN_DIFFUSE + (1 - PD_SUN_DIFFUSE) * min(1.0, sun24 / max(1.0, day_len_h)))
 
     # D3: Solareintrag (I2: kalte Schneedecke vertraegt mehr)
     destroy_wh = PD_SOLAR_DESTROY_WH
@@ -194,25 +208,23 @@ def compute_powder(
         return res
 
     valid: set = set()
-    # R1
     if tmax < PD_DEEP_FREEZE_C:
         res.reason_flags.append("R1_deep_freeze")
-        valid.update(_ALL)
-    # R2
-    if gust_w < PD_GUST_CALM_KMH and mean_w < PD_WIND_CALM_KMH:
-        res.reason_flags.append("R2_calm_wind")
-        valid.update(_ALL)
-    # R3
-    if PD_GUST_REDIST_MIN_KMH <= gust_w <= PD_GUST_REDIST_MAX_KMH and mean_w < PD_WIND_REDIST_KMH:
-        res.reason_flags.append("R3_wind_redistribution")
-        for q in _ALL:
-            if _is_lee(_QCEN[q], dom_w):
-                valid.add(q)
-    # R4
     clear_night = any(sun_h[t] < 0.01 and temp_c[t] < 0 for t in range(ta, tb))
     if PD_FREEZE_CLEAR_MIN_C <= tmax < PD_FREEZE_CLEAR_MAX_C and clear_night:
         res.reason_flags.append("R4_freeze_clear_night")
-        valid.add("N")
+    storm = False
+    if gust_w < PD_GUST_CALM_KMH and mean_w < PD_WIND_CALM_KMH:
+        res.reason_flags.append("R2_calm_wind")
+        valid.update(_ALL)
+    else:
+        storm = not (gust_w <= PD_GUST_REDIST_MAX_KMH and mean_w < PD_WIND_REDIST_KMH)
+        res.reason_flags.append("R3_wind_redistribution")
+        if storm:
+            res.reason_flags.append("W2_storm")
+        for q in _ALL:
+            if _is_lee(_QCEN[q], dom_w):
+                valid.add(q)
 
     if not valid:
         return res
@@ -237,7 +249,7 @@ def compute_powder(
     if not valid:
         return res
 
-    if ftc >= PD_FT_DEGRADE or aged or warm_dh >= PD_WARM_DH_DEGRADE:
+    if ftc >= PD_FT_DEGRADE or aged or warm_dh >= PD_WARM_DH_DEGRADE or storm:
         res.quality = "reduced"
     res.powdered = True
     return res

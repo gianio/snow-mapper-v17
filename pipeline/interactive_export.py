@@ -220,6 +220,16 @@ def _cloud(fc, T):
     return np.array([r[:T] for r in rows], dtype="float64")
 
 
+def _humidity(fc, T):
+    """Relative Feuchte [%] je Punkt und Stunde, oder None (aeltere Caches,
+    MeteoSchweiz-Rueckfall) -- dann trennt das Modell Regen/Schnee wie
+    bisher auf der Lufttemperatur."""
+    rows = [getattr(f, "relative_humidity_2m", None) or [] for f in fc]
+    if not rows or any(len(r) < T for r in rows):
+        return None
+    return np.clip(np.array([r[:T] for r in rows], dtype="float64"), 1.0, 100.0)
+
+
 def _level_wind(fc, T, key):
     """Wind speed [m/s] on a pressure level per point and hour, or None when
     the source does not deliver it."""
@@ -590,15 +600,24 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     # MeteoSwiss over Open-Meteo where it has the hours (pipeline/ogd_site.py):
     # the archive for the past days, the newest ICON-CH run ahead
     wx_src = None
+    # humidity: Open-Meteo's, MeteoSwiss' over it where it has the hours
+    rh_m = _humidity(fc, T)
+    if rh_m is None:
+        rh_m = np.full((len(fc), T), np.nan)
     if not use_synthetic and (os.environ.get("SNOWMAPPER_OGD_SITE") or os.environ.get("SNOWMAPPER_WX_ARCHIVE")):
         try:
             from pipeline import ogd_site
             wx_src = ogd_site.overlay(os.environ.get("SNOWMAPPER_OGD_SITE"), os.environ.get("SNOWMAPPER_WX_ARCHIVE"),
-                                      lats, lons, times, temp_m, prec_m, snow_m, wspd_m, wdir_m, sun_m)
+                                      lats, lons, times, temp_m, prec_m, snow_m, wspd_m, wdir_m, sun_m, rh_m)
             print(f"[INT] Wetter: {wx_src or 'MeteoSchweiz nicht verfuegbar -- Open-Meteo'}.")
         except Exception as e:                      # noqa: BLE001
             print(f"[INT] MeteoSchweiz nicht verwendbar: {type(e).__name__}: {e}")
+    if np.isnan(rh_m).all():
+        rh_m = None
+    else:                                           # gaps: saturated air = the split on the air temperature
+        rh_m = np.clip(np.nan_to_num(rh_m, nan=100.0), 1.0, 100.0)
     cloud_m = _cloud(fc, T)
+    print(f"[INT] Feuchte: {'ja (Regen/Schnee auf der Feuchtkugeltemperatur)' if rh_m is not None else 'nein (Lufttemperatur)'}.")
     clv_m = [_level_wind(fc, T, "cloud_cover_" + k) for k in ("low", "mid", "high")]
     clv_m = clv_m if all(m is not None for m in clv_m) else None
     lvl_m = {k: _level_wind(fc, T, "wind_speed_" + h) for k, h in (("wind850", "850hPa"), ("wind700", "700hPa"))}
@@ -687,7 +706,8 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
             temperature_c_ref=temp_g, ref_elevation=ref_elev,
             wind_speed_ms=ws_g,
             wind_direction_deg=(np.degrees(np.arctan2(
-                _apply(sin_d[:, t], idx, w), _apply(cos_d[:, t], idx, w))) % 360).reshape(shape))
+                _apply(sin_d[:, t], idx, w), _apply(cos_d[:, t], idx, w))) % 360).reshape(shape),
+            rel_humidity_pct=None if rh_m is None else _apply(rh_m[:, t], idx, w).reshape(shape))
         snow_t = compute_new_snow(terrain, wg, params)["new_snow_cm"]
         temp_t = temp_g + lapse * (terrain.elevation - ref_elev)
         sun_t = np.clip(_apply(sun_m[:, t], idx, w).reshape(shape) / 3600.0, 0, 1)
@@ -774,6 +794,10 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
         "nsp": {"t_center": params["temperature"]["t_center_c"], "k": params["temperature"]["k"],
                 "slr_i": params["slr"]["slr_intercept"], "slr_s": params["slr"]["slr_slope"],
                 "slr_min": params["slr"]["slr_min"], "slr_max": params["slr"]["slr_max"],
+                # Crocus-Dichte und Feuchtkugel-Trennung (config/model_params.yaml)
+                "slr_m": params["slr"].get("method", "linear"),
+                "rho": [params["slr"].get(k) for k in ("rho_a", "rho_b", "rho_c", "rho_min", "rho_max")],
+                "tw_c": params["temperature"].get("wetbulb_center_c"), "tw_k": params["temperature"].get("wetbulb_k"),
                 "gamma": params["altitude"]["precip_gamma_per_m"],
                 "fmin": params["altitude"]["precip_factor_min"], "fmax": params["altitude"]["precip_factor_max"],
                 "lapse": params["altitude"]["temp_lapse_k_per_m"]},
@@ -9637,6 +9661,8 @@ const PD_PERSIST_CHECK_H=72;      // I4: Kalt-Persistenz alter Powder
 const PD_PERSIST_WARM_C=0.5;      // I4
 const PD_PERSIST_WARM_SHARE=0.35; // I4
 const PD_WARM_BASE_C=0.5,PD_WARM_DH_DESTROY=6,PD_WARM_DH_DEGRADE=2,PD_WARM_LOOKBACK_H=48; // D4: warme Luft
+const PD_RIDGE_WIND_F=0.4;        // W1: 700-hPa-Wind x 0.4 als Kammwind
+const PD_SUN_DIFFUSE=0.25;        // S1: Anteil der Clear-Sky-Strahlung, der bei Bewoelkung bleibt
 const precv=(t,p)=>PREC[t*NP+p]/M.prec_mul;
 const maspv=p=>MASPECT[p]*M.dir_div;
 const mslpv=p=>MSLOPE[p];
@@ -9656,10 +9682,14 @@ function computePowder(p,ta,tb){
   const asp=maspv(p),slp=mslpv(p),quad=aspectQ(asp);
   const res={powdered:false,valid_aspects:[],reason_flags:[],quality:'stable'};
   // Dominant wind + mean wind from nearest wind point
-  const wk=mainToWind[p];let ss=0,sc2=0,ws=0,wc=0;
-  for(let t=ta;t<tb;t++){const d=WDIR[t*P+wk]*M.dir_div*Math.PI/180;ss+=Math.sin(d);sc2+=Math.cos(d);ws+=SPD[t*P+wk]/M.spd_mul*3.6;wc++;}
+  const wk=mainToWind[p];let ss=0,sc2=0,ws=0,wc=0,w7=0;
+  const has7=W700.length>=T*NP;
+  for(let t=ta;t<tb;t++){const d=WDIR[t*P+wk]*M.dir_div*Math.PI/180;ss+=Math.sin(d);sc2+=Math.cos(d);ws+=SPD[t*P+wk]/M.spd_mul*3.6;if(has7)w7+=W700[t*NP+p]/M.spd_mul*3.6;wc++;}
   const domW=(Math.atan2(ss,sc2)*180/Math.PI+360)%360;
-  const meanW=ws/Math.max(1,wc), gustW=meanW*PD_GUST_FACTOR;
+  // the 10 m wind of the weather model is weak in the mountains (19.11.: median
+  // 18 km/h where the SLF bulletin named wind slabs, 48 km/h at 700 hPa); snow
+  // is moved at ridge height -> the stronger of the two, ridge wind damped
+  const meanW=Math.max(ws/Math.max(1,wc),PD_RIDGE_WIND_F*w7/Math.max(1,wc)), gustW=meanW*PD_GUST_FACTOR;
   let tmax=-999;for(let t=ta;t<tb;t++){const v=tv(t,p);if(v>tmax)tmax=v;}
   // Letzter Schneefall ueber die ganze Serie (fuer D0'/D1')
   let lastSnowG=-1;for(let t=0;t<tb;t++){if(SNOW[t*NP+p]*M.snow_scale>0.1)lastSnowG=t;}
@@ -9693,26 +9723,32 @@ function computePowder(p,ta,tb){
   if(warmDh>=PD_WARM_DH_DESTROY){res.reason_flags.push(tv(tb-1,p)>0?'D4_warm_wet':'D4_warm_refrozen');return res;}
   // D3: Solar melt (I2: kalte Decke vertraegt mehr Sonne)
   const doy=bandDoy();if(doy!==radDoy){radCS=computeRad(doy);radDoy=doy;}
-  const rp=main2rad[p];const solar=rp>=0?radCS[rp]:0;
+  // radCS is the clear-sky day; scaled by the sunshine of the last 24 h (S1),
+  // otherwise a south slope lost its powder under a closed cloud deck too
+  const rp=main2rad[p];let sun24=0;for(let t=Math.max(0,tb-24);t<tb;t++)sun24+=sunv(t,p);
+  const sunFr=Math.min(1,sun24/Math.max(1,dayLenH(doy)));
+  const solar=rp>=0?radCS[rp]*(PD_SUN_DIFFUSE+(1-PD_SUN_DIFFUSE)*sunFr):0;
+  res.sunFr=sunFr;
   let destroyWh=PD_SOLAR_DESTROY_WH;
   if(tmax<PD_COLD_SOLAR_TMAX_C){destroyWh*=PD_COLD_SOLAR_FACTOR;res.reason_flags.push('I2_cold_solar_relax');}
   if(solar>=destroyWh){res.reason_flags.push('D3_solar_melt');return res;}
   // --- Preservation ---
+  // The wind decides which aspects keep their powder; cold only keeps its
+  // quality. (Before, R1 deep freeze opened every aspect whatever the wind:
+  // on 19.11. 45 of the 76 regions the SLF named wind slabs in showed powder
+  // all round. Cold dry snow drifts more easily, not less.)
   const ALL=['N','E','S','W'];const valid=new Set();
-  // R1
-  if(tmax<PD_DEEP_FREEZE_C){res.reason_flags.push('R1_deep_freeze');ALL.forEach(a=>valid.add(a));}
-  // R2
-  if(gustW<PD_GUST_CALM_KMH&&meanW<PD_WIND_CALM_KMH){res.reason_flags.push('R2_calm_wind');ALL.forEach(a=>valid.add(a));}
-  // R3
-  if(gustW>=PD_GUST_REDIST_MIN_KMH&&gustW<=PD_GUST_REDIST_MAX_KMH&&meanW<PD_WIND_REDIST_KMH){
-    res.reason_flags.push('R3_wind_redistribution');
-    for(const q of ALL){if(isLee(_QCEN[q],domW))valid.add(q);}
-  }
-  // R4
+  if(tmax<PD_DEEP_FREEZE_C)res.reason_flags.push('R1_deep_freeze');
   let clearNight=false;
   for(let t=ta;t<tb&&!clearNight;t++){if(sunv(t,p)<0.01&&tv(t,p)<0)clearNight=true;}
-  if(tmax>=PD_FREEZE_CLEAR_MIN_C&&tmax<PD_FREEZE_CLEAR_MAX_C&&clearNight){
-    res.reason_flags.push('R4_freeze_clear_night');valid.add('N');
+  if(tmax>=PD_FREEZE_CLEAR_MIN_C&&tmax<PD_FREEZE_CLEAR_MAX_C&&clearNight)res.reason_flags.push('R4_freeze_clear_night');
+  let storm=false;
+  if(gustW<PD_GUST_CALM_KMH&&meanW<PD_WIND_CALM_KMH){res.reason_flags.push('R2_calm_wind');ALL.forEach(a=>valid.add(a));}
+  else{
+    // R3 drift (W2: a storm too -- then the lee holds wind-packed powder, the rest is pressed)
+    storm=!(gustW<=PD_GUST_REDIST_MAX_KMH&&meanW<PD_WIND_REDIST_KMH);
+    res.reason_flags.push('R3_wind_redistribution');if(storm)res.reason_flags.push('W2_storm');
+    for(const q of ALL){if(isLee(_QCEN[q],domW))valid.add(q);}
   }
   if(valid.size===0)return res;
   // Solar moderation — nur wenn nicht tiefgefroren (I3b)
@@ -9726,7 +9762,7 @@ function computePowder(p,ta,tb){
   res.valid_aspects=[...valid];
   if(!valid.has(quad))return res;
   // Degradation
-  if(ftc>=PD_FT_DEGRADE||aged||warmDh>=PD_WARM_DH_DEGRADE)res.quality='reduced';
+  if(ftc>=PD_FT_DEGRADE||aged||warmDh>=PD_WARM_DH_DEGRADE||storm)res.quality='reduced';
   res.powdered=true;return res;
 }
 // colour ramps by stops [x, '#hex'], linear in between
@@ -14681,6 +14717,9 @@ const rad2cube=new Int32Array(RNP);
 (function(){for(let p=0;p<NP;p++){const y=(p/W)|0,x=p%W;const la=laMax-(laMax-laMin)*y/Math.max(1,H-1);const lo=loMin+(loMax-loMin)*x/Math.max(1,W-1);let bd=1e18,bk=0;for(let k=0;k<P;k++){const dl=la-M.wind.lat[k],dn=lo-M.wind.lon[k],d=dl*dl+dn*dn;if(d<bd){bd=d;bk=k;}}mainToWind[p]=bk;}})();
 (function(){for(let rp=0;rp<RNP;rp++)main2rad[rad2cube[rp]]=rp;})();
 let radCS=null,radDoy=-1;
+// hours from sunrise to sunset at 46.5 degN on day of year doy
+function dayLenH(doy){const d=23.45*Math.PI/180*Math.sin(2*Math.PI*(284+doy)/365),x=-Math.tan(46.5*Math.PI/180)*Math.tan(d);
+  return 24/Math.PI*Math.acos(Math.max(-1,Math.min(1,x)));}
 function computeRad(doy){const decl=23.45*Math.PI/180*Math.sin(2*Math.PI*(284+doy)/365);
   const I0=1361,tau=0.72,dt=0.5,out=new Float32Array(RNP);
   for(let p=0;p<RNP;p++){const ry=(p/RW)|0;const lat=(RbN-(RbN-RbS)*ry/(RH-1))*Math.PI/180;
@@ -15788,9 +15827,16 @@ const NS_ALPHA=175;                   // a little more see-through than 205: the
 let _nsV=null,_nsHid=null;            // window snowfall per cell, the legend's hide filter
 const _nsOk=PREC.length>=T*NP&&TEMP.length>=T*NP;
 let _nsProf=null,_nsHave=null,_nsKey='',_nsFS=null;
-function nsFS(){if(_nsFS)return _nsFS;const q=M.nsp||{},tc=q.t_center??1,k=q.k??1.4,si=q.slr_i??10,ss=q.slr_s??-0.8,s0=q.slr_min??6,s1=q.slr_max??25;
+function nsFS(){if(_nsFS)return _nsFS;const q=M.nsp||{},si=q.slr_i??10,ss=q.slr_s??-0.8,s0=q.slr_min??6,s1=q.slr_max??25;
+  // the pipeline splits rain/snow on the wet-bulb temperature when it has the
+  // humidity; here, where only the air temperature is at hand, the same curve
+  // on it (in precipitation the air is near saturation, Tw ~ T)
+  const tc=q.tw_c??q.t_center??1,k=q.tw_k??q.k??1.4,R=q.slr_m==='crocus'&&q.rho&&q.rho.every(x=>x!=null)?q.rho:null;
   _nsFS=new Float32Array(801);       // snow share x snow-to-liquid ratio, -50..+30 degC in 0.1 K
-  for(let i=0;i<=800;i++){const t=-50+i*0.1,f=1/(1+Math.exp(Math.max(-50,Math.min(50,k*(t-tc)))));_nsFS[i]=f*Math.max(s0,Math.min(s1,si+ss*t))/10;}
+  for(let i=0;i<=800;i++){const t=-50+i*0.1,f=1/(1+Math.exp(Math.max(-50,Math.min(50,k*(t-tc)))));
+    // Crocus density at a typical 3 m/s: only the ratio between heights is used
+    const slr=R?1000/Math.max(R[3],Math.min(R[4],R[0]+R[1]*t+R[2]*Math.sqrt(3))):Math.max(s0,Math.min(s1,si+ss*t));
+    _nsFS[i]=f*slr/10;}
   return _nsFS;}
 function nsProfile(p){
   const key=a+'|'+b;
