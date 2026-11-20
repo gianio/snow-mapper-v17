@@ -44,6 +44,27 @@ Zahlen **nicht** enthalten (die Modelldatei hat keine Feuchte) – sie soll das 
 Kritisch: Am 19.11. war es überall windig, auch in Regionen ohne Triebschnee – die
 Trennschärfe der Windregel ist mit einem Tag **nicht** belegt. S1 hat noch keine Bodenwahrheit.
 
+## 2b · Live-Prüfung nach dem Merge (Lauf 202611200139, 20.11.)
+
+Veröffentlichte Werte (mit 24-h-Setzung) gegen SLF HN1D, 16.–19.11., gleiche Zellen:
+
+| | alter Lauf (19.11. 13:43) | neuer Lauf | offline erwartet |
+|---|---:|---:|---:|
+| Modell / SLF | 3.19 | **1.39** | 1.14 |
+| MAE 10-km-Blöcke | 5.05 cm | **1.58 cm** | 1.2 cm |
+| CSI ≥ 10 cm | 0.18 | 0.20 | 0.15 |
+
+Je Tag Modell/SLF: 0.96 · 1.85 · 1.20 · 1.55 (der 17.11. bleibt der schlechteste, siehe Schritt 3).
+Höhenbänder Modell / SLF: < 1500 m 0.3 / 1.0 · 1500–2000 2.4 / 1.8 · 2000–2500 4.0 / 2.6 · > 2500 5.4 / 4.7 cm.
+
+Kritisch: Live liegt ~20 % über der Offline-Erwartung. Wahrscheinlich ist das die
+Feuchtkugel-Trennung: In trockener Luft fällt mehr Schnee, und das vor allem
+zwischen 1500 und 2500 m statt unter 1500 m, wo es fehlt. Dazu kommt das
+250-m-Gitter statt 1 km. Unter 1500 m ist das Modell weiter zu tief. Das liegt
+kaum an der Phase, eher an der SLF-Karte selbst (Talstationen in 1-km-Zellen)
+oder an der Setzung nasser Schneedecken. Noch nicht nachjustiert: 4 Tage sind
+eine Wetterlage (Schritt 8).
+
 ## 3 · Nächster Plan
 
 | # | Schritt | Warum | Messbar an |
