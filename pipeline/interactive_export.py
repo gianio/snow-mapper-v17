@@ -7609,6 +7609,42 @@ html.cap-ios body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #
 /* Schneetyp-Flächen: scharf, nicht nochmals weichgezeichnet */
 .raster-smooth.cls-crisp{image-rendering:auto}
 
+/* ==== Kernprodukt Schneetyp + Community (M3) ==== */
+/* point chip: the reason as a second line under the value, never wider than the phone */
+.pt-chip{max-width:calc(100vw - 24px)}
+.pt-v{display:grid!important;grid-template-columns:auto auto auto;grid-template-rows:auto auto;column-gap:7px;row-gap:2px;align-items:center;text-align:left}
+.pt-v>i,.pt-v>svg{grid-row:1/3}
+.pt-v>b{grid-column:3;grid-row:1;white-space:nowrap}
+/* the chip hangs in a 0-wide marker, so the second line needs its own width */
+.pt-v>small{grid-column:3;grid-row:2;white-space:normal;width:max-content;max-width:min(40vw,190px);line-height:1.3!important;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pt-v>b:only-of-type:last-child{grid-row:1/3}
+/* «Melden»: M3 tonal button inside the chip */
+.pt-rep{display:inline-flex;align-items:center;gap:4px;height:34px;padding:0 12px 0 9px;margin-left:2px;border-radius:999px!important;
+  background:var(--md-secondary-container,#D7E3F8)!important;color:var(--md-on-secondary-container,#101C2B)!important;font:600 13px/1 var(--font)}
+.pt-rep svg{width:16px;height:16px}
+/* quick report: the model's suggestion -- an M3 outlined card with one tonal action */
+.qs-model{display:flex;align-items:center;gap:10px;margin:-2px 0 12px;padding:10px 10px 10px 12px;border-radius:16px;
+  border:1px solid var(--md-outline-variant,#C3C7CF);background:var(--md-surface,#fff)}
+.qs-model[hidden]{display:none}
+.qs-m-t{flex:1;min-width:0;display:grid;grid-template-columns:auto auto 1fr;align-items:center;column-gap:8px;row-gap:2px}
+.qs-m-l{grid-column:1/-1;font:600 11px/1.2 var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--md-on-surface-var,#43474E)}
+.qs-m-t .qs-ic{width:24px!important;height:24px!important;border-radius:50%!important}
+.qs-m-t .qs-ic svg{width:14px;height:14px}
+.qs-m-t b{font:600 15px/1.25 var(--font);color:var(--md-on-surface,#191C20);white-space:nowrap}
+.qs-m-t small{grid-column:1/-1;font:500 12.5px/1.35 var(--font);color:var(--md-on-surface-var,#43474E)}
+.qs-m-take{flex:none;height:40px;padding:0 18px;border:0;border-radius:999px;cursor:pointer;font:600 14px/1 var(--font);
+  background:var(--md-primary,#2E5DA8);color:var(--md-on-primary,#fff)}
+.qs-m-take.on{background:var(--md-secondary-container,#D7E3F8);color:var(--md-on-secondary-container,#101C2B)}
+/* feed: model vs report, an M3 assist chip */
+.fc-model{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px 0 7px;border-radius:8px;
+  border:1px solid var(--md-outline-variant,#C3C7CF);font:600 12px/1 var(--font);color:var(--md-on-surface-var,#43474E);white-space:nowrap}
+.fc-model svg{width:14px;height:14px;flex:none}
+.fc-model.ag2{border-color:transparent;background:#DCF2E3;color:#0F5223}
+.fc-model.ag1{border-color:transparent;background:#E9EEF6;color:#2F3B4C}
+.fc-model.ag0{border-color:transparent;background:#FBE4DE;color:#7A2414}
+.fc-facts{flex-wrap:wrap;row-gap:6px}
+
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -9690,6 +9726,7 @@ function computePowder(p,ta,tb){
   // 18 km/h where the SLF bulletin named wind slabs, 48 km/h at 700 hPa); snow
   // is moved at ridge height -> the stronger of the two, ridge wind damped
   const meanW=Math.max(ws/Math.max(1,wc),PD_RIDGE_WIND_F*w7/Math.max(1,wc)), gustW=meanW*PD_GUST_FACTOR;
+  res.domW=domW;res.meanW=meanW;
   let tmax=-999;for(let t=ta;t<tb;t++){const v=tv(t,p);if(v>tmax)tmax=v;}
   // Letzter Schneefall ueber die ganze Serie (fuer D0'/D1')
   let lastSnowG=-1;for(let t=0;t<tb;t++){if(SNOW[t*NP+p]*M.snow_scale>0.1)lastSnowG=t;}
@@ -9988,8 +10025,8 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     ctx2.moveTo(x,day?2:topPad);ctx2.lineTo(x,day?ch-2:baseY);ctx2.stroke();
     if(compact)continue;
     if(day){const dd=Math.round((Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-_tlToday)/864e5);
-      const rel=dd===0?'Heute':dd===1?'Morgen':null,wd=WD()[d.getUTCDay()];
-      const lab=rel||(wd+' '+d.getUTCDate()+'.'),narrow=rel||wd;
+      // relative days instead of weekdays: «Heute», «-1d», «+2d»
+      const rel=dd===0?'Heute':null,lab=relDayLbl(dd),narrow=lab;
       if((_dayN++%dayEvery)===0&&x-_lastLabX>=34){ctx2.fillStyle=rel?_P.ink:_P.mut;ctx2.font='700 11.5px Helvetica Neue,Helvetica,Arial,sans-serif';
         const L=pxH*24<52?narrow:lab;ctx2.fillText(L,x+4,ch-5);_lastLabX=x;_lastHrX=x+ctx2.measureText(L).width;}}
     else if(labH&&hr%labH===0&&x-_lastHrX>=22){ctx2.fillStyle=_P.mut;ctx2.globalAlpha=.75;ctx2.font='600 11px Helvetica Neue,Helvetica,Arial,sans-serif';
@@ -10103,8 +10140,13 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     ctx2.textAlign='left';ctx2.fillText(tA,Math.max(x1+10,6),14);
     ctx2.textAlign='right';ctx2.fillText(tB,Math.min(x2-10,cw-6),14);
   }}
-// a time on the timeline with its weekday: «Mo 15:00»
-function tlWhen(t){t=Math.max(0,Math.min(T-1,t));const d=zLocal(tMs(t));return WD()[d.getUTCDay()]+' '+fmtTime(t);}
+// a day relative to today: «Heute», «-1d», «+2d» (the timeline speaks in
+// offsets, not weekdays -- "Mi" makes you count, "+2d" does not)
+function relDayLbl(dd){return dd===0?tr('Heute'):(dd>0?'+':'−')+Math.abs(dd)+'d';}
+function relDayOf(t){const d=zLocal(tMs(t)),n=zLocal(Date.now());
+  return Math.round((Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate()))/864e5);}
+// a time on the timeline with its day offset: «-1d 15:00», «Heute 09:00»
+function tlWhen(t){t=Math.max(0,Math.min(T-1,t));return relDayLbl(relDayOf(t))+' '+fmtTime(t);}
 // Karte + Layer
 const [laMin,loMin,laMax,loMax]=M.bounds;
 const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
@@ -16072,6 +16114,43 @@ function powderSurf(r){const f=r.reason_flags||[];
   if(f.includes('R3_wind_redistribution'))return 1;
   if(f.includes('D0_no_recent_snow'))return 0;
   return null;}
+// ── What the snow-type model says, in the community's words ─────────────
+// One place for the point chip, the quick report's suggestion and the feed's
+// "model vs report": the class as a quick-report key, the powder depth and a
+// short plain-language reason ("Wind aus W – Lee-Hang").
+const PD_KEY_OF_SURF={8:'regen',2:'kruste',7:'nass',6:'sulz',1:'hart'};
+function dirWord(deg){return ['N','NO','O','SO','S','SW','W','NW'][Math.round((((deg||0)%360)+360)%360/45)%8];}
+function pdWhy(r){const f=r.reason_flags||[],has=k=>f.includes(k);
+  if(has('D1_rain'))return 'Regen nach dem letzten Schneefall';
+  if(has('D4_warm_wet'))return 'warme Luft – die Oberfläche ist nass';
+  if(has('D4_warm_refrozen'))return 'angetaut und wieder gefroren';
+  if(has('D2_freeze_thaw'))return 'mehrmals angetaut und gefroren';
+  if(has('D3_solar_melt'))return 'viel Sonne seit dem Schneefall';
+  if(has('D0_no_recent_snow'))return 'seit Tagen nichts Neues';
+  const w=r.domW!=null?'Wind aus '+dirWord(r.domW):'Wind';
+  if(has('W2_storm'))return r.powdered?w+' (Sturm) – nur im Lee locker':w+' (Sturm) – verblasen';
+  if(has('R3_wind_redistribution'))return r.powdered?w+' – Lee-Hang, eingeweht':w+' – Luv-Hang, gepresst';
+  if(has('G2_wet_afternoon'))return 'warm und sonnig am Nachmittag';
+  if(has('I4_old_snow_persist'))return 'kalt geblieben – alter Pulver';
+  if(has('R2_calm_wind'))return 'kaum Wind seit dem Schneefall';
+  return '';}
+// p: model cell; tb: end hour (exclusive), 24 h back
+function modelSnowCell(p,tb){if(p<0||!(SNOW.length>=T*NP))return null;
+  tb=Math.max(1,Math.min(T,tb==null?nowIdx+1:tb));const ta=Math.max(0,tb-24);
+  let r;try{r=computePowder(p,ta,tb);}catch(e){return null;}
+  let k=null;
+  if(r.powdered)k=(r.reason_flags||[]).includes('I4_old_snow_persist')?'kantig':'pulver';
+  else{const s=powderSurf(r);k=PD_KEY_OF_SURF[s]||null;if(k==='hart'&&(r.reason_flags||[]).includes('W2_storm'))k='abgeblasen';}
+  const qt=k&&QS_TYPES.find(x=>x.k===k);
+  return qt?{k,qt,cm:Math.max(0,Math.round(r.newSnow||0)),why:pdWhy(r),reduced:r.quality==='reduced',r}:null;}
+function modelSnowAt(lat,lon,ms){const p=ptCell(lat,lon);
+  const tb=ms==null?null:Math.floor((ms-tMs(0))/36e5)+1;
+  if(tb!=null&&(tb<2||tb>T))return null;
+  return modelSnowCell(p,tb);}
+// do a report and the model say the same? close families count as agreeing
+const PD_FAMILY={pulver:'loose',kantig:'loose',trieb:'wind',hart:'wind',abgeblasen:'wind',kruste:'crust',regen:'wet',nass:'wet',sulz:'corn'};
+function pdAgree(repK,modK){if(!repK||!modK)return null;if(repK===modK)return 2;
+  return PD_FAMILY[repK]&&PD_FAMILY[repK]===PD_FAMILY[modK]?1:0;}
 function windStat(k){let mn=1e9,mx=-1e9,su=0,c=0,ss=0,sc=0;
   for(let t=a;t<b;t++){const v=SPD[t*P+k]/M.spd_mul,dd=WDIR[t*P+k]*M.dir_div*Math.PI/180;
     mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;ss+=Math.sin(dd);sc+=Math.cos(dd);}
@@ -17861,10 +17940,10 @@ function ptLayerValue(lat,lon){const p=ptCell(lat,lon);if(p<0)return null;
     if(id==='depth'){const v=cum[b*NP+p];return {ic:ic(id),v:Math.round(v)+' cm',s:'Schneehöhe',c:fpSnowCol(v)};}
     if(id==='temp'){const v=mean(t=>tvI(t,p));return {ic:ic(id),v:(v>0?'+':'')+v.toFixed(1)+' °C',s:'Temperatur',c:v>0?'#E5484D':'#3B82F6'};}
     if(id==='wind'){const wk=mainToWind[p];const v=mean(t=>SPD[t*P+wk]/M.spd_mul*3.6);return {ic:ic(id),v:Math.round(v)+' km/h',s:'Wind',c:'#64748B'};}
-    if(id==='powder'||id==='snowpack'){const r=computePowder(p,a,b);
-      if(r.powdered)return {ic:ic(id),v:'Pulver '+Math.round(r.newSnow||0)+' cm',s:r.quality==='reduced'?'etwas gesetzt':'gut',c:fpSnowCol(r.newSnow||0)};
+    if(id==='powder'||id==='snowpack'){const r=computePowder(p,a,b),why=pdWhy(r);
+      if(r.powdered)return {ic:ic(id),v:'Pulver '+Math.round(r.newSnow||0)+' cm',s:(r.quality==='reduced'?'gesetzt':'gut')+(why?' · '+why:''),c:fpSnowCol(r.newSnow||0),pd:1};
       const k=powderSurf(r),row=PD_SURF_ROWS.find(q=>q[0]===k);
-      return {ic:ic(id),v:row?row[1]:'kein Pulver',s:row?row[2]:'',c:k!=null&&PD_SURF_COL[k]?'rgb('+PD_SURF_COL[k].join(',')+')':'#C9D0DA'};}
+      return {ic:ic(id),v:row?row[1]:'kein Pulver',s:why||(row?row[2]:''),c:k!=null&&PD_SURF_COL[k]?'rgb('+PD_SURF_COL[k].join(',')+')':'#C9D0DA',pd:1};}
   }catch(e){}
   const asp=(function(){try{const d=fineAspectDeg(lat,lon);return d!=null?asp8(d):aspectQ(maspv(p));}catch(e){return '';}})();
   return {ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l6-11 4 6 3-4 5 9z"/></svg>',v:Math.round(z)+' m',s:asp?'Exposition '+asp:'',c:'#64748B'};}
@@ -17872,12 +17951,15 @@ function ptChipOpen(lat,lon){ptChipClose();const v=ptLayerValue(lat,lon);if(!v){
   const m=L.marker([lat,lon],{icon:L.divIcon({className:'',html:'<div class="insp-xmark"><i></i></div>',iconSize:[30,30],iconAnchor:[15,15]}),interactive:false,zIndexOffset:2000}).addTo(map);
   const pop=L.marker([lat,lon],{icon:L.divIcon({className:'pt-chip-wrap',iconSize:null,iconAnchor:[0,0],
     html:'<div class="pt-chip" role="group" aria-label="Wert hier"><button type="button" class="pt-v" onclick="ptChipMore()"><i style="background:'+v.c+'"></i>'+v.ic+'<b>'+escapeHtml(v.v)+'</b>'+(v.s?'<small>'+escapeHtml(v.s)+'</small>':'')+'</button>'
+      // snow type: "is it so?" -- one tap to the quick report, the model's class pre-filled
+      +(v.pd?'<button type="button" class="pt-rep" onclick="ptChipReport()" aria-label="Schnee hier melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Melden</button>':'')
       +'<button type="button" class="pt-more" onclick="ptChipMore()" aria-label="Mehr Informationen zu diesem Punkt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg></button>'
       +'<button type="button" class="pt-x" onclick="ptChipClose()" aria-label="Schliessen">×</button></div>'}),zIndexOffset:2100,keyboard:false}).addTo(map);
   _ptChip={lat,lon,m,pop};try{haptic(3);}catch(e){}
   try{L.DomEvent.disableClickPropagation(pop.getElement());}catch(e){}}
 function ptChipClose(){if(!_ptChip)return;try{map.removeLayer(_ptChip.m);map.removeLayer(_ptChip.pop);}catch(e){}_ptChip=null;}
 function ptChipMore(){if(!_ptChip)return;const {lat,lon}=_ptChip;ptChipClose();inspOpen(lat,lon);}
+function ptChipReport(){ptChipClose();try{qsOpen();}catch(e){}}
 // the chip follows the layer, the time and the window
 function ptChipRefresh(){if(_ptChip){const {lat,lon}=_ptChip;ptChipOpen(lat,lon);}}
 function mapModeBusy(){const B=document.body.classList;
@@ -21603,6 +21685,8 @@ function qsOpen(){
   el.innerHTML='<div class="qs-in"><div class="qs-grab"></div>'
     +'<div class="qs-hd"><b>Schnellmeldung</b><button type="button" class="qs-x" onclick="qsClose()" aria-label="Schliessen">×</button></div>'
     +'<div class="qs-loc" id="qsLoc"><span>Standort wird bestimmt…</span></div>'
+    // what the model says here: one tap takes it over, then only correct what differs
+    +'<div class="qs-model" id="qsModel" hidden></div>'
     +'<div class="qs-tour" id="qsTour"></div>'
     // when it was: now by default, back up to 7 days (a report written later)
     +'<div class="qs-when"><span class="qs-lbl">Wann</span><div class="qs-whenseg"><button type="button" id="qsWhenNow" class="on" onclick="qsWhenNowSet()">Jetzt</button><button type="button" id="qsWhenOther" onclick="qsWhenPick()">Früher …</button></div><input type="datetime-local" id="qsWhen" hidden oninput="qsWhenSync()" aria-label="Datum und Zeit der Beobachtung"><b id="qsWhenV" hidden>jetzt</b></div>'
@@ -21697,7 +21781,21 @@ function qsPlace(lat,lon,acc,noGps){if(!qs)return;
   const r=map.getContainer().getBoundingClientRect();
   map.setView([lat,lon],Math.max(map.getZoom(),14),{animate:false});
   map.panBy([0,Math.round(r.height/2-qsCrossY())],{animate:false});
-  _qsY=qsCrossY();qsCrossPos();qsLocText();qsTourSync();const b=document.getElementById('qsPost');if(b)b.disabled=false;}
+  _qsY=qsCrossY();qsCrossPos();qsLocText();qsModelSync();qsTourSync();const b=document.getElementById('qsPost');if(b)b.disabled=false;}
+// the model's snow type at the report's point and time, as a suggestion
+function qsModelSync(){const el=document.getElementById('qsModel');if(!el||!qs||!qs.ll)return;
+  let ms=null;try{const w=qsWhenMs();if(isFinite(w)&&Math.abs(Date.now()-w)>36e5)ms=w;}catch(e){}
+  const m=modelSnowAt(qs.ll[0],qs.ll[1],ms);qs.model=m;
+  if(!m){el.hidden=true;return;}
+  const same=QS_TYPES[qs.type]&&QS_TYPES[qs.type].k===m.k;
+  el.hidden=false;
+  el.innerHTML='<div class="qs-m-t"><span class="qs-m-l">Modell hier</span>'+qsIc(m.k,m.qt.c,'sm')
+    +'<b>'+escapeHtml(m.qt.l)+(m.qt.depth&&m.cm?' · '+m.cm+' cm':'')+'</b>'
+    +(m.why?'<small>'+escapeHtml(m.why)+'</small>':'')+'</div>'
+    +'<button type="button" class="qs-m-take'+(same?' on':'')+'" onclick="qsModelTake()">'+(same?'Übernommen':'Stimmt')+'</button>';}
+function qsModelTake(){if(!qs||!qs.model)return;const i=QS_TYPES.findIndex(x=>x.k===qs.model.k);if(i<0)return;
+  qsPick(i);if(QS_TYPES[i].depth&&qs.model.cm>0)qsDepth(Math.min(QS_CM_MAX,qs.model.cm));
+  try{haptic(5);}catch(e){}}
 function qsTourSync(){if(!qs||!qs.ll)return;const ll=qs.ll;
   toursEnsure().then(()=>{if(qs)tourPickRender('qsTour',ll[0],ll[1]);}).catch(()=>{});}
 function qsLocText(){const el=document.getElementById('qsLoc');if(!el||!qs||!qs.ll)return;
@@ -21715,7 +21813,10 @@ function qsSync(){if(!qs)return;document.querySelectorAll('#qsWheel .qs-it').for
   // tracks for the loose snow, a state slider for the others)
   const d=document.getElementById('qsDep');if(d)d.hidden=!QS_TYPES[qs.type].depth;
   const tr=document.getElementById('qsTrk');if(tr)tr.hidden=!QS_TYPES[qs.type].depth;
-  qsQualSync();}
+  qsQualSync();
+  // the suggestion's button follows: «Übernommen» once the wheel shows the model's type
+  const mb=document.querySelector('#qsModel .qs-m-take');
+  if(mb&&qs.model){const same=QS_TYPES[qs.type].k===qs.model.k;mb.classList.toggle('on',same);mb.textContent=same?'Übernommen':'Stimmt';}}
 function qsQualSync(){if(!qs)return;const k=QS_TYPES[qs.type].k,Q=QS_QUAL[k],box=document.getElementById('qsQual');if(!box)return;
   box.hidden=!Q;if(!Q)return;const n=Q.l.length,i=qs.qual[k]!=null?qs.qual[k]:Math.floor((n-1)/2),r=document.getElementById('qsQualR');
   document.getElementById('qsQualT').textContent=Q.t;
@@ -21754,8 +21855,11 @@ function qsWhenSync(){const v=document.getElementById('qsWhenV');if(!v)return;co
   {const now=ago<10*6e4,bn=document.getElementById('qsWhenNow'),bo=document.getElementById('qsWhenOther');
    if(bn)bn.classList.toggle('on',now);
    if(bo){bo.classList.toggle('on',!now);const d=new Date(ms);
-     bo.textContent=now?'Früher …':(d.getDate()===new Date().getDate()&&ago<864e5?'Heute':(WD()[d.getDay()]||'')+' '+d.getDate()+'.'+(d.getMonth()+1)+'.')+', '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}}
-  v.textContent=ago<10*6e4?'jetzt':ago<36e5?'vor '+Math.round(ago/6e4)+' min':ago<864e5&&new Date(ms).getDate()===new Date().getDate()?'heute':(WD()[new Date(ms).getDay()]||'');}
+     const dd=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()))/864e5);
+     bo.textContent=now?'Früher …':relDayLbl(dd)+', '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}}
+  {const d=new Date(ms),dd=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()))/864e5);
+   v.textContent=ago<10*6e4?'jetzt':ago<36e5?'vor '+Math.round(ago/6e4)+' min':dd===0?'heute':relDayLbl(dd);}
+  try{qsModelSync();}catch(e){}}
 function qsDangerToggle(){const w=document.getElementById('qsDanger'),b=document.getElementById('qsDgB');if(!w||!b)return;
   b.hidden=!b.hidden;w.classList.toggle('on',!b.hidden);const h=w.querySelector('.qs-dg-h');if(h)h.setAttribute('aria-expanded',String(!b.hidden));try{haptic(3);}catch(e){}}
 function qsCmtToggle(){const b=document.getElementById('qsCmtBox');if(!b)return;b.hidden=!b.hidden;
@@ -21772,6 +21876,9 @@ async function qsPost(){if(!qs||qs.busy||!qs.ll)return;
     const cd={snow:t.k,measurement:t.l+(t.depth?' '+qsCmText(qs.cm):''),
       aspect:d.aspect||null,altitudeM:d.elev!=null?d.elev:null,gpsAcc:qs.acc?Math.round(qs.acc):null,moved:qs.moved||undefined};
     if(dp)cd.depthBand=[dp[0],dp[1]];
+    // the model's class here, kept with the report: every quick report is a
+    // labelled check of the snow-type layer (model vs ground truth)
+    if(qs.model)cd.model={k:qs.model.k,cm:qs.model.cm,agree:pdAgree(t.k,qs.model.k),v:M.version||null};
     const Q=QS_QUAL[t.k];let qv=null;
     if(Q&&qs.qualSet[t.k]){qv=qs.qual[t.k];cd.qual={t:Q.t,v:qv,l:Q.l[qv]};cd.measurement+=' · '+(Q.crust?'Deckel ':'')+(Q.m||'')+Q.l[qv];
       if(Q.crust)cd.crust=Q.crust[qv];}
@@ -24590,7 +24697,17 @@ function feedFactsHTML(r){const cd=r.condition_data||{},qt=typeof cd.snow==='str
   const extra=[cd.qual&&cd.qual.l?(cd.qual.t==='Deckel'?'Deckel ':'')+cd.qual.l:cd.crust?'Deckel '+lbOf(SNOW_THICK,cd.crust):'',cd.tracks?lbOf(TRK_TRACKS,cd.tracks):''].filter(Boolean).join(' · ');
   return '<div class="fc-facts"><span class="fc-snow">'+qsIc(qt.k,qt.c,'sm')+escapeHtml(qt.l)+'</span>'
     +(dep?'<b>'+dep+'</b>':'')+(where?'<span class="fc-where">'+escapeHtml(where)+'</span>':'')
-    +(extra?'<span class="fc-where">'+escapeHtml(extra)+'</span>':'')+'</div>';}
+    +(extra?'<span class="fc-where">'+escapeHtml(extra)+'</span>':'')+feedModelHTML(r,qt)+'</div>';}
+// what the snow-type model said there and then, next to what was seen: the
+// community checks the model in plain sight (and the model the report)
+const FC_AG_IC=['<path d="M6 6l12 12M18 6L6 18"/>','<path d="M4 9h16M4 15h16"/>','<path d="M5 12.5l4.5 4.5L19 7"/>'];
+function feedModelHTML(r,qt){
+  const cd=r.condition_data||{};let m=null;
+  if(cd.model&&cd.model.k){const q=QS_TYPES.find(x=>x.k===cd.model.k);if(q)m={k:cd.model.k,qt:q};}
+  else if(r.lat!=null&&r.lng!=null){try{m=modelSnowAt(r.lat,r.lng,rptTimeMs(r));}catch(e){m=null;}}
+  if(!m||!m.qt)return '';
+  const ag=pdAgree(qt.k,m.k),t=['Modell sagte etwas anderes','Modell: ähnlich','Modell: gleich'][ag];
+  return '<span class="fc-model ag'+ag+'" title="'+escapeHtml(t)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+FC_AG_IC[ag]+'</svg>Modell: '+escapeHtml(m.qt.l)+'</span>';}
 // Everything a report says, as label/value rows (only what is there).
 function feedDetailsHTML(r){const cd=r.condition_data||{},rows=[];
   const lb=(arr,k)=>{try{const f=(arr||[]).find(x=>x[0]===k);return f?f[1]:k;}catch(e){return k;}};
