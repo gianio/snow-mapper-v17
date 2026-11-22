@@ -7644,6 +7644,20 @@ html.cap-ios body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #
 .fc-model.ag1{border-color:transparent;background:#E9EEF6;color:#2F3B4C}
 .fc-model.ag0{border-color:transparent;background:#FBE4DE;color:#7A2414}
 .fc-facts{flex-wrap:wrap;row-gap:6px}
+/* aerial photo on: the data layer lets it show through */
+body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
+/* feed: the model's weekly hit rate, an M3 filled card */
+.feed-hit{display:flex;align-items:center;gap:12px;margin:8px 12px 4px;padding:12px 14px;border-radius:16px;
+  background:var(--md-surface-container,#EEF1F6);color:var(--md-on-surface,#191C20)}
+.feed-hit[hidden]{display:none}
+.fh-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fh-t b{font:600 14.5px/1.25 var(--font)}
+.fh-t small{font:500 12.5px/1.35 var(--font);color:var(--md-on-surface-var,#43474E)}
+.fh-ring{--p:0;flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;
+  background:conic-gradient(var(--md-primary,#2E5DA8) calc(var(--p)*1%),var(--md-outline-variant,#C3C7CF) 0)}
+.fh-ring b{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--md-surface-container,#EEF1F6);font:700 12px/1 var(--font)}
+.fh-ic{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--md-secondary-container,#D7E3F8);color:var(--md-on-secondary-container,#101C2B)}
+.fh-ic svg{width:20px;height:20px}
 /* webcam popup: picture / daylight / 24 h timelapse, an M3 segmented button */
 .wc-pop .wc-media{position:relative}
 .wc-pop .wc-media img,.wc-pop .wc-media .wc-img{margin-bottom:0}
@@ -9724,7 +9738,12 @@ function aspCol(p){const s=mslpv(p);if(s<5)return ASPC.F;const q=aspectQ(maspv(p
 function isLee(cellAsp,windFrom){const lee=(windFrom+180)%360;let d=Math.abs(cellAsp-lee);if(d>180)d=360-d;return d<90;}
 const _QCEN={N:0,E:90,S:180,W:270};
 // Referenz: model/powder_engine.py — Aenderungen dort und hier synchron halten!
+// perturbation hooks for the "unsichere Stellen" layer: the same rules with the
+// air 1 K warmer / colder or the wind a quarter stronger / weaker
+let _pdDT=0,_pdWF=1;
+const _tvRaw=(t,p)=>TEMP[t*NP+p]/M.temp_mul-M.temp_off;
 function computePowder(p,ta,tb){
+  const tv=_pdDT?((t,q)=>_tvRaw(t,q)+_pdDT):_tvRaw;
   const asp=maspv(p),slp=mslpv(p),quad=aspectQ(asp);
   const res={powdered:false,valid_aspects:[],reason_flags:[],quality:'stable'};
   // Dominant wind + mean wind from nearest wind point
@@ -9735,7 +9754,7 @@ function computePowder(p,ta,tb){
   // the 10 m wind of the weather model is weak in the mountains (19.11.: median
   // 18 km/h where the SLF bulletin named wind slabs, 48 km/h at 700 hPa); snow
   // is moved at ridge height -> the stronger of the two, ridge wind damped
-  const meanW=Math.max(ws/Math.max(1,wc),PD_RIDGE_WIND_F*w7/Math.max(1,wc)), gustW=meanW*PD_GUST_FACTOR;
+  const meanW=_pdWF*Math.max(ws/Math.max(1,wc),PD_RIDGE_WIND_F*w7/Math.max(1,wc)), gustW=meanW*PD_GUST_FACTOR;
   res.domW=domW;res.meanW=meanW;
   let tmax=-999;for(let t=ta;t<tb;t++){const v=tv(t,p);if(v>tmax)tmax=v;}
   // Letzter Schneefall ueber die ganze Serie (fuer D0'/D1')
@@ -10458,6 +10477,13 @@ const OVERLAYS={
   // the one map a tourer reads with every other
   slope:{label:'Hangneigung ab 30°',wmts:'ch.swisstopo.hangneigung-ueber_30',op:.55,
          attr:'Hangneigung © swisstopo'},
+  // swisstopo's orthophoto (10-25 cm, summer flights) under the data layers:
+  // free geodata (OGD), commercial use allowed with the source named
+  aerial:{label:'Luftbild (SWISSIMAGE)',wmts:'ch.swisstopo.swissimage',ext:'jpeg',op:1,pane:'aerialPane',mz:20,
+          attr:'Luftbild SWISSIMAGE © swisstopo'},
+  // where the snow-type class is a close call: ±1 °C or ±25 % wind would
+  // change it -- hatched, so nobody reads a coin toss as certain
+  uncert:{label:'Unsichere Stellen (Schneetyp knapp)',vector:true,attr:''},
   // pistes and lifts from OpenStreetMap (our own build) with the resort names
   // the highest snowfall line of the selected window, drawn on the terrain
   snowline:{label:'Schneefallgrenze (höchste im Zeitraum)',vector:true,attr:''},
@@ -10522,7 +10548,10 @@ function ovAvailable(k){
 function ovBuild(k){
   if(ovLayer[k])return ovLayer[k];
   const o=OVERLAYS[k];
-  if(o.wmts){ovLayer[k]=L.tileLayer(swissTile(o.wmts,'png'),{opacity:o.op,pane:'overlayPane'});}
+  if(o.wmts){if(o.pane&&!map.getPane(o.pane)){const pn=map.createPane(o.pane);pn.style.zIndex=210;}
+    ovLayer[k]=L.tileLayer(swissTile(o.wmts,o.ext||'png'),{opacity:o.op,pane:o.pane||'overlayPane',crossOrigin:true,
+      maxNativeZoom:o.mz||18,maxZoom:20,keepBuffer:2});}
+  else if(k==='uncert'){ovLayer[k]=L.layerGroup();setTimeout(uncRefresh,0);}
   else if(k==='avalanche'){ovLayer[k]=avBuildLayer();}
   else if(k==='skitourVec'){ovLayer[k]=tourBuildLayer();}
   else if(k==='webcams'){ovLayer[k]=wcBuildLayer();}
@@ -10547,6 +10576,8 @@ function ovToggle(k,auto){
   if((k==='myacts'||k==='reports')&&!ovOn[k])trkShownClear();
   if(k==='skiareas'){try{localStorage.setItem('ssm_skiareas',ovOn[k]?'1':'0');}catch(e){}}
   if(k==='snowline'){try{localStorage.setItem('ssm_snowline2',ovOn[k]?'1':'0');}catch(e){}if(ovOn[k])snowlineRefresh();}
+  if(k==='aerial'){try{localStorage.setItem('ssm_aerial',ovOn[k]?'1':'0');}catch(e){}document.body.classList.toggle('aerial-on',!!ovOn[k]);}
+  if(k==='uncert'&&ovOn[k])uncRefresh();
   if(k==='avalanche')document.body.classList.toggle('av-on',!!ovOn[k]);
   if(k==='webcams'&&!auto){_wcAuto=false;try{localStorage.setItem('ssm_webcams',ovOn[k]?'1':'0');}catch(e){}}
   if(k==='skitourVec'){if(ovOn[k])tourRecolor();else tourClose();}
@@ -15998,7 +16029,7 @@ function alpsRender(){
   if(!alpsOv)alpsOv=L.imageOverlay(url,bb,{opacity:.94*layerOpacityMul(),className:'raster-smooth',interactive:false});else{alpsOv.setUrl(url);alpsOv.setOpacity(.94*layerOpacityMul());}
   if(!map.hasLayer(alpsOv))alpsOv.addTo(map);
 }
-function renderRaster(){_renderRaster();try{ptChipRefresh();}catch(e){}try{alpsRender();}catch(e){}try{if(ovOn.snowline)snowlineRefresh();}catch(e){}try{nsLabRefresh();}catch(e){}}
+function renderRaster(){_renderRaster();try{ptChipRefresh();}catch(e){}try{if(ovOn.uncert)uncRefreshSoon();}catch(e){}try{alpsRender();}catch(e){}try{if(ovOn.snowline)snowlineRefresh();}catch(e){}try{nsLabRefresh();}catch(e){}}
 // ── Neuschnee: place names with the window's centimetres ──────────────────
 // Like a TV snow map: well-known resorts and valleys across the Alps carry
 // a chip with the new snow of the chosen window (same colours as the layer).
@@ -17059,6 +17090,8 @@ function lyRender(){
   lyInfoRender();
 }
 const OV_ICON={
+  aerial:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="8" r="1.6"/>',
+  uncert:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 11l8-8M3 19L19 3M9 21L21 9M17 21l4-4"/>',
   reports:'<path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17"/>',
   myacts:'<path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="8" r="1.6"/>',
   webcams:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
@@ -17096,7 +17129,7 @@ function ovRowHTML(k){
 }
 // the chip names: short enough to read in full; the long name stays the
 // accessible name and the tooltip
-const OV_SHORT={reports:'Meldungen',myacts:'Meine Touren',skitourVec:'Touren mit Score',skitour:'Tourenkarte',
+const OV_SHORT={aerial:'Luftbild',uncert:'Unsichere Stellen',reports:'Meldungen',myacts:'Meine Touren',skitourVec:'Touren mit Score',skitour:'Tourenkarte',
   webcams:'Webcams',wildlife:'Wildruhezonen',slope:'Hangneigung',snowline:'Schneefallgrenze',skiareas:'Skigebiete',
   avalanche:'Lawinenbulletin',xwc:'Webcam-Galerie',xstn:'Messstationen'};
 // the community's own pins live under its shelf, not with the map extras
@@ -18038,6 +18071,56 @@ function ptChipMore(){if(!_ptChip)return;const {lat,lon}=_ptChip;ptChipClose();i
 function ptChipReport(){ptChipClose();try{qsOpen();}catch(e){}}
 // the chip follows the layer, the time and the window
 function ptChipRefresh(){if(_ptChip){const {lat,lon}=_ptChip;ptChipOpen(lat,lon);}}
+// ── Unsichere Stellen: where the snow-type class is a close call ─────────
+// Each sampled cell is classed by the snow-type rules as they stand and again
+// with the air 1 K warmer and colder and the wind 25 % stronger and weaker.
+// Where any of those changes the class, the cell is hatched: the map should
+// not look as sure there as it does where all five agree. Worked through in
+// slices so the page never freezes; the hatch is drawn in screen pixels.
+const _unc={key:'',mask:null,busy:false,job:0,layer:null,n:0,nu:0};
+let _uncT=0;
+function uncRefreshSoon(){clearTimeout(_uncT);_uncT=setTimeout(uncRefresh,350);}
+function uncClass(r){return r.powdered?'p'+(r.quality==='reduced'?1:0):'s'+powderSurf(r);}
+function uncRefresh(){if(!ovOn.uncert||!(SNOW.length>=T*NP))return;
+  const ta=a,tb=Math.max(a+1,b),key=ta+'|'+tb;if(key===_unc.key&&_unc.mask){uncDraw();return;}
+  const job=++_unc.job,st=NP>250000?2:1,mask=new Uint8Array(NP),PERT=[[1,1],[-1,1],[0,1.25],[0,0.75]];
+  let y=0,nAll=0,nUnc=0;
+  const step=()=>{if(job!==_unc.job||!ovOn.uncert)return;const t0=performance.now();
+    for(;y<H&&performance.now()-t0<24;y+=st){for(let x=0;x<W;x+=st){const p=y*W+x;
+      let r0;try{_pdDT=0;_pdWF=1;r0=computePowder(p,ta,tb);}catch(e){continue;}
+      const c0=uncClass(r0);if(c0==='s0'||c0==='snull'){continue;}   // nothing there to be unsure about
+      nAll++;let unsure=false;
+      for(const [dT,wf] of PERT){_pdDT=dT;_pdWF=wf;let r;try{r=computePowder(p,ta,tb);}catch(e){continue;}
+        if(uncClass(r)!==c0){unsure=true;break;}}
+      _pdDT=0;_pdWF=1;
+      if(unsure){nUnc++;for(let dy=0;dy<st&&y+dy<H;dy++)for(let dx=0;dx<st&&x+dx<W;dx++)mask[(y+dy)*W+x+dx]=1;}}}
+    _pdDT=0;_pdWF=1;
+    if(y<H){setTimeout(step,0);return;}
+    _unc.key=key;_unc.mask=mask;_unc.n=nAll;_unc.nu=nUnc;uncDraw();};
+  step();}
+let _uncPatC=null;
+function uncPattern(){if(_uncPatC)return _uncPatC;const c=document.createElement('canvas');c.width=c.height=9;const g=c.getContext('2d');
+  g.strokeStyle='rgba(28,32,44,.62)';g.lineWidth=1.5;g.beginPath();g.moveTo(-1,10);g.lineTo(10,-1);g.moveTo(-1,1);g.lineTo(1,-1);g.moveTo(8,10);g.lineTo(10,8);g.stroke();
+  return _uncPatC=c;}
+const UncGrid=L.GridLayer.extend({createTile:function(c){const tile=document.createElement('canvas'),ts=this.getTileSize();tile.width=ts.x;tile.height=ts.y;
+  const m=_unc.mask;if(!m)return tile;const g=tile.getContext('2d'),z=c.z,nw=c.scaleBy(ts);
+  const ll0=map.unproject(nw,z),ll1=map.unproject(nw.add(ts),z);
+  const x0=Math.max(0,Math.floor((ll0.lng-loMin)/(loMax-loMin)*W)),x1=Math.min(W-1,Math.floor((ll1.lng-loMin)/(loMax-loMin)*W));
+  const y0=Math.max(0,Math.floor((laMax-ll0.lat)/(laMax-laMin)*H)),y1=Math.min(H-1,Math.floor((laMax-ll1.lat)/(laMax-laMin)*H));
+  if(x1<x0||y1<y0)return tile;
+  g.fillStyle=g.createPattern(uncPattern(),'repeat');
+  const px=lo=>map.project([laMax,lo],z).x-nw.x,py=la=>map.project([la,loMin],z).y-nw.y;
+  for(let y=y0;y<=y1;y++){const ya=py(laMax-(y)*(laMax-laMin)/H),yb=py(laMax-(y+1)*(laMax-laMin)/H);
+    for(let x=x0;x<=x1;x++){if(!m[y*W+x])continue;const xa=px(loMin+x*(loMax-loMin)/W),xb=px(loMin+(x+1)*(loMax-loMin)/W);
+      g.fillRect(Math.floor(xa),Math.floor(ya),Math.ceil(xb-xa)+1,Math.ceil(yb-ya)+1);}}
+  return tile;}});
+function uncDraw(){const grp=ovLayer.uncert;if(!grp)return;
+  if(!_unc.layer){_unc.layer=new UncGrid({pane:'overlayPane',zIndex:450,updateWhenZooming:false});}
+  if(!grp.hasLayer(_unc.layer))grp.addLayer(_unc.layer);else _unc.layer.redraw();
+  try{uncNote();}catch(e){}}
+// a short note while the layer is on: how much of the snow-covered map is a close call
+function uncNote(){if(!_unc.n)return;const pc=Math.round(_unc.nu/_unc.n*100);
+  toastOnce('unc-'+_unc.key,'Schraffiert: knapp an einer Grenze (±1 °C, ±25 % Wind) – '+pc+' % der verschneiten Fläche');}
 function mapModeBusy(){const B=document.body.classList;
   return ['ts-open','tn-open','qs-open','draw-on','rep-open','trk-open','snp-open','plan-on'].some(c=>B.contains(c))
     ||!!(typeof obsState!=='undefined'&&obsState&&document.getElementById('reportOverlay')&&document.getElementById('reportOverlay').style.display!=='none')
@@ -19834,6 +19917,7 @@ try{if(localStorage.getItem('ssm_reports')==='0'){ovOn.reports=false;map.removeL
 // «Meine Aufzeichnungen» stays as you left it (it is off unless you turned it on)
 try{if(localStorage.getItem('ssm_myacts')==='1')setTimeout(()=>{try{if(!ovOn.myacts)ovToggle('myacts',true);}catch(e){}},0);}catch(e){}
 try{if(localStorage.getItem('ssm_skiareas')==='1')setTimeout(()=>{try{if(!ovOn.skiareas)ovToggle('skiareas',true);}catch(e){}},0);}catch(e){}
+try{if(localStorage.getItem('ssm_aerial')==='1')setTimeout(()=>{try{if(!ovOn.aerial)ovToggle('aerial',true);}catch(e){}},0);}catch(e){}
 try{if(localStorage.getItem('ssm_snowline2')==='1')setTimeout(()=>{try{if(!ovOn.snowline)ovToggle('snowline',true);}catch(e){}},0);}catch(e){}
 // Default is the 1 April 2026 demo dataset; live/current weather is an
 // explicit opt-in, remembered in localStorage so it survives a fresh load
@@ -25031,7 +25115,33 @@ function feedWireCarousels(){document.querySelectorAll('.fc-carousel').forEach(c
 function fcStep(id,d){const c=document.getElementById('fcar-'+id);if(!c)return;
   const i=Math.max(0,Math.min(c.children.length-1,Math.round(c.scrollLeft/Math.max(1,c.clientWidth))+d));
   c.scrollTo({left:i*c.clientWidth,behavior:'smooth'});}
+// ── «Modell diese Woche: 71 % bestätigt» ────────────────────────────────
+// Every quick report carries what the model said there (condition_data.model,
+// agree 2 = same class, 1 = related, 0 = different). The share of the last
+// 7 days stands over the feed, in plain sight: honesty as a feature, and a
+// reason to report. Counted from the database, the loaded posts as fallback.
+let _hit={at:0,n:0,ok:0,same:0,busy:false};
+async function hitLoad(){if(_hit.busy||Date.now()-_hit.at<10*60e3)return;_hit.busy=true;
+  const since=new Date(Date.now()-7*864e5).toISOString();let rows=null;
+  try{if(sb){const {data,error}=await sb.from('reports').select('condition_data,captured_at').gte('captured_at',since)
+      .not('condition_data->model','is',null).limit(2000);if(!error)rows=data;}}catch(e){rows=null;}
+  if(!rows)rows=(allReports||[]).filter(r=>r.condition_data&&r.condition_data.model&&rptTimeMs(r)>=Date.now()-7*864e5);
+  let n=0,ok=0,same=0;rows.forEach(r=>{const m=r.condition_data&&r.condition_data.model;if(!m||m.agree==null)return;n++;if(m.agree>=1)ok++;if(m.agree===2)same++;});
+  _hit={at:Date.now(),n,ok,same,busy:false};feedHitSync();}
+function feedHitSync(){const list=document.getElementById('feedList');if(!list)return;
+  let el=document.getElementById('feedHit');
+  if(!el){el=document.createElement('div');el.id='feedHit';el.className='feed-hit';list.parentNode.insertBefore(el,list);}
+  hitLoad();
+  const n=_hit.n;
+  if(!_hit.at){el.hidden=true;return;}
+  el.hidden=false;
+  if(n<5){el.innerHTML='<span class="fh-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/></svg></span>'
+    +'<span class="fh-t"><b>Modell-Check</b><small>Noch '+(n?'zu wenige Meldungen ('+n+')':'keine Meldungen')+' diese Woche – jede Schnellmeldung prüft das Modell</small></span>';return;}
+  const pc=Math.round(_hit.ok/n*100),ps=Math.round(_hit.same/n*100);
+  el.innerHTML='<span class="fh-ring" style="--p:'+pc+'" aria-hidden="true"><b>'+pc+'%</b></span>'
+    +'<span class="fh-t"><b>Modell diese Woche: '+pc+' % bestätigt</b><small>'+n+' Schnellmeldungen · '+ps+' % genau gleich, '+(pc-ps)+' % ähnlich</small></span>';}
 function feedRender(){
+  try{feedHitSync();}catch(e){}
   const list=document.getElementById('feedList');
   // Drawn snow-maps feed the Reported Powder model (progZones() reads
   // allReports directly), but they are not posts -- nobody drew them to be
