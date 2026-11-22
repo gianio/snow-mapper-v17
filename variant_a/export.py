@@ -28,6 +28,21 @@ FOREST_DIM = 0.65          # class layers keep 35 % of their alpha in full fores
 _PNG_W = 2000
 
 
+def _despeckle(lab):
+    """Lone classified cells off: a cell with a class keeps it only when at
+    least two of its eight neighbours carry a class too. Right at a threshold
+    (thin cover on flat land) single 250 m cells flip into a class their
+    surroundings do not have and show as scattered squares across the
+    lowlands. Colouring only -- the statistics keep the raw labels."""
+    on = lab > 0
+    p = np.pad(on, 1).astype(np.uint8)
+    nb = sum(p[1 + dy:p.shape[0] - 1 + dy, 1 + dx:p.shape[1] - 1 + dx]
+             for dy in (-1, 0, 1) for dx in (-1, 0, 1) if dy or dx)
+    out = lab.copy()
+    out[on & (nb < 2)] = 0
+    return out
+
+
 def _rgba_from_labels(lab, table):
     im = np.zeros((*lab.shape, 4), np.uint8)
     for k, c in table.items():
@@ -457,11 +472,11 @@ def export_matrix(grid: NationalGrid, frames, wps, runs, results, prof_ts,
     for dt, g in frames:
         tag = dt.strftime("%Y-%m-%dT%H%M")
         for key, rgba, nearest in (
-            ("ski18", _dim_forest(_rgba_from_labels(g["ski18"], classify.SKI_RGBA), forest), True),
-            ("ski6", _dim_forest(_thin_hatch(_rgba_from_labels(g["ski6"], classify.SKI6_RGBA), g["ski6"],
+            ("ski18", _dim_forest(_rgba_from_labels(_despeckle(g["ski18"]), classify.SKI_RGBA), forest), True),
+            ("ski6", _dim_forest(_thin_hatch(_rgba_from_labels(d6 := _despeckle(g["ski6"]), classify.SKI6_RGBA), d6,
                                              g.get("thin_cm")), forest), True),
-            ("wind", _dim_forest(_rgba_from_labels(g["wind"], classify.WIND_RGBA), forest), True),
-            *((("powder", _dim_forest(_rgba_from_labels(g["powder"], classify.POWDER_RGBA), forest), True),)
+            ("wind", _dim_forest(_rgba_from_labels(_despeckle(g["wind"]), classify.WIND_RGBA), forest), True),
+            *((("powder", _dim_forest(_rgba_from_labels(_despeckle(g["powder"]), classify.POWDER_RGBA), forest), True),)
               if "powder" in g else ()),
             ("density", _rgba_density(g["density"], valid), False),
         ):
