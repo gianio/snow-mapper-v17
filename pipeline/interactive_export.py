@@ -1181,6 +1181,64 @@ def write_bin_blob(path: Path, meta, blobs):
 LO_FACTOR = 4          # the quick first-start blob keeps every 4th cell
 # fetched by the app on first use (latest.json "x"), not with the package
 LAZY_BLOBS = ("CLOUD", "CLV", "W850", "W700")
+# Terrain pictures that never change between runs: their own files, named by
+# content (data/static/<key>-<hash>.png), so the browser and the service
+# worker keep them for good -- they were 40-47 % of every data package.
+STATIC_PNGS = ("ASPECTPNG", "ELEVPNG", "ROUGHPNG")
+# Hourly cubes stored as the change from the hour before (mod 256): temperature
+# and the like change slowly, so the differences are mostly 0 and +-1 and gzip
+# them to about 40 % (measured on the 21.11. run: TEMP 6.9 -> 2.7 MB).
+DELTA_BLOBS = ("TEMP", "ABL", "W850", "W700")
+
+
+def static_png_files(ddir: Path, blobs, tag: str = "") -> dict:
+    """Write the terrain PNGs under data/static/ by content hash; returns
+    {key: relative URL}. Unchanged pictures keep their name run after run."""
+    import hashlib
+    sdir = ddir / "static"
+    sdir.mkdir(exist_ok=True)
+    urls = {}
+    for k in STATIC_PNGS:
+        v = blobs.get(k)
+        if not v:
+            continue
+        raw = base64.b64decode(v) if isinstance(v, str) else bytes(v)
+        fn = "%s%s-%s.png" % (k.lower(), tag, hashlib.sha1(raw).hexdigest()[:12])
+        f = sdir / fn
+        if not f.exists():
+            f.write_bytes(raw)
+        urls[k] = "data/static/" + fn
+    return urls
+
+
+def prune_static(ddir: Path, *url_maps):
+    """Remove pictures under data/static/ that no package names any more."""
+    keep = set(u.rsplit("/", 1)[1] for m in url_maps for u in (m or {}).values())
+    for old in (ddir / "static").glob("*.png"):
+        if old.name not in keep:
+            old.unlink(missing_ok=True)
+
+
+def delta_blobs(meta, blobs, keys=DELTA_BLOBS):
+    """Hourly cubes (T x width x height bytes) as differences to the hour
+    before, mod 256; the first hour as is. Returns (blobs, keys applied).
+    The client undoes it with a running sum (smbWork in the boot loader)."""
+    T, NP = int(meta["T"]), int(meta["width"]) * int(meta["height"])
+    out, done = dict(blobs), []
+    for k in keys:
+        v = blobs.get(k)
+        if not v:
+            continue
+        raw = base64.b64decode(v) if isinstance(v, str) else bytes(v)
+        if len(raw) != T * NP or T < 2:
+            continue
+        a = np.frombuffer(raw, np.uint8).reshape(T, NP)
+        d = np.empty_like(a)
+        d[0] = a[0]
+        d[1:] = (a[1:].astype(np.int16) - a[:-1].astype(np.int16)) % 256
+        out[k] = d.tobytes()
+        done.append(k)
+    return out, done
 
 
 def coarse_meta_blobs(meta, blobs, f=LO_FACTOR):
@@ -1374,12 +1432,41 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
         write_bin_blob(ddir / xname, {"T": meta["T"], "width": meta["width"], "height": meta["height"]}, lazy)
         pointer["x"] = xname
     # ... and a coarse copy, shown first while the full one loads behind it
+    mlo = blo = None
     try:
         loname = "snowdata-%s.lo.bin.gz" % stamp
-        write_bin_blob(ddir / loname, *coarse_meta_blobs(meta, blobs))
+        mlo, blo = coarse_meta_blobs(meta, blobs)
+        write_bin_blob(ddir / loname, mlo, blo)
         pointer["lo"] = loname
     except Exception as e:
         print(f"[OUT] coarse blob skipped: {type(e).__name__}: {e}")
+    # The lighter packages for current shells ("bin2" / "lo2"): the terrain
+    # pictures as their own long-cached files, the slow-changing hourly cubes
+    # as differences. "bin" / "lo" above stay as they were for shells that
+    # predate this (cached pages, store builds already on phones).
+    try:
+        urls = static_png_files(ddir, blobs)
+        m2 = dict(meta, png_urls=urls)
+        b2, done = delta_blobs(meta, {k: v for k, v in main.items() if k not in urls})
+        m2["delta"] = done
+        bin2 = "snowdata-%s.v2.bin.gz" % stamp
+        write_bin_blob(ddir / bin2, m2, b2)
+        pointer["bin2"] = bin2
+        urls_lo = {}
+        if mlo is not None:
+            urls_lo = static_png_files(ddir, blo, tag="-lo")
+            mlo2 = dict(mlo, png_urls=urls_lo)
+            blo2, done_lo = delta_blobs(mlo, {k: v for k, v in blo.items() if k not in urls_lo})
+            mlo2["delta"] = done_lo
+            lo2 = "snowdata-%s.v2.lo.bin.gz" % stamp
+            write_bin_blob(ddir / lo2, mlo2, blo2)
+            pointer["lo2"] = lo2
+        prune_static(ddir, urls, urls_lo)
+        sz = lambda n: (ddir / n).stat().st_size / 1e6
+        print(f"[OUT] v2 packages: full {sz(binname):.1f} -> {sz(bin2):.1f} MB"
+              + (f", coarse {sz(loname):.1f} -> {sz(pointer['lo2']):.1f} MB" if "lo2" in pointer else ""))
+    except Exception as e:
+        print(f"[OUT] v2 packages skipped: {type(e).__name__}: {e}")
     if gz_only:
         plain_mb = len(payload) / 1e6
         print(f"[OUT] gz-only: uncompressed blob ({plain_mb:.0f} MB) not written "
@@ -1412,7 +1499,7 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
             (old.parent / old.name[:-3]).unlink(missing_ok=True)
         except OSError:
             pass
-    for old in sorted(ddir.glob("snowdata-*.bin.gz"))[:-8]:       # full + coarse
+    for old in sorted(ddir.glob("snowdata-*.bin.gz"))[:-10]:      # full, coarse, v2 full + coarse, extra
         old.unlink(missing_ok=True)
     for old in sorted(ddir.glob("snowdata-*.json"))[:-4]:
         try:
@@ -1616,6 +1703,12 @@ _BOOT_SPLIT = r"""<script>
       var head=JSON.parse(new TextDecoder().decode(u8.subarray(8,8+n)));
       var base=8+n+((8-(8+n)%8)%8),M=head.meta,ix=head.blobs;
       function view(k){var e=ix[k];return e?new Uint8Array(buf,base+e[0],e[1]):new Uint8Array(0);}
+      // v2 packages store slow-changing hourly cubes as the change from the
+      // hour before (mod 256): a running sum gives the values back, in place
+      if(M.delta&&M.delta.length){var NPd=M.width*M.height,Td=M.T;
+        for(var di=0;di<M.delta.length;di++){var A=view(M.delta[di]);if(A.length<Td*NPd)continue;
+          for(var t1=1;t1<Td;t1++){var o1=t1*NPd,o0=o1-NPd;for(var q1=0;q1<NPd;q1++)A[o1+q1]=(A[o1+q1]+A[o0+q1])&255;}}
+        M.delta=[];}
       post({stage:'cum'});
       // Snow height as a running mass balance -- exactly the loop app.js runs
       // when it gets no `cum` (keep the two identical).
@@ -1681,12 +1774,18 @@ _BOOT_SPLIT = r"""<script>
         // one of this very run is already on the phone; the full one then
         // loads behind the map and is used from the next start on (or at
         // once, from the 'sharper map' chip).
-        var haveFull=false;try{haveFull=localStorage.getItem('ssm_full')===lj.bin;}catch(e){}
-        if(lj.lo&&!haveFull){
-          try{var Dl=await loadBin(pre+'data/'+lj.lo);window.__fullPending={url:pre+'data/'+lj.bin,name:lj.bin};return Dl;}
+        // the v2 packages (terrain pictures apart, cubes as differences) when
+        // the build wrote them: about half the bytes
+        var BIN=lj.bin2||lj.bin,LO=lj.lo2||lj.lo;
+        var haveFull=false;try{haveFull=localStorage.getItem('ssm_full')===BIN;}catch(e){}
+        // on a slow or metered connection the full package is not fetched
+        // behind the map on its own -- the coarse one is plenty for a look
+        var cn=navigator.connection||{},slow=!!(cn.saveData||/(^|-)2g|3g/.test(cn.effectiveType||''));
+        if(LO&&!haveFull){
+          try{var Dl=await loadBin(pre+'data/'+LO);if(!slow)window.__fullPending={url:pre+'data/'+BIN,name:BIN};return Dl;}
           catch(e){try{if(window.Sentry)window.Sentry.captureException(e);}catch(_){}}
         }
-        try{var Df=await loadBin(pre+'data/'+lj.bin);try{localStorage.setItem('ssm_full',lj.bin);}catch(e){}
+        try{var Df=await loadBin(pre+'data/'+BIN);try{localStorage.setItem('ssm_full',BIN);}catch(e){}
           // cloud and free-air wind, fetched by the app when first shown
           if(lj.x)window.__dataX=pre+'data/'+lj.x;return Df;}
         catch(e){try{if(window.Sentry)window.Sentry.captureException(e);}catch(_){}}
@@ -1859,6 +1958,10 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
   // (an area saved for offline use keeps the next 24 h of them)
   if(url.pathname.indexOf('/data/variant_a')>=0){
     e.respondWith(fetch(r).catch(()=>offMatch(r).then(m=>m||Response.error())));return;}
+  // terrain pictures named by their content: the same file for months -> cache-first, kept
+  if(url.pathname.includes('/data/static/')){
+    e.respondWith(caches.match(r).then(m=>m||fetch(r).then(resp=>{if(resp.ok){const cp=resp.clone();caches.open(C).then(c=>c.put(r,cp)).catch(()=>{});}return resp;})));
+    return;}
   // Content-stamped data blobs are immutable -> cache-first (repeat loads use 0 network),
   // and stale stamps are purged whenever a new one is stored.
   if(url.pathname.includes('/data/snowdata-')){
@@ -7644,6 +7747,15 @@ html.cap-ios body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #
 .fc-model.ag1{border-color:transparent;background:#E9EEF6;color:#2F3B4C}
 .fc-model.ag0{border-color:transparent;background:#FBE4DE;color:#7A2414}
 .fc-facts{flex-wrap:wrap;row-gap:6px}
+/* feed without an account: a sign-in card after the preview (M3 filled card) */
+.feed-gate{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;margin:12px;padding:22px 18px;border-radius:20px;
+  background:var(--md-surface-container,#EEF1F6);color:var(--md-on-surface,#191C20)}
+.feed-gate .fg-ic{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--md-secondary-container,#D7E3F8);color:var(--md-on-secondary-container,#101C2B)}
+.feed-gate .fg-ic svg{width:22px;height:22px}
+.feed-gate b{font:600 16px/1.3 var(--font)}
+.feed-gate small{font:500 13px/1.45 var(--font);color:var(--md-on-surface-var,#43474E);max-width:320px}
+.feed-gate button{margin-top:6px;height:44px;padding:0 26px;border:0;border-radius:999px;cursor:pointer;font:600 15px/1 var(--font);
+  background:var(--md-primary,#2E5DA8);color:var(--md-on-primary,#fff)}
 /* aerial photo on: the data layer lets it show through */
 body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
 /* feed: the model's weekly hit rate, an M3 filled card */
@@ -9551,7 +9663,11 @@ if(_isNative){try{document.documentElement.classList.add('cap-native');if(_CAP.g
 // A binary data blob (boot loader, SMB1) hands over Uint8Array views that
 // are used as they are; the JSON blob carries base64 strings.
 function dec(b){if(b instanceof Uint8Array)return b;const s=atob(b),n=s.length,a=new Uint8Array(n);for(let i=0;i<n;i++)a[i]=s.charCodeAt(i);return a;}
-function _pngUrl(k){const b=db(k);if(b instanceof Uint8Array){try{return URL.createObjectURL(new Blob([b],{type:'image/png'}));}catch(e){return '';}}return "data:image/png;base64,"+b;}
+// v2 packages name the terrain pictures as files of their own (M.png_urls);
+// in the native app they come from the hosted site like the other data
+function _pngFile(k){const u=M.png_urls&&M.png_urls[k];if(!u)return '';
+  const R=(window.__smRemote||'').replace(/\/+$/,'');return R?R+'/'+u:u;}
+function _pngUrl(k){const f=_pngFile(k);if(f)return f;const b=db(k);if(b instanceof Uint8Array){try{return URL.createObjectURL(new Blob([b],{type:'image/png'}));}catch(e){return '';}}return "data:image/png;base64,"+b;}
 const SNOW=dec(db('SNOW')),TEMP=dec(db('TEMP')),SUN=dec(db('SUN')),SPD=dec(db('SPD')),WDIR=dec(db('DIR'));
 const ABL=dec(db('ABL'));
 const WINDG=dec(db('WINDG')),RSLOPE=dec(db('RSLOPE')),RASPECT=dec(db('RASPECT')),RHOR=dec(db('RHOR'));
@@ -14709,9 +14825,11 @@ const aspI=new Image();
 // Decoding starts after the first frame: nothing on screen depends on it.
 // With the binary blob the PNG bytes are at hand, and a Worker decodes and
 // reads them back (a multi-second main-thread task on a phone otherwise).
-function _aspWorker(){const raw=db('ASPECTPNG');
-  if(!(raw instanceof Uint8Array)||!raw.length||!window.Worker||typeof OffscreenCanvas==='undefined')return false;
-  try{const src='onmessage=async function(e){try{const bmp=await createImageBitmap(new Blob([e.data],{type:"image/png"}));'
+function _aspWorker(){const raw=db('ASPECTPNG'),file=_pngFile('ASPECTPNG');
+  if(!file&&(!(raw instanceof Uint8Array)||!raw.length))return false;
+  if(!window.Worker||typeof OffscreenCanvas==='undefined')return false;
+  try{const src='onmessage=async function(e){try{const blob=typeof e.data==="string"?await (await fetch(e.data)).blob():new Blob([e.data],{type:"image/png"});'
+      +'const bmp=await createImageBitmap(blob);'
       +'const c=new OffscreenCanvas(bmp.width,bmp.height),x=c.getContext("2d",{willReadFrequently:true});x.drawImage(bmp,0,0);'
       +'const d=x.getImageData(0,0,bmp.width,bmp.height);postMessage({w:d.width,h:d.height,buf:d.data.buffer},[d.data.buffer]);}'
       +'catch(err){postMessage({err:String(err)});}};';
@@ -14721,12 +14839,15 @@ function _aspWorker(){const raw=db('ASPECTPNG');
       aspPW=m.w;aspPH=m.h;aspData=new Uint8ClampedArray(m.buf);
       try{if(map.hasLayer(aspectGrid))aspectGrid.redraw();}catch(e2){}};
     w.onerror=()=>{w.terminate();aspI.src=ASPECT_PNG;};
+    if(file){w.postMessage(new URL(file,location.href).href);return true;}
     const copy=raw.slice();w.postMessage(copy.buffer,[copy.buffer]);return true;}catch(e){return false;}}
+// pictures from the hosted site (native app) must not taint the canvas they are read back from
+try{aspI.crossOrigin='anonymous';}catch(e){}
 _afterFirstPaint(function(){if(!_aspWorker())aspI.src=ASPECT_PNG;});
 aspI.onload=function(){aspPW=aspI.width;aspPH=aspI.height;const c=document.createElement('canvas');c.width=aspPW;c.height=aspPH;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(aspI,0,0);try{aspData=x.getImageData(0,0,aspPW,aspPH).data;}catch(e){}};
 // --- Fine terrain sampling: 60 m aspect (8-way) + fine elevation raster ---
 let elevData=null,elevPW=0,elevPH=0;
-const elevI=new Image();
+const elevI=new Image();try{elevI.crossOrigin='anonymous';}catch(e){}
 _afterFirstPaint(function(){elevI.src=ELEV_PNG;});
 elevI.onload=function(){elevPW=elevI.width;elevPH=elevI.height;const c=document.createElement('canvas');c.width=elevPW;c.height=elevPH;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(elevI,0,0);try{elevData=x.getImageData(0,0,elevPW,elevPH).data;}catch(e){}
   try{if(demoFitZones()){loadReportMarkers();if(layer==='prog')renderPrognosis(stat);else if(layer==='powfind')renderPowderFind();}}catch(e){}};
@@ -22191,7 +22312,9 @@ function offlineUrls(){
   for(const z of [VA_TERR_Z,TERR_FZ])box(z,(x,y)=>tiles.push(VA_TERR+z+'/'+x+'/'+y+'.png'));
   const D=window.__dataLj;
   if(D&&D.lj){const p=D.pre+'data/';other.add(p+'latest.json');other.add(p+'tours.json');other.add(p+'config.json');
-    ['bin','x'].forEach(k=>{if(D.lj[k])other.add(p+D.lj[k]);});}
+    [D.lj.bin2?'bin2':'bin','x'].forEach(k=>{if(D.lj[k])other.add(p+D.lj[k]);});
+    // the terrain pictures the v2 package points to
+    ['ASPECTPNG','ELEVPNG','ROUGHPNG'].forEach(k=>{const f=_pngFile(k);if(f)other.add(new URL(f,location.href).href);});}
   document.querySelectorAll('script[src],link[rel=stylesheet][href]').forEach(el=>{const u=el.src||el.href;
     if(/^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net)\//.test(u)||/\/vendor\//.test(u))other.add(u);});
   return {tiles,other:[...other],bounds:[s,w,n,e]};}
@@ -22230,7 +22353,7 @@ async function offlineSave(){if(!isPro()){proSheet('offline');return;}
     const D=window.__dataLj,nm=(function(){const c=map.getCenter();try{const t=tourNearPoint(c.lat,c.lng,6000,1);if(t.length)return 'bei '+(t[0].t.pname||t[0].t.name);}catch(e){}
       return c.lat.toFixed(2)+'°N '+c.lng.toFixed(2)+'°E';})();
     const info={at:Date.now(),name:nm,n:all.length-fail,bytes,bounds:U.bounds,gen:D&&D.lj&&D.lj.generated||null};
-    try{localStorage.setItem(OFF_KEY,JSON.stringify(info));if(D&&D.lj&&D.lj.bin)localStorage.setItem('ssm_full',D.lj.bin);}catch(e){}
+    try{localStorage.setItem(OFF_KEY,JSON.stringify(info));if(D&&D.lj&&(D.lj.bin2||D.lj.bin))localStorage.setItem('ssm_full',D.lj.bin2||D.lj.bin);}catch(e){}
     toast(fail>all.length*0.1?'Teilweise gespeichert ('+fail+' fehlten)':'Offline gespeichert · '+Math.round(bytes/1e6)+' MB','ok');
   }catch(e){toast('Offline-Speichern fehlgeschlagen: '+(e.message||e),'err');}
   _offBusy=false;offRender();}
@@ -25244,7 +25367,11 @@ function feedRender(){
   if(!filtered.length){list.innerHTML='<div class="feed-empty">'+(!main||feedFilter==='all'?'Noch keine Beiträge hier. Sei die erste Person – tippe unten auf «Melden».':'Noch keine «'+escapeHtml((FEED_KINDS.find(k=>k.id===feedFilter)||{}).l||'')+'» hier.')+'</div>';return;}
   // Building four hundred cards to show six is most of what made opening the
   // feed feel slow. Nobody scrolls past the first page before it re-renders.
-  const FEED_PAGE=40;
+  // Without an account the feed is a preview: the three newest posts, then a
+  // sign-in card. (The map keeps its community pins: a look at the snow
+  // should not need an account; reading the conversation does.)
+  const guest=!sbUser&&feedScope!=='post';
+  const FEED_PAGE=guest?3:40;
   const shown=filtered.slice(0,FEED_PAGE),more=filtered.length-shown.length;
   list.innerHTML=shown.map((r,ix)=>{
     const col=CAT_COLORS[r.cat]||'#666';
@@ -25291,7 +25418,10 @@ function feedRender(){
         ${heartBtnHTML(r)}${endBtn}
       </div>
     </div>${isF&&filtered.length>1?`<div class="feed-more-hd">${feedScope==='post'?'Neueste Beiträge':'Weitere Beiträge'+(feedUserName?' von '+escapeHtml(feedUserName):'')}</div>`:''}`;
-  }).join('')+(more>0?('<div class="feed-more">'+more+' weitere</div>'):'')
+  }).join('')+(guest?('<div class="feed-gate"><span class="fg-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>'
+      +'<b>'+(more>0?more+' weitere Meldungen':'Die ganze Community')+'</b><small>Melde dich kostenlos an, um alle Meldungen, Fotos und Kommentare zu sehen – und selbst zu melden.</small>'
+      +'<button type="button" onclick="authShow()">Anmelden</button></div>')
+    :(more>0?('<div class="feed-more">'+more+' weitere</div>'):''))
     +(txtHidden?'<button type="button" class="feed-txt-more" onclick="feedTxtSet(true)">'+txtHidden+' Beitr'+(txtHidden===1?'ag':'äge')+' ohne Bild einblenden</button>':'');
   feedAnimateCards();feedWireCarousels();feedSeenWatch();
   try{feedHighlight(shown.map(r=>r.id));}catch(e){}
