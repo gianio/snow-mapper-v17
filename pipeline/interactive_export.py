@@ -11417,7 +11417,7 @@ function vaHiEngine(){
   // (3 x 3 terrain pixels) is coloured too; closed areas and their edges are
   // untouched. Summed-area table: O(1) per pixel.
   E.despeckle=function(out,S,blk){
-    var R=Math.max(1,Math.round(blk*1.5)),W1=S+1,sat=new Int32Array(W1*W1),x,y;
+    var R=Math.max(3*S/256,Math.round(blk*1.5))|0,W1=S+1,sat=new Int32Array(W1*W1),x,y;
     for(y=0;y<S;y++){var row=0;for(x=0;x<S;x++){row+=out[(y*S+x)*4+3]>0?1:0;sat[(y+1)*W1+x+1]=sat[y*W1+x+1]+row;}}
     for(y=0;y<S;y++){var y0=Math.max(0,y-R),y1=Math.min(S,y+R+1);
       for(x=0;x<S;x++){var o=(y*S+x)*4;if(!out[o+3])continue;
