@@ -21,6 +21,17 @@ name: Cloudflare tiles
 #        variable TILES_BASE_URL (the Worker's URL; optional R2_BUCKET).
 
 on:
+  # after a merge that can change the Worker or the SNOWPACK engine it carries:
+  # the Worker is redeployed by itself -- but only when the cut-out engine or
+  # the Worker code really differ from the last deploy (cache key below). No
+  # tile publish here (that stays once a day, R2 writes).
+  push:
+    branches: [main]
+    paths:
+      - 'tiles/worker/**'
+      - 'pipeline/interactive_export.py'
+      - 'tools/make_va_engine.py'
+      - '.github/workflows/cloudflare.yml'
   workflow_dispatch:
     inputs:
       deploy_worker:
@@ -72,7 +83,7 @@ concurrency:
 
 jobs:
   worker:
-    if: inputs.deploy_worker
+    if: inputs.deploy_worker || github.event_name == 'push'
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     steps:
@@ -91,13 +102,26 @@ jobs:
           mkdir -p dist
           python run_interactive.py --split --offline --date 2026-04-01 --res 4000 --out-dir dist
           python tools/make_va_engine.py dist/app.js tiles/worker/src/va_engine.js
+      # after a merge: deploy only when the engine or the Worker changed since
+      # the last deploy (a merge that only touched the app's look is skipped)
+      - name: Same Worker as last deployed?
+        id: same
+        if: github.event_name == 'push'
+        uses: actions/cache/restore@v4
+        with:
+          path: tiles/worker/src/va_engine.js
+          key: cf-worker-${{ hashFiles('tiles/worker/src/**', 'tiles/worker/package-lock.json', 'tiles/worker/wrangler.toml') }}
+          lookup-only: true
       - name: Install worker dependencies
+        if: steps.same.outputs.cache-hit != 'true'
         working-directory: tiles/worker
         run: npm ci --no-audit --no-fund
       - name: Test against the committed demo export
+        if: steps.same.outputs.cache-hit != 'true'
         working-directory: tiles/worker
         run: node test/test_worker.mjs ../../variant_a_export
       - name: Deploy to Cloudflare
+        if: steps.same.outputs.cache-hit != 'true'
         working-directory: tiles/worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -114,6 +138,13 @@ jobs:
           else
             echo "::warning::GH_DISPATCH_TOKEN not set -- the live cycles keep running on GitHub's own (late) schedule"
           fi
+      # remember what is deployed now (the key the check above looks for)
+      - name: Remember the deployed Worker
+        if: steps.same.outputs.cache-hit != 'true' && success()
+        uses: actions/cache/save@v4
+        with:
+          path: tiles/worker/src/va_engine.js
+          key: cf-worker-${{ hashFiles('tiles/worker/src/**', 'tiles/worker/package-lock.json', 'tiles/worker/wrangler.toml') }}
 
   publish:
     needs: worker

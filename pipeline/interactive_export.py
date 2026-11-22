@@ -1181,6 +1181,64 @@ def write_bin_blob(path: Path, meta, blobs):
 LO_FACTOR = 4          # the quick first-start blob keeps every 4th cell
 # fetched by the app on first use (latest.json "x"), not with the package
 LAZY_BLOBS = ("CLOUD", "CLV", "W850", "W700")
+# Terrain pictures that never change between runs: their own files, named by
+# content (data/static/<key>-<hash>.png), so the browser and the service
+# worker keep them for good -- they were 40-47 % of every data package.
+STATIC_PNGS = ("ASPECTPNG", "ELEVPNG", "ROUGHPNG")
+# Hourly cubes stored as the change from the hour before (mod 256): temperature
+# and the like change slowly, so the differences are mostly 0 and +-1 and gzip
+# them to about 40 % (measured on the 21.11. run: TEMP 6.9 -> 2.7 MB).
+DELTA_BLOBS = ("TEMP", "ABL", "W850", "W700")
+
+
+def static_png_files(ddir: Path, blobs, tag: str = "") -> dict:
+    """Write the terrain PNGs under data/static/ by content hash; returns
+    {key: relative URL}. Unchanged pictures keep their name run after run."""
+    import hashlib
+    sdir = ddir / "static"
+    sdir.mkdir(exist_ok=True)
+    urls = {}
+    for k in STATIC_PNGS:
+        v = blobs.get(k)
+        if not v:
+            continue
+        raw = base64.b64decode(v) if isinstance(v, str) else bytes(v)
+        fn = "%s%s-%s.png" % (k.lower(), tag, hashlib.sha1(raw).hexdigest()[:12])
+        f = sdir / fn
+        if not f.exists():
+            f.write_bytes(raw)
+        urls[k] = "data/static/" + fn
+    return urls
+
+
+def prune_static(ddir: Path, *url_maps):
+    """Remove pictures under data/static/ that no package names any more."""
+    keep = set(u.rsplit("/", 1)[1] for m in url_maps for u in (m or {}).values())
+    for old in (ddir / "static").glob("*.png"):
+        if old.name not in keep:
+            old.unlink(missing_ok=True)
+
+
+def delta_blobs(meta, blobs, keys=DELTA_BLOBS):
+    """Hourly cubes (T x width x height bytes) as differences to the hour
+    before, mod 256; the first hour as is. Returns (blobs, keys applied).
+    The client undoes it with a running sum (smbWork in the boot loader)."""
+    T, NP = int(meta["T"]), int(meta["width"]) * int(meta["height"])
+    out, done = dict(blobs), []
+    for k in keys:
+        v = blobs.get(k)
+        if not v:
+            continue
+        raw = base64.b64decode(v) if isinstance(v, str) else bytes(v)
+        if len(raw) != T * NP or T < 2:
+            continue
+        a = np.frombuffer(raw, np.uint8).reshape(T, NP)
+        d = np.empty_like(a)
+        d[0] = a[0]
+        d[1:] = (a[1:].astype(np.int16) - a[:-1].astype(np.int16)) % 256
+        out[k] = d.tobytes()
+        done.append(k)
+    return out, done
 
 
 def coarse_meta_blobs(meta, blobs, f=LO_FACTOR):
@@ -1374,12 +1432,41 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
         write_bin_blob(ddir / xname, {"T": meta["T"], "width": meta["width"], "height": meta["height"]}, lazy)
         pointer["x"] = xname
     # ... and a coarse copy, shown first while the full one loads behind it
+    mlo = blo = None
     try:
         loname = "snowdata-%s.lo.bin.gz" % stamp
-        write_bin_blob(ddir / loname, *coarse_meta_blobs(meta, blobs))
+        mlo, blo = coarse_meta_blobs(meta, blobs)
+        write_bin_blob(ddir / loname, mlo, blo)
         pointer["lo"] = loname
     except Exception as e:
         print(f"[OUT] coarse blob skipped: {type(e).__name__}: {e}")
+    # The lighter packages for current shells ("bin2" / "lo2"): the terrain
+    # pictures as their own long-cached files, the slow-changing hourly cubes
+    # as differences. "bin" / "lo" above stay as they were for shells that
+    # predate this (cached pages, store builds already on phones).
+    try:
+        urls = static_png_files(ddir, blobs)
+        m2 = dict(meta, png_urls=urls)
+        b2, done = delta_blobs(meta, {k: v for k, v in main.items() if k not in urls})
+        m2["delta"] = done
+        bin2 = "snowdata-%s.v2.bin.gz" % stamp
+        write_bin_blob(ddir / bin2, m2, b2)
+        pointer["bin2"] = bin2
+        urls_lo = {}
+        if mlo is not None:
+            urls_lo = static_png_files(ddir, blo, tag="-lo")
+            mlo2 = dict(mlo, png_urls=urls_lo)
+            blo2, done_lo = delta_blobs(mlo, {k: v for k, v in blo.items() if k not in urls_lo})
+            mlo2["delta"] = done_lo
+            lo2 = "snowdata-%s.v2.lo.bin.gz" % stamp
+            write_bin_blob(ddir / lo2, mlo2, blo2)
+            pointer["lo2"] = lo2
+        prune_static(ddir, urls, urls_lo)
+        sz = lambda n: (ddir / n).stat().st_size / 1e6
+        print(f"[OUT] v2 packages: full {sz(binname):.1f} -> {sz(bin2):.1f} MB"
+              + (f", coarse {sz(loname):.1f} -> {sz(pointer['lo2']):.1f} MB" if "lo2" in pointer else ""))
+    except Exception as e:
+        print(f"[OUT] v2 packages skipped: {type(e).__name__}: {e}")
     if gz_only:
         plain_mb = len(payload) / 1e6
         print(f"[OUT] gz-only: uncompressed blob ({plain_mb:.0f} MB) not written "
@@ -1412,7 +1499,7 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
             (old.parent / old.name[:-3]).unlink(missing_ok=True)
         except OSError:
             pass
-    for old in sorted(ddir.glob("snowdata-*.bin.gz"))[:-8]:       # full + coarse
+    for old in sorted(ddir.glob("snowdata-*.bin.gz"))[:-10]:      # full, coarse, v2 full + coarse, extra
         old.unlink(missing_ok=True)
     for old in sorted(ddir.glob("snowdata-*.json"))[:-4]:
         try:
@@ -1616,6 +1703,12 @@ _BOOT_SPLIT = r"""<script>
       var head=JSON.parse(new TextDecoder().decode(u8.subarray(8,8+n)));
       var base=8+n+((8-(8+n)%8)%8),M=head.meta,ix=head.blobs;
       function view(k){var e=ix[k];return e?new Uint8Array(buf,base+e[0],e[1]):new Uint8Array(0);}
+      // v2 packages store slow-changing hourly cubes as the change from the
+      // hour before (mod 256): a running sum gives the values back, in place
+      if(M.delta&&M.delta.length){var NPd=M.width*M.height,Td=M.T;
+        for(var di=0;di<M.delta.length;di++){var A=view(M.delta[di]);if(A.length<Td*NPd)continue;
+          for(var t1=1;t1<Td;t1++){var o1=t1*NPd,o0=o1-NPd;for(var q1=0;q1<NPd;q1++)A[o1+q1]=(A[o1+q1]+A[o0+q1])&255;}}
+        M.delta=[];}
       post({stage:'cum'});
       // Snow height as a running mass balance -- exactly the loop app.js runs
       // when it gets no `cum` (keep the two identical).
@@ -1681,12 +1774,18 @@ _BOOT_SPLIT = r"""<script>
         // one of this very run is already on the phone; the full one then
         // loads behind the map and is used from the next start on (or at
         // once, from the 'sharper map' chip).
-        var haveFull=false;try{haveFull=localStorage.getItem('ssm_full')===lj.bin;}catch(e){}
-        if(lj.lo&&!haveFull){
-          try{var Dl=await loadBin(pre+'data/'+lj.lo);window.__fullPending={url:pre+'data/'+lj.bin,name:lj.bin};return Dl;}
+        // the v2 packages (terrain pictures apart, cubes as differences) when
+        // the build wrote them: about half the bytes
+        var BIN=lj.bin2||lj.bin,LO=lj.lo2||lj.lo;
+        var haveFull=false;try{haveFull=localStorage.getItem('ssm_full')===BIN;}catch(e){}
+        // on a slow or metered connection the full package is not fetched
+        // behind the map on its own -- the coarse one is plenty for a look
+        var cn=navigator.connection||{},slow=!!(cn.saveData||/(^|-)2g|3g/.test(cn.effectiveType||''));
+        if(LO&&!haveFull){
+          try{var Dl=await loadBin(pre+'data/'+LO);if(!slow)window.__fullPending={url:pre+'data/'+BIN,name:BIN};return Dl;}
           catch(e){try{if(window.Sentry)window.Sentry.captureException(e);}catch(_){}}
         }
-        try{var Df=await loadBin(pre+'data/'+lj.bin);try{localStorage.setItem('ssm_full',lj.bin);}catch(e){}
+        try{var Df=await loadBin(pre+'data/'+BIN);try{localStorage.setItem('ssm_full',BIN);}catch(e){}
           // cloud and free-air wind, fetched by the app when first shown
           if(lj.x)window.__dataX=pre+'data/'+lj.x;return Df;}
         catch(e){try{if(window.Sentry)window.Sentry.captureException(e);}catch(_){}}
@@ -1859,6 +1958,10 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
   // (an area saved for offline use keeps the next 24 h of them)
   if(url.pathname.indexOf('/data/variant_a')>=0){
     e.respondWith(fetch(r).catch(()=>offMatch(r).then(m=>m||Response.error())));return;}
+  // terrain pictures named by their content: the same file for months -> cache-first, kept
+  if(url.pathname.includes('/data/static/')){
+    e.respondWith(caches.match(r).then(m=>m||fetch(r).then(resp=>{if(resp.ok){const cp=resp.clone();caches.open(C).then(c=>c.put(r,cp)).catch(()=>{});}return resp;})));
+    return;}
   // Content-stamped data blobs are immutable -> cache-first (repeat loads use 0 network),
   // and stale stamps are purged whenever a new one is stored.
   if(url.pathname.includes('/data/snowdata-')){
@@ -7349,6 +7452,34 @@ body.leg-open #miniLegend #mlName{color:var(--md-on-primary)}
 #ovChips .ov-chip{width:40px;height:40px;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer;
   background:var(--md-secondary-container,#D6E3FF);color:var(--md-on-secondary-container,#0F1C2C);box-shadow:0 1px 3px rgba(0,0,0,.18)}
 #ovChips .ov-chip svg{width:20px;height:20px}
+/* ==== Runde 22.11.: Steuerleiste schmal und einklappbar ==== */
+#mapFabs .mfab-grp .mfab{width:32px!important;height:32px!important;border-radius:16px!important}
+#mapFabs .mfab-grp .mfab svg{width:16px!important;height:16px!important}
+#mapFabs .mfab-grp .mfab .fab-txt{font:600 11px/1 var(--font)!important}
+#mapFabs .mfab-grp .mfab+.mfab::before{left:7px!important;right:7px!important}
+#mapFabs{gap:8px!important}
+#ovChips{gap:6px;margin-top:4px}
+#ovChips .ov-chip{width:32px;height:32px}
+#ovChips .ov-chip svg{width:16px;height:16px}
+#miniLegend,#mapFabs #miniLegend,body.desk #mapFabs #miniLegend{width:34px!important;height:34px!important;max-width:34px!important}
+#miniLegend #mlName{height:34px!important}
+#miniLegend #mlName svg{width:17px!important;height:17px!important}
+#fabFold{width:36px;height:16px;padding:0;border:0;border-radius:8px;display:grid;place-items:center;cursor:pointer;
+  background:color-mix(in srgb,var(--card) 82%,transparent);color:var(--ink-700,#555);box-shadow:0 1px 3px rgba(0,0,0,.16);align-self:flex-end}
+#fabFold svg{width:12px;height:12px;transition:transform .2s}
+body.fabs-folded #fabFold svg{transform:rotate(180deg)}
+body.fabs-folded #mapFabs>:not(#fabFold){display:none!important}
+.wc-pin{width:24px!important;height:24px!important;border-radius:8px!important;box-shadow:0 0 0 1.5px #fff,0 2px 6px rgba(0,0,0,.28)!important}
+.wc-pin svg{width:13px!important;height:13px!important}
+#tlTomorrowBtn{display:none!important}
+/* dark: the glass bars dark too (they were white glass), the brand readable */
+:root[data-theme="dark"] #bottomPanel,:root[data-theme="dark"] #tabBar{background:rgba(24,28,34,.78)!important;
+  box-shadow:0 4px 18px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.08)!important}
+:root[data-theme="dark"] #brandTop span{color:#E6EAF0;text-shadow:0 0 3px #000,0 0 3px #000}
+:root[data-theme="dark"] #tlChips button{color:var(--md-on-surface-var,#C4C6D0)!important;border-color:rgba(255,255,255,.28)!important}
+:root[data-theme="dark"] #tlChips button.on{color:var(--md-on-secondary-container)!important}
+:root[data-theme="dark"] #fabFold{background:rgba(24,28,34,.82);color:#C4C6D0}
+:root[data-theme="dark"] #tabBar button[aria-current=page]::before{background:#3B4858!important}
 /* the brand, top left: the app icon and its name under it */
 #brandTop{position:fixed;z-index:1150;left:12px;top:calc(env(safe-area-inset-top,0px) + 6px);display:flex;flex-direction:column;align-items:center;gap:1px;pointer-events:none}
 #brandTop img{width:34px;height:34px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);object-fit:cover}
@@ -7609,6 +7740,79 @@ html.cap-ios body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #
 /* Schneetyp-Flächen: scharf, nicht nochmals weichgezeichnet */
 .raster-smooth.cls-crisp{image-rendering:auto}
 
+/* ==== Kernprodukt Schneetyp + Community (M3) ==== */
+/* point chip: the reason as a second line under the value, never wider than the phone */
+.pt-chip{max-width:calc(100vw - 24px)}
+.pt-v{display:grid!important;grid-template-columns:auto auto auto;grid-template-rows:auto auto;column-gap:7px;row-gap:2px;align-items:center;text-align:left}
+.pt-v>i,.pt-v>svg{grid-row:1/3}
+.pt-v>b{grid-column:3;grid-row:1;white-space:nowrap}
+/* the chip hangs in a 0-wide marker, so the second line needs its own width */
+.pt-v>small{grid-column:3;grid-row:2;white-space:normal;width:max-content;max-width:min(40vw,190px);line-height:1.3!important;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pt-v>b:only-of-type:last-child{grid-row:1/3}
+/* «Melden»: M3 tonal button inside the chip */
+.pt-rep{display:inline-flex;align-items:center;gap:4px;height:34px;padding:0 12px 0 9px;margin-left:2px;border-radius:999px!important;
+  background:var(--md-secondary-container,#D7E3F8)!important;color:var(--md-on-secondary-container,#101C2B)!important;font:600 13px/1 var(--font)}
+.pt-rep svg{width:16px;height:16px}
+/* quick report: the model's suggestion -- an M3 outlined card with one tonal action */
+.qs-model{display:flex;align-items:center;gap:10px;margin:-2px 0 12px;padding:10px 10px 10px 12px;border-radius:16px;
+  border:1px solid var(--md-outline-variant,#C3C7CF);background:var(--md-surface,#fff)}
+.qs-model[hidden]{display:none}
+.qs-m-t{flex:1;min-width:0;display:grid;grid-template-columns:auto auto 1fr;align-items:center;column-gap:8px;row-gap:2px}
+.qs-m-l{grid-column:1/-1;font:600 11px/1.2 var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--md-on-surface-var,#43474E)}
+.qs-m-t .qs-ic{width:24px!important;height:24px!important;border-radius:50%!important}
+.qs-m-t .qs-ic svg{width:14px;height:14px}
+.qs-m-t b{font:600 15px/1.25 var(--font);color:var(--md-on-surface,#191C20);white-space:nowrap}
+.qs-m-t small{grid-column:1/-1;font:500 12.5px/1.35 var(--font);color:var(--md-on-surface-var,#43474E)}
+.qs-m-take{flex:none;height:40px;padding:0 18px;border:0;border-radius:999px;cursor:pointer;font:600 14px/1 var(--font);
+  background:var(--md-primary,#2E5DA8);color:var(--md-on-primary,#fff)}
+.qs-m-take.on{background:var(--md-secondary-container,#D7E3F8);color:var(--md-on-secondary-container,#101C2B)}
+/* feed: model vs report, an M3 assist chip */
+.fc-model{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px 0 7px;border-radius:8px;
+  border:1px solid var(--md-outline-variant,#C3C7CF);font:600 12px/1 var(--font);color:var(--md-on-surface-var,#43474E);white-space:nowrap}
+.fc-model svg{width:14px;height:14px;flex:none}
+.fc-model.ag2{border-color:transparent;background:#DCF2E3;color:#0F5223}
+.fc-model.ag1{border-color:transparent;background:#E9EEF6;color:#2F3B4C}
+.fc-model.ag0{border-color:transparent;background:#FBE4DE;color:#7A2414}
+.fc-facts{flex-wrap:wrap;row-gap:6px}
+/* Neuschnee: band numbers inside the bands -- quiet, no box, a soft light halo */
+.ns-band{pointer-events:none!important}
+.ns-band span{display:block;transform:translate(-50%,-50%);white-space:nowrap;font:600 11.5px/1 var(--font);letter-spacing:.01em;opacity:.82;
+  text-shadow:0 0 2px rgba(255,255,255,.75),0 0 6px rgba(255,255,255,.45)}
+/* feed without an account: a sign-in card after the preview (M3 filled card) */
+.feed-gate{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;margin:12px;padding:22px 18px;border-radius:20px;
+  background:var(--md-surface-container,#EEF1F6);color:var(--md-on-surface,#191C20)}
+.feed-gate .fg-ic{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--md-secondary-container,#D7E3F8);color:var(--md-on-secondary-container,#101C2B)}
+.feed-gate .fg-ic svg{width:22px;height:22px}
+.feed-gate b{font:600 16px/1.3 var(--font)}
+.feed-gate small{font:500 13px/1.45 var(--font);color:var(--md-on-surface-var,#43474E);max-width:320px}
+.feed-gate button{margin-top:6px;height:44px;padding:0 26px;border:0;border-radius:999px;cursor:pointer;font:600 15px/1 var(--font);
+  background:var(--md-primary,#2E5DA8);color:var(--md-on-primary,#fff)}
+/* aerial photo on: the data layer lets it show through */
+body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
+/* feed: the model's weekly hit rate, an M3 filled card */
+.feed-hit{display:flex;align-items:center;gap:12px;margin:8px 12px 4px;padding:12px 14px;border-radius:16px;
+  background:var(--md-surface-container,#EEF1F6);color:var(--md-on-surface,#191C20)}
+.feed-hit[hidden]{display:none}
+.fh-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fh-t b{font:600 14.5px/1.25 var(--font)}
+.fh-t small{font:500 12.5px/1.35 var(--font);color:var(--md-on-surface-var,#43474E)}
+.fh-ring{--p:0;flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;
+  background:conic-gradient(var(--md-primary,#2E5DA8) calc(var(--p)*1%),var(--md-outline-variant,#C3C7CF) 0)}
+.fh-ring b{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--md-surface-container,#EEF1F6);font:700 12px/1 var(--font)}
+.fh-ic{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--md-secondary-container,#D7E3F8);color:var(--md-on-secondary-container,#101C2B)}
+.fh-ic svg{width:20px;height:20px}
+/* webcam popup: picture / daylight / 24 h timelapse, an M3 segmented button */
+.wc-pop .wc-media{position:relative}
+.wc-pop .wc-media img,.wc-pop .wc-media .wc-img{margin-bottom:0}
+.wc-pop .wc-frame{display:block;width:100%;aspect-ratio:16/9;border:0;background:#000}
+.wc-seg{display:flex;margin:10px 12px 0;border:1px solid var(--md-outline,#73777F);border-radius:999px;overflow:hidden}
+.wc-seg button{flex:1;min-width:0;height:36px;border:0;border-left:1px solid var(--md-outline,#73777F);background:transparent;cursor:pointer;
+  font:600 13px/1 var(--font);color:var(--md-on-surface,#191C20);padding:0 6px}
+.wc-seg button:first-child{border-left:0}
+.wc-seg button.on{background:var(--md-secondary-container,#D7E3F8);color:var(--md-on-secondary-container,#101C2B)}
+.wc-pop .wc-note{display:block;margin:6px 12px 2px;font:500 12px/1.3 var(--font);color:var(--md-on-surface-var,#43474E)}
+
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -7617,7 +7821,10 @@ html.cap-ios body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #
 // Light only for now (per request): no dark palette, whatever the phone
 // says or was chosen before. The dark tokens stay in the CSS, unused.
 (function(){try{
-  document.documentElement.setAttribute('data-theme','light');
+  // light by default; dark only when chosen in Einstellungen (or «System» on a dark phone)
+  var tp='light';try{tp=localStorage.getItem('ssm_theme')||'light';}catch(e){}
+  var dk=tp==='dark'||(tp==='system'&&!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches));
+  document.documentElement.setAttribute('data-theme',dk?'dark':'light');
   // the Android app's WebView: no GPU blur behind the bars (the CI emulator
   // died twice right after launch once the frosted bars were on)
   var ua=navigator.userAgent||'';
@@ -7723,6 +7930,7 @@ html.cap-ios body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #
 <button class="feed-qr" id="mapQr" onclick="qrOpen(event)" title="Schnellmeldung Powder" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Powder melden" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Powder melden</span></button>
 <div id="mapFabs">
+  <button type="button" id="fabFold" onclick="fabsFold()" aria-label="Steuerleiste ein-/ausklappen" title="Steuerleiste ein-/ausklappen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
   <div class="mfab-grp" role="toolbar" aria-label="Karte">
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
@@ -7771,8 +7979,8 @@ html.cap-ios body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #
 <div class="set-sheet" id="setSheet" onclick="if(event.target===this)setClose()">
   <div class="set-in" role="dialog" aria-modal="true" aria-label="Einstellungen">
     <div class="set-head"><b>Einstellungen</b><button onclick="setClose()" aria-label="Schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>
-    <span class="lbl-micro" hidden>Darstellung</span>
-    <div class="prof-seg" id="setTheme" hidden>
+    <span class="lbl-micro">Darstellung</span>
+    <div class="prof-seg" id="setTheme">
       <button data-v="system" onclick="themeSet('system')">System</button>
       <button data-v="light" onclick="themeSet('light')">Hell</button>
       <button data-v="dark" onclick="themeSet('dark')">Dunkel</button>
@@ -7868,6 +8076,7 @@ html.cap-ios body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #
 </div><button id="btn3dClose">✕ 2D</button>
 <div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="30" style="width:100px;accent-color:var(--acc)"> Map <span id="mapOpacLbl">30%</span></label>
 <button id="btn3dExag" title="Überhöhung (1.0 = wahre Höhen)">×1.0</button>
+<button id="btn3dPhoto" title="Luftbild (SWISSIMAGE) oder Karte" aria-pressed="true">Luftbild</button>
 <select id="overlay3d" style="padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:16px;min-height:46px"><option value="none">Keine Ebene</option><option value="snow">Neuschnee</option><option value="temp">Temperatur</option><option value="wind">Wind</option><option value="depth">Schneehöhe</option><option value="powder">Powder</option></select>
 <span id="keys3d" style="font-size:12px;color:var(--mut);opacity:.7;padding:6px 10px;display:none">WASD/Pfeile: drehen · +/-: zoomen · R: zurücksetzen</span></div>
 </div>
@@ -9490,7 +9699,11 @@ if(_isNative){try{document.documentElement.classList.add('cap-native');if(_CAP.g
 // A binary data blob (boot loader, SMB1) hands over Uint8Array views that
 // are used as they are; the JSON blob carries base64 strings.
 function dec(b){if(b instanceof Uint8Array)return b;const s=atob(b),n=s.length,a=new Uint8Array(n);for(let i=0;i<n;i++)a[i]=s.charCodeAt(i);return a;}
-function _pngUrl(k){const b=db(k);if(b instanceof Uint8Array){try{return URL.createObjectURL(new Blob([b],{type:'image/png'}));}catch(e){return '';}}return "data:image/png;base64,"+b;}
+// v2 packages name the terrain pictures as files of their own (M.png_urls);
+// in the native app they come from the hosted site like the other data
+function _pngFile(k){const u=M.png_urls&&M.png_urls[k];if(!u)return '';
+  const R=(window.__smRemote||'').replace(/\/+$/,'');return R?R+'/'+u:u;}
+function _pngUrl(k){const f=_pngFile(k);if(f)return f;const b=db(k);if(b instanceof Uint8Array){try{return URL.createObjectURL(new Blob([b],{type:'image/png'}));}catch(e){return '';}}return "data:image/png;base64,"+b;}
 const SNOW=dec(db('SNOW')),TEMP=dec(db('TEMP')),SUN=dec(db('SUN')),SPD=dec(db('SPD')),WDIR=dec(db('DIR'));
 const ABL=dec(db('ABL'));
 const WINDG=dec(db('WINDG')),RSLOPE=dec(db('RSLOPE')),RASPECT=dec(db('RASPECT')),RHOR=dec(db('RHOR'));
@@ -9678,7 +9891,12 @@ function aspCol(p){const s=mslpv(p);if(s<5)return ASPC.F;const q=aspectQ(maspv(p
 function isLee(cellAsp,windFrom){const lee=(windFrom+180)%360;let d=Math.abs(cellAsp-lee);if(d>180)d=360-d;return d<90;}
 const _QCEN={N:0,E:90,S:180,W:270};
 // Referenz: model/powder_engine.py — Aenderungen dort und hier synchron halten!
+// perturbation hooks for the "unsichere Stellen" layer: the same rules with the
+// air 1 K warmer / colder or the wind a quarter stronger / weaker
+let _pdDT=0,_pdWF=1;
+const _tvRaw=(t,p)=>TEMP[t*NP+p]/M.temp_mul-M.temp_off;
 function computePowder(p,ta,tb){
+  const tv=_pdDT?((t,q)=>_tvRaw(t,q)+_pdDT):_tvRaw;
   const asp=maspv(p),slp=mslpv(p),quad=aspectQ(asp);
   const res={powdered:false,valid_aspects:[],reason_flags:[],quality:'stable'};
   // Dominant wind + mean wind from nearest wind point
@@ -9689,7 +9907,8 @@ function computePowder(p,ta,tb){
   // the 10 m wind of the weather model is weak in the mountains (19.11.: median
   // 18 km/h where the SLF bulletin named wind slabs, 48 km/h at 700 hPa); snow
   // is moved at ridge height -> the stronger of the two, ridge wind damped
-  const meanW=Math.max(ws/Math.max(1,wc),PD_RIDGE_WIND_F*w7/Math.max(1,wc)), gustW=meanW*PD_GUST_FACTOR;
+  const meanW=_pdWF*Math.max(ws/Math.max(1,wc),PD_RIDGE_WIND_F*w7/Math.max(1,wc)), gustW=meanW*PD_GUST_FACTOR;
+  res.domW=domW;res.meanW=meanW;
   let tmax=-999;for(let t=ta;t<tb;t++){const v=tv(t,p);if(v>tmax)tmax=v;}
   // Letzter Schneefall ueber die ganze Serie (fuer D0'/D1')
   let lastSnowG=-1;for(let t=0;t<tb;t++){if(SNOW[t*NP+p]*M.snow_scale>0.1)lastSnowG=t;}
@@ -9988,8 +10207,8 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     ctx2.moveTo(x,day?2:topPad);ctx2.lineTo(x,day?ch-2:baseY);ctx2.stroke();
     if(compact)continue;
     if(day){const dd=Math.round((Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-_tlToday)/864e5);
-      const rel=dd===0?'Heute':dd===1?'Morgen':null,wd=WD()[d.getUTCDay()];
-      const lab=rel||(wd+' '+d.getUTCDate()+'.'),narrow=rel||wd;
+      // relative days instead of weekdays: «Heute», «-1d», «+2d»
+      const rel=dd===0?'Heute':null,lab=relDayLbl(dd),narrow=lab;
       if((_dayN++%dayEvery)===0&&x-_lastLabX>=34){ctx2.fillStyle=rel?_P.ink:_P.mut;ctx2.font='700 11.5px Helvetica Neue,Helvetica,Arial,sans-serif';
         const L=pxH*24<52?narrow:lab;ctx2.fillText(L,x+4,ch-5);_lastLabX=x;_lastHrX=x+ctx2.measureText(L).width;}}
     else if(labH&&hr%labH===0&&x-_lastHrX>=22){ctx2.fillStyle=_P.mut;ctx2.globalAlpha=.75;ctx2.font='600 11px Helvetica Neue,Helvetica,Arial,sans-serif';
@@ -10103,8 +10322,13 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     ctx2.textAlign='left';ctx2.fillText(tA,Math.max(x1+10,6),14);
     ctx2.textAlign='right';ctx2.fillText(tB,Math.min(x2-10,cw-6),14);
   }}
-// a time on the timeline with its weekday: «Mo 15:00»
-function tlWhen(t){t=Math.max(0,Math.min(T-1,t));const d=zLocal(tMs(t));return WD()[d.getUTCDay()]+' '+fmtTime(t);}
+// a day relative to today: «Heute», «-1d», «+2d» (the timeline speaks in
+// offsets, not weekdays -- "Mi" makes you count, "+2d" does not)
+function relDayLbl(dd){return dd===0?tr('Heute'):(dd>0?'+':'−')+Math.abs(dd)+'d';}
+function relDayOf(t){const d=zLocal(tMs(t)),n=zLocal(Date.now());
+  return Math.round((Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate()))/864e5);}
+// a time on the timeline with its day offset: «-1d 15:00», «Heute 09:00»
+function tlWhen(t){t=Math.max(0,Math.min(T-1,t));return relDayLbl(relDayOf(t))+' '+fmtTime(t);}
 // Karte + Layer
 const [laMin,loMin,laMax,loMax]=M.bounds;
 const _desktop=window.innerWidth>560&&!('ontouchstart'in window);
@@ -10406,6 +10630,13 @@ const OVERLAYS={
   // the one map a tourer reads with every other
   slope:{label:'Hangneigung ab 30°',wmts:'ch.swisstopo.hangneigung-ueber_30',op:.55,
          attr:'Hangneigung © swisstopo'},
+  // swisstopo's orthophoto (10-25 cm, summer flights) under the data layers:
+  // free geodata (OGD), commercial use allowed with the source named
+  aerial:{label:'Luftbild (SWISSIMAGE)',wmts:'ch.swisstopo.swissimage',ext:'jpeg',op:1,pane:'aerialPane',mz:20,
+          attr:'Luftbild SWISSIMAGE © swisstopo'},
+  // where the snow-type class is a close call: ±1 °C or ±25 % wind would
+  // change it -- hatched, so nobody reads a coin toss as certain
+  uncert:{label:'Unsichere Stellen (Schneetyp knapp)',vector:true,attr:''},
   // pistes and lifts from OpenStreetMap (our own build) with the resort names
   // the highest snowfall line of the selected window, drawn on the terrain
   snowline:{label:'Schneefallgrenze (höchste im Zeitraum)',vector:true,attr:''},
@@ -10470,7 +10701,10 @@ function ovAvailable(k){
 function ovBuild(k){
   if(ovLayer[k])return ovLayer[k];
   const o=OVERLAYS[k];
-  if(o.wmts){ovLayer[k]=L.tileLayer(swissTile(o.wmts,'png'),{opacity:o.op,pane:'overlayPane'});}
+  if(o.wmts){if(o.pane&&!map.getPane(o.pane)){const pn=map.createPane(o.pane);pn.style.zIndex=210;}
+    ovLayer[k]=L.tileLayer(swissTile(o.wmts,o.ext||'png'),{opacity:o.op,pane:o.pane||'overlayPane',crossOrigin:true,
+      maxNativeZoom:o.mz||18,maxZoom:20,keepBuffer:2});}
+  else if(k==='uncert'){ovLayer[k]=L.layerGroup();setTimeout(uncRefresh,0);}
   else if(k==='avalanche'){ovLayer[k]=avBuildLayer();}
   else if(k==='skitourVec'){ovLayer[k]=tourBuildLayer();}
   else if(k==='webcams'){ovLayer[k]=wcBuildLayer();}
@@ -10495,6 +10729,8 @@ function ovToggle(k,auto){
   if((k==='myacts'||k==='reports')&&!ovOn[k])trkShownClear();
   if(k==='skiareas'){try{localStorage.setItem('ssm_skiareas',ovOn[k]?'1':'0');}catch(e){}}
   if(k==='snowline'){try{localStorage.setItem('ssm_snowline2',ovOn[k]?'1':'0');}catch(e){}if(ovOn[k])snowlineRefresh();}
+  if(k==='aerial'){try{localStorage.setItem('ssm_aerial',ovOn[k]?'1':'0');}catch(e){}document.body.classList.toggle('aerial-on',!!ovOn[k]);}
+  if(k==='uncert'&&ovOn[k])uncRefresh();
   if(k==='avalanche')document.body.classList.toggle('av-on',!!ovOn[k]);
   if(k==='webcams'&&!auto){_wcAuto=false;try{localStorage.setItem('ssm_webcams',ovOn[k]?'1':'0');}catch(e){}}
   if(k==='skitourVec'){if(ovOn[k])tourRecolor();else tourClose();}
@@ -11023,8 +11259,10 @@ function vaHiEngine(){
       // the whole thin pack -- and hatched red in render(): rocks possible
       if(L===3||L===4||L===5||L===8||L===9||L===10){var pw6=m[E.mi.powder_depth_cm],B6=E.pk.powder_bounds||[1,5,10,15,20,30,40,50,75,100],j6=0;
         if(L===10&&!(pw6>=E.pk.thresholds.SK_POWDER_MIN))pw6=m[E.mi.total_hs_cm];
-        while(j6<B6.length&&pw6>=B6[j6])j6++;j6=Math.max(1,Math.min(6,j6));
-        var P6=[[0,0,0,0],[102,238,242,250],[79,195,242,250],[61,142,240,235],[90,111,214,235],[147,112,216,235],[196,91,224,235]][j6];
+        // the full snow scale of Neuschnee / Schneehöhe (1 … 100+ cm), not capped at 30
+        while(j6<B6.length&&pw6>=B6[j6])j6++;j6=Math.max(1,Math.min(10,j6));
+        var P6=((E.pk.rgba&&E.pk.rgba.powder&&E.pk.rgba.powder.length>10)?E.pk.rgba.powder
+          :[[0,0,0,0],[102,238,242,250],[79,195,242,250],[61,142,240,235],[90,111,214,235],[147,112,216,235],[196,91,224,235],[224,140,108,235],[240,164,52,235],[238,107,30,235],[226,56,43,235]])[j6];
         E.cls=L;out[0]=P6[0];out[1]=P6[1];out[2]=P6[2];out[3]=P6[3];return;}}
     else if(layer==='powder'){
       // dry powder depth in the SLF snow-depth bands (classify_powder)
@@ -11768,7 +12006,8 @@ function vaPickLayer(k){
 // disagreed with the map. Pack and frame are loaded here on demand and the
 // card opens again once they are in.
 let _vaPtWant=null;const _vaPtFail=new Set();
-function vaPointReopen(){const pn=document.getElementById('inspPanel');
+function vaPointReopen(){try{ptChipRefresh();}catch(e){}try{if(typeof qs!=='undefined'&&qs&&qs.ll)qsModelSync();}catch(e){}
+  const pn=document.getElementById('inspPanel');
   if(inspLast&&!inspLast.stn&&pn&&pn.classList.contains('open')){const st=pn.scrollTop;inspOpen(inspLast.lat,inspLast.lon);pn.scrollTop=st;}}
 // The terrain the map is drawn on at that spot: the same Terrarium tile, the
 // same pixel, the same slope and aspect (E.terrain) -- on a ridge the 25 m
@@ -11833,7 +12072,11 @@ function vaPointHTML(lat,lon,elev,slope,aspect){vaPointHTML.hs=null;vaPointHTML.
   const lbl=k6===0?'kein / wenig Schnee':k6===10?'Dünne Schneedecke – Steine, kaum fahrbar'
     :isPow?(thinC?'Pulver auf dünner Unterlage – Steine möglich':'Pulver, trocken'):(VA_SKI6_DE[k6]||nm('simple',sim)||'');
   if(!c6[3]){c6[0]=150;c6[1]=160;c6[2]=175;}
-  vaPointHTML.st={k6,pw,hs:m[x.total_hs_cm],thin:thinC};
+  // why, in a few words (the point chip and the quick report use it too)
+  const why=k6===0?'':m[x.crust_thick_cm]>0.2&&!isPow?'Harschdeckel '+m[x.crust_thick_cm].toFixed(1)+' cm'
+    :m[x.drift_load]>=0.2?'eingeweht (Triebschnee)':m[x.wind_scour]>=0.2?'vom Wind verblasen'
+    :thinC?'dünne Unterlage – Steine möglich':isPow?(pw>=1?'trocken, locker':''):'';
+  vaPointHTML.st={k6,pw,hs:m[x.total_hs_cm],thin:thinC,lbl,c:'rgb('+c6.slice(0,3).join(',')+')',why};
   if(tr){const AS=['N','NO','O','SO','S','SW','W','NW'];bits.splice(1,0,'Modellgelände '+Math.round(tr.el)+' m · '+Math.round(tr.sl)+'° '+AS[Math.round(tr.as/45)%8]);}
   const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+c6.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(lbl)+'</b></div>'
     +'<div><span>Pulver</span><b>'+(pw>=1?pw+'<small> cm</small>':'–')+'</b></div>'
@@ -12354,6 +12597,8 @@ function tourRamp(v,focus){const P=VA_PALETTE.ski6;
                                      :[[0,_hx(SC[0])],[20,_hx(SC[2])],[40,_hx(SC[3])],[60,_hx(SC[4])],[80,_hx(SC[5])],[100,_hx(SC[6])]];
   const c=_lerpC(st,v);return 'rgb('+c[0]+','+c[1]+','+c[2]+')';}
 function tourVal(r){return r?(tourFocus==='sulz'?r.sulz:r.powder):-1;}
+// the share for display: «–» where the route has no score yet (it printed «null»)
+function tourValTxt(r){const v=tourVal(r);return (v==null||!isFinite(v)||v<0)?'–':String(Math.round(v));}
 function tourColor(r){if(!r)return 'rgb('+TOUR_GREY.join(',')+')';return tourRamp(tourVal(r));}
 const tourVa={key:null,tag:null,eng:null,scores:new Map(),busy:null,when:'',done:false,run:0};
 function _lv03(lat,lon){const p=(lat*3600-169028.66)/10000,l=(lon*3600-26782.5)/10000;
@@ -12701,7 +12946,7 @@ function tourProfileSVG(t,r){_tpLast=[t,r];
 // and which way it faces -- "Oben Pulver 15 cm, unten Kruste · Abfahrt N".
 // From the same per-stretch SNOWPACK classes the score is made of.
 const TV_WORD={0:'kein Schnee',1:'hart',2:'Kruste',6:'Sulz',7:'nass',10:'dünn',11:'Altpulver'};
-function tourVerdict(t,r){
+function tourSheetVerdict(t,r){
   if(!r||!r.cls)return '';
   const segs=tourGeo(t).segs,n=Math.min(segs.length,r.cls.length);if(n<3)return '';
   const desc=i=>segs[i].sl!=null&&segs[i].sl>=TOUR_MIN_SLOPE&&segs[i].sl<=TOUR_MAX_SLOPE;
@@ -12736,11 +12981,11 @@ function tourSheetRender(t,r){
     +(r&&r.hsCm!=null&&r.hsCm<TOUR_HS_FULL?'<div class="ts-note">'+escapeHtml(tourCoverNote(r.hsCm))+'</div>':'');
   el.innerHTML='<div class="tsh-grab" data-drag></div>'
     +'<div class="tour-hd" data-drag>'+(tourFromSearch?'<button type="button" class="tour-backi" onclick="tourBackToSearch()" aria-label="Zurück zur Liste">‹</button>':'')
-    +'<span class="tour-score" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r):'–')+'<small>%</small></span>'
+    +'<span class="tour-score" style="--sc:'+tourColor(r)+'">'+tourValTxt(r)+(tourValTxt(r)==='–'?'':'<small>%</small>')+'</span>'
     +'<div class="tour-tt"><b>'+escapeHtml(t.name||'Skitour')+'</b><span>'+escapeHtml(facts)+'</span></div>'
     +favBtnHTML('tour',t.id,t.pname||t.name||'Skitour',g.hi.lat!=null?g.hi.lat:t.coords[0][1],g.hi.lon!=null?g.hi.lon:t.coords[0][0],g.hi.el,'tour-fav')
     +'<button type="button" class="tour-x" onclick="tourClose()" aria-label="Schliessen">×</button></div>'
-    +(function(){const v=tourVerdict(t,r);return v?'<div class="tour-verdict">'+escapeHtml(v)+'</div>':'';})()
+    +(function(){const v=tourSheetVerdict(t,r);return v?'<div class="tour-verdict">'+escapeHtml(v)+'</div>':'';})()
     // SLF's level for the route's region(s), the highest one it touches
     +'<div class="tour-av">'+avChipHTML(g.avMax?{lvl:g.avMax}:null,g.core>0.005?Math.round(g.core*100)+' % in Kernzone':'nicht in Kernzone')+'</div>'
     +stats
@@ -12969,7 +13214,7 @@ function wcErrTxt(e){const st=e&&e.status;
   if(st===429)return 'Webcams: Tageslimit von Windy erreicht – später nochmals versuchen.';
   if(st)return 'Webcams konnten nicht geladen werden (Windy antwortet '+st+').';
   return 'Webcams konnten nicht geladen werden – keine Verbindung zu Windy.';}
-function wcIcon(){return L.divIcon({className:'',iconSize:[30,30],iconAnchor:[15,15],
+function wcIcon(){return L.divIcon({className:'',iconSize:[24,24],iconAnchor:[12,12],
   html:'<div class="wc-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>'});}
 function wcBuildLayer(){wcLayer=L.layerGroup();setTimeout(wcRefresh,0);return wcLayer;}
 async function wcRefresh(){
@@ -12988,13 +13233,45 @@ async function wcRefresh(){
   }catch(e){console.warn('webcams',e);toastOnce('wc-err',wcErrTxt(e));}
   wcBusy=false;
 }
+// What a webcam shows first, chosen once and remembered: «auto» = the latest
+// picture by day and the last daylight picture at night (a black frame says
+// nothing), «img» = always the latest, «daylight» = always the last daylight
+// picture, «day» = Windy's 24 h timelapse with its own time slider.
+// (Windy's API has no picture archive of its own to scrub through, and its
+// picture links expire after minutes -- the timelapse player is the archive.)
+const WC_DEF_OPTS=[['auto','Auto'],['img','Jetzt'],['daylight','Tag'],['day','24 h']];
+function wcDef(){try{const v=localStorage.getItem('ssm_wcdef');return WC_DEF_OPTS.some(o=>o[0]===v)?v:'auto';}catch(e){return 'auto';}}
+function wcDefSet(v){try{localStorage.setItem('ssm_wcdef',v);}catch(e){}}
+function wcIsNight(){try{const d=zLocal(Date.now()),h=d.getUTCHours()+d.getUTCMinutes()/60,doy=Math.floor((Date.now()-Date.UTC(d.getUTCFullYear(),0,0))/864e5),
+  half=dayLenH(doy)/2;return h<12.5-half+0.3||h>12.5+half-0.3;}catch(e){return false;}}
+function wcPopMedia(c,mode){
+  if(mode==='auto')mode=wcIsNight()&&c.dimg?'daylight':'img';
+  if(mode==='day'&&c.player)return '<iframe class="wc-frame" src="'+escapeHtml(c.player)+'" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer-when-downgrade" title="'+escapeHtml(c.t)+' – 24 h"></iframe>';
+  const s=mode==='daylight'?(c.dimg||c.img):(c.img||c.dimg);
+  return s?'<img src="'+escapeHtml(s)+'" alt="">':'<div class="wc-img"></div>';}
+const _wcPop={};
+function wcPopMode(id,mode,save){const c=_wcPop[id];if(!c)return;if(save)wcDefSet(mode);
+  const box=document.getElementById('wcm-'+id);if(box)box.innerHTML=wcPopMedia(c,mode);
+  document.querySelectorAll('#wcs-'+id+' button').forEach(b=>b.classList.toggle('on',b.dataset.m===mode));
+  const n=document.getElementById('wcn-'+id);if(n)n.textContent=wcNoteTxt(c,mode);
+  try{haptic(3);}catch(e){}}
+function wcNoteTxt(c,mode){return mode==='day'?'Letzte 24 Stunden · Zeitregler im Player'
+  :(mode==='daylight'||(mode==='auto'&&wcIsNight()&&c.dimg))?'Letztes Bild bei Tageslicht':'Aktuelles Bild';}
 async function wcPreview(id,mk){
-  try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
-    const w=await r.json(),im=w.images&&(w.images.current||w.images.daylight)||{},src=im.preview||im.thumbnail;
+  try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls,player',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
+    const w=await r.json(),imc=(w.images&&w.images.current)||{},imd=(w.images&&w.images.daylight)||{},pl=w.player||{};
+    const day=typeof pl.day==='string'?pl.day:(pl.day&&typeof pl.day==='object'?(pl.day.embed||pl.day.link):null);
     const loc=w.location||{},upd=w.lastUpdatedOn?new Date(w.lastUpdatedOn):null;
     const when=upd?new Intl.DateTimeFormat(LOCALE(),{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}).format(upd):'';
     const link=(w.urls&&(w.urls.detail||w.urls.provider))||('https://www.windy.com/webcams/'+id);
-    mk.setPopupContent('<div class="wc-pop">'+(src?'<img src="'+escapeHtml(src)+'" alt="">':'<div class="wc-img"></div>')
+    const c=_wcPop[id]={t:w.title||'Webcam',img:imc.preview||imc.thumbnail||null,dimg:imd.preview||imd.thumbnail||null,player:typeof day==='string'?day:null};
+    const def=wcDef(),eid=escapeHtml(String(id));
+    mk.setPopupContent('<div class="wc-pop"><div class="wc-media" id="wcm-'+eid+'">'+wcPopMedia(c,def)+'</div>'
+      // M3 segmented button: what to show; the choice becomes the default
+      +'<div class="wc-seg" id="wcs-'+eid+'" role="group" aria-label="Webcam-Ansicht">'
+      +WC_DEF_OPTS.filter(o=>o[0]!=='day'||c.player).filter(o=>o[0]!=='daylight'||c.dimg)
+        .map(o=>'<button type="button" data-m="'+o[0]+'" class="'+(o[0]===def?'on':'')+'" onclick="wcPopMode(\''+eid+'\',\''+o[0]+'\',true)">'+o[1]+'</button>').join('')+'</div>'
+      +'<small class="wc-note" id="wcn-'+eid+'">'+escapeHtml(wcNoteTxt(c,def))+'</small>'
       +'<b>'+escapeHtml(w.title||'Webcam')+'</b><span>'+escapeHtml([loc.city,loc.region].filter(Boolean).join(', '))+(when?' · '+when:'')+'</span>'
       +'<button class="wc-fav'+(wcFavHas(id)?' on':'')+'" onclick="wcFavToggle(\''+escapeHtml(id)+'\',this)" data-t="'+escapeHtml(w.title||'Webcam')+'" data-lat="'+(loc.latitude||'')+'" data-lon="'+(loc.longitude||'')+'">'+(wcFavHas(id)?'★ Gemerkt':'☆ Merken')+'</button>'
       +'<button class="wc-fav wc-tvb" onclick="wcTvFrom(\''+escapeHtml(id)+'\')">▶ Webcam-TV</button>'
@@ -13011,7 +13288,7 @@ map.on('moveend',()=>{try{feedHereSync();}catch(e){}});
 // (all at once), or shows the latest picture. TV runs through the
 // favourites one after another; "In der Nähe" runs through the cameras
 // around you above a chosen altitude (our terrain model gives the altitude).
-const WCV={mode:null,kind:'img',tv:0,tvT:0,tvList:[],minAlt:1000,near:null,busy:false,view:-1,viewT:0};
+const WCV={mode:null,kind:(function(){try{return localStorage.getItem('ssm_wcdef')==='day'?'day':'img';}catch(e){return 'img';}})(),tv:0,tvT:0,tvList:[],minAlt:1000,near:null,busy:false,view:-1,viewT:0};
 const WC_TV_MS=15000;
 function wcFavs(){try{const v=JSON.parse(localStorage.getItem('ssm_wcfav')||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}}
 function wcFavSave(v){try{localStorage.setItem('ssm_wcfav',JSON.stringify(v));}catch(e){}}
@@ -13024,7 +13301,9 @@ function wcFavToggle(id,btn){id=String(id);let v=wcFavs();
 // details with fresh image links and the timelapse player
 async function wcDetails(ids){if(!ids.length)return [];
   const j=await wcFetch('webcamIds='+ids.map(encodeURIComponent).join(',')+'&limit=50&include=images,location,player');
-  return (j.webcams||[]).map(w=>{const loc=w.location||{},im=w.images&&(w.images.current||w.images.daylight)||{},pl=w.player||{};
+  // the remembered default decides which picture a tile shows (daylight at night with «Auto»)
+  const dl=wcDef()==='daylight'||(wcDef()==='auto'&&wcIsNight());
+  return (j.webcams||[]).map(w=>{const I=w.images||{},loc=w.location||{},im=(dl?(I.daylight||I.current):(I.current||I.daylight))||{},pl=w.player||{};
     const day=typeof pl.day==='string'?pl.day:(pl.day&&typeof pl.day==='object'?(pl.day.embed||pl.day.link):null),alt=loc.latitude!=null?fineElev(loc.latitude,loc.longitude):null;
     const live=typeof pl.live==='string'?pl.live:(pl.live&&typeof pl.live==='object'?(pl.live.embed||pl.live.link):null);
     return {id:String(w.webcamId||w.id),t:w.title||'Webcam',lat:loc.latitude,lon:loc.longitude,img:im.preview||im.thumbnail||null,
@@ -13059,7 +13338,10 @@ async function wcvRender(){const el=document.getElementById('wcvBody');if(!el)re
 // Picture | timelapse | live: the same switch on the grid, the viewer and TV
 function wcvKindBar(){return '<div class="wcv-kind">'+[['img','Live-Bild'],['day','Zeitraffer 24 h'],['live','Live-Video']]
   .map(k=>'<button class="'+(WCV.kind===k[0]?'on':'')+'" onclick="wcvKind(\''+k[0]+'\')">'+k[1]+'</button>').join('')+'</div>';}
-function wcvKind(k){WCV.kind=k;const el=document.getElementById('wcvBody');if(!el)return;
+function wcvKind(k){WCV.kind=k;
+  // the viewer's switch sets the same default as the map popup
+  if(k==='day')wcDefSet('day');else if(k==='img'&&wcDef()==='day')wcDefSet('auto');
+  const el=document.getElementById('wcvBody');if(!el)return;
   if(WCV.view>=0)wcvView(WCV.view);else if(WCV.mode==='near')wcvNearShow(el);else wcvRender();}
 // The grid always shows pictures (one video per tile would be too much);
 // a tap opens the camera large, with the switch.
@@ -14500,11 +14782,11 @@ function tsRender(onlyMap){
     +'</div>';
   const rows=list.slice(0,40).map((o,i)=>{const r=o.r,g=tourGeo(o.t);
     const nw=tpPeople(o.t.id).length;
-    return '<button type="button" class="tn-row" data-tid="'+escapeHtml(String(o.t.id))+'" onclick="tsPick('+i+')"><span class="tn-sc" style="--sc:'+tourColor(r)+'">'+(r?tourVal(r)+'%':'…')+'</span>'
+    return '<button type="button" class="tn-row" data-tid="'+escapeHtml(String(o.t.id))+'" onclick="tsPick('+i+')"><span class="tn-sc" style="--sc:'+tourColor(r)+'">'+(r?(tourValTxt(r)==='–'?'–':tourValTxt(r)+'%'):'…')+'</span>'
       +'<span class="tn-t"><b>'+(g.avMax?'<i class="tn-av" style="--avc:'+AV_COLORS[g.avMax]+'" title="Lawinengefahr '+g.avMax+' – '+AV_LABELS[g.avMax]+' (SLF)">'+g.avMax+'</i>':'')
       +escapeHtml(o.nv>1?(o.t.pname||o.t.name):(o.t.name||'Skitour'))+'</b><span>'+(o.nv>1?o.nv+' Varianten · ':'')+(Math.round(o.d/100)/10)+' km · '
       +(g.gain!=null?g.gain+' Hm · ':'')+'bis '+g.maxSlope+'°'+(g.hi.el!=null?' · '+Math.round(g.hi.el)+' m':'')+'</span>'
-      +(function(){let v='';try{v=tourVerdict(o.t,r);}catch(e){}return v?'<em class="tn-v">'+escapeHtml(v)+'</em>':'';})()+'</span>'
+      +(function(){let v='';try{v=tourSheetVerdict(o.t,r);}catch(e){}return v?'<em class="tn-v">'+escapeHtml(v)+'</em>':'';})()+'</span>'
       +'<span class="tn-w'+(nw?' on':'')+'" title="schauen gerade">'+(nw?(nw>10?'10+':nw):'')+'</span></button>';}).join('');
   if(onlyMap&&el.querySelector('.ts-list')){el.querySelector('.ts-count').textContent=list.length+' Touren';
     el.querySelector('.ts-list').innerHTML=rows||'<div class="tn-empty">Keine Tour passt zu diesen Filtern.</div>';tsSliderSync();return;}
@@ -14583,9 +14865,11 @@ const aspI=new Image();
 // Decoding starts after the first frame: nothing on screen depends on it.
 // With the binary blob the PNG bytes are at hand, and a Worker decodes and
 // reads them back (a multi-second main-thread task on a phone otherwise).
-function _aspWorker(){const raw=db('ASPECTPNG');
-  if(!(raw instanceof Uint8Array)||!raw.length||!window.Worker||typeof OffscreenCanvas==='undefined')return false;
-  try{const src='onmessage=async function(e){try{const bmp=await createImageBitmap(new Blob([e.data],{type:"image/png"}));'
+function _aspWorker(){const raw=db('ASPECTPNG'),file=_pngFile('ASPECTPNG');
+  if(!file&&(!(raw instanceof Uint8Array)||!raw.length))return false;
+  if(!window.Worker||typeof OffscreenCanvas==='undefined')return false;
+  try{const src='onmessage=async function(e){try{const blob=typeof e.data==="string"?await (await fetch(e.data)).blob():new Blob([e.data],{type:"image/png"});'
+      +'const bmp=await createImageBitmap(blob);'
       +'const c=new OffscreenCanvas(bmp.width,bmp.height),x=c.getContext("2d",{willReadFrequently:true});x.drawImage(bmp,0,0);'
       +'const d=x.getImageData(0,0,bmp.width,bmp.height);postMessage({w:d.width,h:d.height,buf:d.data.buffer},[d.data.buffer]);}'
       +'catch(err){postMessage({err:String(err)});}};';
@@ -14595,12 +14879,15 @@ function _aspWorker(){const raw=db('ASPECTPNG');
       aspPW=m.w;aspPH=m.h;aspData=new Uint8ClampedArray(m.buf);
       try{if(map.hasLayer(aspectGrid))aspectGrid.redraw();}catch(e2){}};
     w.onerror=()=>{w.terminate();aspI.src=ASPECT_PNG;};
+    if(file){w.postMessage(new URL(file,location.href).href);return true;}
     const copy=raw.slice();w.postMessage(copy.buffer,[copy.buffer]);return true;}catch(e){return false;}}
+// pictures from the hosted site (native app) must not taint the canvas they are read back from
+try{aspI.crossOrigin='anonymous';}catch(e){}
 _afterFirstPaint(function(){if(!_aspWorker())aspI.src=ASPECT_PNG;});
 aspI.onload=function(){aspPW=aspI.width;aspPH=aspI.height;const c=document.createElement('canvas');c.width=aspPW;c.height=aspPH;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(aspI,0,0);try{aspData=x.getImageData(0,0,aspPW,aspPH).data;}catch(e){}};
 // --- Fine terrain sampling: 60 m aspect (8-way) + fine elevation raster ---
 let elevData=null,elevPW=0,elevPH=0;
-const elevI=new Image();
+const elevI=new Image();try{elevI.crossOrigin='anonymous';}catch(e){}
 _afterFirstPaint(function(){elevI.src=ELEV_PNG;});
 elevI.onload=function(){elevPW=elevI.width;elevPH=elevI.height;const c=document.createElement('canvas');c.width=elevPW;c.height=elevPH;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(elevI,0,0);try{elevData=x.getImageData(0,0,elevPW,elevPH).data;}catch(e){}
   try{if(demoFitZones()){loadReportMarkers();if(layer==='prog')renderPrognosis(stat);else if(layer==='powfind')renderPowderFind();}}catch(e){}};
@@ -15904,7 +16191,7 @@ function alpsRender(){
   if(!alpsOv)alpsOv=L.imageOverlay(url,bb,{opacity:.94*layerOpacityMul(),className:'raster-smooth',interactive:false});else{alpsOv.setUrl(url);alpsOv.setOpacity(.94*layerOpacityMul());}
   if(!map.hasLayer(alpsOv))alpsOv.addTo(map);
 }
-function renderRaster(){_renderRaster();try{ptChipRefresh();}catch(e){}try{alpsRender();}catch(e){}try{if(ovOn.snowline)snowlineRefresh();}catch(e){}try{nsLabRefresh();}catch(e){}}
+function renderRaster(){_renderRaster();try{ptChipRefresh();}catch(e){}try{if(ovOn.uncert)uncRefreshSoon();}catch(e){}try{alpsRender();}catch(e){}try{if(ovOn.snowline)snowlineRefresh();}catch(e){}try{nsLabRefresh();}catch(e){}}
 // ── Neuschnee: place names with the window's centimetres ──────────────────
 // Like a TV snow map: well-known resorts and valleys across the Alps carry
 // a chip with the new snow of the chosen window (same colours as the layer).
@@ -15942,7 +16229,48 @@ function nsLabRefresh(){
   NS_PLACES.forEach(([n,la,lo,t])=>{if(t>tier)return;const v=nsCmAt(la,lo);if(!(v>=1))return;
     const cm=Math.round(v),c=RGB[snowBand(v)]||[120,160,220],dark=(c[0]*.3+c[1]*.59+c[2]*.11)<150;
     nsLabG.addLayer(L.marker([la,lo],{interactive:false,keyboard:false,
-      icon:L.divIcon({className:'ns-lab',iconSize:null,html:'<b style="background:rgb('+c[0]+','+c[1]+','+c[2]+');color:'+(dark?'#fff':'#0b1b2e')+'">'+cm+'</b><span>'+escapeHtml(n)+'</span>'})}));});}
+      icon:L.divIcon({className:'ns-lab',iconSize:null,html:'<b style="background:rgb('+c[0]+','+c[1]+','+c[2]+');color:'+(dark?'#fff':'#0b1b2e')+'">'+cm+'</b><span>'+escapeHtml(n)+'</span>'})}));});
+  try{nsBandRefresh();}catch(e){}}
+// The numbers of the bands, written into the bands themselves («10–15»):
+// sampled on a screen grid, a label where the band is, the same band not
+// twice within ~170 px, in a darker tone of the band's own colour with no
+// box -- readable, but not louder than the map.
+let nsBandG=null,_nsBandK='';
+// the value the Neuschnee map draws at a point: the cells interpolated
+// bilinearly between their centres, carried to the terrain's own height once
+// a cell is a few pixels across (as the drawing does) -- the Alps grid outside
+function nsPixAt(lat,lon){
+  const V=_nsV;if(!V||!(lat>laMin&&lat<laMax&&lon>loMin&&lon<loMax))return nsCmAt(lat,lon);
+  const fx=Math.min(W-1,Math.max(0,(lon-loMin)/(loMax-loMin)*W-.5)),fy=Math.min(H-1,Math.max(0,(laMax-lat)/(laMax-laMin)*H-.5));
+  const xa=fx|0,ya=fy|0,xb=Math.min(W-1,xa+1),yb=Math.min(H-1,ya+1),tx=fx-xa,ty=fy-ya;
+  const p0=map.latLngToContainerPoint([laMax,loMin]),p1=map.latLngToContainerPoint([laMin,loMax]),terr=_nsOk&&elevData&&(p1.x-p0.x)/W>=6;
+  const z=terr?fineElev(lat,lon):null;let su=0,sw=0;
+  const add=(p,wt)=>{if(wt<=0||inDomainEdge(p))return;const v0=V[p];if(!(v0===v0))return;
+    su+=wt*(z==null?v0:nsAtHeight(p,v0,z-melevv(p)));sw+=wt;};
+  add(ya*W+xa,(1-tx)*(1-ty));add(ya*W+xb,tx*(1-ty));add(yb*W+xa,(1-tx)*ty);add(yb*W+xb,tx*ty);
+  return sw?su/sw:NaN;}
+function nsBandRefresh(){
+  const on=layer==='snow'&&typeof raster!=='undefined'&&map.hasLayer(raster)&&!(typeof is3d!=='undefined'&&is3d);
+  if(!nsBandG){nsBandG=L.layerGroup();map.on('moveend',()=>{try{nsBandRefresh();}catch(e){}});}
+  if(!on){if(map.hasLayer(nsBandG))map.removeLayer(nsBandG);_nsBandK='';return;}
+  if(!map.hasLayer(nsBandG))nsBandG.addTo(map);
+  const bb=map.getBounds(),k=a+'|'+b+'|'+map.getZoom().toFixed(1)+'|'+bb.toBBoxString();if(k===_nsBandK)return;_nsBandK=k;
+  nsBandG.clearLayers();
+  const sz=map.getSize(),step=96,placed=[],hidF=(typeof legHideFn==='function')?legHideFn():null;
+  // places already carry their number: keep the band labels off them
+  const taken=[];nsLabG&&nsLabG.eachLayer(m=>{try{taken.push(map.latLngToContainerPoint(m.getLatLng()));}catch(e){}});
+  for(let y=step*0.6;y<sz.y-40;y+=step)for(let x=step*0.5+((y/step|0)%2)*step/2;x<sz.x-20;x+=step){
+    const ll=map.containerPointToLatLng([x,y]);let v;try{v=nsPixAt(ll.lat,ll.lng);}catch(e){continue;}
+    if(!(v>=SB[0]))continue;if(hidF&&hidF(v))continue;
+    const j=snowBand(v);if(j<0)continue;
+    if(taken.some(q=>Math.abs(q.x-x)<70&&Math.abs(q.y-y)<34))continue;
+    if(placed.some(q=>q.j===j&&Math.hypot(q.x-x,q.y-y)<170))continue;
+    placed.push({x,y,j});
+    const top=j>=SB.length-2,lab=SB[j]+(top?'+':'–'+SB[j+1]),c=RGB[j]||[120,160,220];
+    // a darker tone of the band colour (about 45 % toward a deep blue-grey)
+    const d=[c[0]*.5+20*.5|0,c[1]*.5+28*.5|0,c[2]*.5+48*.5|0];
+    nsBandG.addLayer(L.marker(ll,{interactive:false,keyboard:false,zIndexOffset:-200,
+      icon:L.divIcon({className:'ns-band',iconSize:null,html:'<span style="color:rgb('+d.join(',')+')">'+lab+'</span>'})}));}}
 // ── Schneefallgrenze: the highest snowfall line of the window ─────────────
 // For every hour with precipitation the snowfall line sits where the air is
 // about +1 degC: the cell's temperature carried up or down its own height at
@@ -16072,6 +16400,60 @@ function powderSurf(r){const f=r.reason_flags||[];
   if(f.includes('R3_wind_redistribution'))return 1;
   if(f.includes('D0_no_recent_snow'))return 0;
   return null;}
+// ── What the snow-type model says, in the community's words ─────────────
+// One place for the point chip, the quick report's suggestion and the feed's
+// "model vs report": the class as a quick-report key, the powder depth and a
+// short plain-language reason ("Wind aus W – Lee-Hang").
+const PD_KEY_OF_SURF={8:'regen',2:'kruste',7:'nass',6:'sulz',1:'hart'};
+function dirWord(deg){return ['N','NO','O','SO','S','SW','W','NW'][Math.round((((deg||0)%360)+360)%360/45)%8];}
+function pdWhy(r){const f=r.reason_flags||[],has=k=>f.includes(k);
+  if(has('D1_rain'))return 'Regen nach dem letzten Schneefall';
+  if(has('D4_warm_wet'))return 'warme Luft – die Oberfläche ist nass';
+  if(has('D4_warm_refrozen'))return 'angetaut und wieder gefroren';
+  if(has('D2_freeze_thaw'))return 'mehrmals angetaut und gefroren';
+  if(has('D3_solar_melt'))return 'viel Sonne seit dem Schneefall';
+  if(has('D0_no_recent_snow'))return 'seit Tagen nichts Neues';
+  const w=r.domW!=null?'Wind aus '+dirWord(r.domW):'Wind';
+  if(has('W2_storm'))return r.powdered?w+' (Sturm) – nur im Lee locker':w+' (Sturm) – verblasen';
+  if(has('R3_wind_redistribution'))return r.powdered?w+' – Lee-Hang, eingeweht':w+' – Luv-Hang, gepresst';
+  if(has('G2_wet_afternoon'))return 'warm und sonnig am Nachmittag';
+  if(has('I4_old_snow_persist'))return 'kalt geblieben – alter Pulver';
+  if(has('R2_calm_wind'))return 'kaum Wind seit dem Schneefall';
+  return '';}
+// p: model cell; tb: end hour (exclusive), 24 h back
+function modelSnowCell(p,tb){if(p<0||!(SNOW.length>=T*NP))return null;
+  tb=Math.max(1,Math.min(T,tb==null?nowIdx+1:tb));const ta=Math.max(0,tb-24);
+  let r;try{r=computePowder(p,ta,tb);}catch(e){return null;}
+  let k=null;
+  if(r.powdered)k=(r.reason_flags||[]).includes('I4_old_snow_persist')?'kantig':'pulver';
+  else{const s=powderSurf(r);k=PD_KEY_OF_SURF[s]||null;if(k==='hart'&&(r.reason_flags||[]).includes('W2_storm'))k='abgeblasen';}
+  const qt=k&&QS_TYPES.find(x=>x.k===k);
+  return qt?{k,qt,cm:Math.max(0,Math.round(r.newSnow||0)),why:pdWhy(r),reduced:r.quality==='reduced',r}:null;}
+// SNOWPACK (Variant A) at a point: the same engine, terrain tile and frame the
+// Skiqualität map is drawn from -- 'loading' while its data comes, null
+// without an export. Its frame is the time on the timeline.
+const VA_K6_QS={0:'aper',1:'hart',2:'kruste',3:'pulver',4:'pulver',5:'pulver',6:'sulz',7:'nass',8:'pulver',9:'pulver',10:'duenn',11:'kantig'};
+function vaSnowAt(lat,lon){if(!(typeof vaAvailable==='function'&&vaAvailable()))return null;
+  let z=null,sl=0,as=0;try{z=fineElev(lat,lon);}catch(e){}
+  const p=ptCell(lat,lon);if(p>=0){if(z==null)z=melevv(p);sl=mslpv(p);as=maspv(p);}
+  try{const d=fineAspectDeg(lat,lon);if(d!=null)as=d;}catch(e){}
+  if(z==null)return null;
+  let h='';try{h=vaPointHTML(lat,lon,z,sl,as);}catch(e){return null;}
+  if(h&&h.indexOf('lädt')>=0)return 'loading';
+  return vaPointHTML.st||null;}
+function vaSnowModel(st){const k=VA_K6_QS[st.k6],qt=k&&QS_TYPES.find(x=>x.k===k);
+  return qt?{k,qt,cm:Math.max(0,Math.round(st.pw||0)),why:st.why||'',src:'va'}:null;}
+function modelSnowAt(lat,lon,ms){
+  // now (or the timeline's time): SNOWPACK where it exists, as on the map
+  if(ms==null){const v=vaSnowAt(lat,lon);if(v&&v!=='loading'){const m=vaSnowModel(v);if(m)return m;}}
+  const p=ptCell(lat,lon);
+  const tb=ms==null?null:Math.floor((ms-tMs(0))/36e5)+1;
+  if(tb!=null&&(tb<2||tb>T))return null;
+  return modelSnowCell(p,tb);}
+// do a report and the model say the same? close families count as agreeing
+const PD_FAMILY={pulver:'loose',kantig:'loose',trieb:'wind',hart:'wind',abgeblasen:'wind',kruste:'crust',regen:'wet',nass:'wet',sulz:'corn'};
+function pdAgree(repK,modK){if(!repK||!modK)return null;if(repK===modK)return 2;
+  return PD_FAMILY[repK]&&PD_FAMILY[repK]===PD_FAMILY[modK]?1:0;}
 function windStat(k){let mn=1e9,mx=-1e9,su=0,c=0,ss=0,sc=0;
   for(let t=a;t<b;t++){const v=SPD[t*P+k]/M.spd_mul,dd=WDIR[t*P+k]*M.dir_div*Math.PI/180;
     mn=Math.min(mn,v);mx=Math.max(mx,v);su+=v;c++;ss+=Math.sin(dd);sc+=Math.cos(dd);}
@@ -16287,7 +16669,7 @@ function legSpec(l){
     // never shares of the view. Zoomed in the map draws powder in the SLF
     // bands (device engine); the coarse frames in the five powder classes.
     if(vaKey==='ski6'){const rows=[];
-      if(vaEng){const B=SB.slice(0,6),C=SC.slice(0,6);
+      if(vaEng){const B=SB.slice(0,10),C=SC.slice(0,10);
         for(let i=B.length-1;i>=0;i--)rows.push({k:100+i,c:C[i],s:B[i]+(i===B.length-1?'+':'–'+B[i+1]),n:'Pulver '+B[i]+(i===B.length-1?'+ cm':'–'+B[i+1]+' cm')});}
       else [[9,'40+'],[8,'30–40'],[5,leg[8]?'20–30':'20+'],[4,'10–20'],[3,'2–10']].forEach(([k,sv])=>{if(k===8&&!leg[8])return;
         rows.push({k,c:rgb(VA_PALETTE.ski6[k]),s:sv,n:'Pulver '+sv+' cm'});});
@@ -16300,8 +16682,8 @@ function legSpec(l){
       // numbers, then the other surfaces (crust, hard, wet ...) by name
       const pw=rows.filter(r=>r.k>=100||[3,4,5,8,9].includes(r.k)),sf=rows.filter(r=>pw.indexOf(r)<0).map(r=>Object.assign({},r,{sep:false}));
       const up=pw.slice().reverse(),ticks=[];
-      up.forEach((r,i)=>{const lo=parseInt(String(r.s),10);if(i>0&&[10,20,30,40].includes(lo))ticks.push([i,String(lo)]);});
-      return {t:name,u:'Pulver cm',va:true,noShare:true,rows,steps:{cols:up.map(r=>r.c),ticks},more:sf,moreT:'sonst'};}
+      up.forEach((r,i)=>{const lo=parseInt(String(r.s),10);if(i>0&&[10,30,100].includes(lo))ticks.push([i,String(lo)]);});
+      return {t:name,u:'Pulver cm',va:true,noShare:true,rows,steps:{cols:up.map(r=>r.c),ticks},more:sf,moreT:'Andere Schneearten'};}
     const rows=ORD.filter(k=>leg[k]&&leg[k][1]).map(k=>{const e=leg[k],nm=e[2]||String(e[0]).replace(/_/g,' ');
       return {k,c:rgb(e[1]),s:SH[k]||nm.split(/[\s/(]/)[0].slice(0,7),n:nm};});
     return {t:name,u:(vaKey==='ski6'||vaKey==='powder')?'Pulver cm':vaKey==='wind'?'Wind':'Klasse',va:true,rows};
@@ -16318,7 +16700,7 @@ function legSpec(l){
   if(l==='powder')return {t:'Powder',u:'Pulver cm',
     rows:(()=>{const rows=[];for(let i=SB.length-2;i>=0;i--){const top=i===SB.length-2;
       rows.push({c:SC[Math.min(i,SC.length-1)],s:(i?SB[i]:'<'+SB[1])+(top?'+':i?'–'+SB[i+1]:''),n:(i?SB[i]:'<'+SB[1])+(top?'+':i?'–'+SB[i+1]:'')+' cm Pulver'});}return rows;})(),
-    steps:snowSteps(),moreT:'sonst',
+    steps:snowSteps(),moreT:'Andere Schneearten',
     more:PD_SURF_ROWS.map(([k,sv,n])=>({k,c:'rgb('+PD_SURF_COL[k].join(',')+')',s:sv,n:sv+' – '+n})),long:'Neuschnee, der als Pulver liegen bleibt; Deckkraft = wie sicher'};
   if(l==='wind'){
     const wl=WIND_LVLS[windLvl][1];
@@ -16911,6 +17293,8 @@ function lyRender(){
   lyInfoRender();
 }
 const OV_ICON={
+  aerial:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="8" r="1.6"/>',
+  uncert:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 11l8-8M3 19L19 3M9 21L21 9M17 21l4-4"/>',
   reports:'<path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17"/>',
   myacts:'<path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-6 4-9"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="8" r="1.6"/>',
   webcams:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
@@ -16948,7 +17332,7 @@ function ovRowHTML(k){
 }
 // the chip names: short enough to read in full; the long name stays the
 // accessible name and the tooltip
-const OV_SHORT={reports:'Meldungen',myacts:'Meine Touren',skitourVec:'Touren mit Score',skitour:'Tourenkarte',
+const OV_SHORT={aerial:'Luftbild',uncert:'Unsichere Stellen',reports:'Meldungen',myacts:'Meine Touren',skitourVec:'Touren mit Score',skitour:'Tourenkarte',
   webcams:'Webcams',wildlife:'Wildruhezonen',slope:'Hangneigung',snowline:'Schneefallgrenze',skiareas:'Skigebiete',
   avalanche:'Lawinenbulletin',xwc:'Webcam-Galerie',xstn:'Messstationen'};
 // the community's own pins live under its shelf, not with the map extras
@@ -17339,8 +17723,8 @@ addEventListener('pointerdown',e=>{
 // --- Theme -------------------------------------------------------------
 // Three states, because "follow the phone" is the one most people want and
 // neither of the other two can express it.
-function themePref(){try{return localStorage.getItem('ssm_theme')||'system';}catch(e){return 'system';}}
-const THEME_DARK_OK=false;   // light only for now
+function themePref(){try{return localStorage.getItem('ssm_theme')||'light';}catch(e){return 'light';}}
+const THEME_DARK_OK=true;   // dark on request (Einstellungen › Darstellung); light stays the default
 function themeIsDark(v){
   if(!THEME_DARK_OK)return false;
   v=v||themePref();
@@ -17861,10 +18245,17 @@ function ptLayerValue(lat,lon){const p=ptCell(lat,lon);if(p<0)return null;
     if(id==='depth'){const v=cum[b*NP+p];return {ic:ic(id),v:Math.round(v)+' cm',s:'Schneehöhe',c:fpSnowCol(v)};}
     if(id==='temp'){const v=mean(t=>tvI(t,p));return {ic:ic(id),v:(v>0?'+':'')+v.toFixed(1)+' °C',s:'Temperatur',c:v>0?'#E5484D':'#3B82F6'};}
     if(id==='wind'){const wk=mainToWind[p];const v=mean(t=>SPD[t*P+wk]/M.spd_mul*3.6);return {ic:ic(id),v:Math.round(v)+' km/h',s:'Wind',c:'#64748B'};}
-    if(id==='powder'||id==='snowpack'){const r=computePowder(p,a,b);
-      if(r.powdered)return {ic:ic(id),v:'Pulver '+Math.round(r.newSnow||0)+' cm',s:r.quality==='reduced'?'etwas gesetzt':'gut',c:fpSnowCol(r.newSnow||0)};
+    // Skiqualität is drawn by SNOWPACK: read the same engine at the same spot
+    // (it said «Eingeregnet» from the rule engine where the map and the point
+    // page showed powder)
+    if(id==='snowpack'){const st=vaSnowAt(lat,lon);
+      if(st==='loading')return {ic:ic(id),v:'Skiqualität',s:'lädt …',c:'#C9D0DA',pd:1};
+      if(st){const pow=[3,4,5,8,9].includes(st.k6);
+        return {ic:ic(id),v:pow&&st.pw>=1?'Pulver '+st.pw+' cm':st.lbl,s:pow?(st.thin?'dünne Unterlage – Steine möglich':st.why):st.why,c:st.c,pd:1};}}
+    if(id==='powder'||id==='snowpack'){const r=computePowder(p,a,b),why=pdWhy(r);
+      if(r.powdered)return {ic:ic(id),v:'Pulver '+Math.round(r.newSnow||0)+' cm',s:(r.quality==='reduced'?'gesetzt':'gut')+(why?' · '+why:''),c:fpSnowCol(r.newSnow||0),pd:1};
       const k=powderSurf(r),row=PD_SURF_ROWS.find(q=>q[0]===k);
-      return {ic:ic(id),v:row?row[1]:'kein Pulver',s:row?row[2]:'',c:k!=null&&PD_SURF_COL[k]?'rgb('+PD_SURF_COL[k].join(',')+')':'#C9D0DA'};}
+      return {ic:ic(id),v:row?row[1]:'kein Pulver',s:why||(row?row[2]:''),c:k!=null&&PD_SURF_COL[k]?'rgb('+PD_SURF_COL[k].join(',')+')':'#C9D0DA',pd:1};}
   }catch(e){}
   const asp=(function(){try{const d=fineAspectDeg(lat,lon);return d!=null?asp8(d):aspectQ(maspv(p));}catch(e){return '';}})();
   return {ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l6-11 4 6 3-4 5 9z"/></svg>',v:Math.round(z)+' m',s:asp?'Exposition '+asp:'',c:'#64748B'};}
@@ -17872,14 +18263,67 @@ function ptChipOpen(lat,lon){ptChipClose();const v=ptLayerValue(lat,lon);if(!v){
   const m=L.marker([lat,lon],{icon:L.divIcon({className:'',html:'<div class="insp-xmark"><i></i></div>',iconSize:[30,30],iconAnchor:[15,15]}),interactive:false,zIndexOffset:2000}).addTo(map);
   const pop=L.marker([lat,lon],{icon:L.divIcon({className:'pt-chip-wrap',iconSize:null,iconAnchor:[0,0],
     html:'<div class="pt-chip" role="group" aria-label="Wert hier"><button type="button" class="pt-v" onclick="ptChipMore()"><i style="background:'+v.c+'"></i>'+v.ic+'<b>'+escapeHtml(v.v)+'</b>'+(v.s?'<small>'+escapeHtml(v.s)+'</small>':'')+'</button>'
+      // snow type: "is it so?" -- one tap to the quick report, the model's class pre-filled
+      +(v.pd?'<button type="button" class="pt-rep" onclick="ptChipReport()" aria-label="Schnee hier melden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Melden</button>':'')
       +'<button type="button" class="pt-more" onclick="ptChipMore()" aria-label="Mehr Informationen zu diesem Punkt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg></button>'
       +'<button type="button" class="pt-x" onclick="ptChipClose()" aria-label="Schliessen">×</button></div>'}),zIndexOffset:2100,keyboard:false}).addTo(map);
   _ptChip={lat,lon,m,pop};try{haptic(3);}catch(e){}
   try{L.DomEvent.disableClickPropagation(pop.getElement());}catch(e){}}
 function ptChipClose(){if(!_ptChip)return;try{map.removeLayer(_ptChip.m);map.removeLayer(_ptChip.pop);}catch(e){}_ptChip=null;}
 function ptChipMore(){if(!_ptChip)return;const {lat,lon}=_ptChip;ptChipClose();inspOpen(lat,lon);}
+function ptChipReport(){ptChipClose();try{qsOpen();}catch(e){}}
 // the chip follows the layer, the time and the window
 function ptChipRefresh(){if(_ptChip){const {lat,lon}=_ptChip;ptChipOpen(lat,lon);}}
+// ── Unsichere Stellen: where the snow-type class is a close call ─────────
+// Each sampled cell is classed by the snow-type rules as they stand and again
+// with the air 1 K warmer and colder and the wind 25 % stronger and weaker.
+// Where any of those changes the class, the cell is hatched: the map should
+// not look as sure there as it does where all five agree. Worked through in
+// slices so the page never freezes; the hatch is drawn in screen pixels.
+const _unc={key:'',mask:null,busy:false,job:0,layer:null,n:0,nu:0};
+let _uncT=0;
+function uncRefreshSoon(){clearTimeout(_uncT);_uncT=setTimeout(uncRefresh,350);}
+function uncClass(r){return r.powdered?'p'+(r.quality==='reduced'?1:0):'s'+powderSurf(r);}
+function uncRefresh(){if(!ovOn.uncert||!(SNOW.length>=T*NP))return;
+  const ta=a,tb=Math.max(a+1,b),key=ta+'|'+tb;if(key===_unc.key&&_unc.mask){uncDraw();return;}
+  const job=++_unc.job,st=NP>250000?2:1,mask=new Uint8Array(NP),PERT=[[1,1],[-1,1],[0,1.25],[0,0.75]];
+  let y=0,nAll=0,nUnc=0;
+  const step=()=>{if(job!==_unc.job||!ovOn.uncert)return;const t0=performance.now();
+    for(;y<H&&performance.now()-t0<24;y+=st){for(let x=0;x<W;x+=st){const p=y*W+x;
+      let r0;try{_pdDT=0;_pdWF=1;r0=computePowder(p,ta,tb);}catch(e){continue;}
+      const c0=uncClass(r0);if(c0==='s0'||c0==='snull'){continue;}   // nothing there to be unsure about
+      nAll++;let unsure=false;
+      for(const [dT,wf] of PERT){_pdDT=dT;_pdWF=wf;let r;try{r=computePowder(p,ta,tb);}catch(e){continue;}
+        if(uncClass(r)!==c0){unsure=true;break;}}
+      _pdDT=0;_pdWF=1;
+      if(unsure){nUnc++;for(let dy=0;dy<st&&y+dy<H;dy++)for(let dx=0;dx<st&&x+dx<W;dx++)mask[(y+dy)*W+x+dx]=1;}}}
+    _pdDT=0;_pdWF=1;
+    if(y<H){setTimeout(step,0);return;}
+    _unc.key=key;_unc.mask=mask;_unc.n=nAll;_unc.nu=nUnc;uncDraw();};
+  step();}
+let _uncPatC=null;
+function uncPattern(){if(_uncPatC)return _uncPatC;const c=document.createElement('canvas');c.width=c.height=9;const g=c.getContext('2d');
+  g.strokeStyle='rgba(28,32,44,.62)';g.lineWidth=1.5;g.beginPath();g.moveTo(-1,10);g.lineTo(10,-1);g.moveTo(-1,1);g.lineTo(1,-1);g.moveTo(8,10);g.lineTo(10,8);g.stroke();
+  return _uncPatC=c;}
+const UncGrid=L.GridLayer.extend({createTile:function(c){const tile=document.createElement('canvas'),ts=this.getTileSize();tile.width=ts.x;tile.height=ts.y;
+  const m=_unc.mask;if(!m)return tile;const g=tile.getContext('2d'),z=c.z,nw=c.scaleBy(ts);
+  const ll0=map.unproject(nw,z),ll1=map.unproject(nw.add(ts),z);
+  const x0=Math.max(0,Math.floor((ll0.lng-loMin)/(loMax-loMin)*W)),x1=Math.min(W-1,Math.floor((ll1.lng-loMin)/(loMax-loMin)*W));
+  const y0=Math.max(0,Math.floor((laMax-ll0.lat)/(laMax-laMin)*H)),y1=Math.min(H-1,Math.floor((laMax-ll1.lat)/(laMax-laMin)*H));
+  if(x1<x0||y1<y0)return tile;
+  g.fillStyle=g.createPattern(uncPattern(),'repeat');
+  const px=lo=>map.project([laMax,lo],z).x-nw.x,py=la=>map.project([la,loMin],z).y-nw.y;
+  for(let y=y0;y<=y1;y++){const ya=py(laMax-(y)*(laMax-laMin)/H),yb=py(laMax-(y+1)*(laMax-laMin)/H);
+    for(let x=x0;x<=x1;x++){if(!m[y*W+x])continue;const xa=px(loMin+x*(loMax-loMin)/W),xb=px(loMin+(x+1)*(loMax-loMin)/W);
+      g.fillRect(Math.floor(xa),Math.floor(ya),Math.ceil(xb-xa)+1,Math.ceil(yb-ya)+1);}}
+  return tile;}});
+function uncDraw(){const grp=ovLayer.uncert;if(!grp)return;
+  if(!_unc.layer){_unc.layer=new UncGrid({pane:'overlayPane',zIndex:450,updateWhenZooming:false});}
+  if(!grp.hasLayer(_unc.layer))grp.addLayer(_unc.layer);else _unc.layer.redraw();
+  try{uncNote();}catch(e){}}
+// a short note while the layer is on: how much of the snow-covered map is a close call
+function uncNote(){if(!_unc.n)return;const pc=Math.round(_unc.nu/_unc.n*100);
+  toastOnce('unc-'+_unc.key,'Schraffiert: knapp an einer Grenze (±1 °C, ±25 % Wind) – '+pc+' % der verschneiten Fläche');}
 function mapModeBusy(){const B=document.body.classList;
   return ['ts-open','tn-open','qs-open','draw-on','rep-open','trk-open','snp-open','plan-on'].some(c=>B.contains(c))
     ||!!(typeof obsState!=='undefined'&&obsState&&document.getElementById('reportOverlay')&&document.getElementById('reportOverlay').style.display!=='none')
@@ -18820,13 +19264,28 @@ function init3D(){
         'hillshade-tiles':{type:'raster',tiles:[swissTile('ch.swisstopo.swissalti3d-reliefschattierung_monodirektional','png')],tileSize:256,maxzoom:16},
         // swisstopo's 3D terrain (swissALTI3D), turned into terrarium tiles on
         // the device -- see sw3dProtocol(); the global tiles fill in abroad
-        'terrain-dem':{type:'raster-dem',tiles:[sw3dReady()?'swtopo://{z}/{x}/{y}':'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',maxzoom:14,
-          attribution:'Gelände © swisstopo'},
+        // finer mesh close up (swissALTI3D down to ~2.5 m on a desktop, ~5 m on a
+        // phone): rock bands, ridges and gullies stand up instead of melting
+        'terrain-dem':{type:'raster-dem',tiles:[sw3dReady()?'swtopo://{z}/{x}/{y}':'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',
+          maxzoom:sw3dReady()?(isMobile?15:16):14,attribution:'Gelände © swisstopo'},
+        // the same heights once more, for a shading drawn from them (MapLibre
+        // wants a separate source for terrain and hillshade)
+        'terrain-hs':{type:'raster-dem',tiles:[sw3dReady()?'swtopo://{z}/{x}/{y}':'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',
+          maxzoom:sw3dReady()?15:14},
+        // swisstopo's orthophoto (OGD: free, also commercially, with the source named)
+        'swissimage':{type:'raster',tiles:[swissTile('ch.swisstopo.swissimage','jpeg')],tileSize:256,maxzoom:19,attribution:'Luftbild SWISSIMAGE © swisstopo'},
         'slope-src':{type:'raster',tiles:[swissTile('ch.swisstopo.hangneigung-ueber_30','png')],tileSize:256,minzoom:8,maxzoom:16},
         'skitour-src':{type:'raster',tiles:[swissTile('ch.swisstopo-karto.skitouren','png')],tileSize:256,minzoom:8,maxzoom:16}},
       layers:[
-        {id:'swisstopo-base',type:'raster',source:'swisstopo',paint:{'raster-opacity':0.3}},
-        {id:'hillshade',type:'raster',source:'hillshade-tiles',paint:{'raster-opacity':0.7}},
+        {id:'swisstopo-base',type:'raster',source:'swisstopo',layout:{visibility:photo3dOn()?'none':'visible'},paint:{'raster-opacity':0.3}},
+        {id:'hillshade',type:'raster',source:'hillshade-tiles',layout:{visibility:photo3dOn()?'none':'visible'},paint:{'raster-opacity':0.7}},
+        // the photo by default in 3D, with a light shading from the terrain on
+        // top: rocks read as rock, the sun side and the shadow side apart
+        {id:'swissimage-3d',type:'raster',source:'swissimage',layout:{visibility:photo3dOn()?'visible':'none'},
+          paint:{'raster-opacity':1,'raster-contrast':0.08,'raster-saturation':-0.04,'raster-fade-duration':150}},
+        {id:'relief-3d',type:'hillshade',source:'terrain-hs',layout:{visibility:photo3dOn()?'visible':'none'},
+          paint:{'hillshade-exaggeration':0.42,'hillshade-illumination-direction':315,'hillshade-shadow-color':'#16202b',
+            'hillshade-highlight-color':'rgba(255,255,255,0.28)','hillshade-accent-color':'#2b3038'}},
         // the 2D map's overlays, draped on the relief like everything else
         {id:'slope-3d',type:'raster',source:'slope-src',layout:{visibility:ovOn.slope?'visible':'none'},paint:{'raster-opacity':0.5,'raster-fade-duration':0}},
         {id:'skitour-3d',type:'raster',source:'skitour-src',layout:{visibility:ovOn.skitour?'visible':'none'},paint:{'raster-opacity':0.9,'raster-fade-duration':0}}],
@@ -18839,7 +19298,7 @@ function init3D(){
   map3d.keyboard.enable();
   document.getElementById('btn3dFloat').classList.add('active');
   if(!isMobile)document.getElementById('keys3d').style.display='inline';
-  map3d.on('load',()=>{try{sync3dLayer();}catch(e){}update3dOverlay();
+  map3d.on('load',()=>{try{sync3dLayer();}catch(e){}update3dOverlay();try{photo3dSet(photo3dOn());}catch(e){}
     // from the two-finger gesture: the flat map tips over into 3D
     if(_tilt3d){_tilt3d=false;map3d.easeTo({pitch:60,bearing:-15,duration:1100});}
     else fly3dIn();
@@ -18923,7 +19382,18 @@ function close3D(){
   document.getElementById('btn3dFloat').classList.remove('active');}
 document.getElementById('btn3dFloat').onclick=e=>{e.stopPropagation();if(is3d)close3D();else init3D();};
 document.getElementById('btn3dClose').onclick=()=>close3D();
-document.getElementById('mapOpac3d').oninput=function(){if(!map3d)return;const v=this.value/100;
+// 3D on the aerial photo (default) or on the map; remembered
+function photo3dOn(){try{return localStorage.getItem('ssm_3d_photo')!=='0';}catch(e){return true;}}
+function photo3dSet(on){try{localStorage.setItem('ssm_3d_photo',on?'1':'0');}catch(e){}
+  const b=document.getElementById('btn3dPhoto');if(b){b.setAttribute('aria-pressed',on?'true':'false');b.classList.toggle('on',on);b.textContent=on?'Luftbild':'Karte';}
+  if(!map3d||!map3d.getLayer)return;
+  const vis=(id,v)=>{if(map3d.getLayer(id))map3d.setLayoutProperty(id,'visibility',v?'visible':'none');};
+  vis('swissimage-3d',on);vis('relief-3d',on);
+  const mv=(document.getElementById('mapOpac3d')||{value:30}).value/100;
+  vis('swisstopo-base',!on&&mv>=0.02);vis('hillshade',!on&&mv<=0.98);
+  const ctl=document.getElementById('mapOpac3d');if(ctl&&ctl.parentElement)ctl.parentElement.style.display=on?'none':'';}
+document.getElementById('btn3dPhoto').onclick=()=>{photo3dSet(!photo3dOn());try{haptic(4);}catch(e){}};
+document.getElementById('mapOpac3d').oninput=function(){if(!map3d||photo3dOn())return;const v=this.value/100;
   map3d.setPaintProperty('swisstopo-base','raster-opacity',v);
   map3d.setPaintProperty('hillshade','raster-opacity',1-v);
   // a picture at 0 % is not fetched at all
@@ -19676,6 +20146,7 @@ try{if(localStorage.getItem('ssm_reports')==='0'){ovOn.reports=false;map.removeL
 // «Meine Aufzeichnungen» stays as you left it (it is off unless you turned it on)
 try{if(localStorage.getItem('ssm_myacts')==='1')setTimeout(()=>{try{if(!ovOn.myacts)ovToggle('myacts',true);}catch(e){}},0);}catch(e){}
 try{if(localStorage.getItem('ssm_skiareas')==='1')setTimeout(()=>{try{if(!ovOn.skiareas)ovToggle('skiareas',true);}catch(e){}},0);}catch(e){}
+try{if(localStorage.getItem('ssm_aerial')==='1')setTimeout(()=>{try{if(!ovOn.aerial)ovToggle('aerial',true);}catch(e){}},0);}catch(e){}
 try{if(localStorage.getItem('ssm_snowline2')==='1')setTimeout(()=>{try{if(!ovOn.snowline)ovToggle('snowline',true);}catch(e){}},0);}catch(e){}
 // Default is the 1 April 2026 demo dataset; live/current weather is an
 // explicit opt-in, remembered in localStorage so it survives a fresh load
@@ -21603,6 +22074,8 @@ function qsOpen(){
   el.innerHTML='<div class="qs-in"><div class="qs-grab"></div>'
     +'<div class="qs-hd"><b>Schnellmeldung</b><button type="button" class="qs-x" onclick="qsClose()" aria-label="Schliessen">×</button></div>'
     +'<div class="qs-loc" id="qsLoc"><span>Standort wird bestimmt…</span></div>'
+    // what the model says here: one tap takes it over, then only correct what differs
+    +'<div class="qs-model" id="qsModel" hidden></div>'
     +'<div class="qs-tour" id="qsTour"></div>'
     // when it was: now by default, back up to 7 days (a report written later)
     +'<div class="qs-when"><span class="qs-lbl">Wann</span><div class="qs-whenseg"><button type="button" id="qsWhenNow" class="on" onclick="qsWhenNowSet()">Jetzt</button><button type="button" id="qsWhenOther" onclick="qsWhenPick()">Früher …</button></div><input type="datetime-local" id="qsWhen" hidden oninput="qsWhenSync()" aria-label="Datum und Zeit der Beobachtung"><b id="qsWhenV" hidden>jetzt</b></div>'
@@ -21697,7 +22170,21 @@ function qsPlace(lat,lon,acc,noGps){if(!qs)return;
   const r=map.getContainer().getBoundingClientRect();
   map.setView([lat,lon],Math.max(map.getZoom(),14),{animate:false});
   map.panBy([0,Math.round(r.height/2-qsCrossY())],{animate:false});
-  _qsY=qsCrossY();qsCrossPos();qsLocText();qsTourSync();const b=document.getElementById('qsPost');if(b)b.disabled=false;}
+  _qsY=qsCrossY();qsCrossPos();qsLocText();qsModelSync();qsTourSync();const b=document.getElementById('qsPost');if(b)b.disabled=false;}
+// the model's snow type at the report's point and time, as a suggestion
+function qsModelSync(){const el=document.getElementById('qsModel');if(!el||!qs||!qs.ll)return;
+  let ms=null;try{const w=qsWhenMs();if(isFinite(w)&&Math.abs(Date.now()-w)>36e5)ms=w;}catch(e){}
+  const m=modelSnowAt(qs.ll[0],qs.ll[1],ms);qs.model=m;
+  if(!m){el.hidden=true;return;}
+  const same=QS_TYPES[qs.type]&&QS_TYPES[qs.type].k===m.k;
+  el.hidden=false;
+  el.innerHTML='<div class="qs-m-t"><span class="qs-m-l">Modell hier</span>'+qsIc(m.k,m.qt.c,'sm')
+    +'<b>'+escapeHtml(m.qt.l)+(m.qt.depth&&m.cm?' · '+m.cm+' cm':'')+'</b>'
+    +(m.why?'<small>'+escapeHtml(m.why)+'</small>':'')+'</div>'
+    +'<button type="button" class="qs-m-take'+(same?' on':'')+'" onclick="qsModelTake()">'+(same?'Übernommen':'Stimmt')+'</button>';}
+function qsModelTake(){if(!qs||!qs.model)return;const i=QS_TYPES.findIndex(x=>x.k===qs.model.k);if(i<0)return;
+  qsPick(i);if(QS_TYPES[i].depth&&qs.model.cm>0)qsDepth(Math.min(QS_CM_MAX,qs.model.cm));
+  try{haptic(5);}catch(e){}}
 function qsTourSync(){if(!qs||!qs.ll)return;const ll=qs.ll;
   toursEnsure().then(()=>{if(qs)tourPickRender('qsTour',ll[0],ll[1]);}).catch(()=>{});}
 function qsLocText(){const el=document.getElementById('qsLoc');if(!el||!qs||!qs.ll)return;
@@ -21715,7 +22202,10 @@ function qsSync(){if(!qs)return;document.querySelectorAll('#qsWheel .qs-it').for
   // tracks for the loose snow, a state slider for the others)
   const d=document.getElementById('qsDep');if(d)d.hidden=!QS_TYPES[qs.type].depth;
   const tr=document.getElementById('qsTrk');if(tr)tr.hidden=!QS_TYPES[qs.type].depth;
-  qsQualSync();}
+  qsQualSync();
+  // the suggestion's button follows: «Übernommen» once the wheel shows the model's type
+  const mb=document.querySelector('#qsModel .qs-m-take');
+  if(mb&&qs.model){const same=QS_TYPES[qs.type].k===qs.model.k;mb.classList.toggle('on',same);mb.textContent=same?'Übernommen':'Stimmt';}}
 function qsQualSync(){if(!qs)return;const k=QS_TYPES[qs.type].k,Q=QS_QUAL[k],box=document.getElementById('qsQual');if(!box)return;
   box.hidden=!Q;if(!Q)return;const n=Q.l.length,i=qs.qual[k]!=null?qs.qual[k]:Math.floor((n-1)/2),r=document.getElementById('qsQualR');
   document.getElementById('qsQualT').textContent=Q.t;
@@ -21754,8 +22244,11 @@ function qsWhenSync(){const v=document.getElementById('qsWhenV');if(!v)return;co
   {const now=ago<10*6e4,bn=document.getElementById('qsWhenNow'),bo=document.getElementById('qsWhenOther');
    if(bn)bn.classList.toggle('on',now);
    if(bo){bo.classList.toggle('on',!now);const d=new Date(ms);
-     bo.textContent=now?'Früher …':(d.getDate()===new Date().getDate()&&ago<864e5?'Heute':(WD()[d.getDay()]||'')+' '+d.getDate()+'.'+(d.getMonth()+1)+'.')+', '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}}
-  v.textContent=ago<10*6e4?'jetzt':ago<36e5?'vor '+Math.round(ago/6e4)+' min':ago<864e5&&new Date(ms).getDate()===new Date().getDate()?'heute':(WD()[new Date(ms).getDay()]||'');}
+     const dd=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()))/864e5);
+     bo.textContent=now?'Früher …':relDayLbl(dd)+', '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}}
+  {const d=new Date(ms),dd=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()))/864e5);
+   v.textContent=ago<10*6e4?'jetzt':ago<36e5?'vor '+Math.round(ago/6e4)+' min':dd===0?'heute':relDayLbl(dd);}
+  try{qsModelSync();}catch(e){}}
 function qsDangerToggle(){const w=document.getElementById('qsDanger'),b=document.getElementById('qsDgB');if(!w||!b)return;
   b.hidden=!b.hidden;w.classList.toggle('on',!b.hidden);const h=w.querySelector('.qs-dg-h');if(h)h.setAttribute('aria-expanded',String(!b.hidden));try{haptic(3);}catch(e){}}
 function qsCmtToggle(){const b=document.getElementById('qsCmtBox');if(!b)return;b.hidden=!b.hidden;
@@ -21772,6 +22265,9 @@ async function qsPost(){if(!qs||qs.busy||!qs.ll)return;
     const cd={snow:t.k,measurement:t.l+(t.depth?' '+qsCmText(qs.cm):''),
       aspect:d.aspect||null,altitudeM:d.elev!=null?d.elev:null,gpsAcc:qs.acc?Math.round(qs.acc):null,moved:qs.moved||undefined};
     if(dp)cd.depthBand=[dp[0],dp[1]];
+    // the model's class here, kept with the report: every quick report is a
+    // labelled check of the snow-type layer (model vs ground truth)
+    if(qs.model)cd.model={k:qs.model.k,cm:qs.model.cm,agree:pdAgree(t.k,qs.model.k),v:M.version||null};
     const Q=QS_QUAL[t.k];let qv=null;
     if(Q&&qs.qualSet[t.k]){qv=qs.qual[t.k];cd.qual={t:Q.t,v:qv,l:Q.l[qv]};cd.measurement+=' · '+(Q.crust?'Deckel ':'')+(Q.m||'')+Q.l[qv];
       if(Q.crust)cd.crust=Q.crust[qv];}
@@ -21798,9 +22294,10 @@ async function qsPost(){if(!qs||qs.busy||!qs.ll)return;
 // SNOWPACK scoring the tour finder uses. A pill at the top; a tap opens them.
 let _nbT=0,_nbKey='',_nbList=[],_nbMe=false;
 function nearBestSoon(ms){clearTimeout(_nbT);_nbT=setTimeout(nearBestRun,ms==null?1500:ms);}
+const NEAR_BEST_PILL=false;   // no tour suggestion pill top centre (per request)
 function nearBestShut(){try{return sessionStorage.getItem('ssm_nb_x')==='1';}catch(e){return false;}}
 async function nearBestRun(){
-  if(nearBestShut()||!(typeof vaAvailable==='function'&&vaAvailable()))return;
+  if(!NEAR_BEST_PILL||nearBestShut()||!(typeof vaAvailable==='function'&&vaAvailable()))return;
   try{await toursEnsure();}catch(e){return;}
   if(!tourList().length||!(await tourVaPrepare()))return;
   const me=!!myLoc,c=me?{lat:myLoc[0],lon:myLoc[1]}:(()=>{const x=map.getCenter();return {lat:x.lat,lon:x.lng};})();
@@ -21817,6 +22314,10 @@ async function nearBestRun(){
     .sort((x,y)=>(y.r.powder*(1+(y.r.powderCm||0)/40))-(x.r.powder*(1+(x.r.powderCm||0)/40)))
     .forEach(o=>{const g=o.t.group||o.t.id;if(seen.has(g)||out.length>=3)return;seen.add(g);out.push(o);});
   _nbList=out;_nbMe=me;nearBestRender();}
+// the map's side buttons fold away to a small handle (remembered)
+function fabsFold(on){on=on==null?!document.body.classList.contains('fabs-folded'):on;
+  document.body.classList.toggle('fabs-folded',on);try{localStorage.setItem('ssm_fabs_fold',on?'1':'0');}catch(e){}try{haptic(3);}catch(e){}}
+try{if(localStorage.getItem('ssm_fabs_fold')==='1')document.body.classList.add('fabs-folded');}catch(e){}
 function nearBestName(o){return o.t.pname||o.t.name||'Skitour';}
 function nearBestRender(){
   let el=document.getElementById('nearBest');
@@ -21829,7 +22330,7 @@ function nearBestRender(){
     +'<div class="nb-card" role="dialog" aria-label="Bestes Pulver in deiner Nähe"><div class="nb-hd"><b>Bestes Pulver in deiner Nähe</b>'
     +'<button type="button" onclick="nearBestClose()" aria-label="Ausblenden">×</button></div>'
     +'<small class="nb-sub"><span>'+(_nbMe?'Umkreis 30 km um dich':'Umkreis 30 km um die Kartenmitte')+'</span>'+(tourVa.when?' · <span>Modell</span> '+escapeHtml(tourVa.when):'')+'</small>'
-    +_nbList.map((o,i)=>{const g=tourGeo(o.t);let v='';try{v=tourVerdict(o.t,o.r);}catch(e){}
+    +_nbList.map((o,i)=>{const g=tourGeo(o.t);let v='';try{v=tourSheetVerdict(o.t,o.r);}catch(e){}
       if(!v||/keine/i.test(v))v=o.r.powderCm?'Pulver '+o.r.powderCm+' cm':'';
       return '<button type="button" class="nb-row" onclick="nearBestPick('+i+')"><span class="tn-sc" style="--sc:'+tourColor(o.r)+'">'+o.r.powder+'%</span>'
         +'<span class="nb-t"><b>'+escapeHtml(nearBestName(o))+'</b><em>'+escapeHtml(v||('Pulver '+(o.r.powderCm||'')+' cm'))+'</em>'
@@ -21897,7 +22398,9 @@ function offlineUrls(){
   for(const z of [VA_TERR_Z,TERR_FZ])box(z,(x,y)=>tiles.push(VA_TERR+z+'/'+x+'/'+y+'.png'));
   const D=window.__dataLj;
   if(D&&D.lj){const p=D.pre+'data/';other.add(p+'latest.json');other.add(p+'tours.json');other.add(p+'config.json');
-    ['bin','x'].forEach(k=>{if(D.lj[k])other.add(p+D.lj[k]);});}
+    [D.lj.bin2?'bin2':'bin','x'].forEach(k=>{if(D.lj[k])other.add(p+D.lj[k]);});
+    // the terrain pictures the v2 package points to
+    ['ASPECTPNG','ELEVPNG','ROUGHPNG'].forEach(k=>{const f=_pngFile(k);if(f)other.add(new URL(f,location.href).href);});}
   document.querySelectorAll('script[src],link[rel=stylesheet][href]').forEach(el=>{const u=el.src||el.href;
     if(/^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net)\//.test(u)||/\/vendor\//.test(u))other.add(u);});
   return {tiles,other:[...other],bounds:[s,w,n,e]};}
@@ -21913,12 +22416,14 @@ async function offlineVaUrls(){const out=[];
   let i0=ts.findIndex(t=>Date.parse(String(t).slice(0,16)+':00Z')>=now);if(i0<0)i0=Math.max(0,ts.length-24);
   for(let i=i0;i<Math.min(ts.length,i0+25);i++)out.push(vaV(VA_BASE+'/'+vaPk.file.replace('{tag}',vaMan.tags[i])));
   return out;}
-let _offBusy=false;
+let _offBusy=false,_offAbort=null;
+// stop a running offline download; what came in so far is thrown away
+function offlineCancel(){if(_offAbort)_offAbort.abort();}
 async function offlineSave(){if(!isPro()){proSheet('offline');return;}
   if(_offBusy)return;
   if(!('caches' in window)){toast('Dieser Browser kann nichts offline speichern','err');return;}
   if(navigator.onLine===false){toast('Zum Speichern braucht es Netz','err');return;}
-  _offBusy=true;const set=t=>{const b=document.getElementById('offSaveBtn');if(b)b.querySelector('span').textContent=t;};
+  _offBusy=true;_offAbort=new AbortController();const sig=_offAbort.signal;offRender();const set=t=>{const b=document.getElementById('offSaveBtn');if(b)b.querySelector('span').textContent=t;};
   try{
     const U=offlineUrls(),va=await offlineVaUrls(),all=[...U.other,...va,...U.tiles];
     const cache=await caches.open(OFF_CACHE);
@@ -21926,20 +22431,22 @@ async function offlineSave(){if(!isPro()){proSheet('offline');return;}
     for(const k of await cache.keys())await cache.delete(k);
     let done=0,bytes=0,fail=0,i=0;set('Speichert… 0 %');
     const one=async u=>{try{let r=null;
-        try{r=await fetch(u,{cache:'force-cache'});}catch(e){r=null;}
-        if(!r||!(r.ok||r.type==='opaque'))r=await fetch(u,{mode:'no-cors'});
+        try{r=await fetch(u,{cache:'force-cache',signal:sig});}catch(e){if(sig.aborted)return;r=null;}
+        if(!r||!(r.ok||r.type==='opaque'))r=await fetch(u,{mode:'no-cors',signal:sig});
         const bl=await r.clone().blob().catch(()=>null);if(bl)bytes+=bl.size;
         await cache.put(u,r);}catch(e){fail++;}
       done++;if(done%20===0)set('Speichert… '+Math.round(done/all.length*100)+' %');};
-    const work=async()=>{while(i<all.length){const u=all[i++];await one(u);}};
+    const work=async()=>{while(i<all.length&&!sig.aborted){const u=all[i++];await one(u);}};
     await Promise.all([work(),work(),work(),work(),work(),work()]);
+    if(sig.aborted){try{await caches.delete(OFF_CACHE);}catch(e){}try{localStorage.removeItem(OFF_KEY);}catch(e){}
+      toast('Offline-Download abgebrochen','info');_offBusy=false;_offAbort=null;offRender();return;}
     const D=window.__dataLj,nm=(function(){const c=map.getCenter();try{const t=tourNearPoint(c.lat,c.lng,6000,1);if(t.length)return 'bei '+(t[0].t.pname||t[0].t.name);}catch(e){}
       return c.lat.toFixed(2)+'°N '+c.lng.toFixed(2)+'°E';})();
     const info={at:Date.now(),name:nm,n:all.length-fail,bytes,bounds:U.bounds,gen:D&&D.lj&&D.lj.generated||null};
-    try{localStorage.setItem(OFF_KEY,JSON.stringify(info));if(D&&D.lj&&D.lj.bin)localStorage.setItem('ssm_full',D.lj.bin);}catch(e){}
+    try{localStorage.setItem(OFF_KEY,JSON.stringify(info));if(D&&D.lj&&(D.lj.bin2||D.lj.bin))localStorage.setItem('ssm_full',D.lj.bin2||D.lj.bin);}catch(e){}
     toast(fail>all.length*0.1?'Teilweise gespeichert ('+fail+' fehlten)':'Offline gespeichert · '+Math.round(bytes/1e6)+' MB','ok');
   }catch(e){toast('Offline-Speichern fehlgeschlagen: '+(e.message||e),'err');}
-  _offBusy=false;offRender();}
+  _offBusy=false;_offAbort=null;offRender();}
 // Without a service worker (the iPhone/Android app) nothing serves the saved
 // area by itself: a map tile that fails to load (no signal) is taken from
 // the offline cache instead. On the website the worker does it first.
@@ -21961,8 +22468,8 @@ function offRender(){const el=document.getElementById('setOffline');if(!el)retur
   const o=offInfo(),ic='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>';
   el.innerHTML=(o?'<div class="off-info"><b>'+escapeHtml(o.name)+'</b><small><span>Gespeichert</span> '+escapeHtml(offWhen(o.at))+' · '+Math.round((o.bytes||0)/1e6)+' MB'
       +(o.gen?' · <span>Vorhersage vom</span> '+escapeHtml(offWhen(Date.parse(o.gen))):'')+'</small></div>':'')
-    +'<button type="button" id="offSaveBtn" onclick="offlineSave()">'+ic+'<span>'+(o?'Neu speichern (aktueller Kartenausschnitt)':'Kartenausschnitt offline speichern')+'</span></button>'
-    +(o?'<button type="button" onclick="offlineDrop()"><span>Offline-Daten löschen</span></button>'
+    +'<button type="button" id="offSaveBtn" onclick="offlineSave()"'+(_offBusy?' disabled':'')+'>'+ic+'<span>'+(_offBusy?'Speichert…':o?'Neu speichern (aktueller Kartenausschnitt)':'Kartenausschnitt offline speichern')+'</span></button>'
+    +(_offBusy?'<button type="button" id="offCancelBtn" onclick="offlineCancel()"><span>Download abbrechen</span></button>':o?'<button type="button" onclick="offlineDrop()"><span>Offline-Daten löschen</span></button>'
       :'<div class="fav-note">Karte, Vorhersage und Skiqualität der nächsten 24 h für das Gebiet auf dem Bildschirm (bis ca. 25 × 25 km). Oben am Berg ohne Netz startet die App damit.</div>');}
 // offline: one bar that says which forecast the map shows
 function offBar(){let el=document.getElementById('offBar');
@@ -22008,7 +22515,7 @@ async function profSave(){
 async function profSignOut(){bioForget();await pushUnsubscribe();window._pushFor=null;if(sb)sb.auth.signOut();profClose();authUpdateUI(null);}
 function sendFeedback(){try{haptic(8);}catch(e){}
   const body=encodeURIComponent('\n\n---\nSnowmapper\n'+(navigator.userAgent||''));
-  window.location.href='mailto:giani.morf@bluewin.ch?subject='+encodeURIComponent('Snowmapper Feedback')+'&body='+body;}
+  window.location.href='mailto:gianandrimorf@gmail.com?subject='+encodeURIComponent('Snowmapper Feedback')+'&body='+body;}
 // --- View another user's profile ---
 let uvUid=null;
 async function viewUser(uid,username){
@@ -24590,7 +25097,17 @@ function feedFactsHTML(r){const cd=r.condition_data||{},qt=typeof cd.snow==='str
   const extra=[cd.qual&&cd.qual.l?(cd.qual.t==='Deckel'?'Deckel ':'')+cd.qual.l:cd.crust?'Deckel '+lbOf(SNOW_THICK,cd.crust):'',cd.tracks?lbOf(TRK_TRACKS,cd.tracks):''].filter(Boolean).join(' · ');
   return '<div class="fc-facts"><span class="fc-snow">'+qsIc(qt.k,qt.c,'sm')+escapeHtml(qt.l)+'</span>'
     +(dep?'<b>'+dep+'</b>':'')+(where?'<span class="fc-where">'+escapeHtml(where)+'</span>':'')
-    +(extra?'<span class="fc-where">'+escapeHtml(extra)+'</span>':'')+'</div>';}
+    +(extra?'<span class="fc-where">'+escapeHtml(extra)+'</span>':'')+feedModelHTML(r,qt)+'</div>';}
+// what the snow-type model said there and then, next to what was seen: the
+// community checks the model in plain sight (and the model the report)
+const FC_AG_IC=['<path d="M6 6l12 12M18 6L6 18"/>','<path d="M4 9h16M4 15h16"/>','<path d="M5 12.5l4.5 4.5L19 7"/>'];
+function feedModelHTML(r,qt){
+  const cd=r.condition_data||{};let m=null;
+  if(cd.model&&cd.model.k){const q=QS_TYPES.find(x=>x.k===cd.model.k);if(q)m={k:cd.model.k,qt:q};}
+  else if(r.lat!=null&&r.lng!=null){try{m=modelSnowAt(r.lat,r.lng,rptTimeMs(r));}catch(e){m=null;}}
+  if(!m||!m.qt)return '';
+  const ag=pdAgree(qt.k,m.k),t=['Modell sagte etwas anderes','Modell: ähnlich','Modell: gleich'][ag];
+  return '<span class="fc-model ag'+ag+'" title="'+escapeHtml(t)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+FC_AG_IC[ag]+'</svg>Modell: '+escapeHtml(m.qt.l)+'</span>';}
 // Everything a report says, as label/value rows (only what is there).
 function feedDetailsHTML(r){const cd=r.condition_data||{},rows=[];
   const lb=(arr,k)=>{try{const f=(arr||[]).find(x=>x[0]===k);return f?f[1]:k;}catch(e){return k;}};
@@ -24838,7 +25355,33 @@ function feedWireCarousels(){document.querySelectorAll('.fc-carousel').forEach(c
 function fcStep(id,d){const c=document.getElementById('fcar-'+id);if(!c)return;
   const i=Math.max(0,Math.min(c.children.length-1,Math.round(c.scrollLeft/Math.max(1,c.clientWidth))+d));
   c.scrollTo({left:i*c.clientWidth,behavior:'smooth'});}
+// ── «Modell diese Woche: 71 % bestätigt» ────────────────────────────────
+// Every quick report carries what the model said there (condition_data.model,
+// agree 2 = same class, 1 = related, 0 = different). The share of the last
+// 7 days stands over the feed, in plain sight: honesty as a feature, and a
+// reason to report. Counted from the database, the loaded posts as fallback.
+let _hit={at:0,n:0,ok:0,same:0,busy:false};
+async function hitLoad(){if(_hit.busy||Date.now()-_hit.at<10*60e3)return;_hit.busy=true;
+  const since=new Date(Date.now()-7*864e5).toISOString();let rows=null;
+  try{if(sb){const {data,error}=await sb.from('reports').select('condition_data,captured_at').gte('captured_at',since)
+      .not('condition_data->model','is',null).limit(2000);if(!error)rows=data;}}catch(e){rows=null;}
+  if(!rows)rows=(allReports||[]).filter(r=>r.condition_data&&r.condition_data.model&&rptTimeMs(r)>=Date.now()-7*864e5);
+  let n=0,ok=0,same=0;rows.forEach(r=>{const m=r.condition_data&&r.condition_data.model;if(!m||m.agree==null)return;n++;if(m.agree>=1)ok++;if(m.agree===2)same++;});
+  _hit={at:Date.now(),n,ok,same,busy:false};feedHitSync();}
+function feedHitSync(){const list=document.getElementById('feedList');if(!list)return;
+  let el=document.getElementById('feedHit');
+  if(!el){el=document.createElement('div');el.id='feedHit';el.className='feed-hit';list.parentNode.insertBefore(el,list);}
+  hitLoad();
+  const n=_hit.n;
+  if(!_hit.at){el.hidden=true;return;}
+  el.hidden=false;
+  if(n<5){el.innerHTML='<span class="fh-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/></svg></span>'
+    +'<span class="fh-t"><b>Modell-Check</b><small>Noch '+(n?'zu wenige Meldungen ('+n+')':'keine Meldungen')+' diese Woche – jede Schnellmeldung prüft das Modell</small></span>';return;}
+  const pc=Math.round(_hit.ok/n*100),ps=Math.round(_hit.same/n*100);
+  el.innerHTML='<span class="fh-ring" style="--p:'+pc+'" aria-hidden="true"><b>'+pc+'%</b></span>'
+    +'<span class="fh-t"><b>Modell diese Woche: '+pc+' % bestätigt</b><small>'+n+' Schnellmeldungen · '+ps+' % genau gleich, '+(pc-ps)+' % ähnlich</small></span>';}
 function feedRender(){
+  try{feedHitSync();}catch(e){}
   const list=document.getElementById('feedList');
   // Drawn snow-maps feed the Reported Powder model (progZones() reads
   // allReports directly), but they are not posts -- nobody drew them to be
@@ -24914,7 +25457,11 @@ function feedRender(){
   if(!filtered.length){list.innerHTML='<div class="feed-empty">'+(!main||feedFilter==='all'?'Noch keine Beiträge hier. Sei die erste Person – tippe unten auf «Melden».':'Noch keine «'+escapeHtml((FEED_KINDS.find(k=>k.id===feedFilter)||{}).l||'')+'» hier.')+'</div>';return;}
   // Building four hundred cards to show six is most of what made opening the
   // feed feel slow. Nobody scrolls past the first page before it re-renders.
-  const FEED_PAGE=40;
+  // Without an account the feed is a preview: the three newest posts, then a
+  // sign-in card. (The map keeps its community pins: a look at the snow
+  // should not need an account; reading the conversation does.)
+  const guest=!sbUser&&feedScope!=='post';
+  const FEED_PAGE=guest?3:40;
   const shown=filtered.slice(0,FEED_PAGE),more=filtered.length-shown.length;
   list.innerHTML=shown.map((r,ix)=>{
     const col=CAT_COLORS[r.cat]||'#666';
@@ -24961,7 +25508,10 @@ function feedRender(){
         ${heartBtnHTML(r)}${endBtn}
       </div>
     </div>${isF&&filtered.length>1?`<div class="feed-more-hd">${feedScope==='post'?'Neueste Beiträge':'Weitere Beiträge'+(feedUserName?' von '+escapeHtml(feedUserName):'')}</div>`:''}`;
-  }).join('')+(more>0?('<div class="feed-more">'+more+' weitere</div>'):'')
+  }).join('')+(guest?('<div class="feed-gate"><span class="fg-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>'
+      +'<b>'+(more>0?more+' weitere Meldungen':'Die ganze Community')+'</b><small>Melde dich kostenlos an, um alle Meldungen, Fotos und Kommentare zu sehen – und selbst zu melden.</small>'
+      +'<button type="button" onclick="authShow()">Anmelden</button></div>')
+    :(more>0?('<div class="feed-more">'+more+' weitere</div>'):''))
     +(txtHidden?'<button type="button" class="feed-txt-more" onclick="feedTxtSet(true)">'+txtHidden+' Beitr'+(txtHidden===1?'ag':'äge')+' ohne Bild einblenden</button>':'');
   feedAnimateCards();feedWireCarousels();feedSeenWatch();
   try{feedHighlight(shown.map(r=>r.id));}catch(e){}
