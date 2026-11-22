@@ -7452,6 +7452,34 @@ body.leg-open #miniLegend #mlName{color:var(--md-on-primary)}
 #ovChips .ov-chip{width:40px;height:40px;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer;
   background:var(--md-secondary-container,#D6E3FF);color:var(--md-on-secondary-container,#0F1C2C);box-shadow:0 1px 3px rgba(0,0,0,.18)}
 #ovChips .ov-chip svg{width:20px;height:20px}
+/* ==== Runde 22.11.: Steuerleiste schmal und einklappbar ==== */
+#mapFabs .mfab-grp .mfab{width:32px!important;height:32px!important;border-radius:16px!important}
+#mapFabs .mfab-grp .mfab svg{width:16px!important;height:16px!important}
+#mapFabs .mfab-grp .mfab .fab-txt{font:600 11px/1 var(--font)!important}
+#mapFabs .mfab-grp .mfab+.mfab::before{left:7px!important;right:7px!important}
+#mapFabs{gap:8px!important}
+#ovChips{gap:6px;margin-top:4px}
+#ovChips .ov-chip{width:32px;height:32px}
+#ovChips .ov-chip svg{width:16px;height:16px}
+#miniLegend,#mapFabs #miniLegend,body.desk #mapFabs #miniLegend{width:34px!important;height:34px!important;max-width:34px!important}
+#miniLegend #mlName{height:34px!important}
+#miniLegend #mlName svg{width:17px!important;height:17px!important}
+#fabFold{width:36px;height:16px;padding:0;border:0;border-radius:8px;display:grid;place-items:center;cursor:pointer;
+  background:color-mix(in srgb,var(--card) 82%,transparent);color:var(--ink-700,#555);box-shadow:0 1px 3px rgba(0,0,0,.16);align-self:flex-end}
+#fabFold svg{width:12px;height:12px;transition:transform .2s}
+body.fabs-folded #fabFold svg{transform:rotate(180deg)}
+body.fabs-folded #mapFabs>:not(#fabFold){display:none!important}
+.wc-pin{width:24px!important;height:24px!important;border-radius:8px!important;box-shadow:0 0 0 1.5px #fff,0 2px 6px rgba(0,0,0,.28)!important}
+.wc-pin svg{width:13px!important;height:13px!important}
+#tlTomorrowBtn{display:none!important}
+/* dark: the glass bars dark too (they were white glass), the brand readable */
+:root[data-theme="dark"] #bottomPanel,:root[data-theme="dark"] #tabBar{background:rgba(24,28,34,.78)!important;
+  box-shadow:0 4px 18px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.08)!important}
+:root[data-theme="dark"] #brandTop span{color:#E6EAF0;text-shadow:0 0 3px #000,0 0 3px #000}
+:root[data-theme="dark"] #tlChips button{color:var(--md-on-surface-var,#C4C6D0)!important;border-color:rgba(255,255,255,.28)!important}
+:root[data-theme="dark"] #tlChips button.on{color:var(--md-on-secondary-container)!important}
+:root[data-theme="dark"] #fabFold{background:rgba(24,28,34,.82);color:#C4C6D0}
+:root[data-theme="dark"] #tabBar button[aria-current=page]::before{background:#3B4858!important}
 /* the brand, top left: the app icon and its name under it */
 #brandTop{position:fixed;z-index:1150;left:12px;top:calc(env(safe-area-inset-top,0px) + 6px);display:flex;flex-direction:column;align-items:center;gap:1px;pointer-events:none}
 #brandTop img{width:34px;height:34px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);object-fit:cover}
@@ -7793,7 +7821,10 @@ body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
 // Light only for now (per request): no dark palette, whatever the phone
 // says or was chosen before. The dark tokens stay in the CSS, unused.
 (function(){try{
-  document.documentElement.setAttribute('data-theme','light');
+  // light by default; dark only when chosen in Einstellungen (or «System» on a dark phone)
+  var tp='light';try{tp=localStorage.getItem('ssm_theme')||'light';}catch(e){}
+  var dk=tp==='dark'||(tp==='system'&&!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches));
+  document.documentElement.setAttribute('data-theme',dk?'dark':'light');
   // the Android app's WebView: no GPU blur behind the bars (the CI emulator
   // died twice right after launch once the frosted bars were on)
   var ua=navigator.userAgent||'';
@@ -7899,6 +7930,7 @@ body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
 <button class="feed-qr" id="mapQr" onclick="qrOpen(event)" title="Schnellmeldung Powder" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg><span>Powder</span></button>
 <button class="feed-qr feed-draw" id="mapDraw" onclick="drawOpen()" title="Powder melden" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 2.5 2.5-7 7L12 22l-2.5-.5z"/><path d="M15.5 6.5l2 2"/><circle cx="6" cy="7" r="3"/><path d="M6 10v7"/></svg><span>Powder melden</span></button>
 <div id="mapFabs">
+  <button type="button" id="fabFold" onclick="fabsFold()" aria-label="Steuerleiste ein-/ausklappen" title="Steuerleiste ein-/ausklappen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
   <div class="mfab-grp" role="toolbar" aria-label="Karte">
     <button class="mfab" id="searchFab" onclick="searchFieldOpen()" title="Ort suchen" aria-label="Ort suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
     <button class="mfab" id="locFab" onclick="flyToMe()" title="Zu meinem Standort" aria-label="Zu meinem Standort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L14 21l-2.2-7.8L4 11z"/></svg></button>
@@ -7947,8 +7979,8 @@ body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
 <div class="set-sheet" id="setSheet" onclick="if(event.target===this)setClose()">
   <div class="set-in" role="dialog" aria-modal="true" aria-label="Einstellungen">
     <div class="set-head"><b>Einstellungen</b><button onclick="setClose()" aria-label="Schliessen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>
-    <span class="lbl-micro" hidden>Darstellung</span>
-    <div class="prof-seg" id="setTheme" hidden>
+    <span class="lbl-micro">Darstellung</span>
+    <div class="prof-seg" id="setTheme">
       <button data-v="system" onclick="themeSet('system')">System</button>
       <button data-v="light" onclick="themeSet('light')">Hell</button>
       <button data-v="dark" onclick="themeSet('dark')">Dunkel</button>
@@ -13182,7 +13214,7 @@ function wcErrTxt(e){const st=e&&e.status;
   if(st===429)return 'Webcams: Tageslimit von Windy erreicht – später nochmals versuchen.';
   if(st)return 'Webcams konnten nicht geladen werden (Windy antwortet '+st+').';
   return 'Webcams konnten nicht geladen werden – keine Verbindung zu Windy.';}
-function wcIcon(){return L.divIcon({className:'',iconSize:[30,30],iconAnchor:[15,15],
+function wcIcon(){return L.divIcon({className:'',iconSize:[24,24],iconAnchor:[12,12],
   html:'<div class="wc-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>'});}
 function wcBuildLayer(){wcLayer=L.layerGroup();setTimeout(wcRefresh,0);return wcLayer;}
 async function wcRefresh(){
@@ -17691,8 +17723,8 @@ addEventListener('pointerdown',e=>{
 // --- Theme -------------------------------------------------------------
 // Three states, because "follow the phone" is the one most people want and
 // neither of the other two can express it.
-function themePref(){try{return localStorage.getItem('ssm_theme')||'system';}catch(e){return 'system';}}
-const THEME_DARK_OK=false;   // light only for now
+function themePref(){try{return localStorage.getItem('ssm_theme')||'light';}catch(e){return 'light';}}
+const THEME_DARK_OK=true;   // dark on request (Einstellungen › Darstellung); light stays the default
 function themeIsDark(v){
   if(!THEME_DARK_OK)return false;
   v=v||themePref();
@@ -22262,9 +22294,10 @@ async function qsPost(){if(!qs||qs.busy||!qs.ll)return;
 // SNOWPACK scoring the tour finder uses. A pill at the top; a tap opens them.
 let _nbT=0,_nbKey='',_nbList=[],_nbMe=false;
 function nearBestSoon(ms){clearTimeout(_nbT);_nbT=setTimeout(nearBestRun,ms==null?1500:ms);}
+const NEAR_BEST_PILL=false;   // no tour suggestion pill top centre (per request)
 function nearBestShut(){try{return sessionStorage.getItem('ssm_nb_x')==='1';}catch(e){return false;}}
 async function nearBestRun(){
-  if(nearBestShut()||!(typeof vaAvailable==='function'&&vaAvailable()))return;
+  if(!NEAR_BEST_PILL||nearBestShut()||!(typeof vaAvailable==='function'&&vaAvailable()))return;
   try{await toursEnsure();}catch(e){return;}
   if(!tourList().length||!(await tourVaPrepare()))return;
   const me=!!myLoc,c=me?{lat:myLoc[0],lon:myLoc[1]}:(()=>{const x=map.getCenter();return {lat:x.lat,lon:x.lng};})();
@@ -22281,6 +22314,10 @@ async function nearBestRun(){
     .sort((x,y)=>(y.r.powder*(1+(y.r.powderCm||0)/40))-(x.r.powder*(1+(x.r.powderCm||0)/40)))
     .forEach(o=>{const g=o.t.group||o.t.id;if(seen.has(g)||out.length>=3)return;seen.add(g);out.push(o);});
   _nbList=out;_nbMe=me;nearBestRender();}
+// the map's side buttons fold away to a small handle (remembered)
+function fabsFold(on){on=on==null?!document.body.classList.contains('fabs-folded'):on;
+  document.body.classList.toggle('fabs-folded',on);try{localStorage.setItem('ssm_fabs_fold',on?'1':'0');}catch(e){}try{haptic(3);}catch(e){}}
+try{if(localStorage.getItem('ssm_fabs_fold')==='1')document.body.classList.add('fabs-folded');}catch(e){}
 function nearBestName(o){return o.t.pname||o.t.name||'Skitour';}
 function nearBestRender(){
   let el=document.getElementById('nearBest');
@@ -22379,12 +22416,14 @@ async function offlineVaUrls(){const out=[];
   let i0=ts.findIndex(t=>Date.parse(String(t).slice(0,16)+':00Z')>=now);if(i0<0)i0=Math.max(0,ts.length-24);
   for(let i=i0;i<Math.min(ts.length,i0+25);i++)out.push(vaV(VA_BASE+'/'+vaPk.file.replace('{tag}',vaMan.tags[i])));
   return out;}
-let _offBusy=false;
+let _offBusy=false,_offAbort=null;
+// stop a running offline download; what came in so far is thrown away
+function offlineCancel(){if(_offAbort)_offAbort.abort();}
 async function offlineSave(){if(!isPro()){proSheet('offline');return;}
   if(_offBusy)return;
   if(!('caches' in window)){toast('Dieser Browser kann nichts offline speichern','err');return;}
   if(navigator.onLine===false){toast('Zum Speichern braucht es Netz','err');return;}
-  _offBusy=true;const set=t=>{const b=document.getElementById('offSaveBtn');if(b)b.querySelector('span').textContent=t;};
+  _offBusy=true;_offAbort=new AbortController();const sig=_offAbort.signal;offRender();const set=t=>{const b=document.getElementById('offSaveBtn');if(b)b.querySelector('span').textContent=t;};
   try{
     const U=offlineUrls(),va=await offlineVaUrls(),all=[...U.other,...va,...U.tiles];
     const cache=await caches.open(OFF_CACHE);
@@ -22392,20 +22431,22 @@ async function offlineSave(){if(!isPro()){proSheet('offline');return;}
     for(const k of await cache.keys())await cache.delete(k);
     let done=0,bytes=0,fail=0,i=0;set('Speichert… 0 %');
     const one=async u=>{try{let r=null;
-        try{r=await fetch(u,{cache:'force-cache'});}catch(e){r=null;}
-        if(!r||!(r.ok||r.type==='opaque'))r=await fetch(u,{mode:'no-cors'});
+        try{r=await fetch(u,{cache:'force-cache',signal:sig});}catch(e){if(sig.aborted)return;r=null;}
+        if(!r||!(r.ok||r.type==='opaque'))r=await fetch(u,{mode:'no-cors',signal:sig});
         const bl=await r.clone().blob().catch(()=>null);if(bl)bytes+=bl.size;
         await cache.put(u,r);}catch(e){fail++;}
       done++;if(done%20===0)set('Speichert… '+Math.round(done/all.length*100)+' %');};
-    const work=async()=>{while(i<all.length){const u=all[i++];await one(u);}};
+    const work=async()=>{while(i<all.length&&!sig.aborted){const u=all[i++];await one(u);}};
     await Promise.all([work(),work(),work(),work(),work(),work()]);
+    if(sig.aborted){try{await caches.delete(OFF_CACHE);}catch(e){}try{localStorage.removeItem(OFF_KEY);}catch(e){}
+      toast('Offline-Download abgebrochen','info');_offBusy=false;_offAbort=null;offRender();return;}
     const D=window.__dataLj,nm=(function(){const c=map.getCenter();try{const t=tourNearPoint(c.lat,c.lng,6000,1);if(t.length)return 'bei '+(t[0].t.pname||t[0].t.name);}catch(e){}
       return c.lat.toFixed(2)+'°N '+c.lng.toFixed(2)+'°E';})();
     const info={at:Date.now(),name:nm,n:all.length-fail,bytes,bounds:U.bounds,gen:D&&D.lj&&D.lj.generated||null};
     try{localStorage.setItem(OFF_KEY,JSON.stringify(info));if(D&&D.lj&&(D.lj.bin2||D.lj.bin))localStorage.setItem('ssm_full',D.lj.bin2||D.lj.bin);}catch(e){}
     toast(fail>all.length*0.1?'Teilweise gespeichert ('+fail+' fehlten)':'Offline gespeichert · '+Math.round(bytes/1e6)+' MB','ok');
   }catch(e){toast('Offline-Speichern fehlgeschlagen: '+(e.message||e),'err');}
-  _offBusy=false;offRender();}
+  _offBusy=false;_offAbort=null;offRender();}
 // Without a service worker (the iPhone/Android app) nothing serves the saved
 // area by itself: a map tile that fails to load (no signal) is taken from
 // the offline cache instead. On the website the worker does it first.
@@ -22427,8 +22468,8 @@ function offRender(){const el=document.getElementById('setOffline');if(!el)retur
   const o=offInfo(),ic='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>';
   el.innerHTML=(o?'<div class="off-info"><b>'+escapeHtml(o.name)+'</b><small><span>Gespeichert</span> '+escapeHtml(offWhen(o.at))+' · '+Math.round((o.bytes||0)/1e6)+' MB'
       +(o.gen?' · <span>Vorhersage vom</span> '+escapeHtml(offWhen(Date.parse(o.gen))):'')+'</small></div>':'')
-    +'<button type="button" id="offSaveBtn" onclick="offlineSave()">'+ic+'<span>'+(o?'Neu speichern (aktueller Kartenausschnitt)':'Kartenausschnitt offline speichern')+'</span></button>'
-    +(o?'<button type="button" onclick="offlineDrop()"><span>Offline-Daten löschen</span></button>'
+    +'<button type="button" id="offSaveBtn" onclick="offlineSave()"'+(_offBusy?' disabled':'')+'>'+ic+'<span>'+(_offBusy?'Speichert…':o?'Neu speichern (aktueller Kartenausschnitt)':'Kartenausschnitt offline speichern')+'</span></button>'
+    +(_offBusy?'<button type="button" id="offCancelBtn" onclick="offlineCancel()"><span>Download abbrechen</span></button>':o?'<button type="button" onclick="offlineDrop()"><span>Offline-Daten löschen</span></button>'
       :'<div class="fav-note">Karte, Vorhersage und Skiqualität der nächsten 24 h für das Gebiet auf dem Bildschirm (bis ca. 25 × 25 km). Oben am Berg ohne Netz startet die App damit.</div>');}
 // offline: one bar that says which forecast the map shows
 function offBar(){let el=document.getElementById('offBar');
