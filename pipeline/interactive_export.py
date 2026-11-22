@@ -7475,6 +7475,17 @@ body.fabs-folded #mapFabs>:not(#fabFold){display:none!important}
 .wc-pin{width:24px!important;height:24px!important;border-radius:8px!important;box-shadow:0 0 0 1.5px #fff,0 2px 6px rgba(0,0,0,.28)!important}
 .wc-pin svg{width:13px!important;height:13px!important}
 #tlTomorrowBtn{display:none!important}
+.feed-hit{position:relative}
+.fh-info{margin-left:auto;flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--md-outline-var,#C4C6D0);background:transparent;color:var(--md-primary,#0B63B5);font:700 13px/1 var(--font);cursor:pointer}
+.acc-sheet{position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.32);display:flex;align-items:flex-end;justify-content:center}
+.acc-in{width:min(560px,100%);max-height:85dvh;overflow:auto;background:var(--md-surface,#fff);color:var(--md-on-surface,#111);border-radius:28px 28px 0 0;padding:18px 20px calc(18px + env(safe-area-inset-bottom,0px))}
+body.desk .acc-sheet{align-items:center}body.desk .acc-in{border-radius:28px}
+.acc-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.acc-hd b{font:600 20px/1.2 var(--font)}
+.acc-hd button{width:36px;height:36px;border-radius:50%;border:0;background:var(--md-surface-high,#eee);font-size:20px;cursor:pointer;color:inherit}
+.acc-live{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;background:var(--md-secondary-container,#D6E3F7);color:var(--md-on-secondary-container,#0F1D2E);margin-bottom:8px;font:500 14px/1.35 var(--font)}
+.acc-row{padding:10px 2px;border-bottom:1px solid var(--md-outline-var,rgba(0,0,0,.12));display:flex;flex-direction:column;gap:3px}
+.acc-row b{font:600 14px/1.3 var(--font)}.acc-row span{font:400 14px/1.4 var(--font);color:var(--md-on-surface-var,#44474E)}
+.acc-note{font:400 13px/1.45 var(--font);color:var(--md-on-surface-var,#44474E);margin:12px 2px 0}
 /* ==== Computer (body.desk): room to spare -- bigger webcam view, hover peek, normal buttons ==== */
 body.desk #mapFabs .mfab-grp .mfab{width:40px!important;height:40px!important;border-radius:20px!important}
 body.desk #mapFabs .mfab-grp .mfab svg{width:19px!important;height:19px!important}
@@ -18365,8 +18376,10 @@ function uncRefresh(){if(!ovOn.uncert||!(SNOW.length>=T*NP))return;
     _unc.key=key;_unc.mask=mask;_unc.n=nAll;_unc.nu=nUnc;uncDraw();};
   step();}
 let _uncPatC=null;
-function uncPattern(){if(_uncPatC)return _uncPatC;const c=document.createElement('canvas');c.width=c.height=9;const g=c.getContext('2d');
-  g.strokeStyle='rgba(28,32,44,.62)';g.lineWidth=1.5;g.beginPath();g.moveTo(-1,10);g.lineTo(10,-1);g.moveTo(-1,1);g.lineTo(1,-1);g.moveTo(8,10);g.lineTo(10,8);g.stroke();
+// orange wash + bold orange-brown hatching: reads at a glance over every layer
+function uncPattern(){if(_uncPatC)return _uncPatC;const c=document.createElement('canvas');c.width=c.height=10;const g=c.getContext('2d');
+  g.fillStyle='rgba(255,140,0,.24)';g.fillRect(0,0,10,10);
+  g.strokeStyle='rgba(204,85,0,.95)';g.lineWidth=2.2;g.lineCap='square';g.beginPath();g.moveTo(-1,11);g.lineTo(11,-1);g.moveTo(-1,1);g.lineTo(1,-1);g.moveTo(9,11);g.lineTo(11,9);g.stroke();
   return _uncPatC=c;}
 const UncGrid=L.GridLayer.extend({createTile:function(c){const tile=document.createElement('canvas'),ts=this.getTileSize();tile.width=ts.x;tile.height=ts.y;
   const m=_unc.mask;if(!m)return tile;const g=tile.getContext('2d'),z=c.z,nw=c.scaleBy(ts);
@@ -20205,7 +20218,8 @@ let reportMarkers=L.layerGroup().addTo(map);
 try{if(!localStorage.getItem('ssm_ly_def2')){['ssm_tours','ssm_reports'].forEach(k=>{if(localStorage.getItem(k)==='0')localStorage.removeItem(k);});
   localStorage.setItem('ssm_ly_def2','1');}}catch(e){}
 ovOn.reports=true;
-try{if(localStorage.getItem('ssm_reports')==='0'){ovOn.reports=false;map.removeLayer(reportMarkers);}}catch(e){}
+try{if(!localStorage.getItem('ssm_rep_def3')){localStorage.removeItem('ssm_reports');localStorage.setItem('ssm_rep_def3','1');}
+  if(localStorage.getItem('ssm_reports')==='0'){ovOn.reports=false;map.removeLayer(reportMarkers);}}catch(e){}
 // «Meine Aufzeichnungen» stays as you left it (it is off unless you turned it on)
 try{if(localStorage.getItem('ssm_myacts')==='1')setTimeout(()=>{try{if(!ovOn.myacts)ovToggle('myacts',true);}catch(e){}},0);}catch(e){}
 try{if(localStorage.getItem('ssm_skiareas')==='1')setTimeout(()=>{try{if(!ovOn.skiareas)ovToggle('skiareas',true);}catch(e){}},0);}catch(e){}
@@ -20420,7 +20434,8 @@ const RPT_RECENT_D=7;
 function rptWindow(){try{const now=Date.now(),hi=Math.min(tMs(b),now);let lo=tMs(a);
   if(hi>=now-3.6e6)lo=Math.min(lo,now-RPT_RECENT_D*864e5);
   else if(!(hi-lo>=24*3.6e6))lo=hi-48*3.6e6;return {lo,hi:hi+30*60e3};}catch(e){return null;}}
-function rptInWindow(r,W){if(!W)return true;if(sbUser&&r.userId===sbUser.id&&Date.now()-rptTimeMs(r)<10*60e3)return true;
+function rptMineFresh(r){return !!(sbUser&&r&&r.userId===sbUser.id&&Date.now()-Date.parse(r.createdAt||0)<48*3.6e6);}
+function rptInWindow(r,W){if(!W)return true;if(rptMineFresh(r))return true;
   const t=rptTimeMs(r);return t>=W.lo&&t<=W.hi;}
 let _rptWinKey='';
 function rptWindowSync(){const W=rptWindow();const k=W?Math.round(W.lo/36e5)+':'+Math.round(W.hi/36e5):'';
@@ -21163,10 +21178,14 @@ function authMenu(){openProfile();}
 // Device-local, so they work before sign-in and never need a round trip.
 const PREF_KEY='ssm_prefs_v1';
 // opens where you last were (Einstellungen: or the whole country, or your home area)
-const PREF_DEFAULTS={start:'last',home:'',layer:'meteo:powder',window:'48',showMyReports:false};
+const PREF_DEFAULTS={start:'last',home:'',layer:'meteo:powder',window:'48',showMyReports:true};
 let prefs=Object.assign({},PREF_DEFAULTS);
 function prefsLoad(){try{const v=JSON.parse(localStorage.getItem(PREF_KEY)||'{}');
-  prefs=Object.assign({},PREF_DEFAULTS,v||{});}catch(e){prefs=Object.assign({},PREF_DEFAULTS);}
+  prefs=Object.assign({},PREF_DEFAULTS,v||{});
+  // once: your own reports back in the feed for everyone (they were hidden
+  // by default -- a fresh quick report then seemed to vanish)
+  if(!localStorage.getItem('ssm_myrep_v2')){prefs.showMyReports=true;localStorage.setItem('ssm_myrep_v2','1');try{localStorage.setItem(PREF_KEY,JSON.stringify(prefs));}catch(_){}}
+  }catch(e){prefs=Object.assign({},PREF_DEFAULTS);}
   return prefs;}
 function prefsSave(){try{localStorage.setItem(PREF_KEY,JSON.stringify(prefs));}catch(e){}}
 prefsLoad();
@@ -24546,7 +24565,9 @@ function feedRegionSet(id,keep){feedRegion=(feedRegion===id&&!keep)?'':id;try{lo
   try{feedRegionsRender();}catch(e){}
   if(feedRegion==='near'&&!myLoc){try{geoLocate(p=>{myLoc=[p.coords.latitude,p.coords.longitude];feedRender();},()=>{});}catch(e){}}
   try{haptic(3);}catch(e){}try{feedTopRender();}catch(e){}feedRender();}
-function feedRegionFilter(list){if(!feedRegion)return list;
+function feedRegionFilter(list){if(!feedRegion)return list;const _mine=list.filter(rptMineFresh);
+  const out=feedRegionFilter0(list);return out.concat(_mine.filter(r=>out.indexOf(r)<0));}
+function feedRegionFilter0(list){
   if(feedRegion==='view'){const b=feedViewB;if(!b)return list;
     if(feedViewIds)return list.filter(r=>feedViewIds.has(String(r.id)));
     return list.filter(r=>r.lat>=b[0]&&r.lat<=b[2]&&r.lng>=b[1]&&r.lng<=b[3]);}
@@ -25439,10 +25460,27 @@ function feedHitSync(){const list=document.getElementById('feedList');if(!list)r
   if(!_hit.at){el.hidden=true;return;}
   el.hidden=false;
   if(n<5){el.innerHTML='<span class="fh-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/></svg></span>'
-    +'<span class="fh-t"><b>Modell-Check</b><small>Noch '+(n?'zu wenige Meldungen ('+n+')':'keine Meldungen')+' diese Woche – jede Schnellmeldung prüft das Modell</small></span>';return;}
+    +'<span class="fh-t"><b>Modell-Check</b><small>Noch '+(n?'zu wenige Meldungen ('+n+')':'keine Meldungen')+' diese Woche – jede Schnellmeldung prüft das Modell</small></span>'+'<button type="button" class="fh-info" onclick="accOpen()" aria-label="Wie genau ist das Modell?">i</button>';return;}
   const pc=Math.round(_hit.ok/n*100),ps=Math.round(_hit.same/n*100);
   el.innerHTML='<span class="fh-ring" style="--p:'+pc+'" aria-hidden="true"><b>'+pc+'%</b></span>'
-    +'<span class="fh-t"><b>Modell diese Woche: '+pc+' % bestätigt</b><small>'+n+' Schnellmeldungen · '+ps+' % genau gleich, '+(pc-ps)+' % ähnlich</small></span>';}
+    +'<span class="fh-t"><b>Modell diese Woche: '+pc+' % bestätigt</b><small>'+n+' Schnellmeldungen · '+ps+' % genau gleich, '+(pc-ps)+' % ähnlich</small></span>'+'<button type="button" class="fh-info" onclick="accOpen()" aria-label="Wie genau ist das Modell?">i</button>';}
+// «Wie genau ist das Modell?» -- the validation so far, in plain words: the
+// community check of this week and the checks against measurements (SLF,
+// MeteoSchweiz) from the model rounds. Numbers from docs/plan-modell-runde-*.
+const ACC_ROWS=[
+  ['Neuschnee gegen SLF-Messungen (HN1D, 19.–21.11.2026)','Mittlerer Fehler 1.6 cm (vorher 5.1 cm); Modell/SLF 1.4 (vorher 3.2)'],
+  ['Niederschlag gegen MeteoSchweiz-Stationen','Modell 7–29 % über den Messungen – der Niederschlag selbst stimmt gut'],
+  ['Schneetyp: Wind-Expositionen gegen SLF-Bulletin (19.11.)','Übereinstimmung 0.54 (Zufall 0.29) bei 76 Regionen mit Triebschnee'],
+  ['Community-Check','Jede Schnellmeldung speichert, was das Modell dort sagte – die Quote oben ist live']];
+function accOpen(){let el=document.getElementById('accSheet');if(el){el.remove();}
+  el=document.createElement('div');el.id='accSheet';el.className='acc-sheet';el.setAttribute('role','dialog');el.setAttribute('aria-label','Wie genau ist das Modell?');
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  const n=_hit.n,pc=n?Math.round(_hit.ok/n*100):null;
+  el.innerHTML='<div class="acc-in"><div class="acc-hd"><b>Wie genau ist das Modell?</b><button type="button" onclick="this.closest(\'.acc-sheet\').remove()" aria-label="Schliessen">×</button></div>'
+    +(pc!=null&&n>=5?'<div class="acc-live"><span class="fh-ring" style="--p:'+pc+'"><b>'+pc+'%</b></span><span>Diese Woche von der Community bestätigt ('+n+' Schnellmeldungen)</span></div>':'')
+    +ACC_ROWS.map(r=>'<div class="acc-row"><b>'+escapeHtml(r[0])+'</b><span>'+escapeHtml(r[1])+'</span></div>').join('')
+    +'<p class="acc-note">Ein paar Tage sind noch keine Statistik – belastbar wird es über Wochen. Darum zählt jede Meldung: sie zeigt, wo das Modell danebenliegt.</p></div>';
+  document.body.appendChild(el);}
 function feedRender(){
   try{feedHitSync();}catch(e){}
   const list=document.getElementById('feedList');
