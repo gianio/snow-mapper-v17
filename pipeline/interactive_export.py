@@ -7644,6 +7644,16 @@ html.cap-ios body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #
 .fc-model.ag1{border-color:transparent;background:#E9EEF6;color:#2F3B4C}
 .fc-model.ag0{border-color:transparent;background:#FBE4DE;color:#7A2414}
 .fc-facts{flex-wrap:wrap;row-gap:6px}
+/* webcam popup: picture / daylight / 24 h timelapse, an M3 segmented button */
+.wc-pop .wc-media{position:relative}
+.wc-pop .wc-media img,.wc-pop .wc-media .wc-img{margin-bottom:0}
+.wc-pop .wc-frame{display:block;width:100%;aspect-ratio:16/9;border:0;background:#000}
+.wc-seg{display:flex;margin:10px 12px 0;border:1px solid var(--md-outline,#73777F);border-radius:999px;overflow:hidden}
+.wc-seg button{flex:1;min-width:0;height:36px;border:0;border-left:1px solid var(--md-outline,#73777F);background:transparent;cursor:pointer;
+  font:600 13px/1 var(--font);color:var(--md-on-surface,#191C20);padding:0 6px}
+.wc-seg button:first-child{border-left:0}
+.wc-seg button.on{background:var(--md-secondary-container,#D7E3F8);color:var(--md-on-secondary-container,#101C2B)}
+.wc-pop .wc-note{display:block;margin:6px 12px 2px;font:500 12px/1.3 var(--font);color:var(--md-on-surface-var,#43474E)}
 
 </style>
 <script>
@@ -11810,7 +11820,8 @@ function vaPickLayer(k){
 // disagreed with the map. Pack and frame are loaded here on demand and the
 // card opens again once they are in.
 let _vaPtWant=null;const _vaPtFail=new Set();
-function vaPointReopen(){const pn=document.getElementById('inspPanel');
+function vaPointReopen(){try{ptChipRefresh();}catch(e){}try{if(typeof qs!=='undefined'&&qs&&qs.ll)qsModelSync();}catch(e){}
+  const pn=document.getElementById('inspPanel');
   if(inspLast&&!inspLast.stn&&pn&&pn.classList.contains('open')){const st=pn.scrollTop;inspOpen(inspLast.lat,inspLast.lon);pn.scrollTop=st;}}
 // The terrain the map is drawn on at that spot: the same Terrarium tile, the
 // same pixel, the same slope and aspect (E.terrain) -- on a ridge the 25 m
@@ -11875,7 +11886,11 @@ function vaPointHTML(lat,lon,elev,slope,aspect){vaPointHTML.hs=null;vaPointHTML.
   const lbl=k6===0?'kein / wenig Schnee':k6===10?'Dünne Schneedecke – Steine, kaum fahrbar'
     :isPow?(thinC?'Pulver auf dünner Unterlage – Steine möglich':'Pulver, trocken'):(VA_SKI6_DE[k6]||nm('simple',sim)||'');
   if(!c6[3]){c6[0]=150;c6[1]=160;c6[2]=175;}
-  vaPointHTML.st={k6,pw,hs:m[x.total_hs_cm],thin:thinC};
+  // why, in a few words (the point chip and the quick report use it too)
+  const why=k6===0?'':m[x.crust_thick_cm]>0.2&&!isPow?'Harschdeckel '+m[x.crust_thick_cm].toFixed(1)+' cm'
+    :m[x.drift_load]>=0.2?'eingeweht (Triebschnee)':m[x.wind_scour]>=0.2?'vom Wind verblasen'
+    :thinC?'dünne Unterlage – Steine möglich':isPow?(pw>=1?'trocken, locker':''):'';
+  vaPointHTML.st={k6,pw,hs:m[x.total_hs_cm],thin:thinC,lbl,c:'rgb('+c6.slice(0,3).join(',')+')',why};
   if(tr){const AS=['N','NO','O','SO','S','SW','W','NW'];bits.splice(1,0,'Modellgelände '+Math.round(tr.el)+' m · '+Math.round(tr.sl)+'° '+AS[Math.round(tr.as/45)%8]);}
   const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+c6.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(lbl)+'</b></div>'
     +'<div><span>Pulver</span><b>'+(pw>=1?pw+'<small> cm</small>':'–')+'</b></div>'
@@ -13030,13 +13045,45 @@ async function wcRefresh(){
   }catch(e){console.warn('webcams',e);toastOnce('wc-err',wcErrTxt(e));}
   wcBusy=false;
 }
+// What a webcam shows first, chosen once and remembered: «auto» = the latest
+// picture by day and the last daylight picture at night (a black frame says
+// nothing), «img» = always the latest, «daylight» = always the last daylight
+// picture, «day» = Windy's 24 h timelapse with its own time slider.
+// (Windy's API has no picture archive of its own to scrub through, and its
+// picture links expire after minutes -- the timelapse player is the archive.)
+const WC_DEF_OPTS=[['auto','Auto'],['img','Jetzt'],['daylight','Tag'],['day','24 h']];
+function wcDef(){try{const v=localStorage.getItem('ssm_wcdef');return WC_DEF_OPTS.some(o=>o[0]===v)?v:'auto';}catch(e){return 'auto';}}
+function wcDefSet(v){try{localStorage.setItem('ssm_wcdef',v);}catch(e){}}
+function wcIsNight(){try{const d=zLocal(Date.now()),h=d.getUTCHours()+d.getUTCMinutes()/60,doy=Math.floor((Date.now()-Date.UTC(d.getUTCFullYear(),0,0))/864e5),
+  half=dayLenH(doy)/2;return h<12.5-half+0.3||h>12.5+half-0.3;}catch(e){return false;}}
+function wcPopMedia(c,mode){
+  if(mode==='auto')mode=wcIsNight()&&c.dimg?'daylight':'img';
+  if(mode==='day'&&c.player)return '<iframe class="wc-frame" src="'+escapeHtml(c.player)+'" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer-when-downgrade" title="'+escapeHtml(c.t)+' – 24 h"></iframe>';
+  const s=mode==='daylight'?(c.dimg||c.img):(c.img||c.dimg);
+  return s?'<img src="'+escapeHtml(s)+'" alt="">':'<div class="wc-img"></div>';}
+const _wcPop={};
+function wcPopMode(id,mode,save){const c=_wcPop[id];if(!c)return;if(save)wcDefSet(mode);
+  const box=document.getElementById('wcm-'+id);if(box)box.innerHTML=wcPopMedia(c,mode);
+  document.querySelectorAll('#wcs-'+id+' button').forEach(b=>b.classList.toggle('on',b.dataset.m===mode));
+  const n=document.getElementById('wcn-'+id);if(n)n.textContent=wcNoteTxt(c,mode);
+  try{haptic(3);}catch(e){}}
+function wcNoteTxt(c,mode){return mode==='day'?'Letzte 24 Stunden · Zeitregler im Player'
+  :(mode==='daylight'||(mode==='auto'&&wcIsNight()&&c.dimg))?'Letztes Bild bei Tageslicht':'Aktuelles Bild';}
 async function wcPreview(id,mk){
-  try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
-    const w=await r.json(),im=w.images&&(w.images.current||w.images.daylight)||{},src=im.preview||im.thumbnail;
+  try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls,player',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
+    const w=await r.json(),imc=(w.images&&w.images.current)||{},imd=(w.images&&w.images.daylight)||{},pl=w.player||{};
+    const day=typeof pl.day==='string'?pl.day:(pl.day&&typeof pl.day==='object'?(pl.day.embed||pl.day.link):null);
     const loc=w.location||{},upd=w.lastUpdatedOn?new Date(w.lastUpdatedOn):null;
     const when=upd?new Intl.DateTimeFormat(LOCALE(),{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}).format(upd):'';
     const link=(w.urls&&(w.urls.detail||w.urls.provider))||('https://www.windy.com/webcams/'+id);
-    mk.setPopupContent('<div class="wc-pop">'+(src?'<img src="'+escapeHtml(src)+'" alt="">':'<div class="wc-img"></div>')
+    const c=_wcPop[id]={t:w.title||'Webcam',img:imc.preview||imc.thumbnail||null,dimg:imd.preview||imd.thumbnail||null,player:typeof day==='string'?day:null};
+    const def=wcDef(),eid=escapeHtml(String(id));
+    mk.setPopupContent('<div class="wc-pop"><div class="wc-media" id="wcm-'+eid+'">'+wcPopMedia(c,def)+'</div>'
+      // M3 segmented button: what to show; the choice becomes the default
+      +'<div class="wc-seg" id="wcs-'+eid+'" role="group" aria-label="Webcam-Ansicht">'
+      +WC_DEF_OPTS.filter(o=>o[0]!=='day'||c.player).filter(o=>o[0]!=='daylight'||c.dimg)
+        .map(o=>'<button type="button" data-m="'+o[0]+'" class="'+(o[0]===def?'on':'')+'" onclick="wcPopMode(\''+eid+'\',\''+o[0]+'\',true)">'+o[1]+'</button>').join('')+'</div>'
+      +'<small class="wc-note" id="wcn-'+eid+'">'+escapeHtml(wcNoteTxt(c,def))+'</small>'
       +'<b>'+escapeHtml(w.title||'Webcam')+'</b><span>'+escapeHtml([loc.city,loc.region].filter(Boolean).join(', '))+(when?' · '+when:'')+'</span>'
       +'<button class="wc-fav'+(wcFavHas(id)?' on':'')+'" onclick="wcFavToggle(\''+escapeHtml(id)+'\',this)" data-t="'+escapeHtml(w.title||'Webcam')+'" data-lat="'+(loc.latitude||'')+'" data-lon="'+(loc.longitude||'')+'">'+(wcFavHas(id)?'★ Gemerkt':'☆ Merken')+'</button>'
       +'<button class="wc-fav wc-tvb" onclick="wcTvFrom(\''+escapeHtml(id)+'\')">▶ Webcam-TV</button>'
@@ -13053,7 +13100,7 @@ map.on('moveend',()=>{try{feedHereSync();}catch(e){}});
 // (all at once), or shows the latest picture. TV runs through the
 // favourites one after another; "In der Nähe" runs through the cameras
 // around you above a chosen altitude (our terrain model gives the altitude).
-const WCV={mode:null,kind:'img',tv:0,tvT:0,tvList:[],minAlt:1000,near:null,busy:false,view:-1,viewT:0};
+const WCV={mode:null,kind:(function(){try{return localStorage.getItem('ssm_wcdef')==='day'?'day':'img';}catch(e){return 'img';}})(),tv:0,tvT:0,tvList:[],minAlt:1000,near:null,busy:false,view:-1,viewT:0};
 const WC_TV_MS=15000;
 function wcFavs(){try{const v=JSON.parse(localStorage.getItem('ssm_wcfav')||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}}
 function wcFavSave(v){try{localStorage.setItem('ssm_wcfav',JSON.stringify(v));}catch(e){}}
@@ -13066,7 +13113,9 @@ function wcFavToggle(id,btn){id=String(id);let v=wcFavs();
 // details with fresh image links and the timelapse player
 async function wcDetails(ids){if(!ids.length)return [];
   const j=await wcFetch('webcamIds='+ids.map(encodeURIComponent).join(',')+'&limit=50&include=images,location,player');
-  return (j.webcams||[]).map(w=>{const loc=w.location||{},im=w.images&&(w.images.current||w.images.daylight)||{},pl=w.player||{};
+  // the remembered default decides which picture a tile shows (daylight at night with «Auto»)
+  const dl=wcDef()==='daylight'||(wcDef()==='auto'&&wcIsNight());
+  return (j.webcams||[]).map(w=>{const I=w.images||{},loc=w.location||{},im=(dl?(I.daylight||I.current):(I.current||I.daylight))||{},pl=w.player||{};
     const day=typeof pl.day==='string'?pl.day:(pl.day&&typeof pl.day==='object'?(pl.day.embed||pl.day.link):null),alt=loc.latitude!=null?fineElev(loc.latitude,loc.longitude):null;
     const live=typeof pl.live==='string'?pl.live:(pl.live&&typeof pl.live==='object'?(pl.live.embed||pl.live.link):null);
     return {id:String(w.webcamId||w.id),t:w.title||'Webcam',lat:loc.latitude,lon:loc.longitude,img:im.preview||im.thumbnail||null,
@@ -13101,7 +13150,10 @@ async function wcvRender(){const el=document.getElementById('wcvBody');if(!el)re
 // Picture | timelapse | live: the same switch on the grid, the viewer and TV
 function wcvKindBar(){return '<div class="wcv-kind">'+[['img','Live-Bild'],['day','Zeitraffer 24 h'],['live','Live-Video']]
   .map(k=>'<button class="'+(WCV.kind===k[0]?'on':'')+'" onclick="wcvKind(\''+k[0]+'\')">'+k[1]+'</button>').join('')+'</div>';}
-function wcvKind(k){WCV.kind=k;const el=document.getElementById('wcvBody');if(!el)return;
+function wcvKind(k){WCV.kind=k;
+  // the viewer's switch sets the same default as the map popup
+  if(k==='day')wcDefSet('day');else if(k==='img'&&wcDef()==='day')wcDefSet('auto');
+  const el=document.getElementById('wcvBody');if(!el)return;
   if(WCV.view>=0)wcvView(WCV.view);else if(WCV.mode==='near')wcvNearShow(el);else wcvRender();}
 // The grid always shows pictures (one video per tile would be too much);
 // a tap opens the camera large, with the switch.
@@ -16143,7 +16195,24 @@ function modelSnowCell(p,tb){if(p<0||!(SNOW.length>=T*NP))return null;
   else{const s=powderSurf(r);k=PD_KEY_OF_SURF[s]||null;if(k==='hart'&&(r.reason_flags||[]).includes('W2_storm'))k='abgeblasen';}
   const qt=k&&QS_TYPES.find(x=>x.k===k);
   return qt?{k,qt,cm:Math.max(0,Math.round(r.newSnow||0)),why:pdWhy(r),reduced:r.quality==='reduced',r}:null;}
-function modelSnowAt(lat,lon,ms){const p=ptCell(lat,lon);
+// SNOWPACK (Variant A) at a point: the same engine, terrain tile and frame the
+// Skiqualität map is drawn from -- 'loading' while its data comes, null
+// without an export. Its frame is the time on the timeline.
+const VA_K6_QS={0:'aper',1:'hart',2:'kruste',3:'pulver',4:'pulver',5:'pulver',6:'sulz',7:'nass',8:'pulver',9:'pulver',10:'duenn',11:'kantig'};
+function vaSnowAt(lat,lon){if(!(typeof vaAvailable==='function'&&vaAvailable()))return null;
+  let z=null,sl=0,as=0;try{z=fineElev(lat,lon);}catch(e){}
+  const p=ptCell(lat,lon);if(p>=0){if(z==null)z=melevv(p);sl=mslpv(p);as=maspv(p);}
+  try{const d=fineAspectDeg(lat,lon);if(d!=null)as=d;}catch(e){}
+  if(z==null)return null;
+  let h='';try{h=vaPointHTML(lat,lon,z,sl,as);}catch(e){return null;}
+  if(h&&h.indexOf('lädt')>=0)return 'loading';
+  return vaPointHTML.st||null;}
+function vaSnowModel(st){const k=VA_K6_QS[st.k6],qt=k&&QS_TYPES.find(x=>x.k===k);
+  return qt?{k,qt,cm:Math.max(0,Math.round(st.pw||0)),why:st.why||'',src:'va'}:null;}
+function modelSnowAt(lat,lon,ms){
+  // now (or the timeline's time): SNOWPACK where it exists, as on the map
+  if(ms==null){const v=vaSnowAt(lat,lon);if(v&&v!=='loading'){const m=vaSnowModel(v);if(m)return m;}}
+  const p=ptCell(lat,lon);
   const tb=ms==null?null:Math.floor((ms-tMs(0))/36e5)+1;
   if(tb!=null&&(tb<2||tb>T))return null;
   return modelSnowCell(p,tb);}
@@ -17940,6 +18009,13 @@ function ptLayerValue(lat,lon){const p=ptCell(lat,lon);if(p<0)return null;
     if(id==='depth'){const v=cum[b*NP+p];return {ic:ic(id),v:Math.round(v)+' cm',s:'Schneehöhe',c:fpSnowCol(v)};}
     if(id==='temp'){const v=mean(t=>tvI(t,p));return {ic:ic(id),v:(v>0?'+':'')+v.toFixed(1)+' °C',s:'Temperatur',c:v>0?'#E5484D':'#3B82F6'};}
     if(id==='wind'){const wk=mainToWind[p];const v=mean(t=>SPD[t*P+wk]/M.spd_mul*3.6);return {ic:ic(id),v:Math.round(v)+' km/h',s:'Wind',c:'#64748B'};}
+    // Skiqualität is drawn by SNOWPACK: read the same engine at the same spot
+    // (it said «Eingeregnet» from the rule engine where the map and the point
+    // page showed powder)
+    if(id==='snowpack'){const st=vaSnowAt(lat,lon);
+      if(st==='loading')return {ic:ic(id),v:'Skiqualität',s:'lädt …',c:'#C9D0DA',pd:1};
+      if(st){const pow=[3,4,5,8,9].includes(st.k6);
+        return {ic:ic(id),v:pow&&st.pw>=1?'Pulver '+st.pw+' cm':st.lbl,s:pow?(st.thin?'dünne Unterlage – Steine möglich':st.why):st.why,c:st.c,pd:1};}}
     if(id==='powder'||id==='snowpack'){const r=computePowder(p,a,b),why=pdWhy(r);
       if(r.powdered)return {ic:ic(id),v:'Pulver '+Math.round(r.newSnow||0)+' cm',s:(r.quality==='reduced'?'gesetzt':'gut')+(why?' · '+why:''),c:fpSnowCol(r.newSnow||0),pd:1};
       const k=powderSurf(r),row=PD_SURF_ROWS.find(q=>q[0]===k);
