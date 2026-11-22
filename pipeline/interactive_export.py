@@ -11407,7 +11407,23 @@ function vaHiEngine(){
         var o=(py*S+px)*4;out[o]=r0;out[o+1]=g0;out[o+2]=b0;out[o+3]=a;
       }
     }
+    E.despeckle(out,S,Math.max(1,Math.round(S/256*Math.pow(2,q.z-q.tz))));
     return out;
+  };
+  // Lone specks off: where the cover sits right at a threshold (flat land,
+  // a thin layer) single terrain pixels -- a gentle slope, an odd aspect --
+  // flip into a class their surroundings do not have, and show as scattered
+  // squares. A pixel stays only if at least a fifth of the area around it
+  // (3 x 3 terrain pixels) is coloured too; closed areas and their edges are
+  // untouched. Summed-area table: O(1) per pixel.
+  E.despeckle=function(out,S,blk){
+    var R=Math.max(1,Math.round(blk*1.5)),W1=S+1,sat=new Int32Array(W1*W1),x,y;
+    for(y=0;y<S;y++){var row=0;for(x=0;x<S;x++){row+=out[(y*S+x)*4+3]>0?1:0;sat[(y+1)*W1+x+1]=sat[y*W1+x+1]+row;}}
+    for(y=0;y<S;y++){var y0=Math.max(0,y-R),y1=Math.min(S,y+R+1);
+      for(x=0;x<S;x++){var o=(y*S+x)*4;if(!out[o+3])continue;
+        var x0=Math.max(0,x-R),x1=Math.min(S,x+R+1),
+            n=sat[y1*W1+x1]-sat[y0*W1+x1]-sat[y1*W1+x0]+sat[y0*W1+x0],tot=(y1-y0)*(x1-x0);
+        if(n<tot*0.2)out[o+3]=0;}}
   };
   return E;
 }
