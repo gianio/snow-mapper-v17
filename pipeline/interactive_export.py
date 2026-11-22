@@ -2042,6 +2042,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://gdtxwowcqtbdkcoksivb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://wmts.geo.admin.ch" crossorigin>
+<link rel="preconnect" href="https://snowmapper-tiles.giani-morf.workers.dev" crossorigin>
+<link rel="preconnect" href="https://s3.amazonaws.com" crossorigin>
+<link rel="dns-prefetch" href="https://a.tile.opentopomap.org">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
@@ -7472,6 +7475,23 @@ body.fabs-folded #mapFabs>:not(#fabFold){display:none!important}
 .wc-pin{width:24px!important;height:24px!important;border-radius:8px!important;box-shadow:0 0 0 1.5px #fff,0 2px 6px rgba(0,0,0,.28)!important}
 .wc-pin svg{width:13px!important;height:13px!important}
 #tlTomorrowBtn{display:none!important}
+/* ==== Computer (body.desk): room to spare -- bigger webcam view, hover peek, normal buttons ==== */
+body.desk #mapFabs .mfab-grp .mfab{width:40px!important;height:40px!important;border-radius:20px!important}
+body.desk #mapFabs .mfab-grp .mfab svg{width:19px!important;height:19px!important}
+body.desk #ovChips .ov-chip{width:38px;height:38px}
+body.desk .wc-pin{width:28px!important;height:28px!important}
+body.desk .wc-pin svg{width:15px!important;height:15px!important}
+body.desk .wc-popup .leaflet-popup-content{width:480px!important;max-width:min(480px,calc(100vw - 140px))!important}
+body.desk .wc-pop .wc-seg button{cursor:pointer}
+.wc-tipw.leaflet-tooltip{padding:0;border:0;border-radius:12px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.28);background:var(--card,#fff)}
+.wc-tipw.leaflet-tooltip::before{display:none}
+.wc-tip{width:240px;font:600 12px/1.3 var(--font);color:var(--fg,#111)}
+.wc-tip img,.wc-tip .wc-img{display:block;width:240px;aspect-ratio:16/9;object-fit:cover;background:var(--fill,#eee)}
+.wc-tip b{display:block;padding:6px 9px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kbd-help{position:fixed;z-index:3000;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--card,#fff);color:var(--fg,#111);border-radius:20px;
+  padding:18px 22px;box-shadow:0 18px 50px rgba(0,0,0,.3);font:500 14px/1.5 var(--font);min-width:300px}
+.kbd-help b{display:block;font-size:16px;margin-bottom:8px}.kbd-help div{display:flex;justify-content:space-between;gap:24px}
+.kbd-help kbd{font:600 12px/1 var(--font);padding:4px 7px;border-radius:6px;background:var(--fill,#eee);box-shadow:inset 0 -1px 0 rgba(0,0,0,.15)}
 /* dark: the glass bars dark too (they were white glass), the brand readable */
 :root[data-theme="dark"] #bottomPanel,:root[data-theme="dark"] #tabBar{background:rgba(24,28,34,.78)!important;
   box-shadow:0 4px 18px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.08)!important}
@@ -10583,6 +10603,8 @@ const OsmTopo=L.GridLayer.extend({
         CH_BORDER.forEach((q,i)=>{const p=m.project(q,z),x=p.x-c.x*256,y=p.y-c.y*256;if(i)g.lineTo(x,y);else g.moveTo(x,y);});
         g.closePath();g.fill();}catch(e){}done(null,t);};
     img.onerror=()=>done(null,t);
+    // abroad only, from a slow volunteer server: never ahead of the Swiss tiles
+    try{img.fetchPriority='low';img.decoding='async';}catch(e){}
     img.src=L.Util.template(OSM_URL,{s:'abc'[Math.abs(c.x+c.y)%3],z:z,x:c.x,y:c.y});
     return t;}});
 const osmTopo=new OsmTopo({pane:'osmPane',maxZoom:18,maxNativeZoom:17,keepBuffer:2,updateWhenZooming:false,
@@ -13227,8 +13249,11 @@ async function wcRefresh(){
     (j.webcams||[]).forEach(w=>{const id=String(w.webcamId||w.id),loc=w.location||{};
       if(wcSeen.has(id)||loc.latitude==null)return;
       const mk=L.marker([loc.latitude,loc.longitude],{icon:wcIcon(),title:w.title||'Webcam',zIndexOffset:300});
-      mk.bindPopup('<div class="wc-pop"><div class="wc-img skel"></div><b>'+escapeHtml(w.title||'Webcam')+'</b></div>',{className:'wc-popup',maxWidth:300,minWidth:260});
-      mk.on('popupopen',()=>wcPreview(id,mk));
+      const dk=document.body.classList.contains('desk');
+      mk.bindPopup('<div class="wc-pop"><div class="wc-img skel"></div><b>'+escapeHtml(w.title||'Webcam')+'</b></div>',{className:'wc-popup',maxWidth:dk?500:300,minWidth:dk?440:260});
+      mk.on('popupopen',()=>{try{mk.closeTooltip();}catch(e){}wcPreview(id,mk);});
+      // on a computer: hovering a camera shows its latest picture right away
+      mk.on('mouseover',()=>wcPeek(id,mk,w.title||'Webcam'));
       wcSeen.set(id,mk);wcLayer.addLayer(mk);});
   }catch(e){console.warn('webcams',e);toastOnce('wc-err',wcErrTxt(e));}
   wcBusy=false;
@@ -13257,6 +13282,16 @@ function wcPopMode(id,mode,save){const c=_wcPop[id];if(!c)return;if(save)wcDefSe
   try{haptic(3);}catch(e){}}
 function wcNoteTxt(c,mode){return mode==='day'?'Letzte 24 Stunden · Zeitregler im Player'
   :(mode==='daylight'||(mode==='auto'&&wcIsNight()&&c.dimg))?'Letztes Bild bei Tageslicht':'Aktuelles Bild';}
+const _wcThumb=new Map();
+function wcThumb(id){if(!_wcThumb.has(id))_wcThumb.set(id,fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'})
+  .then(r=>r.json()).then(w=>{const c=(w.images&&w.images.current)||{},d=(w.images&&w.images.daylight)||{};
+    return (wcIsNight()&&(d.preview||d.thumbnail))||c.preview||c.thumbnail||d.preview||null;}).catch(()=>{_wcThumb.delete(id);return null;}));
+  return _wcThumb.get(id);}
+async function wcPeek(id,mk,title){if(!document.body.classList.contains('desk')||mk.isPopupOpen())return;
+  const html=src=>'<div class="wc-tip">'+(src?'<img src="'+escapeHtml(src)+'" alt="">':'<div class="wc-img"></div>')+'<b>'+escapeHtml(title)+'</b></div>';
+  if(!mk.getTooltip())mk.bindTooltip(html(null),{direction:'top',offset:[0,-16],className:'wc-tipw',opacity:1});
+  mk.openTooltip();const src=await wcThumb(id);
+  if(mk.getTooltip()&&!mk.isPopupOpen()){mk.setTooltipContent(html(src));}}
 async function wcPreview(id,mk){
   try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls,player',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
     const w=await r.json(),imc=(w.images&&w.images.current)||{},imd=(w.images&&w.images.daylight)||{},pl=w.player||{};
@@ -17981,6 +18016,34 @@ function deskSync(){let d=false;try{d=matchMedia('(hover:hover) and (pointer:fin
   document.body.classList.toggle('desk',d);try{navSync();}catch(e){}}
 addEventListener('resize',()=>{clearTimeout(deskSync._t);deskSync._t=setTimeout(deskSync,150);});
 setTimeout(deskSync,0);
+// ── Computer: keyboard shortcuts ──
+// ←/→ an hour (Shift: a day), / search, L layers, 3 the 3D view, H side
+// buttons in/out, ? this list. Never while typing, never in 3D (it has its
+// own keys) and never with a sheet open that takes the keys itself.
+function tlShift(d){if(typeof T==='undefined')return;const ws=Math.max(1,b-a);
+  b=Math.max(ws,Math.min(T,b+d));a=Math.max(0,b-ws);
+  if(typeof vaFollowTimeline==='function')try{vaFollowTimeline();}catch(e){}
+  try{tvFollow();}catch(e){}renderAll();}
+function kbdHelp(){let el=document.getElementById('kbdHelp');if(el){el.remove();return;}
+  el=document.createElement('div');el.id='kbdHelp';el.className='kbd-help';el.setAttribute('role','dialog');el.onclick=()=>el.remove();
+  const r=(k,t)=>'<div><span>'+t+'</span><span>'+k+'</span></div>';
+  el.innerHTML='<b>Tastenkürzel</b>'+r('<kbd>←</kbd> <kbd>→</kbd>','Eine Stunde früher / später')+r('<kbd>Shift</kbd>+<kbd>←</kbd> <kbd>→</kbd>','Einen Tag')
+    +r('<kbd>/</kbd>','Ort suchen')+r('<kbd>L</kbd>','Ebenen')+r('<kbd>3</kbd>','3D ein/aus')+r('<kbd>H</kbd>','Seitenknöpfe ein-/ausklappen')+r('<kbd>Esc</kbd>','Schliessen')+r('<kbd>?</kbd>','Diese Liste');
+  document.body.appendChild(el);}
+addEventListener('keydown',e=>{
+  if(!document.body.classList.contains('desk')||e.ctrlKey||e.metaKey||e.altKey)return;
+  const tg=(e.target&&e.target.tagName)||'';if(/^(INPUT|TEXTAREA|SELECT)$/.test(tg)||(e.target&&e.target.isContentEditable))return;
+  if(typeof is3d!=='undefined'&&is3d&&e.key!=='3'&&e.key!=='?')return;
+  if(document.body.classList.contains('ly-open')&&e.key!=='l'&&e.key!=='L')return;
+  const k=e.key;
+  if(k==='ArrowLeft'||k==='ArrowRight'){tlShift((k==='ArrowLeft'?-1:1)*(e.shiftKey?24:1));e.preventDefault();e.stopPropagation();}
+  else if(k==='/'){try{searchFieldOpen();}catch(_){}e.preventDefault();}
+  else if(k==='l'||k==='L'){try{document.body.classList.contains('ly-open')?lyPanelClose():lyPanelOpen();}catch(_){}e.preventDefault();}
+  else if(k==='3'){const bt=document.getElementById('btn3dFloat');if(bt)bt.click();e.preventDefault();}
+  else if(k==='h'||k==='H'){try{fabsFold();}catch(_){}e.preventDefault();}
+  else if(k==='?'){kbdHelp();e.preventDefault();}
+  else if(k==='Escape'){const h=document.getElementById('kbdHelp');if(h)h.remove();}
+},true);   // capture: the map would take the arrows for panning otherwise
 function repSheetToggle(on){const el=document.getElementById('repSheet');if(!el)return;
   on=on===undefined?el.hidden:!!on;el.hidden=!on;
   if(on&&document.body.classList.contains('desk')){const t=document.querySelector('.ab-tabs [data-tab=report]');
