@@ -2042,6 +2042,9 @@ fit();addEventListener('resize',fit);addEventListener('orientationchange',functi
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://gdtxwowcqtbdkcoksivb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://wmts.geo.admin.ch" crossorigin>
+<link rel="preconnect" href="https://snowmapper-tiles.giani-morf.workers.dev" crossorigin>
+<link rel="preconnect" href="https://s3.amazonaws.com" crossorigin>
+<link rel="dns-prefetch" href="https://a.tile.opentopomap.org">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
@@ -7472,6 +7475,34 @@ body.fabs-folded #mapFabs>:not(#fabFold){display:none!important}
 .wc-pin{width:24px!important;height:24px!important;border-radius:8px!important;box-shadow:0 0 0 1.5px #fff,0 2px 6px rgba(0,0,0,.28)!important}
 .wc-pin svg{width:13px!important;height:13px!important}
 #tlTomorrowBtn{display:none!important}
+.feed-hit{position:relative}
+.fh-info{margin-left:auto;flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--md-outline-var,#C4C6D0);background:transparent;color:var(--md-primary,#0B63B5);font:700 13px/1 var(--font);cursor:pointer}
+.acc-sheet{position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.32);display:flex;align-items:flex-end;justify-content:center}
+.acc-in{width:min(560px,100%);max-height:85dvh;overflow:auto;background:var(--md-surface,#fff);color:var(--md-on-surface,#111);border-radius:28px 28px 0 0;padding:18px 20px calc(18px + env(safe-area-inset-bottom,0px))}
+body.desk .acc-sheet{align-items:center}body.desk .acc-in{border-radius:28px}
+.acc-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.acc-hd b{font:600 20px/1.2 var(--font)}
+.acc-hd button{width:36px;height:36px;border-radius:50%;border:0;background:var(--md-surface-high,#eee);font-size:20px;cursor:pointer;color:inherit}
+.acc-live{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;background:var(--md-secondary-container,#D6E3F7);color:var(--md-on-secondary-container,#0F1D2E);margin-bottom:8px;font:500 14px/1.35 var(--font)}
+.acc-row{padding:10px 2px;border-bottom:1px solid var(--md-outline-var,rgba(0,0,0,.12));display:flex;flex-direction:column;gap:3px}
+.acc-row b{font:600 14px/1.3 var(--font)}.acc-row span{font:400 14px/1.4 var(--font);color:var(--md-on-surface-var,#44474E)}
+.acc-note{font:400 13px/1.45 var(--font);color:var(--md-on-surface-var,#44474E);margin:12px 2px 0}
+/* ==== Computer (body.desk): room to spare -- bigger webcam view, hover peek, normal buttons ==== */
+body.desk #mapFabs .mfab-grp .mfab{width:40px!important;height:40px!important;border-radius:20px!important}
+body.desk #mapFabs .mfab-grp .mfab svg{width:19px!important;height:19px!important}
+body.desk #ovChips .ov-chip{width:38px;height:38px}
+body.desk .wc-pin{width:28px!important;height:28px!important}
+body.desk .wc-pin svg{width:15px!important;height:15px!important}
+body.desk .wc-popup .leaflet-popup-content{width:480px!important;max-width:min(480px,calc(100vw - 140px))!important}
+body.desk .wc-pop .wc-seg button{cursor:pointer}
+.wc-tipw.leaflet-tooltip{padding:0;border:0;border-radius:12px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.28);background:var(--card,#fff)}
+.wc-tipw.leaflet-tooltip::before{display:none}
+.wc-tip{width:240px;font:600 12px/1.3 var(--font);color:var(--fg,#111)}
+.wc-tip img,.wc-tip .wc-img{display:block;width:240px;aspect-ratio:16/9;object-fit:cover;background:var(--fill,#eee)}
+.wc-tip b{display:block;padding:6px 9px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kbd-help{position:fixed;z-index:3000;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--card,#fff);color:var(--fg,#111);border-radius:20px;
+  padding:18px 22px;box-shadow:0 18px 50px rgba(0,0,0,.3);font:500 14px/1.5 var(--font);min-width:300px}
+.kbd-help b{display:block;font-size:16px;margin-bottom:8px}.kbd-help div{display:flex;justify-content:space-between;gap:24px}
+.kbd-help kbd{font:600 12px/1 var(--font);padding:4px 7px;border-radius:6px;background:var(--fill,#eee);box-shadow:inset 0 -1px 0 rgba(0,0,0,.15)}
 /* dark: the glass bars dark too (they were white glass), the brand readable */
 :root[data-theme="dark"] #bottomPanel,:root[data-theme="dark"] #tabBar{background:rgba(24,28,34,.78)!important;
   box-shadow:0 4px 18px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.08)!important}
@@ -10583,6 +10614,8 @@ const OsmTopo=L.GridLayer.extend({
         CH_BORDER.forEach((q,i)=>{const p=m.project(q,z),x=p.x-c.x*256,y=p.y-c.y*256;if(i)g.lineTo(x,y);else g.moveTo(x,y);});
         g.closePath();g.fill();}catch(e){}done(null,t);};
     img.onerror=()=>done(null,t);
+    // abroad only, from a slow volunteer server: never ahead of the Swiss tiles
+    try{img.fetchPriority='low';img.decoding='async';}catch(e){}
     img.src=L.Util.template(OSM_URL,{s:'abc'[Math.abs(c.x+c.y)%3],z:z,x:c.x,y:c.y});
     return t;}});
 const osmTopo=new OsmTopo({pane:'osmPane',maxZoom:18,maxNativeZoom:17,keepBuffer:2,updateWhenZooming:false,
@@ -13227,8 +13260,11 @@ async function wcRefresh(){
     (j.webcams||[]).forEach(w=>{const id=String(w.webcamId||w.id),loc=w.location||{};
       if(wcSeen.has(id)||loc.latitude==null)return;
       const mk=L.marker([loc.latitude,loc.longitude],{icon:wcIcon(),title:w.title||'Webcam',zIndexOffset:300});
-      mk.bindPopup('<div class="wc-pop"><div class="wc-img skel"></div><b>'+escapeHtml(w.title||'Webcam')+'</b></div>',{className:'wc-popup',maxWidth:300,minWidth:260});
-      mk.on('popupopen',()=>wcPreview(id,mk));
+      const dk=document.body.classList.contains('desk');
+      mk.bindPopup('<div class="wc-pop"><div class="wc-img skel"></div><b>'+escapeHtml(w.title||'Webcam')+'</b></div>',{className:'wc-popup',maxWidth:dk?500:300,minWidth:dk?440:260});
+      mk.on('popupopen',()=>{try{mk.closeTooltip();}catch(e){}wcPreview(id,mk);});
+      // on a computer: hovering a camera shows its latest picture right away
+      mk.on('mouseover',()=>wcPeek(id,mk,w.title||'Webcam'));
       wcSeen.set(id,mk);wcLayer.addLayer(mk);});
   }catch(e){console.warn('webcams',e);toastOnce('wc-err',wcErrTxt(e));}
   wcBusy=false;
@@ -13257,6 +13293,16 @@ function wcPopMode(id,mode,save){const c=_wcPop[id];if(!c)return;if(save)wcDefSe
   try{haptic(3);}catch(e){}}
 function wcNoteTxt(c,mode){return mode==='day'?'Letzte 24 Stunden · Zeitregler im Player'
   :(mode==='daylight'||(mode==='auto'&&wcIsNight()&&c.dimg))?'Letztes Bild bei Tageslicht':'Aktuelles Bild';}
+const _wcThumb=new Map();
+function wcThumb(id){if(!_wcThumb.has(id))_wcThumb.set(id,fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'})
+  .then(r=>r.json()).then(w=>{const c=(w.images&&w.images.current)||{},d=(w.images&&w.images.daylight)||{};
+    return (wcIsNight()&&(d.preview||d.thumbnail))||c.preview||c.thumbnail||d.preview||null;}).catch(()=>{_wcThumb.delete(id);return null;}));
+  return _wcThumb.get(id);}
+async function wcPeek(id,mk,title){if(!document.body.classList.contains('desk')||mk.isPopupOpen())return;
+  const html=src=>'<div class="wc-tip">'+(src?'<img src="'+escapeHtml(src)+'" alt="">':'<div class="wc-img"></div>')+'<b>'+escapeHtml(title)+'</b></div>';
+  if(!mk.getTooltip())mk.bindTooltip(html(null),{direction:'top',offset:[0,-16],className:'wc-tipw',opacity:1});
+  mk.openTooltip();const src=await wcThumb(id);
+  if(mk.getTooltip()&&!mk.isPopupOpen()){mk.setTooltipContent(html(src));}}
 async function wcPreview(id,mk){
   try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls,player',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
     const w=await r.json(),imc=(w.images&&w.images.current)||{},imd=(w.images&&w.images.daylight)||{},pl=w.player||{};
@@ -17981,6 +18027,34 @@ function deskSync(){let d=false;try{d=matchMedia('(hover:hover) and (pointer:fin
   document.body.classList.toggle('desk',d);try{navSync();}catch(e){}}
 addEventListener('resize',()=>{clearTimeout(deskSync._t);deskSync._t=setTimeout(deskSync,150);});
 setTimeout(deskSync,0);
+// ── Computer: keyboard shortcuts ──
+// ←/→ an hour (Shift: a day), / search, L layers, 3 the 3D view, H side
+// buttons in/out, ? this list. Never while typing, never in 3D (it has its
+// own keys) and never with a sheet open that takes the keys itself.
+function tlShift(d){if(typeof T==='undefined')return;const ws=Math.max(1,b-a);
+  b=Math.max(ws,Math.min(T,b+d));a=Math.max(0,b-ws);
+  if(typeof vaFollowTimeline==='function')try{vaFollowTimeline();}catch(e){}
+  try{tvFollow();}catch(e){}renderAll();}
+function kbdHelp(){let el=document.getElementById('kbdHelp');if(el){el.remove();return;}
+  el=document.createElement('div');el.id='kbdHelp';el.className='kbd-help';el.setAttribute('role','dialog');el.onclick=()=>el.remove();
+  const r=(k,t)=>'<div><span>'+t+'</span><span>'+k+'</span></div>';
+  el.innerHTML='<b>Tastenkürzel</b>'+r('<kbd>←</kbd> <kbd>→</kbd>','Eine Stunde früher / später')+r('<kbd>Shift</kbd>+<kbd>←</kbd> <kbd>→</kbd>','Einen Tag')
+    +r('<kbd>/</kbd>','Ort suchen')+r('<kbd>L</kbd>','Ebenen')+r('<kbd>3</kbd>','3D ein/aus')+r('<kbd>H</kbd>','Seitenknöpfe ein-/ausklappen')+r('<kbd>Esc</kbd>','Schliessen')+r('<kbd>?</kbd>','Diese Liste');
+  document.body.appendChild(el);}
+addEventListener('keydown',e=>{
+  if(!document.body.classList.contains('desk')||e.ctrlKey||e.metaKey||e.altKey)return;
+  const tg=(e.target&&e.target.tagName)||'';if(/^(INPUT|TEXTAREA|SELECT)$/.test(tg)||(e.target&&e.target.isContentEditable))return;
+  if(typeof is3d!=='undefined'&&is3d&&e.key!=='3'&&e.key!=='?')return;
+  if(document.body.classList.contains('ly-open')&&e.key!=='l'&&e.key!=='L')return;
+  const k=e.key;
+  if(k==='ArrowLeft'||k==='ArrowRight'){tlShift((k==='ArrowLeft'?-1:1)*(e.shiftKey?24:1));e.preventDefault();e.stopPropagation();}
+  else if(k==='/'){try{searchFieldOpen();}catch(_){}e.preventDefault();}
+  else if(k==='l'||k==='L'){try{document.body.classList.contains('ly-open')?lyPanelClose():lyPanelOpen();}catch(_){}e.preventDefault();}
+  else if(k==='3'){const bt=document.getElementById('btn3dFloat');if(bt)bt.click();e.preventDefault();}
+  else if(k==='h'||k==='H'){try{fabsFold();}catch(_){}e.preventDefault();}
+  else if(k==='?'){kbdHelp();e.preventDefault();}
+  else if(k==='Escape'){const h=document.getElementById('kbdHelp');if(h)h.remove();}
+},true);   // capture: the map would take the arrows for panning otherwise
 function repSheetToggle(on){const el=document.getElementById('repSheet');if(!el)return;
   on=on===undefined?el.hidden:!!on;el.hidden=!on;
   if(on&&document.body.classList.contains('desk')){const t=document.querySelector('.ab-tabs [data-tab=report]');
@@ -18302,8 +18376,10 @@ function uncRefresh(){if(!ovOn.uncert||!(SNOW.length>=T*NP))return;
     _unc.key=key;_unc.mask=mask;_unc.n=nAll;_unc.nu=nUnc;uncDraw();};
   step();}
 let _uncPatC=null;
-function uncPattern(){if(_uncPatC)return _uncPatC;const c=document.createElement('canvas');c.width=c.height=9;const g=c.getContext('2d');
-  g.strokeStyle='rgba(28,32,44,.62)';g.lineWidth=1.5;g.beginPath();g.moveTo(-1,10);g.lineTo(10,-1);g.moveTo(-1,1);g.lineTo(1,-1);g.moveTo(8,10);g.lineTo(10,8);g.stroke();
+// orange wash + bold orange-brown hatching: reads at a glance over every layer
+function uncPattern(){if(_uncPatC)return _uncPatC;const c=document.createElement('canvas');c.width=c.height=10;const g=c.getContext('2d');
+  g.fillStyle='rgba(255,140,0,.24)';g.fillRect(0,0,10,10);
+  g.strokeStyle='rgba(204,85,0,.95)';g.lineWidth=2.2;g.lineCap='square';g.beginPath();g.moveTo(-1,11);g.lineTo(11,-1);g.moveTo(-1,1);g.lineTo(1,-1);g.moveTo(9,11);g.lineTo(11,9);g.stroke();
   return _uncPatC=c;}
 const UncGrid=L.GridLayer.extend({createTile:function(c){const tile=document.createElement('canvas'),ts=this.getTileSize();tile.width=ts.x;tile.height=ts.y;
   const m=_unc.mask;if(!m)return tile;const g=tile.getContext('2d'),z=c.z,nw=c.scaleBy(ts);
@@ -20142,7 +20218,8 @@ let reportMarkers=L.layerGroup().addTo(map);
 try{if(!localStorage.getItem('ssm_ly_def2')){['ssm_tours','ssm_reports'].forEach(k=>{if(localStorage.getItem(k)==='0')localStorage.removeItem(k);});
   localStorage.setItem('ssm_ly_def2','1');}}catch(e){}
 ovOn.reports=true;
-try{if(localStorage.getItem('ssm_reports')==='0'){ovOn.reports=false;map.removeLayer(reportMarkers);}}catch(e){}
+try{if(!localStorage.getItem('ssm_rep_def3')){localStorage.removeItem('ssm_reports');localStorage.setItem('ssm_rep_def3','1');}
+  if(localStorage.getItem('ssm_reports')==='0'){ovOn.reports=false;map.removeLayer(reportMarkers);}}catch(e){}
 // «Meine Aufzeichnungen» stays as you left it (it is off unless you turned it on)
 try{if(localStorage.getItem('ssm_myacts')==='1')setTimeout(()=>{try{if(!ovOn.myacts)ovToggle('myacts',true);}catch(e){}},0);}catch(e){}
 try{if(localStorage.getItem('ssm_skiareas')==='1')setTimeout(()=>{try{if(!ovOn.skiareas)ovToggle('skiareas',true);}catch(e){}},0);}catch(e){}
@@ -20357,7 +20434,8 @@ const RPT_RECENT_D=7;
 function rptWindow(){try{const now=Date.now(),hi=Math.min(tMs(b),now);let lo=tMs(a);
   if(hi>=now-3.6e6)lo=Math.min(lo,now-RPT_RECENT_D*864e5);
   else if(!(hi-lo>=24*3.6e6))lo=hi-48*3.6e6;return {lo,hi:hi+30*60e3};}catch(e){return null;}}
-function rptInWindow(r,W){if(!W)return true;if(sbUser&&r.userId===sbUser.id&&Date.now()-rptTimeMs(r)<10*60e3)return true;
+function rptMineFresh(r){return !!(sbUser&&r&&r.userId===sbUser.id&&Date.now()-Date.parse(r.createdAt||0)<48*3.6e6);}
+function rptInWindow(r,W){if(!W)return true;if(rptMineFresh(r))return true;
   const t=rptTimeMs(r);return t>=W.lo&&t<=W.hi;}
 let _rptWinKey='';
 function rptWindowSync(){const W=rptWindow();const k=W?Math.round(W.lo/36e5)+':'+Math.round(W.hi/36e5):'';
@@ -21100,10 +21178,14 @@ function authMenu(){openProfile();}
 // Device-local, so they work before sign-in and never need a round trip.
 const PREF_KEY='ssm_prefs_v1';
 // opens where you last were (Einstellungen: or the whole country, or your home area)
-const PREF_DEFAULTS={start:'last',home:'',layer:'meteo:powder',window:'48',showMyReports:false};
+const PREF_DEFAULTS={start:'last',home:'',layer:'meteo:powder',window:'48',showMyReports:true};
 let prefs=Object.assign({},PREF_DEFAULTS);
 function prefsLoad(){try{const v=JSON.parse(localStorage.getItem(PREF_KEY)||'{}');
-  prefs=Object.assign({},PREF_DEFAULTS,v||{});}catch(e){prefs=Object.assign({},PREF_DEFAULTS);}
+  prefs=Object.assign({},PREF_DEFAULTS,v||{});
+  // once: your own reports back in the feed for everyone (they were hidden
+  // by default -- a fresh quick report then seemed to vanish)
+  if(!localStorage.getItem('ssm_myrep_v2')){prefs.showMyReports=true;localStorage.setItem('ssm_myrep_v2','1');try{localStorage.setItem(PREF_KEY,JSON.stringify(prefs));}catch(_){}}
+  }catch(e){prefs=Object.assign({},PREF_DEFAULTS);}
   return prefs;}
 function prefsSave(){try{localStorage.setItem(PREF_KEY,JSON.stringify(prefs));}catch(e){}}
 prefsLoad();
@@ -24483,7 +24565,9 @@ function feedRegionSet(id,keep){feedRegion=(feedRegion===id&&!keep)?'':id;try{lo
   try{feedRegionsRender();}catch(e){}
   if(feedRegion==='near'&&!myLoc){try{geoLocate(p=>{myLoc=[p.coords.latitude,p.coords.longitude];feedRender();},()=>{});}catch(e){}}
   try{haptic(3);}catch(e){}try{feedTopRender();}catch(e){}feedRender();}
-function feedRegionFilter(list){if(!feedRegion)return list;
+function feedRegionFilter(list){if(!feedRegion)return list;const _mine=list.filter(rptMineFresh);
+  const out=feedRegionFilter0(list);return out.concat(_mine.filter(r=>out.indexOf(r)<0));}
+function feedRegionFilter0(list){
   if(feedRegion==='view'){const b=feedViewB;if(!b)return list;
     if(feedViewIds)return list.filter(r=>feedViewIds.has(String(r.id)));
     return list.filter(r=>r.lat>=b[0]&&r.lat<=b[2]&&r.lng>=b[1]&&r.lng<=b[3]);}
@@ -25376,10 +25460,27 @@ function feedHitSync(){const list=document.getElementById('feedList');if(!list)r
   if(!_hit.at){el.hidden=true;return;}
   el.hidden=false;
   if(n<5){el.innerHTML='<span class="fh-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/></svg></span>'
-    +'<span class="fh-t"><b>Modell-Check</b><small>Noch '+(n?'zu wenige Meldungen ('+n+')':'keine Meldungen')+' diese Woche – jede Schnellmeldung prüft das Modell</small></span>';return;}
+    +'<span class="fh-t"><b>Modell-Check</b><small>Noch '+(n?'zu wenige Meldungen ('+n+')':'keine Meldungen')+' diese Woche – jede Schnellmeldung prüft das Modell</small></span>'+'<button type="button" class="fh-info" onclick="accOpen()" aria-label="Wie genau ist das Modell?">i</button>';return;}
   const pc=Math.round(_hit.ok/n*100),ps=Math.round(_hit.same/n*100);
   el.innerHTML='<span class="fh-ring" style="--p:'+pc+'" aria-hidden="true"><b>'+pc+'%</b></span>'
-    +'<span class="fh-t"><b>Modell diese Woche: '+pc+' % bestätigt</b><small>'+n+' Schnellmeldungen · '+ps+' % genau gleich, '+(pc-ps)+' % ähnlich</small></span>';}
+    +'<span class="fh-t"><b>Modell diese Woche: '+pc+' % bestätigt</b><small>'+n+' Schnellmeldungen · '+ps+' % genau gleich, '+(pc-ps)+' % ähnlich</small></span>'+'<button type="button" class="fh-info" onclick="accOpen()" aria-label="Wie genau ist das Modell?">i</button>';}
+// «Wie genau ist das Modell?» -- the validation so far, in plain words: the
+// community check of this week and the checks against measurements (SLF,
+// MeteoSchweiz) from the model rounds. Numbers from docs/plan-modell-runde-*.
+const ACC_ROWS=[
+  ['Neuschnee gegen SLF-Messungen (HN1D, 19.–21.11.2026)','Mittlerer Fehler 1.6 cm (vorher 5.1 cm); Modell/SLF 1.4 (vorher 3.2)'],
+  ['Niederschlag gegen MeteoSchweiz-Stationen','Modell 7–29 % über den Messungen – der Niederschlag selbst stimmt gut'],
+  ['Schneetyp: Wind-Expositionen gegen SLF-Bulletin (19.11.)','Übereinstimmung 0.54 (Zufall 0.29) bei 76 Regionen mit Triebschnee'],
+  ['Community-Check','Jede Schnellmeldung speichert, was das Modell dort sagte – die Quote oben ist live']];
+function accOpen(){let el=document.getElementById('accSheet');if(el){el.remove();}
+  el=document.createElement('div');el.id='accSheet';el.className='acc-sheet';el.setAttribute('role','dialog');el.setAttribute('aria-label','Wie genau ist das Modell?');
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  const n=_hit.n,pc=n?Math.round(_hit.ok/n*100):null;
+  el.innerHTML='<div class="acc-in"><div class="acc-hd"><b>Wie genau ist das Modell?</b><button type="button" onclick="this.closest(\'.acc-sheet\').remove()" aria-label="Schliessen">×</button></div>'
+    +(pc!=null&&n>=5?'<div class="acc-live"><span class="fh-ring" style="--p:'+pc+'"><b>'+pc+'%</b></span><span>Diese Woche von der Community bestätigt ('+n+' Schnellmeldungen)</span></div>':'')
+    +ACC_ROWS.map(r=>'<div class="acc-row"><b>'+escapeHtml(r[0])+'</b><span>'+escapeHtml(r[1])+'</span></div>').join('')
+    +'<p class="acc-note">Ein paar Tage sind noch keine Statistik – belastbar wird es über Wochen. Darum zählt jede Meldung: sie zeigt, wo das Modell danebenliegt.</p></div>';
+  document.body.appendChild(el);}
 function feedRender(){
   try{feedHitSync();}catch(e){}
   const list=document.getElementById('feedList');
