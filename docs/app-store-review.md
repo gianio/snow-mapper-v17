@@ -41,7 +41,7 @@ später einfach die URLs austauschen.
 > Skitouren, Teilen eines Beitrags als Bild, Schnellaktionen auf dem App-Symbol.
 > Feedback direkt in der App (Sprechblase oben links) oder per Screenshot in TestFlight.
 
-**Feedback-E-Mail:** giani.morf@bluewin.ch
+**Feedback-E-Mail:** gianandrimorf@gmail.com
 **Marketing-URL:** optional
 **Datenschutz-URL:** siehe 1.
 

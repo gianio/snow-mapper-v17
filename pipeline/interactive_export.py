@@ -7928,6 +7928,7 @@ body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
 </div><button id="btn3dClose">✕ 2D</button>
 <div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="30" style="width:100px;accent-color:var(--acc)"> Map <span id="mapOpacLbl">30%</span></label>
 <button id="btn3dExag" title="Überhöhung (1.0 = wahre Höhen)">×1.0</button>
+<button id="btn3dPhoto" title="Luftbild (SWISSIMAGE) oder Karte" aria-pressed="true">Luftbild</button>
 <select id="overlay3d" style="padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:16px;min-height:46px"><option value="none">Keine Ebene</option><option value="snow">Neuschnee</option><option value="temp">Temperatur</option><option value="wind">Wind</option><option value="depth">Schneehöhe</option><option value="powder">Powder</option></select>
 <span id="keys3d" style="font-size:12px;color:var(--mut);opacity:.7;padding:6px 10px;display:none">WASD/Pfeile: drehen · +/-: zoomen · R: zurücksetzen</span></div>
 </div>
@@ -19061,13 +19062,28 @@ function init3D(){
         'hillshade-tiles':{type:'raster',tiles:[swissTile('ch.swisstopo.swissalti3d-reliefschattierung_monodirektional','png')],tileSize:256,maxzoom:16},
         // swisstopo's 3D terrain (swissALTI3D), turned into terrarium tiles on
         // the device -- see sw3dProtocol(); the global tiles fill in abroad
-        'terrain-dem':{type:'raster-dem',tiles:[sw3dReady()?'swtopo://{z}/{x}/{y}':'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',maxzoom:14,
-          attribution:'Gelände © swisstopo'},
+        // finer mesh close up (swissALTI3D down to ~2.5 m on a desktop, ~5 m on a
+        // phone): rock bands, ridges and gullies stand up instead of melting
+        'terrain-dem':{type:'raster-dem',tiles:[sw3dReady()?'swtopo://{z}/{x}/{y}':'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',
+          maxzoom:sw3dReady()?(isMobile?15:16):14,attribution:'Gelände © swisstopo'},
+        // the same heights once more, for a shading drawn from them (MapLibre
+        // wants a separate source for terrain and hillshade)
+        'terrain-hs':{type:'raster-dem',tiles:[sw3dReady()?'swtopo://{z}/{x}/{y}':'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',
+          maxzoom:sw3dReady()?15:14},
+        // swisstopo's orthophoto (OGD: free, also commercially, with the source named)
+        'swissimage':{type:'raster',tiles:[swissTile('ch.swisstopo.swissimage','jpeg')],tileSize:256,maxzoom:19,attribution:'Luftbild SWISSIMAGE © swisstopo'},
         'slope-src':{type:'raster',tiles:[swissTile('ch.swisstopo.hangneigung-ueber_30','png')],tileSize:256,minzoom:8,maxzoom:16},
         'skitour-src':{type:'raster',tiles:[swissTile('ch.swisstopo-karto.skitouren','png')],tileSize:256,minzoom:8,maxzoom:16}},
       layers:[
-        {id:'swisstopo-base',type:'raster',source:'swisstopo',paint:{'raster-opacity':0.3}},
-        {id:'hillshade',type:'raster',source:'hillshade-tiles',paint:{'raster-opacity':0.7}},
+        {id:'swisstopo-base',type:'raster',source:'swisstopo',layout:{visibility:photo3dOn()?'none':'visible'},paint:{'raster-opacity':0.3}},
+        {id:'hillshade',type:'raster',source:'hillshade-tiles',layout:{visibility:photo3dOn()?'none':'visible'},paint:{'raster-opacity':0.7}},
+        // the photo by default in 3D, with a light shading from the terrain on
+        // top: rocks read as rock, the sun side and the shadow side apart
+        {id:'swissimage-3d',type:'raster',source:'swissimage',layout:{visibility:photo3dOn()?'visible':'none'},
+          paint:{'raster-opacity':1,'raster-contrast':0.08,'raster-saturation':-0.04,'raster-fade-duration':150}},
+        {id:'relief-3d',type:'hillshade',source:'terrain-hs',layout:{visibility:photo3dOn()?'visible':'none'},
+          paint:{'hillshade-exaggeration':0.42,'hillshade-illumination-direction':315,'hillshade-shadow-color':'#16202b',
+            'hillshade-highlight-color':'rgba(255,255,255,0.28)','hillshade-accent-color':'#2b3038'}},
         // the 2D map's overlays, draped on the relief like everything else
         {id:'slope-3d',type:'raster',source:'slope-src',layout:{visibility:ovOn.slope?'visible':'none'},paint:{'raster-opacity':0.5,'raster-fade-duration':0}},
         {id:'skitour-3d',type:'raster',source:'skitour-src',layout:{visibility:ovOn.skitour?'visible':'none'},paint:{'raster-opacity':0.9,'raster-fade-duration':0}}],
@@ -19080,7 +19096,7 @@ function init3D(){
   map3d.keyboard.enable();
   document.getElementById('btn3dFloat').classList.add('active');
   if(!isMobile)document.getElementById('keys3d').style.display='inline';
-  map3d.on('load',()=>{try{sync3dLayer();}catch(e){}update3dOverlay();
+  map3d.on('load',()=>{try{sync3dLayer();}catch(e){}update3dOverlay();try{photo3dSet(photo3dOn());}catch(e){}
     // from the two-finger gesture: the flat map tips over into 3D
     if(_tilt3d){_tilt3d=false;map3d.easeTo({pitch:60,bearing:-15,duration:1100});}
     else fly3dIn();
@@ -19164,7 +19180,18 @@ function close3D(){
   document.getElementById('btn3dFloat').classList.remove('active');}
 document.getElementById('btn3dFloat').onclick=e=>{e.stopPropagation();if(is3d)close3D();else init3D();};
 document.getElementById('btn3dClose').onclick=()=>close3D();
-document.getElementById('mapOpac3d').oninput=function(){if(!map3d)return;const v=this.value/100;
+// 3D on the aerial photo (default) or on the map; remembered
+function photo3dOn(){try{return localStorage.getItem('ssm_3d_photo')!=='0';}catch(e){return true;}}
+function photo3dSet(on){try{localStorage.setItem('ssm_3d_photo',on?'1':'0');}catch(e){}
+  const b=document.getElementById('btn3dPhoto');if(b){b.setAttribute('aria-pressed',on?'true':'false');b.classList.toggle('on',on);b.textContent=on?'Luftbild':'Karte';}
+  if(!map3d||!map3d.getLayer)return;
+  const vis=(id,v)=>{if(map3d.getLayer(id))map3d.setLayoutProperty(id,'visibility',v?'visible':'none');};
+  vis('swissimage-3d',on);vis('relief-3d',on);
+  const mv=(document.getElementById('mapOpac3d')||{value:30}).value/100;
+  vis('swisstopo-base',!on&&mv>=0.02);vis('hillshade',!on&&mv<=0.98);
+  const ctl=document.getElementById('mapOpac3d');if(ctl&&ctl.parentElement)ctl.parentElement.style.display=on?'none':'';}
+document.getElementById('btn3dPhoto').onclick=()=>{photo3dSet(!photo3dOn());try{haptic(4);}catch(e){}};
+document.getElementById('mapOpac3d').oninput=function(){if(!map3d||photo3dOn())return;const v=this.value/100;
   map3d.setPaintProperty('swisstopo-base','raster-opacity',v);
   map3d.setPaintProperty('hillshade','raster-opacity',1-v);
   // a picture at 0 % is not fetched at all
@@ -22275,7 +22302,7 @@ async function profSave(){
 async function profSignOut(){bioForget();await pushUnsubscribe();window._pushFor=null;if(sb)sb.auth.signOut();profClose();authUpdateUI(null);}
 function sendFeedback(){try{haptic(8);}catch(e){}
   const body=encodeURIComponent('\n\n---\nSnowmapper\n'+(navigator.userAgent||''));
-  window.location.href='mailto:giani.morf@bluewin.ch?subject='+encodeURIComponent('Snowmapper Feedback')+'&body='+body;}
+  window.location.href='mailto:gianandrimorf@gmail.com?subject='+encodeURIComponent('Snowmapper Feedback')+'&body='+body;}
 // --- View another user's profile ---
 let uvUid=null;
 async function viewUser(uid,username){
