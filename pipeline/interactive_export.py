@@ -7486,6 +7486,24 @@ body.fabs-folded #mapFabs>:not(#fabFold){display:none!important}
 .wc-pin{width:24px!important;height:24px!important;border-radius:8px!important;box-shadow:0 0 0 1.5px #fff,0 2px 6px rgba(0,0,0,.28)!important}
 .wc-pin svg{width:13px!important;height:13px!important}
 #tlTomorrowBtn{display:none!important}
+.pt-v{grid-template-columns:auto auto minmax(0,1fr)!important}
+/* zoomed in past the model's own detail (terrain ~25 m, zoom 12) the classes
+   are stretched: smoothed edges instead of stair-step squares */
+body.z-deep .va-hi canvas,body.z-deep .va-srv img,body.z-deep .raster-smooth.va-crisp{image-rendering:auto!important}
+/* webcam preview: tap = full screen with the 24 h player */
+.wc-pop .wc-media{cursor:zoom-in}
+.wc-pop .wc-zoom{position:absolute;right:6px;top:6px;width:26px;height:26px;border-radius:13px;display:grid;place-items:center;background:rgba(0,0,0,.45);color:#fff;pointer-events:none}
+.wc-pop .wc-zoom svg{width:14px;height:14px}
+.wc-full{position:fixed;inset:0;z-index:20050;background:rgba(8,10,14,.92);display:flex;flex-direction:column;
+  padding:calc(env(safe-area-inset-top,0px) + 8px) 0 env(safe-area-inset-bottom,0px)}
+.wcf-hd{display:flex;align-items:center;gap:10px;padding:6px 12px 10px;color:#fff}
+.wcf-hd b{font:600 16px/1.2 var(--font);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wcf-hd small{font:400 12px/1.2 var(--font);opacity:.7;display:none}
+@media (min-width:600px){.wcf-hd small{display:block}}
+.wcf-hd button{flex:none;width:40px;height:40px;border-radius:20px;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:24px;line-height:1;cursor:pointer}
+.wcf-media{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+.wcf-media iframe{width:100%;height:100%;border:0;background:#000}
+.wcf-media img{max-width:100%;max-height:100%;object-fit:contain}
 /* the layer icon as large as the side buttons; its scale folds out below */
 #miniLegend,#mapFabs #miniLegend,body.desk #mapFabs #miniLegend{width:36px!important;height:36px!important;max-width:36px!important}
 #miniLegend #mlName{height:36px!important}#miniLegend #mlName svg{width:18px!important;height:18px!important}
@@ -7659,7 +7677,7 @@ body.desk .leaflet-control-scale,body.desk .leaflet-control-attribution{bottom:c
 .pt-chip-wrap{pointer-events:auto;width:0!important;height:0!important}
 .pt-chip{position:absolute;left:0;top:0;transform:translate(-50%,calc(-100% - 20px));display:flex;align-items:center;gap:2px;white-space:nowrap;
   background:var(--md-surface,#fff);border-radius:999px;padding:4px;box-shadow:0 3px 12px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.04)}
-.pt-chip::after{content:'';position:absolute;left:50%;bottom:-6px;width:12px;height:12px;background:inherit;transform:translateX(-50%) rotate(45deg);box-shadow:3px 3px 4px rgba(0,0,0,.08)}
+.pt-chip::after{content:'';position:absolute;left:calc(50% + var(--ax,0px));bottom:-6px;width:12px;height:12px;background:inherit;transform:translateX(-50%) rotate(45deg);box-shadow:3px 3px 4px rgba(0,0,0,.08)}
 .pt-chip button{border:0;background:none;cursor:pointer;color:var(--md-on-surface,#191C20);position:relative;z-index:1}
 .pt-v{display:flex;align-items:center;gap:7px;padding:4px 6px 4px 8px;border-radius:999px}
 .pt-v i{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
@@ -7809,7 +7827,8 @@ html.cap-ios body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #
 .pt-chip{max-width:calc(100vw - 24px)}
 .pt-v{display:grid!important;grid-template-columns:auto auto auto;grid-template-rows:auto auto;column-gap:7px;row-gap:2px;align-items:center;text-align:left}
 .pt-v>i,.pt-v>svg{grid-row:1/3}
-.pt-v>b{grid-column:3;grid-row:1;white-space:nowrap}
+.pt-v>b{grid-column:3;grid-row:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pt-chip{overflow:visible}.pt-chip .pt-v{min-width:0;overflow:hidden}
 /* the chip hangs in a 0-wide marker, so the second line needs its own width */
 .pt-v>small{grid-column:3;grid-row:2;white-space:normal;width:max-content;max-width:min(40vw,190px);line-height:1.3!important;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -13352,7 +13371,7 @@ function wcPopMedia(c,mode){
   return s?'<img src="'+escapeHtml(s)+'" alt="">':'<div class="wc-img"></div>';}
 const _wcPop={};
 function wcPopMode(id,mode,save){const c=_wcPop[id];if(!c)return;if(save)wcDefSet(mode);
-  const box=document.getElementById('wcm-'+id);if(box)box.innerHTML=wcPopMedia(c,mode);
+  const box=document.getElementById('wcm-'+id);if(box){const z=box.querySelector('.wc-zoom');box.innerHTML=wcPopMedia(c,mode);if(z)box.appendChild(z);}
   document.querySelectorAll('#wcs-'+id+' button').forEach(b=>b.classList.toggle('on',b.dataset.m===mode));
   const n=document.getElementById('wcn-'+id);if(n)n.textContent=wcNoteTxt(c,mode);
   try{haptic(3);}catch(e){}}
@@ -13368,6 +13387,17 @@ async function wcPeek(id,mk,title){if(!document.body.classList.contains('desk')|
   if(!mk.getTooltip())mk.bindTooltip(html(null),{direction:'top',offset:[0,-16],className:'wc-tipw',opacity:1});
   mk.openTooltip();const src=await wcThumb(id);
   if(mk.getTooltip()&&!mk.isPopupOpen()){mk.setTooltipContent(html(src));}}
+// A tap on the preview: the camera full screen with Windy's 24 h player and
+// its time slider (the latest picture where there is no player); × or Esc closes
+function wcFull(id){const c=_wcPop[id];if(!c)return;wcFullClose();
+  const el=document.createElement('div');el.id='wcFull';el.className='wc-full';el.setAttribute('role','dialog');el.setAttribute('aria-label',c.t);
+  const media=c.player?'<iframe src="'+escapeHtml(c.player)+'" allow="autoplay; fullscreen" referrerpolicy="no-referrer-when-downgrade" title="'+escapeHtml(c.t)+' – 24 h"></iframe>'
+    :'<img src="'+escapeHtml(c.img||c.dimg||'')+'" alt="">';
+  el.innerHTML='<div class="wcf-hd"><b>'+escapeHtml(c.t)+'</b><small>'+(c.player?'Letzte 24 Stunden · Zeitregler im Player':'Aktuelles Bild')+'</small>'
+    +'<button type="button" onclick="wcFullClose()" aria-label="Schliessen">×</button></div><div class="wcf-media">'+media+'</div>';
+  el.onclick=e=>{if(e.target===el)wcFullClose();};document.body.appendChild(el);document.body.classList.add('wcf-open');try{haptic(4);}catch(e){}}
+function wcFullClose(){const el=document.getElementById('wcFull');if(el)el.remove();document.body.classList.remove('wcf-open');}
+addEventListener('keydown',e=>{if(e.key==='Escape')wcFullClose();});
 async function wcPreview(id,mk){
   try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls,player',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
     const w=await r.json(),imc=(w.images&&w.images.current)||{},imd=(w.images&&w.images.daylight)||{},pl=w.player||{};
@@ -13377,7 +13407,7 @@ async function wcPreview(id,mk){
     const link=(w.urls&&(w.urls.detail||w.urls.provider))||('https://www.windy.com/webcams/'+id);
     const c=_wcPop[id]={t:w.title||'Webcam',img:imc.preview||imc.thumbnail||null,dimg:imd.preview||imd.thumbnail||null,player:typeof day==='string'?day:null};
     const def=wcDef(),eid=escapeHtml(String(id));
-    mk.setPopupContent('<div class="wc-pop"><div class="wc-media" id="wcm-'+eid+'">'+wcPopMedia(c,def)+'</div>'
+    mk.setPopupContent('<div class="wc-pop"><div class="wc-media" id="wcm-'+eid+'" role="button" tabindex="0" aria-label="Webcam gross – letzte 24 Stunden" onclick="wcFull(\''+eid+'\')">'+wcPopMedia(c,def)+'<span class="wc-zoom" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span></div>'
       // M3 segmented button: what to show; the choice becomes the default
       +'<div class="wc-seg" id="wcs-'+eid+'" role="group" aria-label="Webcam-Ansicht">'
       +WC_DEF_OPTS.filter(o=>o[0]!=='day'||c.player).filter(o=>o[0]!=='daylight'||c.dimg)
@@ -18440,7 +18470,19 @@ function ptChipOpen(lat,lon){ptChipClose();const v=ptLayerValue(lat,lon);if(!v){
       +'<button type="button" class="pt-more" onclick="ptChipMore()" aria-label="Mehr Informationen zu diesem Punkt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg></button>'
       +'<button type="button" class="pt-x" onclick="ptChipClose()" aria-label="Schliessen">×</button></div>'}),zIndexOffset:2100,keyboard:false}).addTo(map);
   _ptChip={lat,lon,m,pop};try{haptic(3);}catch(e){}
-  try{L.DomEvent.disableClickPropagation(pop.getElement());}catch(e){}}
+  try{L.DomEvent.disableClickPropagation(pop.getElement());}catch(e){}
+  ptChipFit();}
+// The chip always fits the window: shifted sideways (the arrow stays on the
+// point) and never under the side buttons or past the screen edge; a long
+// value is cut with «…» rather than running out of the window.
+try{const zd=()=>document.body.classList.toggle('z-deep',map.getZoom()>=13.5);map.on('zoomend',zd);zd();}catch(e){}
+function ptChipFit(){if(!_ptChip)return;const w=_ptChip.pop.getElement(),el=w&&w.querySelector('.pt-chip');if(!el)return;
+  const rail=document.querySelector('#mapFabs .mfab-grp'),rr=rail&&rail.offsetParent?rail.getBoundingClientRect():null;
+  const lo=8,hi=Math.min(innerWidth-8,rr&&rr.width?rr.left-8:innerWidth-8);
+  el.style.maxWidth=Math.max(160,hi-lo)+'px';el.style.marginLeft='0px';
+  const r=el.getBoundingClientRect();let dx=0;if(r.right>hi)dx=hi-r.right;if(r.left+dx<lo)dx=lo-r.left;
+  el.style.marginLeft=dx+'px';el.style.setProperty('--ax',(-dx)+'px');}
+try{map.on('move zoom',()=>{if(_ptChip)ptChipFit();});addEventListener('resize',()=>{if(_ptChip)ptChipFit();});}catch(e){}
 function ptChipClose(){if(!_ptChip)return;try{map.removeLayer(_ptChip.m);map.removeLayer(_ptChip.pop);}catch(e){}_ptChip=null;}
 function ptChipMore(){if(!_ptChip)return;const {lat,lon}=_ptChip;ptChipClose();inspOpen(lat,lon);}
 function ptChipReport(){ptChipClose();try{qsOpen();}catch(e){}}
