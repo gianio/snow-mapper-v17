@@ -1,0 +1,71 @@
+name: Validation backfill
+
+# Once, by hand: re-runs the new-snow model for past days (Open-Meteo archive
+# weather, the model code of this commit) and scores every day against the
+# SLF study plots and the MeteoSwiss manual network, from --since to a few
+# days ago. The rows are marked "rb" (re-run with today's model) and go into
+# the same history as the daily validation (R2, validation/newsnow_hist.json);
+# the app shows them apart from the days the model really ran on.
+
+on:
+  workflow_dispatch:
+    inputs:
+      since:
+        description: "First day (YYYY-MM-DD)"
+        default: "2026-10-15"
+      res:
+        description: "Model resolution in m (1000 = as on the site, 2000 = 4x faster)"
+        default: "2000"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validation-history
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ vars.R2_BUCKET }}
+      R2_ARCHIVE_BUCKET: ${{ vars.R2_ARCHIVE_BUCKET }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Re-run and score, 9 days per build
+        env:
+          SINCE: ${{ inputs.since }}
+          RES: ${{ inputs.res }}
+        run: |
+          mkdir -p outputs
+          d=$(date -u -d "$SINCE + 4 days" +%F); last=$(date -u -d "4 days ago" +%F)
+          while [ "$(date -u -d "$d" +%s)" -le "$(date -u -d "$last" +%s)" ]; do
+            echo "::group::centre $d"
+            rm -rf dist_bf outputs/model_daily.npz
+            if timeout 2400 python -u run_interactive.py --split --gz-only --date "$d" --days 5 --res "$RES" \
+                 --out-dir dist_bf --model-daily outputs/model_daily.npz > outputs/build.log 2>&1; then
+              python tools/validate_newsnow.py --model outputs/model_daily.npz --hist outputs/validation_hist.json \
+                --out outputs/validation.json --kind rb --r2 || echo "::warning::scoring $d failed"
+            else
+              tail -20 outputs/build.log; echo "::warning::build for $d failed"
+            fi
+            echo "::endgroup::"
+            d=$(date -u -d "$d + 9 days" +%F)
+          done
+          test -f outputs/validation.json && python -c "import json;print(json.dumps(json.load(open('outputs/validation.json'))['newsnow']['season'],indent=1))"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-backfill
+          path: outputs/validation*.json
+          retention-days: 14

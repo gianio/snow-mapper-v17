@@ -45,6 +45,9 @@ def main() -> None:
                     help="Nur den .gz-Blob schreiben (GitHub-Pages-Limit ist 1 GB "
                          "und zaehlt die UNkomprimierte Datei). Setzt "
                          "DecompressionStream voraus -> iOS >= 16.4.")
+    ap.add_argument("--model-daily", type=str, default=None,
+                    help="also write the model's daily new snow (06-06 UTC, settled 24 h) "
+                         "per cell to this .npz -- the input of tools/validate_newsnow.py")
     ap.add_argument("--out-dir", type=str, default="dist",
                     help="Zielverzeichnis für den --split-Build (Default: dist)")
     args = ap.parse_args()
@@ -58,6 +61,9 @@ def main() -> None:
         weather_step_deg=args.weather_step,
         n_stations=args.stations,
     )
+    if args.model_daily:
+        from pipeline.validation_grid import write_model_daily
+        print("[VAL]", write_model_daily(data, Path(args.model_daily)))
     if args.split:
         out = export_split_app(data, Path(args.out_dir), gz_only=args.gz_only)
         print(f"[OUT] App-Shell + Daten-Blob: {out} (+ app.js, data/latest.json)")

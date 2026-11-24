@@ -326,8 +326,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # GitHub starts the "03:00" schedule hours late (10-13 UTC lately) and
+          # the cycle takes ~1.5 h: a cycle ending until 20 UTC still gets the
+          # day's tiles (once a day stays guaranteed by the check below)
           H=$(date -u +%H); GO=false
-          if [ "$((10#$H))" -ge 3 ] && [ "$((10#$H))" -lt 12 ]; then
+          if [ "$((10#$H))" -ge 3 ] && [ "$((10#$H))" -lt 20 ]; then
             GO=true
             for R in $(gh api -X GET "repos/${{ github.repository }}/actions/workflows/variant-a-live.yml/runs" \
                          -f created=">=$(date -u +%F)" -f per_page=20 \

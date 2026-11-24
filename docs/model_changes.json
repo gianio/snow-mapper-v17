@@ -1,0 +1,13 @@
+[
+  {"date": "2026-10-24", "pr": 144, "models": ["st"], "text": "Triebschnee besser erkannt"},
+  {"date": "2026-10-25", "pr": 147, "models": ["ns", "st"], "text": "Temperatur auf Geländehöhe, MeteoSchweiz ICON-CH1"},
+  {"date": "2026-11-01", "pr": 163, "models": ["ns"], "text": "Wetter von MeteoSchweiz"},
+  {"date": "2026-11-02", "pr": 169, "models": ["ns"], "text": "Wetter nur noch von MeteoSchweiz (ohne Open-Meteo)"},
+  {"date": "2026-11-05", "pr": 173, "models": ["hs", "st"], "text": "Schneedeckenmodell (SNOWPACK) einmal täglich"},
+  {"date": "2026-11-08", "pr": 180, "models": ["hs"], "text": "Bodenwärme im Schneedeckenmodell"},
+  {"date": "2026-11-13", "pr": 183, "models": ["ns", "st"], "text": "Modellkorrekturen"},
+  {"date": "2026-11-17", "pr": 190, "models": ["ns"], "text": "Neuschnee: flacheres Schnee-Wasser-Verhältnis, 24-h-Setzung"},
+  {"date": "2026-11-17", "pr": 192, "models": ["st"], "text": "Schneetyp: Warmluft-Regel"},
+  {"date": "2026-11-20", "pr": 197, "models": ["ns", "st"], "text": "Neuschnee: Dichte aus Temperatur und Wind, keine doppelte Höhen-Zugabe; Schneetyp: Wind bestimmt die Expositionen"},
+  {"date": "2026-11-24", "pr": 204, "models": ["st"], "text": "Schneetyp: einzelne Flecken im Flachland entfernt"}
+]
