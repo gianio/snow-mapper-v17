@@ -19350,7 +19350,9 @@ function update3dOverlay(){if(!map3d||!is3d)return;try{sync3dOverlays();}catch(e
   if(map3d.getLayer('data-overlay')){map3d.setLayoutProperty('data-overlay','visibility','visible');
     try{map3d.setPaintProperty('data-overlay','raster-resampling','linear');}catch(e){}}}
 let _ml=null;
-setTimeout(()=>{try{const c=navigator.connection;if(c&&(c.saveData||/2g|3g/.test(c.effectiveType||'')))return;
+// only on a computer: in the Android WebView loading the GL library in the
+// background took the CI emulator down ~40 s after launch
+setTimeout(()=>{try{if(!document.body.classList.contains('desk')||document.documentElement.classList.contains('and-wv'))return;const c=navigator.connection;if(c&&(c.saveData||/2g|3g/.test(c.effectiveType||'')))return;
   const go=()=>{if(!window.maplibregl&&!_ml)ensureMaplibre(()=>{try{sw3dInit();}catch(e){}});};
   (window.requestIdleCallback||setTimeout)(go,{timeout:4000});}catch(e){}},25000);
 function ensureMaplibre(cb){
