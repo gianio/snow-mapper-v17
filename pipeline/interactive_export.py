@@ -7517,6 +7517,18 @@ body.fabs-folded #mapFabs>:not(#fabFold){display:none!important}
 .acc-src b{display:block;font:600 13.5px/1.3 var(--font)}.acc-src small{font:400 12px/1.3 var(--font);color:var(--md-on-surface-var,#555)}
 .acc-mark{flex:none;min-width:58px;padding:6px 8px;border-radius:10px;background:#fff;border:1px solid var(--md-outline-var,#ddd);font:800 12px/1 var(--font);letter-spacing:.02em;color:#C5221F;text-align:center}
 .acc-upd{margin-top:-4px!important}
+/* stations by kind: IMIS automatic, SLF / MeteoSwiss read by hand, SwissMetNet */
+.stn.vst{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;padding:0 7px 0 3px!important}
+.stn.vst i{font:800 9px/1 var(--font);font-style:normal;letter-spacing:.02em;padding:3px 4px;border-radius:6px;color:#fff}
+.vst-slf i,.vst-k.vst-slf{background:#B42318}.vst-msw i,.vst-k.vst-msw{background:#0B63B5}.vst-smn i,.vst-k.vst-smn{background:#475467}
+.stn-dot.vst-slf{background:#B42318}.stn-dot.vst-msw{background:#0B63B5}.stn-dot.vst-smn{background:#475467}
+.stn.st-imis::before,.scl.st-imis .s-c::before{content:'IMIS';font:800 8px/1 var(--font);color:#fff;background:#7A5AF8;border-radius:5px;padding:2px 3px;margin-right:4px;vertical-align:1px}
+.vst-pop{display:flex;flex-direction:column;gap:3px;font:13px/1.35 var(--font)}
+.vst-pop span{color:var(--md-on-surface-var,#555)}
+.vst-k{align-self:flex-start;color:#fff;font:700 11px/1 var(--font);font-style:normal;padding:4px 6px;border-radius:6px;margin:2px 0 4px}
+.vst-pop table{border-collapse:collapse;font-size:12.5px}.vst-pop th{text-align:left;font-weight:600;padding:2px 6px 2px 0;color:var(--md-on-surface-var,#555)}
+.vst-pop td{padding:2px 6px 2px 0;font-variant-numeric:tabular-nums}.vst-pop small{color:var(--md-on-surface-var,#777);margin-top:4px}
+
 .acc-more{display:inline-block;margin:2px 0 4px;font:600 13px var(--font);color:var(--md-primary,#0B63B5);text-decoration:none}
 /* 3D on a computer: MapLibre's own compact control (zoom, compass that
    resets north, pitch) below the top bar; no extra pad, no hint boxes */
@@ -16755,9 +16767,38 @@ function renderStations(){stnGroup.clearLayers();if(!showStn)return;
         '<div class="s-row">'+pill(ll,'#b0c4de')+'<span class="s-c"'+pc+' title="'+escapeHtml(stnTip(s,sv))+'">'+lbl+'</span>'+pill(lr,'#70d890')+'</div>'+
         '<div class="s-b">'+pill(bot,'#f07070')+'</div></div>';
       iSize=[104,52];iAnc=[52,26];}
+    if(tier>=1)html=html.replace(/^<div class="(stn|scl)"/,'<div class="$1 st-imis"');
     const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:html,iconSize:iSize,iconAnchor:iAnc}),zIndexOffset:500});
     m.on('click',ev=>{L.DomEvent.stopPropagation(ev);stnOpen(s.code);});m.addTo(stnGroup);}
+  try{valStnRender(tier);}catch(e){}
 }
+// The stations the daily validation reads (data/validation.json), beside the
+// IMIS ones and marked by kind: SLF study plots and the MeteoSwiss network
+// are READ BY HAND once a day (new snow 24 h at 06 UTC), SwissMetNet measures
+// automatically (temperature). Each shows its last measurement with the
+// model's value at the same place beside it.
+const VST_KIND={slf:['SLF','Manuelles Messfeld SLF','von Hand gemessen, täglich 06 UTC'],
+  msw:['MS','Manuelle Station MeteoSchweiz','von Hand gemessen, täglich 06 UTC'],
+  smn:['SMN','SwissMetNet MeteoSchweiz','automatisch gemessen']};
+function valStnRender(tier){const v=_accVal;
+  if(!v){accLoad().then(()=>{if(showStn&&_accVal)renderStations();});return;}
+  const show=layer==='snow'?'ns':(layer==='temp'||layer==='tsurf')?'t':null;if(!show)return;
+  const fmtD=d=>new Date(d+'T12:00Z').toLocaleDateString('de-CH',{weekday:'short',day:'numeric',month:'numeric'});
+  const add=(s,kind,val,tip,body)=>{const K=VST_KIND[kind];
+    const html=tier===0?'<div class="stn-dot vst-'+kind+'"></div>'
+      :'<div class="stn vst vst-'+kind+'" title="'+escapeHtml(tip)+'"><i>'+K[0]+'</i>'+val+'</div>';
+    const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html,iconSize:tier===0?[12,12]:[64,22],iconAnchor:tier===0?[6,6]:[32,11]}),zIndexOffset:450});
+    m.bindPopup('<div class="vst-pop"><b>'+escapeHtml(s.name||s.code)+'</b><span>'+s.z+' m · '+K[1]+'</span><em class="vst-k vst-'+kind+'">'+K[0]+' · '+K[2]+'</em>'+body
+      +'<small>Daten: '+(kind==='slf'?'WSL-Institut für Schnee- und Lawinenforschung SLF':'MeteoSchweiz')+', CC BY 4.0</small></div>',{maxWidth:260});
+    m.addTo(stnGroup);};
+  if(show==='ns')(v.stations_newsnow||[]).forEach(s=>{const d=s.days[s.days.length-1];
+    const rows=s.days.slice().reverse().map(x=>'<tr><td>'+fmtD(x.d)+'</td><td>'+Math.round(x.o)+' cm</td><td>'+Math.round(x.m)+' cm</td></tr>').join('');
+    add(s,s.src,Math.round(d.o)+'<small> cm</small>',(s.name||s.code)+' · Neuschnee 24 h gemessen '+Math.round(d.o)+' cm · Modell '+Math.round(d.m)+' cm',
+      '<table><tr><th>Neuschnee 24 h</th><th>gemessen</th><th>Modell</th></tr>'+rows+'</table>');});
+  else ((v.temp&&v.temp.stations)||[]).forEach(s=>{const d=s.days[s.days.length-1];
+    const rows=s.days.slice().reverse().map(x=>'<tr><td>'+fmtD(x.d)+'</td><td>'+Math.round(x.on)+' / '+Math.round(x.ox)+'°</td><td>'+Math.round(x.mn)+' / '+Math.round(x.mx)+'°</td></tr>').join('');
+    add(s,'smn',Math.round(d.ox)+'°',(s.name||s.code)+' · Max gemessen '+Math.round(d.ox)+'° · Modell '+Math.round(d.mx)+'°',
+      '<table><tr><th>Min / Max</th><th>gemessen</th><th>Modell</th></tr>'+rows+'</table>');});}
 // A viewport-scoped raster has to follow the viewport.
 let _progMoveT=null;
 function progRefresh(){
@@ -18534,7 +18575,7 @@ function ptLayerValue(lat,lon){const p=ptCell(lat,lon);if(p<0)return null;
   try{
     if(id==='newsnow'){const v=nsAtHeight(p,nsAt(p,a,b),fz==null?NaN:fz-melevv(p));return {ic:ic(id),v:'+'+(v<10?v.toFixed(1):Math.round(v))+' cm',s:'Neuschnee',c:fpSnowCol(v)};}
     if(id==='depth'){const v=cum[b*NP+p];return {ic:ic(id),v:Math.round(v)+' cm',s:'Schneehöhe',c:depthCss(v)};}
-    if(id==='temp'){const v=mean(t=>tvI(t,p));return {ic:ic(id),v:(v>0?'+':'')+v.toFixed(1)+' °C',s:'Temperatur',c:v>0?'#E5484D':'#3B82F6'};}
+    if(id==='temp'){const dz=fz==null?0:Math.max(-8,Math.min(8,TEMP_LAPSE*(fz-melevv(p))));const v=mean(t=>tvI(t,p))+dz;return {ic:ic(id),v:(v>0?'+':'')+v.toFixed(1)+' °C',s:'Temperatur',c:v>0?'#E5484D':'#3B82F6'};}
     if(id==='wind'){const wk=mainToWind[p];const v=mean(t=>SPD[t*P+wk]/M.spd_mul*3.6);return {ic:ic(id),v:Math.round(v)+' km/h',s:'Wind',c:'#64748B'};}
     // Skiqualität is drawn by SNOWPACK: read the same engine at the same spot
     // (it said «Eingeregnet» from the rule engine where the map and the point
@@ -18850,7 +18891,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
       '</div>';
   }catch(e){}}
   // the numbers first: what fell in the chosen window, what lies, how cold
-  let kpi='',tmn=1e9,tmx=-1e9;try{for(let t=a;t<Math.min(b,T);t++){const v=tvI(t,p);if(v==null||v!==v)continue;if(v<tmn)tmn=v;if(v>tmx)tmx=v;}
+  let kpi='',tmn=1e9,tmx=-1e9;try{for(let t=a;t<Math.min(b,T);t++){const v=tvI(t,p)+(p===_inspPt?_inspDT:0);if(v==null||v!==v)continue;if(v<tmn)tmn=v;if(v>tmx)tmx=v;}
     const kt=t=>{const d=zLocal(tMs(t));return WD()[d.getUTCDay()]+' '+String(d.getUTCHours()).padStart(2,'0')+'h';};
     kpi='<div class="insp-kpis"><div class="k-snow"><span>Neuschnee</span><b>+'+newSnow.toFixed(newSnow<10?1:0)+'<small> cm</small></b><em>'+kt(a)+' – '+kt(Math.max(a,b-1))+'</em></div>'
       +'<div><span>Schneehöhe</span><b>'+depthNow.toFixed(0)+'<small> cm</small></b><em>am Ende</em></div>'
@@ -18937,8 +18978,12 @@ function ptDaysHTML(lat,lon,elev){const days=fpDays();if(!days.length)return '';
     const rg=Math.max(100,A.hi-A.lo),y0=Math.max(0,Math.min(1,(x.lo-A.lo)/rg)),y1=Math.max(y0+.08,Math.min(1,(x.hi-A.lo)/rg)),col=x.good?'#2E9E5B':'#9BC53D';
     return '<span class="fp-c fp-qc'+cls(d)+'"><b style="color:'+col+'">'+(x.asp.length===4?'alle':x.asp.map(a2=>FP_ASL[a2]).join(' '))+'</b><i class="fp-ax"><u style="bottom:'+(y0*44).toFixed(0)+'px;height:'+((y1-y0)*44).toFixed(0)+'px;background:'+col+'"></u></i><small class="fp-hm">'+x.lo+'–'+x.hi+'</small></span>';}).join(''):'';
   // weather per day: temperature range, sun hours, wind
+  // the cell's temperature moved from its mean height to the point's own (as
+  // the temperature map does): on the Weissfluhjoch the cell sits hundreds of
+  // metres lower, and Min/Max read several degrees warm against the station
+  const dzT=pc<0||!(elev>0)?0:Math.max(-8,Math.min(8,TEMP_LAPSE*(elev-melevv(pc))));
   const wx=pc<0?null:days.map(d=>{let mn=1e9,mx=-1e9,sun=0,ws=0,wm=0,n=0,ss=0,sc=0;
-    for(let t=d.t0;t<d.t1;t++){const v=tvI(t,pc);if(v===v){if(v<mn)mn=v;if(v>mx)mx=v;}sun+=sunv(t,pc);
+    for(let t=d.t0;t<d.t1;t++){const v=tvI(t,pc)+dzT;if(v===v){if(v<mn)mn=v;if(v>mx)mx=v;}sun+=sunv(t,pc);
       if(wk>=0){const sp=SPD[t*P+wk]/M.spd_mul*3.6,dd=WDIR[t*P+wk]*M.dir_div*Math.PI/180;ws+=sp;if(sp>wm)wm=sp;ss+=Math.sin(dd);sc+=Math.cos(dd);n++;}}
     return {mn,mx,sun,wmean:n?ws/n:0,wmax:wm,dir:(Math.atan2(ss,sc)*180/Math.PI+360)%360};});
   let tRow='',sRow='',wRow='';
@@ -19056,7 +19101,7 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
     else if(q.k==='temp'){
       // air and snow surface, one °C axis; 0 °C marked
       const air=[],srf=[];let mn=1e9,mx=-1e9;
-      for(let t=0;t<T;t++){air[t]=tvI(t,p);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);
+      for(let t=0;t<T;t++){air[t]=tvI(t,p)+(p===_inspPt?_inspDT:0);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);
         for(const v of [air[t],srf[t]])if(v==v&&v!=null){if(v<mn)mn=v;if(v>mx)mx=v;}}
       const raw=Math.max(1,mx-mn),st=raw<=5?1:raw<=12?2:raw<=28?5:10;mn=Math.floor(mn/st)*st;mx=Math.ceil(mx/st)*st;if(mx===mn)mx+=st;
       const yT=v=>r.base-(v-mn)/(mx-mn)*hgt;
@@ -19160,13 +19205,13 @@ function icDepth(cv,p){const{ctx,w,h}=icSetup(cv,80);const t0=a,t1=b;const LG=4,
   ctx.beginPath();for(let i=0;i<Ln;i++){const x=px(i),y=py(vals[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.strokeStyle=cvTok('--accent-meteo','#2A8FD8');ctx.lineWidth=2.2;ctx.stroke();
   icPill(ctx,px(mi),py(vals[mi])-21,vals[mi].toFixed(0)+' cm',cvTok('--accent-meteo','#2A8FD8'),w);}
 function icTemp(cv,p){const t0=a,t1=Math.max(a+2,b),air=[],srf=[];
-  for(let t=t0;t<t1&&t<T;t++){air[t]=tvI(t,p);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);}
+  for(let t=t0;t<t1&&t<T;t++){air[t]=tvI(t,p)+(p===_inspPt?_inspDT:0);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);}
   tempChart(cv,air,srf,t0,Math.min(t1,T));}
 // New snow and temperature in one chart: whether it snowed and whether it
 // was cold enough for it to stay powder are read together. Bars = new snow
 // per hour on the right axis, lines = air and snow surface on the left.
 function icSnowTemp(cv,p){const t0=a,t1=Math.min(T,Math.max(a+2,b)),air=[],srf=[],sn=[];
-  for(let t=t0;t<t1;t++){air[t]=tvI(t,p);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);sn[t]=SNOW[t*NP+p]*NS_SC;}
+  for(let t=t0;t<t1;t++){air[t]=tvI(t,p)+(p===_inspPt?_inspDT:0);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);sn[t]=SNOW[t*NP+p]*NS_SC;}
   tempChart(cv,air,srf,t0,t1,sn);}
 // Temperature over time with real axes: °C ticks on the left, hours and days
 // along the bottom. Air is a solid line, the snow surface a dashed one -- the
@@ -25787,6 +25832,18 @@ function accSrcHTML(v){const S=(v&&v.sources)||[{name:'WSL-Institut für Schnee-
       +'<span><b>'+escapeHtml(x.name)+'</b><small>'+escapeHtml(x.what)+' · Lizenz '+escapeHtml(x.licence)+'</small></span></a>').join('')
     +'<div class="acc-src"><span class="acc-mark">IMIS</span><span><b>SLF – IMIS-Stationen</b><small>Schneehöhe · Lizenz CC BY 4.0</small></span></div>'
     +'<p class="acc-note">Messdaten: WSL-Institut für Schnee- und Lawinenforschung SLF (<a href="https://www.slf.ch" target="_blank" rel="noopener">www.slf.ch</a>) und MeteoSchweiz, je unter CC BY 4.0. Die Messwerte sind teils Rohdaten. Vergleich und Auswertung: Snowmapper.</p></div>';}
+// 2 m temperature, daily min / max, against SwissMetNet (the model moved to
+// each station's height)
+function accTempHTML(v){const T=v&&v.temp;if(!T||!T.last7)return '';const t7=T.last7,ts=T.season||{};
+  const sg=x=>(x>0?'+':'')+accFmt(x,' °C');
+  const box=(t,mae,bias,sub)=>'<div class="acc-kpi"><b>'+accFmt(mae,' °C')+'</b><span>'+t+'</span><small>Bias '+sg(bias)+(sub?' · '+sub:'')+'</small></div>';
+  const S=(T.stations||[]).map(s=>{const d=s.days[s.days.length-1];return {n:s.name,z:s.z,d,eh:d.mx-d.ox,el:d.mn-d.on};})
+    .sort((a,b)=>Math.max(Math.abs(b.eh),Math.abs(b.el))-Math.max(Math.abs(a.eh),Math.abs(a.el))).slice(0,5);
+  return '<div class="acc-sec"><h4>Temperatur <small>Tages-Min/Max gegen SwissMetNet, auf die Stationshöhe umgerechnet</small></h4>'
+    +'<div class="acc-kpis">'+box('Max, 7 Tage',t7.mae_max,t7.bias_max,t7.n+' Werte')+box('Min, 7 Tage',t7.mae_min,t7.bias_min,'')
+    +(ts.n?box('Max, seit Start',ts.mae_max,ts.bias_max,''):'')+'</div>'
+    +(S.length?'<table class="acc-tab"><tr><th>Grösste Abweichung</th><th>Max M/S</th><th>Min M/S</th></tr>'+S.map(x=>'<tr><td>'+escapeHtml(x.n)+' <small>'+x.z+' m</small></td><td>'+Math.round(x.d.mx)+' / '+Math.round(x.d.ox)+'°</td><td>'+Math.round(x.d.mn)+' / '+Math.round(x.d.on)+'°</td></tr>').join('')
+      +'</table><p class="acc-note">M = Modell, S = Station, letzter gemessener Tag.</p>':'')+'</div>';}
 function accChgHTML(v){const C=((v&&v.changes)||[]).slice().reverse();if(!C.length)return '';
   const tag={ns:'Neuschnee',st:'Schneetyp',hs:'Schneehöhe'};
   return '<div class="acc-sec"><h4>Modelländerungen</h4>'+C.slice(0,8).map(c=>'<div class="acc-row"><b>'+new Date(c.date).toLocaleDateString('de-CH',{day:'numeric',month:'short'})+' · '+c.models.map(m=>tag[m]||m).join(', ')+'</b><span>'+escapeHtml(c.text)+'</span></div>').join('')+'</div>';}
@@ -25796,7 +25853,7 @@ function accOpen(){let el=document.getElementById('accSheet');if(el){el.remove()
   const draw=()=>{const n=_hit.n,pc=n?Math.round(_hit.ok/n*100):null,v=_accVal;
     el.innerHTML='<div class="acc-in"><div class="acc-hd"><b>Wie genau ist das Modell?</b><button type="button" onclick="this.closest(\'.acc-sheet\').remove()" aria-label="Schliessen">×</button></div>'
       +(v&&v.updated?'<p class="acc-note acc-upd">Täglich gegen die Messstationen geprüft · Stand '+new Date(v.updated+'Z').toLocaleString('de-CH',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})+'</p>':'')
-      +accNsHTML(v)+accHsHTML(_accDrift)
+      +accNsHTML(v)+accTempHTML(v)+accHsHTML(_accDrift)
       +'<div class="acc-sec"><h4>Schneetyp <small>keine Messstationen – die Community prüft</small></h4>'
       +(pc!=null&&n>=5?'<div class="acc-live"><span class="fh-ring" style="--p:'+pc+'"><b>'+pc+'%</b></span><span>Diese Woche von der Community bestätigt ('+n+' Schnellmeldungen)</span></div>':'<p class="acc-note">Noch zu wenige Schnellmeldungen diese Woche.</p>')
       +ACC_ROWS.slice(2,3).map(r=>'<div class="acc-row"><b>'+escapeHtml(r[0])+'</b><span>'+escapeHtml(r[1])+'</span></div>').join('')+'</div>'
