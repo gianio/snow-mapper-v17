@@ -7486,6 +7486,18 @@ body.fabs-folded #mapFabs>:not(#fabFold){display:none!important}
 .wc-pin{width:24px!important;height:24px!important;border-radius:8px!important;box-shadow:0 0 0 1.5px #fff,0 2px 6px rgba(0,0,0,.28)!important}
 .wc-pin svg{width:13px!important;height:13px!important}
 #tlTomorrowBtn{display:none!important}
+/* 3D on a computer: MapLibre's own compact control (zoom, compass that
+   resets north, pitch) below the top bar; no extra pad, no hint boxes */
+body.desk .pad3d,#keys3d{display:none!important}
+body.desk #three-wrap .maplibregl-ctrl-top-left{display:block!important;top:84px;left:12px}
+body.desk #three-wrap .maplibregl-ctrl-group{border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+body.desk #three-wrap .maplibregl-ctrl-group button{width:38px;height:38px}
+.seg3d{display:inline-flex;border-radius:14px;overflow:hidden;border:1px solid var(--bd);background:var(--glass)}
+.seg3d button{border:0!important;border-radius:0!important;background:transparent!important;padding:10px 14px!important;min-height:40px;color:var(--fg2);cursor:pointer;font:600 14px/1 var(--font)}
+.seg3d button.on{background:var(--md-secondary-container,#D6E3FF)!important;color:var(--md-on-secondary-container,#0F1C2C)}
+.hint3d{position:absolute;left:50%;top:84px;transform:translateX(-50%);z-index:2002;display:flex;gap:14px;flex-wrap:wrap;justify-content:center;
+  padding:8px 14px;border-radius:14px;background:rgba(20,24,30,.78);color:#e8edf3;font:500 13px/1.3 var(--font);pointer-events:none;transition:opacity .6s}
+.hint3d b{color:#fff}.hint3d.gone{opacity:0}
 .pt-v{grid-template-columns:auto auto minmax(0,1fr)!important}
 /* zoomed in past the model's own detail (terrain ~25 m, zoom 12) the classes
    are stretched: smoothed edges instead of stair-step squares */
@@ -8157,9 +8169,9 @@ body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
   <button type="button" class="p-rt" onclick="pad3d('right')" aria-label="Nach rechts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
   <small class="p-hint">Drehen &amp; kippen: <b>Strg</b> + Maus ziehen</small>
 </div><button id="btn3dClose">✕ 2D</button>
-<div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="55" style="width:100px;accent-color:var(--acc)"> Map <span id="mapOpacLbl">30%</span></label>
+<div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="55" style="width:100px;accent-color:var(--acc)"> Karte <span id="mapOpacLbl">55%</span></label>
 <button id="btn3dExag" title="Überhöhung (1.0 = wahre Höhen)">×1.0</button>
-<button id="btn3dPhoto" title="Luftbild (SWISSIMAGE) oder Karte" aria-pressed="true">Luftbild</button>
+<div class="seg3d" role="group" aria-label="Grundlage 3D"><button type="button" data-v="0" onclick="photo3dSet(false)">Winterkarte</button><button type="button" data-v="1" onclick="photo3dSet(true)">Luftbild (Sommer)</button></div><button id="btn3dPhoto" hidden></button>
 <select id="overlay3d" style="padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:16px;min-height:46px"><option value="none">Keine Ebene</option><option value="snow">Neuschnee</option><option value="temp">Temperatur</option><option value="wind">Wind</option><option value="depth">Schneehöhe</option><option value="powder">Powder</option></select>
 <span id="keys3d" style="font-size:12px;color:var(--mut);opacity:.7;padding:6px 10px;display:none">WASD/Pfeile: drehen · +/-: zoomen · R: zurücksetzen</span></div>
 </div>
@@ -19527,10 +19539,14 @@ function init3D(){
     maxBounds:[[loMinW-0.1,laMinW-0.05],[loMaxW+0.1,laMaxW+0.05]],
     touchZoomRotate:true,touchPitch:true,dragRotate:true});
   map3d.addControl(new maplibregl.NavigationControl({visualizePitch:true,showCompass:true}),'top-left');
+  try{document.querySelectorAll('.seg3d button').forEach(x=>x.classList.toggle('on',(x.dataset.v==='1')===photo3dOn()));}catch(e){}
   map3d.scrollZoom.setWheelZoomRate(1/100);
   map3d.keyboard.enable();
   document.getElementById('btn3dFloat').classList.add('active');
-  if(!isMobile)document.getElementById('keys3d').style.display='inline';
+  if(document.body.classList.contains('desk'))try{let h=document.getElementById('hint3d');if(!h){h=document.createElement('div');h.id='hint3d';h.className='hint3d';
+      h.innerHTML='<span><b>Ziehen</b> verschieben</span><span><b>Rechte Maustaste</b> oder <b>Strg</b> + ziehen: drehen &amp; kippen</span><span><b>Mausrad</b> zoomen</span>';
+      document.getElementById('three-wrap').appendChild(h);}
+    h.classList.remove('gone');clearTimeout(h._t);h._t=setTimeout(()=>h.classList.add('gone'),7000);}catch(e){}
   map3d.on('load',()=>{try{sync3dLayer();}catch(e){}update3dOverlay();try{photo3dSet(photo3dOn());}catch(e){}
     // from the two-finger gesture: the flat map tips over into 3D
     if(_tilt3d){_tilt3d=false;map3d.easeTo({pitch:60,bearing:-15,duration:1100});}
@@ -19620,14 +19636,14 @@ document.getElementById('btn3dClose').onclick=()=>close3D();
 // the (summer) aerial photo is the alternative (per request, 23.11.)
 function photo3dOn(){try{return localStorage.getItem('ssm_3d_photo2')==='1';}catch(e){return false;}}
 function photo3dSet(on){try{localStorage.setItem('ssm_3d_photo2',on?'1':'0');}catch(e){}
-  const b=document.getElementById('btn3dPhoto');if(b){b.setAttribute('aria-pressed',on?'true':'false');b.classList.toggle('on',on);b.textContent=on?'Luftbild (Sommer)':'Winterkarte';}
+  document.querySelectorAll('.seg3d button').forEach(x=>x.classList.toggle('on',(x.dataset.v==='1')===on));
   if(!map3d||!map3d.getLayer)return;
   const vis=(id,v)=>{if(map3d.getLayer(id))map3d.setLayoutProperty(id,'visibility',v?'visible':'none');};
   vis('swissimage-3d',on);vis('relief-3d',true);
   const mv=(document.getElementById("mapOpac3d")||{value:55}).value/100;
   vis('swisstopo-base',!on&&mv>=0.02);vis('hillshade',!on&&mv<=0.98);
   const ctl=document.getElementById('mapOpac3d');if(ctl&&ctl.parentElement)ctl.parentElement.style.display=on?'none':'';}
-document.getElementById('btn3dPhoto').onclick=()=>{photo3dSet(!photo3dOn());try{haptic(4);}catch(e){}};
+
 document.getElementById('mapOpac3d').oninput=function(){if(!map3d||photo3dOn())return;const v=this.value/100;
   map3d.setPaintProperty('swisstopo-base','raster-opacity',v);
   map3d.setPaintProperty('hillshade','raster-opacity',1-v);
