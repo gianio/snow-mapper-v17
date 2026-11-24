@@ -7486,6 +7486,30 @@ body.fabs-folded #mapFabs>:not(#fabFold){display:none!important}
 .wc-pin{width:24px!important;height:24px!important;border-radius:8px!important;box-shadow:0 0 0 1.5px #fff,0 2px 6px rgba(0,0,0,.28)!important}
 .wc-pin svg{width:13px!important;height:13px!important}
 #tlTomorrowBtn{display:none!important}
+/* «Wie genau ist das Modell?» */
+.acc-sec{margin:14px 0 4px}.acc-sec h4{font:600 16px/1.3 var(--font);margin:0 0 8px;color:var(--md-on-surface,#111)}
+.acc-sec h4 small{display:block;font:400 12.5px/1.3 var(--font);color:var(--md-on-surface-var,#555);margin-top:2px}
+.acc-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
+.acc-kpi{background:var(--md-surface-c,#EEF1F6);border-radius:14px;padding:10px 10px 9px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.acc-kpi b{font:700 19px/1.1 var(--font);color:var(--md-on-surface,#111)}.acc-kpi span{font:600 12px/1.25 var(--font);color:var(--md-on-surface,#222)}
+.acc-kpi small{font:400 11.5px/1.3 var(--font);color:var(--md-on-surface-var,#555);overflow-wrap:anywhere}
+.acc-kpi .st-ok{color:#1E8E3E}.acc-kpi .st-watch{color:#B26A00}.acc-kpi .st-drift{color:#C5221F}
+.acc-chart{width:100%;height:auto;margin:6px 0 2px}.acc-chart text{font:500 9px var(--font);fill:var(--md-on-surface-var,#666)}
+.acc-chart .acc-ax{stroke:var(--md-outline-var,#ccc);stroke-width:1}
+.acc-chart polyline{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.acc-l-an{stroke:var(--md-primary,#0B63B5)}.acc-l-fc{stroke:#E37400;stroke-dasharray:4 3}.acc-l-rb{stroke:#9AA4B2}
+.acc-chg{stroke:#7B5CD6;stroke-width:1.2;stroke-dasharray:2 2}
+.acc-key{display:flex;flex-wrap:wrap;gap:4px 12px;font:500 11.5px/1.3 var(--font);color:var(--md-on-surface-var,#555);margin-bottom:6px}
+.acc-key i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:5px}
+.acc-key .k-an{border-color:var(--md-primary,#0B63B5)}.acc-key .k-fc{border-color:#E37400;border-top-style:dashed}.acc-key .k-rb{border-color:#9AA4B2}.acc-key .k-chg{border-color:#7B5CD6;border-top-style:dotted}
+.acc-tab{width:100%;border-collapse:collapse;font:500 13px/1.3 var(--font);margin-top:6px}
+.acc-tab th{text-align:left;font-weight:600;color:var(--md-on-surface-var,#555);padding:4px 2px;border-bottom:1px solid var(--md-outline-var,#ddd)}
+.acc-tab td{padding:5px 2px;border-bottom:1px solid var(--md-outline-var,rgba(0,0,0,.08))}
+.acc-src{display:flex;align-items:center;gap:12px;padding:8px 2px;text-decoration:none;color:inherit;border-bottom:1px solid var(--md-outline-var,rgba(0,0,0,.08))}
+.acc-src b{display:block;font:600 13.5px/1.3 var(--font)}.acc-src small{font:400 12px/1.3 var(--font);color:var(--md-on-surface-var,#555)}
+.acc-mark{flex:none;min-width:58px;padding:6px 8px;border-radius:10px;background:#fff;border:1px solid var(--md-outline-var,#ddd);font:800 12px/1 var(--font);letter-spacing:.02em;color:#C5221F;text-align:center}
+.acc-upd{margin-top:-4px!important}
+.acc-more{display:inline-block;margin:2px 0 4px;font:600 13px var(--font);color:var(--md-primary,#0B63B5);text-decoration:none}
 /* 3D on a computer: MapLibre's own compact control (zoom, compass that
    resets north, pitch) below the top bar; no extra pad, no hint boxes */
 body.desk .pad3d,#keys3d{display:none!important}
@@ -25660,15 +25684,73 @@ const ACC_ROWS=[
   ['Niederschlag gegen MeteoSchweiz-Stationen','Modell 7–29 % über den Messungen – der Niederschlag selbst stimmt gut'],
   ['Schneetyp: Wind-Expositionen gegen SLF-Bulletin (19.11.)','Übereinstimmung 0.54 (Zufall 0.29) bei 76 Regionen mit Triebschnee'],
   ['Community-Check','Jede Schnellmeldung speichert, was das Modell dort sagte – die Quote oben ist live']];
+// The daily validation (tools/validate_newsnow.py, written by the deploy into
+// data/validation.json) and the snowpack drift check of the live cycle
+// (data/variant_a_live/drift.json): loaded when the sheet opens.
+let _accVal=null,_accDrift=null;
+async function accLoad(){const j=async p=>{try{const r=await dataFetch(p,{cache:'no-cache'});return r&&r.ok?await r.json():null;}catch(e){return null;}};
+  const [v,d]=await Promise.all([_accVal||j('data/validation.json'),_accDrift||j('data/variant_a_live/drift.json')]);
+  _accVal=v||_accVal;_accDrift=d||_accDrift;}
+function accFmt(x,u){return x==null||!isFinite(x)?'–':(Math.round(x*10)/10).toLocaleString('de-CH')+(u||'');}
+function accPct(x){return x==null?'–':Math.round(x*100)+' %';}
+// daily mean error as a small line chart: the days the model ran (solid),
+// the forecast of the day before (dashed), re-runs with today's model (grey);
+// a tick for every model change
+function accChart(v){const S=(v&&v.newsnow&&v.newsnow.series)||[];if(S.length<2)return '';
+  const W=320,H=120,pl=26,pr=6,pt=8,pb=18,d0=Date.parse(S[0].d),d1=Date.parse(S[S.length-1].d),span=Math.max(1,d1-d0);
+  const mx=Math.max(2,...S.flatMap(e=>['an','fc','rb'].map(k=>e[k]?e[k].mae:0)));
+  const X=d=>pl+(Date.parse(d)-d0)/span*(W-pl-pr),Y=y=>pt+(1-y/mx)*(H-pt-pb);
+  const line=(k,cls)=>{const pts=S.filter(e=>e[k]).map(e=>X(e.d).toFixed(1)+','+Y(e[k].mae).toFixed(1));return pts.length>1?'<polyline class="'+cls+'" points="'+pts.join(' ')+'"/>':'';};
+  const ch=((v&&v.changes)||[]).filter(c=>c.models.includes('ns')&&Date.parse(c.date)>=d0&&Date.parse(c.date)<=d1)
+    .map(c=>'<line class="acc-chg" x1="'+X(c.date).toFixed(1)+'" x2="'+X(c.date).toFixed(1)+'" y1="'+pt+'" y2="'+(H-pb)+'"><title>'+escapeHtml(c.date+': '+c.text)+'</title></line>').join('');
+  const fmtD=t=>new Date(t).toLocaleDateString('de-CH',{day:'numeric',month:'numeric'});
+  return '<svg class="acc-chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Mittlerer Fehler Neuschnee pro Tag">'
+    +'<line class="acc-ax" x1="'+pl+'" x2="'+(W-pr)+'" y1="'+(H-pb)+'" y2="'+(H-pb)+'"/>'
+    +'<text x="2" y="'+(pt+8)+'">'+Math.round(mx)+' cm</text><text x="2" y="'+(H-pb)+'">0</text>'
+    +'<text x="'+pl+'" y="'+(H-3)+'">'+fmtD(d0)+'</text><text x="'+(W-pr)+'" y="'+(H-3)+'" text-anchor="end">'+fmtD(d1)+'</text>'
+    +ch+line('rb','acc-l-rb')+line('an','acc-l-an')+line('fc','acc-l-fc')+'</svg>'
+    +'<div class="acc-key"><span><i class="k-an"></i>Modell (Analyse)</span><span><i class="k-fc"></i>Prognose vom Vortag</span><span><i class="k-rb"></i>Rückrechnung</span><span><i class="k-chg"></i>Modelländerung</span></div>';}
+function accNsHTML(v){const N=v&&v.newsnow;if(!N)return '<p class="acc-note">Die tägliche Prüfung gegen die Messstationen läuft ab dem nächsten Build – hier erscheinen dann die Zahlen.</p>';
+  const r7=N.last7&&N.last7.an,f7=N.last7&&N.last7.fc,ss=N.season||{};
+  const box=(t,o,sub)=>'<div class="acc-kpi"><b>'+(o?accFmt(o.mae,' cm'):'–')+'</b><span>'+t+'</span><small>'+(o?(sub||('Bias '+(o.bias>0?'+':'')+accFmt(o.bias,' cm')+' · '+o.n+' Messungen')):'noch keine Daten')+'</small></div>';
+  const bands=N.bands30||{},bk=Object.keys(bands).sort((a,b)=>parseInt(a)-parseInt(b));
+  return '<div class="acc-sec"><h4>Neuschnee 24 h <small>mittlerer Fehler gegen die Messbretter</small></h4>'
+    +'<div class="acc-kpis">'+box('letzte 7 Tage',r7)+box('Prognose vom Vortag (7 T.)',f7)+box('seit Start',ss.an||ss.rb)+'</div>'
+    +(r7&&r7.pod!=null?'<div class="acc-row"><b>Neuschnee erkannt (ab 1 cm)</b><span>'+accPct(r7.pod)+' der Tage mit Neuschnee auf dem Brett hatte auch das Modell; '+accPct(r7.far)+' Fehlalarme</span></div>':'')
+    +(N.snow_rain&&N.snow_rain.n?'<div class="acc-row"><b>Schnee oder Regen?</b><span>An '+accPct(N.snow_rain.agree)+' der Stationstage mit Niederschlag lag das Modell richtig ('+N.snow_rain.n+' Fälle)</span></div>':'')
+    +accChart(v)
+    +(bk.length?'<table class="acc-tab"><tr><th>Höhe</th><th>Fehler</th><th>Bias</th><th>n</th></tr>'+bk.map(k=>'<tr><td>'+k.replace('-','–')+' m</td><td>'+accFmt(bands[k].mae,' cm')+'</td><td>'+(bands[k].bias>0?'+':'')+accFmt(bands[k].bias,' cm')+'</td><td>'+bands[k].n+'</td></tr>').join('')+'</table><p class="acc-note">Letzte 30 Tage. Bias &gt; 0: das Modell zeigt mehr als gemessen.</p>':'')
+    +'</div>';}
+function accHsHTML(d){const A=d&&(d.all||d.independent);if(!A)return '';
+  const st={OK:'im Rahmen',WATCH:'beobachten',DRIFT:'Abweichung',NODATA:'zu wenig Schnee'}[d.status]||d.status;
+  return '<div class="acc-sec"><h4>Schneehöhe (Schneedeckenmodell) <small>gegen die IMIS-Stationen, '+escapeHtml((A.window||[]).join(' – '))+'</small></h4>'
+    +'<div class="acc-kpis"><div class="acc-kpi"><b>'+accFmt(A.mae_cm,' cm')+'</b><span>mittlerer Fehler</span><small>'+(A.stations||0)+' Stationen</small></div>'
+    +'<div class="acc-kpi"><b>'+(A.bias_cm>0?'+':'')+accFmt(A.bias_cm,' cm')+'</b><span>Bias</span><small>gemessen im Mittel '+accFmt(A.median_measured_cm,' cm')+'</small></div>'
+    +'<div class="acc-kpi"><b class="st-'+escapeHtml(String(d.status||'').toLowerCase())+'">'+escapeHtml(st)+'</b><span>Status</span><small>'+escapeHtml(((A.reasons||[])[0]||'').slice(0,60))+'</small></div></div><a class="acc-more" href="data/variant_a_live/drift.html" target="_blank" rel="noopener">Verlauf seit Saisonbeginn ›</a></div>';}
+function accSrcHTML(v){const S=(v&&v.sources)||[{name:'WSL-Institut für Schnee- und Lawinenforschung SLF',what:'Messstationen',licence:'CC BY 4.0',url:'https://www.slf.ch',terms:'https://www.slf.ch/en/services-and-products/slf-data-service/'},
+    {name:'Bundesamt für Meteorologie und Klimatologie MeteoSchweiz',what:'Manuelles Niederschlagsmessnetz',licence:'CC BY 4.0',url:'https://www.meteoschweiz.admin.ch',terms:'https://opendatadocs.meteoswiss.ch/general/terms-of-use'}];
+  const mark={'WSL-Institut für Schnee- und Lawinenforschung SLF':'SLF','Bundesamt für Meteorologie und Klimatologie MeteoSchweiz':'MeteoSchweiz'};
+  return '<div class="acc-sec"><h4>Datenquellen</h4>'+S.map(x=>'<a class="acc-src" href="'+escapeHtml(x.url)+'" target="_blank" rel="noopener"><span class="acc-mark">'+escapeHtml(mark[x.name]||x.name)+'</span>'
+      +'<span><b>'+escapeHtml(x.name)+'</b><small>'+escapeHtml(x.what)+' · Lizenz '+escapeHtml(x.licence)+'</small></span></a>').join('')
+    +'<div class="acc-src"><span class="acc-mark">IMIS</span><span><b>SLF – IMIS-Stationen</b><small>Schneehöhe · Lizenz CC BY 4.0</small></span></div>'
+    +'<p class="acc-note">Messdaten: WSL-Institut für Schnee- und Lawinenforschung SLF (<a href="https://www.slf.ch" target="_blank" rel="noopener">www.slf.ch</a>) und MeteoSchweiz, je unter CC BY 4.0. Die Messwerte sind teils Rohdaten. Vergleich und Auswertung: Snowmapper.</p></div>';}
+function accChgHTML(v){const C=((v&&v.changes)||[]).slice().reverse();if(!C.length)return '';
+  const tag={ns:'Neuschnee',st:'Schneetyp',hs:'Schneehöhe'};
+  return '<div class="acc-sec"><h4>Modelländerungen</h4>'+C.slice(0,8).map(c=>'<div class="acc-row"><b>'+new Date(c.date).toLocaleDateString('de-CH',{day:'numeric',month:'short'})+' · '+c.models.map(m=>tag[m]||m).join(', ')+'</b><span>'+escapeHtml(c.text)+'</span></div>').join('')+'</div>';}
 function accOpen(){let el=document.getElementById('accSheet');if(el){el.remove();}
   el=document.createElement('div');el.id='accSheet';el.className='acc-sheet';el.setAttribute('role','dialog');el.setAttribute('aria-label','Wie genau ist das Modell?');
   el.onclick=e=>{if(e.target===el)el.remove();};
-  const n=_hit.n,pc=n?Math.round(_hit.ok/n*100):null;
-  el.innerHTML='<div class="acc-in"><div class="acc-hd"><b>Wie genau ist das Modell?</b><button type="button" onclick="this.closest(\'.acc-sheet\').remove()" aria-label="Schliessen">×</button></div>'
-    +(pc!=null&&n>=5?'<div class="acc-live"><span class="fh-ring" style="--p:'+pc+'"><b>'+pc+'%</b></span><span>Diese Woche von der Community bestätigt ('+n+' Schnellmeldungen)</span></div>':'')
-    +ACC_ROWS.map(r=>'<div class="acc-row"><b>'+escapeHtml(r[0])+'</b><span>'+escapeHtml(r[1])+'</span></div>').join('')
-    +'<p class="acc-note">Ein paar Tage sind noch keine Statistik – belastbar wird es über Wochen. Darum zählt jede Meldung: sie zeigt, wo das Modell danebenliegt.</p></div>';
-  document.body.appendChild(el);}
+  const draw=()=>{const n=_hit.n,pc=n?Math.round(_hit.ok/n*100):null,v=_accVal;
+    el.innerHTML='<div class="acc-in"><div class="acc-hd"><b>Wie genau ist das Modell?</b><button type="button" onclick="this.closest(\'.acc-sheet\').remove()" aria-label="Schliessen">×</button></div>'
+      +(v&&v.updated?'<p class="acc-note acc-upd">Täglich gegen die Messstationen geprüft · Stand '+new Date(v.updated+'Z').toLocaleString('de-CH',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})+'</p>':'')
+      +accNsHTML(v)+accHsHTML(_accDrift)
+      +'<div class="acc-sec"><h4>Schneetyp <small>keine Messstationen – die Community prüft</small></h4>'
+      +(pc!=null&&n>=5?'<div class="acc-live"><span class="fh-ring" style="--p:'+pc+'"><b>'+pc+'%</b></span><span>Diese Woche von der Community bestätigt ('+n+' Schnellmeldungen)</span></div>':'<p class="acc-note">Noch zu wenige Schnellmeldungen diese Woche.</p>')
+      +ACC_ROWS.slice(2,3).map(r=>'<div class="acc-row"><b>'+escapeHtml(r[0])+'</b><span>'+escapeHtml(r[1])+'</span></div>').join('')+'</div>'
+      +accChgHTML(v)+accSrcHTML(v)
+      +'<p class="acc-note">Ein paar Tage sind noch keine Statistik – belastbar wird es über Wochen. «Rückrechnung» heisst: vergangene Tage nachträglich mit dem heutigen Modell gerechnet.</p></div>';};
+  draw();document.body.appendChild(el);
+  accLoad().then(()=>{if(document.body.contains(el))draw();});}
 function feedRender(){
   try{feedHitSync();}catch(e){}
   const list=document.getElementById('feedList');
