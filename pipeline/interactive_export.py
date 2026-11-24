@@ -7486,6 +7486,23 @@ body.fabs-folded #mapFabs>:not(#fabFold){display:none!important}
 .wc-pin{width:24px!important;height:24px!important;border-radius:8px!important;box-shadow:0 0 0 1.5px #fff,0 2px 6px rgba(0,0,0,.28)!important}
 .wc-pin svg{width:13px!important;height:13px!important}
 #tlTomorrowBtn{display:none!important}
+/* the layer icon as large as the side buttons; its scale folds out below */
+#miniLegend,#mapFabs #miniLegend,body.desk #mapFabs #miniLegend{width:36px!important;height:36px!important;max-width:36px!important}
+#miniLegend #mlName{height:36px!important}#miniLegend #mlName svg{width:18px!important;height:18px!important}
+body.desk #miniLegend,body.desk #mapFabs #miniLegend{width:40px!important;height:40px!important;max-width:40px!important}
+body.desk #miniLegend #mlName{height:40px!important}
+#mlScaleBtn{width:36px;padding:4px 0 2px;border:0;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;
+  background:color-mix(in srgb,var(--card,#fff) 88%,transparent);color:var(--md-on-surface-var,#444);box-shadow:0 1px 3px rgba(0,0,0,.16);align-self:flex-end}
+#mlScaleBtn[hidden]{display:none}
+#mlScaleBtn i{display:block;width:10px;height:46px;border-radius:5px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+#mlScaleBtn svg{width:12px;height:12px}
+body.leg-open #mlScaleBtn svg{transform:rotate(180deg)}
+body.desk #mlScaleBtn{width:40px}
+/* phones: no backdrop blur over the map -- re-blurring the moving map every
+   frame is what warms an iPhone; the bars get a denser surface instead */
+@media (hover:none){html:not(.desk-x) :is(*,#_#_#_){-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+  #bottomPanel,#tabBar{background:rgba(250,251,253,.9)!important}
+  :root[data-theme="dark"] #bottomPanel,:root[data-theme="dark"] #tabBar{background:rgba(24,28,34,.9)!important}}
 /* 3D at true scale only: the DEM heights are exact, no stretch factor */
 #btn3dExag{display:none!important}
 /* «Powder melden»: only where, how deep, post (type fixed to powder) */
@@ -11017,7 +11034,7 @@ async function vaLoad(){
     // and once more a moment later: on a slow phone the forecast package or
     // the overview tiles can still be on their way, and the layer otherwise
     // only showed after the time was moved by hand
-    [1500,5000,12000].forEach(ms=>setTimeout(()=>{try{if(layer==='snowpack'&&!vaTimeMoved){vaOvWant=null;vaRefresh();renderAll();}}catch(e){}},ms));
+    [1500,5000,12000].forEach(ms=>setTimeout(()=>{try{if(layer==='snowpack'&&!vaTimeMoved&&!vaOvCur())vaRefresh();}catch(e){}},ms));
   }catch(e){}
 }
 
@@ -11451,7 +11468,7 @@ function vaHiEngine(){
       for(x=0;x<S;x++){var o=(y*S+x)*4;if(!out[o+3])continue;
         var x0=Math.max(0,x-R),x1=Math.min(S,x+R+1),
             n=sat[y1*W1+x1]-sat[y0*W1+x1]-sat[y1*W1+x0]+sat[y0*W1+x0],tot=(y1-y0)*(x1-x0);
-        if(n<tot*0.2)out[o+3]=0;}}
+        if(n<tot*0.33)out[o+3]=0;}}
   };
   return E;
 }
@@ -11769,7 +11786,10 @@ function vaFilterChanged(){
 // behind it; the swap happens when the new one is complete, so a time step
 // never shows an empty or half-drawn map.
 function vaSwap(make,onReady){
-  const S={cur:null,next:null,ready:false,key:null};
+  // busy: the current layer is fetching tiles for a new view -- the frame
+  // PNG stays visible under it until they are in (else the layer blinked
+  // out after every pan or zoom and came back tile by tile)
+  const S={cur:null,next:null,ready:false,key:null,busy:false};
   S.sync=function(key){
     if(!vaGrp)return;
     const want=S.next||S.cur;
@@ -11777,9 +11797,10 @@ function vaSwap(make,onReady){
     if(S.next){vaGrp.removeLayer(S.next);S.next=null;}
     const l=make(key);if(!l)return;
     l._vaKeyS=key;l.setOpacity(0);
+    l.on('loading',()=>{if(l===S.cur&&S.ready&&!S.busy){S.busy=true;try{vaSyncOpacity();}catch(e){}}});
     l.on('load',()=>{
       if(l===S.next){if(S.cur)vaGrp.removeLayer(S.cur);S.cur=l;S.next=null;}
-      if(l===S.cur){S.ready=true;l.setOpacity(vaOpacity());if(onReady)onReady();}
+      if(l===S.cur){S.ready=true;S.busy=false;l.setOpacity(vaOpacity());if(onReady)onReady();}
     });
     if(!S.cur){S.cur=l;S.ready=false;}else S.next=l;
     vaGrp.addLayer(l);
@@ -11893,7 +11914,7 @@ function vaSyncOpacity(){
     // frames the service does not have), the overview below; the frame PNG
     // only until one of them is there
     const zin=map.getZoom()>=VA_HI_Z,srv=vaSrvActive(),op=vaOpacity();
-    const cov=zin?(srv?vaSrv.ready:vaHiCovers()):vaOvT.ready;
+    const cov=zin?(srv?vaSrv.ready&&!vaSrv.busy:vaHiCovers()):vaOvT.ready&&!vaOvT.busy;
     if(vaOv){try{vaOv.setOpacity(cov?0:op);}catch(e){}}
     if(vaSrv.cur&&vaSrv.ready)try{vaSrv.cur.setOpacity(op);}catch(e){}
     if(vaOvT.cur&&vaOvT.ready)try{vaOvT.cur.setOpacity(op);}catch(e){}
@@ -16696,9 +16717,21 @@ function legend(l){
 // -- built by reading the SAME markup legendFor() already produces (off-DOM,
 // never inserted) rather than hand-duplicating every layer's colour table a
 // second time, so it can never drift out of sync with the real legend.
+// Under the layer icon: the layer's colour scale as a small strip with a
+// chevron -- one tap unfolds the full legend (what each colour means)
+function mlScaleSync(sp){let b=document.getElementById('mlScaleBtn');const box=document.getElementById('miniLegend');
+  if(!sp||!box||!box.parentNode){if(b)b.hidden=true;return;}
+  if(!b){b=document.createElement('button');b.type='button';b.id='mlScaleBtn';b.setAttribute('aria-label','Skala aufklappen');
+    b.onclick=e=>{try{legInfoToggle(e);}catch(_){}};box.after(b);}
+  let cols=sp.steps&&sp.steps.cols?sp.steps.cols.slice():(sp.rows||[]).map(r=>r.c).reverse();
+  if(sp.grad)cols=[sp.grad];
+  const bar=cols.length===1&&/gradient/.test(cols[0])?cols[0]:'linear-gradient(to top,'+cols.map((c,i)=>c+' '+(i/cols.length*100).toFixed(1)+'% '+((i+1)/cols.length*100).toFixed(1)+'%').join(',')+')';
+  b.innerHTML='<i style="background:'+bar+'"></i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+  b.hidden=false;}
 function miniLegendRender(l){try{thrFloatSync();}catch(_){}
   const box=document.getElementById('miniLegend');if(!box)return;
   const sp=legSpec(l||layer);
+  try{mlScaleSync(sp);}catch(_){}
   if(!sp){box.classList.remove('show');return;}
   document.getElementById('mlUnit').textContent=sp.u||'';
   // which layer is on: its icon and name on top of the scale
@@ -16953,7 +16986,10 @@ function legInfoRender(){
       +(sp.long?'<p class="li-note">'+escapeHtml(sp.long)+'</p>':'')+legMoreHTML(sp);
   }else{
     const sh=sp.va?vaViewShares():null;
-    const rows=(sh&&sh.tot>0&&sp.rows.length>7)?sp.rows.slice().sort((x,y)=>(sh.cnt[y.k]||0)-(sh.cnt[x.k]||0)):sp.rows;
+    // classes listed under «Andere Schneearten» are not repeated above, and
+    // a scale (powder depths) keeps its order instead of sorting by share
+    const moreK=new Set((sp.more||[]).map(r=>r.k)),base=sp.rows.filter(r=>!moreK.has(r.k));
+    const rows=(sh&&sh.tot>0&&base.length>7&&!sp.more)?base.slice().sort((x,y)=>(sh.cnt[y.k]||0)-(sh.cnt[x.k]||0)):base;
     body='<div class="li-rows">'+rows.map(r=>{
       const pc=(sh&&sh.tot>0&&r.k!=null)?Math.round((sh.cnt[r.k]||0)/sh.tot*100):null;
       const sw=r.k!=null&&legRows(),on=sw?!legHiddenK(layer,r.k):true;
@@ -18706,7 +18742,8 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
      inspVerdictHTML({st:vaSec?vaPointHTML.st:null,newSnow,depth:depthNow,tmn,tmx,asp:aspLbl,slope:slp})+
      (function(){let av=null;try{av=avLevelAt(lat,lon,elevD,aspDeg);}catch(e){}return avChipHTML(av);})()+
      (layer==='snowpack'&&vaSec?'':kpi)+
-   '</div>'+(function(){const nm=(function(){try{const n=tourNearPoint(lat,lon,1500,1);if(n.length)return 'bei '+(n[0].t.pname||n[0].t.name||'Skitour');}catch(e){}
+   '</div>'+(function(){const nm=(function(){try{const g=slfRegionAt(lat,lon);if(g)return g.name;}catch(e){}
+       try{const n=tourNearPoint(lat,lon,1500,1);if(n.length)return 'bei '+(n[0].t.pname||n[0].t.name||'Skitour');}catch(e){}
        return lat.toFixed(3)+'°N '+lon.toFixed(3)+'°E';})();
      return favBtnHTML('area',lat.toFixed(3)+','+lon.toFixed(3),'Region '+nm,lat,lon,elevD,'insp-fav');})()
    +'<button aria-label="Schliessen" onclick="inspClose()">✕</button></div>'+
@@ -19271,6 +19308,9 @@ function update3dOverlay(){if(!map3d||!is3d)return;try{sync3dOverlays();}catch(e
   if(map3d.getLayer('data-overlay')){map3d.setLayoutProperty('data-overlay','visibility','visible');
     try{map3d.setPaintProperty('data-overlay','raster-resampling','linear');}catch(e){}}}
 let _ml=null;
+setTimeout(()=>{try{const c=navigator.connection;if(c&&(c.saveData||/2g|3g/.test(c.effectiveType||'')))return;
+  const go=()=>{if(!window.maplibregl&&!_ml)ensureMaplibre(()=>{try{sw3dInit();}catch(e){}});};
+  (window.requestIdleCallback||setTimeout)(go,{timeout:4000});}catch(e){}},25000);
 function ensureMaplibre(cb){
   if(window.maplibregl){cb();return;}
   if(_ml){_ml.push(cb);return;}
@@ -19334,7 +19374,17 @@ function sw3dDecode(buf){const dv=new DataView(buf);let o=88;
   let hi=0;for(let i=0;i<tc*3;i++){const c=big?dv.getUint32(o+i*4,true):dv.getUint16(o+i*2,true);idx[i]=hi-c;if(c===0)hi++;}
   return {u,v,h,idx};}
 const _mercY=lat=>{const s=Math.sin(lat*Math.PI/180);return .5-Math.log((1+s)/(1-s))/(4*Math.PI);};
-async function sw3dTile(url,ac){
+// The relief mesh and the shading ask for the very same tiles: each one is
+// decoded and rasterised once, the second request takes the finished PNG
+// (it was done twice -- half the 3D start time and a good part of the heat)
+const _sw3dDone=new Map();
+function sw3dTile(url,ac){const k=url.replace(/^swtopo:\/\//,'');
+  if(_sw3dDone.has(k))return _sw3dDone.get(k).then(d=>({data:d.slice(0)}));
+  const p=sw3dTile0(url,null).then(r=>r.data);_sw3dDone.set(k,p);
+  if(_sw3dDone.size>400){const k0=_sw3dDone.keys().next().value;_sw3dDone.delete(k0);}
+  p.catch(()=>_sw3dDone.delete(k));
+  return p.then(d=>({data:d.slice(0)}));}
+async function sw3dTile0(url,ac){
   const m=url.match(/swtopo:\/\/(\d+)\/(\d+)\/(\d+)/),z=+m[1],x=+m[2],y=+m[3],N=256,n2=Math.pow(2,z);
   const lon0=x/n2*360-180,lon1=(x+1)/n2*360-180;
   const latOf=yy=>Math.atan(Math.sinh(Math.PI*(1-2*yy/n2)))*180/Math.PI,latN=latOf(y),latS=latOf(y+1);
@@ -19387,7 +19437,7 @@ function init3D(){
   // From the 3D button: a short flight in from outside -- start high and
   // off to the north-west, then glide to the mountain nearest the centre
   // and end on a 45 degree view. (The two-finger tilt keeps its own move.)
-  _fly3d=!_tilt3d&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+  _fly3d=!_tilt3d&&!isMobile&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
   try{if(!ovOn.skitourVec)ovToggle('skitourVec',true);}catch(e){}
   const st3=_fly3d?{c:[Math.max(loMinW,lc.lng-1.2),Math.min(laMaxW,lc.lat+0.8)],z:Math.min(6.8,lz)}:{c:[lc.lng,lc.lat],z:lz};
   map3d=new maplibregl.Map({container:'map3d',
@@ -19405,11 +19455,11 @@ function init3D(){
         // finer mesh close up (swissALTI3D down to ~2.5 m on a desktop, ~5 m on a
         // phone): rock bands, ridges and gullies stand up instead of melting
         'terrain-dem':{type:'raster-dem',tiles:[sw3dReady()?'swtopo://{z}/{x}/{y}':'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',
-          maxzoom:sw3dReady()?(isMobile?15:16):14,attribution:'Gelände © swisstopo'},
+          maxzoom:sw3dReady()?(isMobile?14:15):14,attribution:'Gelände © swisstopo'},
         // the same heights once more, for a shading drawn from them (MapLibre
         // wants a separate source for terrain and hillshade)
         'terrain-hs':{type:'raster-dem',tiles:[sw3dReady()?'swtopo://{z}/{x}/{y}':'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',
-          maxzoom:sw3dReady()?15:14},
+          maxzoom:sw3dReady()?(isMobile?14:15):14},
         // swisstopo's orthophoto (OGD: free, also commercially, with the source named)
         'swissimage':{type:'raster',tiles:[swissTile('ch.swisstopo.swissimage','jpeg')],tileSize:256,maxzoom:19,attribution:'Luftbild SWISSIMAGE © swisstopo'},
         'slope-src':{type:'raster',tiles:[swissTile('ch.swisstopo.hangneigung-ueber_30','png')],tileSize:256,minzoom:8,maxzoom:16},
@@ -19428,6 +19478,7 @@ function init3D(){
         {id:'slope-3d',type:'raster',source:'slope-src',layout:{visibility:ovOn.slope?'visible':'none'},paint:{'raster-opacity':0.5,'raster-fade-duration':0}},
         {id:'skitour-3d',type:'raster',source:'skitour-src',layout:{visibility:ovOn.skitour?'visible':'none'},paint:{'raster-opacity':0.9,'raster-fade-duration':0}}],
       terrain:{source:'terrain-dem',exaggeration:exag3d}},
+    pixelRatio:Math.min(window.devicePixelRatio||1,isMobile?1.5:2),maxTileCacheSize:isMobile?120:300,fadeDuration:0,
     center:st3.c,zoom:st3.z,pitch:_tilt3d||_fly3d?0:60,bearing:_tilt3d?0:_fly3d?0:-20,maxPitch:72,maxZoom:17.5,
     maxBounds:[[loMinW-0.1,laMinW-0.05],[loMaxW+0.1,laMaxW+0.05]],
     touchZoomRotate:true,touchPitch:true,dragRotate:true});
@@ -24609,16 +24660,23 @@ function obsSubLabel(){const s=obsState;if(s.type==='avalanche')return s.avalanc
 let feedFilter='all',feedAnchor=null,feedScope='all',feedGroup=null;
 // Regions as one-tap chips under the feed's title. Coarse boxes (first match
 // wins), good enough to say "Wallis" or "Graubünden" -- not a border survey.
-const FEED_REGIONS=[
-  {id:'near',label:'In der Nähe'},
-  {id:'gr',label:'Graubünden',b:[46.15,8.65,47.07,10.50]},
-  {id:'vs',label:'Wallis',b:[45.85,6.75,46.50,8.45]},
-  {id:'be',label:'Berner Oberland',b:[46.35,7.20,46.90,8.45]},
-  {id:'zs',label:'Zentralschweiz',b:[46.50,8.20,47.15,9.20]},
-  {id:'ti',label:'Tessin',b:[45.80,8.35,46.55,9.20]},
-  {id:'vd',label:'Waadt / Freiburg',b:[46.25,6.60,46.75,7.35]},
-  {id:'os',label:'Ostschweiz',b:[46.95,8.90,47.60,9.75]}];
+// The SLF's own avalanche warning regions (149 micro-regions, CH-xxxx) and
+// their main areas (the first digit of the id) -- the same regions the
+// bulletin speaks in, not boxes of our own.
+const SLF_REG_SRC=__SLF_REGIONS__;
+const SLF_AREAS={'1':'Westliche Voralpen & Berner Oberland','2':'Zentralschweiz & Uri','3':'Glarus, St. Gallen & Appenzell','4':'Wallis',
+  '5':'Nord- & Mittelbünden','6':'Tessin & Misox','7':'Engadin & Südtäler','8':'Jura','9':'Mittelland'};
+const SLF_REG=(SLF_REG_SRC.regions||[]).map(r=>{const rings=r.rings.map(enc=>{const v=enc.split(','),o=[];let la=0,lo=0;
+    for(let i=0;i<v.length;i+=2){la+=+v[i];lo+=+v[i+1];o.push([lo/1e4,la/1e4]);}return o;});
+  let b=[90,180,-90,-180];rings.forEach(R=>R.forEach(([x,y])=>{if(y<b[0])b[0]=y;if(x<b[1])b[1]=x;if(y>b[2])b[2]=y;if(x>b[3])b[3]=x;}));
+  return {id:r.id,name:r.name,area:r.id.charAt(3),rings,b};});
+function slfRegionAt(lat,lon){for(const r of SLF_REG){const b=r.b;if(lat<b[0]||lat>b[2]||lon<b[1]||lon>b[3])continue;
+    for(const R of r.rings){let ins=false;for(let i=0,j=R.length-1;i<R.length;j=i++){const a=R[i],c=R[j];
+        if((a[1]>lat)!==(c[1]>lat)&&lon<(c[0]-a[0])*(lat-a[1])/(c[1]-a[1])+a[0])ins=!ins;}if(ins)return r;}}
+  return null;}
+const FEED_REGIONS=[{id:'near',label:'In der Nähe'}].concat(Object.keys(SLF_AREAS).map(k=>({id:'slf'+k,label:SLF_AREAS[k],slf:k})));
 let feedRegion='';try{feedRegion=localStorage.getItem('ssm_feed_region')||'';}catch(e){}
+if(/^(gr|vs|be|zs|ti|vd|os)$/.test(feedRegion))feedRegion='';   // the old boxes, now SLF areas
 // Two regions that are not a canton: the map view a person came from
 // («Beiträge hier im Feed» on the map, a snapshot of its bounds) and their
 // favourite areas and tours (posts within FEED_FAV_KM of any / of one).
@@ -24627,8 +24685,7 @@ const FEED_FAV_KM=8;
 function feedRegionLabel(id){id=id||feedRegion;if(id==='view')return 'Kartenausschnitt';if(id==='fav')return 'Meine Favoriten';
   if(id&&id.indexOf('fav:')===0){const f=(favs||[]).find(x=>'fav:'+x.id===id);return f?f.name:'Favorit';}
   return (FEED_REGIONS.find(g=>g.id===id)||{}).label||'';}
-function feedRegionOf(r){for(const g of FEED_REGIONS){if(!g.b)continue;const b=g.b;
-  if(r.lat>=b[0]&&r.lat<=b[2]&&r.lng>=b[1]&&r.lng<=b[3])return g.id;}return '';}
+function feedRegionOf(r){if(r._slf===undefined){const g=slfRegionAt(r.lat,r.lng);r._slf=g?'slf'+g.area:'';}return r._slf;}
 function feedRegionSet(id,keep){feedRegion=(feedRegion===id&&!keep)?'':id;try{localStorage.setItem('ssm_feed_region',feedRegion);}catch(e){}
   if(feedRegion==='fav'||feedRegion.indexOf('fav:')===0){if(!sbUser){authShow();return;}
     if(!favs){favLoad().then(()=>{try{feedRegionsRender();feedTopRender();}catch(e){}feedRender();});}}
@@ -25764,3 +25821,11 @@ function feedAnimateCards(){
 function feedFlyTo(lat,lng){feedClose();setTimeout(()=>map.flyTo([lat,lng],14,{duration:1.2}),350);}
 /*__APP_END__*/</script></body></html>
 """
+
+# SLF avalanche warning regions (tools/make_slf_regions.py), embedded: the
+# feed's region chips and the names of remembered regions follow them
+try:
+    _SLF_REG = (Path(__file__).resolve().parent.parent / "data_connectors" / "slf_regions.json").read_text()
+except Exception:                                  # noqa: BLE001
+    _SLF_REG = '{"regions":[]}'
+_HTML = _HTML.replace("__SLF_REGIONS__", _SLF_REG)

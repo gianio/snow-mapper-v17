@@ -30,16 +30,20 @@ _PNG_W = 2000
 
 def _despeckle(lab):
     """Lone classified cells off: a cell with a class keeps it only when at
-    least two of its eight neighbours carry a class too. Right at a threshold
+    least three of its eight neighbours carry a class too (two passes). Right at a threshold
     (thin cover on flat land) single 250 m cells flip into a class their
     surroundings do not have and show as scattered squares across the
     lowlands. Colouring only -- the statistics keep the raw labels."""
-    on = lab > 0
-    p = np.pad(on, 1).astype(np.uint8)
-    nb = sum(p[1 + dy:p.shape[0] - 1 + dy, 1 + dx:p.shape[1] - 1 + dx]
-             for dy in (-1, 0, 1) for dx in (-1, 0, 1) if dy or dx)
     out = lab.copy()
-    out[on & (nb < 2)] = 0
+    # twice (3, then 4 of 8): small clusters (2x2 cells) go too, which a single
+    # pass with 2 of 8 left on the plateau (Zürich, 23.11.); a closed area
+    # loses at most its outermost corner cells
+    for need in (3, 4):
+        on = out > 0
+        p = np.pad(on, 1).astype(np.uint8)
+        nb = sum(p[1 + dy:p.shape[0] - 1 + dy, 1 + dx:p.shape[1] - 1 + dx]
+                 for dy in (-1, 0, 1) for dx in (-1, 0, 1) if dy or dx)
+        out[on & (nb < need)] = 0
     return out
 
 
