@@ -47,7 +47,8 @@ def ground_heat(day):
 
 
 def _init_snow(elev):
-    hs = max(float(np.interp(elev, config.INIT_ELEV, config.INIT_HS)), 0.05)
+    hs = float(np.interp(elev, config.INIT_ELEV, config.INIT_HS))
+    hs = 0.0 if hs < 0.02 else max(hs, 0.05)
     rho = float(np.interp(elev, config.INIT_ELEV, config.INIT_RHO))
     return hs, rho
 
@@ -87,6 +88,7 @@ def write_sno(p, sno_dir: Path, start_date, bare=False):
     """Initial snow file. `bare`: no snow at all -- the autumn season start of
     a live run, when the snowpack is built entirely from the forcing."""
     hs, rho = _init_snow(p["elev"]); nl = len(_BASE_LAYERS); th = hs / nl
+    bare = bare or hs <= 0.0                      # valley runs: no assumed base
     if bare:
         hs, nl = 0.0, 0
     ne = max(1, int(round(th / _BASE_ELEM_M)))

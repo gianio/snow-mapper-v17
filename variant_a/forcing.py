@@ -206,6 +206,25 @@ _BACKOFF_429_S = 15.0
 FORCING_WORKERS = 3          # parallel weather points; 6 ran into Open-Meteo's rate limit
 
 
+# Open-Meteo's free tier counts a request by its days x variables, with an
+# hourly and a daily cap. Once a cap is hit every request answers 429 with a
+# Retry-After of up to hours -- the cycle of 24.11. spent 4.5 h waiting and was
+# cancelled. So: a long Retry-After closes Open-Meteo for the rest of the
+# cycle at once, and after FORCING_OM_BUDGET_S nothing more is asked. What is
+# missing then comes from our own MeteoSwiss archive and the OGD forecast.
+FORCING_OM_BUDGET_S = 50 * 60
+_OM = {"closed": None, "deadline": None}
+
+
+def _om_closed():
+    if _OM["closed"]:
+        return _OM["closed"]
+    if _OM["deadline"] is not None and time.time() > _OM["deadline"]:
+        _OM["closed"] = f"Open-Meteo time budget ({FORCING_OM_BUDGET_S // 60} min) used up"
+        print(f"  forcing: {_OM['closed']} -- no more requests this cycle", flush=True)
+    return _OM["closed"]
+
+
 def _fetch_json(url, params, timeout=_TIMEOUT_S):
     """(json, None) or (None, reason). A 400 is a verdict, not a hiccup --
     unknown model, date out of range -- so it is returned immediately rather
@@ -214,6 +233,8 @@ def _fetch_json(url, params, timeout=_TIMEOUT_S):
     q = urllib.parse.urlencode(params, safe=",")
     last = None
     for i in range(_FETCH_TRIES):
+        if _om_closed():
+            return None, _OM["closed"]
         wait = 2.0 * (i + 1)
         try:
             with urllib.request.urlopen(f"{url}?{q}", timeout=timeout) as r:
@@ -233,6 +254,10 @@ def _fetch_json(url, params, timeout=_TIMEOUT_S):
                     wait = float(e.headers.get("Retry-After") or 0) or 0
                 except Exception:
                     wait = 0
+                if wait > 300:
+                    _OM["closed"] = f"Open-Meteo rate limit (Retry-After {wait:.0f} s)"
+                    print(f"  forcing: {_OM['closed']} -- no more requests this cycle", flush=True)
+                    return None, _OM["closed"]
                 wait = max(wait, _BACKOFF_429_S * (2 ** i))
         except Exception as e:
             last = f"{type(e).__name__}: {e}"
@@ -306,6 +331,26 @@ def _splice(base, extra):
             if i is not None and j < len(ev) and ev[j] is not None and out[v][i] is None:
                 out[v][i] = ev[j]
     return out, taken
+
+
+def _skeleton(start, end):
+    """An empty hourly block over start 00:00 .. end 23:00 (UTC), so series
+    that each cover part of the span can be laid into one time axis."""
+    t0 = datetime.strptime(start, "%Y-%m-%d")
+    n = int((datetime.strptime(end, "%Y-%m-%d") - t0).total_seconds() // 3600) + 24
+    times = [(t0 + timedelta(hours=k)).strftime("%Y-%m-%dT%H:%M") for k in range(n)]
+    return {"time": times, **{v: [None] * n for v in _VARS}}
+
+
+def _gap_days(h):
+    """(first, last) date with an hour that lacks a variable SNOWPACK needs,
+    or None when every hour is filled."""
+    t = h.get("time") or []
+    bad = [i for i in range(len(t))
+           if any((h.get(v) or [None] * len(t))[i] is None for v in _NEED)]
+    if not bad:
+        return None
+    return t[bad[0]][:10], t[bad[-1]][:10]
 
 
 def fetch_weather(lat, lon, elev, start, end, models=None):
@@ -530,6 +575,8 @@ def build_forcing_matrix(wps, runs, target_date, win, meteo_dir: Path | None = N
     print(f"  forcing: {len(wps)} weather points, {start} .. {end}, "
           f"models {', '.join(config.FORCING_MODELS)} then archive")
 
+    _OM["closed"], _OM["deadline"] = None, time.time() + FORCING_OM_BUDGET_S
+
     def one(w):
         cache = meteo_dir / f"{w['id']}.json"
         if cache.exists():
@@ -539,33 +586,55 @@ def build_forcing_matrix(wps, runs, target_date, win, meteo_dir: Path | None = N
                     return w["id"], c["hourly"], c["model"], []
             except Exception:
                 pass
-        h, m, notes = fetch_weather(w["lat"], w["lon"], w["ref_elev"], start, end)
-        # Our own MeteoSwiss archive over the past days (pipeline/wx_archive.py):
-        # ICON-CH short forecasts filed by earlier cycles. Open-Meteo stays
-        # underneath for every hour the archive does not have yet.
-        if h and archive_dir:
+        # Our own MeteoSwiss hours first: the archive (ICON-CH short forecasts
+        # filed by earlier cycles, pipeline/wx_archive.py) and this cycle's
+        # OGD forecast. Open-Meteo is asked only for the days they leave
+        # empty, plus a day either side so the height shift (dT) of the
+        # MeteoSwiss values can be measured against it.
+        ah, od = None, None
+        if archive_dir:
             try:
                 from pipeline import wx_archive
                 ah = wx_archive.series(Path(archive_dir), w["id"], start, end)
-                if ah:
-                    h, n_a, dT_a = _overlay_ogd(h, ah)
-                    if n_a:
-                        notes.append(f"archive {n_a} h, dT {dT_a:+.1f} K")
-                        m = f"archive+{m}"
             except Exception as e:                      # noqa: BLE001
-                notes.append(f"archive unreadable: {e}")
-        # MeteoSwiss OGD forecast hours on top (tools/ogd_extract.py), when
-        # the workflow produced them.
+                print(f"  forcing {w['id']}: archive unreadable: {e}")
         of = Path(ogd_dir) / f"{w['id']}.json" if ogd_dir else None
-        if h and of is not None and of.exists():
+        if of is not None and of.exists():
             try:
                 od = json.loads(of.read_text())
-                h, n_ogd, dT = _overlay_ogd(h, od.get("hourly"))
-                if n_ogd:
-                    notes.append(f"OGD {od.get('model')} {n_ogd} h, dT {dT:+.1f} K")
-                    m = f"{od.get('model')}+{m}"
-            except Exception as e:
-                notes.append(f"OGD unreadable: {e}")
+            except Exception:
+                od = None
+        own = _skeleton(start, end)
+        if ah:
+            own, _, _ = _overlay_ogd(own, ah)
+        if od and od.get("hourly"):
+            own, _, _ = _overlay_ogd(own, od.get("hourly"))
+        gap = _gap_days(own)
+        if gap is None:                                  # all ours: two days for dT
+            s2 = start
+            e2 = min(end, (datetime.strptime(start, "%Y-%m-%d") + timedelta(days=1)).date().isoformat())
+        else:
+            s2 = max(start, (datetime.strptime(gap[0], "%Y-%m-%d") - timedelta(days=1)).date().isoformat())
+            e2 = min(end, (datetime.strptime(gap[1], "%Y-%m-%d") + timedelta(days=1)).date().isoformat())
+        hom, m, notes = fetch_weather(w["lat"], w["lon"], w["ref_elev"], s2, e2)
+        h = _skeleton(start, end)
+        if hom:
+            h, _ = _splice(h, hom)
+        else:
+            m = None
+        if ah:
+            h, n_a, dT_a = _overlay_ogd(h, ah)
+            if n_a:
+                notes.append(f"archive {n_a} h, dT {dT_a:+.1f} K")
+                m = f"archive+{m}" if m else "archive"
+        if od and od.get("hourly"):
+            h, n_ogd, dT = _overlay_ogd(h, od.get("hourly"))
+            if n_ogd:
+                notes.append(f"OGD {od.get('model')} {n_ogd} h, dT {dT:+.1f} K")
+                m = f"{od.get('model')}+{m}" if m else str(od.get("model"))
+        if _coverage(h) < config.FORCING_MIN_COVERAGE:
+            notes.append(f"coverage {_coverage(h)*100:.0f}% with archive, OGD and Open-Meteo")
+            h = None
         if h:
             cache.write_text(json.dumps({"start": start, "end": end, "model": m,
                                          "hourly": h}))

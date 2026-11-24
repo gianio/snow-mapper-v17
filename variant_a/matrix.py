@@ -37,7 +37,7 @@ FLAT = 0                                  # slope-class index of the flat run
 
 
 def band_values():
-    """All candidate elevation bands, e.g. 1200, 1500, ... 3300."""
+    """All candidate elevation bands, e.g. 600, 900, ... 3300."""
     return np.arange(config.MATRIX_ELEV_MIN, config.MATRIX_ELEV_MAX + 1e-6,
                      config.MATRIX_ELEV_STEP)
 
@@ -179,6 +179,12 @@ def _weights(grid, wps, runs, rows, cols, aspect, neighbours=None):
     lut = _lookup(wps, runs)
     b0 = np.array([w["bands"][0] for w in wps])
     nb = np.array([len(w["bands"]) for w in wps])
+    # a neighbour whose lowest band lies far above the cell fades out (its
+    # snow is that of a higher slope), so the lowest neighbours decide there
+    below = np.maximum(0.0, b0[widx] - elev[:, None] - 0.5 * config.MATRIX_ELEV_STEP)
+    below -= below.min(axis=1, keepdims=True)    # relative: the lowest keeps its weight
+    wh = wh * np.exp(-below / config.MATRIX_BELOW_FADE_M)
+    wh /= wh.sum(axis=1, keepdims=True)
 
     # slope: piecewise-linear between the class nodes (0, 20, 38 deg)
     nodes = np.array(slope_nodes())
