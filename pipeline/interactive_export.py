@@ -2030,9 +2030,20 @@ function fit(){var p=innerHeight>=innerWidth,sh=p?Math.max(screen.height,screen.
   // cut. A window as wide as the screen (every iPhone) is the whole screen
   // (black-translucent status bar), so it takes the screen height; otherwise
   // the largest of the measured heights, never more than the screen.
-  var h=Math.max(innerHeight,d.clientHeight,lvh);if(Math.abs(innerWidth-sw)<=2)h=sh;
+  // Newer iOS (26) no longer lets a home-screen app reach under the bottom
+  // edge: forcing the screen height there pushed the tab bar below the
+  // visible area and left a white band. What a fixed layer with inset:0
+  // actually covers is the real visible height, on every iOS -- take that
+  // (or innerHeight / the visual viewport if larger), never the screen blindly.
+  var fx=0;try{var q=document.createElement('div');q.style.cssText='position:fixed;top:0;bottom:0;left:0;width:1px;visibility:hidden;pointer-events:none';
+    d.appendChild(q);fx=q.getBoundingClientRect().height;d.removeChild(q);}catch(e){}
+  var vv=window.visualViewport?visualViewport.height:0;
+  var h=Math.max(innerHeight,fx,vv);if(!(h>200))h=Math.max(innerHeight,d.clientHeight,lvh);
   d.style.setProperty('--app-h',Math.min(sh,h)+'px');}
-fit();addEventListener('resize',fit);addEventListener('orientationchange',function(){setTimeout(fit,300);});})();</script>
+fit();addEventListener('resize',fit);addEventListener('orientationchange',function(){setTimeout(fit,300);});
+// iOS settles the standalone viewport a moment after launch
+setTimeout(fit,400);setTimeout(fit,1500);addEventListener('pageshow',fit);
+try{if(window.visualViewport)visualViewport.addEventListener('resize',fit);}catch(e){}})();</script>
 <meta name="theme-color" content="#ffffff"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <title>Snowmapper</title>
@@ -7456,14 +7467,14 @@ body.leg-open #miniLegend #mlName{color:var(--md-on-primary)}
   background:var(--md-secondary-container,#D6E3FF);color:var(--md-on-secondary-container,#0F1C2C);box-shadow:0 1px 3px rgba(0,0,0,.18)}
 #ovChips .ov-chip svg{width:20px;height:20px}
 /* ==== Runde 22.11.: Steuerleiste schmal und einklappbar ==== */
-#mapFabs .mfab-grp .mfab{width:32px!important;height:32px!important;border-radius:16px!important}
-#mapFabs .mfab-grp .mfab svg{width:16px!important;height:16px!important}
+#mapFabs .mfab-grp .mfab{width:36px!important;height:36px!important;border-radius:18px!important}
+#mapFabs .mfab-grp .mfab svg{width:18px!important;height:18px!important}
 #mapFabs .mfab-grp .mfab .fab-txt{font:600 11px/1 var(--font)!important}
 #mapFabs .mfab-grp .mfab+.mfab::before{left:7px!important;right:7px!important}
 #mapFabs{gap:8px!important}
 #ovChips{gap:6px;margin-top:4px}
-#ovChips .ov-chip{width:32px;height:32px}
-#ovChips .ov-chip svg{width:16px;height:16px}
+#ovChips .ov-chip{width:36px;height:36px}
+#ovChips .ov-chip svg{width:18px;height:18px}
 #miniLegend,#mapFabs #miniLegend,body.desk #mapFabs #miniLegend{width:34px!important;height:34px!important;max-width:34px!important}
 #miniLegend #mlName{height:34px!important}
 #miniLegend #mlName svg{width:17px!important;height:17px!important}
@@ -7475,6 +7486,11 @@ body.fabs-folded #mapFabs>:not(#fabFold){display:none!important}
 .wc-pin{width:24px!important;height:24px!important;border-radius:8px!important;box-shadow:0 0 0 1.5px #fff,0 2px 6px rgba(0,0,0,.28)!important}
 .wc-pin svg{width:13px!important;height:13px!important}
 #tlTomorrowBtn{display:none!important}
+/* 3D at true scale only: the DEM heights are exact, no stretch factor */
+#btn3dExag{display:none!important}
+/* «Powder melden»: only where, how deep, post (type fixed to powder) */
+.qs-simple .qs-when,.qs-simple .qs-pair-l,.qs-simple .qs-qual,.qs-simple .qs-trk,.qs-simple .qs-danger,.qs-simple .qs-tour,.qs-simple .qs-model{display:none!important}
+.qs-simple .qs-pair{display:block}
 .feed-hit{position:relative}
 .fh-info{margin-left:auto;flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--md-outline-var,#C4C6D0);background:transparent;color:var(--md-primary,#0B63B5);font:700 13px/1 var(--font);cursor:pointer}
 .acc-sheet{position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.32);display:flex;align-items:flex-end;justify-content:center}
@@ -7876,7 +7892,7 @@ body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
 <div id="wcv" class="wcv" hidden role="dialog" aria-label="Webcams"><div class="wcv-top"><button class="wcv-x" onclick="wcvClose()" aria-label="Schliessen">×</button><b>Webcams</b>
 <div class="wcv-seg" role="tablist"><button data-m="fav" onclick="wcvMode('fav')">Favoriten</button><button data-m="tv" onclick="wcvMode('tv')">Webcam-TV</button><button data-m="near" onclick="wcvMode('near')">In der Nähe</button></div></div>
 <div class="wcv-body" id="wcvBody"></div></div>
-<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it rs-one" onclick="repSheetToggle(false);qsOpen()"><i style="--rc:linear-gradient(150deg,#8FD9FF,#2F8FDB)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg></i><span><b>Schnellmeldung</b><small>Schneeart, Tiefe, Standort – in Sekunden</small></span></button><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:linear-gradient(150deg,#6FB4F0,#3F8AD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg></i><span><b>Powder melden</b><small>Schnee-Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:linear-gradient(150deg,#4A86C8,#2D5A8C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button><button class="rs-it" onclick="repSheetToggle(false);planOpen()"><i style="--rc:linear-gradient(150deg,#55C27F,#1E8E3E)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="6" r="2.2"/><path d="M7 17c4-1 2-6 6-7s3-2 4-2.5"/><path d="M15 15l4 4M19 15l-4 4" stroke-width="1.6"/></svg></i><span><b>Tour planen</b><small>Eigene Route zeichnen – Höhe, Steilheit, Zeit</small></span></button></div></div>
+<div id="repSheet" hidden><div class="rs-in" role="menu" aria-label="Melden"><button class="rs-it rs-one" onclick="repSheetToggle(false);qsOpen()"><i style="--rc:linear-gradient(150deg,#8FD9FF,#2F8FDB)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.4 7.2c-.1.7.8 1.1 1.2.5L20 11.5c.4-.5 0-1.3-.6-1.3H13l1.3-7.7c.1-.7-.8-1.1-1.3-.5z"/></svg></i><span><b>Schnellmeldung</b><small>Schneeart, Tiefe, Standort – in Sekunden</small></span></button><button class="rs-it" onclick="repSheetToggle(false);qsPowderOpen()"><i style="--rc:linear-gradient(150deg,#B9A6FF,#6A4FD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17"/></svg></i><span><b>Powder melden</b><small>Pulver und Tiefe – ein Tipp</small></span></button><button class="rs-it" onclick="repSheetToggle(false);drawOpen()"><i style="--rc:linear-gradient(150deg,#6FB4F0,#3F8AD6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5L12.2 11.8"/><path d="M12.2 11.8c-1.9-.6-3.9.4-4.4 2.3-.4 1.7-1.4 2.8-3.3 3.3 2.9 1.7 6.7 1.3 8-1.2.7-1.4.6-3.1-.3-4.4z"/><path d="M6 2.6v6.8M3.05 4.3l5.9 3.4M8.95 4.3l-5.9 3.4"/></svg></i><span><b>Schnee-Karte</b><small>Verhältnisse auf die Karte malen</small></span></button><button class="rs-it" onclick="repSheetToggle(false);obsOpen()"><i style="--rc:linear-gradient(150deg,#4A86C8,#2D5A8C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></i><span><b>Beobachtung</b><small>Lawine, Wumm, Triebschnee …</small></span></button><button class="rs-it" onclick="repSheetToggle(false);planOpen()"><i style="--rc:linear-gradient(150deg,#55C27F,#1E8E3E)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="6" r="2.2"/><path d="M7 17c4-1 2-6 6-7s3-2 4-2.5"/><path d="M15 15l4 4M19 15l-4 4" stroke-width="1.6"/></svg></i><span><b>Tour planen</b><small>Eigene Route zeichnen – Höhe, Steilheit, Zeit</small></span></button></div></div>
 <nav id="tabBar" aria-label="Navigation">
   <button data-tab="map" onclick="navGo('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg><span>Karte</span></button>
   <button data-tab="tours" id="tourFab" onclick="navGo('tours')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5l5.5-9 3.5 5.5 2-3 3 5"/><circle cx="17" cy="6.5" r="3.2"/><path d="M19.4 8.9l2.3 2.3"/></svg><span>Touren</span></button>
@@ -8105,7 +8121,7 @@ body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
   <button type="button" class="p-rt" onclick="pad3d('right')" aria-label="Nach rechts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
   <small class="p-hint">Drehen &amp; kippen: <b>Strg</b> + Maus ziehen</small>
 </div><button id="btn3dClose">✕ 2D</button>
-<div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="30" style="width:100px;accent-color:var(--acc)"> Map <span id="mapOpacLbl">30%</span></label>
+<div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="55" style="width:100px;accent-color:var(--acc)"> Map <span id="mapOpacLbl">30%</span></label>
 <button id="btn3dExag" title="Überhöhung (1.0 = wahre Höhen)">×1.0</button>
 <button id="btn3dPhoto" title="Luftbild (SWISSIMAGE) oder Karte" aria-pressed="true">Luftbild</button>
 <select id="overlay3d" style="padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:16px;min-height:46px"><option value="none">Keine Ebene</option><option value="snow">Neuschnee</option><option value="temp">Temperatur</option><option value="wind">Wind</option><option value="depth">Schneehöhe</option><option value="powder">Powder</option></select>
@@ -10239,9 +10255,9 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     if(compact)continue;
     if(day){const dd=Math.round((Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-_tlToday)/864e5);
       // relative days instead of weekdays: «Heute», «-1d», «+2d»
-      const rel=dd===0?'Heute':null,lab=relDayLbl(dd),narrow=lab;
+      const rel=dd===0?'Heute':null,lab=relDayLbl(dd),narrow=dd===0?lab:lab.split(' ')[0];
       if((_dayN++%dayEvery)===0&&x-_lastLabX>=34){ctx2.fillStyle=rel?_P.ink:_P.mut;ctx2.font='700 11.5px Helvetica Neue,Helvetica,Arial,sans-serif';
-        const L=pxH*24<52?narrow:lab;ctx2.fillText(L,x+4,ch-5);_lastLabX=x;_lastHrX=x+ctx2.measureText(L).width;}}
+        const L=pxH*24<72?narrow:lab;ctx2.fillText(L,x+4,ch-5);_lastLabX=x;_lastHrX=x+ctx2.measureText(L).width;}}
     else if(labH&&hr%labH===0&&x-_lastHrX>=22){ctx2.fillStyle=_P.mut;ctx2.globalAlpha=.75;ctx2.font='600 11px Helvetica Neue,Helvetica,Arial,sans-serif';
       ctx2.textAlign='center';ctx2.fillText(String(hr).padStart(2,'0'),x,ch-5);ctx2.textAlign='left';ctx2.globalAlpha=1;_lastHrX=x+8;}}
   // baseline
@@ -10355,7 +10371,10 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
   }}
 // a day relative to today: «Heute», «-1d», «+2d» (the timeline speaks in
 // offsets, not weekdays -- "Mi" makes you count, "+2d" does not)
-function relDayLbl(dd){return dd===0?tr('Heute'):(dd>0?'+':'−')+Math.abs(dd)+'d';}
+// «+1d Di»: the offset first, the weekday after it so nobody has to count
+function relDayLbl(dd){if(dd===0)return tr('Heute');
+  let wd='';try{wd=new Date(Date.now()+dd*864e5).toLocaleDateString(LOCALE(),{weekday:'short',timeZone:'Europe/Zurich'}).replace('.','');}catch(e){}
+  return (dd>0?'+':'−')+Math.abs(dd)+'d'+(wd?' '+wd:'');}
 function relDayOf(t){const d=zLocal(tMs(t)),n=zLocal(Date.now());
   return Math.round((Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate()))/864e5);}
 // a time on the timeline with its day offset: «-1d 15:00», «Heute 09:00»
@@ -10492,9 +10511,14 @@ const BASE_ATTR='© swisstopo · Wetter: MeteoSchweiz, <a href="https://open-met
 // viewport stay in the DOM, so a pan back over ground you have just seen is a
 // transform rather than a network round trip. updateWhenIdle stops us asking
 // for tiles at every intermediate zoom of a pinch.
+// Phones: fewer tiles held beside the view and a smaller render cache. iOS
+// reloads a web page that grows past its memory limit -- what looked like
+// «the app loads again when I zoom out» (every layer's old zoom level is
+// still held while the new one comes in).
+var KB_=(function(){try{return matchMedia('(hover:hover) and (pointer:fine)').matches?2:1;}catch(e){return 1;}})();
 function swissBaseLayer(opts){return L.tileLayer(swissTile(BASE_TILE),
   Object.assign({maxZoom:17,crossOrigin:true,attribution:BASE_ATTR,
-    keepBuffer:2,updateWhenIdle:false,updateWhenZooming:false},opts||{}));}
+    keepBuffer:KB_,updateWhenIdle:false,updateWhenZooming:false},opts||{}));}
 const base=swissBaseLayer().addTo(map);
 // The tiles are independent of the forecast blob, so there is no reason for
 // them to wait behind it.
@@ -10563,7 +10587,7 @@ function _applyVectorFade(op,t){
 //    layers and routes stand out;
 //  - close (> 12.5): the winter map in its own colours.
 const reliefBase=L.tileLayer(swissTile('ch.swisstopo.swissalti3d-reliefschattierung_monodirektional','png'),
-  {maxZoom:17,crossOrigin:true,keepBuffer:2,updateWhenZooming:false,zIndex:0,className:'relief-base'}).addTo(map);
+  {maxZoom:17,crossOrigin:true,keepBuffer:KB_,updateWhenZooming:false,zIndex:0,className:'relief-base'}).addTo(map);
 try{base.setZIndex(1);}catch(e){}
 const _ramp=(z,z0,z1)=>Math.max(0,Math.min(1,(z-z0)/(z1-z0)));
 function updateBaseFade(force){
@@ -10618,7 +10642,7 @@ const OsmTopo=L.GridLayer.extend({
     try{img.fetchPriority='low';img.decoding='async';}catch(e){}
     img.src=L.Util.template(OSM_URL,{s:'abc'[Math.abs(c.x+c.y)%3],z:z,x:c.x,y:c.y});
     return t;}});
-const osmTopo=new OsmTopo({pane:'osmPane',maxZoom:18,maxNativeZoom:17,keepBuffer:2,updateWhenZooming:false,
+const osmTopo=new OsmTopo({pane:'osmPane',maxZoom:18,maxNativeZoom:17,keepBuffer:KB_,updateWhenZooming:false,
    className:'base-tiles osm-tiles',
    attribution:'Ausland: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, SRTM · <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)'}).addTo(map);
 map.on('zoom',updateBaseFade);
@@ -10736,7 +10760,7 @@ function ovBuild(k){
   const o=OVERLAYS[k];
   if(o.wmts){if(o.pane&&!map.getPane(o.pane)){const pn=map.createPane(o.pane);pn.style.zIndex=210;}
     ovLayer[k]=L.tileLayer(swissTile(o.wmts,o.ext||'png'),{opacity:o.op,pane:o.pane||'overlayPane',crossOrigin:true,
-      maxNativeZoom:o.mz||18,maxZoom:20,keepBuffer:2});}
+      maxNativeZoom:o.mz||18,maxZoom:20,keepBuffer:KB_});}
   else if(k==='uncert'){ovLayer[k]=L.layerGroup();setTimeout(uncRefresh,0);}
   else if(k==='avalanche'){ovLayer[k]=avBuildLayer();}
   else if(k==='skitourVec'){ovLayer[k]=tourBuildLayer();}
@@ -10990,6 +11014,10 @@ async function vaLoad(){
     ovSyncUI();try{ovRender();}catch(e){}
     // the layer list gains its SNOWPACK entry now that there is data
     try{renderLayerStrip();if(layer==='snowpack')renderAll();}catch(e){}
+    // and once more a moment later: on a slow phone the forecast package or
+    // the overview tiles can still be on their way, and the layer otherwise
+    // only showed after the time was moved by hand
+    [1500,5000,12000].forEach(ms=>setTimeout(()=>{try{if(layer==='snowpack'&&!vaTimeMoved){vaOvWant=null;vaRefresh();renderAll();}}catch(e){}},ms));
   }catch(e){}
 }
 
@@ -11597,7 +11625,7 @@ function vaHiCKey(tag,layer,c,S){return tag+'|'+layer+'|'+c.z+'/'+c.x+'/'+c.y+'|
 function vaHiCachePut(k,px){
   if(vaHiCache.has(k)){vaHiCacheB-=vaHiCache.get(k).length;vaHiCache.delete(k);}
   vaHiCache.set(k,px);vaHiCacheB+=px.length;
-  while(vaHiCacheB>32e6&&vaHiCache.size){const k0=vaHiCache.keys().next().value;vaHiCacheB-=vaHiCache.get(k0).length;vaHiCache.delete(k0);}
+  while(vaHiCacheB>(KB_>1?32e6:12e6)&&vaHiCache.size){const k0=vaHiCache.keys().next().value;vaHiCacheB-=vaHiCache.get(k0).length;vaHiCache.delete(k0);}
 }
 function vaHiTile(c,S,tag,layer,prio,stale){
   if(!vaPk||!tag)return Promise.resolve(null);
@@ -11669,7 +11697,7 @@ function vaHiMake(){
     return t;
   }});
   vaHi=new Lyr({minZoom:VA_HI_Z,maxNativeZoom:VA_TERR_Z,pane:'overlayPane',opacity:vaOpacity(),
-                updateWhenIdle:true,updateWhenZooming:false,keepBuffer:2,className:'va-hi'});
+                updateWhenIdle:true,updateWhenZooming:false,keepBuffer:KB_,className:'va-hi'});
   // The coarse frame stays visible until the fine tiles for this view are
   // actually there -- hiding it on zoomend is what made the layer vanish
   // for seconds (or for good, on a failed terrain fetch) when zooming in.
@@ -11765,7 +11793,7 @@ const vaSrv=vaSwap(key=>{
   const [view,tag]=key.split('|');
   const l=L.tileLayer(t.base+'/v1/'+encodeURIComponent(t.run)+'/'+view+'/'+tag+'/{z}/{x}/{y}.png',
     {minZoom:VA_HI_Z,maxNativeZoom:t.zmax||12,maxZoom:19,tileSize:256,crossOrigin:'anonymous',
-     pane:'overlayPane',updateWhenZooming:false,keepBuffer:2,className:'va-srv'});
+     pane:'overlayPane',updateWhenZooming:false,keepBuffer:KB_,className:'va-srv'});
   l.on('tileload',()=>{vaSrvOk++;});
   // A service that is down, or a run that is gone: render on the device.
   l.on('tileerror',()=>{vaSrvErr++;if(vaSrvErr>=4&&vaSrvOk===0)vaTilesFallback();});
@@ -13243,7 +13271,7 @@ function rptPlace(r){
 var WEBCAM_KEY=null,wcLayer=null,wcSeen=new Map(),wcT=0,wcBusy=false;   // var: the layer list asks before this line has run
 const WC_API='https://api.windy.com/webcams/api/v3/webcams';
 // cameras from a view of about 50 x 50 km (a phone at zoom ~9.8)
-const WC_MIN_Z=9.8;
+const WC_MIN_Z=10.8;   // webcams from a view of about 25 x 25 km
 dataFetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
   if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}
     window._wcOk=true;try{ovRender();}catch(e){}
@@ -15935,10 +15963,22 @@ const isMobile=window.innerWidth<=560;
 // snow depth (typically 0-300cm+ at a base) instead of new-snow-per-window
 // (typically 0-100cm) -- discrete steps, not the old continuous gradient.
 // the same SLF classes as Neuschnee (and the powder in Skiqualität)
-const DEPTH_BOUNDS=SB;
-function depthCol(v){if(v<DEPTH_BOUNDS[0])return null;
-  for(let i=DEPTH_BOUNDS.length-1;i>=1;i--)if(v>=DEPTH_BOUNDS[i-1])return RGB[Math.min(i-1,RGB.length-1)];
-  return RGB[0];}
+// Schneehöhe has its own scale (per request): up to 60 cm is «not enough
+// snow» -- three bands drawn only as brown hatching (sparse -> dense), then
+// a continuous viridis ramp (matplotlib, reversed: yellow 60 cm -> deep
+// violet 400 cm+), quantised in 10 cm steps so no band lines show.
+const DEP_B=(()=>{const b=[1,20,40,60];for(let v=70;v<=400;v+=10)b.push(v);return b;})();
+const DEP_VIR=[[253,231,37],[181,222,43],[110,206,88],[53,183,121],[31,158,137],[38,130,142],[49,104,142],[62,74,137],[72,40,120],[68,1,84]];
+function depthVir(t){t=Math.max(0,Math.min(1,t))*(DEP_VIR.length-1);const i=Math.min(DEP_VIR.length-2,t|0),f=t-i,a=DEP_VIR[i],b=DEP_VIR[i+1];
+  return [Math.round(a[0]+(b[0]-a[0])*f),Math.round(a[1]+(b[1]-a[1])*f),Math.round(a[2]+(b[2]-a[2])*f)];}
+const DEP_BROWN=[[176,138,96],[150,108,66],[122,84,48]];
+const DEP_RGB=DEP_B.slice(0,-1).map((v,i)=>i<3?DEP_BROWN[i]:depthVir((v-60)/340)).concat([depthVir(1)]);
+function depthBand(v){if(v==null||!(v>=DEP_B[0]))return -1;let j=0;while(j+1<DEP_B.length&&v>=DEP_B[j+1])j++;return Math.min(j,DEP_RGB.length-1);}
+// brown hatching for the «not enough snow» bands: denser the deeper
+function depthHatch(bq,X,Y){const per=[9,7,5][bq],on=[1.6,2,2.2][bq];return ((X+Y)%per)<on;}
+const DEPTH_BOUNDS=DEP_B;
+function depthCol(v){const j=depthBand(v);return j<0?null:DEP_RGB[j];}
+function depthCss(v){const c=depthCol(v);return c?'rgb('+c.join(',')+')':'#D5DAE1';}
 // --- Domain edge mask -----------------------------------------------------
 // A gridded forecast is unreliable in the cells at its own boundary: they have
 // no upwind neighbours, so advection and the wind field are one-sided there.
@@ -16008,6 +16048,7 @@ function setRasterCls(get,k){_isoV=null;isoHiHide();_tmpV=null;tempHiHide();
   cx.putImageData(img,0,0);
   // drawn fine enough already: the browser must not blur it again
   try{const e=raster.getElement();if(e)e.classList.add('cls-crisp');}catch(e){}}
+const _bandOf=v=>layer==='depth'?depthBand(v):snowBand(v);
 function setRasterIso(val,alpha,k){try{const e=raster.getElement();if(e)e.classList.remove('cls-crisp');}catch(e){}_tmpV=null;if(tempHi&&map.hasLayer(tempHi))map.removeLayer(tempHi);const chm=domMask(),V=new Float32Array(NP);
   for(let p=0;p<NP;p++){const v=(inDomainEdge(p)||!chm[p])?null:val(p);V[p]=v==null?NaN:v;}
   const w=W*k,h=H*k;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
@@ -16018,12 +16059,13 @@ function setRasterIso(val,alpha,k){try{const e=raster.getElement();if(e)e.classL
       if(isNaN(V[(Math.round(fy))*W+Math.round(fx)])){B[q]=-1;continue;}
       let su=0,sw=0;const add=(p,wt)=>{const v=V[p];if(!isNaN(v)&&wt>0){su+=v*wt;sw+=wt;}};
       add(y0*W+x0,(1-tx)*(1-ty));add(y0*W+x1,tx*(1-ty));add(y1*W+x0,(1-tx)*ty);add(y1*W+x1,tx*ty);
-      B[q]=sw?snowBand(su/sw):-1;}}
+      B[q]=sw?_bandOf(su/sw):-1;}}
   // with the Alps layer beyond, the last SEAM_CELLS before the edge fade out
   // while the Alps layer fades in over the same band: no hard rectangle
-  const fe=(typeof ALPS!=='undefined'&&ALPS&&layer==='snow')?SEAM_CELLS:0;
-  for(let q=0;q<w*h;q++){const bq=B[q];if(bq<0)continue;const o=q*4,c=RGB[bq],X=q%w;
-    const edge=(X<w-1&&B[q+1]!==bq)||(q+w<w*h&&B[q+w]!==bq);
+  const fe=(typeof ALPS!=='undefined'&&ALPS&&layer==='snow')?SEAM_CELLS:0,dep=layer==='depth',PAL=dep?DEP_RGB:RGB;
+  for(let q=0;q<w*h;q++){const bq=B[q];if(bq<0)continue;const o=q*4,c=PAL[bq],X=q%w;
+    if(dep&&bq<3){if(depthHatch(bq,X,(q/w)|0)){d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=235;}continue;}
+    const edge=!(dep&&bq>3)&&((X<w-1&&B[q+1]!==bq)||(q+w<w*h&&B[q+w]!==bq));
     let fa=1;if(fe){const cx=(X+.5)/k,cy=((q/w)|0)+.5;const dc=Math.min(cx-EDGE_COLS,W-EDGE_COLS-cx,cy/k-EDGE_ROWS,H-EDGE_ROWS-cy/k);fa=Math.max(0,Math.min(1,dc/fe));}
     // the line is a darker shade of the band itself: present, but faint
     const f=edge?.8:1,al=bq<2?Math.min(255,alpha+30):alpha;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=(edge?Math.min(255,al+30):al)*fa;}
@@ -16063,7 +16105,7 @@ function isoHiRender(){const V=_isoV;
         const z=fineElev(lat[Y],lng[X]);let su=0,sw=0;
         const add=(p,wt)=>{if(wt>0&&!out(p)){su+=wt*(z==null?NV[p]:nsAtHeight(p,NV[p],z-ME[p]));sw+=wt;}};
         add(ya*W+xa,(1-tx)*(1-ty));add(ya*W+xb,tx*(1-ty));add(yb*W+xa,(1-tx)*ty);add(yb*W+xb,tx*ty);
-        const v=sw?su/sw:null;B[qq]=(v==null||(hid&&hid(v)))?-1:snowBand(v);}}}
+        const v=sw?su/sw:null;B[qq]=(v==null||(hid&&hid(v)))?-1:_bandOf(v);}}}
   else for(let Y=0;Y<h;Y++){const fy=Math.min(H-1,Math.max(0,((y0+(Y+.5)/q)-p0.y)/sy*H-.5)),ya=fy|0,yb=Math.min(H-1,ya+1),ty=fy-ya,yn=Math.round(fy)*W;
     for(let X=0;X<w;X++){const fx=Math.min(W-1,Math.max(0,((x0+(X+.5)/q)-p0.x)/sx*W-.5)),xa=fx|0,xb=Math.min(W-1,xa+1),tx=fx-xa,qq=Y*w+X;
       if(isNaN(V[yn+Math.round(fx)])){B[qq]=-1;continue;}
@@ -16072,10 +16114,12 @@ function isoHiRender(){const V=_isoV;
       v=V[ya*W+xb];wt=tx*(1-ty);if(v===v&&wt>0){su+=v*wt;sw+=wt;}
       v=V[yb*W+xa];wt=(1-tx)*ty;if(v===v&&wt>0){su+=v*wt;sw+=wt;}
       v=V[yb*W+xb];wt=tx*ty;if(v===v&&wt>0){su+=v*wt;sw+=wt;}
-      B[qq]=sw?snowBand(su/sw):-1;}}
+      B[qq]=sw?_bandOf(su/sw):-1;}}
   const al=_isoA,fe=(typeof ALPS!=='undefined'&&ALPS&&layer==='snow')?SEAM_CELLS:0;
-  for(let qq=0;qq<w*h;qq++){const bq=B[qq];if(bq<0)continue;const o=qq*4,c=RGB[bq],X=qq%w;
-    const edge=(X<w-1&&B[qq+1]!==bq)||(qq+w<w*h&&B[qq+w]!==bq);
+  const dep=layer==='depth',PAL=dep?DEP_RGB:RGB;
+  for(let qq=0;qq<w*h;qq++){const bq=B[qq];if(bq<0)continue;const o=qq*4,c=PAL[bq],X=qq%w;
+    if(dep&&bq<3){if(depthHatch(bq,X,(qq/w)|0)){d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=235;}continue;}
+    const edge=!(dep&&bq>3)&&((X<w-1&&B[qq+1]!==bq)||(qq+w<w*h&&B[qq+w]!==bq));
     // the same cross-fade towards the Alps layer as the coarse picture
     let fa=1;if(fe){const cx=((x0+(X+.5)/q)-p0.x)/sx*W,cy=((y0+(((qq/w)|0)+.5)/q)-p0.y)/sy*H;
       fa=Math.max(0,Math.min(1,Math.min(cx-EDGE_COLS,W-EDGE_COLS-cx,cy-EDGE_ROWS,H-EDGE_ROWS-cy)/fe));}
@@ -16600,7 +16644,8 @@ function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");const
 function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString(LOCALE(),{day:'2-digit',month:'short'});}
 function legendFor(l){const sn={avg:'Mittel',max:'Max',min:'Min',sub0:'immer <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
   if(l=="snow"){let h="<b>Neuschnee [cm]</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}${i===SB.length-2?'+':'–'+SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (antippen für Details)</div>"+LG_ABROAD;}
-  if(l=="depth"){let h="<b>Schneehöhe [cm]</b><br>";for(let i=0;i<DEPTH_BOUNDS.length-1;i++)h+=`<div><i style="background:${SC[Math.min(i,SC.length-1)]}"></i>${DEPTH_BOUNDS[i]}${i===DEPTH_BOUNDS.length-2?'+':'–'+DEPTH_BOUNDS[i+1]}</div>`;return h+LG_ABROAD;}
+  if(l=="depth"){let h="<b>Schneehöhe [cm]</b><br>";[[1,20],[20,40],[40,60]].forEach((r,i)=>{h+=`<div><i style="background:repeating-linear-gradient(135deg,rgb(${DEP_BROWN[i].join(',')}) 0 2px,transparent 2px 5px)"></i>${r[0]}–${r[1]} · zu wenig</div>`;});
+    [[60,100],[100,150],[150,200],[200,300],[300,400]].forEach(r=>{h+=`<div><i style="background:${depthCss((r[0]+r[1])/2)}"></i>${r[0]}${r[1]>=400?'+':'–'+r[1]}</div>`;});return h+LG_ABROAD;}
   if(l=="temp"){let extra="blau = kalt · rot = warm";if(stat=="sub0")extra="nur Zellen, die im ganzen Fenster unter 0°C bleiben";if(stat=="max05")extra="nur Zellen mit Höchstwert 0–5°C";return `<b>Temp 2 m [°C] (${sn})</b><br>${extra}`;}
   if(l=="wind"){const wl=WIND_LVLS[windLvl][1];if(stat=="lt10")return "<b>Wind "+wl+" ("+sn+")</b><br>grün = Höchstwind bleibt unter 10 km/h";return '<b>Wind '+wl+' (km/h, '+sn+')</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(30,120,255),rgb(30,240,135),rgb(255,240,0),rgb(255,40,0));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:11px"><span>0</span><span>25</span><span>50</span><span>70+</span></div><div style="margin-top:4px;font-size:12px">Pfeile zeigen die Windrichtung</div>';}
   if(l=="cloud")return "<b>Bewölkung [%]</b><br>zur gewählten Stunde · hellblau = wenig, tiefblau = bedeckt";
@@ -16755,10 +16800,11 @@ function legSpec(l){
   if(l==='snow'){const rows=[];for(let i=SB.length-2;i>=0;i--){const top=i===SB.length-2;
       rows.push({k:i,lo:SB[i],hi:top?Infinity:SB[i+1],c:SC[Math.min(i,SC.length-1)],s:SB[i]+(top?'+':'–'+SB[i+1]),n:SB[i]+(top?'+':'–'+SB[i+1])+' cm'});}
     return {t:'Neuschnee',u:'cm',rows,steps:snowSteps()};}
-  if(l==='depth'){const rows=[];for(let i=DEPTH_BOUNDS.length-2;i>=0;i--){const top=i===DEPTH_BOUNDS.length-2;
-      rows.push({k:i,lo:DEPTH_BOUNDS[i],hi:top?Infinity:DEPTH_BOUNDS[i+1],c:SC[Math.min(i,SC.length-1)],s:DEPTH_BOUNDS[i]+(top?'+':'–'+DEPTH_BOUNDS[i+1]),
-      n:DEPTH_BOUNDS[i]+(top?'+':'–'+DEPTH_BOUNDS[i+1])+' cm'});}
-    return {t:'Schneehöhe',u:'cm',rows,steps:snowSteps()};}
+  if(l==='depth'){const R=[[300,Infinity],[200,300],[150,200],[100,150],[60,100],[40,60],[20,40],[1,20]],rows=R.map((r,i)=>{
+      const hat=r[0]<60,c=hat?'repeating-linear-gradient(135deg,rgb('+DEP_BROWN[[1,20,40].indexOf(r[0])].join(',')+') 0 2px,transparent 2px 5px)':depthCss((r[0]+Math.min(r[1],400))/2);
+      const t=r[0]+(r[1]===Infinity?'+':'–'+r[1]);return {k:i,lo:r[0],hi:r[1],c,s:t,n:t+' cm'+(hat?' · zu wenig Schnee':'')};});
+    const ramp=[];for(let v=60;v<=400;v+=34)ramp.push(depthCss(v));
+    return {t:'Schneehöhe',u:'cm',rows,steps:{cols:[...DEP_BROWN.map(c=>'rgb('+c.join(',')+')'),...ramp],ticks:[[3,'60'],[7,'200'],[13,'400']]}};}
   if(l==='powder')return {t:'Powder',u:'Pulver cm',
     rows:(()=>{const rows=[];for(let i=SB.length-2;i>=0;i--){const top=i===SB.length-2;
       rows.push({c:SC[Math.min(i,SC.length-1)],s:(i?SB[i]:'<'+SB[1])+(top?'+':i?'–'+SB[i+1]:''),n:(i?SB[i]:'<'+SB[1])+(top?'+':i?'–'+SB[i+1]:'')+' cm Pulver'});}return rows;})(),
@@ -18332,7 +18378,7 @@ function ptLayerValue(lat,lon){const p=ptCell(lat,lon);if(p<0)return null;
   const L0=lyLayers(),it=!lyNoneOn()&&L0[lyIndex()]&&L0[lyIndex()][2],id=it&&it.id;
   try{
     if(id==='newsnow'){const v=nsAtHeight(p,nsAt(p,a,b),fz==null?NaN:fz-melevv(p));return {ic:ic(id),v:'+'+(v<10?v.toFixed(1):Math.round(v))+' cm',s:'Neuschnee',c:fpSnowCol(v)};}
-    if(id==='depth'){const v=cum[b*NP+p];return {ic:ic(id),v:Math.round(v)+' cm',s:'Schneehöhe',c:fpSnowCol(v)};}
+    if(id==='depth'){const v=cum[b*NP+p];return {ic:ic(id),v:Math.round(v)+' cm',s:'Schneehöhe',c:depthCss(v)};}
     if(id==='temp'){const v=mean(t=>tvI(t,p));return {ic:ic(id),v:(v>0?'+':'')+v.toFixed(1)+' °C',s:'Temperatur',c:v>0?'#E5484D':'#3B82F6'};}
     if(id==='wind'){const wk=mainToWind[p];const v=mean(t=>SPD[t*P+wk]/M.spd_mul*3.6);return {ic:ic(id),v:Math.round(v)+' km/h',s:'Wind',c:'#64748B'};}
     // Skiqualität is drawn by SNOWPACK: read the same engine at the same spot
@@ -19369,13 +19415,13 @@ function init3D(){
         'slope-src':{type:'raster',tiles:[swissTile('ch.swisstopo.hangneigung-ueber_30','png')],tileSize:256,minzoom:8,maxzoom:16},
         'skitour-src':{type:'raster',tiles:[swissTile('ch.swisstopo-karto.skitouren','png')],tileSize:256,minzoom:8,maxzoom:16}},
       layers:[
-        {id:'swisstopo-base',type:'raster',source:'swisstopo',layout:{visibility:photo3dOn()?'none':'visible'},paint:{'raster-opacity':0.3}},
-        {id:'hillshade',type:'raster',source:'hillshade-tiles',layout:{visibility:photo3dOn()?'none':'visible'},paint:{'raster-opacity':0.7}},
+        {id:'swisstopo-base',type:'raster',source:'swisstopo',layout:{visibility:photo3dOn()?'none':'visible'},paint:{'raster-opacity':0.55}},
+        {id:'hillshade',type:'raster',source:'hillshade-tiles',layout:{visibility:photo3dOn()?'none':'visible'},paint:{'raster-opacity':0.45}},
         // the photo by default in 3D, with a light shading from the terrain on
         // top: rocks read as rock, the sun side and the shadow side apart
         {id:'swissimage-3d',type:'raster',source:'swissimage',layout:{visibility:photo3dOn()?'visible':'none'},
           paint:{'raster-opacity':1,'raster-contrast':0.08,'raster-saturation':-0.04,'raster-fade-duration':150}},
-        {id:'relief-3d',type:'hillshade',source:'terrain-hs',layout:{visibility:photo3dOn()?'visible':'none'},
+        {id:'relief-3d',type:'hillshade',source:'terrain-hs',layout:{visibility:'visible'},
           paint:{'hillshade-exaggeration':0.42,'hillshade-illumination-direction':315,'hillshade-shadow-color':'#16202b',
             'hillshade-highlight-color':'rgba(255,255,255,0.28)','hillshade-accent-color':'#2b3038'}},
         // the 2D map's overlays, draped on the relief like everything else
@@ -19475,13 +19521,15 @@ function close3D(){
 document.getElementById('btn3dFloat').onclick=e=>{e.stopPropagation();if(is3d)close3D();else init3D();};
 document.getElementById('btn3dClose').onclick=()=>close3D();
 // 3D on the aerial photo (default) or on the map; remembered
-function photo3dOn(){try{return localStorage.getItem('ssm_3d_photo')!=='0';}catch(e){return true;}}
-function photo3dSet(on){try{localStorage.setItem('ssm_3d_photo',on?'1':'0');}catch(e){}
-  const b=document.getElementById('btn3dPhoto');if(b){b.setAttribute('aria-pressed',on?'true':'false');b.classList.toggle('on',on);b.textContent=on?'Luftbild':'Karte';}
+// 3D opens on the winter map with the relief shaded from the real heights;
+// the (summer) aerial photo is the alternative (per request, 23.11.)
+function photo3dOn(){try{return localStorage.getItem('ssm_3d_photo2')==='1';}catch(e){return false;}}
+function photo3dSet(on){try{localStorage.setItem('ssm_3d_photo2',on?'1':'0');}catch(e){}
+  const b=document.getElementById('btn3dPhoto');if(b){b.setAttribute('aria-pressed',on?'true':'false');b.classList.toggle('on',on);b.textContent=on?'Luftbild (Sommer)':'Winterkarte';}
   if(!map3d||!map3d.getLayer)return;
   const vis=(id,v)=>{if(map3d.getLayer(id))map3d.setLayoutProperty(id,'visibility',v?'visible':'none');};
-  vis('swissimage-3d',on);vis('relief-3d',on);
-  const mv=(document.getElementById('mapOpac3d')||{value:30}).value/100;
+  vis('swissimage-3d',on);vis('relief-3d',true);
+  const mv=(document.getElementById("mapOpac3d")||{value:55}).value/100;
   vis('swisstopo-base',!on&&mv>=0.02);vis('hillshade',!on&&mv<=0.98);
   const ctl=document.getElementById('mapOpac3d');if(ctl&&ctl.parentElement)ctl.parentElement.style.display=on?'none':'';}
 document.getElementById('btn3dPhoto').onclick=()=>{photo3dSet(!photo3dOn());try{haptic(4);}catch(e){}};
@@ -22156,7 +22204,9 @@ function qsCmText(cm){return (cm>=QS_CM_MAX?QS_CM_MAX+'+':Math.round(cm))+' cm';
 const QS_DEPTH=SB.slice(0,-1).map((lo,i,a)=>[lo,i<a.length-1?a[i+1]:null,SC[i]]);
 const QS_ROW=44;
 let qs=null,qsMarker=null,_qsWT=0;
-function qsOpen(){
+// «Powder melden»: the quick report reduced to powder + depth (+ photo), one screen
+function qsPowderOpen(){qsOpen({powder:true});}
+function qsOpen(o){o=o||{};
   if(!sb||!sbUser){authShow();return;}
   // always on the map screen, centred on where you are (GPS below)
   try{if(document.body.getAttribute('data-screen')!=='search')navGo('map');}catch(e){}
@@ -22205,6 +22255,8 @@ function qsOpen(){
     +'<span id="qsPhN">Foto</span><input type="file" accept="image/*" multiple hidden onchange="qsPhoto(this)"></label>'
     +'<button type="button" class="qs-cm" id="qsCm" onclick="qsCmtToggle()" aria-label="Kommentar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span>Text</span></button>'
     +'<button type="button" class="qs-post" id="qsPost" onclick="qsPost()" disabled>Posten</button></div></div>';
+  el.classList.toggle('qs-simple',!!o.powder);
+  if(o.powder){const h=el.querySelector('.qs-hd b');if(h)h.textContent='Powder melden';}
   el.classList.add('open');document.body.classList.add('qs-open');try{navSync();}catch(e){}
   qsDepth(15);qsCrossOn();qsWhenInit();
   {const qi=el.querySelector('.qs-in');if(qi)qi.addEventListener('scroll',()=>qi.classList.toggle('scrolled',qi.scrollTop>4),{passive:true});}
@@ -23344,6 +23396,8 @@ function obsWarmLocation(){if(!navigator.geolocation)return;navigator.geolocatio
   if(obsState&&obsState.location.source!=='exif'&&obsState.location.source!=='manual'){obsApplyLoc(p.coords.latitude,p.coords.longitude,'device');if(!obsState.observedAt)obsState.observedAt=new Date();const st=obsState.steps[obsState.step];if(st&&(st.k==='submit'||st.final))obsRender();}
 },()=>{},{enableHighAccuracy:true,timeout:12000,maximumAge:0});}
 function obsOpen(){if(!sb||!sbUser){authShow();return;}
+  // straight to the observation form, whatever was open (feed, my reports)
+  try{if(document.getElementById('feedPage').classList.contains('open'))feedClose();}catch(e){}try{rpClose();}catch(e){}
   obsState=null;obsOpenCards=new Set();document.getElementById('reportOverlay').style.display='flex';
   document.getElementById('obsBack').style.visibility='hidden';
   document.getElementById('obsProgress').innerHTML='';
@@ -24899,7 +24953,8 @@ function feedSideSync(){
   // the visible third has moved, so the map has to re-centre on it
   setTimeout(()=>{try{map.invalidateSize({animate:false,pan:false});}catch(e){}},320);
 }
-function feedCreatePost(){if(!sb||!sbUser){authShow();return;}scrGo('report');}
+// «+» in the feed: the same «Melden» menu as the tab bar (it opened «Meine Meldungen»)
+function feedCreatePost(){if(!sb||!sbUser){authShow();return;}try{repSheetToggle(true);}catch(e){scrGo('report');}}
 // --- Comments ---
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 let cmtReportId=null;
