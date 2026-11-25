@@ -494,7 +494,7 @@ def write_summary(H, out: Path):
              "kind": "an" if "an" in tby[d] else "rb"} for d in sorted(tby)[-120:]]
     # the stations, with the model beside the measurement for the last days
     tst, meta = H.get("tst") or {}, H.get("tmeta") or {}
-    tdays = sorted(tst)[-7:]
+    tdays = sorted(tst)[-14:]
     stations = []
     for code, m in meta.items():
         v = [(d, tst[d][code]) for d in tdays if code in tst[d]]
@@ -502,9 +502,9 @@ def write_summary(H, out: Path):
             continue
         stations.append({"code": code, "lat": m[0], "lon": m[1], "z": m[2], "name": m[3],
                          "days": [{"d": d, "mn": x[0], "mx": x[1], "on": x[2], "ox": x[3]} for d, x in v]})
-    # new snow per station: the last 3 measured days, model beside it
+    # new snow per station: the last 14 measured days, model beside it
     nst, nmeta = H.get("nst") or {}, H.get("nmeta") or {}
-    ndays = sorted(nst)[-3:]
+    ndays = sorted(nst)[-14:]
     nstations = []
     for sid in ("slf", "msw"):
         for code, m in (nmeta.get(sid) or {}).items():
