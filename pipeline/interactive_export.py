@@ -980,6 +980,22 @@ def _slf_avalanche():
         return None
     if not doc:
         return None
+    # the bulletin texts repeat across regions: each distinct text once, in
+    # doc["tx"], the regions point to it by index (keeps the blob small)
+    tx, idx = [], {}
+    def _ref(v):
+        if not v:
+            return None
+        if v not in idx:
+            idx[v] = len(tx); tx.append(v)
+        return idx[v]
+    for r in doc.get("regions") or []:
+        for k in ("snowpack", "tendency", "weather"):
+            if k in r:
+                r[k] = _ref(r[k])
+        if r.get("texts"):
+            r["texts"] = [{"t": t.get("t", ""), "c": _ref(t.get("c"))} for t in r["texts"]]
+    doc["tx"] = tx
     n = len(doc.get("regions") or [])
     with_geom = sum(1 for r in doc["regions"] if r.get("geometry"))
     print(f"[INT] Lawinenbulletin: {n} Regionen ({with_geom} mit Geometrie)"
@@ -7539,6 +7555,22 @@ body.wcp-open #mapFabs,body.wcp-open #miniLegend{opacity:0!important;pointer-eve
 .acc-src b{display:block;font:600 13.5px/1.3 var(--font)}.acc-src small{font:400 12px/1.3 var(--font);color:var(--md-on-surface-var,#555)}
 .acc-mark{flex:none;min-width:58px;padding:6px 8px;border-radius:10px;background:#fff;border:1px solid var(--md-outline-var,#ddd);font:800 12px/1 var(--font);letter-spacing:.02em;color:#C5221F;text-align:center}
 .acc-upd{margin-top:-4px!important}
+/* the SLF bulletin text of a region, M3 bottom sheet */
+.av-sheet{position:fixed;inset:0;z-index:20040;background:rgba(0,0,0,.32);display:flex;align-items:flex-end;justify-content:center}
+.av-in{width:min(640px,100%);max-height:86vh;overflow:auto;background:var(--md-surface,#fff);border-radius:28px 28px 0 0;padding:14px 20px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 24px rgba(0,0,0,.18)}
+body.desk .av-sheet{align-items:center}body.desk .av-in{border-radius:28px}
+.av-hd{display:flex;align-items:center;gap:12px;position:sticky;top:-14px;background:inherit;padding:4px 0 8px}
+.av-lv{flex:none;min-width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font:800 20px/1 var(--font)}
+.av-hd>div{flex:1;min-width:0}.av-hd b{display:block;font:600 18px/1.25 var(--font)}
+.av-hd small{display:block;font:400 13px/1.3 var(--font);color:var(--md-on-surface-var,#555)}
+.av-x{flex:none;width:40px;height:40px;border-radius:20px;border:0;background:var(--md-surface-c,#EEF1F6);font:400 24px/1 var(--font);cursor:pointer}
+.av-core{margin:4px 0 8px;font:500 14px/1.4 var(--font)}
+.av-in section{margin:12px 0 4px}.av-in h4{margin:0 0 4px;font:600 15px/1.3 var(--font)}
+.av-tx{font:400 14px/1.5 var(--font);color:var(--md-on-surface,#1B1B1F)}.av-tx h5{margin:8px 0 2px;font:600 13.5px/1.3 var(--font)}
+.av-tx p{margin:2px 0 6px}.av-tx ul{margin:2px 0 6px;padding-left:20px}
+.av-src{margin:14px 0 0;font:400 12px/1.4 var(--font);color:var(--md-on-surface-var,#666)}
+.av-more{display:block;margin:8px 0 2px;height:36px;padding:0 16px;border-radius:18px;border:0;background:var(--md-primary,#0B63B5);color:#fff;font:600 13.5px/1 var(--font);cursor:pointer}
+
 /* stations by kind: IMIS automatic, SLF / MeteoSwiss read by hand, SwissMetNet */
 .stn.vst{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;padding:0 7px 0 3px!important}
 .stn.vst i{font:800 9px/1 var(--font);font-style:normal;letter-spacing:.02em;padding:3px 4px;border-radius:6px;color:#fff}
@@ -10984,6 +11016,35 @@ function ovSyncUI(){try{ovChipsSync();}catch(e){}
 const AV_COLORS={1:'#CCFF66',2:'#FFFF00',3:'#FF9900',4:'#FF0000',5:'#800000'};
 const AV_LABELS={1:'gering',2:'mässig',3:'erheblich',4:'gross',5:'sehr gross'};
 function avRegions(){const a=M.avalanche;return (a&&a.regions)||[];}
+// The bulletin's own text for a region, in the app: the SLF's words as they
+// are (its HTML reduced to headings, paragraphs and lists), never rewritten
+function avTx(i){const t=M.avalanche&&M.avalanche.tx;return (i!=null&&t&&t[i])||'';}
+function avSafeHtml(html){if(!html)return '';
+  try{const d=new DOMParser().parseFromString('<div>'+html+'</div>','text/html').body.firstChild,out=[];
+    const walk=n=>{n.childNodes.forEach(c=>{if(c.nodeType===3){out.push(escapeHtml(c.textContent));return;}
+      const t=(c.tagName||'').toLowerCase();
+      if(t==='br'){out.push('<br>');return;}
+      const ok={h2:'h5',h3:'h5',p:'p',ul:'ul',li:'li',b:'b',strong:'b',i:'i',em:'i'}[t];
+      if(ok)out.push('<'+ok+'>');walk(c);if(ok)out.push('</'+ok+'>');});};
+    walk(d);return out.join('');}catch(e){return escapeHtml(String(html).replace(/<[^>]+>/g,' '));}}
+function avTextOpen(id){const r=avRegions().find(x=>String(x.id)===String(id));if(!r)return;
+  try{map.closePopup();}catch(e){}
+  let el=document.getElementById('avSheet');if(el)el.remove();
+  el=document.createElement('div');el.id='avSheet';el.className='av-sheet';el.setAttribute('role','dialog');el.setAttribute('aria-label','Lawinenbulletin');
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  const lv=r.danger,col=AV_COLORS[lv]||'#999',dark=lv>=4;
+  const pub=r.published?new Date(r.published).toLocaleString('de-CH',{weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+  const until=r.until?new Date(r.until).toLocaleString('de-CH',{weekday:'short',hour:'2-digit',minute:'2-digit'}):'';
+  const sec=(h,html)=>html?'<section><h4>'+h+'</h4><div class="av-tx">'+html+'</div></section>':'';
+  el.innerHTML='<div class="av-in"><div class="av-hd"><span class="av-lv" style="background:'+col+';color:'+(dark?'#fff':'#1B1B1F')+'">'+lv+(r.sub&&r.sub!=='='?r.sub:'')+'</span>'
+    +'<div><b>'+escapeHtml(AV_LABELS[lv]||'')+'</b><small>'+escapeHtml((r.regions||[]).slice(0,4).join(', '))+((r.regions||[]).length>4?' u. a.':'')+'</small></div>'
+    +'<button type="button" class="av-x" onclick="this.closest(\'.av-sheet\').remove()" aria-label="Schliessen">×</button></div>'
+    +(r.core?'<p class="av-core">'+escapeHtml(r.core)+'</p>':'')
+    +(r.texts||[]).map(t=>sec(escapeHtml(t.t||'Lawinenproblem'),avSafeHtml(avTx(t.c)))).join('')
+    +sec('Schneedecke',avSafeHtml(avTx(r.snowpack)))+sec('Tendenz',avSafeHtml(avTx(r.tendency)))+sec('Wetter',avSafeHtml(avTx(r.weather)))
+    +'<p class="av-src">Lawinenbulletin des WSL-Instituts für Schnee- und Lawinenforschung SLF'+(pub?' · publiziert '+pub:'')+(until?' · gültig bis '+until:'')
+    +' · CC BY 4.0 · <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation/" target="_blank" rel="noopener">Original auf slf.ch</a></p></div>';
+  document.body.appendChild(el);try{haptic(4);}catch(e){}}
 function avByRegion(){const m={};avRegions().forEach(r=>{m[r.id]=r;});return m;}
 // The neighbouring countries, beside the SLF: each warning service's own
 // danger level per region, as the EAWS publishes them every day
@@ -11042,6 +11103,7 @@ function avBuildLayer(){
         +(p.problems&&p.problems.length?'<br>Problem: '+escapeHtml(p.problems.join(', ')):'')
         +(p.regions&&p.regions.length?'<div style="margin-top:4px;font-size:12px;opacity:.8">'+escapeHtml(p.regions.slice(0,6).join(', '))+(p.regions.length>6?' u. a.':'')+'</div>':'')
         +(p.until?'<div style="font-size:12px;opacity:.7">gültig bis '+new Date(p.until).toLocaleString('de-CH',{weekday:'short',hour:'2-digit',minute:'2-digit'})+'</div>':'')
+        +(p.texts&&p.texts.length||p.snowpack!=null?'<button type="button" class="av-more" onclick="avTextOpen(\''+escapeHtml(String(p.id))+'\')">Bulletin-Text lesen</button>':'')
         +'<div style="margin-top:6px;font-size:12px;opacity:.75">Quelle: SLF ·'
         +' <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation/"'
         +' target="_blank" rel="noopener">Bulletin öffnen</a></div>');

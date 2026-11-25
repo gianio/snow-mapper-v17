@@ -224,6 +224,19 @@ def _bulletin_entry(b: dict) -> Optional[Dict[str, Any]]:
         if ct and not core:
             core = ct
     regs = [r for r in (_first(b, "regions", "region", default=[]) or []) if isinstance(r, dict)]
+    # the bulletin's own words (CAAML comments; HTML with h2/p/ul/li/br):
+    # what each avalanche problem means, the snowpack, the tendency, the
+    # weather -- shown as they are, never rewritten
+    def _c(x):
+        return (x or {}).get("comment") if isinstance(x, dict) else None
+    texts = []
+    for pr in problems:
+        if isinstance(pr, dict) and pr.get("comment"):
+            kind = _first(pr, "problemType", "problem_type", "type")
+            texts.append({"t": PROBLEM_DE.get(kind, kind) if isinstance(kind, str) else "",
+                          "c": pr.get("comment")})
+    tend = _first(b, "tendency", default=None)
+    tend = tend[0] if isinstance(tend, list) and tend else tend
     return {
         "id": _first(b, "bulletinID", "bulletinId", default=None)
               or ",".join(str(r.get("regionID")) for r in regs),
@@ -236,6 +249,11 @@ def _bulletin_entry(b: dict) -> Optional[Dict[str, Any]]:
                         "startTime", "start_time"),
         "until": _first(_first(b, "validTime", "validity_time", default={}) or {},
                         "endTime", "end_time"),
+        "texts": texts,
+        "snowpack": _c(_first(b, "snowpackStructure", default=None)),
+        "tendency": _c(tend),
+        "weather": _c(_first(b, "weatherForecast", default=None)),
+        "published": _first(b, "publicationTime", default=None),
     }
 
 
