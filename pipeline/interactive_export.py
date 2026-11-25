@@ -5521,6 +5521,16 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
  .wc-pin svg{width:16px;height:16px}
  .wc-popup .leaflet-popup-content-wrapper{border-radius:18px;padding:0;overflow:hidden}
  .wc-popup .leaflet-popup-content{margin:0;width:280px!important;max-width:calc(100vw - 104px)}
+ @media (max-width:899px){.wc-popup .leaflet-popup-content{width:calc(100vw - 16px)!important;max-width:calc(100vw - 16px)!important}}
+ /* M3: a clear round close button over the picture */
+ .wc-popup a.leaflet-popup-close-button{top:8px!important;right:8px!important;width:40px!important;height:40px!important;border-radius:20px;
+   display:grid!important;place-items:center;background:rgba(255,255,255,.94)!important;color:#1B1B1F!important;font:400 0/1 var(--font)!important;
+   box-shadow:0 1px 3px rgba(0,0,0,.3),0 4px 8px rgba(0,0,0,.15);z-index:5}
+ .wc-popup a.leaflet-popup-close-button span{display:none}
+ .wc-popup a.leaflet-popup-close-button::before{content:'';width:18px;height:18px;background:currentColor;
+   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z'/%3E%3C/svg%3E") center/contain no-repeat;
+   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z'/%3E%3C/svg%3E") center/contain no-repeat}
+ .wc-popup .wc-zoom{right:auto!important;left:8px}
  .wc-pop{display:flex;flex-direction:column;gap:3px;padding-bottom:10px}
  .wc-pop img,.wc-pop .wc-img{width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--fill);display:block;margin-bottom:6px}
  .wc-pop b,.wc-pop span,.wc-pop a,.wc-pop em{padding:0 12px}
@@ -13478,7 +13488,10 @@ async function wcRefresh(){
       if(wcSeen.has(id)||loc.latitude==null)return;
       const mk=L.marker([loc.latitude,loc.longitude],{icon:wcIcon(),title:w.title||'Webcam',zIndexOffset:300});
       const dk=document.body.classList.contains('desk');
-      mk.bindPopup('<div class="wc-pop"><div class="wc-img skel"></div><b>'+escapeHtml(w.title||'Webcam')+'</b></div>',{className:'wc-popup',maxWidth:dk?500:300,minWidth:dk?440:260});
+      // on a phone the preview takes the whole width of the screen
+      const pw=dk?0:Math.max(260,innerWidth-16);
+      mk.bindPopup('<div class="wc-pop"><div class="wc-img skel"></div><b>'+escapeHtml(w.title||'Webcam')+'</b></div>',
+        {className:'wc-popup',maxWidth:dk?500:pw,minWidth:dk?440:pw,autoPanPadding:L.point(8,72)});
       mk.on('popupopen',()=>{try{mk.closeTooltip();}catch(e){}wcPreview(id,mk);});
       // on a computer: hovering a camera shows its latest picture right away
       mk.on('mouseover',()=>wcPeek(id,mk,w.title||'Webcam'));
@@ -13492,14 +13505,14 @@ async function wcRefresh(){
 // picture, «day» = Windy's 24 h timelapse with its own time slider.
 // (Windy's API has no picture archive of its own to scrub through, and its
 // picture links expire after minutes -- the timelapse player is the archive.)
-const WC_DEF_OPTS=[['auto','Auto'],['img','Jetzt'],['daylight','Tag'],['day','24 h']];
+const WC_DEF_OPTS=[['auto','Auto'],['img','Jetzt'],['daylight','Tag'],['day','24 h'],['month','30 Tage']];
 function wcDef(){try{const v=localStorage.getItem('ssm_wcdef');return WC_DEF_OPTS.some(o=>o[0]===v)?v:'auto';}catch(e){return 'auto';}}
 function wcDefSet(v){try{localStorage.setItem('ssm_wcdef',v);}catch(e){}}
 function wcIsNight(){try{const d=zLocal(Date.now()),h=d.getUTCHours()+d.getUTCMinutes()/60,doy=Math.floor((Date.now()-Date.UTC(d.getUTCFullYear(),0,0))/864e5),
   half=dayLenH(doy)/2;return h<12.5-half+0.3||h>12.5+half-0.3;}catch(e){return false;}}
 function wcPopMedia(c,mode){
   if(mode==='auto')mode=wcIsNight()&&c.dimg?'daylight':'img';
-  if(mode==='day'&&c.player)return '<iframe class="wc-frame" src="'+escapeHtml(c.player)+'" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer-when-downgrade" title="'+escapeHtml(c.t)+' – 24 h"></iframe>';
+  if((mode==='day'&&c.player)||(mode==='month'&&c.month))return '<iframe class="wc-frame" src="'+escapeHtml(mode==='month'?c.month:c.player)+'" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer-when-downgrade" title="'+escapeHtml(c.t)+(mode==='month'?' – 30 Tage':' – 24 h')+'"></iframe>';
   const s=mode==='daylight'?(c.dimg||c.img):(c.img||c.dimg);
   return s?'<img src="'+escapeHtml(s)+'" alt="">':'<div class="wc-img"></div>';}
 const _wcPop={};
@@ -13508,7 +13521,7 @@ function wcPopMode(id,mode,save){const c=_wcPop[id];if(!c)return;if(save)wcDefSe
   document.querySelectorAll('#wcs-'+id+' button').forEach(b=>b.classList.toggle('on',b.dataset.m===mode));
   const n=document.getElementById('wcn-'+id);if(n)n.textContent=wcNoteTxt(c,mode);
   try{haptic(3);}catch(e){}}
-function wcNoteTxt(c,mode){return mode==='day'?'Letzte 24 Stunden · Zeitregler im Player'
+function wcNoteTxt(c,mode){return mode==='month'?'Letzte 30 Tage · im Player Tag für Tag zurück und vor':mode==='day'?'Letzte 24 Stunden · Morgen, Mittag, Abend mit dem Zeitregler im Player'
   :(mode==='daylight'||(mode==='auto'&&wcIsNight()&&c.dimg))?'Letztes Bild bei Tageslicht':'Aktuelles Bild';}
 const _wcThumb=new Map();
 function wcThumb(id){if(!_wcThumb.has(id))_wcThumb.set(id,fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'})
@@ -13557,16 +13570,17 @@ addEventListener('keydown',e=>{if(e.key==='Escape')wcFullClose();});
 async function wcPreview(id,mk){
   try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls,player',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
     const w=await r.json(),imc=(w.images&&w.images.current)||{},imd=(w.images&&w.images.daylight)||{},pl=w.player||{};
-    const day=typeof pl.day==='string'?pl.day:(pl.day&&typeof pl.day==='object'?(pl.day.embed||pl.day.link):null);
+    const pu=k=>typeof pl[k]==='string'?pl[k]:(pl[k]&&typeof pl[k]==='object'?(pl[k].embed||pl[k].link):null);
+    const day=pu('day'),month=pu('month');
     const loc=w.location||{},upd=w.lastUpdatedOn?new Date(w.lastUpdatedOn):null;
     const when=upd?new Intl.DateTimeFormat(LOCALE(),{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}).format(upd):'';
     const link=(w.urls&&(w.urls.detail||w.urls.provider))||('https://www.windy.com/webcams/'+id);
-    const c=_wcPop[id]={t:w.title||'Webcam',img:imc.preview||imc.thumbnail||null,dimg:imd.preview||imd.thumbnail||null,player:typeof day==='string'?day:null};
+    const c=_wcPop[id]={t:w.title||'Webcam',img:imc.preview||imc.thumbnail||null,dimg:imd.preview||imd.thumbnail||null,player:typeof day==='string'?day:null,month:typeof month==='string'?month:null};
     const def=wcDef(),eid=escapeHtml(String(id));
     mk.setPopupContent('<div class="wc-pop"><div class="wc-media" id="wcm-'+eid+'" role="button" tabindex="0" aria-label="Webcam gross – letzte 24 Stunden" onclick="wcFull(\''+eid+'\')">'+wcPopMedia(c,def)+'<span class="wc-zoom" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span></div>'
       // M3 segmented button: what to show; the choice becomes the default
       +'<div class="wc-seg" id="wcs-'+eid+'" role="group" aria-label="Webcam-Ansicht">'
-      +WC_DEF_OPTS.filter(o=>o[0]!=='day'||c.player).filter(o=>o[0]!=='daylight'||c.dimg)
+      +WC_DEF_OPTS.filter(o=>o[0]!=='day'||c.player).filter(o=>o[0]!=='month'||c.month).filter(o=>o[0]!=='daylight'||c.dimg)
         .map(o=>'<button type="button" data-m="'+o[0]+'" class="'+(o[0]===def?'on':'')+'" onclick="wcPopMode(\''+eid+'\',\''+o[0]+'\',true)">'+o[1]+'</button>').join('')+'</div>'
       +'<small class="wc-note" id="wcn-'+eid+'">'+escapeHtml(wcNoteTxt(c,def))+'</small>'
       +'<b>'+escapeHtml(w.title||'Webcam')+'</b><span>'+escapeHtml([loc.city,loc.region].filter(Boolean).join(', '))+(when?' · '+when:'')+'</span>'
