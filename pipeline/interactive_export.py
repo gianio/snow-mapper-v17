@@ -7510,6 +7510,9 @@ body.leg-open #miniLegend #mlName{color:var(--md-on-primary)}
 #fabFold svg{width:12px;height:12px;transition:transform .2s}
 body.fabs-folded #fabFold svg{transform:rotate(180deg)}
 body.fabs-folded #mapFabs>:not(#fabFold){display:none!important}
+/* the side buttons stay: no fold handle any more */
+#fabFold{display:none!important}
+body.wcp-open #mapFabs,body.wcp-open #miniLegend{opacity:0!important;pointer-events:none!important;transition:opacity .15s}body.fabs-folded #mapFabs>:not(#fabFold){display:revert!important}
 .wc-pin{width:24px!important;height:24px!important;border-radius:8px!important;box-shadow:0 0 0 1.5px #fff,0 2px 6px rgba(0,0,0,.28)!important}
 .wc-pin svg{width:13px!important;height:13px!important}
 #tlTomorrowBtn{display:none!important}
@@ -7869,7 +7872,7 @@ body.insp-open .pt-chip-wrap{display:none}
   body.nav-hide:not(.desk) #tabBar{transform:none!important}
 }
 /* the timeline: the same glass, M3 filter chips */
-#bottomPanel{border-radius:24px!important;background:rgba(255,255,255,.52)!important;-webkit-backdrop-filter:blur(18px) saturate(1.6)!important;backdrop-filter:blur(18px) saturate(1.6)!important;
+#bottomPanel{border-radius:24px!important;background:rgba(255,255,255,.60)!important;-webkit-backdrop-filter:blur(18px) saturate(1.6)!important;backdrop-filter:blur(18px) saturate(1.6)!important;
   box-shadow:0 4px 18px rgba(16,24,40,.14),inset 0 0 0 1px rgba(255,255,255,.55)!important;border:0!important}
 #tlChips{gap:6px!important;align-items:center}
 #tlChips button{height:32px!important;min-width:0;padding:0 12px!important;border-radius:8px!important;border:1px solid var(--md-outline,#74777F)!important;
@@ -8972,7 +8975,7 @@ const I18N_DICT={
 "Ganze Zeichnung löschen?":["Delete the whole drawing?","Effacer tout le dessin ?","Cancellare tutto il disegno?"],
 "Gealterter":["Aged","Vieillie","Invecchiata"],
 "Gebiet":["Area","Région","Zona"],
-"Gemeldetes Powder":["Reported powder","Poudreuse signalée","Polvere segnalata"],
+"Gemeldeter Powder":["Reported powder","Poudreuse signalée","Polvere segnalata"],
 "Gemerkt":["Saved","Enregistré","Salvato"],
 "Gepostet ✓":["Posted ✓","Publié ✓","Pubblicato ✓"],
 "Gesamtbewölkung aus dem Wettermodell zur gewählten Stunde – wie ein Satellitenbild, kein Mittel. Hellblau = wenige Wolken, tiefblau = bedeckt. Wichtig für Sicht, Sonneneinstrahlung und ob die Oberfläche in der Nacht abkühlt.":["Total cloud cover from the weather model at the selected hour – like a satellite picture, not an average. Light blue = few clouds, deep blue = overcast. Matters for visibility, sunshine and whether the surface cools at night.","Nébulosité totale du modèle météo à l'heure choisie – comme une image satellite, pas une moyenne. Bleu clair = peu de nuages, bleu foncé = couvert. Important pour la visibilité, l'ensoleillement et le refroidissement nocturne de la surface.","Nuvolosità totale del modello meteo all'ora scelta – come un'immagine satellitare, non una media. Azzurro = poche nuvole, blu scuro = coperto. Importante per visibilità, soleggiamento e raffreddamento notturno della superficie."],
@@ -9980,11 +9983,14 @@ function clvCol(l,m,h){let r=0,g=0,b=0,a=0;
 // snow always reads darker), cyan through blue and violet to a deep berry.
 // One snow-amount scale everywhere (maps, legends, reports, profiles), fixed in
 // the app so an older data blob with the old colours draws the same.
-// Neuschnee in the SLF's own classes (White Risk «Neuschnee»: 1 10 20 30 40 60 80 100 cm)
-const SB=[1,10,20,30,40,60,80,100,300],SC=['#93DFF0','#3BA8E8','#2A86DE','#3563CF','#5446BC','#6631A3','#761565','#640C44'],RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
+// Neuschnee in the SLF's own classes (White Risk «Neuschnee»: 1 10 20 30 40 60 80 100 cm),
+// coloured from cmocean «dense» (perceptually uniform: pale blue -> violet ->
+// near black, strong contrast from a little to a lot); the same scale for
+// Neuschnee, Schneehöhe and powder
+const SB=[1,10,20,30,40,60,80,100,300],SC=['#B4D8E4','#89BCE3','#749CE4','#7777D9','#7952B8','#71338D','#5F1B5B','#3F102D'],RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
 // powder depth on the SNOWPACK layers and in reports keeps its finer classes
 // (the exports carry these bounds: classify.POWDER_BOUNDS)
-const PB=[1,5,10,15,20,30,40,50,75,100,300],PC=['#93DFF0','#62C8EE','#3BA8E8','#2A86DE','#3563CF','#5446BC','#6631A3','#741F86','#761565','#640C44'];
+const PB=[1,5,10,15,20,30,40,50,75,100,300],PC=['#B4D8E4','#92C3E2','#79AAE4','#738FE3','#7772D6','#7957BD','#753D9D','#6B2879','#591750','#3F102D'];
 function snowCol(v){if(v<SB[0])return null;for(let i=SB.length-1;i>=1;i--)if(v>=SB[i-1])return RGB[Math.min(i-1,RGB.length-1)];return RGB[0];}
 // The stepped legend above is right for the model layers (an official
 // SLF-style band scale), but a field built by blending overlapping reports
@@ -10888,6 +10894,7 @@ function skiBuildLayer(){const g=L.layerGroup();
   return g;}
 function ovAvailable(k){
   if(k==='avalanche')return true;   // SLF, and the neighbouring countries via EAWS
+  if(k==='uncert')return false;     // too coarse to say anything useful: off
   if(k==='skitourVec')return tourList().length>0;
   if(k==='webcams')return !!WEBCAM_KEY;
   if(k==='variantA')return vaAvailable();
@@ -11502,7 +11509,7 @@ function vaHiEngine(){
         // the full snow scale of Neuschnee / Schneehöhe (1 … 100+ cm), not capped at 30
         while(j6<B6.length&&pw6>=B6[j6])j6++;j6=Math.max(1,Math.min(10,j6));
         var P6=((E.pk.rgba&&E.pk.rgba.powder&&E.pk.rgba.powder.length>10)?E.pk.rgba.powder
-          :[[0,0,0,0],[102,238,242,250],[79,195,242,250],[61,142,240,235],[90,111,214,235],[147,112,216,235],[196,91,224,235],[224,140,108,235],[240,164,52,235],[238,107,30,235],[226,56,43,235]])[j6];
+          :[[0,0,0,0],[180,216,228,250],[146,195,226,250],[121,170,228,235],[115,143,227,235],[119,114,214,235],[121,87,189,235],[117,61,157,235],[107,40,121,235],[89,23,80,235],[63,16,45,235]])[j6];
         E.cls=L;out[0]=P6[0];out[1]=P6[1];out[2]=P6[2];out[3]=P6[3];return;}}
     else if(layer==='powder'){
       // dry powder depth in the SLF snow-depth bands (classify_powder)
@@ -11510,7 +11517,7 @@ function vaHiEngine(){
       if(!(hs>=Math.min(T.THIN_COVER_HS,T.SK_THIN_POWDER_HS!=null?T.SK_THIN_POWDER_HS:3))||!(pw>=T.SK_POWDER_MIN)||lw>T.SK_WET_LWC){out[0]=out[1]=out[2]=out[3]=0;return;}
       var B=E.pk.powder_bounds||[1,5,10,15,20,30,40,50,75,100],i=0;while(i<B.length&&pw>=B[i])i++;
       var PT=(E.pk.rgba&&E.pk.rgba.powder&&E.pk.rgba.powder.length>9)?E.pk.rgba.powder
-        :[[0,0,0,0],[102,238,242,250],[79,195,242,250],[61,142,240,235],[90,111,214,235],[147,112,216,235],[196,91,224,235],[224,140,108,235],[240,164,52,235],[238,107,30,235],[226,56,43,235]];
+        :[[0,0,0,0],[180,216,228,250],[146,195,226,250],[121,170,228,235],[115,143,227,235],[119,114,214,235],[121,87,189,235],[117,61,157,235],[107,40,121,235],[89,23,80,235],[63,16,45,235]];
       E.cls=i;var pc=PT[Math.max(1,Math.min(PT.length-1,i))];out[0]=pc[0];out[1]=pc[1];out[2]=pc[2];out[3]=pc[3];return;}
     else if(layer==='wind'){L=E.clsWind(m);key='wind';}
     else if(layer==='simple'){L=E.clsSimple(m);key='simple';}
@@ -11615,7 +11622,17 @@ function vaHiEngine(){
       }
     }
     E.despeckle(out,S,Math.max(1,Math.round(S/256*Math.pow(2,q.z-q.tz))));
+    E.edges(out,S);
     return out;
+  };
+  // Clear class edges, as on Neuschnee: where the colour changes to the right
+  // or below, the pixel takes a darker shade of its own colour (one pixel wide)
+  E.edges=function(out,S){
+    var x,y,o,o2,same=function(a,b){return out[a]===out[b]&&out[a+1]===out[b+1]&&out[a+2]===out[b+2]&&(out[a+3]>0)===(out[b+3]>0);};
+    var mark=new Uint8Array(S*S);
+    for(y=0;y<S;y++)for(x=0;x<S;x++){o=(y*S+x)*4;if(!out[o+3])continue;
+      if((x<S-1&&!same(o,o+4))||(y<S-1&&!same(o,o+S*4))||(x>0&&!out[o-4+3])||(y>0&&!out[o-S*4+3]))mark[y*S+x]=1;}
+    for(y=0;y<S*S;y++)if(mark[y]){o2=y*4;out[o2]=out[o2]*0.74;out[o2+1]=out[o2+1]*0.74;out[o2+2]=out[o2+2]*0.74;out[o2+3]=Math.min(255,out[o2+3]+30);}
   };
   // Lone specks off: where the cover sits right at a threshold (flat land,
   // a thin layer) single terrain pixels -- a gentle slope, an odd aspect --
@@ -13454,7 +13471,11 @@ function rptPlace(r){
 var WEBCAM_KEY=null,wcLayer=null,wcSeen=new Map(),wcT=0,wcBusy=false;   // var: the layer list asks before this line has run
 const WC_API='https://api.windy.com/webcams/api/v3/webcams';
 // cameras from a view of about 50 x 50 km (a phone at zoom ~9.8)
-const WC_MIN_Z=10.8;   // webcams from a view of about 25 x 25 km
+const WC_MIN_Z=11.1;   // webcams from a view of about 20 x 20 km
+// while a webcam preview is open the side buttons step aside (it spans the
+// width of a phone)
+try{map.on('popupopen',e=>{if(e.popup&&e.popup.options&&e.popup.options.className==='wc-popup')document.body.classList.add('wcp-open');});
+  map.on('popupclose',e=>{if(e.popup&&e.popup.options&&e.popup.options.className==='wc-popup')document.body.classList.remove('wcp-open');});}catch(e){}
 dataFetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
   if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}
     window._wcOk=true;try{ovRender();}catch(e){}
@@ -15575,7 +15596,7 @@ function trustGauge(n){const L=trustLevel(n),k=TRUST_LV.length,cx=150,cy=148,r=1
     +'<g class="tg-needle" style="--a:'+((f-.5)*180).toFixed(1)+'deg"><path d="M'+b1[0].toFixed(1)+' '+b1[1].toFixed(1)+'L'+tip[0].toFixed(1)+' '+tip[1].toFixed(1)+'L'+b2[0].toFixed(1)+' '+b2[1].toFixed(1)+'Z" fill="var(--fg)"/>'
     +'<circle cx="'+cx+'" cy="'+cy+'" r="10" fill="var(--fg)"/><circle cx="'+cx+'" cy="'+cy+'" r="4" fill="var(--card)"/></g>'
     +'<text x="'+cx+'" y="'+(cy+44)+'" text-anchor="middle" class="tg-n">'+n+'</text></svg>';}
-// how much more a report counts in «Gemeldetes Powder» at t points (= progReportWeight's trust factor)
+// how much more a report counts in «Gemeldeter Powder» at t points (= progReportWeight's trust factor)
 function trustWeight(t){return 1+PROG_TRUST_MAX*(t/(t+PROG_TRUST_HALF));}
 function trustLevel(n){n=n||0;let i=0;for(let k=0;k<TRUST_LV.length;k++)if(n>=TRUST_LV[k][0])i=k;
   const nx=TRUST_LV[i+1];return {i,name:TRUST_LV[i][1],sub:TRUST_LV[i][2],emo:trustIco(i,18),n,next:nx?nx[0]:null,pct:nx?Math.round((n-TRUST_LV[i][0])/(nx[0]-TRUST_LV[i][0])*100):100};}
@@ -15604,7 +15625,7 @@ function trustInfo(n,own){if(n==null){n=sbUser?progTrustOf(sbUser.id):0;own=!!sb
       +'<span class="trl-n"><b>'+v[0]+'+</b><small>×'+w.toFixed(2)+'</small></span></div>';}).reverse().join('');
   trSheet('<div class="trs-hd">'+trustGauge(n)+'<b>'+L.emo+' '+escapeHtml(L.name)+'</b><small>'+escapeHtml(L.sub)+(L.next!=null?' · noch '+(L.next-n)+' bis «'+escapeHtml(TRUST_LV[L.i+1][1])+'»':'')+'</small></div>'
     +how
-    +'<p class="trs-p">Jede Bestätigung, die <b>andere</b> deinen Meldungen geben, ist <b>+1 Punkt</b>. Je höher deine Stufe, desto stärker zählen deine Meldungen in «Gemeldetes Powder» (×-Faktor rechts).</p>'
+    +'<p class="trs-p">Jede Bestätigung, die <b>andere</b> deinen Meldungen geben, ist <b>+1 Punkt</b>. Je höher deine Stufe, desto stärker zählen deine Meldungen in «Gemeldeter Powder» (×-Faktor rechts).</p>'
     +'<button type="button" class="trs-board" onclick="trustBoard()">🏆 Rangliste ansehen</button>'
     +'<div class="trl-list">'+rows+'</div>'
     +'<p class="trs-tip">Tipp: Fotos, Höhe und Exposition machen eine Meldung glaubwürdig – und bestätigungswürdig.</p>');}
@@ -16193,7 +16214,8 @@ const DEP_VIR=[[253,231,37],[181,222,43],[110,206,88],[53,183,121],[31,158,137],
 function depthVir(t){t=Math.max(0,Math.min(1,t))*(DEP_VIR.length-1);const i=Math.min(DEP_VIR.length-2,t|0),f=t-i,a=DEP_VIR[i],b=DEP_VIR[i+1];
   return [Math.round(a[0]+(b[0]-a[0])*f),Math.round(a[1]+(b[1]-a[1])*f),Math.round(a[2]+(b[2]-a[2])*f)];}
 const DEP_BROWN=[[168,128,86],[132,94,56]];
-const DEP_RGB=DEP_B.map((v,i)=>i<DEP_NH?DEP_BROWN[i]:depthVir((i-DEP_NH)/(DEP_B.length-1-DEP_NH)));
+const DEP_DENSE=[[123,173,228],[116,133,224],[121,93,196],[116,58,152],[97,29,96],[63,16,45]];
+const DEP_RGB=DEP_B.map((v,i)=>i<DEP_NH?DEP_BROWN[i]:DEP_DENSE[Math.min(DEP_DENSE.length-1,i-DEP_NH)]);
 function depthBand(v){if(v==null||!(v>=DEP_B[0]))return -1;let j=0;while(j+1<DEP_B.length&&v>=DEP_B[j+1])j++;return Math.min(j,DEP_RGB.length-1);}
 // brown hatching for the «not enough snow» bands: denser the deeper
 function depthHatch(bq,X,Y){const per=[8,6][bq],on=[1.6,2.1][bq];return ((X+Y)%per)<on;}
@@ -16588,16 +16610,33 @@ function isoValAt(lat,lon){const V=_isoV;if(!V||!(lat>laMin&&lat<laMax&&lon>loMi
   const add=(p,wt)=>{const v=V[p];if(wt>0&&v===v){su+=v*wt;sw+=wt;}};
   add(ya*W+xa,(1-tx)*(1-ty));add(ya*W+xb,tx*(1-ty));add(yb*W+xa,(1-tx)*ty);add(yb*W+xb,tx*ty);return sw?su/sw:NaN;}
 const DEP_LBL=new Set(DEP_B.slice(1));
+// Skiqualität / powder: the powder depth the device engine draws at a point
+// (same frame, terrain and interpolation), 0 where it draws no powder
+let _vaPowCand=null;
+function vaPowAt(lat,lon){
+  if(!vaEng||!vaEng.vals)return NaN;const fr=vaPointFrame();if(!fr||fr==='loading')return NaN;
+  const z=fineElev(lat,lon);if(z==null)return NaN;
+  const en=vaEng.wgs2lv03(lat,lon);let sb=vaEng.gridAt(vaEng.shade,en[0],en[1]);if(sb<0||sb===255)return NaN;
+  sb=vaEng.gridBil(vaEng.shade,en[0],en[1]);if(sb<0)return NaN;
+  const m=vaPowAt.m||(vaPowAt.m=new Float64Array(vaEng.nm));
+  if(!_vaPowCand)_vaPowCand=vaEng.candidates(en[0],en[1],90000);
+  if(!vaEng.evalAt(en[0],en[1],z,fineSlope(lat,lon)||0,fineAspectDeg(lat,lon)||0,sb/254,_vaPowCand,m,vaEng.metsFor('ski6')))return NaN;
+  vaEng.adjPrecip(m,en[0],en[1]);
+  const k6=vaEng.clsSki6(m);return [3,4,5,8,9].includes(k6)?m[vaEng.mi.powder_depth_cm]:0;}
+function pbBand(v){if(!(v>=PB[0]))return -1;let j=0;while(j+1<PB.length-1&&v>=PB[j+1])j++;return j;}
+const PC_RGB=PC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
 function nsBandRefresh(){
-  const dep=layer==='depth',on=(layer==='snow'||dep)&&typeof raster!=='undefined'&&map.hasLayer(raster)&&!(typeof is3d!=='undefined'&&is3d);
+  const va=layer==='snowpack'&&typeof vaKey!=='undefined'&&(vaKey==='ski6'||vaKey==='powder')&&!!(vaEng&&vaEng.vals)&&map.getZoom()>=VA_HI_Z;
+  const dep=layer==='depth',on=(layer==='snow'||dep||va)&&(va||(typeof raster!=='undefined'&&map.hasLayer(raster)))&&!(typeof is3d!=='undefined'&&is3d);
   if(!nsBandG){nsBandG=L.layerGroup();map.on('moveend',()=>{try{nsBandRefresh();}catch(e){}});}
   if(!on){if(map.hasLayer(nsBandG))map.removeLayer(nsBandG);_nsBandK='';return;}
   if(!map.hasLayer(nsBandG))nsBandG.addTo(map);
-  const bb=map.getBounds(),k=layer+'|'+a+'|'+b+'|'+map.getZoom().toFixed(1)+'|'+bb.toBBoxString();if(k===_nsBandK)return;_nsBandK=k;
-  nsBandG.clearLayers();
-  const valAt=dep?isoValAt:nsPixAt,LIM=dep?DEP_B:SB,band=dep?depthBand:snowBand,PAL=dep?DEP_RGB:RGB;
-  const want=T=>dep?DEP_LBL.has(T):T>SB[0];
-  const hidF=(!dep&&typeof legHideFn==='function')?legHideFn():null;
+  const bb=map.getBounds(),k=layer+'|'+(va?vaKey+'|'+(typeof vaHiTag!=='undefined'?vaHiTag:''):'')+'|'+a+'|'+b+'|'+map.getZoom().toFixed(1)+'|'+bb.toBBoxString();if(k===_nsBandK)return;_nsBandK=k;
+  nsBandG.clearLayers();_vaPowCand=null;
+  if(va){const c=map.getCenter(),en=vaEng.wgs2lv03(c.lat,c.lng);_vaPowCand=vaEng.candidates(en[0],en[1],90000);}
+  const valAt=va?vaPowAt:dep?isoValAt:nsPixAt,LIM=va?PB:dep?DEP_B:SB,band=va?pbBand:dep?depthBand:snowBand,PAL=va?PC_RGB:dep?DEP_RGB:RGB;
+  const want=T=>va?T>PB[0]:dep?DEP_LBL.has(T):T>SB[0];
+  const hidF=(!dep&&!va&&typeof legHideFn==='function')?legHideFn():null;
   const sz=map.getSize(),st=26,nx=Math.ceil(sz.x/st)+1,ny=Math.ceil(sz.y/st)+1;
   const vAt=(x,y)=>{try{const ll=map.containerPointToLatLng([x,y]);return valAt(ll.lat,ll.lng);}catch(e){return NaN;}};
   const G=new Float32Array(nx*ny),J=new Int16Array(nx*ny);
@@ -16939,7 +16978,7 @@ function legendFor(l){const sn={avg:'Mittel',max:'Max',min:'Min',sub0:'immer <0�
   if(l=="skiable")return '<b>Befahrbarkeit (Schätzung)</b><br>Schneehöhe gegen das, was das Gelände braucht<div style="margin-top:4px"><div><i style="background:#64dc64"></i>Reichlich Schnee</div><div><i style="background:#a0dc64"></i>Befahrbar</div><div><i style="background:#ffdc32"></i>Knapp</div><div><i style="background:#ff8c28"></i>Braucht mehr Schnee</div><div><i style="background:#ff3c28"></i>Weit weg von befahrbar</div><div><i style="background:#500000"></i>Zu steil (&gt;55°)</div></div>';
   if(l=="powfind"){
     const sw=(cm)=>{const c=snowCol(cm)||[150,150,150];return '<div><i style="background:rgb('+c[0]+','+c[1]+','+c[2]+')"></i>'+cm+' cm</div>';};
-    return '<b>Gemeldetes Powder</b><br>'+sw(10)+sw(30)+sw(60)+sw(100)+
+    return '<b>Gemeldeter Powder</b><br>'+sw(10)+sw(30)+sw(60)+sw(100)+
       '<div style="margin-top:4px;font-size:12px">Farbe = Schneehöhe (SLF-Skala), gemittelt über die nahen Zeichnen-Reports pro Exposition und Höhenband.</div>'+
       '<div style="font-size:12px">Nur Zeichnen-Reports · Vertrauen ≥ '+progConfMin+'%</div>';}
   if(l=="progpat"){const ty=_progType||stat,pt=PROG_PATTERNS[ty]||{label:ty,hint:''};
@@ -17041,7 +17080,7 @@ function miniLegendRender(l){try{thrFloatSync();}catch(_){}
 // rows run top-down, high to low, like a printed colour key.
 // the snow scale as steps: the SLF classes, four numbers (1, 10, 30, 100 cm)
 function snowSteps(){const n=SB.length-1,at=v=>SB.indexOf(v);
-  return {cols:SC.slice(0,n),ticks:[[at(1),'1'],[at(10),'10'],[at(30),'30'],[at(100),'100']].filter(t=>t[0]>=0)};}
+  return {cols:SC.slice(0,n),ticks:SB.slice(0,n).map((v,i)=>[i,String(v)])};}
 function legSpec(l){
   const rgb=c=>'rgb('+c[0]+','+c[1]+','+c[2]+')';
   // by the layer asked about: right after a switch the SNOWPACK overlay can
@@ -17081,7 +17120,7 @@ function legSpec(l){
       // numbers, then the other surfaces (crust, hard, wet ...) by name
       const pw=rows.filter(r=>r.k>=100||[3,4,5,8,9].includes(r.k)),sf=rows.filter(r=>pw.indexOf(r)<0).map(r=>Object.assign({},r,{sep:false}));
       const up=pw.slice().reverse(),ticks=[];
-      up.forEach((r,i)=>{const lo=parseInt(String(r.s),10);if(i>0&&[10,30,100].includes(lo))ticks.push([i,String(lo)]);});
+      up.forEach((r,i)=>{const lo=parseInt(String(r.s),10);if(lo===lo)ticks.push([i,String(lo)]);});
       return {t:name,u:'Pulver cm',va:true,noShare:true,rows,steps:{cols:up.map(r=>r.c),ticks},more:sf,moreT:'Andere Schneearten'};}
     const rows=ORD.filter(k=>leg[k]&&leg[k][1]).map(k=>{const e=leg[k],nm=e[2]||String(e[0]).replace(/_/g,' ');
       return {k,c:rgb(e[1]),s:SH[k]||nm.split(/[\s/(]/)[0].slice(0,7),n:nm};});
@@ -17095,7 +17134,7 @@ function legSpec(l){
   if(l==='depth'){const rows=[];for(let i=DEP_B.length-1;i>=0;i--){const lo=DEP_B[i],hi=i+1<DEP_B.length?DEP_B[i+1]:Infinity,hat=i<DEP_NH;
       const c=hat?'repeating-linear-gradient(135deg,rgb('+DEP_BROWN[i].join(',')+') 0 2px,transparent 2px 5px)':'rgb('+DEP_RGB[i].join(',')+')';
       const t=lo+(hi===Infinity?'+':'–'+hi);rows.push({k:i,lo,hi,c,s:t,n:t+' cm'+(hat?' · zu wenig Schnee':'')});}
-    return {t:'Schneehöhe',u:'cm',rows,steps:{cols:DEP_RGB.map(c=>'rgb('+c.join(',')+')'),ticks:[[2,'50'],[5,'200'],[7,'400']]}};}
+    return {t:'Schneehöhe',u:'cm',rows,steps:{cols:DEP_RGB.map(c=>'rgb('+c.join(',')+')'),ticks:DEP_B.map((v,i)=>[i,String(v)])}};}
   if(l==='powder')return {t:'Powder',u:'Pulver cm',
     rows:(()=>{const rows=[];for(let i=SB.length-2;i>=0;i--){const top=i===SB.length-2;
       rows.push({c:SC[Math.min(i,SC.length-1)],s:(i?SB[i]:'<'+SB[1])+(top?'+':i?'–'+SB[i+1]:''),n:(i?SB[i]:'<'+SB[1])+(top?'+':i?'–'+SB[i+1]:'')+' cm Pulver'});}return rows;})(),
@@ -17117,7 +17156,7 @@ function legSpec(l){
   if(l==='cloud'){const C3=[[10,40,'wenig'],[40,70,'teils'],[70,101,'bedeckt']];
     const rows=C3.map((x,k)=>{const c=cloudCol(((x[0]+x[1])/2-10)/90);return {k,lo:x[0],hi:x[1],c:'rgba('+c[0]+','+c[1]+','+c[2]+','+Math.max(.55,c[3]/255).toFixed(2)+')',s:x[2],n:x[0]+'–'+Math.min(100,x[1])+' % · '+x[2]};}).reverse();
     return {t:'Bewölkung',u:'%',rows,long:'Gesamtbewölkung zur gewählten Stunde (wie ein Satellitenbild)'+(M.cloud_src?'. Quelle: '+M.cloud_src+' (1 km), wo verfügbar.':'')};}
-  if(l==='powfind')return {t:'Gemeldetes Powder',u:'cm',rows:[[100],[60,100],[30,60],[10,30]].map(([cm,hi])=>{const c=snowCol(cm)||[150,150,150];return {c:rgb(c),s:cm+(hi?'–'+hi:'+'),n:cm+(hi?'–'+hi:'+')+' cm'};})};
+  if(l==='powfind')return {t:'Gemeldeter Powder',u:'cm',rows:[[100],[60,100],[30,60],[10,30]].map(([cm,hi])=>{const c=snowCol(cm)||[150,150,150];return {c:rgb(c),s:cm+(hi?'–'+hi:'+'),n:cm+(hi?'–'+hi:'+')+' cm'};})};
   return null;
 }
 // ── The legend is the switch ─────────────────────────────────────────────
@@ -17449,7 +17488,7 @@ const GROUPS={
     {id:'snowpack',label:'Skiqualität',va:true,single:true,vars:[{l:'snowpack',s:'ski6',label:'Skiqualität'},
       {l:'snowpack',s:'ski18',label:'Skiqualität'}]},
     {id:'vadrift',label:'Triebschnee',va:true,vars:[{l:'snowpack',s:'wind',label:'Triebschnee'}]},
-    {id:'reppow',label:'Gemeldetes Powder',vars:[{l:'powfind',s:'powder',label:'Gemeldetes Powder'}]},
+    {id:'reppow',label:'Gemeldeter Powder',vars:[{l:'powfind',s:'powder',label:'Gemeldeter Powder'}]},
     {id:'newsnow',label:'Neuschnee',vars:[{l:'snow',s:'avg',label:'Neuschnee'}]},
     {id:'depth',label:'Schneehöhe',vars:[{l:'depth',s:'avg',label:'Schneehöhe'}]},
     // Wind and temperature keep their statistic (over the chosen window) as
@@ -18407,7 +18446,7 @@ addEventListener('keydown',e=>{
   else if(k==='/'){try{searchFieldOpen();}catch(_){}e.preventDefault();}
   else if(k==='l'||k==='L'){try{document.body.classList.contains('ly-open')?lyPanelClose():lyPanelOpen();}catch(_){}e.preventDefault();}
   else if(k==='3'){const bt=document.getElementById('btn3dFloat');if(bt)bt.click();e.preventDefault();}
-  else if(k==='h'||k==='H'){try{fabsFold();}catch(_){}e.preventDefault();}
+  else if(k==='h'||k==='H'){e.preventDefault();}
   else if(k==='?'){kbdHelp();e.preventDefault();}
   else if(k==='Escape'){const h=document.getElementById('kbdHelp');if(h)h.remove();}
 },true);   // capture: the map would take the arrows for panning otherwise
@@ -22798,7 +22837,7 @@ async function nearBestRun(){
 // the map's side buttons fold away to a small handle (remembered)
 function fabsFold(on){on=on==null?!document.body.classList.contains('fabs-folded'):on;
   document.body.classList.toggle('fabs-folded',on);try{localStorage.setItem('ssm_fabs_fold',on?'1':'0');}catch(e){}try{haptic(3);}catch(e){}}
-try{if(localStorage.getItem('ssm_fabs_fold')==='1')document.body.classList.add('fabs-folded');}catch(e){}
+try{localStorage.removeItem('ssm_fabs_fold');document.body.classList.remove('fabs-folded');}catch(e){}
 function nearBestName(o){return o.t.pname||o.t.name||'Skitour';}
 function nearBestRender(){
   let el=document.getElementById('nearBest');

@@ -1062,7 +1062,8 @@ def refrozen_series(times, surface_lw, hours=15.0):
 POWDER_BOUNDS = [1, 5, 10, 15, 20, 30, 40, 50, 75, 100]
 POWDER_LABELS = ["none"] + [f"powder_{a}_{b}" for a, b in zip(POWDER_BOUNDS[:-1], POWDER_BOUNDS[1:])] + ["powder_gt_100"]
 POWDER_DE = ["–"] + [f"Pulver {a}–{b} cm" for a, b in zip(POWDER_BOUNDS[:-1], POWDER_BOUNDS[1:])] + ["Pulver > 100 cm"]
-_SLF_HEX = ["#93DFF0", "#62C8EE", "#3BA8E8", "#2A86DE", "#3563CF", "#5446BC", "#6631A3", "#741F86", "#761565", "#640C44"]
+# cmocean «dense», as the app's snow scales
+_SLF_HEX = ["#B4D8E4", "#92C3E2", "#79AAE4", "#738FE3", "#7772D6", "#7957BD", "#753D9D", "#6B2879", "#591750", "#3F102D"]
 POWDER_RGBA = {0: (0, 0, 0, 0), **{i + 1: (int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16), 250 if i < 2 else 235)
                                     for i, h in enumerate(_SLF_HEX)}}
 
