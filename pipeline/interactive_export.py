@@ -7566,9 +7566,25 @@ body.z-deep .va-hi canvas,body.z-deep .va-srv img,body.z-deep .raster-smooth.va-
 .wcf-hd small{font:400 12px/1.2 var(--font);opacity:.7;display:none}
 @media (min-width:600px){.wcf-hd small{display:block}}
 .wcf-hd button{flex:none;width:40px;height:40px;border-radius:20px;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:24px;line-height:1;cursor:pointer}
-.wcf-media{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+.wcf-media{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;position:relative;overflow:hidden}
 .wcf-media iframe{width:100%;height:100%;border:0;background:#000}
 .wcf-media img{max-width:100%;max-height:100%;object-fit:contain}
+.wcf-hd .wcf-rot{width:auto;padding:0 12px;font:600 13px/1 var(--font);display:inline-flex;align-items:center;gap:6px}
+.wcf-hd .wcf-rot svg{width:16px;height:16px}
+/* upright phone: the picture as wide as the screen, in the middle; the
+   player's slider right under it -- not stretched over the whole height */
+@media (orientation:portrait){
+  .wc-full{background:#000}
+  .wcf-media iframe{height:calc(100vw * 9 / 16 + 64px);max-height:100%}}
+/* a phone held sideways: the whole length (the app itself stays upright, so
+   the player is turned by 90 degrees; the browser turns it by itself) */
+.wc-full.rot .wcf-media iframe,.wc-full.rot .wcf-media img{position:absolute;left:50%;top:50%;
+  width:var(--wcf-h,100vh)!important;height:var(--wcf-w,100vw)!important;max-width:none;max-height:none;
+  transform:translate(-50%,-50%) rotate(var(--wcf-a,90deg));object-fit:contain}
+@media (orientation:landscape) and (max-height:560px){
+  .wc-full{padding:0 env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px);background:#000}
+  .wcf-hd{position:absolute;top:6px;right:6px;z-index:2;padding:0}
+  .wcf-hd b,.wcf-hd small,.wcf-hd .wcf-rot{display:none}}
 /* the layer icon as large as the side buttons; its scale folds out below */
 #miniLegend,#mapFabs #miniLegend,body.desk #mapFabs #miniLegend{width:36px!important;height:36px!important;max-width:36px!important}
 #miniLegend #mlName{height:36px!important}#miniLegend #mlName svg{width:18px!important;height:18px!important}
@@ -13511,9 +13527,32 @@ function wcFull(id){const c=_wcPop[id];if(!c)return;wcFullClose();
   const media=c.player?'<iframe src="'+escapeHtml(c.player)+'" allow="autoplay; fullscreen" referrerpolicy="no-referrer-when-downgrade" title="'+escapeHtml(c.t)+' – 24 h"></iframe>'
     :'<img src="'+escapeHtml(c.img||c.dimg||'')+'" alt="">';
   el.innerHTML='<div class="wcf-hd"><b>'+escapeHtml(c.t)+'</b><small>'+(c.player?'Letzte 24 Stunden · Zeitregler im Player':'Aktuelles Bild')+'</small>'
+    +(isMobile?'<button type="button" class="wcf-rot" onclick="wcFullRot()" aria-label="Quer anzeigen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M8 3h8M12 3v2"/></svg>Quer</button>':'')
     +'<button type="button" onclick="wcFullClose()" aria-label="Schliessen">×</button></div><div class="wcf-media">'+media+'</div>';
-  el.onclick=e=>{if(e.target===el)wcFullClose();};document.body.appendChild(el);document.body.classList.add('wcf-open');try{haptic(4);}catch(e){}}
-function wcFullClose(){const el=document.getElementById('wcFull');if(el)el.remove();document.body.classList.remove('wcf-open');}
+  el.onclick=e=>{if(e.target===el)wcFullClose();};document.body.appendChild(el);document.body.classList.add('wcf-open');try{haptic(4);}catch(e){}
+  wcFullTilt();}
+// sideways on a phone: the app stays upright, so the player is turned here --
+// by the button, or by the phone's own tilt where the motion sensor answers
+let _wcfTilt=null,_wcfMan=null;
+function wcFullApply(a){const el=document.getElementById('wcFull');if(!el)return;
+  const m=el.querySelector('.wcf-media');if(!m)return;
+  if(!a){el.classList.remove('rot');return;}
+  el.style.setProperty('--wcf-a',a+'deg');el.style.setProperty('--wcf-w',m.clientWidth+'px');el.style.setProperty('--wcf-h',m.clientHeight+'px');
+  el.classList.add('rot');}
+function wcFullRot(){const el=document.getElementById('wcFull');if(!el)return;
+  _wcfMan=el.classList.contains('rot')?0:90;wcFullApply(_wcfMan);}
+function wcFullTilt(){_wcfMan=null;
+  if(!isMobile||matchMedia('(orientation:landscape)').matches)return;
+  const on=()=>{if(_wcfTilt)return;_wcfTilt=e=>{if(_wcfMan!=null||e.gamma==null)return;
+      // gamma: left/right tilt; held sideways it passes about +-60 degrees
+      const g=e.gamma,b=Math.abs(e.beta||0),side=Math.abs(g)>55&&b<50;
+      wcFullApply(side?(g>0?90:-90):0);};
+    addEventListener('deviceorientation',_wcfTilt);};
+  try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function')
+      DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')on();}).catch(()=>{});
+    else on();}catch(e){}}
+function wcFullClose(){const el=document.getElementById('wcFull');if(el)el.remove();document.body.classList.remove('wcf-open');
+  if(_wcfTilt){removeEventListener('deviceorientation',_wcfTilt);_wcfTilt=null;}}
 addEventListener('keydown',e=>{if(e.key==='Escape')wcFullClose();});
 async function wcPreview(id,mk){
   try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls,player',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
