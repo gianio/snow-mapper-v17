@@ -219,7 +219,12 @@ jobs:
           target: default
           arch: x86_64
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          # guest-side rendering: with the host renderer (swiftshader_indirect)
+          # the whole emulator vanished ~20 s into the app's first map frames
+          # (one frame took 1.4 s to swap) on API 36 and 34 alike -- a crash
+          # in the host GL path, not in the app. Rendering in the guest keeps
+          # any GPU trouble inside Android, where it shows as an app error.
+          emulator-options: -no-window -gpu guest -noaudio -no-boot-anim -no-snapshot
           script: bash apple-app/scripts/android-smoke.sh apk/app-debug.apk smoke
 
       - name: Keep screenshot + logcat
