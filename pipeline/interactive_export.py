@@ -1475,6 +1475,15 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
         (ddir / dataname).write_text(payload, encoding="utf-8")
         pointer["data"] = dataname
     (ddir / "latest.json").write_text(json.dumps(pointer), encoding="utf-8")
+    # avalanche warning regions of the neighbouring countries (EAWS, CC0):
+    # fetched by the app only when the bulletin layer is switched on
+    try:
+        import shutil
+        src = Path(__file__).resolve().parent.parent / "data_connectors" / "eaws_regions.json"
+        if src.exists():
+            shutil.copyfile(src, ddir / "eaws_regions.json")
+    except Exception as e:                                  # noqa: BLE001
+        print(f"[OUT] eaws_regions.json not copied: {e!r}")
     # Client settings that come from the build environment (no secrets of
     # ours: the Windy key is a public client key, sent with every request).
     cfg = {}
@@ -10852,7 +10861,7 @@ function skiBuildLayer(){const g=L.layerGroup();
   CH_RESORTS.forEach(r=>skiLabel(r.name,r.lat,r.lng,false).addTo(g));
   return g;}
 function ovAvailable(k){
-  if(k==='avalanche'){const a=M.avalanche;return !!(a&&a.regions&&a.regions.some(r=>r.geometry));}
+  if(k==='avalanche')return true;   // SLF, and the neighbouring countries via EAWS
   if(k==='skitourVec')return tourList().length>0;
   if(k==='webcams')return !!WEBCAM_KEY;
   if(k==='variantA')return vaAvailable();
@@ -10943,11 +10952,47 @@ const AV_COLORS={1:'#CCFF66',2:'#FFFF00',3:'#FF9900',4:'#FF0000',5:'#800000'};
 const AV_LABELS={1:'gering',2:'mässig',3:'erheblich',4:'gross',5:'sehr gross'};
 function avRegions(){const a=M.avalanche;return (a&&a.regions)||[];}
 function avByRegion(){const m={};avRegions().forEach(r=>{m[r.id]=r;});return m;}
+// The neighbouring countries, beside the SLF: each warning service's own
+// danger level per region, as the EAWS publishes them every day
+// (static.avalanche.report, the regions from regions.avalanches.org, CC0) --
+// drawn the same way, with the service named and linked. Also a viewer only.
+const AV_NB_SRC={FR:['Météo-France','https://meteofrance.com/meteo-montagne'],
+  'IT-21':['ARPA Piemonte','https://www.arpa.piemonte.it/bollettino/bollettino-valanghe'],
+  'IT-23':['Regione Valle d’Aosta','https://www.regione.vda.it/territorio/valanghe/bollettino_neve_e_valanghe/default_i.asp'],
+  'IT-25':['ARPA Lombardia','https://www.arpalombardia.it/temi-ambientali/neve-e-valanghe/'],
+  'IT-32-BZ':['Lawinenwarndienst Südtirol','https://avalanche.report'],'IT-32-TN':['Meteotrentino','https://avalanche.report'],
+  'IT-34':['ARPA Veneto','https://www.arpa.veneto.it/temi-ambientali/neve-e-valanghe'],'IT-36':['ARPA FVG','https://www.meteo.fvg.it/neve.php'],
+  'IT-57':['Regione Marche','https://www.aineva.it/bollettini/'],'IT-MeteoMont':['Meteomont','https://meteomont.org'],
+  'AT-02':['LWD Kärnten','https://lawinenwarndienst.ktn.gv.at'],'AT-03':['LWD Niederösterreich','https://www.lawinenwarndienst-niederoesterreich.at'],
+  'AT-04':['LWD Oberösterreich','https://www.land-oberoesterreich.gv.at/lawinenwarndienst.htm'],'AT-05':['LWD Salzburg','https://lawine.salzburg.at'],
+  'AT-06':['LWD Steiermark','https://www.lawine-steiermark.at'],'AT-07':['Lawinenwarndienst Tirol','https://avalanche.report'],
+  'AT-08':['LWD Vorarlberg','https://warndienste.cnv.at/dibos/lawine/index.html'],'DE-BY':['LWD Bayern','https://www.lawinenwarndienst-bayern.de'],
+  SI:['ARSO','https://meteo.arso.gov.si/met/sl/avalanche/']};
+function avNbSrc(id){const k=Object.keys(AV_NB_SRC).filter(k=>id.startsWith(k)).sort((a,b)=>b.length-a.length)[0];return AV_NB_SRC[k]||['EAWS','https://www.avalanches.org'];}
+function avDecode(enc){const v=enc.split(',').map(Number),out=[];let la=0,lo=0;for(let i=0;i+1<v.length;i+=2){la+=v[i];lo+=v[i+1];out.push([la/1e4,lo/1e4]);}return out;}
+let _avNb=null;
+async function avNbLoad(group){
+  try{
+    if(!_avNb){const [rg,rt]=await Promise.all([dataFetch('data/eaws_regions.json').then(r=>r.ok?r.json():null).catch(()=>null),
+        (async()=>{for(let k=0;k<2;k++){const d=new Date(Date.now()-k*864e5).toISOString().slice(0,10);
+          try{const r=await fetch('https://static.avalanche.report/eaws_bulletins/'+d+'/'+d+'.ratings.json');if(r.ok){const j=await r.json();return {d,m:j.maxDangerRatings||{}};}}catch(e){}}return null;})()]);
+      _avNb={rg,rt};}
+    const {rg,rt}=_avNb;if(!rg||!rt)return;
+    const lbl={1:'gering',2:'mässig',3:'erheblich',4:'gross',5:'sehr gross'};
+    rg.regions.forEach(r=>{const lv=rt.m[r.id];if(!(lv>=1))return;
+      const hi=rt.m[r.id+':high'],lo=rt.m[r.id+':low'],src=avNbSrc(r.id);
+      const poly=L.polygon(r.c.map(avDecode),{color:'#fff',weight:1,opacity:.85,fillColor:AV_COLORS[lv]||'#999',fillOpacity:.6});
+      poly.bindPopup('<b>Stufe '+lv+' – '+(lbl[lv]||'')+'</b><br>'+escapeHtml(r.name)
+        +(hi&&lo&&hi!==lo?'<br><small>oben '+hi+' · unten '+lo+'</small>':'')
+        +'<div style="margin-top:6px;font-size:12px;opacity:.75">Quelle: '+escapeHtml(src[0])+' (über EAWS, '+rt.d+') · <a href="'+src[1]+'" target="_blank" rel="noopener">Bulletin öffnen</a></div>');
+      poly.addTo(group);});
+  }catch(e){}}
 function avBuildLayer(){
+  const grp=L.layerGroup();avNbLoad(grp);
   const feats=avRegions().filter(r=>r.geometry)
     .map(r=>({type:'Feature',properties:r,geometry:r.geometry}));
-  if(!feats.length)return null;
-  return L.geoJSON({type:'FeatureCollection',features:feats},{
+  if(!feats.length)return grp;
+  return L.layerGroup([grp,L.geoJSON({type:'FeatureCollection',features:feats},{
     // the danger level must read at a glance: nearly opaque fills in the SLF
     // colours, a white seam between the regions
     style:f=>({color:'#fff',weight:1.2,opacity:.9,
@@ -10967,7 +11012,7 @@ function avBuildLayer(){
         +'<div style="margin-top:6px;font-size:12px;opacity:.75">Quelle: SLF ·'
         +' <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation/"'
         +' target="_blank" rel="noopener">Bulletin öffnen</a></div>');
-    }});
+    }})]);
 }
 // --- Variant A: SNOWPACK ski-quality layer + snow profiles ----------------
 // Consumes what variant_a/export.py writes (manifest.json + layer PNGs +
