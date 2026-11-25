@@ -185,9 +185,15 @@ jobs:
           track: internal
           status: completed
 
-  # Installs the APK on an Android 16 (API 36) emulator, launches it, presses
+  # Installs the APK on an Android 14 (API 34) emulator, launches it, presses
   # back, and fails on a crash. The screenshot is kept so you can see what the
   # app showed.
+  # The plain AOSP image ("default"), not "google_apis": since 22.11. the API 36
+  # Google image vanished on about half the runs 20-60 s after launch -- no
+  # emulator message, the runner with 15 GB free and no OOM kill, the last log
+  # lines Google Play services updating packages in the background. The app
+  # needs no Play services (no FCM in the debug build), so the smoke test
+  # drops that moving part.
   smoke-test:
     needs: build
     runs-on: ubuntu-latest
@@ -209,8 +215,8 @@ jobs:
       - name: Launch on the emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 36
-          target: google_apis
+          api-level: 34
+          target: default
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
