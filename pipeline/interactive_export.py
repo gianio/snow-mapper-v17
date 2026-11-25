@@ -7555,6 +7555,22 @@ body.wcp-open #mapFabs,body.wcp-open #miniLegend{opacity:0!important;pointer-eve
 .acc-src b{display:block;font:600 13.5px/1.3 var(--font)}.acc-src small{font:400 12px/1.3 var(--font);color:var(--md-on-surface-var,#555)}
 .acc-mark{flex:none;min-width:58px;padding:6px 8px;border-radius:10px;background:#fff;border:1px solid var(--md-outline-var,#ddd);font:800 12px/1 var(--font);letter-spacing:.02em;color:#C5221F;text-align:center}
 .acc-upd{margin-top:-4px!important}
+/* Leute finden: all profiles and the score card */
+.us-tabs{display:flex;margin:10px 0 4px;border:1px solid var(--md-outline,#73777F);border-radius:999px;overflow:hidden}
+.us-tabs button{flex:1;height:36px;border:0;background:transparent;font:600 14px/1 var(--font);color:var(--md-on-surface-var,#44474E);cursor:pointer}
+.us-tabs button+button{border-left:1px solid var(--md-outline,#73777F)}
+.us-tabs button.on{background:var(--md-secondary-container,#D7E3F8);color:var(--md-on-secondary-container,#101C2B)}
+.us-sorts{display:flex;gap:6px;overflow-x:auto;padding:10px 0 6px}
+.us-sorts button{flex:none;height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--md-outline,#74777F);background:transparent;font:500 12.5px/1 var(--font);cursor:pointer;color:var(--md-on-surface-var,#44474E)}
+.us-sorts button.on{background:var(--md-secondary-container,#D6E3FF);border-color:transparent;font-weight:600}
+.us-me{margin:4px 0 10px;padding:10px 12px;border-radius:14px;background:var(--md-primary-container,#D6E3FF);font:500 13px/1.3 var(--font)}
+.us-rank{flex:none;width:26px;text-align:center;font:700 15px/1 var(--font);color:var(--md-on-surface-var,#555)}
+.us-rank.top{color:#B8860B}
+.us-score{flex:none;display:flex;flex-direction:column;align-items:flex-end;margin-right:4px}
+.us-score b{font:700 17px/1 var(--font)}.us-score small{font:500 10.5px/1.2 var(--font);color:var(--md-on-surface-var,#666)}
+.us-t small{font-weight:500;color:var(--md-on-surface-var,#666)}
+.us-note{margin:10px 4px 0;font:400 12px/1.4 var(--font);color:var(--md-on-surface-var,#666)}
+
 /* ==== Modellvergleich (M3) ==== */
 #cmpFab{position:fixed;z-index:1160;top:calc(var(--bar-h,64px) + 6px);left:calc(14px + var(--rvw,118px) + 8px + 48px);width:40px;height:40px;padding:0;border-radius:50%;display:grid;place-items:center;
   border:1px solid var(--hair);background:color-mix(in srgb,var(--card,#fff) 92%,transparent);color:var(--fg2);box-shadow:0 4px 14px rgba(15,23,42,.14);cursor:pointer}
@@ -8693,6 +8709,7 @@ body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
     <div class="prof-head"><span>Leute finden</span><button onclick="usClose()">✕</button></div>
     <div class="prof-body" style="padding-top:10px">
       <input class="prof-bio" style="min-height:auto;height:46px;padding:12px 14px" id="usInput" type="text" placeholder="Benutzername suchen…" autocomplete="off" oninput="usInput()"/>
+      <div class="us-tabs" id="usTabs" role="tablist"><button type="button" role="tab" data-t="all" class="on" onclick="usTab('all')">Alle</button><button type="button" role="tab" data-t="board" onclick="usTab('board')">Rangliste</button></div>
       <div class="us-list" id="usList"><div class="us-empty">Tippe einen Namen, um Leute zu finden.</div></div>
     </div>
   </div>
@@ -23470,7 +23487,44 @@ async function dmSend(){
 }
 // An empty search shows who is active: the people behind the latest reports,
 // most reports first -- so the screen is never a blank box.
-function usSuggest(box){
+// Everyone with a profile, and the score card -- one call to the
+// community_board() function (no e-mail ever leaves the database). A profile
+// on «Nur ich» appears as «privat»: its posts are hidden and not counted.
+// confirmations = the trust points.
+let _usTab='all',_usBoard=null,_usSort='confirmations';
+const US_SORTS=[['confirmations','Report-Score'],['reports_30d','Am aktivsten (30 T.)'],['reports','Meldungen'],['followers','Follower']];
+async function usBoardLoad(){if(_usBoard)return _usBoard;if(!sb)return null;
+  try{const{data,error}=await sb.rpc('community_board');if(error)throw error;_usBoard=data||[];}catch(e){_usBoard=null;}
+  return _usBoard;}
+function usTab(t){_usTab=t;document.querySelectorAll('#usTabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  const inp=document.getElementById('usInput');if(inp)inp.value='';usSuggest(document.getElementById('usList'));try{haptic(3);}catch(e){}}
+function usSort(k){_usSort=k;usSuggest(document.getElementById('usList'));}
+function usRowHTML(u,extra){const me=sbUser&&u.id===sbUser.id,fol=myFollowing.has(u.id);
+  return '<div class="us-row" onclick="usClose();viewUser(\''+u.id+'\',\''+jsArg(u.username||'User')+'\')">'
+    +(extra&&extra.rank?'<span class="us-rank'+(extra.rank<=3?' top':'')+'">'+extra.rank+'</span>':'')
+    +'<div class="av"'+(u.avatar_url?' style="background-image:'+cssUrl(u.avatar_url)+'"':'')+'>'+(u.avatar_url?'':escapeHtml((u.username||'U')[0].toUpperCase()))+'</div>'
+    +'<span class="us-t"><b>'+escapeHtml(u.username||'User')+(me?' <small>(du)</small>':'')+'</b><em>'+(extra&&extra.sub||'')+'</em></span>'
+    +(extra&&extra.score!=null?'<span class="us-score"><b>'+extra.score+'</b><small>'+escapeHtml(extra.unit||'')+'</small></span>':'')
+    +(me?'':'<button class="feed-follow '+(fol?'following':'')+'" onclick="toggleFollow(\''+u.id+'\',event);this.classList.toggle(\'following\');this.textContent=this.classList.contains(\'following\')?\'Folge ich\':\'Folgen\';">'+(fol?'Folge ich':'Folgen')+'</button>')
+    +'</div>';}
+function usAgo(t){if(!t)return '';const d=Math.round((Date.now()-new Date(t))/864e5);return d<1?'heute aktiv':d===1?'gestern aktiv':d<30?'vor '+d+' Tagen aktiv':'aktiv '+new Date(t).toLocaleDateString('de-CH',{month:'short',year:'numeric'});}
+async function usDirectory(box){box.innerHTML='<div class="us-empty">Lädt …</div>';
+  const B=await usBoardLoad();if(!B){usSuggestOld(box);return;}
+  if(_usTab==='board'){
+    const lvl=n=>{let L=TRUST_LV[0];TRUST_LV.forEach(x=>{if(n>=x[0])L=x;});return L[1];};
+    const unit={confirmations:'Punkte',reports_30d:'Meldungen',reports:'Meldungen',followers:'Follower'}[_usSort];
+    const rows=B.slice().sort((a,b)=>(b[_usSort]-a[_usSort])||(b.confirmations-a.confirmations)||(b.reports-a.reports));
+    const mine=sbUser?rows.findIndex(u=>u.id===sbUser.id):-1;
+    box.innerHTML='<div class="us-sorts">'+US_SORTS.map(([k,t])=>'<button type="button" class="'+(k===_usSort?'on':'')+'" onclick="usSort(\''+k+'\')">'+t+'</button>').join('')+'</div>'
+      +(mine>=0?'<div class="us-me">Dein Platz: <b>'+(mine+1)+'</b> von '+rows.length+' · '+rows[mine].confirmations+' Punkte · '+escapeHtml(lvl(rows[mine].confirmations))+'</div>':'')
+      +rows.map((u,i)=>usRowHTML(u,{rank:i+1,score:u[_usSort],unit,sub:u.private?'Profil privat':escapeHtml(lvl(u.confirmations))+' · '+u.reports+' Meldung'+(u.reports===1?'':'en')+(u.comments?' · '+u.comments+' Kommentar'+(u.comments===1?'':'e'):'')})).join('')
+      +'<p class="us-note">Report-Score: jede Bestätigung, die andere deinen öffentlichen Meldungen geben, ist ein Punkt. Profile auf «Nur ich» erscheinen als privat – ihre Beiträge sieht niemand und sie zählen hier nicht.</p>';
+    return;}
+  const rows=B.slice().sort((a,b)=>new Date(b.last_active)-new Date(a.last_active));
+  box.innerHTML='<div class="us-sec">Alle mit Profil ('+rows.length+')</div>'
+    +rows.map(u=>usRowHTML(u,{sub:u.private?'Profil privat':(u.reports?u.reports+' Meldung'+(u.reports===1?'':'en')+' · ':'')+usAgo(u.last_active)})).join('');}
+function usSuggest(box){if(sb){usDirectory(box);return;}usSuggestOld(box);}
+function usSuggestOld(box){
   const by=new Map();
   (allReports||[]).forEach(r=>{if(!r.dbRow||!r.userId||(sbUser&&r.userId===sbUser.id))return;
     const o=by.get(r.userId)||{id:r.userId,name:r.user,avatar:r.avatar,n:0,last:r.time};o.n++;by.set(r.userId,o);});
@@ -23482,7 +23536,7 @@ function usSuggest(box){
       +'<span class="us-t"><b>'+escapeHtml(u.name||'User')+'</b><em>'+u.n+' Meldung'+(u.n>1?'en':'')+' · zuletzt '+escapeHtml(u.last||'')+'</em></span>'
       +'<button class="feed-follow '+(fol?'following':'')+'" onclick="toggleFollow(\''+u.id+'\',event);this.classList.toggle(\'following\');this.textContent=this.classList.contains(\'following\')?\'Folge ich\':\'Folgen\';">'+(fol?'Folge ich':'Folgen')+'</button></div>';}).join('');
 }
-function usOpen(){document.getElementById('usModal').style.display='flex';try{usSuggest(document.getElementById('usList'));}catch(e){}setTimeout(()=>{try{document.getElementById('usInput').focus();}catch(e){}},80);}
+function usOpen(){_usBoard=null;document.getElementById('usModal').style.display='flex';try{usSuggest(document.getElementById('usList'));}catch(e){}setTimeout(()=>{try{document.getElementById('usInput').focus();}catch(e){}},80);}
 function usClose(){document.getElementById('usModal').style.display='none';}
 function usInput(){clearTimeout(_usT);_usT=setTimeout(usSearch,280);}
 async function usSearch(){
