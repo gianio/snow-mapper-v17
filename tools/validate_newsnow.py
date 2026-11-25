@@ -62,6 +62,14 @@ SOURCES = [
      "licence": "CC BY 4.0", "url": "https://www.meteoschweiz.admin.ch",
      "terms": "https://opendatadocs.meteoswiss.ch/general/terms-of-use"},
 ]
+SOURCES.append(
+    {"id": "smn", "name": "Bundesamt für Meteorologie und Klimatologie MeteoSchweiz",
+     "what": "SwissMetNet (automatische Stationen), Temperatur Tagesminimum und -maximum",
+     "licence": "CC BY 4.0", "url": "https://www.meteoschweiz.admin.ch",
+     "terms": "https://opendatadocs.meteoswiss.ch/general/terms-of-use"})
+SMN = "https://data.geo.admin.ch/ch.meteoschweiz.ogd-smn"
+LAPSE = -0.0065          # K/m, the app's TEMP_LAPSE: model cell height -> station height
+T_MAX_DZ = 800.0         # beyond that a 1 km cell says little about the station
 R2_KEY = "validation/newsnow_hist.json"
 
 
@@ -156,6 +164,41 @@ def msw_obs(d0: date, d1: date):
     return hn, rr, st
 
 
+def smn_stations():
+    r = _get(SMN + "/ogd-smn_meta_stations.csv")
+    if not r:
+        return {}
+    st = {}
+    for x in csv.DictReader(io.StringIO(r.content.decode("latin-1")), delimiter=";"):
+        try:
+            st[x["station_abbr"]] = (float(x["station_coordinates_wgs84_lat"]), float(x["station_coordinates_wgs84_lon"]),
+                                     float(x["station_height_masl"]), x["station_name"])
+        except (KeyError, ValueError):
+            pass
+    return st
+
+
+def smn_temp(d0: date, d1: date):
+    """({day: {code: (tmin, tmax)}}, stations) -- SwissMetNet daily 2 m
+    minimum (tre200dn) and maximum (tre200dx) of the UTC day."""
+    st = smn_stations()
+    out = {}
+    hist = (date.today() - d0).days > 300
+    for code in st:
+        r = _get(f"{SMN}/{code.lower()}/ogd-smn_{code.lower()}_d_{'historical' if hist else 'recent'}.csv")
+        if not r:
+            continue
+        for x in csv.DictReader(io.StringIO(r.content.decode("latin-1")), delimiter=";"):
+            try:
+                dd = datetime.strptime(x["reference_timestamp"][:10], "%d.%m.%Y").date()
+                lo, hi = float(x["tre200dn"]), float(x["tre200dx"])
+            except (KeyError, ValueError):
+                continue
+            if d0 <= dd <= d1:
+                out.setdefault(dd.isoformat(), {})[code] = (lo, hi)
+    return out, st
+
+
 # ── model ────────────────────────────────────────────────────────────────────
 class Model:
     def __init__(self, path):
@@ -165,6 +208,9 @@ class Model:
         self.laMin, self.loMin, self.laMax, self.loMax = (float(v) for v in z["bounds"])
         self.H, self.W = self.elev.shape
         self.built = str(z["built"])
+        self.tdays = [str(d) for d in z["tdays"]] if "tdays" in z.files else []
+        self.tmin = z["tmin"].astype(np.float32) if "tmin" in z.files else None
+        self.tmax = z["tmax"].astype(np.float32) if "tmax" in z.files else None
         self.now = datetime.strptime(str(z["now_time"])[:13], "%Y-%m-%dT%H")
 
     def cell(self, lat, lon):
@@ -316,6 +362,8 @@ def main():
             # an backfill row never replaces an operational one
             key = f"{day}|{sid}|{a.kind}"
             H["rows"][key] = row
+            if a.kind == "an":       # per station, for the stations layer of the app
+                H.setdefault("nst", {}).setdefault(day, {})[sid] = {p[3]: [round(p[0], 1), p[1]] for p in pr}
             # forecasts waiting for this day: scored now
             fc = (H["pred"].get(day) or {}).get(sid)
             if fc:
@@ -335,6 +383,44 @@ def main():
                 if c and math.isfinite(float(M.elev[c])) and abs(float(M.elev[c]) - s[2]) <= a.max_dz:
                     v[code] = round(float(M.sums[k][c]), 1)
             H["pred"].setdefault(day, {})[sid] = {"v": v, "sha": ver, "built": M.built}
+    # 2 m temperature: daily min / max against SwissMetNet, the model moved
+    # from its cell's mean height to the station's
+    tpast = [d for d in M.tdays if datetime.fromisoformat(d) + timedelta(days=1) <= M.now
+             and d < date.today().isoformat()] if a.kind == "an" else [d for d in M.tdays if d < date.today().isoformat()]
+    if tpast:
+        tobs, tst = smn_temp(date.fromisoformat(min(tpast)), date.fromisoformat(max(tpast)))
+        H.setdefault("tst", {})
+        for day in tpast:
+            k = M.tdays.index(day)
+            per = {}
+            for code, (olo, ohi) in (tobs.get(day) or {}).items():
+                s_ = tst.get(code)
+                c = s_ and M.cell(s_[0], s_[1])
+                if not c:
+                    continue
+                ez = float(M.elev[c])
+                if not math.isfinite(ez) or abs(ez - s_[2]) > T_MAX_DZ:
+                    continue
+                dz = LAPSE * (s_[2] - ez)
+                per[code] = (round(float(M.tmin[k][c]) + dz, 1), round(float(M.tmax[k][c]) + dz, 1), olo, ohi)
+            if not per:
+                continue
+            e_lo = [v[0] - v[2] for v in per.values()]
+            e_hi = [v[1] - v[3] for v in per.values()]
+            H["rows"][f"{day}|tmp|{a.kind}"] = {
+                "n": len(per), "sha": ver, "built": M.built,
+                "bias_min": round(sum(e_lo) / len(e_lo), 2), "mae_min": round(sum(abs(x) for x in e_lo) / len(e_lo), 2),
+                "bias_max": round(sum(e_hi) / len(e_hi), 2), "mae_max": round(sum(abs(x) for x in e_hi) / len(e_hi), 2)}
+            if a.kind == "an":
+                H["tst"][day] = per
+        H["tmeta"] = {c: [round(v[0], 4), round(v[1], 4), round(v[2]), v[3]] for c, v in tst.items()}
+        cut14 = (date.today() - timedelta(days=14)).isoformat()
+        H["tst"] = {d: v for d, v in H["tst"].items() if d >= cut14}
+    if past:
+        H["nmeta"] = {"slf": {c: [round(v[0], 4), round(v[1], 4), round(v[2]), v[3]] for c, v in slf_st.items()},
+                      "msw": {c: [round(v[0], 4), round(v[1], 4), round(v[2]), v[3]] for c, v in msw_st.items()}}
+    cut14 = (date.today() - timedelta(days=14)).isoformat()
+    H["nst"] = {d: v for d, v in (H.get("nst") or {}).items() if d >= cut14}
     # forget forecasts older than 10 days
     cut = (date.today() - timedelta(days=10)).isoformat()
     H["pred"] = {d: v for d, v in H["pred"].items() if d >= cut}
@@ -361,8 +447,12 @@ def _agg(rows):
 def write_summary(H, out: Path):
     rows = H["rows"]
     by_day = {}
+    tby = {}
     for key, r in rows.items():
         day, sid, kind = key.split("|")
+        if sid == "tmp":
+            tby.setdefault(day, {})[kind] = r
+            continue
         by_day.setdefault(day, {}).setdefault(kind, []).append(r)
     days = sorted(by_day)
     today = date.today()
@@ -391,8 +481,41 @@ def write_summary(H, out: Path):
         changes = json.loads((ROOT / "docs" / "model_changes.json").read_text())
     except (OSError, ValueError):
         pass
+    def tagg(n, kind="an"):
+        lo = (today - timedelta(days=n)).isoformat()
+        rs = [v[kind] for d, v in tby.items() if d >= lo and kind in v]
+        if not rs:
+            return None
+        nn = sum(r["n"] for r in rs)
+        w = lambda k: round(sum(r[k] * r["n"] for r in rs) / nn, 2)
+        return {"n": nn, "days": len(rs), "bias_min": w("bias_min"), "mae_min": w("mae_min"),
+                "bias_max": w("bias_max"), "mae_max": w("mae_max")}
+    tser = [{"d": d, **{k: tby[d][kd][k] for kd in ("an", "rb") if kd in tby[d] for k in ("mae_min", "mae_max", "bias_min", "bias_max")},
+             "kind": "an" if "an" in tby[d] else "rb"} for d in sorted(tby)[-120:]]
+    # the stations, with the model beside the measurement for the last days
+    tst, meta = H.get("tst") or {}, H.get("tmeta") or {}
+    tdays = sorted(tst)[-7:]
+    stations = []
+    for code, m in meta.items():
+        v = [(d, tst[d][code]) for d in tdays if code in tst[d]]
+        if not v:
+            continue
+        stations.append({"code": code, "lat": m[0], "lon": m[1], "z": m[2], "name": m[3],
+                         "days": [{"d": d, "mn": x[0], "mx": x[1], "on": x[2], "ox": x[3]} for d, x in v]})
+    # new snow per station: the last 3 measured days, model beside it
+    nst, nmeta = H.get("nst") or {}, H.get("nmeta") or {}
+    ndays = sorted(nst)[-3:]
+    nstations = []
+    for sid in ("slf", "msw"):
+        for code, m in (nmeta.get(sid) or {}).items():
+            v = [{"d": d, "m": nst[d][sid][code][0], "o": nst[d][sid][code][1]} for d in ndays if code in (nst[d].get(sid) or {})]
+            if v:
+                nstations.append({"src": sid, "code": code, "lat": m[0], "lon": m[1], "z": m[2], "name": m[3], "days": v})
     summary = {
         "updated": H.get("updated"),
+        "stations_newsnow": nstations,
+        "temp": {"last7": tagg(7), "last30": tagg(30), "season": tagg(400) or tagg(400, "rb"), "series": tser,
+                 "stations": stations, "lapse": LAPSE} if tby else None,
         "newsnow": {
             "last7": {"an": window(7, "an"), "fc": window(7, "fc")},
             "last30": {"an": window(30, "an"), "fc": window(30, "fc")},

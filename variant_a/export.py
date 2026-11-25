@@ -153,6 +153,7 @@ def export_pack(out_dir: Path, runs, results, layer_ts, wps, grid, shade, mets, 
         "slopes": list(matrix.slope_nodes()), "aspects": config.MATRIX_ASPECTS,
         "elev_step": config.MATRIX_ELEV_STEP, "neighbours": config.MATRIX_NEIGHBOURS,
         "d0_m": 0.5 * config.WEATHER_SPACING_KM * 1000.0,
+        "below_fade_m": config.MATRIX_BELOW_FADE_M,
         "gate": classify.CRUST_GATE,
         "gated": ["crust_thick_cm", "weak_below_cm", "weak_layer_depth_cm", "sh_surface"],
         "thresholds": {k: getattr(classify, k) for k in (

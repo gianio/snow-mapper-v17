@@ -467,6 +467,18 @@ def test_matrix_weights():
           f"{d.size} cells, p95 {np.percentile(d, 95):.1f} deg")
     check("no cell reads a run of a band its weather point lacks",
           all(x["elev"] in w["bands"] for w in wps for x in runs if x["wp"] == w["id"]))
+    # a low cell must not take the snow of a neighbour whose lowest band is
+    # far above it (Zürich lakeside 400 m with the powder of 1500 m slopes)
+    lo = [dict(w) for w in wps[:2]]
+    lo[0]["bands"] = [600.0, 900.0, 1200.0]; lo[1]["bands"] = [1500.0, 1800.0]
+    lo[1]["e"], lo[1]["n"] = lo[0]["e"] + 2000.0, lo[0]["n"]
+    lruns = matrix.matrix_runs(lo)
+    g2 = _synth_grid(80, 80, 7)
+    g2.elevation[:] = 450.0
+    W2, ci2 = matrix.build_weights(g2, lo, lruns)
+    hi_share = np.asarray(W2[:, [i for i, x in enumerate(lruns) if x["wp"] == lo[1]["id"]]].sum(axis=1)).ravel()
+    check("a cell far below a neighbour's lowest band hardly takes it", hi_share.max() < 0.01,
+          f"max share {hi_share.max():.4f}")
 
 
 def test_forcing_fallback():
@@ -559,8 +571,12 @@ def test_forcing_matrix_shares_weather():
               "longwave_radiation": [250.0] * len(T), "cloud_cover": [50.0] * len(T)}
     fetched = []
     real = forcing.fetch_weather
+    def _span(s, en):
+        # the requested days, every hour filled -- like Open-Meteo
+        sk = forcing._skeleton(s, en)
+        return {k: (sk["time"] if k == "time" else [v[0]] * len(sk["time"])) for k, v in hourly.items()}
     forcing.fetch_weather = lambda lat, lon, e, s, en, models=None: (
-        fetched.append(e), (hourly, "meteoswiss_icon_ch1", []))[1]
+        fetched.append(e), (_span(s, en), "meteoswiss_icon_ch1", []))[1]
     wps = [{"id": "w000", "lat": 46.8, "lon": 9.8, "ref_elev": 2000.0}]
     runs = [{"id": f"w000_{e}_F", "wp": "w000", "lat": 46.8, "lon": 9.8, "elev": float(e)}
             for e in (1700, 2000, 2600)]
@@ -1098,7 +1114,8 @@ def test_rate_limit_backoff():
         seen.append(lat)
         if lat == 46.9 and seen.count(46.9) == 1:
             return None, None, ["HTTP 429"]
-        return hourly, "meteoswiss_icon_ch1", []
+        sk = forcing._skeleton(s, en)
+        return {k: (sk["time"] if k == "time" else [1.0] * len(sk["time"])) for k in hourly}, "meteoswiss_icon_ch1", []
     real_fw, real_pause = forcing.fetch_weather, forcing._RETRY_PAUSE_S
     forcing.fetch_weather, forcing._RETRY_PAUSE_S = fw, 0.0
     try:
@@ -1402,7 +1419,10 @@ def test_temperature_by_height():
                   "shortwave_radiation": [100.0] * 24, "wind_speed_10m": [3.0] * 24,
                   "relative_humidity_2m": [80.0] * 24, "wind_direction_10m": [270.0] * 24}
         real_fw = f.fetch_weather
-        f.fetch_weather = lambda lat, lon, e, s_, en, models=None: (hourly, "m", [])
+        def _span2(s_, en):
+            sk = f._skeleton(s_, en)
+            return {k: (sk["time"] if k == "time" else [v[0]] * len(sk["time"])) for k, v in hourly.items()}
+        f.fetch_weather = lambda lat, lon, e, s_, en, models=None: (_span2(s_, en), "m", [])
         try:
             runs = [{"id": f"{w['id']}_{b0}_F", "wp": w["id"], "lat": w["lat"], "lon": w["lon"], "elev": float(b0)}]
             md = Path(td) / "meteo"
@@ -1418,6 +1438,70 @@ def test_temperature_by_height():
             f.fetch_weather = real_fw
 
 
+def test_own_weather_first():
+    """MeteoSwiss hours first; Open-Meteo only for the gaps, and a long
+    Retry-After closes it for the rest of the cycle (24.11.: 4.5 h waiting)."""
+    print("own weather first, Open-Meteo for the gaps")
+    import io, urllib.error
+    from datetime import datetime
+    win = (datetime(2026, 3, 25), datetime(2026, 3, 30))
+    wps = [{"id": "w000", "lat": 46.8, "lon": 9.8, "ref_elev": 2000.0}]
+    runs = [{"id": "w000_2000_F", "wp": "w000", "lat": 46.8, "lon": 9.8, "elev": 2000.0}]
+    asked = []
+
+    def span(s_, en, val):
+        sk = forcing._skeleton(s_, en)
+        return {"time": sk["time"], **{v: [val] * len(sk["time"]) for v in forcing._VARS}}
+
+    real_fw = forcing.fetch_weather
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            od = Path(td) / "ogd"; od.mkdir()
+            # OGD covers everything from the 20th on; the forcing starts earlier
+            ogd = span("2026-03-20", "2026-03-31", -3.0)
+            (od / "w000.json").write_text(json.dumps({"model": "icon-ch1", "hourly": ogd}))
+            forcing.fetch_weather = lambda lat, lon, e, s_, en, models=None: (
+                asked.append((s_, en)), (span(s_, en, -1.0), "meteoswiss_icon_ch1", []))[1]
+            used = forcing.build_forcing_matrix(wps, runs, "2026-03-30", win, Path(td) / "m1",
+                                                workers=1, ogd_dir=str(od))
+            s0, e0 = asked[0]
+            check("Open-Meteo asked only up to a day past the gap", e0 == "2026-03-20", str(asked))
+            check("forcing built with OGD on top", "icon-ch1" in used.get("w000", ""), str(used))
+            # Open-Meteo closed: the gap stays, nothing is made up
+            forcing.fetch_weather = lambda *a, **k: (None, None, ["closed"])
+            used2 = forcing.build_forcing_matrix(wps, runs, "2026-03-30", win, Path(td) / "m2",
+                                                 workers=1, ogd_dir=str(od))
+            check("a gap without Open-Meteo is not filled by invention", "w000" not in used2, str(used2))
+            # OGD over the whole span: works without Open-Meteo at all
+            full = span("2026-01-01", "2026-04-30", -3.0)
+            (od / "w000.json").write_text(json.dumps({"model": "icon-ch1", "hourly": full}))
+            used3 = forcing.build_forcing_matrix(wps, runs, "2026-03-30", win, Path(td) / "m3",
+                                                 workers=1, ogd_dir=str(od))
+            check("own hours alone are enough", used3.get("w000") == "icon-ch1", str(used3))
+    finally:
+        forcing.fetch_weather = real_fw
+    # a long Retry-After closes Open-Meteo at once
+    calls = []
+    real_open, real_sleep = forcing.urllib.request.urlopen, forcing.time.sleep
+
+    def boom(*a, **k):
+        calls.append(1)
+        raise urllib.error.HTTPError("u", 429, "Too Many", {"Retry-After": "3600"}, io.BytesIO(b""))
+    forcing.urllib.request.urlopen, forcing.time.sleep = boom, (lambda s: None)
+    try:
+        forcing._OM["closed"], forcing._OM["deadline"] = None, None
+        d1, why1 = forcing._fetch_json("http://x", {"a": 1})
+        d2, why2 = forcing._fetch_json("http://x", {"a": 2})
+        check("one call, then closed", len(calls) == 1 and d1 is None and "rate limit" in (why2 or ""),
+              f"{len(calls)} calls, {why2}")
+        forcing._OM["closed"], forcing._OM["deadline"] = None, 0.0
+        check("past the time budget nothing is asked", forcing._fetch_json("http://x", {})[0] is None
+              and len(calls) == 1)
+    finally:
+        forcing.urllib.request.urlopen, forcing.time.sleep = real_open, real_sleep
+        forcing._OM["closed"], forcing._OM["deadline"] = None, None
+
+
 if __name__ == "__main__":
     for t in (test_forcing_starts_before_profile_date, test_covers_rejects_a_stale_smet,
               test_ini, test_timestamp_window, test_prof_start_derivation,
@@ -1431,7 +1515,7 @@ if __name__ == "__main__":
               test_state_roundtrip, test_wind_indices, test_terrain_shading,
               test_imis_correction, test_season_state, test_advance_only, test_drift, test_gates, test_classifier_fixes, test_pack_roundtrip,
               test_rate_limit_backoff, test_precip_pattern, test_ski6_and_wind_classes,
-              test_temperature_by_height):
+              test_temperature_by_height, test_own_weather_first):
         t()
     print("\nVARIANT A PIPELINE " + ("OK" if not FAILS else f"FAILED: {FAILS}"))
     sys.exit(1 if FAILS else 0)

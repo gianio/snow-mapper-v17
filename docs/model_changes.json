@@ -9,5 +9,6 @@
   {"date": "2026-11-17", "pr": 190, "models": ["ns"], "text": "Neuschnee: flacheres Schnee-Wasser-Verhältnis, 24-h-Setzung"},
   {"date": "2026-11-17", "pr": 192, "models": ["st"], "text": "Schneetyp: Warmluft-Regel"},
   {"date": "2026-11-20", "pr": 197, "models": ["ns", "st"], "text": "Neuschnee: Dichte aus Temperatur und Wind, keine doppelte Höhen-Zugabe; Schneetyp: Wind bestimmt die Expositionen"},
-  {"date": "2026-11-24", "pr": 204, "models": ["st"], "text": "Schneetyp: einzelne Flecken im Flachland entfernt"}
+  {"date": "2026-11-24", "pr": 204, "models": ["st"], "text": "Schneetyp: einzelne Flecken im Flachland entfernt"},
+  {"date": "2026-11-25", "pr": 206, "models": ["st", "hs"], "text": "Schneedeckenmodell auch auf 600 und 900 m; Wetterpunkte, die erst weit oben rechnen, zählen in Tallagen kaum noch"}
 ]

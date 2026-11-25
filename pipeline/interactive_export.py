@@ -2039,6 +2039,12 @@ function fit(){var p=innerHeight>=innerWidth,sh=p?Math.max(screen.height,screen.
     d.appendChild(q);fx=q.getBoundingClientRect().height;d.removeChild(q);}catch(e){}
   var vv=window.visualViewport?visualViewport.height:0;
   var h=Math.max(innerHeight,fx,vv);if(!(h>200))h=Math.max(innerHeight,d.clientHeight,lvh);
+  // 24.11.: on the iPhone the measured heights again came out short by about
+  // the status bar (a grey band under the tab bar, the timeline too high).
+  // An iPhone in portrait (window as wide as the screen) shows the app over
+  // the whole screen -- the floating tab bar keeps its distance from the
+  // bottom edge through the safe area, so it is never cut.
+  if(p&&Math.abs(innerWidth-sw)<2&&sh-h>20&&sh-h<80)h=sh;
   d.style.setProperty('--app-h',Math.min(sh,h)+'px');}
 fit();addEventListener('resize',fit);addEventListener('orientationchange',function(){setTimeout(fit,300);});
 // iOS settles the standalone viewport a moment after launch
@@ -2238,8 +2244,10 @@ try{if(window.visualViewport)visualViewport.addEventListener('resize',fit);}catc
     bottom:0 means the real bottom edge. A Safari tab is not affected. */
  html.ios-pwa,html.ios-pwa body{height:var(--app-h,100lvh)!important;bottom:auto!important}
  /* installed app: the floating tab bar a little higher above the home indicator */
- html.ios-pwa #tabBar{bottom:calc(env(safe-area-inset-bottom,0px) + 18px)!important}
- html.ios-pwa{--nav-h:calc(env(safe-area-inset-bottom,0px) + 58px)!important}
+ /* installed app: the same floating tab bar and timeline gap as in Safari */
+ @media (max-width:899px){
+   html.ios-pwa #tabBar{bottom:calc(env(safe-area-inset-bottom,0px) + 10px)!important}
+   html.ios-pwa{--nav-h:calc(env(safe-area-inset-bottom,0px) + 76px)!important}}
  @media all and (display-mode: standalone){
    html,body{height:100vh!important;height:var(--app-h,100lvh)!important;bottom:auto!important}
    body{transform:translateZ(0)}
@@ -6316,7 +6324,7 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
    #tabBar{left:0!important;right:0!important;bottom:0!important;height:calc(env(safe-area-inset-bottom,0px) + 58px)!important;
      padding:0 6px env(safe-area-inset-bottom,0px)!important;border-radius:0!important;border:0!important;
      border-top:1px solid var(--bd)!important;box-shadow:none!important}
-   html.ios-pwa #tabBar{bottom:0!important}}
+   }
  #tabBar button,#tabBar #tbReport{color:var(--fg2)!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
  #tabBar button>span:not(.feed-dot):not(.tb-av){position:static;width:auto;height:auto;overflow:visible;clip:auto;
    font:500 11px/1.1 var(--font);letter-spacing:0}
@@ -7509,6 +7517,18 @@ body.fabs-folded #mapFabs>:not(#fabFold){display:none!important}
 .acc-src b{display:block;font:600 13.5px/1.3 var(--font)}.acc-src small{font:400 12px/1.3 var(--font);color:var(--md-on-surface-var,#555)}
 .acc-mark{flex:none;min-width:58px;padding:6px 8px;border-radius:10px;background:#fff;border:1px solid var(--md-outline-var,#ddd);font:800 12px/1 var(--font);letter-spacing:.02em;color:#C5221F;text-align:center}
 .acc-upd{margin-top:-4px!important}
+/* stations by kind: IMIS automatic, SLF / MeteoSwiss read by hand, SwissMetNet */
+.stn.vst{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;padding:0 7px 0 3px!important}
+.stn.vst i{font:800 9px/1 var(--font);font-style:normal;letter-spacing:.02em;padding:3px 4px;border-radius:6px;color:#fff}
+.vst-slf i,.vst-k.vst-slf{background:#B42318}.vst-msw i,.vst-k.vst-msw{background:#0B63B5}.vst-smn i,.vst-k.vst-smn{background:#475467}
+.stn-dot.vst-slf{background:#B42318}.stn-dot.vst-msw{background:#0B63B5}.stn-dot.vst-smn{background:#475467}
+.stn.st-imis::before,.scl.st-imis .s-c::before{content:'IMIS';font:800 8px/1 var(--font);color:#fff;background:#7A5AF8;border-radius:5px;padding:2px 3px;margin-right:4px;vertical-align:1px}
+.vst-pop{display:flex;flex-direction:column;gap:3px;font:13px/1.35 var(--font)}
+.vst-pop span{color:var(--md-on-surface-var,#555)}
+.vst-k{align-self:flex-start;color:#fff;font:700 11px/1 var(--font);font-style:normal;padding:4px 6px;border-radius:6px;margin:2px 0 4px}
+.vst-pop table{border-collapse:collapse;font-size:12.5px}.vst-pop th{text-align:left;font-weight:600;padding:2px 6px 2px 0;color:var(--md-on-surface-var,#555)}
+.vst-pop td{padding:2px 6px 2px 0;font-variant-numeric:tabular-nums}.vst-pop small{color:var(--md-on-surface-var,#777);margin-top:4px}
+
 .acc-more{display:inline-block;margin:2px 0 4px;font:600 13px var(--font);color:var(--md-primary,#0B63B5);text-decoration:none}
 /* 3D on a computer: MapLibre's own compact control (zoom, compass that
    resets north, pitch) below the top bar; no extra pad, no hint boxes */
@@ -7548,6 +7568,8 @@ body.desk #miniLegend #mlName{height:40px!important}
 #mlScaleBtn{width:36px;padding:4px 0 2px;border:0;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;
   background:color-mix(in srgb,var(--card,#fff) 88%,transparent);color:var(--md-on-surface-var,#444);box-shadow:0 1px 3px rgba(0,0,0,.16);align-self:flex-end}
 #mlScaleBtn[hidden]{display:none}
+/* the band limits are written on the map now: no scale strip under the layer button */
+#mlScaleBtn{display:none!important}
 #mlScaleBtn i{display:block;width:10px;height:46px;border-radius:5px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
 #mlScaleBtn svg{width:12px;height:12px}
 body.leg-open #mlScaleBtn svg{transform:rotate(180deg)}
@@ -7864,7 +7886,9 @@ html.cap-ios body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #
 .pt-v{display:grid!important;grid-template-columns:auto auto auto;grid-template-rows:auto auto;column-gap:7px;row-gap:2px;align-items:center;text-align:left}
 .pt-v>i,.pt-v>svg{grid-row:1/3}
 .pt-v>b{grid-column:3;grid-row:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.pt-chip{overflow:visible}.pt-chip .pt-v{min-width:0;overflow:hidden}
+/* natural width (the wrap is 0 px wide, so without this the text is squeezed
+   to its narrowest); max-width from ptChipFit cuts it only where needed */
+.pt-chip{overflow:visible;width:max-content}.pt-chip .pt-v{min-width:0;overflow:hidden}
 /* the chip hangs in a 0-wide marker, so the second line needs its own width */
 .pt-v>small{grid-column:3;grid-row:2;white-space:normal;width:max-content;max-width:min(40vw,190px);line-height:1.3!important;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -7896,6 +7920,9 @@ html.cap-ios body:not(.nav-screen):not(.trk-open):not(.wcv-open):not(.rp-open) #
 .fc-facts{flex-wrap:wrap;row-gap:6px}
 /* Neuschnee: band numbers inside the bands -- quiet, no box, a soft light halo */
 .ns-band{pointer-events:none!important}
+.ns-edge{pointer-events:none!important}
+.ns-edge span{display:block;white-space:nowrap;font:700 11.5px/1 var(--font);letter-spacing:.01em;
+  text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px rgba(255,255,255,.9),0 0 4px rgba(255,255,255,.8)}
 .ns-band span{display:block;transform:translate(-50%,-50%);white-space:nowrap;font:600 11.5px/1 var(--font);letter-spacing:.01em;opacity:.82;
   text-shadow:0 0 2px rgba(255,255,255,.75),0 0 6px rgba(255,255,255,.45)}
 /* feed without an account: a sign-in card after the preview (M3 filled card) */
@@ -9918,7 +9945,11 @@ function clvCol(l,m,h){let r=0,g=0,b=0,a=0;
 // snow always reads darker), cyan through blue and violet to a deep berry.
 // One snow-amount scale everywhere (maps, legends, reports, profiles), fixed in
 // the app so an older data blob with the old colours draws the same.
-const SB=[1,5,10,15,20,30,40,50,75,100,300],SC=['#93DFF0','#62C8EE','#3BA8E8','#2A86DE','#3563CF','#5446BC','#6631A3','#741F86','#761565','#640C44'],RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
+// Neuschnee in the SLF's own classes (White Risk «Neuschnee»: 1 10 20 30 40 60 80 100 cm)
+const SB=[1,10,20,30,40,60,80,100,300],SC=['#93DFF0','#3BA8E8','#2A86DE','#3563CF','#5446BC','#6631A3','#761565','#640C44'],RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
+// powder depth on the SNOWPACK layers and in reports keeps its finer classes
+// (the exports carry these bounds: classify.POWDER_BOUNDS)
+const PB=[1,5,10,15,20,30,40,50,75,100,300],PC=['#93DFF0','#62C8EE','#3BA8E8','#2A86DE','#3563CF','#5446BC','#6631A3','#741F86','#761565','#640C44'];
 function snowCol(v){if(v<SB[0])return null;for(let i=SB.length-1;i>=1;i--)if(v>=SB[i-1])return RGB[Math.min(i-1,RGB.length-1)];return RGB[0];}
 // The stepped legend above is right for the model layers (an official
 // SLF-style band scale), but a field built by blending overlapping reports
@@ -11258,6 +11289,11 @@ function vaHiEngine(){
     if(!c)return false;
     var d0=pk.d0_m,wh=[],sw=0,i;
     for(i=0;i<c;i++){var v=1/((_nd[i]+d0)*(_nd[i]+d0));wh.push(v);sw+=v;}
+    // a neighbour whose lowest band is far above this place fades out (its snow
+    // is that of a higher slope) -- matrix._weights, MATRIX_BELOW_FADE_M
+    if(pk.below_fade_m){var bl=[],bm=1e9,hs2=0.5*pk.elev_step;
+      for(i=0;i<c;i++){var bb=Math.max(0,E.wps[_ni[i]].b0-elev-hs2);bl.push(bb);if(bb<bm)bm=bb;}
+      sw=0;for(i=0;i<c;i++){wh[i]*=Math.exp(-(bl[i]-bm)/pk.below_fade_m);sw+=wh[i];}}
     var nodes=pk.slopes,ns=nodes.length,na=pk.aspects,step=pk.elev_step;
     var s=Math.max(nodes[0],Math.min(nodes[ns-1],slope||0));
     var sc0=0;while(sc0<ns-2&&s>=nodes[sc0+1])sc0++;
@@ -12747,7 +12783,7 @@ function tourRamp(v,focus){const P=VA_PALETTE.ski6;
   const st=(focus||tourFocus)==='sulz'?[[0,TOUR_GREY],[8,[238,214,166]],[50,P[6]],[100,[166,106,24]]]
                                      // powder: the app's snow scale -- light cyan for a poor tour,
                                      // through blue and indigo to violet for the best
-                                     :[[0,_hx(SC[0])],[20,_hx(SC[2])],[40,_hx(SC[3])],[60,_hx(SC[4])],[80,_hx(SC[5])],[100,_hx(SC[6])]];
+                                     :[[0,_hx(PC[0])],[20,_hx(PC[2])],[40,_hx(PC[3])],[60,_hx(PC[4])],[80,_hx(PC[5])],[100,_hx(PC[6])]];
   const c=_lerpC(st,v);return 'rgb('+c[0]+','+c[1]+','+c[2]+')';}
 function tourVal(r){return r?(tourFocus==='sulz'?r.sulz:r.powder):-1;}
 // the share for display: «–» where the route has no score yet (it printed «null»)
@@ -16050,19 +16086,19 @@ const isMobile=window.innerWidth<=560;
 // snow depth (typically 0-300cm+ at a base) instead of new-snow-per-window
 // (typically 0-100cm) -- discrete steps, not the old continuous gradient.
 // the same SLF classes as Neuschnee (and the powder in Skiqualität)
-// Schneehöhe has its own scale (per request): up to 60 cm is «not enough
-// snow» -- three bands drawn only as brown hatching (sparse -> dense), then
-// a continuous viridis ramp (matplotlib, reversed: yellow 60 cm -> deep
-// violet 400 cm+), quantised in 10 cm steps so no band lines show.
-const DEP_B=(()=>{const b=[1,20,40,60];for(let v=70;v<=400;v+=10)b.push(v);return b;})();
+// Schneehöhe in the SLF's classes (White Risk «Schneehöhe»: 1 20 50 80 120
+// 200 300 400 cm). Below 50 cm is «not enough snow»: two bands drawn only as
+// brown hatching (sparse -> dense), then one viridis tone per class
+// (matplotlib, reversed: yellow 50 cm -> deep violet 400 cm+).
+const DEP_B=[1,20,50,80,120,200,300,400],DEP_NH=2;
 const DEP_VIR=[[253,231,37],[181,222,43],[110,206,88],[53,183,121],[31,158,137],[38,130,142],[49,104,142],[62,74,137],[72,40,120],[68,1,84]];
 function depthVir(t){t=Math.max(0,Math.min(1,t))*(DEP_VIR.length-1);const i=Math.min(DEP_VIR.length-2,t|0),f=t-i,a=DEP_VIR[i],b=DEP_VIR[i+1];
   return [Math.round(a[0]+(b[0]-a[0])*f),Math.round(a[1]+(b[1]-a[1])*f),Math.round(a[2]+(b[2]-a[2])*f)];}
-const DEP_BROWN=[[176,138,96],[150,108,66],[122,84,48]];
-const DEP_RGB=DEP_B.slice(0,-1).map((v,i)=>i<3?DEP_BROWN[i]:depthVir((v-60)/340)).concat([depthVir(1)]);
+const DEP_BROWN=[[168,128,86],[132,94,56]];
+const DEP_RGB=DEP_B.map((v,i)=>i<DEP_NH?DEP_BROWN[i]:depthVir((i-DEP_NH)/(DEP_B.length-1-DEP_NH)));
 function depthBand(v){if(v==null||!(v>=DEP_B[0]))return -1;let j=0;while(j+1<DEP_B.length&&v>=DEP_B[j+1])j++;return Math.min(j,DEP_RGB.length-1);}
 // brown hatching for the «not enough snow» bands: denser the deeper
-function depthHatch(bq,X,Y){const per=[9,7,5][bq],on=[1.6,2,2.2][bq];return ((X+Y)%per)<on;}
+function depthHatch(bq,X,Y){const per=[8,6][bq],on=[1.6,2.1][bq];return ((X+Y)%per)<on;}
 const DEPTH_BOUNDS=DEP_B;
 function depthCol(v){const j=depthBand(v);return j<0?null:DEP_RGB[j];}
 function depthCss(v){const c=depthCol(v);return c?'rgb('+c.join(',')+')':'#D5DAE1';}
@@ -16151,8 +16187,8 @@ function setRasterIso(val,alpha,k){try{const e=raster.getElement();if(e)e.classL
   // while the Alps layer fades in over the same band: no hard rectangle
   const fe=(typeof ALPS!=='undefined'&&ALPS&&layer==='snow')?SEAM_CELLS:0,dep=layer==='depth',PAL=dep?DEP_RGB:RGB;
   for(let q=0;q<w*h;q++){const bq=B[q];if(bq<0)continue;const o=q*4,c=PAL[bq],X=q%w;
-    if(dep&&bq<3){if(depthHatch(bq,X,(q/w)|0)){d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=235;}continue;}
-    const edge=!(dep&&bq>3)&&((X<w-1&&B[q+1]!==bq)||(q+w<w*h&&B[q+w]!==bq));
+    if(dep&&bq<DEP_NH){if(depthHatch(bq,X,(q/w)|0)){d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=235;}continue;}
+    const edge=!(dep&&bq<DEP_NH)&&((X<w-1&&B[q+1]!==bq)||(q+w<w*h&&B[q+w]!==bq));
     let fa=1;if(fe){const cx=(X+.5)/k,cy=((q/w)|0)+.5;const dc=Math.min(cx-EDGE_COLS,W-EDGE_COLS-cx,cy/k-EDGE_ROWS,H-EDGE_ROWS-cy/k);fa=Math.max(0,Math.min(1,dc/fe));}
     // the line is a darker shade of the band itself: present, but faint
     const f=edge?.8:1,al=bq<2?Math.min(255,alpha+30):alpha;d[o]=c[0]*f;d[o+1]=c[1]*f;d[o+2]=c[2]*f;d[o+3]=(edge?Math.min(255,al+30):al)*fa;}
@@ -16205,8 +16241,8 @@ function isoHiRender(){const V=_isoV;
   const al=_isoA,fe=(typeof ALPS!=='undefined'&&ALPS&&layer==='snow')?SEAM_CELLS:0;
   const dep=layer==='depth',PAL=dep?DEP_RGB:RGB;
   for(let qq=0;qq<w*h;qq++){const bq=B[qq];if(bq<0)continue;const o=qq*4,c=PAL[bq],X=qq%w;
-    if(dep&&bq<3){if(depthHatch(bq,X,(qq/w)|0)){d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=235;}continue;}
-    const edge=!(dep&&bq>3)&&((X<w-1&&B[qq+1]!==bq)||(qq+w<w*h&&B[qq+w]!==bq));
+    if(dep&&bq<DEP_NH){if(depthHatch(bq,X,(qq/w)|0)){d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=235;}continue;}
+    const edge=!(dep&&bq<DEP_NH)&&((X<w-1&&B[qq+1]!==bq)||(qq+w<w*h&&B[qq+w]!==bq));
     // the same cross-fade towards the Alps layer as the coarse picture
     let fa=1;if(fe){const cx=((x0+(X+.5)/q)-p0.x)/sx*W,cy=((y0+(((qq/w)|0)+.5)/q)-p0.y)/sy*H;
       fa=Math.max(0,Math.min(1,Math.min(cx-EDGE_COLS,W-EDGE_COLS-cx,cy-EDGE_ROWS,H-EDGE_ROWS-cy)/fe));}
@@ -16415,7 +16451,7 @@ function nsCmAt(lat,lon){
 function nsLabRefresh(){
   const on=layer==='snow'&&typeof raster!=='undefined'&&map.hasLayer(raster)&&!(typeof is3d!=='undefined'&&is3d);
   if(!nsLabG){nsLabG=L.layerGroup();map.on('zoomend',()=>{try{nsLabRefresh();}catch(e){}});}
-  if(!on){if(map.hasLayer(nsLabG))map.removeLayer(nsLabG);_nsLabK='';return;}
+  if(!on){if(map.hasLayer(nsLabG))map.removeLayer(nsLabG);_nsLabK='';try{nsBandRefresh();}catch(e){}return;}
   const z=map.getZoom(),tier=z>=9?2:1,k=a+'|'+b+'|'+tier+'|'+(ALPS?1:0);
   if(!map.hasLayer(nsLabG))nsLabG.addTo(map);if(k===_nsLabK)return;_nsLabK=k;
   nsLabG.clearLayers();
@@ -16442,28 +16478,57 @@ function nsPixAt(lat,lon){
     su+=wt*(z==null?v0:nsAtHeight(p,v0,z-melevv(p)));sw+=wt;};
   add(ya*W+xa,(1-tx)*(1-ty));add(ya*W+xb,tx*(1-ty));add(yb*W+xa,(1-tx)*ty);add(yb*W+xb,tx*ty);
   return sw?su/sw:NaN;}
+// The band limits written ON the band edges, like contour labels («10 cm»
+// where 5–10 meets 10–15): the screen is sampled on a grid, where two
+// neighbouring samples fall in different bands the edge is found by
+// bisection and its value written there, turned along the edge. Each limit at
+// most once per ~220 px, nothing on top of the place labels. Neuschnee and
+// Schneehöhe.
+function isoValAt(lat,lon){const V=_isoV;if(!V||!(lat>laMin&&lat<laMax&&lon>loMin&&lon<loMax))return NaN;
+  const fx=Math.min(W-1,Math.max(0,(lon-loMin)/(loMax-loMin)*W-.5)),fy=Math.min(H-1,Math.max(0,(laMax-lat)/(laMax-laMin)*H-.5));
+  const xa=fx|0,ya=fy|0,xb=Math.min(W-1,xa+1),yb=Math.min(H-1,ya+1),tx=fx-xa,ty=fy-ya;let su=0,sw=0;
+  const add=(p,wt)=>{const v=V[p];if(wt>0&&v===v){su+=v*wt;sw+=wt;}};
+  add(ya*W+xa,(1-tx)*(1-ty));add(ya*W+xb,tx*(1-ty));add(yb*W+xa,(1-tx)*ty);add(yb*W+xb,tx*ty);return sw?su/sw:NaN;}
+const DEP_LBL=new Set(DEP_B.slice(1));
 function nsBandRefresh(){
-  const on=layer==='snow'&&typeof raster!=='undefined'&&map.hasLayer(raster)&&!(typeof is3d!=='undefined'&&is3d);
+  const dep=layer==='depth',on=(layer==='snow'||dep)&&typeof raster!=='undefined'&&map.hasLayer(raster)&&!(typeof is3d!=='undefined'&&is3d);
   if(!nsBandG){nsBandG=L.layerGroup();map.on('moveend',()=>{try{nsBandRefresh();}catch(e){}});}
   if(!on){if(map.hasLayer(nsBandG))map.removeLayer(nsBandG);_nsBandK='';return;}
   if(!map.hasLayer(nsBandG))nsBandG.addTo(map);
-  const bb=map.getBounds(),k=a+'|'+b+'|'+map.getZoom().toFixed(1)+'|'+bb.toBBoxString();if(k===_nsBandK)return;_nsBandK=k;
+  const bb=map.getBounds(),k=layer+'|'+a+'|'+b+'|'+map.getZoom().toFixed(1)+'|'+bb.toBBoxString();if(k===_nsBandK)return;_nsBandK=k;
   nsBandG.clearLayers();
-  const sz=map.getSize(),step=96,placed=[],hidF=(typeof legHideFn==='function')?legHideFn():null;
-  // places already carry their number: keep the band labels off them
-  const taken=[];nsLabG&&nsLabG.eachLayer(m=>{try{taken.push(map.latLngToContainerPoint(m.getLatLng()));}catch(e){}});
-  for(let y=step*0.6;y<sz.y-40;y+=step)for(let x=step*0.5+((y/step|0)%2)*step/2;x<sz.x-20;x+=step){
-    const ll=map.containerPointToLatLng([x,y]);let v;try{v=nsPixAt(ll.lat,ll.lng);}catch(e){continue;}
-    if(!(v>=SB[0]))continue;if(hidF&&hidF(v))continue;
-    const j=snowBand(v);if(j<0)continue;
-    if(taken.some(q=>Math.abs(q.x-x)<70&&Math.abs(q.y-y)<34))continue;
-    if(placed.some(q=>q.j===j&&Math.hypot(q.x-x,q.y-y)<170))continue;
-    placed.push({x,y,j});
-    const top=j>=SB.length-2,lab=SB[j]+(top?'+':'–'+SB[j+1]),c=RGB[j]||[120,160,220];
-    // a darker tone of the band colour (about 45 % toward a deep blue-grey)
-    const d=[c[0]*.5+20*.5|0,c[1]*.5+28*.5|0,c[2]*.5+48*.5|0];
+  const valAt=dep?isoValAt:nsPixAt,LIM=dep?DEP_B:SB,band=dep?depthBand:snowBand,PAL=dep?DEP_RGB:RGB;
+  const want=T=>dep?DEP_LBL.has(T):T>SB[0];
+  const hidF=(!dep&&typeof legHideFn==='function')?legHideFn():null;
+  const sz=map.getSize(),st=26,nx=Math.ceil(sz.x/st)+1,ny=Math.ceil(sz.y/st)+1;
+  const vAt=(x,y)=>{try{const ll=map.containerPointToLatLng([x,y]);return valAt(ll.lat,ll.lng);}catch(e){return NaN;}};
+  const G=new Float32Array(nx*ny),J=new Int16Array(nx*ny);
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const v=vAt(i*st,j*st);G[j*nx+i]=v;J[j*nx+i]=(v===v&&!(hidF&&hidF(v)))?band(v):-2;}
+  const taken=[];nsLabG&&map.hasLayer(nsLabG)&&nsLabG.eachLayer(m=>{try{taken.push(map.latLngToContainerPoint(m.getLatLng()));}catch(e){}});
+  const cand=[];
+  const edge=(i0,j0,i1,j1)=>{const a0=J[j0*nx+i0],a1=J[j1*nx+i1];if(a0<0||a1<0||a0===a1)return;
+    const lo=Math.min(a0,a1),T=LIM[lo+1];if(!(T>0)||!want(T))return;
+    // bisection for value = T between the two samples
+    let x0=i0*st,y0=j0*st,x1=i1*st,y1=j1*st,v0=G[j0*nx+i0];
+    for(let n=0;n<6;n++){const xm=(x0+x1)/2,ym=(y0+y1)/2,vm=vAt(xm,ym);if(!(vm===vm))return;
+      if((vm>=T)===(v0>=T)){x0=xm;y0=ym;v0=vm;}else{x1=xm;y1=ym;}}
+    const x=(x0+x1)/2,y=(y0+y1)/2;if(x<24||y<20||x>sz.x-24||y>sz.y-20)return;
+    // the edge runs across the gradient
+    const gx=vAt(x+4,y)-vAt(x-4,y),gy=vAt(x,y+4)-vAt(x,y-4);let ang=Math.atan2(gy,gx)*180/Math.PI+90;
+    if(!(ang===ang))ang=0;while(ang>90)ang-=180;while(ang<=-90)ang+=180;
+    cand.push({x,y,T,ang,j:lo+1});};
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){if(i+1<nx)edge(i,j,i+1,j);if(j+1<ny)edge(i,j,i,j+1);}
+  // spread them out: start from the middle of the screen
+  const cx=sz.x/2,cy=sz.y/2;cand.sort((p,q)=>Math.hypot(p.x-cx,p.y-cy)-Math.hypot(q.x-cx,q.y-cy));
+  const placed=[];
+  for(const c of cand){if(placed.length>=28)break;
+    if(taken.some(q=>Math.abs(q.x-c.x)<64&&Math.abs(q.y-c.y)<30))continue;
+    if(placed.some(q=>(q.T===c.T&&Math.hypot(q.x-c.x,q.y-c.y)<220)||Math.hypot(q.x-c.x,q.y-c.y)<70))continue;
+    placed.push(c);
+    const col=PAL[Math.min(PAL.length-1,c.j)]||[60,90,140],dk=[col[0]*.45+12|0,col[1]*.45+18|0,col[2]*.45+34|0];
+    const ll=map.containerPointToLatLng([c.x,c.y]);
     nsBandG.addLayer(L.marker(ll,{interactive:false,keyboard:false,zIndexOffset:-200,
-      icon:L.divIcon({className:'ns-band',iconSize:null,html:'<span style="color:rgb('+d.join(',')+')">'+lab+'</span>'})}));}}
+      icon:L.divIcon({className:'ns-edge',iconSize:null,html:'<span style="color:rgb('+dk.join(',')+');transform:translate(-50%,-50%) rotate('+c.ang.toFixed(0)+'deg)">'+c.T+' cm</span>'})}));}}
 // ── Schneefallgrenze: the highest snowfall line of the window ─────────────
 // For every hour with precipitation the snowfall line sits where the air is
 // about +1 degC: the cell's temperature carried up or down its own height at
@@ -16702,9 +16767,38 @@ function renderStations(){stnGroup.clearLayers();if(!showStn)return;
         '<div class="s-row">'+pill(ll,'#b0c4de')+'<span class="s-c"'+pc+' title="'+escapeHtml(stnTip(s,sv))+'">'+lbl+'</span>'+pill(lr,'#70d890')+'</div>'+
         '<div class="s-b">'+pill(bot,'#f07070')+'</div></div>';
       iSize=[104,52];iAnc=[52,26];}
+    if(tier>=1)html=html.replace(/^<div class="(stn|scl)"/,'<div class="$1 st-imis"');
     const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:html,iconSize:iSize,iconAnchor:iAnc}),zIndexOffset:500});
     m.on('click',ev=>{L.DomEvent.stopPropagation(ev);stnOpen(s.code);});m.addTo(stnGroup);}
+  try{valStnRender(tier);}catch(e){}
 }
+// The stations the daily validation reads (data/validation.json), beside the
+// IMIS ones and marked by kind: SLF study plots and the MeteoSwiss network
+// are READ BY HAND once a day (new snow 24 h at 06 UTC), SwissMetNet measures
+// automatically (temperature). Each shows its last measurement with the
+// model's value at the same place beside it.
+const VST_KIND={slf:['SLF','Manuelles Messfeld SLF','von Hand gemessen, täglich 06 UTC'],
+  msw:['MS','Manuelle Station MeteoSchweiz','von Hand gemessen, täglich 06 UTC'],
+  smn:['SMN','SwissMetNet MeteoSchweiz','automatisch gemessen']};
+function valStnRender(tier){const v=_accVal;
+  if(!v){accLoad().then(()=>{if(showStn&&_accVal)renderStations();});return;}
+  const show=layer==='snow'?'ns':(layer==='temp'||layer==='tsurf')?'t':null;if(!show)return;
+  const fmtD=d=>new Date(d+'T12:00Z').toLocaleDateString('de-CH',{weekday:'short',day:'numeric',month:'numeric'});
+  const add=(s,kind,val,tip,body)=>{const K=VST_KIND[kind];
+    const html=tier===0?'<div class="stn-dot vst-'+kind+'"></div>'
+      :'<div class="stn vst vst-'+kind+'" title="'+escapeHtml(tip)+'"><i>'+K[0]+'</i>'+val+'</div>';
+    const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html,iconSize:tier===0?[12,12]:[64,22],iconAnchor:tier===0?[6,6]:[32,11]}),zIndexOffset:450});
+    m.bindPopup('<div class="vst-pop"><b>'+escapeHtml(s.name||s.code)+'</b><span>'+s.z+' m · '+K[1]+'</span><em class="vst-k vst-'+kind+'">'+K[0]+' · '+K[2]+'</em>'+body
+      +'<small>Daten: '+(kind==='slf'?'WSL-Institut für Schnee- und Lawinenforschung SLF':'MeteoSchweiz')+', CC BY 4.0</small></div>',{maxWidth:260});
+    m.addTo(stnGroup);};
+  if(show==='ns')(v.stations_newsnow||[]).forEach(s=>{const d=s.days[s.days.length-1];
+    const rows=s.days.slice().reverse().map(x=>'<tr><td>'+fmtD(x.d)+'</td><td>'+Math.round(x.o)+' cm</td><td>'+Math.round(x.m)+' cm</td></tr>').join('');
+    add(s,s.src,Math.round(d.o)+'<small> cm</small>',(s.name||s.code)+' · Neuschnee 24 h gemessen '+Math.round(d.o)+' cm · Modell '+Math.round(d.m)+' cm',
+      '<table><tr><th>Neuschnee 24 h</th><th>gemessen</th><th>Modell</th></tr>'+rows+'</table>');});
+  else ((v.temp&&v.temp.stations)||[]).forEach(s=>{const d=s.days[s.days.length-1];
+    const rows=s.days.slice().reverse().map(x=>'<tr><td>'+fmtD(x.d)+'</td><td>'+Math.round(x.on)+' / '+Math.round(x.ox)+'°</td><td>'+Math.round(x.mn)+' / '+Math.round(x.mx)+'°</td></tr>').join('');
+    add(s,'smn',Math.round(d.ox)+'°',(s.name||s.code)+' · Max gemessen '+Math.round(d.ox)+'° · Modell '+Math.round(d.mx)+'°',
+      '<table><tr><th>Min / Max</th><th>gemessen</th><th>Modell</th></tr>'+rows+'</table>');});}
 // A viewport-scoped raster has to follow the viewport.
 let _progMoveT=null;
 function progRefresh(){
@@ -16731,8 +16825,9 @@ function fmt(i){const d=new Date(M.times[Math.max(0,Math.min(T-1,i))]+"Z");const
 function dayLabel(doy){const d=new Date(2026,0,1);d.setDate(doy);return d.toLocaleDateString(LOCALE(),{day:'2-digit',month:'short'});}
 function legendFor(l){const sn={avg:'Mittel',max:'Max',min:'Min',sub0:'immer <0°C',max05:'Max 0–5°C',lt10:'max <10 km/h'}[stat];
   if(l=="snow"){let h="<b>Neuschnee [cm]</b><br>";for(let i=0;i<SB.length-1;i++)h+=`<div><i style="background:${SC[i]}"></i>${SB[i]}${i===SB.length-2?'+':'–'+SB[i+1]}</div>`;return h+"<div style='margin-top:5px'><span class='stn' style='padding:0 3px'>NN</span> Station (antippen für Details)</div>"+LG_ABROAD;}
-  if(l=="depth"){let h="<b>Schneehöhe [cm]</b><br>";[[1,20],[20,40],[40,60]].forEach((r,i)=>{h+=`<div><i style="background:repeating-linear-gradient(135deg,rgb(${DEP_BROWN[i].join(',')}) 0 2px,transparent 2px 5px)"></i>${r[0]}–${r[1]} · zu wenig</div>`;});
-    [[60,100],[100,150],[150,200],[200,300],[300,400]].forEach(r=>{h+=`<div><i style="background:${depthCss((r[0]+r[1])/2)}"></i>${r[0]}${r[1]>=400?'+':'–'+r[1]}</div>`;});return h+LG_ABROAD;}
+  if(l=="depth"){let h="<b>Schneehöhe [cm]</b><br>";for(let i=0;i<DEP_B.length;i++){const lo=DEP_B[i],hi=DEP_B[i+1],t=lo+(hi?'–'+hi:'+');
+      h+=i<DEP_NH?`<div><i style="background:repeating-linear-gradient(135deg,rgb(${DEP_BROWN[i].join(',')}) 0 2px,transparent 2px 5px)"></i>${t} · zu wenig</div>`
+        :`<div><i style="background:${depthCss(lo)}"></i>${t}</div>`;}return h+LG_ABROAD;}
   if(l=="temp"){let extra="blau = kalt · rot = warm";if(stat=="sub0")extra="nur Zellen, die im ganzen Fenster unter 0°C bleiben";if(stat=="max05")extra="nur Zellen mit Höchstwert 0–5°C";return `<b>Temp 2 m [°C] (${sn})</b><br>${extra}`;}
   if(l=="wind"){const wl=WIND_LVLS[windLvl][1];if(stat=="lt10")return "<b>Wind "+wl+" ("+sn+")</b><br>grün = Höchstwind bleibt unter 10 km/h";return '<b>Wind '+wl+' (km/h, '+sn+')</b><br><div style="height:12px;border-radius:2px;background:linear-gradient(90deg,rgb(30,120,255),rgb(30,240,135),rgb(255,240,0),rgb(255,40,0));margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:11px"><span>0</span><span>25</span><span>50</span><span>70+</span></div><div style="margin-top:4px;font-size:12px">Pfeile zeigen die Windrichtung</div>';}
   if(l=="cloud")return "<b>Bewölkung [%]</b><br>zur gewählten Stunde · hellblau = wenig, tiefblau = bedeckt";
@@ -16846,7 +16941,7 @@ function miniLegendRender(l){try{thrFloatSync();}catch(_){}
 // One description of every layer's scale: what the narrow card on the map
 // shows (unit + short labels) and what the info card spells out.
 // rows run top-down, high to low, like a printed colour key.
-// the snow scale as steps: ten classes, four numbers (1, 10, 30, 100 cm)
+// the snow scale as steps: the SLF classes, four numbers (1, 10, 30, 100 cm)
 function snowSteps(){const n=SB.length-1,at=v=>SB.indexOf(v);
   return {cols:SC.slice(0,n),ticks:[[at(1),'1'],[at(10),'10'],[at(30),'30'],[at(100),'100']].filter(t=>t[0]>=0)};}
 function legSpec(l){
@@ -16862,7 +16957,7 @@ function legSpec(l){
         ticks:[r[1],Math.round((r[0]+r[1])/2),r[0]],long:'Dichte der obersten Schneeschicht'};}
     // Nur Pulver: always the SLF snow-depth bands -- the sharp map is drawn
     // in them even when the export is an older one without its own layer
-    if(vaKey==='powder'){const B=SB.slice(0,-1),C=SC;
+    if(vaKey==='powder'){const B=PB.slice(0,-1),C=PC;
       const rows=[];for(let i=B.length-1;i>=0;i--)rows.push({k:i+1,c:C[i],s:i===B.length-1?'>'+B[i]:B[i]+'–'+B[i+1],n:'Pulver '+(i===B.length-1?'> '+B[i]:B[i]+'–'+B[i+1])+' cm'});
       return {t:name,u:'Pulver cm',va:true,rows,long:'Trockener Pulver in den Schneehöhen-Klassen des SLF'};}
     const leg=L.legend||{};
@@ -16875,7 +16970,7 @@ function legSpec(l){
     // never shares of the view. Zoomed in the map draws powder in the SLF
     // bands (device engine); the coarse frames in the five powder classes.
     if(vaKey==='ski6'){const rows=[];
-      if(vaEng){const B=SB.slice(0,10),C=SC.slice(0,10);
+      if(vaEng){const B=PB.slice(0,10),C=PC.slice(0,10);
         for(let i=B.length-1;i>=0;i--)rows.push({k:100+i,c:C[i],s:B[i]+(i===B.length-1?'+':'–'+B[i+1]),n:'Pulver '+B[i]+(i===B.length-1?'+ cm':'–'+B[i+1]+' cm')});}
       else [[9,'40+'],[8,'30–40'],[5,leg[8]?'20–30':'20+'],[4,'10–20'],[3,'2–10']].forEach(([k,sv])=>{if(k===8&&!leg[8])return;
         rows.push({k,c:rgb(VA_PALETTE.ski6[k]),s:sv,n:'Pulver '+sv+' cm'});});
@@ -16899,11 +16994,10 @@ function legSpec(l){
   if(l==='snow'){const rows=[];for(let i=SB.length-2;i>=0;i--){const top=i===SB.length-2;
       rows.push({k:i,lo:SB[i],hi:top?Infinity:SB[i+1],c:SC[Math.min(i,SC.length-1)],s:SB[i]+(top?'+':'–'+SB[i+1]),n:SB[i]+(top?'+':'–'+SB[i+1])+' cm'});}
     return {t:'Neuschnee',u:'cm',rows,steps:snowSteps()};}
-  if(l==='depth'){const R=[[300,Infinity],[200,300],[150,200],[100,150],[60,100],[40,60],[20,40],[1,20]],rows=R.map((r,i)=>{
-      const hat=r[0]<60,c=hat?'repeating-linear-gradient(135deg,rgb('+DEP_BROWN[[1,20,40].indexOf(r[0])].join(',')+') 0 2px,transparent 2px 5px)':depthCss((r[0]+Math.min(r[1],400))/2);
-      const t=r[0]+(r[1]===Infinity?'+':'–'+r[1]);return {k:i,lo:r[0],hi:r[1],c,s:t,n:t+' cm'+(hat?' · zu wenig Schnee':'')};});
-    const ramp=[];for(let v=60;v<=400;v+=34)ramp.push(depthCss(v));
-    return {t:'Schneehöhe',u:'cm',rows,steps:{cols:[...DEP_BROWN.map(c=>'rgb('+c.join(',')+')'),...ramp],ticks:[[3,'60'],[7,'200'],[13,'400']]}};}
+  if(l==='depth'){const rows=[];for(let i=DEP_B.length-1;i>=0;i--){const lo=DEP_B[i],hi=i+1<DEP_B.length?DEP_B[i+1]:Infinity,hat=i<DEP_NH;
+      const c=hat?'repeating-linear-gradient(135deg,rgb('+DEP_BROWN[i].join(',')+') 0 2px,transparent 2px 5px)':'rgb('+DEP_RGB[i].join(',')+')';
+      const t=lo+(hi===Infinity?'+':'–'+hi);rows.push({k:i,lo,hi,c,s:t,n:t+' cm'+(hat?' · zu wenig Schnee':'')});}
+    return {t:'Schneehöhe',u:'cm',rows,steps:{cols:DEP_RGB.map(c=>'rgb('+c.join(',')+')'),ticks:[[2,'50'],[5,'200'],[7,'400']]}};}
   if(l==='powder')return {t:'Powder',u:'Pulver cm',
     rows:(()=>{const rows=[];for(let i=SB.length-2;i>=0;i--){const top=i===SB.length-2;
       rows.push({c:SC[Math.min(i,SC.length-1)],s:(i?SB[i]:'<'+SB[1])+(top?'+':i?'–'+SB[i+1]:''),n:(i?SB[i]:'<'+SB[1])+(top?'+':i?'–'+SB[i+1]:'')+' cm Pulver'});}return rows;})(),
@@ -18481,7 +18575,7 @@ function ptLayerValue(lat,lon){const p=ptCell(lat,lon);if(p<0)return null;
   try{
     if(id==='newsnow'){const v=nsAtHeight(p,nsAt(p,a,b),fz==null?NaN:fz-melevv(p));return {ic:ic(id),v:'+'+(v<10?v.toFixed(1):Math.round(v))+' cm',s:'Neuschnee',c:fpSnowCol(v)};}
     if(id==='depth'){const v=cum[b*NP+p];return {ic:ic(id),v:Math.round(v)+' cm',s:'Schneehöhe',c:depthCss(v)};}
-    if(id==='temp'){const v=mean(t=>tvI(t,p));return {ic:ic(id),v:(v>0?'+':'')+v.toFixed(1)+' °C',s:'Temperatur',c:v>0?'#E5484D':'#3B82F6'};}
+    if(id==='temp'){const dz=fz==null?0:Math.max(-8,Math.min(8,TEMP_LAPSE*(fz-melevv(p))));const v=mean(t=>tvI(t,p))+dz;return {ic:ic(id),v:(v>0?'+':'')+v.toFixed(1)+' °C',s:'Temperatur',c:v>0?'#E5484D':'#3B82F6'};}
     if(id==='wind'){const wk=mainToWind[p];const v=mean(t=>SPD[t*P+wk]/M.spd_mul*3.6);return {ic:ic(id),v:Math.round(v)+' km/h',s:'Wind',c:'#64748B'};}
     // Skiqualität is drawn by SNOWPACK: read the same engine at the same spot
     // (it said «Eingeregnet» from the rule engine where the map and the point
@@ -18797,7 +18891,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
       '</div>';
   }catch(e){}}
   // the numbers first: what fell in the chosen window, what lies, how cold
-  let kpi='',tmn=1e9,tmx=-1e9;try{for(let t=a;t<Math.min(b,T);t++){const v=tvI(t,p);if(v==null||v!==v)continue;if(v<tmn)tmn=v;if(v>tmx)tmx=v;}
+  let kpi='',tmn=1e9,tmx=-1e9;try{for(let t=a;t<Math.min(b,T);t++){const v=tvI(t,p)+(p===_inspPt?_inspDT:0);if(v==null||v!==v)continue;if(v<tmn)tmn=v;if(v>tmx)tmx=v;}
     const kt=t=>{const d=zLocal(tMs(t));return WD()[d.getUTCDay()]+' '+String(d.getUTCHours()).padStart(2,'0')+'h';};
     kpi='<div class="insp-kpis"><div class="k-snow"><span>Neuschnee</span><b>+'+newSnow.toFixed(newSnow<10?1:0)+'<small> cm</small></b><em>'+kt(a)+' – '+kt(Math.max(a,b-1))+'</em></div>'
       +'<div><span>Schneehöhe</span><b>'+depthNow.toFixed(0)+'<small> cm</small></b><em>am Ende</em></div>'
@@ -18884,8 +18978,12 @@ function ptDaysHTML(lat,lon,elev){const days=fpDays();if(!days.length)return '';
     const rg=Math.max(100,A.hi-A.lo),y0=Math.max(0,Math.min(1,(x.lo-A.lo)/rg)),y1=Math.max(y0+.08,Math.min(1,(x.hi-A.lo)/rg)),col=x.good?'#2E9E5B':'#9BC53D';
     return '<span class="fp-c fp-qc'+cls(d)+'"><b style="color:'+col+'">'+(x.asp.length===4?'alle':x.asp.map(a2=>FP_ASL[a2]).join(' '))+'</b><i class="fp-ax"><u style="bottom:'+(y0*44).toFixed(0)+'px;height:'+((y1-y0)*44).toFixed(0)+'px;background:'+col+'"></u></i><small class="fp-hm">'+x.lo+'–'+x.hi+'</small></span>';}).join(''):'';
   // weather per day: temperature range, sun hours, wind
+  // the cell's temperature moved from its mean height to the point's own (as
+  // the temperature map does): on the Weissfluhjoch the cell sits hundreds of
+  // metres lower, and Min/Max read several degrees warm against the station
+  const dzT=pc<0||!(elev>0)?0:Math.max(-8,Math.min(8,TEMP_LAPSE*(elev-melevv(pc))));
   const wx=pc<0?null:days.map(d=>{let mn=1e9,mx=-1e9,sun=0,ws=0,wm=0,n=0,ss=0,sc=0;
-    for(let t=d.t0;t<d.t1;t++){const v=tvI(t,pc);if(v===v){if(v<mn)mn=v;if(v>mx)mx=v;}sun+=sunv(t,pc);
+    for(let t=d.t0;t<d.t1;t++){const v=tvI(t,pc)+dzT;if(v===v){if(v<mn)mn=v;if(v>mx)mx=v;}sun+=sunv(t,pc);
       if(wk>=0){const sp=SPD[t*P+wk]/M.spd_mul*3.6,dd=WDIR[t*P+wk]*M.dir_div*Math.PI/180;ws+=sp;if(sp>wm)wm=sp;ss+=Math.sin(dd);sc+=Math.cos(dd);n++;}}
     return {mn,mx,sun,wmean:n?ws/n:0,wmax:wm,dir:(Math.atan2(ss,sc)*180/Math.PI+360)%360};});
   let tRow='',sRow='',wRow='';
@@ -19003,7 +19101,7 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
     else if(q.k==='temp'){
       // air and snow surface, one °C axis; 0 °C marked
       const air=[],srf=[];let mn=1e9,mx=-1e9;
-      for(let t=0;t<T;t++){air[t]=tvI(t,p);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);
+      for(let t=0;t<T;t++){air[t]=tvI(t,p)+(p===_inspPt?_inspDT:0);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);
         for(const v of [air[t],srf[t]])if(v==v&&v!=null){if(v<mn)mn=v;if(v>mx)mx=v;}}
       const raw=Math.max(1,mx-mn),st=raw<=5?1:raw<=12?2:raw<=28?5:10;mn=Math.floor(mn/st)*st;mx=Math.ceil(mx/st)*st;if(mx===mn)mx+=st;
       const yT=v=>r.base-(v-mn)/(mx-mn)*hgt;
@@ -19107,13 +19205,13 @@ function icDepth(cv,p){const{ctx,w,h}=icSetup(cv,80);const t0=a,t1=b;const LG=4,
   ctx.beginPath();for(let i=0;i<Ln;i++){const x=px(i),y=py(vals[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.strokeStyle=cvTok('--accent-meteo','#2A8FD8');ctx.lineWidth=2.2;ctx.stroke();
   icPill(ctx,px(mi),py(vals[mi])-21,vals[mi].toFixed(0)+' cm',cvTok('--accent-meteo','#2A8FD8'),w);}
 function icTemp(cv,p){const t0=a,t1=Math.max(a+2,b),air=[],srf=[];
-  for(let t=t0;t<t1&&t<T;t++){air[t]=tvI(t,p);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);}
+  for(let t=t0;t<t1&&t<T;t++){air[t]=tvI(t,p)+(p===_inspPt?_inspDT:0);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);}
   tempChart(cv,air,srf,t0,Math.min(t1,T));}
 // New snow and temperature in one chart: whether it snowed and whether it
 // was cold enough for it to stay powder are read together. Bars = new snow
 // per hour on the right axis, lines = air and snow surface on the left.
 function icSnowTemp(cv,p){const t0=a,t1=Math.min(T,Math.max(a+2,b)),air=[],srf=[],sn=[];
-  for(let t=t0;t<t1;t++){air[t]=tvI(t,p);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);sn[t]=SNOW[t*NP+p]*NS_SC;}
+  for(let t=t0;t<t1;t++){air[t]=tvI(t,p)+(p===_inspPt?_inspDT:0);srf[t]=tsurfEst(t,p,p===_inspPt?_inspDT:0);sn[t]=SNOW[t*NP+p]*NS_SC;}
   tempChart(cv,air,srf,t0,t1,sn);}
 // Temperature over time with real axes: °C ticks on the left, hours and days
 // along the bottom. Air is a solid line, the snow surface a dashed one -- the
@@ -22336,7 +22434,7 @@ function qsCmBand(cm){return QS_DEPTH.find(d=>cm>=d[0]&&(d[1]==null||cm<d[1]))||
 function qsCmTrack(){const pos=cm=>((Math.min(QS_CM_MAX,cm)-QS_CM_MIN)/(QS_CM_MAX-QS_CM_MIN)*100).toFixed(1);
   return 'linear-gradient(90deg,'+QS_DEPTH.map(d=>d[2]+' '+pos((d[0]+(d[1]==null?QS_CM_MAX:d[1]))/2)+'%').join(',')+')';}
 function qsCmText(cm){return (cm>=QS_CM_MAX?QS_CM_MAX+'+':Math.round(cm))+' cm';}
-const QS_DEPTH=SB.slice(0,-1).map((lo,i,a)=>[lo,i<a.length-1?a[i+1]:null,SC[i]]);
+const QS_DEPTH=PB.slice(0,-1).map((lo,i,a)=>[lo,i<a.length-1?a[i+1]:null,PC[i]]);
 const QS_ROW=44;
 let qs=null,qsMarker=null,_qsWT=0;
 // «Powder melden»: the quick report reduced to powder + depth (+ photo), one screen
@@ -25734,6 +25832,18 @@ function accSrcHTML(v){const S=(v&&v.sources)||[{name:'WSL-Institut für Schnee-
       +'<span><b>'+escapeHtml(x.name)+'</b><small>'+escapeHtml(x.what)+' · Lizenz '+escapeHtml(x.licence)+'</small></span></a>').join('')
     +'<div class="acc-src"><span class="acc-mark">IMIS</span><span><b>SLF – IMIS-Stationen</b><small>Schneehöhe · Lizenz CC BY 4.0</small></span></div>'
     +'<p class="acc-note">Messdaten: WSL-Institut für Schnee- und Lawinenforschung SLF (<a href="https://www.slf.ch" target="_blank" rel="noopener">www.slf.ch</a>) und MeteoSchweiz, je unter CC BY 4.0. Die Messwerte sind teils Rohdaten. Vergleich und Auswertung: Snowmapper.</p></div>';}
+// 2 m temperature, daily min / max, against SwissMetNet (the model moved to
+// each station's height)
+function accTempHTML(v){const T=v&&v.temp;if(!T||!T.last7)return '';const t7=T.last7,ts=T.season||{};
+  const sg=x=>(x>0?'+':'')+accFmt(x,' °C');
+  const box=(t,mae,bias,sub)=>'<div class="acc-kpi"><b>'+accFmt(mae,' °C')+'</b><span>'+t+'</span><small>Bias '+sg(bias)+(sub?' · '+sub:'')+'</small></div>';
+  const S=(T.stations||[]).map(s=>{const d=s.days[s.days.length-1];return {n:s.name,z:s.z,d,eh:d.mx-d.ox,el:d.mn-d.on};})
+    .sort((a,b)=>Math.max(Math.abs(b.eh),Math.abs(b.el))-Math.max(Math.abs(a.eh),Math.abs(a.el))).slice(0,5);
+  return '<div class="acc-sec"><h4>Temperatur <small>Tages-Min/Max gegen SwissMetNet, auf die Stationshöhe umgerechnet</small></h4>'
+    +'<div class="acc-kpis">'+box('Max, 7 Tage',t7.mae_max,t7.bias_max,t7.n+' Werte')+box('Min, 7 Tage',t7.mae_min,t7.bias_min,'')
+    +(ts.n?box('Max, seit Start',ts.mae_max,ts.bias_max,''):'')+'</div>'
+    +(S.length?'<table class="acc-tab"><tr><th>Grösste Abweichung</th><th>Max M/S</th><th>Min M/S</th></tr>'+S.map(x=>'<tr><td>'+escapeHtml(x.n)+' <small>'+x.z+' m</small></td><td>'+Math.round(x.d.mx)+' / '+Math.round(x.d.ox)+'°</td><td>'+Math.round(x.d.mn)+' / '+Math.round(x.d.on)+'°</td></tr>').join('')
+      +'</table><p class="acc-note">M = Modell, S = Station, letzter gemessener Tag.</p>':'')+'</div>';}
 function accChgHTML(v){const C=((v&&v.changes)||[]).slice().reverse();if(!C.length)return '';
   const tag={ns:'Neuschnee',st:'Schneetyp',hs:'Schneehöhe'};
   return '<div class="acc-sec"><h4>Modelländerungen</h4>'+C.slice(0,8).map(c=>'<div class="acc-row"><b>'+new Date(c.date).toLocaleDateString('de-CH',{day:'numeric',month:'short'})+' · '+c.models.map(m=>tag[m]||m).join(', ')+'</b><span>'+escapeHtml(c.text)+'</span></div>').join('')+'</div>';}
@@ -25743,7 +25853,7 @@ function accOpen(){let el=document.getElementById('accSheet');if(el){el.remove()
   const draw=()=>{const n=_hit.n,pc=n?Math.round(_hit.ok/n*100):null,v=_accVal;
     el.innerHTML='<div class="acc-in"><div class="acc-hd"><b>Wie genau ist das Modell?</b><button type="button" onclick="this.closest(\'.acc-sheet\').remove()" aria-label="Schliessen">×</button></div>'
       +(v&&v.updated?'<p class="acc-note acc-upd">Täglich gegen die Messstationen geprüft · Stand '+new Date(v.updated+'Z').toLocaleString('de-CH',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})+'</p>':'')
-      +accNsHTML(v)+accHsHTML(_accDrift)
+      +accNsHTML(v)+accTempHTML(v)+accHsHTML(_accDrift)
       +'<div class="acc-sec"><h4>Schneetyp <small>keine Messstationen – die Community prüft</small></h4>'
       +(pc!=null&&n>=5?'<div class="acc-live"><span class="fh-ring" style="--p:'+pc+'"><b>'+pc+'%</b></span><span>Diese Woche von der Community bestätigt ('+n+' Schnellmeldungen)</span></div>':'<p class="acc-note">Noch zu wenige Schnellmeldungen diese Woche.</p>')
       +ACC_ROWS.slice(2,3).map(r=>'<div class="acc-row"><b>'+escapeHtml(r[0])+'</b><span>'+escapeHtml(r[1])+'</span></div>').join('')+'</div>'

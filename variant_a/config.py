@@ -54,9 +54,11 @@ KNN_WASP = 0.9          # aspect weight
 # Until now this table did nothing at all: the .sno layers were written with
 # ne=0 finite elements, so SNOWPACK built zero nodes and every run -- national
 # ones included -- started from bare ground. See snowpack_runner._BASE_ELEM_M.
-INIT_ELEV = [1000, 1400, 1800, 2200, 2600, 3000, 3400]
-INIT_HS = [0.10, 0.40, 0.80, 1.20, 1.70, 2.20, 2.60]     # m
-INIT_RHO = [300, 300, 310, 320, 330, 340, 350]           # kg/m3
+# Below ~800 m no assumed base at all: the valley runs (MATRIX_ELEV_MIN) start
+# bare and carry only what their own forcing brings.
+INIT_ELEV = [800, 1000, 1400, 1800, 2200, 2600, 3000, 3400]
+INIT_HS = [0.0, 0.10, 0.40, 0.80, 1.20, 1.70, 2.20, 2.60]     # m
+INIT_RHO = [300, 300, 300, 310, 320, 330, 340, 350]           # kg/m3
 
 # Spin-up before the output window opens. SHORT on purpose: for ski quality
 # the last few snowfalls and what the weather did to them since are what
@@ -112,7 +114,11 @@ def season_label(t):
 # only 40% of cells with three aspect sectors.
 WEATHER_SPACING_KM = 15.0          # 135 weather points over the Swiss Alps
 WEATHER_MIN_TOP_M = 1800.0         # skip cells whose terrain never reaches this
-MATRIX_ELEV_MIN = 1200.0
+# Down to 600 m: below the lowest band a cell takes that band's values, and
+# with 1200 m as the floor the Zürich lakeside (400 m) showed the powder of
+# the 1200 m slopes at +5 °C. The 600/900 m runs carry the snow the valley
+# weather really leaves (ICON-CH1 temperature at their own height, elevtemp).
+MATRIX_ELEV_MIN = 600.0
 MATRIX_ELEV_MAX = 3300.0
 MATRIX_ELEV_STEP = 300.0           # up to 8 bands ...
 MATRIX_ASPECTS = 8                 # ... x 8 aspects: the 8x8
@@ -121,6 +127,10 @@ MATRIX_ASPECTS = 8                 # ... x 8 aspects: the 8x8
 # and steep north faces got too much snow and too little sun.
 MATRIX_SLOPES = (20.0, 38.0, 45.0)
 MATRIX_NEIGHBOURS = 3              # weather points blended per grid cell (IDW)
+# A weather point whose lowest band is far ABOVE a cell knows nothing about
+# that height: its weight there falls off by exp(-(lowest band - cell) / this)
+# once the cell is more than half a band below it.
+MATRIX_BELOW_FADE_M = 150.0
 
 # Temperature lapse from a weather point's reference elevation to each run.
 TA_LAPSE_K_PER_M = -0.0065

@@ -46,10 +46,27 @@ def write_model_daily(data, path: Path) -> str:
     wins = daily_windows(data["times"])
     sums = np.stack([snow[i0:i1].astype(np.float32).sum(axis=0) * scale * settle for _, i0, i1 in wins]) \
         if wins else np.zeros((0,) + snow.shape[1:], np.float32)
+    # 2 m temperature: min / max of every complete UTC calendar day, at the
+    # cell's mean height (the validation moves it to the station's height)
+    from pipeline.interactive_export import _TEMP_OFF, _TEMP_MUL
+    tc = np.asarray(data["temp"])
+    ts = [datetime.strptime(t[:13], "%Y-%m-%dT%H") for t in data["times"]]
+    tdays, tmin, tmax = [], [], []
+    for i, t in enumerate(ts):
+        if t.hour != 0 or i + 24 > len(ts) or ts[i + 23] != t + timedelta(hours=23):
+            continue
+        blk = tc[i:i + 24].astype(np.float32)
+        if tc.dtype == np.uint8:
+            blk = blk / _TEMP_MUL - _TEMP_OFF
+        tdays.append(t.date().isoformat()); tmin.append(blk.min(axis=0)); tmax.append(blk.max(axis=0))
+    empty = np.zeros((0,) + tc.shape[1:], np.float32)
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(path, days=np.array([d for d, _, _ in wins]), sums=sums.astype(np.float32),
+                        tdays=np.array(tdays), tmin=np.stack(tmin).astype(np.float16) if tmin else empty,
+                        tmax=np.stack(tmax).astype(np.float16) if tmax else empty,
                         elev=np.asarray(data["main_elev"], np.float32), bounds=np.array(data["bounds"], np.float64),
                         built=np.array(datetime.utcnow().strftime("%Y-%m-%dT%H:%M")),
                         now_time=np.array(data["times"][_now_idx(data["times"])][:13]),
                         settle=np.array(settle))
-    return f"{path}: {len(wins)} days {wins[0][0] if wins else '-'} .. {wins[-1][0] if wins else '-'} (settle {settle})"
+    return (f"{path}: {len(wins)} days {wins[0][0] if wins else '-'} .. {wins[-1][0] if wins else '-'} (settle {settle}); "
+            f"temperature {len(tdays)} days")
