@@ -11657,7 +11657,8 @@ function vaHiEngine(){
   // of the average; -1 when none of the four is inside.
   E.gridBil=function(ras,e,n,cs,keep255){
     if(!ras)return -1;var G=E.pk.grid;cs=cs||G.cs;
-    var fc=(e-G.xll)/cs-0.5,fr=(G.yll+G.nr*cs-n)/cs-0.5,c0=Math.floor(fc),r0=Math.floor(fr),
+    // the raster's top edge is the model grid's (G.nr*G.cs), whatever its own cell size
+    var fc=(e-G.xll)/cs-0.5,fr=(G.yll+G.nr*G.cs-n)/cs-0.5,c0=Math.floor(fc),r0=Math.floor(fr),
         dx=fc-c0,dy=fr-r0,sw=0,sv=0;
     for(var j=0;j<2;j++)for(var i=0;i<2;i++){
       var c=c0+i,r=r0+j;if(c<0||r<0||c>=ras.w||r>=ras.h)continue;
@@ -11729,9 +11730,22 @@ function vaHiEngine(){
         var o=(py*S+px)*4;out[o]=r0;out[o+1]=g0;out[o+2]=b0;out[o+3]=a;
       }
     }
+    E.fillHoles(out,S);
     E.despeckle(out,S,Math.max(1,Math.round(S/256*Math.pow(2,q.z-q.tz))));
     E.edges(out,S);
     return out;
+  };
+  // Pixels the model could not evaluate (no terrain value, a gap in the shade
+  // raster) inside a coloured area: filled from their neighbours -- the most
+  // common colour of the 8 around, when at least 6 of them are coloured, so
+  // gaps close but no area grows past its edge. Two passes for 2-px gaps.
+  E.fillHoles=function(out,S){
+    for(var pass=0;pass<2;pass++){var src=out.slice(0);
+      for(var y=1;y<S-1;y++)for(var x=1;x<S-1;x++){var o=(y*S+x)*4;if(src[o+3])continue;
+        var n=0,best=-1,bc=0,cnt={},dy,dx;
+        for(dy=-1;dy<=1;dy++)for(dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;var q=((y+dy)*S+x+dx)*4;if(!src[q+3])continue;n++;
+          var k=(src[q]<<16)|(src[q+1]<<8)|src[q+2];cnt[k]=(cnt[k]||0)+1;if(cnt[k]>bc){bc=cnt[k];best=q;}}
+        if(n>=6&&best>=0){out[o]=src[best];out[o+1]=src[best+1];out[o+2]=src[best+2];out[o+3]=src[best+3];}}}
   };
   // Clear class edges, as on Neuschnee: where the colour changes to the right
   // or below, the pixel takes a darker shade of its own colour (one pixel wide)
