@@ -7555,6 +7555,52 @@ body.wcp-open #mapFabs,body.wcp-open #miniLegend{opacity:0!important;pointer-eve
 .acc-src b{display:block;font:600 13.5px/1.3 var(--font)}.acc-src small{font:400 12px/1.3 var(--font);color:var(--md-on-surface-var,#555)}
 .acc-mark{flex:none;min-width:58px;padding:6px 8px;border-radius:10px;background:#fff;border:1px solid var(--md-outline-var,#ddd);font:800 12px/1 var(--font);letter-spacing:.02em;color:#C5221F;text-align:center}
 .acc-upd{margin-top:-4px!important}
+/* ==== Modellvergleich (M3) ==== */
+#cmpFab{position:fixed;z-index:1160;top:calc(var(--bar-h,64px) + 6px);left:calc(14px + var(--rvw,118px) + 8px + 48px);width:40px;height:40px;padding:0;border-radius:50%;display:grid;place-items:center;
+  border:1px solid var(--hair);background:color-mix(in srgb,var(--card,#fff) 92%,transparent);color:var(--fg2);box-shadow:0 4px 14px rgba(15,23,42,.14);cursor:pointer}
+#cmpFab svg{width:20px;height:20px;stroke-width:1.75}
+body:not(.desk) #cmpFab{top:calc(env(safe-area-inset-top,0px) + 6px)!important;left:172px!important}
+body.nav-screen #cmpFab,body.ly-open #cmpFab,body.insp-open #cmpFab,body.trk-open #cmpFab,body.draw-on #cmpFab,body.ts-open #cmpFab,body.wcv-open #cmpFab,body.three-open #cmpFab,body.plan-on #cmpFab,body.leg-open:not(.desk) #cmpFab{display:none}
+.cd{position:fixed;inset:0;z-index:20030;background:var(--md-surface,#F8F9FC);display:flex;flex-direction:column}
+.cd-bar{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 8px;background:var(--md-surface,#F8F9FC);border-bottom:1px solid var(--md-outline-var,rgba(0,0,0,.08))}
+.cd-bar button{width:44px;height:44px;border-radius:22px;border:0;background:transparent;display:grid;place-items:center;cursor:pointer;color:var(--md-on-surface,#1B1B1F)}
+.cd-bar button svg{width:24px;height:24px}.cd-bar h2{margin:0;font:600 20px/1.2 var(--font)}.cd-bar small{font:400 12.5px/1.3 var(--font);color:var(--md-on-surface-var,#555)}
+.cd-body{flex:1;overflow:auto;padding:12px 16px calc(24px + env(safe-area-inset-bottom,0px));max-width:820px;width:100%;margin:0 auto;box-sizing:border-box}
+.cd-empty{font:400 14px/1.4 var(--font);color:var(--md-on-surface-var,#555)}
+.cd-chips{display:flex;gap:8px;overflow:auto;padding:2px 0 10px}
+.cd-chips button{flex:none;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--md-outline,#74777F);background:transparent;font:500 14px/1 var(--font);color:var(--md-on-surface-var,#44474E);cursor:pointer}
+.cd-chips button.on{background:var(--md-secondary-container,#D6E3FF);border-color:transparent;color:var(--md-on-secondary-container,#0F1C2C);font-weight:600}
+.cd-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cd-kpi{border-radius:16px;padding:12px;background:var(--md-surface-c,#EEF1F6);display:flex;flex-direction:column;gap:2px;min-width:0}
+.cd-kpi span{font:500 12.5px/1.2 var(--font);color:var(--md-on-surface-var,#555)}.cd-kpi b{font:700 24px/1.1 var(--font)}.cd-kpi b small{font-size:13px;font-weight:600}
+.cd-kpi em{font:400 11.5px/1.3 var(--font);font-style:normal;color:var(--md-on-surface-var,#555)}
+.cd-kpi.g b,.cd-day.g b{color:#1E7A3C}.cd-kpi.m b,.cd-day.m b{color:#A15C00}.cd-kpi.b b,.cd-day.b b{color:#B42318}
+.cd-body h3{margin:18px 0 8px;font:600 16px/1.3 var(--font)}.cd-body h3 small{font:400 12.5px/1.3 var(--font);color:var(--md-on-surface-var,#555);margin-left:6px}
+.cd-days{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity}
+.cd-day{position:relative;flex:none;width:64px;scroll-snap-align:end;border-radius:14px;border:1px solid var(--md-outline-var,rgba(0,0,0,.1));background:var(--md-surface,#fff);padding:8px 4px 6px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-family:var(--font)}
+.cd-day.on{border-color:var(--md-primary,#0B63B5);box-shadow:0 0 0 2px var(--md-primary,#0B63B5) inset}
+.cd-day small{font:500 11px/1.1 var(--font);color:var(--md-on-surface-var,#555)}.cd-day span{font:600 13px/1.1 var(--font)}
+.cd-day b{font:700 17px/1.2 var(--font)}.cd-day em{font:500 11.5px/1 var(--font);font-style:normal;color:var(--md-on-surface-var,#555)}
+.cd-day u{display:block;width:22px;border-radius:4px 4px 0 0;background:currentColor;opacity:.35;margin-top:2px}
+.cd-day.g u{color:#1E7A3C}.cd-day.m u{color:#A15C00}.cd-day.b u{color:#B42318}
+.cd-day .cd-rb{font-size:9.5px}.cd-chg{position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:#7B5CD6}
+.cd-chart{width:100%;height:auto}.cd-chart text{font:500 9px var(--font);fill:var(--md-on-surface-var,#666)}
+.cd-ln{fill:none;stroke:var(--md-primary,#0B63B5);stroke-width:2;stroke-linejoin:round}.cd-bp{fill:#D6604D;opacity:.55}.cd-bn{fill:#4393C3;opacity:.55}
+.cd-cl{stroke:#7B5CD6;stroke-width:1.2;stroke-dasharray:2 2}.cd-ax{stroke:var(--md-outline-var,#ccc)}
+.cd-key{display:flex;flex-wrap:wrap;gap:4px 12px;font:500 11.5px/1.3 var(--font);color:var(--md-on-surface-var,#555)}
+.cd-key i{display:inline-block;width:12px;height:8px;margin-right:5px;border-radius:2px;vertical-align:middle}
+.cd-key .k-ln{height:2px;background:var(--md-primary,#0B63B5)}.cd-key .k-bp{background:#D6604D}.cd-key .k-bn{background:#4393C3}.cd-key .k-cl{height:0;border-top:2px dotted #7B5CD6}
+.cd-mapbtn{display:flex;align-items:center;gap:8px;margin:18px 0 8px;height:40px;padding:0 20px 0 16px;border-radius:20px;border:0;background:var(--md-primary,#0B63B5);color:#fff;font:600 14px/1 var(--font);cursor:pointer}
+.cd-mapbtn svg{width:18px;height:18px}
+.cd-dchips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px}
+.cd-dchips button{flex:none;height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--md-outline,#74777F);background:transparent;font:500 12.5px/1 var(--font);cursor:pointer;color:var(--md-on-surface-var,#44474E)}
+.cd-dchips button.on{background:var(--md-secondary-container,#D6E3FF);border-color:transparent;font-weight:600}
+.cd-map{height:min(60vh,440px);border-radius:16px;overflow:hidden;background:#E9EDF2}
+.cd-mleg{margin:6px 0 0;font:500 11.5px/1.3 var(--font);color:var(--md-on-surface-var,#555)}
+.cd-mleg>div{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;margin:4px 0}.cd-mleg i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:3px;vertical-align:middle;border:1px solid rgba(0,0,0,.15)}
+.cd-mleg p{margin:4px 0 0}
+
 /* the SLF bulletin text of a region, M3 bottom sheet */
 .av-sheet{position:fixed;inset:0;z-index:20040;background:rgba(0,0,0,.32);display:flex;align-items:flex-end;justify-content:center}
 .av-in{width:min(640px,100%);max-height:86vh;overflow:auto;background:var(--md-surface,#fff);border-radius:28px 28px 0 0;padding:14px 20px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 24px rgba(0,0,0,.18)}
@@ -8121,7 +8167,7 @@ body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
      the app uses when it talks about itself (title, share sheet, PWA
      install) -- not in new chrome competing with the map. -->
 
-<button id="infoFab" type="button" onclick="onbIntro()" title="Einführung: was Snowmapper kann" aria-label="Einführung"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.01"/></svg></button><button id="rvFab" type="button" onclick="rvOpen()" title="Feedback zur App senden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5a2 2 0 0 1-2 2H9l-4.5 3.5V6a2 2 0 0 1 2-2H18a2 2 0 0 1 2 2z"/><path d="M12.25 6.9l.95 1.95 2.15.3-1.55 1.5.37 2.13-1.92-1-1.92 1 .37-2.13-1.55-1.5 2.15-.3z" fill="currentColor" stroke="none"/></svg><span>Feedback</span></button>
+<button id="infoFab" type="button" onclick="onbIntro()" title="Einführung: was Snowmapper kann" aria-label="Einführung"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.01"/></svg></button><button id="cmpFab" type="button" onclick="cdOpen()" title="Modellvergleich: Modell gegen die Messstationen" aria-label="Modellvergleich"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></button><button id="rvFab" type="button" onclick="rvOpen()" title="Feedback zur App senden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5a2 2 0 0 1-2 2H9l-4.5 3.5V6a2 2 0 0 1 2-2H18a2 2 0 0 1 2 2z"/><path d="M12.25 6.9l.95 1.95 2.15.3-1.55 1.5.37 2.13-1.92-1-1.92 1 .37-2.13-1.55-1.5 2.15-.3z" fill="currentColor" stroke="none"/></svg><span>Feedback</span></button>
 <header id="appBar">
   <button class="ab-brand" onclick="navGo('map')" aria-label="Snowmapper"><span class="ab-logo"><img src="icon-192.png?v=2" alt="" width="26" height="26"></span><span class="ab-name">Snowmapper</span></button>
   <nav class="ab-tabs" aria-label="Navigation">
@@ -26046,7 +26092,8 @@ function accTempHTML(v){const T=v&&v.temp;if(!T||!T.last7)return '';const t7=T.l
 function accChgHTML(v){const C=((v&&v.changes)||[]).slice().reverse();if(!C.length)return '';
   const tag={ns:'Neuschnee',st:'Schneetyp',hs:'Schneehöhe'};
   return '<div class="acc-sec"><h4>Modelländerungen</h4>'+C.slice(0,8).map(c=>'<div class="acc-row"><b>'+new Date(c.date).toLocaleDateString('de-CH',{day:'numeric',month:'short'})+' · '+c.models.map(m=>tag[m]||m).join(', ')+'</b><span>'+escapeHtml(c.text)+'</span></div>').join('')+'</div>';}
-function accOpen(){let el=document.getElementById('accSheet');if(el){el.remove();}
+function accOpen(){return cdOpen();}
+function accOpenOld(){let el=document.getElementById('accSheet');if(el){el.remove();}
   el=document.createElement('div');el.id='accSheet';el.className='acc-sheet';el.setAttribute('role','dialog');el.setAttribute('aria-label','Wie genau ist das Modell?');
   el.onclick=e=>{if(e.target===el)el.remove();};
   const draw=()=>{const n=_hit.n,pc=n?Math.round(_hit.ok/n*100):null,v=_accVal;
@@ -26060,6 +26107,97 @@ function accOpen(){let el=document.getElementById('accSheet');if(el){el.remove()
       +'<p class="acc-note">Ein paar Tage sind noch keine Statistik – belastbar wird es über Wochen. «Rückrechnung» heisst: vergangene Tage nachträglich mit dem heutigen Modell gerechnet.</p></div>';};
   draw();document.body.appendChild(el);
   accLoad().then(()=>{if(document.body.contains(el))draw();});}
+// ── Modellvergleich: the model against the measuring stations, per day ──
+// A full-screen M3 dashboard: the layer to compare (new snow, temperature max
+// / min), the error over 7 days / 30 days / the season, one card per day as in
+// the forecast table, the course with the model changes, and a map that
+// unfolds with every station of the chosen day coloured by model - measured.
+const CD_LAYERS=[{k:'ns',t:'Neuschnee 24 h',u:'cm',good:2,ok:5},{k:'tx',t:'Temperatur max',u:'°C',good:1.5,ok:3},{k:'tn',t:'Temperatur min',u:'°C',good:1.5,ok:3}];
+let _cd={k:'ns',day:null,map:null,grp:null};
+function cdL(){return CD_LAYERS.find(x=>x.k===_cd.k)||CD_LAYERS[0];}
+function cdSeries(v){const L=cdL();
+  if(L.k==='ns')return ((v.newsnow&&v.newsnow.series)||[]).map(e=>{const r=e.an||e.rb;return r?{d:e.d,mae:r.mae,bias:r.bias,n:r.n,fc:e.fc?e.fc.mae:null,rb:!e.an}:null;}).filter(Boolean);
+  const mk=L.k==='tx'?'max':'min';
+  return ((v.temp&&v.temp.series)||[]).filter(e=>e['mae_'+mk]!=null).map(e=>({d:e.d,mae:e['mae_'+mk],bias:e['bias_'+mk],n:null,rb:e.kind==='rb'}));}
+function cdAgg(v,win){const L=cdL();
+  if(L.k==='ns'){const w=v.newsnow&&v.newsnow[win];const r=w&&(w.an||w.rb);return r?{mae:r.mae,bias:r.bias,n:r.n}:null;}
+  const w=v.temp&&v.temp[win],mk=L.k==='tx'?'max':'min';return w?{mae:w['mae_'+mk],bias:w['bias_'+mk],n:w.n}:null;}
+function cdPoints(v,day){const L=cdL(),out=[];
+  if(L.k==='ns')(v.stations_newsnow||[]).forEach(s=>{const x=s.days.find(q=>q.d===day);if(x)out.push({s,kind:s.src,m:x.m,o:x.o});});
+  else ((v.temp&&v.temp.stations)||[]).forEach(s=>{const x=s.days.find(q=>q.d===day);if(x)out.push({s,kind:'smn',m:L.k==='tx'?x.mx:x.mn,o:L.k==='tx'?x.ox:x.on});});
+  return out;}
+function cdDays(v){const L=cdL(),set=new Set();
+  if(L.k==='ns')(v.stations_newsnow||[]).forEach(s=>s.days.forEach(q=>set.add(q.d)));
+  else ((v.temp&&v.temp.stations)||[]).forEach(s=>s.days.forEach(q=>set.add(q.d)));
+  return [...set].sort();}
+function cdTone(x){const L=cdL();return x==null?'':x<=L.good?'g':x<=L.ok?'m':'b';}
+function cdFmt(x,sign){if(x==null||!isFinite(x))return '–';const r=Math.round(x*10)/10;return (sign&&r>0?'+':'')+r.toLocaleString('de-CH');}
+// model - measured, diverging: blue = model too low, red = too high
+function cdDevCol(d){const L=cdL(),b=L.u==='cm'?[-10,-5,-2,2,5,10]:[-4,-2,-1,1,2,4],
+  C=['#2166AC','#4393C3','#92C5DE','#E0E0E0','#F4A582','#D6604D','#B2182B'];let i=0;while(i<b.length&&d>=b[i])i++;return C[i];}
+function cdDayLbl(d){const t=new Date(d+'T12:00Z');return {wd:t.toLocaleDateString('de-CH',{weekday:'short'}),dm:t.toLocaleDateString('de-CH',{day:'numeric',month:'numeric'})};}
+function cdRender(){const el=document.getElementById('cmpDash');if(!el)return;const v=_accVal,L=cdL();
+  const body=el.querySelector('.cd-body');
+  if(!v){body.innerHTML='<p class="cd-empty">Die tägliche Prüfung gegen die Messstationen läuft ab dem nächsten Build – hier erscheinen dann die Zahlen.</p>'+accHsHTML(_accDrift)+accSrcHTML(null);return;}
+  const S=cdSeries(v),chg=(v.changes||[]);
+  const kpi=(t,a)=>'<div class="cd-kpi '+cdTone(a&&a.mae)+'"><span>'+t+'</span><b>'+(a?cdFmt(a.mae)+' <small>'+L.u+'</small>':'–')+'</b><em>'+(a?'Bias '+cdFmt(a.bias,1)+' '+L.u+(a.n?' · '+a.n+' Messungen':''):'noch keine Daten')+'</em></div>';
+  const mx=Math.max(L.ok*1.6,...S.map(x=>x.mae||0));
+  const days=S.slice(-30).map(x=>{const dl=cdDayLbl(x.d),c=chg.find(q=>q.date===x.d);
+    return '<button type="button" class="cd-day '+cdTone(x.mae)+(x.d===_cd.day?' on':'')+'" onclick="cdPick(\''+x.d+'\')" title="'+escapeHtml(c?c.text:'')+'">'
+      +(c?'<i class="cd-chg" aria-label="Modelländerung"></i>':'')+'<small>'+dl.wd+'</small><span>'+dl.dm+'</span>'
+      +'<b>'+cdFmt(x.mae)+'</b><em>'+cdFmt(x.bias,1)+'</em><u style="height:'+Math.max(3,Math.round((x.mae||0)/mx*40))+'px"></u>'
+      +(x.n?'<small>'+x.n+'</small>':'')+(x.rb?'<small class="cd-rb">nachgerechnet</small>':'')+'</button>';}).join('');
+  // the course: daily error (line), bias (bars around zero), model changes
+  let chart='';if(S.length>1){const W=340,H=130,pl=28,pr=6,pt=8,pb=18,n=S.length,X=i=>pl+i/(n-1)*(W-pl-pr),
+      bmx=Math.max(1,...S.map(x=>Math.abs(x.bias||0))),Y=y=>pt+(1-y/mx)*(H-pt-pb),y0=Y(0);
+    chart='<svg class="cd-chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Fehler pro Tag">'
+      +S.map((x,i)=>{const h=(x.bias||0)/bmx*(H-pt-pb)*0.35;return '<rect x="'+(X(i)-2).toFixed(1)+'" y="'+(h>0?y0-h:y0).toFixed(1)+'" width="4" height="'+Math.abs(h).toFixed(1)+'" class="'+(h>0?'cd-bp':'cd-bn')+'"/>';}).join('')
+      +chg.map(c=>{const i=S.findIndex(x=>x.d>=c.date);return i>=0?'<line class="cd-cl" x1="'+X(i).toFixed(1)+'" x2="'+X(i).toFixed(1)+'" y1="'+pt+'" y2="'+(H-pb)+'"><title>'+escapeHtml(c.date+': '+c.text)+'</title></line>':'';}).join('')
+      +'<polyline class="cd-ln" points="'+S.map((x,i)=>X(i).toFixed(1)+','+Y(x.mae||0).toFixed(1)).join(' ')+'"/>'
+      +'<line class="cd-ax" x1="'+pl+'" x2="'+(W-pr)+'" y1="'+(H-pb)+'" y2="'+(H-pb)+'"/>'
+      +'<text x="2" y="'+(pt+8)+'">'+Math.round(mx)+'</text><text x="2" y="'+(H-pb)+'">0</text>'
+      +'<text x="'+pl+'" y="'+(H-3)+'">'+cdDayLbl(S[0].d).dm+'</text><text x="'+(W-pr)+'" y="'+(H-3)+'" text-anchor="end">'+cdDayLbl(S[n-1].d).dm+'</text></svg>'
+      +'<div class="cd-key"><span><i class="k-ln"></i>mittlerer Fehler</span><span><i class="k-bp"></i>Modell zu hoch</span><span><i class="k-bn"></i>zu tief</span><span><i class="k-cl"></i>Modelländerung</span></div>';}
+  const D=cdDays(v);if(!_cd.day||D.indexOf(_cd.day)<0)_cd.day=D[D.length-1]||null;
+  body.innerHTML='<div class="cd-chips" role="tablist">'+CD_LAYERS.map(x=>'<button type="button" role="tab" aria-selected="'+(x.k===_cd.k)+'" class="'+(x.k===_cd.k?'on':'')+'" onclick="cdLayer(\''+x.k+'\')">'+x.t+'</button>').join('')+'</div>'
+    +'<div class="cd-kpis">'+kpi('7 Tage',cdAgg(v,'last7'))+kpi('30 Tage',cdAgg(v,'last30'))+kpi('Seit Start',cdAgg(v,'season'))+'</div>'
+    +'<h3>Pro Tag <small>mittlerer Fehler · Bias · Messungen</small></h3><div class="cd-days" id="cdDays">'+(days||'<p class="cd-empty">Noch keine Tage.</p>')+'</div>'
+    +(chart?'<h3>Verlauf</h3>'+chart:'')
+    +'<button type="button" class="cd-mapbtn" onclick="cdMapToggle()" aria-expanded="'+(!!_cd.map)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>'+(_cd.map?'Karte zuklappen':'Karte der Messpunkte')+'</button>'
+    +'<div class="cd-mapw" id="cdMapW"'+(_cd.map?'':' hidden')+'><div class="cd-dchips">'+D.slice(-14).map(d=>{const dl=cdDayLbl(d);return '<button type="button" class="'+(d===_cd.day?'on':'')+'" onclick="cdPick(\''+d+'\')">'+dl.wd+' '+dl.dm+'</button>';}).join('')+'</div>'
+    +'<div id="cdMap" class="cd-map"></div><div class="cd-mleg"><span>Modell − Messung ('+L.u+')</span><div>'
+    +(L.u==='cm'?['< −10','−5','−2','±2','+5','+10','> +10']:['< −4','−2','−1','±1','+2','+4','> +4']).map((t,i)=>'<i style="background:'+['#2166AC','#4393C3','#92C5DE','#E0E0E0','#F4A582','#D6604D','#B2182B'][i]+'"></i><small>'+t+'</small>').join('')+'</div>'
+    +'<p>'+(L.k==='ns'?'Punkte: SLF-Messfelder und MeteoSchweiz-Beobachter, von Hand gemessen um 06 UTC (Neuschnee der 24 h davor).':'Punkte: SwissMetNet-Stationen (automatisch), Tagesminimum/-maximum; das Modell auf die Stationshöhe umgerechnet.')+'</p></div>'
+    +accHsHTML(_accDrift)
+    +'<div class="acc-sec"><h4>Schneetyp <small>keine Messstationen – die Community prüft mit Schnellmeldungen</small></h4>'+(_hit.n>=5?'<p class="acc-note">Diese Woche '+Math.round(_hit.ok/_hit.n*100)+' % von '+_hit.n+' Schnellmeldungen bestätigt.</p>':'<p class="acc-note">Noch zu wenige Schnellmeldungen diese Woche.</p>')+'</div>'
+    +accChgHTML(v)+accSrcHTML(v);
+  const dd=document.getElementById('cdDays');if(dd)dd.scrollLeft=dd.scrollWidth;
+  if(_cd.map)cdMapDraw();}
+function cdLayer(k){_cd.k=k;cdRender();try{haptic(3);}catch(e){}}
+function cdPick(d){_cd.day=d;if(!_cd.map){_cd.map=true;}cdRender();
+  setTimeout(()=>{const m=document.getElementById('cdMapW');if(m)m.scrollIntoView({behavior:'smooth',block:'nearest'});},60);}
+function cdMapToggle(){_cd.map=!_cd.map;if(!_cd.map&&_cd.lm){try{_cd.lm.remove();}catch(e){}_cd.lm=null;}cdRender();}
+function cdMapDraw(){const box=document.getElementById('cdMap');if(!box||!_accVal)return;
+  if(_cd.lm&&_cd.lm.getContainer()!==box){try{_cd.lm.remove();}catch(e){}_cd.lm=null;}
+  if(!_cd.lm){_cd.lm=L.map(box,{zoomControl:true,attributionControl:true,zoomSnap:0.25}).setView([46.75,8.3],7);
+    L.tileLayer(swissTile('ch.swisstopo.pixelkarte-grau','jpeg'),{maxZoom:15,attribution:'© swisstopo'}).addTo(_cd.lm);
+    _cd.grp=L.layerGroup().addTo(_cd.lm);}
+  _cd.grp.clearLayers();const L0=cdL(),pts=cdPoints(_accVal,_cd.day);
+  const KIND={slf:'SLF-Messfeld, von Hand',msw:'MeteoSchweiz-Beobachter, von Hand',smn:'SwissMetNet, automatisch'};
+  pts.forEach(p=>{const d=p.m-p.o;
+    L.circleMarker([p.s.lat,p.s.lon],{radius:7,color:'#fff',weight:1.5,fillColor:cdDevCol(d),fillOpacity:.95})
+      .bindPopup('<b>'+escapeHtml(p.s.name||p.s.code)+'</b><br><small>'+p.s.z+' m · '+KIND[p.kind]+'</small><br>gemessen '+cdFmt(p.o)+' '+L0.u+' · Modell '+cdFmt(p.m)+' '+L0.u+'<br><b>Abweichung '+cdFmt(d,1)+' '+L0.u+'</b>').addTo(_cd.grp);});
+  setTimeout(()=>{try{_cd.lm.invalidateSize();}catch(e){}},50);}
+function cdOpen(){let el=document.getElementById('cmpDash');if(el)el.remove();_cd.lm=null;
+  el=document.createElement('div');el.id='cmpDash';el.className='cd';el.setAttribute('role','dialog');el.setAttribute('aria-label','Modellvergleich');
+  el.innerHTML='<header class="cd-bar"><button type="button" onclick="cdClose()" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>'
+    +'<div><h2>Modellvergleich</h2><small id="cdUpd">gegen die Messstationen, täglich</small></div></header><div class="cd-body"><p class="cd-empty">Lädt …</p></div>';
+  document.body.appendChild(el);document.body.classList.add('cd-open');try{haptic(4);}catch(e){}
+  accLoad().then(()=>{if(!document.body.contains(el))return;
+    const u=document.getElementById('cdUpd');if(u&&_accVal&&_accVal.updated)u.textContent='gegen die Messstationen · Stand '+new Date(_accVal.updated+'Z').toLocaleString('de-CH',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});
+    cdRender();});}
+function cdClose(){const el=document.getElementById('cmpDash');if(el)el.remove();document.body.classList.remove('cd-open');if(_cd.lm){try{_cd.lm.remove();}catch(e){}_cd.lm=null;}}
+addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('cmpDash'))cdClose();});
 function feedRender(){
   try{feedHitSync();}catch(e){}
   const list=document.getElementById('feedList');
