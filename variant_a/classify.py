@@ -972,16 +972,16 @@ SKI6_DE = ["kein / wenig Schnee", "durchgehend hart", "Kruste", "Pulver 0–10 c
            "Pulver 30–40 cm", "Pulver > 40 cm", "dünne Schneedecke (< 20 cm)",
            "Lockerer Altschnee (kantig)"]
 # Powder in the SLF snow-depth colours of the Neuschnee / Schneehöhe layers
-# (5-10 green .. 50-75 navy, the class's band); the surfaces you would
+# (White Risk snow-map colours: mint .. green .. blue, the class's band); the surfaces you would
 # rather avoid are the warm/neutral ones: cool grey for hard, muted coral
 # for crust, honey for wet / Sulz. The app carries the same table
 # (VA_PALETTE) so older exports are shown in it as well.
 SKI6_RGBA = {0: (0, 0, 0, 0), 1: (156, 168, 184, 185), 2: (214, 108, 98, 215),
-             3: (149, 207, 153, 250), 4: (102, 187, 106, 240), 5: (66, 165, 245, 235),
+             3: (215, 253, 209, 245), 4: (173, 238, 183, 240), 5: (112, 186, 160, 240),
              6: (226, 170, 72, 220), 7: (150, 104, 74, 225),
              # thin cover: the frames colour it by depth and hatch it red
              # (export._thin_hatch); this is the plain fallback
-             8: (30, 136, 229, 235), 9: (21, 101, 192, 240), 10: (194, 229, 196, 235),
+             8: (80, 148, 177, 240), 9: (48, 110, 171, 240), 10: (214, 212, 204, 235),
              # loose but old (facets, depth hoar, surface hoar): a dusty
              # lavender -- loose like powder, but not the fresh-powder colours
              11: (176, 162, 212, 225)}
@@ -1062,8 +1062,8 @@ def refrozen_series(times, surface_lw, hours=15.0):
 POWDER_BOUNDS = [1, 5, 10, 15, 20, 30, 40, 50, 75, 100]
 POWDER_LABELS = ["none"] + [f"powder_{a}_{b}" for a, b in zip(POWDER_BOUNDS[:-1], POWDER_BOUNDS[1:])] + ["powder_gt_100"]
 POWDER_DE = ["–"] + [f"Pulver {a}–{b} cm" for a, b in zip(POWDER_BOUNDS[:-1], POWDER_BOUNDS[1:])] + ["Pulver > 100 cm"]
-# cmocean «dense», as the app's snow scales
-_SLF_HEX = ["#B4D8E4", "#92C3E2", "#79AAE4", "#738FE3", "#7772D6", "#7957BD", "#753D9D", "#6B2879", "#591750", "#3F102D"]
+# the SLF's snow-map colours (White Risk), per powder class as the app
+_SLF_HEX = ["#D7FDD1", "#D7FDD1", "#ADEEB7", "#ADEEB7", "#70BAA0", "#5094B1", "#306EAB", "#204D87", "#580F31", "#460A11"]
 POWDER_RGBA = {0: (0, 0, 0, 0), **{i + 1: (int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16), 250 if i < 2 else 235)
                                     for i, h in enumerate(_SLF_HEX)}}
 

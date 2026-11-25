@@ -3210,7 +3210,16 @@ try{if(window.visualViewport)visualViewport.addEventListener('resize',fit);}catc
  #boot{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
    background:var(--map-bg,#EEF1F5);color:var(--fg,#1b2230);pointer-events:none;
    font-family:Helvetica Neue,Helvetica,Arial,sans-serif,-apple-system,"Segoe UI",sans-serif}
- #boot .bt-in{display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 24px;text-align:center}
+ #boot .bt-in{display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 24px;text-align:center;position:relative;z-index:1}
+ /* the loading screen: night, storm and drifting contour lines (canvas #btSky) */
+ #boot{background:#0B1626!important;color:#EAF2FF!important}
+ #btSky{position:absolute;inset:0;width:100%;height:100%;display:block}
+ #boot #bootSrc b{color:#F2F7FF}#boot #bootSrc span{color:#B8C8DE}#boot #bootTxt{color:#8FA3BF}
+ #boot #bootPct{color:#CFE3FF}#boot .bt-bar{background:rgba(255,255,255,.12)}#boot .bt-bar i{background:linear-gradient(90deg,#7FC4FF,#D7FDD1)}
+ #boot .bt-src{background:rgba(18,34,58,.72)!important;border-color:rgba(150,196,255,.25)!important;color:#A9C2E2!important;backdrop-filter:blur(4px)}
+ #boot .bt-src.on{background:#3F8AD6!important;color:#fff!important}
+ #boot .bt-ln{stroke:rgba(150,196,255,.25)}
+ #boot .bt-halo{background:radial-gradient(circle,rgba(140,200,255,.55),rgba(111,180,240,0) 70%)}
  /* a snow crystal that grows arm by arm, holds, and melts away again;
     the whole crystal turns slowly and a soft halo breathes behind it */
  #boot .bt-orbit{position:relative;width:240px;height:240px;margin-bottom:4px}
@@ -5546,7 +5555,13 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
  .wc-popup a.leaflet-popup-close-button::before{content:'';width:18px;height:18px;background:currentColor;
    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z'/%3E%3C/svg%3E") center/contain no-repeat;
    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z'/%3E%3C/svg%3E") center/contain no-repeat}
- .wc-popup .wc-zoom{right:auto!important;left:8px}
+ .wc-popup .wc-zoom{right:auto!important;left:8px;top:8px!important;width:40px!important;height:40px!important;border-radius:20px!important;
+   background:rgba(255,255,255,.94)!important;color:#1B1B1F!important;box-shadow:0 1px 3px rgba(0,0,0,.3),0 4px 8px rgba(0,0,0,.15)}
+ .wc-popup .wc-zoom svg{width:18px!important;height:18px!important}
+ .wc-popup .leaflet-popup-content-wrapper,.wc-popup .leaflet-popup-content,.wc-pop{box-sizing:border-box}
+ .wc-pop .wc-media{position:relative;width:100%;overflow:hidden}
+ .wc-pop img,.wc-pop .wc-frame{max-width:100%}
+ .leaflet-container.wc-far .wc-pin,.leaflet-container.wc-far .leaflet-marker-icon:has(.wc-pin){display:none!important}
  .wc-pop{display:flex;flex-direction:column;gap:3px;padding-bottom:10px}
  .wc-pop img,.wc-pop .wc-img{width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--fill);display:block;margin-bottom:6px}
  .wc-pop b,.wc-pop span,.wc-pop a,.wc-pop em{padding:0 12px}
@@ -8091,6 +8106,39 @@ body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
 .wc-seg button.on{background:var(--md-secondary-container,#D7E3F8);color:var(--md-on-secondary-container,#101C2B)}
 .wc-pop .wc-note{display:block;margin:6px 12px 2px;font:500 12px/1.3 var(--font);color:var(--md-on-surface-var,#43474E)}
 
+
+/* model comparison: scores */
+.cd-kpi{position:relative}
+.cd-sc{position:absolute;right:10px;top:10px;min-width:30px;height:24px;padding:0 7px;border-radius:12px;display:grid;place-items:center;font:700 13px/1 var(--font);font-style:normal;
+  background:var(--md-surface-container-high,#E6E8EE);color:var(--fg,#1b2230)}
+.cd-sc.g,.cd-dsc.g{background:#D7F5DD;color:#0F5223}.cd-sc.m,.cd-dsc.m{background:#FFF0C2;color:#6A4A00}.cd-sc.b,.cd-dsc.b{background:#FFD9D6;color:#8C1D18}
+.cd-dsc{display:block;margin:3px auto 0;width:max-content;min-width:24px;padding:2px 6px;border-radius:9px;font:700 11px/1.2 var(--font);font-style:normal}
+.cd-vers{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.cd-ver{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 38% auto;gap:4px 12px;align-items:center;padding:12px 14px;border-radius:16px;
+  background:var(--md-surface-container,#EEF0F5)}
+.cd-ver .cd-vh{display:flex;flex-direction:column;gap:2px;min-width:0}.cd-ver .cd-vh b{font:600 14px/1.2 var(--font)}.cd-ver .cd-vh small{color:var(--fg2,#555);font-size:12px}
+.cd-vbar{height:8px;border-radius:4px;background:rgba(0,0,0,.08);overflow:hidden}.cd-vbar i{display:block;height:100%;border-radius:4px;background:#5094B1}
+.cd-ver.g .cd-vbar i{background:#2E9E57}.cd-ver.m .cd-vbar i{background:#D9A400}.cd-ver.b .cd-vbar i{background:#C8473D}
+.cd-vn{text-align:right}.cd-vn b{display:block;font:700 18px/1 var(--font)}.cd-vn small{font-size:11px;color:var(--fg2,#555)}
+.cd-ver p{grid-column:1/-1;margin:2px 0 0;font-size:12px;color:var(--fg2,#555)}
+.cd-best{position:absolute;top:-7px;right:12px;padding:1px 8px;border-radius:8px;background:#306EAB;color:#fff;font:700 10px/1.5 var(--font);text-transform:uppercase;letter-spacing:.04em}
+:root[data-theme="dark"] .cd-ver{background:rgba(255,255,255,.06)}:root[data-theme="dark"] .cd-vbar{background:rgba(255,255,255,.12)}
+/* ==== Runde 25.11.: modern, solid timeline; side buttons a touch bigger ==== */
+/* the timeline: an opaque M3 surface with soft elevation, no rim, no glass */
+#bottomPanel,:root[data-theme="light"] #bottomPanel,:root.and-wv[data-theme="light"] #bottomPanel{background:#FBFCFE!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;border:0!important;
+  box-shadow:0 1px 2px rgba(16,24,40,.08),0 8px 28px rgba(16,24,40,.16)!important}
+:root[data-theme="dark"] #bottomPanel{background:#1C2129!important;box-shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.45)!important}
+#timeline{border:0!important;background:transparent!important}
+#bottomPanel #tlChips button:not(.on){border-color:transparent!important;background:rgba(16,24,40,.05)!important}
+:root[data-theme="dark"] #bottomPanel #tlChips button:not(.on){background:rgba(255,255,255,.07)!important}
+#mapFabs .mfab-grp .mfab{width:40px!important;height:40px!important;border-radius:20px!important}
+#mapFabs .mfab-grp .mfab svg{width:20px!important;height:20px!important}
+#ovChips .ov-chip{width:40px;height:40px}
+#ovChips .ov-chip svg{width:20px;height:20px}
+#miniLegend,#mapFabs #miniLegend,body.desk #mapFabs #miniLegend{width:38px!important;height:38px!important;max-width:38px!important}
+#miniLegend #mlName{height:38px!important}
+#miniLegend #mlName svg{width:19px!important;height:19px!important}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -8112,7 +8160,70 @@ body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
 </head><body>
 <!-- No splash. The app is the first thing on screen; while the forecast data
      streams in, a hairline at the top edge carries the real progress. -->
-<div id="boot" role="status" aria-live="polite"><div class="bt-in"><div class="bt-orbit" aria-hidden="true"><svg class="bt-lines" viewBox="0 0 240 240"><path class="bt-ln" data-k="0" d="M120.0 46.0L120.0 68.0"/><circle class="bt-pk" data-k="0" r="3" style="offset-path:path('M120.0 46.0L120.0 68.0')"/><path class="bt-ln" data-k="1" d="M184.1 83.0L165.0 94.0"/><circle class="bt-pk" data-k="1" r="3" style="offset-path:path('M184.1 83.0L165.0 94.0')"/><path class="bt-ln" data-k="2" d="M184.1 157.0L165.0 146.0"/><circle class="bt-pk" data-k="2" r="3" style="offset-path:path('M184.1 157.0L165.0 146.0')"/><path class="bt-ln" data-k="3" d="M120.0 194.0L120.0 172.0"/><circle class="bt-pk" data-k="3" r="3" style="offset-path:path('M120.0 194.0L120.0 172.0')"/><path class="bt-ln" data-k="4" d="M55.9 157.0L75.0 146.0"/><circle class="bt-pk" data-k="4" r="3" style="offset-path:path('M55.9 157.0L75.0 146.0')"/><path class="bt-ln" data-k="5" d="M55.9 83.0L75.0 94.0"/><circle class="bt-pk" data-k="5" r="3" style="offset-path:path('M55.9 83.0L75.0 94.0')"/></svg><i class="bt-src" data-k="0" style="left:100px;top:2px"><svg viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 1 1 1.2-8.8A6 6 0 0 1 19.5 11 3.5 3.5 0 0 1 18 18z"/></svg></i><i class="bt-src" data-k="1" style="left:185px;top:51px"><svg viewBox="0 0 24 24"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/></svg></i><i class="bt-src" data-k="2" style="left:185px;top:149px"><svg viewBox="0 0 24 24"><path d="M2 20l6.5-11 4 6 3-4.5L22 20z"/></svg></i><i class="bt-src" data-k="3" style="left:100px;top:198px"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="3.5" rx="1"/><rect x="4" y="10.25" width="16" height="3.5" rx="1"/><rect x="4" y="15.5" width="16" height="3.5" rx="1"/></svg></i><i class="bt-src" data-k="4" style="left:15px;top:149px"><svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="M8 21h8"/><circle cx="12" cy="6" r="2.5"/><path d="M7.5 3.5a6.5 6.5 0 0 0 0 5M16.5 3.5a6.5 6.5 0 0 1 0 5"/></svg></i><i class="bt-src" data-k="5" style="left:15px;top:51px"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-3-5.5"/></svg></i><div class="bt-crys"><i class="bt-halo"></i><svg class="bt-flake" viewBox="0 0 64 64"><defs><linearGradient id="btG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#8FD0FF"/><stop offset=".55" stop-color="#3F8AD6"/><stop offset="1" stop-color="#2D5A8C"/></linearGradient></defs><g class="bt-rot"><g transform="rotate(0 32 32)" style="--i:0"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(60 32 32)" style="--i:1"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(120 32 32)" style="--i:2"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(180 32 32)" style="--i:3"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(240 32 32)" style="--i:4"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(300 32 32)" style="--i:5"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><circle class="bt-core" cx="32" cy="32" r="3.4"/></g></svg></div></div><div id="bootSrc"><b id="bootSrcT"></b><span id="bootSrcD"></span></div><div id="bootPct">0 %</div><div class="bt-bar"><i></i></div><div id="bootTxt"></div></div></div>
+<div id="boot" role="status" aria-live="polite"><canvas id="btSky" aria-hidden="true"></canvas><div class="bt-in"><div class="bt-orbit" aria-hidden="true"><svg class="bt-lines" viewBox="0 0 240 240"><path class="bt-ln" data-k="0" d="M120.0 46.0L120.0 68.0"/><circle class="bt-pk" data-k="0" r="3" style="offset-path:path('M120.0 46.0L120.0 68.0')"/><path class="bt-ln" data-k="1" d="M184.1 83.0L165.0 94.0"/><circle class="bt-pk" data-k="1" r="3" style="offset-path:path('M184.1 83.0L165.0 94.0')"/><path class="bt-ln" data-k="2" d="M184.1 157.0L165.0 146.0"/><circle class="bt-pk" data-k="2" r="3" style="offset-path:path('M184.1 157.0L165.0 146.0')"/><path class="bt-ln" data-k="3" d="M120.0 194.0L120.0 172.0"/><circle class="bt-pk" data-k="3" r="3" style="offset-path:path('M120.0 194.0L120.0 172.0')"/><path class="bt-ln" data-k="4" d="M55.9 157.0L75.0 146.0"/><circle class="bt-pk" data-k="4" r="3" style="offset-path:path('M55.9 157.0L75.0 146.0')"/><path class="bt-ln" data-k="5" d="M55.9 83.0L75.0 94.0"/><circle class="bt-pk" data-k="5" r="3" style="offset-path:path('M55.9 83.0L75.0 94.0')"/></svg><i class="bt-src" data-k="0" style="left:100px;top:2px"><svg viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 1 1 1.2-8.8A6 6 0 0 1 19.5 11 3.5 3.5 0 0 1 18 18z"/></svg></i><i class="bt-src" data-k="1" style="left:185px;top:51px"><svg viewBox="0 0 24 24"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/></svg></i><i class="bt-src" data-k="2" style="left:185px;top:149px"><svg viewBox="0 0 24 24"><path d="M2 20l6.5-11 4 6 3-4.5L22 20z"/></svg></i><i class="bt-src" data-k="3" style="left:100px;top:198px"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="3.5" rx="1"/><rect x="4" y="10.25" width="16" height="3.5" rx="1"/><rect x="4" y="15.5" width="16" height="3.5" rx="1"/></svg></i><i class="bt-src" data-k="4" style="left:15px;top:149px"><svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="M8 21h8"/><circle cx="12" cy="6" r="2.5"/><path d="M7.5 3.5a6.5 6.5 0 0 0 0 5M16.5 3.5a6.5 6.5 0 0 1 0 5"/></svg></i><i class="bt-src" data-k="5" style="left:15px;top:51px"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-3-5.5"/></svg></i><div class="bt-crys"><i class="bt-halo"></i><svg class="bt-flake" viewBox="0 0 64 64"><defs><linearGradient id="btG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#F2FAFF"/><stop offset=".55" stop-color="#9AD3FF"/><stop offset="1" stop-color="#4F9BE6"/></linearGradient></defs><g class="bt-rot"><g transform="rotate(0 32 32)" style="--i:0"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(60 32 32)" style="--i:1"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(120 32 32)" style="--i:2"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(180 32 32)" style="--i:3"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(240 32 32)" style="--i:4"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(300 32 32)" style="--i:5"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><circle class="bt-core" cx="32" cy="32" r="3.4"/></g></svg></div></div><div id="bootSrc"><b id="bootSrcT"></b><span id="bootSrcD"></span></div><div id="bootPct">0 %</div><div class="bt-bar"><i></i></div><div id="bootTxt"></div></div></div>
+<script>
+/* Loading screen backdrop: a dark, stormy night over the mountains --
+   contour lines of a slowly shifting terrain drift past, and snow flurries
+   blow through them with the wind. Pure canvas, stops itself once the
+   loading screen is gone (or with reduced motion: one still frame). */
+(function(){try{
+  var cv=document.getElementById('btSky');if(!cv||!cv.getContext)return;
+  var cx=cv.getContext('2d'),W=0,H=0,dpr=Math.min(2,window.devicePixelRatio||1),t0=performance.now(),still=false;
+  try{still=matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){}
+  var fl=[];
+  function size(){W=cv.clientWidth||innerWidth;H=cv.clientHeight||innerHeight;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+    var n=Math.round(Math.min(260,W*H/4200));fl=[];for(var i=0;i<n;i++)fl.push({x:Math.random()*W,y:Math.random()*H,z:.35+Math.random()*.65,p:Math.random()*6.3});}
+  size();addEventListener('resize',size);
+  // a terrain of a few rolling waves, moving with the time
+  function hgt(x,y,t){return Math.sin(x*.011+t*.17)*1.2+Math.sin(y*.013-t*.11+x*.004)*1.1+Math.sin((x+y)*.0067+t*.07)*1.6
+    +Math.sin((x-y*.6)*.021-t*.23)*.45+Math.cos(Math.hypot(x-W*.62,y-H*.38)*.012-t*.09)*1.3;}
+  var G=18,LV=[-3.2,-2.4,-1.6,-.8,0,.8,1.6,2.4,3.2];
+  function contours(t){var nx=Math.ceil(W/G)+2,ny=Math.ceil(H/G)+2,v=new Float32Array(nx*ny),x,y,k;
+    var ox=(t*9)%G;
+    for(y=0;y<ny;y++)for(x=0;x<nx;x++)v[y*nx+x]=hgt(x*G-ox+t*9,y*G,t);
+    for(k=0;k<LV.length;k++){var L=LV[k],major=k%4===0;
+      cx.beginPath();
+      for(y=0;y<ny-1;y++)for(x=0;x<nx-1;x++){
+        var a=v[y*nx+x],b=v[y*nx+x+1],c=v[(y+1)*nx+x+1],d=v[(y+1)*nx+x],
+            m=(a>L?8:0)|(b>L?4:0)|(c>L?2:0)|(d>L?1:0);if(m===0||m===15)continue;
+        var X=x*G-ox,Y=y*G,
+            pt=function(e){if(e===0)return [X+G*(L-a)/(b-a),Y];if(e===1)return [X+G,Y+G*(L-b)/(c-b)];if(e===2)return [X+G*(L-d)/(c-d),Y+G];return [X,Y+G*(L-a)/(d-a)];},
+            seg=function(e1,e2){var p=pt(e1),q=pt(e2);cx.moveTo(p[0],p[1]);cx.lineTo(q[0],q[1]);};
+        switch(m){case 1:case 14:seg(2,3);break;case 2:case 13:seg(1,2);break;case 3:case 12:seg(1,3);break;
+          case 4:case 11:seg(0,1);break;case 6:case 9:seg(0,2);break;case 7:case 8:seg(0,3);break;
+          case 5:seg(0,3);seg(1,2);break;case 10:seg(0,1);seg(2,3);break;}}
+      cx.strokeStyle=major?'rgba(160,204,255,.46)':'rgba(128,172,232,.24)';cx.lineWidth=major?1.5:1;cx.stroke();}}
+  var raf=0,last=0;
+  function frame(now){
+    var b=document.getElementById('boot');
+    if(!b||!b.isConnected){cancelAnimationFrame(raf);removeEventListener('resize',size);return;}
+    raf=requestAnimationFrame(frame);
+    if(now-last<33)return;var dt=Math.min(.1,(now-(last||now))/1000);last=now;
+    var t=(now-t0)/1000;
+    cx.setTransform(dpr,0,0,dpr,0,0);
+    var g=cx.createLinearGradient(0,0,W*.3,H);g.addColorStop(0,'#0A1424');g.addColorStop(.55,'#10233D');g.addColorStop(1,'#0B1A2E');
+    cx.fillStyle=g;cx.fillRect(0,0,W,H);
+    // a storm light moving behind the clouds
+    var rg=cx.createRadialGradient(W*(.5+.25*Math.sin(t*.13)),H*.32,0,W*.5,H*.32,Math.max(W,H)*.7);
+    rg.addColorStop(0,'rgba(70,120,190,.22)');rg.addColorStop(1,'rgba(10,20,36,0)');cx.fillStyle=rg;cx.fillRect(0,0,W,H);
+    contours(t);
+    // gusts: the wind strengthens and eases off
+    var wind=60+50*Math.sin(t*.7)+25*Math.sin(t*1.9);
+    for(var i=0;i<fl.length;i++){var f=fl[i];
+      f.x+=(wind*f.z+Math.sin(t*2+f.p)*14)*dt;f.y+=(38+50*f.z)*f.z*dt;
+      if(f.x>W+10){f.x=-10;f.y=Math.random()*H;}if(f.y>H+10){f.y=-10;f.x=Math.random()*W;}
+      var r=.6+1.9*f.z,al=.25+.6*f.z;
+      // a soft streak behind the near flakes (motion), a round flake in front
+      if(f.z>.6){cx.strokeStyle='rgba(225,238,255,'+(al*.35).toFixed(2)+')';cx.lineWidth=r*.8;cx.lineCap='round';
+        cx.beginPath();cx.moveTo(f.x,f.y);cx.lineTo(f.x-wind*f.z*.06,f.y-(38+50*f.z)*f.z*.04);cx.stroke();}
+      cx.fillStyle='rgba(240,247,255,'+al.toFixed(2)+')';cx.beginPath();cx.arc(f.x,f.y,r*.75,0,6.283);cx.fill();}
+    // a vignette so the centre (crystal, text) stays calm
+    var vg=cx.createRadialGradient(W/2,H/2,Math.min(W,H)*.15,W/2,H/2,Math.max(W,H)*.75);
+    vg.addColorStop(0,'rgba(8,14,26,.35)');vg.addColorStop(1,'rgba(4,8,16,.55)');cx.fillStyle=vg;cx.fillRect(0,0,W,H);
+    if(still)cancelAnimationFrame(raf);}
+  raf=requestAnimationFrame(frame);
+}catch(e){}})();
+</script>
 <div id="toastWrap" aria-live="polite"></div>
 <div id="onb" hidden role="dialog" aria-modal="true" aria-label="Willkommen"><div class="onb-bg" aria-hidden="true"><i></i><i></i><i></i></div><div class="onb-card" id="onbCard"></div></div>
 <div id="appLock" hidden role="dialog" aria-modal="true" aria-label="Gesperrt"><div class="onb-bg" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -10079,13 +10190,13 @@ function clvCol(l,m,h){let r=0,g=0,b=0,a=0;
 // One snow-amount scale everywhere (maps, legends, reports, profiles), fixed in
 // the app so an older data blob with the old colours draws the same.
 // Neuschnee in the SLF's own classes (White Risk «Neuschnee»: 1 10 20 30 40 60 80 100 cm),
-// coloured from cmocean «dense» (perceptually uniform: pale blue -> violet ->
-// near black, strong contrast from a little to a lot); the same scale for
-// Neuschnee, Schneehöhe and powder
-const SB=[1,10,20,30,40,60,80,100,300],SC=['#B4D8E4','#89BCE3','#749CE4','#7777D9','#7952B8','#71338D','#5F1B5B','#3F102D'],RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
+// in the SLF's own colours (White Risk snow maps: pale mint -> green -> blue
+// -> wine red), the same scale for Neuschnee, Schneehöhe and powder: one
+// colour per depth everywhere
+const SB=[1,10,20,30,40,60,80,100,300],SC=['#D7FDD1','#ADEEB7','#70BAA0','#5094B1','#306EAB','#204D87','#580F31','#460A11'],RGB=SC.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
 // powder depth on the SNOWPACK layers and in reports keeps its finer classes
 // (the exports carry these bounds: classify.POWDER_BOUNDS)
-const PB=[1,5,10,15,20,30,40,50,75,100,300],PC=['#B4D8E4','#92C3E2','#79AAE4','#738FE3','#7772D6','#7957BD','#753D9D','#6B2879','#591750','#3F102D'];
+const PB=[1,5,10,15,20,30,40,50,75,100,300],PC=['#D7FDD1','#D7FDD1','#ADEEB7','#ADEEB7','#70BAA0','#5094B1','#306EAB','#204D87','#580F31','#460A11'];
 function snowCol(v){if(v<SB[0])return null;for(let i=SB.length-1;i>=1;i--)if(v>=SB[i-1])return RGB[Math.min(i-1,RGB.length-1)];return RGB[0];}
 // The stepped legend above is right for the model layers (an official
 // SLF-style band scale), but a field built by blending overlapping reports
@@ -11218,11 +11329,11 @@ function vaProfAvailable(){
 const VA_PALETTE={
   // powder in the SLF snow-depth colours (the map draws it in those bands
   // zoomed in; the coarse frames, tours and pens follow)
-  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[98,200,238,245],4:[42,134,222,240],5:[53,99,207,240],6:[226,170,72,220],7:[150,104,74,225],8:[84,70,188,240],9:[102,49,163,240],10:[194,229,196,235],11:[132,178,176,225]},
+  ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[215,253,209,245],4:[173,238,183,240],5:[112,186,160,240],6:[226,170,72,220],7:[150,104,74,225],8:[80,148,177,240],9:[48,110,171,240],10:[214,212,204,235],11:[176,164,196,225]},
   wind:{1:[156,168,184,190],2:[186,170,236,205],3:[112,72,200,230]}};
 // Nur Pulver on an export without its own powder layer: the three ski6 powder
 // classes, coloured like the nearest SLF snow-depth bands.
-const VA_VPAL={powder:{3:[98,200,238,245],4:[42,134,222,240],5:[53,99,207,240],8:[84,70,188,240],9:[102,49,163,240]}};
+const VA_VPAL={powder:{3:[215,253,209,245],4:[173,238,183,240],5:[112,186,160,240],8:[80,148,177,240],9:[48,110,171,240]}};
 const VA_SKI6_DE={1:'durchgehend hart',2:'Kruste',3:'Pulver 0–10 cm',4:'Pulver 10–20 cm',5:'Pulver 20–30 cm',6:'Sulz (aufgefirnt)',7:'nass / faul',8:'Pulver 30–40 cm',9:'Pulver > 40 cm',10:'dünne Schneedecke (< 20 cm)',11:'Altpulver'};
 // An export without the simple six classes still has "simple" (15 kinds of
 // surface): the six are folded from it, so Skiqualität always opens simple.
@@ -11634,7 +11745,7 @@ function vaHiEngine(){
         // the full snow scale of Neuschnee / Schneehöhe (1 … 100+ cm), not capped at 30
         while(j6<B6.length&&pw6>=B6[j6])j6++;j6=Math.max(1,Math.min(10,j6));
         var P6=((E.pk.rgba&&E.pk.rgba.powder&&E.pk.rgba.powder.length>10)?E.pk.rgba.powder
-          :[[0,0,0,0],[180,216,228,250],[146,195,226,250],[121,170,228,235],[115,143,227,235],[119,114,214,235],[121,87,189,235],[117,61,157,235],[107,40,121,235],[89,23,80,235],[63,16,45,235]])[j6];
+          :[[0,0,0,0],[215,253,209,250],[215,253,209,250],[173,238,183,235],[173,238,183,235],[112,186,160,235],[80,148,177,235],[48,110,171,235],[32,77,135,235],[88,15,49,235],[70,10,17,235]])[j6];
         E.cls=L;out[0]=P6[0];out[1]=P6[1];out[2]=P6[2];out[3]=P6[3];return;}}
     else if(layer==='powder'){
       // dry powder depth in the SLF snow-depth bands (classify_powder)
@@ -11642,7 +11753,7 @@ function vaHiEngine(){
       if(!(hs>=Math.min(T.THIN_COVER_HS,T.SK_THIN_POWDER_HS!=null?T.SK_THIN_POWDER_HS:3))||!(pw>=T.SK_POWDER_MIN)||lw>T.SK_WET_LWC){out[0]=out[1]=out[2]=out[3]=0;return;}
       var B=E.pk.powder_bounds||[1,5,10,15,20,30,40,50,75,100],i=0;while(i<B.length&&pw>=B[i])i++;
       var PT=(E.pk.rgba&&E.pk.rgba.powder&&E.pk.rgba.powder.length>9)?E.pk.rgba.powder
-        :[[0,0,0,0],[180,216,228,250],[146,195,226,250],[121,170,228,235],[115,143,227,235],[119,114,214,235],[121,87,189,235],[117,61,157,235],[107,40,121,235],[89,23,80,235],[63,16,45,235]];
+        :[[0,0,0,0],[215,253,209,250],[215,253,209,250],[173,238,183,235],[173,238,183,235],[112,186,160,235],[80,148,177,235],[48,110,171,235],[32,77,135,235],[88,15,49,235],[70,10,17,235]];
       E.cls=i;var pc=PT[Math.max(1,Math.min(PT.length-1,i))];out[0]=pc[0];out[1]=pc[1];out[2]=pc[2];out[3]=pc[3];return;}
     else if(layer==='wind'){L=E.clsWind(m);key='wind';}
     else if(layer==='simple'){L=E.clsSimple(m);key='simple';}
@@ -11749,6 +11860,7 @@ function vaHiEngine(){
     }
     E.fillHoles(out,S);
     E.despeckle(out,S,Math.max(1,Math.round(S/256*Math.pow(2,q.z-q.tz))));
+    if(lk.indexOf('ski6')===0||q.layer==='powder')E.majority(out,S,Math.max(2,Math.round(S/256*Math.pow(2,q.z-q.tz)*1.5)));
     E.edges(out,S);
     return out;
   };
@@ -11763,6 +11875,30 @@ function vaHiEngine(){
         for(dy=-1;dy<=1;dy++)for(dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;var q=((y+dy)*S+x+dx)*4;if(!src[q+3])continue;n++;
           var k=(src[q]<<16)|(src[q+1]<<8)|src[q+2];cnt[k]=(cnt[k]||0)+1;if(cnt[k]>bc){bc=cnt[k];best=q;}}
         if(n>=6&&best>=0){out[o]=src[best];out[o+1]=src[best+1];out[o+2]=src[best+2];out[o+3]=src[best+3];}}}
+  };
+  // Slopes of one exposure read as one surface: a pixel whose class is a
+  // minority in the area around it (radius R, about 2-3 terrain pixels)
+  // takes the class most of its neighbours have -- a stray old-snow speck in
+  // a powder slope (or the reverse) goes, real changes of class (a ridge, a
+  // height band) stay because there the other class is not the majority.
+  E.majority=function(out,S,R){
+    var N=S*S,K=new Int32Array(N),y,x,o;
+    var DASH=((214<<16)|(40<<8)|40)+1;
+    for(o=0;o<N;o++){var p=o*4;K[o]=out[p+3]?((out[p]<<16)|(out[p+1]<<8)|out[p+2])+1:0;}
+    var src=out.slice(0),ks=[],cs=[];
+    for(y=0;y<S;y++)for(x=0;x<S;x++){o=y*S+x;var me=K[o];if(!me||me===DASH)continue;
+      ks.length=0;cs.length=0;var tot=0,mine=0;
+      for(var dy=-R;dy<=R;dy++){var yy=y+dy;if(yy<0||yy>=S)continue;
+        for(var dx=-R;dx<=R;dx++){var xx=x+dx;if(xx<0||xx>=S)continue;var k=K[yy*S+xx];if(!k||k===DASH)continue;tot++;
+          if(k===me){mine++;continue;}var j=ks.indexOf(k);if(j<0){ks.push(k);cs.push(1);}else cs[j]++;}}
+      if(mine*3>=tot)continue;
+      var bj=-1,bc=0;for(var i=0;i<cs.length;i++)if(cs[i]>bc){bc=cs[i];bj=i;}
+      if(bj<0||bc*2<tot)continue;
+      var t=ks[bj]-1,q=o*4;
+      // the alpha of a neighbour with that colour (forest fade differs)
+      for(var dy2=-R;dy2<=R;dy2++){var y2=y+dy2;if(y2<0||y2>=S)continue;var hit=false;
+        for(var dx2=-R;dx2<=R;dx2++){var x2=x+dx2;if(x2<0||x2>=S)continue;if(K[y2*S+x2]===t+1){var q2=(y2*S+x2)*4;
+          out[q]=src[q2];out[q+1]=src[q2+1];out[q+2]=src[q2+2];out[q+3]=src[q2+3];hit=true;break;}}if(hit)break;}}
   };
   // Clear class edges, as on Neuschnee: where the colour changes to the right
   // or below, the pixel takes a darker shade of its own colour (one pixel wide)
@@ -12020,7 +12156,8 @@ function vaHiRepaint(){
   if(!vaHi||!vaHi._tiles)return;
   for(const k in vaHi._tiles){const e=vaHi._tiles[k].el;if(e&&e._vaC)vaHiPaint(e);}
 }
-let vaHiReady=false;
+let vaHiReady=false,vaHiReadyZ=null;
+function vaTileZ(){try{return Math.min(VA_TERR_Z,Math.round(map.getZoom()));}catch(e){return null;}}
 function vaHiMake(){
   if(vaHi||typeof L==='undefined'||!L.GridLayer)return vaHi;
   const Lyr=L.GridLayer.extend({createTile:function(c,done){
@@ -12036,8 +12173,10 @@ function vaHiMake(){
   // The coarse frame stays visible until the fine tiles for this view are
   // actually there -- hiding it on zoomend is what made the layer vanish
   // for seconds (or for good, on a failed terrain fetch) when zooming in.
-  vaHi.on('loading',()=>{vaHiReady=false;vaSyncOpacity();});
-  vaHi.on('load',()=>{vaHiReady=true;vaSyncOpacity();});
+  // only a new zoom level brings the coarse frame back; a pan keeps the
+  // sharp tiles on top (new edge tiles fill in), no colour flicker
+  vaHi.on('loading',()=>{if(vaHiReadyZ!==vaTileZ()){vaHiReady=false;vaSyncOpacity();}});
+  vaHi.on('load',()=>{vaHiReady=true;vaHiReadyZ=vaTileZ();vaSyncOpacity();});
   return vaHi;
 }
 function vaHiActive(){
@@ -12092,8 +12231,22 @@ function vaTiles(){const t=vaMan&&vaMan.tiles;return (t&&t.base&&t.run&&!vaTiles
 // knows whole views).
 function vaTileView(){const t=vaTiles();return t&&!vaHideMask()&&(t.views||[]).indexOf(vaKey)>=0?vaKey:null;}
 // Classes switched off on the legend, as a bit mask over the class ids.
-function vaHideMask(){if(layer!=='snowpack'||!vaMan)return 0;const rows=legRows('snowpack');if(!rows)return 0;
-  const vis=legVisSet('snowpack');let m=0;rows.forEach(r=>{if(!vis.has(r.k)&&r.k>0&&r.k<31)m|=1<<r.k;});return m;}
+// Skiqualität in three steps of zoom, what a skier wants to see first:
+//  far (below zoom 10): only where there is powder, in coarse classes -- like
+//    the Neuschnee map;
+//  middle (10 to 12): powder in the fine cm classes, with cm labels;
+//  near (from 12): every kind of snow (crust, Sulz, wet, hard, thin, old).
+const VA_ALL_Z=12;
+const VA_NONPOW=(1<<1)|(1<<2)|(1<<6)|(1<<7)|(1<<10)|(1<<11);
+function vaZoomStep(){try{const z=map.getZoom();return z<VA_HI_Z?0:z<VA_ALL_Z?1:2;}catch(e){return 2;}}
+function vaZoomMask(){return vaKey==='ski6'&&vaZoomStep()<2?VA_NONPOW:0;}
+function vaHideMask(){if(layer!=='snowpack'||!vaMan)return 0;const zm=vaZoomMask(),rows=legRows('snowpack');if(!rows)return zm;
+  const vis=legVisSet('snowpack');let m=zm;rows.forEach(r=>{if(!vis.has(r.k)&&r.k>0&&r.k<31)m|=1<<r.k;});return m;}
+let _vaStep=null;
+function vaZoomStepSync(){const st=vaZoomStep();if(st===_vaStep)return;const was=_vaStep;_vaStep=st;
+  if(was==null||layer!=='snowpack'||vaKey!=='ski6'||!ovOn.variantA)return;
+  try{vaFilterChanged();}catch(e){}try{miniLegendRender();}catch(e){}
+  if(st<2)toastOnce('va-step','Skiqualität: weit weg nur Powder – näher heranzoomen für alle Schneearten');}
 function vaRenderLayer(){const m=vaHideMask();return m?vaKey+'~'+m:vaKey;}
 function vaFilterChanged(){
   if(!vaAvailable())return;
@@ -12115,10 +12268,13 @@ function vaSwap(make,onReady){
     if(S.next){vaGrp.removeLayer(S.next);S.next=null;}
     const l=make(key);if(!l)return;
     l._vaKeyS=key;l.setOpacity(0);
-    l.on('loading',()=>{if(l===S.cur&&S.ready&&!S.busy){S.busy=true;try{vaSyncOpacity();}catch(e){}}});
+    // A pan at the same zoom only adds tiles at the edge: the coarse frame
+    // must not come back under the whole view for that (it classifies by
+    // 250 m cells, so its colours differ -- the flicker while moving the map)
+    l.on('loading',()=>{if(l===S.cur&&S.ready&&!S.busy&&vaTileZ()!==S.z){S.busy=true;try{vaSyncOpacity();}catch(e){}}});
     l.on('load',()=>{
       if(l===S.next){if(S.cur)vaGrp.removeLayer(S.cur);S.cur=l;S.next=null;}
-      if(l===S.cur){S.ready=true;S.busy=false;l.setOpacity(vaOpacity());if(onReady)onReady();}
+      if(l===S.cur){S.ready=true;S.busy=false;S.z=vaTileZ();l.setOpacity(vaOpacity());if(onReady)onReady();}
     });
     if(!S.cur){S.cur=l;S.ready=false;}else S.next=l;
     vaGrp.addLayer(l);
@@ -13613,7 +13769,11 @@ const WC_API='https://api.windy.com/webcams/api/v3/webcams';
 const WC_MIN_Z=11.1;   // webcams from a view of about 20 x 20 km
 // while a webcam preview is open the side buttons step aside (it spans the
 // width of a phone)
-try{map.on('popupopen',e=>{if(e.popup&&e.popup.options&&e.popup.options.className==='wc-popup')document.body.classList.add('wcp-open');});
+try{map.on('popupopen',e=>{if(e.popup&&e.popup.options&&e.popup.options.className==='wc-popup'){document.body.classList.add('wcp-open');
+    // on a phone the preview is as wide as the screen: bring the camera to the
+    // middle so it is not cut at the right edge
+    if(!document.body.classList.contains('desk'))try{const pt=map.latLngToContainerPoint(e.popup.getLatLng()),W=map.getSize().x;
+      if(Math.abs(pt.x-W/2)>2)map.panBy([pt.x-W/2,0],{animate:true,duration:.25});}catch(_){}}});
   map.on('popupclose',e=>{if(e.popup&&e.popup.options&&e.popup.options.className==='wc-popup')document.body.classList.remove('wcp-open');});}catch(e){}
 dataFetch('data/config.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
   if(j&&j.windy_webcams_key){WEBCAM_KEY=j.windy_webcams_key;try{ovSyncUI();ovRender();}catch(e){}
@@ -13753,6 +13913,12 @@ async function wcPreview(id,mk){
 const _toastSeen=new Set();
 function toastOnce(k,msg){if(_toastSeen.has(k))return;_toastSeen.add(k);try{toast(msg,'info');}catch(e){}}
 map.on('moveend',()=>{if(!ovOn.webcams)return;clearTimeout(wcT);wcT=setTimeout(wcRefresh,400);});
+// zoomed out past the camera zoom the pins go (they stay loaded, and come back
+// when zooming in again), so far-away views are not dotted with cameras
+function wcFarSync(){try{const far=map.getZoom()<WC_MIN_Z;map.getContainer().classList.toggle('wc-far',far);
+  if(far&&wcLayer)wcLayer.eachLayer(m=>{try{if(m.isPopupOpen&&m.isPopupOpen())m.closePopup();}catch(e){}});}catch(e){}}
+map.on('zoomend',wcFarSync);wcFarSync();
+try{map.on('zoomend',()=>{try{vaZoomStepSync();}catch(e){}});vaZoomStepSync();}catch(e){}
 map.on('moveend',()=>{try{feedHereSync();}catch(e){}});
 // ── Webcam screen: favourites as tiles, Webcam-TV, cameras near me ──
 // Favourites live on the device. Each tile plays Windy's 24-hour timelapse
@@ -16348,13 +16514,12 @@ const isMobile=window.innerWidth<=560;
 // 200 300 400 cm). Below 50 cm is «not enough snow»: two bands drawn only as
 // brown hatching (sparse -> dense), then one viridis tone per class
 // (matplotlib, reversed: yellow 50 cm -> deep violet 400 cm+).
-const DEP_B=[1,20,50,80,120,200,300,400],DEP_NH=2;
+const DEP_B=[1,20,50,80,120,200,300,400],DEP_NH=0;   // no hatched classes any more
 const DEP_VIR=[[253,231,37],[181,222,43],[110,206,88],[53,183,121],[31,158,137],[38,130,142],[49,104,142],[62,74,137],[72,40,120],[68,1,84]];
 function depthVir(t){t=Math.max(0,Math.min(1,t))*(DEP_VIR.length-1);const i=Math.min(DEP_VIR.length-2,t|0),f=t-i,a=DEP_VIR[i],b=DEP_VIR[i+1];
   return [Math.round(a[0]+(b[0]-a[0])*f),Math.round(a[1]+(b[1]-a[1])*f),Math.round(a[2]+(b[2]-a[2])*f)];}
 const DEP_BROWN=[[168,128,86],[132,94,56]];
-const DEP_DENSE=[[123,173,228],[116,133,224],[121,93,196],[116,58,152],[97,29,96],[63,16,45]];
-const DEP_RGB=DEP_B.map((v,i)=>i<DEP_NH?DEP_BROWN[i]:DEP_DENSE[Math.min(DEP_DENSE.length-1,i-DEP_NH)]);
+const DEP_RGB=DEP_B.map((v,i)=>[[215,253,209],[173,238,183],[112,186,160],[80,148,177],[48,110,171],[32,77,135],[88,15,49],[70,10,17]][i]);
 function depthBand(v){if(v==null||!(v>=DEP_B[0]))return -1;let j=0;while(j+1<DEP_B.length&&v>=DEP_B[j+1])j++;return Math.min(j,DEP_RGB.length-1);}
 // brown hatching for the «not enough snow» bands: denser the deeper
 function depthHatch(bq,X,Y){const per=[8,6][bq],on=[1.6,2.1][bq];return ((X+Y)%per)<on;}
@@ -26198,6 +26363,28 @@ function cdDays(v){const L=cdL(),set=new Set();
   if(L.k==='ns')(v.stations_newsnow||[]).forEach(s=>s.days.forEach(q=>set.add(q.d)));
   else ((v.temp&&v.temp.stations)||[]).forEach(s=>s.days.forEach(q=>set.add(q.d)));
   return [...set].sort();}
+// One number per day and period: a score from 0 to 100 -- 100 = no error,
+// 50 = the error at the «ok» limit of the layer (5 cm new snow, 3 °C), then
+// falling slowly towards 0. Comparable across layers and model versions.
+function cdScore(mae){const L=cdL();return mae==null||!isFinite(mae)?null:Math.round(100*L.ok/(L.ok+Math.max(0,mae)));}
+function cdScTone(sc){return sc==null?'':sc>=70?'g':sc>=50?'m':'b';}
+// the score per model version (or per period between two model changes)
+function cdVersions(v,S){let P=(v.versions||[]).filter(x=>x&&x.since).map(x=>({since:x.since,lbl:(x.sha||'').slice(0,7),kind:x.kind}));
+  if(P.length<2)P=[{since:S.length?S[0].d:'',lbl:'Start'}].concat((v.changes||[]).filter(c=>c&&c.date).map(c=>({since:c.date,lbl:c.date,txt:c.text})));
+  P.sort((a,b)=>a.since<b.since?-1:a.since>b.since?1:0);
+  const out=[];P.forEach((p,i)=>{const to=i+1<P.length?P[i+1].since:'9999';
+    const E=S.filter(x=>x.d>=p.since&&x.d<to&&x.mae!=null);if(!E.length)return;
+    let w=0,sm=0,sb=0;E.forEach(x=>{const k=x.n||1;w+=k;sm+=x.mae*k;sb+=(x.bias||0)*k;});
+    const chg=(v.changes||[]).find(c=>c.date>=p.since&&c.date<to);
+    out.push({p,days:E.length,mae:sm/w,bias:sb/w,sc:cdScore(sm/w),txt:p.txt||(chg&&chg.text)||''});});
+  return out;}
+function cdVerHTML(v,S){const R=cdVersions(v,S);if(R.length<1)return '';const L=cdL(),best=Math.max(...R.map(r=>r.sc||0));
+  return '<h3>Modellversionen <small>Score je Version · '+L.t+'</small></h3><div class="cd-vers">'
+    +R.map((r,i)=>{const dl=cdDayLbl(r.p.since);
+      return '<div class="cd-ver '+cdScTone(r.sc)+'"><div class="cd-vh"><b>'+(i===R.length-1?'Aktuell':escapeHtml(r.p.lbl||'Version '+(i+1)))+'</b><small>ab '+dl.dm+' · '+r.days+' Tage</small></div>'
+        +'<div class="cd-vbar"><i style="width:'+(r.sc||0)+'%"></i></div><div class="cd-vn"><b>'+(r.sc==null?'–':r.sc)+'</b><small>'+cdFmt(r.mae)+' '+L.u+'</small></div>'
+        +(r.sc===best&&R.length>1?'<span class="cd-best">beste</span>':'')
+        +(r.txt?'<p>'+escapeHtml(r.txt)+'</p>':'')+'</div>';}).join('')+'</div>';}
 function cdTone(x){const L=cdL();return x==null?'':x<=L.good?'g':x<=L.ok?'m':'b';}
 function cdFmt(x,sign){if(x==null||!isFinite(x))return '–';const r=Math.round(x*10)/10;return (sign&&r>0?'+':'')+r.toLocaleString('de-CH');}
 // model - measured, diverging: blue = model too low, red = too high
@@ -26208,12 +26395,12 @@ function cdRender(){const el=document.getElementById('cmpDash');if(!el)return;co
   const body=el.querySelector('.cd-body');
   if(!v){body.innerHTML='<p class="cd-empty">Die tägliche Prüfung gegen die Messstationen läuft ab dem nächsten Build – hier erscheinen dann die Zahlen.</p>'+accHsHTML(_accDrift)+accSrcHTML(null);return;}
   const S=cdSeries(v),chg=(v.changes||[]);
-  const kpi=(t,a)=>'<div class="cd-kpi '+cdTone(a&&a.mae)+'"><span>'+t+'</span><b>'+(a?cdFmt(a.mae)+' <small>'+L.u+'</small>':'–')+'</b><em>'+(a?'Bias '+cdFmt(a.bias,1)+' '+L.u+(a.n?' · '+a.n+' Messungen':''):'noch keine Daten')+'</em></div>';
+  const kpi=(t,a)=>'<div class="cd-kpi '+cdTone(a&&a.mae)+'"><span>'+t+'</span>'+(a&&a.mae!=null?'<i class="cd-sc '+cdScTone(cdScore(a.mae))+'" title="Score 0–100">'+cdScore(a.mae)+'</i>':'')+'<b>'+(a?cdFmt(a.mae)+' <small>'+L.u+'</small>':'–')+'</b><em>'+(a?'Bias '+cdFmt(a.bias,1)+' '+L.u+(a.n?' · '+a.n+' Messungen':''):'noch keine Daten')+'</em></div>';
   const mx=Math.max(L.ok*1.6,...S.map(x=>x.mae||0));
   const days=S.slice(-30).map(x=>{const dl=cdDayLbl(x.d),c=chg.find(q=>q.date===x.d);
     return '<button type="button" class="cd-day '+cdTone(x.mae)+(x.d===_cd.day?' on':'')+'" onclick="cdPick(\''+x.d+'\')" title="'+escapeHtml(c?c.text:'')+'">'
       +(c?'<i class="cd-chg" aria-label="Modelländerung"></i>':'')+'<small>'+dl.wd+'</small><span>'+dl.dm+'</span>'
-      +'<b>'+cdFmt(x.mae)+'</b><em>'+cdFmt(x.bias,1)+'</em><u style="height:'+Math.max(3,Math.round((x.mae||0)/mx*40))+'px"></u>'
+      +'<b>'+cdFmt(x.mae)+'</b><em>'+cdFmt(x.bias,1)+'</em><i class="cd-dsc '+cdScTone(cdScore(x.mae))+'">'+(cdScore(x.mae)==null?'–':cdScore(x.mae))+'</i><u style="height:'+Math.max(3,Math.round((x.mae||0)/mx*40))+'px"></u>'
       +(x.n?'<small>'+x.n+'</small>':'')+(x.rb?'<small class="cd-rb">nachgerechnet</small>':'')+'</button>';}).join('');
   // the course: daily error (line), bias (bars around zero), model changes
   let chart='';if(S.length>1){const W=340,H=130,pl=28,pr=6,pt=8,pb=18,n=S.length,X=i=>pl+i/(n-1)*(W-pl-pr),
@@ -26229,8 +26416,9 @@ function cdRender(){const el=document.getElementById('cmpDash');if(!el)return;co
   const D=cdDays(v);if(!_cd.day||D.indexOf(_cd.day)<0)_cd.day=D[D.length-1]||null;
   body.innerHTML='<div class="cd-chips" role="tablist">'+CD_LAYERS.map(x=>'<button type="button" role="tab" aria-selected="'+(x.k===_cd.k)+'" class="'+(x.k===_cd.k?'on':'')+'" onclick="cdLayer(\''+x.k+'\')">'+x.t+'</button>').join('')+'</div>'
     +'<div class="cd-kpis">'+kpi('7 Tage',cdAgg(v,'last7'))+kpi('30 Tage',cdAgg(v,'last30'))+kpi('Seit Start',cdAgg(v,'season'))+'</div>'
-    +'<h3>Pro Tag <small>mittlerer Fehler · Bias · Messungen</small></h3><div class="cd-days" id="cdDays">'+(days||'<p class="cd-empty">Noch keine Tage.</p>')+'</div>'
+    +'<h3>Pro Tag <small>Fehler · Bias · Score · Messungen</small></h3><div class="cd-days" id="cdDays">'+(days||'<p class="cd-empty">Noch keine Tage.</p>')+'</div>'
     +(chart?'<h3>Verlauf</h3>'+chart:'')
+    +cdVerHTML(v,S)
     +'<button type="button" class="cd-mapbtn" onclick="cdMapToggle()" aria-expanded="'+(!!_cd.map)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>'+(_cd.map?'Karte zuklappen':'Karte der Messpunkte')+'</button>'
     +'<div class="cd-mapw" id="cdMapW"'+(_cd.map?'':' hidden')+'><div class="cd-dchips">'+D.slice(-14).map(d=>{const dl=cdDayLbl(d);return '<button type="button" class="'+(d===_cd.day?'on':'')+'" onclick="cdPick(\''+d+'\')">'+dl.wd+' '+dl.dm+'</button>';}).join('')+'</div>'
     +'<div id="cdMap" class="cd-map"></div><div class="cd-mleg"><span>Modell − Messung ('+L.u+')</span><div>'
