@@ -39,6 +39,10 @@ a logcat -c
 # this file is the only record of what the app and the GPU were doing
 ( adb logcat -v time > "$OUT/logcat-stream.txt" 2>&1 & echo $! > "$OUT/.logcat.pid" )
 ( while sleep 5; do adb shell dumpsys meminfo "$PKG" 2>/dev/null | grep -E "TOTAL|Graphics|GL mtrack" | head -3 | sed "s/^/[$(date +%T)] /"; done > "$OUT/meminfo.txt" 2>&1 & echo $! > "$OUT/.mem.pid" )
+# the HOST side too: the emulator has vanished without a word ~20-60 s after
+# launch on about half the runs -- a host that runs out of memory kills the
+# emulator process silently, and this is what shows it
+( while sleep 3; do echo "[$(date +%T)] $(free -m | awk '/Mem:/{print "used "$3" / "$2" MB, available "$7" MB"}') | emulator rss $(ps -C qemu-system-x86_64 -o rss= 2>/dev/null | awk '{s+=$1} END {print int(s/1024)}') MB"; done > "$OUT/host-mem.txt" 2>&1 & echo $! > "$OUT/.host.pid" )
 a shell am start -W -n "$PKG/.MainActivity" || { echo "::error::app did not start"; exit 1; }
 
 # The first launch unpacks the bundled forecast and builds the map; give it time.
@@ -57,7 +61,10 @@ if ! adb get-state 2>/dev/null | grep -q device; then
   echo "--- last lines streamed before it went (logcat-stream.txt) ---"
   tail -n 60 "$OUT/logcat-stream.txt" 2>/dev/null | grep -vE "^\s*$" | tail -n 60
   echo "--- app memory (meminfo.txt) ---"; tail -n 12 "$OUT/meminfo.txt" 2>/dev/null
-  for f in "$OUT/.logcat.pid" "$OUT/.mem.pid"; do kill "$(cat "$f" 2>/dev/null)" 2>/dev/null; rm -f "$f"; done
+  echo "--- host memory (host-mem.txt) ---"; tail -n 25 "$OUT/host-mem.txt" 2>/dev/null
+  echo "--- host kernel: out-of-memory kills ---"
+  sudo dmesg 2>/dev/null | grep -iE "out of memory|oom-kill|killed process" | tail -n 10 || echo "(dmesg not readable)"
+  for f in "$OUT/.logcat.pid" "$OUT/.mem.pid" "$OUT/.host.pid"; do kill "$(cat "$f" 2>/dev/null)" 2>/dev/null; rm -f "$f"; done
   exit 1
 fi
 
@@ -82,7 +89,7 @@ fi
 echo "--- JS console errors (informational) ---"
 grep -E "E Capacitor/Console|Uncaught" "$OUT/logcat.txt" | head -30 || true
 
-for f in "$OUT/.logcat.pid" "$OUT/.mem.pid"; do kill "$(cat "$f" 2>/dev/null)" 2>/dev/null; rm -f "$f"; done
+for f in "$OUT/.logcat.pid" "$OUT/.mem.pid" "$OUT/.host.pid"; do kill "$(cat "$f" 2>/dev/null)" 2>/dev/null; rm -f "$f"; done
 echo "--- app memory (meminfo.txt) ---"; tail -n 6 "$OUT/meminfo.txt" 2>/dev/null || true
 [ "$fail" = 0 ] && echo "smoke test passed: installed, launched, survived back"
 exit "$fail"

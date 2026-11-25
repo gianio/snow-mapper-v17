@@ -1475,6 +1475,15 @@ def export_split_app(data, out_dir: Path, gz_only: bool = False) -> Path:
         (ddir / dataname).write_text(payload, encoding="utf-8")
         pointer["data"] = dataname
     (ddir / "latest.json").write_text(json.dumps(pointer), encoding="utf-8")
+    # avalanche warning regions of the neighbouring countries (EAWS, CC0):
+    # fetched by the app only when the bulletin layer is switched on
+    try:
+        import shutil
+        src = Path(__file__).resolve().parent.parent / "data_connectors" / "eaws_regions.json"
+        if src.exists():
+            shutil.copyfile(src, ddir / "eaws_regions.json")
+    except Exception as e:                                  # noqa: BLE001
+        print(f"[OUT] eaws_regions.json not copied: {e!r}")
     # Client settings that come from the build environment (no secrets of
     # ours: the Windy key is a public client key, sent with every request).
     cfg = {}
@@ -5512,6 +5521,16 @@ body.desk #tsRadBar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
  .wc-pin svg{width:16px;height:16px}
  .wc-popup .leaflet-popup-content-wrapper{border-radius:18px;padding:0;overflow:hidden}
  .wc-popup .leaflet-popup-content{margin:0;width:280px!important;max-width:calc(100vw - 104px)}
+ @media (max-width:899px){.wc-popup .leaflet-popup-content{width:calc(100vw - 16px)!important;max-width:calc(100vw - 16px)!important}}
+ /* M3: a clear round close button over the picture */
+ .wc-popup a.leaflet-popup-close-button{top:8px!important;right:8px!important;width:40px!important;height:40px!important;border-radius:20px;
+   display:grid!important;place-items:center;background:rgba(255,255,255,.94)!important;color:#1B1B1F!important;font:400 0/1 var(--font)!important;
+   box-shadow:0 1px 3px rgba(0,0,0,.3),0 4px 8px rgba(0,0,0,.15);z-index:5}
+ .wc-popup a.leaflet-popup-close-button span{display:none}
+ .wc-popup a.leaflet-popup-close-button::before{content:'';width:18px;height:18px;background:currentColor;
+   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z'/%3E%3C/svg%3E") center/contain no-repeat;
+   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z'/%3E%3C/svg%3E") center/contain no-repeat}
+ .wc-popup .wc-zoom{right:auto!important;left:8px}
  .wc-pop{display:flex;flex-direction:column;gap:3px;padding-bottom:10px}
  .wc-pop img,.wc-pop .wc-img{width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--fill);display:block;margin-bottom:6px}
  .wc-pop b,.wc-pop span,.wc-pop a,.wc-pop em{padding:0 12px}
@@ -7557,9 +7576,25 @@ body.z-deep .va-hi canvas,body.z-deep .va-srv img,body.z-deep .raster-smooth.va-
 .wcf-hd small{font:400 12px/1.2 var(--font);opacity:.7;display:none}
 @media (min-width:600px){.wcf-hd small{display:block}}
 .wcf-hd button{flex:none;width:40px;height:40px;border-radius:20px;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:24px;line-height:1;cursor:pointer}
-.wcf-media{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+.wcf-media{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;position:relative;overflow:hidden}
 .wcf-media iframe{width:100%;height:100%;border:0;background:#000}
 .wcf-media img{max-width:100%;max-height:100%;object-fit:contain}
+.wcf-hd .wcf-rot{width:auto;padding:0 12px;font:600 13px/1 var(--font);display:inline-flex;align-items:center;gap:6px}
+.wcf-hd .wcf-rot svg{width:16px;height:16px}
+/* upright phone: the picture as wide as the screen, in the middle; the
+   player's slider right under it -- not stretched over the whole height */
+@media (orientation:portrait){
+  .wc-full{background:#000}
+  .wcf-media iframe{height:calc(100vw * 9 / 16 + 64px);max-height:100%}}
+/* a phone held sideways: the whole length (the app itself stays upright, so
+   the player is turned by 90 degrees; the browser turns it by itself) */
+.wc-full.rot .wcf-media iframe,.wc-full.rot .wcf-media img{position:absolute;left:50%;top:50%;
+  width:var(--wcf-h,100vh)!important;height:var(--wcf-w,100vw)!important;max-width:none;max-height:none;
+  transform:translate(-50%,-50%) rotate(var(--wcf-a,90deg));object-fit:contain}
+@media (orientation:landscape) and (max-height:560px){
+  .wc-full{padding:0 env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px);background:#000}
+  .wcf-hd{position:absolute;top:6px;right:6px;z-index:2;padding:0}
+  .wcf-hd b,.wcf-hd small,.wcf-hd .wcf-rot{display:none}}
 /* the layer icon as large as the side buttons; its scale folds out below */
 #miniLegend,#mapFabs #miniLegend,body.desk #mapFabs #miniLegend{width:36px!important;height:36px!important;max-width:36px!important}
 #miniLegend #mlName{height:36px!important}#miniLegend #mlName svg{width:18px!important;height:18px!important}
@@ -10852,7 +10887,7 @@ function skiBuildLayer(){const g=L.layerGroup();
   CH_RESORTS.forEach(r=>skiLabel(r.name,r.lat,r.lng,false).addTo(g));
   return g;}
 function ovAvailable(k){
-  if(k==='avalanche'){const a=M.avalanche;return !!(a&&a.regions&&a.regions.some(r=>r.geometry));}
+  if(k==='avalanche')return true;   // SLF, and the neighbouring countries via EAWS
   if(k==='skitourVec')return tourList().length>0;
   if(k==='webcams')return !!WEBCAM_KEY;
   if(k==='variantA')return vaAvailable();
@@ -10943,11 +10978,47 @@ const AV_COLORS={1:'#CCFF66',2:'#FFFF00',3:'#FF9900',4:'#FF0000',5:'#800000'};
 const AV_LABELS={1:'gering',2:'mässig',3:'erheblich',4:'gross',5:'sehr gross'};
 function avRegions(){const a=M.avalanche;return (a&&a.regions)||[];}
 function avByRegion(){const m={};avRegions().forEach(r=>{m[r.id]=r;});return m;}
+// The neighbouring countries, beside the SLF: each warning service's own
+// danger level per region, as the EAWS publishes them every day
+// (static.avalanche.report, the regions from regions.avalanches.org, CC0) --
+// drawn the same way, with the service named and linked. Also a viewer only.
+const AV_NB_SRC={FR:['Météo-France','https://meteofrance.com/meteo-montagne'],
+  'IT-21':['ARPA Piemonte','https://www.arpa.piemonte.it/bollettino/bollettino-valanghe'],
+  'IT-23':['Regione Valle d’Aosta','https://www.regione.vda.it/territorio/valanghe/bollettino_neve_e_valanghe/default_i.asp'],
+  'IT-25':['ARPA Lombardia','https://www.arpalombardia.it/temi-ambientali/neve-e-valanghe/'],
+  'IT-32-BZ':['Lawinenwarndienst Südtirol','https://avalanche.report'],'IT-32-TN':['Meteotrentino','https://avalanche.report'],
+  'IT-34':['ARPA Veneto','https://www.arpa.veneto.it/temi-ambientali/neve-e-valanghe'],'IT-36':['ARPA FVG','https://www.meteo.fvg.it/neve.php'],
+  'IT-57':['Regione Marche','https://www.aineva.it/bollettini/'],'IT-MeteoMont':['Meteomont','https://meteomont.org'],
+  'AT-02':['LWD Kärnten','https://lawinenwarndienst.ktn.gv.at'],'AT-03':['LWD Niederösterreich','https://www.lawinenwarndienst-niederoesterreich.at'],
+  'AT-04':['LWD Oberösterreich','https://www.land-oberoesterreich.gv.at/lawinenwarndienst.htm'],'AT-05':['LWD Salzburg','https://lawine.salzburg.at'],
+  'AT-06':['LWD Steiermark','https://www.lawine-steiermark.at'],'AT-07':['Lawinenwarndienst Tirol','https://avalanche.report'],
+  'AT-08':['LWD Vorarlberg','https://warndienste.cnv.at/dibos/lawine/index.html'],'DE-BY':['LWD Bayern','https://www.lawinenwarndienst-bayern.de'],
+  SI:['ARSO','https://meteo.arso.gov.si/met/sl/avalanche/']};
+function avNbSrc(id){const k=Object.keys(AV_NB_SRC).filter(k=>id.startsWith(k)).sort((a,b)=>b.length-a.length)[0];return AV_NB_SRC[k]||['EAWS','https://www.avalanches.org'];}
+function avDecode(enc){const v=enc.split(',').map(Number),out=[];let la=0,lo=0;for(let i=0;i+1<v.length;i+=2){la+=v[i];lo+=v[i+1];out.push([la/1e4,lo/1e4]);}return out;}
+let _avNb=null;
+async function avNbLoad(group){
+  try{
+    if(!_avNb){const [rg,rt]=await Promise.all([dataFetch('data/eaws_regions.json').then(r=>r.ok?r.json():null).catch(()=>null),
+        (async()=>{for(let k=0;k<2;k++){const d=new Date(Date.now()-k*864e5).toISOString().slice(0,10);
+          try{const r=await fetch('https://static.avalanche.report/eaws_bulletins/'+d+'/'+d+'.ratings.json');if(r.ok){const j=await r.json();return {d,m:j.maxDangerRatings||{}};}}catch(e){}}return null;})()]);
+      _avNb={rg,rt};}
+    const {rg,rt}=_avNb;if(!rg||!rt)return;
+    const lbl={1:'gering',2:'mässig',3:'erheblich',4:'gross',5:'sehr gross'};
+    rg.regions.forEach(r=>{const lv=rt.m[r.id];if(!(lv>=1))return;
+      const hi=rt.m[r.id+':high'],lo=rt.m[r.id+':low'],src=avNbSrc(r.id);
+      const poly=L.polygon(r.c.map(avDecode),{color:'#fff',weight:1,opacity:.85,fillColor:AV_COLORS[lv]||'#999',fillOpacity:.6});
+      poly.bindPopup('<b>Stufe '+lv+' – '+(lbl[lv]||'')+'</b><br>'+escapeHtml(r.name)
+        +(hi&&lo&&hi!==lo?'<br><small>oben '+hi+' · unten '+lo+'</small>':'')
+        +'<div style="margin-top:6px;font-size:12px;opacity:.75">Quelle: '+escapeHtml(src[0])+' (über EAWS, '+rt.d+') · <a href="'+src[1]+'" target="_blank" rel="noopener">Bulletin öffnen</a></div>');
+      poly.addTo(group);});
+  }catch(e){}}
 function avBuildLayer(){
+  const grp=L.layerGroup();avNbLoad(grp);
   const feats=avRegions().filter(r=>r.geometry)
     .map(r=>({type:'Feature',properties:r,geometry:r.geometry}));
-  if(!feats.length)return null;
-  return L.geoJSON({type:'FeatureCollection',features:feats},{
+  if(!feats.length)return grp;
+  return L.layerGroup([grp,L.geoJSON({type:'FeatureCollection',features:feats},{
     // the danger level must read at a glance: nearly opaque fills in the SLF
     // colours, a white seam between the regions
     style:f=>({color:'#fff',weight:1.2,opacity:.9,
@@ -10967,7 +11038,7 @@ function avBuildLayer(){
         +'<div style="margin-top:6px;font-size:12px;opacity:.75">Quelle: SLF ·'
         +' <a href="https://www.slf.ch/de/lawinenbulletin-und-schneesituation/"'
         +' target="_blank" rel="noopener">Bulletin öffnen</a></div>');
-    }});
+    }})]);
 }
 // --- Variant A: SNOWPACK ski-quality layer + snow profiles ----------------
 // Consumes what variant_a/export.py writes (manifest.json + layer PNGs +
@@ -13417,7 +13488,10 @@ async function wcRefresh(){
       if(wcSeen.has(id)||loc.latitude==null)return;
       const mk=L.marker([loc.latitude,loc.longitude],{icon:wcIcon(),title:w.title||'Webcam',zIndexOffset:300});
       const dk=document.body.classList.contains('desk');
-      mk.bindPopup('<div class="wc-pop"><div class="wc-img skel"></div><b>'+escapeHtml(w.title||'Webcam')+'</b></div>',{className:'wc-popup',maxWidth:dk?500:300,minWidth:dk?440:260});
+      // on a phone the preview takes the whole width of the screen
+      const pw=dk?0:Math.max(260,innerWidth-16);
+      mk.bindPopup('<div class="wc-pop"><div class="wc-img skel"></div><b>'+escapeHtml(w.title||'Webcam')+'</b></div>',
+        {className:'wc-popup',maxWidth:dk?500:pw,minWidth:dk?440:pw,autoPanPadding:L.point(8,72)});
       mk.on('popupopen',()=>{try{mk.closeTooltip();}catch(e){}wcPreview(id,mk);});
       // on a computer: hovering a camera shows its latest picture right away
       mk.on('mouseover',()=>wcPeek(id,mk,w.title||'Webcam'));
@@ -13431,14 +13505,14 @@ async function wcRefresh(){
 // picture, «day» = Windy's 24 h timelapse with its own time slider.
 // (Windy's API has no picture archive of its own to scrub through, and its
 // picture links expire after minutes -- the timelapse player is the archive.)
-const WC_DEF_OPTS=[['auto','Auto'],['img','Jetzt'],['daylight','Tag'],['day','24 h']];
+const WC_DEF_OPTS=[['auto','Auto'],['img','Jetzt'],['daylight','Tag'],['day','24 h'],['month','30 Tage']];
 function wcDef(){try{const v=localStorage.getItem('ssm_wcdef');return WC_DEF_OPTS.some(o=>o[0]===v)?v:'auto';}catch(e){return 'auto';}}
 function wcDefSet(v){try{localStorage.setItem('ssm_wcdef',v);}catch(e){}}
 function wcIsNight(){try{const d=zLocal(Date.now()),h=d.getUTCHours()+d.getUTCMinutes()/60,doy=Math.floor((Date.now()-Date.UTC(d.getUTCFullYear(),0,0))/864e5),
   half=dayLenH(doy)/2;return h<12.5-half+0.3||h>12.5+half-0.3;}catch(e){return false;}}
 function wcPopMedia(c,mode){
   if(mode==='auto')mode=wcIsNight()&&c.dimg?'daylight':'img';
-  if(mode==='day'&&c.player)return '<iframe class="wc-frame" src="'+escapeHtml(c.player)+'" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer-when-downgrade" title="'+escapeHtml(c.t)+' – 24 h"></iframe>';
+  if((mode==='day'&&c.player)||(mode==='month'&&c.month))return '<iframe class="wc-frame" src="'+escapeHtml(mode==='month'?c.month:c.player)+'" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer-when-downgrade" title="'+escapeHtml(c.t)+(mode==='month'?' – 30 Tage':' – 24 h')+'"></iframe>';
   const s=mode==='daylight'?(c.dimg||c.img):(c.img||c.dimg);
   return s?'<img src="'+escapeHtml(s)+'" alt="">':'<div class="wc-img"></div>';}
 const _wcPop={};
@@ -13447,7 +13521,7 @@ function wcPopMode(id,mode,save){const c=_wcPop[id];if(!c)return;if(save)wcDefSe
   document.querySelectorAll('#wcs-'+id+' button').forEach(b=>b.classList.toggle('on',b.dataset.m===mode));
   const n=document.getElementById('wcn-'+id);if(n)n.textContent=wcNoteTxt(c,mode);
   try{haptic(3);}catch(e){}}
-function wcNoteTxt(c,mode){return mode==='day'?'Letzte 24 Stunden · Zeitregler im Player'
+function wcNoteTxt(c,mode){return mode==='month'?'Letzte 30 Tage · im Player Tag für Tag zurück und vor':mode==='day'?'Letzte 24 Stunden · Morgen, Mittag, Abend mit dem Zeitregler im Player'
   :(mode==='daylight'||(mode==='auto'&&wcIsNight()&&c.dimg))?'Letztes Bild bei Tageslicht':'Aktuelles Bild';}
 const _wcThumb=new Map();
 function wcThumb(id){if(!_wcThumb.has(id))_wcThumb.set(id,fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'})
@@ -13466,23 +13540,47 @@ function wcFull(id){const c=_wcPop[id];if(!c)return;wcFullClose();
   const media=c.player?'<iframe src="'+escapeHtml(c.player)+'" allow="autoplay; fullscreen" referrerpolicy="no-referrer-when-downgrade" title="'+escapeHtml(c.t)+' – 24 h"></iframe>'
     :'<img src="'+escapeHtml(c.img||c.dimg||'')+'" alt="">';
   el.innerHTML='<div class="wcf-hd"><b>'+escapeHtml(c.t)+'</b><small>'+(c.player?'Letzte 24 Stunden · Zeitregler im Player':'Aktuelles Bild')+'</small>'
+    +(isMobile?'<button type="button" class="wcf-rot" onclick="wcFullRot()" aria-label="Quer anzeigen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M8 3h8M12 3v2"/></svg>Quer</button>':'')
     +'<button type="button" onclick="wcFullClose()" aria-label="Schliessen">×</button></div><div class="wcf-media">'+media+'</div>';
-  el.onclick=e=>{if(e.target===el)wcFullClose();};document.body.appendChild(el);document.body.classList.add('wcf-open');try{haptic(4);}catch(e){}}
-function wcFullClose(){const el=document.getElementById('wcFull');if(el)el.remove();document.body.classList.remove('wcf-open');}
+  el.onclick=e=>{if(e.target===el)wcFullClose();};document.body.appendChild(el);document.body.classList.add('wcf-open');try{haptic(4);}catch(e){}
+  wcFullTilt();}
+// sideways on a phone: the app stays upright, so the player is turned here --
+// by the button, or by the phone's own tilt where the motion sensor answers
+let _wcfTilt=null,_wcfMan=null;
+function wcFullApply(a){const el=document.getElementById('wcFull');if(!el)return;
+  const m=el.querySelector('.wcf-media');if(!m)return;
+  if(!a){el.classList.remove('rot');return;}
+  el.style.setProperty('--wcf-a',a+'deg');el.style.setProperty('--wcf-w',m.clientWidth+'px');el.style.setProperty('--wcf-h',m.clientHeight+'px');
+  el.classList.add('rot');}
+function wcFullRot(){const el=document.getElementById('wcFull');if(!el)return;
+  _wcfMan=el.classList.contains('rot')?0:90;wcFullApply(_wcfMan);}
+function wcFullTilt(){_wcfMan=null;
+  if(!isMobile||matchMedia('(orientation:landscape)').matches)return;
+  const on=()=>{if(_wcfTilt)return;_wcfTilt=e=>{if(_wcfMan!=null||e.gamma==null)return;
+      // gamma: left/right tilt; held sideways it passes about +-60 degrees
+      const g=e.gamma,b=Math.abs(e.beta||0),side=Math.abs(g)>55&&b<50;
+      wcFullApply(side?(g>0?90:-90):0);};
+    addEventListener('deviceorientation',_wcfTilt);};
+  try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function')
+      DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')on();}).catch(()=>{});
+    else on();}catch(e){}}
+function wcFullClose(){const el=document.getElementById('wcFull');if(el)el.remove();document.body.classList.remove('wcf-open');
+  if(_wcfTilt){removeEventListener('deviceorientation',_wcfTilt);_wcfTilt=null;}}
 addEventListener('keydown',e=>{if(e.key==='Escape')wcFullClose();});
 async function wcPreview(id,mk){
   try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls,player',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
     const w=await r.json(),imc=(w.images&&w.images.current)||{},imd=(w.images&&w.images.daylight)||{},pl=w.player||{};
-    const day=typeof pl.day==='string'?pl.day:(pl.day&&typeof pl.day==='object'?(pl.day.embed||pl.day.link):null);
+    const pu=k=>typeof pl[k]==='string'?pl[k]:(pl[k]&&typeof pl[k]==='object'?(pl[k].embed||pl[k].link):null);
+    const day=pu('day'),month=pu('month');
     const loc=w.location||{},upd=w.lastUpdatedOn?new Date(w.lastUpdatedOn):null;
     const when=upd?new Intl.DateTimeFormat(LOCALE(),{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}).format(upd):'';
     const link=(w.urls&&(w.urls.detail||w.urls.provider))||('https://www.windy.com/webcams/'+id);
-    const c=_wcPop[id]={t:w.title||'Webcam',img:imc.preview||imc.thumbnail||null,dimg:imd.preview||imd.thumbnail||null,player:typeof day==='string'?day:null};
+    const c=_wcPop[id]={t:w.title||'Webcam',img:imc.preview||imc.thumbnail||null,dimg:imd.preview||imd.thumbnail||null,player:typeof day==='string'?day:null,month:typeof month==='string'?month:null};
     const def=wcDef(),eid=escapeHtml(String(id));
     mk.setPopupContent('<div class="wc-pop"><div class="wc-media" id="wcm-'+eid+'" role="button" tabindex="0" aria-label="Webcam gross – letzte 24 Stunden" onclick="wcFull(\''+eid+'\')">'+wcPopMedia(c,def)+'<span class="wc-zoom" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span></div>'
       // M3 segmented button: what to show; the choice becomes the default
       +'<div class="wc-seg" id="wcs-'+eid+'" role="group" aria-label="Webcam-Ansicht">'
-      +WC_DEF_OPTS.filter(o=>o[0]!=='day'||c.player).filter(o=>o[0]!=='daylight'||c.dimg)
+      +WC_DEF_OPTS.filter(o=>o[0]!=='day'||c.player).filter(o=>o[0]!=='month'||c.month).filter(o=>o[0]!=='daylight'||c.dimg)
         .map(o=>'<button type="button" data-m="'+o[0]+'" class="'+(o[0]===def?'on':'')+'" onclick="wcPopMode(\''+eid+'\',\''+o[0]+'\',true)">'+o[1]+'</button>').join('')+'</div>'
       +'<small class="wc-note" id="wcn-'+eid+'">'+escapeHtml(wcNoteTxt(c,def))+'</small>'
       +'<b>'+escapeHtml(w.title||'Webcam')+'</b><span>'+escapeHtml([loc.city,loc.region].filter(Boolean).join(', '))+(when?' · '+when:'')+'</span>'
