@@ -35,7 +35,7 @@ HIST_DAYS = 5              # past snowfall that still shapes the top of the pack
 HIST_STEP_H = 3            # one stored increment per 3 h of a run
 HIST_WIN_H = 30            # longest gap between two cycles' runs it has to bridge (ICON-CH1 reaches 33 h)
 MIN_MM = 3.0               # less than this at the weather points: no ratio
-R_MIN, R_MAX = 0.5, 2.0
+R_MIN, R_MAX = 0.7, 1.4     # was 0.5..2.0: x1.7 on a metre of loose snow put Alvier at 1.5 m
 SMOOTH_CELLS = 5           # box filter on the 250 m grid (~1.25 km)
 ISO = "%Y-%m-%dT%H:%M"
 
@@ -194,11 +194,19 @@ def ratio_grid(grid, wps, ce, cn, P, neighbours=None):
     wxy = np.array([[w["e"], w["n"]] for w in wps])
     pw = Pk[tree.query(wxy)[1]]
     k = min(neighbours or config.MATRIX_NEIGHBOURS, len(wps))
-    d, wi = cKDTree(wxy).query(np.column_stack([ge, gn]), k=k)
-    if k == 1:
+    kq = min(k + 1, len(wps))
+    d, wi = cKDTree(wxy).query(np.column_stack([ge, gn]), k=kq)
+    if kq == 1:
         d, wi = d[:, None], wi[:, None]
     d0 = 0.5 * config.WEATHER_SPACING_KM * 1000.0
-    wt = 1.0 / (d + d0) ** 2
+    f = 1.0 / (d + d0) ** 2
+    # the same modified Shepard weights as matrix._weights
+    if kq > k:
+        wt = np.maximum(0.0, f[:, :k] - f[:, k:k + 1])
+        wi = wi[:, :k]
+    else:
+        wt = f
+    wt[wt.sum(axis=1) <= 0] = 1.0
     blend = (wt * pw[wi]).sum(axis=1) / wt.sum(axis=1)
     r = np.where(blend >= MIN_MM, loc / np.maximum(blend, 1e-6), 1.0)
     R[rows, cols] = np.clip(r, R_MIN, R_MAX).astype(np.float32)

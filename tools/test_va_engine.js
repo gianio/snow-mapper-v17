@@ -78,11 +78,16 @@ check('wind (Triebschnee) agrees with the pipeline', wd / N >= 0.985, (100 * wd 
   E.adjPrecip(m2, e, n);
   check('no precip raster -> nothing changes', m2[x.powder_depth_cm] === 20 && m2[x.total_hs_cm] === 100);
   const data = new Uint8Array(G.nr * G.nc).fill(255);
-  for (let r = 8; r <= 12; r++) for (let c = 8; c <= 12; c++) data[r * G.nc + c] = 150;
+  for (let r = 8; r <= 12; r++) for (let c = 8; c <= 12; c++) data[r * G.nc + c] = 130;
   E.precip = { w: G.nc, h: G.nr, data }; E.pk.precip = { file: 'x', cs: G.cs };
   E.adjPrecip(m2, e, n);
-  check('R = 1.5 scales powder x1.5 and moves HS by the same', Math.abs(m2[x.powder_depth_cm] - 30) < 1e-6
-        && Math.abs(m2[x.total_hs_cm] - 110) < 1e-6, m2[x.powder_depth_cm] + ' / ' + m2[x.total_hs_cm]);
+  check('R = 1.3 scales powder x1.3 and moves HS by the same', Math.abs(m2[x.powder_depth_cm] - 26) < 1e-6
+        && Math.abs(m2[x.total_hs_cm] - 106) < 1e-6, m2[x.powder_depth_cm] + ' / ' + m2[x.total_hs_cm]);
+  // an older export's x2 is held to x1.4 (precip.py R_MAX)
+  for (let r = 8; r <= 12; r++) for (let c = 8; c <= 12; c++) data[r * G.nc + c] = 200;
+  const m4 = new Float64Array(E.nm); m4[x.powder_depth_cm] = 20; m4[x.total_hs_cm] = 100;
+  E.adjPrecip(m4, e, n);
+  check('R above 1.4 is held at 1.4', Math.abs(m4[x.powder_depth_cm] - 28) < 1e-6, String(m4[x.powder_depth_cm]));
   const m3 = new Float64Array(E.nm); m3[x.powder_depth_cm] = 20; m3[x.total_hs_cm] = 100;
   E.adjPrecip(m3, G.xll + 30.5 * G.cs, G.yll + (G.nr - 30.5) * G.cs);
   check('255 (no correction) leaves the cell alone', m3[x.powder_depth_cm] === 20);

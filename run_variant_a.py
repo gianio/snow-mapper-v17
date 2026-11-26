@@ -432,6 +432,7 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
     # (7 days back), correction only in live mode.
     rows, summary, new_factors = [], {"stations": 0}, factors
     collected = {}
+    stations = []
     recent = (datetime.utcnow() - win[0]).days <= 7 and win[0] <= datetime.utcnow()
     if (args.live or args.imis) and recent:
         _ts = _time.time()
@@ -485,6 +486,11 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
         results.pop(rid, None)
     assim_summ = assim.apply(rows, runs, results, METS) if args.live else {"used": False}
     assim_summ["spikes_removed"] = len(spikes)
+    if args.live:
+        try:
+            assim_summ["orphans"] = assim.orphans(stations, wps, rows, runs, results, METS, layer_ts)
+        except Exception as e:
+            print(f"ASSIM orphans unavailable: {type(e).__name__}: {e}")
     print(f"ASSIM: {assim_summ}")
 
     # 1 km precipitation pattern (ICON-CH1 via OGD): new snow per cell

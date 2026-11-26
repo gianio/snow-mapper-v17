@@ -167,13 +167,27 @@ def _weights(grid, wps, runs, rows, cols, aspect, neighbours=None):
     slope = np.nan_to_num(grid.slope[rows, cols].astype(np.float64), nan=0.0)
 
     tree = cKDTree(np.array([[w["e"], w["n"]] for w in wps]))
-    dist, widx = tree.query(np.column_stack([ce, cn]), k=k_nb)
-    if k_nb == 1:
+    k_q = min(k_nb + 1, len(wps))
+    dist, widx = tree.query(np.column_stack([ce, cn]), k=k_q)
+    if k_q == 1:
         dist, widx = dist[:, None], widx[:, None]
     # IDW with a softening length of half the spacing, so a cell exactly on a
     # weather point does not take it with weight 1 and flip at the midline.
+    # Modified Shepard: each of the k nearest weighs f(d) - f(d of the
+    # (k+1)th), so a point's weight is zero exactly where the next one takes
+    # over -- plain IDW over the k nearest jumped there, and on the regular
+    # 15 km grid those hand-over lines are straight (hard edges, square
+    # blocks on the map). The app's engine does the same (blend()).
     d0 = 0.5 * config.WEATHER_SPACING_KM * 1000.0
-    wh = 1.0 / (dist + d0) ** 2
+    f = 1.0 / (dist + d0) ** 2
+    if k_q > k_nb:
+        wh = np.maximum(0.0, f[:, :k_nb] - f[:, k_nb:k_nb + 1])
+        dist, widx = dist[:, :k_nb], widx[:, :k_nb]
+    else:
+        wh = f
+    bad = wh.sum(axis=1) <= 0
+    if bad.any():
+        wh[bad] = 1.0
     wh /= wh.sum(axis=1, keepdims=True)
 
     lut = _lookup(wps, runs)
