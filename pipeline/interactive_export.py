@@ -8123,6 +8123,27 @@ body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
 .cd-ver p{grid-column:1/-1;margin:2px 0 0;font-size:12px;color:var(--fg2,#555)}
 .cd-best{position:absolute;top:-7px;right:12px;padding:1px 8px;border-radius:8px;background:#306EAB;color:#fff;font:700 10px/1.5 var(--font);text-transform:uppercase;letter-spacing:.04em}
 :root[data-theme="dark"] .cd-ver{background:rgba(255,255,255,.06)}:root[data-theme="dark"] .cd-vbar{background:rgba(255,255,255,.12)}
+/* webcam on a phone: bottom sheet, the picture whole (not cropped) */
+#wcSheet{position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:4500;max-height:82vh;overflow-y:auto;
+  border-radius:22px;background:var(--card,#fff);color:var(--fg,#1b2230);box-shadow:0 2px 6px rgba(0,0,0,.18),0 16px 40px rgba(0,0,0,.28);
+  transform:translateY(16px);opacity:0;transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .18s;overscroll-behavior:contain}
+#wcSheet.in{transform:none;opacity:1}
+#wcSheet .wc-pop{padding-bottom:14px}
+#wcSheet .wc-pop .wc-media{position:relative;border-radius:22px 22px 0 0;overflow:hidden;background:#000}
+#wcSheet .wc-pop img,#wcSheet .wc-pop .wc-img{width:100%;height:auto;aspect-ratio:auto;max-height:46vh;object-fit:contain;background:#000;margin:0}
+#wcSheet .wc-pop .wc-img.skel{aspect-ratio:16/9;height:auto}
+#wcSheet .wc-pop .wc-frame{width:100%;aspect-ratio:16/9;max-height:46vh}
+#wcSheet .wcs-x{position:absolute;top:8px;right:8px;z-index:6;width:40px;height:40px;border-radius:20px;border:0;display:grid;place-items:center;cursor:pointer;
+  background:rgba(255,255,255,.94);color:#1B1B1F;box-shadow:0 1px 3px rgba(0,0,0,.3),0 4px 8px rgba(0,0,0,.15)}
+#wcSheet .wcs-x::before{content:'';width:18px;height:18px;background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z'/%3E%3C/svg%3E") center/contain no-repeat}
+#wcSheet .wc-zoom{left:8px!important;right:auto!important;top:8px!important;width:40px!important;height:40px!important;border-radius:20px!important;
+  background:rgba(255,255,255,.94)!important;color:#1B1B1F!important;box-shadow:0 1px 3px rgba(0,0,0,.3),0 4px 8px rgba(0,0,0,.15)}
+#wcSheet .wc-zoom svg{width:18px!important;height:18px!important}
+body:has(#wcSheet) #bottomPanel,body:has(#wcSheet) #tabBar{opacity:0;pointer-events:none;transition:opacity .15s}
+/* desktop popup: the picture whole as well */
+.wc-popup .wc-pop img{height:auto;aspect-ratio:auto;object-fit:contain;background:#000;max-height:320px}
 /* ==== Runde 25.11.: modern, solid timeline; side buttons a touch bigger ==== */
 /* the timeline: an opaque M3 surface with soft elevation, no rim, no glass */
 #bottomPanel,:root[data-theme="light"] #bottomPanel,:root.and-wv[data-theme="light"] #bottomPanel{background:#FBFCFE!important;
@@ -13963,11 +13984,13 @@ async function wcRefresh(){
       if(wcSeen.has(id)||loc.latitude==null)return;
       const mk=L.marker([loc.latitude,loc.longitude],{icon:wcIcon(),title:w.title||'Webcam',zIndexOffset:300});
       const dk=document.body.classList.contains('desk');
-      // on a phone the preview takes the whole width of the screen
-      const pw=dk?0:Math.max(260,innerWidth-16);
-      mk.bindPopup('<div class="wc-pop"><div class="wc-img skel"></div><b>'+escapeHtml(w.title||'Webcam')+'</b></div>',
-        {className:'wc-popup',maxWidth:dk?500:pw,minWidth:dk?440:pw,autoPanPadding:L.point(8,72)});
-      mk.on('popupopen',()=>{try{mk.closeTooltip();}catch(e){}wcPreview(id,mk);});
+      if(dk){
+        mk.bindPopup('<div class="wc-pop"><div class="wc-img skel"></div><b>'+escapeHtml(w.title||'Webcam')+'</b></div>',
+          {className:'wc-popup',maxWidth:500,minWidth:440,autoPanPadding:L.point(8,72)});
+        mk.on('popupopen',()=>{try{mk.closeTooltip();}catch(e){}wcPreview(id,mk);});}
+      // on a phone: a sheet fixed to the screen, not a popup hanging off the
+      // marker -- a map popup as wide as the screen was always cut at an edge
+      else mk.on('click',()=>wcSheetOpen(id,mk,w.title||'Webcam'));
       // on a computer: hovering a camera shows its latest picture right away
       mk.on('mouseover',()=>wcPeek(id,mk,w.title||'Webcam'));
       wcSeen.set(id,mk);wcLayer.addLayer(mk);});
@@ -14042,6 +14065,21 @@ function wcFullTilt(){_wcfMan=null;
 function wcFullClose(){const el=document.getElementById('wcFull');if(el)el.remove();document.body.classList.remove('wcf-open');
   if(_wcfTilt){removeEventListener('deviceorientation',_wcfTilt);_wcfTilt=null;}}
 addEventListener('keydown',e=>{if(e.key==='Escape')wcFullClose();});
+// ── phone: the webcam preview as a bottom sheet ──
+function wcSheetOpen(id,mk,title){wcSheetClose(true);
+  const el=document.createElement('div');el.id='wcSheet';el.setAttribute('role','dialog');el.setAttribute('aria-label',title);
+  el.innerHTML='<button type="button" class="wcs-x" onclick="wcSheetClose()" aria-label="Schliessen"></button>'
+    +'<div id="wcSheetB"><div class="wc-pop"><div class="wc-img skel"></div><b>'+escapeHtml(title)+'</b></div></div>';
+  document.body.appendChild(el);document.body.classList.add('wcp-open');
+  requestAnimationFrame(()=>el.classList.add('in'));
+  // the camera stays visible above the sheet
+  try{const pt=map.latLngToContainerPoint(mk.getLatLng()),sz=map.getSize();map.panBy([pt.x-sz.x/2,pt.y-sz.y*0.22],{animate:true,duration:.3});}catch(e){}
+  try{haptic(3);}catch(e){}
+  wcPreview(id,{setPopupContent:h=>{const b=document.getElementById('wcSheetB');if(b&&document.getElementById('wcSheet')===el)b.innerHTML=h;}});}
+function wcSheetClose(quiet){const el=document.getElementById('wcSheet');if(el)el.remove();
+  if(!quiet||!el)document.body.classList.remove('wcp-open');}
+try{map.on('click',()=>{if(document.getElementById('wcSheet'))wcSheetClose();});}catch(e){}
+addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('wcSheet'))wcSheetClose();});
 async function wcPreview(id,mk){
   try{const r=await fetch(WC_API+'/'+encodeURIComponent(id)+'?include=images,location,urls,player',{headers:{'x-windy-api-key':WEBCAM_KEY},referrerPolicy:'strict-origin-when-cross-origin'});
     const w=await r.json(),imc=(w.images&&w.images.current)||{},imd=(w.images&&w.images.daylight)||{},pl=w.player||{};
@@ -14109,7 +14147,7 @@ function wcCap(c){return '<div class="wcv-cap"><span>'+escapeHtml(c.t)+'</span>'
 function wcvOpen(){document.getElementById('wcv').hidden=false;document.body.classList.add('wcv-open');wcvMode(WCV.mode||(wcFavs().length?'fav':'near'));}
 // from a map popup: Webcam-TV starting at this camera. A camera that is not
 // a favourite plays first and then the favourites follow.
-function wcTvFrom(id){id=String(id);try{map.closePopup();}catch(e){}WCV.extra=wcFavHas(id)?null:id;WCV.start=id;WCV.tv=0;
+function wcTvFrom(id){id=String(id);try{map.closePopup();}catch(e){}try{wcSheetClose();}catch(e){}WCV.extra=wcFavHas(id)?null:id;WCV.start=id;WCV.tv=0;
   document.getElementById('wcv').hidden=false;document.body.classList.add('wcv-open');wcvMode('tv');}
 function wcvClose(){WCV.extra=null;WCV.start=null;clearTimeout(WCV.tvT);clearTimeout(WCV.viewT);WCV.view=-1;document.getElementById('wcv').hidden=true;document.body.classList.remove('wcv-open');
   document.getElementById('wcvBody').innerHTML='';}
