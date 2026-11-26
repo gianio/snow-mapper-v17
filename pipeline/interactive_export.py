@@ -8136,9 +8136,13 @@ body.aerial-on .leaflet-overlay-pane img.leaflet-image-layer{opacity:.72}
 #mapFabs .mfab-grp .mfab svg{width:20px!important;height:20px!important}
 #ovChips .ov-chip{width:40px;height:40px}
 #ovChips .ov-chip svg{width:20px;height:20px}
-#miniLegend,#mapFabs #miniLegend,body.desk #mapFabs #miniLegend{width:38px!important;height:38px!important;max-width:38px!important}
-#miniLegend #mlName{height:38px!important}
-#miniLegend #mlName svg{width:19px!important;height:19px!important}
+/* the layer button as wide as the column of side buttons above it (40 px
+   buttons + 2 px rim on each side) */
+#mapFabs .mfab-grp{padding:2px!important;box-sizing:border-box}
+#miniLegend,#mapFabs #miniLegend,body.desk #mapFabs #miniLegend{width:44px!important;height:44px!important;max-width:44px!important;min-width:44px!important;
+  box-sizing:border-box!important;padding:0!important;transform:none!important;align-self:flex-end}
+#miniLegend #mlName{height:44px!important;width:44px!important}
+#miniLegend #mlName svg{width:20px!important;height:20px!important}
 </style>
 <script>
 /* Theme, before anything is painted: a flash of the wrong palette is worse
@@ -10154,6 +10158,49 @@ const _hasAbl=_ascale>0&&ABL.length>=T*NP;
 if(!_cumW)for(let t=0;t<T;t++){const o0=t*NP,o1=(t+1)*NP,s=t*NP,sc=M.snow_scale;
   if(_hasAbl){for(let p=0;p<NP;p++){const v=cum[o0+p]+SNOW[s+p]*sc-ABL[s+p]*_ascale;cum[o1+p]=v>0?v:0;}}
   else {for(let p=0;p<NP;p++)cum[o1+p]=cum[o0+p]+SNOW[s+p]*sc;}}
+// ── Schneehöhe = snow that was already there + the balance since ──────────
+// The forecast blob only carries the new snow and the melt from the start of
+// its window, so on its own «Schneehöhe» was just the snow of the last days
+// (the Mittelland white from one snowfall, the Alps almost bare). SNOWPACK
+// runs the whole season (from 1 September) at every weather point: its snow
+// depth at the window's first hour, flat ground at each cell's height, is the
+// starting value; the window's new snow and melt then run on from there.
+let HS0=null,_hs0Busy=false;
+function cumRebuild(h0){
+  for(let p=0;p<NP;p++)cum[p]=h0?h0[p]:0;
+  for(let t=0;t<T;t++){const o0=t*NP,o1=(t+1)*NP,s=t*NP,sc=M.snow_scale;
+    if(_hasAbl){for(let p=0;p<NP;p++){const v=cum[o0+p]+SNOW[s+p]*sc-ABL[s+p]*_ascale;cum[o1+p]=v>0?v:0;}}
+    else {for(let p=0;p<NP;p++)cum[o1+p]=cum[o0+p]+SNOW[s+p]*sc;}}}
+async function vaDepthInit(){
+  if(HS0||_hs0Busy||typeof vaAvailable!=='function'||!vaAvailable()||!vaMan.pack||!M.times||!M.times.length)return;
+  _hs0Busy=true;
+  try{
+    if(!(await vaPkLoad())||!vaEng)return;
+    const t0=Date.parse(String(M.times[0]).slice(0,16)+':00Z');if(!isFinite(t0))return;
+    const tsOf=g=>Date.parse(String(g).replace(/T(\d{2})(\d{2})$/,'T$1:$2')+':00Z');
+    let tag=null,bd=1e15;(vaMan.tags||[]).forEach(g=>{const d=Math.abs(tsOf(g)-t0);if(d<bd){bd=d;tag=g;}});
+    if(!tag||bd>36*3600e3)return;           // the season run does not reach the window
+    const f=await vaPkFrame(tag);if(!f)return;
+    // an engine of its own: the map and the point card keep theirs
+    const E=vaHiEngine();E.init(vaPk,vaEng.shade,vaEng.forest,vaEng.precip);E.setFrame(f.vals,f.ok);
+    const m=new Float64Array(E.nm),ih=E.mi.total_hs_cm,out=new Float32Array(NP),R=45000;
+    if(ih==null)return;
+    let busyT=performance.now();
+    for(let p=0;p<NP;p++){
+      if(performance.now()-busyT>12){await new Promise(r=>setTimeout(r,0));busyT=performance.now();}
+      const el=melevv(p);if(!(el>0))continue;
+      const y=(p/W)|0,x=p-y*W,la=laMax-(laMax-laMin)*y/Math.max(1,H-1),lo=loMin+(loMax-loMin)*x/Math.max(1,W-1);
+      const en=E.wgs2lv03(la,lo);
+      // only where weather points are near: no extrapolation far outside
+      let near=1e12;for(let j=0;j<E.wps.length;j++){const w=E.wps[j],dx=w.e-en[0],dy=w.n-en[1],d=dx*dx+dy*dy;if(d<near)near=d;}
+      if(near>R*R)continue;
+      if(!E.evalAt(en[0],en[1],el,0,0,0,E.candidates(en[0],en[1],60000),m))continue;
+      E.adjPrecip(m,en[0],en[1]);
+      const v=m[ih];out[p]=v>0.5?v:0;}
+    HS0=out;cumRebuild(HS0);
+    try{renderAll();}catch(e){}try{lyRender();}catch(e){}try{inspAutoRefresh();}catch(e){}
+  }catch(e){console.warn('depth init',e);}
+  finally{_hs0Busy=false;}}
 const tv=(t,p)=>TEMP[t*NP+p]/M.temp_mul-M.temp_off, sunv=(t,p)=>SUN[t*NP+p]/M.sun_mul;
 // Cloud cover [%]; older blobs have no CLOUD field and the layer stays out.
 let _cloudData=!!M.cloud_mul&&CLOUD.length>=T*NP;
@@ -11414,6 +11461,8 @@ async function vaLoad(){
     // Triebschnee): keep the chosen layer by its id, not its position.
     const _pid=(function(){try{const it=groupItems(curTopic)[curItem];return it&&it.id;}catch(e){return null;}})();
     vaMan=m;
+    // the real snow depth (season so far) into the Schneehöhe balance
+    setTimeout(()=>{try{vaDepthInit();}catch(e){}},1200);
     try{const id=_pid==='powder'?'snowpack':_pid,ix=groupItems(curTopic).findIndex(it=>it.id===id);
       if(ix>=0&&(ix!==curItem||id!==_pid))setTopic(curTopic,ix,0);}catch(e){}
     // Profiles are only needed once someone taps the map, so they are fetched
@@ -11809,6 +11858,12 @@ function vaHiEngine(){
     var t=E.terr.get(key);if(t)return t;
     var N=256,el=new Float32Array(N*N),sl=new Float32Array(N*N),as=new Float32Array(N*N),i;
     for(i=0;i<N*N;i++)el[i]=bytes[i*4]*256+bytes[i*4+1]+bytes[i*4+2]/256-32768;
+    // A lone pixel far off all four neighbours while they agree with each
+    // other is a read error, not terrain (one step in the red channel is
+    // 256 m): it takes their mean. A cliff has neighbours that disagree.
+    for(var ry=1;ry<N-1;ry++)for(var rx=1;rx<N-1;rx++){var q0=ry*N+rx,a1=el[q0-1],a2=el[q0+1],a3=el[q0-N],a4=el[q0+N],
+      lo=Math.min(a1,a2,a3,a4),hi=Math.max(a1,a2,a3,a4),v0=el[q0];
+      if(hi-lo<60&&(v0-hi>150||lo-v0>150))el[q0]=(a1+a2+a3+a4)/4;}
     var lat=Math.atan(Math.sinh(Math.PI*(1-2*(y+0.5)/Math.pow(2,z))))*180/Math.PI;
     var res=156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,z);
     for(var r=0;r<N;r++)for(var c=0;c<N;c++){
@@ -11943,9 +11998,58 @@ const vaHiCb={},vaPkFrames=new Map(),vaTerrC=new Map();
 // iOS Safari collects them, and past ~384 MB of canvas memory it kills the
 // page -- the "crashes after a while of sliding" on phones.
 let vaScr=null;
+// PNGs that carry numbers (terrain heights, model values, masks) are decoded
+// here, byte for byte, never through a canvas: Safari / the iOS web view add
+// random noise to every canvas read-back (fingerprinting protection, on for
+// all browsing since iOS 26), and one step in the red channel of a terrain
+// tile is 256 m of height -- scattered pixels in the lowlands then turned
+// into "powder at 1000 m". Inflate with the browser's DecompressionStream,
+// undo the PNG row filters, expand to RGBA. 8-bit, non-interlaced: what the
+// pipeline and the Terrarium tiles use; anything else falls back.
+async function pngDecode(buf){
+  const u=new Uint8Array(buf);
+  if(typeof DecompressionStream==='undefined'||u.length<33||u[0]!==137||u[1]!==80||u[2]!==78||u[3]!==71)throw new Error('png');
+  const rd=o=>((u[o]<<24)|(u[o+1]<<16)|(u[o+2]<<8)|u[o+3])>>>0;
+  let o=8,w=0,h=0,bd=0,ct=0,il=0,pal=null,trn=null;const parts=[];let tot=0;
+  while(o+8<=u.length){const len=rd(o),ty=String.fromCharCode(u[o+4],u[o+5],u[o+6],u[o+7]),d=o+8;
+    if(ty==='IHDR'){w=rd(d);h=rd(d+4);bd=u[d+8];ct=u[d+9];il=u[d+12];}
+    else if(ty==='PLTE')pal=u.subarray(d,d+len);
+    else if(ty==='tRNS')trn=u.subarray(d,d+len);
+    else if(ty==='IDAT'){parts.push(u.subarray(d,d+len));tot+=len;}
+    else if(ty==='IEND')break;
+    o=d+len+4;}
+  const ch={0:1,2:3,3:1,4:2,6:4}[ct];
+  if(bd!==8||il||!ch||!w||!h)throw new Error('png format');
+  const z=new Uint8Array(tot);let q=0;for(const p of parts){z.set(p,q);q+=p.length;}
+  const raw=new Uint8Array(await new Response(new Blob([z]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer());
+  const st=w*ch;if(raw.length<(st+1)*h)throw new Error('png short');
+  const px=new Uint8Array(st*h);
+  for(let y=0;y<h;y++){const f=raw[y*(st+1)],src=y*(st+1)+1,dst=y*st,up=dst-st;
+    for(let x=0;x<st;x++){const a=x>=ch?px[dst+x-ch]:0,b=y?px[up+x]:0,c=(x>=ch&&y)?px[up+x-ch]:0;let v=raw[src+x];
+      if(f===1)v+=a;else if(f===2)v+=b;else if(f===3)v+=(a+b)>>1;
+      else if(f===4){const pp=a+b-c,pa=Math.abs(pp-a),pb=Math.abs(pp-b),pc=Math.abs(pp-c);v+=(pa<=pb&&pa<=pc)?a:(pb<=pc?b:c);}
+      px[dst+x]=v&255;}}
+  const n=w*h,rgba=new Uint8ClampedArray(n*4);
+  for(let i=0,j=0;i<n;i++,j+=ch){const k=i*4;
+    if(ct===6){rgba[k]=px[j];rgba[k+1]=px[j+1];rgba[k+2]=px[j+2];rgba[k+3]=px[j+3];}
+    else if(ct===2){rgba[k]=px[j];rgba[k+1]=px[j+1];rgba[k+2]=px[j+2];rgba[k+3]=255;}
+    else if(ct===0){rgba[k]=rgba[k+1]=rgba[k+2]=px[j];rgba[k+3]=255;}
+    else if(ct===4){rgba[k]=rgba[k+1]=rgba[k+2]=px[j];rgba[k+3]=px[j+1];}
+    else{const pi=px[j]*3;rgba[k]=pal?pal[pi]:0;rgba[k+1]=pal?pal[pi+1]:0;rgba[k+2]=pal?pal[pi+2]:0;rgba[k+3]=trn&&px[j]<trn.length?trn[px[j]]:255;}}
+  return {w,h,rgba};
+}
 async function vaImgBytes(url,maxW){
   const r=await fetch(vaV(url),{cache:'force-cache'});if(!r.ok)throw new Error('HTTP '+r.status);
   const bl=await r.blob();let bm;
+  // exact bytes first (no canvas, no noise); a smaller copy for the legend
+  // is taken by nearest-neighbour sampling of those same bytes
+  try{const img=await pngDecode(await bl.arrayBuffer());
+    if(!maxW||img.w<=maxW)return img;
+    const w2=maxW,h2=Math.max(1,Math.round(img.h*maxW/img.w)),out=new Uint8ClampedArray(w2*h2*4);
+    for(let y=0;y<h2;y++){const sy=Math.min(img.h-1,Math.floor((y+.5)*img.h/h2));
+      for(let x=0;x<w2;x++){const sx=Math.min(img.w-1,Math.floor((x+.5)*img.w/w2)),a=(sy*img.w+sx)*4,b=(y*w2+x)*4;
+        out[b]=img.rgba[a];out[b+1]=img.rgba[a+1];out[b+2]=img.rgba[a+2];out[b+3]=img.rgba[a+3];}}
+    return {w:w2,h:h2,rgba:out};}catch(e){}
   // No colour management and no premultiplication: these PNGs are numbers.
   try{bm=await createImageBitmap(bl,{colorSpaceConversion:'none',premultiplyAlpha:'none'});}
   catch(e){bm=await createImageBitmap(bl);}
@@ -12231,22 +12335,8 @@ function vaTiles(){const t=vaMan&&vaMan.tiles;return (t&&t.base&&t.run&&!vaTiles
 // knows whole views).
 function vaTileView(){const t=vaTiles();return t&&!vaHideMask()&&(t.views||[]).indexOf(vaKey)>=0?vaKey:null;}
 // Classes switched off on the legend, as a bit mask over the class ids.
-// Skiqualität in three steps of zoom, what a skier wants to see first:
-//  far (below zoom 10): only where there is powder, in coarse classes -- like
-//    the Neuschnee map;
-//  middle (10 to 12): powder in the fine cm classes, with cm labels;
-//  near (from 12): every kind of snow (crust, Sulz, wet, hard, thin, old).
-const VA_ALL_Z=12;
-const VA_NONPOW=(1<<1)|(1<<2)|(1<<6)|(1<<7)|(1<<10)|(1<<11);
-function vaZoomStep(){try{const z=map.getZoom();return z<VA_HI_Z?0:z<VA_ALL_Z?1:2;}catch(e){return 2;}}
-function vaZoomMask(){return vaKey==='ski6'&&vaZoomStep()<2?VA_NONPOW:0;}
-function vaHideMask(){if(layer!=='snowpack'||!vaMan)return 0;const zm=vaZoomMask(),rows=legRows('snowpack');if(!rows)return zm;
-  const vis=legVisSet('snowpack');let m=zm;rows.forEach(r=>{if(!vis.has(r.k)&&r.k>0&&r.k<31)m|=1<<r.k;});return m;}
-let _vaStep=null;
-function vaZoomStepSync(){const st=vaZoomStep();if(st===_vaStep)return;const was=_vaStep;_vaStep=st;
-  if(was==null||layer!=='snowpack'||vaKey!=='ski6'||!ovOn.variantA)return;
-  try{vaFilterChanged();}catch(e){}try{miniLegendRender();}catch(e){}
-  if(st<2)toastOnce('va-step','Skiqualität: weit weg nur Powder – näher heranzoomen für alle Schneearten');}
+function vaHideMask(){if(layer!=='snowpack'||!vaMan)return 0;const rows=legRows('snowpack');if(!rows)return 0;
+  const vis=legVisSet('snowpack');let m=0;rows.forEach(r=>{if(!vis.has(r.k)&&r.k>0&&r.k<31)m|=1<<r.k;});return m;}
 function vaRenderLayer(){const m=vaHideMask();return m?vaKey+'~'+m:vaKey;}
 function vaFilterChanged(){
   if(!vaAvailable())return;
@@ -13918,7 +14008,6 @@ map.on('moveend',()=>{if(!ovOn.webcams)return;clearTimeout(wcT);wcT=setTimeout(w
 function wcFarSync(){try{const far=map.getZoom()<WC_MIN_Z;map.getContainer().classList.toggle('wc-far',far);
   if(far&&wcLayer)wcLayer.eachLayer(m=>{try{if(m.isPopupOpen&&m.isPopupOpen())m.closePopup();}catch(e){}});}catch(e){}}
 map.on('zoomend',wcFarSync);wcFarSync();
-try{map.on('zoomend',()=>{try{vaZoomStepSync();}catch(e){}});vaZoomStepSync();}catch(e){}
 map.on('moveend',()=>{try{feedHereSync();}catch(e){}});
 // ── Webcam screen: favourites as tiles, Webcam-TV, cameras near me ──
 // Favourites live on the device. Each tile plays Windy's 24-hour timelapse
@@ -15505,7 +15594,8 @@ const aspI=new Image();
 function _aspWorker(){const raw=db('ASPECTPNG'),file=_pngFile('ASPECTPNG');
   if(!file&&(!(raw instanceof Uint8Array)||!raw.length))return false;
   if(!window.Worker||typeof OffscreenCanvas==='undefined')return false;
-  try{const src='onmessage=async function(e){try{const blob=typeof e.data==="string"?await (await fetch(e.data)).blob():new Blob([e.data],{type:"image/png"});'
+  try{const src=pngDecode.toString()+';onmessage=async function(e){try{const blob=typeof e.data==="string"?await (await fetch(e.data)).blob():new Blob([e.data],{type:"image/png"});'
+      +'try{const im=await pngDecode(await blob.arrayBuffer());postMessage({w:im.w,h:im.h,buf:im.rgba.buffer},[im.rgba.buffer]);return;}catch(_){}'
       +'const bmp=await createImageBitmap(blob);'
       +'const c=new OffscreenCanvas(bmp.width,bmp.height),x=c.getContext("2d",{willReadFrequently:true});x.drawImage(bmp,0,0);'
       +'const d=x.getImageData(0,0,bmp.width,bmp.height);postMessage({w:d.width,h:d.height,buf:d.data.buffer},[d.data.buffer]);}'
@@ -15525,7 +15615,11 @@ aspI.onload=function(){aspPW=aspI.width;aspPH=aspI.height;const c=document.creat
 // --- Fine terrain sampling: 60 m aspect (8-way) + fine elevation raster ---
 let elevData=null,elevPW=0,elevPH=0;
 const elevI=new Image();try{elevI.crossOrigin='anonymous';}catch(e){}
-_afterFirstPaint(function(){elevI.src=ELEV_PNG;});
+_afterFirstPaint(function(){
+  // exact bytes (Safari adds noise to canvas read-backs: heights would jump)
+  fetch(ELEV_PNG).then(r=>r.arrayBuffer()).then(pngDecode).then(img=>{elevPW=img.w;elevPH=img.h;elevData=img.rgba;
+    try{if(demoFitZones()){loadReportMarkers();if(layer==='prog')renderPrognosis(stat);else if(layer==='powfind')renderPowderFind();}}catch(e){}})
+  .catch(()=>{elevI.src=ELEV_PNG;});});
 elevI.onload=function(){elevPW=elevI.width;elevPH=elevI.height;const c=document.createElement('canvas');c.width=elevPW;c.height=elevPH;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(elevI,0,0);try{elevData=x.getImageData(0,0,elevPW,elevPH).data;}catch(e){}
   try{if(demoFitZones()){loadReportMarkers();if(layer==='prog')renderPrognosis(stat);else if(layer==='powfind')renderPowderFind();}}catch(e){}};
 const ASP8DEG=[[0x4A,0x90,0xD9,0],[0x45,0xC0,0xC0,45],[0x66,0xBB,0x6A,90],[0xBE,0xDB,0x39,135],[0xEF,0x53,0x50,180],[0xFF,0x9E,0x42,225],[0xFF,0xC1,0x07,270],[0xA9,0x87,0xE0,315]];
@@ -20028,8 +20122,8 @@ async function sw3dTile0(url,ac){
         if(l1<-1e-4||l2<-1e-4||l3<-1e-4)continue;H[yy*N+xx]=l1*t.h[a]+l2*t.h[b]+l3*t.h[c];}}}}
   // gaps from the global tile
   let gaps=0;for(let i=0;i<N*N;i++)if(H[i]!==H[i])gaps++;
-  if(gaps){try{const bmp=await createImageBitmap(new Blob([await aws()]));const c=new OffscreenCanvas(N,N),g=c.getContext('2d');g.drawImage(bmp,0,0,N,N);
-      const d=g.getImageData(0,0,N,N).data;for(let i=0;i<N*N;i++)if(H[i]!==H[i])H[i]=d[i*4]*256+d[i*4+1]+d[i*4+2]/256-32768;}
+  if(gaps){try{const ab=await aws();let d=null;try{const im=await pngDecode(ab);if(im.w===N&&im.h===N)d=im.rgba;}catch(_){}
+      if(!d){const bmp=await createImageBitmap(new Blob([ab]));const c=new OffscreenCanvas(N,N),g=c.getContext('2d');g.drawImage(bmp,0,0,N,N);d=g.getImageData(0,0,N,N).data;}for(let i=0;i<N*N;i++)if(H[i]!==H[i])H[i]=d[i*4]*256+d[i*4+1]+d[i*4+2]/256-32768;}
     catch(e){for(let i=0;i<N*N;i++)if(H[i]!==H[i])H[i]=0;}}
   const c=new OffscreenCanvas(N,N),g=c.getContext('2d'),img=g.createImageData(N,N),D=img.data;
   for(let i=0;i<N*N;i++){const v=Math.max(0,H[i]+32768);D[i*4]=Math.floor(v/256);D[i*4+1]=Math.floor(v)%256;D[i*4+2]=Math.floor((v%1)*256);D[i*4+3]=255;}
