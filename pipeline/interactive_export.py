@@ -11605,6 +11605,9 @@ function vaHiEngine(){
             200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p];
   }
   E.wgs2lv03=wgs2lv03;
+  E.POW=[[0,0,0,0],[215,253,209,250],[215,253,209,250],[173,238,183,235],[173,238,183,235],[112,186,160,235],[80,148,177,235],[48,110,171,235],[32,77,135,235],[88,15,49,235],[70,10,17,235]];
+  E.PAL={ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[215,253,209,245],4:[173,238,183,240],5:[112,186,160,240],6:[226,170,72,220],7:[150,104,74,225],8:[80,148,177,240],9:[48,110,171,240],10:[214,212,204,235],11:[176,164,196,225]},
+    wind:{1:[156,168,184,190],2:[186,170,236,205],3:[112,72,200,230]}};
   E.init=function(pk,shade,forest,precip){
     E.pk=pk;E.nm=pk.mets.length;E.mi={};
     // packs from before these classes carry no thresholds for them: the
@@ -11623,6 +11626,13 @@ function vaHiEngine(){
       if(sc===0){for(var k=0;k<na;k++)lut[base+k]=ri;}else lut[base+ak]=ri;
     });
     E.lut=lut;E.lutOff=off;E.shade=shade||null;E.forest=forest||null;E.precip=precip||null;
+    // The colours live here, in the engine itself, not in the export: an
+    // export made before a palette change (its pack carries the old table)
+    // is drawn in the current colours all the same, on the phone and in the
+    // tile Worker alike. Powder: the SLF / White Risk snow scale.
+    var rg=pk.rgba=pk.rgba||{};rg.powder=E.POW.map(function(c){return c.slice();});
+    for(var pk6 in E.PAL){var tb=rg[pk6]||(rg[pk6]=[[0,0,0,0]]);for(var id in E.PAL[pk6])tb[+id]=E.PAL[pk6][id].slice();
+      for(var ti=0;ti<tb.length;ti++)if(!tb[ti])tb[ti]=[0,0,0,0];}
     E.gatedIdx=(pk.gated||[]).map(function(m){return E.mi[m];});
   };
   E.setFrame=function(vals,ok){E.vals=vals;E.ok=ok;};
@@ -11880,6 +11890,10 @@ function vaHiEngine(){
   E.render=function(q){
     var S=q.size,out=new Uint8ClampedArray(S*S*4);
     if(!E.vals)return out;
+    // q.track: also keep, per pixel, the class and the numbers behind it, and
+    // carry them through the same clean-up steps as the colours -- the point
+    // card then says exactly what the map shows at that pixel
+    var trk=q.track?{c:new Int16Array(S*S),v:new Float32Array(S*S),h:new Float32Array(S*S)}:null;E._trk=trk;
     // "ski6~56": the view plus a bit mask of classes switched off on the legend
     var hide=0,lk=String(q.layer),ix=lk.indexOf('~');if(ix>0){hide=+lk.slice(ix+1)||0;q=Object.assign({},q,{layer:lk.slice(0,ix)});}
     var T=E.terrain(q.tkey,q.tbytes,q.tz,q.ty),n2=Math.pow(2,q.z),f=Math.pow(2,q.tz-q.z);
@@ -11911,25 +11925,29 @@ function vaHiEngine(){
           if(d1<1.3*hk&&d2<2*sp){r0=214;g0=40;b0=40;a=235;}}
         if(fd&&E.forest){var fv=E.gridBil(E.forest,en[0],en[1],fcs,true);if(fv>0)a*=1-fd*(fv/255);}
         var o=(py*S+px)*4;out[o]=r0;out[o+1]=g0;out[o+2]=b0;out[o+3]=a;
+        if(trk){var pi=py*S+px;trk.c[pi]=E.cls;trk.v[pi]=m[E.mi.powder_depth_cm];trk.h[pi]=m[E.mi.total_hs_cm];}
       }
     }
     E.fillHoles(out,S);
     E.despeckle(out,S,Math.max(1,Math.round(S/256*Math.pow(2,q.z-q.tz))));
     if(lk.indexOf('ski6')===0||q.layer==='powder')E.majority(out,S,Math.max(2,Math.round(S/256*Math.pow(2,q.z-q.tz)*1.5)));
     E.edges(out,S);
+    E._trk=null;if(trk)out.trk=trk;
     return out;
   };
   // Pixels the model could not evaluate (no terrain value, a gap in the shade
   // raster) inside a coloured area: filled from their neighbours -- the most
   // common colour of the 8 around, when at least 6 of them are coloured, so
   // gaps close but no area grows past its edge. Two passes for 2-px gaps.
+  E._tsnap=function(){var t=E._trk;return t?{c:t.c.slice(),v:t.v.slice(),h:t.h.slice()}:null;};
+  E._tcopy=function(ts,from,to){var t=E._trk;if(!t||!ts)return;t.c[to]=ts.c[from];t.v[to]=ts.v[from];t.h[to]=ts.h[from];};
   E.fillHoles=function(out,S){
-    for(var pass=0;pass<2;pass++){var src=out.slice(0);
+    for(var pass=0;pass<2;pass++){var src=out.slice(0),ts=E._tsnap();
       for(var y=1;y<S-1;y++)for(var x=1;x<S-1;x++){var o=(y*S+x)*4;if(src[o+3])continue;
         var n=0,best=-1,bc=0,cnt={},dy,dx;
         for(dy=-1;dy<=1;dy++)for(dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;var q=((y+dy)*S+x+dx)*4;if(!src[q+3])continue;n++;
           var k=(src[q]<<16)|(src[q+1]<<8)|src[q+2];cnt[k]=(cnt[k]||0)+1;if(cnt[k]>bc){bc=cnt[k];best=q;}}
-        if(n>=6&&best>=0){out[o]=src[best];out[o+1]=src[best+1];out[o+2]=src[best+2];out[o+3]=src[best+3];}}}
+        if(n>=6&&best>=0){out[o]=src[best];out[o+1]=src[best+1];out[o+2]=src[best+2];out[o+3]=src[best+3];E._tcopy(ts,best>>2,o>>2);}}}
   };
   // Slopes of one exposure read as one surface: a pixel whose class is a
   // minority in the area around it (radius R, about 2-3 terrain pixels)
@@ -11940,7 +11958,7 @@ function vaHiEngine(){
     var N=S*S,K=new Int32Array(N),y,x,o;
     var DASH=((214<<16)|(40<<8)|40)+1;
     for(o=0;o<N;o++){var p=o*4;K[o]=out[p+3]?((out[p]<<16)|(out[p+1]<<8)|out[p+2])+1:0;}
-    var src=out.slice(0),ks=[],cs=[];
+    var src=out.slice(0),ts=E._tsnap(),ks=[],cs=[];
     for(y=0;y<S;y++)for(x=0;x<S;x++){o=y*S+x;var me=K[o];if(!me||me===DASH)continue;
       ks.length=0;cs.length=0;var tot=0,mine=0;
       for(var dy=-R;dy<=R;dy++){var yy=y+dy;if(yy<0||yy>=S)continue;
@@ -11953,7 +11971,7 @@ function vaHiEngine(){
       // the alpha of a neighbour with that colour (forest fade differs)
       for(var dy2=-R;dy2<=R;dy2++){var y2=y+dy2;if(y2<0||y2>=S)continue;var hit=false;
         for(var dx2=-R;dx2<=R;dx2++){var x2=x+dx2;if(x2<0||x2>=S)continue;if(K[y2*S+x2]===t+1){var q2=(y2*S+x2)*4;
-          out[q]=src[q2];out[q+1]=src[q2+1];out[q+2]=src[q2+2];out[q+3]=src[q2+3];hit=true;break;}}if(hit)break;}}
+          out[q]=src[q2];out[q+1]=src[q2+1];out[q+2]=src[q2+2];out[q+3]=src[q2+3];E._tcopy(ts,q2>>2,q>>2);hit=true;break;}}if(hit)break;}}
   };
   // Clear class edges, as on Neuschnee: where the colour changes to the right
   // or below, the pixel takes a darker shade of its own colour (one pixel wide)
@@ -11977,7 +11995,7 @@ function vaHiEngine(){
       for(x=0;x<S;x++){var o=(y*S+x)*4;if(!out[o+3])continue;
         var x0=Math.max(0,x-R),x1=Math.min(S,x+R+1),
             n=sat[y1*W1+x1]-sat[y0*W1+x1]-sat[y1*W1+x0]+sat[y0*W1+x0],tot=(y1-y0)*(x1-x0);
-        if(n<tot*0.33)out[o+3]=0;}}
+        if(n<tot*0.33){out[o+3]=0;if(E._trk)E._trk.c[o>>2]=0;}}}
   };
   return E;
 }
@@ -11990,7 +12008,15 @@ function vaHiEngine(){
 // pipeline only ships one small PNG of run metrics per frame, so the map is
 // as sharp as the terrain, and changing frame costs ~80 kB, not a raster.
 const VA_TERR='https://s3.amazonaws.com/elevation-tiles-prod/terrarium/';
-const VA_HI_Z=10, VA_TERR_Z=12;
+// ONE layer at every zoom: the device draws it with the same engine from
+// zoom 5 on (the coarse 250 m frame only shows until the model pack is in).
+// Different pictures per zoom -- frames zoomed out, tiles zoomed in, the
+// server's tiles in an export's old colours -- did not match each other nor
+// the point card.
+const VA_HI_Z=5, VA_TERR_Z=12;
+// tile canvas size: the terrain tile's own detail zoomed out (one terrain
+// pixel per canvas pixel at 192 of 256), 128 at zoom 10-11, 192 at 12
+function vaTileS(z){return z>=VA_TERR_Z?192:z>=10?128:192;}
 let vaHiWant=null,vaHiBusy=false,vaPk=null,vaEng=null,vaHi=null,vaHiW=null,vaHiSeq=0,vaHiTag=null,vaGrp=null,vaPkTried=false;
 const vaHiCb={},vaPkFrames=new Map(),vaTerrC=new Map();
 // ONE scratch canvas for every decode, emptied right after. A fresh canvas
@@ -12260,7 +12286,7 @@ function vaHiRepaint(){
   if(!vaHi||!vaHi._tiles)return;
   for(const k in vaHi._tiles){const e=vaHi._tiles[k].el;if(e&&e._vaC)vaHiPaint(e);}
 }
-let vaHiReady=false,vaHiReadyZ=null;
+let vaHiReady=false,vaHiReadyZ=null,vaHiEver=false;
 function vaTileZ(){try{return Math.min(VA_TERR_Z,Math.round(map.getZoom()));}catch(e){return null;}}
 function vaHiMake(){
   if(vaHi||typeof L==='undefined'||!L.GridLayer)return vaHi;
@@ -12268,7 +12294,7 @@ function vaHiMake(){
     // Zoom 10-11: 128 px canvases shown at 256 px (~4x less work). Zoom 12,
     // the terrain's own level (~25 m), gets 192 px; deeper zooms reuse those
     // tiles scaled up (maxNativeZoom) instead of rendering again.
-    const S=c.z>=VA_TERR_Z?192:128,t=document.createElement('canvas');t.width=S;t.height=S;
+    const S=vaTileS(c.z),t=document.createElement('canvas');t.width=S;t.height=S;
     t._vaC={x:c.x,y:c.y,z:c.z};vaHiPaint(t,done);
     return t;
   }});
@@ -12280,7 +12306,7 @@ function vaHiMake(){
   // only a new zoom level brings the coarse frame back; a pan keeps the
   // sharp tiles on top (new edge tiles fill in), no colour flicker
   vaHi.on('loading',()=>{if(vaHiReadyZ!==vaTileZ()){vaHiReady=false;vaSyncOpacity();}});
-  vaHi.on('load',()=>{vaHiReady=true;vaHiReadyZ=vaTileZ();vaSyncOpacity();});
+  vaHi.on('load',()=>{vaHiReady=true;vaHiEver=true;vaHiReadyZ=vaTileZ();vaSyncOpacity();});
   return vaHi;
 }
 function vaHiActive(){
@@ -12330,7 +12356,12 @@ async function vaHiSync(){
 // archive per frame. The phone then only shows pictures. If the service
 // does not answer, everything below falls back to rendering on the device.
 let vaTilesDead=false;
-function vaTiles(){const t=vaMan&&vaMan.tiles;return (t&&t.base&&t.run&&!vaTilesDead)?t:null;}
+// The tile service is not used for the map any more: its tiles are cached
+// per run in the colours of the day they were made, and drawn at another
+// size than the phone's, so they never matched the device layer or the
+// point card. (Kept for the day it renders with the very same settings.)
+const VA_USE_TILE_SERVICE=false;
+function vaTiles(){const t=vaMan&&vaMan.tiles;return (VA_USE_TILE_SERVICE&&t&&t.base&&t.run&&!vaTilesDead)?t:null;}
 // While classes are switched off the device draws (the tile service only
 // knows whole views).
 function vaTileView(){const t=vaTiles();return t&&!vaHideMask()&&(t.views||[]).indexOf(vaKey)>=0?vaKey:null;}
@@ -12485,7 +12516,7 @@ function vaSyncOpacity(){
     if(vaHi){try{vaHi.setOpacity(zin&&!srv?op:0);}catch(e){}}
     return;
   }
-  const hi=vaHiCovers();
+  const hi=vaHiCovers()||(vaHiEver&&vaHiActive());
   if(vaOv){try{vaOv.setOpacity(hi?0:vaOpacity());}catch(e){}}
   if(vaHi){try{vaHi.setOpacity(vaOpacity());}catch(e){}}
 }
@@ -12697,6 +12728,28 @@ function vaPointFrame(){
     if(_vaPtWant!==tag)return;_vaPtWant=null;vaPointReopen();})();}
   return 'loading';
 }
+// What the map shows at this very pixel: the tile it sits in, drawn again
+// with exactly the map's settings (zoom, canvas size, frame, view, legend
+// filter) and the per-pixel class / numbers carried through the same
+// clean-up (gap filling, specks, majority). 'loading' while the terrain tile
+// comes, null where the device layer is not on screen.
+const _vaPix={k:null,v:null};
+function vaPointPix(lat,lon){
+  if(!vaEng||!vaPk||!map||layer!=='snowpack'||!ovOn.variantA)return null;
+  const z=vaTileZ();if(z==null||z<VA_HI_Z)return null;
+  const tag=(vaMan.tags||[])[vaTagIndex()],fr=tag&&vaPkFrames.get(tag);if(!fr)return null;
+  const lk=vaRenderLayer(),S=vaTileS(z),n=Math.pow(2,z),sn=Math.sin(lat*Math.PI/180);
+  const gx=(lon+180)/360*n,gy=(0.5-Math.log((1+sn)/(1-sn))/(4*Math.PI))*n,x=Math.floor(gx),y=Math.floor(gy);
+  const tz=Math.min(z,VA_TERR_Z),f=Math.pow(2,z-tz),tx=Math.floor(x/f),ty=Math.floor(y/f),key=tz+'/'+tx+'/'+ty;
+  const ck=[tag,lk,z,x,y].join('|');let R=_vaPix.k===ck?_vaPix.v:null;
+  if(!R){const by=vaTerrC.get(key);
+    if(!by){vaTerrBytes(key).then(()=>vaPointReopen(),()=>{});return 'loading';}
+    vaEng.setFrame(fr.vals,fr.ok);
+    const out=vaEng.render({z,x,y,size:S,layer:lk,tkey:key,tz,tx,ty,tbytes:by,track:true});
+    R=out.trk;if(!R)return null;_vaPix.k=ck;_vaPix.v=R;}
+  const px=Math.max(0,Math.min(S-1,Math.floor((gx-x)*S))),py=Math.max(0,Math.min(S-1,Math.floor((gy-y)*S))),i=py*S+px;
+  return {k:R.c[i],pw:R.v[i],hs:R.h[i]};
+}
 // The model's own reading of the tapped spot: same numbers the map is drawn
 // from, at the tapped height, steepness and aspect.
 function vaPointHTML(lat,lon,elev,slope,aspect){vaPointHTML.hs=null;vaPointHTML.st=null;
@@ -12706,8 +12759,11 @@ function vaPointHTML(lat,lon,elev,slope,aspect){vaPointHTML.hs=null;vaPointHTML.
   if(st==='loading'||tr==='loading')return '<div class="insp-sec va-pt"><h4>Schneequalität <em>lädt…</em></h4></div>';
   if(tr){elev=tr.el;slope=tr.sl;aspect=tr.as;}
   const en=vaEng.wgs2lv03(lat,lon);let sb=vaEng.gridAt(vaEng.shade,en[0],en[1]);
-  if(sb<0||sb===255)return '';
-  sb=vaEng.gridBil(vaEng.shade,en[0],en[1]);if(sb<0)return '';
+  // outside the model area the map is empty -- unless its gap filling
+  // coloured this pixel from its neighbours: then the card follows the map
+  const pix0=vaKey==='ski6'?vaPointPix(lat,lon):null;
+  if(sb<0||sb===255){if(!(pix0&&pix0!=='loading'&&pix0.k))return pix0==='loading'?'<div class="insp-sec va-pt"><h4>Schneequalität <em>lädt…</em></h4></div>':'';sb=0;}
+  else{sb=vaEng.gridBil(vaEng.shade,en[0],en[1]);if(sb<0)sb=0;}
   const m=new Float64Array(vaEng.nm);
   if(!vaEng.evalAt(en[0],en[1],elev,slope||0,aspect||0,sb/254,vaEng.candidates(en[0],en[1],60000),m))return '';
   vaEng.adjPrecip(m,en[0],en[1]);
@@ -12725,12 +12781,21 @@ function vaPointHTML(lat,lon,elev,slope,aspect){vaPointHTML.hs=null;vaPointHTML.
   if(fo>0)bits.push('Wald '+Math.round(fo/2.55)+'%');
   // first what lies here and how much of it: the Skiqualität class and the
   // colour the map draws at this very spot (same engine, terrain and frame)
-  const T=vaEng.pk&&vaEng.pk.thresholds||{},k6=vaEng.clsSki6(m),c6=[150,160,175,0];vaEng.color('ski6',m,c6);
+  const T=vaEng.pk&&vaEng.pk.thresholds||{},c6=[150,160,175,0];
+  let k6=vaEng.clsSki6(m),pwRaw=m[x.powder_depth_cm]||0,hsRaw=m[x.total_hs_cm];
+  // with the Skiqualität map on screen the card says what the map shows at
+  // this pixel -- class, powder and depth after the map's clean-up -- so the
+  // two always agree (a speck the map smoothed away is not "powder" here)
+  const pix=pix0;
+  if(pix==='loading')return '<div class="insp-sec va-pt"><h4>Schneequalität <em>lädt…</em></h4></div>';
+  if(pix){k6=pix.k;if(k6){pwRaw=pix.pw;hsRaw=pix.hs;}else{pwRaw=0;}
+    m[x.powder_depth_cm]=pwRaw;m[x.total_hs_cm]=hsRaw;}
+  vaEng.color('ski6',m,c6);if(pix&&!k6)c6[3]=0;
   // loose old (faceted) snow is not counted as powder
   // loose old snow and a thin / no cover are not "powder" either (the popup
   // used to say "Dünne Schneedecke – Steine" next to "Pulver 5 cm")
-  const hs=Math.round(m[x.total_hs_cm]),pw=(k6===11||k6===10||k6===0)?0:Math.round(m[x.powder_depth_cm]||0);vaPointHTML.hs=m[x.total_hs_cm];
-  const isPow=[3,4,5,8,9].includes(k6),thinC=m[x.total_hs_cm]<(T.THIN_COVER_HS||20);
+  const hs=Math.round(hsRaw),pw=(k6===11||k6===10||k6===0)?0:Math.round(pwRaw||0);vaPointHTML.hs=hsRaw;
+  const isPow=[3,4,5,8,9].includes(k6),thinC=hsRaw<(T.THIN_COVER_HS||20);
   const lbl=k6===0?'kein / wenig Schnee':k6===10?'Dünne Schneedecke – Steine, kaum fahrbar'
     :isPow?(thinC?'Pulver auf dünner Unterlage – Steine möglich':'Pulver, trocken'):(VA_SKI6_DE[k6]||nm('simple',sim)||'');
   if(!c6[3]){c6[0]=150;c6[1]=160;c6[2]=175;}
@@ -12738,7 +12803,7 @@ function vaPointHTML(lat,lon,elev,slope,aspect){vaPointHTML.hs=null;vaPointHTML.
   const why=k6===0?'':m[x.crust_thick_cm]>0.2&&!isPow?'Harschdeckel '+m[x.crust_thick_cm].toFixed(1)+' cm'
     :m[x.drift_load]>=0.2?'eingeweht (Triebschnee)':m[x.wind_scour]>=0.2?'vom Wind verblasen'
     :thinC?'dünne Unterlage – Steine möglich':isPow?(pw>=1?'trocken, locker':''):'';
-  vaPointHTML.st={k6,pw,hs:m[x.total_hs_cm],thin:thinC,lbl,c:'rgb('+c6.slice(0,3).join(',')+')',why};
+  vaPointHTML.st={k6,pw,hs:hsRaw,thin:thinC,lbl,c:'rgb('+c6.slice(0,3).join(',')+')',why};
   if(tr){const AS=['N','NO','O','SO','S','SW','W','NW'];bits.splice(1,0,'Modellgelände '+Math.round(tr.el)+' m · '+Math.round(tr.sl)+'° '+AS[Math.round(tr.as/45)%8]);}
   const kpi='<div class="va-kpi"><div class="vk-cls"><i style="background:rgb('+c6.slice(0,3).join(',')+')"></i><span>Schnee hier</span><b>'+escapeHtml(lbl)+'</b></div>'
     +'<div><span>Pulver</span><b>'+(pw>=1?pw+'<small> cm</small>':'–')+'</b></div>'
