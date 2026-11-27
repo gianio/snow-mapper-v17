@@ -71,8 +71,42 @@ def fetch_point(lat, lon, start_date, end_date, model="best_match"):
     return d.get("hourly", {})
 
 
+_PHASE = {}
+
+
+def _phase_params():
+    """(wet-bulb centre, steepness) of the rain/snow split, the same curve as
+    the new-snow model (config/model_params.yaml temperature.wetbulb_*)."""
+    if not _PHASE:
+        try:
+            from config.settings import load_model_params
+            t = load_model_params()["temperature"]
+            _PHASE["c"], _PHASE["k"] = float(t["wetbulb_center_c"]), float(t["wetbulb_k"])
+        except Exception:                            # noqa: BLE001
+            _PHASE["c"], _PHASE["k"] = 1.0, 2.0
+    return _PHASE["c"], _PHASE["k"]
+
+
+def liquid_fraction(ta_c, rh_pct, elev_m):
+    """Share of the precipitation that falls as rain (SNOWPACK's PSUM_PH:
+    0 = all snow, 1 = all rain), from the wet-bulb temperature.
+
+    Without PSUM_PH SNOWPACK splits on the air temperature alone, hard at
+    THRESH_RAIN = 1.2 degC: rain from 1.2 degC on, in dry air too, where the
+    flakes cool by evaporation and still arrive as snow up to +2..+4 degC
+    (Ding et al. 2014). The new-snow model splits on the wet bulb, and its
+    curve is the one calibrated against the station boards."""
+    import math
+    from model.factors import wet_bulb_c
+    c, k = _phase_params()
+    tw = float(wet_bulb_c(float(ta_c), float(rh_pct), float(elev_m)))
+    x = max(-50.0, min(50.0, k * (tw - c)))
+    return 1.0 - 1.0 / (1.0 + math.exp(x))
+
+
 def hourly_to_smet(pid, lat, lon, elev, hourly, dst: Path):
-    """Write a SNOWPACK SMET from an Open-Meteo hourly block."""
+    """Write a SNOWPACK SMET from an Open-Meteo hourly block. PSUM_PH, the
+    rain share, comes from the wet-bulb split (liquid_fraction)."""
     t = hourly.get("time", [])
     TA = hourly.get("temperature_2m", [])
     RH = hourly.get("relative_humidity_2m", [])
@@ -84,7 +118,7 @@ def hourly_to_smet(pid, lat, lon, elev, hourly, dst: Path):
              f"station_name = va_{pid}", f"latitude     = {lat:.6f}",
              f"longitude    = {lon:.6f}", f"altitude     = {elev:.1f}",
              "nodata       = -999", "tz           = 0",
-             "fields       = timestamp TA RH VW DW PSUM ISWR", "[DATA]"]
+             "fields       = timestamp TA RH VW DW PSUM PSUM_PH ISWR", "[DATA]"]
     def g(a, i, d=None):
         v = a[i] if i < len(a) else None
         return v if v is not None else d
@@ -92,8 +126,14 @@ def hourly_to_smet(pid, lat, lon, elev, hourly, dst: Path):
         ta = g(TA, i); rh = g(RH, i); p = g(P, i); vw = g(VW, i); dw = g(DW, i); isw = g(IS, i)
         if ta is None:
             continue
-        lines.append(f"{ts}:00 {ta+273.15:.2f} {max(0.01,min(1.0,(rh or 50)/100)):.3f} "
-                     f"{max(0.2,vw or 0.2):.2f} {dw or 0:.0f} {max(0.0,p or 0.0):.3f} {max(0.0,isw or 0.0):.1f}")
+        # no humidity: nodata, so SNOWPACK's own generator fills it (the
+        # ini's RH generator); the phase then splits as in saturated air
+        # (the air temperature) -- not on an invented 50 %, which in this
+        # wet-bulb split would have made snow of +3 degC rain
+        rhf = None if rh is None else max(0.01, min(1.0, rh / 100))
+        ph = liquid_fraction(ta, 100.0 if rhf is None else rhf * 100.0, elev)
+        lines.append(f"{ts}:00 {ta+273.15:.2f} {'-999' if rhf is None else f'{rhf:.3f}'} "
+                     f"{max(0.2,vw or 0.2):.2f} {dw or 0:.0f} {max(0.0,p or 0.0):.3f} {ph:.3f} {max(0.0,isw or 0.0):.1f}")
     dst.write_text("\n".join(lines) + "\n")
     return dst
 

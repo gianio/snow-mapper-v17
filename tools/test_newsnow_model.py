@@ -40,9 +40,12 @@ check("without humidity the split stays on the air temperature", abs(f_old - 0.2
 
 slr = lambda t, u: float(factors.snow_to_liquid_ratio(np.array([float(t)]), P, np.array([float(u)]))[0])
 check("cold calm snow is light", slr(-10, 0) > 12, f"{slr(-10, 0):.1f}:1")
-check("wind packs it", slr(-5, 8) < 7.5, f"{slr(-5, 8):.1f}:1")
-check("warm wet snow is heavy", slr(1, 5) < 6.5, f"{slr(1, 5):.1f}:1")
-check("bounded 4.5:1 .. 15:1", 4.5 <= slr(5, 40) and slr(-40, 0) <= 15.0, f"{slr(5, 40):.1f} / {slr(-40, 0):.1f}")
+check("wind packs it", slr(-5, 8) < 0.8 * slr(-5, 0), f"{slr(-5, 8):.1f}:1 vs calm {slr(-5, 0):.1f}:1")
+check("warm wet snow is heavy", slr(1, 5) < 9.0 and slr(1, 5) < 0.7 * slr(-5, 5), f"{slr(1, 5):.1f}:1")
+check("bounded 4.5:1 .. 20:1", 4.5 <= slr(5, 40) and slr(-40, 0) <= 20.0, f"{slr(5, 40):.1f} / {slr(-40, 0):.1f}")
+# calibrated against the station boards (27.11.): a day of ~10 mm at -3 degC
+# and a light wind is ~10-14 cm on the board, not the 5 cm of the old density
+check("10 mm at -3 degC, 2 m/s: 10..14 cm", 10.0 <= slr(-3, 2) <= 14.0, f"{slr(-3, 2):.1f} cm")
 
 rng = np.random.default_rng(1)
 z = gaussian_filter(rng.normal(0, 1, (160, 160)), 6) * 4000 + 2000
@@ -55,6 +58,10 @@ tf = out["terrain_factor"]
 check("wind and Luv/Lee move snow, they do not add it", abs(float(tf.mean()) - 1.0) < 0.03, f"mean {tf.mean():.3f}")
 check("but still redistribute it", float(tf.std()) > 0.05, f"spread {tf.std():.3f}")
 check("no NaN in the new snow", not np.isnan(out["new_snow_cm"]).any())
+pre = 1.0 * out["snow_fraction"] * out["slr"] / 10.0 * out["altitude_factor"]
+check("the Luv/Lee x wind factor is not applied to the new snow (no skill at the boards)",
+      np.allclose(out["new_snow_cm"], np.clip(pre, 0, P["limits"]["max_new_snow_cm"])),
+      f"max diff {float(np.abs(out['new_snow_cm'] - pre).max()):.3g}")
 
 print("\nNEWSNOW MODEL OK" if not fails else f"\n{fails} FAILED")
 sys.exit(1 if fails else 0)

@@ -284,7 +284,9 @@ def full_season(origin):
 
 def _state_meta(st, factors, origin, t, extra=None):
     m = ((st or {}).get("meta") or {})
-    out = {"precip_factor": factors, "cycle": int(m.get("cycle", 0)) + 1,
+    from variant_a.imis import FACTOR_KIND
+    out = {"precip_factor": factors, "precip_factor_kind": FACTOR_KIND,
+           "cycle": int(m.get("cycle", 0)) + 1,
            "season": config.season_label(t), "origin": origin}
     out.update(extra or {})
     return out
@@ -352,7 +354,7 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
     adv_to = datetime.strptime(args.date, "%Y-%m-%d") if args.advance_only else win[0]
 
     # Live: what can continue from the carried snowpack?
-    st, carried, factors = None, set(), {}
+    st, carried, factors, siblings = None, set(), {}, {}
     since = None
     cold_from, bare, origin, n_cold_plan = None, False, None, 0
     if args.live:
@@ -360,17 +362,32 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
         carried = state_mod.available(st, {r["id"] for r in runs}, adv_to)
         # precipitation factors belong to the season they were learnt in
         same_season = st is not None and config.season_start(st["time"]) == config.season_start(adv_to)
-        factors = dict((st or {}).get("meta", {}).get("precip_factor") or {}) if same_season else {}
-        n_cold_plan = len(runs) - len(carried)
+        meta0 = (st or {}).get("meta", {}) or {}
+        # ... and to what they were learnt from: the factors of the absolute-HS
+        # rule (until 27.11.) had run into their bounds -- start again at 1
+        same_kind = meta0.get("precip_factor_kind") == imis.FACTOR_KIND
+        factors = dict(meta0.get("precip_factor") or {}) if (same_season and same_kind) else {}
+        if same_season and not same_kind and meta0.get("precip_factor"):
+            print(f"  precipitation factors of an older rule ({len(meta0['precip_factor'])}) dropped")
         cold_from, bare, kind = _cold_start_plan(adv_to, args.season_replay)
+        # mid-season, a slope without a state of its own starts from a carried
+        # neighbour's snowpack, not from the assumed mid-winter base
+        siblings = matrix.pick_siblings(runs, carried) if (kind == "spinup" and st is not None) else {}
+        n_cold_plan = len(runs) - len(carried) - len(siblings)
         since = cold_from if n_cold_plan else st["time"]
         if st is not None and carried:
             since = min(since, st["time"])
         origin = _origin(st, carried, n_cold_plan, cold_from, bare, kind)
+        if siblings:
+            origin = dict(origin or {})
+            origin["later_cold_starts"] = (list(origin.get("later_cold_starts") or []) + [
+                {"kind": "neighbour", "from": adv_to.strftime("%Y-%m-%d"), "bare": False,
+                 "runs": len(siblings)}])[-5:]
         print(f"live: season {config.season_label(adv_to)}, state "
               f"{'valid at ' + st['time'].strftime('%Y-%m-%d %H:%M') if st else 'none'}"
               f", {len(carried)}/{len(runs)} runs carried, "
               f"{sum(1 for v in factors.values() if v != 1.0)} precip corrections"
+              + (f", {len(siblings)} start from a neighbour's snowpack" if siblings else "")
               + (f"; {n_cold_plan} cold starts from {cold_from:%Y-%m-%d} ({kind}"
                  f"{', bare ground' if bare else ', assumed base'})" if n_cold_plan else ""))
 
@@ -398,7 +415,8 @@ def _main_matrix(args, grid, win, _t, _t0, _time):
         sno_src = config.WORK_DIR / "state_new" / "sno"
         matrix.advance_state(runs, carried, st["sno"] if st else None,
                              st["time"] if st else None, adv_to, sno_src,
-                             workers=args.workers, bare=bare, cold_from=cold_from)
+                             workers=args.workers, bare=bare, cold_from=cold_from,
+                             siblings=siblings)
         _t["advance"] = _time.time() - _ts
         if args.advance_only:
             meta = state_mod.save(args.state_out or args.state_dir, adv_to, sno_src,

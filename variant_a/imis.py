@@ -12,13 +12,19 @@ Two uses, both per weather point:
   station's elevation, against the measured HS over the past half of the
   window. Summarised as bias / MAE / RMSE and written into the manifest.
 
-* Correction ("nudging by precipitation"). Snow height is, to first order,
-  precipitation. If a weather point's flat run keeps ending up with less
-  snow than its stations measure, its precipitation is scaled up for the
-  next cycle, and vice versa. The factor moves slowly (square root of the
-  ratio per cycle, clipped), so one odd station or one bad day does not
-  swing it. It feeds the next state advance and forecast; the state itself
-  is never overwritten with a measurement.
+* Correction ("nudging by precipitation"). What precipitation decides is
+  how much the snow GROWS when it snows. So the factor learns from the
+  growth: the sum of the daily HS gains over the past days, measured vs
+  model at the station's height, whenever one of them gained at least
+  GAIN_MIN_CM. Without a snowfall there is nothing to learn and the factor
+  relaxes towards 1 (LEAK per cycle). It feeds the next state advance and
+  forecast; the state itself is never overwritten with a measurement.
+
+  Until 27.11. it learnt from the absolute HS instead. That error sits in
+  the carried snowpack and does not go away when the precipitation is
+  right, so the factor kept moving every cycle until it hit its bound:
+  25 weather points ended at x0.5 and halved the snowfall of 23.-27.11.,
+  which ICON had about right (0.95x the gauges).
 """
 from __future__ import annotations
 import math
@@ -30,10 +36,14 @@ import numpy as np
 
 MATCH_KM = 12.0            # station must be this close to its weather point
 MATCH_DZ = 150.0           # ... and inside the bands, give or take this
-DAMP_CM = 20.0             # added to both sides of the ratio: small HS is noisy
+DAMP_CM = 5.0              # added to both gains: a few cm of growth are noisy
+GAIN_MIN_CM = 8.0          # a snowfall worth learning from (measured or model)
+GAIN_STEP_H = 24           # HS read once a day: the hourly sensor jitters
 STEP_EXP = 0.5             # per-cycle move: factor *= ratio ** STEP_EXP
-F_MIN, F_MAX = 0.5, 2.0    # hard bounds on the precipitation factor
+LEAK = 0.9                 # per cycle without a snowfall: factor **= LEAK (back towards 1)
+F_MIN, F_MAX = 0.67, 1.5   # hard bounds on the precipitation factor
 R_MIN, R_MAX = 0.7, 1.4    # bounds on one cycle's ratio
+FACTOR_KIND = "gain"       # what the stored factors were learnt from
 HOLDOUT_MOD = 4            # every 4th station (by a hash of its code) is held
                            # out of the correction, so the drift check
                            # (drift.py) has stations the model was never
@@ -118,12 +128,14 @@ def compare(stations, wps, runs, results, layer_ts, mets, now=None, collect=None
             continue
         m = np.array(pairs)
         err = m[:, 1] - m[:, 0]
+        g_meas, g_mod = gains(pairs_t)
         rows.append({"station": s.code, "label": s.label, "wp": w["id"],
                      "elev": round(s.elevation), "n": len(pairs),
                      "bias": round(float(err.mean()), 1),
                      "mae": round(float(np.abs(err).mean()), 1),
                      "last_meas": round(float(m[-1, 0]), 1),
                      "last_model": round(float(m[-1, 1]), 1),
+                     "gain_meas": round(g_meas, 1), "gain_model": round(g_mod, 1),
                      "holdout": is_holdout(s.code)})
     if not rows:
         return rows, {"stations": 0}
@@ -136,18 +148,52 @@ def compare(stations, wps, runs, results, layer_ts, mets, now=None, collect=None
     return rows, summary
 
 
+def gains(pairs_t, step_h=GAIN_STEP_H):
+    """(measured, model) HS growth [cm]: the positive day-to-day changes of
+    the series read every `step_h` hours back from its last hour, summed.
+    Settling and melt between snowfalls do not count against it."""
+    if len(pairs_t) < 2:
+        return 0.0, 0.0
+    pts = sorted(pairs_t, key=lambda p: p[0])
+    by_t = {p[0]: p for p in pts}
+    t_last = pts[-1][0]
+    from datetime import timedelta
+    seq, t = [], t_last
+    while t >= pts[0][0]:
+        p = by_t.get(t)
+        if p is None:                    # the nearest hour within 3 h
+            near = min(pts, key=lambda q: abs((q[0] - t).total_seconds()))
+            p = near if abs((near[0] - t).total_seconds()) <= 3 * 3600 else None
+        if p is not None:
+            seq.append(p)
+        t -= timedelta(hours=step_h)
+    seq.reverse()
+    gm = sum(max(0.0, b[1] - a[1]) for a, b in zip(seq, seq[1:]))
+    gd = sum(max(0.0, b[2] - a[2]) for a, b in zip(seq, seq[1:]))
+    return float(gm), float(gd)
+
+
 def update_factors(rows, old=None):
-    """New {wp: precipitation factor} from the comparison rows."""
+    """New {wp: precipitation factor} from the comparison rows: learnt from
+    the snowfall growth (gains), relaxed towards 1 without a snowfall."""
     old = dict(old or {})
     by = {}
     for r in rows:
         if r.get("holdout"):
             continue
-        ratio = (r["last_meas"] + DAMP_CM) / (r["last_model"] + DAMP_CM)
+        gm, gd = r.get("gain_meas"), r.get("gain_model")
+        if gm is None or gd is None or max(gm, gd) < GAIN_MIN_CM:
+            continue
+        ratio = (gm + DAMP_CM) / (gd + DAMP_CM)
         by.setdefault(r["wp"], []).append(min(R_MAX, max(R_MIN, ratio)))
-    new = dict(old)
-    for wp, rs in by.items():
-        g = math.exp(sum(math.log(x) for x in rs) / len(rs))     # geometric mean
-        f = old.get(wp, 1.0) * g ** STEP_EXP
-        new[wp] = round(min(F_MAX, max(F_MIN, f)), 3)
+    new = {}
+    for wp in set(old) | set(by):
+        f = old.get(wp, 1.0) ** LEAK
+        rs = by.get(wp)
+        if rs:
+            g = math.exp(sum(math.log(x) for x in rs) / len(rs))     # geometric mean
+            f *= g ** STEP_EXP
+        f = round(min(F_MAX, max(F_MIN, f)), 3)
+        if abs(f - 1.0) >= 0.005:
+            new[wp] = f
     return new

@@ -9,7 +9,8 @@ Modus "precip" (Standard):
     snow_frac  = temperature_factor(T_cell)
     SLR        = snow_to_liquid_ratio(T_cell)
     snow_pre   = P_cell * snow_frac * SLR / 10            [cm]
-    Snow_new   = snow_pre * terrain_factor               [cm]
+    Snow_new   = snow_pre (* terrain_factor, nur wenn
+                 wind_redistribution.apply_to_new_snow -- seit 27.11. aus)
     terrain_factor = orographic x wind, lokal auf Mittel 1 normiert
     snow_frac  aus der Feuchtkugeltemperatur, wenn Feuchte vorliegt
     SLR        = 1000 / rho_new(T, Wind)  (Crocus)
@@ -85,6 +86,9 @@ def compute_new_snow(
     # wird auf seinen Mittelwert in der Umgebung (~1.5 km) normiert. Die
     # Stauniederschlaege der Gebirgsketten liefert schon das Wettermodell.
     terrain_factor = conserve_locally(oro_factor * wind_factor, terrain, params)
+    # config/model_params.yaml wind_redistribution.apply_to_new_snow: off since
+    # 27.11. -- no skill against the station boards at 1 km
+    apply_tf = bool(params.get("wind_redistribution", {}).get("apply_to_new_snow", True))
 
     if mode == "snowfall":
         snow_fraction = np.ones_like(temp_cell)
@@ -96,7 +100,7 @@ def compute_new_snow(
         precip_cell = weather.precipitation_mm * alt_factor
         snow_pre = precip_cell * snow_fraction * slr / 10.0
 
-    new_snow = snow_pre * terrain_factor
+    new_snow = snow_pre * terrain_factor if apply_tf else snow_pre
     new_snow = np.clip(new_snow, 0.0, params["limits"]["max_new_snow_cm"])
 
     return {
