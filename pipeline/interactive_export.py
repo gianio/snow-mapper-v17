@@ -1667,7 +1667,12 @@ _BOOT_SPLIT = r"""<script>
   function sentStop(){if(sentT){clearInterval(sentT);sentT=null;}}
   function bootDone(){sentStop();var e=document.getElementById('boot');if(!e)return;
     prog(1,'Fertig');e.classList.add('done');setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e);},300);
-    setTimeout(swReg,3000);setTimeout(fullBehind,1500);}
+    setTimeout(swReg,3000);
+    // the 9 MB full-resolution data only once the app has been quiet for a
+    // while, and not on a slow or metered connection: fetched 1.5 s after the
+    // start it took the whole line just when the map was being moved
+    setTimeout(function(){var c=navigator.connection||{};if(c.saveData||/(^|-)2g|3g/.test(c.effectiveType||''))return;
+      if(window.requestIdleCallback)requestIdleCallback(fullBehind,{timeout:30000});else fullBehind();},25000);}
   // The full-resolution data, fetched quietly once the coarse map is up. It
   // only lands in the cache here; the next start (or the chip) uses it.
   function fullBehind(){var F=window.__fullPending;if(!F)return;window.__fullPending=null;
@@ -1680,6 +1685,8 @@ _BOOT_SPLIT = r"""<script>
         setTimeout(function(){c.classList.remove('on');setTimeout(function(){if(c.parentNode)c.parentNode.removeChild(c);},400);},20000);})
       .catch(function(){});}
   window.__bootDone=bootDone;
+  // slow start: say why, after a few seconds (a fast start never sees it)
+  setTimeout(function(){var n=document.getElementById('bootNote');if(n&&document.getElementById('boot'))n.hidden=false;},3500);
   // Data or map library not reachable: almost always a deploy in progress
   // (or no network). A friendly maintenance screen that retries by itself.
   function fail(m){
@@ -3253,6 +3260,8 @@ try{if(window.visualViewport)visualViewport.addEventListener('resize',fit);}catc
  @keyframes btGrowB{0%,26%{stroke-dashoffset:1;opacity:0}30%{opacity:1}52%{stroke-dashoffset:0}80%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
  @keyframes btCore{0%,100%{transform:scale(.6);opacity:.5}40%,80%{transform:scale(1);opacity:1}}
  @keyframes btHalo{0%,100%{transform:scale(.7);opacity:.35}50%{transform:scale(1.15);opacity:1}}
+ #bootNote{max-width:330px;margin-top:6px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.08);color:#B8C8DE;font:400 12.5px/1.45 "Helvetica Neue",Helvetica,Arial,sans-serif;text-align:left}
+ #bootNote[hidden]{display:none}#bootNote b{color:#EAF2FF;font-weight:700}
  #bootTxt{font:500 13px/1.3 "Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--mut,#6b7280);max-width:320px;min-height:1.3em}
  #bootTxt{transition:opacity .9s ease,transform .9s ease;animation:btTxt .9s ease}
  #bootTxt.out{opacity:0;transform:translateY(-3px)}
@@ -7544,8 +7553,8 @@ body.fabs-folded #mapFabs>:not(#fabFold){display:none!important}
 /* the side buttons stay: no fold handle any more */
 #fabFold{display:none!important}
 body.wcp-open #mapFabs,body.wcp-open #miniLegend{opacity:0!important;pointer-events:none!important;transition:opacity .15s}body.fabs-folded #mapFabs>:not(#fabFold){display:revert!important}
-.wc-pin{width:24px!important;height:24px!important;border-radius:8px!important;box-shadow:0 0 0 1.5px #fff,0 2px 6px rgba(0,0,0,.28)!important}
-.wc-pin svg{width:13px!important;height:13px!important}
+.wc-pin{width:20px!important;height:20px!important;border-radius:7px!important;box-shadow:0 0 0 1.5px #fff,0 2px 5px rgba(0,0,0,.26)!important}
+.wc-pin svg{width:11px!important;height:11px!important}
 #tlTomorrowBtn{display:none!important}
 /* «Wie genau ist das Modell?» */
 .acc-sec{margin:14px 0 4px}.acc-sec h4{font:600 16px/1.3 var(--font);margin:0 0 8px;color:var(--md-on-surface,#111)}
@@ -7746,8 +7755,8 @@ body.desk .acc-sheet{align-items:center}body.desk .acc-in{border-radius:28px}
 body.desk #mapFabs .mfab-grp .mfab{width:40px!important;height:40px!important;border-radius:20px!important}
 body.desk #mapFabs .mfab-grp .mfab svg{width:19px!important;height:19px!important}
 body.desk #ovChips .ov-chip{width:38px;height:38px}
-body.desk .wc-pin{width:28px!important;height:28px!important}
-body.desk .wc-pin svg{width:15px!important;height:15px!important}
+body.desk .wc-pin{width:23px!important;height:23px!important}
+body.desk .wc-pin svg{width:12px!important;height:12px!important}
 body.desk .wc-popup .leaflet-popup-content{width:480px!important;max-width:min(480px,calc(100vw - 140px))!important}
 body.desk .wc-pop .wc-seg button{cursor:pointer}
 .wc-tipw.leaflet-tooltip{padding:0;border:0;border-radius:12px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.28);background:var(--card,#fff)}
@@ -8175,6 +8184,61 @@ body:has(#wcSheet) #bottomPanel,body:has(#wcSheet) #tabBar{opacity:0;pointer-eve
    a small text field on iOS); the map keeps its own pinch zoom */
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media (pointer:coarse){input:not([type=range]):not([type=checkbox]):not([type=radio]),textarea,select{font-size:16px!important}}
+/* layer info: link to the full snow-type screen */
+.li-more{display:flex;align-items:center;gap:12px;width:100%;margin:12px 0 2px;padding:12px 14px;border:0;border-radius:16px;cursor:pointer;text-align:left;
+  background:var(--md-secondary-container,#D6E3FF);color:var(--md-on-secondary-container,#0F1C2C);font-family:var(--font)}
+.li-more>svg{width:22px;height:22px;flex:none}.li-more .li-go{margin-left:auto;width:20px;height:20px;opacity:.7}
+.li-more span{display:flex;flex-direction:column;gap:2px;min-width:0}.li-more b{font:700 14px/1.2 var(--font)}.li-more small{font:400 12px/1.3 var(--font);opacity:.8}
+#lyPanel .ly-info .li-more{display:flex}
+/* the snow-type screen */
+#stSheet{z-index:20060}
+.st-body{padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}
+.st-intro{margin:0 0 18px;padding:14px 16px;border-radius:18px;background:var(--md-surface-container,#EEF0F5)}
+.st-intro h3{margin:0 0 8px;font:700 16px/1.2 var(--font)}
+.st-intro ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font:400 13.5px/1.45 var(--font)}
+.st-intro ol.st-ord{gap:5px}
+.st-note{margin:10px 0 0;font:500 12.5px/1.4 var(--font);color:var(--fg2,#555)}
+.st-h2{margin:22px 0 10px;font:700 19px/1.2 var(--font)}
+.st-c{margin:0 0 12px;padding:14px 16px;border-radius:18px;background:var(--card,#fff);box-shadow:0 0 0 1px var(--hair,rgba(0,0,0,.08)),0 1px 3px rgba(16,24,40,.06)}
+.st-h{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.st-h h3{margin:0;font:700 16px/1.2 var(--font)}
+.st-sw{display:flex;flex:none;border-radius:8px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.st-sw i{display:block;width:16px;height:30px}.st-sw i:only-child{width:30px}
+.st-w{margin:0 0 6px;font:500 14px/1.45 var(--font)}
+.st-c h4{margin:12px 0 4px;font:700 12px/1.2 var(--font);text-transform:uppercase;letter-spacing:.05em;color:var(--md-primary,#2D5A8C)}
+.st-c ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px;font:400 13.5px/1.45 var(--font)}
+.st-c p{margin:0;font:400 13.5px/1.45 var(--font)}
+:root[data-theme="dark"] .st-intro{background:rgba(255,255,255,.06)}
+/* ==== Desktop: the community page over the full width ==== */
+@media (min-width:900px){
+  /* filters in one bar across the top, not a tall box in the middle */
+  body.desk .feed-page:not(.side) .feed-top{max-width:none;margin:0;padding:10px 28px 10px;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 10px;border-bottom:1px solid var(--hair)}
+  body.desk .feed-page:not(.side) .feed-top .ft-row{display:contents}
+  body.desk .feed-page:not(.side) .feed-top .ft-cat{order:1}
+  body.desk .feed-page:not(.side) .feed-top .ft-map{order:2}
+  body.desk .feed-page:not(.side) .feed-top .ft-kinds{order:3;padding:0;margin:0;overflow:visible;flex-wrap:wrap}
+  body.desk .feed-page:not(.side) .feed-top .ft-snows{order:4}
+  body.desk .feed-page:not(.side) .feed-top .ft-sp{order:5;flex:1 1 0}
+  body.desk .feed-page:not(.side) .feed-top .ft-ic:not(.ft-map){order:6}
+  body.desk .feed-page:not(.side) .feed-top .mvr{order:7;flex:1 1 100%;margin:0}
+  /* the posts in columns across the width */
+  body.desk .feed-page:not(.side) .feed-scroll{padding-left:0;padding-right:0}
+  body.desk .feed-page:not(.side) .feed-hit{margin:12px 28px 0;max-width:none}
+  body.desk .feed-page:not(.side) .feed-grid{max-width:none;margin:0;padding:18px 28px 120px;display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:20px;align-items:start}
+  body.desk .feed-page:not(.side) .feed-grid>.feed-card{margin:0;min-width:0}
+  body.desk .feed-page:not(.side) .feed-grid>:not(.feed-card){grid-column:1/-1}
+}
+/* pictures: arrows for a mouse, always visible on a computer */
+body.desk .fc-wrap:has(.fc-nav) .fc-nav{display:flex}
+.fc-nav{z-index:3}
+/* posts waiting for a connection */
+#obPill{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 62px);transform:translateX(-50%);z-index:9000;display:flex;align-items:center;gap:8px;max-width:calc(100vw - 24px);
+  padding:8px 14px 8px 12px;border:0;border-radius:999px;background:#10243F;color:#fff;font:600 13px/1.2 var(--font);box-shadow:0 4px 16px rgba(0,0,0,.28);cursor:pointer}
+#obPill i{width:9px;height:9px;border-radius:50%;background:#FFB020;animation:obP 1.4s ease-in-out infinite;flex:none}
+#obPill small{font:400 11.5px/1 var(--font);opacity:.7}
+@keyframes obP{0%,100%{opacity:.35}50%{opacity:1}}
+@media (max-width:420px){#obPill small{display:none}}
 /* ==== Runde 25.11.: modern, solid timeline; side buttons a touch bigger ==== */
 /* the timeline: an opaque M3 surface with soft elevation, no rim, no glass */
 #bottomPanel,:root[data-theme="light"] #bottomPanel,:root.and-wv[data-theme="light"] #bottomPanel{background:#FBFCFE!important;
@@ -8186,8 +8250,8 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
 :root[data-theme="dark"] #bottomPanel #tlChips button:not(.on){background:rgba(255,255,255,.07)!important}
 #mapFabs .mfab-grp .mfab{width:40px!important;height:40px!important;border-radius:20px!important}
 #mapFabs .mfab-grp .mfab svg{width:20px!important;height:20px!important}
-#ovChips .ov-chip{width:40px;height:40px}
-#ovChips .ov-chip svg{width:20px;height:20px}
+#ovChips .ov-chip{width:44px;height:44px}
+#ovChips .ov-chip svg{width:22px;height:22px}
 /* the layer button as wide as the column of side buttons above it (40 px
    buttons + 2 px rim on each side) */
 #mapFabs .mfab-grp{padding:2px!important;box-sizing:border-box}
@@ -8216,7 +8280,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
 </head><body>
 <!-- No splash. The app is the first thing on screen; while the forecast data
      streams in, a hairline at the top edge carries the real progress. -->
-<div id="boot" role="status" aria-live="polite"><canvas id="btSky" aria-hidden="true"></canvas><div class="bt-in"><div class="bt-orbit" aria-hidden="true"><svg class="bt-lines" viewBox="0 0 240 240"><path class="bt-ln" data-k="0" d="M120.0 46.0L120.0 68.0"/><circle class="bt-pk" data-k="0" r="3" style="offset-path:path('M120.0 46.0L120.0 68.0')"/><path class="bt-ln" data-k="1" d="M184.1 83.0L165.0 94.0"/><circle class="bt-pk" data-k="1" r="3" style="offset-path:path('M184.1 83.0L165.0 94.0')"/><path class="bt-ln" data-k="2" d="M184.1 157.0L165.0 146.0"/><circle class="bt-pk" data-k="2" r="3" style="offset-path:path('M184.1 157.0L165.0 146.0')"/><path class="bt-ln" data-k="3" d="M120.0 194.0L120.0 172.0"/><circle class="bt-pk" data-k="3" r="3" style="offset-path:path('M120.0 194.0L120.0 172.0')"/><path class="bt-ln" data-k="4" d="M55.9 157.0L75.0 146.0"/><circle class="bt-pk" data-k="4" r="3" style="offset-path:path('M55.9 157.0L75.0 146.0')"/><path class="bt-ln" data-k="5" d="M55.9 83.0L75.0 94.0"/><circle class="bt-pk" data-k="5" r="3" style="offset-path:path('M55.9 83.0L75.0 94.0')"/></svg><i class="bt-src" data-k="0" style="left:100px;top:2px"><svg viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 1 1 1.2-8.8A6 6 0 0 1 19.5 11 3.5 3.5 0 0 1 18 18z"/></svg></i><i class="bt-src" data-k="1" style="left:185px;top:51px"><svg viewBox="0 0 24 24"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/></svg></i><i class="bt-src" data-k="2" style="left:185px;top:149px"><svg viewBox="0 0 24 24"><path d="M2 20l6.5-11 4 6 3-4.5L22 20z"/></svg></i><i class="bt-src" data-k="3" style="left:100px;top:198px"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="3.5" rx="1"/><rect x="4" y="10.25" width="16" height="3.5" rx="1"/><rect x="4" y="15.5" width="16" height="3.5" rx="1"/></svg></i><i class="bt-src" data-k="4" style="left:15px;top:149px"><svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="M8 21h8"/><circle cx="12" cy="6" r="2.5"/><path d="M7.5 3.5a6.5 6.5 0 0 0 0 5M16.5 3.5a6.5 6.5 0 0 1 0 5"/></svg></i><i class="bt-src" data-k="5" style="left:15px;top:51px"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-3-5.5"/></svg></i><div class="bt-crys"><i class="bt-halo"></i><svg class="bt-flake" viewBox="0 0 64 64"><defs><linearGradient id="btG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#F2FAFF"/><stop offset=".55" stop-color="#9AD3FF"/><stop offset="1" stop-color="#4F9BE6"/></linearGradient></defs><g class="bt-rot"><g transform="rotate(0 32 32)" style="--i:0"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(60 32 32)" style="--i:1"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(120 32 32)" style="--i:2"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(180 32 32)" style="--i:3"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(240 32 32)" style="--i:4"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(300 32 32)" style="--i:5"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><circle class="bt-core" cx="32" cy="32" r="3.4"/></g></svg></div></div><div id="bootSrc"><b id="bootSrcT"></b><span id="bootSrcD"></span></div><div id="bootPct">0 %</div><div class="bt-bar"><i></i></div><div id="bootTxt"></div></div></div>
+<div id="boot" role="status" aria-live="polite"><canvas id="btSky" aria-hidden="true"></canvas><div class="bt-in"><div class="bt-orbit" aria-hidden="true"><svg class="bt-lines" viewBox="0 0 240 240"><path class="bt-ln" data-k="0" d="M120.0 46.0L120.0 68.0"/><circle class="bt-pk" data-k="0" r="3" style="offset-path:path('M120.0 46.0L120.0 68.0')"/><path class="bt-ln" data-k="1" d="M184.1 83.0L165.0 94.0"/><circle class="bt-pk" data-k="1" r="3" style="offset-path:path('M184.1 83.0L165.0 94.0')"/><path class="bt-ln" data-k="2" d="M184.1 157.0L165.0 146.0"/><circle class="bt-pk" data-k="2" r="3" style="offset-path:path('M184.1 157.0L165.0 146.0')"/><path class="bt-ln" data-k="3" d="M120.0 194.0L120.0 172.0"/><circle class="bt-pk" data-k="3" r="3" style="offset-path:path('M120.0 194.0L120.0 172.0')"/><path class="bt-ln" data-k="4" d="M55.9 157.0L75.0 146.0"/><circle class="bt-pk" data-k="4" r="3" style="offset-path:path('M55.9 157.0L75.0 146.0')"/><path class="bt-ln" data-k="5" d="M55.9 83.0L75.0 94.0"/><circle class="bt-pk" data-k="5" r="3" style="offset-path:path('M55.9 83.0L75.0 94.0')"/></svg><i class="bt-src" data-k="0" style="left:100px;top:2px"><svg viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 1 1 1.2-8.8A6 6 0 0 1 19.5 11 3.5 3.5 0 0 1 18 18z"/></svg></i><i class="bt-src" data-k="1" style="left:185px;top:51px"><svg viewBox="0 0 24 24"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/></svg></i><i class="bt-src" data-k="2" style="left:185px;top:149px"><svg viewBox="0 0 24 24"><path d="M2 20l6.5-11 4 6 3-4.5L22 20z"/></svg></i><i class="bt-src" data-k="3" style="left:100px;top:198px"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="3.5" rx="1"/><rect x="4" y="10.25" width="16" height="3.5" rx="1"/><rect x="4" y="15.5" width="16" height="3.5" rx="1"/></svg></i><i class="bt-src" data-k="4" style="left:15px;top:149px"><svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="M8 21h8"/><circle cx="12" cy="6" r="2.5"/><path d="M7.5 3.5a6.5 6.5 0 0 0 0 5M16.5 3.5a6.5 6.5 0 0 1 0 5"/></svg></i><i class="bt-src" data-k="5" style="left:15px;top:51px"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-3-5.5"/></svg></i><div class="bt-crys"><i class="bt-halo"></i><svg class="bt-flake" viewBox="0 0 64 64"><defs><linearGradient id="btG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#F2FAFF"/><stop offset=".55" stop-color="#9AD3FF"/><stop offset="1" stop-color="#4F9BE6"/></linearGradient></defs><g class="bt-rot"><g transform="rotate(0 32 32)" style="--i:0"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(60 32 32)" style="--i:1"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(120 32 32)" style="--i:2"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(180 32 32)" style="--i:3"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(240 32 32)" style="--i:4"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><g transform="rotate(300 32 32)" style="--i:5"><path class="bt-arm" pathLength="1" d="M32 29V5"/><path class="bt-br" pathLength="1" d="M32 12.5l-5.5-4.5M32 12.5l5.5-4.5"/><path class="bt-br bt-br2" pathLength="1" d="M32 20l-7-5.5M32 20l7-5.5"/></g><circle class="bt-core" cx="32" cy="32" r="3.4"/></g></svg></div></div><div id="bootSrc"><b id="bootSrcT"></b><span id="bootSrcD"></span></div><div id="bootPct">0 %</div><div class="bt-bar"><i></i></div><div id="bootTxt"></div><div id="bootNote" hidden><b>Warum dauert das?</b> Beim ersten Öffnen nach einem neuen Modelllauf müssen sehr viele Schneedaten geladen werden (rund 12 MB), und dein Gerät rechnet die Schneekarte selbst. Mehr Serverleistung würde in der Testversion deutlich mehr kosten. Beim nächsten Öffnen liegen die Daten schon im Zwischenspeicher – dann geht es schneller.</div></div></div>
 <script>
 /* Loading screen backdrop: a dark, stormy night over the mountains --
    contour lines of a slowly shifting terrain drift past, and snow flurries
@@ -8519,7 +8583,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
   <button type="button" class="p-rt" onclick="pad3d('right')" aria-label="Nach rechts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
   <small class="p-hint">Drehen &amp; kippen: <b>Strg</b> + Maus ziehen</small>
 </div><button id="btn3dClose">✕ 2D</button>
-<div class="ctrl3d"><label style="display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="55" style="width:100px;accent-color:var(--acc)"> Karte <span id="mapOpacLbl">55%</span></label>
+<div class="ctrl3d"><label hidden style="display:none;align-items:center;gap:8px;color:var(--fg2);font-size:16px">Relief <input id="mapOpac3d" type="range" min="0" max="100" value="80" style="width:100px;accent-color:var(--acc)"> Karte <span id="mapOpacLbl">55%</span></label>
 <button id="btn3dExag" title="Überhöhung (1.0 = wahre Höhen)">×1.0</button>
 <div class="seg3d" role="group" aria-label="Grundlage 3D"><button type="button" data-v="0" onclick="photo3dSet(false)">Winterkarte</button><button type="button" data-v="1" onclick="photo3dSet(true)">Luftbild (Sommer)</button></div><button id="btn3dPhoto" hidden></button>
 <select id="overlay3d" style="padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--glass);color:var(--fg2);font-size:16px;min-height:46px"><option value="none">Keine Ebene</option><option value="snow">Neuschnee</option><option value="temp">Temperatur</option><option value="wind">Wind</option><option value="depth">Schneehöhe</option><option value="powder">Powder</option></select>
@@ -11043,7 +11107,7 @@ function updateBaseFade(force){
   const t=baseFadeT(),z=map.getZoom();
   // widest view: mostly the abstract country shape and relief; the map
   // comes in as you zoom
-  const op=0.16+0.84*_ramp(z,8.4,10.8);
+  const op=0.06+0.94*_ramp(z,8.4,10.8);
   base.setOpacity(op);
   try{osmTopo.setOpacity(op);}catch(e){}
   try{reliefBase.setOpacity(0.9-0.9*_ramp(z,9.2,13));}catch(e){}
@@ -11054,7 +11118,7 @@ function updateBaseFade(force){
   _fadeRaf=requestAnimationFrame(function(){
     _fadeRaf=0;
     const t2=baseFadeT();
-    const op2=0.16+0.84*_ramp(map.getZoom(),8.4,10.8);
+    const op2=0.06+0.94*_ramp(map.getZoom(),8.4,10.8);
     _lastFadeOp=op2;
     _applyVectorFade(op2,t2);
   });
@@ -11074,6 +11138,28 @@ map.getPane('osmPane').style.pointerEvents='none';
 const OSM_URL='https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
 function _inPoly(lat,lng,P){let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],b=P[j];
   if((a[0]>lat)!==(b[0]>lat)&&lng<(b[1]-a[1])*(lat-a[0])/(b[0]-a[0])+a[1])c=!c;}return c;}
+// Along the border the Swiss map is kept as far as it goes: the outline above
+// is simplified (about 600 m), and swisstopo's own map reaches a good way
+// past the real border. So within CH_KEEP_KM of the border, wherever the
+// swisstopo tile has map content, the foreign map steps aside -- OpenTopoMap
+// only fills where swisstopo is blank (white). Judged in 4-px blocks: a block
+// counts as «no map» only when it is all but pure white (glaciers still have
+// contour lines). Farther out OpenTopoMap stays: at small scales swisstopo
+// draws all of Europe in a coarse style that is not wanted there.
+const CH_KEEP_KM=10;
+const CH_BB=(function(){let a=90,b=180,c=-90,d=-180;CH_BORDER.forEach(q=>{if(q[0]<a)a=q[0];if(q[0]>c)c=q[0];if(q[1]<b)b=q[1];if(q[1]>d)d=q[1];});return [a,b,c,d];})();
+function _nearCH(nw,se,pad){return se.lat<CH_BB[2]+pad&&nw.lat>CH_BB[0]-pad&&nw.lng<CH_BB[3]+pad&&se.lng>CH_BB[1]-pad;}
+let _swScr=null,_swBand=null;
+function _swissKeep(g,sw,pts,dpx){try{if(!_swScr){_swScr=document.createElement('canvas');_swScr.width=_swScr.height=256;_swBand=document.createElement('canvas');_swBand.width=_swBand.height=256;}
+  const x=_swScr.getContext('2d',{willReadFrequently:true});x.clearRect(0,0,256,256);x.drawImage(sw,0,0,256,256);
+  const d=x.getImageData(0,0,256,256).data,B=4;
+  // the band: the Swiss outline, filled and stroked CH_KEEP_KM wide
+  const b=_swBand.getContext('2d',{willReadFrequently:true});b.clearRect(0,0,256,256);b.lineJoin='round';b.fillStyle=b.strokeStyle='#000';
+  b.lineWidth=Math.min(1024,Math.max(1,dpx*2));b.beginPath();pts.forEach((q,i)=>{if(i)b.lineTo(q[0],q[1]);else b.moveTo(q[0],q[1]);});b.closePath();b.fill();b.stroke();
+  const bd=b.getImageData(0,0,256,256).data;
+  for(let by=0;by<256;by+=B)for(let bx=0;bx<256;bx+=B){if(bd[((by+2)*256+bx+2)*4+3]<128)continue;let white=0;
+    for(let y=by;y<by+B;y++)for(let xx=bx;xx<bx+B;xx++){const i=(y*256+xx)*4;if(d[i]>=246&&d[i+1]>=246&&d[i+2]>=246)white++;}
+    if(white<B*B*0.9)g.clearRect(bx,by,B,B);}}catch(e){}}
 const OsmTopo=L.GridLayer.extend({
   createTile(c,done){const t=document.createElement('canvas');t.width=t.height=256;const m=this._map,z=c.z;
     const nw=m.unproject([c.x*256,c.y*256],z),se=m.unproject([(c.x+1)*256,(c.y+1)*256],z);
@@ -11082,11 +11168,21 @@ const OsmTopo=L.GridLayer.extend({
     if(corners.every(q=>_inPoly(q[0],q[1],CH_BORDER))&&!CH_BORDER.some(q=>q[0]<=nw.lat&&q[0]>=se.lat&&q[1]>=nw.lng&&q[1]<=se.lng)){
       setTimeout(()=>done(null,t),0);return t;}
     const img=new Image();img.crossOrigin='anonymous';
-    img.onload=()=>{try{const g=t.getContext('2d');g.drawImage(img,0,0,256,256);
+    // near the border: the swisstopo tile of the same place (the base layer
+    // has asked for it already, so it comes from the cache)
+    const near=_nearCH(nw,se,0.2);let sw=null,left=near?2:1,osmOk=false;
+    const fin=()=>{if(--left>0)return;
+      if(osmOk){try{const g=t.getContext('2d');g.drawImage(img,0,0,256,256);
+        const pts=CH_BORDER.map(q=>{const p=m.project(q,z);return [p.x-c.x*256,p.y-c.y*256];});
         g.globalCompositeOperation='destination-out';g.beginPath();
-        CH_BORDER.forEach((q,i)=>{const p=m.project(q,z),x=p.x-c.x*256,y=p.y-c.y*256;if(i)g.lineTo(x,y);else g.moveTo(x,y);});
-        g.closePath();g.fill();}catch(e){}done(null,t);};
-    img.onerror=()=>done(null,t);
+        pts.forEach((q,i)=>{if(i)g.lineTo(q[0],q[1]);else g.moveTo(q[0],q[1]);});
+        g.closePath();g.fill();
+        if(sw){const mpp=156543.03392*Math.cos(Math.max(nw.lat,se.lat)*Math.PI/180)/Math.pow(2,z);_swissKeep(g,sw,pts,CH_KEEP_KM*1000/mpp);}}catch(e){}}
+      done(null,t);};
+    if(near){const si=new Image();si.crossOrigin='anonymous';si.onload=()=>{sw=si;fin();};si.onerror=()=>fin();
+      try{si.decoding='async';}catch(e){}si.src=L.Util.template(swissTile(BASE_TILE),{z:z,x:c.x,y:c.y});}
+    img.onload=()=>{osmOk=true;fin();};
+    img.onerror=()=>fin();
     // abroad only, from a slow volunteer server: never ahead of the Swiss tiles
     try{img.fetchPriority='low';img.decoding='async';}catch(e){}
     img.src=L.Util.template(OSM_URL,{s:'abc'[Math.abs(c.x+c.y)%3],z:z,x:c.x,y:c.y});
@@ -11513,8 +11609,11 @@ async function vaLoad(){
     // Triebschnee): keep the chosen layer by its id, not its position.
     const _pid=(function(){try{const it=groupItems(curTopic)[curItem];return it&&it.id;}catch(e){return null;}})();
     vaMan=m;
-    // the real snow depth (season so far) into the Schneehöhe balance
-    setTimeout(()=>{try{vaDepthInit();}catch(e){}},1200);
+    // the real snow depth (season so far) into the Schneehöhe balance: right
+    // away when the depth layer is on, else when the app is idle (it loads
+    // the snow-model pack, ~1 MB, and takes half a second of work)
+    if(layer==='depth')setTimeout(()=>{try{vaDepthInit();}catch(e){}},300);
+    else setTimeout(()=>{const go=()=>{try{vaDepthInit();}catch(e){}};if(window.requestIdleCallback)requestIdleCallback(go,{timeout:20000});else go();},15000);
     try{const id=_pid==='powder'?'snowpack':_pid,ix=groupItems(curTopic).findIndex(it=>it.id===id);
       if(ix>=0&&(ix!==curItem||id!==_pid))setTopic(curTopic,ix,0);}catch(e){}
     // Profiles are only needed once someone taps the map, so they are fetched
@@ -11638,7 +11737,7 @@ function vaFrameUrl(key,idx){
 // 0.34 zoomed in washed the classes out to pastel. 0.72 -> 0.5 keeps both the
 // map and the classes readable, and the panel's "Transparenz" slider scales
 // it like every other layer.
-const VA_OP_OUT=0.74, VA_OP_IN=0.58, VA_Z_OUT=8, VA_Z_IN=14;
+const VA_OP_OUT=0.9, VA_OP_IN=0.58, VA_Z_OUT=8, VA_Z_IN=14;   // zoomed right out the layer is nearly opaque over the calm grey relief
 function vaOpacity(){
   const z=(map&&map.getZoom&&map.getZoom())||VA_Z_OUT;
   const t=Math.max(0,Math.min(1,(z-VA_Z_OUT)/(VA_Z_IN-VA_Z_OUT)));
@@ -12071,12 +12170,13 @@ function vaHiEngine(){
 // pipeline only ships one small PNG of run metrics per frame, so the map is
 // as sharp as the terrain, and changing frame costs ~80 kB, not a raster.
 const VA_TERR='https://s3.amazonaws.com/elevation-tiles-prod/terrarium/';
-// ONE layer at every zoom: the device draws it with the same engine from
-// zoom 5 on (the coarse 250 m frame only shows until the model pack is in).
-// Different pictures per zoom -- frames zoomed out, tiles zoomed in, the
-// server's tiles in an export's old colours -- did not match each other nor
-// the point card.
-const VA_HI_Z=5, VA_TERR_Z=12;
+// ONE layer at every zoom, in one palette: from zoom 9 (a screen pixel is then
+// ~300 m, finer than the 250 m national frame) the device draws it with the
+// engine; zoomed out the national frame is the layer -- recoloured with the
+// same table, and instant (rendering the whole country tile by tile made the
+// map heavy to pan). The server's tiles, in an export's old colours, did not
+// match either nor the point card.
+const VA_HI_Z=9, VA_TERR_Z=12;
 // tile canvas size: the terrain tile's own detail zoomed out (one terrain
 // pixel per canvas pixel at 192 of 256), 128 at zoom 10-11, 192 at 12
 function vaTileS(z){return z>=VA_TERR_Z?192:z>=10?128:192;}
@@ -12238,8 +12338,15 @@ async function vaTerrBytes(key){
 const vaHiQ=[];
 function vaHiAlive(){return vaHiWs.filter(W=>!W.dead);}
 function vaHiQueue(job){
-  return new Promise(res=>{job.res=res;vaHiQ.push(job);vaHiQ.sort((x,y)=>x.prio-y.prio);vaHiPump();});
+  return new Promise(res=>{job.res=res;vaHiQ.push(job);vaHiQSort();vaHiPump();});
 }
+// the tiles in the middle of the screen first, the edges after: the part you
+// look at fills in before the rim does
+function vaHiQSort(){let cx=0,cy=0,z=0;
+  try{z=Math.round(map.getZoom());const c=map.getCenter(),n=Math.pow(2,z);cx=(c.lng+180)/360*n;
+    const sn=Math.sin(c.lat*Math.PI/180);cy=(0.5-Math.log((1+sn)/(1-sn))/(4*Math.PI))*n;}catch(e){}
+  const d=j=>{if(!j.c||j.c.z!==z)return 1e6;return Math.hypot(j.c.x+.5-cx,j.c.y+.5-cy);};
+  vaHiQ.sort((x,y)=>(x.prio-y.prio)||(d(x)-d(y)));}
 async function vaHiRun(W,job){
   const {c,S,tag,layer}=job;
   const tz=Math.min(c.z,VA_TERR_Z),f=Math.pow(2,c.z-tz),tx=Math.floor(c.x/f),ty=Math.floor(c.y/f);
@@ -14012,7 +14119,7 @@ function wcErrTxt(e){const st=e&&e.status;
   if(st===429)return 'Webcams: Tageslimit von Windy erreicht – später nochmals versuchen.';
   if(st)return 'Webcams konnten nicht geladen werden (Windy antwortet '+st+').';
   return 'Webcams konnten nicht geladen werden – keine Verbindung zu Windy.';}
-function wcIcon(){return L.divIcon({className:'',iconSize:[24,24],iconAnchor:[12,12],
+function wcIcon(){return L.divIcon({className:'',iconSize:[20,20],iconAnchor:[10,10],
   html:'<div class="wc-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>'});}
 function wcBuildLayer(){wcLayer=L.layerGroup();setTimeout(wcRefresh,0);return wcLayer;}
 async function wcRefresh(){
@@ -15229,7 +15336,10 @@ function actFeedVisual(r){const cd=r.condition_data,A=cd.activity;
     .concat([A.map?'<div class="fc-slide" onclick="event.stopPropagation();actOpen(\''+r.id+'\')"><img src="'+A.map+'" alt="" loading="lazy"></div>'
       :'<div class="fc-slide act-svg" onclick="event.stopPropagation();actOpen(\''+r.id+'\')">'+trkThumb(A.track,400,300,'',A.rep)+'</div>']);
   return '<div class="act-card"><div class="fc-wrap act-wrap"><div class="fc-carousel" id="fcar-a'+id+'">'+slides.join('')+'</div>'+plus
-    +(slides.length>1?'<div class="fc-dots" id="fcd-a'+id+'">'+slides.map((x,i)=>'<i class="'+(i?'':'on')+'"></i>').join('')+'</div>':'')+'</div>'
+    +(slides.length>1?'<div class="fc-dots" id="fcd-a'+id+'">'+slides.map((x,i)=>'<i class="'+(i?'':'on')+'"></i>').join('')+'</div>'
+      // arrows for a mouse (a computer cannot swipe): shown on desktop and on hover
+      +'<button type="button" class="fc-nav prev" aria-label="Zurück" onclick="event.stopPropagation();fcStep(\'a'+id+'\',-1)">‹</button>'
+      +'<button type="button" class="fc-nav next" aria-label="Weiter" onclick="event.stopPropagation();fcStep(\'a'+id+'\',1)">›</button>':'')+'</div>'
     +'<div class="act-st" onclick="event.stopPropagation();actOpen(\''+r.id+'\')"><div><small>Distanz</small><b>'+fmt(A.dist||0)+'</b></div><div><small>Aufstieg</small><b>'+(A.up||0)+' m</b></div><div><small>Zeit</small><b>'+trkFmtT(A.moving||0)+'</b></div></div>'
     // the snow along the route is in the stats sheet and the drawn map, not
     // listed in the feed
@@ -17297,7 +17407,7 @@ function _renderRaster(){
   if(layer=="snow"){const R=winRaw(SNOW,'snow'),sc=NS_SC,nv=_nsV||(_nsV=new Float32Array(NP));
     for(let p=0;p<NP;p++)nv[p]=R.su[p]*sc;
     _nsHid=_hid;setRasterIso(p=>{const v=nv[p];return _hid&&_hid(v)?null:v;},NS_ALPHA,NP>50000?2:3);}
-  else if(layer=="depth"){const cb2=b*NP;setRasterIso(p=>{const v=cum[cb2+p];return (v<1||(_hid&&_hid(v)))?null:v;},215,NP>50000?2:3);}
+  else if(layer=="depth"){try{if(!HS0&&!_hs0Busy)vaDepthInit();}catch(e){}const cb2=b*NP;setRasterIso(p=>{const v=cum[cb2+p];return (v<1||(_hid&&_hid(v)))?null:v;},215,NP>50000?2:3);}
   else if(layer=="temp"){const R=winRaw(TEMP,'temp'),tm=M.temp_mul,to=M.temp_off,c=Math.max(0,b-a);
     setRaster(p=>{if(!c)return null;const mn=R.mn[p]/tm-to,mx=R.mx[p]/tm-to,su=R.su[p]/tm-c*to;
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[40,120-(x*60|0),255,215];}
@@ -18232,6 +18342,93 @@ const LY_VAR_TEXT={
   'snowpack|Triebschnee':'Wo der Wind Schnee abgelagert (violett) oder weggeblasen hat (grau).',
   'temp|0–5 °C':'Nur Flächen mit einem Maximum zwischen 0 und 5 °C — Firn-Bedingungen.'
 };
+// ── «Schneetypen im Detail»: one full screen that explains every class the
+// Skiqualität map can show -- what it is, how the model decides it, which
+// limits apply (read live from the model pack, so the text is never at odds
+// with what is computed), and what it means on skis.
+function stThr(){const T=(vaPk&&vaPk.thresholds)||{};
+  return Object.assign({SK_POWDER_MIN:2,SK_P1:10,SK_P2:20,SK_P3:30,SK_P4:40,SK_THIN_POWDER_HS:3,THIN_COVER_HS:20,CRUST_FINE:0.25,CRUST_BREAKING:2,ICE_DENSITY_MIN:700,
+    SK_WET_LWC:1,SOFT_LWC:0.3,SULZ_SOFT_MIN:0.5,SULZ_SOFT_MAX:5,SULZ_LWC_MAX:3,SULZ_BASE_MIN:10,SK_FACET_SHARE:0.5,WIND_MIN:0.45,WD_STRONG:0.7},T);}
+function stTypes(){const T=stThr(),n=v=>String(Math.round(v*100)/100).replace('.',','),col=k=>{const c=(VA_PALETTE.ski6[k]||[150,160,175]);return 'rgb('+c[0]+','+c[1]+','+c[2]+')';},
+  pc=i=>'rgb('+PC_RGB[i].join(',')+')';
+  return [
+  {k:'p',name:'Pulver',cols:[pc(1),pc(3),pc(5),pc(7),pc(9)],
+   was:'Lockerer, trockener, nicht gebundener Schnee an der Oberfläche – das, wofür man Skifahren geht. Die Farbe sagt, wie viel davon liegt.',
+   wie:['Das Modell geht die Schichten von der Oberfläche nach unten durch und zählt zusammen, wie dick die lockere Deckschicht ist: Schichten mit einer Dichte unter 200 kg/m³ oder mit noch erhaltenen Sternkristallen. Schmelzformen mit Dichte über 130 kg/m³ zählen als Kruste und beenden die Zählung.',
+        'Pulver ist es ab '+n(T.SK_POWDER_MIN)+' cm lockerer Schicht und wenn die Oberfläche trocken ist (Flüssigwasser höchstens '+n(T.SK_WET_LWC)+' %).',
+        'Die Farbe nach der cm-Menge der lockeren Schicht: 1–5 · 5–10 · 10–15 · 15–20 · 20–30 · 30–40 · 40–50 · 50–75 · 75–100 · über 100 cm, in der Farbskala der SLF- und White-Risk-Schneekarten – dieselbe wie bei Neuschnee und Schneehöhe.'],
+   ski:'Ab 10 cm gut fahrbar, ab 20 cm sehr gut. Bei dünner Unterlage (unter '+n(T.THIN_COVER_HS)+' cm Schneehöhe) können Steine darunter liegen.'},
+  {k:11,name:'Altpulver (lockerer Altschnee, kantig)',cols:[col(11)],
+   was:'Lockerer Schnee, der nicht mehr frisch ist: Seine oberste Schicht besteht überwiegend aus kantigen Kristallen, Tiefenreif oder Oberflächenreif. Er sieht aus wie Pulver, verhält sich aber anders.',
+   wie:['Gleiche Bedingung wie Pulver (mindestens '+n(T.SK_POWDER_MIN)+' cm lockere Schicht), aber mindestens '+Math.round(T.SK_FACET_SHARE*100)+' % dieser Schicht sind Kristalle vom Typ kantig aufgebaut (FC), Tiefenreif (DH) oder Oberflächenreif (SH).',
+        'Das ist die Kornform, die SNOWPACK Schicht für Schicht mitrechnet – entstanden aus kalter, klarer Witterung und grossen Temperaturunterschieden in der Decke.'],
+   ski:'Fährt sich locker, trägt aber schlecht und ist ein klassischer Schwachschicht-Kandidat. Im Zusammenhang mit dem Lawinenbulletin lesen.'},
+  {k:2,name:'Kruste / Harsch',cols:[col(2)],
+   was:'Eine verharschte, gefrorene Oberfläche: Schmelz-Gefrier-Kruste, Windkruste oder Eis. Sie trägt entweder (gut fahrbar bei Firn-Bedingungen) oder bricht durch (schwierig).',
+   wie:['Dicke der Kruste: ab '+n(T.CRUST_FINE)+' cm feine Kruste, ab '+n(T.CRUST_BREAKING)+' cm Bruchharsch (tragend oder nicht – je nach Unterlage).',
+        'Eis: Dichte der Oberfläche ab '+Math.round(T.ICE_DENSITY_MIN)+' kg/m³.',
+        'Liegt mindestens '+n(T.SK_POWDER_MIN)+' cm Pulver darüber, gewinnt das Pulver – die Kruste steckt dann darunter.'],
+   ski:'Anspruchsvoll. Auf harten Hängen braucht es Kanten, in steilem Gelände ist ein Sturz gefährlich.'},
+  {k:1,name:'Durchgehend hart',cols:[col(1)],
+   was:'Die Schneedecke ist trocken und fest: gesetzt, windgepresst oder durch Kälte verfestigt – ohne lockere Deckschicht, ohne Kruste, ohne Nässe.',
+   wie:['Ist, was übrig bleibt: kein Pulver (unter '+n(T.SK_POWDER_MIN)+' cm lockere Schicht), keine Kruste (unter '+n(T.CRUST_FINE)+' cm), nicht nass.'],
+   ski:'Griffig bis eisig. Je nach Hang durchaus gut fahrbar, aber ohne Pulvergefühl.'},
+  {k:6,name:'Sulz (aufgefirnt)',cols:[col(6)],
+   was:'Die Frühjahrs-Wohlfühloberfläche: Nachts gefroren, tagsüber taut nur die oberste Schicht auf und ist weich, darunter trägt der Schnee noch.',
+   wie:['Es müssen alle fünf Bedingungen zusammen stimmen: aufgetaute Deckschicht ('+n(T.SULZ_SOFT_MIN)+' bis '+n(T.SULZ_SOFT_MAX)+' cm dick, Flüssigwasser über '+n(T.SOFT_LWC)+' %), das Wasser aber unter '+n(T.SULZ_LWC_MAX)+' % (sonst ist es nass), eine tragfähige gefrorene Unterlage von mindestens '+n(T.SULZ_BASE_MIN)+' cm, und die Decke hat in der Nacht davor wieder durchgefroren.',
+        'Fehlt die Nachtfrost-Phase, ist es zu früh (hart) oder zu spät (faul) – dann wird daraus «nass / faul».'],
+   ski:'Zum richtigen Zeitpunkt der beste Schnee des Frühjahrs. Zu früh hart, zu spät schwer.'},
+  {k:7,name:'Nass / faul',cols:[col(7)],
+   was:'Durchfeuchteter, schwerer Schnee: Die Oberfläche hat viel Wasser, die Unterlage trägt nicht mehr richtig.',
+   wie:['Flüssigwasser in der Oberfläche über '+n(T.SK_WET_LWC)+' % – und es ist keine Sulz-Situation (siehe oben).'],
+   ski:'Schwer und kraftraubend. Nasse Lawinen sind in dieser Phase wahrscheinlicher.'},
+  {k:10,name:'Dünne Schneedecke',cols:[col(10)],
+   was:'Zu wenig Schnee für sicheres Fahren: Steine, Gras und Büsche können durchkommen. Auf der Karte rot gestrichelt.',
+   wie:['Gesamte Schneehöhe unter '+n(T.THIN_COVER_HS)+' cm. Ausnahme: trockener Pulver ab '+n(T.SK_THIN_POWDER_HS)+' cm Gesamthöhe bleibt als Pulver sichtbar (Frühwinter).',
+        'Unter '+n(T.SK_THIN_POWDER_HS)+' cm Gesamthöhe wird nichts gezeichnet.'],
+   ski:'Steine, kaum fahrbar. Schonen die Beläge nicht.'}
+  ];}
+function stWindTypes(){const T=stThr(),n=v=>String(Math.round(v*100)/100).replace('.',',');
+  return [
+  {name:'Triebschnee',cols:['rgb(112,72,200)'],
+   was:'Vom Wind abgelagerter Schnee in den Leehängen: je nach Verlauf weich bis fest gepresst, oft tiefer als der Neuschnee allein.',
+   wie:['Aus dem Wind der letzten 24 Stunden: Transport ab etwa 5 m/s (10-m-Wind), mit der dritten Potenz der Geschwindigkeit. Daraus entsteht ein Index von 0 bis 1.',
+        'Ob ein Hang Luv oder Lee ist, entscheidet seine Exposition gegenüber der Windrichtung. Triebschnee: Index ab '+n(T.WD_STRONG)+'.'],
+   ski:'Fährt sich oft gut, ist aber das typische Lawinenproblem. Immer mit dem Lawinenbulletin lesen.'},
+  {name:'Leichte Triebschnee-Ablagerung',cols:['rgb(186,170,236)'],
+   was:'Schwächere Verfrachtung: eine dünnere Ablagerung auf der Leeseite.',
+   wie:['Triebschnee-Index zwischen '+n(T.WIND_MIN)+' und '+n(T.WD_STRONG)+'.'],
+   ski:'Wie Triebschnee, aber weniger ausgeprägt.'},
+  {name:'Abgeblasen / windgepresst',cols:['rgb(156,168,184)'],
+   was:'Luv- und Gratlagen: Der Wind hat den lockeren Schnee weggetragen oder fest gepresst.',
+   wie:['Abblas-Index ab '+n(T.WIND_MIN)+'. Bei einer dünnen Decke (unter '+n(T.THIN_COVER_HS)+' cm) wird nichts gezeichnet.'],
+   ski:'Hart, mit oft nur wenig Schnee. Steine und Grasbüschel möglich.'}
+  ];}
+function stOpen(sec){stClose(true);
+  const el=document.createElement('div');el.id='stSheet';el.className='cd st';el.setAttribute('role','dialog');el.setAttribute('aria-label','Schneetypen im Detail');
+  const card=x=>'<article class="st-c"><div class="st-h"><span class="st-sw">'+x.cols.map(c=>'<i style="background:'+c+'"></i>').join('')+'</span><h3>'+escapeHtml(x.name)+'</h3></div>'
+    +'<p class="st-w">'+escapeHtml(x.was)+'</p><h4>So erkennt es das Modell</h4><ul>'+x.wie.map(w=>'<li>'+escapeHtml(w)+'</li>').join('')+'</ul>'
+    +'<h4>Auf Ski</h4><p>'+escapeHtml(x.ski)+'</p></article>';
+  el.innerHTML='<header class="cd-bar"><button type="button" onclick="stClose()" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>'
+    +'<div><h2>Schneetypen im Detail</h2><small>Skiqualität aus dem Schneedeckenmodell</small></div></header><div class="cd-body st-body">'
+    +'<section class="st-intro"><h3>Wie die Karte entsteht</h3><ol>'
+    +'<li><b>Schneedeckenmodell.</b> SNOWPACK rechnet die Schneedecke Schicht für Schicht – an 135 Wetterpunkten in der ganzen Schweiz, je in Höhenbändern zu 300 m, vier Neigungen (0°, 20°, 38°, 45°) und acht Expositionen. Stündliches Wetter von MeteoSchweiz (ICON-CH1/CH2) treibt es an; es läuft seit dem 1. September.</li>'
+    +'<li><b>Aufs Gelände übertragen.</b> Jedes Pixel (rund 30 m) bekommt die Werte der Rechnung, die zu seiner Höhe, Neigung und Exposition passt, gemischt aus den nächsten Wetterpunkten – stetig, ohne Kanten. Schatten der Nachbargipfel und ein 1-km-Niederschlagsmuster korrigieren das.</li>'
+    +'<li><b>Messungen als Kontrolle.</b> Über 120 IMIS-Stationen des SLF messen die Schneehöhe. Wo das Modell deutlich zu viel Schnee hat, wird er abgezogen. Einzelne Stationen bleiben bewusst unkorrigiert als unabhängiger Test (siehe Modellvergleich).</li>'
+    +'<li><b>Klassen.</b> Aus den Werten pro Pixel entscheidet eine feste Reihenfolge, welcher Schneetyp es ist (unten). Danach werden einzelne Fremdpixel geglättet, damit Hänge einheitlich aussehen.</li></ol>'
+    +'<p class="st-note">Das ist eine Modellrechnung, keine Messung und kein Lawinenbulletin. Sie ersetzt nie die Beurteilung vor Ort.</p></section>'
+    +'<section class="st-intro"><h3>Reihenfolge der Entscheidung</h3><ol class="st-ord">'
+    +'<li>Gesamthöhe unter 3 cm → nichts gezeichnet</li><li>Kruste ab '+stThr().CRUST_FINE+' cm oder Eis → <b>Kruste</b>; sonst → <b>hart</b></li>'
+    +'<li>Lockere Schicht ab '+stThr().SK_POWDER_MIN+' cm → <b>Pulver</b> (in cm-Stufen), überschreibt Kruste/hart</li>'
+    +'<li>…aber zur Hälfte kantig → <b>Altpulver</b></li><li>Nass → <b>nass / faul</b>, oder wenn alle Sulz-Bedingungen stimmen → <b>Sulz</b></li>'
+    +'<li>Gesamthöhe unter '+stThr().THIN_COVER_HS+' cm → <b>dünne Schneedecke</b> (ausser trockenem Pulver)</li></ol></section>'
+    +'<h2 class="st-h2">Skiqualität</h2>'+stTypes().map(card).join('')
+    +'<h2 class="st-h2" id="stWind">Triebschnee (eigene Ansicht)</h2>'+stWindTypes().map(card).join('')
+    +'<p class="st-note">Die Grenzwerte stammen direkt aus dem aktuellen Modelllauf'+(vaPk?'':' (Standardwerte, bis das Modell geladen ist)')+'.</p></div>';
+  document.body.appendChild(el);document.body.classList.add('cd-open');try{haptic(4);}catch(e){}
+  if(sec==='wind'){setTimeout(()=>{const t=document.getElementById('stWind');if(t)t.scrollIntoView({block:'start'});},60);}}
+function stClose(quiet){const el=document.getElementById('stSheet');if(el)el.remove();if(!quiet&&!document.getElementById('cmpDash'))document.body.classList.remove('cd-open');}
+addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('stSheet'))stClose();});
 function lyInfoRender(){
   const el=document.getElementById('lyInfo');
   const lg=document.getElementById('lyLegend');
@@ -18244,8 +18441,12 @@ function lyInfoRender(){
   const vt=v&&LY_VAR_TEXT[it.id+'|'+v.label];
   const lvl=(it.id==='wind'&&WIND_LVLS.length>1)?('<div class="li-lvl"><span>Höhe</span><div class="li-lvl-b">'+WIND_LVLS.map((x,i)=>
       '<button type="button" class="'+(i===windLvl?'on':'')+'" onclick="windLvlSet('+i+')">'+(i?'≈ ':'')+x[1]+(i?'':' über Boden')+'</button>').join('')+'</div></div>'):'';
+  const more=(it.id==='snowpack'||it.id==='vadrift')?'<button type="button" class="li-more" onclick="stOpen(\''+(it.id==='vadrift'?'wind':'')+'\')">'
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 12h16M4 19h10"/></svg>'
+    +'<span><b>Schneetypen im Detail</b><small>Was sie sind, wie das Modell sie erkennt, welche Grenzwerte gelten</small></span>'
+    +'<svg class="li-go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>':'';
   el.innerHTML=lvl+'<h4>'+escapeHtml(it.id==='wind'?'Wind auf '+WIND_LVLS[windLvl][1]+(windLvl?' (freie Atmosphäre)':''):info.t)+'</h4><p>'+escapeHtml(info.d)+'</p>'+
-    (info.u?('<span class="li-unit">'+escapeHtml(info.u)+'</span>'):'')+
+    (info.u?('<span class="li-unit">'+escapeHtml(info.u)+'</span>'):'')+more+
     ((vars.length>1&&v)?('<div class="li-sub"><h4>'+escapeHtml(v.label)+'</h4><p>'+
       escapeHtml(vt||'Variante dieser Ebene.')+'</p></div>'):'');
 }
@@ -20263,12 +20464,12 @@ async function sw3dTile0(url,ac){
   const latOf=yy=>Math.atan(Math.sinh(Math.PI*(1-2*yy/n2)))*180/Math.PI,latN=latOf(y),latS=latOf(y+1);
   const aws=async()=>{const r=await fetch(AWS_DEM+z+'/'+x+'/'+y+'.png',{signal:ac&&ac.signal});return r.arrayBuffer();};
   // only Switzerland and its rim carry swisstopo's fine mesh; elsewhere the global tile
-  if(z<8||lat1Out(latS,latN,lon0,lon1))return {data:await aws()};
+  if(z<8||lat1Out(latS,latN,lon0,lon1))return {data:await demPng(await demFromTerrarium(await aws(),N),N)};
   const L=Math.min(16,Math.max(0,z-1)),w=180/Math.pow(2,L);
   const gx0=Math.floor((lon0+180)/w),gx1=Math.floor((lon1+180-1e-9)/w),gy0=Math.floor((latS+90)/w),gy1=Math.floor((latN+90-1e-9)/w);
   const jobs=[];for(let gx=gx0;gx<=gx1;gx++)for(let gy=gy0;gy<=gy1;gy++)jobs.push(sw3dGet(L,gx,gy,ac).then(t=>t&&{t,gx,gy}));
   const tiles=(await Promise.all(jobs)).filter(Boolean);
-  if(!tiles.length)return {data:await aws()};
+  if(!tiles.length)return {data:await demPng(await demFromTerrarium(await aws(),N),N)};
   const H=new Float32Array(N*N).fill(NaN),my0=_mercY(latN),my1=_mercY(latS);
   for(const {t,gx,gy} of tiles){const W0=gx*w-180,S0=gy*w-90,nv=t.u.length,px=new Float32Array(nv),py=new Float32Array(nv);
     for(let i=0;i<nv;i++){const lo=W0+t.u[i]/32767*w,la=S0+t.v[i]/32767*w;px[i]=(lo-lon0)/(lon1-lon0)*N;py[i]=(_mercY(la)-my0)/(my1-my0)*N;}
@@ -20285,10 +20486,43 @@ async function sw3dTile0(url,ac){
   if(gaps){try{const ab=await aws();let d=null;try{const im=await pngDecode(ab);if(im.w===N&&im.h===N)d=im.rgba;}catch(_){}
       if(!d){const bmp=await createImageBitmap(new Blob([ab]));const c=new OffscreenCanvas(N,N),g=c.getContext('2d');g.drawImage(bmp,0,0,N,N);d=g.getImageData(0,0,N,N).data;}for(let i=0;i<N*N;i++)if(H[i]!==H[i])H[i]=d[i*4]*256+d[i*4+1]+d[i*4+2]/256-32768;}
     catch(e){for(let i=0;i<N*N;i++)if(H[i]!==H[i])H[i]=0;}}
-  const c=new OffscreenCanvas(N,N),g=c.getContext('2d'),img=g.createImageData(N,N),D=img.data;
-  for(let i=0;i<N*N;i++){const v=Math.max(0,H[i]+32768);D[i*4]=Math.floor(v/256);D[i*4+1]=Math.floor(v)%256;D[i*4+2]=Math.floor((v%1)*256);D[i*4+3]=255;}
-  g.putImageData(img,0,0);const blob=await c.convertToBlob({type:'image/png'});
-  return {data:await blob.arrayBuffer()};}
+  return {data:await demPng(H,N)};}
+// Heights for MapLibre in a code that survives a browser's read-back noise.
+// Safari (and the iOS web view) add random noise to every canvas read-back;
+// MapLibre reads its height tiles that way. In terrarium code one step in the
+// red channel is 256 m -- the 3D map turned into a field of needles. Here the
+// height is spread over all three channels, h = 9 R + 7 G + 4 B - 100 m
+// (MapLibre's «custom» encoding): a step of noise costs a few metres, and
+// the code still resolves 1 m. The PNG is written here, byte by byte, so no
+// canvas of ours adds noise either.
+const DEM_F=[9,7,4],DEM_BASE=100;
+const _demFix=(function(){const t=[];for(let r=0;r<20;r++){let best=null;
+  for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++)for(let k=-3;k<=3;k++){if(9*i+7*j+4*k!==r)continue;const c=Math.abs(i)+Math.abs(j)+Math.abs(k);if(!best||c<best[3])best=[i,j,k,c];}
+  t.push(best||[0,0,0,0]);}return t;})();
+function demEncode(H,N){const D=new Uint8Array(N*N*4);
+  for(let i=0;i<N*N;i++){let h=H[i];if(!(h===h))h=0;let t=Math.round(Math.max(0,Math.min(5099,h+DEM_BASE)));
+    let a=Math.floor(t/20);if(a<3)a=3;let r=t-20*a;let add=[0,0,0];
+    if(r<0){// very low ground: plain blue channel steps
+      a=0;const R0=Math.floor(t/9),R1=t-9*R0,G0=Math.floor(R1/7),B0=Math.round((R1-7*G0)/4);D[i*4]=R0;D[i*4+1]=G0;D[i*4+2]=B0;D[i*4+3]=255;continue;}
+    if(r>=20){a+=Math.floor(r/20);r=r%20;}
+    add=_demFix[r];D[i*4]=Math.max(0,Math.min(255,a+add[0]));D[i*4+1]=Math.max(0,Math.min(255,a+add[1]));D[i*4+2]=Math.max(0,Math.min(255,a+add[2]));D[i*4+3]=255;}
+  return D;}
+const _crcT=(function(){const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function _crc(b){let c=0xffffffff;for(let i=0;i<b.length;i++)c=_crcT[(c^b[i])&255]^(c>>>8);return (c^0xffffffff)>>>0;}
+async function pngEncodeRGBA(w,h,px){
+  const raw=new Uint8Array((w*4+1)*h);for(let y=0;y<h;y++){raw[y*(w*4+1)]=0;raw.set(px.subarray(y*w*4,(y+1)*w*4),y*(w*4+1)+1);}
+  const z=new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer());
+  const chunk=(type,data)=>{const o=new Uint8Array(12+data.length),dv=new DataView(o.buffer);dv.setUint32(0,data.length);
+    for(let i=0;i<4;i++)o[4+i]=type.charCodeAt(i);o.set(data,8);dv.setUint32(8+data.length,_crc(o.subarray(4,8+data.length)));return o;};
+  const ih=new Uint8Array(13),dv=new DataView(ih.buffer);dv.setUint32(0,w);dv.setUint32(4,h);ih[8]=8;ih[9]=6;
+  const parts=[new Uint8Array([137,80,78,71,13,10,26,10]),chunk('IHDR',ih),chunk('IDAT',z),chunk('IEND',new Uint8Array(0))];
+  let n=0;parts.forEach(p=>n+=p.length);const out=new Uint8Array(n);let o=0;parts.forEach(p=>{out.set(p,o);o+=p.length;});return out.buffer;}
+async function demPng(H,N){return pngEncodeRGBA(N,N,demEncode(H,N));}
+// a terrarium tile (S3) to heights, exactly (no canvas)
+async function demFromTerrarium(ab,N){const im=await pngDecode(ab);const H=new Float32Array(N*N),d=im.rgba;
+  if(im.w===N&&im.h===N){for(let i=0;i<N*N;i++)H[i]=d[i*4]*256+d[i*4+1]+d[i*4+2]/256-32768;}
+  else{for(let y=0;y<N;y++)for(let x=0;x<N;x++){const sx=Math.min(im.w-1,Math.floor(x*im.w/N)),sy=Math.min(im.h-1,Math.floor(y*im.h/N)),q=(sy*im.w+sx)*4;H[y*N+x]=d[q]*256+d[q+1]+d[q+2]/256-32768;}}
+  return H;}
 // a web-mercator tile wholly outside Switzerland and its rim
 function lat1Out(latS,latN,lon0,lon1){return latN<45.6||latS>48.0||lon1<5.7||lon0>10.8;}
 function init3D(){
@@ -20327,11 +20561,11 @@ function init3D(){
         // the device -- see sw3dProtocol(); the global tiles fill in abroad
         // finer mesh close up (swissALTI3D down to ~2.5 m on a desktop, ~5 m on a
         // phone): rock bands, ridges and gullies stand up instead of melting
-        'terrain-dem':{type:'raster-dem',tiles:[sw3dReady()?'swtopo://{z}/{x}/{y}':'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',
+        'terrain-dem':{type:'raster-dem',tiles:[sw3dReady()?'swtopo://{z}/{x}/{y}':'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,...(sw3dReady()?{encoding:'custom',redFactor:DEM_F[0],greenFactor:DEM_F[1],blueFactor:DEM_F[2],baseShift:DEM_BASE}:{encoding:'terrarium'}),
           maxzoom:sw3dReady()?(isMobile?14:15):14,attribution:'Gelände © swisstopo'},
         // the same heights once more, for a shading drawn from them (MapLibre
         // wants a separate source for terrain and hillshade)
-        'terrain-hs':{type:'raster-dem',tiles:[sw3dReady()?'swtopo://{z}/{x}/{y}':'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,encoding:'terrarium',
+        'terrain-hs':{type:'raster-dem',tiles:[sw3dReady()?'swtopo://{z}/{x}/{y}':'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],tileSize:256,...(sw3dReady()?{encoding:'custom',redFactor:DEM_F[0],greenFactor:DEM_F[1],blueFactor:DEM_F[2],baseShift:DEM_BASE}:{encoding:'terrarium'}),
           maxzoom:sw3dReady()?(isMobile?14:15):14},
         // swisstopo's orthophoto (OGD: free, also commercially, with the source named)
         'swissimage':{type:'raster',tiles:[swissTile('ch.swisstopo.swissimage','jpeg')],tileSize:256,maxzoom:19,attribution:'Luftbild SWISSIMAGE © swisstopo'},
@@ -20459,7 +20693,8 @@ function photo3dSet(on){try{localStorage.setItem('ssm_3d_photo2',on?'1':'0');}ca
   vis('swissimage-3d',on);vis('relief-3d',true);
   const mv=(document.getElementById("mapOpac3d")||{value:55}).value/100;
   vis('swisstopo-base',!on&&mv>=0.02);vis('hillshade',!on&&mv<=0.98);
-  const ctl=document.getElementById('mapOpac3d');if(ctl&&ctl.parentElement)ctl.parentElement.style.display=on?'none':'';}
+  // (3D kept simple: no relief/map slider any more -- the map at a fixed 80 %)
+  }
 
 document.getElementById('mapOpac3d').oninput=function(){if(!map3d||photo3dOn())return;const v=this.value/100;
   map3d.setPaintProperty('swisstopo-base','raster-opacity',v);
@@ -20751,6 +20986,98 @@ async function sbFetch(input,init){const res=await fetch(input,init);
     return new Response(out,{status:res.status,statusText:res.statusText,headers:h});
   }catch(e){return res;}}
 try{sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},global:{fetch:sbFetch}});}catch(e){console.warn('Supabase SDK not loaded',e);}
+// ── Posts wait for a connection ────────────────────────────────────────────
+// On a weak or missing connection a post no longer fails (and no longer
+// leaves the sheet hanging): the photos and the report are kept on the
+// device and go up by themselves as soon as there is a connection again.
+// Every kind of post (quick report, drawing, observation, activity) goes
+// through the same two calls -- a photo upload into «report-images» and the
+// insert into «reports» -- so both are wrapped here, once:
+//  * an upload that cannot reach the server is kept and reported as done: the
+//    public address of a file follows from its path alone, so the link the
+//    post carries is already the right one;
+//  * the insert that cannot reach the server is kept with a fixed id, so a
+//    retry (or an answer lost on the way) never makes a second post.
+// The queue lives in its own IndexedDB; it is sent photos first, then posts,
+// on `online`, when the app comes back to the front and on a timer.
+const OB_DB='ssm-outbox';let _obDb=null,_obBusy=false,_obTimer=0,_obFail=0;
+function obOpen(){return _obDb||(_obDb=new Promise((res,rej)=>{try{const r=indexedDB.open(OB_DB,1);
+  r.onupgradeneeded=()=>{r.result.createObjectStore('q',{keyPath:'k',autoIncrement:true});};
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e);}}));}
+async function obAll(){const db=await obOpen();return new Promise((res,rej)=>{const q=db.transaction('q').objectStore('q').getAll();q.onsuccess=()=>res(q.result||[]);q.onerror=()=>rej(q.error);});}
+async function obAdd(it){const db=await obOpen();return new Promise((res,rej)=>{const tx=db.transaction('q','readwrite');tx.objectStore('q').add(it);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);});}
+async function obDel(k){const db=await obOpen();return new Promise((res,rej)=>{const tx=db.transaction('q','readwrite');tx.objectStore('q').delete(k);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);});}
+async function obPut(it){const db=await obOpen();return new Promise((res,rej)=>{const tx=db.transaction('q','readwrite');tx.objectStore('q').put(it);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);});}
+function obNetErr(e){if(navigator.onLine===false)return true;
+  const m=String((e&&(e.message||e.error_description||e.name))||e||'');
+  return /failed to fetch|networkerror|network request failed|load failed|fetch failed|timeout|timed out|aborted|offline|ECONN|ENOTFOUND|AuthRetryableFetch/i.test(m)||(e&&(e.status===0||e.status===408||e.status===502||e.status===503||e.status===504));}
+function obTimeout(p,ms){return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]);}
+function obUuid(){return crypto.randomUUID?crypto.randomUUID():'10000000-1000-4000-8000-100000000000'.replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));}
+let _obPillT=0;
+async function obPill(){try{const n=(await obAll()).filter(x=>x.t==='row').length,up=(await obAll()).filter(x=>x.t==='up').length;
+  let el=document.getElementById('obPill');
+  if(!n&&!up){if(el)el.remove();return;}
+  if(!el){el=document.createElement('button');el.id='obPill';el.type='button';el.onclick=()=>obFlush(true);document.body.appendChild(el);}
+  el.innerHTML='<i></i><span>'+(n?(n===1?'1 Beitrag wartet':n+' Beiträge warten'):'Fotos warten')+' auf Netz</span><small>Antippen = jetzt versuchen</small>';}catch(e){}}
+function obSchedule(){clearTimeout(_obTimer);_obTimer=setTimeout(()=>obFlush(false),Math.min(600e3,30e3*Math.pow(2,Math.min(_obFail,4))));}
+async function obFlush(manual){if(_obBusy||!sb)return;if(navigator.onLine===false&&!manual){obPill();return;}
+  _obBusy=true;let sent=0,left=0;
+  try{const{data:ses}=await sb.auth.getSession();if(!(ses&&ses.session)){return;}
+    const all=(await obAll()).sort((a,b)=>(a.t==='up'?0:1)-(b.t==='up'?0:1)||a.k-b.k);
+    for(const it of all){
+      try{
+        if(it.t==='up'){const{error}=await obTimeout(_obRawUpload(it.bucket,it.path,it.blob,{cacheControl:'31536000',contentType:it.ct,upsert:true}),90e3);if(error)throw error;}
+        else{const{error}=await obTimeout(_obRawInsert(it.row),30e3);
+          if(error&&!(error.code==='23505'||/duplicate key/i.test(error.message||'')))throw error;sent++;}
+        await obDel(it.k);
+      }catch(e){
+        if(obNetErr(e)){left++;_obFail++;break;}
+        // the server said no (not a connection problem): a few tries, then let go
+        it.tries=(it.tries||0)+1;if(it.tries>=5){await obDel(it.k);try{toast('Ein Beitrag konnte nicht hochgeladen werden: '+(e.message||e),'err');}catch(_){}}else await obPut(it);
+      }}
+    if(sent){_obFail=0;try{toast(sent===1?'Dein Beitrag ist hochgeladen':sent+' Beiträge hochgeladen','ok');haptic(12);loadDbReports();}catch(e){}}
+  }catch(e){}finally{_obBusy=false;
+    try{const rest=await obAll();if(rest.length)obSchedule();}catch(e){}obPill();}}
+let _obRawInsert=null,_obRawUpload=null;
+(function(){if(!sb)return;
+  // «storage» is a getter that builds a new client on every access in the
+  // SDK: patch what it hands out, not one instance
+  const pd=Object.getOwnPropertyDescriptor(Object.getPrototypeOf(sb)||{},'storage'),fromO=sb.from.bind(sb);
+  const stor0=(pd&&pd.get)?null:sb.storage,stor0from=stor0?stor0.from.bind(stor0):null,
+    storRaw=bucket=>(pd&&pd.get)?pd.get.call(sb).from(bucket):stor0from(bucket);
+  _obRawInsert=row=>fromO('reports').insert(row);
+  _obRawUpload=(bucket,path,blob,opts)=>storRaw(bucket).upload(path,blob,opts);
+  sb.from=function(t){const q=fromO(t);if(t!=='reports'||!q||typeof q.insert!=='function')return q;
+    const ins=q.insert.bind(q);
+    q.insert=function(row,opts){if(Array.isArray(row)||(opts&&Object.keys(opts).length)||!row||typeof row!=='object')return ins(row,opts);
+      if(!row.id)row.id=obUuid();
+      return (async()=>{
+        if(navigator.onLine===false){await obAdd({t:'row',row,at:Date.now()});obQueuedNote();return{data:null,error:null,queued:true};}
+        try{const r=await obTimeout(Promise.resolve(ins(row)),30e3);
+          if(r&&r.error&&obNetErr(r.error)){await obAdd({t:'row',row,at:Date.now()});obQueuedNote();return{data:null,error:null,queued:true};}
+          return r;}
+        catch(e){if(obNetErr(e)){await obAdd({t:'row',row,at:Date.now()});obQueuedNote();return{data:null,error:null,queued:true};}throw e;}})();};
+    return q;};
+  const wrapBucket=function(bucket){const b=storRaw(bucket);if(bucket!=='report-images'||!b||typeof b.upload!=='function')return b;
+    const up=b.upload.bind(b);
+    b.upload=async function(path,blob,opts){
+      const keep=async()=>{await obAdd({t:'up',bucket,path,blob,ct:(opts&&opts.contentType)||(blob&&blob.type)||'image/jpeg',at:Date.now()});obQueuedNote();return{data:{path},error:null};};
+      if(navigator.onLine===false)return keep();
+      try{const r=await obTimeout(Promise.resolve(up(path,blob,opts)),60e3);
+        if(r&&r.error&&obNetErr(r.error))return keep();
+        return r;}
+      catch(e){if(obNetErr(e))return keep();throw e;}};
+    return b;};
+  const patchStor=st=>{if(!st||st._obP)return st;st.from=wrapBucket;try{st._obP=1;}catch(e){}return st;};
+  if(pd&&pd.get)Object.defineProperty(sb,'storage',{configurable:true,get(){return patchStor(pd.get.call(sb));}});
+  else patchStor(sb.storage);
+  addEventListener('online',()=>{_obFail=0;obFlush(false);});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')obFlush(false);});
+  setTimeout(()=>{obFlush(false);},6000);
+})();
+function obQueuedNote(){clearTimeout(_obPillT);
+  // after the post's own «gepostet» message: what really happened
+  _obPillT=setTimeout(()=>{try{toast('Kein stabiles Netz – dein Beitrag wird automatisch hochgeladen, sobald du wieder Verbindung hast.','info');}catch(e){}obPill();obSchedule();},900);}
 function haptic(ms){try{const H=_capPlugin('Haptics');if(H){H.impact({style:(ms||8)>=15?'MEDIUM':'LIGHT'});return;}navigator.vibrate(ms||8);}catch(e){}}
 // --- Custom inline icon set (replaces emoji everywhere in the UI chrome) ---
 const IC={
@@ -23446,7 +23773,7 @@ function modelVsReports(days){
   const n=pairs.length,mae=pairs.reduce((s,[o,m])=>s+Math.abs(m-o),0)/n,bias=pairs.reduce((s,[o,m])=>s+(m-o),0)/n;
   return {n,mae,bias};}
 function modelVsReportsHTML(){let s=null;try{s=modelVsReports(7);}catch(e){}
-  if(!s||!(s.n>=3))return '';
+  if(!s||!(s.n>=1))return '';
   const lean=Math.abs(s.bias)<2?'liegt im Mittel richtig':s.bias<0?'eher zu wenig Schnee':'eher zu viel Schnee';
   return '<div class="mvr" title="Gemeldete Pulvertiefe gegen den Modell-Neuschnee der 72 h davor, am selben Ort und auf derselben Höhe">'
     +'<b>Modell vs. Meldungen</b><span><span>7 Tage</span> · <span>Ø '+Math.round(s.mae)+' cm daneben</span> · <span>'+s.n+' Meldungen</span> · <span>'+lean+'</span></span></div>';}
@@ -26501,11 +26828,11 @@ function feedHitSync(){const list=document.getElementById('feedList');if(!list)r
   const n=_hit.n;
   if(!_hit.at){el.hidden=true;return;}
   el.hidden=false;
-  if(n<5){el.innerHTML='<span class="fh-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/></svg></span>'
-    +'<span class="fh-t"><b>Modell-Check</b><small>Noch '+(n?'zu wenige Meldungen ('+n+')':'keine Meldungen')+' diese Woche – jede Schnellmeldung prüft das Modell</small></span>'+'<button type="button" class="fh-info" onclick="accOpen()" aria-label="Wie genau ist das Modell?">i</button>';return;}
+  if(n<1){el.innerHTML='<span class="fh-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/></svg></span>'
+    +'<span class="fh-t"><b>Modell-Check</b><small>Diese Woche noch keine Schnellmeldung – jede Meldung prüft das Modell</small></span>'+'<button type="button" class="fh-info" onclick="accOpen()" aria-label="Wie genau ist das Modell?">i</button>';return;}
   const pc=Math.round(_hit.ok/n*100),ps=Math.round(_hit.same/n*100);
   el.innerHTML='<span class="fh-ring" style="--p:'+pc+'" aria-hidden="true"><b>'+pc+'%</b></span>'
-    +'<span class="fh-t"><b>Modell diese Woche: '+pc+' % bestätigt</b><small>'+n+' Schnellmeldungen · '+ps+' % genau gleich, '+(pc-ps)+' % ähnlich</small></span>'+'<button type="button" class="fh-info" onclick="accOpen()" aria-label="Wie genau ist das Modell?">i</button>';}
+    +'<span class="fh-t"><b>Modell diese Woche: '+pc+' % bestätigt</b><small>'+n+' Schnellmeldung'+(n>1?'en':'')+' · '+ps+' % genau gleich, '+(pc-ps)+' % ähnlich'+(n<5?' · erst wenige Meldungen, mit Vorsicht lesen':'')+'</small></span>'+'<button type="button" class="fh-info" onclick="accOpen()" aria-label="Wie genau ist das Modell?">i</button>';}
 // «Wie genau ist das Modell?» -- the validation so far, in plain words: the
 // community check of this week and the checks against measurements (SLF,
 // MeteoSchweiz) from the model rounds. Numbers from docs/plan-modell-runde-*.
@@ -26648,7 +26975,7 @@ function cdDayLbl(d){const t=new Date(d+'T12:00Z');return {wd:t.toLocaleDateStri
 function cdSrcHTML(){return '<div class="cd-src" role="tablist">'+[['st','Messstationen SLF / MeteoSchweiz'],['app','Meldungen in Snowmapper']]
   .map(x=>'<button type="button" role="tab" aria-selected="'+(x[0]===_cd.src)+'" class="'+(x[0]===_cd.src?'on':'')+'" onclick="cdSrc(\''+x[0]+'\')">'+x[1]+'</button>').join('')+'</div>';}
 function cdChipsHTML(){return '<div class="cd-chips" role="tablist">'+CD_LAYERS.map(x=>'<button type="button" role="tab" aria-selected="'+(x.k===_cd.k)+'" class="'+(x.k===_cd.k?'on':'')+'" onclick="cdLayer(\''+x.k+'\')">'+x.t+'</button>').join('')+'</div>';}
-function cdSrc(k){_cd.src=k;if(_cd.lm){try{_cd.lm.remove();}catch(e){}_cd.lm=null;}cdRender();if(k==='app')cdAppCompute();try{haptic(3);}catch(e){}}
+function cdSrc(k){_cd.src=k;if(_cd.lm){try{_cd.lm.remove();}catch(e){}_cd.lm=null;}if(k==='app')_cd.app=null;cdRender();if(k==='app')cdAppCompute();try{haptic(3);}catch(e){}}
 // a map of points coloured by model - measured (or reported)
 function cdPtsMap(pts,bins,u){const box=document.getElementById('cdMap');if(!box)return;
   if(_cd.lm&&_cd.lm.getContainer()!==box){try{_cd.lm.remove();}catch(e){}_cd.lm=null;}
@@ -26683,15 +27010,20 @@ function cdHsHTML(){const V=vaMan&&vaMan.validation,I=V&&V.imis,R=cdHsRows(),D=_
 function cdHsMap(){const R=cdHsRows();cdPtsMap(R.map(x=>({lat:x.lat,lon:x.lon,m:x.m,o:x.o,pop:'<b>'+escapeHtml(x.name||x.code)+'</b><br><small>'+x.code+' · '+x.z+' m · IMIS</small><br>gemessen '+Math.round(x.o)+' cm · Modell '+Math.round(x.m)+' cm<br><b>Abweichung '+cdFmt(x.m-x.o,1)+' cm</b>'})),[-40,-20,-10,10,20,40],'cm');}
 // ── reports in this app: what people found vs what the model had there ──
 async function cdAppCompute(){if(_cd.appBusy)return;_cd.appBusy=true;
-  try{const R=(allReports||[]).filter(r=>r.lat!=null&&r.lng!=null&&r.created_at&&Date.now()-Date.parse(r.created_at)<21*864e5);
+  // the app keeps a report's time as capturedAt / createdAt (rptTimeMs):
+  // the first version asked for created_at and so never found one
+  try{const R=(allReports||[]).filter(r=>r.lat!=null&&r.lng!=null&&Date.now()-rptTimeMs(r)<21*864e5);
     const ok=typeof vaAvailable==='function'&&vaAvailable()&&await vaPkLoad();
     if(!ok||!vaEng){_cd.app={rows:[],err:'Das Schneedeckenmodell ist noch nicht geladen.'};return;}
     if(!_cd.E){_cd.E=vaHiEngine();_cd.E.init(vaPk,vaEng.shade,vaEng.forest,vaEng.precip);}
     const E=_cd.E,x=E.mi,m=new Float64Array(E.nm),tsOf=g=>Date.parse(String(g).replace(/T(\d{2})(\d{2})$/,'T$1:$2')+':00Z'),out=[];
     for(const r of R){const cd=r.condition_data||{},cm=_rptDepth(r),snow=String(cd.snow||r.subtype||'');
-      const isPow=(cm!=null&&cm>0)||cd.powder===true||/pulver|powder/i.test(snow);
-      if(cm==null&&!cd.quick&&!/pulver|powder/i.test(snow))continue;
-      const t=Date.parse(r.created_at);let tag=null,bd=1e15;(vaMan.tags||[]).forEach(g=>{const d=Math.abs(tsOf(g)-t);if(d<bd){bd=d;tag=g;}});
+      const snowT=snow+' '+String(r.sub||'')+' '+String(cd.measurement||r.measurement||'');
+      const isPow=(cm!=null&&cm>0)||cd.powder===true||/pulver|powder/i.test(snowT);
+      // anything that says something about the snow: a depth, a quick report,
+      // a snow type, drawn zones or snow points along a route
+      if(cm==null&&!cd.quick&&!cd.zones&&!cd.snowPts&&!/pulver|powder|harsch|sulz|nass|hart|kruste|wind/i.test(snowT))continue;
+      const t=rptTimeMs(r);let tag=null,bd=1e15;(vaMan.tags||[]).forEach(g=>{const d=Math.abs(tsOf(g)-t);if(d<bd){bd=d;tag=g;}});
       if(!tag||bd>3*3600e3){out.push({r,lat:r.lat,lon:r.lng,t,rep:cm,repPow:isPow,out:true});continue;}
       const f=await vaPkFrame(tag);if(!f)continue;E.setFrame(f.vals,f.ok);
       let el=null,sl=0,as=0;try{el=fineElev(r.lat,r.lng);sl=fineSlope(r.lat,r.lng)||0;as=fineAspectDeg(r.lat,r.lng)||0;}catch(e){}
@@ -26711,7 +27043,7 @@ function cdAppHTML(){const A=_cd.app;
   const kpi='<div class="cd-kpis"><div class="cd-kpi '+cdTone(mae)+'"><span>Pulver-cm</span>'+(mae!=null?'<i class="cd-sc '+cdScTone(cdScore(mae))+'">'+cdScore(mae)+'</i>':'')+'<b>'+cdFmt(mae)+' <small>cm</small></b><em>'+(cmR.length?'Bias '+cdFmt(bias,1)+' cm · '+cmR.length+' Meldung'+(cmR.length>1?'en':''):'noch keine cm-Angaben')+'</em></div>'
     +'<div class="cd-kpi '+(hit==null?'':hit>=.8?'g':hit>=.6?'m':'b')+'"><span>Pulver ja / nein</span><b>'+(hit==null?'–':Math.round(hit*100)+' %')+'</b><em>'+R.length+' Meldung'+(R.length===1?'':'en')+' getroffen</em></div></div>';
   const fmtT=t=>new Date(t).toLocaleString('de-CH',{weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});
-  const list=A.rows.length?'<div class="cd-hs">'+A.rows.map(x=>{const nm=escapeHtml(String((x.r.location&&x.r.location.name)||x.r.location||x.r.subtype||'Meldung')).slice(0,60);
+  const list=A.rows.length?'<div class="cd-hs">'+A.rows.map(x=>{const nm=escapeHtml(String(x.r.peak||x.r.dest||x.r.sub||x.r.user||'Meldung')).slice(0,60);
       if(x.out)return '<div class="cd-hsr cd-out"><span><b>'+nm+'</b><small>'+fmtT(x.t)+' · ausserhalb des Modellzeitraums</small></span><em>'+(x.rep!=null?x.rep:(x.repPow?'Pulver':'–'))+'</em><em>–</em><i></i></div>';
       const d=x.rep!=null?x.mod-x.rep:null,ok=x.repPow===x.modPow;
       return '<div class="cd-hsr"><span><b>'+nm+'</b><small>'+fmtT(x.t)+(x.z?' · '+x.z+' m':'')+' · Modell HS '+x.hs+' cm</small></span><em>'+(x.rep!=null?x.rep:(x.repPow?'Pulver':'kein'))+'</em><em>'+(x.modPow?x.mod:'kein')+'</em>'
