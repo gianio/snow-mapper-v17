@@ -947,7 +947,8 @@ def test_drift():
           "precipitation": [2.0, 0.0]}
     btc = {"2026-11-10T00:00": (-2.0, 0.0), "2026-11-10T01:00": (-2.0, 0.0)}
     lb = forcing._lapsed(hb, 0.0, band_t=btc)["temperature_2m"]
-    check("precipitating hour: band at most 1.5 K below the profile", abs(lb[0] - 1.5) < 1e-6, str(lb))
+    check("precipitating hour: band at most PRECIP_MIX_K below the profile",
+          abs(lb[0] - max(-2.0, 3.0 - forcing.PRECIP_MIX_K)) < 1e-6, str(lb))
     check("dry hour: the band's own (cold-pool) temperature is kept", abs(lb[1] + 2.0) < 1e-6, str(lb))
     from variant_a import assim
     A_runs = [{"id": f"w0_{z}", "wp": "w0", "elev": z, "slope": 0, "slope_c": 0, "aspect_k": -1}

@@ -535,7 +535,14 @@ def _profile_dT(hourly, i, z_ref, z):
 
 
 PRECIP_MIX_MM = 0.1   # mm/h: an hour counts as precipitating
-PRECIP_MIX_K = 1.5    # K a band may sit below the column profile while it precipitates
+# K a band may sit below the column profile while it precipitates. Was 1.5:
+# 111 SwissMetNet valley/mountain pairs (<= 25 km, 27.11.) show the opposite
+# of "mixed air" -- in precipitating hours near freezing the valley station
+# is 3.7 K below the mountain station carried down at 6.5 K/km (93 % of the
+# hours more than 1.5 K): melting snow cools the air below the snowfall line.
+# 1.5 K warmed exactly the valleys where it snowed; 4 K keeps only the
+# implausible cold-pool cases out.
+PRECIP_MIX_K = 4.0
 
 
 def _lapsed(hourly, dz, precip_factor=1.0, z_ref=None, band_t=None):
