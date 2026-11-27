@@ -9,7 +9,10 @@ still lands on top -- only the snow the stations do not see is removed.
 
 Why: in autumn the model kept 10-30 cm where the stations had ~1 cm
 (Nov 2026: bias +10..13 cm with 1 cm measured). That phantom base is what
-made the map show "Pulver" on bare slopes.
+made the map show "Pulver" on bare slopes. Much of it was the assumed
+mid-winter base of slopes that had to start mid-season; the state advance
+now takes that out of the snowpack itself (snowpack_runner.strip_assumed_base)
+and such slopes start from a neighbour's snowpack (matrix.pick_siblings).
 
 Also `mask_band_outliers`: a single slope class at one height band with far
 more snow than the bands right above and below (e.g. 104 cm between 6 and
@@ -21,6 +24,13 @@ from __future__ import annotations
 import numpy as np
 
 MIN_EXCESS_CM = 3.0     # below this the station and the model agree
+# 27.11.: a station's excess said little about the rest of its weather point.
+# Station errors 5-10 km apart correlate at 0.05; taking one station's excess
+# off a whole point made the held-out stations worse (MAE 14.6 -> 15.9 cm,
+# leave-one-out over 131 IMIS stations). Two stations agreeing and half the
+# excess: 14.5. So that.
+APPLY_MIN_STATIONS = 2
+APPLY_SHRINK = 0.5
 ORPHAN_KM = 25.0        # weather points without a station of their own: stations this close
 ORPHAN_DZ = 300.0       # ... whose height lies in (or this close to) the point's bands
 ORPHAN_MIN_F = 0.5      # never take off more than half the snow
@@ -28,8 +38,9 @@ FADE_M = 600.0          # station influence fades to zero over this height dista
 DEPTH_METS = ("total_hs_cm", "powder_depth_cm", "soft_top_cm", "weak_layer_depth_cm", "mf_base_cm")
 
 
-def offsets(rows):
-    """{wp: [(station elevation, excess cm)]} from imis.compare rows."""
+def offsets(rows, min_stations=1):
+    """{wp: [(station elevation, excess cm)]} from imis.compare rows; only
+    weather points where at least `min_stations` stations see an excess."""
     out = {}
     for r in rows or []:
         if r.get("holdout"):
@@ -37,7 +48,7 @@ def offsets(rows):
         ex = float(r.get("last_model", 0)) - float(r.get("last_meas", 0))
         if ex >= MIN_EXCESS_CM:
             out.setdefault(r["wp"], []).append((float(r["elev"]), ex))
-    return out
+    return {wp: v for wp, v in out.items() if len(v) >= min_stations}
 
 
 def excess_at(stations, elev):
@@ -54,8 +65,9 @@ def excess_at(stations, elev):
 
 
 def apply(rows, runs, results, mets):
-    """Remove the station-confirmed excess in place. Returns a summary."""
-    offs = offsets(rows)
+    """Remove half the excess that two or more stations of a weather point
+    confirm, in place. Returns a summary."""
+    offs = offsets(rows, APPLY_MIN_STATIONS)
     if not offs:
         return {"used": False, "runs": 0}
     idx = {m: mets.index(m) for m in DEPTH_METS if m in mets}
@@ -67,7 +79,7 @@ def apply(rows, runs, results, mets):
         st = offs.get(r["wp"])
         if not st or r["id"] not in results:
             continue
-        d = excess_at(st, float(r["elev"]))
+        d = APPLY_SHRINK * excess_at(st, float(r["elev"]))
         if d < 0.5:
             continue
         arr = results[r["id"]][0]

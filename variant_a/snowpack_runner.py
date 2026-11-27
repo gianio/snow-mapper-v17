@@ -114,6 +114,106 @@ def write_sno(p, sno_dir: Path, start_date, bare=False):
     (sno_dir / f"{p['id']}.sno").write_text(c)
 
 
+# ── carried snow files ───────────────────────────────────────────────────────
+# The assumed base above is written with the deposition date 1900-01-01, and
+# SNOWPACK keeps every element's deposition date through its output .sno. So
+# a carried snowpack that still holds 1900 elements still holds the invented
+# base. Nov 2026: ~4100 slopes that had to start mid-season (new bands, new
+# runs) got 1.2 m at 2200 m, 1.7 m at 2600 m on 9 October -- weeks before the
+# first real snow -- and the stations under them read 2-50 cm where the model
+# had 40-130 (Rientallücke 3 vs 43, Engstligenalp 52 vs 132).
+BASE_YEAR_MAX = 1950
+
+
+def _sno_split(text):
+    """(header lines, field names, data lines) of a SMET .sno."""
+    lines = text.splitlines()
+    try:
+        k = next(i for i, ln in enumerate(lines) if ln.strip().upper() == "[DATA]")
+    except StopIteration:
+        return lines, [], []
+    head = lines[:k + 1]
+    fields = []
+    for ln in head:
+        key, _, val = ln.partition("=")
+        if key.strip().lower() == "fields":
+            fields = val.split()
+    return head, fields, [ln for ln in lines[k + 1:] if ln.strip()]
+
+
+def _set_header(head, key, value):
+    out, done = [], False
+    for ln in head:
+        k, sep, _ = ln.partition("=")
+        if sep and k.strip() == key:
+            out.append(f"{k.rstrip():<12} = {value}" if len(k.rstrip()) < 12 else f"{k.rstrip()} = {value}")
+            done = True
+        else:
+            out.append(ln)
+    if not done:                      # before the fields line
+        i = next((i for i, ln in enumerate(out) if ln.partition("=")[0].strip().lower() == "fields"), len(out) - 1)
+        out.insert(i, f"{key} = {value}")
+    return out
+
+
+def _header_value(head, key, default=None):
+    for ln in head:
+        k, sep, v = ln.partition("=")
+        if sep and k.strip() == key:
+            return v.strip()
+    return default
+
+
+def strip_assumed_base(text):
+    """(text, removed_cm): the .sno without the elements of the assumed base
+    (deposition date before BASE_YEAR_MAX). Soil layers stay. HS_Last, the
+    layer count and the erosion level follow."""
+    head, fields, data = _sno_split(text)
+    if not data or "timestamp" not in fields or "Layer_Thick" not in fields:
+        return text, 0.0
+    it, ith = fields.index("timestamp"), fields.index("Layer_Thick")
+    ine = fields.index("ne") if "ne" in fields else None
+    n_soil = int(float(_header_value(head, "nSoilLayerData", "0") or 0))
+    keep, removed_cm, removed_el = [], 0.0, 0
+    for j, ln in enumerate(data):
+        c = ln.split()
+        try:
+            year = int(c[it][:4])
+        except (ValueError, IndexError):
+            year = 9999
+        if j >= n_soil and year < BASE_YEAR_MAX:
+            removed_cm += float(c[ith]) * 100.0
+            removed_el += int(float(c[ine])) if ine is not None else 1
+            continue
+        keep.append(ln)
+    if removed_el == 0:
+        return text, 0.0
+    n_snow = len(keep) - n_soil
+    hs = sum(float(ln.split()[ith]) for ln in keep[n_soil:])
+    head = _set_header(head, "nSnowLayerData", str(n_snow))
+    head = _set_header(head, "HS_Last", f"{hs:.4f}")
+    el = _header_value(head, "ErosionLevel")
+    if el is not None:
+        try:
+            head = _set_header(head, "ErosionLevel", str(max(0, int(float(el)) - removed_el)))
+        except ValueError:
+            pass
+    return "\n".join(head + keep) + "\n", round(removed_cm, 1)
+
+
+def retarget_sno(text, p):
+    """A carried .sno of one slope as the start of another (`p`): the snow
+    layers stay, the slope's identity, position and geometry are `p`'s."""
+    head, _, data = _sno_split(text)
+    for key, val in (("station_id", p["id"]), ("station_name", f"va_{p['id']}"),
+                     ("latitude", f"{p['lat']:.6f}"), ("longitude", f"{p['lon']:.6f}"),
+                     ("altitude", f"{p['elev']:.1f}"),
+                     ("easting", f"{p.get('e_lv95', 0.0):.0f}"), ("northing", f"{p.get('n_lv95', 0.0):.0f}"),
+                     ("SlopeAngle", f"{p['slope']:.2f}"), ("SlopeAzi", f"{p['aspect']:.2f}")):
+        head = _set_header(head, key, val)
+    return "\n".join(head + data) + "\n"
+
+
 def write_ini(p, ini_dir: Path, sno_dir: Path, meteo_dir: Path, runs_dir: Path,
               prof_start_days=0.0, step_h=None, snow_out: Path | None = None,
               prof_write=True, name=None, day=None):

@@ -773,15 +773,34 @@ def test_imis_correction():
     check("model HS is interpolated to the station height", rows and abs(rows[0]["last_model"] - 70) < 0.1,
           str(rows[:1]))
     check("bias is model minus measured", summ["bias_cm"] == -70.0, str(summ))
-    f1 = imis.update_factors(rows, {})
-    check("too little snow -> more precipitation, but a bounded step",
+    # the factor learns from snowfall growth, not from the absolute height:
+    # a constant offset (old snow the model has too little of) moves nothing
+    check("a steady offset without a snowfall does not move the factor",
+          imis.update_factors(rows, {}) == {}, str(imis.update_factors(rows, {})))
+    check("without a snowfall an old factor relaxes towards 1",
+          0.5 < imis.update_factors(rows, {"w0": 0.5})["w0"] > 0.5 ** 1.0
+          and imis.update_factors(rows, {"w0": 0.5})["w0"] < 1.0)
+    days = [datetime(2026, 3, 25) + timedelta(hours=24 * i) for i in range(6)]
+    gm, gd = imis.gains([(t, 40.0 + 10 * min(i, 3), 40.0 + 4 * min(i, 3)) for i, t in enumerate(days)])
+    check("gains: 30 cm measured, 12 cm model over three snowy days", abs(gm - 30) < 1e-6 and abs(gd - 12) < 1e-6,
+          f"{gm} {gd}")
+    check("gains: settling between snowfalls does not count",
+          imis.gains([(days[0], 50.0, 50.0), (days[1], 46.0, 47.0), (days[2], 44.0, 45.0)]) == (0.0, 0.0))
+    snowy = [dict(rows[0], gain_meas=30.0, gain_model=12.0)]
+    f1 = imis.update_factors(snowy, {})
+    check("model grew too little -> more precipitation, but a bounded step",
           1.0 < f1["w0"] <= imis.R_MAX ** imis.STEP_EXP + 1e-9, str(f1))
     f = {"w0": 1.0}
-    for _ in range(20):
-        f = imis.update_factors(rows, f)
+    for _ in range(40):
+        f = imis.update_factors(snowy, f)
     check("the factor never leaves its bounds", f["w0"] <= imis.F_MAX, str(f))
-    held = [dict(r, holdout=True) for r in rows]
-    check("held-out stations never move the factor", imis.update_factors(held, {"w0": 1.0}) == {"w0": 1.0})
+    f = {"w0": 1.0}
+    for _ in range(40):
+        f = imis.update_factors([dict(rows[0], gain_meas=5.0, gain_model=40.0)], f)
+    check("... nor its lower one (it ended at 0.5 under the old rule)", f["w0"] >= imis.F_MIN, str(f))
+    held = [dict(r, holdout=True) for r in snowy]
+    check("held-out stations never move the factor", imis.update_factors(held, {"w0": 1.1}) ==
+          {"w0": round(1.1 ** imis.LEAK, 3)})
     col = {}
     imis.compare(st, wps, runs, res, frames, METS, now=frames[-1], collect=col)
     check("the comparison hands its hourly pairs to the drift history",
@@ -841,7 +860,8 @@ def test_advance_only():
     runs = [{"id": "w000_1800_F", "wp": "w000", "elev": 1800.0, "slope": 0.0, "lat": 46.8, "lon": 9.8}]
     seen = []
 
-    def fake_adv(runs_, carried, st_sno, st_time, to_time, out_dir, workers=None, bare=False, cold_from=None):
+    def fake_adv(runs_, carried, st_sno, st_time, to_time, out_dir, workers=None, bare=False, cold_from=None,
+                 siblings=None):
         seen.append({"carried": set(carried), "to": to_time, "bare": bare, "cold_from": cold_from})
         Path(out_dir).mkdir(parents=True, exist_ok=True)
         for r in runs_:
@@ -939,10 +959,44 @@ def test_drift():
     rowsA = [{"wp": "w0", "elev": 2400, "last_model": 26, "last_meas": 1, "holdout": False},
              {"wp": "w0", "elev": 2400, "last_model": 26, "last_meas": 26, "holdout": True}]
     sA = assim.apply(rowsA, A_runs, A_res, A_mets)
+    check("one station alone does not correct its weather point", not sA["used"] and
+          A_res["w0_2400"][0][0, 0] == 26, str(sA))
+    rowsA.append({"wp": "w0", "elev": 2400, "last_model": 26, "last_meas": 1, "holdout": False})
+    sA = assim.apply(rowsA, A_runs, A_res, A_mets)
     v24 = A_res["w0_2400"][0]
-    check("IMIS excess removed at the station height, new snow kept on top",
-          v24[0, 0] == 1 and v24[1, 0] == 11 and v24[0, 1] <= v24[0, 0], str(v24.tolist()) + str(sA))
-    check("held-out stations do not correct", len(assim.offsets(rowsA)["w0"]) == 1)
+    check("two stations: half their excess off at their height, new snow kept on top",
+          abs(v24[0, 0] - 13.5) < 1e-6 and abs(v24[1, 0] - 23.5) < 1e-6 and v24[0, 1] <= v24[0, 0],
+          str(v24.tolist()) + str(sA))
+    check("held-out stations do not correct", len(assim.offsets(rowsA)["w0"]) == 2)
+    # the assumed base in a carried snowpack, and a slope starting from a neighbour
+    sno_dir = Path(tempfile.mkdtemp())
+    p0 = {"id": "w0_2300_F", "wp": "w0", "elev": 2300.0, "slope": 0.0, "aspect": 0.0, "lat": 46.6, "lon": 8.4}
+    SR.write_sno(p0, sno_dir, "2026-10-09")
+    txt = (sno_dir / "w0_2300_F.sno").read_text()
+    real = ("2026-11-18T06:00 0.2500 268.15 0.1200 0.0000 0.8800 0.0000 0.0000 0.0000 0.0000 "
+            "0.2000 0.1000 0.8000 0.3000 0 0.000000 1 0.000000 0.000000")
+    carried_txt = txt.rstrip("\n") + "\n" + real + "\n"
+    carried_txt = carried_txt.replace("nSnowLayerData   = 3", "nSnowLayerData   = 4")
+    out, cm = SR.strip_assumed_base(carried_txt)
+    _h, _f, data = SR._sno_split(out)
+    check("assumed base (1900 elements) taken out of a carried snowpack, real snow kept",
+          cm > 100 and len(data) == 1 and data[0].startswith("2026-11-18")
+          and SR._header_value(_h, "nSnowLayerData") == "1"
+          and abs(float(SR._header_value(_h, "HS_Last")) - 0.25) < 1e-6, f"{cm} {data} {_h}")
+    check("a snowpack without the base is left as it is", SR.strip_assumed_base(out)[1] == 0.0)
+    p1 = dict(p0, id="w0_2450_N30", elev=2450.0, slope=30.0, aspect=0.0, lat=46.61)
+    rt = SR.retarget_sno(out, p1)
+    _h, _f, data = SR._sno_split(rt)
+    check("a neighbour's snowpack takes the new slope's id, height and geometry",
+          SR._header_value(_h, "station_id") == "w0_2450_N30" and SR._header_value(_h, "altitude") == "2450.0"
+          and SR._header_value(_h, "SlopeAngle") == "30.00" and len(data) == 1, str(_h))
+    from variant_a import matrix as MX
+    sib_runs = [dict(p0, id="a", elev=2300.0), dict(p0, id="b", elev=2600.0, slope=30.0, aspect=180.0),
+                dict(p0, id="c", elev=2450.0, slope=30.0, aspect=180.0),
+                dict(p0, id="d", elev=3400.0), dict(p0, id="e", wp="w9", elev=2350.0, lat=47.5)]
+    sib = MX.pick_siblings(sib_runs, {"a", "b"})
+    check("mid-season: the nearest carried slope of the same point, same slope class first",
+          sib.get("c") == "b" and "d" not in sib and "e" not in sib, str(sib))
     check("ground heat: ~12 W/m2 at the season start, ~2 in mid-winter",
           SR.ground_heat("2026-10-01") >= 11.5 and 1.9 <= SR.ground_heat("2027-01-20") <= 2.6
           and SR.ground_heat("2026-11-08") > SR.ground_heat("2026-12-15"))

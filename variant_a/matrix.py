@@ -20,7 +20,7 @@ subregion and gave each its own weather. There, "north vs south at 2400 m"
 was also "weather cell A vs weather cell B".
 """
 from __future__ import annotations
-import glob, os, shutil, time
+import glob, math, os, shutil, time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -360,18 +360,63 @@ def run_matrix(runs, target_date, win, step_h, prof_step_h, workers=None, spinup
     return results, layer_ts, prof_ts
 
 
+SIBLING_DZ = 300.0        # a slope that must start mid-season takes the snowpack of
+SIBLING_KM = 25.0         # a carried slope this close in height (and, off its own
+                          # weather point, in distance)
+
+
+def pick_siblings(runs, carried):
+    """{run id: carried run id} for runs without a state of their own.
+
+    Mid-season a slope with no carried snowpack (a new band, a new aspect, a
+    new weather point) used to start 21 days back on the assumed base -- a
+    mid-winter climatology (1.2 m at 2200 m) laid down in October. A carried
+    neighbour knows this winter: the same weather point, the nearest height,
+    preferably the same slope class; else the nearest weather point's slope
+    at that height. Runs with no neighbour within SIBLING_DZ / SIBLING_KM keep
+    the old cold start."""
+    have = [r for r in runs if r["id"] in carried]
+    if not have:
+        return {}
+    by_wp = {}
+    for r in have:
+        by_wp.setdefault(r["wp"], []).append(r)
+
+    def cost(r, c):
+        dz = abs(float(c["elev"]) - float(r["elev"]))
+        geo = (0.0 if c["slope"] == r["slope"] else 40.0) + \
+              (0.0 if c["aspect"] == r["aspect"] or not r["slope"] else 20.0)
+        return dz + geo
+
+    out = {}
+    for r in runs:
+        if r["id"] in carried:
+            continue
+        cand = [c for c in by_wp.get(r["wp"], []) if abs(float(c["elev"]) - float(r["elev"])) <= SIBLING_DZ]
+        if not cand:
+            cand = [c for c in have
+                    if abs(float(c["elev"]) - float(r["elev"])) <= SIBLING_DZ
+                    and math.hypot((c["lon"] - r["lon"]) * 76.0, (c["lat"] - r["lat"]) * 111.0) <= SIBLING_KM]
+        if cand:
+            out[r["id"]] = min(cand, key=lambda c: (cost(r, c), c["id"]))["id"]
+    return out
+
+
 def advance_state(runs, carried, st_sno, st_time, to_time, out_dir: Path,
-                  workers=None, spinup_days=None, bare=False, cold_from=None):
+                  workers=None, spinup_days=None, bare=False, cold_from=None, siblings=None):
     """Integrate every run to `to_time` and write its snowpack there.
 
     `carried` are the run ids that continue from `st_sno` (valid at
-    `st_time`); every other run cold-starts at `cold_from` (live: the season
+    `st_time`); `siblings` ({run: carried run}) start from that neighbour's
+    snowpack; every other run cold-starts at `cold_from` (live: the season
     start), else `spinup_days` before `to_time`, from the synthetic base or
-    from bare ground (`bare`). Nothing is written
+    from bare ground (`bare`). Carried snowpacks lose what is left of the
+    synthetic base (snowpack_runner.strip_assumed_base). Nothing is written
     but the final .sno: out_dir/<run_id>.sno. Returns the ids that made it.
     """
     from . import snowpack_runner
     spinup_days = spinup_days or config.SPINUP_DAYS
+    siblings = dict(siblings or {}) if st_sno is not None else {}
     base = config.WORK_DIR / "advance"
     sno_dir, ini_dir, runs_dir = base / "sno", base / "ini", base / "runs"
     raw = base / "out"
@@ -379,30 +424,49 @@ def advance_state(runs, carried, st_sno, st_time, to_time, out_dir: Path,
         d.mkdir(parents=True, exist_ok=True)
     meteo_dir = config.WORK_DIR / "meteo"
     cold_start = (cold_from or (to_time - timedelta(days=spinup_days))).date().isoformat()
+    by_id = {r["id"]: r for r in runs}
+
+    def carried_text(rid):
+        txt, cm = snowpack_runner.strip_assumed_base((Path(st_sno) / f"{rid}.sno").read_text())
+        stripped[0] += cm > 0
+        stripped[1] += cm
+        return txt
+
+    stripped = [0, 0.0]
     jobs = []
-    n_cold = 0
+    n_cold = n_sib = 0
     for r in runs:
-        if r["id"] in carried and st_sno is not None and st_time < to_time:
-            shutil.copy2(Path(st_sno) / f"{r['id']}.sno", sno_dir / f"{r['id']}.sno")
-        elif r["id"] in carried:
+        from_state = r["id"] in carried and st_sno is not None
+        if from_state and st_time < to_time:
+            (sno_dir / f"{r['id']}.sno").write_text(carried_text(r["id"]))
+        elif from_state:
             # state already at to_time: nothing to integrate
-            shutil.copy2(Path(st_sno) / f"{r['id']}.sno", Path(out_dir) / f"{r['id']}.sno")
+            (Path(out_dir) / f"{r['id']}.sno").write_text(carried_text(r["id"]))
             continue
+        elif r["id"] in siblings and st_time < to_time:
+            src = by_id.get(siblings[r["id"]]) or {"id": siblings[r["id"]]}
+            (sno_dir / f"{r['id']}.sno").write_text(
+                snowpack_runner.retarget_sno(carried_text(src["id"]), r))
+            from_state = True
+            n_sib += 1
         else:
             snowpack_runner.write_sno(r, sno_dir, cold_start, bare=bare)
             n_cold += 1
         # the ground heat follows the season: take it at the middle of what
         # this run integrates (a 30-day replay step at its end date would
         # give the whole of October the value of 31 October)
-        t_from = st_time if (r["id"] in carried and st_sno is not None) else datetime.fromisoformat(cold_start)
+        t_from = st_time if from_state else datetime.fromisoformat(cold_start)
         mid = t_from + (to_time - t_from) / 2
         snowpack_runner.write_ini(r, ini_dir, sno_dir, meteo_dir, runs_dir, 0.0, 24,
                                   snow_out=raw, prof_write=False, day=mid)
         jobs.append((str(ini_dir / f"{r['id']}.ini"), to_time.strftime("%Y-%m-%dT%H:%M"),
                      str(raw / f"{r['id']}_va.sno")))
-    print(f"  state advance to {to_time:%Y-%m-%d %H:%M}: {len(jobs) - n_cold} carried, "
+    print(f"  state advance to {to_time:%Y-%m-%d %H:%M}: {len(jobs) - n_cold - n_sib} carried, "
+          f"{n_sib} from a neighbour's snowpack, "
           f"{n_cold} cold-start{' (bare ground)' if bare and n_cold else ''}"
-          f"{' from ' + cold_start if n_cold else ''}")
+          f"{' from ' + cold_start if n_cold else ''}"
+          + (f"; assumed base removed from {stripped[0]} snowpacks ({stripped[1] / max(1, stripped[0]):.0f} cm each)"
+             if stripped[0] else ""))
     ok, fail = set(), []
     t0 = time.time()
     workers = workers or (os.cpu_count() or 4)
