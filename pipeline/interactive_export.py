@@ -8250,6 +8250,7 @@ body.desk .fc-wrap:has(.fc-nav) .fc-nav{display:flex}
   padding:8px 14px 8px 12px;border:0;border-radius:999px;background:#10243F;color:#fff;font:600 13px/1.2 var(--font);box-shadow:0 4px 16px rgba(0,0,0,.28);cursor:pointer}
 #obPill i{width:9px;height:9px;border-radius:50%;background:#FFB020;animation:obP 1.4s ease-in-out infinite;flex:none}
 #obPill small{font:400 11.5px/1 var(--font);opacity:.7}
+#obPill.ob-up i{background:#2A8FD8}
 @keyframes obP{0%,100%{opacity:.35}50%{opacity:1}}
 @media (max-width:420px){#obPill small{display:none}}
 /* ==== Runde 25.11.: modern, solid timeline; side buttons a touch bigger ==== */
@@ -10761,9 +10762,24 @@ function tvZoom(factor,anchorFrac){
   let ns=Math.max(TV_MIN,Math.min(T,TV_MAX,span/factor));
   tv0=mid-ns*(anchorFrac==null?0.5:anchorFrac);tv1=tv0+ns;tvClamp();
 }
-// t <-> x, in view coordinates
-function tvX(t,cw){return (t-tv0)/tvSpan()*cw;}
-function tvT(x,cw){return tv0+x/cw*tvSpan();}
+// t <-> x, in view coordinates. Nights are marked but take less room: an
+// hour between sunset and sunrise gets TL_NIGHT_W of a day hour's width, so
+// the days -- when people ski -- get the space. The model still runs every
+// hour of the night (night snowfall, refreezing crusts, settling); only the
+// slider is drawn tighter there.
+const TL_NIGHT_W=0.35;let _tlC=null;
+function tlNightMs(ms){const st=sunTimes(Math.floor(ms/864e5)*864e5);if(!st)return false;return ms<st.rise||ms>st.set;}
+function tlCum(){if(_tlC&&_tlC.T===T)return _tlC.c;
+  const c=new Float64Array(T+2),ms0=tMs(0);
+  for(let t=0;t<=T;t++)c[t+1]=c[t]+(tlNightMs(ms0+(t+.5)*36e5)?TL_NIGHT_W:1);
+  _tlC={T,c};return c;}
+function tlC(t){const c=tlCum();if(t<=0)return t;if(t>=T+1)return c[T+1]+(t-T-1);
+  const i=Math.floor(t);return c[i]+(t-i)*(c[i+1]-c[i]);}
+function tlCinv(v){const c=tlCum();if(v<=0)return v;if(v>=c[T+1])return T+1+(v-c[T+1]);
+  let lo=0,hi=T+1;while(hi-lo>1){const m=(lo+hi)>>1;if(c[m]<=v)lo=m;else hi=m;}
+  const w=c[lo+1]-c[lo];return lo+(w>0?(v-c[lo])/w:0);}
+function tvX(t,cw){const c0=tlC(tv0),c1=tlC(tv1);return (tlC(t)-c0)/Math.max(1e-9,c1-c0)*cw;}
+function tvT(x,cw){const c0=tlC(tv0),c1=tlC(tv1);return tlCinv(c0+x/cw*(c1-c0));}
 // Ski > Powder is the one layer whose model genuinely answers "what does it
 // look like right now" (computePowder aggregates backward from b over a
 // fixed lookback) rather than "what happened between two times I pick" --
@@ -10868,7 +10884,9 @@ function drawTimeline(){const tc=document.getElementById('timeline');const rect=
     // In single-point mode a..b is only the hidden lookback, not something
     // the user picked: shading it made a phantom window trail the handle.
     ctx2.globalAlpha=single?(fut?.8:.6):(inSel?(fut?1:.7):.28);
-    rr(x+.5,baseY-h,Math.max(bw-1,1.8),h,Math.min(2.5,bw/2.2));ctx2.fill();ctx2.globalAlpha=1;}
+    // each bar as wide as its hour: a night hour is drawn narrower
+    const bwT=Math.max(1.2,tvX(t+1,cw)-x);
+    rr(x+.5,baseY-h,Math.max(bwT-1,1),h,Math.min(2.5,bwT/2.2));ctx2.fill();ctx2.globalAlpha=1;}
   // each snowfall "hill" carries its own peak rate (cm/h, mean over the map in view)
   // just above its tallest bar, so the heights have a scale
   // (the bars stay abstract: no cm/h numbers on them -- the point card has the figures)
@@ -11638,17 +11656,19 @@ function vaPalApply(m){
     m.layers.powder={file:S6.file,legend:leg,_virt:S6._virt||'ski6',_src:S6._src.map(([o,id])=>[o,P.includes(id)?id:0]),_recolor:true};
   }
 }
+// classes switched off on the legend: snow of another kind, drawn faint grey
+const VA_OFF=[198,202,209,72];
 const vaRecolorC=new Map();let vaRcCv=null;
 async function vaRecolorUrl(u,key){
   const L=vaMan&&vaMan.layers[key],hm=key===vaKey?vaHideMask():0;if(!L||(!L._recolor&&!hm))return u;
   const ck=key+'|'+hm+'|'+u;if(vaRecolorC.has(ck))return vaRecolorC.get(ck);
-  const img=await vaImgBytes(u.split("#")[0]),d=img.rgba,pal=(L._src||[]).map(([o,id])=>[o,(id&&!((hm>>id)&1))?(VA_PALETTE[key]||VA_VPAL[key])[id]:[0,0,0,0]]);
+  const img=await vaImgBytes(u.split("#")[0]),d=img.rgba,pal=(L._src||[]).map(([o,id])=>[o,!id?[0,0,0,0]:((hm>>id)&1)?VA_OFF:(VA_PALETTE[key]||VA_VPAL[key])[id]]);
   const lut=new Map();
   // forest-faded pixels are a shade off the table: nearest original colour
   const near=(r,g,b)=>{let best=null,bd=1e9;for(const [o,n] of pal){const e=(o[0]-r)*(o[0]-r)+(o[1]-g)*(o[1]-g)+(o[2]-b)*(o[2]-b);if(e<bd){bd=e;best=n;}}return bd<=2500?best:null;};
   for(let o=0;o<d.length;o+=4){if(d[o+3]<4)continue;const k=(d[o]<<16)|(d[o+1]<<8)|d[o+2];
     let n=lut.get(k);if(n===undefined){n=near(d[o],d[o+1],d[o+2]);lut.set(k,n);}
-    if(n){d[o]=n[0];d[o+1]=n[1];d[o+2]=n[2];if(!n[3])d[o+3]=0;}}
+    if(n){d[o]=n[0];d[o+1]=n[1];d[o+2]=n[2];if(!n[3])d[o+3]=0;else if(n.length>3&&n[3]<255)d[o+3]=Math.min(d[o+3],n[3]);}}
   if(!vaRcCv)vaRcCv=document.createElement('canvas');
   const cv=vaRcCv;cv.width=img.w;cv.height=img.h;
   cv.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(d.buffer,d.byteOffset,d.length),img.w,img.h),0,0);
@@ -11832,6 +11852,8 @@ function vaHiEngine(){
             200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p];
   }
   E.wgs2lv03=wgs2lv03;
+  // a class switched off on the legend: snow of another kind, faint grey
+  E.OFF=[198,202,209,72];
   E.POW=[[0,0,0,0],[215,253,209,250],[215,253,209,250],[173,238,183,235],[173,238,183,235],[112,186,160,235],[80,148,177,235],[48,110,171,235],[32,77,135,235],[88,15,49,235],[70,10,17,235]];
   E.PAL={ski6:{1:[156,168,184,185],2:[214,108,98,215],3:[215,253,209,245],4:[173,238,183,240],5:[112,186,160,240],6:[226,170,72,220],7:[150,104,74,225],8:[80,148,177,240],9:[48,110,171,240],10:[214,212,204,235],11:[176,164,196,225]},
     wind:{1:[156,168,184,190],2:[186,170,236,205],3:[112,72,200,230]}};
@@ -12155,11 +12177,14 @@ function vaHiEngine(){
         E.adjPrecip(m,en[0],en[1]);
         E.color(q.layer,m,col);
         if(!col[3])continue;
-        if(hide&&(hide>>E.cls)&1)continue;
+        // a class switched off on the legend is snow all the same: a faint
+        // grey, not a hole -- blank read as "no snow on the peaks"
+        var off=hide&&(hide>>E.cls)&1;
+        if(off){col[0]=E.OFF[0];col[1]=E.OFF[1];col[2]=E.OFF[2];col[3]=E.OFF[3];}
         var a=col[3],r0=col[0],g0=col[1],b0=col[2];
         // thin cover: thin red dashes across the colour, in map pixels so
         // they run on across tile edges
-        if(E.cls===10&&lk.indexOf('ski6')===0){var hk=S/256,hx=q.x*S+px,hy=q.y*S+py,sp=7*hk,d1=(hx+hy)%sp,d2=((hx-hy)%(3*sp)+3*sp)%(3*sp);
+        if(!off&&E.cls===10&&lk.indexOf('ski6')===0){var hk=S/256,hx=q.x*S+px,hy=q.y*S+py,sp=7*hk,d1=(hx+hy)%sp,d2=((hx-hy)%(3*sp)+3*sp)%(3*sp);
           if(d1<1.3*hk&&d2<2*sp){r0=214;g0=40;b0=40;a=235;}}
         if(fd&&E.forest){var fv=E.gridBil(E.forest,en[0],en[1],fcs,true);if(fv>0)a*=1-fd*(fv/255);}
         var o=(py*S+px)*4;out[o]=r0;out[o+1]=g0;out[o+2]=b0;out[o+3]=a;
@@ -12362,7 +12387,9 @@ async function _vaPkLoad(){
 const vaHiWs=[];
 function vaHiWorkerInit(pk,sh,fo,pr){
   if(vaHiWs.length||typeof Worker==='undefined'||typeof Blob==='undefined')return;
-  const n=Math.max(1,Math.min(2,(navigator.hardwareConcurrency||2)-1));
+  // one per core but one (the map and the UI keep theirs), up to 4: a
+  // zoomed-in screen is 15-25 tiles of 100-500 ms each
+  const n=Math.max(1,Math.min(4,(navigator.hardwareConcurrency||2)-1));
   const src='var E=('+vaHiEngine.toString()+')(),F={},FK=[];onmessage=function(ev){var d=ev.data;'
     +'if(d.t==="init")E.init(d.pk,d.sh,d.fo,d.pr);'
     +'else if(d.t==="frame"){if(!F[d.tag])FK.push(d.tag);F[d.tag]={v:d.vals,o:d.ok};while(FK.length>4)delete F[FK.shift()];}'
@@ -12399,13 +12426,23 @@ async function vaPkFrame(tag){
   if(vaPkFrames.size>6)vaPkFrames.delete(vaPkFrames.keys().next().value);
   return f;
 }
-async function vaTerrBytes(key){
-  if(vaTerrC.has(key))return vaTerrC.get(key);
-  const img=await vaImgBytes(VA_TERR+key+'.png');
-  vaTerrC.set(key,img.rgba);
-  if(vaTerrC.size>12)vaTerrC.delete(vaTerrC.keys().next().value);
-  return img.rgba;
+const vaTerrP=new Map();
+function vaTerrBytes(key){
+  if(vaTerrC.has(key)){const v=vaTerrC.get(key);vaTerrC.delete(key);vaTerrC.set(key,v);return Promise.resolve(v);}
+  if(vaTerrP.has(key))return vaTerrP.get(key);
+  const p=vaImgBytes(VA_TERR+key+'.png').then(img=>{
+    vaTerrC.set(key,img.rgba);
+    // ~260 kB each: 40 cover a zoomed-in screen and a pan back
+    while(vaTerrC.size>(KB_>1?40:20))vaTerrC.delete(vaTerrC.keys().next().value);
+    return img.rgba;}).finally(()=>vaTerrP.delete(key));
+  vaTerrP.set(key,p);return p;
 }
+// the terrain of every queued tile is fetched at once, several in parallel,
+// not one after the other as each tile's turn comes
+function vaTerrPrefetch(){let n=0;
+  for(const j of vaHiQ){if(n>=8)break;const c=j.c;if(!c)continue;
+    const tz=Math.min(c.z,VA_TERR_Z),f=Math.pow(2,c.z-tz),key=tz+'/'+Math.floor(c.x/f)+'/'+Math.floor(c.y/f);
+    if(vaTerrC.has(key)||vaTerrP.has(key))continue;n++;vaTerrBytes(key).catch(()=>{});}}
 // ── render queue ──────────────────────────────────────────────────────────
 // prio 0: tiles of the frame on screen; prio 1: the neighbouring frames,
 // rendered ahead into the tile cache so ‹ › and the next drag step are
@@ -12414,7 +12451,8 @@ async function vaTerrBytes(key){
 const vaHiQ=[];
 function vaHiAlive(){return vaHiWs.filter(W=>!W.dead);}
 function vaHiQueue(job){
-  return new Promise(res=>{job.res=res;vaHiQ.push(job);vaHiQSort();vaHiPump();});
+  return new Promise(res=>{job.res=res;vaHiQ.push(job);vaHiQSort();vaHiPump();
+    clearTimeout(vaHiQueue._pf);vaHiQueue._pf=setTimeout(vaTerrPrefetch,0);});
 }
 // the tiles in the middle of the screen first, the edges after: the part you
 // look at fills in before the rim does
@@ -12519,13 +12557,29 @@ function vaHiPaint(t,done,tries){
     if((tries||0)<3)setTimeout(()=>{if(t.isConnected&&t._vaGen===gen)vaHiPaint(t,null,(tries||0)+1);},2500*((tries||0)+1));};
   // until a newer paint of this tile (or the tile itself) is gone
   const stale=()=>t._vaGen!==gen||!t.isConnected&&!done;
-  vaHiTile(c,S,tag,layer,0,stale).then(px=>{
+  // Zoomed in (192 px tiles) a quick 64 px preview first -- 9x fewer pixels,
+  // all previews of the screen before any full tile -- so the view fills in
+  // within a moment and sharpens tile by tile, instead of waiting for whole
+  // tiles one after the other.
+  const lo=(S>=192&&!vaHiCache.has(vaHiCKey(tag,layer,c,S)))?64:0;
+  let full=false;
+  if(lo)vaHiTile(c,lo,tag,layer,0,stale).then(px=>{
+    if(full||t._vaGen!==gen||!px||px.length!==lo*lo*4)return;
+    try{const o=vaHiPrevCv||(vaHiPrevCv=document.createElement('canvas'));o.width=lo;o.height=lo;
+      o.getContext('2d').putImageData(new ImageData(px,lo,lo),0,0);
+      const cx=t.getContext('2d');cx.clearRect(0,0,S,S);cx.imageSmoothingEnabled=true;cx.drawImage(o,0,0,S,S);}catch(e){return;}
+    // the tile counts as there: the coarse frame may step aside
+    if(done){const d=done;done=null;d(null,t);}
+  }).catch(()=>{});
+  vaHiTile(c,S,tag,layer,lo?0.5:0,stale).then(px=>{
+    full=true;
     if(t._vaGen!==gen)return fin();
     if(px&&px.length===S*S*4){try{t.getContext('2d').putImageData(new ImageData(px,S,S),0,0);}catch(e){fb();}}
     else fb();
     fin();
   }).catch(()=>{if(t._vaGen===gen)fb();fin();});
 }
+let vaHiPrevCv=null;
 // New frame or sub-layer: repaint the tiles in place. redraw() threw every
 // tile away first, which is what made the layer blink out on each step.
 function vaHiRepaint(){
@@ -18846,7 +18900,8 @@ addEventListener('load',()=>{positionSearch();try{map.invalidateSize({animate:fa
     const cx=e.touches?e.touches[0].clientX:e.clientX;
     if(mode==='pan'){panMove(cx);return;}
     if(mode==='point'){pointDragTo(cx);edgeScroll(cx);paint();return;}
-    const delta=Math.round((cx-dragStartX)/W()*tvSpan());
+    // through the same t <-> x mapping as the drawing (nights are narrower)
+    const _r0=tc.getBoundingClientRect(),delta=Math.round(tvT(cx-_r0.left,W())-tvT(dragStartX-_r0.left,W()));
     if(mode==='center'){const na=Math.max(0,Math.min(T-ws,dragStartA+delta));a=na;b=na+ws;}
     else if(mode==='left'){a=Math.max(0,Math.min(dragStartB-4,dragStartA+delta));windowSize=b-a;}
     else if(mode==='right'){b=Math.min(T,Math.max(dragStartA+4,dragStartB+delta));windowSize=b-a;}
@@ -21095,7 +21150,10 @@ async function obPill(){try{const n=(await obAll()).filter(x=>x.t==='row').lengt
   let el=document.getElementById('obPill');
   if(!n&&!up){if(el)el.remove();return;}
   if(!el){el=document.createElement('button');el.id='obPill';el.type='button';el.onclick=()=>obFlush(true);document.body.appendChild(el);}
-  el.innerHTML='<i></i><span>'+(n?(n===1?'1 Beitrag wartet':n+' Beiträge warten'):'Fotos warten')+' auf Netz</span><small>Antippen = jetzt versuchen</small>';}catch(e){}}
+  const on=navigator.onLine!==false&&!_obFail;
+  el.classList.toggle('ob-up',on);
+  el.innerHTML='<i></i><span>'+(on?(n>1?n+' Beiträge werden hochgeladen…':(n?'Beitrag wird hochgeladen…':'Fotos werden hochgeladen…'))
+    :(n?(n===1?'1 Beitrag wartet':n+' Beiträge warten'):'Fotos warten')+' auf Netz')+'</span><small>'+(on?'läuft im Hintergrund':'Antippen = jetzt versuchen')+'</small>';}catch(e){}}
 function obSchedule(){clearTimeout(_obTimer);_obTimer=setTimeout(()=>obFlush(false),Math.min(600e3,30e3*Math.pow(2,Math.min(_obFail,4))));}
 async function obFlush(manual){if(_obBusy||!sb)return;if(navigator.onLine===false&&!manual){obPill();return;}
   _obBusy=true;let sent=0,left=0;
@@ -21114,6 +21172,7 @@ async function obFlush(manual){if(_obBusy||!sb)return;if(navigator.onLine===fals
       }}
     if(sent){_obFail=0;try{toast(sent===1?'Dein Beitrag ist hochgeladen':sent+' Beiträge hochgeladen','ok');haptic(12);loadDbReports();}catch(e){}}
   }catch(e){}finally{_obBusy=false;
+    if(_obAgain&&!left){_obAgain=false;setTimeout(()=>obFlush(false),30);}
     try{const rest=await obAll();if(rest.length)obSchedule();}catch(e){}obPill();}}
 let _obRawInsert=null,_obRawUpload=null;
 (function(){if(!sb)return;
@@ -21128,22 +21187,26 @@ let _obRawInsert=null,_obRawUpload=null;
     const ins=q.insert.bind(q);
     q.insert=function(row,opts){if(Array.isArray(row)||(opts&&Object.keys(opts).length)||!row||typeof row!=='object')return ins(row,opts);
       if(!row.id)row.id=obUuid();
+      // Posting never waits for the network: the post is kept on the device
+      // (fixed id, so it is never sent twice) and the sheet closes at once;
+      // it goes up in the background now, or as soon as there is a
+      // connection. Only without a working device store is it sent directly.
       return (async()=>{
-        if(navigator.onLine===false){await obAdd({t:'row',row,at:Date.now()});obQueuedNote();return{data:null,error:null,queued:true};}
-        try{const r=await obTimeout(Promise.resolve(ins(row)),30e3);
-          if(r&&r.error&&obNetErr(r.error)){await obAdd({t:'row',row,at:Date.now()});obQueuedNote();return{data:null,error:null,queued:true};}
-          return r;}
-        catch(e){if(obNetErr(e)){await obAdd({t:'row',row,at:Date.now()});obQueuedNote();return{data:null,error:null,queued:true};}throw e;}})();};
+        try{await obAdd({t:'row',row,at:Date.now()});obQueuedNote();obKick();return{data:null,error:null,queued:true};}
+        catch(eq){}
+        try{const r=await obTimeout(Promise.resolve(ins(row)),30e3);return r;}
+        catch(e){if(obNetErr(e))return{data:null,error:{message:'Kein Netz – bitte später nochmals senden'}};throw e;}})();};
     return q;};
   const wrapBucket=function(bucket){const b=storRaw(bucket);if(bucket!=='report-images'||!b||typeof b.upload!=='function')return b;
     const up=b.upload.bind(b);
     b.upload=async function(path,blob,opts){
-      const keep=async()=>{await obAdd({t:'up',bucket,path,blob,ct:(opts&&opts.contentType)||(blob&&blob.type)||'image/jpeg',at:Date.now()});obQueuedNote();return{data:{path},error:null};};
-      if(navigator.onLine===false)return keep();
-      try{const r=await obTimeout(Promise.resolve(up(path,blob,opts)),60e3);
-        if(r&&r.error&&obNetErr(r.error))return keep();
-        return r;}
-      catch(e){if(obNetErr(e))return keep();throw e;}};
+      // like the post: the photo is kept and goes up in the background (its
+      // public address follows from the path, so the post's link is right)
+      try{await obAdd({t:'up',bucket,path,blob,ct:(opts&&opts.contentType)||(blob&&blob.type)||'image/jpeg',at:Date.now()});
+        obQueuedNote();obKick();return{data:{path},error:null};}
+      catch(eq){}
+      try{return await obTimeout(Promise.resolve(up(path,blob,opts)),60e3);}
+      catch(e){if(obNetErr(e))return{data:null,error:{message:'Kein Netz – bitte später nochmals senden'}};throw e;}};
     return b;};
   const patchStor=st=>{if(!st||st._obP)return st;st.from=wrapBucket;try{st._obP=1;}catch(e){}return st;};
   if(pd&&pd.get)Object.defineProperty(sb,'storage',{configurable:true,get(){return patchStor(pd.get.call(sb));}});
@@ -21153,8 +21216,13 @@ let _obRawInsert=null,_obRawUpload=null;
   setTimeout(()=>{obFlush(false);},6000);
 })();
 function obQueuedNote(){clearTimeout(_obPillT);
-  // after the post's own «gepostet» message: what really happened
-  _obPillT=setTimeout(()=>{try{toast('Kein stabiles Netz – dein Beitrag wird automatisch hochgeladen, sobald du wieder Verbindung hast.','info');}catch(e){}obPill();obSchedule();},900);}
+  // after the post's own «gepostet» message: only without a connection does
+  // it say so; online the small pill shows the upload running
+  _obPillT=setTimeout(()=>{if(navigator.onLine===false){try{toast('Kein Netz – dein Beitrag wird automatisch hochgeladen, sobald du wieder Verbindung hast.','info');}catch(e){}}
+    obPill();obSchedule();},900);}
+// send what is queued as soon as possible; a flush already running goes again
+let _obAgain=false;
+function obKick(){if(_obBusy){_obAgain=true;return;}setTimeout(()=>obFlush(false),30);}
 function haptic(ms){try{const H=_capPlugin('Haptics');if(H){H.impact({style:(ms||8)>=15?'MEDIUM':'LIGHT'});return;}navigator.vibrate(ms||8);}catch(e){}}
 // --- Custom inline icon set (replaces emoji everywhere in the UI chrome) ---
 const IC={
