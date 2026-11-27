@@ -10330,6 +10330,69 @@ async function vaDepthInit(){
     try{renderAll();}catch(e){}try{lyRender();}catch(e){}try{inspAutoRefresh();}catch(e){}
   }catch(e){console.warn('depth init',e);}
   finally{_hs0Busy=false;}}
+// ── Schneehöhe at any time: the snowpack model's own ───────────────────────
+// SNOWPACK runs every slope through the whole window (a frame every 2 h,
+// past and forecast): the whole pack settles, melt comes from the energy
+// balance, the IMIS correction is in. The map used to take only its first
+// frame and add the forecast blob's new snow and index melt on top -- so the
+// old snow never settled or melted during the ten days. Now the depth at a
+// time is SNOWPACK's, flat ground at each cell's height, between its two
+// nearest frames (a few ms per frame on the device). Until a frame is in,
+// the old balance (HS0 + new snow - melt) stands in.
+const HSV=new Map(),_hsvPend=new Set();let _hsvE=null,_hsvQ=Promise.resolve();
+const _vaTagMs=g=>Date.parse(String(g).replace(/T(\d{2})(\d{2})$/,'T$1:$2')+':00Z');
+// the frames on both sides of cum index t (= the end of hour t-1) and the weight
+function hsvTags(t){
+  const tags=(typeof vaMan!=='undefined'&&vaMan&&vaMan.tags)||[];const tm=M.times&&M.times[Math.max(0,Math.min(T-1,t-1))];
+  if(!tags.length||!tm)return null;
+  const ms=Date.parse(String(tm).slice(0,16)+':00Z'),G=3*3600e3;if(!isFinite(ms))return null;
+  let i1=-1;for(let i=0;i<tags.length;i++)if(_vaTagMs(tags[i])>=ms){i1=i;break;}
+  if(i1<0){const g=tags[tags.length-1];return ms-_vaTagMs(g)<=G?[g,g,0]:null;}
+  if(i1===0)return _vaTagMs(tags[0])-ms<=G?[tags[0],tags[0],0]:null;
+  const g0=tags[i1-1],g1=tags[i1],t0=_vaTagMs(g0),t1=_vaTagMs(g1);
+  return [g0,g1,t1>t0?(ms-t0)/(t1-t0):0];}
+function hsvGrid(tag){
+  if(HSV.has(tag))return Promise.resolve(HSV.get(tag));
+  if(_hsvPend.has(tag))return _hsvQ.then(()=>HSV.get(tag)||null);
+  _hsvPend.add(tag);
+  // one frame after the other: the engine holds one frame at a time
+  _hsvQ=_hsvQ.then(async()=>{
+    try{
+      if(typeof vaAvailable!=='function'||!vaAvailable()||!vaMan.pack||!(await vaPkLoad())||!vaEng)return;
+      const f=await vaPkFrame(tag);if(!f)return;
+      if(!_hsvE){_hsvE=vaHiEngine();_hsvE.init(vaPk,vaEng.shade,vaEng.forest,vaEng.precip);}
+      const E=_hsvE,ih=E.mi.total_hs_cm;if(ih==null)return;
+      E.setFrame(f.vals,f.ok);
+      const m=new Float64Array(E.nm),out=new Float32Array(NP),R=45000;let busyT=performance.now();
+      for(let p=0;p<NP;p++){
+        if(performance.now()-busyT>12){await new Promise(r=>setTimeout(r,0));busyT=performance.now();E.setFrame(f.vals,f.ok);}
+        const el=melevv(p);if(!(el>0))continue;
+        const y=(p/W)|0,x=p-y*W,la=laMax-(laMax-laMin)*y/Math.max(1,H-1),lo=loMin+(loMax-loMin)*x/Math.max(1,W-1);
+        const en=E.wgs2lv03(la,lo);
+        let near=1e12;for(let j=0;j<E.wps.length;j++){const w=E.wps[j],dx=w.e-en[0],dy=w.n-en[1],d=dx*dx+dy*dy;if(d<near)near=d;}
+        if(near>R*R){out[p]=NaN;continue;}          // no weather point near: the old balance there
+        if(!E.evalAt(en[0],en[1],el,0,0,0,E.candidates(en[0],en[1],60000),m)){out[p]=NaN;continue;}
+        E.adjPrecip(m,en[0],en[1]);
+        const v=m[ih];out[p]=v>0.5?v:0;}
+      HSV.set(tag,out);
+      if(HSV.size>10)HSV.delete(HSV.keys().next().value);
+    }catch(e){console.warn('depth frame',tag,e);}
+    finally{_hsvPend.delete(tag);}});
+  return _hsvQ.then(()=>HSV.get(tag)||null);}
+// SNOWPACK depth [cm] at cell p and cum index t, or null while not computed
+function hsvAt(p,t){const k=hsvTags(t);if(!k)return null;const A=HSV.get(k[0]),B=HSV.get(k[1]);if(!A||!B)return null;
+  const v=A[p]*(1-k[2])+B[p]*k[2];return v===v?v:null;}
+function depthAt(p,t){const v=hsvAt(p,t);return v==null?cum[t*NP+p]:v;}
+// ask for the frames of cum index t; true when they are there
+function hsvWant(t){const k=hsvTags(t);if(!k)return false;let have=true;
+  for(const g of new Set([k[0],k[1]]))if(!HSV.has(g)){have=false;
+    hsvGrid(g).then(a=>{if(!a||layer!=='depth')return;const kk=hsvTags(b);if(kk&&(kk[0]===g||kk[1]===g)){
+      try{renderAll();}catch(e){}try{inspAutoRefresh();}catch(e){}}});}
+  return have;}
+// a point's depth series: the balance's course, shifted to SNOWPACK at the
+// selected time so the curve and the map agree there
+function depthSeries(p,t0,t1){const v=[],h=hsvAt(p,b),off=h==null?0:h-cum[b*NP+p];
+  for(let t=t0;t<=t1;t++){const x=cum[t*NP+p]+off;v.push(x>0?x:0);}return v;}
 const tv=(t,p)=>TEMP[t*NP+p]/M.temp_mul-M.temp_off, sunv=(t,p)=>SUN[t*NP+p]/M.sun_mul;
 // Cloud cover [%]; older blobs have no CLOUD field and the layer stays out.
 let _cloudData=!!M.cloud_mul&&CLOUD.length>=T*NP;
@@ -13427,7 +13490,7 @@ function tourSampleSeg(seg){
   if(p<0){seg.quality='unknown';return;}
   seg.elev=melevv(p);seg.slope=mslpv(p);seg.aspect=maspv(p);
   const pw=computePowder(p,a,b);
-  seg.powdered=!!pw.powdered;seg.hs=cum[b*NP+p];
+  seg.powdered=!!pw.powdered;seg.hs=depthAt(p,b);
   seg.quality=pw.powdered?(pw.quality==='reduced'?'powder-reduced':'powder'):'kein Powder';
   if(!pw.powdered&&pw.reason_flags&&pw.reason_flags.length)seg.quality=tourFlagLabel(pw.reason_flags);
   // Core zone comes from SLF's own bulletin, never from our own reckoning.
@@ -17420,7 +17483,8 @@ function _renderRaster(){
   if(layer=="snow"){const R=winRaw(SNOW,'snow'),sc=NS_SC,nv=_nsV||(_nsV=new Float32Array(NP));
     for(let p=0;p<NP;p++)nv[p]=R.su[p]*sc;
     _nsHid=_hid;setRasterIso(p=>{const v=nv[p];return _hid&&_hid(v)?null:v;},NS_ALPHA,NP>50000?2:3);}
-  else if(layer=="depth"){try{if(!HS0&&!_hs0Busy)vaDepthInit();}catch(e){}const cb2=b*NP;setRasterIso(p=>{const v=cum[cb2+p];return (v<1||(_hid&&_hid(v)))?null:v;},215,NP>50000?2:3);}
+  else if(layer=="depth"){try{if(!HS0&&!_hs0Busy)vaDepthInit();}catch(e){}const cb2=b*NP,va=hsvWant(b);
+    setRasterIso(p=>{const h=va?hsvAt(p,b):null,v=h==null?cum[cb2+p]:h;return (v<1||(_hid&&_hid(v)))?null:v;},215,NP>50000?2:3);}
   else if(layer=="temp"){const R=winRaw(TEMP,'temp'),tm=M.temp_mul,to=M.temp_off,c=Math.max(0,b-a);
     setRaster(p=>{if(!c)return null;const mn=R.mn[p]/tm-to,mx=R.mx[p]/tm-to,su=R.su[p]/tm-c*to;
       if(stat=="sub0"){if(mx>=0)return null;const x=Math.min(1,-mx/20);return[40,120-(x*60|0),255,215];}
@@ -17537,7 +17601,7 @@ function detailTier(){const z=map.getZoom();if(z<9.4)return 0;if(z<11.2||isMobil
 // "gemessen +12 cm · Modell hier +9 cm" -- the model at the station's own height
 function stnTip(s,sv){let t=(s.label||s.code)+' · '+s.elev+' m';
   try{const p=tourCell(s.lat,s.lon);if(p<0||(layer!="snow"&&layer!="depth"))return t;
-    const mv=layer=="snow"?nsAtHeight(p,nsAt(p,a,b),s.elev-melevv(p)):cum[b*NP+p];
+    const mv=layer=="snow"?nsAtHeight(p,nsAt(p,a,b),s.elev-melevv(p)):depthAt(p,b);
     t+=' · gemessen '+(sv!=null?(layer=="snow"?'+':'')+Math.round(sv)+' cm':'–')+' · Modell '+(layer=="snow"?'+':'')+Math.round(mv)+' cm';}catch(e){}
   return t;}
 function renderStations(){stnGroup.clearLayers();if(!showStn)return;
@@ -19479,7 +19543,7 @@ function ptLayerValue(lat,lon){const p=ptCell(lat,lon);if(p<0)return null;
   const L0=lyLayers(),it=!lyNoneOn()&&L0[lyIndex()]&&L0[lyIndex()][2],id=it&&it.id;
   try{
     if(id==='newsnow'){const v=nsAtHeight(p,nsAt(p,a,b),fz==null?NaN:fz-melevv(p));return {ic:ic(id),v:'+'+(v<10?v.toFixed(1):Math.round(v))+' cm',s:'Neuschnee',c:fpSnowCol(v)};}
-    if(id==='depth'){const v=cum[b*NP+p];return {ic:ic(id),v:Math.round(v)+' cm',s:'Schneehöhe',c:depthCss(v)};}
+    if(id==='depth'){const v=depthAt(p,b);return {ic:ic(id),v:Math.round(v)+' cm',s:'Schneehöhe',c:depthCss(v)};}
     if(id==='temp'){const dz=fz==null?0:Math.max(-8,Math.min(8,TEMP_LAPSE*(fz-melevv(p))));const v=mean(t=>tvI(t,p))+dz;return {ic:ic(id),v:(v>0?'+':'')+v.toFixed(1)+' °C',s:'Temperatur',c:v>0?'#E5484D':'#3B82F6'};}
     if(id==='wind'){const wk=mainToWind[p];const v=mean(t=>SPD[t*P+wk]/M.spd_mul*3.6);return {ic:ic(id),v:Math.round(v)+' km/h',s:'Wind',c:'#64748B'};}
     // Skiqualität is drawn by SNOWPACK: read the same engine at the same spot
@@ -19726,7 +19790,7 @@ function inspOpen(lat,lon){inspLast={lat,lon};document.body.classList.add('insp-
   inspMarker=L.marker([lat,lon],{icon:L.divIcon({className:'',html:'<div class="insp-xmark"><i></i></div>',iconSize:[30,30],iconAnchor:[15,15]}),interactive:false,zIndexOffset:2000}).addTo(map);
   const cb=b*NP,_fz=fineElev(lat,lon);
   // what fell in the window, at this spot's height -- as the map draws it
-  const newSnow=nsAtHeight(p,nsAt(p,a,b),_fz==null?NaN:_fz-melevv(p)),depthNow=cum[cb+p];
+  const newSnow=nsAtHeight(p,nsAt(p,a,b),_fz==null?NaN:_fz-melevv(p)),depthNow=depthAt(p,b);
   let wsum=0;for(let t=a;t<b;t++)wsum+=SPD[t*P+wk]/M.spd_mul*3.6;const wmean=wsum/Math.max(1,b-a);
   // ~25 m terrain from the Terrarium tile when it is loaded (re-opens itself
   // once it arrives), else the national ~115 m rasters.
@@ -20023,7 +20087,7 @@ function mgDraw(p,wk){const sc=document.getElementById('mgSc'),cv=document.getEl
       tg.addColorStop(0,'#F0564A');tg.addColorStop(Math.max(0,zf-.001),'#F0564A');tg.addColorStop(Math.min(1,zf+.001),'#3D8BF0');tg.addColorStop(1,'#3D8BF0');
       c.beginPath();mgSmooth(c,pA);c.strokeStyle=tg;c.lineWidth=3;c.stroke();
       unit(r,'°C',false);hours(r);title(r,q.t,[{n:'Luft',c:'#3D8BF0',c2:'#F0564A',w:3},{n:'Schneeoberfläche',c:'rgba(214,140,40,.9)',w:2,d:[1,4]}]);}
-    else if(q.k==='depth'){let mx=1;const v=[];for(let t=0;t<T;t++){v[t]=cum[t*NP+p];if(v[t]>mx)mx=v[t];}
+    else if(q.k==='depth'){let mx=1;const v=depthSeries(p,0,T-1);for(let t=0;t<T;t++)if(v[t]>mx)mx=v[t];
       mx=Math.ceil(mx/10)*10;const yD=x=>r.base-x/mx*hgt,pts=v.map((x,t)=>[XC(t),yD(x)]);
       for(const s of [mx/2,mx])hline(yD(s));for(const s of [0,mx/2,mx])lab(Math.round(s)+'',MG_L-6,yD(s),'right');
       c.beginPath();mgSmooth(c,pts);c.lineTo(XC(T-1),r.base);c.lineTo(XC(0),r.base);c.closePath();c.fillStyle=vgrad(r.top,r.base,'rgba(61,139,240,.38)','rgba(61,139,240,.04)');c.fill();
@@ -20106,7 +20170,7 @@ function icNewSnow(cv,p){const{ctx,w,h}=icSetup(cv,86);const t0=a,t1=b,n=Math.ma
   if(mx>0.002){const px=LG+mi*bw+bw/2,bh=Math.max(1.5,mx/mxs*(baseY-26));
     icPill(ctx,px,baseY-bh-21,mx.toFixed(mx>=1?1:2)+' cm/h',cvTok('--accent-meteo','#2A8FD8'),w);}}
 function icDepth(cv,p){const{ctx,w,h}=icSetup(cv,80);const t0=a,t1=b;const LG=4,baseY=h-16,plotW=w-LG-4;
-  const vals=[];let mx=1,mi=0;for(let t=t0;t<=t1;t++){const v=cum[t*NP+p];vals.push(v);if(v>mx){mx=v;mi=t-t0;}}
+  const vals=depthSeries(p,t0,t1);let mx=1,mi=0;for(let i=0;i<vals.length;i++)if(vals[i]>mx){mx=vals[i];mi=i;}
   icDayGrid(ctx,LG,plotW,h,t0,t1,baseY);
   ctx.strokeStyle='rgba(18,21,26,.12)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(LG,baseY+.5);ctx.lineTo(w,baseY+.5);ctx.stroke();
   const Ln=vals.length,px=i=>LG+i/(Ln-1)*plotW,py=v=>baseY-v/mx*(baseY-26);
@@ -20352,7 +20416,7 @@ function make3dOverlay(mode){
   const ox=oc.getContext('2d'),oi=ox.createImageData(W,H),od=oi.data;
   for(let p=0;p<NP;p++){const o=p*4;let r=0,g=0,bl=0,al=0;
     if(mode==='snow'){const v=nsAt(p,a,b);const c=snowCol(v);if(c){r=c[0];g=c[1];bl=c[2];al=200;}}
-    else if(mode==='depth'){const cb2=b*NP;const v=cum[cb2+p];if(v>=1){const x=Math.min(1,v/300);r=220-x*180|0;g=235-x*95|0;bl=255-x*30|0;al=180;}}
+    else if(mode==='depth'){const v=depthAt(p,b);if(v>=1){const x=Math.min(1,v/300);r=220-x*180|0;g=235-x*95|0;bl=255-x*30|0;al=180;}}
     else if(mode==='temp'){let su=0,c=0;for(let t=a;t<b;t++){su+=tv(t,p);c++;}const v=su/Math.max(1,c);const tc2=tempCol(v);r=tc2[0];g=tc2[1];bl=tc2[2];al=170;}
     else if(mode==='wind'){let su=0,c=0;for(let t=a;t<b;t++){su+=wg_(t,p)*3.6;c++;}const v=su/Math.max(1,c);if(v>=1){const c2=rampBYR(v/70);r=c2[0];g=c2[1];bl=c2[2];al=160;}}
     else if(mode==='powder'){const pw=computePowder(p,a,b);if(pw.powdered){r=200;g=220;bl=255;al=pw.quality==='reduced'?140:180;}}

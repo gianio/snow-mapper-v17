@@ -58,6 +58,10 @@ tf = out["terrain_factor"]
 check("wind and Luv/Lee move snow, they do not add it", abs(float(tf.mean()) - 1.0) < 0.03, f"mean {tf.mean():.3f}")
 check("but still redistribute it", float(tf.std()) > 0.05, f"spread {tf.std():.3f}")
 check("no NaN in the new snow", not np.isnan(out["new_snow_cm"]).any())
+pre = 1.0 * out["snow_fraction"] * out["slr"] / 10.0 * out["altitude_factor"]
+check("the Luv/Lee x wind factor is not applied to the new snow (no skill at the boards)",
+      np.allclose(out["new_snow_cm"], np.clip(pre, 0, P["limits"]["max_new_snow_cm"])),
+      f"max diff {float(np.abs(out['new_snow_cm'] - pre).max()):.3g}")
 
 print("\nNEWSNOW MODEL OK" if not fails else f"\n{fails} FAILED")
 sys.exit(1 if fails else 0)
