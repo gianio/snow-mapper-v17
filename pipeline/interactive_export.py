@@ -659,9 +659,22 @@ def build_interactive_data(center_date, days_each_side, resolution_m, use_synthe
     FIELDS = ("snow", "ablation", "temp", "sun", "wind_grid", "prec") + (("cloud",) if has_cloud else ()) + (("clv",) if has_clv else ()) + tuple(lvl_m)
     cubes = {k: np.zeros((T, dh, dw), "uint8") for k in FIELDS}
 
+    # Summed fields (new snow, melt, precipitation) carry each cell's rounding
+    # remainder into the next hour: a light snowfall of 0.08 cm/h used to
+    # round to 0 every hour and vanished from the day's sum.
+    carry = {k: np.zeros((dh, dw), "float32") for k in ("snow", "ablation", "prec")}
+    unit = {"snow": _SNOW_SCALE, "ablation": _ABL_SCALE, "prec": 1.0 / _PREC_MUL}
+
     def _store(key, t, frame_lv95):
         """Eine Stunde: LV95 -> WGS84 -> uint8, direkt in den Zielwuerfel."""
         f = _reproj_frame(frame_lv95, dem.transform, aoi.crs, dst_t, dh, dw)
+        if key in carry:
+            u = unit[key]
+            want = np.maximum(f, 0.0) + carry[key]
+            q = np.clip(np.round(want / u), 0, 255)
+            carry[key] = np.clip(want - q * u, -u, u).astype("float32")
+            cubes[key][t] = q.astype("uint8")
+            return f
         cubes[key][t] = np.clip(QZ[key](f), 0, 255).astype("uint8")
         return f
 

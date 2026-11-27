@@ -10,5 +10,6 @@
   {"date": "2026-11-17", "pr": 192, "models": ["st"], "text": "Schneetyp: Warmluft-Regel"},
   {"date": "2026-11-20", "pr": 197, "models": ["ns", "st"], "text": "Neuschnee: Dichte aus Temperatur und Wind, keine doppelte Höhen-Zugabe; Schneetyp: Wind bestimmt die Expositionen"},
   {"date": "2026-11-24", "pr": 204, "models": ["st"], "text": "Schneetyp: einzelne Flecken im Flachland entfernt"},
-  {"date": "2026-11-25", "pr": 206, "models": ["st", "hs"], "text": "Schneedeckenmodell auch auf 600 und 900 m; Wetterpunkte, die erst weit oben rechnen, zählen in Tallagen kaum noch"}
+  {"date": "2026-11-25", "pr": 206, "models": ["st", "hs"], "text": "Schneedeckenmodell auch auf 600 und 900 m; Wetterpunkte, die erst weit oben rechnen, zählen in Tallagen kaum noch"},
+  {"date": "2026-11-27", "pr": 214, "models": ["ns"], "text": "Neuschnee: Dichte neu gegen 2682 Stationsmessungen kalibriert (vorher im Mittel nur halb so viel wie gemessen), leichter Schneefall geht beim Runden nicht mehr verloren"}
 ]

@@ -43,13 +43,25 @@ slr:
   # HN1D ist 24 h alt. Ergebnis: Modell/SLF 2.76 -> 1.14, MAE (10 km) 4.1 -> 1.2 cm.
   # Der Niederschlag selbst stimmt (Modell / SwissMetNet-Messer 1.1-1.3, die
   # Messer fangen Schnee 10-40 % zu wenig) -- der Fehler sass in der Dichte.
-  # Bei -5 degC: windstill ~10:1, 3 m/s ~6.7:1, 10 m/s ~5:1.
+  # 27.11.: neu kalibriert gegen 2682 Stationstage (SLF-Messfelder und
+  # MeteoSchweiz-Handmessnetz, 17.-27.11., Leave-one-day-out). Mit 125/6/35
+  # war der 24-h-Neuschnee im Mittel nur 0.54x des gemessenen, an Tagen mit
+  # >= 10 cm 0.37x (Elm 36 -> 5, Pigniu 38 -> 5 cm), und der Fehler wuchs mit
+  # der Hoehe (ueber 2000 m -5.6 cm). Der Niederschlag (ICON-CH) liegt an den
+  # Schneetagen beim Messer (0.95) -- der Messer faengt Schnee aber 20-40 % zu
+  # wenig, die Dichte muss sich auf diesen Niederschlag beziehen. Die HN1D-
+  # Kalibrierung vom 19.11. fiel in Tage, an denen der Modellniederschlag
+  # 1.3-2x ueber den Messern lag; die hohe Dichte glich das aus.
+  # Jetzt: Verhaeltnis 0.99, MAE 1.64 -> 1.51 cm, Treffer >= 5 cm 39 -> 69 %,
+  # Hoehenstufen alle innerhalb +-0.8 cm.
+  # Bei -5 degC: windstill 25:1 -> gedeckelt 20:1, 3 m/s ~14:1, 10 m/s ~11:1;
+  # bei 0 degC und 3 m/s ~9.5:1.
   # Die lineare Formel darunter bleibt als Rueckfall (method: linear).
   method: crocus
-  rho_a: 125.0
-  rho_b: 6.0            # pro degC
-  rho_c: 35.0           # pro sqrt(m/s)
-  rho_min: 67.0         # hoechstens 15:1
+  rho_a: 80.0
+  rho_b: 8.0            # pro degC
+  rho_c: 15.0           # pro sqrt(m/s)
+  rho_min: 50.0         # hoechstens 20:1
   rho_max: 220.0        # nasser Schnee ~4.5:1
   slr_intercept: 10.0   # SLR bei 0 degC
   # 17.11.: flacher und tiefer gedeckelt -- ein Vergleich mit gemessenem
