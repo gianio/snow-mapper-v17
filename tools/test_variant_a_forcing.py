@@ -997,6 +997,11 @@ def test_drift():
     sib = MX.pick_siblings(sib_runs, {"a", "b"})
     check("mid-season: the nearest carried slope of the same point, same slope class first",
           sib.get("c") == "b" and "d" not in sib and "e" not in sib, str(sib))
+    lf = forcing.liquid_fraction
+    check("rain share: cold is snow, warm is rain, the split on the wet bulb",
+          lf(-5.0, 90.0, 1500.0) < 0.01 and lf(6.0, 95.0, 1500.0) > 0.99
+          and lf(2.0, 60.0, 2000.0) < 0.3 and lf(2.0, 100.0, 2000.0) > 0.7,
+          f"{lf(-5, 90, 1500):.3f} {lf(6, 95, 1500):.3f} dry +2: {lf(2, 60, 2000):.2f} saturated +2: {lf(2, 100, 2000):.2f}")
     check("ground heat: ~12 W/m2 at the season start, ~2 in mid-winter",
           SR.ground_heat("2026-10-01") >= 11.5 and 1.9 <= SR.ground_heat("2027-01-20") <= 2.6
           and SR.ground_heat("2026-11-08") > SR.ground_heat("2026-12-15"))
@@ -1489,6 +1494,8 @@ def test_temperature_by_height():
             want = bt2[w["id"]][b0]["2026-03-30T07:00"]
             check("the .smet carries the cell temperature for forecast hours",
                   abs(ta - (want[0] - 0.0065 * want[1])) < 0.02, f"{ta:.2f} vs cell {want}")
+            hdr = [l for l in (md / f"{runs[0]['id']}.smet").read_text().splitlines() if l.startswith("fields")][0]
+            check("the .smet hands SNOWPACK the rain share (PSUM_PH)", "PSUM_PH" in hdr.split(), hdr)
         finally:
             f.fetch_weather = real_fw
 
